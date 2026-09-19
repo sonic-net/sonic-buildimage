@@ -211,6 +211,21 @@ def load_namespace_config():
 def file_exists_filter(path):
     return os.path.isfile(path)
 
+def strip_control_chars(value):
+    """Strip whitespace/control chars from a ConfigDB value before it's
+    interpolated into a generated config file (defense-in-depth against
+    writes that bypass YANG validation, e.g. direct Redis writes).
+    """
+    # str(value) raises UnicodeEncodeError on Python 2 for a STR_TYPE
+    # (unicode) value with non-ASCII chars; keep it as-is instead of
+    # falling back to the raw, unfiltered value.
+    if isinstance(value, STR_TYPE):
+        text = value
+    else:
+        text = str(value)
+    text = "".join(text.split())
+    return text
+
 class FormatConverter:
     """Convert config DB based schema to legacy minigraph based schema for backward capability.
 We will move to DB schema and remove this class when the config templates are modified.
@@ -321,6 +336,10 @@ def _get_jinja2_env(paths):
     # Base64 encoder/decoder
     env.filters['b64encode'] = b64encode
     env.filters['b64decode'] = b64decode
+
+    # Strip whitespace/control chars from ConfigDB-sourced values (see
+    # strip_control_chars docstring)
+    env.filters['strip_control_chars'] = strip_control_chars
 
     # Introduce a 'template_exists' function to check if a template exists
     # This is used to conditionally import a template since jinja2 import

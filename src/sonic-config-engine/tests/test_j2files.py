@@ -1168,6 +1168,334 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
+    def test_ntp_conf_injection_stripped(self):
+        # ConfigDB validation (YANG) can be bypassed by a direct Redis write.
+        # A NTP_SERVER key/association_type/resolve_as value containing a
+        # newline or other whitespace must not be able to create a second
+        # chrony directive or inject extra arguments onto the rendered line.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        payloads = (
+            ('LF', '\nnoselect 6.6.6.6'),
+            ('CR', '\rnoselect 6.6.6.6'),
+            ('CRLF', '\r\nnoselect 6.6.6.6'),
+            ('space', ' noselect 6.6.6.6'),
+            ('tab', '\tnoselect 6.6.6.6'),
+        )
+
+        for marker, injected_suffix in payloads:
+            additional_data = json.dumps({
+                'NTP_SERVER': {
+                    'evil-server.example' + injected_suffix: {
+                        'association_type': 'server' + injected_suffix,
+                        'admin_state': 'enabled',
+                        'resolve_as': '10.20.30.40' + injected_suffix,
+                    }
+                }
+            })
+            argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            self.assertNotIn('\r', output, '{} payload left a carriage return in the rendered output'.format(marker))
+            self.assertFalse(
+                any(line.strip().startswith('noselect') for line in output.splitlines()),
+                '{} payload created a standalone injected directive'.format(marker)
+            )
+            self.assertIn(
+                'servernoselect6.6.6.6 10.20.30.40noselect6.6.6.6\n',
+                output,
+                '{} payload was not collapsed onto a single server line'.format(marker)
+            )
+
+    def test_ntp_conf_injection_stripped_missing_resolve_as(self):
+        # Same as test_ntp_conf_injection_stripped, but exercises the
+        # server-key fallback path (config.resolve_as absent, so the
+        # NTP_SERVER key itself is used as resolve_as) instead of an
+        # explicit resolve_as value. Without this, a regression in the
+        # server-key sanitization path would go undetected.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                '10.20.30.40\nnoselect 6.6.6.6': {
+                    'association_type': 'server\nnoselect 6.6.6.6',
+                    'admin_state': 'enabled',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'missing-resolve_as fallback payload created a standalone injected directive'
+        )
+        self.assertIn(
+            'servernoselect6.6.6.6 10.20.30.40noselect6.6.6.6\n',
+            output,
+            'missing-resolve_as fallback payload was not collapsed onto a single server line'
+        )
+
+    def test_ntp_conf_injection_stripped_pool(self):
+        # Same as test_ntp_conf_injection_stripped, but exercises the
+        # association_type == 'pool' override (line ~53), where resolve_as
+        # is reassigned from the NTP_SERVER key rather than config.resolve_as.
+        # A malicious explicit resolve_as would be ignored by this branch,
+        # so this must inject through the server key instead.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'pool.example\nnoselect 6.6.6.6': {
+                    'association_type': 'pool',
+                    'admin_state': 'enabled',
+                    'resolve_as': 'this-value-must-be-ignored',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'pool-branch payload created a standalone injected directive'
+        )
+        self.assertIn(
+            'pool pool.examplenoselect6.6.6.6\n',
+            output,
+            'pool-branch payload was not collapsed onto a single pool line'
+        )
+        self.assertNotIn('this-value-must-be-ignored', output)
+
+    def test_ntp_conf_key_version_injection_stripped(self):
+        # config.key (leafref to a uint16 NTP_KEY id) and config.version
+        # (uint8, range 3..4) are only constrained by YANG under validated
+        # writes; a direct Redis bypass write can still make either an
+        # arbitrary string, so both must be stripped at the render sink.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP': {'global': {'authentication': 'enabled'}},
+            'NTP_SERVER': {
+                'server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': '1.2.3.4',
+                    'key': '5\nnoselect 6.6.6.6',
+                    'version': '4\nnoselect 7.7.7.7',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'key/version payload created a standalone injected directive'
+        )
+        self.assertIn(
+            'server 1.2.3.4 key 5noselect6.6.6.6 version 4noselect7.7.7.7\n',
+            output,
+            'key/version payload was not collapsed onto the server line'
+        )
+
+    def test_ntp_conf_clean_rendering_unaffected(self):
+        # Regression: legitimate values (no injected whitespace) render
+        # exactly as before the stripping was introduced.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_keys_injection_stripped(self):
+        # The decoded NTP_KEY value can contain arbitrary bytes (base64
+        # encoding does not constrain its payload), so a key value that
+        # decodes to a string containing a newline must not be able to
+        # inject a second chrony.keys directive.
+        import base64
+
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        payloads = (
+            ('LF', 'goodkey\nnoselect 8.8.8.8'),
+            ('CR', 'goodkey\rnoselect 8.8.8.8'),
+            ('CRLF', 'goodkey\r\nnoselect 8.8.8.8'),
+        )
+
+        for marker, malicious_secret in payloads:
+            encoded_value = base64.b64encode(malicious_secret.encode()).decode()
+            additional_data = json.dumps({
+                'NTP_KEY': {
+                    '7': {
+                        'type': 'md5',
+                        'value': encoded_value,
+                    }
+                }
+            })
+            argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            self.assertNotIn('\r', output, '{} payload left a carriage return in the rendered output'.format(marker))
+            self.assertFalse(
+                any(line.strip().startswith('noselect') for line in output.splitlines()),
+                '{} payload created a standalone injected directive'.format(marker)
+            )
+            self.assertTrue(
+                any(line.startswith('7 MD5 goodkeynoselect8.8.8.8') for line in output.splitlines()),
+                '{} payload was not collapsed onto the key line'.format(marker)
+            )
+
+    def test_ntp_keys_keyid_type_injection_stripped(self):
+        # keyid (uint16 key-id) and NTP_KEY[keyid].type (enum key-type) are
+        # only constrained by YANG under validated writes; a direct Redis
+        # bypass write can still make either an arbitrary string, so both
+        # must be stripped at the render sink, not just the decoded value.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_KEY': {
+                '5\nnoselect 8.8.8.8': {
+                    'type': 'md5\nnoselect 9.9.9.9',
+                    'value': 'Z29vZGtleQ==',  # base64("goodkey")
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'keyid/type payload created a standalone injected directive'
+        )
+        self.assertIn(
+            '5noselect8.8.8.8 MD5NOSELECT9.9.9.9 goodkey',
+            output,
+            'keyid/type payload was not collapsed onto the key line'
+        )
+
+    def test_ntp_keys_trusted_arr_injection_stripped(self):
+        # trusted_arr collects resolve_as from NTP_SERVER entries marked
+        # trusted; this is a separate code path from the association line
+        # sanitization in chrony.conf.j2 and must be exercised on its own,
+        # otherwise a regression here would not be caught by the
+        # chrony.conf-focused injection tests above.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'trusted-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': '10.20.30.40\nnoselect 6.6.6.6',
+                    'trusted': 'yes',
+                }
+            },
+            'NTP_KEY': {
+                '7': {
+                    'type': 'md5',
+                    'value': 'Z29vZGtleQ==',  # base64("goodkey")
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'trusted_arr payload created a standalone injected directive'
+        )
+        self.assertIn(
+            '7 MD5 goodkey 10.20.30.40noselect6.6.6.6',
+            output,
+            'trusted_arr payload was not collapsed into the trusted list on the key line'
+        )
+
+    def test_ntp_keys_trusted_arr_comma_injection_stripped(self):
+        # strip_control_chars only removes whitespace/control characters,
+        # but trusted_str joins trusted_arr entries with ',' -- so a
+        # resolve_as value containing a comma must also be stripped here,
+        # otherwise it is rendered as two separate trusted hosts, extending
+        # trust to an attacker-controlled host.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'trusted-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': 'legit.example,attacker.example',
+                    'trusted': 'yes',
+                }
+            },
+            'NTP_KEY': {
+                '7': {
+                    'type': 'md5',
+                    'value': 'Z29vZGtleQ==',  # base64("goodkey")
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertNotIn(
+            'legit.example,attacker.example',
+            output,
+            'comma payload was rendered as two separate trusted hosts'
+        )
+        self.assertIn(
+            '7 MD5 goodkey legit.exampleattacker.example',
+            output,
+            'comma payload was not collapsed into a single trusted-list token'
+        )
+
+    def test_ntp_keys_clean_rendering_unaffected(self):
+        # Regression: legitimate key values render exactly as before the
+        # stripping was introduced.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.keys")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_strip_control_chars_non_ascii_injection_stripped(self):
+        # A non-ASCII resolve_as payload with an embedded newline must
+        # still be stripped: on Python 2, str(value) raises
+        # UnicodeEncodeError for such a value, which strip_control_chars()
+        # used to catch and return unfiltered.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'evil-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': u'ntp-\u00e9\nnoselect 6.6.6.6',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'non-ASCII payload created a standalone injected directive'
+        )
+        self.assertIn(u'ntp-\u00e9noselect6.6.6.6', output)
+
     def test_backend_acl_template_render(self):
         acl_template = os.path.join(
             self.test_dir, '..', '..', '..', 'files', 'build_templates',

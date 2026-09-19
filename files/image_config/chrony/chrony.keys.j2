@@ -3,16 +3,30 @@
 # Controlled by chrony-config.sh
 ###############################################################################
 
-{# We can connect only to the servers we trust. Determine those servers -#}
+{# We can connect only to the servers we trust. Determine those servers.
+ConfigDB values are stripped of whitespace/control characters below (via
+strip_control_chars) so a value that bypasses YANG validation (e.g. a
+direct Redis write) cannot inject a second chrony.keys directive or extra
+arguments onto a line. trusted_str below joins entries with ',', so a
+comma is also stripped here -- otherwise a resolve_as value containing a
+comma would be rendered as two trusted hosts, extending trust to an
+attacker-controlled host. -#}
 {% set trusted_arr = [] -%}
 {% for server in NTP_SERVER if NTP_SERVER[server].trusted == 'yes' and
                                NTP_SERVER[server].resolve_as -%}
-    {% set _ = trusted_arr.append(NTP_SERVER[server].resolve_as) -%}
+    {% set _ = trusted_arr.append((NTP_SERVER[server].resolve_as | strip_control_chars) | replace(',', '')) -%}
 {% endfor -%}
 
 {# Define authentication keys inventory -#}
 {% set trusted_str = ' ' ~ trusted_arr|join(',') -%}
 {% for keyid in NTP_KEY if NTP_KEY[keyid].type and NTP_KEY[keyid].value %}
-{% set keyval = NTP_KEY[keyid].value | b64decode %}
-{{ keyid }} {{ NTP_KEY[keyid].type | upper }} {{ keyval }}{{trusted_str}}
+{# The decoded key value can contain arbitrary bytes (base64 does not
+constrain its payload), so it must be stripped here regardless of any
+constraint placed on the encoded string. keyid and type are also stripped:
+both are only numeric/enum-constrained under YANG validation (uint16
+key-id, enum key-type), which a direct Redis write bypasses entirely. -#}
+{% set keyval = (NTP_KEY[keyid].value | b64decode) | strip_control_chars %}
+{% set safe_keyid = keyid | strip_control_chars %}
+{% set safe_keytype = NTP_KEY[keyid].type | strip_control_chars %}
+{{ safe_keyid }} {{ safe_keytype | upper }} {{ keyval }}{{trusted_str}}
 {% endfor -%}

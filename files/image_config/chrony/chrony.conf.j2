@@ -22,14 +22,19 @@ confdir /etc/chrony/conf.d
     {# Server options -#}
     {% set soptions = '' -%}
 
-    {# Define defaults if not defined -#}
-    {% set association_type = config.association_type | d('server') -%}
-    {% set resolve_as = config.resolve_as | d(server) -%}
+    {# Define defaults if not defined. ConfigDB values are stripped of
+    whitespace/control characters below (via strip_control_chars) so a
+    value that bypasses YANG validation (e.g. a direct Redis write) cannot
+    inject a second chrony directive or extra arguments onto this line. -#}
+    {% set association_type = (config.association_type | d('server')) | strip_control_chars -%}
+    {% set resolve_as = (config.resolve_as | d(server)) | strip_control_chars -%}
 
-    {# Authentication key -#}
+    {# Authentication key. Stripped for the same reason as association_type/
+    resolve_as above: key is a leafref to a uint16 NTP_KEY id, but ConfigDB
+    doesn't enforce that at the storage layer for a bypass write. -#}
     {% if global.authentication == 'enabled' -%}
         {% if config.key -%}
-            {% set soptions = soptions ~ ' key ' ~ config.key -%}
+            {% set soptions = soptions ~ ' key ' ~ (config.key | strip_control_chars) -%}
         {% endif -%}
     {% endif -%}
 
@@ -38,16 +43,17 @@ confdir /etc/chrony/conf.d
         {% set soptions = soptions ~ ' iburst' -%}
     {% endif -%}
 
-    {# Protocol version -#}
+    {# Protocol version. Stripped for the same reason as key above: version
+    is uint8 (range 3..4) only under YANG validation. -#}
     {% if config.version -%}
-        {% set soptions = soptions ~ ' version ' ~ config.version -%}
+        {% set soptions = soptions ~ ' version ' ~ (config.version | strip_control_chars) -%}
     {% endif -%}
 
     {# Check if there are any pool configured. BTW it doesn't matter what was
     configured as "resolve_as" for pools. If they were configured with FQDN they
     must remain like that -#}
     {% if association_type == 'pool' -%}
-        {% set resolve_as = server -%}
+        {% set resolve_as = server | strip_control_chars -%}
     {% endif -%}
 
 {{ association_type }} {{ resolve_as }}{{ soptions }}
