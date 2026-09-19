@@ -6,7 +6,7 @@ from dhcp_utilities.common.dhcp_db_monitor import DhcpRelaydDbMonitor, DhcpServd
     DhcpServerTableIntfEnablementEventChecker, DhcpServerTableCfgChangeEventChecker, \
     DhcpPortTableEventChecker, DhcpRangeTableEventChecker, DhcpOptionTableEventChecker, \
     VlanTableEventChecker, VlanMemberTableEventChecker, VlanIntfTableEventChecker, DhcpServerFeatureStateChecker, \
-    MidPlaneTableEventChecker, DpusTableEventChecker
+    MidPlaneTableEventChecker, DpusTableEventChecker, DhcpV4RelayTableEventChecker
 from dhcp_utilities.common.utils import DhcpDbConnector
 from swsscommon import swsscommon
 from unittest.mock import patch, ANY, PropertyMock, MagicMock
@@ -397,3 +397,17 @@ def test_dpus_table_checker(mock_swsscommon_dbconnector_init, tested_data):
         expected_res = tested_data["exp_res"]
         check_res = db_event_checker.check_update_event({})
         assert expected_res == check_res
+
+
+@pytest.mark.parametrize("table_event", [
+    [("Vlan1000", "SET", (("dhcpv4_servers", "192.0.0.1"),))],
+    [("Vlan1000", "DEL", tuple())]
+])
+def test_dhcpv4_relay_table_checker(mock_swsscommon_dbconnector_init, table_event):
+    with patch.object(ConfigDbEventChecker, "enable"), \
+         patch.object(ConfigDbEventChecker, "subscriber_state_table",
+                      return_value=MockSubscribeTable(table_event), new_callable=PropertyMock), \
+         patch.object(sys, "exit"):
+        sel = swsscommon.Select()
+        db_event_checker = DhcpV4RelayTableEventChecker(sel, MagicMock())
+        assert db_event_checker.check_update_event({})
