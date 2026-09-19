@@ -1,8 +1,21 @@
 !
 ! template: bgpd/templates/general/instance.conf.j2
 !
+{# In BGP confederation, confed-external neighbors (ASN not equal to the local  #}
+{# member ASN and not in the confederation peers list, e.g. T3) are 'external'  #}
+{# to FRR and cannot share a peer-group with confed-internal neighbors. Send    #}
+{# them to PEER_EXTERNAL_* (same route-maps). Non-confed devices are unchanged. #}
+{% set confed_peers = [] %}
+{% if (CONFIG_DB__BGP_DEVICE_GLOBAL is defined) and ('CONFED' in CONFIG_DB__BGP_DEVICE_GLOBAL) and ('peers' in CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']) %}
+{%   set confed_peers = (CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']['peers'] | replace(';', ' ')).split() %}
+{% endif %}
+{% set is_confed_external = (CONFIG_DB__BGP_DEVICE_GLOBAL is defined) and ('CONFED' in CONFIG_DB__BGP_DEVICE_GLOBAL) and ('asn' in CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']) and ((bgp_session['asn'] | string) != (bgp_asn | string)) and ((bgp_session['asn'] | string) not in confed_peers) %}
 {% if is_interface_neighbor | default(neighbor_addr | is_interface) %}
+{% if is_confed_external %}
+  neighbor {{ neighbor_addr }} interface peer-group PEER_EXTERNAL_UNNUMBERED
+{% else %}
   neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
+{% endif %}
 {% endif %}
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
@@ -36,7 +49,11 @@
 {% endif %}
 {% elif neighbor_addr | ipv4 %}
   address-family ipv4
+{% if is_confed_external %}
+    neighbor {{ neighbor_addr }} peer-group PEER_EXTERNAL_V4
+{% else %}
     neighbor {{ neighbor_addr }} peer-group PEER_V4
+{% endif %}
 !
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client
@@ -50,7 +67,11 @@
   exit-address-family
 {% elif neighbor_addr | ipv6 %}
   address-family ipv6
+{% if is_confed_external %}
+    neighbor {{ neighbor_addr }} peer-group PEER_EXTERNAL_V6
+{% else %}
     neighbor {{ neighbor_addr }} peer-group PEER_V6
+{% endif %}
 !
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client

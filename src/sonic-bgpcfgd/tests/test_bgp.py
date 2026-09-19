@@ -181,6 +181,43 @@ def test_update_peer_invalid_admin_status(mocked_log_err):
         assert res, "Expect True return value for peer update"
         mocked_log_err.assert_called_with("Peer 'default|10.10.10.1': Can't update the peer. It has wrong attribute value attr['admin_status'] = 'invalid'")
 
+def test_peer_key_validation():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        assert m.parse_key("Vrf-RED_1|FC00:10::1") == ("Vrf-RED_1", "fc00:10::1")
+        assert m.parse_key("default|Ethernet0") == ("default", "Ethernet0")
+
+        for key in (None, "vrf name|10.10.10.1", "default|not;an-address",
+                    "default|Ethernet-Future0",
+                    "default|10.10.10.1" + chr(10)):
+            assert m.parse_key(key) is None
+
+        dynamic = constructor(constant, peer_type="dynamic")
+        assert dynamic.parse_key("default|BGPSLB-Passive_1") == (
+            "default", "BGPSLB-Passive_1")
+        assert dynamic.parse_key("vnet1|BGPWithVnet") == (
+            "vnet1", "BGPWithVnet")
+        long_vnet = "vnet-" + "x" * 250
+        assert dynamic.parse_key(long_vnet + "|BGPWithVnet") == (
+            long_vnet, "BGPWithVnet")
+        assert m.parse_key(long_vnet + "|10.10.10.1") is None
+
+        for key in ("default|", "default|peer group", "default|peer" + chr(10),
+                    long_vnet + "x|BGPPeer",
+                    "-vnet|BGPPeer", "vnet;show|BGPPeer",
+                    "vnet1|peer;show"):
+            assert dynamic.parse_key(key) is None
+
+def test_invalid_peer_keys_are_ignored():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        m.cfg_mgr.push.reset_mock()
+
+        assert m.set_handler("vrf name|10.10.10.1", {"admin_status": "up"})
+        m.del_handler("default|10.10.10.1" + chr(10))
+
+        m.cfg_mgr.push.assert_not_called()
+
 def test_add_peer():
     for constant in load_constant_files():
         m = constructor(constant)
@@ -346,7 +383,7 @@ def test_unnumbered_peer_manager_depends_on_port_table():
 
 def test_add_unnumbered_peer_from_port_table():
     for constant in load_constant_files():
-        for neighbor in ("Ethernet-Future0", "Ethernet-BP0", "Ethernet-Rec0", "Ethernet-IB0"):
+        for neighbor in ("EthernetFuture0", "Ethernet-BP0", "Ethernet-Rec0", "Ethernet-IB0"):
             m = constructor(constant)
             m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, neighbor, {})
             res = m.set_handler(neighbor, {'asn': '65200', 'name': 'TOR'})
@@ -407,29 +444,29 @@ def test_latest_pending_set_replaces_earlier_data():
         satisfy_non_port_dependencies(m)
 
         m.handler(
-            "Ethernet-Future0",
+            "EthernetFuture0",
             manager_mod.swsscommon.SET_COMMAND,
             {'asn': '65200', 'name': 'TOR'}
         )
         m.handler(
-            "Ethernet-Future0",
+            "EthernetFuture0",
             manager_mod.swsscommon.SET_COMMAND,
             {'asn': '65300', 'name': 'TOR'}
         )
 
         assert m.set_queue == [
-            ("Ethernet-Future0", {'asn': '65300', 'name': 'TOR'})
+            ("EthernetFuture0", {'asn': '65300', 'name': 'TOR'})
         ]
 
-        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
+        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "EthernetFuture0", {})
 
         assert m.set_queue == []
         assert any(
-            'neighbor Ethernet-Future0 remote-as 65300' in call.args[0]
+            'neighbor EthernetFuture0 remote-as 65300' in call.args[0]
             for call in m.cfg_mgr.push.call_args_list
         )
         assert not any(
-            'neighbor Ethernet-Future0 remote-as 65200' in call.args[0]
+            'neighbor EthernetFuture0 remote-as 65200' in call.args[0]
             for call in m.cfg_mgr.push.call_args_list
         )
 
@@ -438,10 +475,10 @@ def test_latest_pending_set_replaces_earlier_data():
 def test_defer_non_ip_neighbor_missing_from_interface_tables(mocked_log_debug):
     for constant in load_constant_files():
         m = constructor(constant)
-        res = m.set_handler("Ethernet-Future0", {'asn': '65200', 'name': 'TOR'})
+        res = m.set_handler("EthernetFuture0", {'asn': '65200', 'name': 'TOR'})
         assert not res, "Expect False return value"
         mocked_log_debug.assert_called_with(
-            "Peer 'Ethernet-Future0' is not yet present in the PORT, PORTCHANNEL, or interface tables"
+            "Peer 'EthernetFuture0' is not yet present in the PORT, PORTCHANNEL, or interface tables"
         )
 
 
@@ -453,7 +490,7 @@ def test_late_port_neighbor_converges_without_errors(mocked_log_warn, mocked_log
         satisfy_non_port_dependencies(m)
 
         m.handler(
-            "Ethernet-Future0",
+            "EthernetFuture0",
             manager_mod.swsscommon.SET_COMMAND,
             {'asn': '65200', 'name': 'TOR'}
         )
@@ -463,20 +500,20 @@ def test_late_port_neighbor_converges_without_errors(mocked_log_warn, mocked_log
             m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, port, {})
 
         assert len(m.set_queue) == 1
-        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
+        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "EthernetFuture0", {})
 
         assert m.set_queue == []
         mocked_log_err.assert_not_called()
         mocked_log_warn.assert_not_called()
         assert any(
-            'neighbor Ethernet-Future0 interface peer-group PEER_UNNUMBERED' in call.args[0]
+            'neighbor EthernetFuture0 interface peer-group PEER_UNNUMBERED' in call.args[0]
             for call in m.cfg_mgr.push.call_args_list
         )
 
 
 def test_delete_removes_pending_peer():
     for constant in load_constant_files():
-        for key in ("Ethernet-Future0", "Vrf-10|Ethernet-Future0"):
+        for key in ("EthernetFuture0", "Vrf-10|EthernetFuture0"):
             m = constructor(constant)
             satisfy_non_port_dependencies(m)
 
@@ -490,9 +527,9 @@ def test_delete_removes_pending_peer():
             m.handler(key, manager_mod.swsscommon.DEL_COMMAND, {})
             assert m.set_queue == []
 
-            m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
+            m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "EthernetFuture0", {})
             assert not any(
-                'neighbor Ethernet-Future0 interface peer-group' in call.args[0]
+                'neighbor EthernetFuture0 interface peer-group' in call.args[0]
                 for call in m.cfg_mgr.push.call_args_list
             )
 
