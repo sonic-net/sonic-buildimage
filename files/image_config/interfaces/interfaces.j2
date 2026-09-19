@@ -82,21 +82,26 @@ iface {{ port }} inet6 dhcp
 {% endif %}
 
 {% else %}
-{% if MGMT_INTERFACE %}
-{% for (name, prefix) in MGMT_INTERFACE|pfx_filter|unique(attribute=0) %}
-auto {{ name }}
+{% set mgmt_interfaces = MGMT_INTERFACE | mgmt_interface if MGMT_INTERFACE is defined else {} %}
+{% if mgmt_interfaces %}
+{% for (name, prefix) in mgmt_interfaces|unique(attribute=0) %}
+{% set mgmt_name = name | mgmt_interface_name %}
+auto {{ mgmt_name }}
 {% endfor %}
-{% for (name, prefix) in MGMT_INTERFACE|pfx_filter %}
-iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
-    address {{ prefix | ip }}
-    netmask {{ prefix | netmask if prefix | ipv4 else prefix | prefixlen }}
-    network {{ prefix | network }}
-{% if prefix | broadcast %}
-    broadcast {{ prefix | broadcast }}
+{% for (name, prefix) in mgmt_interfaces %}
+{% set mgmt_name = name | mgmt_interface_name %}
+{% set mgmt_prefix = prefix | ip_prefix %}
+{% set mgmt_gateway = mgmt_interfaces[(name, prefix)]['gwaddr'] | ip_address_for_prefix(mgmt_prefix) %}
+iface {{ mgmt_name }} {{ 'inet' if mgmt_prefix | ipv4 else 'inet6' }} static
+    address {{ mgmt_prefix | ip }}
+    netmask {{ mgmt_prefix | netmask if mgmt_prefix | ipv4 else mgmt_prefix | prefixlen }}
+    network {{ mgmt_prefix | network }}
+{% if mgmt_prefix | broadcast %}
+    broadcast {{ mgmt_prefix | broadcast }}
 {% endif %}
-{% if prefix | ipv6 %}
+{% if mgmt_prefix | ipv6 %}
     # IPv6 may be disabled on the mgmt port (inherited default); re-enable it so the address can be assigned
-    pre-up sysctl -w net.ipv6.conf.{{ name }}.disable_ipv6=0
+    pre-up sysctl -w net.ipv6.conf.{{ mgmt_name }}.disable_ipv6=0
 {% endif %}
 {%     set vrf_table = 'default' %}
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
@@ -106,56 +111,58 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
 {% set force_mgmt_route_priority = 32764 %}
     ########## management network policy routing rules
     # management port up rules
-    up ip {{ '-4' if prefix | ipv4 else '-6' }} route add {{ prefix | network }}/{{ prefix | prefixlen }} dev {{ name }} table {{ vrf_table }}
-    up ip {{ '-4' if prefix | ipv4 else '-6' }} route add default via {{ MGMT_INTERFACE[(name, prefix)]['gwaddr'] }} dev {{ name }} table {{ vrf_table }} metric 201
-    up ip {{ '-4' if prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority + 1 }} from {{ prefix | ip }}/{{ '32' if prefix | ipv4 else '128' }} table {{ vrf_table }}
-{% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
-    up ip {{ '-4' if prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
+    up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route add {{ mgmt_prefix | network }}/{{ mgmt_prefix | prefixlen }} dev {{ mgmt_name }} table {{ vrf_table }}
+    up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route add default via {{ mgmt_gateway }} dev {{ mgmt_name }} table {{ vrf_table }} metric 201
+    up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority + 1 }} from {{ mgmt_prefix | ip }}/{{ '32' if mgmt_prefix | ipv4 else '128' }} table {{ vrf_table }}
+{% for route in mgmt_interfaces[(name, prefix)].get('forced_mgmt_routes', []) %}
+{% set mgmt_route = route | ip_address_or_prefix %}
+    up ip {{ '-4' if mgmt_route | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ mgmt_route }} table {{ vrf_table }}
 {% endfor %}
 {% if SYSLOG_SERVER is defined and SYSLOG_SERVER %}
 {% for server in SYSLOG_SERVER %}
 {% set server_vrf = SYSLOG_SERVER[server].get('vrf', '') if SYSLOG_SERVER[server] is mapping else '' %}
 {% if server_vrf == '' or server_vrf == 'mgmt' %}
-{% if server | ipv4 and prefix | ipv4 %}
+{% if server | ipv4 and mgmt_prefix | ipv4 %}
     up ip rule add pref {{ force_mgmt_route_priority }} to {{ server }}/32 table {{ vrf_table }}
-{% elif server | ipv6 and prefix | ipv6 %}
+{% elif server | ipv6 and mgmt_prefix | ipv6 %}
     up ip -6 rule add pref {{ force_mgmt_route_priority }} to {{ server }}/128 table {{ vrf_table }}
 {% endif %}
 {% endif %}
 {% endfor %}
 {% else %}
-{% if prefix | ipv4 %}
+{% if mgmt_prefix | ipv4 %}
     up ip rule add pref {{ force_mgmt_route_priority }} to 10.20.6.16/32 table {{ vrf_table }}
 {% endif %}
 {% endif %}
-{% if prefix | ipv6 and vrf_table == 'default'%}
+{% if mgmt_prefix | ipv6 and vrf_table == 'default'%}
     # IPV6 default table not add to lookup by default, management server need this to access IPV6 address when BGP shutdown
     up ip -6 rule add pref {{ force_mgmt_route_priority + 3 }} lookup {{ vrf_table }}
 {% endif %}
     # management port down rules
-    pre-down ip {{ '-4' if prefix | ipv4 else '-6' }} route delete default via {{ MGMT_INTERFACE[(name, prefix)]['gwaddr'] }} dev {{ name }} table {{ vrf_table }}
-    pre-down ip {{ '-4' if prefix | ipv4 else '-6' }} route delete {{ prefix | network }}/{{ prefix | prefixlen }} dev {{ name }} table {{ vrf_table }}
-    pre-down ip {{ '-4' if prefix | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority + 1 }} from {{ prefix | ip }}/{{ '32' if prefix | ipv4 else '128' }} table {{ vrf_table }}
-{% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
-    pre-down ip {{ '-4' if route | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
+    pre-down ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route delete default via {{ mgmt_gateway }} dev {{ mgmt_name }} table {{ vrf_table }}
+    pre-down ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route delete {{ mgmt_prefix | network }}/{{ mgmt_prefix | prefixlen }} dev {{ mgmt_name }} table {{ vrf_table }}
+    pre-down ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority + 1 }} from {{ mgmt_prefix | ip }}/{{ '32' if mgmt_prefix | ipv4 else '128' }} table {{ vrf_table }}
+{% for route in mgmt_interfaces[(name, prefix)].get('forced_mgmt_routes', []) %}
+{% set mgmt_route = route | ip_address_or_prefix %}
+    pre-down ip {{ '-4' if mgmt_route | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority }} to {{ mgmt_route }} table {{ vrf_table }}
 {% endfor %}
 {% if SYSLOG_SERVER is defined and SYSLOG_SERVER %}
 {% for server in SYSLOG_SERVER %}
 {% set server_vrf = SYSLOG_SERVER[server].get('vrf', '') if SYSLOG_SERVER[server] is mapping else '' %}
 {% if server_vrf == '' or server_vrf == 'mgmt' %}
-{% if server | ipv4 and prefix | ipv4 %}
+{% if server | ipv4 and mgmt_prefix | ipv4 %}
     down ip rule delete pref {{ force_mgmt_route_priority }} to {{ server }}/32 table {{ vrf_table }}
-{% elif server | ipv6 and prefix | ipv6 %}
+{% elif server | ipv6 and mgmt_prefix | ipv6 %}
     down ip -6 rule delete pref {{ force_mgmt_route_priority }} to {{ server }}/128 table {{ vrf_table }}
 {% endif %}
 {% endif %}
 {% endfor %}
 {% else %}
-{% if prefix | ipv4 %}
+{% if mgmt_prefix | ipv4 %}
     down ip rule delete pref {{ force_mgmt_route_priority }} to 10.20.6.16/32 table {{ vrf_table }}
 {% endif %}
 {% endif %}
-{% if prefix | ipv6 and vrf_table == 'default'%}
+{% if mgmt_prefix | ipv6 and vrf_table == 'default'%}
     pre-down ip -6 rule delete pref {{ force_mgmt_route_priority + 3 }} lookup {{ vrf_table }}
 {% endif %}
 {# TODO: COPP policy type rules #}
