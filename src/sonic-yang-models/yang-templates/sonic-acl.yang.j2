@@ -96,6 +96,11 @@ module sonic-acl {
 					type yang:mac-address;
 				}
 
+				leaf TC_ACTION {
+					description "Traffic class (CoS) to set on matching packets";
+					type uint8;
+				}
+
 				leaf IP_TYPE {
 					description "IP type to match (IPv4, IPv6, ARP, etc.)";
 					type stypes:ip_type;
