@@ -67,11 +67,11 @@ ply==3.11
 pooch==1.8.2
 prompt-toolkit==3.0.36
 prompt_toolkit==3.0.53
-protobuf==7.36.1
+protobuf==7.36.2
 psutil==7.2.2
 ptyprocess==0.7.0
 pure-eval==0.0.0
-pure_eval==0.2.3
+pure_eval==0.2.4
 pyaml==26.7.0
 pybrctl==0.1.4
 pycparser==3.0
@@ -104,7 +104,7 @@ stack-data==0.6.3
 supervisor==4.3.0
 sympy==1.13.3
 thrift==0.24.0
-tornado==6.5.8
+tornado==6.5.10
 tqdm==4.67.1
 traitlets==5.16.1
 typeguard==4.4.2
@@ -281,7 +281,7 @@ ufolib2==0.17.1
 unicodedata2==15.1.0
 unittest-xml-reporting==4.0.0
 urllib3==2.3.0
-wcwidth==0.8.3
+wcwidth==0.8.4
 webencodings==0.5.1
 werkzeug==3.1.8
 wheel==0.46.1
