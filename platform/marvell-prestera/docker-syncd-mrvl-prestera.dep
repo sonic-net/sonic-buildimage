@@ -1,5 +1,6 @@
 DPATH       := $($(DOCKER_SYNCD_BASE)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.mk $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.dep $(PLATFORM_PATH)/sai.mk
+DEP_FILES   += $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
 
