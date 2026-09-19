@@ -1375,7 +1375,13 @@
         "LOOPBACK_INTERFACE": {
             "Loopback0": {
                "nat_zone": "2",
-               "admin_status": "up"
+               "admin_status": "up",
+               "description": "Router ID loopback"
+            },
+            "Loopback1": {
+                "admin_status": "up",
+                "description": "Overlay service loopback",
+                "vnet_name": "vnet1"
             },
             "Loopback0|2a04:5555:40:4::4e9/128": {
                 "scope": "global",
