@@ -1,7 +1,7 @@
 {
     "GLOBAL_MEDIA_SETTINGS": {
         "1-64": {
-            "NVIDIA-980-9IAU(9-00XM0H|I-00XM0[REMB])": {
+            "NVIDIA-980-9IAU(9-00XM0[HM]|I-00XM0[REMB])": {
                 "speed:200GAUI-1": {
                     "tx_precoding": {
                         "lane0": "0x00000001",
