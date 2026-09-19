@@ -5,7 +5,6 @@ import re
 import ipaddress
 
 from .log import log_debug, log_info, log_err, log_warn
-from .template import TemplateFabric
 from .manager import Manager
 
 
@@ -41,7 +40,12 @@ class BGPAllowListMgr(Manager):
             db,
             table,
         )
-        self.key_re = re.compile(r"^DEPLOYMENT_ID\|\d+\|\S+$|^DEPLOYMENT_ID\|\d+$|^DEPLOYMENT_ID\|\d+\|\S+\|NEIGHBOR_TYPE\|\S+$|^DEPLOYMENT_ID\|\d+\|NEIGHBOR_TYPE\|\S+")
+        key_value = r"[A-Za-z0-9_.:-]+"
+        self.key_re = re.compile(
+            r"DEPLOYMENT_ID\|(?P<deployment_id>[0-9]{1,10})"
+            r"(?:\|(?:%s|NEIGHBOR_TYPE\|%s(?:\|%s)?))?" %
+            (key_value, key_value, key_value)
+        )
         self.enabled = self.__get_enabled()
         self.prefix_match_tag = self.__get_routemap_tag()
         self.__load_constant_lists()
@@ -87,20 +91,21 @@ class BGPAllowListMgr(Manager):
         if data is None:
             log_err("BGPAllowListMgr::Received BGP ALLOWED 'SET' message without data")
             return False
-        if not self.key_re.match(key):
-            log_err("BGPAllowListMgr::Received BGP ALLOWED 'SET' message with invalid key: '%s'" % key)
+        key_match = self.key_re.fullmatch(key)
+        if not key_match or int(key_match.group("deployment_id")) > 0xffffffff:
+            log_err("BGPAllowListMgr::Received BGP ALLOWED 'SET' message with invalid key: %r" % key)
             return False
         prefixes_v4 = []
         prefixes_v6 = []
         if "prefixes_v4" in data:
             prefixes_v4 = str(data["prefixes_v4"]).split(",")
-            if not all(TemplateFabric.is_ipv4(re.split('ge|le', prefix)[0]) for prefix in prefixes_v4):
+            if not all(self.__parse_prefix(prefix, 4) for prefix in prefixes_v4):
                 arguments = "prefixes_v4", str(data["prefixes_v4"])
                 log_err("BGPAllowListMgr::Received BGP ALLOWED 'SET' message with invalid input[%s]:'%s'" % arguments)
                 return False
         if "prefixes_v6" in data:
             prefixes_v6 = str(data["prefixes_v6"]).split(",")
-            if not all(TemplateFabric.is_ipv6(re.split('ge|le', prefix)[0]) for prefix in prefixes_v6):
+            if not all(self.__parse_prefix(prefix, 6) for prefix in prefixes_v6):
                 arguments = "prefixes_v6", str(data["prefixes_v6"])
                 log_err("BGPAllowListMgr::Received BGP ALLOWED 'SET' message with invalid input[%s]:'%s'" % arguments)
                 return False
@@ -141,10 +146,36 @@ class BGPAllowListMgr(Manager):
         :param key: a key of "DEL" message
         :return: True if parameters are valid, False if parameters are invalid
         """
-        if not self.key_re.match(key):
-            log_err("BGPAllowListMgr::Received BGP ALLOWED 'DEL' message with invalid key: '$s'" % key)
+        key_match = self.key_re.fullmatch(key)
+        if not key_match or int(key_match.group("deployment_id")) > 0xffffffff:
+            log_err("BGPAllowListMgr::Received BGP ALLOWED 'DEL' message with invalid key: %r" % key)
             return False
         return True
+
+    @staticmethod
+    def __parse_prefix(prefix, version):
+        match = re.fullmatch(
+            r"(?P<prefix>\S+)(?: (?P<operator>le|ge) (?P<length>[0-9]+))?",
+            prefix
+        )
+        if not match or "/" not in match.group("prefix"):
+            return None
+
+        try:
+            network = ipaddress.ip_network(match.group("prefix"), strict=False)
+        except ValueError:
+            return None
+
+        if network.version != version:
+            return None
+
+        length = match.group("length")
+        if length is not None:
+            length = int(length)
+            if not network.prefixlen <= length <= network.max_prefixlen:
+                return None
+
+        return match.group("prefix"), match.group("operator"), length, network.prefixlen
 
     def __update_policy(self, deployment_id, community_value, prefixes_v4, prefixes_v6, default_action, neighbor_type):
         """
@@ -743,10 +774,14 @@ class BGPAllowListMgr(Manager):
         res = []
         prefix_mask_default = 32 if af == self.V4 else 128
         for prefix in allow_list:
-            if 'le' in prefix or 'ge' in prefix:
-                res.append("permit %s" % prefix)
+            parsed = self.__parse_prefix(prefix, 4 if af == self.V4 else 6)
+            if parsed is None:
+                log_err("BGPAllowListMgr::Ignoring invalid prefix-list entry: %r" % prefix)
+                continue
+            prefix, operator, length, prefix_mask = parsed
+            if operator:
+                res.append("permit %s %s %d" % (prefix, operator, length))
             else:
-                prefix_mask = int(prefix.split("/")[1])
                 if prefix_mask == prefix_mask_default:
                     res.append("permit %s" % prefix)
                 else:
