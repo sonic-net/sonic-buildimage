@@ -18,3 +18,4 @@
 0018-Replace-FD_SET-select-with-poll-to-avoid-FD_SETSIZE-abort.patch
 0019-fix-event-fd-init-and-free.patch
 0020-Extend-LACP-fallback-support-to-multiple-ports.patch
+0021-Add-fallback-static-LAG-support.patch
