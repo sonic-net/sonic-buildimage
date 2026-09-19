@@ -22,6 +22,10 @@ module sonic-portchannel {
         prefix vrf;
     }
 
+    import sonic-port {
+        prefix prt;
+    }
+
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
     revision 2025-06-24 {
@@ -42,6 +46,13 @@ module sonic-portchannel {
 
     revision 2019-07-01 {
         description "First Revision";
+    }
+
+    typedef lag-type {
+        type enumeration {
+            enum LACP;
+            enum STATIC;
+        }
     }
 
     container sonic-portchannel {
@@ -135,6 +146,16 @@ module sonic-portchannel {
                          deployments that require peer devices to advertise a shared LACP system ID.
                          When unset, the device's default system MAC is used.";
                     type yang:mac-address;
+                }
+
+                leaf lag_type {
+                    type lag-type;
+                    description "Describes how the LAG is defined and managed; either statically or with LACP";
+                }
+
+                leaf-list members {
+                    type string;
+                    description "List of portchannel's members";
                 }
 
             } /* end of list PORTCHANNEL_LIST */
@@ -251,6 +272,67 @@ module sonic-portchannel {
             } /* end of list PORTCHANNEL_INTERFACE_IPPREFIX_LIST */
 
         } /* end of container PORTCHANNEL_INTERFACE */
+
+        container LAG_TABLE {
+            config false;
+
+            list LAG_TABLE_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                }
+
+                leaf admin_status {
+                    type stypes:admin_status;
+                }
+
+                leaf mtu {
+                    type uint32 {
+                        range "1312..9216" {
+                            error-message "Invalid MTU value";
+                            error-app-tag mtu-invalid;
+                        }
+                    }
+                }
+
+                leaf active {
+                    type boolean;
+                }
+
+                leaf oper_status {
+                    type stypes:oper-status;
+                }
+
+                leaf speed {
+                    type uint64;
+                }
+            }
+        } /* end of container LAG_TABLE */
+
+        container LAG_MEMBER_TABLE {
+            config false;
+            list LAG_MEMBER_TABLE_LIST {
+                key "name interface";
+
+                leaf name {
+                    type leafref {
+                        path "../../../LAG_TABLE/LAG_TABLE_LIST/name";
+                    }
+                }
+
+                leaf interface {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                }
+                leaf status {
+                    type string;
+                    description
+                        "status of the portchannel member";
+                }
+            }
+        } /* end of container LAG_MEMBER_TABLE */
 
     } /* end of container sonic-portchannel */
 
