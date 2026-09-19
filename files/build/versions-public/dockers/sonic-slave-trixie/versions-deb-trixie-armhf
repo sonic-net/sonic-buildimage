@@ -1,3 +1,5 @@
+base-files==13.8+deb13u7
+bash==5.2.37-2+b10
 binutils-arm-linux-gnueabihf==2.44-3
 cpp-14-arm-linux-gnueabihf==14.2.0-19
 cpp-arm-linux-gnueabihf==4:14.2.0-1
@@ -27,3 +29,4 @@ node-xtend==4.0.2-3
 nodejs==20.19.2+dfsg-1+deb13u2
 nodejs-doc==20.19.2+dfsg-1+deb13u2
 python3-zopfli==0.2.3.post1-1
+tzdata==2026c-0+deb13u1

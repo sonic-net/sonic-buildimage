@@ -38,15 +38,15 @@ libapparmor1==4.1.0-1
 libasan8==14.2.0-19
 libbabeltrace1==1.5.11-4+b2
 libbinutils==2.44-3
-libc-dev-bin==2.41-12+deb13u3
-libc6-dev==2.41-12+deb13u3
+libc-dev-bin==2.41-12+deb13u4
+libc6-dev==2.41-12+deb13u4
 libcairo2==1.18.4-1+b1
 libcbor0.10==0.10.2-2
 libcc1-0==14.2.0-19
 libcrypt-dev==1:4.4.38-1
 libctf-nobfd0==2.44-3
 libctf0==2.44-3
-libcurl3t64-gnutls==8.14.1-2+deb13u4
+libcurl3t64-gnutls==8.14.1-2+deb13u5
 libdatrie1==0.2.13-3+b1
 libdbi1t64==0.9.0-6.1+b1
 libdebuginfod-common==0.192-4
@@ -62,7 +62,7 @@ libfreetype6==2.13.3+dfsg-1+deb13u1
 libfribidi0==1.0.16-1
 libgcc-14-dev==14.2.0-19
 libgcrypt20==1.11.0-7+deb13u1
-libglib2.0-0t64==2.84.4-3~deb13u3
+libglib2.0-0t64==2.84.4-3~deb13u5
 libgomp1==14.2.0-19
 libgpg-error0==1.51-4
 libgpm2==1.20.7-11+b2
@@ -92,7 +92,7 @@ libpci3==1:3.13.0-2
 libpixman-1-0==0.44.0-3
 libpng16-16t64==1.6.48-1+deb13u5
 libpython3-dev==3.13.5-1
-libpython3.13-dev==3.13.5-2+deb13u4
+libpython3.13-dev==3.13.5-2+deb13u5
 libquadmath0==14.2.0-19
 librrd-dev==1.7.2-4.2+b5
 librrd8t64==1.7.2-4.2+b5
@@ -139,7 +139,7 @@ python3-bottle==0.13.2-1.1
 python3-netifaces==0.11.0-2+b6
 python3-smbus==4.4-2
 python3-swsscommon-dbgsym==1.0.0
-python3.13-dev==3.13.5-2+deb13u4
+python3.13-dev==3.13.5-2+deb13u5
 rpcsvc-proto==1.4.3-1
 rrdtool==1.7.2-4.2+b5
 sensible-utils==0.0.25

@@ -1,5 +1,5 @@
-libc-dev-bin==2.41-12+deb13u3
-libc6-dev==2.41-12+deb13u3
+libc-dev-bin==2.41-12+deb13u4
+libc6-dev==2.41-12+deb13u4
 libcrypt-dev==1:4.4.38-1
 libgcrypt20==1.11.0-7+deb13u1
 libgpg-error0==1.51-4
