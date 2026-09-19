@@ -2059,9 +2059,12 @@
             "policy": {
                 "system_leak_policy": "enabled",
                 "system_critical_leak_action": "power_off",
+                "system_major_leak_action": "syslog_only",
                 "system_minor_leak_action": "syslog_only",
+                "system_major_leak_num_min_sensors": "2",
                 "rack_mgr_leak_policy": "enabled",
                 "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_major_alert_action": "syslog_only",
                 "rack_mgr_minor_alert_action": "syslog_only"
             }
         },
