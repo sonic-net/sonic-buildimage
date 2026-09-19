@@ -7,6 +7,11 @@ module sonic-leak-control {
 
     description "YANG model for BMC liquid-cooling leak control policy and leak sensor profiles";
 
+    revision 2026-09-19 {
+        description "Add MAJOR leak support: system/rack_mgr major leak actions and
+                     the system_major_leak_num_min_sensors (MIN-N) threshold.";
+    }
+
     revision 2026-04-16 {
         description "Initial version";
     }
@@ -58,10 +63,26 @@ module sonic-leak-control {
                     description "Action taken when a critical system leak is detected";
                 }
 
+                leaf system_major_leak_action {
+                    type leak-action;
+                    default syslog_only;
+                    description "Action taken when a major system leak is detected";
+                }
+
                 leaf system_minor_leak_action {
                     type leak-action;
                     default syslog_only;
                     description "Action taken when a minor system leak is detected";
+                }
+
+                leaf system_major_leak_num_min_sensors {
+                    type uint32 {
+                        range "2..max";
+                    }
+                    description "MIN-N: number of concurrent minor leaks at or above which the
+                                 system is classified as a major leak. Overrides the platform default
+                                 (LiquidCoolingBase.get_major_leak_num_min_sensors()). Must be >= 2;
+                                 when unset, the platform-provided value is used.";
                 }
 
                 leaf rack_mgr_leak_policy {
@@ -74,6 +95,12 @@ module sonic-leak-control {
                     type leak-action;
                     default syslog_only;
                     description "Action taken when a critical rack manager alert is received";
+                }
+
+                leaf rack_mgr_major_alert_action {
+                    type leak-action;
+                    default syslog_only;
+                    description "Action taken when a major rack manager alert is received";
                 }
 
                 leaf rack_mgr_minor_alert_action {
