@@ -34,6 +34,14 @@
         "eStrKey" : "Pattern",
         "eStr": ["false|true|False|True"]
     },
+    "PORTCHANNEL_LEARN_MODE_VALID": {
+        "desc": "Configure a valid learn_mode in PORTCHANNEL table."
+    },
+    "PORTCHANNEL_LEARN_MODE_INVALID": {
+        "desc": "INCORRECT LEARN_MODE IN PORTCHANNEL TABLE.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["learn_mode"]
+    },
     "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
         "desc": "Configure IP address on PORTCHANNEL_INTERFACE table."
     },

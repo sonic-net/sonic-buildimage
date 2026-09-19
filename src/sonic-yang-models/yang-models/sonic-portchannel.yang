@@ -24,6 +24,10 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+    revision 2026-07-17 {
+        description "Add learn_mode leaf to PORTCHANNEL_LIST";
+    }
+
     revision 2025-06-24 {
         description "Add LACP System MAC address";
     }
@@ -135,6 +139,34 @@ module sonic-portchannel {
                          deployments that require peer devices to advertise a shared LACP system ID.
                          When unset, the device's default system MAC is used.";
                     type yang:mac-address;
+                }
+
+                leaf learn_mode {
+                    description
+                        "MAC address learning mode for the PortChannel bridge port. teammgr reads
+                         this value from CONFIG_DB and portsorch applies it as the SAI bridge-port
+                         FDB learning mode. When unset, hardware learning is used.";
+                    type enumeration {
+                        enum drop {
+                            description "Drop packets with an unknown source MAC and do not learn.";
+                        }
+                        enum disable {
+                            description "Do not learn new source MACs. Forwarding is unaffected.";
+                        }
+                        enum hardware {
+                            description "Learn source MACs in hardware. This is the default.";
+                        }
+                        enum cpu_trap {
+                            description "Trap packets with an unknown source MAC to the CPU and do not learn in hardware.";
+                        }
+                        enum cpu_log {
+                            description "Copy packets with an unknown source MAC to the CPU for logging and do not learn in hardware.";
+                        }
+                        enum notification {
+                            description "Raise an FDB event for an unknown source MAC and do not learn in hardware.";
+                        }
+                    }
+                    default hardware;
                 }
 
             } /* end of list PORTCHANNEL_LIST */

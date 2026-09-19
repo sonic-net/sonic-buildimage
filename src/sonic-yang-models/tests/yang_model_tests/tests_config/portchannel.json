@@ -171,6 +171,34 @@
             }
         }
     },
+    "PORTCHANNEL_LEARN_MODE_VALID": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "learn_mode": "disable"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_LEARN_MODE_INVALID": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "learn_mode": "invalid"
+                    }
+                ]
+            }
+        }
+    },
     "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
         "sonic-portchannel:sonic-portchannel": {
             "sonic-portchannel:PORTCHANNEL": {
