@@ -89,7 +89,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
             for file in self.yangFiles:
                 m = self._load_schema_module(file)
                 if m is not None:
-                    self.sysLog(msg="module: {} is loaded successfully".format(m.name()))
+                    self.sysLog(syslog.LOG_DEBUG, msg="module: {} is loaded successfully".format(m.name()))
                 else:
                     raise(Exception("Could not load module {}".format(file)))
 
@@ -333,7 +333,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         # get keys from YANG model list itself
         listKeys = " ".join(k.name() for k in list_snode.keys())
-        self.sysLog(msg="xlateList keyList:{}".format(listKeys))
+        self.sysLog(syslog.LOG_DEBUG, msg="xlateList keyList:{}".format(listKeys))
         primaryKeys = list(config.keys())
         for pkey in primaryKeys:
             try:
@@ -382,7 +382,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
             # Empty container - return
             return
 
-        self.sysLog(msg="xlateProcessListOfContainer: {}".format(ccName))
+        self.sysLog(syslog.LOG_DEBUG, msg="xlateProcessListOfContainer: {}".format(ccName))
         self.elementPath.append(ccName)
         self._xlateContainer(ccontainer, yang, configC[ccName], table)
         self.elementPath.pop()
@@ -403,7 +403,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
         # Type 1 lists need special handling because of inner yang list and
         # config db format.
         if list_snode.name() in Type_1_list_maps_model:
-            self.sysLog(msg="_xlateType1MapList: {}".format(list_snode.name()))
+            self.sysLog(syslog.LOG_DEBUG, msg="_xlateType1MapList: {}".format(list_snode.name()))
             self._xlateType1MapList(list_snode, yang, config, table, exceptionList)
             return
 
@@ -414,7 +414,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
         leafDict = self._createLeafDict(list_snode, table)
         # get keys from YANG model list itself
         listKeys = " ".join(k.name() for k in list_snode.keys())
-        self.sysLog(msg="xlateList keyList:{}".format(listKeys))
+        self.sysLog(syslog.LOG_DEBUG, msg="xlateList keyList:{}".format(listKeys))
         primaryKeys = list(config.keys())
         for pkey in primaryKeys:
             try:
@@ -464,7 +464,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
     """
     def _xlateListInContainer(self, modelList, yang, configC, table, exceptionList):
         yang[modelList.name()] = list()
-        self.sysLog(msg="xlateProcessListOfContainer: {}".format(modelList.name()))
+        self.sysLog(syslog.LOG_DEBUG, msg="xlateProcessListOfContainer: {}".format(modelList.name()))
         self._xlateList(modelList, yang[modelList.name()], configC, table, exceptionList)
         # clean empty lists
         if len(yang[modelList.name()]) == 0:
@@ -488,7 +488,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
             # Empty container, clean config and return
             del configC[ccName]
             return
-        self.sysLog(msg="xlateProcessListOfContainer: {}".format(ccName))
+        self.sysLog(syslog.LOG_DEBUG, msg="xlateProcessListOfContainer: {}".format(ccName))
         self.elementPath.append(ccName)
         self._xlateContainer(ccontainer, yang[ccName], \
         configC[ccName], table)
@@ -569,7 +569,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
             # Add new top level container for first table in this container
             yangJ[key] = dict() if yangJ.get(key) is None else yangJ[key]
             yangJ[key][subkey] = dict()
-            self.sysLog(msg="xlateConfigDBtoYang {}:{}".format(key, subkey))
+            self.sysLog(syslog.LOG_DEBUG, msg="xlateConfigDBtoYang {}:{}".format(key, subkey))
             self.elementPath.append(table)
             self._xlateContainer(cmap['container'], yangJ[key][subkey], \
                                 jIn[table], table)
@@ -772,7 +772,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
     def _revXlateListInContainer(self, modelList, yang, config, table):
         # Pass matching list from Yang Json if exist
         if yang.get(modelList.name()):
-            self.sysLog(msg="revXlateListInContainer {}".format(modelList.name()))
+            self.sysLog(syslog.LOG_DEBUG, msg="revXlateListInContainer {}".format(modelList.name()))
             self._revXlateList(modelList, yang[modelList.name()], config, table)
         return
 
@@ -783,7 +783,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
         # Pass matching list from Yang Json if exist
         if yang.get(modelContainer.name()):
             config[modelContainer.name()] = dict()
-            self.sysLog(msg="revXlateContainerInContainer {}".format(modelContainer.name()))
+            self.sysLog(syslog.LOG_DEBUG, msg="revXlateContainerInContainer {}".format(modelContainer.name()))
             self.elementPath.append(modelContainer.name())
             self._revXlateContainer(modelContainer, yang[modelContainer.name()], \
                 config[modelContainer.name()], table)
@@ -834,7 +834,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 table = names[0] if len(names) == 1 else names[1]
                 cmap = self.confDbYangMap[table]
                 cDbJson[table] = dict()
-                self.sysLog(msg="revXlateYangtoConfigDB {}".format(table))
+                self.sysLog(syslog.LOG_DEBUG, msg="revXlateYangtoConfigDB {}".format(table))
                 self.elementPath.append(table)
                 self._revXlateContainer(cmap['container'], yangJ[module_top][container], \
                     cDbJson[table], table)
@@ -964,7 +964,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
           # xlated result will be in self.xlateJson
           self._xlateConfigDB(xlateFile=xlateFile)
           if not quiet:
-              self.sysLog(msg="Try to load Data in the tree")
+              self.sysLog(syslog.LOG_DEBUG, msg="Try to load Data in the tree")
           self.root = self.ctx.parse_data_mem(dumps(self.xlateJson), "json", no_state=True, strict=True, json_string_datatypes=True)
 
        except Exception as e:
