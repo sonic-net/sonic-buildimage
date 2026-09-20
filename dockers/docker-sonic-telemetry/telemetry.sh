@@ -140,6 +140,12 @@ fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
+# Fail-closed default: if user_auth is unset in CONFIG_DB, force cert mode.
+# Without this, --client_auth is omitted and authentication ends up disabled
+# entirely.
+if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
+    USER_AUTH="cert"
+fi
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
