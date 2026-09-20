@@ -1896,6 +1896,7 @@ class BGPConfigDaemon:
                       ('gr_restart_time',                               '{no:no-prefix}bgp graceful-restart restart-time {}'),
                       ('gr_stale_routes_time',                          '{no:no-prefix}bgp graceful-restart stalepath-time {}'),
                       ('gr_preserve_fw_state',                          '{no:no-prefix}bgp graceful-restart preserve-fw-state', ['true', 'false']),
+                      ('gr_disable_end_of_rib_marker',                  '{no:no-prefix}bgp graceful-restart disable-eor', ['true', 'false']),
                       ('log_nbr_state_changes',                         '{no:no-prefix}bgp log-neighbor-changes', ['true', 'false']),
                       ('rr_cluster_id',                                 '{no:no-prefix}bgp cluster-id {}'),
                       ('rr_allow_out_policy',                           '{no:no-prefix}bgp route-reflector allow-outbound-policy', ['true', 'false']),
@@ -3355,10 +3356,10 @@ class BGPConfigDaemon:
                         continue
                     cmd_prefix = ['configure terminal', 'router bgp {} vrf {}'.format(local_asn, vrf)]
                     if 'srv6_locator' in data:
-                        cmd = vtysh_cmd('configure terminal')
-                        cmd += " -c 'router bgp {} vrf {}' ".format(local_asn, vrf)
-                        cmd += " -c 'segment-routing srv6' "
-                        cmd += " -c 'locator {}' ".format(data['srv6_locator'].data)
+                        cmd = vtysh_cmd('configure terminal',
+                                       'router bgp {} vrf {}'.format(local_asn, vrf),
+                                       'segment-routing srv6',
+                                       'locator {}'.format(data['srv6_locator'].data))
                         if not self.__run_command(table, cmd):
                             syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
                             continue
@@ -3370,22 +3371,22 @@ class BGPConfigDaemon:
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
             elif table == 'SRV6_MY_LOCATORS':
-                if key is None:
-                    syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_LOCATORS table')
-                    continue
                 if not del_table:
-                    key = prefix
+                    locator_name = prefix
                     prefix = data['prefix']
-                    cmd = vtysh_cmd('configure terminal', 'segment-routing', 'srv6', 'locators')
-                    cmd += " -c 'locator {}' ".format(key)
-                    cmd += " -c 'prefix {} block-len {} node-len {} func-bits {}' ".format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)
+                    cmd = vtysh_cmd('configure terminal',
+                                    'segment-routing', 'srv6', 'locators',
+                                    'locator {}'.format(locator_name),
+                                    'prefix {} block-len {} node-len {} func-bits {}'.format(
+                                        prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data))
                     if not self.__run_command(table, cmd):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATORS config command')
                         continue
             elif table == 'SRV6_MY_SOURCE':
                 source = data['source-address']
-                cmd = vtysh_cmd('configure terminal', 'segment-routing', 'srv6', 'encapsulation')
-                cmd += " -c 'source-address {}' ".format(source.data)
+                cmd = vtysh_cmd('configure terminal',
+                                'segment-routing', 'srv6', 'encapsulation',
+                                'source-address {}'.format(source.data))
                 if not self.__run_command(table, cmd):
                     syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 encap config command {}'.format(cmd))
                     continue
@@ -3394,13 +3395,14 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_SIDS table')
                     continue
                 if not del_table:
-                    cmd = vtysh_cmd('configure terminal', 'segment-routing', 'srv6')
-                    cmd +="-c 'static-sids' "
+                    cmd = vtysh_cmd('configure terminal', 'segment-routing', 'srv6', 'static-sids')
                     uDTAction = ["uDT46", "uDT4", "uDT6"]
                     if data['action'].data in uDTAction:
-                        cmd +="-c 'sid {} locator {} behavior {} vrf {}' ".format(key, prefix, data['action'].data, data['decap_vrf'].data)
+                        cmd += ['-c', 'sid {} locator {} behavior {} vrf {}'.format(
+                            key, prefix, data['action'].data, data['decap_vrf'].data)]
                     elif data['action'].data == 'uN':
-                        cmd +="-c 'sid {} locator {} behavior {} ' ".format(key, prefix, data['action'].data)
+                        cmd += ['-c', 'sid {} locator {} behavior {} '.format(
+                            key, prefix, data['action'].data)]
                     else:
                         syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command, not support action %s'.format(data['action'].data))
                         continue
@@ -3519,8 +3521,9 @@ class BGPConfigDaemon:
                     if is_peer_group:
                         # clear associated neighbor list in cache
                         self.__delete_pg_neighbors(vrf, key)
-                    command = vtysh_cmd('configure terminal', 'router bgp {} vrf {}', 'no neighbor {}').\
-                        format(local_asn, vrf, key)
+                    command = vtysh_cmd('configure terminal',
+                                        'router bgp {} vrf {}'.format(local_asn, vrf),
+                                        'no neighbor {}'.format(key))
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete VRF %s bgp neigbor %s' % (vrf, key))
                     self.__delete_vrf_neighbor(vrf, key, data, is_peer_group)
@@ -3703,8 +3706,9 @@ class BGPConfigDaemon:
                             syslog.syslog(syslog.LOG_ERR, 'prefix of {} with range {} not found from prefix-set {}'.\
                                             format(ip_pfx, len_range, pfx_set_name))
                             continue
-                        command = vtysh_cmd('configure terminal', 'no {} prefix-list {} {}').\
-                                    format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(del_pfx))
+                        command = vtysh_cmd('configure terminal',
+                                            'no {} prefix-list {} {}'.format(
+                                                ('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(del_pfx)))
                         if not self.__run_command(table, command, daemons):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete prefix %s with range %s from set %s' %
                                           (ip_pfx, len_range, pfx_set_name))
@@ -3723,8 +3727,9 @@ class BGPConfigDaemon:
                         # daemons set.
                         af = self.prefix_set_list[pfx_set_name].af
                         daemons = None if af == socket.AF_INET else ['bgpd', 'zebra']
-                        command = vtysh_cmd('configure terminal', '{} prefix-list {} {}').\
-                                    format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(add_pfx))
+                        command = vtysh_cmd('configure terminal',
+                                            '{} prefix-list {} {}'.format(
+                                                ('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(add_pfx)))
                         if not self.__run_command(table, command, daemons):
                             syslog.syslog(syslog.LOG_ERR, 'failed to add prefix %s with range %s to set %s' %
                                           (ip_pfx, len_range, pfx_set_name))
@@ -3740,8 +3745,9 @@ class BGPConfigDaemon:
                     ip_addr_list = data['address'].data
                     if pfx_set_name in self.prefix_set_list:
                         af = self.prefix_set_list[pfx_set_name].af
-                        command = vtysh_cmd('configure terminal', 'no {} prefix-list {}').\
-                                   format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name)
+                        command = vtysh_cmd('configure terminal',
+                                            'no {} prefix-list {}'.format(
+                                                ('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name))
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete existing prefix-set {}'.format(pfx_set_name))
                             continue
@@ -3754,8 +3760,9 @@ class BGPConfigDaemon:
                             except ValueError:
                                 continue
                         for prefix in prefix_set:
-                            command = vtysh_cmd('configure terminal', '{} prefix-list {} {}').\
-                                       format(('ip' if prefix_set.af == socket.AF_INET else 'ipv6'), pfx_set_name, str(prefix))
+                            command = vtysh_cmd('configure terminal',
+                                                '{} prefix-list {} {}'.format(
+                                                    ('ip' if prefix_set.af == socket.AF_INET else 'ipv6'), pfx_set_name, str(prefix)))
                             if not self.__run_command(table, command, daemons):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete existing prefix-set {}'.format(pfx_set_name))
                                 continue
@@ -3974,8 +3981,10 @@ class BGPConfigDaemon:
 
                         suffix_cmd, oper = self.__bfd_handle_delete (data)
                         if suffix_cmd and oper == CachedDataWithOp.OP_DELETE:
-                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} local-address {} vrf {} interface {}', '{}').\
-                            format(remoteaddr, localaddr, vrf, interface, suffix_cmd)
+                            command = vtysh_cmd('configure terminal', 'bfd',
+                                                'peer {} local-address {} vrf {} interface {}'.format(
+                                                    remoteaddr, localaddr, vrf, interface),
+                                                '{}'.format(suffix_cmd))
 
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
@@ -3994,8 +4003,9 @@ class BGPConfigDaemon:
                         suffix_cmd, oper = self.__bfd_handle_delete (data)
 
                         if suffix_cmd and oper == CachedDataWithOp.OP_DELETE:
-                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} vrf {} interface {}', '{}').\
-                            format(remoteaddr, vrf, interface, suffix_cmd)
+                            command = vtysh_cmd('configure terminal', 'bfd',
+                                                'peer {} vrf {} interface {}'.format(remoteaddr, vrf, interface),
+                                                '{}'.format(suffix_cmd))
 
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
@@ -4013,12 +4023,13 @@ class BGPConfigDaemon:
                         dval = data['local-address']
                         localaddr = dval.data
                         syslog.syslog(syslog.LOG_INFO, 'Delete BFD single hop to {} {} {}'.format(remoteaddr, vrf, interface, localaddr))
-                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} local-address {} vrf {} interface {}').\
-                            format(remoteaddr, localaddr, vrf, interface)
+                        command = vtysh_cmd('configure terminal', 'bfd',
+                                            'no peer {} local-address {} vrf {} interface {}'.format(
+                                                remoteaddr, localaddr, vrf, interface))
                     else:
                         syslog.syslog(syslog.LOG_INFO, 'Delete BFD single hop to {} {} {}'.format(remoteaddr, vrf, interface))
-                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} vrf {} interface {}').\
-                            format(remoteaddr, vrf, interface)
+                        command = vtysh_cmd('configure terminal', 'bfd',
+                                            'no peer {} vrf {} interface {}'.format(remoteaddr, vrf, interface))
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
                         continue
@@ -4031,11 +4042,14 @@ class BGPConfigDaemon:
                     suffix_cmd, oper = self.__bfd_handle_delete (data)
                     if suffix_cmd and oper == CachedDataWithOp.OP_DELETE:
                         if not 'null' in interface:
-                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} local-address {} vrf {} interface {}', '{}').\
-                            format(remoteaddr, localaddr, vrf, interface, suffix_cmd)
+                            command = vtysh_cmd('configure terminal', 'bfd',
+                                                'peer {} local-address {} vrf {} interface {}'.format(
+                                                    remoteaddr, localaddr, vrf, interface),
+                                                '{}'.format(suffix_cmd))
                         else:
-                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} local-address {} vrf {}', '{}').\
-                            format(remoteaddr, localaddr, vrf, suffix_cmd)
+                            command = vtysh_cmd('configure terminal', 'bfd',
+                                                'peer {} local-address {} vrf {}'.format(remoteaddr, localaddr, vrf),
+                                                '{}'.format(suffix_cmd))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
@@ -4056,11 +4070,13 @@ class BGPConfigDaemon:
                 else:
                     syslog.syslog(syslog.LOG_INFO, 'Delete BFD multi hop to {} {} {} {}'.format(remoteaddr, vrf, localaddr, interface))
                     if not 'null' in interface:
-                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} vrf {} multihop local-address {} interface {}').\
-                        format(remoteaddr, vrf, localaddr, interface)
+                        command = vtysh_cmd('configure terminal', 'bfd',
+                                            'no peer {} vrf {} multihop local-address {} interface {}'.format(
+                                                remoteaddr, vrf, localaddr, interface))
                     else:
-                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} vrf {} multihop local-address {}').\
-                        format(remoteaddr, vrf, localaddr)
+                        command = vtysh_cmd('configure terminal', 'bfd',
+                                            'no peer {} vrf {} multihop local-address {}'.format(
+                                                remoteaddr, vrf, localaddr))
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete multihop peer {}'.format(key))
@@ -4097,8 +4113,10 @@ class BGPConfigDaemon:
                                 chk_icmp_attrs_dict = {'icmp_source_interface':'source-interface ', 'icmp_source_ip':'source-address ', 'icmp_size':'request-data-size ', 'icmp_vrf':'source-vrf ', 'icmp_tos':'tos ', 'icmp_ttl':'ttl '}
                                 for attr in chk_icmp_attrs:
                                     if attr in data and data[attr].op != CachedDataWithOp.OP_DELETE:
-                                        command = vtysh_cmd('configure terminal', 'ip sla {}', '{}', '{} {}').\
-                                        format(sla_id, icmp_cmd_mode, chk_icmp_attrs_dict[attr], data[attr].data)
+                                        command = vtysh_cmd('configure terminal',
+                                                            'ip sla {}'.format(sla_id),
+                                                            '{}'.format(icmp_cmd_mode),
+                                                            '{} {}'.format(chk_icmp_attrs_dict[attr], data[attr].data))
                                         syslog.syslog(syslog.LOG_INFO, 'Execute Icmp Cmd {}'.format(command))
                                         if not self.__run_command(table, command):
                                             syslog.syslog(syslog.LOG_ERR, 'failed to add icmp config for  ip sla {}'.format(sla_id))
@@ -4124,8 +4142,10 @@ class BGPConfigDaemon:
                                 chk_tcp_attrs_dict = {'tcp_source_interface':'source-interface ', 'tcp_source_ip':'source-address ', 'tcp_source_port':'source-port ', 'tcp_vrf':'source-vrf ', 'tcp_tos':'tos ', 'tcp_ttl':'ttl '}
                                 for attr in chk_tcp_attrs:
                                     if attr in data and data[attr].op != CachedDataWithOp.OP_DELETE:
-                                        command = vtysh_cmd('configure terminal', 'ip sla {}', '{}', '{} {}').\
-                                        format(sla_id, tcp_cmd_mode, chk_tcp_attrs_dict[attr], data[attr].data)
+                                        command = vtysh_cmd('configure terminal',
+                                                            'ip sla {}'.format(sla_id),
+                                                            '{}'.format(tcp_cmd_mode),
+                                                            '{} {}'.format(chk_tcp_attrs_dict[attr], data[attr].data))
                                         syslog.syslog(syslog.LOG_INFO, 'Execute Tcp Cmd {}'.format(command))
                                         if not self.__run_command(table, command):
                                             syslog.syslog(syslog.LOG_ERR, 'failed to add Tcp config for  ip sla {}'.format(sla_id))
@@ -4197,8 +4217,9 @@ class BGPConfigDaemon:
                 syslog.syslog(syslog.LOG_INFO, 'Create router ospf vrf {}, Vlink: {}, tableop {}'.format(vrf, data, del_table))
 
                 if data == {}:
-                    command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no area {} virtual-link {}').\
-                    format(vrf, area, vlinkid)
+                    command = vtysh_cmd('configure terminal',
+                                        'router ospf vrf {}'.format(vrf),
+                                        'no area {} virtual-link {}'.format(area, vlinkid))
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete vlink {} {}'.format(area, vlinkid))
@@ -4214,8 +4235,9 @@ class BGPConfigDaemon:
                         continue
 
                     if del_table:
-                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no area {} virtual-link {}').\
-                        format(vrf, area, vlinkid)
+                        command = vtysh_cmd('configure terminal',
+                                            'router ospf vrf {}'.format(vrf),
+                                            'no area {} virtual-link {}'.format(area, vlinkid))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete vlink {} {}'.format(area, vlinkid))
@@ -4232,15 +4254,17 @@ class BGPConfigDaemon:
                 network = keyvals[1]
 
                 if not del_table:
-                    command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'network {} area {}').\
-                    format(vrf, network, area)
+                    command = vtysh_cmd('configure terminal',
+                                        'router ospf vrf {}'.format(vrf),
+                                        'network {} area {}'.format(network, area))
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to create network {} {}'.format(area, network))
                         continue
                 else:
-                    command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no network {} area {}').\
-                    format(vrf, network, area)
+                    command = vtysh_cmd('configure terminal',
+                                        'router ospf vrf {}'.format(vrf),
+                                        'no network {} area {}'.format(network, area))
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete network {} {}'.format(area, network))
@@ -4259,15 +4283,17 @@ class BGPConfigDaemon:
 
                 if data == {}:
                    if not del_table:
-                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'area {} range {}').\
-                        format(vrf, area, range)
+                        command = vtysh_cmd('configure terminal',
+                                            'router ospf vrf {}'.format(vrf),
+                                            'area {} range {}'.format(area, range))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create range {} {}'.format(area, range))
                             continue
                    else:
-                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no area {} range {}').\
-                        format(vrf, area, range)
+                        command = vtysh_cmd('configure terminal',
+                                            'router ospf vrf {}'.format(vrf),
+                                            'no area {} range {}'.format(area, range))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete range {} {}'.format(area, range))
@@ -4363,8 +4389,9 @@ class BGPConfigDaemon:
                         else:
                             cmd_suffix = "no distribute-list {} out {}".format(acclistname, protocol.lower())
 
-                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', '{}').\
-                            format(vrf, cmd_suffix)
+                        command = vtysh_cmd('configure terminal',
+                                            'router ospf vrf {}'.format(vrf),
+                                            '{}'.format(cmd_suffix))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create distribute-list {} {}'.format(protocol, direction))
@@ -4383,8 +4410,9 @@ class BGPConfigDaemon:
                             else:
                                 cmd_suffix = "no redistribute {}".format(protocol.lower()) + del_cmd_suffix
 
-                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', '{}').\
-                            format(vrf, cmd_suffix)
+                        command = vtysh_cmd('configure terminal',
+                                            'router ospf vrf {}'.format(vrf),
+                                            '{}'.format(cmd_suffix))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create default-info/redistribute {} {}'.format(protocol, direction))
@@ -4395,11 +4423,13 @@ class BGPConfigDaemon:
                     if (direction == "IMPORT"):
                         command = ""
                         if (protocol == "DEFAULT_ROUTE"):
-                            command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no default-information originate').\
-                            format(vrf)
+                            command = vtysh_cmd('configure terminal',
+                                                'router ospf vrf {}'.format(vrf),
+                                                'no default-information originate')
                         else:
-                            command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no redistribute {}').\
-                            format(vrf, protocol.lower())
+                            command = vtysh_cmd('configure terminal',
+                                                'router ospf vrf {}'.format(vrf),
+                                                'no redistribute {}'.format(protocol.lower()))
 
                         if (command != ""):
                             if not self.__run_command(table, command):
@@ -4409,8 +4439,9 @@ class BGPConfigDaemon:
                                 self.__ospf_delete(data)
                     else:
                         if (acclistname != ""):
-                            command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no distribute-list {} out {}').\
-                            format(vrf, acclistname, protocol.lower())
+                            command = vtysh_cmd('configure terminal',
+                                                'router ospf vrf {}'.format(vrf),
+                                                'no distribute-list {} out {}'.format(acclistname, protocol.lower()))
 
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete distribute-list {} {}'.format(protocol, direction))
@@ -4493,15 +4524,17 @@ class BGPConfigDaemon:
                 if data == {}:
                    if not del_table:
 
-                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'passive-interface {} {}').\
-                        format(vrf, if_name, if_addr)
+                        command = vtysh_cmd('configure terminal',
+                                            'router ospf vrf {}'.format(vrf),
+                                            'passive-interface {} {}'.format(if_name, if_addr))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create passive interface {} {}'.format(if_name, if_addr))
                             continue
                    else:
-                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no passive-interface {} {}').\
-                        format(vrf, if_name, if_addr)
+                        command = vtysh_cmd('configure terminal',
+                                            'router ospf vrf {}'.format(vrf),
+                                            'no passive-interface {} {}'.format(if_name, if_addr))
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete passive interface {} {}'.format(if_name, if_addr))

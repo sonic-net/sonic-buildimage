@@ -124,6 +124,9 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
 {% if 'gr_preserve_fw_state' in bgp_sess and bgp_sess['gr_preserve_fw_state'] == 'true' %}
  bgp graceful-restart preserve-fw-state
 {% endif %}
+{% if 'gr_disable_end_of_rib_marker' in bgp_sess and bgp_sess['gr_disable_end_of_rib_marker'] == 'true' %}
+ bgp graceful-restart disable-eor
+{% endif %}
 {# --------------------------bgp graceful-restart - end   ----------------------------- #}
 {# --------------------------bgp bestpath as-path - start ----------------------------- #}
 {% if 'ignore_as_path_length' in bgp_sess %}

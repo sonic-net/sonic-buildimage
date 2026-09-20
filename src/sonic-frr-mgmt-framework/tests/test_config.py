@@ -126,6 +126,8 @@ bgp_globals_data = [
                        conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart stalepath-time 20']),
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'gr_preserve_fw_state': 'true'},
                        conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart preserve-fw-state']),
+        CmdMapTestInfo('BGP_GLOBALS', 'default', {'gr_disable_end_of_rib_marker': 'true'},
+                       conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart disable-eor']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv4_unicast', {'ebgp_route_distance': '100',
                                                                   'ibgp_route_distance': '115',
                                                                   'local_route_distance': '238'},
