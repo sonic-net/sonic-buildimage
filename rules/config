@@ -89,6 +89,12 @@ BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
+# BMC (aspeed) images always include ZTP support. The service ships
+# disabled on these images; admins opt in with 'systemctl enable --now ztp'.
+ifeq ($(CONFIGURED_PLATFORM),aspeed)
+ENABLE_ZTP = y
+endif
+
 # INCLUDE_PDE - Enable platform development environment
 # INCLUDE_PDE = y
 # SHUTDOWN_BGP_ON_START - if set to y all bgp sessions will be in admin down state when
