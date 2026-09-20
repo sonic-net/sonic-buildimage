@@ -15,6 +15,7 @@ import logging
 import netaddr
 import io
 import struct
+import zlib
 
 class CachedDataWithOp:
     OP_NONE = 0
@@ -106,6 +107,7 @@ class BgpdClientMgr(threading.Thread):
             'VRF': ['mgmtd'],
             'EVPN_MH_GLOBAL': ['zebra'],
             'EVPN_MH_INTERFACE': ['zebra'],
+            'EVPN_ETHERNET_SEGMENT': ['zebra'],
             'BGP_GLOBALS_EVPN_VNI': ['bgpd'],
             'BGP_GLOBALS_EVPN_RT': ['bgpd'],
             'BGP_GLOBALS_EVPN_VNI_RT': ['bgpd'],
@@ -1003,6 +1005,36 @@ def hdl_protocol_route_map(daemon, cmd_str, op, st_idx, args, data):
 
     return cmd_list
 
+def hdl_tx_add_paths(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) < 3:
+        return None
+    neighbor = args[0]
+    tx_mode = args[1]
+    count = args[2]
+    cmd_enable = op != CachedDataWithOp.OP_DELETE
+
+    def build(subcmd, enable):
+        return cmd_str.format(CommandArgument(daemon, True, neighbor),
+                             CommandArgument(daemon, enable, subcmd),
+                             no=CommandArgument(daemon, enable))
+
+    # tx_add_paths and tx_add_best_path_count are mutually exclusive.
+    # run_command() calls this handler separately per delete/update subset
+    # and orders delete calls before update calls, so only the field
+    # relevant to this call is non-empty in args.
+    if tx_mode:
+        if tx_mode == 'tx_all_paths':
+            return [build('addpath-tx-all-paths', cmd_enable)]
+        elif tx_mode == 'tx_best_path_per_as':
+            return [build('addpath-tx-bestpath-per-AS', cmd_enable)]
+        syslog.syslog(syslog.LOG_ERR, 'hdl_tx_add_paths: invalid tx_add_paths value %s' % tx_mode)
+        return None
+
+    if cmd_enable and not count:
+        return None
+    subcmd = 'addpath-tx-best-selected %s' % count if cmd_enable else 'addpath-tx-best-selected'
+    return [build(subcmd, cmd_enable)]
+
 def hdl_send_com(daemon, cmd_str, op, st_idx, args, data):
     if len(args) < 2:
         return None
@@ -1846,8 +1878,13 @@ class IpNextHopSet(set):
                 return (af_id, new_prefix)
         return (None, None)
 
+_EVPN_ES_PORT_ID_RE = re.compile(r'[a-zA-Z]+(?P<port_id>[0-9_]+)')
+
+
 class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
+    EVPN_ES_TYPE_0 = 'TYPE_0_OPERATOR_CONFIGURED'
+    EVPN_ES_TYPE_3 = 'TYPE_3_MAC_BASED'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
                       ('sid_vpn_per_vrf_export_explicit',               '{no:no-prefix}sid vpn per-vrf export explicit {}'),
@@ -1926,6 +1963,8 @@ class BGPConfigDaemon:
                             'dad-time'],                                 '{no:no-prefix}dup-addr-detection max-moves {} time {}'),
                          ('dad-freeze',                                   '{no:no-prefix}dup-addr-detection freeze {}'),
                          ('route-distinguisher',                         '{no:no-prefix}rd {}'),
+                         # evpn_rd is the latest key; route-distinguisher is deprecated but retained for backward compatibility
+                         ('evpn_rd',                                     '{no:no-prefix}rd {}'),
                          ('import-rts',                                  '{no:no-prefix}route-target import {}', hdl_import_list),
                          ('export-rts',                                  '{no:no-prefix}route-target export {}', hdl_export_list),
                          ('import_vrf',                                 '{no:no-prefix}import vrf {}'),
@@ -1981,7 +2020,7 @@ class BGPConfigDaemon:
                       ('weight',                                            '{no:no-prefix}neighbor {} weight {}'),
                       ('as_override',                                       '{no:no-prefix}neighbor {} as-override', ['true', 'false']),
                       ('send_community',                                    '{no:no-prefix}neighbor {} send-community {}', hdl_send_com),
-                      ('tx_add_paths',                                      '{no:no-prefix}neighbor {} {:tx-add-paths}'),
+                      (['++tx_add_paths', '++tx_add_best_path_count'],       '{no:no-prefix}neighbor {} {}', hdl_tx_add_paths),
                       (['++unchanged_as_path',
                         '++unchanged_med', '++unchanged_nexthop'],          '{no:no-prefix}neighbor {} attribute-unchanged {:uchg-as-path} {:uchg-med} {:uchg-nh}', hdl_attr_unchanged),
                       ('filter_list_in',                                    '{no:no-prefix}neighbor {} filter-list {} in'),
@@ -2019,6 +2058,7 @@ class BGPConfigDaemon:
                          ('set_next_hop',                   '{no:no-prefix}set ip next-hop {}'),
                          ('set_ipv6_next_hop_global',       '[bgpd]{no:no-prefix}set ipv6 next-hop global {}'),
                          ('set_ipv6_next_hop_prefer_global', '[bgpd]{no:no-prefix}set ipv6 next-hop prefer-global', ['true', 'false']),
+                         ('set_src',                        '[mgmtd]{no:no-prefix}set src {}'),
                          (['set_metric_action', '+set_metric', '+set_med'], '{}set metric {} ', handle_rmap_set_metric),
                          ('set_med',                        '{no:no-prefix}set metric {}'),
                          (('set_asn', '+set_repeat_asn'),   '[bgpd]{no:no-prefix}set as-path prepend {:repeat}', hdl_set_asn),
@@ -2027,11 +2067,13 @@ class BGPConfigDaemon:
                          ('set_community_ref',              '[bgpd]{no:no-prefix}set community {:com-ref}'),
                          ('set_ext_community_inline',       '[bgpd]{no:no-prefix}set extcommunity {:ext-com-list}', hdl_set_extcomm, True),
                          ('set_ext_community_ref',          '[bgpd]{no:no-prefix}set extcommunity {:ext-com-ref}', hdl_set_extcomm, False),
+                         ('set_tag',                        '{no:no-prefix}set tag {}'),
                          ('next_statement',                 '[bgpd]{no:no-prefix}continue {}'),
                          ('on_match_next',                  '[bgpd]{no:no-prefix}on-match next', ['true', 'false']),
                          ('on_match_goto_statement',        '[bgpd]{no:no-prefix}on-match goto {}'),
                          ('description',                    '{no:no-prefix}description {}')
     ]
+    route_map_mgmtd_fields = frozenset(['set_src'])
 
     bfd_peer_shop_key_map = [('enabled',                        '{no:no-prefix}shutdown', ['false', 'true']),
                          ('desired-minimum-tx-interval',        '{no:no-prefix}transmit-interval {}'),
@@ -2399,6 +2441,27 @@ class BGPConfigDaemon:
                 self.evpn_mh_redirect_off = True
                 break
 
+        self.evpn_es_map = {}
+        evpn_es_table = self.config_db.get_table('EVPN_ETHERNET_SEGMENT')
+        for ifname, entry in evpn_es_table.items():
+            esi_type = entry.get('type')
+            # Split/separated startup replays TYPE_3 via evpn_ethernet_segment_handler
+            # against minimal FRR config; caching here would make that replay a no-op.
+            if esi_type == self.EVPN_ES_TYPE_3 and self.config_mode != "unified":
+                continue
+            programmed = {}
+            esi_val = entry.get('esi')
+            # Boot frr.conf renders TYPE_0; TYPE_3 is handler-driven in non-unified replay.
+            if esi_type:
+                sig = self._evpn_es_signature(ifname, esi_type, esi_val)
+                if sig is not None:
+                    programmed['es_sig'] = sig
+            df_pref = entry.get('df_pref')
+            if df_pref not in (None, ''):
+                programmed['df_pref'] = str(df_pref)
+            if programmed:
+                self.evpn_es_map[ifname] = programmed
+
         # VRF ==> ip_prefix ==> nexthop list
         self.static_route_list = {}
         sroute_table = self.config_db.get_table('STATIC_ROUTE')
@@ -2459,6 +2522,8 @@ class BGPConfigDaemon:
             ('NHT', self.bgp_table_handler_common),
             ('EVPN_MH_GLOBAL', self.evpn_mh_global_handler),
             ('EVPN_MH_INTERFACE', self.evpn_mh_interface_handler),
+            ('EVPN_ETHERNET_SEGMENT', self.evpn_ethernet_segment_handler),
+            ('PORTCHANNEL', self.portchannel_handler),
             ('PROTOCOL_ROUTE_MAP', self.bgp_table_handler_common),
             ('PIM_GLOBALS', self.bgp_table_handler_common),
             ('PIM_INTERFACE', self.bgp_table_handler_common),
@@ -2481,6 +2546,7 @@ class BGPConfigDaemon:
             # hidden by zebra accepting and never retried, desyncing the mgmtd path.
             BgpdClientMgr.TABLE_DAEMON['EVPN_MH_GLOBAL'] = ['mgmtd']
             BgpdClientMgr.TABLE_DAEMON['EVPN_MH_INTERFACE'] = ['mgmtd']
+            BgpdClientMgr.TABLE_DAEMON['EVPN_ETHERNET_SEGMENT'] = ['mgmtd']
             # Resetting here ensures BGP_PEER_GROUP and 'neighbor PG peer-group' configurations
             # correctly create peer-groups in FRR during replay.
             self.bgp_peer_group = {}
@@ -2491,10 +2557,14 @@ class BGPConfigDaemon:
             self.vrf_vni_map = {}
             self.evpn_mh_intf_map = {}
             self.evpn_mh_redirect_off = False
-            # table_data_cache is pre-populated from CONFIG_DB; evict EVPN_MH_GLOBAL so
-            # unified replay pushes timer fields into empty FRR/mgmtd instead of OP_NONE.
+            self.evpn_es_map = {}
+            # table_data_cache is pre-populated from CONFIG_DB; evict EVPN_MH_GLOBAL and
+            # EVPN_ETHERNET_SEGMENT so unified replay pushes their fields into empty
+            # FRR/mgmtd instead of computing OP_NONE against the cached values.
             for table_key in list(self.table_data_cache.keys()):
                 if table_key.startswith('EVPN_MH_GLOBAL&&'):
+                    del self.table_data_cache[table_key]
+                elif table_key.startswith('EVPN_ETHERNET_SEGMENT&&'):
                     del self.table_data_cache[table_key]
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
@@ -2509,6 +2579,11 @@ class BGPConfigDaemon:
                     if table == 'EVPN_MH_GLOBAL':
                         self.evpn_mh_global_handler(table, key, data)
                         continue
+                    if table == 'EVPN_ETHERNET_SEGMENT':
+                        self.evpn_ethernet_segment_handler(table, key, data)
+                        continue
+                    if table == 'PORTCHANNEL':
+                        continue
                     upd_data = {}
                     for upd_key, upd_val in data.items():
                         upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
@@ -2518,6 +2593,14 @@ class BGPConfigDaemon:
                     for table1, key1, data1 in upd_data_list:
                         table_key = ExtConfigDBConnector.get_table_key(table1, key1)
                         self.__update_cache_data(table_key, data1)
+        else:
+            # Separated/split-unified: boot FRR config is minimal for TYPE_3.
+            # Replay TYPE_3 rows through the handler so port_id/system_mac logic
+            # stays in one place and evpn_es_map reflects programmed state.
+            for ifname, entry in evpn_es_table.items():
+                if entry.get('type') == self.EVPN_ES_TYPE_3:
+                    self.evpn_es_map.pop(ifname, None)
+                    self.evpn_ethernet_segment_handler('EVPN_ETHERNET_SEGMENT', ifname, entry)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -2725,6 +2808,205 @@ class BGPConfigDaemon:
         if ifname in self.evpn_mh_intf_map and not self.evpn_mh_intf_map[ifname]:
             del self.evpn_mh_intf_map[ifname]
 
+    # ------------------------------------------------------------------
+    # EVPN_ETHERNET_SEGMENT (per-interface ES config)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _evpn_es_port_id(ifname):
+        """Derive Type-3 local es-id using the same rules as sonic-cfggen
+        port_id_from_if_name and config interface evpn-esi (Ethernet0 -> "0").
+        Uses a stable CRC32 fallback for names without a numeric suffix."""
+        match = _EVPN_ES_PORT_ID_RE.search(ifname or '')
+        if match:
+            port_id = match.group('port_id').replace('_', '')
+            if port_id:
+                return port_id
+        return str((zlib.crc32((ifname or '').encode()) & 0xFFFFFF) or 1)
+
+    @staticmethod
+    def _evpn_es_system_mac_val(mac):
+        if isinstance(mac, str) and mac:
+            return mac
+        return None
+
+    def _evpn_es_lookup_system_mac(self, ifname):
+        """Return the port-channel system-mac for Type-3 ES, if the interface
+        is a PortChannel that has one configured; otherwise None."""
+        try:
+            po_entry = self.config_db.get_entry('PORTCHANNEL', ifname)
+        except Exception:
+            return None
+        return self._evpn_es_system_mac_val(po_entry.get('system_mac') if po_entry else None)
+
+    def _evpn_es_signature(self, ifname, esi_type, esi_val):
+        """Return a hashable signature describing the ES that WOULD be pushed
+        for the given inputs. Used for change detection so we skip idempotent
+        re-pushes. Signature intentionally captures every value that ends up
+        on the wire (es-id and es-sys-mac)."""
+        if esi_type == self.EVPN_ES_TYPE_0:
+            if not esi_val:
+                return None
+            return ('type-0', str(esi_val))
+        if esi_type == self.EVPN_ES_TYPE_3:
+            port_id = self._evpn_es_port_id(ifname)
+            sys_mac = self._evpn_es_lookup_system_mac(ifname)
+            return ('type-3', port_id, sys_mac)
+        return None
+
+    def __push_evpn_es_config(self, table, ifname, esi_type, esi_val):
+        """Push the composite ES (es-id [+ es-sys-mac]) in one vtysh batch.
+        run_vtysh_command executes each -c separately, so roll back on failure."""
+        cmds = ['configure terminal', 'interface {}'.format(ifname)]
+        if esi_type == self.EVPN_ES_TYPE_0:
+            if not esi_val:
+                syslog.syslog(syslog.LOG_ERR,
+                              '[bgp cfgd](evpn es) {} type-0 missing esi'.format(ifname))
+                return False
+            cmds.append('evpn mh es-id {}'.format(esi_val))
+        elif esi_type == self.EVPN_ES_TYPE_3:
+            port_id = self._evpn_es_port_id(ifname)
+            cmds.append('evpn mh es-id {}'.format(port_id))
+            sys_mac = self._evpn_es_lookup_system_mac(ifname)
+            if sys_mac:
+                cmds.append('evpn mh es-sys-mac {}'.format(sys_mac))
+            else:
+                cmds.append('no evpn mh es-sys-mac')
+        else:
+            syslog.syslog(syslog.LOG_ERR,
+                          '[bgp cfgd](evpn es) {} unsupported esi-type {}'.format(ifname, esi_type))
+            return False
+        if self.__run_command(table, vtysh_cmd(*cmds)):
+            return True
+        self.__remove_evpn_es_config(table, ifname)
+        return False
+
+    def __remove_evpn_es_config(self, table, ifname):
+        """Clear both es-id and es-sys-mac on the interface. `no evpn mh es-id`
+        is safe when nothing is configured (FRR treats it as a no-op)."""
+        return self.__run_command(table, vtysh_cmd(
+            'configure terminal',
+            'interface {}'.format(ifname),
+            'no evpn mh es-id',
+            'no evpn mh es-sys-mac'))
+
+    def __push_evpn_es_df_pref(self, table, ifname, df_pref):
+        return self.__run_command(table, vtysh_cmd(
+            'configure terminal',
+            'interface {}'.format(ifname),
+            'evpn mh es-df-pref {}'.format(df_pref)))
+
+    def __remove_evpn_es_df_pref(self, table, ifname):
+        return self.__run_command(table, vtysh_cmd(
+            'configure terminal',
+            'interface {}'.format(ifname),
+            'no evpn mh es-df-pref'))
+
+    def evpn_ethernet_segment_handler(self, table, key, data):
+        ifname = self._evpn_mh_ifname(key)
+        table_key = ExtConfigDBConnector.get_table_key(table, key)
+        cached_data = self.table_data_cache.get(table_key, {})
+        syslog.syslog(syslog.LOG_INFO,
+                      '[bgp cfgd](evpn es) {} changed to {}'.format(ifname, data))
+
+        programmed = self.evpn_es_map.setdefault(ifname, {})
+
+        # Full row delete (data is None) — clear everything for this interface.
+        if data is None:
+            if 'es_sig' in programmed or cached_data.get('esi') or cached_data.get('type'):
+                if self.__remove_evpn_es_config(table, ifname):
+                    programmed.pop('es_sig', None)
+            if 'df_pref' in programmed or cached_data.get('df_pref') not in (None, ''):
+                if self.__remove_evpn_es_df_pref(table, ifname):
+                    programmed.pop('df_pref', None)
+            if ifname in self.evpn_es_map and not self.evpn_es_map[ifname]:
+                del self.evpn_es_map[ifname]
+            return
+
+        # Empty dict — replay/no-op path.
+        if not data:
+            return
+
+        # esi + type compose into a single vtysh push (plus es-sys-mac for
+        # Type-3 when the interface is a PortChannel with system_mac set).
+        new_esi = data.get('esi')
+        new_type = data.get('type')
+        cur_sig = programmed.get('es_sig')
+
+        if new_type and (new_esi or new_type == self.EVPN_ES_TYPE_3):
+            desired_sig = self._evpn_es_signature(ifname, new_type, new_esi)
+            if desired_sig and cur_sig != desired_sig:
+                if cur_sig is not None:
+                    if not self.__remove_evpn_es_config(table, ifname):
+                        return
+                    programmed.pop('es_sig', None)
+                if self.__push_evpn_es_config(table, ifname, new_type, new_esi):
+                    self.evpn_es_map.setdefault(ifname, {})['es_sig'] = desired_sig
+        elif cur_sig is not None:
+            if self.__remove_evpn_es_config(table, ifname):
+                self.evpn_es_map.setdefault(ifname, {}).pop('es_sig', None)
+
+        cur_df_pref = programmed.get('df_pref')
+        if 'df_pref' in data:
+            new_df_pref = data['df_pref']
+            if new_df_pref in (None, ''):
+                if cur_df_pref is not None:
+                    if self.__remove_evpn_es_df_pref(table, ifname):
+                        self.evpn_es_map.setdefault(ifname, {}).pop('df_pref', None)
+            else:
+                new_df_pref = str(new_df_pref)
+                if cur_df_pref != new_df_pref:
+                    if self.__push_evpn_es_df_pref(table, ifname, new_df_pref):
+                        self.evpn_es_map.setdefault(ifname, {})['df_pref'] = new_df_pref
+        elif cur_df_pref is not None:
+            if self.__remove_evpn_es_df_pref(table, ifname):
+                self.evpn_es_map.setdefault(ifname, {}).pop('df_pref', None)
+
+        if ifname in self.evpn_es_map and not self.evpn_es_map[ifname]:
+            del self.evpn_es_map[ifname]
+
+    def portchannel_handler(self, table, key, data):
+        """Re-sync TYPE_3 EVPN ES when PortChannel system_mac changes."""
+        ifname = self._evpn_mh_ifname(key)
+        table_key = ExtConfigDBConnector.get_table_key(table, key)
+        cached = self.table_data_cache.get(table_key, {})
+        old_mac = self._evpn_es_system_mac_val(cached.get('system_mac'))
+        if data is None:
+            new_mac = None
+        elif 'system_mac' in data:
+            new_mac = self._evpn_es_system_mac_val(data.get('system_mac'))
+        else:
+            new_mac = None
+        if new_mac == old_mac:
+            return
+
+        try:
+            es_entry = self.config_db.get_entry('EVPN_ETHERNET_SEGMENT', ifname)
+        except Exception:
+            return
+        if not es_entry or es_entry.get('type') != self.EVPN_ES_TYPE_3:
+            if data is None:
+                self.table_data_cache.pop(table_key, None)
+            else:
+                pc_cache = self.table_data_cache.setdefault(table_key, {})
+                if new_mac:
+                    pc_cache['system_mac'] = new_mac
+                else:
+                    pc_cache.pop('system_mac', None)
+            return
+
+        desired_sig = self._evpn_es_signature(ifname, self.EVPN_ES_TYPE_3, es_entry.get('esi'))
+        self.evpn_ethernet_segment_handler('EVPN_ETHERNET_SEGMENT', ifname, dict(es_entry))
+        if self.evpn_es_map.get(ifname, {}).get('es_sig') != desired_sig:
+            return
+        if data is None:
+            self.table_data_cache.pop(table_key, None)
+        else:
+            pc_cache = self.table_data_cache.setdefault(table_key, {})
+            if new_mac:
+                pc_cache['system_mac'] = new_mac
+            else:
+                pc_cache.pop('system_mac', None)
+
     def evpn_mh_global_handler(self, table, key, data):
         redirect_keys = {'startup_delay', 'mac_holdtime', 'neigh_holdtime'}
         table_key = ExtConfigDBConnector.get_table_key(table, key)
@@ -2856,6 +3138,20 @@ class BGPConfigDaemon:
             # force delete all neighbor attributes in cache
             dval.status = CachedDataWithOp.STAT_SUCC
             dval.op = CachedDataWithOp.OP_DELETE
+
+    @staticmethod
+    def __route_map_has_mgmtd_attrs(data):
+        return any(field in data for field in BGPConfigDaemon.route_map_mgmtd_fields)
+
+    def __run_route_map_seq_delete(self, table, map_name, operation, seq_no, data):
+        command = vtysh_cmd('configure terminal', 'no route-map {} {} {}'.format(
+            map_name, operation, seq_no))
+        if not self.__run_command(table, command):
+            return False
+        if self.__route_map_has_mgmtd_attrs(data):
+            if not self.__run_command(table, command, daemons=['mgmtd']):
+                return False
+        return True
 
     @staticmethod
     def __vrf_based_table(table_name):
@@ -3584,15 +3880,19 @@ class BGPConfigDaemon:
                     if 'route_operation' in data:
                         dval = data['route_operation']
                         if dval.op != CachedDataWithOp.OP_NONE:
-                            enable = (dval.op != CachedDataWithOp.OP_DELETE)
-                            no_arg = CommandArgument(self, enable)
-                            command = vtysh_cmd('configure terminal', '{:no-prefix}route-map {} {} {}').\
-                                       format(no_arg, map_name, dval.data, seq_no)
+                            if dval.op == CachedDataWithOp.OP_DELETE:
+                                if not self.__run_route_map_seq_delete(
+                                        table, map_name, dval.data, seq_no, data):
+                                    syslog.syslog(syslog.LOG_ERR, 'failed to configure route-map {} seq {}'.format(map_name, seq_no))
+                                    continue
+                                self.__delete_route_map(map_name, seq_no, data)
+                                continue
+                            no_arg = CommandArgument(self, True)
+                            command = vtysh_cmd(
+                                'configure terminal',
+                                '{:no-prefix}route-map {} {} {}'.format(no_arg, map_name, dval.data, seq_no))
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to configure route-map {} seq {}'.format(map_name, seq_no))
-                                continue
-                            if dval.op == CachedDataWithOp.OP_DELETE:
-                                self.__delete_route_map(map_name, seq_no, data)
                                 continue
                             self.route_map.setdefault(map_name, {})[seq_no] = dval.data
                             for k, v in data.items():
@@ -3611,9 +3911,8 @@ class BGPConfigDaemon:
                     if map_name not in self.route_map or seq_no not in self.route_map[map_name]:
                         syslog.syslog(syslog.LOG_ERR, 'route-map {} seq {} not found for delete'.format(map_name, seq_no))
                         continue
-                    command = vtysh_cmd('configure terminal', 'no route-map {} {} {}').\
-                               format(map_name, self.route_map[map_name][seq_no], seq_no)
-                    if not self.__run_command(table, command):
+                    if not self.__run_route_map_seq_delete(
+                            table, map_name, self.route_map[map_name][seq_no], seq_no, data):
                         syslog.syslog(syslog.LOG_ERR, 'failed running route-map delete command')
                         continue
                     self.__delete_route_map(map_name, seq_no, data)

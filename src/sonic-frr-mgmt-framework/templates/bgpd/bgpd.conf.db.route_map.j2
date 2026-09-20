@@ -114,6 +114,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'set_ext_community_ref' in rm_val %}
  set extcommunity {{rm_val['set_ext_community_ref']}}
 {% endif %}
+{% if 'set_tag' in rm_val %}
+ set tag {{rm_val['set_tag']}}
+{% endif %}
 {% if 'set_next_hop' in rm_val %}
  set ip next-hop {{rm_val['set_next_hop']}}
 {% endif %}
@@ -125,6 +128,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% endif %}
 {% if 'set_ipv6_next_hop_prefer_global' in rm_val and rm_val['set_ipv6_next_hop_prefer_global'] == 'true' %}
  set ipv6 next-hop prefer-global
+{% endif %}
+{% if 'set_src' in rm_val %}
+ set src {{rm_val['set_src']}}
 {% endif %}
 {% if 'set_local_preference' in rm_val %}
  set local-preference {{rm_val['set_local_preference']}}

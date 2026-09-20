@@ -282,6 +282,9 @@ module sonic-bgp-common {
             type uint32 {
                 range "50..60000";
             }
+            must "../bfd = 'true' and ../required_minimum_receive and ../detection_multiplier" {
+                error-message "detection_multiplier, required_minimum_receive and desired_minimum_tx_interval must be configured together with bfd enabled";
+            }
             description "Desired minimum transmit interval in milliseconds";
         }
 
@@ -289,12 +292,18 @@ module sonic-bgp-common {
             type uint32 {
                 range "50..60000";
             }
+            must "../bfd = 'true' and ../desired_minimum_tx_interval and ../detection_multiplier" {
+                error-message "detection_multiplier, required_minimum_receive and desired_minimum_tx_interval must be configured together with bfd enabled";
+            }
             description "Required minimum receive interval in milliseconds";
         }
 
         leaf detection_multiplier {
             type uint8 {
                 range "2..255";
+            }
+            must "../bfd = 'true' and ../desired_minimum_tx_interval and ../required_minimum_receive" {
+                error-message "detection_multiplier, required_minimum_receive and desired_minimum_tx_interval must be configured together with bfd enabled";
             }
             description "Detection multiplier";
         }
@@ -423,6 +432,9 @@ module sonic-bgp-common {
 
         leaf max_prefix_warning_only {
             type boolean;
+            must "(current() = 'false' or ../max_prefix_limit >= 0)" {
+                error-message "max_prefix_warning_only requires max_prefix_limit to be configured";
+            }
             description "Only log a warning instead of tearing down the session when the maximum prefix limit is exceeded.";
         }
 
@@ -430,12 +442,21 @@ module sonic-bgp-common {
             type uint8 {
                 range "1..100";
             }
+            must "../max_prefix_limit >= 0" {
+                error-message "max_prefix_warning_threshold requires max_prefix_limit to be configured";
+            }
             description "Percentage of the maximum prefix limit at which a warning is generated.";
         }
 
         leaf max_prefix_restart_interval {
             type uint16 {
                 range "1..65535";
+            }
+            must "../max_prefix_limit >= 0" {
+                error-message "max_prefix_restart_interval requires max_prefix_limit to be configured";
+            }
+            must "not(../max_prefix_warning_only = 'true')" {
+                error-message "max_prefix_restart_interval is mutually exclusive with max_prefix_warning_only";
             }
             description "Time in seconds to wait before re-establishing the session after a max-prefix limit shutdown.";
         }
@@ -494,7 +515,21 @@ module sonic-bgp-common {
 
         leaf tx_add_paths {
             type bgp_tx_add_paths_type;
-            description "Advertise all paths or best path per AS using add path";
+            description
+                "Add-path advertisement mode: all paths or the best path per AS.
+                 Mutually exclusive with tx_add_best_path_count.";
+        }
+
+        leaf tx_add_best_path_count {
+            type uint8 {
+                range 1..6;
+            }
+            must "not(../tx_add_paths)" {
+                error-message "tx_add_best_path_count is mutually exclusive with tx_add_paths";
+            }
+            description
+                "Number of best paths to advertise. Mutually exclusive with
+                 tx_add_paths.";
         }
 
         leaf unchanged_as_path {
@@ -557,11 +592,17 @@ module sonic-bgp-common {
 
         leaf replace_private_as {
             type boolean;
+            must "(current() = 'false' or ../remove_private_as_enabled = 'true')" {
+                error-message "replace_private_as requires remove_private_as_enabled to be enabled";
+            }
             description "Replace private AS numbers with the local AS number in outbound updates.";
         }
 
         leaf remove_private_as_all {
             type boolean;
+            must "(current() = 'false' or ../remove_private_as_enabled = 'true')" {
+                error-message "remove_private_as_all requires remove_private_as_enabled to be enabled";
+            }
             description "Remove all private AS numbers (including in the middle of the path) from outbound updates.";
         }
 
@@ -572,11 +613,23 @@ module sonic-bgp-common {
 
         leaf allow_as_count {
             type uint8;
+            must "../allow_as_in = 'true'" {
+                error-message "allow_as_count requires allow_as_in to be enabled";
+            }
+            must "not(../allow_as_origin = 'true')" {
+                error-message "allow_as_count is mutually exclusive with allow_as_origin";
+            }
             description "Maximum number of times the local AS number may appear in a received AS path.";
         }
 
         leaf allow_as_origin {
             type boolean;
+            must "(current() = 'false' or ../allow_as_in = 'true')" {
+                error-message "allow_as_origin requires allow_as_in to be enabled";
+            }
+            must "(current() = 'false' or not(../allow_as_count))" {
+                error-message "allow_as_origin is mutually exclusive with allow_as_count";
+            }
             description "Accept routes that originated from the local AS.";
         }
 

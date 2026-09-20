@@ -34,6 +34,24 @@ module sonic-bgp-peergroup {
             list BGP_PEER_GROUP_LIST {
                 key "vrf_name peer_group_name";
 
+                must "not(peer_type = 'internal') or not(asn) or "
+                   + "asn = /bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/"
+                   + "bgpg:BGP_GLOBALS_LIST[bgpg:vrf_name=current()/vrf_name]/"
+                   + "bgpg:local_asn" {
+                    error-message
+                        "peer_type 'internal' requires asn to be the same as "
+                      + "local_asn of BGP_GLOBALS for the same VRF";
+                }
+
+                must "not(peer_type = 'external') or not(asn) or "
+                   + "not(asn = /bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/"
+                   + "bgpg:BGP_GLOBALS_LIST[bgpg:vrf_name=current()/vrf_name]/"
+                   + "bgpg:local_asn)" {
+                    error-message
+                        "peer_type 'external' requires asn to be different from "
+                      + "local_asn of BGP_GLOBALS for the same VRF";
+                }
+
                 leaf vrf_name {
                     type leafref {
                         path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";

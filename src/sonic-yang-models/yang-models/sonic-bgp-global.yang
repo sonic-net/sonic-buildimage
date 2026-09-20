@@ -896,6 +896,10 @@ module sonic-bgp-global {
             list BGP_GLOBALS_EVPN_VNI_LIST {
                 key "vrf_name afi_safi vni_number";
 
+                must "../../BGP_GLOBALS_AF/BGP_GLOBALS_AF_LIST[vrf_name=current()/vrf_name][afi_safi='l2vpn_evpn']/advertise-all-vni = 'true'" {
+                    error-message "advertise-all-vni must be enabled on the parent l2vpn_evpn address-family before configuring per-VNI entries";
+                }
+
                 leaf vrf_name {
                     type leafref {
                         path "../../../BGP_GLOBALS/BGP_GLOBALS_LIST/vrf_name";

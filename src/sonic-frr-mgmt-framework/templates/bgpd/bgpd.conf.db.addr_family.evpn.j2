@@ -31,7 +31,9 @@
 {% if 'default-originate-ipv6' in af_val and af_val['default-originate-ipv6'] == 'true' %}
   default-originate ipv6
 {% endif %}
-{% if 'route-distinguisher' in af_val %}
+{% if 'evpn_rd' in af_val %}
+  rd {{af_val['evpn_rd']}}
+{% elif 'route-distinguisher' in af_val %}
   rd {{af_val['route-distinguisher']}}
 {% endif %}
 {% if 'import-rts' in af_val %}

@@ -361,6 +361,24 @@ evpn_mh_interface_data = [
                   ignore_tail=None),
 ]
 
+evpn_ethernet_segment_data = [
+    CmdMapTestInfo('EVPN_ETHERNET_SEGMENT', 'Ethernet4',
+                  {'esi': '00:11:22:33:44:55:66:77:88:99', 'type': 'TYPE_0_OPERATOR_CONFIGURED'},
+                  ['configure terminal', 'interface Ethernet4',
+                   '{}evpn mh es-id 00:11:22:33:44:55:66:77:88:99'],
+                  ignore_tail=None),
+    CmdMapTestInfo('EVPN_ETHERNET_SEGMENT', 'Ethernet10',
+                  {'type': 'TYPE_3_MAC_BASED'},
+                  ['configure terminal', 'interface Ethernet10',
+                   '{}evpn mh es-id 10', 'no evpn mh es-sys-mac'],
+                  ignore_tail=None),
+    CmdMapTestInfo('EVPN_ETHERNET_SEGMENT', 'Ethernet120',
+                  {'df_pref': '100'},
+                  ['configure terminal', 'interface Ethernet120',
+                   '{}evpn mh es-df-pref 100'],
+                  ignore_tail=None),
+]
+
 def test_bgp_bfd_strict_mode():
     data_set_del_test(bfd_strict_mode_data, skip_del=True)
 
@@ -369,6 +387,9 @@ def test_evpn_mh_global_redirect_off():
 
 def test_evpn_mh_interface():
     data_set_del_test(evpn_mh_interface_data)
+
+def test_evpn_ethernet_segment():
+    data_set_del_test(evpn_ethernet_segment_data, skip_del=True)
 
 
 @patch.dict('sys.modules', **mockmapping)
@@ -452,6 +473,134 @@ def test_unified_mode_evpn_mh_global_timer_cache_reset_enables_replay(run_cmd):
     cmds = _get_vtysh_commands(run_cmd)
     assert any('evpn mh startup-delay 120' in c for c in cmds), \
         "After cache eviction, timer must be pushed to FRR; cmds={}".format(cmds)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_port_id_matches_cfggen(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    assert daemon._evpn_es_port_id('Ethernet0') == '0'
+    assert daemon._evpn_es_port_id('Ethernet4') == '4'
+    assert daemon._evpn_es_port_id('PortChannel10') == '10'
+    a = daemon._evpn_es_port_id('Loopback0')
+    b = daemon._evpn_es_port_id('Loopback0')
+    assert a == b and a != daemon._evpn_es_port_id('Loopback1')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_port_id_crc32_fallback(run_cmd):
+    """Names with no trailing numeric suffix must fall back to the stable
+    zlib.crc32 hash, staying deterministic and non-zero."""
+    import zlib
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+
+    for ifname in ('', None, 'eth-mgmt', 'Bridge'):
+        port_id = daemon._evpn_es_port_id(ifname)
+        expected = str((zlib.crc32((ifname or '').encode()) & 0xFFFFFF) or 1)
+        assert port_id == expected
+        assert port_id.isdigit() and int(port_id) != 0
+
+    a = daemon._evpn_es_port_id('eth-mgmt')
+    b = daemon._evpn_es_port_id('eth-mgmt')
+    assert a == b
+    assert a != daemon._evpn_es_port_id('Bridge')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_system_mac_val(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    assert daemon._evpn_es_system_mac_val('00:11:22:33:44:55') == '00:11:22:33:44:55'
+    assert daemon._evpn_es_system_mac_val('') is None
+    assert daemon._evpn_es_system_mac_val(None) is None
+    assert daemon._evpn_es_system_mac_val(0) is None
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_df_pref_hdel(run_cmd):
+    """HDEL df_pref must clear FRR when programmed, even if boot cache still has it."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    table_key = ExtConfigDBConnector.get_table_key('EVPN_ETHERNET_SEGMENT', 'Ethernet120')
+    daemon.table_data_cache[table_key] = {'df_pref': '100'}
+    daemon.evpn_es_map['Ethernet120'] = {'df_pref': '100'}
+    es_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+
+    es_hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet120', {
+        'esi': '00:11:22:33:44:55:66:77:88:99',
+        'type': 'TYPE_0_OPERATOR_CONFIGURED',
+    })
+
+    run_cmd.assert_called_with(
+        'EVPN_ETHERNET_SEGMENT',
+        CmdMapTestInfo.compose_vtysh_cmd(['configure terminal', 'interface Ethernet120', 'no evpn mh es-df-pref']),
+        True, None)
+    assert 'df_pref' not in daemon.evpn_es_map.get('Ethernet120', {})
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_row_delete_preserves_failed_config(run_cmd):
+    """Row delete must keep programmed ES when vtysh removal fails."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = False
+    daemon = BGPConfigDaemon()
+    sig = ('type-0', '00:11:22:33:44:55:66:77:88:99')
+    daemon.evpn_es_map['Ethernet4'] = {'es_sig': sig, 'df_pref': '100'}
+    es_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+
+    es_hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet4', None)
+
+    assert daemon.evpn_es_map['Ethernet4']['es_sig'] == sig
+    assert daemon.evpn_es_map['Ethernet4']['df_pref'] == '100'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_type3_resync_on_portchannel_system_mac(run_cmd):
+    """PORTCHANNEL system_mac changes must re-program TYPE_3 es-sys-mac."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    pc_hdlr = [h for t, h in daemon.table_handler_list if t == 'PORTCHANNEL'][0]
+    ifname = 'PortChannel10'
+    daemon.evpn_es_map[ifname] = {'es_sig': ('type-3', '10', None)}
+
+    def fake_get_entry(table, key):
+        if table == 'EVPN_ETHERNET_SEGMENT' and key == ifname:
+            return {'type': 'TYPE_3_MAC_BASED'}
+        if table == 'PORTCHANNEL' and key == ifname:
+            return {'system_mac': '00:11:22:33:44:55'}
+        return {}
+
+    with patch.object(daemon.config_db, 'get_entry', side_effect=fake_get_entry):
+        pc_hdlr('PORTCHANNEL', ifname, {'system_mac': '00:11:22:33:44:55'})
+
+    cmds = ' '.join(_get_vtysh_commands(run_cmd))
+    assert 'evpn mh es-sys-mac 00:11:22:33:44:55' in cmds
+    assert daemon.evpn_es_map[ifname]['es_sig'] == ('type-3', '10', '00:11:22:33:44:55')
+
+    run_cmd.reset_mock()
+    table_key = ExtConfigDBConnector.get_table_key('PORTCHANNEL', ifname)
+    daemon.table_data_cache[table_key] = {'system_mac': '00:11:22:33:44:55'}
+
+    def fake_get_entry_no_mac(table, key):
+        if table == 'EVPN_ETHERNET_SEGMENT' and key == ifname:
+            return {'type': 'TYPE_3_MAC_BASED'}
+        return {}
+
+    with patch.object(daemon.config_db, 'get_entry', side_effect=fake_get_entry_no_mac):
+        pc_hdlr('PORTCHANNEL', ifname, {})
+
+    cmds = ' '.join(_get_vtysh_commands(run_cmd))
+    assert 'no evpn mh es-sys-mac' in cmds
+    assert daemon.evpn_es_map[ifname]['es_sig'] == ('type-3', '10', None)
 
 
 # ---------------------------------------------------------------------------
@@ -806,3 +955,78 @@ def test_unified_mode_cache_reset_enables_pg_creation(run_cmd):
          "cmds={}".format(cmds_after_reset))
     assert 'PEER_V4' in daemon.bgp_peer_group.get('default', {}), \
         "PEER_V4 must be tracked in bgp_peer_group cache after creation"
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_route_map_set_src(run_cmd):
+    """ROUTE_MAP set_src is applied as 'set src <ip>' under the route-map.
+
+    'set src' is northbound-owned in FRR, so only mgmtd accepts it.
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+
+    rmap_hdlr = [h for t, h in daemon.table_handler_list if t == 'ROUTE_MAP'][0]
+
+    for seq, addr in (('10', '7.7.7.7'), ('20', '2004::7')):
+        key = 'RM_SET_SRC|' + seq
+        run_cmd.reset_mock()
+        rmap_hdlr('ROUTE_MAP', key, {'route_operation': 'permit', 'set_src': addr})
+
+        set_src_calls = []
+        for c in run_cmd.call_args_list:
+            cmd = c[0][1]
+            text = ' '.join(cmd) if isinstance(cmd, list) else cmd
+            if 'set src {}'.format(addr) in text:
+                set_src_calls.append(c)
+        assert len(set_src_calls) == 1, \
+            "expected a single 'set src {}' command; cmds={}".format(
+                    addr, _get_vtysh_commands(run_cmd))
+        cmd, daemons = set_src_calls[0][0][1], set_src_calls[0][0][3]
+        text = ' '.join(cmd) if isinstance(cmd, list) else cmd
+        assert 'route-map RM_SET_SRC permit {}'.format(seq) in text, \
+            "'set src' must be applied under the route-map sequence; cmd={}".format(text)
+        assert daemons == ['mgmtd'], \
+            "'set src' must be sent to mgmtd only, got {}".format(daemons)
+
+        run_cmd.reset_mock()
+        rmap_hdlr('ROUTE_MAP', key, {'route_operation': 'permit'})
+        assert any('no set src {}'.format(addr) in (
+                    ' '.join(c[0][1]) if isinstance(c[0][1], list) else c[0][1])
+                   for c in run_cmd.call_args_list), \
+            "expected 'no set src {}' when field is removed; cmds={}".format(
+                    addr, _get_vtysh_commands(run_cmd))
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_route_map_set_src_row_delete(run_cmd):
+    """Whole-sequence ROUTE_MAP delete must also target mgmtd when set_src is present."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    rmap_hdlr = [h for t, h in daemon.table_handler_list if t == 'ROUTE_MAP'][0]
+
+    key = 'RM_SET_SRC|10'
+    rmap_hdlr('ROUTE_MAP', key, {'route_operation': 'permit', 'set_src': '7.7.7.7'})
+    run_cmd.reset_mock()
+
+    rmap_hdlr('ROUTE_MAP', key, None)
+
+    delete_calls = []
+    for c in run_cmd.call_args_list:
+        cmd = c[0][1]
+        text = ' '.join(cmd) if isinstance(cmd, list) else cmd
+        if 'no route-map RM_SET_SRC permit 10' in text:
+            delete_calls.append(c)
+    assert len(delete_calls) == 2, \
+        "expected delete to default daemons and mgmtd; cmds={}".format(
+                _get_vtysh_commands(run_cmd))
+    default_daemons = delete_calls[0][0][3]
+    assert default_daemons is None or default_daemons == ['zebra', 'bgpd', 'ospfd'], \
+        "first delete must use ROUTE_MAP default daemons, got {}".format(default_daemons)
+    assert delete_calls[1][0][3] == ['mgmtd'], \
+        "second delete must target mgmtd when set_src is present, got {}".format(
+                delete_calls[1][0][3])
