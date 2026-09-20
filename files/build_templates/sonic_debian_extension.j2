@@ -301,6 +301,17 @@ install_deb_package $debs_path/sonic-host-services-data_*.deb
 {% if enable_ztp == "y" %}
 # Install ZTP (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-ztp_*.deb
+{% if sonic_asic_platform == "aspeed" %}
+# BMC images (aspeed) ship ZTP installed but not running: a BMC must not
+# self-provision unless an admin opts in with 'systemctl enable --now ztp'.
+# The unit is disabled, not masked, so it starts cleanly once enabled.
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable ztp.service
+# Default ZTP configuration for BMC: no in-band discovery (a BMC is
+# provisioned over eth0 only). config-setup seeds /host/ztp/ztp_cfg.json
+# from this template on first boot, before the ZTP engine can create it
+# with built-in defaults (feat-inband true).
+sudo cp files/image_config/ztp/ztp_cfg.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/ztp_cfg.json
+{% endif %}
 {% endif %}
 
 {% for machine_debs in lazy_build_installer_debs.strip().split() -%}

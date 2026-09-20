@@ -32,6 +32,8 @@ CONFIG_DB_PREFIX=config_db
 CONFIG_DB_SUFFIX=.json
 MINGRAPH_FILE=/etc/sonic/minigraph.xml
 TMP_ZTP_CONFIG_DB_JSON=/tmp/ztp_config_db.json
+ZTP_CFG_JSON=/host/ztp/ztp_cfg.json
+ZTP_CFG_TEMPLATE=/usr/share/sonic/templates/ztp_cfg.json
 FACTORY_DEFAULT_HOOKS=/etc/config-setup/factory-default-hooks.d
 CONFIG_PRE_MIGRATION_HOOKS=/etc/config-setup/config-migration-pre-hooks.d
 CONFIG_POST_MIGRATION_HOOKS=/etc/config-setup/config-migration-post-hooks.d
@@ -211,6 +213,13 @@ ztp_is_enabled()
     if [ -e /usr/bin/ztp ]; then
         status=$(ztp status -c)
         [ "$status" != "0:DISABLED" ] && [ "$status" != "" ] && rv=0
+        # When ztp.service is disabled at the systemd level (e.g. BMC images
+        # ship it disabled), the ZTP engine will never run, so first boot
+        # must fall back to factory default configuration instead of waiting
+        # on a ZTP session that cannot start.
+        if [ $rv -eq 0 ] && [ "$(systemctl is-enabled ztp.service 2>/dev/null)" != "enabled" ]; then
+            rv=1
+        fi
     fi
     return $rv
 }
@@ -445,6 +454,15 @@ do_config_backup()
 #    start ZTP
 boot_config()
 {
+    # Seed the initial ZTP configuration from an image-provided default
+    # (e.g. BMC images ship one with feat-inband disabled). This must run
+    # before the first ztp CLI invocation, which would otherwise create
+    # /host/ztp/ztp_cfg.json with the ZTP engine's built-in defaults.
+    if [ -r ${ZTP_CFG_TEMPLATE} ] && [ ! -e ${ZTP_CFG_JSON} ]; then
+        mkdir -p $(dirname ${ZTP_CFG_JSON})
+        cp ${ZTP_CFG_TEMPLATE} ${ZTP_CFG_JSON}
+    fi
+
     check_system_warm_boot
     if [ -e /etc/sonic/pending_config_migration ] || [ -e  ${CONFIG_SETUP_POST_MIGRATION_FLAG} ]; then
         do_config_migration
