@@ -38,7 +38,7 @@
         "eStr": "Invalid value \"12341234\" in \"df_pref\" element"
     },
     "EVPN_MH_VALID_TEST": {
-        "desc": "Valid EVPN multihoming global configuration"
+        "desc": "Valid EVPN Ethernet Segment Configuration"
     },
     "EVPN_INVALID_STARTUP_DELAY": {
         "desc": "Global Startup Delay value out of range",
@@ -54,17 +54,13 @@
     },
     "EVPN_INVALID_IFNAME_NOT_EXISTS": {
         "desc": "Invalid ifname that doesn't exist in PORT table",
-        "eStrKey": "InvalidValue",
-        "eStr": [
-            "Ethernet99"
-        ]
+        "eStrKey" : "InvalidValue",
+        "eStr": ["Ethernet99"]
     },
     "EVPN_INVALID_PORTCHANNEL_NOT_EXISTS": {
         "desc": "Invalid ifname that doesn't exist in PORTCHANNEL table",
-        "eStrKey": "InvalidValue",
-        "eStr": [
-            "PortChannel0099"
-        ]
+        "eStrKey" : "InvalidValue",
+        "eStr": ["PortChannel0099"]
     },
     "EVPN_MH_GLOBAL_NEG_INVALID_KEY": {
         "desc": "EVPN_MH_GLOBAL entry name must be default",
