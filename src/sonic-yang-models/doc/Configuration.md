@@ -1543,6 +1543,8 @@ GNMI (gRPC Network Management Interface) related configuration is defined in the
             "log_level": "2",
             "port": "8080",
             "save_on_set": "false",
+            "translib_write": "false",
+            "native_write": "false",
             "enable_crl": "true",
             "crl_expire_duration": "86400",
             "user_auth": "password",
@@ -2751,6 +2753,8 @@ and is listed in this table.
 ```
 
 ### Telemetry client
+
+`path_target` may be `APPL_DB`, `CONFIG_DB`, `COUNTERS_DB`, `STATE_DB`, `OC_YANG`, or `OTHERS`.
 
 ```
 {
