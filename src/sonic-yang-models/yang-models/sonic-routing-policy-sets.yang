@@ -11,6 +11,10 @@ module sonic-routing-policy-sets {
         prefix ext;
     }
 
+    import sonic-common {
+        prefix cmn;
+    }
+
     organization
         "SONiC";
 
@@ -99,6 +103,13 @@ module sonic-routing-policy-sets {
                     description "Address family of the prefix";
                     default "IPv4";
                 }
+
+                leaf description {
+                    type string {
+                        length 1..255;
+                    }
+                    description "Prefix description";
+                }
             }
         }
 
@@ -119,8 +130,17 @@ module sonic-routing-policy-sets {
                          be unique for each prefix in a prefix-list. Target devices should apply the prefixes in
                          ascending order determined by sequence no (low to high), rather than relying only on order
                          in the list.";
-                    must "count(../../PREFIX_LIST[name=current()/../name and sequence_number=current()]) <= 1" {
-                        error-message "sequence_number required to be unique for each prefix-list";
+                    must
+                        "/cmn:operation/cmn:operation = 'DELETE' or " +
+                        "(/cmn:operation/cmn:operation = 'UPDATE' and " +
+                        " count(../../PREFIX_LIST[name=current()/../name and " +
+                        "                         sequence_number=current() and " +
+                        "                         ip_prefix=current()/../ip_prefix and " +
+                        "                         masklength_range=current()/../masklength_range]) = 1) or " +
+                        "count(../../PREFIX_LIST[name=current()/../name and " +
+                        "                         sequence_number=current()]) <= 1" {
+                        error-message
+                            "sequence_number required to be unique for each prefix-list";
                     }
                 }
             }

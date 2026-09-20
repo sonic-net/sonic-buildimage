@@ -1394,5 +1394,68 @@
                 ]
             }
         }
+    },
+    "VLAN_INTERFACE_ND_FLAGS_VALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "description": "vlan_nd_flags_test"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "nd_suppress_ra": true,
+                        "nd_managed_config_flag": true,
+                        "nd_other_config_flag": false
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_PREFIX_VALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "description": "vlan_nd_prefix_test"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE_ND_PREFIX": {
+                "VLAN_INTERFACE_ND_PREFIX_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "prefix": "2001:db8::/64",
+                        "disable_autoconfiguration": true
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_SEND_REDIRECTS_VALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "description": "vlan_send_redirects_test"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "send_redirects": false
+                    }
+                ]
+            }
+        }
     }
 }

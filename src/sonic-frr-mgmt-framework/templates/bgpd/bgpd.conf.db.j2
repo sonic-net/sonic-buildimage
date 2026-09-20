@@ -70,6 +70,9 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
 {% if 'disable_ebgp_connected_rt_check' in bgp_sess and bgp_sess['disable_ebgp_connected_rt_check'] == 'true' %}
  bgp disable-ebgp-connected-route-check
 {% endif %}
+{% if 'ebgp_requires_policy' in bgp_sess and bgp_sess['ebgp_requires_policy'] == 'false' %}
+ no bgp ebgp-requires-policy
+{% endif %}
 {% if 'deterministic_med' in bgp_sess and bgp_sess['deterministic_med'] == 'true' %}
  bgp deterministic-med
 {% endif %}

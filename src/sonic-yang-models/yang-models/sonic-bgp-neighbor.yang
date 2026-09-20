@@ -36,6 +36,10 @@ module sonic-bgp-neighbor {
         prefix svnet;
     }
 
+    import sonic-vlan-sub-interface {
+        prefix vlan-sub-interface;
+    }
+
     organization
         "SONiC";
 
@@ -124,6 +128,9 @@ module sonic-bgp-neighbor {
                         }
                         type string {
                             pattern '(Ethernet|Eth|PortChannel|Po)[0-9]+\.[0-9]+';
+                        }
+                        type leafref {
+                            path "/vlan-sub-interface:sonic-vlan-sub-interface/vlan-sub-interface:VLAN_SUB_INTERFACE/vlan-sub-interface:VLAN_SUB_INTERFACE_LIST/vlan-sub-interface:name";
                         }
                     }
                     description "BGP Neighbor, it will be neighbor address or interface name";

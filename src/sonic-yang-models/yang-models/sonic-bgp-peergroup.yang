@@ -46,6 +46,7 @@ module sonic-bgp-peergroup {
                     description "Peer group name";
                 }
                 uses bgpcmn:sonic-bgp-cmn;
+                uses bgpcmn:sonic-bgp-cmn-gr;
             }
         }
 

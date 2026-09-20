@@ -44,6 +44,13 @@ class CachedDataWithOp:
 
 bgpd_client = None
 
+def vtysh_cmd(*config_cmds):
+    """Build argv list for vtysh -c ... (sonic-net/sonic-buildimage #26921)."""
+    args = ['vtysh']
+    for cmd in config_cmds:
+        args += ['-c', cmd]
+    return args
+
 def g_run_command(table, command, use_bgpd_client, daemons, ignore_fail = False):
     syslog.syslog(syslog.LOG_DEBUG, "execute command {} for table {}.".format(command, table))
     if not (len(command) > 0 and command[0] == 'vtysh'):
@@ -73,7 +80,6 @@ def extract_cmd_daemons(cmd_str):
     return (daemons, cmd_str)
 
 class BgpdClientMgr(threading.Thread):
-    VTYSH_MARK = 'vtysh '
     PROXY_SERVER_ADDR = '/etc/frr/bgpd_client_sock'
     ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd']
     TABLE_DAEMON = {
@@ -97,7 +103,9 @@ class BgpdClientMgr(threading.Thread):
             'ROUTE_REDISTRIBUTE': ['bgpd'],
             'BGP_GLOBALS_AF_AGGREGATE_ADDR': ['bgpd'],
             'BGP_GLOBALS_AF_NETWORK': ['bgpd'],
-            'VRF': ['zebra'],
+            'VRF': ['mgmtd'],
+            'EVPN_MH_GLOBAL': ['zebra'],
+            'EVPN_MH_INTERFACE': ['zebra'],
             'BGP_GLOBALS_EVPN_VNI': ['bgpd'],
             'BGP_GLOBALS_EVPN_RT': ['bgpd'],
             'BGP_GLOBALS_EVPN_VNI_RT': ['bgpd'],
@@ -114,6 +122,10 @@ class BgpdClientMgr(threading.Thread):
             'OSPFV2_INTERFACE': ['ospfd'],
             'OSPFV2_ROUTER_PASSIVE_INTERFACE': ['ospfd'],
             'STATIC_ROUTE': ['mgmtd'],
+            'VLAN_INTERFACE': ['zebra'],
+            'VLAN_INTERFACE_ND_PREFIX': ['zebra'],
+            'NHT': ['zebra'],
+            'PROTOCOL_ROUTE_MAP': ['zebra'],
             'PIM_GLOBALS': ['pimd'],
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],
@@ -760,8 +772,10 @@ class BGPKeyMapList(list):
                     ignore_fail = False
                     if type(cmd) is tuple:
                         cmd, ignore_fail = cmd
-                    if not g_run_command(table, cmd_args + ['-c', cmd], True, key_map.daemons, ignore_fail):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running FRR command: %s' % cmd)
+                    cmd_daemons, cmd_stripped = extract_cmd_daemons(cmd)
+                    daemons_to_use = cmd_daemons if cmd_daemons is not None else key_map.daemons
+                    if not g_run_command(table, cmd_args + ['-c', cmd_stripped], True, daemons_to_use, ignore_fail):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running FRR command: %s' % cmd_stripped)
                         failed = True
                         break
                 if not failed:
@@ -938,9 +952,56 @@ class CommandArgument(object):
                 self.value = 'nexthop-vrf %s' % self.to_str()
         elif format == 'tolower':
             self.tolower = True
+        elif format == 'bfd':
+            if self.value == 'true':
+                self.value = 'bfd'
+            else:
+                self.value = ''
         elif format == 'pim_hello_parms':
             self.value = ' '.join(self.value.split(','))
         return self.to_str()
+
+def hdl_protocol_route_map(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) < 4:
+        syslog.syslog(syslog.LOG_ERR, 'hdl_protocol_route_map: insufficient arguments')
+        return None
+
+    vrf_name = args[0]
+    protocol = args[1]
+    addr_family = args[2]
+    route_map = args[3]
+
+    # Only support default VRF and BGP protocol
+    if vrf_name != 'default':
+        syslog.syslog(syslog.LOG_ERR, 'hdl_protocol_route_map: only default VRF supported, got vrf {}'.format(vrf_name))
+        return None
+
+    if protocol != 'bgp':
+        syslog.syslog(syslog.LOG_ERR, 'hdl_protocol_route_map: only bgp protocol supported, got {}'.format(protocol))
+        return None
+
+    # Determine IP version prefix
+    if addr_family == 'ipv4':
+        ip_prefix = 'ip'
+    elif addr_family == 'ipv6':
+        ip_prefix = 'ipv6'
+    else:
+        syslog.syslog(syslog.LOG_ERR, 'hdl_protocol_route_map: invalid address family {}'.format(addr_family))
+        return None
+
+    cmd_list = []
+
+    # Prefix commands with [zebra] to ensure they only go to zebra daemon
+    if op == CachedDataWithOp.OP_DELETE:
+        cmd_list.append('[zebra]no {} protocol bgp'.format(ip_prefix))
+    else:
+        if route_map and route_map.strip():
+            cmd_list.append('[zebra]{} protocol bgp route-map {}'.format(ip_prefix, route_map.strip()))
+        else:
+            syslog.syslog(syslog.LOG_ERR, 'hdl_protocol_route_map: empty route_map name')
+            return None
+
+    return cmd_list
 
 def hdl_send_com(daemon, cmd_str, op, st_idx, args, data):
     if len(args) < 2:
@@ -1417,7 +1478,7 @@ def hdl_confed_peers(daemon, cmd_str, op, st_idx, args, data):
     return cmd_list
 
 def hdl_static_route(daemon, cmd_str, op, st_idx, args, data):
-    if len(args) < 6:
+    if len(args) < 7:
         return None
     vrf = args[0]
     ip_prefix = args[1]
@@ -1433,7 +1494,8 @@ def hdl_static_route(daemon, cmd_str, op, st_idx, args, data):
         tag_list = arg_list(args[6])
         dist_list = arg_list(args[7])
         nh_vrf_list = arg_list(args[8])
-        ip_nh_set = IpNextHopSet(af, bkh_list, nh_list, track_list, intf_list, tag_list, dist_list, nh_vrf_list)
+        bfd_list = arg_list(args[9]) if len(args) > 9 else None
+        ip_nh_set = IpNextHopSet(af, bkh_list, nh_list, track_list, intf_list, tag_list, dist_list, nh_vrf_list, bfd_list)
     cur_nh_set = daemon.static_route_list.get(vrf, {}).get(ip_prefix, IpNextHopSet(af))
     diff_set = ip_nh_set.symmetric_difference(cur_nh_set)
     op_cmd_list = {}
@@ -1705,12 +1767,13 @@ class AggregateAddr:
         self.summary_only = False
 
 class IpNextHop:
-    def __init__(self, af_id, blackhole, dst_ip, track, if_name, tag, dist, vrf):
+    def __init__(self, af_id, blackhole, dst_ip, track, if_name, tag, dist, vrf, bfd=None):
         zero_ip = lambda af: '0.0.0.0' if af == socket.AF_INET else '::'
         self.af = af_id
         self.blackhole = 'false' if blackhole is None or blackhole == '' else blackhole
         self.distance = 0 if dist is None else int(dist)
         self.track = 0 if track is None else int(track)
+        self.bfd = 'false' if bfd is None or bfd == '' else bfd
         if self.blackhole == 'true':
             dst_ip = if_name = vrf = None
         self.ip = zero_ip(af_id) if dst_ip is None else dst_ip
@@ -1725,16 +1788,18 @@ class IpNextHop:
     def __eq__(self, other):
         return (self.af == other.af and self.blackhole == other.blackhole and
                 self.ip == other.ip and self.track == other.track and self.interface == other.interface and
-                self.tag == other.tag and self.distance == other.distance and self.nh_vrf == other.nh_vrf)
+                self.tag == other.tag and self.distance == other.distance and self.nh_vrf == other.nh_vrf and
+                self.bfd == other.bfd)
     def __ne__(self, other):
         return (self.af != other.af or self.blackhole != other.blackhole or
                 self.ip != other.ip or self.track != other.track or self.interface != other.interface or
-                self.tag != other.tag or self.distance != other.distance or self.nh_vrf != other.nh_vrf)
+                self.tag != other.tag or self.distance != other.distance or self.nh_vrf != other.nh_vrf or
+                self.bfd != other.bfd)
     def __hash__(self):
-        return hash((self.af, self.blackhole, self.ip, self.track, self.interface, self.tag, self.distance, self.nh_vrf))
+        return hash((self.af, self.blackhole, self.ip, self.track, self.interface, self.tag, self.distance, self.nh_vrf, self.bfd))
     def __str__(self):
-        return 'AF %d BKH %s IP %s TRACK %d INTF %s TAG %d DIST %d VRF %s' % (
-                self.af, self.blackhole, self.ip, self.track, self.interface, self.tag, self.distance, self.nh_vrf)
+        return 'AF %d BKH %s IP %s TRACK %d INTF %s TAG %d DIST %d VRF %s BFD %s' % (
+                self.af, self.blackhole, self.ip, self.track, self.interface, self.tag, self.distance, self.nh_vrf, self.bfd)
     def is_ip_valid(self):
         socket.inet_pton(self.af, self.ip)
     def is_zero_ip(self):
@@ -1744,22 +1809,25 @@ class IpNextHop:
             return False
     def is_portchannel(self):
         return True if self.ip.startswith('PortChannel') else False
-    def get_arg_list(self):
+    def get_arg_list(self, include_bfd=True):
         arg = lambda x: '' if x is None else x
         num_arg = lambda x: '' if x is None or x == 0 else str(x)
         ip_arg = lambda : '' if self.ip is None else ('' if self.is_zero_ip() else self.ip)
-        return [self.blackhole, ip_arg(), arg(self.interface), num_arg(self.track), num_arg(self.tag), num_arg(self.distance), arg(self.nh_vrf)]
+        result = [self.blackhole, ip_arg(), arg(self.interface), num_arg(self.track), num_arg(self.tag), num_arg(self.distance), arg(self.nh_vrf)]
+        if include_bfd:
+            result.append(self.bfd)
+        return result
 
 class IpNextHopSet(set):
-    def __init__(self, af, bkh_list = None, ip_list = None, track_list = None, intf_list = None, tag_list = None, dist_list = None, vrf_list = None):
+    def __init__(self, af, bkh_list = None, ip_list = None, track_list = None, intf_list = None, tag_list = None, dist_list = None, vrf_list = None, bfd_list = None):
         super(IpNextHopSet, self).__init__()
         if bkh_list is None and ip_list is None and intf_list is None:
             # empty set, for delete case
             return
-        nums = {len(x) for x in [bkh_list, ip_list, track_list, intf_list, tag_list, dist_list, vrf_list] if x is not None}
+        nums = {len(x) for x in [bkh_list, ip_list, track_list, intf_list, tag_list, dist_list, vrf_list, bfd_list] if x is not None}
         if len(nums) != 1:
             syslog.syslog(syslog.LOG_ERR, 'Lists of next-hop attribute have different sizes: %s' % nums)
-            for x in [bkh_list, ip_list, track_list, intf_list, tag_list, dist_list, vrf_list]:
+            for x in [bkh_list, ip_list, track_list, intf_list, tag_list, dist_list, vrf_list, bfd_list]:
                 syslog.syslog(syslog.LOG_DEBUG, 'List: %s' % x)
             return
         nh_cnt = nums.pop()
@@ -1767,7 +1835,7 @@ class IpNextHopSet(set):
         for idx in range(nh_cnt):
             try:
                 self.add(IpNextHop(af, item(bkh_list, idx), item(ip_list, idx), item(track_list, idx), item(intf_list, idx),
-                                   item(tag_list, idx), item(dist_list, idx), item(vrf_list, idx), ))
+                                   item(tag_list, idx), item(dist_list, idx), item(vrf_list, idx), item(bfd_list, idx)))
             except ValueError:
                 continue
     @staticmethod
@@ -1796,6 +1864,7 @@ class BGPConfigDaemon:
                       ('rr_allow_out_policy',                           '{no:no-prefix}bgp route-reflector allow-outbound-policy', ['true', 'false']),
                       ('disable_ebgp_connected_rt_check',               '{no:no-prefix}bgp disable-ebgp-connected-route-check', ['true', 'false']),
                       ('fast_external_failover',                        '{no:no-prefix}bgp fast-external-failover', ['true', 'false', True]),
+                      ('ebgp_requires_policy',                          '{no:no-prefix}bgp ebgp-requires-policy', ['true', 'false']),
                       ('network_import_check',                          '{no:no-prefix}bgp network import-check', ['true', 'false']),
                       ('graceful_shutdown',                             '{no:no-prefix}bgp graceful-shutdown', ['true', 'false']),
                       ('rr_clnt_to_clnt_reflection',                    '{no:no-prefix}bgp client-to-client reflection', ['true', 'false', True]),
@@ -1870,7 +1939,7 @@ class BGPConfigDaemon:
                    ('local_addr',                           '{no:no-prefix}neighbor {} update-source {}'),
                    ('name',                                 '{no:no-prefix}neighbor {} description {}'),
                    (['ebgp_multihop', '+ebgp_multihop_ttl'],'{no:no-prefix}neighbor {} ebgp-multihop {}', ['true', 'false']),
-                   ('auth_password',                        '{no:no-prefix}neighbor {} password {} encrypted'),
+                   ('auth_password',                        '{no:no-prefix}neighbor {} password {}'),
                    (['keepalive', 'holdtime'],              '{no:no-prefix}neighbor {} timers {} {}'),
                    ('conn_retry',                           '{no:no-prefix}neighbor {} timers connect {}'),
                    ('min_adv_interval',                     '{no:no-prefix}neighbor {} advertisement-interval {}'),
@@ -1881,13 +1950,17 @@ class BGPConfigDaemon:
                    ('solo_peer',                            '{no:no-prefix}neighbor {} solo', ['true', 'false']),
                    ('ttl_security_hops',                    '{no:no-prefix}neighbor {} ttl-security hops {}'),
                    ('bfd',                                  '{no:no-prefix}neighbor {} bfd', ['true', 'false']),
+                   ('bfd_strict_mode',                      '{no:no-prefix}neighbor {} bfd strict', ['true', 'false']),
                    ('bfd_check_ctrl_plane_failure',         '{no:no-prefix}neighbor {} bfd check-control-plane-failure', ['true', 'false']),
+                   (['detection_multiplier', 'required_minimum_receive', 'desired_minimum_tx_interval'], 'neighbor {} bfd {} {} {}'),
                    ('capability_dynamic',                   '{no:no-prefix}neighbor {} capability dynamic', ['true', 'false']),
                    ('dont_negotiate_capability',            '{no:no-prefix}neighbor {} dont-capability-negotiate', ['true', 'false']),
                    ('enforce_multihop',                     '{no:no-prefix}neighbor {} enforce-multihop', ['true', 'false']),
                    ('override_capability',                  '{no:no-prefix}neighbor {} override-capability', ['true', 'false']),
                    ('peer_port',                            '{no:no-prefix}neighbor {} port {}'),
-                   ('strict_capability_match',              '{no:no-prefix}neighbor {} strict-capability-match', ['true', 'false'])
+                   ('strict_capability_match',              '{no:no-prefix}neighbor {} strict-capability-match', ['true', 'false']),
+                   ('tcp_mss',                              '{no:no-prefix}neighbor {} tcp-mss {}'),
+                   ('graceful_restart_enable',              '{no:no-prefix}neighbor {} graceful-restart', ['true', 'false'])
     ]
 
     nbr_key_map = [('peer_group_name',  '{no:no-prefix}neighbor {} peer-group {}')]
@@ -1927,6 +2000,7 @@ class BGPConfigDaemon:
     route_map_key_map = [('match_interface',                '{no:no-prefix}match interface {}'),
                          ('match_prefix_set|ipv4',          '{no:no-prefix}match ip address prefix-list {}'),
                          ('match_prefix_set|ipv6',          '{no:no-prefix}match ipv6 address prefix-list {}'),
+                         ('match_ipv6_prefix_set',          '{no:no-prefix}match ipv6 address prefix-list {}'),
                          ('match_neighbor',                 '[bgpd]{no:no-prefix}match peer {:peer-ip}'),
                          ('match_tag',                      '{no:no-prefix}match tag {}'),
                          ('match_protocol',                 '[zebra]{no:no-prefix}match source-protocol {:src-proto}'),
@@ -1952,7 +2026,11 @@ class BGPConfigDaemon:
                          ('set_community_inline',           '[bgpd]{no:no-prefix}set community {}'),
                          ('set_community_ref',              '[bgpd]{no:no-prefix}set community {:com-ref}'),
                          ('set_ext_community_inline',       '[bgpd]{no:no-prefix}set extcommunity {:ext-com-list}', hdl_set_extcomm, True),
-                         ('set_ext_community_ref',          '[bgpd]{no:no-prefix}set extcommunity {:ext-com-ref}', hdl_set_extcomm, False)
+                         ('set_ext_community_ref',          '[bgpd]{no:no-prefix}set extcommunity {:ext-com-ref}', hdl_set_extcomm, False),
+                         ('next_statement',                 '[bgpd]{no:no-prefix}continue {}'),
+                         ('on_match_next',                  '[bgpd]{no:no-prefix}on-match next', ['true', 'false']),
+                         ('on_match_goto_statement',        '[bgpd]{no:no-prefix}on-match goto {}'),
+                         ('description',                    '{no:no-prefix}description {}')
     ]
 
     bfd_peer_shop_key_map = [('enabled',                        '{no:no-prefix}shutdown', ['false', 'true']),
@@ -2052,10 +2130,29 @@ class BGPConfigDaemon:
                              ('retransmission-interval', '{}ip ospf retransmit-interval {} {}', handle_ospf_if_common),
                              ('transmit-delay', '{}ip ospf transmit-delay {} {}', handle_ospf_if_common),
                            ]
-    static_route_map = [(['ip_prefix|ipv4', '++blackhole', '++nexthop', '++ifname', '++track', '++tag', '++distance', '++nexthop-vrf'],
-                         '{no:no-prefix}ip route {} {:blackhole} {} {} {:track} {:nh-tag} {} {:nh-vrf}', hdl_static_route, socket.AF_INET),
-                        (['ip_prefix|ipv6', '++blackhole', '++nexthop', '++ifname', '++track', '++tag', '++distance', '++nexthop-vrf'],
-                         '{no:no-prefix}ipv6 route {} {:blackhole} {} {} {:track} {:nh-tag} {} {:nh-vrf} ', hdl_static_route, socket.AF_INET6)]
+    static_route_map = [(['ip_prefix|ipv4', '++blackhole', '++nexthop', '++ifname', '++track', '++tag', '++distance', '++nexthop-vrf', '++bfd'],
+                         '{no:no-prefix}ip route {} {:blackhole} {} {} {:track} {:nh-tag} {} {:nh-vrf} {:bfd}', hdl_static_route, socket.AF_INET),
+                        (['ip_prefix|ipv6', '++blackhole', '++nexthop', '++ifname', '++track', '++tag', '++distance', '++nexthop-vrf', '++bfd'],
+                         '{no:no-prefix}ipv6 route {} {:blackhole} {} {} {:track} {:nh-tag} {} {:nh-vrf} {:bfd}', hdl_static_route, socket.AF_INET6)]
+
+    vlan_interface_key_map = [('nd_managed_config_flag', '{no:no-prefix}ipv6 nd managed-config-flag', ['true', 'false']),
+                              ('nd_other_config_flag', '{no:no-prefix}ipv6 nd other-config-flag', ['true', 'false']),
+                              ('nd_suppress_ra', '{no:no-prefix}ipv6 nd suppress-ra', ['true', 'false', True])]
+
+    vlan_interface_nd_prefix_key_map = [('disable_autoconfiguration', '{no:no-prefix}ipv6 nd prefix {} no-autoconfig', ['true', 'false'])]
+
+    nht_key_map = [('ipv4_resolve_via_default', '{no:no-prefix}ip nht resolve-via-default', ['true', 'false']),
+                   ('ipv6_resolve_via_default', '{no:no-prefix}ipv6 nht resolve-via-default', ['true', 'false'])]
+
+    evpn_mh_global_key_map = [('startup_delay', '{no:no-prefix}evpn mh startup-delay {}'),
+                              ('mac_holdtime', '{no:no-prefix}evpn mh mac-holdtime {}'),
+                              ('neigh_holdtime', '{no:no-prefix}evpn mh neigh-holdtime {}')]
+
+    evpn_mh_interface_key_map = [('mh_uplink', '{no:no-prefix}evpn mh uplink', ['true', 'false']),
+                                 ('bypass', '{no:no-prefix}evpn mh bypass', ['true', 'false'])]
+
+    protocol_route_map_key_map = [('route_map', '{no:no-prefix}', hdl_protocol_route_map)]
+
     pim_interface_key_map = [('mode', '{no:no-prefix}ip pim', ['sm','']),
                              ('dr-priority', '{no:no-prefix}ip pim drpriority {}'),
                              ('hello-interval', '{no:no-prefix}ip pim hello {:pim_hello_parms}',
@@ -2127,6 +2224,12 @@ class BGPConfigDaemon:
                       'OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE':ospfv2_area_range_key_map,
                       'OSPFV2_INTERFACE':               ospfv2_interface_key_map,
                       'STATIC_ROUTE':                   static_route_map,
+                      'VLAN_INTERFACE':                 vlan_interface_key_map,
+                      'VLAN_INTERFACE_ND_PREFIX':       vlan_interface_nd_prefix_key_map,
+                      'NHT':                            nht_key_map,
+                      'EVPN_MH_GLOBAL':                 evpn_mh_global_key_map,
+                      'EVPN_MH_INTERFACE':              evpn_mh_interface_key_map,
+                      'PROTOCOL_ROUTE_MAP':             protocol_route_map_key_map,
                       'PIM_GLOBALS':                    pim_global_key_map,
                       'PIM_INTERFACE':                  pim_interface_key_map,
                       'IGMP_INTERFACE':                 igmp_mcast_grp_key_map,
@@ -2154,7 +2257,11 @@ class BGPConfigDaemon:
         return False
 
     def __init__(self):
-        self.config_db = ExtConfigDBConnector({'STATIC_ROUTE': {'nexthop', 'ifname', 'distance', 'nexthop-vrf', 'blackhole', 'track'}})
+        self.config_db = ExtConfigDBConnector({'STATIC_ROUTE': {'nexthop', 'ifname', 'distance', 'nexthop-vrf', 'blackhole', 'track', 'bfd'},
+                                               'VLAN_INTERFACE': {'nd-managed-config-flag', 'nd-other-config-flag', 'nd-suppress-ra'},
+                                               'VLAN_INTERFACE_ND_PREFIX': {'disable_autoconfiguration'},
+                                               'NHT': {'ipv4_resolve_via_default', 'ipv6_resolve_via_default'},
+                                               'PROTOCOL_ROUTE_MAP': {'route_map'}})
         try:
             self.config_db.connect()
         except Exception as e:
@@ -2184,27 +2291,19 @@ class BGPConfigDaemon:
             if 'confed_peers' in entry:
                 self.bgp_confed_peers[vrf] = set(entry['confed_peers'])
         # VRF ==> grp_name ==> peer_group
-        self.bgp_peer_group = {}
         # VRF ==> set of interface neighbor
+        # Both caches act as "already pushed to bgpd" markers used by the
+        # idempotency checks in __update_bgp (peer-group / interface-neighbor
+        # creation paths).  They MUST start empty: the unified-mode startup
+        # replay and runtime bgp_neighbor_handler calls populate them only
+        # after a successful vtysh push.  Pre-populating from CONFIG_DB at
+        # startup causes the unified replay to skip the initial
+        # 'neighbor <pg> peer-group' / 'neighbor <if> interface' creation
+        # commands, leaving bgpd with no peer-group/interface and every
+        # subsequent attribute command failing with
+        # "% Configure the peer-group first" / "% Malformed address or name".
+        self.bgp_peer_group = {}
         self.bgp_intf_nbr = {}
-        nbr_table = self.config_db.get_table('BGP_NEIGHBOR')
-        pg_table = self.config_db.get_table('BGP_PEER_GROUP')
-        for key, entry in pg_table.items():
-            vrf, pg = key
-            self.bgp_peer_group.setdefault(vrf, {})[pg] = BGPPeerGroup(vrf)
-            syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: VRF %s Peer_Group %s' % (vrf, pg))
-        for key, entry in nbr_table.items():
-            if len(key) != 2:
-                continue
-            vrf, peer = key
-            if 'peer_group_name' in entry:
-                pg_name = entry['peer_group_name']
-                if vrf in self.bgp_peer_group and pg_name in self.bgp_peer_group[vrf]:
-                    self.bgp_peer_group[vrf][pg_name].ref_nbrs.add(peer)
-                    syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: VRF %s Neighbor %s Peer_Group %s' %
-                            (vrf, peer, pg_name))
-            if not self.__peer_is_ip(peer):
-                self.bgp_intf_nbr.setdefault(vrf, set()).add(peer)
         # map_name ==> seq_no ==> operation
         self.route_map = {}
         rtmap_table = self.config_db.get_table('ROUTE_MAP')
@@ -2214,13 +2313,15 @@ class BGPConfigDaemon:
             if 'route_operation' in entry:
                 self.route_map.setdefault(rtmap_name, {})[seq_no] = entry['route_operation']
 
+        # comm_set_list is the "already pushed to bgpd" marker used by the
+        # idempotency check in hdl_com_set.  It MUST start empty so the
+        # unified-mode startup replay does not emit a `no bgp community-list`
+        # against an empty bgpd (which fails with rc=13 and aborts the rest
+        # of the command list, leaving bgpd permanently without the
+        # community-list entries).  Runtime ADD events populate this cache
+        # via the COMMUNITY_SET branch of __update_bgp() after a successful
+        # vtysh push.
         self.comm_set_list = {}
-        comm_table = self.config_db.get_table('COMMUNITY_SET')
-        for key, entry in comm_table.items():
-            syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Community %s' % key)
-            self.comm_set_list[key] = CommunityList(key, False)
-            for k, v in entry.items():
-                self.comm_set_list[key].db_data_to_attr(k, v)
         self.extcomm_set_list = {}
         extcomm_table = self.config_db.get_table('EXTENDED_COMMUNITY_SET')
         for key, entry in extcomm_table.items():
@@ -2231,9 +2332,17 @@ class BGPConfigDaemon:
         self.prefix_set_list = {}
         pfx_set_table = self.config_db.get_table('PREFIX_SET')
         for key, entry in pfx_set_table.items():
-            if 'mode' in entry:
-                syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix_Set %s mode %s' % (key, entry['mode']))
-                self.prefix_set_list[key] = MatchPrefixList(entry['mode'].lower())
+            # Mode may be absent for empty PREFIX_SET entries ({}); defer AF
+            # resolution (None) so add_prefix() infers it from the first IP
+            # added during PREFIX table iteration below.
+            set_mode = entry.get('mode')
+            if set_mode is not None:
+                set_mode = set_mode.lower()
+            syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix_Set %s mode %s' % (key, set_mode))
+            self.prefix_set_list[key] = MatchPrefixList(set_mode)
+            if 'description' in entry:
+                syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix_Set %s description %s' % (key, entry['description']))
+                self.prefix_set_list[key].description = entry['description']
         pfx_table = self.config_db.get_table('PREFIX')
         for key, entry in pfx_table.items():
             if len(key) == 4:
@@ -2257,25 +2366,38 @@ class BGPConfigDaemon:
                 self.as_path_set_list[key] = entry['as_path_set_member'][:]
         self.tag_set_list = {}
 
+        # af_aggr_list is the "already pushed to bgpd" marker used by the
+        # idempotency check in hdl_af_aggregate.  It MUST start empty so the
+        # unified-mode startup replay does not emit a `no aggregate-address`
+        # against an empty bgpd (which fails with rc=13 and aborts the rest
+        # of the command list, leaving bgpd permanently without the
+        # aggregate-address entries).  Runtime ADD events populate this
+        # cache via __update_bgp() after a successful vtysh push.
         self.af_aggr_list = {}
-        af_aggr_table = self.config_db.get_table('BGP_GLOBALS_AF_AGGREGATE_ADDR')
-        for key, entry in af_aggr_table.items():
-            vrf, af_type, ip_pfx = key
-            af, _ = af_type.lower().split('_')
-            norm_ip_pfx = MatchPrefix.normalize_ip_prefix((socket.AF_INET if af == 'ipv4' else socket.AF_INET6), ip_pfx)
-            if norm_ip_pfx is not None:
-                syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: AF Aggregate Prefix %s of vrf %s AF %s' % (norm_ip_pfx, vrf, af))
-                aggr_obj = AggregateAddr()
-                for k, v in entry.items():
-                    if v == 'true':
-                        setattr(aggr_obj, k, True)
-                self.af_aggr_list.setdefault(vrf, {})[norm_ip_pfx] = aggr_obj
 
         self.vrf_vni_map = {}
         vrf_table = self.config_db.get_table('VRF')
         for key, entry in vrf_table.items():
-            if 'vni' in entry:
-                self.vrf_vni_map[key] = entry['vni']
+            vni = entry.get('vni')
+            if self._vni_active(vni):
+                self.vrf_vni_map[key] = str(vni)
+
+        self.evpn_mh_intf_map = {}
+        evpn_mh_intf_table = self.config_db.get_table('EVPN_MH_INTERFACE')
+        for ifname, entry in evpn_mh_intf_table.items():
+            attrs = {}
+            for attr in BGPConfigDaemon.EVPN_MH_INTF_ATTRS:
+                if attr in entry and BGPConfigDaemon._mh_bool_active(entry[attr]):
+                    attrs[attr] = True
+            if attrs:
+                self.evpn_mh_intf_map[ifname] = attrs
+
+        self.evpn_mh_redirect_off = False
+        evpn_mh_global = self.config_db.get_table('EVPN_MH_GLOBAL')
+        for _, entry in evpn_mh_global.items():
+            if BGPConfigDaemon._mh_bool_active(entry.get('redirect_off')):
+                self.evpn_mh_redirect_off = True
+                break
 
         # VRF ==> ip_prefix ==> nexthop list
         self.static_route_list = {}
@@ -2292,7 +2414,7 @@ class BGPConfigDaemon:
             self.static_route_list.setdefault(vrf, {})[ip_prefix] = IpNextHopSet(af,
                                         nh_attr('blackhole'), nh_attr('nexthop'),nh_attr('track'),
                                         nh_attr('ifname'), nh_attr('tag'), nh_attr('distance'),
-                                        nh_attr('nexthop-vrf'))
+                                        nh_attr('nexthop-vrf'), nh_attr('bfd'))
 
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
@@ -2332,6 +2454,12 @@ class BGPConfigDaemon:
             ('OSPFV2_INTERFACE', self.bgp_table_handler_common),
             ('OSPFV2_ROUTER_PASSIVE_INTERFACE', self.bgp_table_handler_common),
             ('STATIC_ROUTE', self.bgp_table_handler_common),
+            ('VLAN_INTERFACE', self.bgp_table_handler_common),
+            ('VLAN_INTERFACE_ND_PREFIX', self.bgp_table_handler_common),
+            ('NHT', self.bgp_table_handler_common),
+            ('EVPN_MH_GLOBAL', self.evpn_mh_global_handler),
+            ('EVPN_MH_INTERFACE', self.evpn_mh_interface_handler),
+            ('PROTOCOL_ROUTE_MAP', self.bgp_table_handler_common),
             ('PIM_GLOBALS', self.bgp_table_handler_common),
             ('PIM_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
@@ -2346,10 +2474,41 @@ class BGPConfigDaemon:
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
         if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
+            # In unified mode mgmtd is the single configuration authority and
+            # propagates to the zebra backend.  Route EVPN MH commands to mgmtd
+            # only: targeting both daemons masks failures because run_vtysh_command
+            # reports success if ANY daemon accepts, so a mgmtd rejection would be
+            # hidden by zebra accepting and never retried, desyncing the mgmtd path.
+            BgpdClientMgr.TABLE_DAEMON['EVPN_MH_GLOBAL'] = ['mgmtd']
+            BgpdClientMgr.TABLE_DAEMON['EVPN_MH_INTERFACE'] = ['mgmtd']
+            # Resetting here ensures BGP_PEER_GROUP and 'neighbor PG peer-group' configurations
+            # correctly create peer-groups in FRR during replay.
+            self.bgp_peer_group = {}
+            self.bgp_intf_nbr = {}
+            # vrf_vni_map is pre-populated from CONFIG_DB above for runtime tracking, but
+            # unified-mode replay must push VNI into mgmtd; clear the cache so vrf_handler
+            # does not treat CONFIG_DB state as already programmed in FRR.
+            self.vrf_vni_map = {}
+            self.evpn_mh_intf_map = {}
+            self.evpn_mh_redirect_off = False
+            # table_data_cache is pre-populated from CONFIG_DB; evict EVPN_MH_GLOBAL so
+            # unified replay pushes timer fields into empty FRR/mgmtd instead of OP_NONE.
+            for table_key in list(self.table_data_cache.keys()):
+                if table_key.startswith('EVPN_MH_GLOBAL&&'):
+                    del self.table_data_cache[table_key]
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
+                    if table == 'VRF':
+                        self.vrf_handler(table, key, data)
+                        continue
+                    if table == 'EVPN_MH_INTERFACE':
+                        self.evpn_mh_interface_handler(table, key, data)
+                        continue
+                    if table == 'EVPN_MH_GLOBAL':
+                        self.evpn_mh_global_handler(table, key, data)
+                        continue
                     upd_data = {}
                     for upd_key, upd_val in data.items():
                         upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
@@ -2390,11 +2549,11 @@ class BGPConfigDaemon:
             cmd = cmd + ' interface ' + key_params[2]
         if not data:
             #BFD peer is deleted
-            command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd', '-c', 'no {}'.format(cmd)]
+            command = vtysh_cmd('configure terminal', 'bfd', 'no {}'.format(cmd))
             self.__run_command(table, command)
         else:
             #create/update case
-            command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd', '-c', '{}'.format(cmd)]
+            command = vtysh_cmd('configure terminal', 'bfd', '{}'.format(cmd))
             for param in data:
                 if param == 'transmit_interval':
                     command += ['-c', 'transmit-interval {}'.format(data[param])]
@@ -2414,34 +2573,189 @@ class BGPConfigDaemon:
                     command += ['-c', 'shutdown']
             self.__run_command(table, command)
 
+    @staticmethod
+    def _vni_active(vni):
+        return vni is not None and str(vni) not in ('', '0')
+
+    def __push_vrf_vni_command(self, table, vrf_name, vni=None, remove_vni=None):
+        command = vtysh_cmd('configure terminal', 'vrf {}'.format(vrf_name))
+        if remove_vni is not None:
+            command += ['-c', 'no vni {}'.format(remove_vni)]
+        if vni is not None:
+            command += ['-c', 'vni {}'.format(vni)]
+        command += ['-c', 'exit-vrf']
+        return self.__run_command(table, command)
+
+    def __remove_vrf_vni(self, table, vrf_name):
+        if vrf_name not in self.vrf_vni_map:
+            return
+        old_vni = self.vrf_vni_map[vrf_name]
+        if self._vni_active(old_vni):
+            # Only forget the VNI once mgmtd/vtysh confirms the removal; a failed
+            # 'no vni' must stay cached so a later event can retry.
+            if not self.__push_vrf_vni_command(table, vrf_name, remove_vni=old_vni):
+                return
+        del self.vrf_vni_map[vrf_name]
+
     def vrf_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](vrf) value for {} changed to {}'.format(key, data))
-        #get vrf key
-        key_params = key.split('|')
-        cmd = 'vrf {}'.format(key_params[0])
+        vrf_name = key.split('|', 1)[0]
+
         if not data:
-            #VRF is deleted
-            command = ['vtysh', '-c', 'configure terminal', '-c', '{}'.format(cmd)]
-            if key_params[0] in self.vrf_vni_map:
-                command += ['-c', 'no vni {}'.format(self.vrf_vni_map[key_params[0]])]
-                del self.vrf_vni_map[key_params[0]]
-                self.__run_command(table, command)
+            self.__remove_vrf_vni(table, vrf_name)
+            return
+
+        vni = data.get('vni')
+        if self._vni_active(vni):
+            new_vni = str(vni)
+            old_vni = self.vrf_vni_map.get(vrf_name)
+            if old_vni == new_vni:
+                return
+            if old_vni is not None and self._vni_active(old_vni):
+                # Replace as two separately-tracked steps.  The proxy runs each
+                # -c command independently and continues past a failure, so a
+                # combined 'no vni old' + 'vni new' could remove the old VNI yet
+                # fail to add the new one, leaving FRR VNI-less while the cache
+                # still claimed old_vni (a later revert to old_vni would then be
+                # skipped as unchanged).
+                if not self.__push_vrf_vni_command(table, vrf_name, remove_vni=old_vni):
+                    # Old VNI still programmed in FRR; keep the cache so a later
+                    # event retries the removal.
+                    return
+                # Old VNI removed from FRR: drop it from the cache before the add
+                # so that if the add fails, the cache matches FRR (no VNI) and a
+                # subsequent event for old_vni or new_vni is retried as a fresh add.
+                self.vrf_vni_map.pop(vrf_name, None)
+            # Only mark the VNI as programmed after mgmtd/vtysh accepts it; a failed
+            # add must not be cached or a same-VNI retry would be skipped.
+            if self.__push_vrf_vni_command(table, vrf_name, vni=new_vni):
+                self.vrf_vni_map[vrf_name] = new_vni
+        elif vrf_name in self.vrf_vni_map:
+            # vni=0, HDEL vni, or field absent while a VNI is still programmed in FRR
+            self.__remove_vrf_vni(table, vrf_name)
+
+    EVPN_MH_INTF_ATTRS = {
+        'mh_uplink': 'evpn mh uplink',
+        'bypass': 'evpn mh bypass',
+    }
+
+    @staticmethod
+    def _mh_bool_active(value):
+        return value is not None and str(value).lower() == 'true'
+
+    @staticmethod
+    def _evpn_mh_ifname(key):
+        if isinstance(key, tuple):
+            return key[0]
+        return str(key).split('|', 1)[0]
+
+    def __push_evpn_mh_intf_attr(self, table, ifname, attr, remove=False):
+        cmd = self.EVPN_MH_INTF_ATTRS[attr]
+        if remove:
+            cmd = 'no ' + cmd
+        command = vtysh_cmd('configure terminal', 'interface {}'.format(ifname), '{}'.format(cmd))
+        return self.__run_command(table, command)
+
+    def __remove_evpn_mh_intf_attr(self, table, ifname, attr):
+        if self.__push_evpn_mh_intf_attr(table, ifname, attr, remove=True):
+            if ifname in self.evpn_mh_intf_map and attr in self.evpn_mh_intf_map[ifname]:
+                del self.evpn_mh_intf_map[ifname][attr]
+
+    def __clear_evpn_mh_intf_attr(self, table, ifname, attr):
+        """Remove an EVPN-MH interface attribute from FRR regardless of map state."""
+        if self.__push_evpn_mh_intf_attr(table, ifname, attr, remove=True):
+            if ifname in self.evpn_mh_intf_map and attr in self.evpn_mh_intf_map[ifname]:
+                del self.evpn_mh_intf_map[ifname][attr]
+
+    def __sync_evpn_mh_redirect_off_cache(self, table_key, active):
+        cached_data = self.table_data_cache.setdefault(table_key, {})
+        if active:
+            cached_data['redirect_off'] = 'true'
         else:
-            #create/update case
-            command = ['vtysh', '-c', 'configure terminal', '-c', '{}'.format(cmd)]
-            positive_execute = False
-            for param in data:
-                if param == 'vni':
-                    if data[param] != '0':
-                        command += ['-c', 'vni {}'.format(data[param])]
-                        self.vrf_vni_map[key_params[0]] = data[param]
-                        positive_execute = True
-                    elif key_params[0] in self.vrf_vni_map:
-                        command += ['-c', 'no vni {}'.format(self.vrf_vni_map[key_params[0]])]
-                        del self.vrf_vni_map[key_params[0]]
-                        positive_execute = True
-            if positive_execute == True:
-                self.__run_command(table, command)
+            cached_data.pop('redirect_off', None)
+            if not cached_data:
+                self.table_data_cache.pop(table_key, None)
+
+    def evpn_mh_interface_handler(self, table, key, data):
+        ifname = self._evpn_mh_ifname(key)
+        table_key = ExtConfigDBConnector.get_table_key(table, key)
+        cached_data = self.table_data_cache.get(table_key, {})
+        syslog.syslog(syslog.LOG_INFO,
+                      '[bgp cfgd](evpn mh if) {} changed to {}'.format(ifname, data))
+
+        if data is None:
+            for attr in self.EVPN_MH_INTF_ATTRS:
+                if ifname in self.evpn_mh_intf_map and attr in self.evpn_mh_intf_map[ifname]:
+                    self.__remove_evpn_mh_intf_attr(table, ifname, attr)
+                else:
+                    self.__clear_evpn_mh_intf_attr(table, ifname, attr)
+            if ifname in self.evpn_mh_intf_map and not self.evpn_mh_intf_map[ifname]:
+                del self.evpn_mh_intf_map[ifname]
+            return
+
+        if not data:
+            attrs_to_clear = set(self.evpn_mh_intf_map.get(ifname, {}))
+            for attr in self.EVPN_MH_INTF_ATTRS:
+                if self._mh_bool_active(cached_data.get(attr)):
+                    attrs_to_clear.add(attr)
+            for attr in attrs_to_clear:
+                if ifname in self.evpn_mh_intf_map and attr in self.evpn_mh_intf_map[ifname]:
+                    self.__remove_evpn_mh_intf_attr(table, ifname, attr)
+                else:
+                    self.__clear_evpn_mh_intf_attr(table, ifname, attr)
+            if ifname in self.evpn_mh_intf_map and not self.evpn_mh_intf_map[ifname]:
+                del self.evpn_mh_intf_map[ifname]
+            return
+
+        programmed = self.evpn_mh_intf_map.setdefault(ifname, {})
+        for attr in self.EVPN_MH_INTF_ATTRS:
+            if attr in data:
+                if self._mh_bool_active(data[attr]):
+                    if programmed.get(attr):
+                        continue
+                    if self.__push_evpn_mh_intf_attr(table, ifname, attr):
+                        self.evpn_mh_intf_map.setdefault(ifname, {})[attr] = True
+                elif attr in programmed:
+                    self.__remove_evpn_mh_intf_attr(table, ifname, attr)
+            elif attr in programmed or self._mh_bool_active(cached_data.get(attr)):
+                # HDEL: field dropped from CONFIG_DB — clear FRR even if boot got
+                # it before frrcfgd tracked the interface attribute.
+                self.__clear_evpn_mh_intf_attr(table, ifname, attr)
+
+        if ifname in self.evpn_mh_intf_map and not self.evpn_mh_intf_map[ifname]:
+            del self.evpn_mh_intf_map[ifname]
+
+    def evpn_mh_global_handler(self, table, key, data):
+        redirect_keys = {'startup_delay', 'mac_holdtime', 'neigh_holdtime'}
+        table_key = ExtConfigDBConnector.get_table_key(table, key)
+        cached_data = self.table_data_cache.get(table_key, {})
+
+        if not data:
+            if self.__run_command(table, vtysh_cmd('configure terminal', 'no evpn mh redirect-off')):
+                self.evpn_mh_redirect_off = False
+                self.__sync_evpn_mh_redirect_off_cache(table_key, False)
+            self.bgp_table_handler_common(table, key, None)
+            return
+
+        if 'redirect_off' in data:
+            active = self._mh_bool_active(data['redirect_off'])
+        elif self.evpn_mh_redirect_off or self._mh_bool_active(cached_data.get('redirect_off')):
+            # HDEL redirect_off while other fields remain, or boot/cache tracked it.
+            active = False
+        else:
+            active = None
+
+        if active is True:
+            if self.__run_command(table, vtysh_cmd('configure terminal', 'evpn mh redirect-off')):
+                self.evpn_mh_redirect_off = True
+                self.__sync_evpn_mh_redirect_off_cache(table_key, True)
+        elif active is False:
+            if self.__run_command(table, vtysh_cmd('configure terminal', 'no evpn mh redirect-off')):
+                self.evpn_mh_redirect_off = False
+                self.__sync_evpn_mh_redirect_off_cache(table_key, False)
+
+        timer_data = {k: v for k, v in data.items() if k in redirect_keys}
+        self.bgp_table_handler_common(table, key, timer_data, cache_omit_keys={'redirect_off'})
 
     def __get_vrf_asn(self, vrf):
         if vrf in self.bgp_asn:
@@ -2459,9 +2773,9 @@ class BGPConfigDaemon:
             syslog.syslog(syslog.LOG_ERR, 'failed to get local ASN of VRF {} for delete'.format(vrf))
             return False
         if vrf != self.DEFAULT_VRF:
-            command = ['vtysh', '-c', 'configure terminal', '-c', 'no router bgp {} vrf {}'.format(local_asn, vrf)]
+            command = vtysh_cmd('configure terminal', 'no router bgp {} vrf {}'.format(local_asn, vrf))
         else:
-            command = ['vtysh', '-c', 'configure terminal', '-c', 'no router bgp {}'.format(local_asn)]
+            command = vtysh_cmd('configure terminal', 'no router bgp {}'.format(local_asn))
         if not self.__run_command(table, command):
             syslog.syslog(syslog.LOG_ERR, 'failed to delete local_asn for VRF %s' % vrf)
             return False
@@ -2473,19 +2787,44 @@ class BGPConfigDaemon:
             dval.op = CachedDataWithOp.OP_DELETE
         return True
 
+    # Address families for which per-AF cache rows may exist for neighbors
+    # and peer-groups.  Used by the eviction paths below so that a
+    # delete-then-readd sequence does not leave stale per-AF cache rows
+    # behind for any modeled address family.
+    BGP_NBR_AF_LIST = ('ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn')
+
     def __cleanup_nbr_cache(self, vrf, nbr):
         nbr_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR',
                                             self.config_db.serialize_key((vrf, nbr)))
         self.table_data_cache.pop(nbr_key, None)
-        for af in ['ipv4', 'ipv6']:
+        for af_safi in self.BGP_NBR_AF_LIST:
             nbr_af_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR_AF',
-                                                self.config_db.serialize_key((vrf, nbr, af + '_unicast')))
+                                                self.config_db.serialize_key((vrf, nbr, af_safi)))
             self.table_data_cache.pop(nbr_af_key, None)
 
     def __delete_vrf_neighbor(self, vrf, peer, data, is_peer_grp):
         if is_peer_grp:
             if vrf in self.bgp_peer_group and peer in self.bgp_peer_group[vrf]:
                 del(self.bgp_peer_group[vrf][peer])
+            # Explicitly evict the BGP_PEER_GROUP table_data_cache entry so that a
+            # subsequent re-add of the same peer-group produces OP_ADD (not OP_NONE).
+            # Without this, __update_cache_data skips the stale cache row (because all
+            # ops are set to OP_NONE below) and the stale values survive; on the next
+            # config load the identical values compare equal and get OP_NONE, causing
+            # frrcfgd to skip all vtysh attribute commands (remote-as, timers, etc.)
+            # and leaving FRR with an unconfigured peer-group.
+            pg_cache_key = ExtConfigDBConnector.get_table_key(
+                'BGP_PEER_GROUP', self.config_db.serialize_key((vrf, peer)))
+            self.table_data_cache.pop(pg_cache_key, None)
+            # Also clear associated per-AF cache for the peer-group itself.
+            # Walk all modeled address families (ipv4_unicast, ipv6_unicast,
+            # l2vpn_evpn) so that a future EVPN-keyed peer-group AF row is
+            # not stranded with stale cache after delete-then-readd.
+            for af_safi in self.BGP_NBR_AF_LIST:
+                pg_af_cache_key = ExtConfigDBConnector.get_table_key(
+                    'BGP_PEER_GROUP_AF',
+                    self.config_db.serialize_key((vrf, peer, af_safi)))
+                self.table_data_cache.pop(pg_af_cache_key, None)
         else:
             if vrf in self.bgp_peer_group:
                 for _, peer_grp in self.bgp_peer_group[vrf].items():
@@ -2642,6 +2981,7 @@ class BGPConfigDaemon:
         return cmd_suffix, None
 
     def __update_bgp(self, data_list):
+        pg_keys = None  # fetched at most once per call, only when needed for auto-create
         while not self.bgp_message.empty():
             key, del_table, table, data = self.bgp_message.get()
             if table == 'STATIC_ROUTE' and len(key.split('|')) == 1:
@@ -2701,7 +3041,7 @@ class BGPConfigDaemon:
                         if dval.op == CachedDataWithOp.OP_NONE:
                             prog_asn = False
                         if prog_asn:
-                            command = ['vtysh', '-c', 'configure terminal', '-c', 'router bgp {} vrf {}'.format(dval.data, vrf), '-c', 'no bgp default ipv4-unicast']
+                            command = vtysh_cmd('configure terminal', 'router bgp {} vrf {}'.format(dval.data, vrf), 'no bgp default ipv4-unicast')
                             if self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_DEBUG, 'set local_asn %s to VRF %s, re-apply all VRF related tables' % (dval.data, vrf))
                                 self.bgp_asn[vrf] = dval.data
@@ -2719,10 +3059,10 @@ class BGPConfigDaemon:
                         continue
                     cmd_prefix = ['configure terminal', 'router bgp {} vrf {}'.format(local_asn, vrf)]
                     if 'srv6_locator' in data:
-                        cmd = ['vtysh', '-c', 'configure terminal',
-                               '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
-                               '-c', 'segment-routing srv6',
-                               '-c', 'locator {}'.format(data['srv6_locator'].data)]
+                        cmd = vtysh_cmd('configure terminal')
+                        cmd += " -c 'router bgp {} vrf {}' ".format(local_asn, vrf)
+                        cmd += " -c 'segment-routing srv6' "
+                        cmd += " -c 'locator {}' ".format(data['srv6_locator'].data)
                         if not self.__run_command(table, cmd):
                             syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
                             continue
@@ -2734,21 +3074,22 @@ class BGPConfigDaemon:
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
             elif table == 'SRV6_MY_LOCATORS':
+                if key is None:
+                    syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_LOCATORS table')
+                    continue
                 if not del_table:
-                    locator_name = prefix
+                    key = prefix
                     prefix = data['prefix']
-                    cmd = ['vtysh', '-c', 'configure terminal',
-                           '-c', 'segment-routing', '-c', 'srv6', '-c', 'locators',
-                           '-c', 'locator {}'.format(locator_name),
-                           '-c', 'prefix {} block-len {} node-len {} func-bits {}'.format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)]
+                    cmd = vtysh_cmd('configure terminal', 'segment-routing', 'srv6', 'locators')
+                    cmd += " -c 'locator {}' ".format(key)
+                    cmd += " -c 'prefix {} block-len {} node-len {} func-bits {}' ".format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)
                     if not self.__run_command(table, cmd):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATORS config command')
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
                         continue
             elif table == 'SRV6_MY_SOURCE':
                 source = data['source-address']
-                cmd = ['vtysh', '-c', 'configure terminal',
-                       '-c', 'segment-routing', '-c', 'srv6', '-c', 'encapsulation',
-                       '-c', 'source-address {}'.format(source.data)]
+                cmd = vtysh_cmd('configure terminal', 'segment-routing', 'srv6', 'encapsulation')
+                cmd += " -c 'source-address {}' ".format(source.data)
                 if not self.__run_command(table, cmd):
                     syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 encap config command {}'.format(cmd))
                     continue
@@ -2757,14 +3098,13 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_SIDS table')
                     continue
                 if not del_table:
-                    cmd = ['vtysh', '-c', 'configure terminal',
-                           '-c', 'segment-routing', '-c', 'srv6',
-                           '-c', 'static-sids']
+                    cmd = vtysh_cmd('configure terminal', 'segment-routing', 'srv6')
+                    cmd +="-c 'static-sids' "
                     uDTAction = ["uDT46", "uDT4", "uDT6"]
                     if data['action'].data in uDTAction:
-                        cmd += ['-c', 'sid {} locator {} behavior {} vrf {}'.format(key, prefix, data['action'].data, data['decap_vrf'].data)]
+                        cmd +="-c 'sid {} locator {} behavior {} vrf {}' ".format(key, prefix, data['action'].data, data['decap_vrf'].data)
                     elif data['action'].data == 'uN':
-                        cmd += ['-c', 'sid {} locator {} behavior {} '.format(key, prefix, data['action'].data)]
+                        cmd +="-c 'sid {} locator {} behavior {} ' ".format(key, prefix, data['action'].data)
                     else:
                         syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command, not support action %s'.format(data['action'].data))
                         continue
@@ -2797,22 +3137,45 @@ class BGPConfigDaemon:
                     if is_peer_group:
                         # if peer group is not created, create it before setting other attributes
                         if key not in self.bgp_peer_group.setdefault(vrf, {}):
-                            command = ['vtysh', '-c', 'configure terminal',
-                                       '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
-                                       '-c', 'neighbor {} peer-group'.format(key)]
+                            command = vtysh_cmd('configure terminal',
+                                                'router bgp {} vrf {}'.format(local_asn, vrf),
+                                                'neighbor {} peer-group'.format(key))
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to create peer-group %s for VRF %s' % (key, vrf))
                                 continue
                             self.bgp_peer_group[vrf][key] = BGPPeerGroup(vrf)
                     elif not self.__peer_is_ip(key):
                         if key not in self.bgp_intf_nbr.setdefault(vrf, set()):
-                            command = ['vtysh', '-c', 'configure terminal',
-                                       '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
-                                       '-c', 'neighbor {} interface'.format(key)]
+                            command = vtysh_cmd('configure terminal',
+                                                'router bgp {} vrf {}'.format(local_asn, vrf),
+                                                'neighbor {} interface'.format(key))
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to create neighbor of interface %s for VRF %s' % (key, vrf))
                                 continue
                             self.bgp_intf_nbr[vrf].add(key)
+                    # If this BGP_NEIGHBOR references a peer-group not yet in FRR, create it proactively.
+                    if not is_peer_group:
+                        pg_val = data.get('peer_group_name', None)
+                        if pg_val is not None and pg_val.op == CachedDataWithOp.OP_ADD:
+                            pg_name = pg_val.data
+                            if pg_name and pg_name not in self.bgp_peer_group.setdefault(vrf, {}):
+                                if pg_keys is None:
+                                    pg_keys = self.config_db.get_keys('BGP_PEER_GROUP')
+                                pg_key = (vrf, pg_name)
+                                if pg_key in pg_keys:
+                                    command = vtysh_cmd('configure terminal',
+                                                        'router bgp {} vrf {}'.format(local_asn, vrf),
+                                                        'neighbor {} peer-group'.format(pg_name))
+                                    if not self.__run_command(table, command):
+                                        syslog.syslog(syslog.LOG_ERR,
+                                            'failed to auto-create peer-group %s for neighbor %s in VRF %s' % (pg_name, key, vrf))
+                                        continue
+                                    self.bgp_peer_group[vrf][pg_name] = BGPPeerGroup(vrf)
+                                    syslog.syslog(syslog.LOG_NOTICE,
+                                        'auto-created peer-group %s in FRR (BGP_NEIGHBOR arrived before BGP_PEER_GROUP) for VRF %s' % (pg_name, vrf))
+                                else:
+                                    syslog.syslog(syslog.LOG_ERR,
+                                        'peer-group %s referenced by neighbor %s not found in CONFIG_DB for VRF %s; skipping auto-create' % (pg_name, key, vrf))
                     bfd_val = data.get('bfd', None)
                     if (bfd_val is not None and (bfd_val.op == CachedDataWithOp.OP_ADD or bfd_val.op == CachedDataWithOp.OP_UPDATE) and
                         bfd_val.data == 'true'):
@@ -2828,8 +3191,8 @@ class BGPConfigDaemon:
                          data['peer_group_name'].op == CachedDataWithOp.OP_DELETE)):
                         dval = data['peer_group_name']
                         if vrf not in self.bgp_peer_group or dval.data not in self.bgp_peer_group[vrf]:
-                            # should not happen because vtysh command will fail if peer_group not exists
-                            syslog.syslog(syslog.LOG_ERR, 'invalid peer-group %s was referenced' % dval.data)
+                            # peer-group referenced by neighbor does not exist (genuine misconfiguration)
+                            syslog.syslog(syslog.LOG_ERR, 'invalid peer-group %s was referenced by neighbor %s in VRF %s' % (dval.data, key, vrf))
                             continue
                         peer_grp = self.bgp_peer_group[vrf][dval.data]
                         if dval.op == CachedDataWithOp.OP_ADD:
@@ -2860,9 +3223,8 @@ class BGPConfigDaemon:
                     if is_peer_group:
                         # clear associated neighbor list in cache
                         self.__delete_pg_neighbors(vrf, key)
-                    command = ['vtysh', '-c', 'configure terminal',
-                               '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
-                               '-c', 'no neighbor {}'.format(key)]
+                    command = vtysh_cmd('configure terminal', 'router bgp {} vrf {}', 'no neighbor {}').\
+                        format(local_asn, vrf, key)
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete VRF %s bgp neigbor %s' % (vrf, key))
                     self.__delete_vrf_neighbor(vrf, key, data, is_peer_group)
@@ -2870,6 +3232,13 @@ class BGPConfigDaemon:
                 nbr, af_type = key.split('|')
                 af, ip_type = af_type.lower().split('_')
                 syslog.syslog(syslog.LOG_INFO, 'Set address family for neighbor {} to {} {}'.format(nbr, af, ip_type))
+                # Transform admin_status from 'up'/'down' to 'true'/'false'
+                if 'admin_status' in data:
+                    admin_val = data['admin_status']
+                    if admin_val.data == 'up':
+                        data['admin_status'].data = 'true'
+                    elif admin_val.data == 'down':
+                        data['admin_status'].data = 'false'
                 cmd_prefix = ['configure terminal',
                               'router bgp {} vrf {}'.format(local_asn, vrf),
                               'address-family {} {}'.format(af, ip_type)]
@@ -2897,27 +3266,115 @@ class BGPConfigDaemon:
                         comm_set.db_data_to_attr(dkey, upd_val)
             elif table == 'PREFIX_SET':
                 pfx_set_name = prefix
-                if not del_table:
+                # Handle prefix-set deletion
+                if del_table:
                     if pfx_set_name in self.prefix_set_list:
-                        syslog.syslog(syslog.LOG_DEBUG, 'prefix-set %s exists with af %d' %
-                                (pfx_set_name, self.prefix_set_list[pfx_set_name].af))
-                        continue
+                        prefix_set = self.prefix_set_list[pfx_set_name]
+                        # Remove description from FRR before deleting prefix-set
+                        if hasattr(prefix_set, 'description'):
+                            af_type = 'ip' if prefix_set.af == socket.AF_INET else 'ipv6'
+                            command = vtysh_cmd('configure terminal', 'no {} prefix-list {} description'.format(af_type, pfx_set_name))
+                            if not self.__run_command(table, command):
+                                syslog.syslog(syslog.LOG_ERR, 'Failed to remove description from FRR during prefix-set %s deletion' % pfx_set_name)
+                        syslog.syslog(syslog.LOG_DEBUG, 'Deleting prefix-set %s from cache' % pfx_set_name)
+                        del(self.prefix_set_list[pfx_set_name])
+                    for _, dval in data.items():
+                        dval.status = CachedDataWithOp.STAT_SUCC
+                    continue
+                # Handle prefix-set creation or updates
+                if pfx_set_name not in self.prefix_set_list:
+                    # Create new prefix-set
                     if 'mode' not in data:
                         syslog.syslog(syslog.LOG_ERR, 'no mode given for prefix-set %s' % pfx_set_name)
+                        for _, dval in data.items():
+                            dval.status = CachedDataWithOp.STAT_FAIL if dval.op != CachedDataWithOp.OP_DELETE else CachedDataWithOp.STAT_SUCC
                         continue
                     set_mode = data['mode'].data.lower()
                     self.prefix_set_list[pfx_set_name] = MatchPrefixList(set_mode)
+                    syslog.syslog(syslog.LOG_DEBUG, 'Created new prefix-set %s with mode %s' % (pfx_set_name, set_mode))
+                    # Handle description during creation
+                    if 'description' in data and data['description'].op not in [CachedDataWithOp.OP_DELETE, CachedDataWithOp.OP_NONE]:
+                        self.prefix_set_list[pfx_set_name].description = data['description'].data
                 else:
-                    if pfx_set_name in self.prefix_set_list:
-                        del(self.prefix_set_list[pfx_set_name])
-                for _, dval in data.items():
-                    dval.status = CachedDataWithOp.STAT_SUCC
+                    # Cache row already exists - either from a previous
+                    # PREFIX_SET event or from the on-demand stub created in
+                    # the PREFIX-event handler.  Reconcile .af with the
+                    # declared mode so that a stub created before mode was
+                    # known is upgraded inline rather than left silently
+                    # stuck on a fallback AF.
+                    cached = self.prefix_set_list[pfx_set_name]
+                    if 'mode' in data:
+                        declared_af = (socket.AF_INET
+                                       if data['mode'].data.lower() == 'ipv4'
+                                       else socket.AF_INET6)
+                        if cached.af is None:
+                            cached.af = declared_af
+                            syslog.syslog(syslog.LOG_DEBUG,
+                                          'prefix-set %s: bound deferred af to %d (declared mode %s)' %
+                                          (pfx_set_name, declared_af, data['mode'].data))
+                        elif cached.af != declared_af:
+                            if len(cached) == 0:
+                                old_af = cached.af
+                                cached.af = declared_af
+                                syslog.syslog(syslog.LOG_WARNING,
+                                              'prefix-set %s: upgraded af from %d to %d to match declared mode %s' %
+                                              (pfx_set_name, old_af, declared_af, data['mode'].data))
+                            else:
+                                syslog.syslog(syslog.LOG_ERR,
+                                              'prefix-set %s: declared mode %s disagrees with cached af %d and %d prefix(es) already added; keeping cached af' %
+                                              (pfx_set_name, data['mode'].data, cached.af, len(cached)))
+                    syslog.syslog(syslog.LOG_DEBUG, 'prefix-set %s exists with af %s' %
+                            (pfx_set_name, str(cached.af)))
+                # Optimized description handling - unified for both new and existing prefix-sets
+                desc_op = data.get('description')
+                if desc_op and pfx_set_name in self.prefix_set_list:
+                    prefix_set = self.prefix_set_list[pfx_set_name]
+                    af_type = 'ip' if prefix_set.af == socket.AF_INET else 'ipv6'
+                    if desc_op.op == CachedDataWithOp.OP_DELETE:
+                        # Remove from cache and FRR if exists
+                        if hasattr(prefix_set, 'description'):
+                            delattr(prefix_set, 'description')
+                            command = vtysh_cmd('configure terminal', 'no {} prefix-list {} description'.format(af_type, pfx_set_name))
+                            desc_op.status = CachedDataWithOp.STAT_SUCC if self.__run_command(table, command) else CachedDataWithOp.STAT_FAIL
+                            if desc_op.status == CachedDataWithOp.STAT_FAIL:
+                                syslog.syslog(syslog.LOG_ERR, 'Failed to remove description from FRR for prefix-set %s' % pfx_set_name)
+                        else:
+                            desc_op.status = CachedDataWithOp.STAT_SUCC
+                    elif desc_op.op in [CachedDataWithOp.OP_ADD, CachedDataWithOp.OP_UPDATE] and desc_op.data and desc_op.data.strip():
+                        # Add/update description in cache and FRR
+                        prefix_set.description = desc_op.data
+                        escaped_desc = desc_op.data.replace('"', '\\"') if '"' in desc_op.data else desc_op.data
+                        command = vtysh_cmd('configure terminal', '{} prefix-list {} description \\"{}\\"'.format(af_type, pfx_set_name, escaped_desc))
+                        desc_op.status = CachedDataWithOp.STAT_SUCC if self.__run_command(table, command) else CachedDataWithOp.STAT_FAIL
+                        if desc_op.status == CachedDataWithOp.STAT_FAIL:
+                            syslog.syslog(syslog.LOG_ERR, 'Failed to apply description to FRR for prefix-set %s' % pfx_set_name)
+                    else:
+                        desc_op.status = CachedDataWithOp.STAT_SUCC
+                # Batch status update for remaining operations
+                for dval in data.values():
+                    if not hasattr(dval, 'status') or dval.status is None:
+                        dval.status = CachedDataWithOp.STAT_SUCC
             elif table == 'PREFIX' or table == 'NEIGHBOR_SET' or table == 'NEXTHOP_SET':
                 pfx_set_name = self.get_prefix_set_name(prefix, table)
                 if table == 'PREFIX':
                     if pfx_set_name not in self.prefix_set_list:
-                        syslog.syslog(syslog.LOG_ERR, 'could not find prefix-set %s from cache' % pfx_set_name)
-                        continue
+                        # PREFIX keyspace event may arrive before PREFIX_SET event (race at
+                        # runtime config load).  Do an on-demand CONFIG_DB lookup so the
+                        # prefix-set entry is not silently dropped.
+                        ps_entry = self.config_db.get_entry('PREFIX_SET', pfx_set_name)
+                        set_mode = ps_entry.get('mode') if ps_entry else None
+                        if set_mode is not None:
+                            set_mode = set_mode.lower()
+                        # If set_mode is still None (PREFIX_SET row missing or
+                        # carries no mode key), defer AF resolution.  add_prefix()
+                        # below will infer .af from the IP family of the prefix
+                        # being added; a subsequent PREFIX_SET event will
+                        # reconcile via the upgrade path in the PREFIX_SET
+                        # handler's else-branch.
+                        syslog.syslog(syslog.LOG_WARNING,
+                                      'prefix-set %s not in cache; initializing on-demand with mode %s'
+                                      % (pfx_set_name, set_mode if set_mode else 'deferred'))
+                        self.prefix_set_list[pfx_set_name] = MatchPrefixList(set_mode)
                     keys = key.split('|')
                     if len(keys) == 3:
                         seq = keys[0]
@@ -2932,6 +3389,11 @@ class BGPConfigDaemon:
                     pfx_action = data.get('action', None)
                     if pfx_action is None or pfx_action.op == CachedDataWithOp.OP_NONE:
                         continue
+                    # MatchPrefixList.af may be None on a freshly-created lazy
+                    # stub (PREFIX-before-PREFIX_SET race).  We read .af here
+                    # for the DELETE path and re-read after add_prefix() in
+                    # the ADD path, since add_prefix() binds .af to the
+                    # actual prefix's IP family on a lazy stub.
                     af = self.prefix_set_list[pfx_set_name].af
                     if af == socket.AF_INET:
                         # use table daemons setting
@@ -2945,8 +3407,8 @@ class BGPConfigDaemon:
                             syslog.syslog(syslog.LOG_ERR, 'prefix of {} with range {} not found from prefix-set {}'.\
                                             format(ip_pfx, len_range, pfx_set_name))
                             continue
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'no {} prefix-list {} {}'.format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(del_pfx))]
+                        command = vtysh_cmd('configure terminal', 'no {} prefix-list {} {}').\
+                                    format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(del_pfx))
                         if not self.__run_command(table, command, daemons):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete prefix %s with range %s from set %s' %
                                           (ip_pfx, len_range, pfx_set_name))
@@ -2960,8 +3422,13 @@ class BGPConfigDaemon:
                             syslog.syslog(syslog.LOG_ERR, 'failed to update prefix-set %s in cache with prefix %s range %s' %
                                     (pfx_set_name, ip_pfx, len_range))
                             continue
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', '{} prefix-list {} {}'.format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(add_pfx))]
+                        # add_prefix() may have just bound .af on a lazy stub;
+                        # re-read so vtysh receives the right ip/ipv6 verb and
+                        # daemons set.
+                        af = self.prefix_set_list[pfx_set_name].af
+                        daemons = None if af == socket.AF_INET else ['bgpd', 'zebra']
+                        command = vtysh_cmd('configure terminal', '{} prefix-list {} {}').\
+                                    format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name, str(add_pfx))
                         if not self.__run_command(table, command, daemons):
                             syslog.syslog(syslog.LOG_ERR, 'failed to add prefix %s with range %s to set %s' %
                                           (ip_pfx, len_range, pfx_set_name))
@@ -2977,8 +3444,8 @@ class BGPConfigDaemon:
                     ip_addr_list = data['address'].data
                     if pfx_set_name in self.prefix_set_list:
                         af = self.prefix_set_list[pfx_set_name].af
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'no {} prefix-list {}'.format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name)]
+                        command = vtysh_cmd('configure terminal', 'no {} prefix-list {}').\
+                                   format(('ip' if af == socket.AF_INET else 'ipv6'), pfx_set_name)
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete existing prefix-set {}'.format(pfx_set_name))
                             continue
@@ -2991,9 +3458,9 @@ class BGPConfigDaemon:
                             except ValueError:
                                 continue
                         for prefix in prefix_set:
-                            command = ['vtysh', '-c', 'configure terminal',
-                                       '-c', '{} prefix-list {} {}'.format(('ip' if prefix_set.af == socket.AF_INET else 'ipv6'), pfx_set_name, str(prefix))]
-                            if not self.__run_command(table, command):
+                            command = vtysh_cmd('configure terminal', '{} prefix-list {} {}').\
+                                       format(('ip' if prefix_set.af == socket.AF_INET else 'ipv6'), pfx_set_name, str(prefix))
+                            if not self.__run_command(table, command, daemons):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete existing prefix-set {}'.format(pfx_set_name))
                                 continue
                         self.prefix_set_list[pfx_set_name] = prefix_set
@@ -3119,8 +3586,8 @@ class BGPConfigDaemon:
                         if dval.op != CachedDataWithOp.OP_NONE:
                             enable = (dval.op != CachedDataWithOp.OP_DELETE)
                             no_arg = CommandArgument(self, enable)
-                            command = ['vtysh', '-c', 'configure terminal',
-                                       '-c', '{:no-prefix}route-map {} {} {}'.format(no_arg, map_name, dval.data, seq_no)]
+                            command = vtysh_cmd('configure terminal', '{:no-prefix}route-map {} {} {}').\
+                                       format(no_arg, map_name, dval.data, seq_no)
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to configure route-map {} seq {}'.format(map_name, seq_no))
                                 continue
@@ -3144,8 +3611,8 @@ class BGPConfigDaemon:
                     if map_name not in self.route_map or seq_no not in self.route_map[map_name]:
                         syslog.syslog(syslog.LOG_ERR, 'route-map {} seq {} not found for delete'.format(map_name, seq_no))
                         continue
-                    command = ['vtysh', '-c', 'configure terminal',
-                               '-c', 'no route-map {} {} {}'.format(map_name, self.route_map[map_name][seq_no], seq_no)]
+                    command = vtysh_cmd('configure terminal', 'no route-map {} {} {}').\
+                               format(map_name, self.route_map[map_name][seq_no], seq_no)
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed running route-map delete command')
                         continue
@@ -3208,9 +3675,8 @@ class BGPConfigDaemon:
 
                         suffix_cmd, oper = self.__bfd_handle_delete (data)
                         if suffix_cmd and oper == CachedDataWithOp.OP_DELETE:
-                            command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                       '-c', 'peer {} local-address {} vrf {} interface {}'.format(remoteaddr, localaddr, vrf, interface),
-                                       '-c', suffix_cmd]
+                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} local-address {} vrf {} interface {}', '{}').\
+                            format(remoteaddr, localaddr, vrf, interface, suffix_cmd)
 
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
@@ -3229,9 +3695,8 @@ class BGPConfigDaemon:
                         suffix_cmd, oper = self.__bfd_handle_delete (data)
 
                         if suffix_cmd and oper == CachedDataWithOp.OP_DELETE:
-                            command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                       '-c', 'peer {} vrf {} interface {}'.format(remoteaddr, vrf, interface),
-                                       '-c', suffix_cmd]
+                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} vrf {} interface {}', '{}').\
+                            format(remoteaddr, vrf, interface, suffix_cmd)
 
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
@@ -3249,12 +3714,12 @@ class BGPConfigDaemon:
                         dval = data['local-address']
                         localaddr = dval.data
                         syslog.syslog(syslog.LOG_INFO, 'Delete BFD single hop to {} {} {}'.format(remoteaddr, vrf, interface, localaddr))
-                        command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                   '-c', 'no peer {} local-address {} vrf {} interface {}'.format(remoteaddr, localaddr, vrf, interface)]
+                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} local-address {} vrf {} interface {}').\
+                            format(remoteaddr, localaddr, vrf, interface)
                     else:
                         syslog.syslog(syslog.LOG_INFO, 'Delete BFD single hop to {} {} {}'.format(remoteaddr, vrf, interface))
-                        command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                   '-c', 'no peer {} vrf {} interface {}'.format(remoteaddr, vrf, interface)]
+                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} vrf {} interface {}').\
+                            format(remoteaddr, vrf, interface)
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
                         continue
@@ -3267,13 +3732,11 @@ class BGPConfigDaemon:
                     suffix_cmd, oper = self.__bfd_handle_delete (data)
                     if suffix_cmd and oper == CachedDataWithOp.OP_DELETE:
                         if not 'null' in interface:
-                            command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                       '-c', 'peer {} local-address {} vrf {} interface {}'.format(remoteaddr, localaddr, vrf, interface),
-                                       '-c', suffix_cmd]
+                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} local-address {} vrf {} interface {}', '{}').\
+                            format(remoteaddr, localaddr, vrf, interface, suffix_cmd)
                         else:
-                            command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                       '-c', 'peer {} local-address {} vrf {}'.format(remoteaddr, localaddr, vrf),
-                                       '-c', suffix_cmd]
+                            command = vtysh_cmd('configure terminal', 'bfd', 'peer {} local-address {} vrf {}', '{}').\
+                            format(remoteaddr, localaddr, vrf, suffix_cmd)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete single-hop peer {}'.format(key))
@@ -3294,11 +3757,11 @@ class BGPConfigDaemon:
                 else:
                     syslog.syslog(syslog.LOG_INFO, 'Delete BFD multi hop to {} {} {} {}'.format(remoteaddr, vrf, localaddr, interface))
                     if not 'null' in interface:
-                        command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                   '-c', 'no peer {} vrf {} multihop local-address {} interface {}'.format(remoteaddr, vrf, localaddr, interface)]
+                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} vrf {} multihop local-address {} interface {}').\
+                        format(remoteaddr, vrf, localaddr, interface)
                     else:
-                        command = ['vtysh', '-c', 'configure terminal', '-c', 'bfd',
-                                   '-c', 'no peer {} vrf {} multihop local-address {}'.format(remoteaddr, vrf, localaddr)]
+                        command = vtysh_cmd('configure terminal', 'bfd', 'no peer {} vrf {} multihop local-address {}').\
+                        format(remoteaddr, vrf, localaddr)
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete multihop peer {}'.format(key))
@@ -3335,10 +3798,8 @@ class BGPConfigDaemon:
                                 chk_icmp_attrs_dict = {'icmp_source_interface':'source-interface ', 'icmp_source_ip':'source-address ', 'icmp_size':'request-data-size ', 'icmp_vrf':'source-vrf ', 'icmp_tos':'tos ', 'icmp_ttl':'ttl '}
                                 for attr in chk_icmp_attrs:
                                     if attr in data and data[attr].op != CachedDataWithOp.OP_DELETE:
-                                        command = ['vtysh', '-c', 'configure terminal',
-                                               '-c', 'ip sla {}'.format(sla_id),
-                                               '-c', icmp_cmd_mode,
-                                               '-c', '{} {}'.format(chk_icmp_attrs_dict[attr], data[attr].data)]
+                                        command = vtysh_cmd('configure terminal', 'ip sla {}', '{}', '{} {}').\
+                                        format(sla_id, icmp_cmd_mode, chk_icmp_attrs_dict[attr], data[attr].data)
                                         syslog.syslog(syslog.LOG_INFO, 'Execute Icmp Cmd {}'.format(command))
                                         if not self.__run_command(table, command):
                                             syslog.syslog(syslog.LOG_ERR, 'failed to add icmp config for  ip sla {}'.format(sla_id))
@@ -3364,10 +3825,8 @@ class BGPConfigDaemon:
                                 chk_tcp_attrs_dict = {'tcp_source_interface':'source-interface ', 'tcp_source_ip':'source-address ', 'tcp_source_port':'source-port ', 'tcp_vrf':'source-vrf ', 'tcp_tos':'tos ', 'tcp_ttl':'ttl '}
                                 for attr in chk_tcp_attrs:
                                     if attr in data and data[attr].op != CachedDataWithOp.OP_DELETE:
-                                        command = ['vtysh', '-c', 'configure terminal',
-                                               '-c', 'ip sla {}'.format(sla_id),
-                                               '-c', tcp_cmd_mode,
-                                               '-c', '{} {}'.format(chk_tcp_attrs_dict[attr], data[attr].data)]
+                                        command = vtysh_cmd('configure terminal', 'ip sla {}', '{}', '{} {}').\
+                                        format(sla_id, tcp_cmd_mode, chk_tcp_attrs_dict[attr], data[attr].data)
                                         syslog.syslog(syslog.LOG_INFO, 'Execute Tcp Cmd {}'.format(command))
                                         if not self.__run_command(table, command):
                                             syslog.syslog(syslog.LOG_ERR, 'failed to add Tcp config for  ip sla {}'.format(sla_id))
@@ -3390,7 +3849,7 @@ class BGPConfigDaemon:
 
                 # Always delete ip sla if it is not found in configdb
                 if not found_in_configdb:
-                    command = ['vtysh', '-c', 'configure terminal', '-c', 'no ip sla {}'.format(sla_id)]
+                    command = vtysh_cmd('configure terminal', 'no ip sla {}'.format(sla_id))
                     syslog.syslog(syslog.LOG_ERR, 'Entry deleted in ip sla config db')
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete router ip sla {}'.format(sla_id))
@@ -3411,7 +3870,7 @@ class BGPConfigDaemon:
                         syslog.syslog(syslog.LOG_ERR, 'failed running ospf config command')
                         continue
                 else:
-                    command = ['vtysh', '-c', 'configure terminal', '-c', 'no router ospf vrf {}'.format(vrf)]
+                    command = vtysh_cmd('configure terminal', 'no router ospf vrf {}'.format(vrf))
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete router ospf vrf {}'.format(vrf))
@@ -3439,9 +3898,8 @@ class BGPConfigDaemon:
                 syslog.syslog(syslog.LOG_INFO, 'Create router ospf vrf {}, Vlink: {}, tableop {}'.format(vrf, data, del_table))
 
                 if data == {}:
-                    command = ['vtysh', '-c', 'configure terminal',
-                               '-c', 'router ospf vrf {}'.format(vrf),
-                               '-c', 'no area {} virtual-link {}'.format(area, vlinkid)]
+                    command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no area {} virtual-link {}').\
+                    format(vrf, area, vlinkid)
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete vlink {} {}'.format(area, vlinkid))
@@ -3457,9 +3915,8 @@ class BGPConfigDaemon:
                         continue
 
                     if del_table:
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'router ospf vrf {}'.format(vrf),
-                                   '-c', 'no area {} virtual-link {}'.format(area, vlinkid)]
+                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no area {} virtual-link {}').\
+                        format(vrf, area, vlinkid)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete vlink {} {}'.format(area, vlinkid))
@@ -3476,17 +3933,15 @@ class BGPConfigDaemon:
                 network = keyvals[1]
 
                 if not del_table:
-                    command = ['vtysh', '-c', 'configure terminal',
-                               '-c', 'router ospf vrf {}'.format(vrf),
-                               '-c', 'network {} area {}'.format(network, area)]
+                    command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'network {} area {}').\
+                    format(vrf, network, area)
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to create network {} {}'.format(area, network))
                         continue
                 else:
-                    command = ['vtysh', '-c', 'configure terminal',
-                               '-c', 'router ospf vrf {}'.format(vrf),
-                               '-c', 'no network {} area {}'.format(network, area)]
+                    command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no network {} area {}').\
+                    format(vrf, network, area)
 
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to delete network {} {}'.format(area, network))
@@ -3505,17 +3960,15 @@ class BGPConfigDaemon:
 
                 if data == {}:
                    if not del_table:
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'router ospf vrf {}'.format(vrf),
-                                   '-c', 'area {} range {}'.format(area, range)]
+                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'area {} range {}').\
+                        format(vrf, area, range)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create range {} {}'.format(area, range))
                             continue
                    else:
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'router ospf vrf {}'.format(vrf),
-                                   '-c', 'no area {} range {}'.format(area, range)]
+                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no area {} range {}').\
+                        format(vrf, area, range)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete range {} {}'.format(area, range))
@@ -3540,7 +3993,8 @@ class BGPConfigDaemon:
                 if (protocol == "DIRECTLY_CONNECTED"):
                     protocol = "CONNECTED"
 
-                syslog.syslog(syslog.LOG_INFO, 'Create redistribute-list {} {}'.format(protocol, direction))
+                syslog.syslog(syslog.LOG_INFO, 'Create redistribute-list {} {}'.\
+                                format(protocol, direction))
 
                 cmd_suffix = ""
                 del_cmd_suffix = ""
@@ -3610,9 +4064,8 @@ class BGPConfigDaemon:
                         else:
                             cmd_suffix = "no distribute-list {} out {}".format(acclistname, protocol.lower())
 
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'router ospf vrf {}'.format(vrf),
-                                   '-c', cmd_suffix]
+                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', '{}').\
+                            format(vrf, cmd_suffix)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create distribute-list {} {}'.format(protocol, direction))
@@ -3631,9 +4084,8 @@ class BGPConfigDaemon:
                             else:
                                 cmd_suffix = "no redistribute {}".format(protocol.lower()) + del_cmd_suffix
 
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'router ospf vrf {}'.format(vrf),
-                                   '-c', cmd_suffix]
+                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', '{}').\
+                            format(vrf, cmd_suffix)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create default-info/redistribute {} {}'.format(protocol, direction))
@@ -3642,17 +4094,15 @@ class BGPConfigDaemon:
                             self.__ospf_apply_config(data, rmapoper, metricoper, metrictypeoper, alwaysoper, acclistoper)
                 else:
                     if (direction == "IMPORT"):
-                        command = []
+                        command = ""
                         if (protocol == "DEFAULT_ROUTE"):
-                            command = ['vtysh', '-c', 'configure terminal',
-                                       '-c', 'router ospf vrf {}'.format(vrf),
-                                       '-c', 'no default-information originate']
+                            command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no default-information originate').\
+                            format(vrf)
                         else:
-                            command = ['vtysh', '-c', 'configure terminal',
-                                       '-c', 'router ospf vrf {}'.format(vrf),
-                                       '-c', 'no redistribute {}'.format(protocol.lower())]
+                            command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no redistribute {}').\
+                            format(vrf, protocol.lower())
 
-                        if command:
+                        if (command != ""):
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete default-info/redistribute {}'.format(protocol.lower()))
                                 continue
@@ -3660,9 +4110,8 @@ class BGPConfigDaemon:
                                 self.__ospf_delete(data)
                     else:
                         if (acclistname != ""):
-                            command = ['vtysh', '-c', 'configure terminal',
-                                       '-c', 'router ospf vrf {}'.format(vrf),
-                                       '-c', 'no distribute-list {} out {}'.format(acclistname, protocol.lower())]
+                            command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no distribute-list {} out {}').\
+                            format(vrf, acclistname, protocol.lower())
 
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete distribute-list {} {}'.format(protocol, direction))
@@ -3745,17 +4194,15 @@ class BGPConfigDaemon:
                 if data == {}:
                    if not del_table:
 
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'router ospf vrf {}'.format(vrf),
-                                   '-c', 'passive-interface {} {}'.format(if_name, if_addr)]
+                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'passive-interface {} {}').\
+                        format(vrf, if_name, if_addr)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to create passive interface {} {}'.format(if_name, if_addr))
                             continue
                    else:
-                        command = ['vtysh', '-c', 'configure terminal',
-                                   '-c', 'router ospf vrf {}'.format(vrf),
-                                   '-c', 'no passive-interface {} {}'.format(if_name, if_addr)]
+                        command = vtysh_cmd('configure terminal', 'router ospf vrf {}', 'no passive-interface {} {}').\
+                        format(vrf, if_name, if_addr)
 
                         if not self.__run_command(table, command):
                             syslog.syslog(syslog.LOG_ERR, 'failed to delete passive interface {} {}'.format(if_name, if_addr))
@@ -3856,10 +4303,56 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_ERR, 'failed running ip igmp interface config command')
                     continue
 
+            elif table == 'PROTOCOL_ROUTE_MAP':
+                if key is None:
+                    syslog.syslog(syslog.LOG_ERR, 'PROTOCOL_ROUTE_MAP: key is None')
+                    continue
+                key_parts = key.split('|')
+                if len(key_parts) != 2:
+                    syslog.syslog(syslog.LOG_ERR, 'PROTOCOL_ROUTE_MAP: expected 2 parts in key (protocol|addr_family), got {}'.format(key))
+                    continue
+                vrf_name = prefix
+                protocol = key_parts[0]
+                addr_family = key_parts[1]
+                syslog.syslog(syslog.LOG_INFO, 'PROTOCOL_ROUTE_MAP: vrf={}, protocol={}, addr_family={}'.format(vrf_name, protocol, addr_family))
 
-    def __add_op_to_data(self, table_key, data, comb_attr_list):
+                # Construct command
+                cmd_prefix = ['configure terminal']
+                if not key_map.run_command(self, table, data, cmd_prefix, vrf_name, protocol, addr_family):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running PROTOCOL_ROUTE_MAP config command')
+                    continue
+            else:
+                # Generic handler for tables without specific handling (e.g., NHT, VLAN_INTERFACE, VLAN_INTERFACE_ND_PREFIX)
+                if key_map is not None:
+                    syslog.syslog(syslog.LOG_INFO, 'Generic handler for table {} prefix {} key {}'.format(table, prefix, key))
+                    cmd_prefix = ['configure terminal']
+                    # For VLAN_INTERFACE, VLAN_INTERFACE_ND_PREFIX, and EVPN_MH_INTERFACE,
+                    # add interface context
+                    if table in ('VLAN_INTERFACE', 'VLAN_INTERFACE_ND_PREFIX', 'EVPN_MH_INTERFACE'):
+                        # prefix is the interface name (e.g., Vlan20, Ethernet120)
+                        cmd_prefix.append('interface {}'.format(prefix))
+                        syslog.syslog(syslog.LOG_INFO, 'Added interface context for table {} interface {}'.format(table, prefix))
+                    # For VLAN_INTERFACE_ND_PREFIX, pass the IPv6 prefix as upper_val
+                    if table == 'VLAN_INTERFACE_ND_PREFIX' and key is not None:
+                        # key contains the IPv6 prefix (e.g., 2001:db8::/64)
+                        if not key_map.run_command(self, table, data, cmd_prefix, key):
+                            syslog.syslog(syslog.LOG_ERR, 'failed running {} config command'.format(table))
+                            continue
+                    else:
+                        if not key_map.run_command(self, table, data, cmd_prefix):
+                            syslog.syslog(syslog.LOG_ERR, 'failed running {} config command'.format(table))
+                            continue
+                else:
+                    syslog.syslog(syslog.LOG_ERR, 'No key_map found for table {}'.format(table))
+                    continue
+
+
+    def __add_op_to_data(self, table_key, data, comb_attr_list, cache_omit_keys=None):
         cached_data = self.table_data_cache.setdefault(table_key, {})
-        for key in cached_data:
+        diff_cache = cached_data
+        if cache_omit_keys:
+            diff_cache = {k: v for k, v in cached_data.items() if k not in cache_omit_keys}
+        for key in diff_cache:
             if key in data:
                 # both in cache and data, update/none
                 data[key] = (CachedDataWithOp(data[key], CachedDataWithOp.OP_NONE) if data[key] == cached_data[key] else
@@ -3894,24 +4387,28 @@ class BGPConfigDaemon:
     def __update_cache_data(self, table_key, data):
         cached_data = self.table_data_cache.setdefault(table_key, {})
         for key, val in data.items():
-            if not isinstance(val, CachedDataWithOp) or val.op == CachedDataWithOp.OP_NONE or val.status == CachedDataWithOp.STAT_FAIL:
-                syslog.syslog(syslog.LOG_DEBUG, 'ignore cache update for %s because of %s%s%s' %
+            if not isinstance(val, CachedDataWithOp) or val.op == CachedDataWithOp.OP_NONE:
+                syslog.syslog(syslog.LOG_DEBUG, 'ignore cache update for %s because of %s%s' %
                         (key, ('' if isinstance(val, CachedDataWithOp) else 'INV_DATA '),
-                              ('NO_OP ' if isinstance(val, CachedDataWithOp) and val.op == CachedDataWithOp.OP_NONE else ''),
-                              ('STAT_FAIL ' if isinstance(val, CachedDataWithOp) and val.status == CachedDataWithOp.STAT_FAIL else '')))
+                              ('NO_OP ' if isinstance(val, CachedDataWithOp) and val.op == CachedDataWithOp.OP_NONE else '')))
+                continue
+            # For DELETE operations, update cache even if command failed (idempotent behavior)
+            # For ADD/UPDATE operations, only update cache if command succeeded
+            if val.status == CachedDataWithOp.STAT_FAIL and val.op != CachedDataWithOp.OP_DELETE:
+                syslog.syslog(syslog.LOG_DEBUG, 'ignore cache update for %s because of STAT_FAIL (op=%s)' % (key, val.op))
                 continue
             if val.op == CachedDataWithOp.OP_ADD or val.op == CachedDataWithOp.OP_UPDATE:
                 cached_data[key] = val.data
                 syslog.syslog(syslog.LOG_INFO, 'Add {} data {} to cache'.format(key, cached_data[key]))
             elif val.op == CachedDataWithOp.OP_DELETE:
-                syslog.syslog(syslog.LOG_INFO, 'delete {} data {} from cache'.format(key, cached_data.get(key, '')))
+                syslog.syslog(syslog.LOG_INFO, 'delete {} data {} from cache (status={})'.format(key, cached_data.get(key, ''), 'FAIL' if val.status == CachedDataWithOp.STAT_FAIL else 'SUCCESS'))
                 cached_data.pop(key, None)
         if len(cached_data) == 0:
             syslog.syslog(syslog.LOG_INFO, 'delete table row {} from cache'.format(table_key))
             del(self.table_data_cache[table_key])
 
 
-    def bgp_table_handler_common(self, table, key, data, comb_attr_list = []):
+    def bgp_table_handler_common(self, table, key, data, comb_attr_list = [], cache_omit_keys=None):
         syslog.syslog(syslog.LOG_DEBUG, '----------------------------------')
         syslog.syslog(syslog.LOG_DEBUG, ' BGP table handling')
         syslog.syslog(syslog.LOG_DEBUG, '----------------------------------')
@@ -3928,7 +4425,7 @@ class BGPConfigDaemon:
             syslog.syslog(syslog.LOG_DEBUG, '        %-10s - %s' % (dkey, dval))
         syslog.syslog(syslog.LOG_DEBUG, '')
         table_key = ExtConfigDBConnector.get_table_key(table, key)
-        self.__add_op_to_data(table_key, data, comb_attr_list)
+        self.__add_op_to_data(table_key, data, comb_attr_list, cache_omit_keys)
         self.bgp_message.put((key, del_table, table, data))
         upd_data_list = []
         self.__update_bgp(upd_data_list)

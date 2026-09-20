@@ -13,7 +13,9 @@
 agentx
 {% endif %}
 !
+{% include "zebra/zebra.evpn_mh_global.conf.j2" %}
 {% include "zebra/zebra.interfaces.conf.j2" %}
+{% include "zebra/zebra.evpn_mh_interface.conf.j2" %}
 !
 {% include "staticd/staticd.loopback_route.conf.j2" %}
 !
