@@ -88,9 +88,9 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
         exit 1
     fi
 else
-    if [[ ($NUM_ASIC -gt 1) ]]; then
-        # multi-asic, docker0 IP interface may not be present when rsyslog.service was started.
-        # restart the rsyslog for TCP port socket binding.
+    if [[ ($NUM_ASIC -gt 1) || -n "$docker0_ip" ]]; then
+        # A listener bound to docker0 may have failed before the bridge address
+        # was ready. Restart rsyslog so the socket is bound after docker0 exists.
         systemctl restart rsyslog
     else
         # Config unchanged — just signal rsyslog to re-open log files
