@@ -1887,7 +1887,8 @@ class BGPConfigDaemon:
                    ('enforce_multihop',                     '{no:no-prefix}neighbor {} enforce-multihop', ['true', 'false']),
                    ('override_capability',                  '{no:no-prefix}neighbor {} override-capability', ['true', 'false']),
                    ('peer_port',                            '{no:no-prefix}neighbor {} port {}'),
-                   ('strict_capability_match',              '{no:no-prefix}neighbor {} strict-capability-match', ['true', 'false'])
+                   ('strict_capability_match',              '{no:no-prefix}neighbor {} strict-capability-match', ['true', 'false']),
+                   ('tcp_mss',                              '{no:no-prefix}neighbor {} tcp-mss {}')
     ]
 
     nbr_key_map = [('peer_group_name',  '{no:no-prefix}neighbor {} peer-group {}')]
