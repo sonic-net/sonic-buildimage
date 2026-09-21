@@ -634,8 +634,10 @@ class VersionBuild:
     def get_module_path_by_name(self, module_name):
         return VersionModule.get_module_path_by_name(self.source_path, module_name)
 
-    def get_docker_module_names_from_source(self):
-        dockers_path = os.path.join(self.source_path, 'files/build/versions/dockers')
+    def get_docker_module_names_from_source(self, version_path=None):
+        if version_path is None:
+            version_path = os.path.join(self.source_path, DEFAULT_VERSION_PATH)
+        dockers_path = os.path.join(version_path, 'dockers')
         if not os.path.isdir(dockers_path):
             raise ValueError('Docker version source path does not exist: {}'.format(dockers_path))
         return {
@@ -764,6 +766,11 @@ class VersionManagerCommands:
         )
         parser.add_argument('-s', '--source_path', default='.', help='source path')
         parser.add_argument(
+            '--source_version_path',
+            default=DEFAULT_VERSION_PATH,
+            help='version root containing the source Docker modules',
+        )
+        parser.add_argument(
             '-e',
             '--exclude_module',
             action='append',
@@ -783,8 +790,11 @@ class VersionManagerCommands:
         args = parser.parse_args(sys.argv[2:])
 
         try:
+            source_version_path = args.source_version_path
+            if not os.path.isabs(source_version_path):
+                source_version_path = os.path.join(args.source_path, source_version_path)
             source_build = VersionBuild(source_path=args.source_path)
-            source_modules = source_build.get_docker_module_names_from_source()
+            source_modules = source_build.get_docker_module_names_from_source(source_version_path)
             target_modules = set()
             for target_path in args.target_path:
                 target_build = VersionBuild(target_path=target_path, source_path=args.source_path)
@@ -802,7 +812,7 @@ class VersionManagerCommands:
         for module_name in uncovered_modules:
             print('  {}'.format(module_name))
         if args.remove_uncovered:
-            dockers_path = os.path.join(args.source_path, 'files/build/versions/dockers')
+            dockers_path = os.path.join(source_version_path, 'dockers')
             module_paths = [
                 os.path.join(dockers_path, module_name)
                 for module_name in uncovered_modules
