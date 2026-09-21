@@ -133,10 +133,14 @@ stages:
         do
           CHECK_VERSION_OPTIONS+=("--target_path" "$artifact/target")
         done
-        scripts/versions_manager.py check \
+        if ! scripts/versions_manager.py check \
           --source_version_path files/build/versions-public \
           --remove_uncovered \
           "${CHECK_VERSION_OPTIONS[@]}"
+        then
+          echo "Failed to clean up stale Docker version modules."
+          exit 1
+        fi
         git diff files/build/versions-public
       displayName: 'Freeze Versions'
     - script: |
