@@ -636,6 +636,8 @@ class VersionBuild:
 
     def get_docker_module_names_from_source(self):
         dockers_path = os.path.join(self.source_path, 'files/build/versions/dockers')
+        if not os.path.isdir(dockers_path):
+            raise ValueError('Docker version source path does not exist: {}'.format(dockers_path))
         return {
             os.path.basename(path)
             for path in glob.glob(dockers_path + '/*')
@@ -643,12 +645,26 @@ class VersionBuild:
         }
 
     def get_docker_module_names_from_target(self):
-        self.load_from_target()
-        return {
-            module_name
-            for module_name in self.modules
-            if os.path.isdir(os.path.join(self.target_path, 'versions/dockers', module_name))
+        versions_path = os.path.join(self.target_path, 'versions')
+        dockers_path = os.path.join(versions_path, 'dockers')
+        if not os.path.isdir(dockers_path):
+            raise ValueError('Docker version target path does not exist: {}'.format(dockers_path))
+
+        module_names = {
+            os.path.basename(path).removesuffix('-dbg')
+            for path in glob.glob(dockers_path + '/*')
+            if os.path.isdir(path)
         }
+        if not module_names:
+            raise ValueError('No Docker version modules found in: {}'.format(dockers_path))
+
+        build_path = os.path.join(versions_path, 'build')
+        for path in glob.glob(os.path.join(build_path, 'build-sonic-slave-*')):
+            if not os.path.isdir(path):
+                continue
+            module_name = os.path.basename(path)
+            module_names.add(module_name.removeprefix('build-').removesuffix('-dbg'))
+        return module_names
 
     def _merge_dgb_modules(self):
         dbg_modules = []
@@ -766,12 +782,16 @@ class VersionManagerCommands:
         )
         args = parser.parse_args(sys.argv[2:])
 
-        source_build = VersionBuild(source_path=args.source_path)
-        source_modules = source_build.get_docker_module_names_from_source()
-        target_modules = set()
-        for target_path in args.target_path:
-            target_build = VersionBuild(target_path=target_path, source_path=args.source_path)
-            target_modules.update(target_build.get_docker_module_names_from_target())
+        try:
+            source_build = VersionBuild(source_path=args.source_path)
+            source_modules = source_build.get_docker_module_names_from_source()
+            target_modules = set()
+            for target_path in args.target_path:
+                target_build = VersionBuild(target_path=target_path, source_path=args.source_path)
+                target_modules.update(target_build.get_docker_module_names_from_target())
+        except ValueError as error:
+            print('ERROR: {}'.format(error))
+            sys.exit(1)
 
         uncovered_modules = sorted(source_modules - target_modules - set(args.exclude_module))
         if not uncovered_modules:
