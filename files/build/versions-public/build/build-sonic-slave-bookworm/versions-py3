@@ -1,3 +1,4 @@
+annotated-types==0.7.0
 bitarray==2.8.1
 blessed==1.49.0
 cachebox==5.2.3
@@ -31,10 +32,13 @@ prefixed==0.9.0
 prettyprinter==0.18.0
 protobuf==5.29.6
 pycairo==1.26.1
+pydantic==2.13.4
+pydantic_core==2.46.4
 pynacl==1.6.2
 pyroute2==0.9.6
 pytest-xdist==3.8.0
 pyyaml==6.0.3
+regex==2024.11.6
 responses==0.26.3
 scp==0.14.5
 semantic-version==2.10.0
@@ -42,6 +46,7 @@ supervisor==4.3.0
 systemd-python==235
 tabulate==0.9.0
 toposort==1.6
+typing-inspection==0.4.2
 typing_extensions==4.16.0
 wcwidth==0.7.0
 www-authenticate==0.9.2

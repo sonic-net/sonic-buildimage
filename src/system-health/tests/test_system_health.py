@@ -222,6 +222,10 @@ def test_optional_containers(mock_check_docker_image):
         container_name: {'state': 'enabled'}
         for container_name in ('otel', 'missing', 'present', 'invalid', 'regular')
     }
+    feature_table['host-service'] = {
+        'state': 'enabled',
+        'runtime_type': 'host',
+    }
     config = Config()
     config.optional_containers = {
         'missing': 'docker-missing',
@@ -246,6 +250,37 @@ def test_optional_containers(mock_check_docker_image):
         config
     )
     assert expected == {'configured'}
+
+
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.subprocess.run')
+def test_host_feature_services(mock_run):
+    mock_run.side_effect = [Mock(returncode=0), Mock(returncode=3)]
+    checker = ServiceChecker()
+    checker.check_host_services({
+        'dldd': {'state': 'enabled', 'runtime_type': 'host'},
+        'failed-host': {'state': 'enabled', 'runtime_type': 'host'},
+        'disabled-host': {'state': 'disabled', 'runtime_type': 'host'},
+        'container': {'state': 'enabled'},
+    }, Config())
+
+    assert checker._info['dldd'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+    assert checker._info['failed-host'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'disabled-host' not in checker._info
+    assert 'container' not in checker._info
+    assert mock_run.call_args_list == [
+        call(
+            ['systemctl', 'is-active', '--quiet', 'dldd.service'],
+            timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
+            check=False,
+        ),
+        call(
+            ['systemctl', 'is-active', '--quiet', 'failed-host.service'],
+            timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
+            check=False,
+        ),
+    ]
+    HealthChecker.summary = HealthChecker.STATUS_OK
 
 
 @patch('health_checker.utils.run_command')

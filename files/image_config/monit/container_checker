@@ -24,6 +24,7 @@ from swsscommon import swsscommon
 
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "event-down-ctr"
+HOST_RUNTIME_TYPE = "host"
 
 def check_docker_image(image_name):
     """
@@ -69,6 +70,8 @@ def get_expected_running_containers():
 
     container_list = []
     for container_name in feature_table.keys():
+        if feature_table[container_name].get("runtime_type") == HOST_RUNTIME_TYPE:
+            continue
         # skip frr_bmp since it's not container just bmp option used by bgpd
         if container_name == "frr_bmp":
             continue

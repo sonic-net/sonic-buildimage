@@ -82,9 +82,14 @@ install_pip_package() {
     if [[ -z "$pip_wheel" ]]; then
         return
     fi
+    local -a pip_install_options=()
+    if [[ -n "${PIP_ONLY_BINARY:-}" ]]; then
+        pip_install_options+=("--only-binary=${PIP_ONLY_BINARY}")
+    fi
     sudo cp $pip_wheel $FILESYSTEM_ROOT/
     basename_pip_wheel=$(basename -a $@)
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $basename_pip_wheel
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT \
+        pip3 install "${pip_install_options[@]}" $basename_pip_wheel
     ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_pip_wheel )
 }
 
@@ -296,8 +301,17 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install system
 # a bit older than what is in pip, but it should be fine.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-gi
 
-# Install SONiC host services package
-install_pip_package {{sonic_host_services_py3_wheel_path}}
+# Pydantic requires newer typing_extensions than Debian Bookworm or Trixie
+# ships. The apt copy has no pip RECORD, so replace only that distro-owned
+# package here. The sonic-host-services wheel metadata remains authoritative
+# for Pydantic and its remaining dependency closure.
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install --ignore-installed --only-binary=:all: \
+    "typing_extensions==4.16.0"
+
+# Install SONiC host services package. Its wheel metadata owns dependency
+# resolution, while pydantic-core must never fall back to an unplanned
+# Rust/source build in the image path.
+PIP_ONLY_BINARY=pydantic-core install_pip_package {{sonic_host_services_py3_wheel_path}}
 
 # Install SONiC host services data files (and any dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-host-services-data_*.deb

@@ -1,3 +1,4 @@
+annotated-types==0.7.0
 autocommand==2.2.2
 azure-common==1.1.28
 azure-nspkg==3.0.2
@@ -62,6 +63,8 @@ pyang==2.7.1
 pyangbind==0.8.7
 pycairo==1.26.1
 pycparser==2.22
+pydantic==2.13.4
+pydantic_core==2.46.4
 pygments==2.21.0
 pygobject==3.50.0
 pynacl==1.5.0
@@ -84,7 +87,8 @@ tabulate==0.9.0
 telnetlib3==5.0.0
 toposort==1.6
 typeguard==4.4.2
-typing_extensions==4.13.2
+typing-inspection==0.4.2
+typing_extensions==4.16.0
 urllib3==2.7.0
 watchdog==6.0.0
 wcwidth==0.8.3

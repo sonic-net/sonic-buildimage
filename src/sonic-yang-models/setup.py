@@ -118,6 +118,7 @@ yang_files = [
     'sonic-dhcp-server.yang',
     'sonic-dhcpv4-relay.yang',
     'sonic-dhcpv6-relay.yang',
+    'sonic-dldd.yang',
     'sonic-dns.yang',
     'sonic-dot1p-tc-map.yang',
     'sonic-dscp-fc-map.yang',

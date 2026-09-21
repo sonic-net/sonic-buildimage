@@ -45,6 +45,9 @@ $(DOCKER_GNMI)_RUN_OPT += -v /:/mnt/host:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
 # For sonic binary image downloads to persistent file system.
 $(DOCKER_GNMI)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
+# For authenticated gNOI File delivery of staged DLDD rules. Keep promoted
+# rules and generated artifacts read-only through the host-root mount above.
+$(DOCKER_GNMI)_RUN_OPT += -v /var/lib/sonic/dldd/inbox:/mnt/host/var/lib/sonic/dldd/inbox:rw
 # For host command execution in gnoi.
 $(DOCKER_GNMI)_RUN_OPT += --pid=host
 # Container hardening: Replace --privileged with specific capabilities
