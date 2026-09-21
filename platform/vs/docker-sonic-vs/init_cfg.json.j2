@@ -7,9 +7,9 @@
         }
     },
 {% if switch_type != "dpu" %}
-{% set features = ({"swss": "enabled", "bgp": "enabled", "teamd": "enabled", "nat": "enabled", "database": "enabled", "lldp": "enabled", "dhcp_relay": "enabled", "macsec": "enabled"}) %}
+{% set features = ({"swss": "enabled", "bgp": "enabled", "teamd": "enabled", "nat": "enabled", "database": "enabled", "lldp": "enabled", "snmp": "enabled", "dhcp_relay": "enabled", "macsec": "enabled"}) %}
 {% else %}
-{% set features = ({"swss": "enabled", "bgp": "enabled", "teamd": "disabled", "nat": "disabled", "database": "enabled", "lldp": "enabled", "dhcp_relay": "disabled", "macsec": "disabled"}) %}
+{% set features = ({"swss": "enabled", "bgp": "enabled", "teamd": "disabled", "nat": "disabled", "database": "enabled", "lldp": "enabled", "snmp": "enabled", "dhcp_relay": "disabled", "macsec": "disabled"}) %}
 {% endif %}
     "FEATURE": {
 {% for feature, state in features.items() %}
