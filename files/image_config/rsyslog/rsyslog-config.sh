@@ -97,16 +97,11 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
         exit 1
     fi
 else
-    docker0_listener_missing=false
-    if [[ -n "$docker0_ip" ]]; then
-        if listener_missing -lun "$docker0_ip" 514; then
-            docker0_listener_missing=true
-        elif listener_missing -lnt "$docker0_ip" 2514; then
-            docker0_listener_missing=true
-        fi
-    fi
-
-    if [[ ($NUM_ASIC -gt 1) || "$docker0_listener_missing" == true ]]; then
+    if [[ ($NUM_ASIC -gt 1) ]]; then
+        systemctl restart rsyslog
+    elif [[ -n "$docker0_ip" ]] && \
+         { listener_missing -lun "$docker0_ip" 514 ||
+           listener_missing -lnt "$docker0_ip" 2514; }; then
         # Retry docker0 listeners whose initial binds failed before the bridge
         # address was ready.
         systemctl restart rsyslog
