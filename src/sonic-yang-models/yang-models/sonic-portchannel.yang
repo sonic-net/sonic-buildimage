@@ -26,6 +26,7 @@ module sonic-portchannel {
 
     revision 2026-07-26 {
         description "Allow member port MTU when it matches the PortChannel MTU (MACsec overhead adjustment)";
+    }
 
     revision 2025-06-24 {
         description "Add LACP System MAC address";
