@@ -26,6 +26,15 @@ for feature in $bridged_syslog_features; do
     fi
 done
 
+listener_missing() {
+    local socket_options=$1
+    local address=$2
+    local port=$3
+
+    ! ss -H "$socket_options" "sport = :$port" |
+        grep -Fq "$address:$port"
+}
+
 hostname=$(hostname)
 
 syslog_with_osversion=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion")
@@ -90,9 +99,9 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
 else
     docker0_listener_missing=false
     if [[ -n "$docker0_ip" ]]; then
-        if ! ss -H -lun "sport = :514" | grep -Fq "$docker0_ip:514"; then
+        if listener_missing -lun "$docker0_ip" 514; then
             docker0_listener_missing=true
-        elif ! ss -H -lnt "sport = :2514" | grep -Fq "$docker0_ip:2514"; then
+        elif listener_missing -lnt "$docker0_ip" 2514; then
             docker0_listener_missing=true
         fi
     fi
