@@ -42,6 +42,13 @@ class MockBMCComponent:
         return 'BMC'
 
 
+# What the Redfish client reports for a firmware ID the BMC does not carry. The
+# BMC answers 404 with a Redfish error body, and curl exits 0 on that, so the
+# client reports ERR_CODE_OK and is left with the 'N/A' it started from - the
+# missing version, not the return code, is what marks the ID as not this BMC's.
+MISSING_INVENTORY_MEMBER = (RedfishClient.ERR_CODE_OK, 'N/A')
+
+
 @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
             mock.MagicMock(return_value=True))
 class TestBMC:
@@ -175,7 +182,7 @@ class TestBMC:
         def fake_get_version(fw_id):
             if fw_id == 'FW_BMC_0':
                 return (RedfishClient.ERR_CODE_OK, expected_version)
-            return (RedfishClient.ERR_CODE_URI_NOT_FOUND, 'N/A')
+            return MISSING_INVENTORY_MEMBER
 
         mock_redfish_get_version.side_effect = fake_get_version
         mock_get_firmware_version.return_value = (RedfishClient.ERR_CODE_OK, 'must-not-be-used')
@@ -202,7 +209,7 @@ class TestBMC:
         def fake_get_version(fw_id):
             if fw_id == 'MGX_FW_BMC_0':
                 return (RedfishClient.ERR_CODE_OK, expected_version)
-            return (RedfishClient.ERR_CODE_URI_NOT_FOUND, 'N/A')
+            return MISSING_INVENTORY_MEMBER
 
         mock_redfish_get_version.side_effect = fake_get_version
         mock_get_firmware_version.return_value = (RedfishClient.ERR_CODE_OK, 'must-not-be-used')
@@ -228,7 +235,7 @@ class TestBMC:
         two-ID resolution exists to catch - a future rename (or an unexpected
         device) that this code does not yet know about.
         """
-        mock_redfish_get_version.return_value = (RedfishClient.ERR_CODE_URI_NOT_FOUND, 'N/A')
+        mock_redfish_get_version.return_value = MISSING_INVENTORY_MEMBER
         bmc = BMC.get_instance()
         assert bmc.get_version() == 'N/A'
         assert mock_redfish_get_version.call_args_list == [
@@ -249,6 +256,30 @@ class TestBMC:
         assert bmc.get_firmware_id() == 'FW_BMC_0'
         assert bmc.get_firmware_id() == 'FW_BMC_0'
         mock_redfish_get_version.assert_called_once_with('FW_BMC_0')
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    def test_bmc_get_firmware_id_legacy_firmware_naming(self, mock_redfish_get_version):
+        """A legacy BMC must resolve to the legacy ID, not just display the right version.
+
+        get_firmware_id() feeds the fw_ids of the update request, so settling on
+        the current-naming ID here would aim the update at an inventory member
+        the BMC does not have.
+        """
+        def fake_get_version(fw_id):
+            if fw_id == 'MGX_FW_BMC_0':
+                return (RedfishClient.ERR_CODE_OK, '88.0060.2112')
+            return MISSING_INVENTORY_MEMBER
+
+        mock_redfish_get_version.side_effect = fake_get_version
+        bmc = BMC.get_instance()
+        assert bmc.get_firmware_id() == 'MGX_FW_BMC_0'
 
     @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
                 mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))

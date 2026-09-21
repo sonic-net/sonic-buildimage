@@ -158,8 +158,8 @@ class BMC(BMCBase):
         Resolve the BMC's own entry in the Redfish firmware inventory.
 
         Queries each known ID's own inventory-member endpoint directly, in
-        resolution order, and stops at the first that exists. This avoids
-        listing the full firmware inventory, which would query every
+        resolution order, and stops at the first that reports a version. This
+        avoids listing the full firmware inventory, which would query every
         component's version just to find the BMC's one entry.
 
         Handles the session instead of @with_session_management: this is also
@@ -169,7 +169,7 @@ class BMC(BMCBase):
 
         Returns:
             A tuple (fw_id, version), or (None, None) if none of the known IDs
-            could be read from the BMC firmware inventory
+            reported a version from the BMC firmware inventory
         """
         caller_has_session = self.rf_client.has_login()
         try:
@@ -180,10 +180,14 @@ class BMC(BMCBase):
                     return None, None
             for fw_id in BMC.BMC_FIRMWARE_IDS:
                 ret, version = self.rf_client.redfish_api_get_firmware_version(fw_id)
-                if ret == RedfishClient.ERR_CODE_OK:
+                # An ID the BMC does not carry answers 404 with a Redfish error
+                # body, which still reads back as ERR_CODE_OK with a version of
+                # 'N/A'. A missing version is therefore the only signal that the
+                # ID is not this BMC's, so keep looking rather than accepting it.
+                if ret == RedfishClient.ERR_CODE_OK and version and version != 'N/A':
                     return fw_id, version
             logger.log_error(f"None of the known BMC firmware IDs {list(BMC.BMC_FIRMWARE_IDS)} "
-                             f"could be read from the BMC firmware inventory")
+                             f"reported a version from the BMC firmware inventory")
             return None, None
         except Exception as e:
             logger.log_error(f"Exception in _get_firmware_inventory_entry: {str(e)}")
