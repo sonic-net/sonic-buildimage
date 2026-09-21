@@ -88,9 +88,18 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
         exit 1
     fi
 else
-    if [[ ($NUM_ASIC -gt 1) || -n "$docker0_ip" ]]; then
-        # A listener bound to docker0 may have failed before the bridge address
-        # was ready. Restart rsyslog so the socket is bound after docker0 exists.
+    docker0_listener_missing=false
+    if [[ -n "$docker0_ip" ]]; then
+        if ! ss -H -lun "sport = :514" | grep -Fq "$docker0_ip:514"; then
+            docker0_listener_missing=true
+        elif ! ss -H -lnt "sport = :2514" | grep -Fq "$docker0_ip:2514"; then
+            docker0_listener_missing=true
+        fi
+    fi
+
+    if [[ ($NUM_ASIC -gt 1) || "$docker0_listener_missing" == true ]]; then
+        # Retry docker0 listeners whose initial binds failed before the bridge
+        # address was ready.
         systemctl restart rsyslog
     else
         # Config unchanged — just signal rsyslog to re-open log files
