@@ -109,6 +109,27 @@
     "ROUTE_MAP_MATCH_TAG_MUST_COND_FALSE": {
         "desc": "Configure route map table with more than one match tag in list.",
         "eStr": "Too many match_tag elements"
+    },
+    "BGP_LARGE_COMMUNITY_VALID": {
+        "desc": "Configure BGP large community table."
+    },
+    "BGP_LARGE_COMMUNITY_INVALID_ACTION": {
+        "desc": "Configure BGP large community with invalid action value.",
+        "eStrKey": "InvalidValue"
+    },
+    "ROUTE_MAP_LARGE_COMMUNITY_VALID": {
+        "desc": "Configure route map with match/set large-community and additive flag."
+    },
+    "ROUTE_MAP_INVALID_MATCH_LARGE_COMMUNITY": {
+        "desc": "Configure route map with non-existent match large community set name.",
+        "eStrKey": "LeafRef"
+    },
+    "ROUTE_MAP_INVALID_SET_LARGE_COMMUNITY_REF": {
+        "desc": "Configure route map with non-existent set_large_community_ref name.",
+        "eStrKey": "LeafRef"
+    },
+    "ROUTE_MAP_COMMUNITY_ADDITIVE_VALID": {
+        "desc": "Configure route map set community inline with additive flag."
     }
 
 }
