@@ -23,7 +23,7 @@ import logging
 import sys
 import threading
 import time
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import sonic_platform.dpuctlplat
 from sonic_platform.dpuctlplat import DpuCtlPlat
@@ -104,14 +104,15 @@ def wait_for_module_transition_to_complete(dpu: str) -> None:
             break
 
 
-def _reboot_with_progress(dpu: str, reboot_fn: Callable[[], None]) -> None:
-    """Run DPU reboot asynchronously and print elapsed time every 5s (matches sonic-bfb-installer.sh run_dpuctl_reset)."""
+def _reboot_with_progress(dpu: str, reboot_fn: Callable[[], bool]) -> bool:
+    """Run a DPU reboot asynchronously, report progress, and return its status."""
     start = time.time()
-    err: list[Exception] = []
+    err: List[Exception] = []
+    result: List[bool] = []
 
     def target() -> None:
         try:
-            reboot_fn()
+            result.append(bool(reboot_fn()))
         except Exception as e:
             err.append(e)
 
@@ -127,10 +128,15 @@ def _reboot_with_progress(dpu: str, reboot_fn: Callable[[], None]) -> None:
     if err:
         e = err[0]
         logger.error("An error occurred while rebooting %s: %s - %s", dpu, type(e).__name__, e)
+        return False
+    if not result or not result[0]:
+        logger.error("DPU reboot did not complete successfully for %s", dpu)
+        return False
+    return True
 
 
-def reset_dpu(dpu: str, use_verbose: bool) -> None:
-    """Reset a DPU, including sensor management, PCI, and power cycling."""
+def reset_dpu(dpu: str, use_verbose: bool) -> bool:
+    """Reset a DPU and return whether its power cycle completed successfully."""
     # Change dpuctlplat to use this script's custom root logger, rather than SysLogger.
     # This applies to all instances of DpuCtlPlat, including those created under-the-hood by the
     # module interface.
@@ -156,10 +162,11 @@ def reset_dpu(dpu: str, use_verbose: bool) -> None:
         # take some work. Also, there are no options for verbosity passed through. So, just use
         # DpuCtlPlat directly, for now, until the ModuleHelper API is extended.
         dpu_ctl_dpu_reboot = lambda: dpu_ctl.dpu_reboot(forced=True, skip_pre_post=True)
-        _reboot_with_progress(dpu, dpu_ctl_dpu_reboot)
-        helper.module_post_startup(dpu)
+        reboot_succeeded = _reboot_with_progress(dpu, dpu_ctl_dpu_reboot)
+        post_startup_succeeded = helper.module_post_startup(dpu)
+        return reboot_succeeded and post_startup_succeeded
     else:
         # Use DpuCtlPlat to reset the DPU and PCI bus only, not handle sensors/etc.
         logger.info("Using DpuCtlPlat to reset %s", dpu)
         dpu_ctl_dpu_reboot = lambda: dpu_ctl.dpu_reboot(forced=True, skip_pre_post=False)
-        _reboot_with_progress(dpu, dpu_ctl_dpu_reboot)
+        return _reboot_with_progress(dpu, dpu_ctl_dpu_reboot)

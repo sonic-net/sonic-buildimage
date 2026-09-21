@@ -37,6 +37,7 @@ include $(PLATFORM_PATH)/iproute2.mk
 include $(PLATFORM_PATH)/install-pending-fw.mk
 include $(PLATFORM_PATH)/integration-scripts.mk
 include $(PLATFORM_PATH)/rshim.mk
+include $(PLATFORM_PATH)/doca-installer.mk
 include $(PLATFORM_PATH)/component-versions.mk
 include $(PLATFORM_PATH)/mlnx-sonic-bfb-installer.mk
 include $(PLATFORM_PATH)/platform-utils/platform-utils.mk

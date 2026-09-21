@@ -192,18 +192,19 @@ class TestRebootWithProgress(unittest.TestCase):
 
         buf = io.StringIO()
         with mock.patch.object(reset_dpu.sys, "stdout", buf):
-            reset_dpu._reboot_with_progress("dpu0", lambda: None)
+            succeeded = reset_dpu._reboot_with_progress("dpu0", lambda: True)
         out = buf.getvalue()
+        self.assertTrue(succeeded)
         self.assertIn("dpu0: Reboot:", out)
         self.assertIn("seconds elapsed in total", out)
 
-    def test_logs_error_when_reboot_raises(self):
-        """Exception from reboot callback is logged and does not propagate."""
+    def test_logs_error_and_reports_failure_when_reboot_raises(self):
+        """Exception from reboot callback is logged, does not propagate, and reports failure."""
         from mellanox_bfb_installer import reset_dpu
 
         mock_log = mock.MagicMock()
 
-        def boom() -> None:
+        def boom() -> bool:
             raise RuntimeError("reboot failed")
 
         buf = io.StringIO()
@@ -211,9 +212,24 @@ class TestRebootWithProgress(unittest.TestCase):
             mock.patch.object(reset_dpu, "logger", mock_log),
             mock.patch.object(reset_dpu.sys, "stdout", buf),
         ):
-            reset_dpu._reboot_with_progress("dpu0", boom)
+            succeeded = reset_dpu._reboot_with_progress("dpu0", boom)
+        self.assertFalse(succeeded)
         mock_log.error.assert_called_once()
         self.assertIn("reboot failed", str(mock_log.error.call_args))
+
+    def test_reports_failure_when_reboot_returns_falsy(self):
+        """A power cycle that reports failure without raising is still a failure."""
+        from mellanox_bfb_installer import reset_dpu
+
+        mock_log = mock.MagicMock()
+        buf = io.StringIO()
+        with (
+            mock.patch.object(reset_dpu, "logger", mock_log),
+            mock.patch.object(reset_dpu.sys, "stdout", buf),
+        ):
+            succeeded = reset_dpu._reboot_with_progress("dpu0", lambda: False)
+        self.assertFalse(succeeded)
+        self.assertIn("did not complete successfully", str(mock_log.error.call_args))
 
 
 class TestResetDpu(unittest.TestCase):
@@ -252,18 +268,66 @@ class TestResetDpu(unittest.TestCase):
 
         mock_log = mock.MagicMock()
         mock_dpu_ctl = mock.MagicMock()
+        mock_dpu_ctl.dpu_reboot.return_value = True
         mock_helper = mock.MagicMock()
+        mock_helper.module_post_startup.return_value = True
         with (
             mock.patch.object(reset_dpu, "logger", mock_log),
             mock.patch.object(reset_dpu, "_is_chassis_module_table_present", return_value=True),
             mock.patch.object(reset_dpu, "DpuCtlPlat", return_value=mock_dpu_ctl),
             mock.patch.object(reset_dpu, "ModuleHelper", return_value=mock_helper),
         ):
-            reset_dpu.reset_dpu("dpu0", False)
+            succeeded = reset_dpu.reset_dpu("dpu0", False)
+        self.assertTrue(succeeded)
         mock_log.info.assert_any_call("Using ModuleHelper to reset %s", "dpu0")
         mock_helper.module_pre_shutdown.assert_called_once_with("dpu0")
         mock_dpu_ctl.dpu_reboot.assert_called_once_with(forced=True, skip_pre_post=True)
         mock_helper.module_post_startup.assert_called_once_with("dpu0")
+
+    def test_module_post_startup_runs_even_when_the_reboot_fails(self):
+        """A failed reboot must not leave the module's sensors masked by the pre-shutdown."""
+        from mellanox_bfb_installer import reset_dpu
+
+        mock_dpu_ctl = mock.MagicMock()
+        mock_dpu_ctl.dpu_reboot.return_value = False
+        mock_helper = mock.MagicMock()
+        with (
+            mock.patch.object(reset_dpu, "_is_chassis_module_table_present", return_value=True),
+            mock.patch.object(reset_dpu, "DpuCtlPlat", return_value=mock_dpu_ctl),
+            mock.patch.object(reset_dpu, "ModuleHelper", return_value=mock_helper),
+            mock.patch.object(reset_dpu.sys, "stdout", io.StringIO()),
+        ):
+            succeeded = reset_dpu.reset_dpu("dpu0", False)
+        self.assertFalse(succeeded)
+        mock_helper.module_post_startup.assert_called_once_with("dpu0")
+
+    def test_reports_failure_when_module_post_startup_fails(self):
+        """A failed PCI reattach makes the complete reset fail."""
+        from mellanox_bfb_installer import reset_dpu
+
+        mock_dpu_ctl = mock.MagicMock()
+        mock_dpu_ctl.dpu_reboot.return_value = True
+        mock_helper = mock.MagicMock()
+        mock_helper.module_post_startup.return_value = False
+        with (
+            mock.patch.object(reset_dpu, "_is_chassis_module_table_present", return_value=True),
+            mock.patch.object(reset_dpu, "DpuCtlPlat", return_value=mock_dpu_ctl),
+            mock.patch.object(reset_dpu, "ModuleHelper", return_value=mock_helper),
+        ):
+            self.assertFalse(reset_dpu.reset_dpu("dpu0", False))
+
+    def test_reports_failure_when_dpuctlplat_reboot_fails(self):
+        """The DpuCtlPlat-only path propagates a failed reboot to the caller."""
+        from mellanox_bfb_installer import reset_dpu
+
+        mock_dpu_ctl = mock.MagicMock()
+        mock_dpu_ctl.dpu_reboot.return_value = False
+        with (
+            mock.patch.object(reset_dpu, "_is_chassis_module_table_present", return_value=False),
+            mock.patch.object(reset_dpu, "DpuCtlPlat", return_value=mock_dpu_ctl),
+            mock.patch.object(reset_dpu.sys, "stdout", io.StringIO()),
+        ):
+            self.assertFalse(reset_dpu.reset_dpu("dpu0", False))
 
 
 if __name__ == "__main__":

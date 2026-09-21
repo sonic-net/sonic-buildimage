@@ -65,6 +65,7 @@ https://github.com/CumulusNetworks/ifupdown2/archive/3.0.0-1.tar.gz==755459b3a58
 https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.32.0/cyclonedx-linux-arm64==52432913f6ec431f2f23d2d27e91bc8a
 https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.32.0/cyclonedx-linux-x64==94b2f43b950920b140fc4930d8f0dca7
 https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh==2e8b2fb7d799d83acf895e20bd1966aa
+https://github.com/Mellanox/sonic-bluefield-packages/releases/download/doca-installer-2.0.3-trixie-amd64/doca-installer_2.0.3_amd64.deb==76975410847f1fdfce674e32d7c07c1f
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13938-trixie/bfscripts_4.14.0-13938_all.deb==be4d44df65936bb71a5173ca94788144
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13938-trixie/gpio-mlxbf3-dkms_1.0-0_all.deb==0a582a32ad430b7131b1a6dd59c748e5
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13938-trixie/mlx-bootctl-dkms_1.3-0_all.deb==f5ff2be259bf23e45972202d5f42a9ca
