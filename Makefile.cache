@@ -480,7 +480,9 @@ rfs_secret_fp = $(if $(strip $(1)),$(shell printf '%s' '$(call rfs_shell_escape,
 # IMAGE_TYPE is intentionally NOT in this static list: it is a per-installer value
 # ($($(installer)_IMAGE_TYPE), see slave.mk) and is folded per RFS target below.
 RFS_INLINE_ENV_FLAGS := $(USERNAME) $(CHANGE_DEFAULT_PASSWORD) $(BMC_NOS_ACCOUNT_USERNAME) \
-                        $(MASTER_KUBERNETES_VERSION) $(MASTER_CRI_DOCKERD) \
+                        $(MASTER_KUBERNETES_VERSION) $(MASTER_KUBERNETES_CNI_VERSION) \
+                        $(MASTER_KUBERNETES_CRI_TOOLS_VERSION) $(MASTER_KUBERNETES_PACKAGE_URL) \
+                        $(MASTER_CRI_DOCKERD) $(MASTER_CRI_DOCKERD_DISTRO) \
                         $(TRUSTED_GPG_URLS) $(BUILD_PACKAGES_URL) \
                         $(call rfs_secret_fp,$(PASSWORD)) \
                         $(call rfs_secret_fp,$(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD))

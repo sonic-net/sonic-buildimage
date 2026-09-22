@@ -248,12 +248,14 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSIO
 
 install_kubernetes () {
     local ver="$1"
-    ## Install k8s package from storage
-    local storage_prefix="$BUILD_PUBLIC_URL/kubernetes"
+    local cri_tools_ver="${2:-$KUBERNETES_CRI_TOOLS_VERSION}"
+    local cni_ver="${3:-$KUBERNETES_CNI_VERSION}"
+    ## Install Kubernetes packages from the selected package repository
+    local storage_prefix="${4:-$BUILD_PUBLIC_URL/kubernetes}"
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/cri-tools.deb -fsSL \
-        ${storage_prefix}/cri-tools_${KUBERNETES_CRI_TOOLS_VERSION}_${CONFIGURED_ARCH}.deb
+        ${storage_prefix}/cri-tools_${cri_tools_ver}_${CONFIGURED_ARCH}.deb
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubernetes-cni.deb -fsSL \
-        ${storage_prefix}/kubernetes-cni_${KUBERNETES_CNI_VERSION}_${CONFIGURED_ARCH}.deb
+        ${storage_prefix}/kubernetes-cni_${cni_ver}_${CONFIGURED_ARCH}.deb
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubelet.deb -fsSL \
         ${storage_prefix}/kubelet_${ver}_${CONFIGURED_ARCH}.deb
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubectl.deb -fsSL \
@@ -282,11 +284,15 @@ if [ "$INCLUDE_KUBERNETES_MASTER" == "y" ]
 then
     ## Install Kubernetes master
     echo '[INFO] Install kubernetes master'
-    install_kubernetes ${MASTER_KUBERNETES_VERSION}
+    install_kubernetes \
+        ${MASTER_KUBERNETES_VERSION} \
+        ${MASTER_KUBERNETES_CRI_TOOLS_VERSION} \
+        ${MASTER_KUBERNETES_CNI_VERSION} \
+        ${MASTER_KUBERNETES_PACKAGE_URL}/${CONFIGURED_ARCH}
 
     sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install hyperv-daemons xmlstarlet parted netcat-openbsd
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/cri-dockerd.deb -fsSL \
-        https://github.com/Mirantis/cri-dockerd/releases/download/v${MASTER_CRI_DOCKERD}/cri-dockerd_${MASTER_CRI_DOCKERD}.3-0.debian-${IMAGE_DISTRO}_amd64.deb
+        https://github.com/Mirantis/cri-dockerd/releases/download/v${MASTER_CRI_DOCKERD}/cri-dockerd_${MASTER_CRI_DOCKERD}.3-0.debian-${MASTER_CRI_DOCKERD_DISTRO}_${CONFIGURED_ARCH}.deb
     sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install -f /tmp/cri-dockerd.deb
     sudo LANG=C chroot $FILESYSTEM_ROOT rm -f /tmp/cri-dockerd.deb
 else
