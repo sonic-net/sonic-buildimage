@@ -1353,7 +1353,6 @@ class TestJ2Files(TestCase):
         payload = '1.0.0\naction(type="omprog" binary="/tmp/evil")'
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": "clean-host",
             "os_version": payload,
             "forward_with_osversion": "true",
         })
@@ -1389,7 +1388,7 @@ class TestJ2Files(TestCase):
         os_version_payload = '1.0\r.0\\%beta'
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": hostname_payload,
+            "DEVICE_METADATA": {"localhost": {"hostname": hostname_payload}},
             "os_version": os_version_payload,
             "forward_with_osversion": "true",
         })
@@ -1424,7 +1423,7 @@ class TestJ2Files(TestCase):
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": "clean-host",
+            "DEVICE_METADATA": {"localhost": {"hostname": "clean-host"}},
             "os_version": "1.0.0",
         })
 
