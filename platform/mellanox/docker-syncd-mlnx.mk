@@ -33,8 +33,25 @@ $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
                                 $(LIBSAIMETADATA_DBG) \
                                 $(LIBSAIREDIS_DBG)
 
+# Consumer side of the dbgsym strategy declared in sdk.mk / mlnx-sai.mk.
+# Ask for a dbgsym package only in the cases where one is actually produced:
+# source builds emit it only when SPLIT_DBGSYM=y, while downloaded packages
+# always ship one. On nostrip builds (SPLIT_DBGSYM=n) the symbols are already
+# inside the runtime debs the base image installs, so there is nothing extra
+# to add.
 ifeq ($(SDK_FROM_SRC), y)
-$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SDK_DBG_DEBS) $(MLNX_SAI_DBGSYM)
+ifeq ($(SPLIT_DBGSYM), y)
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SDK_DBG_DEBS)
+endif
+else
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SDK_DBG_DEBS)
+endif
+ifeq ($(SAI_FROM_SRC), y)
+ifeq ($(SPLIT_DBGSYM), y)
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SAI_DBGSYM)
+endif
+else
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SAI_DBGSYM)
 endif
 
 $(DOCKER_SYNCD_BASE)_VERSION = 1.0.0
