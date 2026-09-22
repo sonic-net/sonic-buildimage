@@ -326,6 +326,18 @@ RUN pip3 install setuptools \
         && pip3 install thrift
 {% endif %}
 
+# ExaBGP's process-API reader can silently drop the tail of a large command
+# batch, leaving a route announcement or withdrawal only partially applied
+# while the HTTP API still returns 200. The upstream fix is not in any
+# released version yet, so it is carried here. See
+# exabgp-patches/0001-use-os-read-for-process-api.patch for the analysis.
+COPY exabgp-patches/ /root/exabgp-patches/
+RUN EXABGP_PKG="$(python3 -c 'import importlib.util; print(importlib.util.find_spec("exabgp").submodule_search_locations[0])')" \
+        && patch -p1 --fuzz=0 -d "$(dirname "$EXABGP_PKG")" \
+            < /root/exabgp-patches/0001-use-os-read-for-process-api.patch \
+        && grep -q 'os.read(proc.stdout.fileno(), 16384)' "$EXABGP_PKG/reactor/api/processes.py" \
+        && rm -rf /root/exabgp-patches
+
 # Install all python modules from pypi. python3-scapy is exception,
 # ptf debian package requires python3-scapy
 RUN pip3 install Flask   \
