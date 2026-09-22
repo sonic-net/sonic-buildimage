@@ -2,6 +2,9 @@
     "PTP_GLOBAL_TEST": {
         "desc": "Configure PTP global settings with domain number and intervals."
     },
+    "PTP_GLOBAL_DEFAULTS_TEST": {
+        "desc": "Configure PTP global with omitted intervals; YANG defaults apply (sync -3, announce 1)."
+    },
     "PTP_GLOBAL_DOMAIN_INVALID_TEST": {
         "desc": "Configure PTP global with out-of-range domain number (> 127).",
         "eStr": ["PTP domain number must be in range 0..127"]

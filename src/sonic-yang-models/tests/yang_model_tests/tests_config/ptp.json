@@ -11,6 +11,16 @@
         }
     },
 
+    "PTP_GLOBAL_DEFAULTS_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP": {
+                "global": {
+                    "domain_number": 0
+                }
+            }
+        }
+    },
+
     "PTP_GLOBAL_DOMAIN_INVALID_TEST": {
         "sonic-ptp:sonic-ptp": {
             "sonic-ptp:PTP": {

@@ -19,6 +19,10 @@ module sonic-ptp {
 
     description "PTP yang Module for SONiC OS";
 
+    revision 2026-09-22 {
+        description "Add default log2 sync_interval (-3) and announce_interval (1)";
+    }
+
     revision 2026-07-08 {
         description "Change PTP_UNICAST_MASTER_TABLE_LIST key from name (string) to id (uint32)";
     }
@@ -50,7 +54,8 @@ module sonic-ptp {
                             error-message "PTP sync interval must be in range -7..7";
                         }
                     }
-                    description "Log2 of the mean Sync message transmission interval in seconds";
+                    default -3;
+                    description "Log2 of the mean Sync message transmission interval in seconds (default -3 = 8/s)";
                 }
 
                 leaf announce_interval {
@@ -59,7 +64,8 @@ module sonic-ptp {
                             error-message "PTP announce interval must be in range -3..4";
                         }
                     }
-                    description "Log2 of the mean Announce message transmission interval in seconds";
+                    default 1;
+                    description "Log2 of the mean Announce message transmission interval in seconds (default 1 = 2s)";
                 }
 
             } /* end of container global */
