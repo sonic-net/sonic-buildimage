@@ -520,6 +520,10 @@ rm /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/AllowAgentForwarding no
 ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
+rm /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/PerSourcePenalties authfail:0
+ins #comment before /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PerSourcePenalties]] "Disable penalty timer to allow for multiple passwords to be used, either local or remote/AAA"
 save
 quit
 EOF
@@ -906,7 +910,17 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
+sudo rm -f $FILESYSTEM_ROOT/run/resolvconf/resolv.conf
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
+
+## sonic-installer package migration runs the deployed image's installer
+## against this rootfs, and a symlinked /etc/resolv.conf breaks one installer
+## generation or another (absolute targets alias the host's own resolv.conf,
+## relative targets escape the image mount). Ship a regular file, which
+## every generation handles; resolv-symlink.conf restores the symlink at boot.
+sudo rm -f $FILESYSTEM_ROOT/etc/resolv.conf
+sudo touch $FILESYSTEM_ROOT/etc/resolv.conf
+sudo cp files/image_config/resolv-config/resolv-symlink.conf $FILESYSTEM_ROOT/usr/lib/tmpfiles.d/
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
