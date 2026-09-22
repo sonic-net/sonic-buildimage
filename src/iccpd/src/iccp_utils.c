@@ -112,6 +112,91 @@ int iccp_get_tlv_type(
     return 0;
 }
 
+int iccp_validate_message(
+    const char *msg_buf,
+    size_t msg_len,
+    uint16_t msg_type)
+{
+    size_t minimum_len = sizeof(ICCHdr);
+    size_t available_tlv_len;
+    size_t declared_tlv_len;
+    uint16_t parameter_len;
+
+    if (!msg_buf || msg_len < minimum_len)
+        return -1;
+
+    switch (msg_type)
+    {
+        case MSG_T_CAPABILITY:
+            minimum_len =
+                sizeof(LDPHdr) + sizeof(LDPICCPCapabilityTLV);
+            break;
+        case MSG_T_RG_APP_DATA:
+            minimum_len += sizeof(ICCParameter);
+            break;
+        case MSG_T_NOTIFICATION:
+            minimum_len += sizeof(NAKTLV);
+            break;
+        case MSG_T_RG_CONNECT:
+            minimum_len += sizeof(ICCParameter);
+            if (msg_len < minimum_len)
+                return -1;
+
+            memcpy(&parameter_len,
+                &msg_buf[sizeof(ICCHdr) + offsetof(ICCParameter, len)],
+                sizeof(parameter_len));
+            available_tlv_len = msg_len - sizeof(ICCHdr);
+            declared_tlv_len =
+                sizeof(ICCParameter) + ntohs(parameter_len);
+            return declared_tlv_len <= available_tlv_len &&
+                   declared_tlv_len <= sizeof(ICCSenderNameTLV)
+                       ? 0 : -1;
+        case MSG_T_RG_DISCONNECT:
+            minimum_len += sizeof(DisconnectCodeTLV);
+            break;
+        default:
+            break;
+    }
+
+    return msg_len >= minimum_len ? 0 : -1;
+}
+
+int iccp_validate_tlv(
+    const char *msg_buf,
+    size_t msg_len,
+    size_t minimum_tlv_len,
+    uint16_t *tlv_type,
+    size_t *tlv_len)
+{
+    ICCParameter icc_param;
+    size_t available_tlv_len;
+    size_t declared_tlv_len;
+    uint16_t parameter_len;
+
+    if (!msg_buf || minimum_tlv_len < sizeof(ICCParameter) ||
+        msg_len < sizeof(ICCHdr) + sizeof(icc_param))
+    {
+        return -1;
+    }
+
+    memcpy(&icc_param, &msg_buf[sizeof(ICCHdr)], sizeof(icc_param));
+    memcpy(&parameter_len, &icc_param.len, sizeof(parameter_len));
+    available_tlv_len = msg_len - sizeof(ICCHdr);
+    declared_tlv_len = sizeof(ICCParameter) + ntohs(parameter_len);
+
+    if (declared_tlv_len < minimum_tlv_len ||
+        declared_tlv_len > available_tlv_len)
+    {
+        return -1;
+    }
+
+    if (tlv_type)
+        *tlv_type = icc_param.type;
+    if (tlv_len)
+        *tlv_len = declared_tlv_len;
+    return 0;
+}
+
 int iccp_parse_agg_config_tlv(
     const char *msg_buf,
     size_t msg_len,
