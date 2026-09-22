@@ -188,6 +188,10 @@ INCLUDE_SNMP ?= y
 # INCLUDE_LLDP - build docker-lldp for LLDP support
 INCLUDE_LLDP ?= y
 
+# INCLUDE_REDFISH - build docker-sonic-redfish (bmcweb + sonic-dbus-bridge) for
+# Redfish support on BMC (aspeed) images
+INCLUDE_REDFISH ?= y
+
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
 
@@ -227,8 +231,7 @@ INCLUDE_VS_DASH_SAI ?= y
 ENABLE_AUTO_TECH_SUPPORT = y
 
 # ENABLE_TRANSLIB_WRITE - Enable translib write/config operations via the gNMI interface.
-# Uncomment to enable:
-# ENABLE_TRANSLIB_WRITE = y
+ENABLE_TRANSLIB_WRITE = y
 
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
 ENABLE_NATIVE_WRITE = y
@@ -425,6 +428,9 @@ ENABLE_SOURCE_ARCHIVE ?= n
 # the installer image. When y, the build invokes scripts/install_sbom_tool.sh
 # to fetch the configured scanner (default: syft) and emits
 # target/sonic-<machine>.bin.cdx.json as a sibling of the .bin.
+# Not supported on armhf builds: syft and grype publish no 32-bit ARM
+# binaries, so the scanner cannot be fetched and the SBOM step fails
+# under the default SBOM_STRICT=y.
 # See README.sbom.md for the full architecture.
 ENABLE_SBOM ?= n
 

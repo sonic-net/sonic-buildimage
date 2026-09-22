@@ -454,21 +454,16 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
-	sudo cp $debs_path/grub-common*.deb $debs_path/grub2-common*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-common*.deb $debs_path/grub2-common*.deb | sed 's,^,./,')
-	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-common*.deb $FILESYSTEM_ROOT/grub2-common*.deb
-	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
-
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
         GRUB_PKGS='grub-efi-amd64-bin grub-pc-bin'
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
         GRUB_PKGS=grub-efi-arm64-bin
     fi
 
-    for grub_pkg in $GRUB_PKGS; do
-       sudo cp $debs_path/${grub_pkg}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
-    done
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -d \
+        $GRUB_PKGS
+
+    sudo cp $FILESYSTEM_ROOT/var/cache/apt/archives/grub*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
 fi
 
 ## Disable kexec supported reboot which was installed by default
@@ -525,6 +520,10 @@ rm /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/AllowAgentForwarding no
 ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
+rm /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/PerSourcePenalties authfail:0
+ins #comment before /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PerSourcePenalties]] "Disable penalty timer to allow for multiple passwords to be used, either local or remote/AAA"
 save
 quit
 EOF
@@ -730,14 +729,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 0 > /etc/fips/fips_enable
 if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
     echo "Secure Boot support build stage: Starting .."
 
-	sudo cp $debs_path/grub-efi*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-efi*.deb | sed 's,^,./,')
-	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-efi*.deb
-
     # debian secure boot dependencies
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
-        shim-unsigned
+        shim-unsigned \
+        grub-efi
 
     if [ ! -f $SECURE_UPGRADE_SIGNING_CERT ]; then
         echo "Error: SONiC SECURE_UPGRADE_SIGNING_CERT=$SECURE_UPGRADE_SIGNING_CERT key missing"
@@ -915,7 +910,17 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
+sudo rm -f $FILESYSTEM_ROOT/run/resolvconf/resolv.conf
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
+
+## sonic-installer package migration runs the deployed image's installer
+## against this rootfs, and a symlinked /etc/resolv.conf breaks one installer
+## generation or another (absolute targets alias the host's own resolv.conf,
+## relative targets escape the image mount). Ship a regular file, which
+## every generation handles; resolv-symlink.conf restores the symlink at boot.
+sudo rm -f $FILESYSTEM_ROOT/etc/resolv.conf
+sudo touch $FILESYSTEM_ROOT/etc/resolv.conf
+sudo cp files/image_config/resolv-config/resolv-symlink.conf $FILESYSTEM_ROOT/usr/lib/tmpfiles.d/
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then

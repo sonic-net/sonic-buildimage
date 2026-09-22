@@ -1,0 +1,15 @@
+[Unit]
+Description= Global Initialize platform drivers.
+After=local-fs.target
+Before=pmon.service platform_process.service
+#DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_driver.py start
+ExecStop=/usr/local/bin/platform_driver.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+
