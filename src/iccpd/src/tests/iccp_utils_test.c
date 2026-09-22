@@ -101,6 +101,75 @@ static void test_tlv_type_parser(void)
     assert(tlv_type == TLV_T_MLACP_AGGREGATOR_CONFIG);
 }
 
+static void test_message_validator(void)
+{
+    char buffer[sizeof(ICCHdr) + sizeof(NAKTLV)] = { 0 };
+    ICCParameter *parameter =
+        (ICCParameter *)&buffer[sizeof(ICCHdr)];
+
+    assert(iccp_validate_message(NULL, sizeof(buffer), MSG_T_RG_APP_DATA) == -1);
+    assert(iccp_validate_message(
+        buffer, sizeof(ICCHdr) - 1, MSG_T_RG_APP_DATA) == -1);
+    assert(iccp_validate_message(
+        buffer, sizeof(ICCHdr), MSG_T_RG_APP_DATA) == -1);
+    assert(iccp_validate_message(
+        buffer, sizeof(ICCHdr) + sizeof(ICCParameter),
+        MSG_T_RG_APP_DATA) == 0);
+    assert(iccp_validate_message(
+        buffer, sizeof(ICCHdr) + sizeof(NAKTLV) - 1,
+        MSG_T_NOTIFICATION) == -1);
+    assert(iccp_validate_message(
+        buffer, sizeof(buffer), MSG_T_NOTIFICATION) == 0);
+
+    parameter->len = htons(5);
+    assert(iccp_validate_message(
+        buffer, sizeof(ICCHdr) + sizeof(ICCParameter) + 5,
+        MSG_T_RG_CONNECT) == 0);
+    assert(iccp_validate_message(
+        buffer, sizeof(ICCHdr) + sizeof(ICCParameter) + 4,
+        MSG_T_RG_CONNECT) == -1);
+    parameter->len = htons(MAX_L_ICC_SENDER_NAME + 1);
+    assert(iccp_validate_message(
+        buffer, sizeof(buffer), MSG_T_RG_CONNECT) == -1);
+}
+
+static void test_tlv_validator(void)
+{
+    char buffer[sizeof(ICCHdr) + sizeof(mLACPSysConfigTLV)] = { 0 };
+    ICCParameter *parameter =
+        (ICCParameter *)&buffer[sizeof(ICCHdr)];
+    size_t tlv_len = 0;
+    uint16_t tlv_type = 0;
+
+    parameter->type = TLV_T_MLACP_SYSTEM_CONFIG;
+    parameter->len =
+        htons(sizeof(mLACPSysConfigTLV) - sizeof(ICCParameter));
+
+    assert(iccp_validate_tlv(
+        NULL, sizeof(buffer), sizeof(mLACPSysConfigTLV),
+        &tlv_type, &tlv_len) == -1);
+    assert(iccp_validate_tlv(
+        buffer, sizeof(ICCHdr) + sizeof(ICCParameter) - 1,
+        sizeof(mLACPSysConfigTLV), &tlv_type, &tlv_len) == -1);
+    assert(iccp_validate_tlv(
+        buffer, sizeof(buffer) - 1,
+        sizeof(mLACPSysConfigTLV), &tlv_type, &tlv_len) == -1);
+
+    parameter->len = htons(
+        sizeof(mLACPSysConfigTLV) - sizeof(ICCParameter) - 1);
+    assert(iccp_validate_tlv(
+        buffer, sizeof(buffer), sizeof(mLACPSysConfigTLV),
+        &tlv_type, &tlv_len) == -1);
+
+    parameter->len =
+        htons(sizeof(mLACPSysConfigTLV) - sizeof(ICCParameter));
+    assert(iccp_validate_tlv(
+        buffer, sizeof(buffer), sizeof(mLACPSysConfigTLV),
+        &tlv_type, &tlv_len) == 0);
+    assert(tlv_type == TLV_T_MLACP_SYSTEM_CONFIG);
+    assert(tlv_len == sizeof(mLACPSysConfigTLV));
+}
+
 static void test_agg_config_parser(void)
 {
     static const char valid_name[] = "PortChannel100";
@@ -174,6 +243,8 @@ int main(int argc, char **argv)
 
     test_exec_command(argv[0]);
     test_tlv_type_parser();
+    test_message_validator();
+    test_tlv_validator();
     test_agg_config_parser();
     return 0;
 }

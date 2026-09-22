@@ -29,6 +29,7 @@
 #include "../include/scheduler.h"
 #include "../include/system.h"
 #include "../include/iccp_netlink.h"
+#include "../include/iccp_utils.h"
 #include "../include/mlacp_link_handler.h"
 /*****************************************
 * Define
@@ -103,21 +104,35 @@ void app_csm_enqueue_msg(struct CSM* csm, struct Msg* msg)
     ICCHdr* icc_hdr = NULL;
     ICCParameter* param = NULL;
     NAKTLV* naktlv = NULL;
+    uint16_t parameter_type;
     int tlv = -1;
     int i = 0;
 
     if (csm == NULL )
     {
         if (msg != NULL )
+        {
+            free(msg->buf);
             free(msg);
+        }
         return;
     }
     if (msg == NULL )
         return;
 
+    if (msg->buf == NULL ||
+        iccp_get_tlv_type(msg->buf, msg->len, &parameter_type) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Dropping truncated application message");
+        free(msg->buf);
+        free(msg);
+        return;
+    }
+
     icc_hdr = (ICCHdr*)msg->buf;
     param = (ICCParameter*)&msg->buf[sizeof(struct ICCHdr)];
-    *(uint16_t *)param = ntohs(*(uint16_t *)param);
+    parameter_type = ntohs(parameter_type);
+    memcpy(param, &parameter_type, sizeof(parameter_type));
 
     if ( icc_hdr->ldp_hdr.msg_type == MSG_T_RG_APP_DATA)
     {
@@ -313,4 +328,3 @@ int mlacp_bind_port_channel_to_csm(struct CSM* csm, const char *ifname)
     /*ICCPD_LOG_WARN(tag, "po%d active =  %d\n", po_id, po_is_active);*/
     return 0;
 }
-
