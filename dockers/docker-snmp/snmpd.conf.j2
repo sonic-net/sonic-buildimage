@@ -26,7 +26,12 @@
 
 {% if SNMP_AGENT_ADDRESS_CONFIG %}
 {% for (agentip, port, vrf) in SNMP_AGENT_ADDRESS_CONFIG %}
-agentAddress {{ protocol(agentip) }}:[{{ agentip }}]{% if vrf %}@{{ vrf }}{% endif %}{% if port %}:{{ port }}{% endif %}{{ "" }}
+{% set agent_proto = protocol(agentip).strip() %}
+{% if agent_proto == 'udp6' %}
+agentAddress {{ agent_proto }}:[{{ agentip }}]{% if vrf %}@{{ vrf }}{% endif %}{% if port %}:{{ port }}{% endif %}{{ "" }}
+{% else %}
+agentAddress {{ agent_proto }}:{{ agentip }}{% if vrf %}@{{ vrf }}{% endif %}{% if port %}:{{ port }}{% endif %}{{ "" }}
+{% endif %}
 {% endfor %}
 {% else %}
 agentAddress udp:161
