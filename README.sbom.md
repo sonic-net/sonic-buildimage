@@ -65,7 +65,7 @@ publishes the sibling files alongside it.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `ENABLE_SBOM` | `n` | Master switch. When `n`, no SBOM hooks fire and no extra tools are installed. |
+| `ENABLE_SBOM` | `n` | Master switch. When `n`, no SBOM hooks fire and no extra tools are installed. Not supported on `armhf` — see [Host architecture support](#host-architecture-support). |
 | `SBOM_FORMAT` | `both` | `cyclonedx`, `spdx`, or `both`. SPDX is a downstream conversion via `cyclonedx-cli` (auto-fetched), so emitting both is essentially free — but the conversion carries **no dependency relationships** and no `formulation`, so the containment graph exists only in the CycloneDX document. |
 | `SBOM_SCAN_TOOL` | `syft` | Binary scanner for transitive deps: `syft` or `trivy`. |
 | `SBOM_INCLUDE_LICENSES` | `y` | Whether to harvest copyrights and resolve SPDX licenses. |
@@ -388,6 +388,18 @@ artifact — no manual pin editing required.
 
 For standalone vuln scanning outside a build, the same script
 auto-fetches into `~/.cache/sonic-sbom/`.
+
+### Host architecture support
+
+`syft` and `grype` publish Linux binaries for `amd64`, `arm64`,
+`ppc64le`, `riscv64` and `s390x` — but not for 32-bit ARM. An `armhf`
+build runs the toolchain inside an armhf slave container, so
+`install_sbom_tool.sh` has nothing to fetch there and exits non-zero,
+which fails the build at SBOM emit time under the default
+`SBOM_STRICT=y`. SONiC's Azure pipelines therefore leave `ENABLE_SBOM`
+unset for armhf jobs (`marvell-prestera-armhf`). Building armhf with
+`ENABLE_SBOM=y SBOM_STRICT=n` still works and yields a partial,
+recipe-only SBOM with no host-rootfs or container-scan coverage.
 
 The aggregator additionally caches per-file scanner output under
 `target/sbom-tools/syft-cache/<tool>-<version>-<sha256>.json`, keyed by

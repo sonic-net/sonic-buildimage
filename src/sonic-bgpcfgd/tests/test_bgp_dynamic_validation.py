@@ -41,6 +41,23 @@ def peer_data(name="BGPSLBPassive"):
             "ip_range": "10.250.0.0/27"}
 
 
+@pytest.mark.parametrize("key", [
+    None, "default|", "default|peer group", "VnetA|peer;show", "vnet;show|Peer",
+])
+@pytest.mark.parametrize("op", ["SET", "DEL"])
+def test_upstream_dynamic_key_validation_is_preserved(dynamic_manager, key, op):
+    m, state_table = dynamic_manager
+    make_dependencies_ready(m)
+    peers = m.peers.copy()
+    with patch("bgpcfgd.managers_bgp.log_err") as log_err:
+        m.handler(key, op, peer_data())
+        log_err.assert_called_once()
+    assert m.peers == peers
+    assert m.set_queue == []
+    m.cfg_mgr.push.assert_not_called()
+    assert not state_table.mock_calls
+
+
 @pytest.mark.parametrize("newline", ["\n", "\r", "\r\n"], ids=["LF", "CR", "CRLF"])
 @pytest.mark.parametrize("field", ["name", "key", "qualified-key", "vrf"])
 @pytest.mark.parametrize("entry,existing,admin_status", [

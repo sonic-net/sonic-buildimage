@@ -49,6 +49,8 @@ input(type="imrelp" address="{{docker0_ip}}" port="2514")
 #### GLOBAL DIRECTIVES ####
 ###########################
 {% set format = gconf.get('format', 'standard') -%}
+{% set hostname = hostname | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set os_version = os_version | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set fw_name = gconf.get('welf_firewall_name', hostname) -%}
 #
 # Use traditional timestamp format.
