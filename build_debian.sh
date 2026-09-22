@@ -304,7 +304,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAUL
 ## Create password for the default user
 ## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
 if [ -n "$PASSWORD" ]; then
-    echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+    set +x
+    printf '%s:%s\n' "$USERNAME" "$PASSWORD" | sudo LANG=C chroot "$FILESYSTEM_ROOT" chpasswd
+    set -x
 else
     sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
 fi
@@ -590,8 +592,11 @@ run_organization_build_hook post-sonic-config-directory
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
 export username="${USERNAME}"
+set +x
 export password="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)"
-j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json
+j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json > /dev/null
+unset password
+set -x
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 600 /etc/sonic/default_users.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:shadow /etc/sonic/default_users.json
 
