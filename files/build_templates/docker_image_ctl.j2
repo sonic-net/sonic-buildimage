@@ -126,6 +126,25 @@ function getBootType()
     echo "${TYPE}"
 }
 
+{%- if docker_container_name == "redfish" %}
+function getRedfishPort()
+{
+    # Host port for the Redfish API from CONFIG_DB, default 443. Table naming
+    # follows the RESTAPI|config / TELEMETRY|gnmi convention. Falls back to
+    # the default on any read error or invalid value, so a missing table or an
+    # unavailable database never blocks container creation.
+    local port
+    port=$($SONIC_DB_CLI CONFIG_DB hget "REDFISH|config" port 2>/dev/null)
+    case "$port" in
+        ''|*[!0-9]*) port=443 ;;
+    esac
+    if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+        port=443
+    fi
+    echo "$port"
+}
+{%- endif %}
+
 function preStartAction()
 {
 {%- if docker_container_name == "database" %}
@@ -597,6 +616,21 @@ start() {
         DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
         if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+            {%- if docker_container_name == "redfish" %}
+            # Port mappings are fixed at container create time, so a changed
+            # CONFIG_DB Redfish port only takes effect by recreating the
+            # container (same pattern as the HWSKU change below).
+            REDFISH_PORT=$(getRedfishPort)
+            # Read the binding with docker inspect, not docker port: the latter
+            # errors on a stopped container, and `systemctl restart` stops the
+            # container before this runs, so docker port would always come back
+            # empty here and the mismatch check would never fire.
+            CURRENT_PORT=$(docker inspect -f '{{"{{"}}(index (index .HostConfig.PortBindings "18080/tcp") 0).HostPort{{"}}"}}' ${DOCKERNAME} 2>/dev/null)
+            if [ -n "$CURRENT_PORT" ] && [ "$CURRENT_PORT" != "$REDFISH_PORT" ]; then
+                echo "Recreating ${DOCKERNAME} container: published port $CURRENT_PORT differs from configured port $REDFISH_PORT"
+                docker rm -f ${DOCKERNAME}
+            else
+            {%- endif %}
             CONTAINER_EXISTS="yes"
             preStartAction
             {%- if docker_container_name == "database" %}
@@ -608,6 +642,9 @@ start() {
             {%- endif %}
             postStartAction
             exit $?
+            {%- if docker_container_name == "redfish" %}
+            fi
+            {%- endif %}
         fi
 
         # docker created with a different HWSKU, remove and recreate
@@ -804,7 +841,14 @@ start() {
         [ -n "$_pmon_rule" ] && PMON_DEVICE_CGROUP_RULES+=( "--device-cgroup-rule=$_pmon_rule" )
     done < <(get_pmon_device_cgroup_rules)
 {%- endif %}
+    {%- if docker_container_name == "redfish" %}
+    REDFISH_PORT=$(getRedfishPort)
+    echo "Publishing Redfish API on host port ${REDFISH_PORT}"
+    {%- endif %}
     docker create {{docker_image_run_opt}} \
+{%- if docker_container_name == "redfish" %}
+        -p 0.0.0.0:${REDFISH_PORT}:18080 \
+{%- endif %}
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
