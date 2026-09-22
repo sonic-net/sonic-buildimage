@@ -20,7 +20,9 @@ import yaml
 XCVR_PRESENCE_CACHE_FILE: Path = Path(
     "/var/run/platform_cache/xcvr_presence_cache.yaml"
 )
-XCVR_PRESENCE_CACHE_MAX_AGE_SECS: int = 30
+# Backstops a killed asic_init.sh; ~2.5x the worst case (3 attempts, ~45s).
+POWER_CYCLE_TTL_S: int = 120
+XCVR_PRESENCE_CACHE_MAX_AGE_SECS: int = POWER_CYCLE_TTL_S
 
 PathLike = str | os.PathLike[str]
 
@@ -70,6 +72,7 @@ def read_cached_presence(
 def write_presence_cache(path: PathLike, presence: dict[int, bool]) -> int:
     """Write a presence dict to path atomically. Returns the number of ports."""
     path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     # Renamed into place so a concurrent xcvrd read never sees a partial file.
     fd, tmp = tempfile.mkstemp(prefix=".xcvr_presence_cache.", dir=path.parent)
     try:

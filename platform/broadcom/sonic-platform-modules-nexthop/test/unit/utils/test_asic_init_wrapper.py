@@ -144,30 +144,31 @@ class TestStages:
         assert not marker.exists()
 
 
-class TestGetAsicBdfs:
-    def test_collects_asic_bus_vars_only(self, wrapper):
-        name_to_cmd = {
-            "asic_bus": "cmd_a",
-            "asic_0_bus": "cmd_b",
-            "cpu_card_fpga_bdf": "cmd_ignored",
-        }
-        bus_for_cmd = {"cmd_a": "01", "cmd_b": "0a"}
-        with (
-            patch.object(wrapper.pcie_lib, "get_var_name_to_cmd_map", autospec=True, return_value=name_to_cmd),
-            patch.object(wrapper.pcie_lib, "get_cmd_output", autospec=True, side_effect=lambda c: bus_for_cmd[c]),
-        ):
-            assert wrapper.get_asic_bdfs() == ["01:00.0", "0a:00.0"]
+class TestHandleWarmBootPostKexec:
+    """The BDF lookup itself is covered by TestGetPcieDeviceBdfs in test_pcie_lib.py."""
 
-    def test_skips_empty_bus(self, wrapper):
+    def test_disables_interrupts_on_every_present_asic(self, wrapper):
         with (
-            patch.object(wrapper.pcie_lib, "get_var_name_to_cmd_map", autospec=True, return_value={"asic_bus": "c"}),
-            patch.object(wrapper.pcie_lib, "get_cmd_output", autospec=True, return_value=""),
+            patch.object(wrapper.pcie_lib, "get_pcie_device_bdfs", autospec=True,
+                         return_value=["01:00.0", "0a:00.0"]) as get_bdfs,
+            patch.object(wrapper, "asic_present_on_pci_bus", side_effect=[True, False]),
+            patch.object(wrapper, "disable_asic_pci_interrupts") as disable,
         ):
-            assert wrapper.get_asic_bdfs() == []
+            assert wrapper.handle_warm_boot_post_kexec() is True
 
-    def test_yaml_read_failure_returns_empty(self, wrapper):
-        with patch.object(wrapper.pcie_lib, "get_var_name_to_cmd_map", autospec=True, side_effect=FileNotFoundError):
-            assert wrapper.get_asic_bdfs() == []
+        get_bdfs.assert_called_once_with(device_type=wrapper.pcie_lib.PcieDeviceType.ASIC)
+        disable.assert_called_once_with("01:00.0", "Warm boot")
+
+    def test_no_asic_bdfs_falls_back(self, wrapper):
+        with patch.object(wrapper.pcie_lib, "get_pcie_device_bdfs", autospec=True, return_value=[]):
+            assert wrapper.handle_warm_boot_post_kexec() is False
+
+    def test_no_asic_present_falls_back(self, wrapper):
+        with (
+            patch.object(wrapper.pcie_lib, "get_pcie_device_bdfs", autospec=True, return_value=["01:00.0"]),
+            patch.object(wrapper, "asic_present_on_pci_bus", return_value=False),
+        ):
+            assert wrapper.handle_warm_boot_post_kexec() is False
 
 
 class TestDisableAsicPciInterrupts:
