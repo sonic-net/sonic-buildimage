@@ -104,7 +104,7 @@ void app_csm_enqueue_msg(struct CSM* csm, struct Msg* msg)
     ICCHdr* icc_hdr = NULL;
     ICCParameter* param = NULL;
     NAKTLV* naktlv = NULL;
-    uint16_t parameter_type;
+    uint16_t parameter_header;
     int tlv = -1;
     int i = 0;
 
@@ -121,7 +121,7 @@ void app_csm_enqueue_msg(struct CSM* csm, struct Msg* msg)
         return;
 
     if (msg->buf == NULL ||
-        iccp_get_tlv_type(msg->buf, msg->len, &parameter_type) != 0)
+        msg->len < sizeof(ICCHdr) + sizeof(ICCParameter))
     {
         ICCPD_LOG_WARN(__FUNCTION__, "Dropping truncated application message");
         free(msg->buf);
@@ -131,8 +131,9 @@ void app_csm_enqueue_msg(struct CSM* csm, struct Msg* msg)
 
     icc_hdr = (ICCHdr*)msg->buf;
     param = (ICCParameter*)&msg->buf[sizeof(struct ICCHdr)];
-    parameter_type = ntohs(parameter_type);
-    memcpy(param, &parameter_type, sizeof(parameter_type));
+    memcpy(&parameter_header, param, sizeof(parameter_header));
+    parameter_header = ntohs(parameter_header);
+    memcpy(param, &parameter_header, sizeof(parameter_header));
 
     if ( icc_hdr->ldp_hdr.msg_type == MSG_T_RG_APP_DATA)
     {

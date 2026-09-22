@@ -9,6 +9,7 @@
 
 int iccp_exec_command(char *const argv[], bool suppress_output);
 bool iccp_is_interface_name_valid(const char *name, size_t name_len);
+/* Extracts the type after the packed parameter header is in host byte order. */
 int iccp_get_tlv_type(
     const char *msg_buf,
     size_t msg_len,
