@@ -753,35 +753,37 @@ int set_sys_arp_accept_flag(char* ifname, int flag)
     if (!fgets(buf, sizeof(buf), file_ptr))
     {
         ICCPD_LOG_WARN(__func__, "Failed to read %s", arp_file);
-        fclose(file_ptr);
+        if (fclose(file_ptr) != 0)
+            ICCPD_LOG_WARN(__func__, "Failed to close %s", arp_file);
+        return result;
+    }
+
+    close_result = fclose(file_ptr);
+    if (close_result != 0)
+    {
+        ICCPD_LOG_WARN(__func__, "Failed to close %s", arp_file);
         return result;
     }
 
     if (atoi(buf) == flag)
-        result = 0;
-    else
-    {
-        fclose(file_ptr);
-        file_ptr = fopen(arp_file, "w");
-        if (!file_ptr)
-        {
-            ICCPD_LOG_WARN(__func__, "Failed to open %s for writing", arp_file);
-            return result;
-        }
-
-        result = fprintf(file_ptr, "%d\n", flag);
-        close_result = fclose(file_ptr);
-        if (result < 0 || close_result != 0)
-        {
-            ICCPD_LOG_WARN(__func__, "Failed to write %d to %s", flag, arp_file);
-            return MCLAG_ERROR;
-        }
-
         return 0;
+
+    file_ptr = fopen(arp_file, "w");
+    if (!file_ptr)
+    {
+        ICCPD_LOG_WARN(__func__, "Failed to open %s for writing", arp_file);
+        return result;
     }
 
-    fclose(file_ptr);
-    return result;
+    result = fprintf(file_ptr, "%d\n", flag);
+    close_result = fclose(file_ptr);
+    if (result < 0 || close_result != 0)
+    {
+        ICCPD_LOG_WARN(__func__, "Failed to write %d to %s", flag, arp_file);
+        return MCLAG_ERROR;
+    }
+
+    return 0;
 }
 
 int local_if_l3_proto_enabled(const char* ifname)
