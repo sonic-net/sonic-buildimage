@@ -23,8 +23,24 @@ SONiC tracking:  https://github.com/sonic-net/sonic-mgmt/issues/28034
 
 The upstream fix was merged to the exabgp 5.0 branch on 2026-09-06, after
 the latest release (5.0.13, 2026-08-24). No released version carries it, so
-it is applied here as a patch. Drop this patch once a release containing
-the fix is available and pinned.
+it is applied here as a patch.
+
+When bumping exabgp, note how the Dockerfile step behaves:
+
+  * If the new version already contains the fix, the step detects the
+    patched call, skips this patch and the build succeeds. Delete this file
+    and the step at that point.
+
+  * If the new version still has the defect, this patch will NOT apply and
+    the build fails on purpose. 5.0 spells the same line differently
+    (buf = str(proc.stdout.read(16384), 'ascii') instead of
+    buf = str_ascii(proc.stdout.read(16384))), so the patch has to be
+    refreshed against the new source rather than force-applied.
+
+  * Upstream has moved the active reader to received_async() on the
+    development branch, leaving the sync received() as dead code. If a
+    future version ships both, patching received() alone is not enough --
+    check which one the reactor actually drives before refreshing.
 
 --- a/exabgp/reactor/api/processes.py
 +++ b/exabgp/reactor/api/processes.py

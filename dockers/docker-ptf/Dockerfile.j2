@@ -329,13 +329,20 @@ RUN pip3 install setuptools \
 # ExaBGP's process-API reader can silently drop the tail of a large command
 # batch, leaving a route announcement or withdrawal only partially applied
 # while the HTTP API still returns 200. The upstream fix is not in any
-# released version yet, so it is carried here. See
+# released version yet, so it is carried here. The step is a no-op once a
+# release containing the fix is pinned. See
 # exabgp-patches/0001-use-os-read-for-process-api.patch for the analysis.
 COPY exabgp-patches/ /root/exabgp-patches/
 RUN EXABGP_PKG="$(python3 -c 'import importlib.util; print(importlib.util.find_spec("exabgp").submodule_search_locations[0])')" \
-        && patch -p1 --fuzz=0 -d "$(dirname "$EXABGP_PKG")" \
-            < /root/exabgp-patches/0001-use-os-read-for-process-api.patch \
-        && grep -q 'os.read(proc.stdout.fileno(), 16384)' "$EXABGP_PKG/reactor/api/processes.py" \
+        && EXABGP_SRC="$EXABGP_PKG/reactor/api/processes.py" \
+        && if grep -q 'os\.read(proc\.stdout\.fileno(), 16384)' "$EXABGP_SRC"; then \
+               echo "exabgp already reads the process API with os.read(); skipping patch"; \
+           else \
+               patch -p1 --fuzz=0 -d "$(dirname "$EXABGP_PKG")" \
+                   < /root/exabgp-patches/0001-use-os-read-for-process-api.patch; \
+           fi \
+        && grep -q 'os\.read(proc\.stdout\.fileno(), 16384)' "$EXABGP_SRC" \
+        && ! grep -q 'proc\.stdout\.read(16384)' "$EXABGP_SRC" \
         && rm -rf /root/exabgp-patches
 
 # Install all python modules from pypi. python3-scapy is exception,
