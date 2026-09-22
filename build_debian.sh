@@ -596,16 +596,17 @@ set +x
 export password="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)"
 j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json > /dev/null
 unset password
-set -x
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 600 /etc/sonic/default_users.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:shadow /etc/sonic/default_users.json
 
 # BMC config info
 export bmc_nos_account_username="${BMC_NOS_ACCOUNT_USERNAME}"
 export bmc_root_account_default_password="${BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD}"
-j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json
+j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json > /dev/null
+unset bmc_root_account_default_password
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/bmc_config.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/bmc_config.json
+set -x
 
 # SED TPM bank addresses (platform-specific)
 if [[ $CONFIGURED_PLATFORM == mellanox ]]; then
