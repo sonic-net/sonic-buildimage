@@ -797,6 +797,22 @@ start() {
     fi
 {%- endif %}
 {%- endif %}
+{%- if sonic_asic_platform == "broadcom" %}
+{%- if docker_container_name == "syncd" %}
+    # platform/broadcom/saibcm-modules-dnx and saibcm-modules-legacy-th's opennsl-modules.init
+    # create these with fixed majors. legacy-th picks the set at runtime based on is_ltsw_chip
+    # (from platform_env.conf, not known at image-build time); dnx creates linux_ngbde alongside
+    # the classic set unconditionally. Check each path individually so only the devices actually
+    # created on this host get mounted. Previously --privileged exposed the whole host /dev implicitly.
+    BRCM_DEV_MNT="-v /dev/shm:/dev/shm:rw"
+    for _brcm_dev in /dev/linux_ngbde /dev/linux_ngknet /dev/linux_ngknetcb \
+                     /dev/linux-kernel-bde /dev/linux-bcm-knet /dev/linux-bcm-bde /dev/linux-knet-cb; do
+        if [ -e "$_brcm_dev" ]; then
+            BRCM_DEV_MNT="$BRCM_DEV_MNT --device=$_brcm_dev:$_brcm_dev:rwm"
+        fi
+    done
+{%- endif %}
+{%- endif %}
 {%- if docker_container_name == "pmon" %}
     # Build --device-cgroup-rule flags from the hot-plug bus/FRU majors.
     PMON_DEVICE_CGROUP_RULES=()
@@ -858,6 +874,7 @@ start() {
 {%- if docker_container_name == "syncd" %}
         --shm-size=${SYNCD_SHM_SIZE:-512m} \
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
+        $BRCM_DEV_MNT \
 {%- endif %}
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
