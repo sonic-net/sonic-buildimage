@@ -303,13 +303,13 @@ sudo cp files/docker/docker.service.conf $_
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
 ## Create password for the default user
 ## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
+set +x
 if [ -n "$PASSWORD" ]; then
-    set +x
     printf '%s:%s\n' "$USERNAME" "$PASSWORD" | sudo LANG=C chroot "$FILESYSTEM_ROOT" chpasswd
-    set -x
 else
     sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
 fi
+set -x
 
 ## Create redis group
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
