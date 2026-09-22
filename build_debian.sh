@@ -338,7 +338,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     efibootmgr              \
     usbutils                \
     pciutils                \
-    iptables-persistent     \
     ebtables                \
     linux-sysctl-defaults   \
     logrotate               \
