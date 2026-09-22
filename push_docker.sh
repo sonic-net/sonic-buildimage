@@ -14,7 +14,9 @@ do
             ;;
         \? ) echo "\
 Usage: [-v <version> ] [ -p <platform> ] <DOCKER_IMAGE_FILE> <REGISTRY_SERVER> <REGISTRY_PORT> \
-<REGISTRY_USERNAME> <REGISTRY_PASSWD> [<DOCKER_IMAGE_TAG>]" 
+<REGISTRY_USERNAME> [<DOCKER_IMAGE_TAG>]
+
+Set REGISTRY_PASSWD in the environment."
             ;;
     esac
 done
@@ -25,8 +27,7 @@ DOCKER_IMAGE_FILE=$1
 REGISTRY_SERVER=$2
 REGISTRY_PORT=$3
 REGISTRY_USERNAME=$4
-REGISTRY_PASSWD=$5
-DOCKER_IMAGE_TAG=$6
+DOCKER_IMAGE_TAG=$5
 REGISTRY_SERVER_WITH_PORT=${REGISTRY_SERVER}${REGISTRY_PORT:+:$REGISTRY_PORT}
 
 push_it() {
@@ -43,12 +44,32 @@ push_it() {
 
 set -e
 
+set +x
+: "${REGISTRY_PASSWD:?REGISTRY_PASSWD must be set in the environment}"
+registry_password=$REGISTRY_PASSWD
+unset REGISTRY_PASSWD
+
+docker_config_dir=$(mktemp -d)
+export DOCKER_CONFIG="$docker_config_dir"
+logged_in=false
+cleanup_registry_auth() {
+    if [[ "$logged_in" == true ]]; then
+        docker logout "$REGISTRY_SERVER_WITH_PORT" > /dev/null 2>&1 || true
+    fi
+    rm -rf -- "$docker_config_dir"
+}
+trap cleanup_registry_auth EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 echo "Loading image ${DOCKER_IMAGE_FILE}"
 docker load < ${DOCKER_IMAGE_FILE}
 
 ## Login the docker image registry server
-## Note: user name and password are passed from command line
-docker login -u ${REGISTRY_USERNAME} -p "${REGISTRY_PASSWD}" ${REGISTRY_SERVER_WITH_PORT}
+printf '%s' "$registry_password" | docker login --username "$REGISTRY_USERNAME" --password-stdin "$REGISTRY_SERVER_WITH_PORT"
+logged_in=true
+unset registry_password
 
 ## Get Docker image name
 docker_image_name=$(basename ${DOCKER_IMAGE_FILE} | cut -d. -f1)
@@ -77,4 +98,3 @@ fi
 
 docker rmi $docker_image_name || true
 echo "Job completed"
-
