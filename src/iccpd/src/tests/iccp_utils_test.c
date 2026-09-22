@@ -118,7 +118,7 @@ static void test_agg_config_parser(void)
     assert(iccp_parse_agg_config_tlv(buffer, msg_len, &parsed) == -1);
 
     msg_len = build_agg_config_msg(
-        buffer, sizeof(buffer), valid_name, MAX_L_PORT_NAME,
+        buffer, sizeof(buffer), NULL, MAX_L_PORT_NAME,
         sizeof(mLACPAggConfigTLV), 0x01);
     assert(iccp_parse_agg_config_tlv(buffer, msg_len, &parsed) == -1);
 
