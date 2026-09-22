@@ -94,6 +94,24 @@ bool iccp_is_interface_name_valid(const char *name, size_t name_len)
     return true;
 }
 
+int iccp_get_tlv_type(
+    const char *msg_buf,
+    size_t msg_len,
+    uint16_t *tlv_type)
+{
+    ICCParameter icc_param;
+
+    if (!msg_buf || !tlv_type ||
+        msg_len < sizeof(ICCHdr) + sizeof(icc_param))
+    {
+        return -1;
+    }
+
+    memcpy(&icc_param, &msg_buf[sizeof(ICCHdr)], sizeof(icc_param));
+    *tlv_type = icc_param.type;
+    return 0;
+}
+
 int iccp_parse_agg_config_tlv(
     const char *msg_buf,
     size_t msg_len,

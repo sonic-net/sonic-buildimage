@@ -82,6 +82,25 @@ static size_t build_agg_config_msg(
     return msg_len;
 }
 
+static void test_tlv_type_parser(void)
+{
+    char buffer[sizeof(ICCHdr) + sizeof(ICCParameter)] = { 0 };
+    ICCParameter icc_param = { 0 };
+    uint16_t tlv_type = 0;
+
+    icc_param.type = TLV_T_MLACP_AGGREGATOR_CONFIG;
+    memcpy(&buffer[sizeof(ICCHdr)], &icc_param, sizeof(icc_param));
+
+    assert(iccp_get_tlv_type(NULL, sizeof(buffer), &tlv_type) == -1);
+    assert(iccp_get_tlv_type(buffer, sizeof(buffer), NULL) == -1);
+    assert(iccp_get_tlv_type(
+        buffer, sizeof(ICCHdr) + sizeof(ICCParameter) - 1,
+        &tlv_type) == -1);
+    assert(iccp_get_tlv_type(
+        buffer, sizeof(buffer), &tlv_type) == 0);
+    assert(tlv_type == TLV_T_MLACP_AGGREGATOR_CONFIG);
+}
+
 static void test_agg_config_parser(void)
 {
     static const char valid_name[] = "PortChannel100";
@@ -154,6 +173,7 @@ int main(int argc, char **argv)
         return child_main(argc, argv);
 
     test_exec_command(argv[0]);
+    test_tlv_type_parser();
     test_agg_config_parser();
     return 0;
 }
