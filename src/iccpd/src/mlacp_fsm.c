@@ -1302,16 +1302,22 @@ static void mlacp_sync_recv_nak_handler(struct CSM* csm,  struct Msg* msg)
 * ***************************************/
 static void mlacp_sync_receiver_handler(struct CSM* csm, struct Msg* msg)
 {
-    ICCParameter *icc_param;
+    uint16_t tlv_type;
 
     /* No receive message...*/
     if (!csm || !msg)
         return;
 
-    icc_param = (ICCParameter*)&(msg->buf[sizeof(ICCHdr)]);
+    if (iccp_get_tlv_type(msg->buf, msg->len, &tlv_type) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+                       "Received ICCP message too short for TLV header: %zu",
+                       msg->len);
+        return;
+    }
 
-    /*fprintf(stderr, " Recv Type [%d]\n", icc_param->type);*/
-    switch (icc_param->type)
+    /*fprintf(stderr, " Recv Type [%d]\n", tlv_type);*/
+    switch (tlv_type)
     {
         case TLV_T_MLACP_SYSTEM_CONFIG:
             mlacp_sync_recv_sysConf(csm, msg);
@@ -1384,7 +1390,7 @@ static void mlacp_sync_receiver_handler(struct CSM* csm, struct Msg* msg)
 
         default:
             ICCPD_LOG_ERR("ICCP_FSM", "Receive unsupported msg 0x%x from peer",
-                icc_param->type);
+                tlv_type);
             break;
     }
 
