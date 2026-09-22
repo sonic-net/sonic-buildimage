@@ -186,6 +186,15 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'wait_for_intf.sh'), self.output_file))
 
+        # Test generation of wait_for_intf.sh when has_sonic_dhcpv4_relay is True.
+        # This exercises the has_sonic_dhcpv4_relay == 'True' branch: the IPv4 waits
+        # become bounded (WAIT_IFACE_READY_TIMEOUT=300), while the IPv6 VLAN waits
+        # stay bounded via WAIT_IFACE_READY_TIMEOUT_V6 (dhcp6relay always reconciles).
+        v4relay_sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
+        argument = ['-m', self.t0_minigraph, '-j', v4relay_sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'wait_for_intf_v4_relay.sh'), self.output_file))
+
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay', 'docker-dhcp-relay.supervisord.conf.j2')
         argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-p', self.t0_port_config, '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
@@ -233,6 +242,25 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                   'docker-dhcp-relay.supervisord.conf'), self.output_file))
+
+        # Test that the DualToR option (-u Loopback0) is rendered for the dhcp6relay agent only when
+        # DEVICE_METADATA.localhost.subtype is 'DualToR'. This is asserted on the rendered content
+        # directly (not only through a golden file) so the template-to-command-line contract is pinned
+        # independently of golden regeneration: the dhcp6relay binary treats '-u' as "enable Dual-ToR
+        # mode", so an unconditional '-u' would silently turn every device into Dual-ToR.
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        # Non-DualToR (no subtype): dhcp6relay must start without '-u Loopback0'.
+        argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-p', self.t0_port_config, '-t', template_path]
+        output = self.run_script(argument)
+        self.assertIn('command=/usr/sbin/dhcp6relay\n', output)
+        self.assertNotIn('dhcp6relay -u Loopback0', output)
+        # DualToR (subtype=DualToR): dhcp6relay must start with '-u Loopback0'.
+        dualtor_sample_data = os.path.join(self.test_dir, "dhcp-relay-dualtor-sample.json")
+        argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-j', dualtor_sample_data,
+                    '-p', self.t0_port_config, '-t', template_path]
+        output = self.run_script(argument)
+        self.assertIn('command=/usr/sbin/dhcp6relay -u Loopback0', output)
 
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
