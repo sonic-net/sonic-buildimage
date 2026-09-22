@@ -207,6 +207,8 @@ int iccp_parse_agg_config_tlv(
     size_t available_tlv_len;
     size_t declared_tlv_len;
     size_t name_len;
+    bool compact_encoding;
+    bool padded_encoding;
     uint16_t parameter_len;
 
     if (!msg_buf || !portconf ||
@@ -222,10 +224,12 @@ int iccp_parse_agg_config_tlv(
         sizeof(parameter_len));
     declared_tlv_len = sizeof(ICCParameter) + ntohs(parameter_len);
     name_len = wire_portconf->agg_name_len;
+    compact_encoding = declared_tlv_len == fixed_tlv_len + name_len;
+    padded_encoding = declared_tlv_len == sizeof(mLACPAggConfigTLV);
 
     if (declared_tlv_len < fixed_tlv_len ||
         declared_tlv_len > available_tlv_len ||
-        name_len > declared_tlv_len - fixed_tlv_len ||
+        (!compact_encoding && !padded_encoding) ||
         !iccp_is_interface_name_valid(wire_portconf->agg_name, name_len) ||
         memchr(wire_portconf->agg_name, '\0', name_len) != NULL)
     {
