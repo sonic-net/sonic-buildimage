@@ -56,7 +56,7 @@ cleanup_registry_auth() {
     if [[ "$logged_in" == true ]]; then
         docker logout "$REGISTRY_SERVER_WITH_PORT" > /dev/null 2>&1 || true
     fi
-    rm -rf -- "$docker_config_dir"
+    rm -rf -- "$docker_config_dir" || true
 }
 trap cleanup_registry_auth EXIT
 trap 'exit 129' HUP
@@ -64,7 +64,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 echo "Loading image ${DOCKER_IMAGE_FILE}"
-docker load < ${DOCKER_IMAGE_FILE}
+docker load < "${DOCKER_IMAGE_FILE}"
 
 ## Login the docker image registry server
 printf '%s' "$registry_password" | docker login --username "$REGISTRY_USERNAME" --password-stdin "$REGISTRY_SERVER_WITH_PORT"
