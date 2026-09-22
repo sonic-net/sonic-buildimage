@@ -47,14 +47,101 @@ class TestIsWarmBootPostKexec:
         with patch("builtins.open", mock_open(read_data=cmdline)):
             assert wrapper.is_warm_boot_post_kexec() is True
 
-    def test_cold_boot(self, wrapper):
-        with patch("builtins.open", mock_open(read_data="BOOT_IMAGE=/boot/vmlinuz rw\n")):
-            assert wrapper.is_warm_boot_post_kexec() is False
-
     def test_fast_reboot_is_not_warm(self, wrapper):
         cmdline = "BOOT_IMAGE=/boot/vmlinuz SONIC_BOOT_TYPE=fast-reboot rw\n"
         with patch("builtins.open", mock_open(read_data=cmdline)):
             assert wrapper.is_warm_boot_post_kexec() is False
+
+
+class TestIsFastRebootPostKexec:
+    def test_fast_reboot_detected(self, wrapper):
+        cmdline = "BOOT_IMAGE=/boot/vmlinuz SONIC_BOOT_TYPE=fast-reboot rw\n"
+        with patch("builtins.open", mock_open(read_data=cmdline)):
+            assert wrapper.is_fast_reboot_post_kexec() is True
+
+    def test_warm_boot_is_not_fast(self, wrapper):
+        cmdline = "BOOT_IMAGE=/boot/vmlinuz SONIC_BOOT_TYPE=warm rw\n"
+        with patch("builtins.open", mock_open(read_data=cmdline)):
+            assert wrapper.is_fast_reboot_post_kexec() is False
+
+    def test_cold_boot_is_neither(self, wrapper):
+        with patch("builtins.open", mock_open(read_data="BOOT_IMAGE=/boot/vmlinuz rw\n")):
+            assert wrapper.is_warm_boot_post_kexec() is False
+            assert wrapper.is_fast_reboot_post_kexec() is False
+
+
+class TestStages:
+    def test_fast_reboot_pre_pddf_defers_reset(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper, "is_fast_reboot_post_kexec", return_value=True),
+            patch.object(wrapper, "handle_warm_boot_post_kexec", return_value=True),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            assert wrapper.main(["wrapper"]) == 0
+        execv.assert_not_called()
+        assert marker.exists()
+
+    def test_fast_reboot_deferral_failure_falls_back_to_reset(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper, "is_fast_reboot_post_kexec", return_value=True),
+            patch.object(wrapper, "handle_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            wrapper.main(["wrapper"])
+        execv.assert_called_once_with(
+            wrapper.ASIC_INIT_SCRIPT, [wrapper.ASIC_INIT_SCRIPT]
+        )
+        assert not marker.exists()
+
+    def test_cold_boot_resets_at_pre_pddf(self, wrapper):
+        with (
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper, "is_fast_reboot_post_kexec", return_value=False),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            wrapper.main(["wrapper", "arg1"])
+        execv.assert_called_once_with(
+            wrapper.ASIC_INIT_SCRIPT, [wrapper.ASIC_INIT_SCRIPT, "arg1"]
+        )
+
+    def test_pre_driver_runs_deferred_reset_and_consumes_marker(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        marker.touch()
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            wrapper.main(["wrapper", "--stage", "pre-driver"])
+        execv.assert_called_once_with(
+            wrapper.ASIC_INIT_SCRIPT, [wrapper.ASIC_INIT_SCRIPT]
+        )
+        assert not marker.exists()
+
+    def test_pre_driver_noop_without_marker(self, wrapper, tmp_path):
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(tmp_path / "absent")),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            assert wrapper.main(["wrapper", "--stage", "pre-driver"]) == 0
+        execv.assert_not_called()
+
+    def test_warm_boot_never_touches_marker_or_reset(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=True),
+            patch.object(wrapper, "handle_warm_boot_post_kexec", return_value=True),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            assert wrapper.main(["wrapper"]) == 0
+        execv.assert_not_called()
+        assert not marker.exists()
 
 
 class TestGetAsicBdfs:
