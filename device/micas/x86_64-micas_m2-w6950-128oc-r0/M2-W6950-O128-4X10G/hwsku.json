@@ -640,10 +640,25 @@
             "autoneg": "off",
             "fec": "rs"
         },
-        "Ethernet1024": {
-            "default_brkout_mode": "1x100G",
+        "Ethernet1025": {
+            "default_brkout_mode": "1x10G",
             "autoneg": "off",
-            "fec": "rs"
+            "fec": "none"
+        },
+        "Ethernet1026": {
+            "default_brkout_mode": "1x10G",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet1027": {
+            "default_brkout_mode": "1x10G",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet1028": {
+            "default_brkout_mode": "1x10G",
+            "autoneg": "off",
+            "fec": "none"
         }
     }
 }
