@@ -48,13 +48,14 @@ if validate_mac "$EEPROM_MAC"; then
     MAC_TO_USE="$EEPROM_MAC"
     log_info "Using EEPROM MAC: $EEPROM_MAC"
 
-    # Sync U-boot environment to match EEPROM (if different)
+    # Sync U-boot environment to match EEPROM (if different).
+    # Best-effort: a read-only or missing U-boot env must not stop the eth0 update below.
     if [ -n "$UBOOT_MAC" ] && [ "$UBOOT_MAC" != "$EEPROM_MAC" ]; then
         log_info "Updating U-boot ethaddr from $UBOOT_MAC to $EEPROM_MAC"
-        fw_setenv ethaddr "$EEPROM_MAC"
+        fw_setenv ethaddr "$EEPROM_MAC" || log_error "Failed to update U-boot ethaddr to $EEPROM_MAC"
     elif [ -z "$UBOOT_MAC" ]; then
         log_info "Setting U-boot ethaddr to $EEPROM_MAC (was unset)"
-        fw_setenv ethaddr "$EEPROM_MAC"
+        fw_setenv ethaddr "$EEPROM_MAC" || log_error "Failed to set U-boot ethaddr to $EEPROM_MAC"
     fi
 elif validate_mac "$UBOOT_MAC"; then
     MAC_TO_USE="$UBOOT_MAC"
@@ -105,7 +106,8 @@ DHCLIENT_PID_FILE="/var/run/dhclient.${INTERFACE}.pid"
 if [ -f "$DHCLIENT_PID_FILE" ]; then
     log_info "Restarting dhclient to obtain new DHCP lease with updated MAC"
     dhclient -r "${INTERFACE}" 2>/dev/null || true
-    dhclient "${INTERFACE}" >/dev/null 2>&1
+    # Capture stderr: dhclient's own message is the only clue why the lease failed
+    DHCLIENT_OUTPUT=$(dhclient "${INTERFACE}" 2>&1) || log_error "dhclient failed on ${INTERFACE}: ${DHCLIENT_OUTPUT}"
 fi
 
 log_info "eth0 MAC address updated to ${MAC_TO_USE}"
