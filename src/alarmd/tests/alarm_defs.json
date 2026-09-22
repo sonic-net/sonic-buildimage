@@ -1,0 +1,28 @@
+{
+  "sonic_version": "master",
+  "alarmd_settings": {
+    "statedb_poll_interval": 3,
+    "script_poll_interval": 60
+  },
+  "alarm_tables": [
+    {
+      "type": "statedb",
+      "table_name": "TEST_TABLE",
+      "object_key_pattern": "TEST_TABLE|*",
+      "checks": [
+        {
+          "check_name": "test_check",
+          "alarm_id": "TEST_ALARM",
+          "severity": "Minor",
+          "description": "Test alarm for unit testing",
+          "category": "Platform",
+          "condition": {
+            "field": "test_field",
+            "operator": "==",
+            "value": "fault"
+          }
+        }
+      ]
+    }
+  ]
+}

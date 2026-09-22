@@ -122,6 +122,7 @@ yang_files = [
     'sonic-dot1p-tc-map.yang',
     'sonic-dscp-fc-map.yang',
     'sonic-dscp-tc-map.yang',
+    'sonic-events-alarmd.yang',
     'sonic-events-bgp.yang',
     'sonic-events-common.yang',
     'sonic-events-dhcp-relay.yang',
