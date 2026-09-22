@@ -18,6 +18,9 @@
     neighbor PEER_V4 soft-reconfiguration inbound
     neighbor PEER_V4 route-map FROM_BGP_PEER_V4 in
     neighbor PEER_V4 route-map TO_BGP_PEER_V4 out
+{% if (CONFIG_DB__BGP_DEVICE_GLOBAL is defined) and ('CONFED' in CONFIG_DB__BGP_DEVICE_GLOBAL) and ('asn' in CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']) %}
+    neighbor PEER_V4 next-hop-self force
+{% endif %}
     neighbor PEER_UNNUMBERED soft-reconfiguration inbound
     neighbor PEER_UNNUMBERED route-map FROM_BGP_PEER_UNNUMBERED_V4 in
     neighbor PEER_UNNUMBERED route-map TO_BGP_PEER_UNNUMBERED_V4 out
@@ -38,6 +41,9 @@
     neighbor PEER_V6 soft-reconfiguration inbound
     neighbor PEER_V6 route-map FROM_BGP_PEER_V6 in
     neighbor PEER_V6 route-map TO_BGP_PEER_V6 out
+{% if (CONFIG_DB__BGP_DEVICE_GLOBAL is defined) and ('CONFED' in CONFIG_DB__BGP_DEVICE_GLOBAL) and ('asn' in CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']) %}
+    neighbor PEER_V6 next-hop-self force
+{% endif %}
     neighbor PEER_UNNUMBERED soft-reconfiguration inbound
     neighbor PEER_UNNUMBERED route-map FROM_BGP_PEER_UNNUMBERED_V6 in
     neighbor PEER_UNNUMBERED route-map TO_BGP_PEER_UNNUMBERED_V6 out
