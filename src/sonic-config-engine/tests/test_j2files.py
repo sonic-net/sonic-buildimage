@@ -234,6 +234,25 @@ class TestJ2Files(TestCase):
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                   'docker-dhcp-relay.supervisord.conf'), self.output_file))
 
+        # Test that the DualToR option (-u Loopback0) is rendered for the dhcp6relay agent only when
+        # DEVICE_METADATA.localhost.subtype is 'DualToR'. This is asserted on the rendered content
+        # directly (not only through a golden file) so the template-to-command-line contract is pinned
+        # independently of golden regeneration: the dhcp6relay binary treats '-u' as "enable Dual-ToR
+        # mode", so an unconditional '-u' would silently turn every device into Dual-ToR.
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        # Non-DualToR (no subtype): dhcp6relay must start without '-u Loopback0'.
+        argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-p', self.t0_port_config, '-t', template_path]
+        output = self.run_script(argument)
+        self.assertIn('command=/usr/sbin/dhcp6relay\n', output)
+        self.assertNotIn('dhcp6relay -u Loopback0', output)
+        # DualToR (subtype=DualToR): dhcp6relay must start with '-u Loopback0'.
+        dualtor_sample_data = os.path.join(self.test_dir, "dhcp-relay-dualtor-sample.json")
+        argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-j', dualtor_sample_data,
+                    '-p', self.t0_port_config, '-t', template_path]
+        output = self.run_script(argument)
+        self.assertIn('command=/usr/sbin/dhcp6relay -u Loopback0', output)
+
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-router-advertiser', 'radvd.conf.j2')
