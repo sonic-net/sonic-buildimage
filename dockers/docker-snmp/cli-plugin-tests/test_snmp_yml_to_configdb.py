@@ -1,4 +1,4 @@
-# tests/test_snmp_yml_to_configdb.py
+# cli-plugin-tests/test_snmp_yml_to_configdb.py
 #
 # Regression + security tests for dockers/docker-snmp/snmp_yml_to_configdb.py
 #
