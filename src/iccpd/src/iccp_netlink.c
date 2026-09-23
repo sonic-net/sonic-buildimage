@@ -53,6 +53,7 @@
 #include "../include/iccp_csm.h"
 #include "../include/logger.h"
 #include "../include/scheduler.h"
+#include "../include/iccp_netlink_utils.h"
 #include "../include/mlacp_link_handler.h"
 #include "../include/msg_format.h"
 #include "../include/iccp_netlink.h"
@@ -1179,6 +1180,12 @@ int iccp_check_if_addr_from_netlink(int family, uint8_t *addr, struct LocalInter
                 return 0;
             }
             struct ifaddrmsg *ifa;
+            if (n->nlmsg_len < NLMSG_LENGTH(sizeof(*ifa)))
+            {
+                ICCPD_LOG_WARN(__FUNCTION__, "Truncated address netlink message");
+                n = NLMSG_NEXT(n, msglen);
+                continue;
+            }
             ifa = NLMSG_DATA(n);
             if (lif && lif->ifindex == ifa->ifa_index)
             {
@@ -1191,6 +1198,11 @@ int iccp_check_if_addr_from_netlink(int family, uint8_t *addr, struct LocalInter
                     {
                         if (family == AF_INET && ifa->ifa_family == AF_INET)
                         {
+                            if (!iccp_netlink_attr_payload_is(rth, sizeof(uint32_t)))
+                            {
+                                rth = RTA_NEXT(rth, rtl);
+                                continue;
+                            }
                             if (*(uint32_t *)addr == ntohl(*((uint32_t *)RTA_DATA(rth))))
                             {
                                 free(buf);
@@ -1201,6 +1213,11 @@ int iccp_check_if_addr_from_netlink(int family, uint8_t *addr, struct LocalInter
                         if (family == AF_INET6 && ifa->ifa_family == AF_INET6)
                         {
                             void *addr_netlink;
+                            if (!iccp_netlink_attr_payload_is(rth, 16))
+                            {
+                                rth = RTA_NEXT(rth, rtl);
+                                continue;
+                            }
                             addr_netlink = RTA_DATA(rth);
                             if (!memcmp((uint8_t *)addr_netlink, addr, 16))
                             {
@@ -1965,6 +1982,12 @@ int iccp_receive_ndisc_packet_handler(struct System *sys)
         return MCLAG_ERROR;
     }
 
+    if (len < (int)sizeof(struct nd_msg))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Truncated neighbor advertisement");
+        return MCLAG_ERROR;
+    }
+
     if (msg.msg_controllen >= sizeof(struct cmsghdr))
         for (cmsgptr = CMSG_FIRSTHDR(&msg); cmsgptr != NULL; cmsgptr = CMSG_NXTHDR(&msg, cmsgptr))
         {
@@ -2005,11 +2028,13 @@ int iccp_receive_ndisc_packet_handler(struct System *sys)
 
             l = nd_opt->nd_opt_len << 3;
 
-            if (l == 0)
+            if (l < (int)sizeof(struct nd_opt_hdr) || l > opt_len)
                 return 0;
 
             if (nd_opt->nd_opt_type == ND_OPT_TARGET_LL_ADDR)
             {
+                if (l < (int)(sizeof(struct nd_opt_hdr) + ETHER_ADDR_LEN))
+                    return 0;
                 memcpy(mac_addr, (char *)((char *)nd_opt + sizeof(struct nd_opt_hdr)), ETHER_ADDR_LEN);
                 break;
             }
