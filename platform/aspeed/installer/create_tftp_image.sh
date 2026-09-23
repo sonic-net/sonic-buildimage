@@ -203,7 +203,15 @@ repack_sonic_initrd_for_tftp_installer() {
         mkdir -p "$d/device/aspeed"
         cp -a "$_aspeed_repo_root/device/aspeed/." "$d/device/aspeed/"
     fi
-    unset _aspeed_repo_root
+    # sonic-machine-conf-init.sh also names nexthop/arista AST2700 platforms. Ship
+    # just their installer.conf -- those vendor trees are ~20 MB, this initrd is small.
+    for _ic in "$_aspeed_repo_root"/device/*/arm64-*/installer.conf; do
+        [ -f "$_ic" ] || continue
+        _rel="${_ic#"$_aspeed_repo_root"/}"
+        mkdir -p "$d/$(dirname "$_rel")"
+        cp "$_ic" "$d/$_rel"
+    done
+    unset _aspeed_repo_root _ic _rel
     inject_fsroot_extras_into_initrd "$d"
     inject_fsroot_nss_into_initrd "$d"
     if [ ! -f "$d/lib/modules/ftgmac100.ko" ] && [ -d "$d/lib/modules" ]; then
@@ -387,12 +395,16 @@ cat > "$OUTPUT_DIR/uboot-tftp-commands.txt" << EOF
 dhcp
 setenv serverip <tftp-server-ip>
 setenv loadaddr $fit_addr
+# \${baudrate} is the rate U-Boot is running; it must not expand empty.
+# On a blank environment this setenv switches the UART and waits: set your
+# terminal to 115200 and press ENTER before pasting the rest.
+test -n "\${baudrate}" || setenv baudrate 115200
 # HTTP example (payload served over HTTP, e.g. on same host as TFTP, default port 80):
-setenv bootargs "console=ttyS12,115200n8 earlycon=uart8250,mmio32,0x14c33b00 root=/dev/ram0 rw sonic_install.bmc_image=http://\${serverip}/$TFTP_IMAGE_NAME"
+setenv bootargs "console=ttyS12,\${baudrate}n8 earlycon=uart8250,mmio32,0x14c33b00 root=/dev/ram0 rw sonic_install.bmc_image=http://\${serverip}/$TFTP_IMAGE_NAME"
 # HTTPS example:
-#   setenv bootargs "console=ttyS12,115200n8 ... root=/dev/ram0 rw sonic_install.bmc_image=https://images.example.com/sonic/$TFTP_IMAGE_NAME"
+#   setenv bootargs "console=ttyS12,\${baudrate}n8 ... root=/dev/ram0 rw sonic_install.bmc_image=https://images.example.com/sonic/$TFTP_IMAGE_NAME"
 # TFTP example (plain path/filename triggers TFTP; pair with sonic_install.tftp_server=):
-#   setenv bootargs "console=ttyS12,115200n8 ... root=/dev/ram0 rw sonic_install.bmc_image=$TFTP_IMAGE_NAME sonic_install.tftp_server=\${serverip}"
+#   setenv bootargs "console=ttyS12,\${baudrate}n8 ... root=/dev/ram0 rw sonic_install.bmc_image=$TFTP_IMAGE_NAME sonic_install.tftp_server=\${serverip}"
 tftp \$loadaddr sonic_tftp_install.fit
 # bootconf must match a "configurations" entry in platform/aspeed/sonic_fit.its (name without conf- prefix).
 setenv bootconf <fit-configuration>
