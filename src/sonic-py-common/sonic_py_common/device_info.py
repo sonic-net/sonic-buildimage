@@ -205,7 +205,11 @@ def get_platform_json_data():
     if not platform:
         return None
 
-    platform_path = get_path_to_platform_dir()
+    try:
+        platform_path = get_path_to_platform_dir()
+    except OSError:
+        return None
+
     if not platform_path:
         return None
 

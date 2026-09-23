@@ -287,6 +287,12 @@ class TestDeviceInfo(object):
         result = device_info.get_platform_json_data()
         assert result is None
 
+        # Test case where the platform directory cannot be located
+        mock_get_path_to_platform_dir.side_effect = OSError("Failed to locate platform directory")
+        result = device_info.get_platform_json_data()
+        assert result is None
+        mock_get_path_to_platform_dir.side_effect = None
+
     @mock.patch("os.path.isfile")
     @mock.patch("{}.open".format(BUILTINS))
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir")
