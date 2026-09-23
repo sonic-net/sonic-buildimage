@@ -8,6 +8,8 @@ FANCONTROL_CONF_FILE="/usr/share/sonic/platform/fancontrol"
 
 SUPERVISOR_CONF_TEMPLATE="/usr/share/sonic/templates/docker-pmon.supervisord.conf.j2"
 SUPERVISOR_CONF_FILE="/etc/supervisor/conf.d/supervisord.conf"
+CRITICAL_PROCESSES_TEMPLATE="/usr/share/sonic/templates/critical_processes.j2"
+CRITICAL_PROCESSES_FILE="/etc/supervisor/critical_processes"
 MODULAR_CHASSISDB_CONF_FILE="/usr/share/sonic/platform/chassisdb.conf"
 PLATFORM_ENV_CONF_FILE="/usr/share/sonic/platform/platform_env.conf"
 
@@ -170,11 +172,15 @@ fi
 
 confvar="{\"HAVE_SENSORS_CONF\":$HAVE_SENSORS_CONF, \"HAVE_FANCONTROL_CONF\":$HAVE_FANCONTROL_CONF, \"API_VERSION\":$SONIC_PLATFORM_API_PYTHON_VERSION, \"IS_MODULAR_CHASSIS\":$IS_MODULAR_CHASSIS, \"IS_SWITCH_BMC\":$IS_SWITCH_BMC}"
 
+# Render critical_processes from the same confvar as supervisord.conf so the two
+# always agree on whether bmcctld exists. The file is rewritten on every start
+# and must be in place before supervisord launches the proc-exit listener, which
+# reads it only once.
 if [ -e $PMON_DAEMON_CONTROL_FILE ];
 then
-    sonic-cfggen -d -j $PMON_DAEMON_CONTROL_FILE -a "$confvar" -t $SUPERVISOR_CONF_TEMPLATE > $SUPERVISOR_CONF_FILE
+    sonic-cfggen -d -j $PMON_DAEMON_CONTROL_FILE -a "$confvar" -t $CRITICAL_PROCESSES_TEMPLATE,$CRITICAL_PROCESSES_FILE -t $SUPERVISOR_CONF_TEMPLATE > $SUPERVISOR_CONF_FILE
 else
-    sonic-cfggen -d -a "$confvar" -t $SUPERVISOR_CONF_TEMPLATE > $SUPERVISOR_CONF_FILE
+    sonic-cfggen -d -a "$confvar" -t $CRITICAL_PROCESSES_TEMPLATE,$CRITICAL_PROCESSES_FILE -t $SUPERVISOR_CONF_TEMPLATE > $SUPERVISOR_CONF_FILE
 fi
 
 exec /usr/local/bin/supervisord

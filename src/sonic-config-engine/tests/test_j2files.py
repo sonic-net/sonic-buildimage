@@ -1,3 +1,4 @@
+import configparser
 import json
 import os
 import shutil
@@ -1631,6 +1632,69 @@ class TestJ2Files(TestCase):
 
         self.assertIn('clean-host', output,
                       'Clean hostname value not found in rendered rsyslog.conf')
+
+    def _render_pmon_critical_processes(self, is_switch_bmc):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-platform-monitor',
+                                     'critical_processes.j2')
+        argument = ['-a', json.dumps({"IS_SWITCH_BMC": is_switch_bmc}), '-t', template_path]
+        return self.run_script(argument)
+
+    def _render_pmon_supervisord_conf(self, is_switch_bmc):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-platform-monitor',
+                                     'docker-pmon.supervisord.conf.j2')
+        # Same variables that docker_init.j2 passes to sonic-cfggen as confvar
+        confvar = {
+            "HAVE_SENSORS_CONF": 0,
+            "HAVE_FANCONTROL_CONF": 0,
+            "API_VERSION": 3,
+            "IS_MODULAR_CHASSIS": 0,
+            "IS_SWITCH_BMC": is_switch_bmc,
+        }
+        argument = ['-a', json.dumps(confvar), '-t', template_path]
+        conf = configparser.ConfigParser(interpolation=None, delimiters=('=',), strict=False)
+        conf.read_string(self.run_script(argument))
+        return conf
+
+    @staticmethod
+    def _critical_process_entries(critical_processes):
+        return [line.strip() for line in critical_processes.splitlines() if line.strip()]
+
+    def test_pmon_critical_processes_switch_bmc(self):
+        output = self._render_pmon_critical_processes(is_switch_bmc=1)
+        entries = self._critical_process_entries(output)
+        self.assertEqual(entries.count('program:bmcctld'), 1,
+                         'program:bmcctld must be listed exactly once on Switch-BMC, got: {}'.format(entries))
+
+    def test_pmon_critical_processes_non_bmc(self):
+        output = self._render_pmon_critical_processes(is_switch_bmc=0)
+        self.assertNotIn('program:bmcctld', output)
+        self.assertEqual(self._critical_process_entries(output), [],
+                         'pmon must have no critical processes on non-BMC systems')
+
+    def test_pmon_critical_processes_match_supervisord_conf(self):
+        for is_switch_bmc in (0, 1):
+            with self.subTest(is_switch_bmc=is_switch_bmc):
+                supervisord_conf = self._render_pmon_supervisord_conf(is_switch_bmc)
+                entries = self._critical_process_entries(self._render_pmon_critical_processes(is_switch_bmc))
+
+                # bmcctld is defined in supervisord.conf if and only if it is critical
+                self.assertEqual(supervisord_conf.has_section('program:bmcctld'), bool(is_switch_bmc))
+                self.assertEqual('program:bmcctld' in entries, bool(is_switch_bmc))
+
+                # every critical entry must be defined in supervisord.conf
+                for entry in entries:
+                    self.assertTrue(supervisord_conf.has_section(entry),
+                                    '{} is critical but not defined in supervisord.conf'.format(entry))
+
+    def test_pmon_proc_exit_listener_subscribes_to_fatal(self):
+        # A process that never survives startsecs goes BACKOFF -> FATAL and never emits
+        # PROCESS_STATE_EXITED, so the listener must also subscribe to PROCESS_STATE_FATAL.
+        for is_switch_bmc in (0, 1):
+            with self.subTest(is_switch_bmc=is_switch_bmc):
+                supervisord_conf = self._render_pmon_supervisord_conf(is_switch_bmc)
+                events = supervisord_conf['eventlistener:supervisor-proc-exit-listener']['events'].split(',')
+                self.assertLessEqual({'PROCESS_STATE_EXITED', 'PROCESS_STATE_RUNNING', 'PROCESS_STATE_FATAL'},
+                                     set(events))
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
