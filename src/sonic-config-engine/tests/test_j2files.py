@@ -1270,6 +1270,38 @@ class TestJ2Files(TestCase):
         )
         self.assertNotIn('this-value-must-be-ignored', output)
 
+    def test_ntp_conf_association_type_restricted_to_schema_values(self):
+        # association_type is rendered as the directive name itself, so it
+        # must be restricted to the YANG enum's 'server'/'pool' values, not
+        # just stripped of whitespace. Otherwise a bypass write could set
+        # it to an arbitrary directive (e.g. association_type='allow' +
+        # resolve_as='0.0.0.0/0' would render "allow 0.0.0.0/0").
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                '0.0.0.0/0': {
+                    'association_type': 'allow',
+                    'admin_state': 'enabled',
+                    'resolve_as': '0.0.0.0/0',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertNotIn(
+            'allow 0.0.0.0/0\n',
+            output,
+            'unsupported association_type value was rendered as its own chrony directive'
+        )
+        self.assertIn(
+            'server 0.0.0.0/0\n',
+            output,
+            'unsupported association_type value was not rejected in favor of the safe server default'
+        )
+
     def test_ntp_conf_key_version_injection_stripped(self):
         # config.key (leafref to a uint16 NTP_KEY id) and config.version
         # (uint8, range 3..4) are only constrained by YANG under validated

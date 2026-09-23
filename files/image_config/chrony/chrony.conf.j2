@@ -25,8 +25,16 @@ confdir /etc/chrony/conf.d
     {# Define defaults if not defined. ConfigDB values are stripped of
     whitespace/control characters below (via strip_control_chars) so a
     value that bypasses YANG validation (e.g. a direct Redis write) cannot
-    inject a second chrony directive or extra arguments onto this line. -#}
+    inject a second chrony directive or extra arguments onto this line.
+
+    association_type is rendered verbatim as the directive name itself, so
+    it's also restricted to the YANG enum's 'server'/'pool' values here;
+    otherwise a bypass write could pick an arbitrary chrony directive
+    (e.g. "allow"). -#}
     {% set association_type = (config.association_type | d('server')) | strip_control_chars -%}
+    {% if association_type not in ['server', 'pool'] -%}
+        {% set association_type = 'server' -%}
+    {% endif -%}
     {% set resolve_as = (config.resolve_as | d(server)) | strip_control_chars -%}
 
     {# Authentication key. Stripped for the same reason as association_type/
