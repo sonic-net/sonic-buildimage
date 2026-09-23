@@ -1,6 +1,6 @@
-From 6bbfb4361e62069fca4b953f2c90b99b1d2f8344 Mon Sep 17 00:00:00 2001
+From ab6d6613818d001337243d00fff843a766792448 Mon Sep 17 00:00:00 2001
 From: Krishnasamy <krishnasamyr@nvidia.com>
-Date: Thu, 29 Jan 2026 11:09:26 +0000
+Date: Mon, 4 May 2026 23:27:34 +0530
 Subject: [PATCH] bgpd: Fix suppress-fib-pending config race condition on
  startup
 
@@ -14,6 +14,7 @@ failed. Automatically retry the configuration when the Zebra connection
 becomes available.
 
 Signed-off-by: Krishnasamy <krishnasamyr@nvidia.com>
+Signed-off-by: Ravi Minnikanti <rminnikanti@marvell.com>
 ---
  bgpd/bgp_zebra.c |  3 +++
  bgpd/bgpd.c      | 59 +++++++++++++++++++++++++++++++++++++++++++-----
@@ -35,7 +36,7 @@ index 0658beffa6..861abe2700 100644
  	 * kick-start them?
  	 */
 diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
-index a725e9ea00..9d5802f517 100644
+index 38e2db92ad..a22759503e 100644
 --- a/bgpd/bgpd.c
 +++ b/bgpd/bgpd.c
 @@ -497,15 +497,39 @@ void bm_wait_for_fib_set(bool set)
@@ -133,7 +134,7 @@ index a725e9ea00..9d5802f517 100644
  void bgp_cluster_id_set(struct bgp *bgp, struct in_addr *cluster_id)
  {
 diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
-index 5ebb28aff5..5ca647fe00 100644
+index c863ed2eeb..05b5f8f47a 100644
 --- a/bgpd/bgpd.h
 +++ b/bgpd/bgpd.h
 @@ -640,6 +640,7 @@ struct bgp {
@@ -144,7 +145,7 @@ index 5ebb28aff5..5ca647fe00 100644
  #define BGP_FLAG_PEERTYPE_MULTIPATH_RELAX (1ULL << 29)
  /* Indicate Graceful Restart support for BGP NOTIFICATION messages */
  #define BGP_FLAG_GRACEFUL_NOTIFICATION (1ULL << 30)
-@@ -2617,6 +2618,8 @@ extern int peer_group_remote_as_delete(struct peer_group *);
+@@ -2616,6 +2617,8 @@ extern int peer_group_remote_as_delete(struct peer_group *);
  extern int peer_group_listen_range_add(struct peer_group *, struct prefix *);
  extern void peer_group_notify_unconfig(struct peer_group *group);
  
@@ -154,5 +155,5 @@ index 5ebb28aff5..5ca647fe00 100644
  extern int peer_deactivate(struct peer *, afi_t, safi_t);
  
 -- 
-2.37.1
+2.25.1
 

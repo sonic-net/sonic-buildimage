@@ -19,8 +19,66 @@
 Setup script for Mellanox Firmware Manager package.
 """
 
-from setuptools import setup, find_packages
+import os
+from setuptools import setup
 import sys
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, kw_only=True)
+class PlatformParts:
+    """The three platform-dependent inputs to setup(); keyword-only because
+    all three fields are tuples of strings and a positional call could transpose them."""
+
+    packages: tuple
+    console_scripts: tuple
+    install_requires: tuple
+
+
+PLATFORM_COMMON = PlatformParts(
+    packages=("mellanox_component_versions",),
+    console_scripts=("get_component_versions.py=mellanox_component_versions.main:main",),
+    install_requires=("tabulate",),
+)
+
+# Added on top of PLATFORM_COMMON; every entry is additive.
+PLATFORM_DELTAS = {
+    "mellanox": PlatformParts(
+        packages=("mellanox_bfb_installer", "mellanox_fw_manager"),
+        console_scripts=(
+            "sonic-bfb-installer=mellanox_bfb_installer.main:main",
+            "mlnx-fw-manager=mellanox_fw_manager.main:main",
+        ),
+        install_requires=("click>=7.0",),
+    ),
+    # No BlueField to install a BFB onto, so no bfb-installer.
+    "nvidia-bluefield": PlatformParts(
+        packages=("mellanox_fw_manager",),
+        console_scripts=("mlnx-fw-manager=mellanox_fw_manager.main:main",),
+        install_requires=("click>=7.0",),
+    ),
+    # Aspeed SoC, not a Mellanox ASIC: no firmware to manage, no BlueField.
+    "aspeed": PlatformParts(packages=(), console_scripts=(), install_requires=()),
+}
+
+SUPPORTED_PLATFORMS = tuple(PLATFORM_DELTAS)
+
+
+platform = os.environ.get("CONFIGURED_PLATFORM", None)
+platform = platform.lower() if platform else platform
+if platform is None:
+    sys.stderr.write("CONFIGURED_PLATFORM environment variable is not set")
+    sys.exit(1)
+if platform not in SUPPORTED_PLATFORMS:
+    expected = ", ".join(f"\"{p}\"" for p in SUPPORTED_PLATFORMS)
+    sys.stderr.write(f"Invalid CONFIGURED_PLATFORM: \"{platform}\". Expected one of {expected}.")
+    sys.exit(1)
+
+delta = PLATFORM_DELTAS[platform]
+packages = [*PLATFORM_COMMON.packages, *delta.packages]
+console_scripts = [*PLATFORM_COMMON.console_scripts, *delta.console_scripts]
+install_requires = [*PLATFORM_COMMON.install_requires, *delta.install_requires]
+
 
 setup(
     name="mellanox-platform-utils",
@@ -29,7 +87,7 @@ setup(
     author_email="oivantsiv@nvidia.com",
     description="Platform utilities package for Mellanox ASICs",
     url="https://github.com/sonic-net/sonic-buildimage",
-    packages=["mellanox_component_versions", "mellanox_fw_manager"],
+    packages=packages,
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -41,11 +99,8 @@ setup(
         "Topic :: System :: Hardware",
         "Topic :: System :: Systems Administration",
     ],
-    python_requires=">=3.7",
-    install_requires=[
-        "tabulate",
-        "click>=7.0",
-    ],
+    python_requires=">=3.10",
+    install_requires=install_requires,
     extras_require={
         "testing": [
             "pytest>=6.0",
@@ -55,10 +110,7 @@ setup(
     },
     test_suite="tests",
     entry_points={
-        "console_scripts": [
-            "mlnx-fw-manager=mellanox_fw_manager.main:main",
-            "get_component_versions.py=mellanox_component_versions.main:main",
-        ],
+        "console_scripts": console_scripts,
     },
     include_package_data=True,
     zip_safe=False,

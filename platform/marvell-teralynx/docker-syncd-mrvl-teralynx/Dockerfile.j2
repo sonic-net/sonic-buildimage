@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -15,8 +15,8 @@ RUN apt-get install -y net-tools
 RUN apt-get install -y libjansson4
 RUN apt-get install -y libyaml-dev
 RUN apt-get install -y binutils
-RUN pip3 install numpy
-RUN pip3 install yamlordereddictloader
+RUN pip3 install --break-system-packages numpy
+RUN pip3 install --break-system-packages yamlordereddictloader
 
 {% if docker_syncd_mrvl_teralynx_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -30,6 +30,9 @@ COPY ["start.sh", "/usr/bin/"]
 COPY ["ivm_start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor/"]
+
+RUN apt-get purge -y libyaml-dev \
+ && apt-get autoremove -y --purge
 
 FROM $BASE
 

@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+
+# Enable security hardening
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# Import default build flags (CFLAGS, LDFLAGS, etc.)
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/default.mk
+
+# Configure arguments: disable static lib, enable shared
+export CONFIGURE_ARGS = --disable-static --enable-shared
+
+# Use autoreconf to ensure configure is up to date
+%:
+	dh $@ --with autoreconf
+
+# Optional: override configure if you need extra flags later
+override_dh_auto_configure:
+	dh_auto_configure -- $(CONFIGURE_ARGS)

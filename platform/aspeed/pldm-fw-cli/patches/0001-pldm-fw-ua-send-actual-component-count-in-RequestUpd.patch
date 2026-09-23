@@ -1,0 +1,44 @@
+From 397ee55e2c67cbb2304e139ef82adf345d2293a4 Mon Sep 17 00:00:00 2001
+From: Brian Carr <brcarr@nvidia.com>
+Date: Tue, 2 Jun 2026 18:19:47 +0300
+Subject: [PATCH 1/6] pldm-fw: ua: send actual component count in RequestUpdate
+
+request_update() hardcoded the RequestUpdate NumberOfComponents field
+to 1. DSP0267 Table 27 defines this field as "the number of components
+that will be passed to the FD during the update", and the FD may use it
+to compare against the number of PassComponentTable/UpdateComponent
+commands it receives. When a package applies more than one component,
+the UA passes all of them (pass_component_table and
+update_components_progress iterate over update.components) while still
+announcing only 1, which a conformant FD can reject as a mismatch.
+
+Derive the count from update.components, the same list driven through
+the rest of the update flow, so the announced value matches what is
+actually sent. The value is fallibly converted to u16 to guard the
+(practically impossible) >65535 component case rather than truncating.
+---
+ pldm-fw/src/ua.rs | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/pldm-fw/src/ua.rs b/pldm-fw/src/ua.rs
+index 9e4c2fc..f49e8b6 100644
+--- a/pldm-fw/src/ua.rs
++++ b/pldm-fw/src/ua.rs
+@@ -180,9 +180,13 @@ pub fn request_update(
+     check_fd_state(comm, PldmFDState::Idle)?;
+ 
+     let sz = XFER_SIZE as u32;
++    let num_components: u16 =
++        update.components.len().try_into().map_err(|_| {
++            PldmUpdateError::new_update("too many components".into())
++        })?;
+     let mut data = vec![];
+     data.extend_from_slice(&sz.to_le_bytes());
+-    data.extend_from_slice(&1u16.to_le_bytes()); // NumberOfComponents
++    data.extend_from_slice(&num_components.to_le_bytes()); // NumberOfComponents
+     data.extend_from_slice(&1u8.to_le_bytes()); // MaximumOutstandingTransferRequests
+     data.extend_from_slice(&0u16.to_le_bytes()); // PackageDataLength
+     update.package.version.write_utf8_bytes(&mut data);
+-- 
+2.49.0
+

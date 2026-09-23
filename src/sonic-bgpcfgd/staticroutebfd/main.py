@@ -3,6 +3,7 @@ import signal
 import sys
 import syslog
 import threading
+import time
 import traceback
 from collections import defaultdict
 from ipaddress import IPv4Address, IPv6Address
@@ -100,6 +101,11 @@ class StaticRouteBfd(object):
     SELECT_TIMEOUT = 1000
     BFD_DEFAULT_CFG = {"multihop": "false", "rx_interval": "50", "tx_interval": "50"}
 
+    # How many seconds between STATE_DB cross-checks for missing BFD sessions.
+    # Armed at end of reconciliation(); wall-clock time avoids starvation when
+    # the selector keeps returning events instead of TIMEOUT.
+    RESYNC_STATE_DB_CHECK_INTERVAL = 10
+
     def __init__(self):
         self.local_db = defaultdict(dict)
         self.local_db[LOCAL_CONFIG_TABLE] = defaultdict(dict)
@@ -123,6 +129,8 @@ class StaticRouteBfd(object):
         self.callbacks = defaultdict(lambda: defaultdict(list))  # db -> table -> handlers[]
         self.subscribers = set()
         self.first_time = True
+        # Armed (set to a future timestamp) at end of reconciliation(); None means disabled.
+        self._next_resync_time = None
 
     def get_ip_from_key(self, key):
         """
@@ -217,6 +225,23 @@ class StaticRouteBfd(object):
 
         return False, ""
 
+    def ifname_from_local_addr(self, local_addr):
+        """
+        Find interface name whose address in LOCAL_INTERFACE_TABLE matches local_addr
+        (same source as BFD session local_addr / BfdOrch local_addr field).
+        """
+        if not local_addr or not str(local_addr).strip():
+            return None
+        want = str(local_addr).strip()
+        for if_name, ip_map in self.local_db[LOCAL_INTERFACE_TABLE].items():
+            if not ip_map:
+                continue
+            for ip in ip_map.values():
+                if ip and ip == want:
+                    return if_name
+        return None
+
+
     def update_bfd_pending(self, if_name):
         del_list=[]
         for k, v in self.local_db[LOCAL_BFD_PENDING_TABLE].items():
@@ -298,6 +323,15 @@ class StaticRouteBfd(object):
             data = db.get_all(db.STATE_DB, key)
             key_new = self.strip_table_name(key, "|")
             self.bfd_state_set_handler(key_new, data)
+
+        # Arm the periodic STATE_DB resync check now that local_db is fully populated.
+        # This recovers from the cold-boot race where swss.sh runs APPL_DB FLUSHDB
+        # after staticroutebfd has already written BFD sessions (see _resync_bfd_sessions
+        # for full root-cause analysis). On a normal mid-life swss restart, swss.sh stops
+        # BGP as a dependent service so staticroutebfd also restarts and calls
+        # reconciliation() fresh — the race cannot occur in that path, but the resync
+        # is harmless and disables itself once all sessions are confirmed in STATE_DB.
+        self._next_resync_time = time.monotonic() + self.RESYNC_STATE_DB_CHECK_INTERVAL
 
     def cleanup_local_bfd_table(self):
         kl=[]
@@ -651,7 +685,12 @@ class StaticRouteBfd(object):
 
         nh_key = vrf + "|" + peer_ip
         state = data['state'] if 'state' in data else "DOWN"
-        log_info("bfd seesion %s state %s" %(bfd_key, state))
+        local_addr = bfd_session.get('local_addr', '')
+        ifname_log = self.ifname_from_local_addr(local_addr)
+        if not ifname_log:
+            ifname_log = intf if intf and intf != "default" else "unknown"
+        log_info("bfd session %s ifname %s state %s" % (bfd_key, ifname_log, state))
+
 
         self.local_db[LOCAL_BFD_TABLE][bfd_key]["state"] = state
 
@@ -735,18 +774,86 @@ class StaticRouteBfd(object):
         self.callbacks[self.config_db.getDbId()][STATIC_ROUTE_TABLE_NAME].append(self.static_route_callback)
         self.callbacks[self.state_db.getDbId()][swsscommon.STATE_BFD_SESSION_TABLE_NAME].append(self.bfd_state_callback)
 
+    def _get_state_bfd_keys(self):
+        """Return list of BFD session keys from STATE_DB (without table-name prefix)."""
+        tbl = swsscommon.Table(self.state_db, swsscommon.STATE_BFD_SESSION_TABLE_NAME)
+        return tbl.getKeys()
+
+    def _resync_bfd_sessions(self):
+        """
+        Re-write BFD sessions that are tracked in local_db but absent from STATE_DB.
+
+        Root cause being recovered from:
+          On a multi-ASIC LC, if swss@<asic> starts *after* the BGP container,
+          swss.sh performs APPL_DB FLUSHDB before orchagent starts. Any BFD sessions
+          that staticroutebfd already wrote to APPL_DB via ProducerStateTable are
+          silently wiped. BfdOrch then initialises with an empty ConsumerStateTable
+          and never programs those sessions into the ASIC. STATE_DB consequently has
+          no entries for those sessions, while local_db believes they are created.
+
+        BfdOrch writes a STATE_DB entry (state=Down) immediately after a successful
+        sai_bfd_api->create_bfd_session() call, so STATE_DB is the authoritative
+        signal that a session is actually programmed. Any session present in local_db
+        with static_route=true but absent from STATE_DB needs to be re-written to
+        APPL_DB so that orchagent can program it.
+
+        Returns True if all static_route sessions are confirmed in STATE_DB (caller
+        can disable further periodic checks), False if any were missing and re-queued.
+        """
+        static_route_sessions = {
+            bfd_key: bfd_session
+            for bfd_key, bfd_session in self.local_db[LOCAL_BFD_TABLE].items()
+            if bfd_session.get("static_route") == "true"
+        }
+        if not static_route_sessions:
+            return True
+
+        # Use existing self.state_db DBConnector via Table.getKeys() — no new connection needed
+        # Table.getKeys() returns keys without the table-name prefix (just "vrf|intf|peer_ip")
+        state_db_keys = set(self._get_state_bfd_keys())
+
+        all_present = True
+        for bfd_key, bfd_session in static_route_sessions.items():
+            # local_db key format: "vrf:intf:peer_ip"
+            # STATE_DB key format (without table prefix): "vrf|intf|peer_ip"
+            # Only replace the first 2 colons (vrf/intf separators) to preserve
+            # colons inside IPv6 peer addresses (e.g. "default:default:2001:db8::1")
+            state_key = bfd_key.replace(":", "|", 2)
+            if state_key not in state_db_keys:
+                all_present = False
+                log_notice(
+                    "BFD session %s found in local_db but missing from STATE_DB "
+                    "(swss/bgp start-order race recovery), re-programming to APPL_DB" % bfd_key
+                )
+                entry = {k: v for k, v in bfd_session.items()
+                         if k not in ("static_route", "state")}
+                self.set_bfd_session_into_appl_db(bfd_key, entry)
+
+        return all_present
+
     def run(self):
         self.prepare_selector()
         while g_run:
             state, _ = self.selector.select(self.SELECT_TIMEOUT)
-            if state == self.selector.TIMEOUT:
-                continue
-            elif state == self.selector.ERROR:
+            if state == self.selector.ERROR:
                 raise Exception("Received error from select")
 
             if self.first_time:
-                self.first_time = False
-                self.reconciliation()
+                if state != self.selector.TIMEOUT:
+                    self.first_time = False
+                    self.reconciliation()
+            else:
+                # Check wall-clock time on every iteration (TIMEOUT or event) so the
+                # resync is not starved when the selector returns frequent events.
+                if self._next_resync_time is not None and time.monotonic() >= self._next_resync_time:
+                    if self._resync_bfd_sessions():
+                        log_info("BFD session resync complete, disabling periodic STATE_DB check")
+                        self._next_resync_time = None
+                    else:
+                        self._next_resync_time = time.monotonic() + self.RESYNC_STATE_DB_CHECK_INTERVAL
+
+            if state == self.selector.TIMEOUT:
+                continue
 
             for sub in self.subscribers:
                 while True:

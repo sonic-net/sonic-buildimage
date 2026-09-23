@@ -23,17 +23,19 @@ from sonic_py_common import multi_asic
 TRANSCEIVER_DOM_TEMPERATURE_TABLE = 'TRANSCEIVER_DOM_TEMPERATURE'
 TRANSCEIVER_DOM_THRESHOLD_TABLE = 'TRANSCEIVER_DOM_THRESHOLD'
 TRANSCEIVER_INFO_TABLE = 'TRANSCEIVER_INFO'
+TEMPERATURE_INFO_TABLE = 'TEMPERATURE_INFO'
 STATE_DB = 'STATE_DB'
 APPL_DB = 'APPL_DB'
 
 
-class DbTableHelper:    
+class DbTableHelper:
     def __init__(self):
         self.state_dbs = {}
         self.appl_dbs = {}
         self.module_temperature_table = None
         self.module_threshold_table = None
         self.module_info_table = None
+        self.temperature_info_table = None
         self._initialized = False
 
     def initialize(self):
@@ -47,6 +49,7 @@ class DbTableHelper:
             self.module_temperature_table = Table(self.state_dbs[default_namespace], TRANSCEIVER_DOM_TEMPERATURE_TABLE)
             self.module_threshold_table = Table(self.state_dbs[default_namespace], TRANSCEIVER_DOM_THRESHOLD_TABLE)
             self.module_info_table = Table(self.state_dbs[default_namespace], TRANSCEIVER_INFO_TABLE)
+            self.temperature_info_table = Table(self.state_dbs[default_namespace], TEMPERATURE_INFO_TABLE)
             self._initialized = True
 
     def get_module_temperature_table(self):
@@ -60,6 +63,10 @@ class DbTableHelper:
     def get_module_info_table(self):
         self.initialize()
         return self.module_info_table
+
+    def get_temperature_info_table(self):
+        self.initialize()
+        return self.temperature_info_table
 
     def get_appl_db(self, namespace):
         self.initialize()

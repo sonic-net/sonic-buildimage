@@ -1,0 +1,13 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "switch_type": "switch"
+        }
+    },
+    "neighbor_addr": "PortChannel101",
+    "bgp_session": {
+        "asn": "65100",
+        "name": "peer_switch"
+    },
+    "bgp_asn": "65100"
+}

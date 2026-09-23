@@ -17,6 +17,8 @@
 
 import os
 
+SUB_VERSION_FILE = "/etc/sonic/.subversion"
+
 
 def get_machine_info():
     if not os.path.isfile('/host/machine.conf'):
@@ -52,3 +54,11 @@ def get_onie_machine(machine_info):
         if 'onie_machine' in machine_info:
             return machine_info['onie_machine']
     return None
+
+
+def get_sub_version():
+    if not os.path.exists(SUB_VERSION_FILE):
+        return "NA"
+    with open(SUB_VERSION_FILE) as fd:
+        sub_ver = fd.read().strip()
+    return sub_ver

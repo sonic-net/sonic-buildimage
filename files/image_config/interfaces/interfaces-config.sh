@@ -70,7 +70,29 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf \
     -t /usr/share/sonic/templates/dhclient.conf.j2,/etc/dhcp/dhclient.conf \
 "
-sonic-cfggen $CFGGEN_PARAMS
+
+# On BMC/Switch-Host platforms, pass bmc.json and the role to sonic-cfggen
+# so interfaces.j2 can render the BMC interface stanza with the correct IP.
+#   switch_bmc=1  -> use bmc_addr  (BMC's own IP on the link)
+#   switch_host=1 -> use bmc_if_addr (Switch-Host's IP on the BMC link)
+PLATFORM=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
+PLATFORM_ENV_CONF="/usr/share/sonic/device/$PLATFORM/platform_env.conf"
+IS_SWITCH_BMC=0
+IS_SWITCH_HOST=0
+if [[ -f "$PLATFORM_ENV_CONF" ]]; then
+    grep -q '^switch_bmc=1'  "$PLATFORM_ENV_CONF" && IS_SWITCH_BMC=1
+    grep -q '^switch_host=1' "$PLATFORM_ENV_CONF" && IS_SWITCH_HOST=1
+fi
+if [[ $IS_SWITCH_BMC -eq 1 || $IS_SWITCH_HOST -eq 1 ]]; then
+    if [[ -f "/etc/sonic/bmc.json" ]]; then
+        sonic-cfggen $CFGGEN_PARAMS -j /etc/sonic/bmc.json \
+            -a "{\"IS_SWITCH_BMC\": $IS_SWITCH_BMC, \"IS_SWITCH_HOST\": $IS_SWITCH_HOST}"
+    else
+        sonic-cfggen $CFGGEN_PARAMS
+    fi
+else
+    sonic-cfggen $CFGGEN_PARAMS
+fi
 
 [[ -f /var/run/dhclient.eth0.pid ]] && kill `cat /var/run/dhclient.eth0.pid` && rm -f /var/run/dhclient.eth0.pid
 [[ -f /var/run/dhclient6.eth0.pid ]] && kill `cat /var/run/dhclient6.eth0.pid` && rm -f /var/run/dhclient6.eth0.pid

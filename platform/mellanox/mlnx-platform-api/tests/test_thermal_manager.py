@@ -24,7 +24,8 @@ class TestThermalManager:
 
     @mock.patch('sonic_platform.chassis.Chassis.chassis_instance', new_callable=mock.MagicMock)
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_dpus_data')
-    def test_updater_init(self, mock_dpus_data, mock_chassis_instance):
+    @mock.patch('sonic_platform.thermal_manager.LiquidCooling.get_num_leak_sensors', return_value=0)
+    def test_updater_init(self, _mock_get_num_leak_sensors, mock_dpus_data, mock_chassis_instance):
         mock_dpus_data.return_value = {}
         sfp_mock = mock.MagicMock()
         mod_mock = mock.MagicMock()
@@ -49,3 +50,18 @@ class TestThermalManager:
             mock_sm_thermal.assert_called_once_with(sfp_list=['sfp1', 'sfp2'], dpu_list=['dpu1', 'dpu2'])
             mgr.deinitialize()
             mgr.thermal_updater_task.stop.assert_called_once()
+
+    @mock.patch('sonic_platform.chassis.Chassis.chassis_instance', new_callable=mock.MagicMock)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_dpus_data')
+    @mock.patch('sonic_platform.thermal_manager.LiquidCooling.get_num_leak_sensors', return_value=2)
+    def test_updater_init_liquid_cooling(self, _mock_get_num_leak_sensors, mock_dpus_data, mock_chassis_instance):
+        mock_dpus_data.return_value = {}
+
+        with mock.patch('sonic_platform.thermal_updater.ThermalUpdater') as mock_thermal, \
+          mock.patch('sonic_platform.smartswitch_thermal_updater.SmartswitchThermalUpdater') as mock_sm_thermal:
+            mgr = ThermalManager()
+            mgr.initialize()
+            mock_thermal.assert_not_called()
+            mock_sm_thermal.assert_not_called()
+            assert mgr.thermal_updater_task is None
+            mgr.deinitialize()

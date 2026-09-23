@@ -17,7 +17,7 @@
 ##
 
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -40,9 +40,6 @@ RUN apt-get update && \
         python-is-python3 \
         pciutils \
         linuxptp
-
-RUN pip3 install --upgrade pip
-RUN apt-get purge -y python-pip
 
 {% if docker_syncd_mlnx_debs.strip() -%}
 # Copy locally-built Debian package dependencies

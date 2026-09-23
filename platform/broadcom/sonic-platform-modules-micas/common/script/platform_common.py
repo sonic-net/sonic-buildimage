@@ -42,6 +42,7 @@ __all__ = [
     "INIT_PARAM",
     "INIT_COMMAND",
     "SET_MAC_CONF",
+    "MGMT_LED_CONFIG",
     "DRVIER_UPDATE_CONF",
     "MONITOR_TEMP_MIN",
     "MONITOR_K",
@@ -85,7 +86,8 @@ __all__ = [
     "DEV_LEDS",
     "fanloc",
     "PLATFORM_POWER_CONF",
-    "POWER_CTRL_CONF"
+    "POWER_CTRL_CONF",
+    "PRODUCT_NAME_CONF",
 ]
 
 # driver blacklist parameter
@@ -152,6 +154,9 @@ INIT_COMMAND = []
 # Set eth mac address parameters
 SET_MAC_CONF = []
 
+# mgmt led config parameters
+MGMT_LED_CONFIG = []
+
 # driver update config
 DRVIER_UPDATE_CONF = {}
 
@@ -160,6 +165,9 @@ PLATFORM_POWER_CONF = []
 
 # power control config
 POWER_CTRL_CONF = {}
+
+# product name config
+PRODUCT_NAME_CONF = {}
 
 ################################ fancontrol parameter###################################
 MONITOR_TEMP_MIN = 38

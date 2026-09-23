@@ -9,7 +9,7 @@ EVENTS_PUBLISHER_TAG = "liquid-cooling-leak"
 
 class HardwareChecker(HealthChecker):
     """
-    Check system hardware status. For now, it checks ASIC, PSU and fan status.
+    Check system hardware status. For now, it checks ASIC, PSU, PDB and fan status.
     """
 
     ASIC_TEMPERATURE_KEY = 'TEMPERATURE_INFO|ASIC'
@@ -165,20 +165,23 @@ class HardwareChecker(HealthChecker):
 
     def _check_psu_status(self, config):
         """
-        Check PSU status including:
-            1. Check all PSUs are present
-            2. Check all PSUs are power on
-            3. Check PSU temperature is in valid range
-            4. Check PSU voltage is in valid range
+        Check PSU and PDB status from STATE_DB PSU_INFO (PDB keys look like PDB 1, PDB 2).
+        PSUs: presence, status, optional temperature/voltage/power_threshold checks.
+        PDBs: presence and status only (for system-health Type column).
         :param config: Health checker configuration
         :return:
         """
-        if config.ignore_devices and 'psu' in config.ignore_devices:
+        ignore_psu = bool(config.ignore_devices) and 'psu' in config.ignore_devices
+        ignore_pdb = bool(config.ignore_devices) and 'pdb' in config.ignore_devices
+        if ignore_psu and ignore_pdb:
             return
 
         keys = self._db.keys(self._db.STATE_DB, HardwareChecker.PSU_TABLE_NAME + '*')
         if not keys:
-            self.set_object_not_ok('PSU', 'PSU', 'Failed to get PSU information')
+            # An empty PSU_INFO table is only a failure when PSU monitoring is expected.
+            # Platforms without PSUs (e.g. DPUs) ignore 'psu' to suppress this alarm.
+            if not ignore_psu:
+                self.set_object_not_ok('PSU', 'PSU', 'Failed to get PSU information')
             return
 
         for key in natsorted(keys):
@@ -189,6 +192,12 @@ class HardwareChecker(HealthChecker):
 
             name = key_list[1]
             if config.ignore_devices and name in config.ignore_devices:
+                continue
+
+            # PSU and PDB rows share PSU_INFO (PDB keys look like "PDB 1"); honor each
+            # category-level ignore independently so ignoring one does not check the other.
+            is_pdb = name.upper().startswith('PDB')
+            if (is_pdb and ignore_pdb) or (not is_pdb and ignore_psu):
                 continue
 
             data_dict = self._db.get_all(self._db.STATE_DB, key)
@@ -211,7 +220,7 @@ class HardwareChecker(HealthChecker):
                 elif temperature_threshold is None:
                     self.set_object_not_ok('PSU', name, 'Failed to get temperature threshold data for {}'.format(name))
                     continue
-                else:
+                elif temperature_threshold != 'N/A':
                     try:
                         temperature = float(temperature)
                         temperature_threshold = float(temperature_threshold)
@@ -243,7 +252,7 @@ class HardwareChecker(HealthChecker):
                     self.set_object_not_ok('PSU', name,
                                            'Failed to get voltage maximum threshold data for {}'.format(name))
                     continue
-                else:
+                elif voltage_min_th != 'N/A' and voltage_max_th != 'N/A':
                     try:
                         voltage = float(voltage)
                         voltage_min_th = float(voltage_min_th)

@@ -1,0 +1,12 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": ["psu", "fan", "asic"],
+    "user_defined_checkers": [],
+    "polling_interval": 300,
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "amber_blink"
+    }
+}
+

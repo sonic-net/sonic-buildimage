@@ -108,18 +108,20 @@ class DevMonitor():
         return ret
 
     def removeDev(self, bus, loc):
-        cmd = "echo  0x%02x > /sys/bus/i2c/devices/i2c-%d/delete_device" % (loc, bus)
         devpath = "/sys/bus/i2c/devices/%d-%04x" % (bus, loc)
         if os.path.exists(devpath):
-            os.system(cmd)
+            delete_file = "/sys/bus/i2c/devices/i2c-%d/delete_device" % bus
+            with open(delete_file, 'w') as f:
+                f.write("0x%02x\n" % loc)
 
     def addDev(self, name, bus, loc):
         if name == "lm75":
             time.sleep(0.1)
-        cmd = "echo  %s 0x%02x > /sys/bus/i2c/devices/i2c-%d/new_device" % (name, loc, bus)
         devpath = "/sys/bus/i2c/devices/%d-%04x" % (bus, loc)
         if os.path.exists(devpath) is False:
-            os.system(cmd)
+            new_device_file = "/sys/bus/i2c/devices/i2c-%d/new_device" % bus
+            with open(new_device_file, 'w') as f:
+                f.write("%s 0x%02x\n" % (name, loc))
 
     def checkattr(self, bus, loc, attr):
         try:

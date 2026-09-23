@@ -1,0 +1,11 @@
+[Unit]
+Description=
+Requires=platform_driver.service
+After=platform_driver.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/oe_voltage_setting.py
+
+[Install]
+WantedBy=multi-user.target

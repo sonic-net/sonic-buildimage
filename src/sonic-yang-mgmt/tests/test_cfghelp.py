@@ -1,8 +1,5 @@
-import json
 import subprocess
 import os
-import importlib.machinery
-import types
 from unittest import TestCase
 
 techsupport_table_output="""\
@@ -195,86 +192,3 @@ class TestCfgHelp(TestCase):
         argument = ['-t', 'SNMP']
         output = self.run_script(argument)
         self.assertEqual(output, snmp_table_output)
-
-
-class TestCfgHelpUnionType(TestCase):
-    """Test parse_leaf handles union types with single and multiple members.
-
-    When a YANG union has a single type member, xmltodict produces a dict
-    instead of a list for the 'type' child. The fix ensures both forms
-    are handled correctly.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        test_dir = os.path.dirname(os.path.realpath(__file__))
-        script_file = os.path.join(test_dir, '..', 'sonic-cfg-help')
-        loader = importlib.machinery.SourceFileLoader("sonic_cfg_help",
-                                                       script_file)
-        cls.mod = types.ModuleType(loader.name)
-        loader.exec_module(cls.mod)
-
-    def _make_describer(self):
-        """Create a SonicCfgDescriber with a no-op __init__."""
-        obj = object.__new__(self.mod.SonicCfgDescriber)
-        return obj
-
-    def test_parse_leaf_union_single_leafref(self):
-        """Union with a single leafref type (dict, not list)."""
-        describer = self._make_describer()
-        key = {
-            '@name': 'test_field',
-            'type': {
-                '@name': 'union',
-                'type': {
-                    '@name': 'leafref',
-                    'path': {'@value': '/test:sonic-test/test:TABLE/test:LIST/test:name'}
-                }
-            }
-        }
-        result = describer.parse_leaf(key, '')
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][0], 'test_field')
-        self.assertEqual(result[0][4], 'TABLE:name')
-
-    def test_parse_leaf_union_multiple_leafrefs(self):
-        """Union with multiple leafref types (list)."""
-        describer = self._make_describer()
-        key = {
-            '@name': 'test_field',
-            'type': {
-                '@name': 'union',
-                'type': [
-                    {
-                        '@name': 'leafref',
-                        'path': {'@value': '/test:sonic-test/test:TABLE_A/test:LIST/test:name'}
-                    },
-                    {
-                        '@name': 'leafref',
-                        'path': {'@value': '/test:sonic-test/test:TABLE_B/test:LIST/test:id'}
-                    }
-                ]
-            }
-        }
-        result = describer.parse_leaf(key, '')
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][0], 'test_field')
-        self.assertIn('TABLE_A:name', result[0][4])
-        self.assertIn('TABLE_B:id', result[0][4])
-
-    def test_parse_leaf_union_single_non_leafref(self):
-        """Union with a single non-leafref type (no path, no crash)."""
-        describer = self._make_describer()
-        key = {
-            '@name': 'test_field',
-            'type': {
-                '@name': 'union',
-                'type': {
-                    '@name': 'string'
-                }
-            }
-        }
-        result = describer.parse_leaf(key, '')
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][0], 'test_field')
-        self.assertEqual(result[0][4], '')

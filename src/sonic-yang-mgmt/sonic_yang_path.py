@@ -1,12 +1,13 @@
 # This script is used as extension of sonic_yang class. It has methods of
 # class sonic_yang. A separate file is used to avoid a single large file.
 
-from __future__ import print_function
+from __future__ import print_function, annotations
 from json import dump, dumps, loads
+import libyang as ly
 import sonic_yang_ext
 import re
 from jsonpointer import JsonPointer
-from typing import List
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 # class sonic_yang methods related to path handling, use mixin to extend sonic_yang
 class SonicYangPathMixin:
@@ -14,6 +15,11 @@ class SonicYangPathMixin:
     All xpath operations in this class are only relevent to ConfigDb and the conversion to YANG xpath.
     It is not meant to support all the xpath functionalities, just the ones relevent to ConfigDb/YANG.
     """
+
+    # Mixin type stubs — these attributes are defined in SonicYang.__init__
+    if TYPE_CHECKING:
+        confDbYangMap: Dict[str, Any]
+        configPathCache: Dict[Tuple[str, bool], str]
     @staticmethod
     def configdb_path_split(configdb_path: str):
         if configdb_path is None or configdb_path == "" or configdb_path == "/":
@@ -29,11 +35,11 @@ class SonicYangPathMixin:
         if not schema_xpath:
             return "/" + "/".join(xpath_tokens)
 
-        # Schema XPath in libyang v1 wants each token prefixed with the module name.
-        # The first token should have this, use that to prefix the rest.
-        module_name = xpath_tokens[0].split(":")[0]
-
-        return "/" + ("/" + module_name + ":").join(xpath_tokens)
+        # Schema XPath in libyang v3 uses RFC 7951 JSON-style prefixes:
+        # nodes inherit their module from their parent, so only the first
+        # token (which crosses from root into the module) gets a prefix.
+        # Subsequent tokens from the same module have no prefix.
+        return "/" + "/".join(xpath_tokens)
 
     @staticmethod
     def xpath_split(xpath: str) -> List[str]:
@@ -60,7 +66,7 @@ class SonicYangPathMixin:
 
         return tokens
 
-    def configdb_path_to_xpath(self, configdb_path: str, schema_xpath: bool=False, configdb: dict=None) -> str:
+    def configdb_path_to_xpath(self, configdb_path: str, schema_xpath: bool=False, configdb: Optional[dict]=None) -> Optional[str]:
         """
         Converts the given ConfigDB path to a Yang data module xpath.
         Parameters:
@@ -71,7 +77,7 @@ class SonicYangPathMixin:
           - configdb: If provided, and schema_xpath is false, will also emit the xpath token for a specific leaf-list
             entry based on the value within the configdb itself.  This is provided in the parsed configdb format, such
             as returned from json.loads().
-                           
+
         Example:
           1. configdb_path: /VLAN_MEMBER/Vlan1000|Ethernet8/tagging_mode
              schema_xpath: False
@@ -113,10 +119,10 @@ class SonicYangPathMixin:
         return xpath
 
 
-    def xpath_to_configdb_path(self, xpath: str, configdb: dict = None) -> str:
+    def xpath_to_configdb_path(self, xpath: str, configdb: Optional[dict] = None) -> str:
         """
-        Converts the given XPATH to ConfigDB Path. 
-        If the xpath references a list value and the configdb is provided, the 
+        Converts the given XPATH to ConfigDB Path.
+        If the xpath references a list value and the configdb is provided, the
         generated path will reference the index of the list value
         Example:
           xpath: /sonic-vlan:sonic-vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[name='Vlan1000'][port='Ethernet8']/tagging_mode
@@ -136,7 +142,7 @@ class SonicYangPathMixin:
         return self.configdb_path_join(configdb_path_tokens)
 
 
-    def __get_xpath_tokens_from_container(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: dict) -> List[str]:
+    def __get_xpath_tokens_from_container(self, model_snode, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: Optional[dict]) -> List[str]:
         token = configdb_path_tokens[token_index]
         xpath_tokens = [token]
 
@@ -144,77 +150,73 @@ class SonicYangPathMixin:
             return xpath_tokens
 
         # check if the configdb token is referring to a list
-        list_model = self.__get_list_model(model, configdb_path_tokens, token_index)
-        if list_model:
-            new_xpath_tokens = self.__get_xpath_tokens_from_list(list_model, configdb_path_tokens, token_index+1, schema_xpath, configdb)
+        list_snode = self.__get_list_model(model_snode, configdb_path_tokens, token_index)
+        if list_snode is not None:
+            new_xpath_tokens = self.__get_xpath_tokens_from_list(list_snode, configdb_path_tokens, token_index+1, schema_xpath, configdb)
             xpath_tokens.extend(new_xpath_tokens)
             return xpath_tokens
 
         # check if it is targetting a child container
-        child_container_model = self.__get_model(model.get('container'), configdb_path_tokens[token_index+1])
-        if child_container_model:
-            new_xpath_tokens = self.__get_xpath_tokens_from_container(child_container_model, configdb_path_tokens, token_index+1, schema_xpath, configdb)
+        child_container = self.__find_child_by_name(model_snode, configdb_path_tokens[token_index+1], (ly.SNode.CONTAINER,))
+        if child_container is not None:
+            new_xpath_tokens = self.__get_xpath_tokens_from_container(child_container, configdb_path_tokens, token_index+1, schema_xpath, configdb)
             xpath_tokens.extend(new_xpath_tokens)
             return xpath_tokens
 
-        leaf_token = self.__get_xpath_token_from_leaf(model, configdb_path_tokens, token_index+1, schema_xpath, configdb)
+        leaf_token = self.__get_xpath_token_from_leaf(model_snode, configdb_path_tokens, token_index+1, schema_xpath, configdb)
         xpath_tokens.append(leaf_token)
 
         return xpath_tokens
 
 
-    # Locate a model matching the given name.  If the model provided is a dict,
-    # it simply ensures the name matches and returns self.  If the model
-    # provided is a list it scans the list for a matching name and returns that
-    # model.
-    def __get_model(self, model, name: str) -> dict:
-        if isinstance(model, dict) and model['@name'] == name:
-            return model
-        if isinstance(model, list):
-            for submodel in model:
-                if submodel['@name'] == name:
-                    return submodel
-
+    # Locate a child of model_snode with the given name and (optional) node-type
+    # filter. SNode.children(types=...) flattens choice/case automatically.
+    def __find_child_by_name(self, model_snode, name: str, types=None):
+        for child in model_snode.children(types=types):
+            if child.name() == name:
+                return child
         return None
 
 
-    # A configdb list specifies the container name, plus the keys separated by |.  We are 
+    # A configdb list specifies the container name, plus the keys separated by |.  We are
     # scanning the model for a list with a matching *number* of keys and returning the
     # reference to the model with the definition.  It is not valid to have 2 lists in
     # the same container with the same number of keys since we have no way to match.
-    def __get_list_model(self, model: dict, configdb_path_tokens: List[str], token_index: int) -> dict:
+    def __get_list_model(self, model_snode, configdb_path_tokens: List[str], token_index: int):
         parent_container_name = configdb_path_tokens[token_index]
-        clist = model.get('list')
+        lists = list(model_snode.children(types=(ly.SNode.LIST,)))
+
+        if len(lists) == 0:
+            return None
+
         # Container contains a single list, just return it
         # TODO: check if matching also by name is necessary
-        if isinstance(clist, dict):
-            return clist
+        if len(lists) == 1:
+            return lists[0]
 
-        if isinstance(clist, list):
-            configdb_values_str = configdb_path_tokens[token_index+1]
-            # Format: "value1|value2|value|..."
-            configdb_values = configdb_values_str.split("|")
-            for list_model in clist:
-                yang_keys_str = list_model['key']['@value']
-                # Format: "key1 key2 key3 ..."
-                yang_keys = yang_keys_str.split()
-                # if same number of values and keys, this is the intended list-model
-                # TODO: Match also on types and not only the length of the keys/values
-                if len(yang_keys) == len(configdb_values):
-                    return list_model
-            raise ValueError(f"Container {parent_container_name} has multiple lists, "
-                             f"but none of them match the config_db value {configdb_values_str}")
+        configdb_values_str = configdb_path_tokens[token_index+1]
+        # Format: "value1|value2|value|..."
+        configdb_values = configdb_values_str.split("|")
+        for list_snode in lists:
+            yang_keys = [k.name() for k in list_snode.keys()]
+            # if same number of values and keys, this is the intended list-model
+            # TODO: Match also on types and not only the length of the keys/values
+            if len(yang_keys) == len(configdb_values):
+                return list_snode
+        raise ValueError(f"Container {parent_container_name} has multiple lists, "
+                         f"but none of them match the config_db value {configdb_values_str}")
 
 
-    def __get_xpath_tokens_from_list(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: dict):
+    def __get_xpath_tokens_from_list(self, list_snode, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: Optional[dict]):
         item_token=""
+        list_keys_str = " ".join(k.name() for k in list_snode.keys())
 
         if schema_xpath:
-            item_token = model['@name']
+            item_token = list_snode.name()
         else:
-            keyDict = self.__parse_configdb_key_to_dict(model['key']['@value'], configdb_path_tokens[token_index])
+            keyDict = self.__parse_configdb_key_to_dict(list_keys_str, configdb_path_tokens[token_index])
             keyTokens = [f"[{key}='{keyDict[key]}']" for key in keyDict]
-            item_token = f"{model['@name']}{''.join(keyTokens)}"
+            item_token = f"{list_snode.name()}{''.join(keyTokens)}"
 
         xpath_tokens = [item_token]
 
@@ -223,13 +225,13 @@ class SonicYangPathMixin:
         if len(configdb_path_tokens)-1 == token_index:
             return xpath_tokens
 
-        type_1_list_model = self.__type1_get_model(model)
-        if type_1_list_model:
-            token = self.__type1_get_xpath_token(type_1_list_model, configdb_path_tokens, token_index+1, schema_xpath)
+        type_1_inner_list = self.__type1_get_model(list_snode)
+        if type_1_inner_list is not None:
+            token = self.__type1_get_xpath_token(type_1_inner_list, configdb_path_tokens, token_index+1, schema_xpath)
             xpath_tokens.append(token)
             return xpath_tokens
 
-        leaf_token = self.__get_xpath_token_from_leaf(model, configdb_path_tokens, token_index+1, schema_xpath, configdb)
+        leaf_token = self.__get_xpath_token_from_leaf(list_snode, configdb_path_tokens, token_index+1, schema_xpath, configdb)
         xpath_tokens.append(leaf_token)
         return xpath_tokens
 
@@ -251,48 +253,37 @@ class SonicYangPathMixin:
 
     # Type1 lists are lists contained within another list.  They always have exactly 1 key, and due to
     # this they are special cased with a static lookup table.  Check to see if the
-    # specified model is a type1 list and if so, return the model.
-    def __type1_get_model(self, model: dict) -> dict:
-        list_name = model['@name']
-        if list_name not in sonic_yang_ext.Type_1_list_maps_model:
+    # specified model is a type1 list and if so, return the inner list SNode.
+    def __type1_get_model(self, list_snode):
+        if list_snode.name() not in sonic_yang_ext.Type_1_list_maps_model:
             return None
-
-        # Type 1 list is expected to have a single inner list model.
-        # No need to check if it is a dictionary of list models.
-        return model.get('list')
+        # Type 1 list is expected to have a single inner list child.
+        return next(iter(list_snode.children(types=(ly.SNode.LIST,))), None)
 
 
     # Type1 lists are lists contained within another list.  They always have exactly 1 key, and due to
     # this they are special cased with a static lookup table.  This is just a helper to do a quick
     # transformation from configdb to the xpath key.
-    def __type1_get_xpath_token(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool) -> str:
+    def __type1_get_xpath_token(self, inner_list_snode, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool) -> str:
         if schema_xpath:
-            return model['@name']
-        return f"{model['@name']}[{model['key']['@value']}='{configdb_path_tokens[token_index]}']"
+            return inner_list_snode.name()
+        # Type 1 inner lists always have exactly one key.
+        key_name = next(iter(inner_list_snode.keys())).name()
+        return f"{inner_list_snode.name()}[{key_name}='{configdb_path_tokens[token_index]}']"
 
 
     # This function outputs the xpath token for leaf, choice, and leaf-list entries.
-    def __get_xpath_token_from_leaf(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: dict) -> str:
+    # iter_children with default options descends into choice/case automatically,
+    # so leaves under choice/case are flattened into the children() iteration.
+    def __get_xpath_token_from_leaf(self, model_snode, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: Optional[dict]) -> str:
         token = configdb_path_tokens[token_index]
 
-        # checking all leaves
-        leaf_model = self.__get_model(model.get('leaf'), token)
-        if leaf_model:
+        # checking all leaves (including those under choice/case)
+        if self.__find_child_by_name(model_snode, token, (ly.SNode.LEAF,)) is not None:
             return token
 
-        # checking choice
-        choices = model.get('choice')
-        if choices:
-            for choice in choices:
-                cases = choice['case']
-                for case in cases:
-                    leaf_model = self.__get_model(case.get('leaf'), token)
-                    if leaf_model:
-                        return token
-
         # checking leaf-list (i.e. arrays of string, number or bool)
-        leaf_list_model = self.__get_model(model.get('leaf-list'), token)
-        if leaf_list_model:
+        if self.__find_child_by_name(model_snode, token, (ly.SNode.LEAFLIST,)) is not None:
             # If there are no more tokens, just return the current token.
             if len(configdb_path_tokens)-1 == token_index:
                 return token
@@ -304,15 +295,15 @@ class SonicYangPathMixin:
             # Reference an explicit leaf list value
             return f"{token}[.='{value}']"
 
-        raise ValueError(f"Path token not found.\n  model: {model}\n  token_index: {token_index}\n  " + \
+        raise ValueError(f"Path token not found.\n  model: {model_snode.schema_path()}\n  token_index: {token_index}\n  " + \
                          f"path_tokens: {configdb_path_tokens}\n  config: {configdb}")
 
 
-    def __get_configdb_value(self, configdb_path_tokens: List[str], configdb: dict) -> str:
+    def __get_configdb_value(self, configdb_path_tokens: List[str], configdb: Optional[dict]) -> Optional[str]:
         if configdb is None:
             return None
 
-        ptr = configdb
+        ptr: Any = configdb
         for i in range(len(configdb_path_tokens)):
             if isinstance(ptr, dict):
                 ptr = ptr[configdb_path_tokens[i]]
@@ -361,7 +352,7 @@ class SonicYangPathMixin:
         return idx
 
 
-    def __get_configdb_path_tokens_from_container(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict) -> List[str]:
+    def __get_configdb_path_tokens_from_container(self, model_snode, xpath_tokens: List[str], token_index: int, configdb: Optional[dict]) -> List[str]:
         token = xpath_tokens[token_index]
         configdb_path_tokens = [token]
 
@@ -373,20 +364,20 @@ class SonicYangPathMixin:
 
         # check child list
         list_name = xpath_tokens[token_index+1].split("[")[0]
-        list_model = self.__get_model(model.get('list'), list_name)
-        if list_model:
-            new_path_tokens = self.__get_configdb_path_tokens_from_list(list_model, xpath_tokens, token_index+1, configdb)
+        list_snode = self.__find_child_by_name(model_snode, list_name, (ly.SNode.LIST,))
+        if list_snode is not None:
+            new_path_tokens = self.__get_configdb_path_tokens_from_list(list_snode, xpath_tokens, token_index+1, configdb)
             configdb_path_tokens.extend(new_path_tokens)
             return configdb_path_tokens
 
         container_name = xpath_tokens[token_index+1]
-        container_model = self.__get_model(model.get('container'), container_name)
-        if container_model:
-            new_path_tokens = self.__get_configdb_path_tokens_from_container(container_model, xpath_tokens, token_index+1, configdb)
+        container_snode = self.__find_child_by_name(model_snode, container_name, (ly.SNode.CONTAINER,))
+        if container_snode is not None:
+            new_path_tokens = self.__get_configdb_path_tokens_from_container(container_snode, xpath_tokens, token_index+1, configdb)
             configdb_path_tokens.extend(new_path_tokens)
             return configdb_path_tokens
 
-        new_path_tokens = self.__get_configdb_path_tokens_from_leaf(model, xpath_tokens, token_index+1, configdb)
+        new_path_tokens = self.__get_configdb_path_tokens_from_leaf(model_snode, xpath_tokens, token_index+1, configdb)
         configdb_path_tokens.extend(new_path_tokens)
 
         return configdb_path_tokens
@@ -414,7 +405,7 @@ class SonicYangPathMixin:
 
         return kv
 
-    def __get_configdb_path_tokens_from_list(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict):
+    def __get_configdb_path_tokens_from_list(self, list_snode, xpath_tokens: List[str], token_index: int, configdb: Optional[dict]):
         token = xpath_tokens[token_index]
         key_dict = self.__xpath_keys_to_dict(token)
 
@@ -426,8 +417,7 @@ class SonicYangPathMixin:
         if not(key_dict):
             return []
 
-        listKeys = model['key']['@value']
-        key_list = listKeys.split()
+        key_list = [k.name() for k in list_snode.keys()]
 
         if len(key_list) != len(key_dict):
             raise ValueError(f"Keys in configDb not matching keys in SonicYang. ConfigDb keys: {key_dict.keys()}. SonicYang keys: {key_list}")
@@ -455,40 +445,28 @@ class SonicYangPathMixin:
         if next_token in key_dict:
             return configdb_path_tokens
 
-        type_1_list_model = self.__type1_get_model(model)
-        if type_1_list_model:
-            new_path_tokens = self.__get_configdb_path_tokens_from_type_1_list(type_1_list_model, xpath_tokens, token_index+1, configdb)
+        type_1_inner_list = self.__type1_get_model(list_snode)
+        if type_1_inner_list is not None:
+            new_path_tokens = self.__get_configdb_path_tokens_from_type_1_list(type_1_inner_list, xpath_tokens, token_index+1, configdb)
             configdb_path_tokens.extend(new_path_tokens)
             return configdb_path_tokens
 
-        new_path_tokens = self.__get_configdb_path_tokens_from_leaf(model, xpath_tokens, token_index+1, configdb)
+        new_path_tokens = self.__get_configdb_path_tokens_from_leaf(list_snode, xpath_tokens, token_index+1, configdb)
         configdb_path_tokens.extend(new_path_tokens)
         return configdb_path_tokens
 
 
-    def __get_configdb_path_tokens_from_leaf(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict) -> List[str]:
+    def __get_configdb_path_tokens_from_leaf(self, model_snode, xpath_tokens: List[str], token_index: int, configdb: Optional[dict]) -> List[Any]:
         token = xpath_tokens[token_index]
 
-        # checking all leaves
-        leaf_model = self.__get_model(model.get('leaf'), token)
-        if leaf_model:
+        # checking all leaves (including those under choice/case — flattened by iter_children)
+        if self.__find_child_by_name(model_snode, token, (ly.SNode.LEAF,)) is not None:
             return [token]
-
-        # checking choices
-        choices = model.get('choice')
-        if choices:
-            for choice in choices:
-                cases = choice['case']
-                for case in cases:
-                    leaf_model = self.__get_model(case.get('leaf'), token)
-                    if leaf_model:
-                        return [token]
 
         # checking leaf-list
         leaf_list_tokens = token.split("[", 1) # split once on the first '[', a regex is used later to fetch keys/values
         leaf_list_name = leaf_list_tokens[0]
-        leaf_list_model = self.__get_model(model.get('leaf-list'), leaf_list_name)
-        if leaf_list_model:
+        if self.__find_child_by_name(model_snode, leaf_list_name, (ly.SNode.LEAFLIST,)) is not None:
             # if whole-list is to be returned, such as if there is no key, or if configdb is not provided,
             # Just return the list-name without checking the list items
             # Example:
@@ -499,7 +477,8 @@ class SonicYangPathMixin:
             leaf_list_pattern = r"^[^\[]+(?:\[\.='([^']*)'\])?$"
             leaf_list_regex = re.compile(leaf_list_pattern)
             match = leaf_list_regex.match(token)
-            # leaf_list_name = match.group(1)
+            if match is None:
+                raise ValueError(f"leaf-list token did not match expected pattern: {token}")
             leaf_list_value = match.group(1)
             list_config = configdb[leaf_list_name]
             # Workaround for those fields who is defined as leaf-list in YANG model but have string value in config DB
@@ -512,18 +491,18 @@ class SonicYangPathMixin:
 
             if not isinstance(list_config, list):
                 raise ValueError(f"list_config is expected to be of type list or string. Found {type(list_config)}.\n  " + \
-                                 f"model: {model}\n  token_index: {token_index}\n  " + \
+                                 f"model: {model_snode.schema_path()}\n  token_index: {token_index}\n  " + \
                                  f"xpath_tokens: {xpath_tokens}\n  config: {configdb}")
 
             list_idx = list_config.index(leaf_list_value)
             return [leaf_list_name, list_idx]
 
-        raise ValueError(f"Xpath token not found.\n  model: {model}\n  token_index: {token_index}\n  " + \
+        raise ValueError(f"Xpath token not found.\n  model: {model_snode.schema_path()}\n  token_index: {token_index}\n  " + \
                          f"xpath_tokens: {xpath_tokens}\n  config: {configdb}")
 
 
-    def __get_configdb_path_tokens_from_type_1_list(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict):
-        type_1_inner_list_name = model['@name']
+    def __get_configdb_path_tokens_from_type_1_list(self, inner_list_snode, xpath_tokens: List[str], token_index: int, configdb: Optional[dict]):
+        type_1_inner_list_name = inner_list_snode.name()
 
         token = xpath_tokens[token_index]
         list_tokens = token.split("[", 1) # split once on the first '[', first element will be the inner list name
@@ -566,8 +545,7 @@ class SonicYangPathMixin:
         #   xpath: /sonic-dot1p-tc-map:sonic-dot1p-tc-map/DOT1P_TO_TC_MAP/DOT1P_TO_TC_MAP_LIST[name='Dot1p_to_tc_map1']/DOT1P_TO_TC_MAP[dot1p='2']/tc
         #   path: /DOT1P_TO_TC_MAP/Dot1p_to_tc_map1/2
         next_token = xpath_tokens[token_index+1]
-        leaf_model = self.__get_model(model.get('leaf'), next_token)
-        if leaf_model:
+        if self.__find_child_by_name(inner_list_snode, next_token, (ly.SNode.LEAF,)) is not None:
             return path_tokens
 
         raise ValueError(f"Type 1 inner list '{type_1_inner_list_name}' does not have a child leaf named '{next_token}'")

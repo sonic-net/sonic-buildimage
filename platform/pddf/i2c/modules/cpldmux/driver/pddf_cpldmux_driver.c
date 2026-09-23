@@ -100,12 +100,6 @@ int pddf_cpldmux_select_default(struct i2c_mux_core *muxc, uint32_t chan)
         switch (pdata->dev_type) {
         case CPLD_MUX:
             // cpld_mux
-            pddf_dbg(
-                CPLDMUX,
-                KERN_INFO
-                "%s: Writing 0x%x at 0x%x offset of cpld 0x%x to enable chan %d\n",
-                __FUNCTION__, sdata->cpld_sel,
-                sdata->cpld_offset, sdata->cpld_devaddr, chan);
             ret = cpldmux_byte_write(
                 pdata->cpld, sdata->cpld_offset,
                 (uint8_t)(sdata->cpld_sel & 0xff));
@@ -148,12 +142,6 @@ int pddf_cpldmux_deselect_default(struct i2c_mux_core *muxc, uint32_t chan)
     sdata = &pdata->chan_data[chan];
     switch (pdata->dev_type) {
     case CPLD_MUX:
-        pddf_dbg(
-            CPLDMUX,
-            KERN_INFO
-            "%s: Writing 0x%x at 0x%x offset of cpld 0x%x to disable chan %d",
-            __FUNCTION__, sdata->cpld_desel, sdata->cpld_offset,
-            sdata->cpld_devaddr, chan);
         ret = cpldmux_byte_write(pdata->cpld, sdata->cpld_offset,
                      (uint8_t)(sdata->cpld_desel));
         break;

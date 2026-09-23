@@ -54,6 +54,9 @@
 0188-i2c-mux-Add-register-map-based-mux-driver.patch
 ###-> mellanox_hw_mgmt-end
 
+###-> nvidia_aspeed_bmc-start
+###-> nvidia_aspeed_bmc-end
+
 # Cisco patches for 5.10 kernel
 cisco-mtd-part.patch
 cisco-mdio-mux-support-acpi.patch

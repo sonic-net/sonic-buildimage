@@ -1,0 +1,213 @@
+#!/usr/bin/python3
+import os
+import sys
+import fcntl
+import click
+import sonic_platform
+from sonic_py_common import device_info, logger, multi_asic
+import sonic_platform_base.sonic_sfp.sfputilhelper
+import utilities_common.cli as clicommon
+from oe_cmis_rw import oe_cmis_sysfs_rw
+
+def help():
+    print("------------------------------OE CMIS sysfs RW Tool--------------------------------")
+    print("Read OE CMIS data:")
+    print("\toe_cmis_sysfs_rw.py rd [oe] [bank] [page] [offset] [rd_len]")
+    print("\t[oe] from 0 to 7 (decimal)")
+    print("\t[bank] from 0 to 7 (hexadecimal)")
+    print("\t[page] from 0 to 0xff (hexadecimal)")
+    print("\t[offset] from 0 to 0xff (hexadecimal)")
+    print("\t[rd_len] from 1 to 256 (decimal)")
+    print("Write OE CMIS data:")
+    print("\toe_cmis_sysfs_rw.py wr [oe] [bank] [page] [offset] [wr_data]")
+    print("\t[oe] from 0 to 7 (decimal)")
+    print("\t[bank] from 0 to 7 (hexadecimal)")
+    print("\t[page] from 0 to 0xff (hexadecimal)")
+    print("\t[offset] from 0 to 0xff (hexadecimal)")
+    print("\t[wr_data] from 0 to 0xff (hexadecimal)")
+    return
+
+def dfd_utest_printf_reg(buf, offset):
+    j = offset % 16
+    tmp = j
+    offset -= j
+    print("    ", end="")
+
+    for i in range(0,16):
+        print("%02X " %i, end="")
+
+    for i in range(0, len(buf) + j):
+        if (i % 16) == 0:
+            print("\n%02X: " % offset, end="")
+            offset += 16
+        if tmp:
+            print("   ", end="")
+            tmp -= 1
+        else:
+            print("%02x " % buf[i-j], end="")
+    print("")
+    return
+
+# oe_cmis_sysfs_rw.py rd [oe] [bank] [page] [offset] [rd_len]
+def cmis_sysfs_read_parse(argv, is_raw):
+    if len(argv) != 7:
+        print("Input invalid")
+        help()
+        return -1
+
+    oe_num = int(argv[2])
+    if oe_num < 0 or oe_num > 7:
+        print("Invalid oe: %d\n" % oe_num)
+        help()
+        return -1
+
+    bank = int(argv[3], 16)
+    if bank < 0 or bank > 0xff:
+        print("Invalid bank: %d" % bank)
+        help()
+        return -1
+
+    page = int(argv[4], 16)
+    if page < 0 or page > 0xff:
+        print("Invalid page: %d" % page)
+        help()
+        return -1
+
+    offset = int(argv[5], 16)
+    if offset < 0 or offset > 0xff:
+        print("Invalid offset: %d" % offset)
+        help()
+        return -1
+
+    rd_len = int(argv[6])
+    if rd_len < 0 or rd_len > 256:
+        print("Invalid offset: %d" % rd_len)
+        help()
+        return -1
+
+    # oe_bus = (oe_num % 8) + 24
+    # i2c_path = cmis_util.cmis_sysfs_i2c_path(oe_num)
+    if (not is_raw):
+        # print("OE CMIS sysfs read, oe: %d, path: %s" % (oe_num, i2c_path))
+        print("OE CMIS sysfs read, oe: %d, bank: 0x%02x, page: 0x%02x offset: 0x%02x, rd_len: %d" %
+            (oe_num, bank, page, offset, rd_len))
+
+    status, value = cmis_util.cmis_read(oe_num, bank, page, offset, rd_len)
+    if status is False:
+        print("Failed to read OE CMIS data, msg: %s" % value)
+        return -1
+    if (not is_raw):
+        dfd_utest_printf_reg(value, offset)
+    else:
+        hex_string_list = ["{}".format(hex(item))[2:].zfill(2) for item in value]
+        output = "".join([item for item in hex_string_list])
+        print(output)
+    return 0
+
+# oe_cmis_sysfs_rw.py wr [oe] [bank] [page] [offset] [wr_data]
+def cmis_sysfs_write_parse(argv, is_raw):
+    if len(argv) != 7:
+        print("Input invalid")
+        help()
+        return -1
+
+    oe_num = int(argv[2])
+    if oe_num < 0 or oe_num > 7:
+        print("Invalid oe: %d\n" % oe_num)
+        help()
+        return -1
+
+    bank = int(argv[3], 16)
+    if bank < 0 or bank > 0xff:
+        print("Invalid bank: %d" % bank)
+        help()
+        return -1
+
+    page = int(argv[4], 16)
+    if page < 0 or page > 0xff:
+        print("Invalid page: %d" % page)
+        help()
+        return -1
+
+    offset = int(argv[5], 16)
+    if offset < 0 or offset > 0xff:
+        print("Invalid offset: %d" % offset)
+        help()
+        return -1
+
+    wr_data = argv[6]
+    wr_data = wr_data.strip()
+    if ((wr_data.find('[')>=0) and (wr_data.find(']')>=0)):
+        import ast
+        wr_data = ast.literal_eval(wr_data)
+    else:
+        wr_data = [int(wr_data, 16)]
+
+    for byte_data in wr_data:
+        if byte_data < 0 or byte_data > 0xff:
+            print("Invalid wr_data: {}".format(wr_data))
+            help()
+            return -1
+
+    # i2c_path = cmis_util.cmis_sysfs_i2c_path(oe_num)
+    # print("OE CMIS sysfs write, oe: %d, path: %s" % (oe_num, i2c_path))
+    if (not is_raw):
+        print("OE CMIS sysfs write, oe: %d, bank: 0x%02x, page: 0x%02x offset: 0x%02x, wr_data: %s" %
+            (oe_num, bank, page, offset, str(["0x%02x"%byte_data for byte_data in wr_data])))
+
+    status, value = cmis_util.cmis_write(oe_num, bank, page, offset, wr_data)
+    if status is False:
+        print("Failed to write OE CMIS data, msg: %s" % value)
+        return -1
+    if (not is_raw):
+        print("OE CMIS data success")
+    return 0
+
+@click.group()
+def cli():
+    pass
+
+@cli.command()
+@click.argument('oe', metavar='<oe-oe>', required=True)
+@click.argument('bank', metavar='<bank>', required=True)
+@click.argument('page', metavar='<page>', required=True)
+@click.argument('offset', metavar='<offset>', required=True)
+@click.argument('rd_len', metavar='<rd_len>', required=True)
+@click.option('-raw', '--raw_data', is_flag=True, help='output raw data')
+def rd(oe, bank, page, offset, rd_len, raw_data):
+    '''Read cmis data from /sys/bus/i2c/devices/XX-0050/eeprom'''
+    oe_list = oe.split('-')
+    if len(oe_list) > 1:
+        range_start = min(int(oe_list[0]), int(oe_list[1]))
+        range_end = max(int(oe_list[0]), int(oe_list[1]))
+        oe_list = range(range_start, range_end+1)
+    
+    for oe in oe_list:
+        # print(oe, bank, page, offset, rd_len)
+        argv = [0, 0, oe, bank, page, offset, rd_len]
+        cmis_sysfs_read_parse(argv, raw_data)
+
+@cli.command()
+@click.argument('oe', metavar='<oe-oe>', required=True)
+@click.argument('bank', metavar='<bank>', required=True)
+@click.argument('page', metavar='<page>', required=True)
+@click.argument('offset', metavar='<offset>', required=True)
+@click.argument('wr_data', metavar='<wr_data>', required=True)
+@click.option('-raw', '--raw_data', is_flag=True, help='write quietly')
+def wr(oe, bank, page, offset, wr_data, raw_data):
+    '''Write cmis data through /sys/bus/i2c/devices/XX-0050/eeprom'''
+    oe_list = oe.split('-')
+    if len(oe_list) > 1:
+        range_start = min(int(oe_list[0]), int(oe_list[1]))
+        range_end = max(int(oe_list[0]), int(oe_list[1]))
+        oe_list = range(range_start, range_end+1)
+    
+    for oe in oe_list:
+        # print(oe, bank, page, offset, wr_data)
+        argv = [0, 0, oe, bank, page, offset, wr_data]
+        cmis_sysfs_write_parse(argv, raw_data)
+
+if __name__ == '__main__':
+    global cmis_util
+    cmis_util = oe_cmis_sysfs_rw()
+    cli()

@@ -390,7 +390,7 @@ class TestMainCLI(unittest.TestCase):
 
         result = runner.invoke(main, ['--upgrade', '--clear-semaphore'])
 
-        mock_handle_upgrade.assert_called_once_with(False, True, True)
+        mock_handle_upgrade.assert_called_once_with(False, True, True, False)
 
 
 def mock_open():

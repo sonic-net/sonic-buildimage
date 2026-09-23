@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import re
+import tempfile
 
 from unittest import TestCase
 import tests.common_utils as utils
@@ -22,6 +23,7 @@ class TestJ2Files(TestCase):
         self.ztp_inband_ip = os.path.join(self.test_dir, "sample-ztp-inband-ip.json")
         self.t0_minigraph = os.path.join(self.test_dir, 't0-sample-graph.xml')
         self.t0_minigraph_syslog = os.path.join(self.test_dir, 't0-sample-graph-syslog.xml')
+        self.syslog_server_vrf = os.path.join(self.test_dir, 'syslog-server-vrf.json')
         self.t0_minigraph_secondary_subnets = os.path.join(self.test_dir, 't0-sample-graph-secondary-subnets.xml')
         self.t0_minigraph_common_dhcp_relay = os.path.join(self.test_dir, 't0-sample-graph-common-dhcp-relay.xml')
         self.t0_mvrf_minigraph = os.path.join(self.test_dir, 't0-sample-graph-mvrf.xml')
@@ -143,6 +145,11 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog'), self.output_file))
 
+        # ZTP disabled, MGMT_INTERFACE defined, SYSLOG_SERVER with per-server VRF
+        argument = ['-m', self.t0_minigraph_syslog, '-j', self.syslog_server_vrf, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog_vrf'), self.output_file))
+
         argument = ['-m', self.t0_mvrf_minigraph, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'mvrf_interfaces'), self.output_file))
@@ -228,6 +235,207 @@ class TestJ2Files(TestCase):
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                   'docker-dhcp-relay.supervisord.conf'), self.output_file))
 
+    def test_dhcp_relay_rejects_invalid_interface_names(self):
+        wait_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'wait_for_intf.sh.j2'
+        )
+        supervisor_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'docker-dhcp-relay.supervisord.conf.j2'
+        )
+        temp_dir = tempfile.mkdtemp(prefix='dhcp-relay-interface-validation-')
+        config_path = os.path.join(temp_dir, 'config.json')
+        invalid_names = (
+            '',
+            '-Vlan100',
+            'Vlan100;touch',
+            'Vlan100$(touch)',
+            'Vlan100`touch`',
+            'Vlan100 * ?',
+            "Vlan100'",
+            'Vlan100"',
+            'Vlan100\\name',
+            'Vlan100/name',
+            'Vlan100,other',
+            'Vlan100:other',
+            'Vlan100]other',
+            'Vlan100%(ENV_HOME)s',
+            'Vlan100\ncommand=/bin/sh -c true',
+            'Vlan100\n',
+            'Vlan100\r\nautostart=true',
+            'Vlan100\targument',
+            'Vl\u00e1n100',
+            'Vlan100\0suffix',
+        )
+
+        try:
+            for invalid_name in invalid_names:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        invalid_name: {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        '{}|192.0.2.1/24'.format(invalid_name): {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                for template in (wait_template, supervisor_template):
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        subprocess.check_output(
+                            self.script_file + ['-j', config_path, '-t', template],
+                            stderr=subprocess.STDOUT
+                        )
+                    output = error.exception.output.decode()
+                    self.assertIn('Invalid interface name', output)
+
+            for invalid_name in invalid_names:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        invalid_name: {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        invalid_name: {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                with self.assertRaises(subprocess.CalledProcessError) as error:
+                    subprocess.check_output(
+                        self.script_file + [
+                            '-j', config_path, '-t', supervisor_template
+                        ],
+                        stderr=subprocess.STDOUT
+                    )
+                output = error.exception.output.decode()
+                self.assertIn('Invalid interface name', output)
+
+            table_inputs = (
+                ('INTERFACE', 'Ethernet0\ncommand=/bin/sh -c true'),
+                ('PORTCHANNEL_INTERFACE', 'PortChannel1\r\nautostart=true'),
+                ('MGMT_INTERFACE', 'eth0\npriority=1'),
+            )
+            for table, invalid_name in table_inputs:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        'Vlan100': {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        'Vlan100|192.0.2.1/24': {},
+                    },
+                    table: {
+                        '{}|198.51.100.1/24'.format(invalid_name): {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                templates = [supervisor_template]
+                if table != 'MGMT_INTERFACE':
+                    templates.append(wait_template)
+                for template in templates:
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        subprocess.check_output(
+                            self.script_file + [
+                                '-j', config_path, '-t', template
+                            ],
+                            stderr=subprocess.STDOUT
+                        )
+                    output = error.exception.output.decode()
+                    self.assertIn('Invalid interface name', output)
+
+            invalid_ipv6_name = 'Vlan200\ncommand=/bin/sh -c true'
+            config = {
+                'VLAN_INTERFACE': {
+                    '{}|2001:db8::1/64'.format(invalid_ipv6_name): {},
+                },
+                'DHCP_RELAY': {
+                    invalid_ipv6_name: {
+                        'dhcpv6_servers': ['2001:db8::10'],
+                    },
+                },
+            }
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+            with self.assertRaises(subprocess.CalledProcessError) as error:
+                subprocess.check_output(
+                    self.script_file + [
+                        '-j', config_path, '-t', wait_template
+                    ],
+                    stderr=subprocess.STDOUT
+                )
+            self.assertIn(
+                'Invalid interface name', error.exception.output.decode()
+            )
+
+            valid_names = (
+                'Ethernet0',
+                'Ethernet-BP0',
+                'Ethernet-IB0',
+                'Ethernet-Rec0',
+                'Ethernet0.100',
+            )
+            config = {
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'deployment_id': '0',
+                    },
+                },
+                'VLAN': {
+                    'Vlan100': {
+                        'dhcp_servers': ['192.0.2.10'],
+                    },
+                },
+                'VLAN_INTERFACE': {
+                    'Vlan100': {},
+                    'Vlan100|192.0.2.1/24': {},
+                },
+                'INTERFACE': {
+                    '{}|198.51.100.{}/31'.format(name, index * 2): {}
+                    for index, name in enumerate(valid_names, 1)
+                },
+                'PORTCHANNEL_INTERFACE': {
+                    'PortChannel0001|203.0.113.1/31': {},
+                },
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.1/24': {},
+                },
+            }
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+            for template in (wait_template, supervisor_template):
+                rendered = self.run_script([
+                    '-j', config_path, '-t', template
+                ])
+                for name in valid_names:
+                    self.assertIn(name, rendered)
+        finally:
+            shutil.rmtree(temp_dir)
+
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-router-advertiser', 'radvd.conf.j2')
@@ -267,6 +475,199 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(expected_mgmt_ipv4_with_ports, self.output_file))
 
+    def test_lldp_hostname_injection_stripped(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        payloads = (
+            ('LF', 'switch-t0\nconfigure system description injected'),
+            ('CR', 'switch-t0\rconfigure system description injected'),
+            ('CRLF', 'switch-t0\r\nconfigure system description injected'),
+        )
+
+        for separator, payload in payloads:
+            additional_data = json.dumps({
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'hostname': payload,
+                    },
+                },
+            })
+            argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            hostname_lines = [
+                line for line in output.splitlines()
+                if line.startswith('configure system hostname ')
+            ]
+            self.assertEqual(
+                len(hostname_lines),
+                1,
+                '{} payload created multiple hostname lines'.format(separator)
+            )
+            self.assertEqual(
+                hostname_lines[0],
+                'configure system hostname switch-t0configure system description injected',
+                '{} payload was not collapsed onto the hostname line'.format(separator)
+            )
+            self.assertNotIn(
+                '\r',
+                output,
+                '{} payload left a carriage return in the rendered output'.format(separator)
+            )
+            self.assertFalse(
+                any(
+                    line.strip().startswith('configure system description injected')
+                    for line in output.splitlines()
+                ),
+                '{} payload created a standalone injected command'.format(separator)
+            )
+
+    def test_lldp_hostname_clean(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        additional_data = json.dumps({
+            'DEVICE_METADATA': {
+                'localhost': {
+                    'hostname': 'DUT_ASW-01.example',
+                },
+            },
+        })
+
+        argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('configure system hostname DUT_ASW-01.example\n', output)
+    def render_snmpd_conf(self, users):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_USER': users}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def render_snmpd_community_conf(self, communities):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_COMMUNITY': communities}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def test_snmpd_community_rendering(self):
+        communities = {
+            'readcommunity': {'TYPE': 'RO'},
+            'writecommunity': {'TYPE': 'RW'}
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity readcommunity\n', output)
+        self.assertIn('rocommunity6 readcommunity\n', output)
+        self.assertIn('rwcommunity writecommunity\n', output)
+        self.assertIn('rwcommunity6 writecommunity\n', output)
+
+    def test_snmpd_community_configuration_injection(self):
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        communities = {}
+        expected_values = []
+
+        for community_type in ('RO', 'RW'):
+            for separator_index, separator in enumerate(whitespace_separators):
+                marker = '{}_{}'.format(community_type, separator_index)
+                injected_tokens = 'rwcommunity evil_{}'.format(marker)
+                unsafe_community = 'safe_{}{}{}'.format(marker, separator, injected_tokens)
+                safe_community = 'safe_{}{}'.format(marker, injected_tokens.replace(' ', ''))
+                community = unsafe_community
+                communities[community] = {'TYPE': community_type}
+                expected_values.append((community_type, unsafe_community, safe_community, injected_tokens))
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for community_type, unsafe_community, safe_community, injected_tokens in expected_values:
+            directive = 'rocommunity' if community_type == 'RO' else 'rwcommunity'
+            self.assertNotIn(unsafe_community, output)
+            self.assertIn('{} {}\n'.format(directive, safe_community), output)
+            self.assertIn('{}6 {}\n'.format(directive, safe_community), output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
+
+    def test_snmpd_user_rendering(self):
+        users = {
+            'readuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RO',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            },
+            'writeuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RW',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            }
+        }
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertIn('rouser readuser Priv\n', output)
+        self.assertIn('CreateUser readuser SHA auth_pass AES encry_pass\n', output)
+        self.assertIn('rwuser writeuser Priv\n', output)
+        self.assertIn('CreateUser writeuser SHA auth_pass AES encry_pass\n', output)
+
+    def test_snmpd_user_configuration_injection(self):
+        rendered_fields = (
+            'name',
+            'SNMP_USER_TYPE',
+            'SNMP_USER_AUTH_TYPE',
+            'SNMP_USER_AUTH_PASSWORD',
+            'SNMP_USER_ENCRYPTION_TYPE',
+            'SNMP_USER_ENCRYPTION_PASSWORD'
+        )
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        users = {}
+        expected_values = []
+
+        for permission in ('RO', 'RW'):
+            for field_index, field in enumerate(rendered_fields):
+                for separator_index, separator in enumerate(whitespace_separators):
+                    marker = '{}_{}_{}'.format(permission, field_index, separator_index)
+                    injected_tokens = 'rocommunity {}'.format(marker)
+                    values = {
+                        'name': 'user{}'.format(marker),
+                        'SNMP_USER_TYPE': 'Priv',
+                        'SNMP_USER_PERMISSION': permission,
+                        'SNMP_USER_AUTH_TYPE': 'SHA',
+                        'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                        'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                        'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+                    }
+                    unsafe_value = values[field] + separator + injected_tokens
+                    safe_value = values[field] + injected_tokens.replace(' ', '')
+                    values[field] = unsafe_value
+                    user = values.pop('name')
+                    users[user] = values
+                    expected_values.append((unsafe_value, safe_value, injected_tokens))
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for unsafe_value, safe_value, injected_tokens in expected_values:
+            self.assertNotIn(unsafe_value, output)
+            self.assertIn(safe_value, output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
+
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-t', ipinip_file]
@@ -282,6 +683,15 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
 
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_subnet_decap_enable.json')
+        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
+    def test_ipinip_disabled(self):
+        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
+        extra_data = {"SYSTEM_DEFAULTS": {"ip_decap": {"status": "disabled"}}}
+        argument = ['-a', json.dumps(extra_data), '-t', ipinip_file]
+        self.run_script(argument, output_file=self.output_file)
+
+        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
     def test_l2switch_template(self):
@@ -674,6 +1084,11 @@ class TestJ2Files(TestCase):
         # copy buffers_config.j2 to the SKU directory to have all templates in one directory
         buffers_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
         shutil.copy2(buffers_config_file, dir_path)
+        buffers_config_organization_file = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'build_templates',
+            'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file):
+            shutil.copy2(buffers_config_organization_file, dir_path)
 
         minigraph = os.path.join(self.test_dir, minigraph)
         argument = ['-m', minigraph, '-p', port_config_ini_file, '-t', buffers_file]
@@ -682,9 +1097,15 @@ class TestJ2Files(TestCase):
         # cleanup
         buffers_config_file_new = os.path.join(dir_path, 'buffers_config.j2')
         os.remove(buffers_config_file_new)
+        buffers_config_organization_file_new = os.path.join(
+            dir_path, 'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file_new):
+            os.remove(buffers_config_organization_file_new)
         self.remove_machine_conf(file_exist, dir_exist)
 
-        out_file_dir = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR)
+        out_file_dir = os.path.dirname(
+            utils.get_sample_output_file(self.test_dir, expected)
+        )
         expected_files = [expected, self.modify_cable_len(expected, out_file_dir)]
         match = False
         diff = ''
@@ -811,8 +1232,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "t1": {
@@ -828,8 +1248,8 @@ class TestJ2Files(TestCase):
         }
         for _, v in test_list.items():
             argument = ["-m", v["graph"], "-p", v["port_config"], "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -841,8 +1261,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {
@@ -857,8 +1276,8 @@ class TestJ2Files(TestCase):
         for _, v in test_list.items():
             os.environ["NAMESPACE_ID"] = v["namespace_id"]
             argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -871,8 +1290,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {
@@ -1028,6 +1446,191 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
+        """welf_firewall_name injection payload must be collapsed to a harmless single line.
+
+        Payload: 'fw1\\naction(type="omprog" binary="/tmp/evil")'
+        The newline strip is the critical defence — without it the action() lands on its own
+        line and rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence
+        in depth.  The test checks both independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'fw1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": payload}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The fw= field must not be split across multiple lines.
+        fw_lines = [l for l in output.splitlines() if 'fw=' in l and 'WelfRemote' not in l]
+        self.assertEqual(len(fw_lines), 1, 'fw= field was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_welf_firewall_name_clean(self):
+        """welf_firewall_name with a safe value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": "clean-fw-name"}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-fw-name', output,
+                      'Clean welf_firewall_name value not found in rendered rsyslog.conf')
+
+    def test_rsyslog_conf_hostname_injection_stripped(self):
+        """DEVICE_METADATA hostname injection payload must be collapsed to a harmless single line.
+
+        Payload: 'host1\\naction(type="omprog" binary="/tmp/evil")'
+        hostname is rendered unquoted inside double-quoted $template directives with no prior
+        sanitization; without the newline strip the injected action() lands on its own line and
+        rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence in depth.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'host1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": payload,
+            "os_version": "1.0.0",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The $template directives must not be split across multiple lines.
+        template_lines = [l for l in output.splitlines() if l.startswith('$template SONiC')]
+        self.assertEqual(len(template_lines), 3,
+                         '$template directive was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_os_version_injection_stripped(self):
+        """DEVICE_METADATA os_version injection payload must be collapsed to a harmless single line.
+
+        Payload: '1.0.0\\naction(type="omprog" binary="/tmp/evil")'
+        os_version is rendered unquoted inside the SONiCForwardFormatWithOsVersion $template
+        directive (rsyslog.conf.j2:65) with no prior sanitization; without the newline strip
+        the injected action() lands on its own line and rsyslog executes /tmp/evil as root.
+        This mirrors test_rsyslog_conf_hostname_injection_stripped but attacks os_version
+        instead of hostname, since both values share the same $template line but are
+        sanitized by two independent filter chains (rsyslog.conf.j2:52-53) — a regression
+        in the os_version chain alone would not be caught by the hostname-only test above.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = '1.0.0\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "clean-host",
+            "os_version": payload,
+            "forward_with_osversion": "true",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The $template directives must not be split across multiple lines.
+        template_lines = [l for l in output.splitlines() if l.startswith('$template SONiC')]
+        self.assertEqual(len(template_lines), 3,
+                         '$template directive was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_hostname_and_os_version_special_chars_stripped(self):
+        """CR, backslash, and percent characters must be stripped from both hostname and
+        os_version, not just the newline/quote characters exercised by the injection tests
+        above. rsyslog.conf.j2:52-53 chain five separate .replace() calls per value
+        (\\n, \\r, ", \\, %); a regression that dropped one of the CR/backslash/percent
+        replacements would still pass the newline/quote-focused tests, so this asserts each
+        of those characters independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        hostname_payload = 'ho\rst\\na%me'
+        os_version_payload = '1.0\r.0\\%beta'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": hostname_payload,
+            "os_version": os_version_payload,
+            "forward_with_osversion": "true",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # Expected values after stripping \n, \r, ", \\, % — mirrors the filter chain in
+        # rsyslog.conf.j2:52-53.
+        def sanitize(value):
+            for ch in ('\n', '\r', '"', '\\', '%'):
+                value = value.replace(ch, '')
+            return value
+
+        expected_hostname = sanitize(hostname_payload)
+        expected_os_version = sanitize(os_version_payload)
+
+        self.assertIn(expected_hostname, output,
+                      'Sanitized hostname value not found in rendered rsyslog.conf')
+        self.assertIn(expected_os_version, output,
+                      'Sanitized os_version value not found in rendered rsyslog.conf')
+        self.assertNotIn(hostname_payload, output,
+                         'Unsanitized hostname payload (with CR/backslash/percent) leaked into rendered rsyslog.conf')
+        self.assertNotIn(os_version_payload, output,
+                         'Unsanitized os_version payload (with CR/backslash/percent) leaked into rendered rsyslog.conf')
+
+    def test_rsyslog_conf_hostname_clean(self):
+        """A safe hostname value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "clean-host",
+            "os_version": "1.0.0",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-host', output,
+                      'Clean hostname value not found in rendered rsyslog.conf')
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

@@ -4,6 +4,7 @@ DOCKER_BASE_TRIXIE = docker-base-trixie.gz
 $(DOCKER_BASE_TRIXIE)_PATH = $(DOCKERS_PATH)/docker-base-trixie
 
 $(DOCKER_BASE_TRIXIE)_DEPENDS += $(SOCAT)
+$(DOCKER_BASE_TRIXIE)_DEPENDS += $(IPROUTE2)
 
 GDB = gdb
 GDBSERVER = gdbserver

@@ -71,12 +71,21 @@ if [ $? -ne 0 ]; then
     SONIC_PLATFORM_WHEEL="/usr/share/sonic/platform/sonic_platform-1.0-py3-none-any.whl"
     echo "sonic-platform package not installed, attempting to install..."
     if [ -e ${SONIC_PLATFORM_WHEEL} ]; then
-       pip3 install ${SONIC_PLATFORM_WHEEL}
-       if [ $? -eq 0 ]; then
-          echo "Successfully installed ${SONIC_PLATFORM_WHEEL}"
+       mapfile -t PLATFORM_WHEELS < <(ls /usr/share/sonic/platform/*.whl 2>/dev/null)
+       echo "Installing platform wheels: ${PLATFORM_WHEELS[*]}"
+       # Install from the local wheel dir only, without resolving dependencies: the
+       # container has no network, so a PyPI lookup would just hang and fail.
+       if pip3 install --root-user-action=ignore --no-deps --no-index --find-links /usr/share/sonic/platform "${PLATFORM_WHEELS[@]}"; then
+          echo "Successfully installed platform wheels"
           SONIC_PLATFORM_API_PYTHON_VERSION=3
        else
-          echo "Error: Failed to install ${SONIC_PLATFORM_WHEEL}"
+          echo "Error: Failed to install all platform wheels. Attempting fallback..."
+          if pip3 install --root-user-action=ignore --no-deps --no-index --find-links /usr/share/sonic/platform "${SONIC_PLATFORM_WHEEL}"; then
+             echo "Successfully installed fallback: ${SONIC_PLATFORM_WHEEL}"
+             SONIC_PLATFORM_API_PYTHON_VERSION=3
+          else
+             echo "Error: Failed to install fallback platform wheel"
+          fi
        fi
     else
        echo "Error: Unable to locate ${SONIC_PLATFORM_WHEEL}"
@@ -84,6 +93,14 @@ if [ $? -ne 0 ]; then
 else
     SONIC_PLATFORM_API_PYTHON_VERSION=3
 fi
+
+# Copy platform-specific supervisor configs if they exist (Aspeed BMC platforms)
+{% if CONFIGURED_PLATFORM == "aspeed" %}
+if [ -n "$(ls /usr/share/sonic/platform/*.supervisord.conf 2>/dev/null)" ]; then
+    echo "Installing platform-specific supervisor configs..."
+    cp /usr/share/sonic/platform/*.supervisord.conf /etc/supervisor/conf.d/
+fi
+{% endif %}
 
 {% if CONFIGURED_PLATFORM == "mellanox" %}
 
@@ -117,13 +134,14 @@ if [ -e $SENSORS_CONF_FILE ]; then
     mkdir -p /etc/sensors.d
     PSU_SENSORS_CONF_UPDATER="/usr/share/sonic/platform/psu_sensors_conf_updater"
     if [ -e $PSU_SENSORS_CONF_UPDATER ]; then
-        source $PSU_SENSORS_CONF_UPDATER 
-        update_psu_sensors_configuration $SENSORS_CONF_FILE
-        if [ -f /tmp/sensors.conf ]; then
-            SENSORS_CONF_FILE="/tmp/sensors.conf"
+        source $PSU_SENSORS_CONF_UPDATER
+        # Atomically install updated conf; falls back to plain copy on failure
+        if ! update_psu_sensors_configuration "$SENSORS_CONF_FILE" /etc/sensors.d/sensors.conf; then
+            /bin/cp -f "$SENSORS_CONF_FILE" /etc/sensors.d/sensors.conf
         fi
+    else
+        /bin/cp -f "$SENSORS_CONF_FILE" /etc/sensors.d/sensors.conf
     fi
-    /bin/cp -f $SENSORS_CONF_FILE /etc/sensors.d/sensors.conf
 fi
 
 if [ -e $FANCONTROL_CONF_FILE ]; then
@@ -140,7 +158,17 @@ if [ -e $MODULAR_CHASSISDB_CONF_FILE ] && [[ $disaggregated_chassis -ne 1 ]]; th
     IS_MODULAR_CHASSIS=1
 fi
 
-confvar="{\"HAVE_SENSORS_CONF\":$HAVE_SENSORS_CONF, \"HAVE_FANCONTROL_CONF\":$HAVE_FANCONTROL_CONF, \"API_VERSION\":$SONIC_PLATFORM_API_PYTHON_VERSION, \"IS_MODULAR_CHASSIS\":$IS_MODULAR_CHASSIS}"
+# Determine if this pmon instance is running on the Switch BMC.
+# switch_bmc=1 is set in platform_env.conf on BMC systems.
+IS_SWITCH_BMC=0
+if [ -e $PLATFORM_ENV_CONF_FILE ]; then
+    bmc_val=$(grep -s '^switch_bmc=' $PLATFORM_ENV_CONF_FILE | cut -d= -f2 | tr -d '[:space:]')
+    if [[ "$bmc_val" == "1" ]]; then
+        IS_SWITCH_BMC=1
+    fi
+fi
+
+confvar="{\"HAVE_SENSORS_CONF\":$HAVE_SENSORS_CONF, \"HAVE_FANCONTROL_CONF\":$HAVE_FANCONTROL_CONF, \"API_VERSION\":$SONIC_PLATFORM_API_PYTHON_VERSION, \"IS_MODULAR_CHASSIS\":$IS_MODULAR_CHASSIS, \"IS_SWITCH_BMC\":$IS_SWITCH_BMC}"
 
 if [ -e $PMON_DAEMON_CONTROL_FILE ];
 then

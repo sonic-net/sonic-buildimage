@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import redis
 import threading
 from sonic_platform_base.module_base import ModuleBase
 from sonic_platform_base.chassis_base import ChassisBase
@@ -42,7 +41,7 @@ class Module(ModuleBase):
     STATE_DB = 6
     STATE_MODULAR_CHASSIS_SLOT_TABLE = 'MODULAR_CHASSIS_SLOT|{}'
     FIELD_SEQ_NO = 'seq_no'
-    redis_client = redis.Redis(db = STATE_DB)
+    redis_client = None
 
     def __init__(self, slot_id):
         super(Module, self).__init__()
@@ -120,14 +119,23 @@ class Module(ModuleBase):
         if state != self.current_state:
             self._re_init()
         elif seq_no != self.seq_no:
-            if state == Module.STATE_ACTIVATED: # LC has been replaced, need re-initialize
+            if state == Module.STATE_ACTIVATED:  # LC has been replaced, need re-initialize
                 self._re_init()
         self.current_state = state
         self.seq_no = seq_no
 
+    @classmethod
+    def _get_redis_client(cls):
+        # Lazily create the STATE_DB client so that importing this module does not
+        # pull in the redis package (saves ~20MB RSS in psud).
+        if cls.redis_client is None:
+            import redis
+            cls.redis_client = redis.Redis(db=cls.STATE_DB)
+        return cls.redis_client
+
     def _get_seq_no(self):
         try:
-            seq_no = Module.redis_client.hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
+            seq_no = Module._get_redis_client().hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
             seq_no = seq_no.decode().strip()
         except Exception as e:
             seq_no = 0
@@ -137,7 +145,6 @@ class Module(ModuleBase):
         self._thermal_list = []
         self._sfp_list = []
         self._sfp_count = 0
-
 
     ##############################################
     # THERMAL methods
@@ -286,8 +293,13 @@ class DpuModule(ModuleBase):
         self.MLX_DPU_REBOOT_CAUSE_WARM = 0
         self.MLX_DPU_REBOOT_CAUSE_COLD = 1
         self.MLX_DPU_REBOOT_CAUSE_WATCHDOG = 2
-        self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
-        self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
+        self.chassis_state_db = None
+
+    def get_chassis_db_conn(self):
+        if not self.chassis_state_db:
+            self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
+            self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
+        return self.chassis_state_db
 
     def get_base_mac(self):
         """
@@ -460,13 +472,29 @@ class DpuModule(ModuleBase):
                     # Extract the value after the '|'
                     reset_reason_value = line.split('|')[1].strip()
                     break
-            if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+            if reset_reason_value and int(reset_reason_value, 16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
                 logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
                 return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
         # Check for other reboot causes
         for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
                 logger.log_notice(f"Reset reason for {self._name} is {rd[0]}")
+                return rd
+        return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
+
+    def get_midplane_down_reason(self):
+        """
+        Retrieves the reason for the midplane down.
+        Using the reboot cause sysfs files to indicate the midplane down reason.
+
+        Returns:
+            A tuple (string, string) where the first element is one of the
+            ChassisBase.REBOOT_CAUSE_* strings and the second element is a
+            description of the midplane down reason.
+        """
+        for f, rd in self.reboot_cause_map.items():
+            if utils.read_int_from_file(f) == 1:
+                logger.log_notice(f"Midplane down reason for {self._name} is {rd[0]}")
                 return rd
         return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
 
@@ -562,10 +590,11 @@ class DpuModule(ModuleBase):
         dpu_drive_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{nvme}"
         return_dict = {}
         try:
-            return_dict[ddr] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
-            return_dict[cpu] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
-            return_dict[nvme] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
+            chassis_state_db = self.get_chassis_db_conn()
+            return_dict[ddr] = chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
+            return_dict[cpu] = chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
+            return_dict[nvme] = chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
         except Exception as e:
-            logger.log_error(f"Failed to check obtain DPU temperature informatoin for {self.get_name()}! {e}")
+            logger.log_error(f"Failed to obtain DPU temperature information for {self.get_name()}! {e}")
             return {}
         return return_dict

@@ -18,10 +18,13 @@ else
     udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 fi
 
-contain_dhcp_server=$(sonic-db-cli CONFIG_DB keys "FEATURE|dhcp_server")
-if [ $contain_dhcp_server ]; then
-    docker0_ip=$(ip -o -4 addr list docker0 | awk '{print $4}' | cut -d/ -f1)
-fi
+bridged_syslog_features="dhcp_server redfish"
+for feature in $bridged_syslog_features; do
+    if [ -n "$(sonic-db-cli CONFIG_DB keys "FEATURE|$feature")" ]; then
+        docker0_ip=$(ip -o -4 addr list docker0 | awk '{print $4}' | cut -d/ -f1)
+        break
+    fi
+done
 
 hostname=$(hostname)
 
@@ -55,8 +58,25 @@ fi
 TMPFILE=$(mktemp /tmp/rsyslog.conf.XXXXXX)
 trap 'rm -f "$TMPFILE"' EXIT
 
+# Build the -a argument with jq so that hostname/os_version (which can
+# contain quotes, backslashes, or other JSON-breaking characters) are
+# safely encoded, rather than interpolated as raw strings into a
+# hand-built JSON literal. The rsyslog.conf.j2 template also strips
+# newlines/quotes/backslashes/percent signs from these values before
+# rendering them into $template directives; this jq encoding ensures the
+# JSON itself is well-formed so sonic-cfggen can parse it in the first
+# place.
+json_args=$(jq -n \
+    --arg udp_server_ip "$udp_server_ip" \
+    --arg hostname "$hostname" \
+    --arg docker0_ip "$docker0_ip" \
+    --arg forward_with_osversion "$syslog_with_osversion" \
+    --arg os_version "$os_version" \
+    --arg syslog_counter "$syslog_counter" \
+    '{udp_server_ip: $udp_server_ip, hostname: $hostname, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter}')
+
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
-    -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\", \"syslog_counter\": \"$syslog_counter\"}" \
+    -a "$json_args" \
     > "$TMPFILE"
 
 if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
@@ -68,6 +88,12 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
         exit 1
     fi
 else
-    # Config unchanged — just signal rsyslog to re-open log files
-    systemctl kill -s HUP rsyslog
+    if [[ ($NUM_ASIC -gt 1) ]]; then
+        # multi-asic, docker0 IP interface may not be present when rsyslog.service was started.
+        # restart the rsyslog for TCP port socket binding.
+        systemctl restart rsyslog
+    else
+        # Config unchanged — just signal rsyslog to re-open log files
+        systemctl kill -s HUP rsyslog
+    fi
 fi

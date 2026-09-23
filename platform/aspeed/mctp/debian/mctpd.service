@@ -1,0 +1,12 @@
+[Unit]
+Description=MCTP control protocol daemon
+Wants=mctp-local.target
+After=mctp-local.target
+
+[Service]
+Type=dbus
+BusName=au.com.codeconstruct.MCTP1
+ExecStart=/usr/sbin/mctpd -v
+
+[Install]
+WantedBy=multi-user.target

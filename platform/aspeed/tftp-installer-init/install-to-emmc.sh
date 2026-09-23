@@ -4,7 +4,8 @@
 # Default: /tmp/sonic-aspeed-arm64-emmc.img.gz
 # After running, reboot to boot from eMMC.
 # Initramfs must provide: sgdisk, wipefs, blockdev, partprobe, e2fsck,
-# gunzip, dd, blkid, mount. (TFTP installer ramfs has no swap and no eMMC mounts.)
+# gunzip, dd (with conv=sparse — coreutils, not BusyBox's), blkdiscard,
+# blkid, mount. (TFTP installer ramfs has no swap and no eMMC mounts.)
 
 IMG="${1:-/tmp/sonic-aspeed-arm64-emmc.img.gz}"
 EMMC="/dev/mmcblk0"
@@ -33,11 +34,18 @@ sync
 blockdev --rereadpt "$EMMC" 2>/dev/null || true
 partprobe "$EMMC" 2>/dev/null || true
 
+# -z (BLKZEROOUT): the sparse dd below assumes skipped regions read as zero;
+# plain discard does not guarantee that on this eMMC (discard_zeroes_data=0).
+echo "Zeroing all blocks on $EMMC..."
+blkdiscard -z "$EMMC"
+sync
+
 echo "Writing $IMG to $EMMC..."
-# Smaller bs + full pipe reads: fewer phys_seg per I/O on some MMC hosts than bs=1M; conv=fsync at end.
+# Smaller bs + full pipe reads: fewer phys_seg per I/O on some MMC hosts than bs=1M; conv=sparse,fsync at end.
+# sparse: lseek() over all-zero source blocks instead of writing them.
 # Pipeline exit status is only from dd; corrupt/truncated gzip can still yield dd exit 0, so require gunzip success.
 gz_ok=$(mktemp) || exit 1
-(gunzip -c "$IMG" && echo ok >"$gz_ok") | dd of="$EMMC" bs=128k iflag=fullblock conv=fsync
+(gunzip -c "$IMG" && echo ok >"$gz_ok") | dd of="$EMMC" bs=128k iflag=fullblock conv=sparse,fsync
 DD_RC=$?
 if [ "$DD_RC" -ne 0 ] || [ ! -s "$gz_ok" ]; then
     rm -f "$gz_ok"
@@ -82,3 +90,57 @@ if [ -f "$MACHINE_CONF_SRC" ] && [ -s "$MACHINE_CONF_SRC" ]; then
         echo "Warning: SONiC-OS partition not found; could not write machine.conf to eMMC."
     fi
 fi
+
+# Post-write sanity check: mount the SONiC-OS partition and confirm an image-* directory
+# is present. This catches the rare case where dd reported success but the eMMC didn't
+# actually persist a valid SONiC payload. Also captures the image dir for /init's banner.
+sync
+blockdev --rereadpt "$EMMC" 2>/dev/null || true
+partprobe "$EMMC" 2>/dev/null || true
+INSTALL_PART=$(blkid -L SONiC-OS 2>/dev/null || true)
+# blkid -L searches every visible block device; reject any match that isn't on our target eMMC
+# (e.g. a USB stick with the same label) so we don't verify the wrong disk.
+case "$INSTALL_PART" in
+    "${EMMC}"*) ;;
+    *) INSTALL_PART="" ;;
+esac
+if [ -z "$INSTALL_PART" ] && [ -b "${EMMC}p1" ]; then
+    INSTALL_PART="${EMMC}p1"
+fi
+INSTALL_IMAGE_DIR=""
+INSTALL_VERIFY_ERR=""
+if [ -n "$INSTALL_PART" ] && [ -b "$INSTALL_PART" ]; then
+    MNT_STATUS=$(mktemp -d)
+    if mount -t ext4 -o ro "$INSTALL_PART" "$MNT_STATUS" 2>/dev/null; then
+        for d in "$MNT_STATUS"/image-*; do
+            [ -d "$d" ] || continue
+            if [ ! -s "$d/boot/sonic_arm64.fit" ]; then
+                INSTALL_VERIFY_ERR="$(basename "$d")/boot/sonic_arm64.fit missing or empty"
+                continue
+            fi
+            if [ ! -s "$d/fs.squashfs" ]; then
+                INSTALL_VERIFY_ERR="$(basename "$d")/fs.squashfs missing or empty"
+                continue
+            fi
+            INSTALL_IMAGE_DIR=$(basename "$d")
+            break
+        done
+        umount "$MNT_STATUS" 2>/dev/null || true
+        [ -z "$INSTALL_IMAGE_DIR" ] && [ -z "$INSTALL_VERIFY_ERR" ] && \
+            INSTALL_VERIFY_ERR="no image-* directory on $INSTALL_PART"
+    else
+        INSTALL_VERIFY_ERR="could not mount $INSTALL_PART read-only"
+    fi
+    rmdir "$MNT_STATUS" 2>/dev/null || true
+else
+    INSTALL_VERIFY_ERR="SONiC-OS partition not found on $EMMC"
+fi
+if [ -z "$INSTALL_IMAGE_DIR" ]; then
+    echo "Error: post-write verification failed: $INSTALL_VERIFY_ERR"
+    exit 1
+fi
+{
+    echo "target_device=$EMMC"
+    echo "image_dir=$INSTALL_IMAGE_DIR"
+} > /tmp/sonic-bmc-install-status
+echo "Image write complete: image_dir=$INSTALL_IMAGE_DIR on $EMMC"
