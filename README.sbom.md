@@ -171,8 +171,9 @@ shown after this list.
   `pkg:github/sonic-net/<repo>@<commit>`. `externalReferences` records
   the submodule URL and pinned commit. No pedigree unless a sibling
   `src/<pkg>.patch/` exists. `sonic-linux-kernel` is the exception:
-  it rebuilds Debian's `linux` source, so its `.deb`s are named like
-  any other patched Debian source (see the kernel entry below).
+  it rebuilds Debian's `linux` source, so its `.deb`s take the
+  `pkg:deb/sonic/<name>@<version>` identity instead. Being a submodule,
+  it gets no Debian `.dsc` ancestor (see the kernel entry below).
 
 - **Patched upstream Debian sources** (`dget` + sidecar patches in
   `src/<pkg>/patch/`). Primary: `pkg:deb/sonic/<name>@<version>`.
