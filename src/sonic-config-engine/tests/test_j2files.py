@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import re
+import tempfile
 
 from unittest import TestCase
 import tests.common_utils as utils
@@ -233,6 +234,207 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                   'docker-dhcp-relay.supervisord.conf'), self.output_file))
+
+    def test_dhcp_relay_rejects_invalid_interface_names(self):
+        wait_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'wait_for_intf.sh.j2'
+        )
+        supervisor_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'docker-dhcp-relay.supervisord.conf.j2'
+        )
+        temp_dir = tempfile.mkdtemp(prefix='dhcp-relay-interface-validation-')
+        config_path = os.path.join(temp_dir, 'config.json')
+        invalid_names = (
+            '',
+            '-Vlan100',
+            'Vlan100;touch',
+            'Vlan100$(touch)',
+            'Vlan100`touch`',
+            'Vlan100 * ?',
+            "Vlan100'",
+            'Vlan100"',
+            'Vlan100\\name',
+            'Vlan100/name',
+            'Vlan100,other',
+            'Vlan100:other',
+            'Vlan100]other',
+            'Vlan100%(ENV_HOME)s',
+            'Vlan100\ncommand=/bin/sh -c true',
+            'Vlan100\n',
+            'Vlan100\r\nautostart=true',
+            'Vlan100\targument',
+            'Vl\u00e1n100',
+            'Vlan100\0suffix',
+        )
+
+        try:
+            for invalid_name in invalid_names:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        invalid_name: {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        '{}|192.0.2.1/24'.format(invalid_name): {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                for template in (wait_template, supervisor_template):
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        subprocess.check_output(
+                            self.script_file + ['-j', config_path, '-t', template],
+                            stderr=subprocess.STDOUT
+                        )
+                    output = error.exception.output.decode()
+                    self.assertIn('Invalid interface name', output)
+
+            for invalid_name in invalid_names:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        invalid_name: {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        invalid_name: {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                with self.assertRaises(subprocess.CalledProcessError) as error:
+                    subprocess.check_output(
+                        self.script_file + [
+                            '-j', config_path, '-t', supervisor_template
+                        ],
+                        stderr=subprocess.STDOUT
+                    )
+                output = error.exception.output.decode()
+                self.assertIn('Invalid interface name', output)
+
+            table_inputs = (
+                ('INTERFACE', 'Ethernet0\ncommand=/bin/sh -c true'),
+                ('PORTCHANNEL_INTERFACE', 'PortChannel1\r\nautostart=true'),
+                ('MGMT_INTERFACE', 'eth0\npriority=1'),
+            )
+            for table, invalid_name in table_inputs:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        'Vlan100': {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        'Vlan100|192.0.2.1/24': {},
+                    },
+                    table: {
+                        '{}|198.51.100.1/24'.format(invalid_name): {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                templates = [supervisor_template]
+                if table != 'MGMT_INTERFACE':
+                    templates.append(wait_template)
+                for template in templates:
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        subprocess.check_output(
+                            self.script_file + [
+                                '-j', config_path, '-t', template
+                            ],
+                            stderr=subprocess.STDOUT
+                        )
+                    output = error.exception.output.decode()
+                    self.assertIn('Invalid interface name', output)
+
+            invalid_ipv6_name = 'Vlan200\ncommand=/bin/sh -c true'
+            config = {
+                'VLAN_INTERFACE': {
+                    '{}|2001:db8::1/64'.format(invalid_ipv6_name): {},
+                },
+                'DHCP_RELAY': {
+                    invalid_ipv6_name: {
+                        'dhcpv6_servers': ['2001:db8::10'],
+                    },
+                },
+            }
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+            with self.assertRaises(subprocess.CalledProcessError) as error:
+                subprocess.check_output(
+                    self.script_file + [
+                        '-j', config_path, '-t', wait_template
+                    ],
+                    stderr=subprocess.STDOUT
+                )
+            self.assertIn(
+                'Invalid interface name', error.exception.output.decode()
+            )
+
+            valid_names = (
+                'Ethernet0',
+                'Ethernet-BP0',
+                'Ethernet-IB0',
+                'Ethernet-Rec0',
+                'Ethernet0.100',
+            )
+            config = {
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'deployment_id': '0',
+                    },
+                },
+                'VLAN': {
+                    'Vlan100': {
+                        'dhcp_servers': ['192.0.2.10'],
+                    },
+                },
+                'VLAN_INTERFACE': {
+                    'Vlan100': {},
+                    'Vlan100|192.0.2.1/24': {},
+                },
+                'INTERFACE': {
+                    '{}|198.51.100.{}/31'.format(name, index * 2): {}
+                    for index, name in enumerate(valid_names, 1)
+                },
+                'PORTCHANNEL_INTERFACE': {
+                    'PortChannel0001|203.0.113.1/31': {},
+                },
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.1/24': {},
+                },
+            }
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+            for template in (wait_template, supervisor_template):
+                rendered = self.run_script([
+                    '-j', config_path, '-t', template
+                ])
+                for name in valid_names:
+                    self.assertIn(name, rendered)
+        finally:
+            shutil.rmtree(temp_dir)
 
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
@@ -1295,6 +1497,140 @@ class TestJ2Files(TestCase):
 
         self.assertIn('clean-fw-name', output,
                       'Clean welf_firewall_name value not found in rendered rsyslog.conf')
+
+    def test_rsyslog_conf_hostname_injection_stripped(self):
+        """DEVICE_METADATA hostname injection payload must be collapsed to a harmless single line.
+
+        Payload: 'host1\\naction(type="omprog" binary="/tmp/evil")'
+        hostname is rendered unquoted inside double-quoted $template directives with no prior
+        sanitization; without the newline strip the injected action() lands on its own line and
+        rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence in depth.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'host1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": payload,
+            "os_version": "1.0.0",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The $template directives must not be split across multiple lines.
+        template_lines = [l for l in output.splitlines() if l.startswith('$template SONiC')]
+        self.assertEqual(len(template_lines), 3,
+                         '$template directive was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_os_version_injection_stripped(self):
+        """DEVICE_METADATA os_version injection payload must be collapsed to a harmless single line.
+
+        Payload: '1.0.0\\naction(type="omprog" binary="/tmp/evil")'
+        os_version is rendered unquoted inside the SONiCForwardFormatWithOsVersion $template
+        directive (rsyslog.conf.j2:65) with no prior sanitization; without the newline strip
+        the injected action() lands on its own line and rsyslog executes /tmp/evil as root.
+        This mirrors test_rsyslog_conf_hostname_injection_stripped but attacks os_version
+        instead of hostname, since both values share the same $template line but are
+        sanitized by two independent filter chains (rsyslog.conf.j2:52-53) — a regression
+        in the os_version chain alone would not be caught by the hostname-only test above.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = '1.0.0\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "clean-host",
+            "os_version": payload,
+            "forward_with_osversion": "true",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The $template directives must not be split across multiple lines.
+        template_lines = [l for l in output.splitlines() if l.startswith('$template SONiC')]
+        self.assertEqual(len(template_lines), 3,
+                         '$template directive was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_hostname_and_os_version_special_chars_stripped(self):
+        """CR, backslash, and percent characters must be stripped from both hostname and
+        os_version, not just the newline/quote characters exercised by the injection tests
+        above. rsyslog.conf.j2:52-53 chain five separate .replace() calls per value
+        (\\n, \\r, ", \\, %); a regression that dropped one of the CR/backslash/percent
+        replacements would still pass the newline/quote-focused tests, so this asserts each
+        of those characters independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        hostname_payload = 'ho\rst\\na%me'
+        os_version_payload = '1.0\r.0\\%beta'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": hostname_payload,
+            "os_version": os_version_payload,
+            "forward_with_osversion": "true",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # Expected values after stripping \n, \r, ", \\, % — mirrors the filter chain in
+        # rsyslog.conf.j2:52-53.
+        def sanitize(value):
+            for ch in ('\n', '\r', '"', '\\', '%'):
+                value = value.replace(ch, '')
+            return value
+
+        expected_hostname = sanitize(hostname_payload)
+        expected_os_version = sanitize(os_version_payload)
+
+        self.assertIn(expected_hostname, output,
+                      'Sanitized hostname value not found in rendered rsyslog.conf')
+        self.assertIn(expected_os_version, output,
+                      'Sanitized os_version value not found in rendered rsyslog.conf')
+        self.assertNotIn(hostname_payload, output,
+                         'Unsanitized hostname payload (with CR/backslash/percent) leaked into rendered rsyslog.conf')
+        self.assertNotIn(os_version_payload, output,
+                         'Unsanitized os_version payload (with CR/backslash/percent) leaked into rendered rsyslog.conf')
+
+    def test_rsyslog_conf_hostname_clean(self):
+        """A safe hostname value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "clean-host",
+            "os_version": "1.0.0",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-host', output,
+                      'Clean hostname value not found in rendered rsyslog.conf')
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
