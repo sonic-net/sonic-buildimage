@@ -10,11 +10,15 @@
         3. Config
 """
 import copy
+import json
 import os
+import stat
+import subprocess
 import sys
 import docker
 import importlib.util
 import importlib.machinery
+import pytest
 from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch, call
@@ -33,7 +37,7 @@ scripts_path = os.path.join(modules_path, 'scripts')
 sys.path.insert(0, modules_path)
 sys.path.insert(0, scripts_path)
 from health_checker import utils
-from health_checker.config import Config
+from health_checker.config import Config, sanitize_optional_containers
 from health_checker.hardware_checker import HardwareChecker
 from health_checker.health_checker import HealthChecker
 from health_checker.manager import HealthCheckerManager
@@ -83,9 +87,165 @@ device_runtime_metadata = {"DEVICE_RUNTIME_METADATA": {"ETHERNET_PORTS_PRESENT":
 def no_op(*args, **kwargs):
     pass  # This function does nothing
 
+
+@pytest.fixture(autouse=True)
+def temporary_critical_process_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr(ServiceChecker, 'CRITICAL_PROCESS_CACHE', str(tmp_path / 'critical_process_cache'))
+
+
 def setup():
     if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
         os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
+
+
+def test_service_checker_critical_process_cache_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        ServiceChecker,
+        'CRITICAL_PROCESS_CACHE',
+        str(tmp_path / 'system-health' / 'critical_process_cache'))
+    checker = ServiceChecker()
+    checker.container_critical_processes = {'snmp': ['snmpd']}
+    checker.need_save_cache = True
+    checker.save_critical_process_cache()
+
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'r') as f:
+        cache = json.load(f)
+    assert cache == {
+        'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+        'container_critical_processes': {'snmp': ['snmpd']}
+    }
+    cache_dir = os.path.dirname(ServiceChecker.CRITICAL_PROCESS_CACHE)
+    assert stat.S_IMODE(os.stat(cache_dir).st_mode) == 0o700
+
+    loaded_checker = ServiceChecker()
+    assert loaded_checker.container_critical_processes == {'snmp': ['snmpd']}
+
+
+def test_service_checker_ignores_invalid_critical_process_cache():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        f.write('not json')
+
+    checker = ServiceChecker()
+    assert checker.container_critical_processes == {}
+
+
+def test_service_checker_ignores_unknown_critical_process_cache_version():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({'version': 2, 'container_critical_processes': {'snmp': ['snmpd']}}, f)
+
+    checker = ServiceChecker()
+    assert checker.container_critical_processes == {}
+
+
+def test_service_checker_ignores_invalid_critical_process_cache_data():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({
+            'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+            'container_critical_processes': {'snmp': 'snmpd'}
+        }, f)
+
+    checker = ServiceChecker()
+    assert checker.container_critical_processes == {}
+
+
+@patch('os.geteuid', return_value=0)
+@patch('os.fstat')
+def test_service_checker_ignores_cache_owned_by_another_user(mock_fstat, mock_geteuid):
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({
+            'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+            'container_critical_processes': {'snmp': ['snmpd']}
+        }, f)
+    mock_fstat.return_value.st_uid = 1000
+
+    checker = ServiceChecker()
+
+    assert checker.container_critical_processes == {}
+
+
+def test_service_checker_preserves_existing_cache_when_replace_fails(monkeypatch, tmp_path):
+    old_cache = {
+        'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+        'container_critical_processes': {'snmp': ['snmpd']}
+    }
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump(old_cache, f)
+    files_before_save = set(tmp_path.iterdir())
+
+    checker = ServiceChecker()
+    checker.container_critical_processes = {'swss': ['orchagent']}
+    checker.need_save_cache = True
+    monkeypatch.setattr(os, 'replace', Mock(side_effect=OSError('replace failed')))
+
+    checker.save_critical_process_cache()
+
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'r') as f:
+        assert json.load(f) == old_cache
+    assert checker.need_save_cache is True
+    assert set(tmp_path.iterdir()) == files_before_save
+
+
+def test_service_checker_removes_stale_cache_when_empty():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({
+            'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+            'container_critical_processes': {'snmp': ['snmpd']}
+        }, f)
+
+    checker = ServiceChecker()
+    checker.container_critical_processes = {}
+    checker.need_save_cache = True
+    checker.save_critical_process_cache()
+
+    assert not os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE)
+
+
+def test_sanitize_optional_containers():
+    assert sanitize_optional_containers(None) == {}
+    assert sanitize_optional_containers(['docker-image']) == {}
+    assert sanitize_optional_containers({
+        'valid': 'docker-valid',
+        'empty-image': '',
+        'null-image': None,
+        '': 'docker-empty-name',
+    }) == {'valid': 'docker-valid'}
+
+
+@patch('sonic_py_common.device_info.is_disaggregated_chassis', MagicMock(return_value=False))
+@patch('sonic_py_common.device_info.is_supervisor', MagicMock(return_value=False))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('sonic_py_common.multi_asic.get_asic_presence_list', MagicMock(return_value=[]))
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.check_docker_image')
+def test_optional_containers(mock_check_docker_image):
+    feature_table = {
+        container_name: {'state': 'enabled'}
+        for container_name in ('otel', 'missing', 'present', 'invalid', 'regular')
+    }
+    config = Config()
+    config.optional_containers = {
+        'missing': 'docker-missing',
+        'present': 'docker-present',
+        'invalid': None,
+    }
+    mock_check_docker_image.side_effect = lambda image_name: image_name == 'docker-present'
+
+    checker = ServiceChecker()
+    expected, _ = checker.get_expected_running_containers(feature_table, config)
+
+    assert expected == {'present', 'invalid', 'regular'}
+    assert mock_check_docker_image.call_args_list == [
+        call('docker-sonic-otel'),
+        call('docker-missing'),
+        call('docker-present'),
+    ]
+
+    config.optional_containers = ['invalid']
+    expected, _ = checker.get_expected_running_containers(
+        {'configured': {'state': 'enabled'}},
+        config
+    )
+    assert expected == {'configured'}
 
 
 @patch('health_checker.utils.run_command')
@@ -1047,6 +1207,56 @@ def test_utils():
 
     output = utils.run_command('ls')
     assert output
+
+
+@patch('subprocess.Popen')
+def test_utils_argv_without_shell(mock_popen):
+    command = ['systemctl', 'show', '--', 'sample.service']
+    process = MagicMock()
+    process.communicate.return_value = ('output', '')
+    mock_popen.return_value = process
+
+    assert utils.run_command(command) == 'output'
+    mock_popen.assert_called_once_with(
+        command,
+        shell=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        start_new_session=True
+    )
+
+
+@patch('health_checker.utils.run_command')
+def test_run_systemctl_show_uses_argv(mock_run_command):
+    mock_run_command.return_value = 'Id=sample.service\nActiveState=active\n'
+    sysmon = Sysmonitor()
+
+    assert sysmon.run_systemctl_show('sample.service') == {
+        'Id': 'sample.service',
+        'ActiveState': 'active'
+    }
+    mock_run_command.assert_called_once_with([
+        'systemctl',
+        'show',
+        '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic',
+        '--',
+        'sample.service'
+    ])
+
+
+@patch('health_checker.utils.run_command')
+def test_run_systemctl_show_preserves_untrusted_service_name(mock_run_command):
+    service_name = 'sample.service;touch /tmp/healthd-test-marker'
+    mock_run_command.return_value = 'Id=sample.service\nActiveState=active\n'
+
+    assert Sysmonitor().run_systemctl_show(service_name) == {
+        'Id': 'sample.service',
+        'ActiveState': 'active'
+    }
+
+    command = mock_run_command.call_args.args[0]
+    assert command[-2:] == ['--', service_name]
 
 
 @patch('health_checker.utils.logger.log_warning')

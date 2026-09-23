@@ -24,6 +24,15 @@
 ## Enable debug output for script
 set -x -e
 
+ORGANIZATION_BUILD_HOOK=files/build_templates/build_debian.organization.sh
+
+run_organization_build_hook()
+{
+    if [ -f "$ORGANIZATION_BUILD_HOOK" ]; then
+        . "$ORGANIZATION_BUILD_HOOK" "$1"
+    fi
+}
+
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
@@ -340,7 +349,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     efibootmgr              \
     usbutils                \
     pciutils                \
-    iptables-persistent     \
     ebtables                \
     linux-sysctl-defaults   \
     logrotate               \
@@ -446,25 +454,22 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
-	sudo cp $debs_path/grub-common*.deb $debs_path/grub2-common*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-common*.deb $debs_path/grub2-common*.deb | sed 's,^,./,')
-	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-common*.deb $FILESYSTEM_ROOT/grub2-common*.deb
-	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
-
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
         GRUB_PKGS='grub-efi-amd64-bin grub-pc-bin'
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
         GRUB_PKGS=grub-efi-arm64-bin
     fi
 
-    for grub_pkg in $GRUB_PKGS; do
-       sudo cp $debs_path/${grub_pkg}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
-    done
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -d \
+        $GRUB_PKGS
+
+    sudo cp $FILESYSTEM_ROOT/var/cache/apt/archives/grub*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
 fi
 
 ## Disable kexec supported reboot which was installed by default
 sudo sed -i 's/LOAD_KEXEC=true/LOAD_KEXEC=false/' $FILESYSTEM_ROOT/etc/default/kexec
+
+run_organization_build_hook post-kexec-configuration
 
 # Ensure that 'logrotate-config.service' is set as a dependency to start before 'logrotate.service'.
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d
@@ -515,6 +520,10 @@ rm /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/AllowAgentForwarding no
 ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
+rm /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/PerSourcePenalties authfail:0
+ins #comment before /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PerSourcePenalties]] "Disable penalty timer to allow for multiple passwords to be used, either local or remote/AAA"
 save
 quit
 EOF
@@ -557,6 +566,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 ## Create /var/run/redis folder for docker-database to mount
 sudo mkdir -p $FILESYSTEM_ROOT/var/run/redis
 
+run_organization_build_hook post-package-setup
+
 ## Config DHCP for eth0
 sudo tee -a $FILESYSTEM_ROOT/etc/network/interfaces > /dev/null <<EOF
 
@@ -577,6 +588,8 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic
 if [ -f files/image_config/sonic_release ]; then
     sudo cp files/image_config/sonic_release $FILESYSTEM_ROOT/etc/sonic/
 fi
+
+run_organization_build_hook post-sonic-config-directory
 
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
@@ -716,14 +729,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 0 > /etc/fips/fips_enable
 if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
     echo "Secure Boot support build stage: Starting .."
 
-	sudo cp $debs_path/grub-efi*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-efi*.deb | sed 's,^,./,')
-	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-efi*.deb
-
     # debian secure boot dependencies
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
-        shim-unsigned
+        shim-unsigned \
+        grub-efi
 
     if [ ! -f $SECURE_UPGRADE_SIGNING_CERT ]; then
         echo "Error: SONiC SECURE_UPGRADE_SIGNING_CERT=$SECURE_UPGRADE_SIGNING_CERT key missing"
@@ -868,6 +877,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /usr/share/doc/* /usr/share/
 ## Clean up pip cache
 sudo LANG=C chroot $FILESYSTEM_ROOT pip3 cache purge
 
+run_organization_build_hook pre-finalization
+
 ## Umount all
 echo '[INFO] Umount all'
 ## Display all process details access /proc
@@ -899,7 +910,17 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
+sudo rm -f $FILESYSTEM_ROOT/run/resolvconf/resolv.conf
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
+
+## sonic-installer package migration runs the deployed image's installer
+## against this rootfs, and a symlinked /etc/resolv.conf breaks one installer
+## generation or another (absolute targets alias the host's own resolv.conf,
+## relative targets escape the image mount). Ship a regular file, which
+## every generation handles; resolv-symlink.conf restores the symlink at boot.
+sudo rm -f $FILESYSTEM_ROOT/etc/resolv.conf
+sudo touch $FILESYSTEM_ROOT/etc/resolv.conf
+sudo cp files/image_config/resolv-config/resolv-symlink.conf $FILESYSTEM_ROOT/usr/lib/tmpfiles.d/
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then

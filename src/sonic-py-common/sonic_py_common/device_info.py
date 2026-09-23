@@ -64,6 +64,7 @@ DPU_NAME_PREFIX = "dpu"
 # Cacheable Objects
 sonic_ver_info = {}
 hw_info_dict = {}
+hwsku_info = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -158,8 +159,23 @@ def get_hwsku():
     Returns:
         A string containing the device's hardware SKU identifier
     """
+    global hwsku_info
 
-    return get_localhost_info('hwsku')
+    # Cache the first valid answer so callers stop opening a CONFIG_DB connection on
+    # every call. A falsy result means the lookup failed, so it is deliberately not
+    # cached and the next call retries.
+    #
+    # Changing the HwSKU needs a config reload, which restarts everything under
+    # sonic.target, so containerized callers always see the new value. Host daemons
+    # outside that target (system-health, for one) are not restarted and keep the
+    # cached value until they are.
+    #
+    # The slot is unsynchronized on purpose: racing threads may both perform the
+    # read, but they store the same value, so the interleaving does not matter.
+    if not hwsku_info:
+        hwsku_info = get_localhost_info('hwsku')
+
+    return hwsku_info
 
 
 def get_platform_and_hwsku():
@@ -208,19 +224,22 @@ def get_platform_json_data():
 
 def get_cpo_data() -> Optional[dict]:
     """
-    Retrieve the data from the cpo.json file.
+    Retrieve the data from the cpo.json file in the platform directory.
 
-    Locates the file using a two-stage lookup: a hwsku-specific file takes
-    precedence over a platform-wide file. Lane fields are normalized from
-    comma-separated strings ("41,42") into lists of ints ([41, 42]); all
-    other fields, including vendor-specific ones, are returned verbatim.
-    None is returned if the file does not exist or cannot be parsed.
+    Lane fields are normalized from comma-separated strings ("41,42") into
+    lists of ints ([41, 42]); all other fields, including vendor-specific
+    ones, are returned verbatim. None is returned if the file does not exist
+    or cannot be parsed.
     """
     if not get_platform():
         return None
 
-    cpo_file = _find_cpo_file()
-    if not cpo_file:
+    try:
+        cpo_file = os.path.join(get_path_to_platform_dir(), CPO_FILE)
+    except OSError:
+        return None
+
+    if not os.path.isfile(cpo_file):
         return None
 
     try:
@@ -232,35 +251,6 @@ def get_cpo_data() -> Optional[dict]:
 
     _normalize_cpo_data(cpo_data)
     return cpo_data
-
-
-def _find_cpo_file() -> Optional[str]:
-    """
-    Locate cpo.json, preferring the hwsku directory over the
-    platform directory.
-    Returns the path to the first cpo.json found, or None.
-    """
-    try:
-        hwsku_dir = get_path_to_hwsku_dir()
-    except (OSError, TypeError):
-        hwsku_dir = None
-
-    if hwsku_dir:
-        hwsku_file = os.path.join(hwsku_dir, CPO_FILE)
-        if os.path.isfile(hwsku_file):
-            return hwsku_file
-
-    try:
-        platform_dir = get_path_to_platform_dir()
-    except OSError:
-        platform_dir = None
-
-    if platform_dir:
-        platform_file = os.path.join(platform_dir, CPO_FILE)
-        if os.path.isfile(platform_file):
-            return platform_file
-
-    return None
 
 
 def _parse_lane_string(lane_string: str) -> List[int]:
@@ -881,6 +871,45 @@ def is_macsec_supported():
                 break
     return int(supported)
 
+# Get the chassis_db_address from the file /etc/sonic/chassisdb_address
+def get_chassis_db_address():
+    chassis_db_address_file_path = "/etc/sonic/chassisdb_address"
+    chassis_db_address = None
+
+    # The file /etc/sonic/chassisdb_address is not present
+    if not os.path.isfile(chassis_db_address_file_path):
+        return chassis_db_address
+
+    with open(chassis_db_address_file_path) as chassis_db_addr_conf:
+        for line in chassis_db_addr_conf:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].lower() == 'chassis_db_address':
+                chassis_db_address = tokens[1].strip()
+                break
+
+    return chassis_db_address
+
+
+def get_smartswitch_midplane_ip():
+    """Parse /usr/lib/systemd/network/bridge-midplane.network to get the NPU bridge-midplane IP.
+    This file is deployed on both NPU and DPU sides of a smartswitch."""
+    network_file = "/usr/lib/systemd/network/bridge-midplane.network"
+    if not os.path.isfile(network_file):
+        return None
+
+    with open(network_file) as f:
+        for line in f:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].strip().lower() == 'address':
+                # Strip prefix length (e.g. "169.254.200.254/24" -> "169.254.200.254")
+                return tokens[1].strip().split('/')[0]
+
+    return None
+
 
 def get_device_runtime_metadata():
     chassis_metadata = {}
@@ -895,6 +924,7 @@ def get_device_runtime_metadata():
     runtime_metadata.update(port_metadata)
     runtime_metadata.update(macsec_support_metadata)
     return {'DEVICE_RUNTIME_METADATA': runtime_metadata }
+
 
 def get_npu_id_from_name(npu_name):
     if npu_name.startswith(NPU_NAME_PREFIX):
@@ -1014,7 +1044,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs']):
+    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs', 'micas-vs']):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()

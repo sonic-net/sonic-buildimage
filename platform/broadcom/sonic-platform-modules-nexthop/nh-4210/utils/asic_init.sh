@@ -5,9 +5,10 @@
 LOCKFD=200
 LOCKFILE="/var/run/nexthop-asic-init.lock"
 ASIC_BRIDGE="00:02.1"
+# Use BDF for FPGA CLIs, as the FPGA name to BDF mapping is not available on first boot.
 FPGA_0_BDF=$(setpci -s 00:01.4 0x19.b | xargs printf '0000:%s:00.0')
 FPGA_1_BDF=$(setpci -s 00:01.5 0x19.b | xargs printf '0000:%s:00.0')
-ASIC_BDF=$(setpci -s 00:02.1 0x19.b | xargs printf '%s:00.0')
+ASIC_BDF=$(setpci -s "$ASIC_BRIDGE" 0x19.b | xargs printf '%s:00.0')
 LOG_PRIO="user.info"
 LOG_ERR="user.err"
 
@@ -37,6 +38,25 @@ fpga_0_write() {
   fi
 }
 
+fpga_0_read() {
+  local offset="$1"
+  local bits="$2"
+  local result
+
+  if [ -n "$bits" ]; then
+    result=$(fpga read32 "$FPGA_0_BDF" "$offset" --bits "$bits")
+  else
+    result=$(fpga read32 "$FPGA_0_BDF" "$offset")
+  fi
+
+  if [ $? -ne 0 ]; then
+    logger -t $LOG_TAG -p $LOG_ERR "Error reading reg $offset on switch fpga $FPGA_0_BDF"
+    exit 1
+  fi
+
+  echo "$result"
+}
+
 fpga_1_write() {
   local offset="$1"
   local value="$2"
@@ -52,6 +72,25 @@ fpga_1_write() {
     logger -t $LOG_TAG -p $LOG_ERR "Error writing $value to reg $offset on mezz fpga $FPGA_1_BDF"
     exit 1
   fi
+}
+
+fpga_1_read() {
+  local offset="$1"
+  local bits="$2"
+  local result
+
+  if [ -n "$bits" ]; then
+    result=$(fpga read32 "$FPGA_1_BDF" "$offset" --bits "$bits")
+  else
+    result=$(fpga read32 "$FPGA_1_BDF" "$offset")
+  fi
+
+  if [ $? -ne 0 ]; then
+    logger -t $LOG_TAG -p $LOG_ERR "Error reading reg $offset on mezz fpga $FPGA_1_BDF"
+    exit 1
+  fi
+
+  echo "$result"
 }
 
 function acquire_lock() {
@@ -76,11 +115,10 @@ function release_lock() {
 function clear_sticky_bits() {
   # This function clears all the sticky bits (Clear On Write) for various
   # power monitoring and other status registers in the Sea Eagle FPGAs.
-  # FPGA 0, Switch Card, DevID 0x7018
-  # FPGA 1, Mezz Card,   DevID 0x7019
+  # FPGA 0, SWITCHCARD_FPGA0, DevID 0x7018
+  # FPGA 1, SWITCHCARD_FPGA1, DevID 0x7019
   # Are both separate PCIe devices accessed through different BDFs.
 
-  # Carrying over from other products:
   # It is safe to just write all 1s to these regs. They are not control bits.
   # If more COW bits are added, we don't have to change this function.
 
@@ -89,9 +127,9 @@ function clear_sticky_bits() {
   fpga_0_write 0xf0 0xffffffff
   # Input Status State Change Flags
   fpga_0_write 0x120 0xffffffff
-  # TH6 Miscellaneous Status Change Flags
+  # TH6 GPIO State Change Flags
   fpga_0_write 0x124 0xffffffff
-  # TH6 Timestamp Interface GPIO State Change Flags
+  # TH6 TS I/F GPIO State Change Flags
   fpga_0_write 0x128 0xffffffff
   # Interrupt Status 0
   fpga_0_write 0x174 0xffffffff
@@ -99,13 +137,11 @@ function clear_sticky_bits() {
   fpga_0_write 0x17c 0xffffffff
   # Interrupt Status 2
   fpga_0_write 0x184 0xffffffff
-  # PDC Status 0 Change Flags
+  # PDC Status Change Flags
   fpga_0_write 0x1b0 0xffffffff
-  # PDC Status 1 Change Flags
-  fpga_0_write 0x1b4 0xffffffff
   # CPU-Switch Card Status Change Flags
   fpga_0_write 0x1b8 0xffffffff
-  # SFP Mgmt Card Status Change Flags
+  # QSFP Mgmt Card Status Change Flags
   fpga_0_write 0x1bc 0xffffffff
   # Miscellaneous Status 0 Change Flags
   fpga_0_write 0x1c0 0xffffffff
@@ -115,6 +151,8 @@ function clear_sticky_bits() {
   # FPGA 1
   # Shift Chains Status
   fpga_1_write 0xf0 0xffffffff
+  # Input Status
+  fpga_1_write 0x110 0xffffffff
   # Input Status State Change Flags
   fpga_1_write 0x120 0xffffffff
   # Interrupt Status 0
@@ -123,29 +161,31 @@ function clear_sticky_bits() {
   fpga_1_write 0x17c 0xffffffff
   # Interrupt Status 2
   fpga_1_write 0x184 0xffffffff
-  # Port 1-32 Module Present Change Flags
-  fpga_1_write 0x1a0 0xffffffff
-  # Port 1-32 Interrupt Change Flags
-  fpga_1_write 0x1a4 0xffffffff
-  # Port 1-32 Power Good Change Flags
-  fpga_1_write 0x1a8 0xffffffff
+  # Mezz Card 0/1 CP Status Change Flags
+  fpga_1_write 0x19c 0xffffffff
   # Port 33-64 Module Present Change Flags
-  fpga_1_write 0x1ac 0xffffffff
+  fpga_1_write 0x1a0 0xffffffff
   # Port 33-64 Interrupt Change Flags
-  fpga_1_write 0x1b0 0xffffffff
+  fpga_1_write 0x1a4 0xffffffff
   # Port 33-64 Power Good Change Flags
+  fpga_1_write 0x1a8 0xffffffff
+  # Port 65-96 Module Present Change Flags
+  fpga_1_write 0x1ac 0xffffffff
+  # Port 65-96 Interrupt Change Flags
+  fpga_1_write 0x1b0 0xffffffff
+  # Port 65-96 Power Good Change Flags
   fpga_1_write 0x1b4 0xffffffff
-  # Mezz 0 Port 1-32 Module Present Change Flags
+  # Mezz 0 Port 97-128 Module Present Change Flags
   fpga_1_write 0x1b8 0xffffffff
-  # Mezz 0 Port 1-32 Interrupt Change Flags
+  # Mezz 0 Port 97-128 Interrupt Change Flags
   fpga_1_write 0x1bc 0xffffffff
-  # Mezz 0 Port 1-32 Power Good Change Flags
+  # Mezz 0 Port 97-128 Power Good Change Flags
   fpga_1_write 0x1c0 0xffffffff
-  # Mezz 1 Port 33-64 Module Present Change Flags
+  # Mezz 1 Port 1-32 Module Present Change Flags
   fpga_1_write 0x1c4 0xffffffff
-  # Mezz 1 Port 33-64 Interrupt Change Flags
+  # Mezz 1 Port 1-32 Interrupt Change Flags
   fpga_1_write 0x1c8 0xffffffff
-  # Mezz 1 Port 33-64 Power Good Change Flags
+  # Mezz 1 Port 1-32 Power Good Change Flags
   fpga_1_write 0x1cc 0xffffffff
   # Fan Card Status 0 State Change Flags
   fpga_1_write 0x1d0 0xffffffff
@@ -172,6 +212,12 @@ if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
   /etc/init.d/opennsl-modules stop
 fi
 
+# Set DP_PWR_ON = 1
+# DP_PWR_ON should already be 1 in normal circumstances, but it's possible
+# a power glitch brings it to 0. The system may kernel panic if we bring up
+# the ASIC when DP_PWR_ON = 0.
+fpga_0_write 0x90 0x1 "9:9"
+
 fpga_0_write 0x8 0x0 "3:3"
 fpga_0_write 0x8 0x1 "10:10"
 
@@ -189,6 +235,15 @@ for attempt in {0..2}; do
 
   clear_sticky_bits
 
+  # Log ASIC_PGOOD
+  pg_bit=$(fpga_0_read 0x98 "23:23")
+  logger -t "$LOG_TAG" -p "$LOG_PRIO" "ASIC_PGOOD = $pg_bit"
+  if [ $(( pg_bit )) -eq 1 ]; then
+    logger -t "$LOG_TAG" -p "$LOG_PRIO" "ASIC power good"
+  else
+    logger -t "$LOG_TAG" -p "$LOG_ERR" "ASIC power good bit not set"
+  fi
+
   lspci -n | grep -q "$ASIC_BDF"
   if [ $? -eq 0 ]; then
     if [ "$attempt" -eq 0 ]; then
@@ -201,6 +256,11 @@ for attempt in {0..2}; do
     output=$(lspci -vvv 2>/dev/null | grep -i -e '^0' -e 'CESta' | grep -B 1 -e 'CESta' | grep -B 1 -e '+ ' -e '+$')
     logger -t $LOG_TAG -p $LOG_PRIO "lspci Errors: ${output}"
 
+    logger -t $LOG_TAG -p $LOG_PRIO "Clearing lspci errors"
+    setpci -s "$ASIC_BRIDGE" 0x160.l=$(setpci -s "$ASIC_BRIDGE" 0x160.l)
+
+    # CPU enables common clk during pcie link training.
+
     if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
       logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
       /etc/init.d/opennsl-modules start
@@ -212,12 +272,8 @@ for attempt in {0..2}; do
   fi
 done
 
-logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not found after power cycle attempts, giving up."
-
-if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
-  logger -t $LOG_TAG -p $LOG_PRIO "Reloading ASIC modules despite failure"
-  /etc/init.d/opennsl-modules start
-fi
+logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not found after power cycle attempts, giving up, powering it down."
+fpga_0_write 0x90 0x0 "9:9"
 
 release_lock
 

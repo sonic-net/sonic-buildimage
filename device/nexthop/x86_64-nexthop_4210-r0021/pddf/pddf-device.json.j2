@@ -2,21 +2,24 @@
   "PLATFORM": {
     "num_psus": 4,
     "num_temps": 19,
+    "num_asic_temps": 0,
     "num_nexthop_fpga_asic_temp_sensors": 2,
-    "num_voltage_sensors": 40,
+    "num_voltage_sensors": 70,
     "num_current_sensors": 23,
-    "num_components": 27,
+    "num_components": 28,
     "num_fantrays": 8,
     "num_fans_pertray": 2,
     "std_kos": [
       "at24",
       "optoe",
       "i2c-dev",
+      "i2c-xiic",
       "spi-xilinx"
     ],
     "pddf_kos": [
       "pddf_spi_module",
       "pddf_multifpgapci_i2c_module",
+      "pddf_multifpgapci_i2c_xiic_module",
       "pddf_multifpgapci_gpio_module",
       "pddf_multifpgapci_spi_module",
       "pddf_client_module",
@@ -29,7 +32,8 @@
       "pddf_xcvr_module",
       "pddf_xcvr_driver_module",
       "pddf_cpldmux_module",
-      "pddf_cpldmux_driver"
+      "pddf_cpldmux_driver",
+      "pddf_multifpgapci_gpio_driver"
     ],
     "custom_kos": [
       "pddf_custom_fpga_algo",
@@ -187,7 +191,9 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x8",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} 0x0 --bits=0:7",
+      "reg_width": 32
     },
     "i2c": {
       "dev_attr": {
@@ -216,6 +222,65 @@
         {
           "chn": "5",
           "dev": "DPM3"
+        }
+      ],
+      "channel_irq": [
+        {
+          "msi_domain": 0,
+          "hw_irq": 8
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 9
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 12
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 13
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 14
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 15
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 16
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 17
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 18
+        }
+      ]
+    },
+    "use_msi": {
+      "min_fpga_version": "0x1",
+      "num_msi_vectors": 1,
+      "msi_domains": [
+        {
+          "msi_vector_num": 0,
+          "irq_chip_name": "bm-msi-0",
+          "irq_line_mask": "0007ff00",
+          "interrupt_enable_reg": "20",
+          "interrupt_status_reg": "24"
         }
       ]
     },
@@ -314,7 +379,9 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x4",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_0_bdf}} 0x0 --bits=0:7",
+      "reg_width": 32
     },
     "i2c": {
       "dev_attr": {
@@ -588,7 +655,312 @@
           "chn": "67",
           "dev": "PORT96"
         }
+      ],
+      "channel_irq": [
+        {
+          "msi_domain": 0,
+          "hw_irq": 8
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 9
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 0
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 1
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 2
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 3
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 4
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 5
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 6
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 7
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 8
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 9
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 12
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 13
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 14
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 15
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 16
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 17
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 18
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 19
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 20
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 21
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 22
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 23
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 24
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 25
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 26
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 27
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 28
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 29
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 30
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 31
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 0
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 1
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 2
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 3
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 4
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 5
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 6
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 7
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 8
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 9
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 12
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 13
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 14
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 15
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 16
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 17
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 18
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 19
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 20
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 21
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 22
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 23
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 24
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 25
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 26
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 27
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 28
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 29
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 30
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 31
+        }
       ]
+    },
+    "use_msi": {
+      "min_fpga_version": "0x0",
+      "num_msi_vectors": 3,
+      "msi_domains": [
+        {
+          "msi_vector_num": 0,
+          "irq_chip_name": "seag0-msi-0",
+          "irq_line_mask": "00000f11",
+          "interrupt_enable_reg": "170",
+          "interrupt_status_reg": "174"
+        },
+        {
+          "msi_vector_num": 1,
+          "irq_chip_name": "seag0-msi-1",
+          "irq_line_mask": "ffffffff",
+          "interrupt_enable_reg": "178",
+          "interrupt_status_reg": "17C"
+        },
+        {
+          "msi_vector_num": 2,
+          "irq_chip_name": "seag0-msi-2",
+          "irq_line_mask": "ffffffff",
+          "interrupt_enable_reg": "180",
+          "interrupt_status_reg": "184"
+        }
+      ],
+      "watchdog": {
+        "msi_domain": 0,
+        "hw_irq": 0
+      }
     },
     "spi_controllers": [
       "SWITCHCARD_SPI_CONTROLLER0"
@@ -687,7 +1059,9 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x0",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_1_bdf}} 0x0 --bits=0:7",
+      "reg_width": 32
     },
     "i2c": {
       "dev_attr": {
@@ -697,6 +1071,14 @@
         "num_virt_ch": "0x4a"
       },
       "channel": [
+        {
+          "chn": "7",
+          "dev": "CPLDMUX2"
+        },
+        {
+          "chn": "8",
+          "dev": "CPLDMUX3"
+        },
         {
           "chn": "0",
           "dev": "FAN-CTRL"
@@ -1004,16 +1386,337 @@
         {
           "chn": "5",
           "dev": "DCDC10"
+        }
+      ],
+      "channel_irq": [
+        {
+          "msi_domain": 0,
+          "hw_irq": 8
         },
         {
-          "chn": "7",
-          "dev": "DCDC11"
+          "msi_domain": 0,
+          "hw_irq": 9
         },
         {
-          "chn": "8",
-          "dev": "DCDC12"
+          "msi_domain": 0,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 12
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 13
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 14
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 15
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 16
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 17
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 0
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 1
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 2
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 3
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 4
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 5
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 6
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 7
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 8
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 9
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 12
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 13
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 14
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 15
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 16
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 17
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 18
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 19
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 20
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 21
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 22
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 23
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 24
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 25
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 26
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 27
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 28
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 29
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 30
+        },
+        {
+          "msi_domain": 1,
+          "hw_irq": 31
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 0
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 1
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 2
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 3
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 4
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 5
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 6
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 7
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 8
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 9
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 12
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 13
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 14
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 15
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 16
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 17
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 18
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 19
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 20
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 21
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 22
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 23
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 24
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 25
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 26
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 27
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 28
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 29
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 30
+        },
+        {
+          "msi_domain": 2,
+          "hw_irq": 31
         }
       ]
+    },
+    "use_msi": {
+      "min_fpga_version": "0x0",
+      "num_msi_vectors": 3,
+      "msi_domains": [
+        {
+          "msi_vector_num": 0,
+          "irq_chip_name": "seag1-msi-0",
+          "irq_line_mask": "0003ff11",
+          "interrupt_enable_reg": "170",
+          "interrupt_status_reg": "174"
+        },
+        {
+          "msi_vector_num": 1,
+          "irq_chip_name": "seag1-msi-1",
+          "irq_line_mask": "ffffffff",
+          "interrupt_enable_reg": "178",
+          "interrupt_status_reg": "17C"
+        },
+        {
+          "msi_vector_num": 2,
+          "irq_chip_name": "seag1-msi-2",
+          "irq_line_mask": "ffffffff",
+          "interrupt_enable_reg": "180",
+          "interrupt_status_reg": "184"
+        }
+      ],
+      "watchdog": {
+        "msi_domain": 0,
+        "hw_irq": 0
+      }
     }
   },
   "COMPONENT3": {
@@ -1045,6 +1748,100 @@
         "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} SWITCHCARD_FPGA1 {}"
       }
     ]
+  },
+  "CPLDMUX2": {
+    "dev_info": {
+      "device_type": "CPLDMUX",
+      "device_name": "CPLDMUX2",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x64",
+        "dev_type": "multifpgapci_mux",
+        "dev_id": "2"
+      },
+      "dev_attr": {
+        "base_chan": "0xa7",
+        "num_chan": "4",
+        "cpld_name": "SWITCHCARD_FPGA1"
+      },
+      "channel": [
+        {
+          "chan": "0",
+          "dev": [],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x0"
+        },
+        {
+          "chan": "1",
+          "dev": [
+            "DCDC11"
+          ],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x1"
+        },
+        {
+          "chan": "2",
+          "dev": [],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x2"
+        },
+        {
+          "chan": "3",
+          "dev": [],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x3"
+        }
+      ]
+    }
+  },
+  "CPLDMUX3": {
+    "dev_info": {
+      "device_type": "CPLDMUX",
+      "device_name": "CPLDMUX3",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x65",
+        "dev_type": "multifpgapci_mux",
+        "dev_id": "3"
+      },
+      "dev_attr": {
+        "base_chan": "0xab",
+        "num_chan": "4",
+        "cpld_name": "SWITCHCARD_FPGA1"
+      },
+      "channel": [
+        {
+          "chan": "0",
+          "dev": [],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x0"
+        },
+        {
+          "chan": "1",
+          "dev": [
+            "DCDC12"
+          ],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x1"
+        },
+        {
+          "chan": "2",
+          "dev": [],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x2"
+        },
+        {
+          "chan": "3",
+          "dev": [],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x3"
+        }
+      ]
+    }
   },
   "COMPONENT4": {
     "comp_attr": {
@@ -1086,7 +1883,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "awk -F = '/onie_version/ {print $2}' /host/machine.conf"
+        "get_cmd": "/usr/local/bin/get-onie-version"
       },
       {
         "attr_name": "model",
@@ -1176,19 +1973,19 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "bcmcmd 'dsh -c \"pciephy fwinfo\"' | grep 'FW version' | awk -F': ' '{print $2}'"
+        "get_cmd": "asic_pcie_fw_version"
       },
       {
         "attr_name": "model",
-        "get_cmd": "echo N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "serial",
-        "get_cmd": "echo N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "revision",
-        "get_cmd": "echo N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "update",
@@ -1296,7 +2093,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1306,7 +2103,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1316,7 +2113,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00000100",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1326,7 +2123,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb4",
+          "attr_offset": "0xc8",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1337,7 +2134,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x250{% endif %}",
           "attr_mask": "0x000000ff",
           "attr_len": "4"
         },
@@ -1346,7 +2143,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1356,7 +2153,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1366,7 +2163,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00000100",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1376,7 +2173,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb4",
+          "attr_offset": "0xc8",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1387,7 +2184,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x250{% endif %}",
           "attr_mask": "0x000000ff",
           "attr_len": "4"
         },
@@ -1396,7 +2193,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1406,7 +2203,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1416,7 +2213,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00008000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1426,7 +2223,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb8",
+          "attr_offset": "0xcc",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1437,8 +2234,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
-          "attr_mask": "0x0000ff00",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x254{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x0000ff00{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1446,7 +2243,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1456,7 +2253,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1466,7 +2263,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00008000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1476,7 +2273,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb8",
+          "attr_offset": "0xcc",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1487,8 +2284,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
-          "attr_mask": "0x0000ff00",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x254{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x0000ff00{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1496,7 +2293,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1506,7 +2303,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1516,7 +2313,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00400000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1526,7 +2323,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xbc",
+          "attr_offset": "0xd0",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1537,8 +2334,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
-          "attr_mask": "0x00ff0000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x258{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x00ff0000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1546,7 +2343,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1556,7 +2353,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1566,7 +2363,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x00400000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1576,7 +2373,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xbc",
+          "attr_offset": "0xd0",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1587,8 +2384,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
-          "attr_mask": "0x00ff0000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x258{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x00ff0000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1596,7 +2393,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -1606,7 +2403,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -1616,7 +2413,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x20000000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1626,7 +2423,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc0",
+          "attr_offset": "0xd4",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1637,8 +2434,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
-          "attr_mask": "0xff000000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x25c{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0xff000000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1646,7 +2443,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -1656,7 +2453,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -1666,7 +2463,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa4",
+          "attr_offset": "0xa8",
           "attr_mask": "0x20000000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1676,7 +2473,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc0",
+          "attr_offset": "0xd4",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1687,8 +2484,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xb0",
-          "attr_mask": "0xff000000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x25c{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0xff000000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1696,7 +2493,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1706,7 +2503,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1716,7 +2513,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00000100",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1726,7 +2523,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc8",
+          "attr_offset": "0xb4",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1737,7 +2534,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x240{% endif %}",
           "attr_mask": "0x000000ff",
           "attr_len": "4"
         },
@@ -1746,7 +2543,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1756,7 +2553,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x000000f0",
           "attr_len": "4",
           "attr_cmpval": "0x00000070"
@@ -1766,7 +2563,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00000100",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1776,7 +2573,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc8",
+          "attr_offset": "0xb4",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1787,7 +2584,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x240{% endif %}",
           "attr_mask": "0x000000ff",
           "attr_len": "4"
         },
@@ -1796,7 +2593,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1806,7 +2603,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1816,7 +2613,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00008000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1826,7 +2623,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xcc",
+          "attr_offset": "0xb8",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1837,8 +2634,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
-          "attr_mask": "0x0000ff00",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x244{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x0000ff00{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1846,7 +2643,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1856,7 +2653,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00007800",
           "attr_len": "4",
           "attr_cmpval": "0x00003800"
@@ -1866,7 +2663,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00008000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1876,7 +2673,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xcc",
+          "attr_offset": "0xb8",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1887,8 +2684,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
-          "attr_mask": "0x0000ff00",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x244{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x0000ff00{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1896,7 +2693,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1906,7 +2703,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1916,7 +2713,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00400000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1926,7 +2723,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xd0",
+          "attr_offset": "0xbc",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1937,8 +2734,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
-          "attr_mask": "0x00ff0000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x248{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x00ff0000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1946,7 +2743,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1956,7 +2753,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x003c0000",
           "attr_len": "4",
           "attr_cmpval": "0x001c0000"
@@ -1966,7 +2763,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x00400000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -1976,7 +2773,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xd0",
+          "attr_offset": "0xbc",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -1987,8 +2784,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
-          "attr_mask": "0x00ff0000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x248{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0x00ff0000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -1996,7 +2793,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -2006,7 +2803,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -2016,7 +2813,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x20000000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -2026,7 +2823,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xd4",
+          "attr_offset": "0xc0",
           "attr_mask": "0x0000ffff",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -2037,8 +2834,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
-          "attr_mask": "0xff000000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x24c{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0xff000000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         },
         {
@@ -2046,7 +2843,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -2056,7 +2853,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x1e000000",
           "attr_len": "4",
           "attr_cmpval": "0x0e000000"
@@ -2066,7 +2863,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xa8",
+          "attr_offset": "0xa4",
           "attr_mask": "0x20000000",
           "attr_len": "4",
           "attr_cmpval": "0x00000000"
@@ -2076,7 +2873,7 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xd4",
+          "attr_offset": "0xc0",
           "attr_mask": "0xffff0000",
           "attr_len": "4",
           "attr_mult": "1913265",
@@ -2087,8 +2884,8 @@
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "attr_offset": "0xc4",
-          "attr_mask": "0xff000000",
+          "attr_offset": "{% if fan_duty_packed_in_one_word %}0xb0{% else %}0x24c{% endif %}",
+          "attr_mask": "{% if fan_duty_packed_in_one_word %}0xff000000{% else %}0x000000ff{% endif %}",
           "attr_len": "4"
         }
       ]
@@ -2107,6 +2904,10 @@
     },
     "i2c": {
       "interface": [
+        {
+          "itf": "eeprom",
+          "dev": "PSU1-EEPROM"
+        },
         {
           "itf": "pmbus",
           "dev": "PSU1-PMBUS"
@@ -2328,6 +3129,29 @@
       ]
     }
   },
+  "PSU1-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU1-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU1"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x59",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT9": {
     "comp_attr": {
       "name": "PSU1",
@@ -2338,7 +3162,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "model",
@@ -2354,7 +3178,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU1 {}"
       }
     ]
   },
@@ -2371,6 +3195,10 @@
     },
     "i2c": {
       "interface": [
+        {
+          "itf": "eeprom",
+          "dev": "PSU2-EEPROM"
+        },
         {
           "itf": "pmbus",
           "dev": "PSU2-PMBUS"
@@ -2592,6 +3420,29 @@
       ]
     }
   },
+  "PSU2-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU2-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5a",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT10": {
     "comp_attr": {
       "name": "PSU2",
@@ -2602,7 +3453,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "model",
@@ -2618,7 +3469,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU2 {}"
       }
     ]
   },
@@ -2635,6 +3486,10 @@
     },
     "i2c": {
       "interface": [
+        {
+          "itf": "eeprom",
+          "dev": "PSU3-EEPROM"
+        },
         {
           "itf": "pmbus",
           "dev": "PSU3-PMBUS"
@@ -2856,6 +3711,29 @@
       ]
     }
   },
+  "PSU3-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU3-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU3"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5b",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT11": {
     "comp_attr": {
       "name": "PSU3",
@@ -2866,7 +3744,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "model",
@@ -2882,7 +3760,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU3 {}"
       }
     ]
   },
@@ -2899,6 +3777,10 @@
     },
     "i2c": {
       "interface": [
+        {
+          "itf": "eeprom",
+          "dev": "PSU4-EEPROM"
+        },
         {
           "itf": "pmbus",
           "dev": "PSU4-PMBUS"
@@ -3120,6 +4002,29 @@
       ]
     }
   },
+  "PSU4-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU4-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU4"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5c",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT12": {
     "comp_attr": {
       "name": "PSU4",
@@ -3130,7 +4035,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "model",
@@ -3146,7 +4051,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU4 {}"
       }
     ]
   },
@@ -3441,7 +4346,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -3540,7 +4445,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -3639,7 +4544,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -3738,7 +4643,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -3837,7 +4742,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -3936,7 +4841,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -4035,7 +4940,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -4134,7 +5039,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -4233,7 +5138,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -4332,7 +5237,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -4431,7 +5336,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -4530,7 +5435,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -4629,7 +5534,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -4728,7 +5633,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -4827,7 +5732,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -4926,7 +5831,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -5025,7 +5930,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -5124,7 +6029,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -5223,7 +6128,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -5322,7 +6227,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -5421,7 +6326,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -5520,7 +6425,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -5619,7 +6524,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -5718,7 +6623,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -5817,7 +6722,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -5916,7 +6821,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -6015,7 +6920,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -6114,7 +7019,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -6213,7 +7118,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -6312,7 +7217,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -6411,7 +7316,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -6609,7 +7514,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -6708,7 +7613,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -6807,7 +7712,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -6906,7 +7811,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -7005,7 +7910,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -7104,7 +8009,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -7203,7 +8108,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -7302,7 +8207,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -7401,7 +8306,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -7500,7 +8405,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -7599,7 +8504,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -7698,7 +8603,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -7797,7 +8702,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -7896,7 +8801,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -7995,7 +8900,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -8094,7 +8999,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -8193,7 +9098,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -8292,7 +9197,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -8391,7 +9296,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -8490,7 +9395,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -8589,7 +9494,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -8688,7 +9593,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -8787,7 +9692,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -8886,7 +9791,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -8985,7 +9890,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -9084,7 +9989,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -9183,7 +10088,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -9282,7 +10187,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -9381,7 +10286,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -9480,7 +10385,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -9579,7 +10484,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -9777,7 +10682,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -9876,7 +10781,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -9975,7 +10880,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -10074,7 +10979,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -10173,7 +11078,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -10272,7 +11177,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -10371,7 +11276,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -10470,7 +11375,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -10569,7 +11474,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -10668,7 +11573,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -10767,7 +11672,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -10866,7 +11771,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -10965,7 +11870,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -11064,7 +11969,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -11163,7 +12068,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -11262,7 +12167,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -11361,7 +12266,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -11460,7 +12365,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -11559,7 +12464,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -11658,7 +12563,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -11757,7 +12662,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -11856,7 +12761,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -11955,7 +12860,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -12054,7 +12959,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -12153,7 +13058,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -12252,7 +13157,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -12351,7 +13256,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -12450,7 +13355,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -12549,7 +13454,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -12648,7 +13553,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -12747,7 +13652,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -12945,7 +13850,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x1",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -13044,7 +13949,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -13143,7 +14048,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -13242,7 +14147,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -13341,7 +14246,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -13440,7 +14345,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -13539,7 +14444,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -13638,7 +14543,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -13737,7 +14642,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -13836,7 +14741,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -13935,7 +14840,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -14034,7 +14939,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -14133,7 +15038,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -14232,7 +15137,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -14331,7 +15236,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -14430,7 +15335,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -14529,7 +15434,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -14628,7 +15533,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -14727,7 +15632,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -14826,7 +15731,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -14925,7 +15830,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -15024,7 +15929,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -15123,7 +16028,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -15222,7 +16127,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -15321,7 +16226,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -15420,7 +16325,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -15519,7 +16424,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -15618,7 +16523,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -15717,7 +16622,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -15816,7 +16721,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -15915,7 +16820,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
           "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -16190,7 +17095,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "1:0",
+          "bits": "11:10",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16200,7 +17105,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "1:0",
+          "bits": "11:10",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16210,7 +17115,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "1:0",
+          "bits": "11:10",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -16233,7 +17138,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "3:2",
+          "bits": "13:12",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16243,7 +17148,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "3:2",
+          "bits": "13:12",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16253,7 +17158,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "3:2",
+          "bits": "13:12",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -16276,7 +17181,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "5:4",
+          "bits": "15:14",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16286,7 +17191,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "5:4",
+          "bits": "15:14",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16296,7 +17201,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "5:4",
+          "bits": "15:14",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -16319,7 +17224,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "7:6",
+          "bits": "17:16",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16329,7 +17234,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "7:6",
+          "bits": "17:16",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16339,7 +17244,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "7:6",
+          "bits": "17:16",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -16362,7 +17267,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "11:10",
+          "bits": "1:0",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16372,7 +17277,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "11:10",
+          "bits": "1:0",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16382,7 +17287,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "11:10",
+          "bits": "1:0",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -16405,7 +17310,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "13:12",
+          "bits": "3:2",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16415,7 +17320,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "13:12",
+          "bits": "3:2",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16425,7 +17330,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "13:12",
+          "bits": "3:2",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -16448,7 +17353,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "15:14",
+          "bits": "5:4",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16458,7 +17363,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "15:14",
+          "bits": "5:4",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16468,7 +17373,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "15:14",
+          "bits": "5:4",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -16491,7 +17396,7 @@
           "attr_name": "green",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "17:16",
+          "bits": "7:6",
           "descr": "green",
           "value": "0x2",
           "swpld_addr": "0xa0",
@@ -16501,7 +17406,7 @@
           "attr_name": "red",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "17:16",
+          "bits": "7:6",
           "descr": "red",
           "value": "0x1",
           "swpld_addr": "0xa0",
@@ -16511,7 +17416,7 @@
           "attr_name": "off",
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
-          "bits": "17:16",
+          "bits": "7:6",
           "descr": "off",
           "value": "0x0",
           "swpld_addr": "0xa0",
@@ -22059,7 +22964,7 @@
       "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
-      "display_name": "Switch Card Lower Rear"
+      "display_name": "Switch Card Rear"
     },
     "i2c": {
       "attr_list": [
@@ -22087,7 +22992,7 @@
       "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
-      "display_name": "PSU 2 Intake"
+      "display_name": "Chassis Intake"
     },
     "i2c": {
       "attr_list": [
@@ -22873,6 +23778,531 @@
       }
     ]
   },
+  "VOLTAGE18": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL1",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS12V_0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in1_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in1_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in1_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in1_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in1_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE19": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL2",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS5V0_0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE20": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL3",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS3V3_WEST"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in3_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in3_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in3_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in3_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in3_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE21": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL4",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS3V3"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in4_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in4_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in4_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in4_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in4_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE22": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL5",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS1V8"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in5_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in5_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in5_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in5_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in5_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE23": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL6",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS1V2"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in6_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in6_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in6_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in6_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in6_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE24": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL7",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS1V0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in7_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in7_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in7_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in7_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in7_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE25": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL8",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS1V2_DP_0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in8_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in8_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in8_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in8_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in8_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE26": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL11",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in11_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in11_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in11_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in11_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in11_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE27": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL12",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in12_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in12_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in12_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in12_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in12_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE28": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL13",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_2"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in13_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in13_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in13_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in13_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in13_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE29": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL14",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_3"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in14_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in14_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in14_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in14_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in14_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE30": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL15",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PB_0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in15_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in15_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in15_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in15_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in15_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE31": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL16",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PB_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in16_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in16_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in16_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in16_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in16_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE32": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM2-RAIL17",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM2"
+    },
+    "dev_attr": {
+      "display_name": "POS1V45_DP_0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in17_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in17_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in17_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in17_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in17_lcrit"
+        }
+      ]
+    }
+  },
   "DPM3": {
     "dev_info": {
       "device_type": "DPM",
@@ -22917,6 +24347,531 @@
       }
     ]
   },
+  "VOLTAGE33": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL1",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS12V_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in1_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in1_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in1_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in1_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in1_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE34": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL2",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS5V0_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE35": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL3",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS3V3_EAST"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in3_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in3_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in3_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in3_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in3_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE36": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL4",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V8_DP"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in4_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in4_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in4_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in4_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in4_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE37": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL5",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V5_DP"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in5_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in5_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in5_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in5_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in5_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE38": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL8",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_4"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in8_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in8_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in8_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in8_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in8_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE39": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL9",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_5"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in9_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in9_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in9_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in9_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in9_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE40": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL10",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_6"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in10_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in10_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in10_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in10_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in10_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE41": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL11",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_7"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in11_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in11_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in11_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in11_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in11_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE42": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL12",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PB_2"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in12_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in12_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in12_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in12_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in12_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE43": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL13",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PB_3"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in13_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in13_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in13_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in13_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in13_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE44": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL14",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V45_DP_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in14_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in14_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in14_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in14_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in14_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE45": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL15",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V2_DP_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in15_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in15_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in15_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in15_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in15_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE46": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL16",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PCIE"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in16_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in16_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in16_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in16_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in16_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE47": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL17",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V2_PCIE"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in17_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in17_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in17_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in17_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in17_lcrit"
+        }
+      ]
+    }
+  },
   "DCDC0": {
     "dev_info": {
       "device_type": "DCDC",
@@ -22931,7 +24886,37 @@
       }
     }
   },
-  "VOLTAGE18": {
+  "COMPONENT16": {
+    "comp_attr": {
+      "name": "DCDC0",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "get_cmd": "echo 'N/A'"
+      }
+    ]
+  },
+  "VOLTAGE48": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC0-RAIL1",
@@ -23036,7 +25021,7 @@
       }
     }
   },
-  "COMPONENT16": {
+  "COMPONENT17": {
     "comp_attr": {
       "name": "DCDC1",
       "type": "dcdc",
@@ -23066,7 +25051,7 @@
       }
     ]
   },
-  "VOLTAGE19": {
+  "VOLTAGE49": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC1-RAIL1",
@@ -23101,7 +25086,7 @@
       ]
     }
   },
-  "VOLTAGE20": {
+  "VOLTAGE50": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC1-RAIL2",
@@ -23233,7 +25218,7 @@
       }
     }
   },
-  "COMPONENT17": {
+  "COMPONENT18": {
     "comp_attr": {
       "name": "DCDC2",
       "type": "dcdc",
@@ -23263,7 +25248,7 @@
       }
     ]
   },
-  "VOLTAGE21": {
+  "VOLTAGE51": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC2-RAIL1",
@@ -23298,7 +25283,7 @@
       ]
     }
   },
-  "VOLTAGE22": {
+  "VOLTAGE52": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC2-RAIL2",
@@ -23430,7 +25415,7 @@
       }
     }
   },
-  "COMPONENT18": {
+  "COMPONENT19": {
     "comp_attr": {
       "name": "DCDC3",
       "type": "dcdc",
@@ -23460,7 +25445,7 @@
       }
     ]
   },
-  "VOLTAGE23": {
+  "VOLTAGE53": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC3-RAIL1",
@@ -23495,7 +25480,7 @@
       ]
     }
   },
-  "VOLTAGE24": {
+  "VOLTAGE54": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC3-RAIL2",
@@ -23627,7 +25612,7 @@
       }
     }
   },
-  "COMPONENT19": {
+  "COMPONENT20": {
     "comp_attr": {
       "name": "DCDC4",
       "type": "dcdc",
@@ -23657,7 +25642,7 @@
       }
     ]
   },
-  "VOLTAGE25": {
+  "VOLTAGE55": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC4-RAIL1",
@@ -23692,7 +25677,7 @@
       ]
     }
   },
-  "VOLTAGE26": {
+  "VOLTAGE56": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC4-RAIL2",
@@ -23824,7 +25809,7 @@
       }
     }
   },
-  "COMPONENT20": {
+  "COMPONENT21": {
     "comp_attr": {
       "name": "DCDC5",
       "type": "dcdc",
@@ -23854,7 +25839,7 @@
       }
     ]
   },
-  "VOLTAGE27": {
+  "VOLTAGE57": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC5-RAIL1",
@@ -23889,7 +25874,7 @@
       ]
     }
   },
-  "VOLTAGE28": {
+  "VOLTAGE58": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC5-RAIL2",
@@ -24021,7 +26006,7 @@
       }
     }
   },
-  "COMPONENT21": {
+  "COMPONENT22": {
     "comp_attr": {
       "name": "DCDC6",
       "type": "dcdc",
@@ -24051,7 +26036,7 @@
       }
     ]
   },
-  "VOLTAGE29": {
+  "VOLTAGE59": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC6-RAIL1",
@@ -24086,7 +26071,7 @@
       ]
     }
   },
-  "VOLTAGE30": {
+  "VOLTAGE60": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC6-RAIL2",
@@ -24218,7 +26203,7 @@
       }
     }
   },
-  "COMPONENT22": {
+  "COMPONENT23": {
     "comp_attr": {
       "name": "DCDC7",
       "type": "dcdc",
@@ -24248,7 +26233,7 @@
       }
     ]
   },
-  "VOLTAGE31": {
+  "VOLTAGE61": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC7-RAIL1",
@@ -24283,7 +26268,7 @@
       ]
     }
   },
-  "VOLTAGE32": {
+  "VOLTAGE62": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC7-RAIL2",
@@ -24415,7 +26400,7 @@
       }
     }
   },
-  "COMPONENT23": {
+  "COMPONENT24": {
     "comp_attr": {
       "name": "DCDC8",
       "type": "dcdc",
@@ -24445,7 +26430,7 @@
       }
     ]
   },
-  "VOLTAGE33": {
+  "VOLTAGE63": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC8-RAIL1",
@@ -24480,7 +26465,7 @@
       ]
     }
   },
-  "VOLTAGE34": {
+  "VOLTAGE64": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC8-RAIL2",
@@ -24612,7 +26597,7 @@
       }
     }
   },
-  "COMPONENT24": {
+  "COMPONENT25": {
     "comp_attr": {
       "name": "DCDC9",
       "type": "dcdc",
@@ -24642,7 +26627,7 @@
       }
     ]
   },
-  "VOLTAGE35": {
+  "VOLTAGE65": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC9-RAIL1",
@@ -24650,7 +26635,8 @@
       "virt_parent": "DCDC9"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST"
+      "display_name": "POS3V3_WEST",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -24747,7 +26733,7 @@
       }
     }
   },
-  "COMPONENT25": {
+  "COMPONENT26": {
     "comp_attr": {
       "name": "DCDC10",
       "type": "dcdc",
@@ -24777,7 +26763,7 @@
       }
     ]
   },
-  "VOLTAGE36": {
+  "VOLTAGE66": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC10-RAIL1",
@@ -24785,7 +26771,8 @@
       "virt_parent": "DCDC10"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST"
+      "display_name": "POS3V3_EAST",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -24872,17 +26859,17 @@
     "dev_info": {
       "device_type": "DCDC",
       "device_name": "DCDC11",
-      "device_parent": "MULTIFPGAPCIE2"
+      "device_parent": "CPLDMUX2"
     },
     "i2c": {
       "topo_info": {
-        "parent_bus": "0x64",
+        "parent_bus": "0xa8",
         "dev_addr": "0x62",
         "dev_type": "nh_raa228244"
       }
     }
   },
-  "COMPONENT26": {
+  "COMPONENT27": {
     "comp_attr": {
       "name": "DCDC11",
       "type": "dcdc",
@@ -24892,7 +26879,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "cat /sys/bus/i2c/devices/100-0062/hwmon/hwmon*/mfr_revision"
+        "get_cmd": "cat /sys/bus/i2c/devices/168-0062/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -24912,15 +26899,16 @@
       }
     ]
   },
-  "VOLTAGE37": {
+  "VOLTAGE67": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC11-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ0"
+      "display_name": "POS3V3_WEST_MEZZ0",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -24947,15 +26935,16 @@
       ]
     }
   },
-  "VOLTAGE38": {
+  "VOLTAGE68": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC11-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ0"
+      "display_name": "POS3V3_EAST_MEZZ0",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -24986,7 +26975,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC11-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
@@ -25013,7 +27002,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC11-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
@@ -25040,7 +27029,7 @@
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC11-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11",
       "nexthop_thermal_pid_domain": "main",
       "nexthop_thermal_setpoint_override": 95.0
@@ -25069,17 +27058,17 @@
     "dev_info": {
       "device_type": "DCDC",
       "device_name": "DCDC12",
-      "device_parent": "MULTIFPGAPCIE2"
+      "device_parent": "CPLDMUX3"
     },
     "i2c": {
       "topo_info": {
-        "parent_bus": "0x65",
+        "parent_bus": "0xac",
         "dev_addr": "0x62",
         "dev_type": "nh_raa228244"
       }
     }
   },
-  "COMPONENT27": {
+  "COMPONENT28": {
     "comp_attr": {
       "name": "DCDC12",
       "type": "dcdc",
@@ -25089,7 +27078,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "cat /sys/bus/i2c/devices/101-0062/hwmon/hwmon*/mfr_revision"
+        "get_cmd": "cat /sys/bus/i2c/devices/172-0062/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -25109,15 +27098,16 @@
       }
     ]
   },
-  "VOLTAGE39": {
+  "VOLTAGE69": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC12-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ1"
+      "display_name": "POS3V3_WEST_MEZZ1",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -25144,15 +27134,16 @@
       ]
     }
   },
-  "VOLTAGE40": {
+  "VOLTAGE70": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC12-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ1"
+      "display_name": "POS3V3_EAST_MEZZ1",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -25183,7 +27174,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC12-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
@@ -25210,7 +27201,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC12-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
@@ -25237,7 +27228,7 @@
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC12-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12",
       "nexthop_thermal_pid_domain": "main",
       "nexthop_thermal_setpoint_override": 95.0
@@ -25307,7 +27298,8 @@
     "dev_attr": {
       "spi_device_driver": "spi-nor",
       "max_speed_hz": 0,
-      "chip_select": 0
+      "chip_select": 0,
+      "mtd_partition_label": "swcf-update"
     }
   },
   "SWITCHCARD_CONFIG_FLASH1": {
@@ -25329,7 +27321,8 @@
     "dev_attr": {
       "spi_device_driver": "spi-nor",
       "max_speed_hz": 0,
-      "chip_select": 0
+      "chip_select": 0,
+      "mtd_partition_label": "swcf-update"
     }
   },
   "MGMT_PHY_FLASH": {

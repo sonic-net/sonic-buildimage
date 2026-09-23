@@ -1,7 +1,7 @@
 
 appl_enable_intr_init.BCM8879X=0
 appl_param_module_id.BCM8879X=3
-sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
+sai_postinit_cmd_file=/usr/share/sonic/platform/Nokia-IXR7250E-SUP-10/sai_postinit_cmd.soc
 bcm_stat_interval.BCM8879X=15000000
 bcm_linkscan_interval=500000
 bist_enable.BCM8879X=0

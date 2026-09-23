@@ -86,6 +86,24 @@
         }
     },
 
+    "TUNNEL_LOAD_IPV6_NO_SRC": {
+        "sonic-tunnel:sonic-tunnel": {
+            "sonic-tunnel:TUNNEL": {
+                "TUNNEL_LIST": [
+                    {
+                        "tunnel_name": "MyIPv6TunnelWithoutSource",
+                        "dscp_mode": "pipe",
+                        "dst_ip": "fc00:1::32",
+                        "ecn_mode": "standard",
+                        "encap_ecn_mode": "standard",
+                        "ttl_mode": "pipe",
+                        "tunnel_type": "IPINIP"
+                    }
+                ]
+            }
+        }
+    },
+
     "TUNNEL_MIXED_AF": {
         "sonic-tunnel:sonic-tunnel": {
             "sonic-tunnel:TUNNEL": {
