@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (C) 2019 Accton Technology Corporation
 #
@@ -18,22 +18,18 @@
 # ------------------------------------------------------------------
 # HISTORY:
 #    mm/dd/yyyy (A.D.)
-#    11/13/2017: Polly Hsu, Create
-#    05/08/2019: Roy Lee, changed for as5812-54x.
 #    05/29/2019: Brandon Chuang, changed for as5835-54x.
+#    08/03/2020: Jostar Yang, change to call PDDF API .
 #    12/05/2025: Richard_KUO Add the flag to control the tolerance
 # ------------------------------------------------------------------
 
 try:
-    import getopt
-    import sys
+    import sys, getopt
     import logging
     import logging.config
-    import time  # this is only being used as part of the example
+    import time
     import signal
     from sonic_platform import platform
-    from as5835_54x.fanutil import FanUtil
-    from as5835_54x.thermalutil import ThermalUtil
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -44,8 +40,12 @@ DUTY_MAX = 100
 
 FAN_SPEED_SETTLE_TIMEOUT_S = 40
 
-global log_file
-global log_level
+platform_chassis = None
+
+test_temp = 0
+test_temp_list = [0, 0, 0, 0]
+test_temp_revert=0
+temp_test_data=0
 
 # Make a class we can use to capture stdout and sterr in the log
 class accton_as5835_54x_monitor(object):
@@ -56,12 +56,8 @@ class accton_as5835_54x_monitor(object):
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
         self.fan_timer_start = time.time()
-
-        self.thermal = ThermalUtil()
-        self.fan = FanUtil()
-
-        self.platform_chassis = platform.Platform().get_chassis()
-        self.fan_list = self.platform_chassis.get_all_fans()
+        global platform_chassis
+        self.fan_list = platform_chassis.get_all_fans()
 
         # set up logging to file
         logging.basicConfig(
@@ -97,8 +93,13 @@ class accton_as5835_54x_monitor(object):
         return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
 
     def manage_fans(self):
+        global platform_chassis
+        global test_temp_list
+        global temp_test_data
+        global test_temp
+
+        THERMAL_NUM_MAX=4
         FAN_LEV1_UP_TEMP = 57700  # temperature
-        FAN_LEV1_DOWN_TEMP = 0    # unused
         FAN_LEV1_SPEED_PERC = DUTY_MAX # percentage*/
 
         FAN_LEV2_UP_TEMP = 53000
@@ -109,38 +110,55 @@ class accton_as5835_54x_monitor(object):
         FAN_LEV3_DOWN_TEMP = 47700
         FAN_LEV3_SPEED_PERC = 65
 
-        FAN_LEV4_UP_TEMP = 0     # unused
         FAN_LEV4_DOWN_TEMP = 42700
         FAN_LEV4_SPEED_PERC = 40
 
+        FAN_NUM=2
+        FAN_TRAY_NUM=5
 
         if self.is_timer_expired():
             self.set_fans_tolerance_mode("on")
 
-        thermal = self.thermal
-        fan = self.fan
+        if test_temp_revert==0:
+            temp_test_data=temp_test_data+2000
+        else:
+            temp_test_data=temp_test_data-2000
 
-        temp2 = thermal.get_thermal_val(2)
-        if temp2 is None:
-            return False
-
-        temp3 = thermal.get_thermal_val(3)
-        if temp3 is None:
-            return False
-
-        new_temp = (temp2 + temp3) / 2
-
-        for x in range(fan.get_idx_fan_start(), fan.get_num_fans()+1):
-            fan_stat = fan.get_fan_status(x)
-            if fan_stat is None:
+        if test_temp==0:
+            temp2=platform_chassis.get_thermal(1).get_temperature()*1000
+            if temp2 is None:
                 return False
-            if fan_stat is False:
-                self._new_perc = FAN_LEV1_SPEED_PERC
-                logging.debug('INFO. SET new_perc to %d (FAN fault. fan_num:%d)', self._new_perc, x)
-                break
-            logging.debug('INFO. fan_stat is True (fan_num:%d)', x)
 
-        if fan_stat is not None and fan_stat is not False:
+            temp3=platform_chassis.get_thermal(2).get_temperature()*1000
+            if temp3 is None:
+                return False
+
+            new_temp = (temp2 + temp3) / 2
+        else:
+            thermal_val=[0,0,0,0]
+            for i in range (THERMAL_NUM_MAX):
+                thermal_val[i]=test_temp_list[i]
+                thermal_val[i]= thermal_val[i] + temp_test_data
+
+
+            new_temp = (thermal_val[1] + thermal_val[2])/2
+            logging.debug("Test case:thermal_val[1]=%d, thermal_val[2]=%d, get new_temp=%d", thermal_val[1], thermal_val[2],new_temp)
+
+        for x in range(FAN_TRAY_NUM * FAN_NUM):
+            #fan_stat = platform_chassis.get_fan(x).get_status() or not platform_chassis.get_fan(x).get_speed_rpm()
+
+            #if fan_stat is None:
+            #    return False
+            #if fan_stat is False:
+            fan_stat=True
+            if not platform_chassis.get_fan(x).get_status() or not platform_chassis.get_fan(x).get_speed_rpm():
+                self._new_perc = FAN_LEV1_SPEED_PERC
+                logging.debug('INFO. SET new_perc to %d (FAN fault. fan_num:%d)', self._new_perc, x+1)
+                fan_stat=False
+                break
+            logging.debug('INFO. fan_stat is True (fan_num:%d)', x+1)
+
+        if fan_stat==True:
             diff = new_temp - self._ori_temp
             if diff  == 0:
                 logging.debug('INFO. RETURN. THERMAL temp not changed. %d / %d (new_temp / ori_temp)', new_temp, self._ori_temp)
@@ -174,13 +192,15 @@ class accton_as5835_54x_monitor(object):
                     self._new_perc = FAN_LEV1_SPEED_PERC
                 logging.debug('INFO. SET. FAN_SPEED as %d (new THERMAL temp:%d)', self._new_perc, new_temp)
 
-        cur_perc = fan.get_fan_duty_cycle()
+        cur_perc= platform_chassis.get_fan(0).get_target_speed()
+        #cur_perc = fan.get_fan_duty_cycle()
         if cur_perc == self._new_perc:
             logging.debug('INFO. RETURN. FAN speed not changed. %d / %d (new_perc / ori_perc)', self._new_perc, cur_perc)
             return True
 
+        #set_stat = fan.set_fan_duty_cycle(self._new_perc)
         self.set_fans_tolerance_mode("off")
-        set_stat = fan.set_fan_duty_cycle(self._new_perc)
+        set_stat = platform_chassis.get_fan(0).set_speed(self._new_perc)
         self.fan_timer_start = time.time()
         if set_stat is True:
             logging.debug('INFO: PASS. set_fan_duty_cycle (%d)', self._new_perc)
@@ -194,17 +214,18 @@ class accton_as5835_54x_monitor(object):
         return True
 
 def handler(signum, frame):
-        fan = FanUtil()
-        logging.debug('INFO:Cause signal %d, set fan speed max.', signum)
-        fan.set_fan_duty_cycle(DUTY_MAX)
-        sys.exit(0)
+    logging.debug('INFO:Cause signal %d, set fan speed max.', signum)
+    platform_chassis.get_fan(0).set_speed(DUTY_MAX)
+    sys.exit(0)
 
 def main(argv):
+    global test_temp
+
     log_file = '%s.log' % FUNCTION_NAME
     log_level = logging.INFO
     if len(sys.argv) != 1:
         try:
-            opts, args = getopt.getopt(argv,'hdl:',['lfile='])
+            opts, args = getopt.getopt(argv,'hdlt:',['lfile='])
         except getopt.GetoptError:
             print('Usage: %s [-d] [-l <log_file>]' % sys.argv[0])
             return 0
@@ -216,6 +237,22 @@ def main(argv):
                 log_level = logging.DEBUG
             elif opt in ('-l', '--lfile'):
                 log_file = arg
+
+        if sys.argv[1]== '-t':
+            if len(sys.argv)!=6:
+                print("temp test, need input 4 temp")
+                return 0
+            i=0
+            for x in range(2, 6):
+               test_temp_list[i]= int(sys.argv[x])*1000
+               i=i+1
+            test_temp = 1
+            log_level = logging.DEBUG
+            print(test_temp_list)
+
+    global platform_chassis
+    platform_chassis = platform.Platform().get_chassis()
+
 
     signal.signal(signal.SIGINT, handler)
     signal.signal(signal.SIGTERM, handler)
