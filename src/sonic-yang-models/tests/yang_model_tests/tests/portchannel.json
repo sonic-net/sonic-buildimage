@@ -113,5 +113,8 @@
     "PORTCHANNEL_MEMBER_INVALID_MTU_MISMATCH": {
         "desc": "Reject a member port whose MTU differs from the PortChannel MTU.",
         "eStr": ["Cannot add a port with MTU configured to a PortChannel unless it matches the PortChannel MTU."]
+    },
+    "PORTCHANNEL_MEMBER_VALID_NO_PORTCHANNEL_MTU": {
+        "desc": "Add a member port with MTU configured to a PortChannel that has no MTU configured."
     }
 }

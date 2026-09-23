@@ -25,7 +25,7 @@ module sonic-portchannel {
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
     revision 2026-07-26 {
-        description "Allow member port MTU when it matches the PortChannel MTU (MACsec overhead adjustment)";
+        description "Constrain a member port MTU to match the PortChannel MTU, unless either is unset.";
     }
 
     revision 2025-06-24 {
@@ -155,7 +155,10 @@ module sonic-portchannel {
 
                 key "name port";
 
+                /* not() guards: XPath equality against an unset MTU is always false, so without
+                   them a member MTU on a PortChannel with no MTU would be rejected. */
                 must "not(/port:sonic-port/port:PORT/port:PORT_LIST[port:name=current()/port]/port:mtu) or " +
+                     "not(/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST[lag:name=current()/name]/lag:mtu) or " +
                      "(/port:sonic-port/port:PORT/port:PORT_LIST[port:name=current()/port]/port:mtu = " +
                      "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST[lag:name=current()/name]/lag:mtu)" {
                     error-message "Cannot add a port with MTU configured to a PortChannel unless it matches the PortChannel MTU.";
