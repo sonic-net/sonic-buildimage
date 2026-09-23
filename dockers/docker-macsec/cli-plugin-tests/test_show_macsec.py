@@ -162,13 +162,18 @@ class TestShowMACsec(object):
             "Principal",
             "CKN",
             "Role",
-            "Live",
-            "Key-server",
-            "SCI",
+            "Primary",
+            "live",
+            "peers",
+            "Fallback",
+            "live",
+            "peers",
             "Local-KS",
             "Status",
             "Age",
         ]
+        assert "Key-server" not in header
+        assert "SCI" not in header
         rows = {
             columns[0]: (columns[-2], columns[-1])
             for columns in (
@@ -278,6 +283,106 @@ class TestShowMACsec(object):
             "authenticated": "false",
             "secured": "true",
         }) == "-"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_compact_live_peers_by_configured_role(self, collect_mka):
+        primary_principal = mka_record()
+        primary_principal["interface"] = "Ethernet0"
+        primary_principal["participants"][0]["live_peers"] = "2"
+        primary_principal["participants"][1]["live_peers"] = "1"
+
+        fallback_principal_primary_live = mka_record()
+        fallback_principal_primary_live["interface"] = "Ethernet4"
+        fallback_principal_primary_live["participants"][0].update({
+            "is_principal": "false",
+            "live_peers": "3",
+        })
+        fallback_principal_primary_live["participants"][1].update({
+            "is_principal": "true",
+            "live_peers": "4",
+        })
+
+        fallback_principal_primary_not_live = mka_record()
+        fallback_principal_primary_not_live["interface"] = "Ethernet8"
+        fallback_principal_primary_not_live["participants"][0].update({
+            "is_principal": "false",
+            "live_peers": "0",
+        })
+        fallback_principal_primary_not_live["participants"][1].update({
+            "is_principal": "true",
+            "live_peers": "5",
+        })
+
+        primary_only = mka_record()
+        primary_only["interface"] = "Ethernet12"
+        primary_only["participants"] = primary_only["participants"][:1]
+        primary_only["participants"][0]["live_peers"] = "6"
+
+        duplicate_primary = mka_record()
+        duplicate_primary["interface"] = "Ethernet16"
+        duplicate_primary["participants"].append({
+            "ckn": "21234567890123456789012345678912",
+            "is_principal": "false",
+            "is_primary": "true",
+            "live_peers": "7",
+        })
+
+        malformed_role = mka_record()
+        malformed_role["interface"] = "Ethernet20"
+        malformed_role["participants"].append({
+            "ckn": "31234567890123456789012345678912",
+            "is_principal": "false",
+            "is_primary": "invalid",
+            "live_peers": "8",
+        })
+
+        collect_mka.side_effect = populate_mka_records([
+            malformed_role,
+            primary_only,
+            fallback_principal_primary_not_live,
+            primary_principal,
+            duplicate_primary,
+            fallback_principal_primary_live,
+        ])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka"])
+
+        assert result.exit_code == 0, result.output
+        header = result.output.splitlines()[0].split()
+        assert header == [
+            "Interface",
+            "KaY",
+            "Secured",
+            "Principal",
+            "CKN",
+            "Role",
+            "Primary",
+            "live",
+            "peers",
+            "Fallback",
+            "live",
+            "peers",
+            "Local-KS",
+            "Status",
+            "Age",
+        ]
+        assert "Key-server" not in header
+        assert "SCI" not in header
+
+        rows = {
+            columns[0]: columns
+            for columns in (
+                line.split()
+                for line in result.output.splitlines()
+                if line.startswith("Ethernet")
+            )
+        }
+        assert rows["Ethernet0"][4:7] == ["primary", "2", "1"]
+        assert rows["Ethernet4"][4:7] == ["fallback", "3", "4"]
+        assert rows["Ethernet8"][4:7] == ["fallback", "0", "5"]
+        assert rows["Ethernet12"][4:7] == ["primary", "6", "-"]
+        assert rows["Ethernet16"][4:7] == ["primary", "-", "1"]
+        assert rows["Ethernet20"][4:7] == ["primary", "-", "-"]
 
     @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
     def test_show_mka_compact_naturally_sorts_interfaces_and_namespaces(self, collect_mka):

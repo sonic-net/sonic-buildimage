@@ -199,6 +199,21 @@ def _controlled_port_mode(session):
     return "inconsistent"
 
 
+def _role_live_peers(participants, expected_is_primary):
+    if any(
+        participant.get("is_primary") not in ("true", "false")
+        for participant in participants
+    ):
+        return "-"
+    role_participants = [
+        participant for participant in participants
+        if participant.get("is_primary") == expected_is_primary
+    ]
+    if len(role_participants) != 1:
+        return "-"
+    return _safe_uint(role_participants[0].get("live_peers"))
+
+
 def _redact_known_secrets(value, secrets):
     result = str(value)
     expanded_secrets = set()
@@ -675,6 +690,12 @@ class MacsecContext(object):
                 "true": "primary",
                 "false": "fallback",
             }.get(principal.get("is_primary"), "-")
+            primary_live_peers = _role_live_peers(
+                record["participants"], "true"
+            )
+            fallback_live_peers = _role_live_peers(
+                record["participants"], "false"
+            )
             age = _age_seconds(session.get("last_updated"))
             row = [
                 record["interface"],
@@ -682,12 +703,8 @@ class MacsecContext(object):
                 _safe_bool(session.get("secured")),
                 principal_ckn,
                 role,
-                _safe_uint(principal.get("live_peers")),
-                _safe_sci(
-                    session.get("key_server_sci"),
-                    record["secrets"],
-                    hide_zero=True,
-                ),
+                primary_live_peers,
+                fallback_live_peers,
                 _safe_bool(session.get("is_key_server")),
                 _compact_status(session, age),
                 _age_label(age),
@@ -702,8 +719,8 @@ class MacsecContext(object):
             "Secured",
             "Principal CKN",
             "Role",
-            "Live",
-            "Key-server SCI",
+            "Primary live peers",
+            "Fallback live peers",
             "Local-KS",
             "Status",
             "Age",
