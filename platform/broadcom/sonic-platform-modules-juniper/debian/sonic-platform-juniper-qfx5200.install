@@ -6,3 +6,4 @@ qfx5200/utils/temperature_thresholds_AFO.txt usr/local/bin
 qfx5200/service/qfx5200-platform-init.service etc/systemd/system
 qfx5200/utils/wrapper-warm-reboot usr/local/bin
 qfx5200/utils/wrapper-fast-reboot usr/local/bin
+qfx5200/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-juniper_qfx5200-r0

@@ -4,3 +4,4 @@ qfx5210/utils/platform_poweroff usr/local/bin
 qfx5210/service/qfx5210-platform-init.service etc/systemd/system
 qfx5210/utils/wrapper-warm-reboot usr/local/bin
 qfx5210/utils/wrapper-fast-reboot usr/local/bin
+qfx5210/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-juniper_qfx5210-r0
