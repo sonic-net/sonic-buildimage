@@ -60,6 +60,12 @@ Forwarded: not-needed
  	uint8_t ssl_state;
 --- a/src/radpeapclient.c
 +++ b/src/radpeapclient.c
+@@ -274,0 +275,5 @@
++	if (eap_pkt_size > EAP_MESSAGE_MAX) {
++		peap_log_debug("compose_eap_identity_pkt: EAP Identity exceeds one RADIUS attribute\n");
++		return -1;
++	}
++
 @@ -432,6 +432,8 @@
  
  	ptr += 2 ;	/* Skip the length field */
@@ -140,17 +146,29 @@ Forwarded: not-needed
  	req->data = (uint8_t *) rad_pkt;
  	req->data_len = rad_pkt_size;
  	CLEAN_UP();
-@@ -1679,17 +1706,36 @@
+@@ -1298,1 +1308,1 @@
+-static RADIUS_PACKET *rad_recv_ipv6(int fd)
++static RADIUS_PACKET *rad_recv_ipv6(int fd, uint8_t *datagram_consumed)
+@@ -1316,0 +1327,1 @@
++	*datagram_consumed = FALSE;
+@@ -1358,0 +1371,1 @@
++	*datagram_consumed = TRUE;
+@@ -1678,0 +1691,1 @@
++	  *datagram_consumed = FALSE;
+@@ -1679,17 +1706,40 @@
   *              RADIUS_PACKET * rep
   */
  static RADIUS_PACKET *
 -rad_peap_recv()
 +rad_peap_recv(RADIUS_PACKET *request, uint8_t *ignore_reply)
  {
++	uint8_t datagram_consumed = FALSE;
  	RADIUS_PACKET * rep = 0;
 +	*ignore_reply = FALSE;
- 	rep = rad_recv_ipv6(peap_instance.sockfd);
+-	rep = rad_recv_ipv6(peap_instance.sockfd);
++	rep = rad_recv_ipv6(peap_instance.sockfd, &datagram_consumed);
  	if(0 == rep) {
++		*ignore_reply = datagram_consumed;
 -		peap_log_debug("rad_peap_recv: rad_decode failed\n");
 +		peap_log_debug("rad_peap_recv: receive failed\n");
  		return 0;
@@ -170,12 +188,14 @@ Forwarded: not-needed
 +	if (rad_verify(rep, request, peap_instance.shared_secret) != 0) {
 +		peap_log_debug("rad_peap_recv: reply verification failed\n");
 +		_pam_radius_incr( peap_instance.conf, STATS_BAD_AUTHENTICATOR);
++		*ignore_reply = TRUE;
 +		rad_free(&rep);
 +		return 0;
 +	}
 +	if ((rad_decode(rep, request, peap_instance.shared_secret)) != 0) {
  		peap_log_debug("rad_peap_recv: rad_decode failed\n");
  		_pam_radius_incr( peap_instance.conf, STATS_BAD_AUTHENTICATOR);
++		*ignore_reply = TRUE;
 +		rad_free(&rep);
  		return 0;
  	}
