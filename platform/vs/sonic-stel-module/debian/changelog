@@ -1,0 +1,6 @@
+sonic-stel-module (1.0-1) unstable; urgency=medium
+
+  * Initial release: sonic_stel genetlink kernel module for
+    High Frequency Telemetry (HFT) stream telemetry support.
+
+ -- SONiC Community <linuxnetdev@microsoft.com>  Wed, 25 Mar 2026 00:00:00 +0000
