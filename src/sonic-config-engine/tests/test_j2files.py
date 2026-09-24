@@ -1203,7 +1203,7 @@ class TestJ2Files(TestCase):
                 '{} payload created a standalone injected directive'.format(marker)
             )
             self.assertIn(
-                'servernoselect6.6.6.6 10.20.30.40noselect6.6.6.6\n',
+                'server 10.20.30.40noselect6.6.6.6\n',
                 output,
                 '{} payload was not collapsed onto a single server line'.format(marker)
             )
