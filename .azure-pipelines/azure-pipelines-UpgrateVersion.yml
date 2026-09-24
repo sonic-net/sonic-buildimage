@@ -128,18 +128,23 @@ stages:
           [[ "$artifact" == *arm64* || "$artifact" == *armhf* || "$artifact" == *nvidia-bluefield* ]] && OPTIONS="-d"
           make freeze FREEZE_VERSION_OPTIONS="$OPTIONS"
         done
-        CHECK_VERSION_OPTIONS=()
-        for artifact in $all_artifacts
-        do
-          CHECK_VERSION_OPTIONS+=("--target_path" "$artifact/target")
-        done
-        if ! scripts/versions_manager.py check \
-          --source_version_path files/build/versions-public \
-          --remove_uncovered \
-          "${CHECK_VERSION_OPTIONS[@]}"
+        if [[ "$(Build.Reason)" != "Schedule" ]]
         then
-          echo "Failed to clean up stale Docker version modules."
-          exit 1
+          echo "Skipping stale Docker version module cleanup for a non-scheduled build."
+        else
+          CHECK_VERSION_OPTIONS=()
+          for artifact in $all_artifacts
+          do
+            CHECK_VERSION_OPTIONS+=("--target_path" "$artifact/target")
+          done
+          if ! scripts/versions_manager.py check \
+            --source_version_path files/build/versions-public \
+            --remove_uncovered \
+            "${CHECK_VERSION_OPTIONS[@]}"
+          then
+            echo "Failed to clean up stale Docker version modules."
+            exit 1
+          fi
         fi
         git diff files/build/versions-public
       displayName: 'Freeze Versions'
