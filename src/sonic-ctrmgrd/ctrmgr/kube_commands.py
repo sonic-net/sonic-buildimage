@@ -106,35 +106,13 @@ def get_device_name():
     return str(device_info.get_hostname()).lower()
 
 
-def _run_command(cmd, timeout=60):
-    """ Run shell command and return exit code, along with stdout. """
-    ret = 0
-    try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-        (o, e) = proc.communicate(timeout=timeout)
-        output = to_str(o)
-        err = to_str(e)
-        ret = proc.returncode
-    except subprocess.TimeoutExpired as error:
-        proc.kill()
-        output = ""
-        err = str(error)
-        ret = -1
-
-    log_debug("cmd:{}\nret={}".format(cmd, ret))
-    if output:
-        log_debug("out:{}".format(output))
-    if err:
-        log_debug("err:{}".format(err))
-
-    return (ret, output.strip(), err.strip())
-
-
 def _run_command_list(cmd, timeout=5):
-    """ Run command as a list with shell=False to avoid shell metacharacter injection.
-    Use this for commands assembled from untrusted input (e.g. CONFIG_DB/STATE_DB values).
-    cmd must be a list.
+    """ Run command as an argv list with shell=False.
+
+    This is the only command runner in this module; a `shell=True` variant
+    used to exist alongside it, but every caller now assembles argv, so the
+    shell-string codepath was removed to eliminate the metacharacter-injection
+    landmine for future refactors.
     """
     ret = 0
     try:
@@ -425,11 +403,11 @@ def _do_reset(pending_join = False):
             "--request-timeout", "20s", "delete", "node", "--", node,
         ], timeout=60)
 
-    _run_command("kubeadm reset -f")
-    _run_command("rm -rf {}".format(CNI_DIR))
+    _run_command_list(["kubeadm", "reset", "-f"], timeout=60)
+    _run_command_list(["rm", "-rf", CNI_DIR], timeout=60)
     if not pending_join:
-        _run_command("rm -f {}".format(KUBE_ADMIN_CONF))
-    _run_command("systemctl stop kubelet")
+        _run_command_list(["rm", "-f", KUBE_ADMIN_CONF], timeout=60)
+    _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
 
 def _do_join(server, port, insecure):
@@ -442,11 +420,11 @@ def _do_join(server, port, insecure):
     try:
         _gen_cli_kubeconf(server, port, insecure)
         _do_reset(True)
-        _run_command("modprobe br_netfilter")
+        _run_command_list(["modprobe", "br_netfilter"], timeout=60)
         # Copy flannel.conf
-        _run_command("mkdir -p {}".format(CNI_DIR))
-        _run_command("cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR))
-        (ret, _, _) = _run_command("systemctl start kubelet")
+        _run_command_list(["mkdir", "-p", CNI_DIR], timeout=60)
+        _run_command_list(["cp", FLANNEL_CONF_FILE, CNI_DIR], timeout=60)
+        (ret, _, _) = _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
 
         if ret == 0:
             (ret, out, err) = _run_command_list([
@@ -486,7 +464,7 @@ def kube_join_master(server, port, insecure, force=False):
         return (-1, "", "")
 
     if ((not force) and is_connected(server)):
-        _run_command("systemctl start kubelet")
+        _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
         err = "Master {} is already connected. "
         err += "Reset or join with force".format(server)
     else:
@@ -515,7 +493,7 @@ def kube_reset_master(force):
     if ret == 0:
         _do_reset()
     else:
-        _run_command("systemctl stop kubelet")
+        _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
     return (ret, err)
 
