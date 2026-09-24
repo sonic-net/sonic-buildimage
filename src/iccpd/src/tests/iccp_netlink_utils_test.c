@@ -33,6 +33,11 @@ static void test_attr_payload_size(void)
     attr.attr.rta_len = sizeof(struct rtattr) - 1;
     assert(!iccp_netlink_attr_payload_is(&attr.attr, 0));
     assert(!iccp_netlink_attr_payload_is(NULL, 4));
+
+    init_attr(&attr, NDA_DST, 1, 0x22);
+    assert(!iccp_netlink_attr_can_advance(&attr.attr, RTA_LENGTH(1)));
+    assert(iccp_netlink_attr_can_advance(&attr.attr, RTA_SPACE(1)));
+    assert(!iccp_netlink_attr_can_advance(NULL, RTA_SPACE(1)));
 }
 
 static void test_parse_rtattrs(void)
