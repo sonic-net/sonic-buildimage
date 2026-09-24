@@ -2817,7 +2817,7 @@
             }
         },
         "45": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -2941,7 +2941,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3067,7 +3067,7 @@
             }
         },
         "46": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3191,7 +3191,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3317,7 +3317,7 @@
             }
         },
         "47": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3441,7 +3441,7 @@
                     "lane7": "0xFFFFFFF0"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3567,7 +3567,7 @@
             }
         },
         "48": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3691,7 +3691,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3817,7 +3817,7 @@
             }
         },
         "49": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -3941,7 +3941,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -4067,7 +4067,7 @@
             }
         },
         "50": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -4191,7 +4191,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -4317,7 +4317,7 @@
             }
         },
         "51": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -4441,7 +4441,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -4567,7 +4567,7 @@
             }
         },
         "52": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -4691,7 +4691,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -6353,7 +6353,7 @@
             }
         },
         "77": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -6477,7 +6477,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -6603,7 +6603,7 @@
             }
         },
         "78": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -6727,7 +6727,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -6853,7 +6853,7 @@
             }
         },
         "79": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -6977,7 +6977,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7103,7 +7103,7 @@
             }
         },
         "80": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7227,7 +7227,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7353,7 +7353,7 @@
             }
         },
         "81": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7477,7 +7477,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7603,7 +7603,7 @@
             }
         },
         "82": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7727,7 +7727,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7853,7 +7853,7 @@
             }
         },
         "83": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -7977,7 +7977,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -8103,7 +8103,7 @@
             }
         },
         "84": {
-            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}SL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
@@ -8227,7 +8227,7 @@
                     "lane7": "0xFFFFFFF8"
                 }
             },
-            "EOPTOLINK-EO138HGPCT\\d{2}CSL1": {
+            "(EOPTOLINK|EOPTERA)-EO138HGPCT\\d{2}CSL1": {
                 "pre3": {
                     "lane0": "0x0",
                     "lane1": "0x0",
