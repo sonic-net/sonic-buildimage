@@ -16,6 +16,7 @@ RUN apt-get update      && \
         libjsoncpp26 \
         libhiredis1.1.0 \
         dbus \
+        redis-tools \
     && rm -rf /var/lib/apt/lists/*
 
 {% if docker_sonic_redfish_debs.strip() -%}
@@ -38,6 +39,9 @@ RUN mkdir -p /etc/bmcweb && \
     useradd -m -s /bin/bash bmcweb && \
     echo "bmcweb:bmcweb" | chpasswd && \
     usermod -aG redfish,priv-admin,priv-operator,priv-user bmcweb
+
+COPY ["bmcweb-start.sh", "/usr/bin/bmcweb-start.sh"]
+RUN chmod +x /usr/bin/bmcweb-start.sh
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor/"]
