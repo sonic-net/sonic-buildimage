@@ -6,7 +6,7 @@ unset PASSWORD
 
 ## Enable debug output for script
 set -x -e
-
+improve build time
 ## Read ONIE image related config file
 
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
