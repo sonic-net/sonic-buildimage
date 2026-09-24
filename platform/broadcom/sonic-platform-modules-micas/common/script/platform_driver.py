@@ -18,12 +18,23 @@
 import os
 import subprocess
 import time
+import sys
 import click
 from platform_config import GLOBALCONFIG, WARM_UPGRADE_STARTED_FLAG, WARM_UPG_FLAG, FW_UPGRADE_STARTED_FLAG
+from platform_util import set_value
+from platform_util import setup_logger, BSP_COMMON_LOG_DIR
 
+# Constants
+LOG_WRITE_SIZE = 1 * 1024 * 1024  # 1 MB
+LOG_FILE = BSP_COMMON_LOG_DIR + "platform_driver_debug.log"
+logger = setup_logger(LOG_FILE, LOG_WRITE_SIZE)
+
+
+def log_message(message):
+    logger.info(message)
 
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
-
+PLATFORM_I2C_RETRY_TIME = 3
 
 class AliasedGroup(click.Group):
     def get_command(self, ctx, cmd_name):
@@ -142,12 +153,47 @@ def checksignaldriver(name):
     return False
 
 
-def adddriver(name, delay):
-    cmd = "modprobe %s" % name
-    if delay != 0:
+def process_init_commands(init):
+    if init is not None:
+        if isinstance(init, list):
+            for init_cmd in init:
+                ret, log = set_value(init_cmd)
+                if ret is True:
+                    click.echo("%%PLATFORM_DRIVER: init success, cmd: %s" % init_cmd)
+                else:
+                    click.echo("%%PLATFORM_DRIVER: init failed, cmd: %s, msg: %s" % (init_cmd, str(log)))
+                    return
+        else:
+            click.echo("%%PLATFORM_DRIVER: init must be list (type is %s)" % type(init).__name__)
+            return
+
+def adddriver(name, delay, init=None):
+    realname = name.lstrip().split(" ")[0]
+    if delay > 0:
         time.sleep(delay)
-    if checksignaldriver(name) is not True:
-        log_os_system(cmd)
+
+    ret = checksignaldriver(realname)
+    if ret is True:
+        log_message("%%PLATFORM_DRIVER: WARN: %s driver already loaded, skip to modprobe" % realname)
+        return
+
+    cmd = "modprobe %s" % name
+    log_message("%%PLATFORM_DRIVER: adddriver cmd: %s, delay: %s" % (cmd, delay))
+    retrytime = PLATFORM_I2C_RETRY_TIME
+    for i in range(retrytime):
+        process_init_commands(init)
+        status, log = log_os_system(cmd)
+        if status == 0:
+            ret = checksignaldriver(realname)
+            if ret is True:
+                log_message("%%PLATFORM_DRIVER: add driver %s success" % realname)
+                return
+            log_message("%%PLATFORM_DRIVER: run %s success, but driver %s not load, retry: %d" % (cmd, realname, i))
+        else:
+            log_message("%%PLATFORM_DRIVER: run %s error, status: %s, msg: %s, retry: %d" % (cmd, status, log, i))
+        time.sleep(0.1)
+    log_message("%%PLATFORM_DRIVER: load %s driver failed, exit!" % realname)
+    sys.exit(1)
 
 
 def removedriver(name, delay, removeable=1):
@@ -181,21 +227,23 @@ def removedrivers():
 
 def adddrivers():
     if GLOBALCONFIG is None:
-        click.echo("%%WB_PLATFORM_DRIVER-INIT: load global config failed.")
+        click.echo("%%PLATFORM_DRIVER-INIT: load global config failed.")
         return
     drivers = GLOBALCONFIG.get("DRIVERLISTS", None)
     if drivers is None:
-        click.echo("%%WB_PLATFORM_DRIVER-INIT: load driver list failed.")
+        click.echo("%%PLATFORM_DRIVER-INIT: load driver list failed.")
         return
     for driver in drivers:
         delay = 0
         name = ""
+        init = None
         if isinstance(driver, dict) and "delay" in driver:
-            name = driver.get("name")
+            name = driver.get("name", "")
             delay = driver["delay"]
+            init = driver.get("init", None)
         else:
             name = driver
-        adddriver(name, delay)
+        adddriver(name, delay, init)
 
 
 def blacklist_driver_remove():

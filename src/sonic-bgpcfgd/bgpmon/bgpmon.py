@@ -77,14 +77,17 @@ class BgpStateGet:
 
     # Get a new snapshot of BGP neighbors and store them in the "new" location
     def get_all_neigh_states(self):
-        cmd = ["vtysh", "-c", 'show bgp summary json']
+        cmd = ["vtysh", "-H", "/dev/null",  "-c", 'show bgp summary json']
         retry_attempt = 0
 
         while retry_attempt < self.MAX_RETRY_ATTEMPTS:
             try:
                 rc, output = getstatusoutput_noshell(cmd)
                 if rc:
-                    syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
+                    if os.system('pgrep -x bgpd > /dev/null 2>&1') != 0 or os.system('pgrep -x zebra > /dev/null 2>&1') != 0:
+                        syslog.syslog(syslog.LOG_WARNING, "vtysh failed (rc={}) when execute: {} Output: {} bgpd or zebra not running — container may be shutting down".format(rc, cmd, output[:200] if output else ""))
+                    else:
+                        syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
                     return
                 if len(output) == 0:
                     syslog.syslog(syslog.LOG_WARNING, "*WARNING* output none when execute: {}".format(cmd))

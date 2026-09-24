@@ -1,0 +1,58 @@
+{
+    "PSU":
+    {
+        "psu_present":
+        {
+            "bmc":
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+        "psu_fan_dir":
+        {
+            "bmc":
+            {
+                "valmap": { "1":"intake", "0":"exhaust" }
+            }
+        },
+        "psu_power_good":
+        {
+            "bmc":
+            {
+                "valmap": { "0": true, "1":false }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED":"35700"
+    },
+
+    "FAN":
+    {
+        "present":
+        {
+            "bmc":
+            {
+               "valmap": {"1":true, "0":false}
+            }
+        },
+
+        "fan_master_led_color":
+        {
+            "colmap": {"green":"green", "red":"yellow"}
+        },
+
+        "pwm_to_duty_cycle": "lambda pwm: (pwm*1.0)"
+    },
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP28": {"0":true, "1":false },
+               "valmap-QSFP-DD": {"1":true, "0":false }
+           }
+        }
+    }
+}

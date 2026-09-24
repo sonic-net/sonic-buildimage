@@ -179,15 +179,13 @@ static int wistron_led_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int wistron_led_remove(struct platform_device *pdev)
+static void wistron_led_remove(struct platform_device *pdev)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(wistron_leds); i++) {
 		led_classdev_unregister(&wistron_leds[i]);
 	}
-
-	return 0;
 }
 
 static struct platform_driver wistron_led_driver = {

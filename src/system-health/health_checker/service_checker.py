@@ -1,11 +1,13 @@
 import docker
+import json
 import os
-import pickle
 import re
+import tempfile
 
 from swsscommon import swsscommon
 from sonic_py_common import multi_asic, device_info
 from sonic_py_common.logger import Logger
+from .config import sanitize_optional_containers
 from .health_checker import HealthChecker
 from . import utils
 
@@ -25,7 +27,6 @@ def check_docker_image(image_name):
         DOCKER_CLIENT.images.get(image_name)
         return True
     except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
-        logger.log_warning("Failed to get image '{}'. Error: '{}'".format(image_name, err))
         return False
 
 class ServiceChecker(HealthChecker):
@@ -34,7 +35,8 @@ class ServiceChecker(HealthChecker):
     """
 
     # Cache file to save container_critical_processes
-    CRITICAL_PROCESS_CACHE = '/tmp/critical_process_cache'
+    CRITICAL_PROCESS_CACHE = '/var/cache/sonic/system-health/critical_process_cache'
+    CRITICAL_PROCESS_CACHE_VERSION = 1
 
     CRITICAL_PROCESSES_PATH = 'etc/supervisor/critical_processes'
 
@@ -48,12 +50,21 @@ class ServiceChecker(HealthChecker):
     CHECK_CMD = 'monit summary -B'
     MIN_CHECK_CMD_LINES = 3
 
-    # Expect status for different system service category.
-    EXPECT_STATUS_DICT = {
-        'System': 'Running',
-        'Process': 'Running',
-        'Filesystem': 'Accessible',
-        'Program': 'Status ok'
+    # Expect status for all system service categories.
+    # Monit 5.34.3+ (Debian 13) uses 'OK' for all service types
+    EXPECTED_STATUS = 'OK'
+
+    # Whitelist of containers which are managed by KubeSonic to bypass health checking entirely.
+    # These containers will be excluded from both expected and running container sets.
+    CONTAINER_K8S_WHITELIST = {'telemetry', 'acms', 'restapi'}
+
+    # Containers that are only present in some images. When the docker image that
+    # backs such a container is not part of the build, the container is not
+    # expected to run and is skipped. Maps container name -> docker image name.
+    # Deployments can declare additional optional containers via the
+    # 'optional_containers' object in system_health_monitoring_config.json.
+    OPTIONAL_CONTAINERS = {
+        'otel': 'docker-sonic-otel',
     }
 
     def __init__(self):
@@ -70,13 +81,13 @@ class ServiceChecker(HealthChecker):
 
         self.load_critical_process_cache()
 
-        self.events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
-
-    def get_expected_running_containers(self, feature_table):
+    def get_expected_running_containers(self, feature_table, config=None):
         """Get a set of containers that are expected to running on SONiC
 
         Args:
             feature_table (object): FEATURE table in CONFIG_DB
+            config (object): Health checker configuration (optional). Used to
+                pick up deployment-declared optional containers.
 
         Returns:
             expected_running_containers: A set of container names that are expected running
@@ -84,6 +95,14 @@ class ServiceChecker(HealthChecker):
         """
         expected_running_containers = set()
         container_feature_dict = {}
+
+        # Build the effective optional-container map: the built-in defaults plus
+        # any extras declared by the deployment configuration.
+        optional_containers = dict(ServiceChecker.OPTIONAL_CONTAINERS)
+        if config is not None:
+            optional_containers.update(
+                sanitize_optional_containers(getattr(config, 'optional_containers', {}))
+            )
 
         # Get current asic presence list. For multi_asic system, multi instance containers
         # should be checked only for asics present.
@@ -99,6 +118,13 @@ class ServiceChecker(HealthChecker):
 
         container_list = []
         for container_name in feature_table.keys():
+            # Skip containers in the whitelist
+            if container_name in ServiceChecker.CONTAINER_K8S_WHITELIST:
+                logger.log_debug("Skipping whitelisted kubesonic managed container '{}' from expected running check".format(container_name))
+                continue
+            # skip frr_bmp since it's not container just bmp option used by bgpd
+            if container_name == "frr_bmp":
+                continue
             # slim image does not have telemetry container and corresponding docker image
             if container_name == "telemetry":
                 ret = check_docker_image("docker-sonic-telemetry")
@@ -112,6 +138,13 @@ class ServiceChecker(HealthChecker):
                     else:
                         container_list.append("gnmi")
                     continue
+            # Some platforms may not include an optional container; skip
+            # expecting it when its docker image is absent from this build.
+            if container_name in optional_containers:
+                if not check_docker_image(optional_containers[container_name]):
+                    logger.log_debug("Ignoring {} container check on image which has no corresponding docker image".format(container_name))
+                    continue
+
             container_list.append(container_name)
 
         for container_name in container_list:
@@ -131,7 +164,7 @@ class ServiceChecker(HealthChecker):
                     expected_running_containers.add(container_name)
                     container_feature_dict[container_name] = container_name
                     
-        if device_info.is_supervisor():
+        if device_info.is_supervisor() or device_info.is_disaggregated_chassis():
             expected_running_containers.add("database-chassis")
             container_feature_dict["database-chassis"] = "database"
         return expected_running_containers, container_feature_dict
@@ -150,6 +183,14 @@ class ServiceChecker(HealthChecker):
             lst = ctrs.list(filters={"status": "running"})
 
             for ctr in lst:
+                # Check if this is a Kubernetes-managed container
+                labels = ctr.labels or {}
+                ns = labels.get("io.kubernetes.pod.namespace")
+                if ns == "sonic":
+                    continue
+                # Skip kubesonic managed containers in the whitelist
+                if ctr.name in ServiceChecker.CONTAINER_K8S_WHITELIST:
+                    continue
                 running_containers.add(ctr.name)
                 if ctr.name not in self.container_critical_processes:
                     self.fill_critical_process_by_container(ctr.name)
@@ -159,20 +200,22 @@ class ServiceChecker(HealthChecker):
         return running_containers
 
     def get_critical_process_list_from_file(self, container, critical_processes_file):
-        """Read critical process name list from critical processes file
+        """Read critical process and group name lists from critical processes file
 
         Args:
             container (str): contianer name
             critical_processes_file (str): critical processes file path
 
         Returns:
-            critical_process_list: A list of critical process names
+            (critical_process_list, critical_group_list): Lists of critical process names
+            and supervisord group names respectively
         """
         critical_process_list = []
+        critical_group_list = []
 
         with open(critical_processes_file, 'r') as file:
             for line in file:
-                # Try to match a line like "program:<process_name>"
+                # Try to match a line like "program:<process_name>" or "group:<group_name>"
                 match = re.match(r"^\s*((.+):(.*))*\s*$", line)
                 if match is None:
                     if container not in self.bad_containers:
@@ -184,8 +227,10 @@ class ServiceChecker(HealthChecker):
                     identifier_value = match.group(3).strip()
                     if identifier_key == "program" and identifier_value:
                         critical_process_list.append(identifier_value)
+                    elif identifier_key == "group" and identifier_value:
+                        critical_group_list.append(identifier_value)
 
-        return critical_process_list
+        return critical_process_list, critical_group_list
 
     def fill_critical_process_by_container(self, container):
         """Get critical process for a given container
@@ -212,7 +257,31 @@ class ServiceChecker(HealthChecker):
             return
 
         # Get critical process list from critical_processes
-        critical_process_list = self.get_critical_process_list_from_file(container, critical_processes_file)
+        critical_process_list, critical_group_list = self.get_critical_process_list_from_file(container, critical_processes_file)
+
+        # Expand group: entries to individual "group:process" names via supervisorctl status.
+        if critical_group_list:
+            count_before_expansion = len(critical_process_list)
+            cmd = 'docker exec {} bash -c "supervisorctl status"'.format(container)
+            status_output = utils.run_command(cmd, timeout=15)
+            if status_output:
+                process_status = self._parse_supervisorctl_status(status_output.strip().splitlines())
+                for proc_name in process_status:
+                    if ':' in proc_name:
+                        group_name = proc_name.split(':')[0]
+                        if group_name in critical_group_list:
+                            critical_process_list.append(proc_name)
+            else:
+                logger.log_warning('Failed to get supervisorctl status for container {}, was container stopped?'.format(container))
+
+            # If group expansion produced no processes (e.g. supervisord still
+            # booting, docker exec failed), skip caching so the next check cycle
+            # retries. Without this, the empty result sticks for the rest of the
+            # daemon's lifetime via the not-in-dict gate in get_current_running_containers.
+            if len(critical_process_list) == count_before_expansion:
+                logger.log_warning('Group expansion produced no processes for container {}; will retry on next check'.format(container))
+                return
+
         self._update_container_critical_processes(container, critical_process_list)
 
     def _update_container_critical_processes(self, container, critical_process_list):
@@ -233,24 +302,66 @@ class ServiceChecker(HealthChecker):
             return
 
         self.need_save_cache = False
+        cache_path = ServiceChecker.CRITICAL_PROCESS_CACHE
         if not self.container_critical_processes:
-            # if container_critical_processes is empty, don't save it
+            try:
+                os.remove(cache_path)
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                self.need_save_cache = True
+                logger.log_error('failed to remove critical process cache: {}'.format(e))
             return
 
-        if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
-            # if cache file exists, remove it
-            os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
-
-        with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'wb+') as f:
-            pickle.dump(self.container_critical_processes, f)
+        cache_dir = os.path.dirname(cache_path)
+        temp_path = None
+        try:
+            os.makedirs(cache_dir, mode=0o700, exist_ok=True)
+            with tempfile.NamedTemporaryFile(mode='w', dir=cache_dir, delete=False) as f:
+                temp_path = f.name
+                json.dump({
+                    'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+                    'container_critical_processes': self.container_critical_processes
+                }, f)
+            os.replace(temp_path, cache_path)
+            temp_path = None
+        except (OSError, TypeError, ValueError) as e:
+            self.need_save_cache = True
+            logger.log_error('failed to save critical process cache: {}'.format(e))
+        finally:
+            if temp_path:
+                try:
+                    os.remove(temp_path)
+                except FileNotFoundError:
+                    pass
 
     def load_critical_process_cache(self):
-        if not os.path.isfile(ServiceChecker.CRITICAL_PROCESS_CACHE):
-            # cache file does not exist
+        try:
+            with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'r') as f:
+                if os.fstat(f.fileno()).st_uid != os.geteuid():
+                    logger.log_error('ignoring critical process cache not owned by this process')
+                    return
+                cache = json.load(f)
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError) as e:
+            logger.log_error('failed to load critical process cache: {}'.format(e))
             return
 
-        with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'rb') as f:
-            self.container_critical_processes = pickle.load(f)
+        if not isinstance(cache, dict) or cache.get('version') != ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION:
+            return
+
+        container_critical_processes = cache.get('container_critical_processes')
+        if not isinstance(container_critical_processes, dict):
+            return
+        if not all(
+                isinstance(container, str)
+                and isinstance(processes, list)
+                and all(isinstance(process, str) for process in processes)
+                for container, processes in container_critical_processes.items()):
+            return
+
+        self.container_critical_processes = container_critical_processes
 
     def reset(self):
         self._info = {}
@@ -287,11 +398,8 @@ class ServiceChecker(HealthChecker):
                 continue
             status = line[status_begin:type_begin].strip()
             service_type = line[type_begin:].strip()
-            if service_type not in ServiceChecker.EXPECT_STATUS_DICT:
-                continue
-            expect_status = ServiceChecker.EXPECT_STATUS_DICT[service_type]
-            if expect_status != status:
-                self.set_object_not_ok(service_type, name, '{} is not {}'.format(name, expect_status))
+            if status != ServiceChecker.EXPECTED_STATUS:
+                self.set_object_not_ok(service_type, name, '{} status is {}, expected {}'.format(name, status, ServiceChecker.EXPECTED_STATUS))
             else:
                 self.set_object_ok(service_type, name)
         return
@@ -306,7 +414,7 @@ class ServiceChecker(HealthChecker):
             self.config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             self.config_db.connect()
         feature_table = self.config_db.get_table("FEATURE")
-        expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table)
+        expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table, config)
         current_running_containers = self.get_current_running_containers()
 
         newly_disabled_containers = set(self.container_critical_processes.keys()).difference(expected_running_containers)
@@ -339,7 +447,6 @@ class ServiceChecker(HealthChecker):
         self.reset()
         self.check_by_monit(config)
         self.check_services(config)
-        swsscommon.events_deinit_publisher(self.events_handle)
 
     def _parse_supervisorctl_status(self, process_status):
         """Expected input:
@@ -363,9 +470,11 @@ class ServiceChecker(HealthChecker):
     def publish_events(self, container_name, critical_process_list):
         params = swsscommon.FieldValueMap()
         params["ctr_name"] = container_name
+        events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
         for process_name in critical_process_list:
             params["process_name"] = process_name
-            swsscommon.event_publish(self.events_handle, EVENTS_PUBLISHER_TAG, params)
+            swsscommon.event_publish(events_handle, EVENTS_PUBLISHER_TAG, params)
+        swsscommon.events_deinit_publisher(events_handle)
 
     def check_process_existence(self, container_name, critical_process_list, config, feature_table):
         """Check whether the process in the specified container is running or not.
@@ -387,7 +496,7 @@ class ServiceChecker(HealthChecker):
                 # it not always possible to get process cmdline in supervisor.conf. E.g, cmdline of orchagent is "/usr/bin/orchagent",
                 # however, in supervisor.conf it is "/usr/bin/orchagent.sh"
                 cmd = 'docker exec {} bash -c "supervisorctl status"'.format(container_name)
-                process_status = utils.run_command(cmd)
+                process_status = utils.run_command(cmd, timeout=15)
                 if process_status is None:
                     for process_name in critical_process_list:
                         self.set_object_not_ok('Process', '{}:{}'.format(container_name, process_name), "Process '{}' in container '{}' is not running".format(process_name, container_name))

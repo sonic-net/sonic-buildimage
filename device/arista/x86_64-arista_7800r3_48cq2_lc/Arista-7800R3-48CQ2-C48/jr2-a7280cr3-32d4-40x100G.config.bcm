@@ -9,6 +9,7 @@ l4_protocols_load_balancing_enable=1
 fabric_logical_port_base=512
 trunk_group_max_members=16
 num_olp_tm_ports.BCM8869X=1
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
 
 # nif
 port_init_cl72=0
@@ -484,16 +485,16 @@ ucode_port_154.BCM8869X=RCY_MIRROR.27:core_1.142
 
 port_priorities.BCM8869X=8
 
-tm_port_header_type_in_0.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_0.BCM8869X=INJECTED
 tm_port_header_type_out_0.BCM8869X=CPU
 
-tm_port_header_type_in_200.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_200.BCM8869X=INJECTED
 tm_port_header_type_out_200.BCM8869X=ETH
-tm_port_header_type_in_201.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_201.BCM8869X=INJECTED
 tm_port_header_type_out_201.BCM8869X=ETH
-tm_port_header_type_in_202.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_202.BCM8869X=INJECTED
 tm_port_header_type_out_202.BCM8869X=ETH
-tm_port_header_type_in_203.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_203.BCM8869X=INJECTED
 tm_port_header_type_out_203.BCM8869X=ETH
 
 sat_enable.BCM8869X=1
@@ -862,3 +863,9 @@ dma_desc_aggregator_enable_specific_MDB_FEC.BCM8869X=1
 sai_pfc_dlr_init_capability=0 
 sai_default_cpu_tx_tc=7
 sai_disable_srcmacqedstmac_ctrl=1
+appl_param_active_links_thr_high=58
+appl_param_active_links_thr_low=1
+custom_feature_start_tx_threshold=20
+sai_ecmp_group_members_increment=8
+sai_instru_stat_accum_enable=1
+sai_fec_stats_cumulative=1

@@ -374,16 +374,16 @@ RUN apt-get install -y libarchive13 librhash0
 RUN apt-get -t stretch-backports install -y libuv1
 # Install cmake/cmake-data 3.13.2-1_bpo9+1
 # latest cmake 3.16.3 break the build libyang 1.0.73
-RUN wget -O cmake-data_3.13.2-1_bpo9+1_all.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake-data_3.13.2-1_bpo9%2B1_all.deb"
+RUN wget -O cmake-data_3.13.2-1_bpo9+1_all.deb "https://packages.trafficmanager.net/public/cmake/cmake-data_3.13.2-1_bpo9%2B1_all.deb"
 RUN dpkg -i cmake-data_3.13.2-1_bpo9+1_all.deb || apt-get install -f
 {% if CONFIGURED_ARCH == "armhf" %}
-RUN wget -O cmake_3.13.2-1_bpo9+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_armhf.deb"
+RUN wget -O cmake_3.13.2-1_bpo9+1_armhf.deb "https://packages.trafficmanager.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_armhf.deb"
 RUN dpkg -i cmake_3.13.2-1_bpo9+1_armhf.deb || apt-get install -f
 {% elif CONFIGURED_ARCH == "arm64" %}
-RUN wget -O cmake_3.13.2-1_bpo9+1_arm64.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_arm64.deb"
+RUN wget -O cmake_3.13.2-1_bpo9+1_arm64.deb "https://packages.trafficmanager.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_arm64.deb"
 RUN dpkg -i cmake_3.13.2-1_bpo9+1_arm64.deb || apt-get install -f
 {% else %}
-RUN wget -O cmake_3.13.2-1_bpo9+1_amd64.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_amd64.deb"
+RUN wget -O cmake_3.13.2-1_bpo9+1_amd64.deb "https://packages.trafficmanager.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_amd64.deb"
 RUN dpkg -i cmake_3.13.2-1_bpo9+1_amd64.deb || apt-get install -f
 {% endif %}
 RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
@@ -437,3 +437,8 @@ LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
 ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
 RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
 {% endif -%}
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='stretch' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

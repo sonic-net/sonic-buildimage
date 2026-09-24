@@ -56,18 +56,23 @@ pmt_alloc_high(const int n)
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     pciehw_spmt_t *spmt;
     int pmti = -1;
+    u_int32_t freepmt_high_l, allocpmt_high_l, allocpmt_low_l;
 
-    if (n == 1 && pshmem->freepmt_high != PMT_INVALID) {
+    freepmt_high_l = PSHMEM_DATA_FIELD(pshmem, freepmt_high);
+    allocpmt_high_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_high);
+    allocpmt_low_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_low);
+
+    if (n == 1 && freepmt_high_l != PMT_INVALID) {
         /* alloc a single entry from free list */
-        pmti = pshmem->freepmt_high;
+        pmti = freepmt_high_l;
         spmt = pciesvc_spmt_get(pmti);
-        pshmem->freepmt_high = spmt->next;
+        PSHMEM_ASGN_FIELD(pshmem, freepmt_high, spmt->next);
         spmt->next = PMT_INVALID;
         pciesvc_spmt_put(spmt, DIRTY);
-    } else if (pshmem->allocpmt_high + n <= pshmem->allocpmt_low) {
+    } else if (allocpmt_high_l + n <= allocpmt_low_l) {
         /* alloc multiple entries from sequential block */
-        pmti = pshmem->allocpmt_high;
-        pshmem->allocpmt_high += n;
+        pmti = allocpmt_high_l;
+        PSHMEM_ASGN_FIELD(pshmem, allocpmt_high, allocpmt_high_l + n);
     }
     return pmti;
 }
@@ -78,18 +83,23 @@ pmt_alloc_low(const int n)
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     pciehw_spmt_t *spmt;
     int pmti = -1;
+    u_int32_t freepmt_low_l, allocpmt_high_l, allocpmt_low_l;
 
-    if (n == 1 && pshmem->freepmt_low != PMT_INVALID) {
+    freepmt_low_l = PSHMEM_DATA_FIELD(pshmem, freepmt_low);
+    allocpmt_high_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_high);
+    allocpmt_low_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_low);
+
+    if (n == 1 && freepmt_low_l != PMT_INVALID) {
         /* alloc a single entry from free list */
-        pmti = pshmem->freepmt_low;
+        pmti = freepmt_low_l;
         spmt = pciesvc_spmt_get(pmti);
-        pshmem->freepmt_low = spmt->next;
+        PSHMEM_ASGN_FIELD(pshmem, freepmt_low, spmt->next);
         spmt->next = PMT_INVALID;
         pciesvc_spmt_put(spmt, DIRTY);
-    } else if (pshmem->allocpmt_low - n >= pshmem->allocpmt_high) {
+    } else if (allocpmt_low_l - n >= allocpmt_high_l) {
         /* alloc multiple entries from sequential block */
-        pshmem->allocpmt_low -= n;
-        pmti = pshmem->allocpmt_low;
+        PSHMEM_ASGN_FIELD(pshmem, allocpmt_low, allocpmt_low_l - n);
+        pmti = PSHMEM_DATA_FIELD(pshmem, allocpmt_low);
     }
     return pmti;
 }
@@ -99,13 +109,14 @@ pmt_alloc_vf0adj(const int n)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     int pmti = -1;
+    u_int32_t allocpmt_vf0adj_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_vf0adj);
 
     /* if no reserved vf0adj region alloc from high pri */
-    if (pshmem->allocpmt_vf0adj == -1) {
+    if (allocpmt_vf0adj_l == -1) {
         pmti = pmt_alloc_high(n);
-    } else if (pshmem->allocpmt_vf0adj + n <= pmt_count()) {
-        pmti = pshmem->allocpmt_vf0adj;
-        pshmem->allocpmt_vf0adj += n;
+    } else if (allocpmt_vf0adj_l + n <= pmt_count()) {
+        pmti = allocpmt_vf0adj_l;
+        PSHMEM_ASGN_FIELD(pshmem, allocpmt_vf0adj, allocpmt_vf0adj_l + n);
     }
     return pmti;
 }
@@ -148,16 +159,18 @@ pmt_alloc(const int n, const int pri)
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     int pmti = -1;
 
-    pciesvc_assert(n > 0);
-    pciesvc_assert(n <= pmt_count());
+    if (n <= 0 || n > pmt_count()) {
+        pciesvc_logerror("pmt_alloc: Invalid count value %d\n", n);
+        return -1;
+    }
 
-    if (!pshmem->pmtpri) {
-        pshmem->allocpmt_low = pmt_count();
-        pshmem->freepmt_high = PMT_INVALID;
-        pshmem->freepmt_low = PMT_INVALID;
-        pshmem->allocpmt_vf0adj = -1;
-        pshmem->freeprt_slab = PRT_INVALID;
-        pshmem->pmtpri = 1;
+    if (!PSHMEM_DATA_FIELD(pshmem, pmtpri)) {
+        PSHMEM_ASGN_FIELD(pshmem, allocpmt_low, pmt_count());
+        PSHMEM_ASGN_FIELD(pshmem, freepmt_high, PMT_INVALID);
+        PSHMEM_ASGN_FIELD(pshmem, freepmt_low, PMT_INVALID);
+        PSHMEM_ASGN_FIELD(pshmem, allocpmt_vf0adj, -1);
+        PSHMEM_ASGN_FIELD(pshmem, freeprt_slab, PRT_INVALID);
+        PSHMEM_ASGN_FIELD(pshmem, pmtpri, 1);
     }
 
     switch (pri) {
@@ -188,20 +201,27 @@ int
 pmt_reserve_vf0adj(const int n)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
+    int ret = 0;
 
-    pshmem->allocpmt_vf0adj = pmt_alloc(n, PMTPRI_LOW);
-    return pshmem->allocpmt_vf0adj;
+    ret = pmt_alloc(n, PMTPRI_LOW);
+    if (ret < 0) return ret;
+    PSHMEM_ASGN_FIELD(pshmem, allocpmt_vf0adj, ret);
+    return PSHMEM_DATA_FIELD(pshmem, allocpmt_vf0adj);
 }
 
 static int
-pmt_to_pri(const int pmti)
+pmt_to_pri(const int pmtb, const int pmtc)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     int pmtpri = -1;
+    int pmti = pmtb + pmtc;
+    u_int32_t allocpmt_high_l, allocpmt_low_l;
 
-    if (pmti >= 0 && pmti <= pshmem->allocpmt_high) {
+    allocpmt_high_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_high);
+    allocpmt_low_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_low);
+    if (pmtb >= 0 && pmti <= allocpmt_high_l) {
         pmtpri = PMTPRI_HIGH;
-    } else if (pmti >= pshmem->allocpmt_low && pmti < pmt_count()) {
+    } else if (pmtb >= allocpmt_low_l && pmti <= pmt_count()) {
         pmtpri = PMTPRI_LOW;
     }
     return pmtpri;
@@ -211,7 +231,7 @@ static int
 spmt_to_pmti(const pciehw_spmt_t *spmt)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
-    return spmt - pshmem->spmt;
+    return spmt - PSHMEM_DATA_FIELD(pshmem, spmt);
 }
 
 void
@@ -219,33 +239,47 @@ pmt_free(const int pmtb, const int pmtc)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     pciehw_spmt_t *spmt;
-    int pmti;
+    int pmti, pmtpri;
+    u_int32_t allocpmt_high_l, freepmt_high_l, allocpmt_low_l, freepmt_low_l;
 
     assert_pmts_in_range(pmtb, pmtc);
 
-    if (pmt_to_pri(pmtb + pmtc) == PMTPRI_HIGH) {
+    allocpmt_high_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_high);
+    allocpmt_low_l = PSHMEM_DATA_FIELD(pshmem, allocpmt_low);
+    freepmt_high_l = PSHMEM_DATA_FIELD(pshmem, freepmt_high);
+    freepmt_low_l = PSHMEM_DATA_FIELD(pshmem, freepmt_low);
+    pmtpri = pmt_to_pri(pmtb, pmtc);
+    if (pmtpri == PMTPRI_HIGH) {
         /* free high pri */
-        for (pmti = pmtb; pmti < pmtb + pmtc; pmti++) {
-            spmt = pciesvc_spmt_get(pmti);
-            spmt->next = pshmem->freepmt_high;
-            pciesvc_spmt_put(spmt, DIRTY);
-            pshmem->freepmt_high = pmti;
+        if (allocpmt_high_l == (pmtb + pmtc)) {
+            PSHMEM_ASGN_FIELD(pshmem, allocpmt_high, allocpmt_high_l - pmtc);
+            return;
         }
-    } else if (pmt_to_pri(pmtb) == PMTPRI_LOW) {
-        /* free low pri */
         for (pmti = pmtb; pmti < pmtb + pmtc; pmti++) {
             spmt = pciesvc_spmt_get(pmti);
-            spmt->next = pshmem->freepmt_low;
+            spmt->next = freepmt_high_l;
             pciesvc_spmt_put(spmt, DIRTY);
-            pshmem->freepmt_low = pmti;
+            PSHMEM_ASGN_FIELD(pshmem, freepmt_high, pmti);
+        }
+    } else if (pmtpri == PMTPRI_LOW) {
+        /* free low pri */
+        if (allocpmt_low_l == pmtb) {
+            PSHMEM_ASGN_FIELD(pshmem, allocpmt_low, allocpmt_low_l + pmtc);
+            return;
+        }
+        for (pmti = pmtb; pmti < pmtb + pmtc; pmti++) {
+            spmt = pciesvc_spmt_get(pmti);
+            spmt->next = freepmt_low_l;
+            pciesvc_spmt_put(spmt, DIRTY);
+            PSHMEM_ASGN_FIELD(pshmem, freepmt_low, pmti);
         }
     } else {
         /* outside of both alloc ranges? */
         pciesvc_logerror("pmt_free: leak pmt %d (%d), "
                          "allocpmt_low %u allocpmt_high %u\n",
                          pmtb, pmtc,
-                         pshmem->allocpmt_low,
-                         pshmem->allocpmt_high);
+                         allocpmt_low_l,
+                         allocpmt_high_l);
     }
 }
 
@@ -631,11 +665,11 @@ spmt_dup_prts(const pciehw_spmt_t *ospmt, pciehw_spmt_t *nspmt)
         pciesvc_logerror("spmt_dup: prt_alloc %d failed\n", pmr->prtc);
         return -1;
     }
-    osprt = &pshmem->sprt[pmr->prtb];
-    nsprt = &pshmem->sprt[prti];
+    osprt = PSHMEM_ADDR_FIELD(pshmem, sprt[pmr->prtb]);
+    nsprt = PSHMEM_ADDR_FIELD(pshmem, sprt[prti]);
     pmr->prtb = prti;
     for (prti = pmr->prtb; prti < pmr->prtb + pmr->prtc; prti++) {
-        *nsprt = *osprt;
+        pciesvc_memcpy(nsprt++, osprt++, sizeof(*nsprt));
     }
     return 0;
 }
@@ -907,6 +941,8 @@ pciehw_pmt_adjust_vf0(pciehw_spmt_t *spmt,
                 r = -1;
                 break;
             }
+            /* set owner to adjusted vf dev */
+            nspmt->owner = spmt->owner + nvfs;
             spmt = nspmt;
         }
     }

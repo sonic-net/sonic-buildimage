@@ -47,6 +47,34 @@ class DeviceGlobalCfgMgr(Manager):
         # By default IDF feature is unisolated
         if not self.directory.path_exist(self.db_name, self.table_name, "idf_isolation_state"):
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", self.IDF_DEFAULTS)
+        # Prime the BGP confederation (CONFED) config from CONFIG_DB up front so
+        # the BGP peer templates can classify confed-external neighbors on the
+        # very first render. bgpcfgd may process the BGP_NEIGHBOR table before the
+        # CONFED update is delivered, and a neighbor that renders successfully is
+        # not re-rendered on a later CONFED change, which would otherwise leave
+        # confed-external neighbors in PEER_V4 (and leaking during TSA). No-op on
+        # non-confed devices (no CONFED row).
+        if not self.directory.path_exist(self.db_name, self.table_name, "CONFED"):
+            self.prime_confed_from_config_db()
+
+    def prime_confed_from_config_db(self):
+        """ Read the CONFED row directly from CONFIG_DB and cache it in the
+        Directory so the peer templates see it before the first neighbor render. """
+        if not hasattr(swsscommon, "ConfigDBConnector"):
+            return
+        try:
+            config_db = swsscommon.ConfigDBConnector()
+            config_db.connect()
+            # get_table() may return None on a missing table or transient read
+            # failure that does not raise; coalesce to {} so the membership test
+            # below never raises TypeError and breaks bgpcfgd startup.
+            device_global = config_db.get_table(self.table_name) or {}
+        except Exception as e:
+            log_err("DeviceGlobalCfgMgr:: failed to read %s from CONFIG_DB: %s" % (self.table_name, str(e)))
+            return
+        if "CONFED" in device_global:
+            self.directory.put(self.db_name, self.table_name, "CONFED", dict(device_global["CONFED"]))
+            log_notice("DeviceGlobalCfgMgr:: primed CONFED config from CONFIG_DB")
 
     def handle_type_update(self):
         log_debug("DeviceGlobalCfgMgr:: Switch role update handler")
@@ -62,6 +90,17 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
+        # the handler is for the whole BGP_DEVICE_GLOBAL table. It has 2 components, state and confged
+        # we only handle the update BGP_DEVICE_GLOBAL|STATE here
+        if key != "STATE":
+            # BGP confederation config is stored in the same table under the
+            # CONFED key. Save it in the Directory so the BGP peer templates can
+            # classify confed-internal vs confed-external neighbors into the
+            # correct peer-group. It carries no TSA/W-ECMP/IDF fields.
+            if key == "CONFED":
+                self.directory.put(self.db_name, self.table_name, "CONFED", data)
+            return True
+
         # TSA configuration
         self.configure_tsa(data)
         # W-ECMP configuration
@@ -73,6 +112,15 @@ class DeviceGlobalCfgMgr(Manager):
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
+
+        # only the STATE component drives the TSA/W-ECMP/IDF handlers
+        if key != "STATE":
+            # CONFED carries no TSA/W-ECMP/IDF fields. Drop it from the Directory
+            # so a stale confederation is not left behind, and return without
+            # running those handlers (which would otherwise re-apply defaults).
+            if key == "CONFED" and self.directory.path_exist(self.db_name, self.table_name, "CONFED"):
+                self.directory.remove(self.db_name, self.table_name, "CONFED")
+            return True
 
         # TSA configuration
         self.configure_tsa()
@@ -244,7 +292,11 @@ class DeviceGlobalCfgMgr(Manager):
         try:
             ch = swsscommon.SonicV2Connector(use_unix_socket_path=False)
             ch.connect(ch.CHASSIS_APP_DB, False)
-            chassis_tsa_status = ch.get(ch.CHASSIS_APP_DB, "BGP_DEVICE_GLOBAL|STATE", 'tsa_enabled')
+            chassis_tsa = ch.get(ch.CHASSIS_APP_DB, "BGP_DEVICE_GLOBAL|STATE", 'tsa_enabled')
+            # chassis_Tsa is None when the chassis_tsa_supported is false in SUP
+            if chassis_tsa is not None:
+               chassis_tsa_status = chassis_tsa
+
         except Exception as e:
             log_err("Got an exception {}".format(e))
 
@@ -257,7 +309,7 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("IDF: invalid value({}) is provided".format(idf_isolation_state))
             return False
 
-        if self.switch_role and self.switch_role != "SpineRouter":
+        if self.switch_role and self.switch_role not in ["SpineRouter", "LowerSpineRouter", "UpperSpineRouter"]:
             log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on %s" % self.switch_role)
             return True
 

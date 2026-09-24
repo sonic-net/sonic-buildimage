@@ -72,7 +72,7 @@ struct spi_board_info spi_dev_device_info[] = {
 static int __init wb_spi_dev_device_init(void)
 {
     int i;
-    struct spi_master *master;
+    struct spi_controller *ctlr;
     struct spi_device *spi;
     int spi_dev_num;
 
@@ -86,14 +86,14 @@ static int __init wb_spi_dev_device_init(void)
     }
 
     for (i = 0; i < ARRAY_SIZE(spi_dev_device_info); i++) {
-        master = wb_spi_master_busnum_to_master(spi_dev_device_info[i].bus_num);
-        if (!master) {
+        ctlr = wb_spi_master_busnum_to_master(spi_dev_device_info[i].bus_num);
+        if (!ctlr) {
             printk(KERN_ERR "get bus_num %u spi master failed.\n",
                 spi_dev_device_info[i].bus_num);
             continue;
         }
-        spi = spi_new_device(master, &spi_dev_device_info[i]);
-        put_device(&master->dev);
+        spi = spi_new_device(ctlr, &spi_dev_device_info[i]);
+        spi_controller_put(ctlr);
         if (spi) {
             g_spi_device[i] = spi;
         } else {

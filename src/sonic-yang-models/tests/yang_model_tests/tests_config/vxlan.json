@@ -196,7 +196,7 @@
             }
         }
     },
-    "VXLAN_TUNNEL_NAME_INVALID_LENGTH_TEST": {
+    "VXLAN_TUNNEL_NAME_LONG_VALID_TEST": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
                 "VLAN_LIST": [
@@ -227,7 +227,7 @@
             }
         }
     },
-    "VXLAN_TUNNEL_NAME_INVALID_TEST": {
+    "VXLAN_TUNNEL_NAME_EMPTY_VALID_TEST": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
                 "VLAN_LIST": [
@@ -317,6 +317,67 @@
                         "mapname": "map_100_Vlan100",
                         "vlan": "Vlan100",
                         "vni": "16777214"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_VALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "vtep1", "src_ip": "1.2.3.4" },
+                    { "name": "vtep2", "src_ip": "2.3.4.5" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_INVALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "vtep1", "src_ip": "1.2.3.4" },
+                    { "name": "vtep2", "src_ip": "2.3.4.5" },
+                    { "name": "vtep3", "src_ip": "3.4.5.6" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_STRING_VALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "arbitrary_string", "src_ip": "5.6.7.8" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_VALID_TTL_MODE_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "tunnel_v4-1",
+                        "src_ip": "5.6.7.8",
+                        "ttl_mode": "pipe"
+                    },
+                    {
+                        "name": "tunnel_v4-2",
+                        "src_ip": "1.2.3.4",
+                        "ttl_mode": "uniform"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_INVALID_TTL_MODE_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "invalid_tunnel",
+                        "src_ip": "1.2.3.4",
+                        "ttl_mode": "invalid"
                     }
                 ]
             }

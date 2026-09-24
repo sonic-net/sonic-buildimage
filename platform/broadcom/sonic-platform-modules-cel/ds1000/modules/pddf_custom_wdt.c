@@ -551,7 +551,6 @@ static int watchdog_notify_sys(struct notifier_block *this, unsigned long code,
 
 static const struct file_operations watchdog_fops = {
     .owner		= THIS_MODULE,
-    .llseek		= no_llseek,
     .open		= watchdog_open,
     .release	= watchdog_release,
     .write		= watchdog_write,
@@ -661,7 +660,7 @@ static int cpld_wdt_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int cpld_wdt_remove(struct platform_device *pdev)
+static void cpld_wdt_remove(struct platform_device *pdev)
 {
     struct cpld_wdt_private *p = platform_get_drvdata(pdev);
 
@@ -670,7 +669,6 @@ static int cpld_wdt_remove(struct platform_device *pdev)
         misc_deregister(&p->mdev);
         unregister_reboot_notifier(&watchdog_notifier);
     }
-    return 0;
 }
 
 static struct platform_driver cpld_wdt_driver = {

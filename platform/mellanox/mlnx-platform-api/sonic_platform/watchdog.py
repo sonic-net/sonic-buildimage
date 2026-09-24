@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -229,7 +230,7 @@ class WatchdogType1(WatchdogImplBase):
         # Save the watchdog arm timestamp
         # requiered for get_remaining_time()
         os.makedirs('/tmp/nvidia', exist_ok=True)
-        utils.write_file(self.TIMESTAMP_FILE, str(time.time()))
+        utils.write_file(self.TIMESTAMP_FILE, str(time.monotonic()))
 
         return ret
 
@@ -244,7 +245,7 @@ class WatchdogType1(WatchdogImplBase):
 
         if self.is_armed():
             arm_timestamp = utils.read_float_from_file(self.TIMESTAMP_FILE)
-            timeleft = int(self.timeout - (time.time() - arm_timestamp))
+            timeleft = int(self.timeout - (time.monotonic() - arm_timestamp))
 
         return timeleft
 

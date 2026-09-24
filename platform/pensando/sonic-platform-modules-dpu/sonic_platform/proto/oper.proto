@@ -1,0 +1,710 @@
+//
+// {C} Copyright 2020 Pensando Systems Inc. All rights reserved
+//
+//------------------------------------------------------------------------------
+///
+/// \file
+/// protobuf specification for operational info
+///
+//------------------------------------------------------------------------------
+
+syntax = "proto3";
+package operd;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/any.proto";
+
+service OperSvc {
+  // OperInfoSubscribe() API is used to subscribe for the  events of interest;
+  // as and when events happen, they are streamed to the client
+  rpc OperInfoSubscribe (stream OperInfoRequest) returns (stream OperInfoResponse) {}
+}
+
+extend google.protobuf.FieldOptions {
+	optional bool nullable = 65001;
+	optional bool embed = 65002;
+	optional string customtype = 65003;
+	optional string customname = 65004;
+	optional string jsontag = 65005;
+	optional string moretags = 65006;
+	optional string casttype = 65007;
+	optional string castkey = 65008;
+	optional string castvalue = 65009;
+
+	optional bool stdtime = 65010;
+	optional bool stdduration = 65011;
+	optional bool wktpointer = 65012;
+
+}
+
+// API return codes (more descriptive than protobuf enums)
+enum ApiStatus {
+  API_STATUS_OK                      = 0;  // success
+  API_STATUS_ERR                     = 1;  // catch-all error
+  API_STATUS_INVALID_ARG             = 2;  // invalid argument
+  API_STATUS_EXISTS_ALREADY          = 3;  // object already exists
+  API_STATUS_OUT_OF_MEM              = 4;  // out of memory
+  API_STATUS_NOT_FOUND               = 5;  // object not found
+  API_STATUS_OUT_OF_RESOURCE         = 6;  // out of resource
+  API_STATUS_RETRY                   = 7;  // if operation can be retried
+  API_STATUS_OPERATION_NOT_ALLOWED   = 8;  // if operation is not allowed on
+                                           // specific type of object
+  API_STATUS_TIMEOUT                 = 9;  // operation timed out
+  API_STATUS_HW_ENTRY_EXISTS         = 10; // entry exists in h/w table
+  API_STATUS_OPERATION_NOT_SUPPORTED = 11; // operation not supported
+  API_STATUS_IN_USE                  = 12; // object in use
+  // sometimes APIs are skipped (i.e. not processed) because other
+  // APIs before that ran into some error
+  API_STATUS_OPERATION_NOT_PROCESSED = 13;
+  API_STATUS_IN_PROGRESS             = 14; // operation in progress
+}
+
+// IP address families
+enum IPAF {
+  IP_AF_NONE  = 0;
+  IP_AF_INET  = 1; // IPv4
+  IP_AF_INET6 = 2; // IPv6
+}
+
+// IP Address object
+message IPAddress {
+  IPAF      Af     = 1 [(moretags) = "meta:mandatory"];
+  // IP address family
+  oneof v4_or_v6 {
+    // IPv4 address
+    fixed32 V4Addr = 2;
+    // IPv6 address
+    bytes   V6Addr = 3;
+  }
+}
+
+// security rule action is one of the below
+enum SecurityRuleAction {
+  SECURITY_RULE_ACTION_NONE  = 0;
+  SECURITY_RULE_ACTION_ALLOW = 1;
+  SECURITY_RULE_ACTION_DENY  = 2;
+}
+
+// flow log type indicates whether log is generated when flow is
+// created or closed
+enum FlowLogType {
+  FLOW_LOG_TYPE_NONE   = 0;
+  // flow log raised at the time of flow/session creation
+  FLOW_LOG_TYPE_OPEN   = 1;
+  // flow log raised at the time of flow/session deletion
+  FLOW_LOG_TYPE_CLOSE  = 2;
+  // flow log raised for long lived flows while flow is active
+  FLOW_LOG_TYPE_ACTIVE = 3;
+}
+
+// flow open reason
+enum FlowOpenReason {
+  FLOW_OPEN_REASON_NONE      = 0;
+  // flow opened by flow miss packet
+  FLOW_OPEN_REASON_FLOW_MISS = 1;
+  // flow opened by flow sync from peer
+  FLOW_OPEN_REASON_FLOW_SYNC = 2;
+  // flow opened by bulk sync from peer
+  FLOW_OPEN_REASON_FULL_SYNC = 3;
+  // flow opened by vmotion sync
+  FLOW_OPEN_REASON_VMOTION   = 4;
+}
+
+// flow close reason
+enum FlowCloseReason {
+  FLOW_CLOSE_REASON_NONE           = 0;
+  // flow closed by user API
+  FLOW_CLOSE_REASON_USER           = 1;
+  // flow closed by aging (idle, drop, close etc.,) timers
+  FLOW_CLOSE_REASON_AGING          = 2;
+  // flow closed by vmotion sync
+  FLOW_CLOSE_REASON_VMOTION        = 3;
+  // flow closed by TCP FIN packet
+  FLOW_CLOSE_REASON_TCP_FULL_CLOSE = 4;
+  // flow closed by TCP RST packet
+  FLOW_CLOSE_REASON_TCP_RESET      = 5;
+  // flow closed by config
+  FLOW_CLOSE_REASON_CFG            = 6;
+  // flow closed by config mismatch
+  FLOW_CLOSE_REASON_CFG_MISMATCH   = 7;
+  // flow closed by link down
+  FLOW_CLOSE_REASON_LINK_DOWN      = 8;
+  // flow closed by flow update error
+  FLOW_CLOSE_REASON_FLOW_UPDATE_ERR = 9;
+  // flow closed by internal error
+  FLOW_CLOSE_REASON_INTERNAL_ERR   = 10;
+  // flow closed by ALG last data session delete
+  FLOW_CLOSE_REASON_ALG_LAST_DATA_SESS_DEL = 11;
+}
+
+// flow key for non-IP flows
+message MACFlowKey {
+  // subnet identifier
+  bytes  Subnet    = 1;
+  // source MAC address
+  uint64 SrcMAC    = 2;
+  // destination MAC address
+  uint64 DstMAC    = 3;
+  // 16 bits of Ethertype in the Ethernet header
+  uint32 EtherType = 4;
+}
+
+// L4 portion of flow key tuple
+message FlowL4Info {
+  // key fields for TCP/UDP flows
+  message TCPUDPInfo {
+    uint32 SrcPort  = 1;
+    uint32 DstPort  = 2;
+  }
+  // key fields for ICMP flows
+  message ICMPInfo {
+    uint32 Type = 1;
+    uint32 Code = 2;
+    uint32 Id   = 3;
+  }
+  oneof l4_info {
+    TCPUDPInfo TcpUdpInfo = 1;
+    ICMPInfo   IcmpInfo   = 2;
+  }
+}
+
+// flow key for IP flows
+message IPFlowKey {
+  // VPC identifier
+  bytes      VPCId      = 1;
+  // source IP seen in the packet
+  IPAddress  SrcIP      = 2;
+  // destination IP seen in the packet
+  IPAddress  DstIP      = 3;
+  // IP protocol
+  uint32     IPProtocol = 4;
+  // L4 information of the flow key
+  FlowL4Info L4Info     = 5;
+}
+
+// flow key is either IP flow key or non-IP flow key
+message FlowKey {
+  oneof key {
+    // flow key for the IPv4 and IPv6 flows
+    IPFlowKey  IPFlowKey  = 1;
+    // flow key for the non-IP flows
+    MACFlowKey MACFlowKey = 2;
+  }
+}
+
+// protobuf format for flow logs (this is the format consumers will see flow
+// logs in). The producer (e.g., VPP) will do just a binary dump to shared
+// memory and a decoder (invoked by operd) will transform the contents into
+// this format
+message FlowLog {
+  // timestamp indicating when the flow is created/closed
+  uint64                   Timestamp                = 1;
+  // flow open log or flow close log
+  FlowLogType              LogType                  = 2;
+  // flow key
+  FlowKey            Key                      = 3;
+  // SessionId identifies unique id assigned for the the flow pair
+  // for the lifetime of the session
+  uint64                   SessionId                = 4;
+  // source interface of first packet in the session
+  // NOTE: this is source vnic's PF/VF/Tunnel uuid if the session is initiated
+  //       locally (irrespective of whether destination is local or remote) and
+  //       if the session is created because first packet came on uplink, this
+  //       field is left empty
+  bytes                    SrcInterface             = 5;
+  // source vnic's uuid if the session is originated from local workload,
+  // empty otherwise
+  bytes                    SrcVnic                  = 6;
+  // vpc of the client/initiator of the session
+  bytes                    SrcVPC                   = 7;
+  // vpc of the server/destination of the session
+  bytes                    DstVPC                   = 8;
+  // security policy id, if security policy was evaluated
+  bytes                    SecurityPolicy           = 9;
+  // security policy rule id, if security policy was evaluated
+  bytes                    SecurityPolicyRule       = 10;
+  // flow action taken
+  SecurityRuleAction FlowAction               = 11;
+  // NAT-ed source IP after the rewrite, if any
+  IPAddress          SrcNATIP                 = 12;
+  // source NAT port, if any
+  uint32                   SrcNATPort               = 13;
+  // NAT-ed destination IP after the rewrite, if any
+  IPAddress          DstNATIP                 = 14;
+  // destination NAT port, if any
+  uint32                   DstNATPort               = 15;
+  // initiator flow octet count
+  uint64                   IflowBytes               = 16;
+  // initator flow packet count
+  uint64                   IflowPackets             = 17;
+  // responder flow octet count
+  uint64                   RflowBytes               = 18;
+  // responder flow packet count
+  uint64                   RflowPackets             = 19;
+  // vlan id in the received packet
+  uint32                   SrcVlan                  = 20;
+  // security policy rule hw id, if security policy was evaluated
+  uint32                   SecurityPloicyRuleId     = 21;
+  // destination vnic uuid
+  // NOTE:
+  // 1. this is valid only in the case of Local-to-Local traffic scenario in the BITW_SERVICE_MODE
+  bytes                    DstVnic                  = 22;
+  // indicates if it is an encrypted flow
+  bool                     Encrypted                = 23;
+  // flow open reason
+  FlowOpenReason           OpenReason               = 24;
+  // indicates if the flow is originated from the host
+  bool                     HostOrigin               = 25;
+  // ingress security policy id of destination, if security policy was evaluated
+  bytes                    DstSecurityPolicy        = 26;
+  // ingress secuiryt policy rule id of destination, if security policy was evaluated
+  bytes                    DstSecurityPolicyRule    = 27;
+  // flow close reason
+  // NOTE: only applicable when LogType is FLOW_LOG_TYPE_CLOSE
+  FlowCloseReason          CloseReason              = 28;
+}
+
+enum EventCategory {
+  NONE      = 0;
+  // system related events (service events, system boot/reboot events, etc...)
+  SYSTEM    = 1;
+  // network related events (linkmgr, bgp, etc...)
+  NETWORK   = 2;
+  // resource related events (cpu, mem and disk usage)
+  RESOURCE  = 3;
+  // learning related events (endpoint info)
+  LEARN     = 4;
+  // upgrade/rollout related events
+  ROLLOUT   = 5;
+  // system interrupt related events
+  INTERRUPT = 6;
+  // ha related events
+  HA        = 7;
+  // workload related events
+  WORKLOAD  = 8;
+}
+
+// severity level of the event
+enum EventSeverity {
+  DEBUG    = 0; // only for debugging purposes
+  INFO     = 1; // no action needed
+  WARN     = 2; // no immediate action needed
+  CRITICAL = 3; // immediate attention required
+}
+
+message EventSource {
+  // name of the component which generated the event
+  string Component = 1;
+  // name of the DSC node which generated the event
+  string NodeName  = 2;
+}
+
+
+// public/Internet or Service/Infra address
+enum AddressType {
+  ADDR_TYPE_NONE    = 0;
+  ADDR_TYPE_PUBLIC  = 1;
+  ADDR_TYPE_SERVICE = 2;
+}
+
+// Endpoint info for learning
+message EpLearnPkt {
+  // host interface on which packet was received
+  bytes HostIf = 1;
+  // packet as received upto a maximum size of 128 bytes
+  bytes Packet = 2;
+}
+
+// NAT port block event specification
+message NatPortblockEvent {
+  // unique key identifying the port block
+  bytes             Id          = 1;
+  // protocol
+  uint32            Protocol    = 2;
+  // source NAT IP address
+  IPAddress   SnatIP      = 3;
+  // NAT address is from Internet or Cloud Infra space
+  AddressType AddressType = 4;
+}
+
+extend google.protobuf.EnumValueOptions {
+  // event category
+  EventCategory Category    = 100001;
+
+  // event severity
+  EventSeverity Severity    = 100002;
+
+  // description for the event
+  string        Description = 100003;
+}
+
+enum EventType {
+  DSE_EVENT_TYPE_NONE                         = 0    [(Category)    = NONE,
+                                                      (Severity)    = DEBUG,
+                                                      (Description) = "Invalid event"];
+
+  // ----------------------------- SYSTEM events --------------------------- //
+  DSE_SERVICE_STARTED                         = 1    [(Category)    = SYSTEM,
+                                                      (Severity)    = DEBUG,
+                                                      (Description) = "DSE service started"];
+
+  DSE_SERVICE_STOPPED                         = 2    [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "DSE related process has been stopped. System performance may be impacted. Further policy changes will not be applied to this DSE till it is reloaded. Recommendation is to collect techsupport and contact support."];
+
+  DSE_SYSTEM_COLDBOOT                         = 3    [(Category)    = SYSTEM,
+                                                      (Severity)    = WARN,
+                                                      (Description) = "DSE cold booted"];
+
+  DSE_MEM_TEMP_ABOVE_THRESHOLD                = 4    [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "Memory temperature is above the critical threshold. SYSTEM performance may be degraded"];
+
+  DSE_MEM_TEMP_BELOW_THRESHOLD                = 5    [(Category)    = SYSTEM,
+                                                      (Severity)    = INFO,
+                                                      (Description) = "Memory temperature has fallen below the critical threshold"];
+
+  DSE_CATTRIP_INTERRUPT                       = 6    [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "Temperature has crossed a fatal threshold, and this DSE has been reloaded. Recommendation is to check environmental conditions."];
+
+  DSE_PANIC_EVENT                             = 7    [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "Encountered a panic during the last boot. Recommendation is to collect techsupport and contact support."];
+
+  DSE_POST_DIAG_FAILURE_EVENT                 = 8    [(Category)    = SYSTEM,
+                                                      (Severity)    = WARN,
+                                                      (Description) = "Post diag test failed"];
+
+  DSE_INFO_PCIEHEALTH_EVENT                   = 9    [(Category)    = SYSTEM,
+                                                      (Severity)    = INFO,
+                                                      (Description) = "Detected a pcie link health event"];
+
+  DSE_WARN_PCIEHEALTH_EVENT                   = 10   [(Category)    = SYSTEM,
+                                                      (Severity)    = WARN,
+                                                      (Description) = "Detected a pcie link health warning"];
+
+  DSE_ERR_PCIEHEALTH_EVENT                    = 11   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "Detected PCIe link error. System performance may be impacted. Recommendation is to collect techsupport and contact support."];
+
+  DSE_FILESYSTEM_USAGE_ABOVE_THRESHOLD        = 12   [(Category)    = SYSTEM,
+                                                      (Severity)    = WARN,
+                                                      (Description) = "Usage of the filesystem partition is above threshold"];
+
+  DSE_FILESYSTEM_USAGE_BELOW_THRESHOLD        = 13   [(Category)    = SYSTEM,
+                                                      (Severity)    = INFO,
+                                                      (Description) = "Usage of the filesystem partition is below threshold"];
+
+  DSE_SERVICE_RESTARTED                       = 14   [(Category)    = SYSTEM,
+                                                      (Severity)    = WARN,
+                                                      (Description) = "DSE service restarted"];
+
+  DSE_PIPELINE_STUCK                          = 15   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "DSE datapath pipeline is stuck"];
+
+  DSE_EMMC_LIFETIME_EXCEEDED                  = 16   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "eMMC lifetime exceeded. Contact support."];
+
+  DSE_SYSTEM_RECOVERY_FAILED                  = 17   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "DSE firmware recovery failed"];
+
+  DSE_SYSTEM_HALTED                           = 18   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "Failure to recover DSE multiple times in a row"];
+
+  DSE_GRACEFUL_UPGRADE_FAILED_PRE_SWITCHOVER  = 19   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "DSE firmware upgrade failed before firmware switchover"];
+
+  DSE_GRACEFUL_UPGRADE_FAILED_POST_SWITCHOVER = 20   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "DSE firmware upgrade failed after firmware switchover"];
+
+  DSE_CONFIG_LOST                             = 21   [(Category)    = SYSTEM,
+                                                      (Severity)    = WARN,
+                                                      (Description) = "DSE configuration is erased, potentially due to other critical events"];
+
+  // ----------------------------- Network events -------------------------- //
+  LINK_UP                              = 1001 [(Category)    = NETWORK,
+                                               (Severity)    = INFO,
+                                               (Description) = "Port link is up"];
+
+  LINK_DOWN                            = 1002 [(Category)    = NETWORK,
+                                               (Severity)    = WARN,
+                                               (Description) = "Port link is down"];
+
+  BGP_SESSION_ESTABLISHED              = 1003 [(Category)    = NETWORK,
+                                               (Severity)    = INFO,
+                                               (Description) = "BGP session is established"];
+
+  BGP_SESSION_DOWN                     = 1004 [(Category)    = NETWORK,
+                                               (Severity)    = WARN,
+                                               (Description) = "BGP session is down"];
+
+  BGP_EVPN_DUP_MAC_IP                  = 1005 [(Category)    = NETWORK,
+                                               (Severity)    = WARN,
+                                               (Description) = "BGP EVPN detected duplicate tenant MAC/IP"];
+
+  BGP_EVPN_DUP_MAC_IP_CLEAR            = 1006 [(Category)    = NETWORK,
+                                               (Severity)    = INFO,
+                                               (Description) = "BGP EVPN duplicate tenant MAC/IP resolved"];
+
+  // ----------------------------- Resource events ------------------------- //
+  DSE_MAX_SESSION_LIMIT_APPROACH        = 2001 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "Session count approaching maximum supported limit"];
+
+  DSE_SESSION_USAGE_BELOW_THRESHOLD     = 2002 [(Category)    = RESOURCE,
+                                                (Severity)    = INFO,
+                                                (Description) = "Session count below threshold"];
+
+  DSE_SESSION_LEARN_PAUSED              = 2003 [(Category)    = RESOURCE,
+                                                (Severity)    = CRITICAL,
+                                                (Description) = "DSE maximum session limit reached, new sessions are dropped"];
+
+  DSE_SESSION_LEARN_RESUMED             = 2004 [(Category)    = RESOURCE,
+                                                (Severity)    = INFO,
+                                                (Description) = "Session learning re-enabled after pause"];
+
+  DSE_MAX_ALG_SESSION_LIMIT_APPROACH    = 2005 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "ALG session count approaching maximum supported limit"];
+
+  DSE_ALG_SESSION_USAGE_BELOW_THRESHOLD = 2006 [(Category)    = RESOURCE,
+                                                (Severity)    = INFO,
+                                                (Description) = "ALG session count below 90% threshold"];
+
+  DSE_ALG_SESSION_LEARN_PAUSED          = 2007 [(Category)    = RESOURCE,
+                                                (Severity)    = CRITICAL,
+                                                (Description) = "DSE maximum ALG session limit reached, new ALG sessions are dropped"];
+
+  DSE_ALG_SESSION_LEARN_RESUMED         = 2008 [(Category)    = RESOURCE,
+                                                (Severity)    = INFO,
+                                                (Description) = "ALG session learning re-enabled after pause"];
+
+  // ----------------------------- Learn events ---------------------------- //
+  LEARN_PKT                            = 3001 [(Category)    = LEARN,
+                                               (Severity)    = INFO,
+                                               (Description) = "Packet received resulting in new endpoint learning or updates to known endpoint"];
+
+  // ----------------------------- Rollout events -------------------------- //
+
+  // ----------------------------- Interrupt events ------------------------ //
+  DSE_HW_RMA_INTERRUPT                 = 4001 [(Category)    = INTERRUPT,
+                                               (Severity)    = CRITICAL,
+                                               (Description) = "Hardware RMA interrupt has been triggered"];
+
+  DSE_FATAL_INTERRUPT                  = 4002 [(Category)    = INTERRUPT,
+                                               (Severity)    = CRITICAL,
+                                               (Description) = "Fatal interrupt has been triggered"];
+
+  DSE_ERROR_INTERRUPT                  = 4003 [(Category)    = INTERRUPT,
+                                               (Severity)    = WARN,
+                                               (Description) = "Error interrupt has been triggered"];
+
+  // ----------------------------- NAT events ---------------------------- //
+  NAT_PORT_USAGE_THRESHOLD_EXCEEDED    = 5001 [(Category)    = RESOURCE,
+                                               (Severity)    = WARN,
+                                               (Description) = "Request to allocate more NAT portblocks"];
+
+  // ----------------------------- HA events ----------------------------- //
+  HA_SOCKET_INIT_FAILED                = 6001 [(Category)    = HA,
+                                               (Severity)    = CRITICAL,
+                                               (Description) = "HA socket initialization failed"];
+
+  HA_PEER_CONNECTION_DOWN              = 6002 [(Category)    = HA,
+                                               (Severity)    = WARN,
+                                               (Description) = "HA connection between local and peer node is down"];
+
+  HA_PEER_CONNECTION_UP                = 6003 [(Category)    = HA,
+                                               (Severity)    = INFO,
+                                               (Description) = "HA connection between local and peer node is up"];
+
+  HA_VIP_UP                            = 6004 [(Category)    = HA,
+                                               (Severity)    = INFO,
+                                               (Description) = "HA VIP instance UP"];
+
+  HA_VIP_DOWN                          = 6005 [(Category)    = HA,
+                                               (Severity)    = INFO,
+                                               (Description) = "HA VIP instance down"];
+
+  HA_VIP_EXIT                          = 6006 [(Category)    = HA,
+                                               (Severity)    = CRITICAL,
+                                               (Description) = "HA VIP instance exited due to failure"];
+
+  HA_FULL_FLOW_SYNC_START              = 6007 [(Category)    = HA,
+                                               (Severity)    = INFO,
+                                               (Description) = "HA full flow sync has started"];
+
+  HA_FULL_FLOW_SYNC_END                = 6008 [(Category)    = HA,
+                                               (Severity)    = INFO,
+                                               (Description) = "HA full flow sync has completed"];
+
+  HA_VERSION_NEGOTIATION_FAILED        = 6009 [(Category)    = HA,
+                                               (Severity)    = CRITICAL,
+                                               (Description) = "HA version negotiation with peer failed"];
+
+  HA_DATAPATH_HEARTBEAT_FAILURE        = 6010 [(Category)    = HA,
+                                               (Severity)    = CRITICAL,
+                                               (Description) = "HA datapath heartbeat with peer failed"];
+
+  HA_STOP_START_REQUIRED               = 6011 [(Category)    = HA,
+                                               (Severity)    = WARN,
+                                               (Description) = "HA stop and start API needs to be invoked"];
+
+  HA_FLOW_RECONCILE_REQUIRED           = 6012 [(Category)    = HA,
+                                               (Severity)    = WARN,
+                                               (Description) = "HA flow reconcile API needs to be invoked"];
+
+  // --------------------------- WORKLOAD events --------------------------- //
+
+  VNIC_SESSION_COUNT_ABOVE_LIMIT        = 7001 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's total session count exceeded configured limit"];
+
+  VNIC_SESSION_COUNT_BELOW_LIMIT        = 7002 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's total session count dropped below configured limit"];
+
+  VNIC_SESSION_THRESHOLD_EXCEEDED       = 7003 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's total session count exceeded configiured threshold, new sessions will be dropped once limit is reached"];
+
+  VNIC_SESSION_WITHIN_THRESHOLD         = 7004 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's total session count dropped below the configured threshold"];
+
+  VNIC_TCP_SESSION_COUNT_ABOVE_LIMIT    = 7005 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's TCP session count exceeded configured limit"];
+
+  VNIC_TCP_SESSION_COUNT_BELOW_LIMIT    = 7006 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's TCP session count dropped below configured limit"];
+
+  VNIC_TCP_SESSION_THRESHOLD_EXCEEDED   = 7007 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's TCP session count exceeded configiured threshold, new sessions will be dropped once limit is reached"];
+
+  VNIC_TCP_SESSION_WITHIN_THRESHOLD     = 7008 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's TCP session count dropped below the configured threshold"];
+
+  VNIC_UDP_SESSION_COUNT_ABOVE_LIMIT    = 7009 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's UDP session count exceeded configured limit"];
+
+  VNIC_UDP_SESSION_COUNT_BELOW_LIMIT    = 7010 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's UDP session count dropped below configured limit"];
+
+  VNIC_UDP_SESSION_THRESHOLD_EXCEEDED   = 7011 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's UDP session count exceeded configiured threshold, new sessions will be dropped once limit is reached"];
+
+  VNIC_UDP_SESSION_WITHIN_THRESHOLD     = 7012 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's UDP session count dropped below the configured threshold"];
+
+  VNIC_ICMP_SESSION_COUNT_ABOVE_LIMIT   = 7013 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's ICMP session count exceeded configured limit"];
+
+  VNIC_ICMP_SESSION_COUNT_BELOW_LIMIT   = 7014 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's ICMP session count dropped below configured limit"];
+
+  VNIC_ICMP_SESSION_THRESHOLD_EXCEEDED  = 7015 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's ICMP session count exceeded configiured threshold, new sessions will be dropped once limit is reached"];
+
+  VNIC_ICMP_SESSION_WITHIN_THRESHOLD    = 7016 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's ICMP session count dropped below the configured threshold"];
+
+  VNIC_OTHER_SESSION_COUNT_ABOVE_LIMIT  = 7017 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's ICMP session count exceeded configured limit"];
+
+  VNIC_OTHER_SESSION_COUNT_BELOW_LIMIT  = 7018 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's non-TCP/UDP/ICMP session count dropped below configured limit"];
+
+  VNIC_OTHER_SESSION_THRESHOLD_EXCEEDED = 7019 [(Category)    = WORKLOAD,
+                                                (Severity)    = WARN,
+                                                (Description) = "vnic's non-TCP/UDP/ICMP session count exceeded configiured threshold, new sessions will be dropped once limit is reached"];
+
+  VNIC_OTHER_SESSION_WITHIN_THRESHOLD   = 7020 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "vnic's non-TCP/UDP/ICMP session count dropped below the configured threshold"];
+}
+
+message EventFilter {
+  // if no filters specified, all events are considered
+  repeated EventType Types = 1;
+}
+
+message Event {
+  EventType                 Type              = 1;
+  EventCategory             Category          = 2;
+  EventSeverity             Severity          = 3;
+  EventSource               Source            = 4;
+  google.protobuf.Timestamp Time              = 5 [(stdtime) = true];
+  string                    Description       = 6;
+  oneof event_info {
+      // TODO: deprecate Message and add EventType specific info
+      string                Message           = 7;
+      // information specific to learn event
+      EpLearnPkt            EpLearnPktInfo    = 8;
+      NatPortblockEvent     NatPbEvent        = 9;
+  }
+}
+
+// Operational Info exported by operd plugin through push / subscription model
+enum OperInfoType {
+  OPER_INFO_TYPE_NONE     = 0;
+  OPER_INFO_TYPE_EVENT    = 1;
+  OPER_INFO_TYPE_FLOW_LOG = 2;
+}
+
+// OperInfoOp indicates whether client is subscribing or unsubscribing
+enum OperInfoOp {
+  OPER_INFO_OP_NONE        = 0;
+  OPER_INFO_OP_SUBSCRIBE   = 1;
+  OPER_INFO_OP_UNSUBSCRIBE = 2;
+}
+
+message OperInfoSpec {
+  // oper info of interest
+  OperInfoType    InfoType    = 1;
+  // action is either subscribe or unsubscribe
+  OperInfoOp      Action      = 2;
+  // any additional InfoType specific filters
+  oneof info_filter {
+    // filter for interested events
+    EventFilter EventFilter   = 3;
+  }
+}
+
+// OperInfoRequest captures client's intereste to subscribe for operational
+// information
+message OperInfoRequest {
+  // list of requests
+  repeated OperInfoSpec Request = 1;
+}
+
+message OperInfoResponse {
+  ApiStatus Status      = 1;
+  OperInfoType    InfoType    = 2;
+  // operational information specific to InfoType
+  oneof oper_info {
+      // information specific for events
+      Event       EventInfo   = 3;
+      FlowLog     FlowLogInfo = 4;
+  }
+}

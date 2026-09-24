@@ -19,13 +19,14 @@ module sonic-fabric-port{
 
         container FABRIC_PORT {
 
-            description "FABRIC_PORT part of config_db.json";
+            description "Fabric port configuration for VOQ chassis inter-linecard links";
 
             list FABRIC_PORT_LIST {
 
                 key "name";
 
                 leaf name {
+                    description "Fabric port name identifier";
                     type string {
                         length 1..128;
                     }

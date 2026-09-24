@@ -248,7 +248,7 @@ exit:
         return ret;
 }
 
-static int dx010_led_drv_remove(struct platform_device *pdev)
+static void dx010_led_drv_remove(struct platform_device *pdev)
 {
         int i;
 
@@ -256,8 +256,6 @@ static int dx010_led_drv_remove(struct platform_device *pdev)
                 led_classdev_unregister(&dx010_leds[i]);
 
         device_remove_file(&pdev->dev, &dev_attr_blink);
-
-        return 0;
 }
 
 static struct platform_driver dx010_led_drv = {

@@ -1401,7 +1401,7 @@ static int t7132s_drv_probe(struct platform_device *pdev)
 	int adapter_id = 0;
 	int chan_id = 0;
 
-	cpld_class = class_create(THIS_MODULE, CLASS_NAME);
+	cpld_class = class_create(CLASS_NAME);
 	ret = PTR_ERR(cpld_class);
 
 	cpld_data = devm_kzalloc(&pdev->dev, sizeof(struct t7132s_cpld),
@@ -1517,7 +1517,7 @@ static int t7132s_drv_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int t7132s_drv_remove(struct platform_device *pdev)
+static void t7132s_drv_remove(struct platform_device *pdev)
 {
 	int ret = 0;
 	int port_count = 0;
@@ -1556,7 +1556,6 @@ static int t7132s_drv_remove(struct platform_device *pdev)
 	devm_kfree(&pdev->dev, cpld_data);
 	devm_kfree(&pdev->dev, pwddev);
 
-	return 0;
 }
 
 static struct platform_driver t7132s_drv = {

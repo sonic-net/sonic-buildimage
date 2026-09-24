@@ -2,7 +2,7 @@
 platform="$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)"
 source /usr/share/sonic/device/$platform/actions.sh
 
-I2C_ADAPTER="/sys/class/i2c-adapter"
+I2C_ADAPTER="/sys/bus/i2c/devices/"
 
 save_cmd "10" "hexdump -C /dev/nvram" "NVRAM dump"
 save_cmd "10" "hexdump -C $I2C_ADAPTER/i2c-10/10-0053/eeprom" "System EEPROM"

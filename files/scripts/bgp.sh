@@ -30,7 +30,7 @@ function validate_restore_count()
 
 function check_fast_boot ()
 {
-    SYSTEM_FAST_REBOOT=`sonic-db-cli STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    SYSTEM_FAST_REBOOT=`$SONIC_DB_CLI STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
     if [[ x"${SYSTEM_FAST_REBOOT}" == x"true" ]]; then
         FAST_BOOT="true"
     else
@@ -69,7 +69,7 @@ stop() {
 
     # Kill bgpd to start the bgp graceful restart procedure
     if [[ x"$WARM_BOOT" == x"true" ]] || [[ x"$FAST_BOOT" == x"true" ]]; then
-        debug "Kill zebra first"
+        debug "Kill zebra and bgpd"
         /usr/bin/docker exec -i bgp pkill -9 zebra || [ $? == 1 ]
         /usr/bin/docker exec -i bgp pkill -9 bgpd || [ $? == 1 ]
     fi

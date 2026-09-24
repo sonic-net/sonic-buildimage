@@ -20,19 +20,33 @@
     "VXLAN_TUNNEL_NAME_VALID_TEST": {
         "desc": "Tunnel Name string length 15 is valid"
     },
-    "VXLAN_TUNNEL_NAME_INVALID_LENGTH_TEST": {
-        "desc": "Tunnel Name string length exceeding 16 is invalid",
-        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    "VXLAN_TUNNEL_NAME_LONG_VALID_TEST": {
+        "desc": "Tunnel Name string length exceeding 16 is now valid"
     },
-    "VXLAN_TUNNEL_NAME_INVALID_TEST": {
-        "desc": "Tunnel Name string length 0 is invalid",
-        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    "VXLAN_TUNNEL_NAME_EMPTY_VALID_TEST": {
+        "desc": "Tunnel Name string length 0 is valid"
     },
     "VXLAN_TUNNEL_NAME_VALID_DST_IPV4_TEST": {
-        "desc": "Valid IPv4 Destination Address",
-        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+        "desc": "Valid IPv4 Destination Address"
     },
     "VXLAN_TUNNEL_NAME_VALID_DST_IPV6_TEST": {
         "desc": "Valid IPv6 Destination Address"
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_VALID_TEST": {
+        "desc": "Valid config with 2 VXLAN_TUNNEL entries"
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_INVALID_TEST": {
+        "desc": "Invalid config with more than 2 VXLAN_TUNNEL entries",
+        "eStrKey": "MaxElements"
+    },
+    "VXLAN_TUNNEL_NAME_STRING_VALID_TEST": {
+        "desc": "Tunnel name as arbitrary string is valid"
+    },
+    "VXLAN_TUNNEL_VALID_TTL_MODE_TEST": {
+        "desc": "Valid config with 'pipe' and 'uniform' TTL modes"
+    },
+    "VXLAN_TUNNEL_INVALID_TTL_MODE_TEST": {
+        "desc": "Invalid config with an unsupported TTL mode",
+        "eStrKey": "Pattern"
     }
 }

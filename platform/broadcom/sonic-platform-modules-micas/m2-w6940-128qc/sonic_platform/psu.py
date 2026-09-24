@@ -125,7 +125,7 @@ class Psu(PsuBase):
         Returns:
             string: The name of the device
         """
-        return "Psu{}".format(self.index)
+        return "PSU {}".format(self.index)
 
     def get_mfr_id(self):
         """
@@ -223,7 +223,7 @@ class Psu(PsuBase):
         Returns:
             integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
         """
-        return -1
+        return self.index
 
     def is_replaceable(self):
         """

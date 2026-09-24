@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-09-04-1.09" profile="Askl1" sid="46b72b06-f2b0-4910-a4a3-b77166e84219">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2026-06-24-1.15" profile="Askl1" dsig="md5" sid="abd9b573-b794-499b-907f-9130515dbe12">
   <ASKL1plt:ASK-L1 xmlns:ASKL1plt="urn:marvell:ASKL1:yang">
     <ASKL1plt:typedefs>
       <ASKL1plt:typedef>
@@ -20,6 +20,11 @@
           <ASKL1plt:name>ASIC_Falcon</ASKL1plt:name>
           <ASKL1plt:description>FALCON</ASKL1plt:description>
           <ASKL1plt:value>2</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>ASIC_AC5P</ASKL1plt:name>
+          <ASKL1plt:description>AC5P</ASKL1plt:description>
+          <ASKL1plt:value>3</ASKL1plt:value>
         </ASKL1plt:enum>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
@@ -152,6 +157,11 @@
           <ASKL1plt:value>54</ASKL1plt:value>
         </ASKL1plt:enum>
         <ASKL1plt:enum>
+          <ASKL1plt:name>2500BASE_X</ASKL1plt:name>
+          <ASKL1plt:description>2.5G</ASKL1plt:description>
+          <ASKL1plt:value>55</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
           <ASKL1plt:name>NA</ASKL1plt:name>
           <ASKL1plt:description/>
           <ASKL1plt:value>57</ASKL1plt:value>
@@ -253,26 +263,6 @@
         <ASKL1plt:description>PHYSICAL PORT NUM</ASKL1plt:description>
         <ASKL1plt:min>0</ASKL1plt:min>
         <ASKL1plt:max>1023</ASKL1plt:max>
-      </ASKL1plt:typedef>
-      <ASKL1plt:typedef>
-        <ASKL1plt:name>tx-param-type</ASKL1plt:name>
-        <ASKL1plt:type>enumeration</ASKL1plt:type>
-        <ASKL1plt:description>Tx parameter type</ASKL1plt:description>
-        <ASKL1plt:enum>
-          <ASKL1plt:name>pre</ASKL1plt:name>
-          <ASKL1plt:description>pre</ASKL1plt:description>
-          <ASKL1plt:value>0</ASKL1plt:value>
-        </ASKL1plt:enum>
-        <ASKL1plt:enum>
-          <ASKL1plt:name>post</ASKL1plt:name>
-          <ASKL1plt:description>post</ASKL1plt:description>
-          <ASKL1plt:value>1</ASKL1plt:value>
-        </ASKL1plt:enum>
-        <ASKL1plt:enum>
-          <ASKL1plt:name>peak</ASKL1plt:name>
-          <ASKL1plt:description>peak</ASKL1plt:description>
-          <ASKL1plt:value>2</ASKL1plt:value>
-        </ASKL1plt:enum>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
         <ASKL1plt:name>rx-param-type</ASKL1plt:name>
@@ -448,6 +438,96 @@
           <ASKL1plt:description>maxRes1</ASKL1plt:description>
           <ASKL1plt:value>33</ASKL1plt:value>
         </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>current1Sel</ASKL1plt:name>
+          <ASKL1plt:description>current1Sel</ASKL1plt:description>
+          <ASKL1plt:value>34</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1Sel</ASKL1plt:name>
+          <ASKL1plt:description>rl1Sel</ASKL1plt:description>
+          <ASKL1plt:value>35</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1Extra</ASKL1plt:name>
+          <ASKL1plt:description>rl1Extra</ASKL1plt:description>
+          <ASKL1plt:value>36</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>cl1Ctrl</ASKL1plt:name>
+          <ASKL1plt:description>cl1Ctrl</ASKL1plt:description>
+          <ASKL1plt:value>37</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>enMidFreq</ASKL1plt:name>
+          <ASKL1plt:description>enMidFreq</ASKL1plt:description>
+          <ASKL1plt:value>38</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>cs1Mid</ASKL1plt:name>
+          <ASKL1plt:description>cs1Mid</ASKL1plt:description>
+          <ASKL1plt:value>39</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rs1Mid</ASKL1plt:name>
+          <ASKL1plt:description>rs1Mid</ASKL1plt:description>
+          <ASKL1plt:value>40</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rfCtrl</ASKL1plt:name>
+          <ASKL1plt:description>rfCtrl</ASKL1plt:description>
+          <ASKL1plt:value>41</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1TiaSel</ASKL1plt:name>
+          <ASKL1plt:description>rl1TiaSel</ASKL1plt:description>
+          <ASKL1plt:value>42</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1TiaExtra</ASKL1plt:name>
+          <ASKL1plt:description>rl1TiaExtra</ASKL1plt:description>
+          <ASKL1plt:value>43</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>hpfRSel1st</ASKL1plt:name>
+          <ASKL1plt:description>hpfRSel1st</ASKL1plt:description>
+          <ASKL1plt:value>44</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>current1TiaSel</ASKL1plt:name>
+          <ASKL1plt:description>current1TiaSel</ASKL1plt:description>
+          <ASKL1plt:value>45</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl2Tune</ASKL1plt:name>
+          <ASKL1plt:description>rl2Tune</ASKL1plt:description>
+          <ASKL1plt:value>46</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl2Sel</ASKL1plt:name>
+          <ASKL1plt:description>rl2Sel</ASKL1plt:description>
+          <ASKL1plt:value>47</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rs2Sel</ASKL1plt:name>
+          <ASKL1plt:description>rs2Sel</ASKL1plt:description>
+          <ASKL1plt:value>48</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>current2Sel</ASKL1plt:name>
+          <ASKL1plt:description>current2Sel</ASKL1plt:description>
+          <ASKL1plt:value>49</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>hpfRsel2nd</ASKL1plt:name>
+          <ASKL1plt:description>hpfRsel2nd</ASKL1plt:description>
+          <ASKL1plt:value>50</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>align90AnaReg</ASKL1plt:name>
+          <ASKL1plt:description>align90AnaReg</ASKL1plt:description>
+          <ASKL1plt:value>51</ASKL1plt:value>
+        </ASKL1plt:enum>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
         <ASKL1plt:name>boolean-type</ASKL1plt:name>
@@ -518,6 +598,11 @@
           <ASKL1plt:description>COMPHY_C28G</ASKL1plt:description>
           <ASKL1plt:value>2</ASKL1plt:value>
         </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>COMPHY_C12G</ASKL1plt:name>
+          <ASKL1plt:description>COMPHY_C12G</ASKL1plt:description>
+          <ASKL1plt:value>3</ASKL1plt:value>
+        </ASKL1plt:enum>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
         <ASKL1plt:name>port-interconnect-profile-type</ASKL1plt:name>
@@ -537,6 +622,36 @@
           <ASKL1plt:name>profile_2</ASKL1plt:name>
           <ASKL1plt:description>Profile 2</ASKL1plt:description>
           <ASKL1plt:value>2</ASKL1plt:value>
+        </ASKL1plt:enum>
+      </ASKL1plt:typedef>
+      <ASKL1plt:typedef>
+        <ASKL1plt:name>port-media-type</ASKL1plt:name>
+        <ASKL1plt:type>enumeration</ASKL1plt:type>
+        <ASKL1plt:description>Port media type - values match definition in sai_port_media_type_t (saiport.h)</ASKL1plt:description>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>media_not_present</ASKL1plt:name>
+          <ASKL1plt:description>Not present</ASKL1plt:description>
+          <ASKL1plt:value>0</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>media_unknown</ASKL1plt:name>
+          <ASKL1plt:description>Unknown</ASKL1plt:description>
+          <ASKL1plt:value>1</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>media_fiber</ASKL1plt:name>
+          <ASKL1plt:description>Fiber</ASKL1plt:description>
+          <ASKL1plt:value>2</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>media_copper</ASKL1plt:name>
+          <ASKL1plt:description>Copper</ASKL1plt:description>
+          <ASKL1plt:value>3</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>media_backplane</ASKL1plt:name>
+          <ASKL1plt:description>Backplane</ASKL1plt:description>
+          <ASKL1plt:value>4</ASKL1plt:value>
         </ASKL1plt:enum>
       </ASKL1plt:typedef>
     </ASKL1plt:typedefs>
@@ -600,6 +715,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">2</ASKL1plt:portNumber>
@@ -607,6 +723,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">3</ASKL1plt:portNumber>
@@ -614,6 +731,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">4</ASKL1plt:portNumber>
@@ -621,6 +739,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">5</ASKL1plt:portNumber>
@@ -628,6 +747,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">6</ASKL1plt:portNumber>
@@ -635,6 +755,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">7</ASKL1plt:portNumber>
@@ -642,6 +763,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">8</ASKL1plt:portNumber>
@@ -649,6 +771,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">9</ASKL1plt:portNumber>
@@ -656,6 +779,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">10</ASKL1plt:portNumber>
@@ -663,6 +787,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">11</ASKL1plt:portNumber>
@@ -670,6 +795,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">12</ASKL1plt:portNumber>
@@ -677,6 +803,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">13</ASKL1plt:portNumber>
@@ -684,6 +811,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">14</ASKL1plt:portNumber>
@@ -691,6 +819,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">15</ASKL1plt:portNumber>
@@ -698,6 +827,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">16</ASKL1plt:portNumber>
@@ -705,6 +835,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">41</ASKL1plt:portNumber>
@@ -712,6 +843,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">42</ASKL1plt:portNumber>
@@ -719,6 +851,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">43</ASKL1plt:portNumber>
@@ -726,6 +859,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">44</ASKL1plt:portNumber>
@@ -733,6 +867,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">45</ASKL1plt:portNumber>
@@ -740,6 +875,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">46</ASKL1plt:portNumber>
@@ -747,6 +883,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">47</ASKL1plt:portNumber>
@@ -754,6 +891,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">48</ASKL1plt:portNumber>
@@ -761,6 +899,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_copper</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">51</ASKL1plt:portNumber>
@@ -768,6 +907,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_unknown</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">52</ASKL1plt:portNumber>
@@ -775,6 +915,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_unknown</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">53</ASKL1plt:portNumber>
@@ -782,6 +923,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">25GR2</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_unknown</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">55</ASKL1plt:portNumber>
@@ -789,6 +931,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">25GR2</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_unknown</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">57</ASKL1plt:portNumber>
@@ -796,6 +939,7 @@
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">25GR2</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
+        <ASKL1plt:supportedMediaType ASKL1plt:type="port-media-type">media_unknown</ASKL1plt:supportedMediaType>
       </ASKL1plt:port-list>
     </ASKL1plt:Port>
   </ASKL1plt:ASK-L1>

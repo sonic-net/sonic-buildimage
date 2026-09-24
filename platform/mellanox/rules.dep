@@ -16,5 +16,4 @@ include $(PLATFORM_PATH)/issu-version.dep
 include $(PLATFORM_PATH)/mlnx-onie-fw-update.dep
 include $(PLATFORM_PATH)/mlnx-ssd-fw-update.dep
 include $(PLATFORM_PATH)/install-pending-fw.dep
-include $(PLATFORM_PATH)/component-versions.dep
 include $(PLATFORM_PATH)/rshim.dep

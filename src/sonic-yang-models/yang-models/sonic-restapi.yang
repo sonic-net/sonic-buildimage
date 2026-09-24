@@ -5,10 +5,6 @@ module sonic-restapi {
     namespace "http://github.com/sonic-net/sonic-restapi";
     prefix restapi;
 
-    import ietf-inet-types {
-        prefix inet;
-    }
-
     organization
         "SONiC";
 
@@ -25,9 +21,10 @@ module sonic-restapi {
 
         container RESTAPI {
 
-            description "RESTAPI TABLE part of config_db.json";
+            description "REST API server certificate and connection configuration";
 
             container certs {
+                description "TLS certificate paths for the REST API server";
 
                 leaf ca_crt {
                     type string {
@@ -45,7 +42,7 @@ module sonic-restapi {
 
                 leaf client_crt_cname {
                     type string {
-                        pattern '([a-zA-Z0-9_\-\.]+,)*([a-zA-Z0-9_\-\.]+)';
+                        pattern '((\*\.)?[a-zA-Z0-9_\-\.]+,)*((\*\.)?[a-zA-Z0-9_\-\.]+)';
                     }
                     description "Client cert name.";
                 }
@@ -60,6 +57,7 @@ module sonic-restapi {
             }
 
             container config {
+                description "REST API server runtime configuration";
 
                 leaf client_auth {
                     type  boolean;

@@ -12,6 +12,10 @@ module sonic-bgp-device-global {
     description
         "SONIC Device-specific BGP global data";
 
+    revision 2026-04-28 {
+        description "Add chassis_tsa_supported to select CHASSIS_APP_DB vs per-linecard TSA orchestration";
+    }
+
     revision 2024-01-28 {
         description "Add Weighted ECMP using BGP link bandwidth";
     }
@@ -24,7 +28,7 @@ module sonic-bgp-device-global {
 
         container BGP_DEVICE_GLOBAL {
 
-            description "BGP_DEVICE_GLOBAL part of config_db.json";
+            description "Device-level BGP global settings such as TSA, WCMP, and IDF isolation.";
 
             container STATE {
 
@@ -35,6 +39,15 @@ module sonic-bgp-device-global {
                     default "false";
                     description
                     "When set to true, Traffic is shifted away (TSA), i.e, BGP routes are not advertised to neighboring routers";
+                }
+
+                leaf chassis_tsa_supported {
+                    type boolean;
+                    default "false";
+                    description
+                    "When true, chassis-wide TSA state is synchronized using CHASSIS_APP_DB on the supervisor.
+                     When false (default), CHASSIS_APP_DB is not used for TSA, the supervisor should push TSA/TSB
+                     to linecards out-of-band (for example via rexec).";
                 }
 
                 leaf wcmp_enabled {
@@ -61,6 +74,25 @@ module sonic-bgp-device-global {
 
             }
             /* end of STATE container */
+            /* start of CONFED container */
+            container CONFED
+            {
+                description "BGP Confederation related configuration";
+
+                leaf asn {
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description "Autonomous System Number for BGP confederation";
+                }
+
+                /* List of peer ASN part of the confederation */
+                leaf peers {
+                    type string;
+                    description "List of sub-ASNs in the confederation separated by semi-colon";
+                }
+            }
+            /* end of CONFED container */
         }
         /* end of BGP_DEVICE_GLOBAL container */
     }

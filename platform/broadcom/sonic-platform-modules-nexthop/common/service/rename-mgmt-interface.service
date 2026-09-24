@@ -1,0 +1,12 @@
+[Unit]
+Description=Rename management interface
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/rename_mgmt_interface.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,74 @@
+{
+    "ASIC_SENSORS_TABLE": {
+        "sonic-asic-sensors:sonic-asic-sensors": {
+            "sonic-asic-sensors:ASIC_SENSORS": {
+                "ASIC_SENSORS_POLLER_INTERVAL": {
+                    "interval": "10"
+                },
+                "ASIC_SENSORS_POLLER_STATUS": {
+                    "admin_status": "enable"
+                }
+            }
+        }
+    },
+    "ASIC_SENSORS_INVALID_POLLER_INTERVAL": {
+        "sonic-asic-sensors:sonic-asic-sensors": {
+            "sonic-asic-sensors:ASIC_SENSORS": {
+                "ASIC_SENSORS_POLLER_INTERVAL": {
+                    "interval": "0"
+                },
+                "ASIC_SENSORS_POLLER_STATUS": {
+                    "admin_status": "enable"
+                }
+            }
+        }
+    },
+    "ASIC_SENSORS_INVALID_POLLER_ADMIN_STATUS": {
+        "sonic-asic-sensors:sonic-asic-sensors": {
+            "sonic-asic-sensors:ASIC_SENSORS": {
+                "ASIC_SENSORS_POLLER_INTERVAL": {
+                    "interval": "10"
+                },
+                "ASIC_SENSORS_POLLER_STATUS": {
+                    "admin_status": "testing"
+                }
+            }
+        }
+    },
+    "ASIC_SENSORS_POLLER_INTERVAL_BAD_LEN_MAX": {
+        "sonic-asic-sensors:sonic-asic-sensors": {
+            "sonic-asic-sensors:ASIC_SENSORS": {
+                "ASIC_SENSORS_POLLER_INTERVAL": {
+                    "interval": "1010101010101010101010"
+                },
+                "ASIC_SENSORS_POLLER_STATUS": {
+                    "admin_status": "enable"
+                }
+            }
+        }
+    },
+    "ASIC_SENSORS_POLLER_INTERVAL_EMPTY_VALUE": {
+        "sonic-asic-sensors:sonic-asic-sensors": {
+            "sonic-asic-sensors:ASIC_SENSORS": {
+                "ASIC_SENSORS_POLLER_INTERVAL": {
+                    "interval": ""
+                },
+                "ASIC_SENSORS_POLLER_STATUS": {
+                    "admin_status": "enable"
+                }
+            }
+        }
+    },
+    "ASIC_SENSORS_POLLER_ADMIN_STATUS_EMPTY_VALUE": {
+        "sonic-asic-sensors:sonic-asic-sensors": {
+            "sonic-asic-sensors:ASIC_SENSORS": {
+                "ASIC_SENSORS_POLLER_INTERVAL": {
+                    "interval": "10"
+                },
+                "ASIC_SENSORS_POLLER_STATUS": {
+                    "admin_status": ""
+                }
+            }
+        }
+    }
+}

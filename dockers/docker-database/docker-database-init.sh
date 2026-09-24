@@ -41,6 +41,7 @@ then
     fi
 fi
 
+
 export BMP_DB_PORT=6400
 
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
@@ -48,13 +49,20 @@ mkdir -p $REDIS_DIR/sonic-db
 mkdir -p /etc/supervisor/conf.d/
 
 if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
-    cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
+    # Copy into a temp file first and atomically move it into place, for the same reason
+    # as the rendered branch below.
+    cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json.new
+    mv $REDIS_DIR/sonic-db/database_config.json.new $REDIS_DIR/sonic-db/database_config.json
 else
+    # Render into a temp file first and atomically move it into place, so that any
+    # process racing to read database_config.json (e.g. waitForAllInstanceDatabaseConfigJsonFilesReady)
+    # never observes a truncated/partially-rendered file.
     if [ -f /etc/sonic/enable_multidb ]; then
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT include_system_eventd=$INCLUDE_SYSTEM_EVENTD jinjanate /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json.tmp
     else
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT include_system_eventd=$INCLUDE_SYSTEM_EVENTD jinjanate /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json.tmp
     fi
+    mv $REDIS_DIR/sonic-db/database_config.json.tmp $REDIS_DIR/sonic-db/database_config.json
 fi
 
 # on VoQ system, we only publish redis_chassis instance and CHASSIS_APP_DB when
@@ -71,6 +79,9 @@ chassis_db_address=""
 chassis_db_port=""
 chassisdb_config="/usr/share/sonic/platform/chassisdb.conf"
 [ -f $chassisdb_config ] && source $chassisdb_config
+chassisdb_address_file="/etc/sonic/chassisdb_address"
+# source the chassisdb_address_file, if the file exists
+[ -f $chassisdb_address_file ] && source $chassisdb_address_file
 
 db_cfg_file="/var/run/redis/sonic-db/database_config.json"
 db_cfg_file_tmp="/var/run/redis/sonic-db/database_config.json.tmp"
@@ -82,8 +93,10 @@ if [[ $DATABASE_TYPE == "chassisdb" ]]; then
     VAR_LIB_REDIS_CHASSIS_DIR="/var/lib/redis_chassis"
     mkdir -p $VAR_LIB_REDIS_CHASSIS_DIR   
     update_chassisdb_config -j $db_cfg_file_tmp -k -p $chassis_db_port
+    # Set protected mode based on the hostname
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
     # generate all redis server supervisord configuration file
-    sonic-cfggen -j $db_cfg_file_tmp \
+    sonic-cfggen -j $db_cfg_file_tmp -a "$additional_data_json" \
     -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
     -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
     rm $db_cfg_file_tmp
@@ -99,21 +112,56 @@ then
     if [ -f /etc/sonic/database_global.json ]; then
         cp /etc/sonic/database_global.json $REDIS_DIR/sonic-db/database_global.json
     else
-        j2 /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json
+        # Render into a temp file first and atomically move it into place, so that any
+        # process racing to read database_global.json never observes a truncated file.
+        jinjanate /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json.tmp
+        mv $REDIS_DIR/sonic-db/database_global.json.tmp $REDIS_DIR/sonic-db/database_global.json
     fi
 fi
 # delete chassisdb config to generate supervisord config
 update_chassisdb_config -j $db_cfg_file_tmp -d
-sonic-cfggen -j $db_cfg_file_tmp \
+
+# On Switch-BMC systems, bind the BMC-side 'redis' instance to the bmc-link IP in addition to loopback.
+# This is used by Switch-Host to push data into BMC-side DB (e.g. thermalctld publishing thermals).
+bmc_link_ip=""
+bmc_link_if=""
+if [ -f /usr/share/sonic/platform/platform_env.conf ] && \
+   grep -q '^switch_bmc=1' /usr/share/sonic/platform/platform_env.conf 2>/dev/null && \
+   [ -f /etc/sonic/bmc.json ]; then
+    bmc_link_ip=$(jq -r '.bmc_addr // empty' /etc/sonic/bmc.json)
+    bmc_link_if=$(jq -r '.bmc_if_name // empty' /etc/sonic/bmc.json)
+fi
+
+# Set protected mode based on the hostname; if bmc_link_ip is set, disable protected-mode on the main 'redis' instance
+# and inject the extra bind IP / iface name so the supervisord template emits them on the --bind line and the
+# pre-exec interface-ready wait-loop.
+if [ -n "$bmc_link_ip" ] && [ -n "$bmc_link_if" ]; then
+    additional_data_json=$(jq -c --arg bmc "$bmc_link_ip" --arg bmcif "$bmc_link_if" \
+        '{INSTANCES: .INSTANCES | with_entries(
+            if .key == "redis"
+            then .value += {is_protected_mode: false, bmc_link_ip: $bmc, bmc_link_if: $bmcif}
+            else .value += {is_protected_mode: (.value.hostname == "127.0.0.1")}
+            end)}' \
+        "$db_cfg_file_tmp")
+else
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
+fi
+# For Linecard databases, disable Redis protected mode to expose them to the midplane.
+if [ -f "$chassisdb_config" ] && [[ "$start_chassis_db" != "1" ]]; then
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: false})}' "$db_cfg_file_tmp")
+fi
+sonic-cfggen -j "$db_cfg_file_tmp" -a "$additional_data_json" \
 -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
 -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
 
 if [[ "$start_chassis_db" != "1" ]] && [[ -z "$chassis_db_address" ]]; then
-     cp $db_cfg_file_tmp $db_cfg_file
+     # $db_cfg_file is already visible to readers on the host, so rename onto it instead
+     # of copying, which would leave it truncated for the duration of the copy.
+     mv $db_cfg_file_tmp $db_cfg_file
 else
      update_chassisdb_config -j $db_cfg_file -p $chassis_db_port
 fi
-rm $db_cfg_file_tmp
+rm -f $db_cfg_file_tmp
 
 # copy dump.rdb file to each instance for restoration
 DUMPFILE=/var/lib/redis/dump.rdb
@@ -133,12 +181,10 @@ do
     chown -R redis:redis /var/lib/$inst
 done
 
-TZ=$(cat /etc/timezone)
-rm -rf /etc/localtime
-ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
-
 chown -R redis:redis $REDIS_DIR
 REDIS_BMP_DIR="/var/lib/redis_bmp"
-chown -R redis:redis $REDIS_BMP_DIR
+if [[ -d $REDIS_BMP_DIR ]]; then
+    chown -R redis:redis $REDIS_BMP_DIR
+fi
 
 exec /usr/local/bin/supervisord

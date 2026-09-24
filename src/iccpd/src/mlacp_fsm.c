@@ -575,8 +575,30 @@ static void mlacp_sync_recv_syncReq(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_portChanInfo(struct CSM* csm, struct Msg* msg)
 {
     mLACPPortChannelInfoTLV* portconf = NULL;
+    size_t tlv_len;
+    int count;
 
     portconf = (mLACPPortChannelInfoTLV*)&(msg->buf[sizeof(ICCHdr)]);
+
+    /* Validate that msg is large enough to hold the TLV header */
+    if (msg->len < sizeof(ICCHdr) + sizeof(mLACPPortChannelInfoTLV))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Received PortChannel Info TLV too short for header: %zu", msg->len);
+        return;
+    }
+
+    /* Validate num_of_vlan_id against actual message length */
+    count = ntohs(portconf->num_of_vlan_id);
+    tlv_len = sizeof(ICCHdr) + sizeof(mLACPPortChannelInfoTLV)
+              + (size_t)count * sizeof(struct mLACPVLANData);
+    if (tlv_len > msg->len)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+            "PortChannel Info num_of_vlan_id %d exceeds msg len %zu, dropping",
+            count, msg->len);
+        return;
+    }
+
     if (mlacp_fsm_update_port_channel_info(csm, portconf) == MCLAG_ERROR)
     {
         mlacp_sync_send_nak_handler(csm, msg);
@@ -607,8 +629,30 @@ static void mlacp_sync_recv_peerLlinkInfo(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_macInfo(struct CSM* csm, struct Msg* msg)
 {
     struct mLACPMACInfoTLV* mac_info = NULL;
+    size_t tlv_len;
+    int count;
 
     mac_info = (struct mLACPMACInfoTLV *)&(msg->buf[sizeof(ICCHdr)]);
+
+    /* Validate that msg is large enough to hold the TLV header */
+    if (msg->len < sizeof(ICCHdr) + sizeof(struct mLACPMACInfoTLV))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Received MAC Info TLV too short for header: %zu", msg->len);
+        return;
+    }
+
+    /* Validate num_of_entry against actual message length */
+    count = ntohs(mac_info->num_of_entry);
+    tlv_len = sizeof(ICCHdr) + sizeof(struct mLACPMACInfoTLV)
+              + (size_t)count * sizeof(struct mLACPMACData);
+    if (tlv_len > msg->len)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+            "MAC Info num_of_entry %d exceeds msg len %zu, dropping",
+            count, msg->len);
+        return;
+    }
+
     mlacp_fsm_update_mac_info_from_peer(csm, mac_info);
     MLACP_SET_ICCP_RX_DBG_COUNTER(csm,
         mac_info->icc_parameter.type, ICCP_DBG_CNTR_STS_OK);
@@ -619,8 +663,30 @@ static void mlacp_sync_recv_macInfo(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_arpInfo(struct CSM* csm, struct Msg* msg)
 {
     struct mLACPARPInfoTLV* arp_info = NULL;
+    size_t tlv_len;
+    int count;
 
     arp_info = (struct mLACPARPInfoTLV *)&(msg->buf[sizeof(ICCHdr)]);
+
+    /* Validate that msg is large enough to hold the TLV header */
+    if (msg->len < sizeof(ICCHdr) + sizeof(struct mLACPARPInfoTLV))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Received ARP Info TLV too short for header: %zu", msg->len);
+        return;
+    }
+
+    /* Validate num_of_entry against actual message length */
+    count = ntohs(arp_info->num_of_entry);
+    tlv_len = sizeof(ICCHdr) + sizeof(struct mLACPARPInfoTLV)
+              + (size_t)count * sizeof(struct ARPMsg);
+    if (tlv_len > msg->len)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+            "ARP Info num_of_entry %d exceeds msg len %zu, dropping",
+            count, msg->len);
+        return;
+    }
+
     mlacp_fsm_update_arp_info(csm, arp_info);
     MLACP_SET_ICCP_RX_DBG_COUNTER(csm,
         arp_info->icc_parameter.type, ICCP_DBG_CNTR_STS_OK);
@@ -631,8 +697,30 @@ static void mlacp_sync_recv_arpInfo(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_ndiscInfo(struct CSM *csm, struct Msg *msg)
 {
     struct mLACPNDISCInfoTLV *ndisc_info = NULL;
+    size_t tlv_len;
+    int count;
 
     ndisc_info = (struct mLACPNDISCInfoTLV *)&(msg->buf[sizeof(ICCHdr)]);
+
+    /* Validate that msg is large enough to hold the TLV header */
+    if (msg->len < sizeof(ICCHdr) + sizeof(struct mLACPNDISCInfoTLV))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Received NDISC Info TLV too short for header: %zu", msg->len);
+        return;
+    }
+
+    /* Validate num_of_entry against actual message length */
+    count = ntohs(ndisc_info->num_of_entry);
+    tlv_len = sizeof(ICCHdr) + sizeof(struct mLACPNDISCInfoTLV)
+              + (size_t)count * sizeof(struct NDISCMsg);
+    if (tlv_len > msg->len)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+            "NDISC Info num_of_entry %d exceeds msg len %zu, dropping",
+            count, msg->len);
+        return;
+    }
+
     mlacp_fsm_update_ndisc_info(csm, ndisc_info);
 
     return;

@@ -1,7 +1,8 @@
 {
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
-            "type": "ToRRouter"
+            "type": "ToRRouter",
+            "bgp_asn": "66000"
         }
     }
 }

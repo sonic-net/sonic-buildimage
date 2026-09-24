@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+
+# Copyright 2026 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Utility for displaying LED status for all port and system LEDs on Nexthop platforms
+
+import sys
+from sonic_platform import platform
+
+
+def get_chassis():
+    try:
+        plat = platform.Platform()
+        return plat.get_chassis()
+    except Exception as e:
+        print(f"Error: Failed to get chassis object: {e}", file=sys.stderr)
+        return None
+
+
+def get_led_status(chassis, led_device_name):
+    try:
+        status = chassis.get_system_led(led_device_name)
+        return status
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def main():
+    chassis = get_chassis()
+    if chassis is None:
+        return 1
+
+    try:
+        num_ports = chassis.get_num_sfps()
+    except Exception as e:
+        print(f"Error: Failed to get number of ports: {e}", file=sys.stderr)
+        return 1
+
+    try:
+        num_fan_drawers = chassis.get_num_fan_drawers()
+    except Exception as e:
+        print(f"Error: Failed to get number of fan drawers: {e}", file=sys.stderr)
+        return 1
+
+    print("System LEDs:")
+    print("-" * 50)
+    system_leds = ["SYS_LED", "PSU_LED", "FAN_LED", "LOC_LED"]
+    for led_name in system_leds:
+        led_status = get_led_status(chassis, led_name)
+        print(f"{led_name:15s}: {led_status}")
+    print("")
+
+    print("Fan Tray LEDs:")
+    print("-" * 50)
+    for tray in range(1, num_fan_drawers + 1):
+        led_name = f"FANTRAY{tray}_LED"
+        led_status = get_led_status(chassis, led_name)
+        print(f"{led_name:15s}: {led_status}")
+    print("")
+
+    print("Port LEDs:")
+    print("-" * 50)
+    for port in range(1, num_ports + 1):
+        led_name = f"PORT_LED_{port}"
+        led_status = get_led_status(chassis, led_name)
+        print(f"{led_name:15s}: {led_status}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    main()

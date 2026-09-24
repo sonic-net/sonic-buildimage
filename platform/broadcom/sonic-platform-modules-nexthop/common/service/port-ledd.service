@@ -1,0 +1,15 @@
+[Unit]
+Description=Port Led Service
+Requires=swss.service pddf-platform-init.service
+After=swss.service pddf-platform-init.service
+BindsTo=swss.service
+
+[Service]
+ExecStart=/usr/local/bin/port_ledd.py
+Restart=on-failure
+RestartSec=10s
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=swss.service

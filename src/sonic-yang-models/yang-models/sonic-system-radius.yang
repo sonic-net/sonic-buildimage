@@ -28,12 +28,8 @@ module sonic-system-radius {
         prefix mgmt-port;
     }
 
-    import sonic-interface {
-        prefix interface;
-    }
-
     description
-        "SONiC RADIUS";
+        "Remote Authentication Dial-In User Service (RADIUS) YANG module for SONiC OS.";
 
     revision 2022-11-11 {
         description "Initial revision.";
@@ -47,13 +43,13 @@ module sonic-system-radius {
         }
     }
 
-
     container sonic-system-radius {
 
         container RADIUS {
+            description "Global RADIUS client configuration.";
 
             container global {
-
+                description "Global RADIUS authentication settings applied to all servers.";
 
                 leaf passkey {
                     type string {
@@ -62,33 +58,28 @@ module sonic-system-radius {
                             error-message 'RADIUS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
                         }
                     }
-                    description
-                            'RADIUS global shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                    description "Default shared secret for authenticating RADIUS server communication.";
                 }
 
                 leaf auth_type {
                     default "pap";
                     type auth_type_enumeration;
-                    description
-                            "RADIUS global method used for authenticating the comm. mesg.";
+                    description "Default authentication protocol (pap, chap, or mschapv2) for RADIUS communication.";
                 }
 
                 leaf src_ip {
                     type inet:ip-address;
-                    description
-                            "source IP address (IPv4 or IPv6) for the outgoing RADIUS pkts.";
+                    description "Source IP address (IPv4 or IPv6) used for outgoing RADIUS packets.";
                 }
 
                 leaf nas_ip {
                     type inet:ip-address;
-                    description
-                            "NAS-IP|IPV6-Address attribute for the outgoing RADIUS pkts.";
+                    description "NAS-IP-Address or NAS-IPv6-Address attribute sent in outgoing RADIUS packets.";
                 }
 
                 leaf statistics {
                     type boolean;
-                    description
-                            "Should statistics collection be enabled/disabled";
+                    description "Enable or disable RADIUS server statistics collection.";
                 }
 
                 leaf timeout {
@@ -98,6 +89,7 @@ module sonic-system-radius {
                             error-message "RADIUS timeout must be 1..60";
                         }
                     }
+                    description "Default timeout in seconds for RADIUS server responses.";
                 }
 
                 leaf retransmit {
@@ -107,14 +99,17 @@ module sonic-system-radius {
                             error-message "RADIUS retransmit must be 0..10";
                         }
                     }
+                    description "Default number of times to retransmit a RADIUS request before giving up.";
                 }
             }
         }
 
         container RADIUS_SERVER {
+            description "Per-server RADIUS configuration entries.";
 
             list RADIUS_SERVER_LIST {
                 key "ipaddress";
+                description "A RADIUS server entry identified by hostname or IP address.";
 
                 max-elements 8;
 
@@ -138,15 +133,13 @@ module sonic-system-radius {
                             error-message 'RADIUS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
                         }
                     }
-                    description
-                            'RADIUS servers shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                    description "Per-server shared secret overriding the global passkey.";
                 }
 
                 leaf auth_type {
                     default "pap";
                     type auth_type_enumeration;
-                    description
-                            "RADIUS server's method used for authenticating the comm. mesg.";
+                    description "Per-server authentication protocol overriding the global auth_type.";
                 }
 
                 leaf priority {
@@ -155,8 +148,7 @@ module sonic-system-radius {
                             error-message "RADIUS priority must be 1..64";
                         }
                     }
-                    description
-                            "RADIUS server's priority";
+                    description "Server selection priority; higher values are tried first.";
                 }
 
                 leaf timeout {
@@ -166,6 +158,7 @@ module sonic-system-radius {
                             error-message "RADIUS timeout must be 1..60";
                         }
                     }
+                    description "Per-server response timeout in seconds.";
                 }
 
                 leaf retransmit {
@@ -175,6 +168,7 @@ module sonic-system-radius {
                             error-message "RADIUS retransmit must be 0..10";
                         }
                     }
+                    description "Per-server number of retransmit attempts before failing over.";
                 }
 
                 leaf vrf {
@@ -183,9 +177,7 @@ module sonic-system-radius {
                             error-message "Error: Invalid VRF name";
                         }
                     }
-                    description
-                        "VRF name";
-
+                    description "VRF used to reach this RADIUS server (mgmt or default).";
                 }
 
                 leaf src_intf {

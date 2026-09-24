@@ -29,7 +29,7 @@ THERMAL_LEVEL_FAN_SPEED = (7000, 10000, 13000, 16000, 19000)
 class Fan(FanBase):
     """DellEMC Platform-specific Fan class"""
 
-    I2C_DIR = "/sys/class/i2c-adapter/"
+    I2C_DIR = "/sys/bus/i2c/devices/"
     FAN_DEV_MAPPING = {
         1: {1: ("i2c-11/11-002a", 1), 2: ("i2c-11/11-002a", 2)},
         2: {1: ("i2c-11/11-0029", 3), 2: ("i2c-11/11-0029", 4)},

@@ -15,14 +15,35 @@
         "desc": "TABLE_WITH_INCORRECT_SAVE_ON_SET failure",
         "eStrKey": "InvalidValue"
     },
+    "GNMI_TABLE_WITH_INCORRECT_VRF": {
+        "desc": "TABLE_WITH_INCORRECT_VRF failure",
+        "eStrKey": "InvalidValue"
+    },
     "GNMI_TABLE_WITH_VALID_CONFIG": {
         "desc": "TABLE WITH VALID CONFIG."
     },
     "GNMI_CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE": {
         "desc": "CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE failure.",
-        "eStrKey": "Mandatory"
+        "eStrKey": "MinElements"
     },
     "GNMI_CLIENT_CERT_LIST_TABLE_WITH_VALID_CONFIG": {
         "desc": "TABLE WITH VALID CONFIG."
+    },
+    "GNMI_TABLE_WITH_VALID_USER_AUTH": {
+        "desc": "TABLE WITH VALID USER_AUTH."
+    },
+    "GNMI_TABLE_WITH_CUSTOM_VRF_INCORRECT": {
+        "desc": "TABLE_WITH_CUSTOM_VRF failure - custom VRFs not supported",
+        "eStrKey": "InvalidValue"
+    },
+    "GNMI_TABLE_WITH_MGMT_VRF_CORRECT": {
+        "desc": "TABLE WITH MGMT VRF ENABLED."
+    },
+    "GNMI_TABLE_WITH_MGMT_VRF_INCORRECT": {
+        "desc": "TABLE WITH MGMT VRF DISABLED - should fail validation.",
+        "eStrKey": "Must"
+    },
+    "GNMI_TABLE_WITH_DEFAULT_VRF_CORRECT": {
+        "desc": "TABLE WITH DEFAULT VRF."
     }
 }

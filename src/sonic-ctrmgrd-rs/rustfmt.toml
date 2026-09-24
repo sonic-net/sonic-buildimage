@@ -1,0 +1,25 @@
+edition = "2018"
+
+# Width
+max_width = 120
+#use_small_heuristics = "Max"
+
+# Space and line breaks
+hard_tabs = false
+tab_spaces = 4
+newline_style = "Auto"
+fn_params_layout = "Tall"
+match_arm_leading_pipes = "Never"
+
+# Reorders and merges
+reorder_imports = true
+reorder_modules = true
+merge_derives = true
+remove_nested_parens = true
+
+# Forcing shorthands
+use_try_shorthand = true
+use_field_init_shorthand = true
+
+# Misc
+force_explicit_abi = true

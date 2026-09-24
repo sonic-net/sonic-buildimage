@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: SONiC Support Forums
+    url: https://groups.google.com/forum/#!forum/sonicproject
+    about: Please ask and answer questions here at the SONiC Support Forums

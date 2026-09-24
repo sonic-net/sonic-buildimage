@@ -1,4 +1,5 @@
 export build_version="${sonic_version}"
+export debian_version="$(cat /etc/debian_version 2>/dev/null || echo 'N/A')"
 export asic_type="${sonic_asic_platform}"
 export commit_id="$(git rev-parse --short HEAD)"
 export branch="$(git rev-parse --abbrev-ref HEAD)"

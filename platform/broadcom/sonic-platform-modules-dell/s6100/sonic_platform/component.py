@@ -59,7 +59,7 @@ class Component(ComponentBase):
             self.name = self.MODULE_COMPONENT[0].format(self.index)
             self.description = self.MODULE_COMPONENT[1].format(
                                ((self.index - 1) * 16) + 1, self.index * 16)
-            self.cpld_version_file = ("/sys/class/i2c-adapter/i2c-{0}/{0}-003e"
+            self.cpld_version_file = ("/sys/bus/i2c/devices/i2c-{0}/{0}-003e"
                                       "/iom_cpld_vers").format(i2c_line)
         else:
             self.index = component_index

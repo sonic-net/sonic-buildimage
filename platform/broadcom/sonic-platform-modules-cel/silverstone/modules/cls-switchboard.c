@@ -505,7 +505,7 @@ err_exit:
 	return err;
 }
 
-static int cls_fpga_remove(struct pci_dev *dev)
+static void cls_fpga_remove(struct pci_dev *dev)
 {
 	int i;
 	struct switchbrd_priv *priv = pci_get_drvdata(dev);
@@ -517,7 +517,6 @@ static int cls_fpga_remove(struct pci_dev *dev)
 	platform_device_unregister(priv->xcvr_pdev);
 	platform_device_unregister(priv->regio_pdev);
 	pci_disable_device(dev);
-	return 0;
 };
 
 static const struct pci_device_id pci_clsswbrd[] = {

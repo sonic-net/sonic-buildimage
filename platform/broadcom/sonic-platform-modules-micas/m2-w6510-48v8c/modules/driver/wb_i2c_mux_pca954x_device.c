@@ -262,7 +262,7 @@ static int __init wb_i2c_mux_pca954x_device_init(void)
             continue;
         }
         client = i2c_new_client_device(adap, &i2c_mux_pca954x_device_info[i]);
-        if (!client) {
+        if (IS_ERR(client) || !client) {
             i2c_mux_pca954x_device_data->client = NULL;
             printk(KERN_ERR "Failed to register pca954x device %d at bus %d!\n",
                 i2c_mux_pca954x_device_data->i2c_addr, i2c_mux_pca954x_device_data->i2c_bus);

@@ -1,6 +1,7 @@
 SPATH       := $($(SONIC_UTILITIES_PY3)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-utilities.mk rules/sonic-utilities.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH).patch/)
 SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
 
 $(SONIC_UTILITIES_PY3)_CACHE_MODE  := GIT_CONTENT_SHA

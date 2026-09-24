@@ -2,14 +2,20 @@ Source: sonic-pddf-platform-modules
 Section: main
 Priority: extra
 Maintainer: Broadcom <sk@broadcom.com>
-Build-Depends: debhelper (>= 9), bzip2
-Standards-Version: 3.9.3
+Build-Depends: debhelper-compat (= 13), dh-python, python3, linux-headers-6.12.41+deb13-common-sonic
+Rules-Requires-Root: no
+Standards-Version: 4.7.2
 
 Package: sonic-platform-pddf
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned, ${python3:Depends}
 Description: kernel modules for platform devices such as psu, fan, sfp, led
 
 Package: sonic-platform-pddf-sym
 Architecture: amd64
 Description: PDDF kernel modules symbols which could be used for other platform modules build
 
+Package: sonic-platform-pddf-dbgsym
+Architecture: amd64
+Depends: sonic-platform-pddf
+Description: debug symbols for kernel modules for platform devices

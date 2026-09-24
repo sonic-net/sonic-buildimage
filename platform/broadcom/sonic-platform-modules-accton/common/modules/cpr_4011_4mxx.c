@@ -243,8 +243,7 @@ static const struct attribute_group cpr_4011_4mxx_group = {
     .attrs = cpr_4011_4mxx_attributes,
 };
 
-static int cpr_4011_4mxx_probe(struct i2c_client *client,
-                               const struct i2c_device_id *dev_id)
+static int cpr_4011_4mxx_probe(struct i2c_client *client)
 {
     struct cpr_4011_4mxx_data *data;
     int status;

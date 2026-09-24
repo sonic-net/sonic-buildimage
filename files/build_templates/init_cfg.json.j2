@@ -24,10 +24,12 @@
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "enable",
-            "FLEX_COUNTER_DELAY_STATUS": "true",
             "POLL_INTERVAL": "10000"
         },
         "PORT": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PORT_PHY_ATTR": {
             "FLEX_COUNTER_STATUS": "enable"
         },
         "RIF": {
@@ -54,6 +56,20 @@
         "PORT_BUFFER_DROP": {
             "FLEX_COUNTER_STATUS": "enable"
         }
+{%- if sonic_asic_platform in ["nvidia-bluefield", "pensando"] %},
+        "ENI": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "DASH_METER": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "HA_SET": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        }
+{%- endif %}
     },
     "BGP_DEVICE_GLOBAL": {
         "STATE": {
@@ -64,12 +80,12 @@
     },
 {%- set features = [("bgp", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}", false, "enabled"),
                    ("database", "always_enabled", false, "always_enabled"),
-                   ("lldp", "enabled", true, "enabled"),
                    ("pmon", "enabled", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}", "enabled"),
-                   ("snmp", "enabled", true, "enabled"),
                    ("swss", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled")] %}
 {%- if include_router_advertiser == "y" %}{% do features.append(("radv", "enabled", false, "enabled")) %}{% endif %}
+{%- if include_lldp == "y" %}{% do features.append(("lldp", "enabled", true, "enabled")) %}{% endif %}
+{%- if include_snmp == "y" %}{% do features.append(("snmp", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_teamd == "y" %}{% do features.append(("teamd", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}", false, "enabled")) %}{% endif %}
 {% do features.append(("dhcp_relay", "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
 {%- if include_dhcp_server == "y" %}{% do features.append(("dhcp_server", "disabled", false, "enabled")) %}{% endif %}
@@ -85,14 +101,23 @@
     {% do features.append(("restapi", "enabled", false, "enabled")) %}
 {%- endif %}
 {%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", true, "enabled")) %}{% endif %}
-{%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
+{%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
 {%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
+{%- if include_system_otel == "y" %}{% do features.append(("otel", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_system_eventd == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" %}
     {% do features.append(("eventd","disabled", false, "enabled")) %}
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
+{%- if include_redfish == "y" and sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
+{%- if sonic_asic_platform == 'aspeed' and include_system_telemetry != "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
+{%- set init_cfg_extensions = namespace(features=[], kube_owned_features=[]) %}
+{%- include 'files/build_templates/init_cfg_organization.j2' ignore missing %}
+{%- for extension_feature in init_cfg_extensions.features %}
+    {% do features.append(extension_feature) %}
+{%- endfor %}
+{%- set kube_owned_features = ["lldp", "pmon", "radv", "eventd", "snmp", "telemetry", "gnmi"] + init_cfg_extensions.kube_owned_features %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}
@@ -115,7 +140,7 @@
             "check_up_status" : "false",
 {%- endif %}
 {%- if include_kubernetes == "y" %}
-{%- if feature in ["lldp", "pmon", "radv", "eventd", "snmp", "telemetry", "gnmi"] %}
+{%- if feature in kube_owned_features %}
             "set_owner": "kube", {% else %}
             "set_owner": "local", {% endif %} {% endif %}
             "high_mem_alert": "disabled"

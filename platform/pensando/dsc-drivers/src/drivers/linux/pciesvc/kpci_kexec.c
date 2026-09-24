@@ -10,6 +10,7 @@
  */
 
 #include "kpcimgr_api.h"
+#include "pciesvc_impl.h"
 #include "pciesvc.h"
 #include "pciesvc_system.h"
 
@@ -24,12 +25,11 @@ kstate_t *kstate = NULL;
 void set_kstate(kstate_t *ks)
 {
 	kstate = ks;
-	kstate_paddr = ks->shmembase + SHMEM_KSTATE_OFFSET;
 }
 
 int virtual(void)
 {
-	return (unsigned long)kstate != kstate_paddr;
+	return ((long)kstate) < 0 ;
 }
 
 /* called in physical mode */
@@ -66,7 +66,7 @@ void kpcimgr_cpu_holding_pen(kstate_t *ks)
 		for (i=0; i<10; i++) {
 			if (release()) {
 				kpcimgr_nommu_poll(ks);
-				kpr_err("poll loop done, returning after %ld polls.\n", npolls);
+				kpr_err("polling did %ld polls.\n", npolls);
 				return;
 			}
 			kp_udelay(1*1000); /* 1ms */
@@ -232,7 +232,8 @@ void kpcimgr_serial_thread(kstate_t *ks)
  *    memory locations.
  */
 
-unsigned long kpcimgr_get_holding_pen(unsigned long old_entry, unsigned int cpu)
+unsigned long kpcimgr_get_holding_pen(unsigned long old_entry,
+				      unsigned int cpu, unsigned long ks_paddr)
 {
 	kstate_t *ks = get_kstate();
 	unsigned long offset, entry;
@@ -257,7 +258,16 @@ unsigned long kpcimgr_get_holding_pen(unsigned long old_entry, unsigned int cpu)
 	}
 	holding_pen_idx++;
 
-	entry = ks->shmembase + KSTATE_CODE_OFFSET + offset;
+#if 1
+	/* temp: stay compatible with old kernel */
+	if ((ks_paddr >> 24) != 0xc5)
+		ks_paddr = ks->shmembase + COMPAT_SHMEM_KSTATE_OFFSET;
+#endif
+	entry = ks_paddr + KSTATE_CODE_OFFSET + offset;
 	kpr_err("%s(cpu%d) entry = %lx\n", __func__, cpu, entry);
+
+	/* propagate value of ks_paddr to persistent memory */
+	offset = ((unsigned long) &kstate_paddr) - (unsigned long) ks->code_base;
+	*(unsigned long *)(ks->persistent_base + offset) = ks_paddr;
 	return entry;
 }

@@ -1,7 +1,7 @@
 ##
 ## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-## Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-## Apache-2.0
+## Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -230,17 +230,64 @@
   id: '1467'
   name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
     Data Fabric: Device 18h; Function 7'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: a2dc
+  name: 'Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated
+    ConnectX-7 network controller (rev 01)'
+- bus: '01'
+  dev: '00'
+  fn: '1'
+  id: c2d5
+  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
+    Interface (rev 01)'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: a2dc
+  name: 'Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated
+    ConnectX-7 network controller (rev 01)'
+- bus: '02'
+  dev: '00'
+  fn: '1'
+  id: c2d5
+  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
+    Interface (rev 01)'
 - bus: '03'
   dev: '00'
   fn: '0'
   id: '5765'
-  name: 'Non-Volatile memory controller: Realtek Semiconductor Co., Ltd. RTS5765DL
-    NVMe SSD Controller (DRAM-less) (rev 01)'
+  name: 'Non-Volatile memory controller: Device 1f9f:5765 (rev 01)'
 - bus: '06'
   dev: '00'
   fn: '0'
   id: cf70
   name: 'Ethernet controller: Mellanox Technologies Spectrum-3'
+- bus: '07'
+  dev: '00'
+  fn: '0'
+  id: a2dc
+  name: 'Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated
+    ConnectX-7 network controller (rev 01)'
+- bus: '07'
+  dev: '00'
+  fn: '1'
+  id: c2d5
+  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
+    Interface (rev 01)'
+- bus: 08
+  dev: '00'
+  fn: '0'
+  id: a2dc
+  name: 'Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated
+    ConnectX-7 network controller (rev 01)'
+- bus: 08
+  dev: '00'
+  fn: '1'
+  id: c2d5
+  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
+    Interface (rev 01)'
 - bus: 09
   dev: '00'
   fn: '0'

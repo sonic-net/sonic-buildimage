@@ -722,12 +722,12 @@ static int add_attributes(struct i2c_client *client,
     return 0;
 }
 
-static int accton_i2c_cpld_probe(struct i2c_client *client,
-                                 const struct i2c_device_id *dev_id)
+static int accton_i2c_cpld_probe(struct i2c_client *client)
 {
     int status;
     struct cpld_data *data = NULL;
     struct device *dev = &client->dev;
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
         dev_dbg(dev, "i2c_check_functionality failed (0x%x)\n", client->addr);

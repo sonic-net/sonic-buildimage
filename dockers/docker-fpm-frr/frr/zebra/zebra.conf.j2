@@ -6,6 +6,15 @@
 !
 {% endblock banner %}
 !
+{% block zebra_nexthop %}
+{% if (('localhost' in DEVICE_METADATA) and ('zebra_nexthop' in DEVICE_METADATA['localhost']) and
+       (DEVICE_METADATA['localhost']['zebra_nexthop'] == 'disabled')) %}
+no zebra nexthop kernel enable
+{% else %}
+zebra nexthop kernel enable
+{% endif %}
+{% endblock zebra_nexthop %}
+!
 {% block fpm %}
 {% if ( ('localhost' in DEVICE_METADATA) and ('nexthop_group' in  DEVICE_METADATA['localhost']) and
         (DEVICE_METADATA['localhost']['nexthop_group'] == 'enabled') ) %}
@@ -18,6 +27,7 @@ no fpm use-next-hop-groups
 !
 fpm address 127.0.0.1
 {% endblock fpm %}
+zebra nexthop-group keep 1
 !
 {% include "common/daemons.common.conf.j2" %}
 !

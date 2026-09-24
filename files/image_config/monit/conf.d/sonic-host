@@ -7,9 +7,15 @@
 
 check filesystem root-overlay with path /
     if space usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+    if inode usage > 85% for 10 times within 20 cycles then alert repeat every 1 cycles
 
 check filesystem var-log with path /var/log
     if space usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+    if inode usage > 85% for 10 times within 20 cycles then alert repeat every 1 cycles
+
+# host-inodes: alert when /host inode usage stays over threshold
+check filesystem host-inodes with path /host
+    if inode usage > 85% for 10 times within 20 cycles then alert repeat every 1 cycles
 
 check system $HOST
     if memory usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
@@ -20,6 +26,8 @@ check process rsyslog with pidfile /var/run/rsyslogd.pid
     start program = "/bin/systemctl start rsyslog.service"
     stop program = "/bin/systemctl stop rsyslog.service"
     if totalmem > 800 MB for 10 times within 20 cycles then restart
+
+check process chrony with pidfile /var/run/chrony/chronyd.pid
 
 # route_check.py Verify routes between APPL-DB & ASIC-DB are in sync.
 # For any discrepancy, details are logged and a non-zero code is returned
@@ -65,3 +73,12 @@ check program arp_update_checker with path "/usr/bin/arp_update_checker" every 1
 check program controlPlaneDropCheck with path "/usr/bin/control_plane_drop_check"
     every 5 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# Periodically update oper status of mgmt interface in STATE_DB 
+check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
+    every 1 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# check if NTP is synchronized
+#check program ntp with path "/usr/local/bin/check_ntp_status.sh"
+#    if status != 0 for 3 cycle then alert repeat every 5 cycles

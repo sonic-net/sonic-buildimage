@@ -42,7 +42,7 @@ You can find a make rule for every target that is defined in recipe there.
 *Makefile* is a wrapper over sonic-slave docker image.  
 
 Every part of build is executed in a docker container called sonic-slave, specifically crafted for this environment.
-If build is started for the first time on a particular host, a new sonic-slave image will be built form *sonic-slave/Dockerfile* on the machine.
+If build is started for the first time on a particular host, a new sonic-slave image will be built from *sonic-slave/Dockerfile* on the machine.
 It might take some time, so be patient.
 After that all subsequent make commands will be executed inside this container.
 *Makefile* takes every target that is passed to make command and delegates it as an entry point to a container,
@@ -119,7 +119,7 @@ SONIC_PYTHON_STDEB_DEBS += $(SOME_NEW_DEB) # add package to this target group
 
 **SONIC_MAKE_DEBS**  
 This is a bit more flexible case.
-If you have to do some specific type of build or apply paths prior to build, just define your own Makefile and add it to buildimage.
+If you have to do some specific type of build or apply patches prior to build, just define your own Makefile and add it to buildimage.
 Define:
 ```make
 SOME_NEW_DEB = some_new_deb.deb # name of your package
@@ -267,7 +267,7 @@ _Recommend: Rename image built using INSTALL_DEBUG_TOOLS=y to mark it explicit. 
         * start process under dbg
         * attach gdb to running process
     * Set required source dir from under /src as needed
-    * May use /debug to record all geb logs or any spew from debug session.
+    * May use /debug to record all gdb logs or any spew from debug session.
     
   ### To enhance debug dockers
   * Add to `<docker name>_DBG_IMAGE_PACKAGES`, additional debug tools that will be pre-installed during build.

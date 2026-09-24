@@ -1,0 +1,15 @@
+[Unit]
+Description=GNMI container
+Requires=database.service
+After=database.service swss.service syncd.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+User=admin
+ExecStartPre=/usr/local/bin/gnmi.sh start
+ExecStart=/usr/local/bin/gnmi.sh wait
+ExecStop=/usr/local/bin/gnmi.sh stop
+RestartSec=30

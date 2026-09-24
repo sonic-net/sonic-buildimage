@@ -13,7 +13,7 @@ events=PROCESS_STATE
 buffer_size=1024
 
 [eventlistener:supervisor-proc-exit-listener]
-command=/usr/bin/supervisor-proc-exit-listener --container-name pmon
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name pmon
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
 autostart=true
 autorestart=unexpected
@@ -24,9 +24,28 @@ command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
+
+
+{% if IS_SWITCH_BMC == 1 %}
+[program:bmcctld]
+command=/usr/local/bin/bmcctld
+priority=2
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+startretries=50
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
 
 
 {% if delay_non_critical_daemon %}
@@ -44,8 +63,10 @@ command=/usr/local/bin/chassisd
 priority=3
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -57,8 +78,10 @@ command=/usr/local/bin/chassis_db_init
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=0
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -70,8 +93,10 @@ command=/usr/bin/lm-sensors.sh
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=0
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
@@ -83,8 +108,10 @@ command=/usr/sbin/fancontrol
 priority=4
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -96,8 +123,10 @@ command={% if API_VERSION == 3 and 'ledd' not in python2_daemons %}python3 {% el
 priority=5
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -116,6 +145,14 @@ dependent_startup_wait_for=rsyslogd:running
     {%- set options = options + " --enable_sff_mgr" %}
 {% endif -%}
 
+{% if xcvrd and xcvrd.dom_temperature_poll_interval %}
+    {%- set options = options + " --dom_temperature_poll_interval " + xcvrd.dom_temperature_poll_interval|string %}
+{% endif -%}
+
+{% if xcvrd and xcvrd.dom_update_interval %}
+    {%- set options = options + " --dom_update_interval " + xcvrd.dom_update_interval|string %}
+{% endif -%}
+
 {% if delay_xcvrd %}
     {%- set command = "bash -c \"sleep 30 && " ~ base_command ~ options ~ "\"" %}
 {% else %}
@@ -125,8 +162,10 @@ command={{ command }}
 priority=6
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -143,8 +182,10 @@ command=nice -n -20 python3 /usr/local/bin/ycabled
 priority=7
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -157,8 +198,10 @@ command={% if API_VERSION == 3 and 'psud' not in python2_daemons %}python3 {% el
 priority=8
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
@@ -170,8 +213,10 @@ command={% if API_VERSION == 3 and 'syseepromd' not in python2_daemons %}python3
 priority=9
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
@@ -179,12 +224,44 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if not skip_thermalctld %}
 [program:thermalctld]
-command={% if API_VERSION == 3 and 'thermalctld' not in python2_daemons %}python3 {% else %} python2 {% endif %}/usr/local/bin/thermalctld
+{% set base_command = (
+    "python3 /usr/local/bin/thermalctld"
+    if API_VERSION == 3 and 'thermalctld' not in python2_daemons
+    else "python2 /usr/local/bin/thermalctld"
+) %}
+{% set options = "" -%}
+
+{% if thermalctld is defined %}
+    {% if thermalctld.thermal_monitor_initial_interval is defined and thermalctld.thermal_monitor_initial_interval is not none %}
+        {%- set options = options + " --thermal-monitor-initial-interval " + thermalctld.thermal_monitor_initial_interval|string %}
+    {% endif -%}
+
+    {% if thermalctld.thermal_monitor_update_interval is defined and thermalctld.thermal_monitor_update_interval is not none %}
+        {%- set options = options + " --thermal-monitor-update-interval " + thermalctld.thermal_monitor_update_interval|string %}
+    {% endif -%}
+
+    {% if thermalctld.thermal_monitor_update_elapsed_threshold is defined and thermalctld.thermal_monitor_update_elapsed_threshold is not none %}
+        {%- set options = options + " --thermal-monitor-update-elapsed-threshold " + thermalctld.thermal_monitor_update_elapsed_threshold|string %}
+    {% endif -%}
+
+    {% if thermalctld.enable_liquid_cooling %}
+    {%- set options = options + " --enable_liquid_cooling" %}
+    {% endif -%}
+
+    {% if thermalctld.liquid_cooling_update_interval %}
+    {%- set options = options ~ " --liquid_cooling_update_interval " ~ thermalctld.liquid_cooling_update_interval %}
+    {% endif -%}
+{% endif -%}
+
+{%- set command = base_command ~ options %}
+command={{ command }}
 priority=10
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 startretries=50
 dependent_startup=true
@@ -197,8 +274,10 @@ command=/usr/local/bin/pcied
 priority=11
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
@@ -210,8 +289,10 @@ command=/usr/local/bin/sensormond
 priority=10
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
@@ -223,8 +304,10 @@ command=/usr/local/bin/stormond
 priority=10
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running

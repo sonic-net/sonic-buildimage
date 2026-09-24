@@ -1,0 +1,16 @@
+[Unit]
+Description=Telemetry container
+Requires=database.service
+After=database.service swss.service syncd.service
+Before=ntp-config.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+User=admin
+ExecStartPre=/usr/local/bin/telemetry.sh start
+ExecStart=/usr/local/bin/telemetry.sh wait
+ExecStop=/usr/local/bin/telemetry.sh stop
+RestartSec=30

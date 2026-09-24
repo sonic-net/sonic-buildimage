@@ -23,10 +23,10 @@
                 "name": "MAC_CPLDC"
             },
             {
-                "name": "FAN_CPLD"
+                "name": "MGMT_CPLD"
             },
             {
-                "name": "MGMT_CPLD"
+                "name": "FAN_CPLD"
             },
             {
                 "name": "MAC_FPGA"
@@ -321,6 +321,16 @@
         ],
         "thermals": [
             {
+                "name": "ASIC_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
                 "name": "BOARD_TEMP",
                 "controllable": false,
                 "low-crit-threshold": true,
@@ -351,7 +361,7 @@
                 "maximum-recorded": true
             },
             {
-                "name": "OUTLET_TEMP",
+                "name": "MOS_TEMP",
                 "controllable": false,
                 "low-crit-threshold": true,
                 "high-crit-threshold": true,
@@ -361,7 +371,7 @@
                 "maximum-recorded": true
             },
             {
-                "name": "ASIC_TEMP",
+                "name": "OUTLET_TEMP",
                 "controllable": false,
                 "low-crit-threshold": true,
                 "high-crit-threshold": true,
@@ -391,17 +401,7 @@
                 "maximum-recorded": true
             },
             {
-                "name": "PSU3_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": true,
-                "maximum-recorded": true
-            },
-            {
-                "name": "PSU4_TEMP",
+                "name": "MOS_TEMP",
                 "controllable": false,
                 "low-crit-threshold": true,
                 "high-crit-threshold": true,

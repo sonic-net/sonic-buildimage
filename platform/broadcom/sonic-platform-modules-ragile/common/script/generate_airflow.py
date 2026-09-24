@@ -16,6 +16,7 @@ write resulet to AIRFLOW_RESULT_FILE, file format:
 }
 '''
 import os
+import subprocess
 import syslog
 import json
 from platform_config import AIR_FLOW_CONF, AIRFLOW_RESULT_FILE
@@ -222,12 +223,11 @@ def generate_airflow():
 
     out_file_dir = os.path.dirname(AIRFLOW_RESULT_FILE)
     if len(out_file_dir) != 0:
-        cmd = "mkdir -p %s" % out_file_dir
-        os.system(cmd)
-        os.system("sync")
+        subprocess.call(["mkdir", "-p", out_file_dir])
+        subprocess.call(["sync"])
     with open(AIRFLOW_RESULT_FILE, "w") as fd:
         fd.write(ret_json)
-    os.system("sync")
+    subprocess.call(["sync"])
 
 
 if __name__ == '__main__':

@@ -179,12 +179,12 @@ ssize_t store_pddf_data(struct device *dev, struct device_attribute *da, const c
                 *(int *)(ptr->addr) = num;
             break;
         case PDDF_USHORT:
-            ret = kstrtoint(buf,16,&num);
+            ret = kstrtouint(buf,16,&num);
             if (ret==0)
                 *(unsigned short *)(ptr->addr) = (unsigned short)num;
             break;
         case PDDF_UINT32:
-            ret = kstrtoint(buf,16,&num);
+            ret = kstrtouint(buf,16,&num);
             if (ret==0)
                 *(uint32_t *)(ptr->addr) = (uint32_t)num;
             break;

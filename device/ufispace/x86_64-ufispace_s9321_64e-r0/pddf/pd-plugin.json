@@ -1,0 +1,84 @@
+{
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP": {"1":true, "0":false },
+               "valmap-QSFP-DD": {"1":true, "0":false},
+               "valmap-QSFP": {"1":true, "0":false}
+           }
+        },
+        "status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+
+    "PSU":
+    {
+        "psu_present":
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+        "psu_support_list":
+        [
+            {"Manufacturer": "DELTA","Name": "DTQ3000AN12C12", "MaxSpd": "PSU_AC_FAN_MAX_SPEED", "Type":"AC", "Dir": "EXHAUST"},
+            {"Manufacturer": "DELTA","Name": "DTQ3001DS12L1P", "MaxSpd": "PSU_DC_FAN_MAX_SPEED", "Type":"DC", "Dir": "EXHAUST"}
+        ],
+
+        "valmap": {"PSU_AC_FAN_MAX_SPEED": "25000", "PSU_DC_FAN_MAX_SPEED":"32500", "DEFAULT_TYPE": "AC"}
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+                "valmap": {"Device Present":true, "Device Absent":false}
+            }
+        },
+        "FAN_R_MAX_SPEED":"11300",
+        "FAN_F_MAX_SPEED":"12000"
+    },
+
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}

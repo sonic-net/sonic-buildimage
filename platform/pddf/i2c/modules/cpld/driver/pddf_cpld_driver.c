@@ -211,8 +211,7 @@ static void board_i2c_cpld_remove_client(struct i2c_client *client)
 	mutex_unlock(&list_lock);
 }
 
-static int board_i2c_cpld_probe(struct i2c_client *client,
-			const struct i2c_device_id *dev_id)
+static int board_i2c_cpld_probe(struct i2c_client *client)
 {
 	int status;
 

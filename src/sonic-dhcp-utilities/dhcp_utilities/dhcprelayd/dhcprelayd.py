@@ -108,7 +108,9 @@ class DhcpRelayd(object):
             set([FEATURE_CHECKER, DHCP_SERVER_CHECKER])
         self._disable_checkers(checkers_to_be_disabled)
 
-        self._start_dhcrelay_process(dhcp_interfaces, dhcp_server_ip, force_kill)
+        feature_table = self.db_connector.get_config_db_table("DEVICE_METADATA")
+        if feature_table.get("localhost", {}).get("has_sonic_dhcpv4_relay", "False") == "False":
+           self._start_dhcrelay_process(dhcp_interfaces, dhcp_server_ip, force_kill)
 
         # TODO dhcpmon is not ready for count packet for dhcp_server, hence comment invoke it for now
         # self._start_dhcpmon_process(dhcp_interfaces, force_kill)
@@ -228,12 +230,20 @@ class DhcpRelayd(object):
         """
         procs = {}
         for proc in psutil.process_iter():
-            try:
-                if proc.name() != "dhcrelay":
-                    continue
-                procs[proc.pid] = [proc.ppid(), proc.cmdline()]
-            except psutil.NoSuchProcess:
-                continue
+            err = None
+            for i in range(5):
+                err = None
+                try:
+                    if proc.name() == "dhcrelay":
+                        procs[proc.pid] = [proc.ppid(), proc.cmdline()]
+                except psutil.NoSuchProcess:
+                    pass
+                except Exception as e:
+                    err = e
+                if err is None:
+                    break
+            if err:
+                raise err
 
         # When there is network io, dhcrelay would create child process to proceed them, psutil has chance to get
         # duplicated cmdline. Hence ignore chlid process in here

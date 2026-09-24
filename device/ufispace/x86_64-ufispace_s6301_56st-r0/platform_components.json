@@ -2,8 +2,10 @@
     "chassis": {
         "x86_64-ufispace_s6301_56st-r0": {
             "component": {
-                "CPLD1": { },
-                "BIOS": { }
+                "CPLD1": {},
+                "BIOS": {},
+                "PCIe": {},
+                "PCIe Loader": {}
             }
         }
     }

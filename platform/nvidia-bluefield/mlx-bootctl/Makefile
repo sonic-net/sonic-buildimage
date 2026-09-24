@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +19,10 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -ex
 
-MLX_BOOTCTL = mlx-bootctl-$(MLX_BOOTCTL_DRIVER_VERSION)
+MLX_BOOTCTL = $(MLX_BOOTCTL_DRIVER)-1.7
 GET_PACKAGE := $(shell pwd)/../recipes/get-soc-package.sh
 
-$(addprefix $(DEST)/, $(MLX_BOOTCTL_DRIVER)): $(DEST)/% :
+$(addprefix $(DEST)/, $(MLX_BOOTCTL_DRIVER_DKMS)): $(DEST)/% :
 	rm -rf ./tmp/
 	mkdir ./tmp/
 	pushd ./tmp/
@@ -32,8 +32,8 @@ $(addprefix $(DEST)/, $(MLX_BOOTCTL_DRIVER)): $(DEST)/% :
 	pushd ${MLX_BOOTCTL}  
 
 	# Build the package
-	KVER=$(KVERSION) WITH_DKMS=0 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	KVER=$(KVERSION) WITH_DKMS=1 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 	
-	mv mlxbf-bootctl.ko $(DEST)/mlx-bootctl.ko
+	mv ../$(MLX_BOOTCTL_DRIVER_DKMS) $(DEST)
 
 	popd

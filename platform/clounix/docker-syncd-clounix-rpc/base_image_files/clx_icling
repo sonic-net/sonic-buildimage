@@ -1,0 +1,5 @@
+#!/bin/bash
+
+docker exec -it syncd clx_diag icling
+docker exec -it syncd jupyter-console --existing clx-icling-shell.json
+

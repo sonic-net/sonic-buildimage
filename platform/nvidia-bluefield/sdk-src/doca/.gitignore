@@ -3,3 +3,5 @@
 # Except these files
 !.gitignore
 !Makefile
+!packages.txt
+!*.patch

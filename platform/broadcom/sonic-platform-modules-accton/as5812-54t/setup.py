@@ -11,6 +11,6 @@ setup(
    description='Module to initialize Accton AS5812-54X platforms',
    
    packages=['as5812_54t'],
-   package_dir={'as5812_54t': 'as5812-54t/classes'},
+   package_dir={'as5812_54t': 'classes'},
 )
 

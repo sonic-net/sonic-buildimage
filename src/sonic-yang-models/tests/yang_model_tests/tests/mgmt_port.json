@@ -15,13 +15,11 @@
     },
     "MGMT_PORT_INVALID_SPEED": {
         "desc": "INVALID SPEED",
-        "eStrKey": "Range",
-        "eStr": ["10|100|1000"]
+        "eStrKey": "Range"
     },
     "MGMT_PORT_INVALID_MTU": {
         "desc": "INVALID MTU",
-        "eStrKey": "Range",
-        "eStr": "1500..9216"
+        "eStrKey": "Range"
     },
     "MGMT_PORT_DEFAULT_MTU": {
         "desc": "VALIDATE DEFAULT MTU",

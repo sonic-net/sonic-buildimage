@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +37,10 @@ class WaitSfpReadyTask(threading.Thread):
         super().__init__(daemon=True)
         self.running = False
         
+        # protect this thread from starting more than 1 time
+        self.start_lock = threading.Lock()
+        self.started_once = False
+
         # Lock to protect the wait list 
         self.lock = threading.Lock()
         
@@ -48,6 +53,12 @@ class WaitSfpReadyTask(threading.Thread):
         # The queue to store those SFPs who finish loading firmware.
         self._ready_set = set()
         
+    def start_once(self):
+        with self.start_lock:
+            if not self.started_once:
+                super().start()
+                self.started_once = True
+
     def stop(self):
         """Stop the task, only used in unit test
         """
@@ -65,7 +76,7 @@ class WaitSfpReadyTask(threading.Thread):
             is_empty = len(self._wait_dict) == 0
   
             # The item will be expired in 3 seconds
-            self._wait_dict[sfp_index] = time.time() + self.WAIT_TIME
+            self._wait_dict[sfp_index] = time.monotonic() + self.WAIT_TIME
 
         if is_empty:
             logger.log_debug('An item arrives, wake up WaitSfpReadyTask')
@@ -80,10 +91,8 @@ class WaitSfpReadyTask(threading.Thread):
         """
         logger.log_debug(f'SFP {sfp_index} is canceled for waiting reset done')
         with self.lock:
-            if sfp_index in self._wait_dict:
-                self._wait_dict.pop(sfp_index)
-            if sfp_index in self._ready_set:
-                self._ready_set.pop(sfp_index)
+            self._wait_dict.pop(sfp_index, None)
+            self._ready_set.discard(sfp_index)
                 
     def get_ready_set(self):
         """Get ready set and clear it
@@ -120,7 +129,7 @@ class WaitSfpReadyTask(threading.Thread):
                 self.event.wait()
                 self.event.clear()
 
-            now = time.time()
+            now = time.monotonic()
             with self.lock:
                 logger.log_debug(f'Processing wait SFP dict: {self._wait_dict}, now={now}')
                 for sfp_index, expire_time in self._wait_dict.items():

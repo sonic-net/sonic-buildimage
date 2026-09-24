@@ -1,5 +1,5 @@
 {
-	"test-vlan:vlan": {
+	"test-vlan:test-vlan": {
 		"test-vlan:VLAN_INTERFACE": {
 			"VLAN_INTERFACE_LIST": [{
 					"vlanid": 111,
@@ -58,7 +58,7 @@
 			}]
 		}
 	},
-	"test-port:port": {
+	"test-port:test-port": {
 		"test-port:PORT": {
 			"PORT_LIST": [{
 					"port_name": "Ethernet0",

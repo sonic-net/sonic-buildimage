@@ -1,6 +1,6 @@
 variables:
   DEFAULT_CONTAINER_REGISTRY: 'publicmirror.azurecr.io'
-  COMMON_LIB_BUILD_ENVS: 'bookworm'
+  COMMON_LIB_BUILD_ENVS: 'bookworm trixie'
   SONIC_SLAVE_DOCKER_DRIVER: 'overlay2'
   SONIC_BUILD_RETRY_COUNT: 3
   SONIC_BUILD_RETRY_INTERVAL: 600

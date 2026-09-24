@@ -1,7 +1,7 @@
 #include <iostream>
+#include <swss/logger.h>
+#include <swss/events.h>
 #include "timestamp_formatter.h"
-#include "logger.h"
-#include "events.h"
 
 using namespace std;
 

@@ -6,7 +6,10 @@
         "fan_drawers": [],
         "psus": [],
         "thermals": [],
-        "sfps": []
+        "sfps": [],
+        "disk": {
+            "device" : "/dev/nvme0n1"
+        }
     },
     "interfaces": {
         "Ethernet0": {

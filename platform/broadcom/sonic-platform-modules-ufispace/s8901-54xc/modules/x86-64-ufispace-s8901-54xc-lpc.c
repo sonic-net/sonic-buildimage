@@ -27,6 +27,7 @@
 #include <linux/platform_device.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/gpio.h>
+#include <linux/version.h>
 
 #define BSP_LOG_R(fmt, args...) \
     _bsp_log (LOG_READ, KERN_INFO "%s:%s[%d]: " fmt "\r\n", \
@@ -66,6 +67,7 @@
 #define REG_CPLD_BUILD                    (REG_BASE_MB + 0x04)
 #define REG_CPLD_CHIP                     (REG_BASE_MB + 0x05)
 #define REG_BRD_EXT_ID                    (REG_BASE_MB + 0x06)
+#define REG_CPLD_RESET_BTN_INTR           (REG_BASE_MB + 0x1F)
 #define REG_I2C_MUX_RESET                 (REG_BASE_MB + 0x46)
 #define REG_I2C_MUX_RESET_2               (REG_BASE_MB + 0x47)
 #define REG_MUX_CTRL                      (REG_BASE_MB + 0x5C)
@@ -90,6 +92,7 @@
 #define MASK_MUX_RESET_ALL                (0x37) // 2#00110111
 #define MASK_MUX_RESET                    (MASK_ALL)
 #define MASK_BIOS_BOOT_ROM                (0b01000000)
+#define MASK_CPLD_RESET_BTN_INTR          (0b10000000)
 
 #define LPC_MDELAY                        (5)
 #define MDELAY_RESET_INTERVAL             (100)
@@ -115,6 +118,8 @@ enum lpc_sysfs_attributes {
     ATT_CPLD_VERSION_BUILD,
     ATT_CPLD_VERSION_H,
 
+    ATT_CPLD_RESET_BTN_INTR,
+
     ATT_MUX_RESET,
     ATT_MUX_CTRL,
 
@@ -133,6 +138,7 @@ enum lpc_sysfs_attributes {
     ATT_BSP_PR_ERR,
     ATT_BSP_REG,
     ATT_BSP_GPIO_MAX,
+    ATT_BSP_GPIO_BASE,
     ATT_MAX
 };
 
@@ -185,6 +191,8 @@ static sysfs_info_t sysfs_info[] = {
     [ATT_CPLD_VERSION_BUILD] = {REG_CPLD_BUILD,   MASK_ALL,            DATA_DEC},
     [ATT_CPLD_VERSION_H]     = {REG_CPLD_VERSION, MASK_ALL,            DATA_UNK},
 
+    [ATT_CPLD_RESET_BTN_INTR] = {REG_CPLD_RESET_BTN_INTR, MASK_CPLD_RESET_BTN_INTR, DATA_HEX},
+
     [ATT_MUX_RESET] = {REG_NONE,    MASK_ALL,  DATA_DEC},
     [ATT_MUX_CTRL]  = {REG_MUX_CTRL, MASK_ALL, DATA_HEX},
 
@@ -213,6 +221,9 @@ u8 enable_log_read  = LOG_DISABLE;
 u8 enable_log_write = LOG_DISABLE;
 u8 enable_log_sys   = LOG_ENABLE;
 u8 mailbox_inited=0;
+
+int lpc_init(void);
+void lpc_exit(void);
 
 /* reg shift */
 static u8 _shift(u8 mask)
@@ -455,9 +466,30 @@ static ssize_t read_gpio_max(struct device *dev,
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
 
     if (attr->index == ATT_BSP_GPIO_MAX) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
         return sprintf(buf, "%d\n", ARCH_NR_GPIOS-1);
+#else
+        return sprintf(buf, "%d\n", -1);
+#endif
     }
     return -1;
+}
+
+/* get gpio base value */
+static ssize_t read_gpio_base(struct device *dev,
+    struct device_attribute *da,
+    char *buf)
+{
+    struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
+
+    if (attr->index == ATT_BSP_GPIO_BASE) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+        return sprintf(buf, "%d\n", -1);
+#else
+        return sprintf(buf, "%d\n", GPIO_DYNAMIC_BASE);
+#endif
+    }
+return -1;
 }
 
 /* get mb cpld version in human readable format */
@@ -661,6 +693,8 @@ static _SENSOR_DEVICE_ATTR_RO(cpld_version_build,  lpc_callback,      ATT_CPLD_V
 static _SENSOR_DEVICE_ATTR_RO(cpld_version_h,      mb_cpld_version_h, ATT_CPLD_VERSION_H);
 static _SENSOR_DEVICE_ATTR_RO(cpld_id,             lpc_callback,      ATT_CPLD_ID);
 
+static _SENSOR_DEVICE_ATTR_RW(cpld_reset_btn_intr, lpc_callback, ATT_CPLD_RESET_BTN_INTR);
+
 static _SENSOR_DEVICE_ATTR_WO(mux_reset, mux_reset, ATT_MUX_RESET);
 static _SENSOR_DEVICE_ATTR_RW(mux_ctrl, lpc_callback, ATT_MUX_CTRL);
 
@@ -680,6 +714,7 @@ static _SENSOR_DEVICE_ATTR_WO(bsp_pr_info, bsp_pr_callback, ATT_BSP_PR_INFO);
 static _SENSOR_DEVICE_ATTR_WO(bsp_pr_err,  bsp_pr_callback, ATT_BSP_PR_ERR);
 static SENSOR_DEVICE_ATTR(bsp_reg,         S_IRUGO | S_IWUSR, read_lpc_callback, write_bsp_callback, ATT_BSP_REG);
 static SENSOR_DEVICE_ATTR(bsp_gpio_max,    S_IRUGO, read_gpio_max, NULL, ATT_BSP_GPIO_MAX);
+static SENSOR_DEVICE_ATTR(bsp_gpio_base,   S_IRUGO, read_gpio_base, NULL, ATT_BSP_GPIO_BASE);
 
 static struct attribute *mb_cpld_attrs[] = {
     _DEVICE_ATTR(board_id_0),
@@ -694,6 +729,7 @@ static struct attribute *mb_cpld_attrs[] = {
     _DEVICE_ATTR(cpld_version_build),
     _DEVICE_ATTR(cpld_version_h),
     _DEVICE_ATTR(cpld_id),
+    _DEVICE_ATTR(cpld_reset_btn_intr),
     _DEVICE_ATTR(mux_reset),
     _DEVICE_ATTR(mux_ctrl),
     NULL,
@@ -706,6 +742,7 @@ static struct attribute *bsp_attrs[] = {
     _DEVICE_ATTR(bsp_pr_err),
     _DEVICE_ATTR(bsp_reg),
     _DEVICE_ATTR(bsp_gpio_max),
+    _DEVICE_ATTR(bsp_gpio_base),
     NULL,
 };
 
@@ -828,14 +865,19 @@ exit:
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int lpc_drv_remove(struct platform_device *pdev)
+#else
+static void lpc_drv_remove(struct platform_device *pdev)
+#endif
 {
     sysfs_remove_group(&pdev->dev.kobj, &mb_cpld_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &bmc_mailbox_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &bsp_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &ec_attr_grp);
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static struct platform_driver lpc_drv = {
@@ -875,9 +917,9 @@ void lpc_exit(void)
     platform_device_unregister(&lpc_dev);
 }
 
+module_init(lpc_init);
+module_exit(lpc_exit);
+
 MODULE_AUTHOR("Jason Tsai <jason.cy.tsai@ufispace.com>");
 MODULE_DESCRIPTION("x86_64_ufispace_s8901_54xc_lpc driver");
 MODULE_LICENSE("GPL");
-
-module_init(lpc_init);
-module_exit(lpc_exit);

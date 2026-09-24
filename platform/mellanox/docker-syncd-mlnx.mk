@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +18,7 @@
 # docker image for mlnx syncd
 
 DOCKER_SYNCD_PLATFORM_CODE = mlnx
-include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
+include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MFT) $(MFT_FWTRACE_CFG) $(IPROUTE2_MLNX)
 
@@ -25,18 +26,42 @@ ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG)
 endif
 
-$(DOCKER_SYNCD_BASE)_FILES += $(ISSU_VERSION_FILE)
+$(DOCKER_SYNCD_BASE)_FILES += $(RDB-CLI) $(ISSU_VERSION_FILE)
 
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \
                                 $(LIBSAIMETADATA_DBG) \
                                 $(LIBSAIREDIS_DBG)
 
+# Consumer side of the dbgsym strategy declared in sdk.mk / mlnx-sai.mk.
+# Ask for a dbgsym package only in the cases where one is actually produced:
+# source builds emit it only when SPLIT_DBGSYM=y, while downloaded packages
+# always ship one. On nostrip builds (SPLIT_DBGSYM=n) the symbols are already
+# inside the runtime debs the base image installs, so there is nothing extra
+# to add.
 ifeq ($(SDK_FROM_SRC), y)
-$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SDK_DBG_DEBS) $(MLNX_SAI_DBGSYM)
+ifeq ($(SPLIT_DBGSYM), y)
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SDK_DBG_DEBS)
+endif
+else
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SDK_DBG_DEBS)
+endif
+ifeq ($(SAI_FROM_SRC), y)
+ifeq ($(SPLIT_DBGSYM), y)
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SAI_DBGSYM)
+endif
+else
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SAI_DBGSYM)
 endif
 
 $(DOCKER_SYNCD_BASE)_VERSION = 1.0.0
 $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 
-$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/warmboot:/var/warmboot
+# Grant device-cgroup access previously provided implicitly by --privileged.
+# The SX SDK opens the sx_core char device (/dev/sxdevs/sxcdev, major dynamically
+# allocated by the driver) and phcsync opens the PTP clock device (/dev/ptp*,
+# also dynamically allocated). A blanket rule mirrors the Broadcom SOC-init fix
+# and covers both; the node itself is bind-mounted (multi-ASIC) or via /dev/sxdevs
+# (single-ASIC).
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='a *:* rwm'
+

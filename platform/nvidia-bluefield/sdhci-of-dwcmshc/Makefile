@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,26 +19,21 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -ex
 
-SDHCI_OF_DWCMSHC = sdhci-of-dwcmshc-${SDHCI_OF_DWCMSHC_DRIVER_VERSION}
-
-MAIN_TARGET = $(SDHCI_OF_DWCMSHC_DRIVER)
-DERIVED_TARGETS =
+SDHCI_OF_DWCMSHC = $(SDHCI_OF_DWCMSHC_DRIVER)-1.0
 GET_PACKAGE := $(shell pwd)/../recipes/get-soc-package.sh
 
-$(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
+$(addprefix $(DEST)/, $(SDHCI_OF_DWCMSHC_DRIVER_DKMS)): $(DEST)/% :
 	rm -rf ./tmp/
 	mkdir ./tmp/
 	pushd ./tmp/
 
 	${GET_PACKAGE} ${BSD_BASE_SOURCE_URL} ${SDHCI_OF_DWCMSHC}
+
+	pushd ${SDHCI_OF_DWCMSHC}  
+
+	# Build the package
+	KVER=$(KVERSION) WITH_DKMS=1 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 	
-	pushd ${SDHCI_OF_DWCMSHC}
-	find . -type f -exec touch {} +
+	mv ../$(SDHCI_OF_DWCMSHC_DRIVER_DKMS) $(DEST)
 
-	# Build the Debs
-	KVER=$(KVERSION) WITH_DKMS=0 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
-
-	mv $(DERIVED_TARGETS) $* $(DEST)/
 	popd
-
-$(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)

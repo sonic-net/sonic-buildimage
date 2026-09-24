@@ -11,6 +11,6 @@ setup(
    description='Module to initialize Accton AS5712-54X platforms',
    
    packages=['as5712_54x'],
-   package_dir={'as5712_54x': 'as5712-54x/classes'},
+   package_dir={'as5712_54x': 'classes'},
 )
 

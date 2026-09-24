@@ -447,8 +447,7 @@ static struct attribute_group i2c_cpld_attr_grp = {
     .attrs = i2c_cpld_attrs,
 };
 
-static int dell_s6100_iom_cpld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int dell_s6100_iom_cpld_probe(struct i2c_client *client)
 {
     int status;
 

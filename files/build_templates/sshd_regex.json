@@ -1,7 +1,0 @@
-[
-    {
-        "tag": "event-sshd",
-        "regex": "auth fail: Password Incorrect. user:.([a-zA-Z0-9-_]*)",
-        "params": [ "username" ]
-    }
-]

@@ -274,13 +274,12 @@ err_exit:
 
 }
 
-static int cls_fpga_remove(struct platform_device *pdev)
+static void cls_fpga_remove(struct platform_device *pdev)
 {
 	struct fpga_priv *fpga = dev_get_drvdata(&pdev->dev);
 	
 	sysfs_remove_group(&pdev->dev.kobj, &fpga_attr_grp);
 	iounmap(fpga->base);
-	return 0;
 }
 
 static void fpga_dev_release( struct device * dev)
@@ -289,8 +288,8 @@ static void fpga_dev_release( struct device * dev)
 }
 static struct resource cls_fpga_resources[] = {
     {
-	.start = NULL,
-        .end = NULL,
+	.start = 0,
+        .end = 0,
 	.flags = IORESOURCE_IO,	
     },
 };

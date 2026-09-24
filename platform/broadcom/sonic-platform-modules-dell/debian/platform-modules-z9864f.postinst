@@ -1,0 +1,11 @@
+# postinst script for Z9864f
+
+# Enable Dell-Z9864f-platform-service
+depmod -a
+systemctl enable platform-modules-z9864f.service
+systemctl start platform-modules-z9864f.service
+systemctl enable system-health.service
+systemctl start --no-block system-health.service
+
+
+#DEBHELPER#

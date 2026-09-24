@@ -4,6 +4,8 @@ SHELL = /bin/bash
 
 MAIN_TARGET = libpam-tacplus_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS = libtac2_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb \
+		  libtac2-dbgsym_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb \
+		  libpam-tacplus-dbgsym_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb \
 		  libtac-dev_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
@@ -24,6 +26,14 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	git apply ../0008-Extract-tacacs-support-functions-into-library.patch
 	git apply ../0009-Add-setting-flag-for-authorization-and-accounting.patch
 	git apply ../0010-handle-bad-password-set-by-sshd.patch
+
+	# Apply optional local patches listed in ../series.local, if present.
+	# No-op upstream (no series.local is shipped); lets downstreams add local
+	# patches without editing this recipe.
+	if [ -f ../series.local ]; then
+		sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$$/d' ../series.local | \
+			while IFS= read -r p; do echo "$$p"; git apply "../$$p"; done
+	fi
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)

@@ -1,0 +1,62 @@
+# $Id: Makefile.linux-x86-generic-common-2_6,v 1.2 Broadcom SDK $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+
+# Default kernel source directory
+ifeq (,$(KERNDIR))
+KERNDIR := /lib/modules/$(shell uname -r)/build
+export KERNDIR
+endif
+
+# Default architecture
+ifeq (,$(ARCH))
+ARCH = $(shell uname -m)
+ifneq (x86_64,$(ARCH))
+ARCH = i386
+endif
+endif
+
+# Target machine for EDK-Host defconfig
+TARGET_MACHINE ?= x86_64
+# Noisy kernel build
+KBUILD_VERBOSE = 1
+
+export ARCH KBUILD_VERBOSE KERNDIR
+
+# Default Linux include directory
+ifeq (,$(LINUX_INCLUDE))
+LINUX_INCLUDE := $(KERNDIR)/include
+endif
+
+# autoconf.h was moved in later kernels
+AUTOCONF = $(KERNDIR)/include/generated/autoconf.h
+ifeq (,$(shell ls $(AUTOCONF) 2>/dev/null))
+AUTOCONF = $(KERNDIR)/include/linux/autoconf.h
+endif
+
+# gcc system include path
+SYSINC = $(shell $(CC) -print-search-dirs | grep install | cut -c 10-)include

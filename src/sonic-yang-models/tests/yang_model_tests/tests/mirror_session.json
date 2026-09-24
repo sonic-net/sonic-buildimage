@@ -14,13 +14,16 @@
     "MIRROR_ERSPAN_ENTRY_WITH_VALID_DEC_VALUES_2": {
         "desc": "Configuring ERSPAN entry with valid decimal values."
     },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_IPV6_SRC_AND_DST_IP": {
+        "desc": "Configuring ERSPAN entry with valid IPv6 source and destination IPs."
+    },
     "MIRROR_ERSPAN_ENTRY_WRONG_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid type",
         "eStrKey": "InvalidValue"
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP": {
         "desc": "Configuring ERSPAN entry with invalid dst_ip",
-        "eStrKey" : "Pattern"
+        "eStr" : "src_ip and dst_ip must have the same IP version."
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid dst_ip",
@@ -28,7 +31,7 @@
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP": {
         "desc": "Configuring ERSPAN entry with invalid src_ip",
-        "eStrKey" : "Pattern"
+        "eStr" : "src_ip and dst_ip must have the same IP version."
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid src_ip",
@@ -60,7 +63,7 @@
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_TTL": {
         "desc": "Configuring ERSPAN entry with invalid ttl",
-        "eStr": "Invalid ttl value"
+        "eStrKey": "Bounds"
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_TTL_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid ttl",
@@ -96,5 +99,43 @@
     "MIRROR_ERSPAN_ENTRY_WITH_INVALID_POLICER": {
         "desc": "Configuring SPAN entry with invalid policer",
         "eStrKey": "LeafRef"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE": {
+        "desc": "Configuring ERSPAN entry with a valid sample_rate."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_MIN": {
+        "desc": "Configuring ERSPAN entry with the minimum valid sample_rate."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE": {
+        "desc": "Configuring ERSPAN entry with a valid truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MIN": {
+        "desc": "Configuring ERSPAN entry with the minimum valid truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MAX": {
+        "desc": "Configuring ERSPAN entry with the maximum valid truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_AND_TRUNCATE": {
+        "desc": "Configuring ERSPAN entry with both sample_rate and truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TOO_LOW": {
+        "desc": "Configuring ERSPAN entry with a sample_rate below the allowed range.",
+        "eStr": "Sample rate must be in range 2..max"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_LOW": {
+        "desc": "Configuring ERSPAN entry with a truncate_size below the allowed range.",
+        "eStr": "Truncate size must be 64..9216"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_HIGH": {
+        "desc": "Configuring ERSPAN entry with a truncate_size above the allowed range.",
+        "eStr": "Truncate size must be 64..9216"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TYPE": {
+        "desc": "Configuring SPAN entry with sample_rate (ERSPAN only).",
+        "eStrKey": "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
+        "desc": "Configuring SPAN entry with truncate_size (ERSPAN only).",
+        "eStrKey": "When"
     }
 }

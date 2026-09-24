@@ -41,16 +41,16 @@ GETREG_PATH="/sys/devices/platform/sys_cpld/getreg"
 BASECPLD_VERSION_CMD="echo '0xA100' > {} && cat {}".format(GETREG_PATH, GETREG_PATH)
 BMC_PRESENCE="echo '0xA108' > {} && cat {}".format(GETREG_PATH, GETREG_PATH)
 SSD_VERSION_CMD = "smartctl -i /dev/sda"
-ASIC_PCIE_VERSION_CMD = "bcmcmd 'pciephy fw version' | grep 'PCIe FW version' | cut -d ' ' -f 4"
+ASIC_PCIE_VERSION_CMD = "(bcmcmd 'echo' >/dev/null 2>&1) && bcmcmd 'pciephy fw version' | grep 'PCIe FW version' | cut -d ' ' -f 4"
 
 UNKNOWN_VER = "Unknown"
 
-class Component():
+class Component(ComponentBase):
     """Platform-specific Component class"""
 
     DEVICE_TYPE = "component"
 
-    def __init__(self, component_index):
+    def __init__(self, component_index, pddf_data=None, pddf_plugin_data=None):
         ComponentBase.__init__(self)
         self.index = component_index
         self.name = self.get_name()

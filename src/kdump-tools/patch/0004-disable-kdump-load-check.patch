@@ -1,0 +1,16 @@
+diff --git a/debian/kdump-config.in b/debian/kdump-config.in
+index ded079f..dcf2991 100755
+--- a/debian/kdump-config.in
++++ b/debian/kdump-config.in
+@@ -487,11 +487,6 @@ kdump_create_symlinks()
+ {
+ 	kernel_version=$1
+ 
+-	if [ -e $sys_kexec_crash ] && [ "$(cat $sys_kexec_crash)" -eq 1 ] ; then
+-		log_failure_msg "Cannot change symbolic links when kdump is loaded"
+-		exit 1
+-	fi
+-
+ 	if [ -e "/boot/vmlinux-${kernel_version}" ] || [ -e "/boot/vmlinuz-${kernel_version}" ]; then
+ 		create_symlink vmlinuz "$kernel_version"
+ 

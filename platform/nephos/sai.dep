@@ -1,0 +1,17 @@
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/sai.mk $(PLATFORM_PATH)/sai.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+
+# The Nephos SAI package is a version-pinned online deb: the SDK/SAI version and
+# download URL live entirely in sai.mk, so keying the .mk/.dep captures every
+# version change. NEPHOS_SAI_DEV is a derived package of NEPHOS_SAI and shares
+# its base cache entry, so only NEPHOS_SAI needs a dependency definition here.
+#
+# Only enable cache keying in the online (SONIC_ONLINE_DEBS) case. When
+# NEPHOS_SAI_DEB_LOCAL_URL is set (SAI_FROM_LOCAL=y) the deb is copied from a
+# local path outside the repo whose contents are not captured by hashing repo
+# files; leave the package uncached in that mode (its pre-existing behavior).
+ifneq ($(SAI_FROM_LOCAL),y)
+$(NEPHOS_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
+$(NEPHOS_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(NEPHOS_SAI)_DEP_FILES   := $(DEP_FILES)
+endif

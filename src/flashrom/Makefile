@@ -4,6 +4,7 @@ SHELL = /bin/bash
 
 
 MAIN_TARGET = $(FLASHROM)
+DERIVED_TARGETS = $(FLASHROM_DBG)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf ./flashrom-$(FLASHROM_VERSION_FULL)
@@ -12,7 +13,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	pushd ./flashrom-$(FLASHROM_VERSION_FULL)
 
 	# Check out tag: tags/0.9.7
-	git checkout -b flashrom-src tags/$(FLASHROM_VERSION_FULL)
+	git checkout -b flashrom-src v$(FLASHROM_VERSION_FULL)
 
 	# Apply patch series
 	stg init
@@ -22,4 +23,6 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS)
 	popd
 
-	mv $* $(DEST)/
+	mv $(DERIVED_TARGETS) $* $(DEST)/
+
+$(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)

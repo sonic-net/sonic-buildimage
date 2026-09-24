@@ -520,7 +520,7 @@
     },
     "LOOPBACK_INTERFACE": {
         "Loopback2": {},
-        "Loopback2|3.3.3.3": {}
+        "Loopback2|3.3.3.3/32": {}
     },
     "MUX_CABLE": {
         "Ethernet0": {
@@ -647,7 +647,6 @@
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "disable",
-            "FLEX_COUNTER_DELAY_STATUS": "true",
             "POLL_INTERVAL": "10000"
         }
     }

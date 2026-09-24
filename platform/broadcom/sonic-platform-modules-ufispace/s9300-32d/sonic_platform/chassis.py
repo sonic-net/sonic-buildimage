@@ -9,11 +9,8 @@
 try:
     import time
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
-    from sonic_py_common import device_info
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
-
-NUM_COMPONENT = 5
 
 class Chassis(PddfChassis):
     """
@@ -24,13 +21,6 @@ class Chassis(PddfChassis):
 
     def __init__(self, pddf_data=None, pddf_plugin_data=None):
         PddfChassis.__init__(self, pddf_data, pddf_plugin_data)
-        self._initialize_components()
-
-    def _initialize_components(self):
-        from sonic_platform.component import Component
-        for index in range(NUM_COMPONENT):
-            component = Component(index)
-            self._component_list.append(component)
             
     # Provide the functions/variables below for which implementation is to be overwritten
 
@@ -153,7 +143,7 @@ class Chassis(PddfChassis):
                 pass
                 #self._sfp_list[int(index)].check_sfp_optoe_type()
         return ret_dict
-            
+
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot

@@ -13,13 +13,13 @@ setuptools.setup(
             'bgpcfgd = bgpcfgd.main:main',
             'staticroutebfd = staticroutebfd.main:main',
             'bgpmon = bgpmon.bgpmon:main',
+            'bfdmon = bfdmon.bfdmon:main',
         ]
     },
     install_requires = [
         'jinja2>=2.10',
         'netaddr==0.8.0',
-        'pyyaml==6.0.1',
-        'ipaddress==1.0.23'
+        'pyyaml>=6.0.1',
     ],
     setup_requires = [
         'pytest-runner',

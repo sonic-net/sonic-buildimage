@@ -21,16 +21,16 @@ index ed363ee..9d08fc0 100644
 --- a/src/event.c
 +++ b/src/event.c
 @@ -336,7 +336,8 @@ static void _handleEvent(Service_T S, Event_T E) {
-                 if (E->state != State_Init || E->state_map & 0x1) {
-                         if (E->state == State_Succeeded || E->state == State_ChangedNot || E->id == Event_Instance || E->id == Event_Action)
-                                 LogInfo("'%s' %s\n", S->name, E->message);
--                        else
-+                        /* Send Error log if state change to failed for 1st time or if we have repeat clause then do periodically */
-+                        else if ((E->state_changed) || (E->state == State_Failed && E->action->failed->repeat && E->count % E->action->failed->repeat == 0))
-                                 LogError("'%s' %s\n", S->name, E->message);
-                 }
-                 if (E->state == State_Init)
+                                 Log_warning("'%s' %s\n", S->name, E->message);
+                         }
                          return;
+-                } else {
++                /* Send Error log if state change to failed for 1st time or if we have repeat clause then do periodically */
++                } else if ((E->state_changed) || (E->state == State_Failed && E->action->failed->repeat && E->count % E->action->failed->repeat == 0)) {
+                         Log_error("'%s' %s\n", S->name, E->message);
+                 }
+         }
+ 
 diff --git a/src/p.y b/src/p.y
 index a57807d..b46b1a1 100644
 --- a/src/p.y
@@ -40,23 +40,23 @@ index a57807d..b46b1a1 100644
                  ;
  
 -action          : ALERT {
-+action          : ALERT repeat{
++action          : ALERT repeat {
                          $<number>$ = Action_Alert;
                    }
 +                | ALERT {
-+                       $<number>$ = Action_Alert;
++                        $<number>$ = Action_Alert;
 +                  }
-                 | EXEC argumentlist repeat {
+                 | EXEC argumentlist exectimeout repeat {
                          $<number>$ = Action_Exec;
                    }
 @@ -2281,6 +2284,9 @@ action1         : action {
-                       repeat = 0;
-                       command1 = command;
-                       command = NULL;
-+                    } else if ($<number>1 == Action_Alert) {
-+                        repeat1 = repeat;
-+                        repeat = 0;
-                     }
+                                 timeout = 0;
+                                 command1 = command;
+                                 command = NULL;
++                        } else if ($<number>1 == Action_Alert) {
++                                repeat1 = repeat;
++                                repeat = 0;
+                         }
                    }
                  ;
 -- 

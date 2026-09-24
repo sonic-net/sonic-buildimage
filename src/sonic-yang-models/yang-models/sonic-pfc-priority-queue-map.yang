@@ -24,11 +24,13 @@ module sonic-pfc-priority-queue-map {
 
         container MAP_PFC_PRIORITY_TO_QUEUE {
 
-            description "MAP_PFC_PRIORITY_TO_QUEUE part of config_db.json";
+            description "Maps PFC priority values to egress queues.";
 
             list MAP_PFC_PRIORITY_TO_QUEUE_LIST {
 
                 key "name";
+
+                description "A named PFC priority to egress queue map.";
 
                 leaf name {
                     type string {
@@ -38,11 +40,14 @@ module sonic-pfc-priority-queue-map {
                             error-app-tag map-name-invalid-length;
                         }
                     }
+                    description "Name of the PFC priority to queue map.";
                 }
 
-                list MAP_PFC_PRIORITY_TO_QUEUE { //this is list inside list for storing mapping between two fields
+                list MAP_PFC_PRIORITY_TO_QUEUE {
 
                     key "pfc_priority";
+
+                    description "Single mapping entry from a PFC priority to an egress queue.";
 
                     leaf pfc_priority {
                         type string {
@@ -51,6 +56,7 @@ module sonic-pfc-priority-queue-map {
                                error-app-tag pfc-priority-invalid;
                             }
                         }
+                        description "PFC priority value (0-7).";
                     }
 
                     leaf qindex {
@@ -60,6 +66,7 @@ module sonic-pfc-priority-queue-map {
                                error-app-tag queue-index-invalid;
                             }
                         }
+                        description "Target egress queue index (0-7).";
                     }
                 }
             }

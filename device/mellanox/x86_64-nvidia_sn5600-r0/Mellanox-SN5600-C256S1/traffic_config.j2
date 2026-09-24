@@ -1,0 +1,34 @@
+{#
+    SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+    Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    Apache-2.0
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+#}
+
+{# Set traffic_classification_enable to false for Moose platform #}
+{%- set traffic_classification_enable = false %}
+
+{#
+The calculation formula for wred_threshold_limit is as follows:
+egress_lossless_pool total size / 12 / 1024
+Where:
+- egress_lossless_pool total size = 158229504 bytes
+- 12 represents the number of queues
+- 1024 is used to convert the unit from bytes to KB
+
+The result is 12876 (rounded down).
+
+So, wred_threshold_limit = 158229504 / 12 / 1024 = 12876 (KB per queue)
+
+The final total value is:
+12876 (KB) * 12 (queues) * 1024 = 158220288 bytes
+#}
+{% set wred_threshold_limit = 158220288 %}

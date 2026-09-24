@@ -4,7 +4,7 @@
     },
     "SERIAL_CONSOLE_INVALID_INACTIVITY_TIMEOUT": {
         "desc": "SERIAL_CONSOLE attribute 'inactivity_timeout' set to invalid value (out of allowed range of [0, 35000] minutes).",
-        "eStr": "does not satisfy the constraint \"0..35000\""
+        "eStrKey": "Range"
     },
     "SERIAL_CONSOLE_INVALID_SYSRQ" : {
         "desc": "SERIAL_CONSOLE attribute 'sysrq' set to invalid value",

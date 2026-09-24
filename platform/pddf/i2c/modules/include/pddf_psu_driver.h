@@ -35,6 +35,10 @@ enum psu_sysfs_attributes {
     PSU_FAN1_SPEED,
     PSU_TEMP1_INPUT,
     PSU_TEMP1_HIGH_THRESHOLD,
+    PSU_TEMP2_INPUT,
+    PSU_TEMP2_HIGH_THRESHOLD,
+    PSU_TEMP3_INPUT,
+    PSU_TEMP3_HIGH_THRESHOLD,
     PSU_V_IN,
     PSU_I_IN,
 	PSU_P_IN,
@@ -60,6 +64,14 @@ struct psu_data {
 	struct device			*hwmon_dev;
 	u8						index;
 	int						num_psu_fans;
+	int						num_psu_thermals;
+	/*
+	 * Bitmap of supported thermal thresholds
+	 * Bit 0 (LSB) corresponds to thermal sensor 1, bit 1 to sensor 2, etc.
+	 * A bit value of 1 means the sensor supports high threshold.
+	 * Needed as some PSUs may not support high threshold for all thermal sensors.
+	 */
+	u32						psu_temp_high_thresh_bitmap;
 	int						num_attr;
 	struct attribute		*psu_attribute_list[MAX_PSU_ATTRS];
 	struct attribute_group	psu_attribute_group;

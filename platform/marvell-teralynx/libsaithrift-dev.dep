@@ -1,6 +1,6 @@
 #DPKG FRK
 SPATH       := $($(LIBSAITHRIFT_DEV)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/marvell-teralynx/libsaithrift-dev.mk platform/marvell-teralynx/libsaithrift-dev.dep
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/libsaithrift-dev.mk $(PLATFORM_PATH)/libsaithrift-dev.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 SMDEP_PATHS := $(SPATH)  $(SPATH)/test/ptf  $(SPATH)/test/saithrift/ctypesgen
 $(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/, $(shell cd $(path) &&  git ls-files | grep -Ev " " )))))

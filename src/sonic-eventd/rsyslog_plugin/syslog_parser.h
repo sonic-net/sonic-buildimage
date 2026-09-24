@@ -12,7 +12,7 @@ extern "C"
 #include <string>
 #include <regex>
 #include <nlohmann/json.hpp>
-#include "events.h"
+#include <swss/events.h>
 #include "timestamp_formatter.h"
 
 using namespace std;

@@ -20,7 +20,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
 
     def __init__(self):
         self.eeprom_path = None
-        f = '/sys/class/i2c-adapter/i2c-2/2-0050/eeprom'
+        f = '/sys/bus/i2c/devices/i2c-2/2-0050/eeprom'
         if not os.path.exists(f):
             return
         self.eeprom_path = f

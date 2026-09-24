@@ -20,8 +20,10 @@ module sonic-grpcclient {
     container sonic-grpcclient {
 
         container GRPCCLIENT {
+            description "DualToR gRPC client configuration for streaming to external collectors.";
 
             container config {
+                description "Security and logging settings for the gRPC client.";
 
                 leaf type {
                     type enumeration {
@@ -52,6 +54,7 @@ module sonic-grpcclient {
             }
 
             container certs {
+                description "TLS certificate paths for the gRPC client.";
 
                 leaf client_crt {
                     type string;

@@ -553,7 +553,9 @@ class TestContainer(object):
         for (i, ct_data) in wait_test_data.items():
             common_test.do_start_test("container_test:container_wait", i, ct_data)
 
-            ret = container.container_wait("snmp")
+            with patch("os.execv", new=common_test.mock_os_execv):
+                ret = container.container_wait("snmp")
+                assert ret == 0
 
             ret = common_test.check_tables_returned()
             assert ret == 0
@@ -576,5 +578,5 @@ class TestContainer(object):
                 ("id", wait_test_data)]:
             common_test.do_start_test("container_main:{}".format(k), 0, v[0])
 
-            with patch('sys.argv', ['container', k, 'snmp']):
+            with patch('sys.argv', ['container', k, 'snmp']), patch("os.execv", new=common_test.mock_os_execv):
                 container.main()

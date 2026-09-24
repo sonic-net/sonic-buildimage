@@ -115,18 +115,12 @@ class temp(sensor):
                         max = tmp
                 if max is None:
                     return None
-                if self.format is None:
-                    self.__Value = int(max)
-                else:
-                    self.__Value = eval(self.format % max)
+                self.__Value = self._scale(max)
             else:
                 ret, val = self.get_value(self.ValueConfig)
                 if ret is False or val is None:
                     return None
-                if self.format is None:
-                    self.__Value = int(val)
-                else:
-                    self.__Value = eval(self.format % val)
+                self.__Value = self._scale(val)
         except Exception as e:
             return None
         if self.fix_value is not None and self.__Value != self.temp_invalid and self.__Value != self.temp_error:

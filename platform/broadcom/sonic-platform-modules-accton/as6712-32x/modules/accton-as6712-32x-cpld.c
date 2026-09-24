@@ -630,16 +630,26 @@ static ssize_t show_version(struct device *dev, struct device_attribute *attr, c
 /*
  * I2C init/probing/exit functions
  */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as6712_32x_cpld_mux_probe(struct i2c_client *client,
              const struct i2c_device_id *id)
+#else
+static int as6712_32x_cpld_mux_probe(struct i2c_client *client)
+#endif
 {
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
-    int force, class;
+    int force;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+    int class;
+#endif
     struct i2c_mux_core *muxc;
     struct as6712_32x_cpld_data *data;
     int chan = 0;
     int ret = -ENODEV;
     const struct attribute_group *group = NULL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *id = i2c_client_get_device_id(client);
+#endif
 
     if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_BYTE))
         return -ENODEV;
@@ -664,10 +674,14 @@ static int as6712_32x_cpld_mux_probe(struct i2c_client *client,
         /* Now create an adapter for each channel */
         for (chan = 0; chan < chips[data->type].nchans; chan++) {
             force = 0;              /* dynamic adap number */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
             class = 0;              /* no class by default */
 
             ret = i2c_mux_add_adapter(muxc, force, chan, class);
 
+#else
+            ret = i2c_mux_add_adapter(muxc, force, chan);
+#endif
             if (ret) {
                 ret = -ENODEV;
                 dev_err(&client->dev, "failed to register multiplexed adapter %d\n", chan);

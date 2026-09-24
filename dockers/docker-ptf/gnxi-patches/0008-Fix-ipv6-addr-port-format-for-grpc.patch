@@ -1,0 +1,24 @@
+From a3b6293c8f9f5e0368a174711c981e9992a315d8 Mon Sep 17 00:00:00 2001
+From: markxiao <markxiao@arista.com>
+Date: Thu, 30 Oct 2025 13:54:47 -0700
+Subject: [PATCH] Fix IPv6 addr + port format for grpc
+
+---
+ gnmi_cli_py/py_gnmicli.py | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index a17e8c3..b7d1165 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -290,6 +290,10 @@ def _create_stub(creds, target, port, host_override):
+   Returns:
+     a gnmi_pb2_grpc object representing a gNMI Stub.
+   """
++  # Handle IPv6 addr + port by wrapping addr in brackets
++  if ':' in target:
++    target = '[' + target + ']'
++
+   if creds:
+     if host_override:
+       channel = gnmi_pb2_grpc.grpc.secure_channel(target + ':' + port, creds, ((

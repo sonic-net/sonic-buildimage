@@ -12,13 +12,13 @@
                "name": "Scd(addr=0000:ff:0b.3)"
             },
             {
+               "name": "RookSysCpld(addr=81-0023)"
+            },
+            {
                "name": "Ucd90160(addr=74-004e)"
             },
             {
                "name": "Ucd90120A(addr=83-0034)"
-            },
-            {
-               "name": "RookSysCpld(addr=81-0023)"
             }
         ],
         "fans": [],

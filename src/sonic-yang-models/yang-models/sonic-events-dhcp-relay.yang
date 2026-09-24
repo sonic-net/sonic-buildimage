@@ -8,14 +8,6 @@ module sonic-events-dhcp-relay {
         revision-date 2022-12-01;
     }
 
-    import sonic-port {
-        prefix port;
-    }
-
-    import sonic-portchannel {
-        prefix lag;
-    }
-
     organization
         "SONiC";
 

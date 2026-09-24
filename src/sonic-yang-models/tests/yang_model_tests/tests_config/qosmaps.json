@@ -247,7 +247,7 @@
                         "TC_TO_QUEUE_MAP": [
                             {
                                 "tc": "1",
-                                "qindex": "8"
+                                "qindex": "10"
                             },
                             {
                                 "tc":"2",
@@ -530,6 +530,30 @@
             }
         },
 
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
         "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
             "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
                 "DOT1P_TO_TC_MAP_LIST": [
@@ -681,11 +705,11 @@
                     {
                         "ifname": "Ethernet0",
                         "dscp_to_tc_map": "map1",
+                        "tc_to_dscp_map": "map1",
                         "tc_to_pg_map": "map1",
                         "tc_to_queue_map": "map1",
                         "pfc_to_queue_map": "map1",
                         "pfc_to_pg_map": "map1",
-                        "dscp_to_tc_map": "map1",
                         "dot1p_to_tc_map": "map1",
                         "pfc_enable": "2,3,4,6",
                         "pfcwd_sw_enable" : "2,3,4,6",
@@ -855,6 +879,150 @@
                 ]
             }
         }
-    }
+    },
 
+    "PORT_QOS_MAP_APPLY_EMPTY_PFC": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "pfc_enable": ""
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_EMPTY_PFCWD": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "pfcwd_sw_enable": ""
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CRETAE": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_TC": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "16",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_DSCP": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "64"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
 }

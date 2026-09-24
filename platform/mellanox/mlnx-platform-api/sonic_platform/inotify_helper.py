@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,9 @@
 """Helper code for Inotify Implementation for reading file until timeout"""
 import os
 import errno
+# Inotify causes an exception when DEBUG env variable is set to a non-integer convertible
+# https://github.com/dsoprea/PyInotify/blob/0.2.10/inotify/adapters.py#L37
+os.environ['DEBUG'] = '0'
 import inotify.adapters
 
 try:
@@ -26,7 +30,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + '- required module not found') from e
 
-logger = SysLogger()
+logger = SysLogger("mlnx-platform-api")
 
 
 class InotifyHelper():
@@ -59,3 +63,33 @@ class InotifyHelper():
         if read_value != expected_value:
             return None
         return read_value
+
+
+class InotifyEventHelper():
+    """Helper Code for Inotify Event Implementation -
+    for files which don't exist yet, and not general event for changes"""
+
+    def __init__(self, dir_path, file_names):
+        self.inotify_obj = inotify.adapters.Inotify()
+        self.dir_path = dir_path
+        self.file_names = set(file_names)
+
+        self.inotify_obj.add_watch(self.dir_path, mask=(inotify.constants.IN_CREATE |
+                                                        inotify.constants.IN_DELETE |
+                                                        inotify.constants.IN_MODIFY |
+                                                        inotify.constants.IN_MOVED_TO |
+                                                        inotify.constants.IN_MOVED_FROM |
+                                                        inotify.constants.IN_CLOSE_WRITE
+                                                       )
+        )
+
+    def wait_for_events(self, timeout_ms):
+        changed_files = set()
+
+        for event in self.inotify_obj.event_gen(timeout_s=timeout_ms/1000,
+                                                yield_nones=False):
+            (_, _, path, filename) = event
+            if path == self.dir_path and filename in self.file_names:
+                changed_files.add(os.path.join(path, filename))
+
+        return list(changed_files)

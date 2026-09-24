@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,5 +23,5 @@ SHELL = /bin/bash
 MAIN_TARGET = component-versions
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	./create_component_versions.sh $(MLNX_SDK_VERSION) $(MLNX_SPC_FW_VERSION) $(MLNX_SAI_VERSION) $(MLNX_HW_MANAGEMENT_VERSION) $(MFT_VERSION) $(MFT_REVISION) $(KVERSION_SHORT) $(SIMX_VERSION)
+	./create_component_versions.sh $(MLNX_SDK_VERSION) $(MLNX_SPC_FW_VERSION) $(MLNX_SAI_VERSION) $(MLNX_HW_MANAGEMENT_VERSION) $(MFT_VERSION) $(MFT_REVISION) $(KVERSION_SHORT) $(SIMX_VERSION) $(MLNX_RSHIM_DRIVER_VERSION)
 	mv temp_versions_file $(DEST)/$(MAIN_TARGET)

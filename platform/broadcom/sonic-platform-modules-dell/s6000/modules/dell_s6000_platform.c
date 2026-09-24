@@ -218,9 +218,8 @@ static int __init qsfp_mux_probe(struct platform_device *pdev)
 
     for (i = 0; i < QSFP_MODULE_NUM; i++) {
         int nr = pdata->base_nr + i;
-        unsigned int class = 0;
 
-        ret = i2c_mux_add_adapter(muxc, nr, i, class);
+        ret = i2c_mux_add_adapter(muxc, nr, i);
         if (ret) {
             dev_err(&pdev->dev, "Failed to add adapter %d\n", i);
             goto add_adapter_failed;
@@ -239,15 +238,13 @@ alloc_failed:
     return ret;
 }
 
-static int qsfp_mux_remove(struct platform_device *pdev)
+static void qsfp_mux_remove(struct platform_device *pdev)
 {
     struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
 
     i2c_mux_del_adapters(muxc);
 
     i2c_put_adapter(muxc->parent);
-
-    return 0;
 }
 
 static struct platform_driver qsfp_mux_driver = {
@@ -1259,7 +1256,7 @@ error:
     return -ENODEV;
 }
 
-static int __exit cpld_remove(struct platform_device *pdev)
+static void __exit cpld_remove(struct platform_device *pdev)
 {
     int i;
     struct i2c_adapter *parent = NULL;
@@ -1281,8 +1278,6 @@ static int __exit cpld_remove(struct platform_device *pdev)
     }
 
     i2c_put_adapter(parent);
-
-    return 0;
 }
 
 static struct platform_driver cpld_driver = {
@@ -1310,7 +1305,7 @@ static int __init dell_s6000_platform_init(void)
     }
     gpio_allocated = true;
 
-    ret = gpio_export(GPIO_I2C_MUX_PIN, false);
+    ret = gpiod_export(gpio_to_desc(GPIO_I2C_MUX_PIN), false);
     if(ret < 0) {
         printk(KERN_WARNING "Failed to export gpio 10");
         goto error_gpio_init;

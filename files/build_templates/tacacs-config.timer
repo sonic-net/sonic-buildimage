@@ -9,4 +9,4 @@ OnBootSec=5min 30 sec
 Unit=tacacs-config.service
 
 [Install]
-WantedBy=timers.target sonic.target sonic-delayed.target
+WantedBy=timers.target sonic.target

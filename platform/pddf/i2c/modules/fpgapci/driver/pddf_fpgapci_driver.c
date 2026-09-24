@@ -101,7 +101,7 @@ static int pddf_pci_add_adapter(struct pci_dev *dev)
 	for (i = 0 ; i < total_i2c_pci_bus; i ++) {
 
 		i2c_pci_adap[i].owner = THIS_MODULE;
-		i2c_pci_adap[i].class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+		i2c_pci_adap[i].class = I2C_CLASS_HWMON;
 
 		/* /dev/i2c-xxx for FPGA LOGIC I2C channel  controller 1-7  */
 		i2c_pci_adap[i].nr = i + pddf_fpga_ops_data.virt_bus ;

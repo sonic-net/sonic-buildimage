@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "SN5610N": {
+            "component": {
+                "ONIE": { },
+                "SSD": { },
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "CPLD4": { }
+            }
+        }
+    }
+}

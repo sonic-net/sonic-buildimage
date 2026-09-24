@@ -1,0 +1,44 @@
+{
+    "SRV6_VALID": {
+        "desc": "Valid config"
+    },
+    "SRV6_MY_LOCATOR_INVALID_FUNC_LEN": {
+        "desc": "A locator configured with invalid func_len",
+        "eStrKey" : "Must"
+    },
+    "SRV6_MY_LOCATOR_INVALID_VRF": {
+        "desc": "A locator configured with an invalid VRF name",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["vrf"]
+    },
+    "SRV6_MY_SID_INVALID_LOCATOR": {
+        "desc": "A SID configured with invalid locator identifier",
+        "eStrKey" : "LeafRef"
+    },
+    "SRV6_MY_SID_INVALID_IP_PREFIX": {
+        "desc": "A SID configured with invalid IPv6 address",
+        "eStrKey" : "Pattern"
+    },
+    "SRV6_MY_SID_INVALID_ACTION": {
+        "desc": "A SID with action uA but missing interface (must constraint)",
+        "eStr": ["interface is mandatory when action is 'uA'"]
+    },
+    "SRV6_MY_SID_UA_VALID": {
+        "desc": "Valid config with action uA"
+    },
+    "SRV6_MY_SID_UA_MISSING_INTERFACE": {
+        "desc": "A SID configured with action uA but missing interface",
+        "eStr": ["interface is mandatory when action is 'uA'"]
+    },
+    "SRV6_MY_SID_UA_MISSING_ADJ": {
+        "desc": "Valid config with action uA (adj is optional)"
+    },
+    "SRV6_MY_SID_UA_MISSING_BOTH": {
+        "desc": "A SID configured with action uA but missing both interface and adj",
+        "eStr": ["interface is mandatory when action is 'uA'"]
+    },
+    "SRV6_MY_SID_ADJ_INVALID_ACTION": {
+        "desc": "A SID with adj set but action is not uA",
+        "eStr": ["adj is only applicable when action is 'uA'"]
+    }
+}

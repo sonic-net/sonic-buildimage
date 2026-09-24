@@ -122,7 +122,7 @@ if [[ "$1" == "init" ]]; then
    echo 0xf0 > /sys/devices/platform/dell-n3248pxe-cpld.0/sfp_txdis
    install_python_api_package
    platform_firmware_versions
-   echo -2 > /sys/class/i2c-adapter/i2c-0/0-0071/idle_state
+   echo -2 > /sys/bus/i2c/devices/i2c-0/0-0071/idle_state
 elif [[ "$1" == "deinit" ]]; then
     switch_board_sfp "delete_device"
     sysdevices "delete_device"

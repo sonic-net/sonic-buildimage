@@ -24,11 +24,13 @@ module sonic-wred-profile {
 
         container WRED_PROFILE {
 
-            description "WRED_PROFILE part of config_db.json";
+            description "Configures Weighted Random Early Detection profiles for congestion avoidance.";
 
             list WRED_PROFILE_LIST {
 
                 key "name";
+
+                description "A named WRED profile with per-color thresholds and drop probabilities.";
 
                 leaf name {
                     type string {
@@ -44,19 +46,19 @@ module sonic-wred-profile {
                 leaf yellow_min_threshold {
                     type uint64;
                     units bytes;
-                    description "Yellow minimum threshold bytes";
+                    description "Queue depth in bytes at which WRED begins dropping yellow-colored packets.";
                 }
 
                 leaf green_min_threshold {
                     type uint64;
                     units bytes;
-                    description "Green minimum threshold bytes";
+                    description "Queue depth in bytes at which WRED begins dropping green-colored packets.";
                 }
 
                 leaf red_min_threshold {
                     type uint64;
                     units bytes;
-                    description "Red minimum threshold bytes";
+                    description "Queue depth in bytes at which WRED begins dropping red-colored packets.";
                 }
 
                 leaf yellow_max_threshold {
@@ -65,7 +67,7 @@ module sonic-wred-profile {
                     must "(current() >= current()/../yellow_min_threshold)" {
                         error-message "Yellow max threshold must be greater than or equal to min threshold";
                     }
-                    description "Yellow maximum threshold bytes";
+                    description "Queue depth in bytes at which WRED drops all yellow-colored packets.";
                 }
 
                 leaf green_max_threshold {
@@ -74,7 +76,7 @@ module sonic-wred-profile {
                     must "(current() >= current()/../green_min_threshold)" {
                          error-message "Green max threshold must be greater than or equal to min threshold";
                     }
-                    description "Green maximum threshold bytes";
+                    description "Queue depth in bytes at which WRED drops all green-colored packets.";
                 }
 
                 leaf red_max_threshold {
@@ -83,7 +85,7 @@ module sonic-wred-profile {
                     must "(current() >= current()/../red_min_threshold)" {
                         error-message "Red max threshold must be greater than or equal to min threshold";
                     }
-                    description "Red maximum threshold bytes";
+                    description "Queue depth in bytes at which WRED drops all red-colored packets.";
                 }
 
                 leaf ecn {
@@ -130,19 +132,19 @@ module sonic-wred-profile {
                 leaf wred_green_enable {
                     type boolean;
                     default false;
-                    description "Green enable";
+                    description "Enable WRED for green-colored traffic.";
                 }
 
                 leaf wred_yellow_enable {
                     type boolean;
                     default false;
-                    description "Yellow enable";
+                    description "Enable WRED for yellow-colored traffic.";
                 }
 
                 leaf wred_red_enable {
                     type boolean;
                     default false;
-                    description "Red enable";
+                    description "Enable WRED for red-colored traffic.";
                 }
 
                 leaf yellow_drop_probability {
@@ -151,7 +153,7 @@ module sonic-wred-profile {
                     }
                     units percent;
                     default 100;
-                    description "Yellow drop probability";
+                    description "Maximum drop probability for yellow-colored packets between min and max thresholds.";
                 }
 
                 leaf green_drop_probability {
@@ -160,7 +162,7 @@ module sonic-wred-profile {
                     }
                     units percent;
                     default 100;
-                    description "Green drop probability";
+                    description "Maximum drop probability for green-colored packets between min and max thresholds.";
                 }
 
                 leaf red_drop_probability {
@@ -169,7 +171,7 @@ module sonic-wred-profile {
                     }
                     units percent;
                     default 100;
-                    description "Red drop probability";
+                    description "Maximum drop probability for red-colored packets between min and max thresholds.";
                 }
             }
         }

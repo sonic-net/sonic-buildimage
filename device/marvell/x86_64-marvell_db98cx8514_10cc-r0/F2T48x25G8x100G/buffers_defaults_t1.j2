@@ -3,34 +3,47 @@
 
 {%- macro generate_buffer_pool_and_profiles() %}
     "BUFFER_POOL": {
-        "ingress_lossless_pool": {
-            "size": "21120000",
-            "type": "ingress",
-            "mode": "dynamic"
+        "ingress_pool1": {
+            "mode": "dynamic",
+            "size": "10500000",
+            "type": "ingress"
         },
-        "egress_pool": {
-            "size": "21120000",
-            "type": "egress",
-            "mode": "static"
+        "ingress_pool2": {
+            "mode": "dynamic",
+            "size": "1000000",
+            "type": "ingress"
+        },
+        "egress_pool1": {
+            "mode": "dynamic",
+            "size": "10500000",
+            "type": "egress"
+        },
+        "egress_pool2": {
+            "mode": "dynamic",
+            "size": "1000000",
+            "type": "egress"
         }
     },
     "BUFFER_PROFILE": {
-        "ingress_lossy_profile": {
-            "pool":"ingress_lossless_pool",
-            "size":"0",
-            "dynamic_th":"3"
-        },
         "egress_lossless_profile": {
-            "pool":"egress_pool",
-            "mode": "static",
-            "size":"330000",
-            "static_th":"0"
+            "pool": "egress_pool1",
+            "size": "0",
+            "dynamic_th": "1"
         },
         "egress_lossy_profile": {
-            "pool":"egress_pool",
-            "size":"0",
-            "mode": "dynamic",
-            "dynamic_th":"3"
+            "pool": "egress_pool2",
+            "size": "0",
+            "dynamic_th": "1"
+        },
+        "ingress_lossless_profile": {
+            "pool": "ingress_pool1",
+            "size": "0",
+            "dynamic_th": "-3"
+        },
+        "ingress_lossy_profile": {
+            "pool": "ingress_pool2",
+            "size": "0",
+            "dynamic_th": "-3"
         }
     },
 {%- endmacro %}

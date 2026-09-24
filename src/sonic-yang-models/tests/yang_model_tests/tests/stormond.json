@@ -4,7 +4,7 @@
     },
     "STORMOND_INVALID_POLLING_INTERVAL": {
         "desc": "Configure an invalid daemon polling interval",
-        "eStrKey" : "InvalidValue"
+        "eStrKey" : "Bounds"
     },
     "STORMOND_INVALID_SYNC_INTERVAL": {
         "desc": "Configure an invalid fsstats file sync interval",

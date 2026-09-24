@@ -24,10 +24,6 @@
             "i2c":
             {
                 "valmap": { "1":true, "0":false }
-            },
-            "bmc":
-            {
-                "valmap": { "Device Present":true, "Device Absent":false }
             }
         }, 
 		
@@ -36,11 +32,7 @@
             "i2c":
             {
                 "valmap": { "1": true, "0":false }
-            },
-            "bmc":
-            {
-                "valmap": { "State Asserted":true, "State Deasserted":false }
-            }        
+            }
         },
 
         "psu_fan_dir":

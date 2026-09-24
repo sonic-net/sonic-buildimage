@@ -376,19 +376,16 @@ MAC_DEFAULT_PARAM = [
 
 
 DRIVERLISTS = [
-    {"name": "wb_pinctrl_intel", "delay": 30},
-    {"name": "wb_gpio_c3000", "delay": 0},
-    {"name": "wb_gpio_c3000_device", "delay": 0},
     {"name": "i2c_ismt", "delay": 0},
     {"name": "i2c_i801", "delay": 0},
     {"name": "i2c_dev", "delay": 0},
     {"name": "i2c_algo_bit", "delay": 0},
     {"name": "i2c_gpio", "delay": 0},
     {"name": "i2c_mux", "delay": 0},
-    {"name": "wb_i2c_gpio_device gpio_sda=31 gpio_scl=32 gpio_chip_name=wb_gpio_c3000", "delay": 0},
+    {"name": "wb_i2c_gpio_device gpio_sda=31 gpio_scl=32 gpio_chip_name=INTC3000:00", "delay": 0},
     {"name": "mdio_bitbang", "delay": 0},
     {"name": "mdio_gpio", "delay": 0},
-    {"name": "wb_mdio_gpio_device gpio_mdc=33 gpio_mdio=34 gpio_chip_name=wb_gpio_c3000", "delay": 0},
+    {"name": "wb_mdio_gpio_device gpio_mdc=33 gpio_mdio=34 gpio_chip_name=INTC3000:00", "delay": 0},
     {"name": "platform_common dfd_my_type=0x40b2", "delay": 0},
     {"name": "wb_pcie_dev", "delay": 0},
     {"name": "wb_lpc_drv", "delay": 0},

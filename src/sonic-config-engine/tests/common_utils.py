@@ -11,6 +11,22 @@ PYvX_DIR = "py3" if PY3x else "py2"
 PYTHON_INTERPRETTER = "python3" if PY3x else "python2"
 YANG_MODELS_DIR = "/usr/local/yang-models"
 
+
+def get_sample_output_file(test_dir, relative_path):
+    """Resolve custom, versioned, then legacy expected-output paths."""
+    custom = os.path.join(
+        test_dir, "sample_output", "custom", PYvX_DIR, relative_path
+    )
+    if os.path.isfile(custom):
+        return custom
+    versioned = os.path.join(
+        test_dir, "sample_output", PYvX_DIR, relative_path
+    )
+    if os.path.isfile(versioned):
+        return versioned
+    return os.path.join(test_dir, "sample_output", relative_path)
+
+
 def tuple_to_str(tuplestr):
     """ Convert Python tuple '('elem1', 'elem2')' representation into string on the for "elem1|elem2" """
     def to_str(tupleobj):
@@ -52,7 +68,7 @@ class YangWrapper(object):
         """
         Raise exception when yang validation failed
         """
-        if PY3x and "-m" in argument:
+        if PY3x and ("-m" in argument or "--preset" in argument):
             import sonic_yang
             parser=argparse.ArgumentParser(description="Render configuration file from minigraph data and jinja2 template.")
             parser.add_argument("-m", "--minigraph", help="minigraph xml file", nargs='?', const='/etc/sonic/minigraph.xml')
@@ -61,10 +77,17 @@ class YangWrapper(object):
             parser.add_argument("-p", "--port-config", help="port config file, used with -m or -k", nargs='?', const=None)
             parser.add_argument("-S", "--hwsku-config", help="hwsku config file, used with -p and -m or -k", nargs='?', const=None)
             parser.add_argument("-j", "--json", help="additional json file input, used with -p, -S and -m or -k", nargs='?', const=None)
+            parser.add_argument("-a", "--additional-data", help="addition data, in json string", nargs='?', const=None)
+            parser.add_argument("--preset", help="generate sample configuration from a preset template",  nargs='?', const=None)
             args, unknown = parser.parse_known_args(argument)
 
             print('\n    Validating yang schema')
-            cmd = self.script_file + ['-m', args.minigraph]
+            if "-m" in argument:
+                cmd = self.script_file + ['-m', args.minigraph]
+                cmd += ['--print-data']
+            elif "--preset" in argument:
+                cmd = self.script_file + ['--preset', args.preset]
+
             if args.hwsku is not None:
                 cmd += ['-k', args.hwsku]
             if args.hwsku_config is not None:
@@ -75,7 +98,9 @@ class YangWrapper(object):
                 cmd += ['-n', args.namespace]
             if args.json is not None:
                 cmd += ['-j', args.json]
-            cmd += ['--print-data']
+            if args.additional_data is not None:
+                cmd += ['-a', args.additional_data]
+
             output = subprocess.check_output(cmd).decode()
             try:
                 self.yang_parser.loadData(configdbJson=json.loads(output))
@@ -86,6 +111,7 @@ class YangWrapper(object):
             if len(self.yang_parser.tablesWithOutYang):
                 return False
         return True
+
 
 def cmp(file1, file2):
     """ compare files """

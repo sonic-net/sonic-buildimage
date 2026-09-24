@@ -1,2 +1,0 @@
-chmod 777 sonic/platform/pddf/i2c/Module.symvers.PDDF
-chown $(stat -c "%u:%g" sonic/platform/pddf/i2c) sonic/platform/pddf/i2c/Module.symvers.PDDF
