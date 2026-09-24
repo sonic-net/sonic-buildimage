@@ -1,0 +1,202 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+export INSTALL_MOD_DIR := extra
+
+export KVERSION   ?= $(shell uname -r)
+export KERNEL_SRC ?= /lib/modules/$(KVERSION)
+KERNEL_BUILD := $(KERNEL_SRC)/build
+MOD_SRC_DIR := $(shell pwd)
+MODULE_DIRS :=
+FIRMWARE_DRIVER_DIR := $(MOD_SRC_DIR)/common/app/firmware_upgrade/firmware_driver
+
+# Common - shared across all Micas BMC cards
+MODULE_DIRS += common
+# Card-specific
+MODULE_DIRS += M2-W6950-128OC
+# Directory names used in card-specific directories
+SCRIPT_DIR := script
+SERVICE_DIR := service
+SYSTEMD_DIR := systemd
+CFG_DIR := cfg
+CONFIG_DIR := config
+HAL_CONFIG_DIR := hal-config
+S3IP_SYSFS_CFG_DIR := s3ip_sysfs_cfg
+ZTP_DIR := ztp
+LIB_DIR := lib
+MODPROBE_CONF_DIR := modprobe_conf
+PYTHON_DIST_PACKAGES_DIR := /usr/lib/python3/dist-packages
+
+PACKAGE_PRE_NAME := sonic-platform-aspeed-micas
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_build:
+	set -e
+	if [ -f $(MOD_SRC_DIR)/common/app/Makefile ]; then \
+		$(MAKE) -C $(MOD_SRC_DIR)/common/app; \
+	fi
+	if [ -f $(FIRMWARE_DRIVER_DIR)/Makefile ]; then \
+		if [ ! -d "$(KERNEL_BUILD)" ]; then \
+			echo "WARNING: Kernel build directory $(KERNEL_BUILD) not found. Skipping firmware driver kernel module build."; \
+		else \
+			$(MAKE) -C $(KERNEL_BUILD) M=$(FIRMWARE_DRIVER_DIR) modules; \
+		fi; \
+	fi
+	# Build kernel modules if they exist
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/modules/Makefile ]; then \
+			if [ ! -d "$(KERNEL_BUILD)" ]; then \
+				echo "WARNING: Kernel build directory $(KERNEL_BUILD) not found. Skipping kernel module build for $${mod}."; \
+			else \
+				$(MAKE) -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
+			fi; \
+		fi; \
+	done)
+	# Build Python wheel from root setup.py
+	PYTHONNOUSERSITE=1 python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)
+	echo "Finished making sonic_platform whl package"
+
+override_dh_auto_test:
+# Skip tests for now
+
+override_dh_usrlocal:
+# Needed since we are installing files to /usr/local
+
+override_dh_installsystemd:
+# Disables dh_installsystemd from autogenerating postinst scripts
+
+override_dh_auto_install:
+	set -e
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		pkg_suffix=$${mod}; \
+		if [ "$${mod}" = "M2-W6950-128OC" ]; then pkg_suffix=m2-w6950-128oc; fi; \
+		pkg_name=$(PACKAGE_PRE_NAME)-$${pkg_suffix}; \
+		dh_installdirs -p$${pkg_name} /lib/systemd/system; \
+		dh_installdirs -p$${pkg_name} /usr/local/bin; \
+		dh_installdirs -p$${pkg_name} etc/modules-load.d; \
+		dh_installdirs -p$${pkg_name} /etc/modprobe.d; \
+		dh_installdirs -p$${pkg_name} /etc/s3ip_sysfs_cfg; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/modules/Makefile ]; then \
+			if [ -d "$(KERNEL_BUILD)" ]; then \
+				dh_installdirs -p$${pkg_name} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+				if find $(MOD_SRC_DIR)/$${mod}/modules -name '*.ko' -print -quit | grep -q .; then \
+					find $(MOD_SRC_DIR)/$${mod}/modules -name '*.ko' -exec cp {} \
+						debian/$${pkg_name}$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/ \; ; \
+				fi; \
+			fi; \
+		fi; \
+		if [ "$${mod}" = "common" ] && [ -d "$(KERNEL_BUILD)" ] && [ -f $(FIRMWARE_DRIVER_DIR)/Makefile ]; then \
+			dh_installdirs -p$${pkg_name} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+			if find $(FIRMWARE_DRIVER_DIR) -name '*.ko' -print -quit | grep -q .; then \
+				find $(FIRMWARE_DRIVER_DIR) -name '*.ko' -exec cp {} \
+					debian/$${pkg_name}$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/ \; ; \
+			fi; \
+		fi; \
+		if [ "$${mod}" = "common" ] && [ -f $(MOD_SRC_DIR)/common/$(LIB_DIR)/Makefile ]; then \
+			dh_installdirs -p$${pkg_name} $(PYTHON_DIST_PACKAGES_DIR); \
+			$(MAKE) -C $(MOD_SRC_DIR)/common/$(LIB_DIR) \
+				install DESTDIR=$(MOD_SRC_DIR)/debian/$${pkg_name} \
+				py_sitepkgs_dir=$(PYTHON_DIST_PACKAGES_DIR); \
+		fi; \
+		if [ "$${mod}" = "common" ] && [ -f $(MOD_SRC_DIR)/common/$(SCRIPT_DIR)/Makefile ]; then \
+			dh_installdirs -p$${pkg_name} /usr/bin; \
+			$(MAKE) -C $(MOD_SRC_DIR)/common/$(SCRIPT_DIR) \
+				install DESTDIR=$(MOD_SRC_DIR)/debian/$${pkg_name}; \
+		fi; \
+		if [ "$${mod}" = "common" ] && [ -f $(MOD_SRC_DIR)/common/$(MODPROBE_CONF_DIR)/Makefile ]; then \
+			$(MAKE) -C $(MOD_SRC_DIR)/common/$(MODPROBE_CONF_DIR) \
+				install DESTDIR=$(MOD_SRC_DIR)/debian/$${pkg_name}; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR) ]; then \
+			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service 2>/dev/null)" ]; then \
+				cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service \
+					debian/$${pkg_name}/lib/systemd/system/; \
+			fi; \
+		fi; \
+		if [ "$${mod}" = "common" ] && [ -f $(MOD_SRC_DIR)/common/$(SERVICE_DIR)/Makefile ]; then \
+			$(MAKE) -C $(MOD_SRC_DIR)/common/$(SERVICE_DIR) \
+				install DESTDIR=$(MOD_SRC_DIR)/debian/$${pkg_name} \
+				systemd_system_unitdir=/lib/systemd/system; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR) ]; then \
+			if [ -n "$$(find $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR) -mindepth 1 -print -quit 2>/dev/null)" ]; then \
+				cp -a $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR)/. \
+					debian/$${pkg_name}/lib/systemd/system/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR) ]; then \
+			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR)/* 2>/dev/null)" ]; then \
+				cp $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR)/* \
+					debian/$${pkg_name}/etc/modules-load.d/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(CONFIG_DIR) ]; then \
+			if [ -n "$$(find $(MOD_SRC_DIR)/$${mod}/$(CONFIG_DIR) -maxdepth 1 -type f 2>/dev/null)" ]; then \
+				install -m 0755 $(MOD_SRC_DIR)/$${mod}/$(CONFIG_DIR)/* \
+					debian/$${pkg_name}/usr/local/bin/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(HAL_CONFIG_DIR) ]; then \
+			if [ -n "$$(find $(MOD_SRC_DIR)/$${mod}/$(HAL_CONFIG_DIR) -maxdepth 1 -type f 2>/dev/null)" ]; then \
+				dh_installdirs -p$${pkg_name} /usr/share/sonic/device/arm64-micas_$${pkg_suffix}-r0/$(HAL_CONFIG_DIR); \
+				install -m 0644 $(MOD_SRC_DIR)/$${mod}/$(HAL_CONFIG_DIR)/* \
+					debian/$${pkg_name}/usr/share/sonic/device/arm64-micas_$${pkg_suffix}-r0/$(HAL_CONFIG_DIR)/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(ZTP_DIR) ]; then \
+			if [ -n "$$(find $(MOD_SRC_DIR)/$${mod}/$(ZTP_DIR) -maxdepth 1 -type f 2>/dev/null)" ]; then \
+				dh_installdirs -p$${pkg_name} /usr/share/sonic/device/arm64-micas_$${pkg_suffix}-r0/$(ZTP_DIR); \
+				install -m 0644 $(MOD_SRC_DIR)/$${mod}/$(ZTP_DIR)/* \
+					debian/$${pkg_name}/usr/share/sonic/device/arm64-micas_$${pkg_suffix}-r0/$(ZTP_DIR)/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(S3IP_SYSFS_CFG_DIR) ]; then \
+			if [ -n "$$(find $(MOD_SRC_DIR)/$${mod}/$(S3IP_SYSFS_CFG_DIR) -mindepth 1 -print -quit 2>/dev/null)" ]; then \
+				cp -r $(MOD_SRC_DIR)/$${mod}/$(S3IP_SYSFS_CFG_DIR)/* \
+					debian/$${pkg_name}/etc/s3ip_sysfs_cfg/; \
+			fi; \
+		fi; \
+		if [ "$${mod}" = "common" ] && [ -f $(MOD_SRC_DIR)/common/app/Makefile ]; then \
+			$(MAKE) -C $(MOD_SRC_DIR)/common/app install DESTDIR=$(MOD_SRC_DIR)/debian/$${pkg_name}; \
+		fi; \
+	done)
+
+override_dh_install:
+	set -e
+	# Get all package names from debian/control
+	(for pkg_name in $$(dh_listpackages); do \
+		set -e; \
+		if [ "$${pkg_name}" = "$(PACKAGE_PRE_NAME)-common" ]; then \
+			continue; \
+		fi; \
+		if [ -f sonic_platform-1.0-py3-none-any.whl ]; then \
+			card_name="$${pkg_name#$(PACKAGE_PRE_NAME)-}"; \
+			device_name="arm64-micas_$${card_name}-r0"; \
+			dh_installdirs -p$${pkg_name} usr/share/sonic/device/$${device_name}/; \
+			dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
+				usr/share/sonic/device/$${device_name}/; \
+		fi; \
+	done)
+
+override_dh_clean:
+	set -e
+	dh_clean
+	if [ -f $(MOD_SRC_DIR)/common/app/Makefile ]; then \
+		$(MAKE) -C $(MOD_SRC_DIR)/common/app clean; \
+	fi
+	if [ -d "$(KERNEL_BUILD)" ] && [ -f "$(FIRMWARE_DRIVER_DIR)/Makefile" ]; then \
+		$(MAKE) -C $(KERNEL_BUILD) M=$(FIRMWARE_DRIVER_DIR) clean; \
+	fi
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		if [ -d "$(KERNEL_BUILD)" ] && [ -f "$(MOD_SRC_DIR)/$${mod}/modules/Makefile" ]; then \
+			make -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+		fi; \
+	done)
+	rm -f $(MOD_SRC_DIR)/*.whl
+	rm -rf $(MOD_SRC_DIR)/build $(MOD_SRC_DIR)/dist $(MOD_SRC_DIR)/*.egg-info
