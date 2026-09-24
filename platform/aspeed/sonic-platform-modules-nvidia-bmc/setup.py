@@ -1,3 +1,4 @@
+#
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -15,7 +16,6 @@
 # limitations under the License.
 #
 
-import os
 from setuptools import setup
 
 setup(
@@ -26,8 +26,18 @@ setup(
     author="NVIDIA",
     author_email="willtsai@nvidia.com",
     url="https://github.com/sonic-net/sonic-buildimage",
-    packages=["sonic_platform"],
-    package_dir={"sonic_platform": "sonic_platform"},
+    packages=[
+        "sonic_platform",
+    ],
+    package_dir={
+        "sonic_platform": "ast2700/sonic_platform",
+    },
+    extras_require={
+        "test": [
+            "pytest",
+            "pytest-cov",
+        ],
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Plugins",

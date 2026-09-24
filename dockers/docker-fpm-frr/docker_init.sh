@@ -67,16 +67,23 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     "
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
-        CFGGEN_PARAMS="$CFGGEN_PARAMS \
-            -t /usr/local/sonic/frrcfgd/bfdd.conf.j2,/etc/frr/bfdd.conf \
-            -t /usr/local/sonic/frrcfgd/ospfd.conf.j2,/etc/frr/ospfd.conf \
+        CFGGEN_PARAMS=" \
+            -d \
+            -y /etc/sonic/constants.yml \
+            -T /usr/local/sonic/frrcfgd \
+            -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
         "
+        sonic-cfggen $CFGGEN_PARAMS
+        echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
+        rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
+              /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
+              /etc/frr/sharpd.conf
     else
         rm -f /etc/frr/bfdd.conf /etc/frr/ospfd.conf
+        sonic-cfggen $CFGGEN_PARAMS
+        echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
+        rm -f /etc/frr/frr.conf
     fi
-    sonic-cfggen $CFGGEN_PARAMS
-    echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
-    rm -f /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "split" ]; then
     echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/frr.conf

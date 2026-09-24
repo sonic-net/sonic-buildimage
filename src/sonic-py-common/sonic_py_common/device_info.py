@@ -6,6 +6,7 @@ import random
 import re
 import subprocess
 import yaml
+from typing import List, Optional
 from natsort import natsorted
 from sonic_py_common.general import getstatusoutput_noshell_pipe
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
@@ -21,6 +22,10 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
+
+# CPO configuration file name
+CPO_FILE = "cpo.json"
+
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
@@ -59,6 +64,7 @@ DPU_NAME_PREFIX = "dpu"
 # Cacheable Objects
 sonic_ver_info = {}
 hw_info_dict = {}
+hwsku_info = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -153,8 +159,23 @@ def get_hwsku():
     Returns:
         A string containing the device's hardware SKU identifier
     """
+    global hwsku_info
 
-    return get_localhost_info('hwsku')
+    # Cache the first valid answer so callers stop opening a CONFIG_DB connection on
+    # every call. A falsy result means the lookup failed, so it is deliberately not
+    # cached and the next call retries.
+    #
+    # Changing the HwSKU needs a config reload, which restarts everything under
+    # sonic.target, so containerized callers always see the new value. Host daemons
+    # outside that target (system-health, for one) are not restarted and keep the
+    # cached value until they are.
+    #
+    # The slot is unsynchronized on purpose: racing threads may both perform the
+    # read, but they store the same value, so the interleaving does not matter.
+    if not hwsku_info:
+        hwsku_info = get_localhost_info('hwsku')
+
+    return hwsku_info
 
 
 def get_platform_and_hwsku():
@@ -184,7 +205,11 @@ def get_platform_json_data():
     if not platform:
         return None
 
-    platform_path = get_path_to_platform_dir()
+    try:
+        platform_path = get_path_to_platform_dir()
+    except OSError:
+        return None
+
     if not platform_path:
         return None
 
@@ -199,6 +224,97 @@ def get_platform_json_data():
     except (json.JSONDecodeError, IOError, TypeError, ValueError):
         # Handle any file reading and JSON parsing errors
         return None
+
+
+def get_cpo_data() -> Optional[dict]:
+    """
+    Retrieve the data from the cpo.json file in the platform directory.
+
+    Lane fields are normalized from comma-separated strings ("41,42") into
+    lists of ints ([41, 42]); all other fields, including vendor-specific
+    ones, are returned verbatim. None is returned if the file does not exist
+    or cannot be parsed.
+    """
+    if not get_platform():
+        return None
+
+    try:
+        cpo_file = os.path.join(get_path_to_platform_dir(), CPO_FILE)
+    except OSError:
+        return None
+
+    if not os.path.isfile(cpo_file):
+        return None
+
+    try:
+        with open(cpo_file, 'r') as f:
+            cpo_data = json.loads(f.read())
+    except (json.JSONDecodeError, IOError, TypeError, ValueError):
+        # Handle any file reading and JSON parsing errors
+        return None
+
+    _normalize_cpo_data(cpo_data)
+    return cpo_data
+
+
+def _parse_lane_string(lane_string: str) -> List[int]:
+    """'41,42,43' -> [41, 42, 43]; tolerates spaces and a trailing comma."""
+    return [int(tok) for tok in lane_string.split(',') if tok.strip() != '']
+
+
+def _normalize_cpo_data(cpo_data: dict) -> None:
+    """
+    In-place normalization of the known lane fields from comma-separated
+    strings to lists of ints. All other fields (vendor-specific included) are
+    left untouched.
+
+    Example input:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": "41,42,43,44",
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        "1": "41,42",
+                        "2": "43,44"
+                    }
+                }
+            }
+        }
+
+    After _normalize_cpo_data(...) the same dict becomes:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": [41, 42, 43, 44],
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        1: [41, 42],
+                        2: [43, 44]
+                    }
+                }
+            }
+        }
+    """
+    for device in cpo_data.get('devices', {}).values():
+        device_type = device['device_type']
+        if device_type == 'optical_engine':
+            device['asic_lanes'] = _parse_lane_string(device['asic_lanes'])
+        elif device_type == 'external_laser_source':
+            device['laser_to_asic_lane_mapping'] = {
+                int(laser): _parse_lane_string(lanes)
+                for laser, lanes in device['laser_to_asic_lane_mapping'].items()
+            }
+        else:
+            raise ValueError(f'Unrecognized device_type: {device_type}')
 
 
 def get_asic_conf_file_path():
@@ -628,14 +744,14 @@ def is_chassis_config_absent():
 
 
 def is_voq_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     single_voq = is_chassis_config_absent()
 
     return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
 def is_packet_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
@@ -665,6 +781,8 @@ def is_virtual_chassis():
 
 
 def is_chassis():
+    if get_localhost_info('type') == 'SpineRouter':
+        return True
     return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
@@ -757,6 +875,45 @@ def is_macsec_supported():
                 break
     return int(supported)
 
+# Get the chassis_db_address from the file /etc/sonic/chassisdb_address
+def get_chassis_db_address():
+    chassis_db_address_file_path = "/etc/sonic/chassisdb_address"
+    chassis_db_address = None
+
+    # The file /etc/sonic/chassisdb_address is not present
+    if not os.path.isfile(chassis_db_address_file_path):
+        return chassis_db_address
+
+    with open(chassis_db_address_file_path) as chassis_db_addr_conf:
+        for line in chassis_db_addr_conf:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].lower() == 'chassis_db_address':
+                chassis_db_address = tokens[1].strip()
+                break
+
+    return chassis_db_address
+
+
+def get_smartswitch_midplane_ip():
+    """Parse /usr/lib/systemd/network/bridge-midplane.network to get the NPU bridge-midplane IP.
+    This file is deployed on both NPU and DPU sides of a smartswitch."""
+    network_file = "/usr/lib/systemd/network/bridge-midplane.network"
+    if not os.path.isfile(network_file):
+        return None
+
+    with open(network_file) as f:
+        for line in f:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].strip().lower() == 'address':
+                # Strip prefix length (e.g. "169.254.200.254/24" -> "169.254.200.254")
+                return tokens[1].strip().split('/')[0]
+
+    return None
+
 
 def get_device_runtime_metadata():
     chassis_metadata = {}
@@ -771,6 +928,7 @@ def get_device_runtime_metadata():
     runtime_metadata.update(port_metadata)
     runtime_metadata.update(macsec_support_metadata)
     return {'DEVICE_RUNTIME_METADATA': runtime_metadata }
+
 
 def get_npu_id_from_name(npu_name):
     if npu_name.startswith(NPU_NAME_PREFIX):
@@ -890,7 +1048,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs']):
+    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs', 'micas-vs']):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
@@ -911,7 +1069,7 @@ def get_system_mac(namespace=None, hostname=None):
             hw_mac_entry_outputs.append((mac, err))
         (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'cisco-8000'):
+    elif (version_info['asic_type'] in ('cisco-8000', 'cisco')):
         # Try to get valid MAC from profile.ini first, else fetch it from syseeprom or eth0
         if namespace is not None:
             profile_cmd0 = ['cat', HOST_DEVICE_PATH + '/' + platform + '/profile.ini']

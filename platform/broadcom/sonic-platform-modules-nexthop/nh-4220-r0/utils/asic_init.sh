@@ -35,6 +35,25 @@ fpga_write() {
   fi
 }
 
+fpga_read() {
+  local offset="$1"
+  local bits="$2"
+  local result
+
+  if [ -n "$bits" ]; then
+    result=$(fpga read32 "$FPGA_BDF" "$offset" --bits "$bits")
+  else
+    result=$(fpga read32 "$FPGA_BDF" "$offset")
+  fi
+
+  if [ $? -ne 0 ]; then
+    logger -t $LOG_TAG -p $LOG_ERR "Error reading reg $offset on fpga $FPGA_BDF"
+    exit 1
+  fi
+
+  echo "$result"
+}
+
 function acquire_lock() {
   if [[ ! -f $LOCKFILE ]]; then
     touch $LOCKFILE
@@ -108,6 +127,11 @@ if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
   /etc/init.d/opennsl-modules stop
 fi
 
+# Set DP_PWR_ON = 1
+# DP_POWR_ON should already be 1 in normal circumstances, but it's possible
+# a power glitch brings it to 0. The system may kernel panic if we bring up
+# the ASIC when DP_PWR_ON = 0.
+fpga_write 0x90  0x1 "9:9"
 
 # Try power cycling, up to two times, or until Switch ASIC chip is found
 for attempt in {0..2}; do
@@ -123,6 +147,15 @@ for attempt in {0..2}; do
 
   # We need to wait for the asic to come up
   sleep 3
+
+  # Log ASIC_PGOOD
+  pg_bit=$(fpga_read 0x94 "15:15")
+  logger -t "$LOG_TAG" -p "$LOG_PRIO" "ASIC_PGOOD = $pg_bit"
+  if [ $(( pg_bit )) -eq 1 ]; then
+    logger -t "$LOG_TAG" -p "$LOG_PRIO" "ASIC power good"
+  else
+    logger -t "$LOG_TAG" -p "$LOG_ERR" "ASIC power good bit not set"
+  fi
 
   # Check if switch ASIC is up
   lspci -n | grep -q "$ASIC_BDF"

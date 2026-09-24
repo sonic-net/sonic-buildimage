@@ -1,0 +1,21 @@
+[Unit]
+Description=One-time MCTP endpoint setup for the AST2700 BMC (IRoT)
+Documentation=https://github.com/CodeConstruct/mctp
+# mctpd owns the au.com.codeconstruct.MCTP1 bus name we drive below.
+Wants=mctpd.service
+After=mctpd.service
+# The per-device sonic_platform wheel is installed at boot by the aspeed
+# platform's sonic-platform-init.service; pull it in and order after it so
+# this runs the current sonic_platform.mctp code (not a stale/absent module).
+Wants=sonic-platform-init.service
+After=sonic-platform-init.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# SetupEndpoint is idempotent; the helper retries internally to cover
+# mctpd/link startup races (Restart= is not honored for Type=oneshot).
+ExecStart=/usr/bin/python3 -m sonic_platform.mctp setup mctpirot0
+
+[Install]
+WantedBy=multi-user.target

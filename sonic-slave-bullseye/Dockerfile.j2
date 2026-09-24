@@ -21,8 +21,8 @@ FROM {{ prefix }}debian:bullseye
 
 MAINTAINER gulv@microsoft.com
 
-COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
-COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+COPY ["files/apt/apt.conf.d/no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/apt-timeout-n-retries", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
@@ -721,6 +721,33 @@ RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-g
 {% endif -%}
 ENV RUSTUP_HOME $RUST_ROOT
 ENV PATH $PATH:$RUST_ROOT/bin
+
+# Install cargo-auditable so every `cargo build` embeds the resolved
+# Cargo.lock into the produced binary's .dep-v0 ELF section. Syft reads
+# that section at SBOM scan time, giving SONiC SBOMs full per-crate
+# visibility for Rust packages without source-tree changes to any
+# debian/rules file. Pinned for reproducibility. CARGO_HOME=$RUST_ROOT
+# ensures the binary lands at /usr/.cargo/bin/cargo-auditable (in PATH
+# for all users) rather than /root/.cargo/bin/ (root-only).
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.6.4
+
+# rust-audit-info is the official CLI for reading the .dep-v0 section
+# that cargo-auditable embedded. scripts/sbom_fragment.py invokes it
+# on every ELF binary inside each SONiC-built .deb to recover the
+# resolved Rust crate set that shipped in that .deb, then emits each
+# crate as a CycloneDX component with sonic:source_deb=<filename>
+# linking it back to the owning artifact. Same install pattern as
+# cargo-auditable so the binary lands at /usr/.cargo/bin/rust-audit-info.
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked rust-audit-info@0.5.4
+
+# /usr/local/bin/cargo is a transparent shim that routes `cargo build`
+# through `cargo auditable` (other subcommands pass through). Single
+# source of truth: files/build/cargo-wrapper; staged into the slave's
+# buildinfo/ directory by scripts/prepare_docker_buildinfo.sh. The
+# shim must sit ahead of $RUST_ROOT/bin in PATH, which the default
+# /usr/local/bin already does.
+COPY buildinfo/cargo-wrapper /usr/local/bin/cargo
+RUN chmod 0755 /usr/local/bin/cargo
 
 {# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
 {% with DEBIAN_VERSION='bullseye' %}

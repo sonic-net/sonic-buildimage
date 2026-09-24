@@ -7,9 +7,10 @@
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
-    from sonic_platform.watchdog import Watchdog
+    from sonic_platform_base.bmc_watchdog import BMCWatchdog
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.switch_host_module import SwitchHostModule
+    from sonic_platform.component import Component
     from sonic_py_common import logger
     from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
@@ -32,14 +33,19 @@ class Chassis(ChassisBase):
     # Thermal sensors are controoled by host CPU
     NUM_THERMAL_SENSORS = 0 
 
+    SOCKET_PATH = "/run/hw-watchdog-mgrd/hw-watchdog-mgrd.sock"
+
+    # Components
+    MAX_COMPONENTS = 1
+
     def __init__(self):
         """
         Initialize Nokia H6-128 BMC with hardware-specific configuration
         """
         super().__init__()
 
-        # Initialize watchdog (same as base class)
-        self._watchdog = Watchdog()
+        # Initialize watchdog (common BMCWatchdog)
+        self._watchdog = BMCWatchdog(socket_path=self.SOCKET_PATH)
 
         # Initialize eeprom
         self._eeprom = Eeprom()
@@ -53,6 +59,11 @@ class Chassis(ChassisBase):
         self._fan_list = []
         self._fan_drawer_list = []
         self._thermal_list = []
+
+        # Components init
+        for i in range(self.MAX_COMPONENTS):
+            component = Component(self.get_model(), i)
+            self._component_list.append(component)
 
         # Nokia-specific initialization
         self.card_revision = self._detect_card_revision()
@@ -76,7 +87,7 @@ class Chassis(ChassisBase):
                 return int(value)
         except (IOError, OSError, ValueError):
             return 0
-    
+
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
@@ -100,7 +111,40 @@ class Chassis(ChassisBase):
             A list of Module objects representing all modules on the chassis
         """
         return self._module_list
-    
+
+    def get_num_modules(self):
+        """
+        Retrieves number of modules available on this chassis
+
+        Returns:
+            total number of modules
+        """
+        return len(self._module_list)
+
+    def get_module(self, index):
+        """
+        Retrieves ther numbered module available on this chassis
+
+        Returns:
+            the specified module object
+        """
+        if index >= len(self._module_list):
+            return None
+
+        return self._module_list[index]
+
+    def get_module_index(self, name):
+        """
+        given module name, retrieves zero based module index
+
+        Returns:
+            zero based index value
+        """
+        for index in range(0, len(self._module_list)):
+            if self._module_list[index].get_name() == name:
+                return index
+        return -1
+
     def get_name(self):
         """
         Retrieves the name of the chassis
@@ -109,7 +153,7 @@ class Chassis(ChassisBase):
             String containing the name of the chassis
         """
         return self._eeprom.modelstr()
-    
+
     def get_model(self):
         """
         Retrieves the model number (or part number) of the chassis
@@ -135,7 +179,7 @@ class Chassis(ChassisBase):
             string: BMC serial number from BMC EEPROM (i2c-4)
         """
         return self._eeprom.serial_number_str()
-    
+
     def get_serial(self):
         """
         Retrieves the serial number of the chassis
@@ -273,3 +317,58 @@ class Chassis(ChassisBase):
         """
         # For now, default to 'r0'
         return 'r0'
+
+    def is_liquid_cooled(self):
+        """
+        Retrieves whether this chassis is liquid cooled
+
+        Returns:
+            bool: True if this chassis is liquid cooled, False otherwise
+        """
+        return False
+
+    def get_liquid_cooling(self):
+        """
+        Liquid cooling is not present on the air-cooled H6-128 BMC platform.
+
+        Returns:
+            None: No liquid cooling object on this chassis.
+        """
+        return None
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def initizalize_system_led(self):
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+
+        Not available on this platform
+        """
+        return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+
+        Not available on this platform
+        """
+        return self.STATUS_LED_COLOR_OFF

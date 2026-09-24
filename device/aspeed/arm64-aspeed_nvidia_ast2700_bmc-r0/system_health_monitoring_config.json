@@ -1,6 +1,6 @@
 {
     "services_to_ignore": [],
-    "devices_to_ignore": ["psu", "fan", "asic"],
+    "devices_to_ignore": ["psu", "pdb", "fan", "asic"],
     "user_defined_checkers": [],
     "polling_interval": 300,
     "led_color": {

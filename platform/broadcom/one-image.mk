@@ -120,6 +120,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(NEXTHOP_4010_R0_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_R1_PLATFORM_MODULE) \
                                $(NEXTHOP_4020_R0_PLATFORM_MODULE) \
+                               $(NEXTHOP_4210_PLATFORM_MODULE) \
+                               $(NEXTHOP_4210_R0021_PLATFORM_MODULE) \
                                $(NEXTHOP_4220_PLATFORM_MODULE) \
                                $(NEXTHOP_4220_R0_PLATFORM_MODULE) \
                                $(NEXTHOP_5010_PLATFORM_MODULE) \
@@ -134,6 +136,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
 			       $(MICAS_M2_W6510_32C_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6520_48C8QC_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6940_128X1_FR4_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6950_128OC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6951_64HC_CP_PLATFORM_MODULE) \
 			       $(SMCI_SSE_T8164_PLATFORM_MODULE) \
 			       $(SMCI_SSE_T8196_PLATFORM_MODULE)
 

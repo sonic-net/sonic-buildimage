@@ -66,15 +66,36 @@ TEMPLATE=files/apt/sources.list.j2
 [ -f $CONFIG_PATH/sources.list.j2 ] && TEMPLATE=$CONFIG_PATH/sources.list.j2
 [ -f $CONFIG_PATH/sources.list.$ARCHITECTURE.j2 ] && TEMPLATE=$CONFIG_PATH/sources.list.$ARCHITECTURE.j2
 
-MIRROR_URLS=$MIRROR_URLS MIRROR_SECURITY_URLS=$MIRROR_SECURITY_URLS j2 $TEMPLATE | sed '/^$/N;/^\n$/D' > $CONFIG_PATH/sources.list.$ARCHITECTURE
+# Write the sources.list via a temp file + atomic rename. Several
+# build_debian.sh invocations run in parallel under `make -j`, one
+# per rootfs target (broadcom, broadcom-dnx, broadcom-legacy-th, …),
+# and they all funnel through this same shared CONFIG_PATH/ARCH
+# pair when CONFIG_PATH is files/apt and ARCHITECTURE is amd64. A
+# naive `> file` redirect truncates the destination first, leaving
+# a window in which a sibling build_debian.sh can `cp` the file in
+# its 0-byte state. The chroot then ends up with an empty sources.list,
+# `apt-get update` succeeds trivially (nothing to fetch), and the
+# next `apt-get install` fails with "Unable to locate package".
+SOURCES_LIST=$CONFIG_PATH/sources.list.$ARCHITECTURE
+SOURCES_LIST_TMP=$(mktemp "${SOURCES_LIST}.XXXXXX")
+trap 'rm -f "$SOURCES_LIST_TMP"' EXIT
+MIRROR_URLS=$MIRROR_URLS MIRROR_SECURITY_URLS=$MIRROR_SECURITY_URLS j2 $TEMPLATE | sed '/^$/N;/^\n$/D' > "$SOURCES_LIST_TMP"
 if [ "$MIRROR_SNAPSHOT" == y ]; then
     # Escape special characters in BUILD_SNAPSHOT_URL for use in sed regex
     ESCAPED_MIRROR_URL=$(echo "$BUILD_SNAPSHOT_URL" | sed 's/[\/&.]/\\&/g')
     # Set the snapshot mirror, and add the SET_REPR_MIRRORS flag
-    sed -i -e "/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" $CONFIG_PATH/sources.list.$ARCHITECTURE
+    sed -i -e "/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" "$SOURCES_LIST_TMP"
 fi
+chmod 664 "$SOURCES_LIST_TMP"
+mv -f "$SOURCES_LIST_TMP" "$SOURCES_LIST"
 
-# Handle apt retry count config
+# Handle apt retry count config. Same race applies — write via temp
+# and atomic rename.
 APT_RETRIES_COUNT_FILENAME=apt-retries-count
 TEMPLATE=files/apt/$APT_RETRIES_COUNT_FILENAME.j2
-j2 $TEMPLATE > $CONFIG_PATH/$APT_RETRIES_COUNT_FILENAME
+APT_RETRIES_COUNT_DEST=$CONFIG_PATH/$APT_RETRIES_COUNT_FILENAME
+APT_RETRIES_COUNT_TMP=$(mktemp "${APT_RETRIES_COUNT_DEST}.XXXXXX")
+trap 'rm -f "$SOURCES_LIST_TMP" "$APT_RETRIES_COUNT_TMP"' EXIT
+j2 $TEMPLATE > "$APT_RETRIES_COUNT_TMP"
+chmod 644 "$APT_RETRIES_COUNT_TMP"
+mv -f "$APT_RETRIES_COUNT_TMP" "$APT_RETRIES_COUNT_DEST"

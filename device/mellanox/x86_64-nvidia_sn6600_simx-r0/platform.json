@@ -24,6 +24,14 @@
                 "name": "CPLD4"
             }
         ],
+        "pdbs": [
+            {
+                "name": "PDB 1"
+            },
+            {
+                "name": "PDB 2"
+            }
+        ],
         "thermals": [
             {
                 "name": "ASIC",
