@@ -2186,6 +2186,18 @@ class BGPConfigDaemon:
             yield field, value
 
     @staticmethod
+    def __normalize_bgp_table_data(table, data):
+        if table != 'BGP_GLOBALS' or 'confed_peers' not in data:
+            return
+
+        peers = data['confed_peers']
+        if isinstance(peers, CachedDataWithOp):
+            if peers.data == ['']:
+                peers.data = []
+        elif peers == ['']:
+            data['confed_peers'] = []
+
+    @staticmethod
     def __bgp_identifier_is_valid(value):
         return (isinstance(value, str) and value and
                 all('\x21' <= char <= '\x7e' and char not in "'\""
@@ -2246,6 +2258,7 @@ class BGPConfigDaemon:
         return True
 
     def __validate_bgp_table_input(self, table, key, data):
+        self.__normalize_bgp_table_data(table, data)
         if self.__vrf_based_table(table):
             key = self.__normalize_bgp_table_key(table, key)
             if key is None:
@@ -2355,6 +2368,7 @@ class BGPConfigDaemon:
         self.bgp_confed_peers = {}
         glb_table = self.config_db.get_table('BGP_GLOBALS')
         for vrf, entry in glb_table.items():
+            self.__normalize_bgp_table_data('BGP_GLOBALS', entry)
             if not isVrfNameValid(vrf):
                 syslog.syslog(syslog.LOG_ERR, 'Ignore BGP_GLOBALS entry with invalid VRF: {!r}'.format(vrf))
                 continue

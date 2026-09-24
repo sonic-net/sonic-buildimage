@@ -99,6 +99,25 @@ def test_bgp_key_and_asn_validation(run_cmd):
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
+def test_empty_confed_peers_runtime_update_is_normalized(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    update_bgp = MagicMock()
+    daemon._BGPConfigDaemon__update_bgp = update_bgp
+
+    daemon.bgp_global_handler(
+        'BGP_GLOBALS', 'default',
+        {'local_asn': '65000', 'confed_peers': ['']})
+
+    key, del_table, table, data = daemon.bgp_message.get_nowait()
+    assert (key, del_table, table) == ('default', False, 'BGP_GLOBALS')
+    assert data['local_asn'].data == '65000'
+    assert data['confed_peers'].data == []
+    update_bgp.assert_called_once()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
 def test_unified_replay_validates_bgp_keys_and_asns(run_cmd):
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()
@@ -130,6 +149,15 @@ def test_unified_replay_validates_bgp_keys_and_asns(run_cmd):
     assert (key, del_table, table) == ('default|fc00:10::1', False, 'BGP_NEIGHBOR')
     assert data['asn'].data == '65001'
     assert data['asn'].op == 1
+    update_bgp.assert_called_once()
+
+    update_bgp.reset_mock()
+    replay_entry('BGP_GLOBALS', 'default',
+                 {'local_asn': '65000', 'confed_peers': ['']})
+    key, del_table, table, data = daemon.bgp_message.get_nowait()
+    assert (key, del_table, table) == ('default', False, 'BGP_GLOBALS')
+    assert data['local_asn'].data == '65000'
+    assert data['confed_peers'].data == []
     update_bgp.assert_called_once()
 
 
