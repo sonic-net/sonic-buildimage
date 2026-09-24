@@ -571,8 +571,8 @@ static void do_ndisc_learn_from_kernel(struct ndmsg *ndm, struct rtattr *tb[], i
         else
         {
             /* update ND */
-            if (ndisc_info->op_type != ndisc_info->op_type
-                || strcmp(ndisc_info->ifname, ndisc_info->ifname) != 0 || memcmp(ndisc_info->mac_addr, ndisc_info->mac_addr, ETHER_ADDR_LEN) != 0)
+            if (ndisc_info->op_type != ndisc_msg->op_type
+                || strcmp(ndisc_info->ifname, ndisc_msg->ifname) != 0 || memcmp(ndisc_info->mac_addr, ndisc_msg->mac_addr, ETHER_ADDR_LEN) != 0)
             {
                 neigh_update = 1;
                 ndisc_info->op_type = ndisc_msg->op_type;
