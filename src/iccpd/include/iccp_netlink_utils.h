@@ -12,6 +12,7 @@
 int iccp_netlink_parse_rtattrs(struct rtattr *tb[], int max,
                                struct rtattr *rta, int len);
 int iccp_netlink_attr_payload_is(const struct rtattr *attr, size_t size);
+int iccp_netlink_attr_can_advance(const struct rtattr *attr, int remaining);
 int iccp_netlink_parse_neighbor_attrs(int family, int is_delete,
                                       struct rtattr *tb[], void *address,
                                       size_t address_size,
