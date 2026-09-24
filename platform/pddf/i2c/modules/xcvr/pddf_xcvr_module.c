@@ -187,8 +187,14 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         if (client_ptr)
         {
             pddf_dbg(XCVR, KERN_ERR "Removing %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
+            XCVR_PDATA *pdata = client_ptr->dev.platform_data;
             i2c_unregister_device(client_ptr);
             delete_device_table(cdata->i2c_name);
+            /* the platform data was allocated here at create time */
+            if (pdata) {
+                kfree(pdata->xcvr_attrs);
+                kfree(pdata);
+            }
         }
         else
         {

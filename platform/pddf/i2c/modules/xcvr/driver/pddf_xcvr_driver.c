@@ -207,8 +207,6 @@ static void xcvr_remove(struct i2c_client *client)
 {
     int ret = 0;
     struct xcvr_data *data = i2c_get_clientdata(client);
-    XCVR_PDATA *platdata = (XCVR_PDATA *)client->dev.platform_data;
-    XCVR_ATTR *platdata_sub = platdata->xcvr_attrs;
 
     if (pddf_xcvr_ops.pre_remove)
     {
@@ -221,14 +219,6 @@ static void xcvr_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &xcvr_group);
     kfree(data);
 
-    if (platdata_sub) {
-        pddf_dbg(XCVR, KERN_DEBUG "%s: Freeing platform subdata\n", __FUNCTION__);
-        kfree(platdata_sub);
-    }
-    if (platdata) {
-        pddf_dbg(XCVR, KERN_DEBUG "%s: Freeing platform data\n", __FUNCTION__);
-        kfree(platdata);
-    }
     
     if (pddf_xcvr_ops.post_remove)
     {
