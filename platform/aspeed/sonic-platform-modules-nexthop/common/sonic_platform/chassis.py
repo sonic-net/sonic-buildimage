@@ -11,6 +11,7 @@ try:
     from sonic_platform_base.bmc_watchdog import BMCWatchdog
     from sonic_platform.thermal import Thermal
     from sonic_platform.eeprom import Eeprom
+    from sonic_platform.liquid_cooling import LiquidCooling
     from sonic_platform.switch_host_module import SwitchHostModule
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
@@ -60,6 +61,9 @@ class Chassis(ChassisBase):
 
         # Initialize watchdog (common BMCWatchdog)
         self._watchdog = BMCWatchdog(socket_path=self.SOCKET_PATH)
+
+        # Lazily-built liquid cooling object (see get_liquid_cooling)
+        self._liquid_cooling = None
 
         # Initialize eeprom
         self._eeprom = Eeprom()
@@ -335,6 +339,22 @@ class Chassis(ChassisBase):
         """
         switch_host = self._module_list[0]
         return switch_host.get_serial()
+
+    def get_liquid_cooling(self):
+        """
+        Retrieves the liquid cooling subsystem of the chassis.
+
+        Built lazily on first use. thermalctld constructs its
+        LiquidCoolingUpdater as soon as is_liquid_cooled() is True and does not
+        guard the call, so this always returns a real object.
+
+        Returns:
+            A LiquidCooling object holding the leak sensors and the leak test
+            interface
+        """
+        if self._liquid_cooling is None:
+            self._liquid_cooling = LiquidCooling()
+        return self._liquid_cooling
 
     def get_watchdog(self):
         """
