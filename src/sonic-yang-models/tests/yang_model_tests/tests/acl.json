@@ -228,5 +228,12 @@
     },
     "ACL_INNERSRCMACREWRITE_NO_INNERSRCIPV6": {
         "desc": "Configure INNERSRCMACREWRITE ACL with INNER_SRC_MAC_REWRITE_ACTION and TUNNEL_VNI but no INNER_SRC_IPV6"
+    },
+    "ACL_RULE_WITH_VALID_PACKET_COLOR_ACTION": {
+        "desc": "Configure ACL rule with valid PACKET_COLOR_ACTION values (GREEN/YELLOW/RED)."
+    },
+    "ACL_RULE_WITH_INVALID_PACKET_COLOR_ACTION": {
+        "desc": "Configure ACL rule with an invalid PACKET_COLOR_ACTION value.",
+        "eStrKey": "InvalidValue"
     }
 }
