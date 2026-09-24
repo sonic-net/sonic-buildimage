@@ -1,4 +1,506 @@
 {
+    "chassis": {
+        "name": "Z9100-ON",
+        "status_led": {
+            "controllable": true,
+            "colors": [
+                "amber",
+                "blinking amber",
+                "green",
+                "blinking green"
+            ]
+        },
+        "thermal_manager": false,
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "FPGA"
+            },
+            {
+                "name": "CPLD"
+            },
+            {
+                "name": "SSD"
+            },
+            {
+                "name": "ONIE"
+            }
+        ],
+        "fans": [
+            {
+                "name": "FanTray1-Fan1",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray1-Fan2",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray2-Fan1",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray2-Fan2",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray3-Fan1",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray3-Fan2",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray4-Fan1",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray4-Fan2",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray5-Fan1",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray5-Fan2",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "PSU1 Fan",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "PSU2 Fan",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "available": false
+                }
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "FanTray1",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "FanTray1-Fan1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                     {
+                        "name": "FanTray1-Fan2",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray2",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "FanTray2-Fan1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                     {
+                        "name": "FanTray2-Fan2",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray3",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "FanTray3-Fan1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                     {
+                        "name": "FanTray3-Fan2",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray4",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "FanTray4-Fan1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "FanTray4-Fan2",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray5",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "FanTray5-Fan1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                     {
+                        "name": "FanTray5-Fan2",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU1 Fan",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "PSU2",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU2 Fan",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "CPU On-board",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "ASIC On-board Rear",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "System Front Left",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "System Front Right",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "BCM Switch On-Board",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "Rear (U2900)",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU 1",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU 2",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPU Core 0",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPU Core 1",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPU Core 2",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPU Core 3",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "SFP/SFP+/SFP28"
+            },
+            {
+                "name": "SFP/SFP+/SFP28"
+            }
+        ]
+    },
     "interfaces": {
         "Ethernet0": {
             "index": "1,1,1,1",
@@ -605,6 +1107,24 @@
                     "Ethernet125",
                     "Ethernet126",
                     "Ethernet127"
+                ]
+            }
+        },
+        "Ethernet129": {
+            "index": "33",
+            "lanes": "129",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet129"
+                ]
+            }
+        },
+        "Ethernet131": {
+            "index": "34",
+            "lanes": "131",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet131"
                 ]
             }
         }

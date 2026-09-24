@@ -1,14 +1,12 @@
 [Unit]
-Description=Dell Z9100 Platform modules
+Description=Dell Z9100 Platform Startup Service
 Before=pmon.service determine-reboot-cause.service pcie-check.service system-health.service watchdog-control.service
 DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStartPre=/usr/local/bin/iom_power_on.sh
-ExecStart=/usr/local/bin/z9100_platform.sh init
-ExecStop=/usr/local/bin/z9100_platform.sh deinit
-RemainAfterExit=yes
+ExecStart=/usr/local/bin/z9100_platform_startup.sh init
+RemainAfterExit=no
 
 [Install]
 WantedBy=multi-user.target
