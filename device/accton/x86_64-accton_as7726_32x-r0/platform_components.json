@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "7726-32X-O-AC-F": {
+            "component": {
+                "MB_CPLD1": { },
+                "MB_CPLD2": { },
+                "MB_CPLD3": { },
+                "FAN_CPLD": { },
+                "CPU_CPLD": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
