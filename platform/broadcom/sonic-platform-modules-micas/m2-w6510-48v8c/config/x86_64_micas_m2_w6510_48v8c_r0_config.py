@@ -747,6 +747,10 @@ DRIVERLISTS = [
     {"name": "plat_fan", "delay": 0},
     {"name": "plat_psu", "delay": 0},
     {"name": "plat_sff", "delay": 0},
+    {"name": "firmware_driver_cpld", "delay": 0},
+    {"name": "firmware_driver_ispvme", "delay": 0},
+    {"name": "firmware_driver_sysfs", "delay": 0},
+    {"name": "wb_firmware_upgrade_device", "delay": 0},
 ]
 
 DEVICE = [
