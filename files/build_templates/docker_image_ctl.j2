@@ -1,5 +1,5 @@
 #!/bin/bash
-{%- set bridged_containers = ["dhcp_server", "redfish"] %}
+{%- set bridged_containers = ["dhcp_server"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
