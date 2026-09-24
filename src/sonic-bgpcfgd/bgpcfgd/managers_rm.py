@@ -86,7 +86,7 @@ class RouteMapMgr(Manager):
         if rm in ROUTE_MAPS :
             cmds.append("route-map %s permit 100" % ("%s_RM" % rm))
             bgp_asn = self.__read_asn()
-            if bgp_asn is None or bgp_asn is '':
+            if bgp_asn is None or bgp_asn == '':
                 log_debug("BGPRouteMapMgr:: update route-map %s, but asn is not found in constants" % ("%s_RM" % rm))
                 return
             cmds.append(" set as-path prepend %s %s" % (bgp_asn, bgp_asn))
