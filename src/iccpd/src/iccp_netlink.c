@@ -1198,12 +1198,8 @@ int iccp_check_if_addr_from_netlink(int family, uint8_t *addr, struct LocalInter
                     {
                         if (family == AF_INET && ifa->ifa_family == AF_INET)
                         {
-                            if (!iccp_netlink_attr_payload_is(rth, sizeof(uint32_t)))
-                            {
-                                rth = RTA_NEXT(rth, rtl);
-                                continue;
-                            }
-                            if (*(uint32_t *)addr == ntohl(*((uint32_t *)RTA_DATA(rth))))
+                            if (iccp_netlink_attr_payload_is(rth, sizeof(uint32_t)) &&
+                                *(uint32_t *)addr == ntohl(*((uint32_t *)RTA_DATA(rth))))
                             {
                                 free(buf);
                                 return 1;
@@ -1213,19 +1209,19 @@ int iccp_check_if_addr_from_netlink(int family, uint8_t *addr, struct LocalInter
                         if (family == AF_INET6 && ifa->ifa_family == AF_INET6)
                         {
                             void *addr_netlink;
-                            if (!iccp_netlink_attr_payload_is(rth, 16))
+                            if (iccp_netlink_attr_payload_is(rth, 16))
                             {
-                                rth = RTA_NEXT(rth, rtl);
-                                continue;
-                            }
-                            addr_netlink = RTA_DATA(rth);
-                            if (!memcmp((uint8_t *)addr_netlink, addr, 16))
-                            {
-                                free(buf);
-                                return 1;
+                                addr_netlink = RTA_DATA(rth);
+                                if (!memcmp((uint8_t *)addr_netlink, addr, 16))
+                                {
+                                    free(buf);
+                                    return 1;
+                                }
                             }
                         }
                     }
+                    if (!iccp_netlink_attr_can_advance(rth, rtl))
+                        break;
                     rth = RTA_NEXT(rth, rtl);
                 }
             }

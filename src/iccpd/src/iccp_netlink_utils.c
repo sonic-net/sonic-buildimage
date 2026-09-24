@@ -51,6 +51,16 @@ int iccp_netlink_attr_payload_is(const struct rtattr *attr, size_t size)
     return (size_t)RTA_PAYLOAD(attr) == size;
 }
 
+int iccp_netlink_attr_can_advance(const struct rtattr *attr, int remaining)
+{
+    if (!attr || remaining < 0 ||
+        attr->rta_len < RTA_LENGTH(0) ||
+        attr->rta_len > remaining)
+        return 0;
+
+    return RTA_ALIGN(attr->rta_len) <= (unsigned int)remaining;
+}
+
 int iccp_netlink_parse_neighbor_attrs(int family, int is_delete,
                                       struct rtattr *tb[], void *address,
                                       size_t address_size,
