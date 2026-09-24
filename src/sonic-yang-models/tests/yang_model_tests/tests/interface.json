@@ -46,5 +46,8 @@
     "INTERFACE_INVALID_MAC_ADDR": {
         "desc": "Set invalid interface mac address.",
         "eStrKey": "Pattern"
+    },
+    "INTERFACE_SEND_REDIRECTS_VALID": {
+        "desc": "Configure send_redirects on interface."
     }
 }

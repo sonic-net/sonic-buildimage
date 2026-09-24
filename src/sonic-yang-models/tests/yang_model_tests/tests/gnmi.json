@@ -45,5 +45,16 @@
     },
     "GNMI_TABLE_WITH_DEFAULT_VRF_CORRECT": {
         "desc": "TABLE WITH DEFAULT VRF."
+    },
+    "GNMI_TABLE_WITH_VALID_WRITE_GATES": {
+        "desc": "TABLE WITH translib_write AND native_write ENABLED."
+    },
+    "GNMI_TABLE_WITH_INCORRECT_TRANSLIB_WRITE": {
+        "desc": "TABLE_WITH_INCORRECT_TRANSLIB_WRITE failure",
+        "eStrKey": "InvalidValue"
+    },
+    "GNMI_TABLE_WITH_INCORRECT_NATIVE_WRITE": {
+        "desc": "TABLE_WITH_INCORRECT_NATIVE_WRITE failure",
+        "eStrKey": "InvalidValue"
     }
 }

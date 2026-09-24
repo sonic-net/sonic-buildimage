@@ -7,6 +7,9 @@
 !
 {% for key, val in PREFIX_SET.items() %}
 {% if 'mode' in val %}
+{% if 'description' in val %}
+{{ip_str[md]}} prefix-list {{key}} description {{val['description']}}
+{% endif %}
 {% for pf_key, pf_val in PREFIX.items() %}
 {# Support both PREFIX_LIST and PREFIX_NOSEQ_LIST #}
 {% if pf_key|count == 4 %}

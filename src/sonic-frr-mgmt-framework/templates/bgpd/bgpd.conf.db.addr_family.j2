@@ -129,6 +129,13 @@
 {% if 'route_download_filter' in af_val %}
   table-map {{af_val['route_download_filter']}}
 {% endif %}
+{# -------legacy per-AF redistribute (prefer ROUTE_REDISTRIBUTE) ----- #}
+{% if 'redistribute_connected' in af_val and af_val['redistribute_connected'] == 'true' %}
+  redistribute connected
+{% endif %}
+{% if 'redistribute_static_rmap' in af_val %}
+  redistribute static route-map {{af_val['redistribute_static_rmap']}}
+{% endif %}
 {# -------bgp evpn - start --------------------------- #}
 {% if af == 'l2vpn_evpn' %}
 {% include "bgpd.conf.db.addr_family.evpn.j2" %}

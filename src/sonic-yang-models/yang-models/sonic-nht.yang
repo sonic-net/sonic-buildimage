@@ -1,0 +1,64 @@
+module sonic-nht {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-nht";
+    prefix nht;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC Next Hop tracking route resolution";
+
+    revision 2025-11-10 {
+        description
+            "Initial version";
+    }
+
+    container sonic-nht {
+
+        container NHT {
+
+            description "NHT part of config_db.json";
+
+            list NHT_LIST {
+
+                key "vrf_name";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        //type leafref {
+                        //    path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        //}
+                    }
+                    description "VRF name";
+                }
+
+                leaf ipv4_resolve_via_default {
+                    description "Enable IPv4 next hop tracking to resolve via default route";
+                    type boolean;
+                }
+
+                leaf ipv6_resolve_via_default {
+                    description "Enable IPv6 next hop tracking to resolve via default route";
+                    type boolean;
+                }
+            }
+            /* end of NHT_LIST */
+        }
+        /* end of container NHT */
+    }
+    /* end of container sonic-nht */
+}
+/* end of module sonic-nht */

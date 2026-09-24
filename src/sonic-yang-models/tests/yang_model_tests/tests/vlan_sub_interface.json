@@ -80,5 +80,8 @@
     "VLAN_SUB_INTERFACE_INVALID_IPV6_LINK_LOCAL": {
         "desc": "Configure VLAN sub interface with an invalid ipv6_use_link_local_only value.",
         "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
+    },
+    "VLAN_SUB_INTERFACE_SEND_REDIRECTS_VALID": {
+        "desc": "Configure send_redirects on VLAN sub-interface."
     }
 }

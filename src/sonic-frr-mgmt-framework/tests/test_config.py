@@ -1,6 +1,6 @@
 import copy
 import re
-from unittest.mock import MagicMock, NonCallableMagicMock, patch
+from unittest.mock import MagicMock, NonCallableMagicMock, call, patch
 
 swsscommon_module_mock = MagicMock(ConfigDBConnector = NonCallableMagicMock)
 # because can’t use dotted names directly in a call, have to create a dictionary and unpack it using **:
@@ -82,8 +82,7 @@ def hdl_confed_peers_cmd(is_del, cmd_list, chk_data):
     if is_del:
         chk_data = list(reversed(chk_data))
     for idx, cmd in enumerate(cmd_list):
-        # cmd is now a list: ['vtysh', '-c', ..., '-c', last_cmd]
-        # Extract last -c value
+        # cmd is a list: ['vtysh', '-c', ..., '-c', last_cmd]
         last_cmd = cmd[-1] if isinstance(cmd, list) else re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
         neg_cmd = False
         if last_cmd.startswith('no '):
@@ -127,6 +126,8 @@ bgp_globals_data = [
                        conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart stalepath-time 20']),
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'gr_preserve_fw_state': 'true'},
                        conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart preserve-fw-state']),
+        CmdMapTestInfo('BGP_GLOBALS', 'default', {'gr_disable_end_of_rib_marker': 'true'},
+                       conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart disable-eor']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv4_unicast', {'ebgp_route_distance': '100',
                                                                   'ibgp_route_distance': '115',
                                                                   'local_route_distance': '238'},
@@ -222,10 +223,28 @@ neighbor_shutdown_data = [
                   conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
 ]
 
+# Create test data for neighbor / peer-group tcp-mss
+tcp_mss_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  ignore_tail=None),
+    # tcp-mss on a neighbor
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.3.3.1',
+                  {'tcp_mss': '1360'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.3.3.1 tcp-mss 1360']),
+    # tcp-mss on a peer-group
+    CmdMapTestInfo('BGP_PEER_GROUP', 'default|PG1',
+                  {'tcp_mss': '1360'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor PG1 tcp-mss 1360'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd, skip_del=False):
     from frrcfgd.frrcfgd import BGPConfigDaemon
+    CmdMapTestInfo.data_buf.clear()
     daemon = BGPConfigDaemon()
     data_buf = {}
     # add data in list
@@ -269,7 +288,6 @@ def test_bgp_neighbor_shutdown():
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
     data_set_del_test(neighbor_shutdown_data, skip_del=True)
 
-
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bgp_neighbor_description_injection(run_cmd):
@@ -307,3 +325,710 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+def test_bgp_tcp_mss():
+    # Verify tcp-mss command generation for both BGP_NEIGHBOR and BGP_PEER_GROUP
+    data_set_del_test(tcp_mss_data, skip_del=True)
+
+bfd_strict_mode_data = [
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  ignore_tail=None),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.0.0.1',
+                  {'bfd': 'true', 'bfd_strict_mode': 'true'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.0.0.1 bfd strict']),
+    # Use a distinct peer-group name; PG1 may still be in CmdMapTestInfo.data_buf
+    # from test_bgp_tcp_mss (skip_del=True) and would inherit stale tcp_mss.
+    CmdMapTestInfo('BGP_PEER_GROUP', 'default|PG_STRICT',
+                  {'bfd': 'true', 'bfd_strict_mode': 'false'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor PG_STRICT bfd strict']),
+]
+
+evpn_mh_global_data = [
+    CmdMapTestInfo('EVPN_MH_GLOBAL', 'default',
+                  {'redirect_off': 'true'},
+                  ['configure terminal', '{}evpn mh redirect-off'],
+                  ignore_tail=None),
+]
+
+evpn_mh_interface_data = [
+    CmdMapTestInfo('EVPN_MH_INTERFACE', 'Ethernet120',
+                  {'mh_uplink': 'true'},
+                  ['configure terminal', 'interface Ethernet120', '{}evpn mh uplink'],
+                  ignore_tail=None),
+    CmdMapTestInfo('EVPN_MH_INTERFACE', 'PortChannel1',
+                  {'bypass': 'true'},
+                  ['configure terminal', 'interface PortChannel1', '{}evpn mh bypass'],
+                  ignore_tail=None),
+]
+
+evpn_ethernet_segment_data = [
+    CmdMapTestInfo('EVPN_ETHERNET_SEGMENT', 'Ethernet4',
+                  {'esi': '00:11:22:33:44:55:66:77:88:99', 'type': 'TYPE_0_OPERATOR_CONFIGURED'},
+                  ['configure terminal', 'interface Ethernet4',
+                   '{}evpn mh es-id 00:11:22:33:44:55:66:77:88:99'],
+                  ignore_tail=None),
+    CmdMapTestInfo('EVPN_ETHERNET_SEGMENT', 'Ethernet10',
+                  {'type': 'TYPE_3_MAC_BASED'},
+                  ['configure terminal', 'interface Ethernet10',
+                   '{}evpn mh es-id 10', 'no evpn mh es-sys-mac'],
+                  ignore_tail=None),
+    CmdMapTestInfo('EVPN_ETHERNET_SEGMENT', 'Ethernet120',
+                  {'df_pref': '100'},
+                  ['configure terminal', 'interface Ethernet120',
+                   '{}evpn mh es-df-pref 100'],
+                  ignore_tail=None),
+]
+
+def test_bgp_bfd_strict_mode():
+    data_set_del_test(bfd_strict_mode_data, skip_del=True)
+
+def test_evpn_mh_global_redirect_off():
+    data_set_del_test(evpn_mh_global_data)
+
+def test_evpn_mh_interface():
+    data_set_del_test(evpn_mh_interface_data)
+
+def test_evpn_ethernet_segment():
+    data_set_del_test(evpn_ethernet_segment_data, skip_del=True)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_mh_interface_row_delete_preserves_failed_attrs(run_cmd):
+    """Row delete must keep programmed attrs when vtysh removal fails."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = False
+    daemon = BGPConfigDaemon()
+    daemon.evpn_mh_intf_map = {'Ethernet120': {'mh_uplink': True, 'bypass': True}}
+    mh_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_MH_INTERFACE'][0]
+
+    mh_hdlr('EVPN_MH_INTERFACE', 'Ethernet120', None)
+
+    assert daemon.evpn_mh_intf_map == {'Ethernet120': {'mh_uplink': True, 'bypass': True}}
+    assert run_cmd.call_count == 2
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_mh_interface_row_delete_clears_untracked_attrs(run_cmd):
+    """Row delete must remove boot-programmed attrs not tracked in evpn_mh_intf_map."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    mh_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_MH_INTERFACE'][0]
+
+    mh_hdlr('EVPN_MH_INTERFACE', 'Ethernet220', None)
+
+    assert run_cmd.call_count == 2
+    cmds = _get_vtysh_commands(run_cmd)
+    assert any('no evpn mh uplink' in c for c in cmds)
+    assert any('no evpn mh bypass' in c for c in cmds)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_mh_global_redirect_off_hdel_from_cache(run_cmd):
+    """HDEL redirect_off must clear FRR when cache had it but the flag was not set."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    daemon.evpn_mh_redirect_off = False
+    table_key = ExtConfigDBConnector.get_table_key('EVPN_MH_GLOBAL', 'default')
+    daemon.table_data_cache[table_key] = {'redirect_off': 'true'}
+    mh_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_MH_GLOBAL'][0]
+
+    mh_hdlr('EVPN_MH_GLOBAL', 'default', {})
+
+    run_cmd.assert_called_with(
+        'EVPN_MH_GLOBAL',
+        CmdMapTestInfo.compose_vtysh_cmd(['configure terminal', 'no evpn mh redirect-off']),
+        True, None)
+    assert daemon.evpn_mh_redirect_off is False
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_unified_mode_evpn_mh_global_timer_cache_reset_enables_replay(run_cmd):
+    """Unified-mode replay: EVPN_MH_GLOBAL table_data_cache must be evicted.
+
+    __init__ pre-populates table_data_cache from CONFIG_DB, so replay would
+    otherwise mark timer fields as OP_NONE and skip pushing into empty mgmtd.
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    mh_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_MH_GLOBAL'][0]
+    table_key = ExtConfigDBConnector.get_table_key('EVPN_MH_GLOBAL', 'default')
+    timer_data = {'startup_delay': '120'}
+
+    daemon.table_data_cache[table_key] = dict(timer_data)
+    run_cmd.reset_mock()
+    mh_hdlr('EVPN_MH_GLOBAL', 'default', timer_data)
+    assert not run_cmd.called, \
+        "With pre-populated table_data_cache, timer replay should be skipped (OP_NONE)"
+
+    del daemon.table_data_cache[table_key]
+    run_cmd.reset_mock()
+    mh_hdlr('EVPN_MH_GLOBAL', 'default', timer_data)
+    cmds = _get_vtysh_commands(run_cmd)
+    assert any('evpn mh startup-delay 120' in c for c in cmds), \
+        "After cache eviction, timer must be pushed to FRR; cmds={}".format(cmds)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_port_id_matches_cfggen(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    assert daemon._evpn_es_port_id('Ethernet0') == '0'
+    assert daemon._evpn_es_port_id('Ethernet4') == '4'
+    assert daemon._evpn_es_port_id('PortChannel10') == '10'
+    a = daemon._evpn_es_port_id('Loopback0')
+    b = daemon._evpn_es_port_id('Loopback0')
+    assert a == b and a != daemon._evpn_es_port_id('Loopback1')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_port_id_crc32_fallback(run_cmd):
+    """Names with no trailing numeric suffix must fall back to the stable
+    zlib.crc32 hash, staying deterministic and non-zero."""
+    import zlib
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+
+    for ifname in ('', None, 'eth-mgmt', 'Bridge'):
+        port_id = daemon._evpn_es_port_id(ifname)
+        expected = str((zlib.crc32((ifname or '').encode()) & 0xFFFFFF) or 1)
+        assert port_id == expected
+        assert port_id.isdigit() and int(port_id) != 0
+
+    a = daemon._evpn_es_port_id('eth-mgmt')
+    b = daemon._evpn_es_port_id('eth-mgmt')
+    assert a == b
+    assert a != daemon._evpn_es_port_id('Bridge')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_system_mac_val(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    assert daemon._evpn_es_system_mac_val('00:11:22:33:44:55') == '00:11:22:33:44:55'
+    assert daemon._evpn_es_system_mac_val('') is None
+    assert daemon._evpn_es_system_mac_val(None) is None
+    assert daemon._evpn_es_system_mac_val(0) is None
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_df_pref_hdel(run_cmd):
+    """HDEL df_pref must clear FRR when programmed, even if boot cache still has it."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    table_key = ExtConfigDBConnector.get_table_key('EVPN_ETHERNET_SEGMENT', 'Ethernet120')
+    daemon.table_data_cache[table_key] = {'df_pref': '100'}
+    daemon.evpn_es_map['Ethernet120'] = {'df_pref': '100'}
+    es_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+
+    es_hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet120', {
+        'esi': '00:11:22:33:44:55:66:77:88:99',
+        'type': 'TYPE_0_OPERATOR_CONFIGURED',
+    })
+
+    run_cmd.assert_called_with(
+        'EVPN_ETHERNET_SEGMENT',
+        CmdMapTestInfo.compose_vtysh_cmd(['configure terminal', 'interface Ethernet120', 'no evpn mh es-df-pref']),
+        True, None)
+    assert 'df_pref' not in daemon.evpn_es_map.get('Ethernet120', {})
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_row_delete_preserves_failed_config(run_cmd):
+    """Row delete must keep programmed ES when vtysh removal fails."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = False
+    daemon = BGPConfigDaemon()
+    sig = ('type-0', '00:11:22:33:44:55:66:77:88:99')
+    daemon.evpn_es_map['Ethernet4'] = {'es_sig': sig, 'df_pref': '100'}
+    es_hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+
+    es_hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet4', None)
+
+    assert daemon.evpn_es_map['Ethernet4']['es_sig'] == sig
+    assert daemon.evpn_es_map['Ethernet4']['df_pref'] == '100'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_es_type3_resync_on_portchannel_system_mac(run_cmd):
+    """PORTCHANNEL system_mac changes must re-program TYPE_3 es-sys-mac."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    pc_hdlr = [h for t, h in daemon.table_handler_list if t == 'PORTCHANNEL'][0]
+    ifname = 'PortChannel10'
+    daemon.evpn_es_map[ifname] = {'es_sig': ('type-3', '10', None)}
+
+    def fake_get_entry(table, key):
+        if table == 'EVPN_ETHERNET_SEGMENT' and key == ifname:
+            return {'type': 'TYPE_3_MAC_BASED'}
+        if table == 'PORTCHANNEL' and key == ifname:
+            return {'system_mac': '00:11:22:33:44:55'}
+        return {}
+
+    with patch.object(daemon.config_db, 'get_entry', side_effect=fake_get_entry):
+        pc_hdlr('PORTCHANNEL', ifname, {'system_mac': '00:11:22:33:44:55'})
+
+    cmds = ' '.join(_get_vtysh_commands(run_cmd))
+    assert 'evpn mh es-sys-mac 00:11:22:33:44:55' in cmds
+    assert daemon.evpn_es_map[ifname]['es_sig'] == ('type-3', '10', '00:11:22:33:44:55')
+
+    run_cmd.reset_mock()
+    table_key = ExtConfigDBConnector.get_table_key('PORTCHANNEL', ifname)
+    daemon.table_data_cache[table_key] = {'system_mac': '00:11:22:33:44:55'}
+
+    def fake_get_entry_no_mac(table, key):
+        if table == 'EVPN_ETHERNET_SEGMENT' and key == ifname:
+            return {'type': 'TYPE_3_MAC_BASED'}
+        return {}
+
+    with patch.object(daemon.config_db, 'get_entry', side_effect=fake_get_entry_no_mac):
+        pc_hdlr('PORTCHANNEL', ifname, {})
+
+    cmds = ' '.join(_get_vtysh_commands(run_cmd))
+    assert 'no evpn mh es-sys-mac' in cmds
+    assert daemon.evpn_es_map[ifname]['es_sig'] == ('type-3', '10', None)
+
+
+# ---------------------------------------------------------------------------
+# Tests for the peer-group ordering fix (auto-create + unified-mode cache reset)
+# ---------------------------------------------------------------------------
+
+def _get_vtysh_commands(run_cmd_mock):
+    """Return searchable vtysh config strings from all g_run_command calls."""
+    out = []
+    for call in run_cmd_mock.call_args_list:
+        cmd = call[0][1]
+        if isinstance(cmd, list):
+            parts = []
+            i = 1
+            while i < len(cmd):
+                if cmd[i] == '-c' and i + 1 < len(cmd):
+                    parts.append(cmd[i + 1])
+                    i += 2
+                else:
+                    i += 1
+            out.append(' '.join(parts))
+        else:
+            out.append(cmd)
+    return out
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_pg_auto_create_when_neighbor_before_pg(run_cmd):
+    """BGP_NEIGHBOR arrives before BGP_PEER_GROUP (natsorted replay order).
+
+    frrcfgd must auto-create the peer-group in FRR before assigning the
+    neighbor to it, so that 'neighbor X peer-group PG' never references an
+    unknown peer-group.
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+
+    # local_asn is needed for vtysh commands to be built correctly
+    daemon.bgp_asn['default'] = 100
+    # PEER_V4 exists in CONFIG_DB but has NOT been sent to FRR yet
+    daemon.config_db.get_keys.return_value = [('default', 'PEER_V4')]
+
+    nbr_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_NEIGHBOR'][0]
+    run_cmd.reset_mock()
+
+    # Simulate: BGP_NEIGHBOR event arrives while bgp_peer_group cache is empty
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_group_name': 'PEER_V4'})
+
+    cmds = _get_vtysh_commands(run_cmd)
+
+    # Auto-create command must have been sent
+    pg_create_idx = next((i for i, c in enumerate(cmds) if 'neighbor PEER_V4 peer-group' in c
+                          and 'peer-group PEER_V4' not in c.split('neighbor PEER_V4 peer-group')[0]), None)
+    pg_assign_idx = next((i for i, c in enumerate(cmds) if "peer-group PEER_V4" in c
+                          and '10.0.0.1' in c), None)
+
+    assert pg_create_idx is not None, \
+        "peer-group auto-create 'neighbor PEER_V4 peer-group' was not sent to FRR; cmds={}".format(cmds)
+    assert pg_assign_idx is not None, \
+        "neighbor-to-peer-group assignment 'neighbor 10.0.0.1 peer-group PEER_V4' not sent; cmds={}".format(cmds)
+    assert pg_create_idx < pg_assign_idx, \
+        "peer-group must be created before neighbor is assigned; cmds={}".format(cmds)
+
+    # Cache must be updated so subsequent events don't double-create
+    assert 'PEER_V4' in daemon.bgp_peer_group.get('default', {}), \
+        "PEER_V4 should be tracked in bgp_peer_group cache after auto-create"
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_pg_auto_create_skipped_for_nonexistent_pg(run_cmd):
+    """BGP_NEIGHBOR references a peer-group that does not exist in CONFIG_DB.
+
+    The auto-create guard must NOT create a ghost peer-group in FRR.
+    frrcfgd still forwards the 'neighbor X peer-group PG' attribute command
+    to FRR (which real FRR rejects, since PG was never defined), but the key
+    protection is that the 'neighbor PG peer-group' definition command is
+    never sent, so FRR stays clean.
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+
+    daemon.bgp_asn['default'] = 100
+    # GHOST_PG is not present in CONFIG_DB at all
+    daemon.config_db.get_keys.return_value = []
+
+    nbr_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_NEIGHBOR'][0]
+    run_cmd.reset_mock()
+
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_group_name': 'GHOST_PG'})
+
+    cmds = _get_vtysh_commands(run_cmd)
+
+    # The peer-group definition ('neighbor GHOST_PG peer-group') must NOT be sent.
+    # This is the critical guard: without it frrcfgd would silently create a
+    # peer-group in FRR with no attributes (no remote-as, etc.) so sessions
+    # could never establish.
+    assert not any(c.endswith("'neighbor GHOST_PG peer-group'") for c in cmds), \
+        "ghost peer-group definition must NOT be sent to FRR; cmds={}".format(cmds)
+
+    # The peer-group must not be tracked in the cache either
+    assert 'GHOST_PG' not in daemon.bgp_peer_group.get('default', {}), \
+        "GHOST_PG must not appear in bgp_peer_group cache"
+
+
+def _vrf_vni_vtysh_cmd(vrf, vni=None, remove_vni=None):
+  cmds = ['configure terminal', 'vrf {}'.format(vrf)]
+  if remove_vni is not None:
+    cmds.append('no vni {}'.format(remove_vni))
+  if vni is not None:
+    cmds.append('vni {}'.format(vni))
+  cmds.append('exit-vrf')
+  return CmdMapTestInfo.compose_vtysh_cmd(cmds)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_add(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '5200'})
+
+    run_cmd.assert_called_once_with('VRF', _vrf_vni_vtysh_cmd('Vrf200', vni='5200'), True, None)
+    assert daemon.vrf_vni_map['Vrf200'] == '5200'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_replace(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {'Vrf200': '200'}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '100'})
+
+    # Replace is issued as two separately-tracked commands so a partial failure
+    # cannot desync FRR from the cache.
+    assert run_cmd.call_args_list == [
+        call('VRF', _vrf_vni_vtysh_cmd('Vrf200', remove_vni='200'), True, None),
+        call('VRF', _vrf_vni_vtysh_cmd('Vrf200', vni='100'), True, None),
+    ]
+    assert daemon.vrf_vni_map['Vrf200'] == '100'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_replace_add_fails_clears_cache(run_cmd):
+    """Replace where the remove succeeds but the add fails must not leave the
+    cache on the old VNI (FRR has already removed it); the entry is cleared so a
+    later revert to the old VNI is retried as a fresh add instead of skipped."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {'Vrf200': '200'}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    # remove old succeeds, add new fails
+    run_cmd.side_effect = [True, False]
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '100'})
+    assert 'Vrf200' not in daemon.vrf_vni_map
+
+    # revert CONFIG_DB to old VNI: cache is empty so it is retried as a fresh add
+    run_cmd.reset_mock(side_effect=True)
+    run_cmd.return_value = True
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '200'})
+    run_cmd.assert_called_once_with('VRF', _vrf_vni_vtysh_cmd('Vrf200', vni='200'), True, None)
+    assert daemon.vrf_vni_map['Vrf200'] == '200'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_zero_hdel_and_delete(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    daemon.vrf_vni_map = {'Vrf200': '5200'}
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '0'})
+    run_cmd.assert_called_with('VRF', _vrf_vni_vtysh_cmd('Vrf200', remove_vni='5200'), True, None)
+    assert 'Vrf200' not in daemon.vrf_vni_map
+
+    run_cmd.reset_mock()
+    daemon.vrf_vni_map = {'Vrf200': '5200'}
+    vrf_hdlr('VRF', 'Vrf200', {})
+    run_cmd.assert_called_with('VRF', _vrf_vni_vtysh_cmd('Vrf200', remove_vni='5200'), True, None)
+    assert 'Vrf200' not in daemon.vrf_vni_map
+
+    run_cmd.reset_mock()
+    daemon.vrf_vni_map = {'Vrf200': '5200'}
+    vrf_hdlr('VRF', 'Vrf200', None)
+    run_cmd.assert_called_with('VRF', _vrf_vni_vtysh_cmd('Vrf200', remove_vni='5200'), True, None)
+    assert 'Vrf200' not in daemon.vrf_vni_map
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_zero_to_active_skips_invalid_remove(run_cmd):
+    """vni=0 in cache must not emit 'no vni 0' when transitioning to a real VNI."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {'Vrf200': '0'}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '5200'})
+
+    run_cmd.assert_called_once_with(
+        'VRF', _vrf_vni_vtysh_cmd('Vrf200', vni='5200'), True, None)
+    assert daemon.vrf_vni_map['Vrf200'] == '5200'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_idempotent_when_unchanged(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {'Vrf200': '5200'}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '5200'})
+
+    run_cmd.assert_not_called()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_failed_add_not_cached_and_retried(run_cmd):
+    """A failed add must not be cached, so a same-VNI retry re-issues the command."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    run_cmd.return_value = False
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '5200'})
+    assert 'Vrf200' not in daemon.vrf_vni_map
+
+    run_cmd.reset_mock()
+    run_cmd.return_value = True
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '5200'})
+    run_cmd.assert_called_once_with('VRF', _vrf_vni_vtysh_cmd('Vrf200', vni='5200'), True, None)
+    assert daemon.vrf_vni_map['Vrf200'] == '5200'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_failed_replace_keeps_old(run_cmd):
+    """A failed replace must keep the old VNI cached for retry."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {'Vrf200': '200'}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    run_cmd.return_value = False
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '100'})
+    assert daemon.vrf_vni_map['Vrf200'] == '200'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_vrf_vni_failed_delete_keeps_vni(run_cmd):
+    """A failed delete must keep the VNI cached since FRR still has it programmed."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.vrf_vni_map = {'Vrf200': '5200'}
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    run_cmd.return_value = False
+    vrf_hdlr('VRF', 'Vrf200', None)
+    assert daemon.vrf_vni_map['Vrf200'] == '5200'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_unified_mode_vrf_vni_cache_reset_enables_replay(run_cmd):
+    """Unified-mode replay: vrf_vni_map must be reset before VRF replay.
+
+    __init__ pre-populates vrf_vni_map from CONFIG_DB, so replay would otherwise
+    treat every VNI as already programmed and skip pushing to mgmtd.
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    vrf_hdlr = [h for t, h in daemon.table_handler_list if t == 'VRF'][0]
+
+    daemon.vrf_vni_map = {'Vrf200': '5200'}
+    run_cmd.reset_mock()
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '5200'})
+    assert not run_cmd.called, \
+        "With pre-populated cache (no reset), replay should skip unchanged VNI"
+
+    daemon.vrf_vni_map = {}
+    run_cmd.reset_mock()
+    vrf_hdlr('VRF', 'Vrf200', {'vni': '5200'})
+    run_cmd.assert_called_once_with('VRF', _vrf_vni_vtysh_cmd('Vrf200', vni='5200'), True, None)
+    assert daemon.vrf_vni_map['Vrf200'] == '5200'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_unified_mode_cache_reset_enables_pg_creation(run_cmd):
+    """Unified-mode replay: bgp_peer_group cache must be reset before replay.
+
+    In unified mode bgpd starts empty, but __init__ pre-populates
+    bgp_peer_group from CONFIG_DB for ref_nbrs tracking.  Without the reset
+    the BGP_PEER_GROUP creation guard (line ~2898) sees the peer-group as
+    already present and skips sending 'neighbor PG peer-group' to vtysh,
+    leaving FRR with no peer-group config.
+
+    This test verifies the two states explicitly:
+      A) cache pre-populated  → creation skipped  (bug scenario)
+      B) cache cleared        → creation issued   (fixed scenario)
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon, BGPPeerGroup
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+
+    daemon.bgp_asn['default'] = 100
+    pg_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_PEER_GROUP'][0]
+
+    # --- Part A: bug scenario (cache pre-populated, no reset) ---
+    # Simulate __init__ pre-populating bgp_peer_group from CONFIG_DB
+    daemon.bgp_peer_group.setdefault('default', {})['PEER_V4'] = BGPPeerGroup('default')
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PEER_V4', {})
+    cmds_with_prepopulated_cache = _get_vtysh_commands(run_cmd)
+
+    assert not any('neighbor PEER_V4 peer-group' in c for c in cmds_with_prepopulated_cache), \
+        ("With pre-populated cache (no reset), creation should be skipped "
+         "(demonstrates the bug); cmds={}".format(cmds_with_prepopulated_cache))
+
+    # --- Part B: fixed scenario (cache reset, as done in unified-mode __init__) ---
+    daemon.bgp_peer_group = {}   # this is the fix at line 2445
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PEER_V4', {})
+    cmds_after_reset = _get_vtysh_commands(run_cmd)
+
+    assert any('neighbor PEER_V4 peer-group' in c for c in cmds_after_reset), \
+        ("After cache reset, 'neighbor PEER_V4 peer-group' must be sent to FRR; "
+         "cmds={}".format(cmds_after_reset))
+    assert 'PEER_V4' in daemon.bgp_peer_group.get('default', {}), \
+        "PEER_V4 must be tracked in bgp_peer_group cache after creation"
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_route_map_set_src(run_cmd):
+    """ROUTE_MAP set_src is applied as 'set src <ip>' under the route-map.
+
+    'set src' is northbound-owned in FRR, so only mgmtd accepts it.
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+
+    rmap_hdlr = [h for t, h in daemon.table_handler_list if t == 'ROUTE_MAP'][0]
+
+    for seq, addr in (('10', '7.7.7.7'), ('20', '2004::7')):
+        key = 'RM_SET_SRC|' + seq
+        run_cmd.reset_mock()
+        rmap_hdlr('ROUTE_MAP', key, {'route_operation': 'permit', 'set_src': addr})
+
+        set_src_calls = []
+        for c in run_cmd.call_args_list:
+            cmd = c[0][1]
+            text = ' '.join(cmd) if isinstance(cmd, list) else cmd
+            if 'set src {}'.format(addr) in text:
+                set_src_calls.append(c)
+        assert len(set_src_calls) == 1, \
+            "expected a single 'set src {}' command; cmds={}".format(
+                    addr, _get_vtysh_commands(run_cmd))
+        cmd, daemons = set_src_calls[0][0][1], set_src_calls[0][0][3]
+        text = ' '.join(cmd) if isinstance(cmd, list) else cmd
+        assert 'route-map RM_SET_SRC permit {}'.format(seq) in text, \
+            "'set src' must be applied under the route-map sequence; cmd={}".format(text)
+        assert daemons == ['mgmtd'], \
+            "'set src' must be sent to mgmtd only, got {}".format(daemons)
+
+        run_cmd.reset_mock()
+        rmap_hdlr('ROUTE_MAP', key, {'route_operation': 'permit'})
+        assert any('no set src {}'.format(addr) in (
+                    ' '.join(c[0][1]) if isinstance(c[0][1], list) else c[0][1])
+                   for c in run_cmd.call_args_list), \
+            "expected 'no set src {}' when field is removed; cmds={}".format(
+                    addr, _get_vtysh_commands(run_cmd))
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_route_map_set_src_row_delete(run_cmd):
+    """Whole-sequence ROUTE_MAP delete must also target mgmtd when set_src is present."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    rmap_hdlr = [h for t, h in daemon.table_handler_list if t == 'ROUTE_MAP'][0]
+
+    key = 'RM_SET_SRC|10'
+    rmap_hdlr('ROUTE_MAP', key, {'route_operation': 'permit', 'set_src': '7.7.7.7'})
+    run_cmd.reset_mock()
+
+    rmap_hdlr('ROUTE_MAP', key, None)
+
+    delete_calls = []
+    for c in run_cmd.call_args_list:
+        cmd = c[0][1]
+        text = ' '.join(cmd) if isinstance(cmd, list) else cmd
+        if 'no route-map RM_SET_SRC permit 10' in text:
+            delete_calls.append(c)
+    assert len(delete_calls) == 2, \
+        "expected delete to default daemons and mgmtd; cmds={}".format(
+                _get_vtysh_commands(run_cmd))
+    default_daemons = delete_calls[0][0][3]
+    assert default_daemons is None or default_daemons == ['zebra', 'bgpd', 'ospfd'], \
+        "first delete must use ROUTE_MAP default daemons, got {}".format(default_daemons)
+    assert delete_calls[1][0][3] == ['mgmtd'], \
+        "second delete must target mgmtd when set_src is present, got {}".format(
+                delete_calls[1][0][3])

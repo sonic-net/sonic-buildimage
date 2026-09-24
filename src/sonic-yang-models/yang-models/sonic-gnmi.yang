@@ -20,6 +20,11 @@ module sonic-gnmi {
 
     description "GNMI YANG Module for SONiC OS";
 
+    revision 2026-07-21 {
+        description
+            "Add translib_write and native_write leaves to gate
+             gNMI translib and native write/config operations (default disabled).";
+    }
     revision 2025-09-01 {
         description "Add VRF support for GNMI service";
     }
@@ -90,6 +95,18 @@ module sonic-gnmi {
                 leaf save_on_set {
                     type boolean;
                     description "Flag for enabling save on set.";
+                }
+
+                leaf translib_write {
+                    type boolean;
+                    default false;
+                    description "Enable gNMI translib write/config operations.";
+                }
+
+                leaf native_write {
+                    type boolean;
+                    default false;
+                    description "Enable gNMI native DB write/config operations.";
                 }
 
                 leaf enable_crl {
