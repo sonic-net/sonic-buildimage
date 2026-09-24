@@ -254,6 +254,11 @@ module sonic-port{
 					default "false";
 					description "Enable or disable fast link-up on the port";
 				}
+        
+				leaf id {
+						description "Numeric identifier (SDN Port) used by the controller to address the interface";
+						type int32;
+				}
 
 
 			} /* end of list PORT_LIST */
