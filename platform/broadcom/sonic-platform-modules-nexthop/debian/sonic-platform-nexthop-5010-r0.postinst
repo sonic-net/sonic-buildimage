@@ -14,5 +14,3 @@ systemctl enable voltage-margin-init.service
 systemctl start voltage-margin-init.service
 systemctl enable adm1266-rtc-sync.timer
 systemctl start adm1266-rtc-sync.timer
-systemctl enable watchdog.timer
-systemctl start watchdog.timer

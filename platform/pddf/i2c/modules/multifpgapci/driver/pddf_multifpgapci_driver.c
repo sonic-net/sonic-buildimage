@@ -47,7 +47,7 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/workqueue.h>
-
+#include <linux/irqreturn.h>
 #include "pddf_client_defs.h"
 #include "pddf_multifpgapci_defs.h"
 
@@ -560,6 +560,47 @@ free_regmap_irqs:
 	return err;
 }
 
+static irqreturn_t watchdog_msi_handler(int irq, void *data) {
+	panic("[%s] watchdog expired. attempting kdump\n", __FUNCTION__);
+	return IRQ_HANDLED;
+}
+
+static int
+register_watchdog_msi_handler(struct pci_dev *pci_dev,
+							  struct pddf_multifpgapci_drvdata *pci_privdata,
+							  unsigned int msi_domain, unsigned int hw_irq) {
+	if (!pci_privdata->msi_domain_irq_chip_data[msi_domain]) {
+		printk("%s: [%s] MSI domain %u not initialized\n", MULTIFPGA,
+			   __FUNCTION__, msi_domain);
+		return -EINVAL;
+	}
+	int virq = regmap_irq_get_virq(
+		pci_privdata->msi_domain_irq_chip_data[msi_domain], hw_irq);
+	if (virq <= 0) {
+		pddf_dbg(MULTIFPGA,
+				 KERN_ERR
+				 "[%s] failed to get virq for msi_domain=%d hw_irq=%d, ret=%d",
+				 __FUNCTION__, msi_domain, hw_irq, virq);
+		return virq;
+	}
+
+	int ret = request_threaded_irq(virq, NULL, watchdog_msi_handler,
+								   IRQF_ONESHOT, "watchdog", pci_dev);
+	if (ret < 0) {
+		printk(
+			"%s: [%s] Failed to request_threaded_irq for watchdog MSI handler. ret=%d\n",
+			MULTIFPGA, __FUNCTION__, ret);
+		return ret;
+	}
+
+	pci_privdata->watchdog_virq = virq;
+	pddf_dbg(MULTIFPGA,
+			 KERN_INFO
+			 "[%s] registered handler for watchdog MSI, virq=%d, msi_domain=%d, hw_irq=%d\n",
+			 __FUNCTION__, virq, msi_domain, hw_irq);
+	return 0;
+}
+
 ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 					  const char *buf, size_t count) {
 	pddf_dbg(MULTIFPGA, KERN_INFO "%s ..\n", __FUNCTION__);
@@ -643,6 +684,45 @@ ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 
 		ret = register_msi_domain(pci_dev, msi_domain, irq_chip_name,
 								  unmask_reg, status_reg, irq_line_mask);
+		if (ret)
+			return ret;
+	} else if (strncmp(buf, "register_watchdog_msi",
+					   strlen("register_watchdog_msi")) == 0) {
+		unsigned int msi_domain, hw_irq;
+		int sscanf_result =
+			sscanf(buf, "register_watchdog_msi %u %u", &msi_domain, &hw_irq);
+		if (sscanf_result != 2) {
+			printk("%s: [%s] Failed to parse buf: %s\n", MULTIFPGA,
+				   __FUNCTION__, buf);
+			return -EINVAL;
+		}
+		if (msi_domain >= MAX_NUM_MSI_VECTORS) {
+			printk("%s: [%s] MSI domain %d out of range [0, %d)\n", MULTIFPGA,
+				   __FUNCTION__, msi_domain, MAX_NUM_MSI_VECTORS);
+			return -EINVAL;
+		}
+
+		pci_dev = (struct pci_dev *)get_device_table(cdata->i2c_name);
+		if (!pci_dev) {
+			printk("%s: [%s] PCI device not found\n", MULTIFPGA, __FUNCTION__);
+			return -ENODEV;
+		}
+		struct pddf_multifpgapci_drvdata *pci_privdata =
+			(struct pddf_multifpgapci_drvdata *)dev_get_drvdata(&pci_dev->dev);
+		if (!pci_privdata) {
+			printk("[%s] Failed to get pci_privdata\n", __FUNCTION__);
+			return -ENODEV;
+		}
+
+		const int reg_width = pci_privdata->regmap_config.val_bits;
+		if (hw_irq >= reg_width) {
+			printk("%s: [%s] hw_irq %d out of range [0, %d)\n", MULTIFPGA,
+				   __FUNCTION__, hw_irq, reg_width);
+			return -EINVAL;
+		}
+
+		ret = register_watchdog_msi_handler(pci_dev, pci_privdata, msi_domain,
+											hw_irq);
 		if (ret)
 			return ret;
 	}
@@ -876,6 +956,8 @@ static void pddf_multifpgapci_remove(struct pci_dev *dev)
 
 	delete_fpga_data_node(pci_name(dev));
 
+	if (pci_privdata->watchdog_virq)
+		free_irq(pci_privdata->watchdog_virq, dev);
 	if (!IS_ERR_OR_NULL(pci_privdata->regmap))
 		regmap_exit(pci_privdata->regmap);
 	for (unsigned i = 0; i < pci_privdata->num_msi_vectors; ++i) {
