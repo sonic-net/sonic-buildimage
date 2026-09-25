@@ -12,6 +12,11 @@ module sonic-bgp-device-global {
     description
         "SONIC Device-specific BGP global data";
 
+    revision 2026-07-22 {
+        description "Add a pattern to the BGP confederation peers leaf, previously an
+                     unconstrained string, enforcing its semi-colon-separated sub-ASN shape.";
+    }
+    
     revision 2026-04-28 {
         description "Add chassis_tsa_supported to select CHASSIS_APP_DB vs per-linecard TSA orchestration";
     }
@@ -88,8 +93,12 @@ module sonic-bgp-device-global {
 
                 /* List of peer ASN part of the confederation */
                 leaf peers {
-                    type string;
-                    description "List of sub-ASNs in the confederation separated by semi-colon";
+                    type string {
+                        pattern "[1-9][0-9]*(;[1-9][0-9]*)*";
+                    }
+                    description "List of sub-ASNs in the confederation separated by semi-colon.
+                                 The pattern enforces the semi-colon-separated shape; it does not
+                                 range-check each sub-ASN against the 32-bit AS number maximum.";
                 }
             }
             /* end of CONFED container */

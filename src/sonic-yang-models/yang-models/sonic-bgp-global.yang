@@ -19,6 +19,10 @@ module sonic-bgp-global {
         prefix ext;
     }
 
+    import sonic-bgp-common {
+        prefix bgpcmn;
+    }
+
     organization
         "SONiC";
 
@@ -27,6 +31,15 @@ module sonic-bgp-global {
 
     description
         "SONIC BGP Global YANG";
+
+    revision 2026-07-22 {
+        description
+            "Constrain the afi_safi keys of BGP_GLOBALS_AF_LIST, BGP_GLOBALS_AF_AGGREGATE_ADDR_LIST
+             and BGP_GLOBALS_AF_NETWORK_LIST to bgp_afi_safi_global instead of an unconstrained
+             string, so the SR-Policy families are rejected at validation time.
+             Also constrain rr_cluster_id, previously an unconstrained string, to a union of an
+             IPv4 address and a 32-bit integer.";
+    }
 
     revision 2021-02-26 {
         description
@@ -113,8 +126,15 @@ module sonic-bgp-global {
                 }
 
                 leaf rr_cluster_id {
-                    type string;
-                    description "Route reflector cluster ID used to identify the reflector cluster.";
+                    type union {
+                        type inet:ipv4-address;
+                        type uint32 {
+                            range "1..4294967295";
+                        }
+                    }
+                    description "Route reflector cluster ID used to identify the reflector cluster.
+                                 Expressed either in dotted-quad notation or as a non-zero 32-bit
+                                 integer (1..4294967295).";
                 }
 
                 leaf rr_allow_out_policy {
@@ -333,7 +353,7 @@ module sonic-bgp-global {
                 }
 
                 leaf afi_safi {
-                    type string;
+                    type bgpcmn:bgp_afi_safi_global;
                     description "Address family name and subsequent address family name";
                 }
 
@@ -478,7 +498,7 @@ module sonic-bgp-global {
                 }
 
                 leaf afi_safi {
-                    type string;
+                    type bgpcmn:bgp_afi_safi_global;
                     description "Address family name and subsequent address family name";
                 }
 
@@ -518,7 +538,7 @@ module sonic-bgp-global {
                 }
 
                 leaf afi_safi {
-                    type string;
+                    type bgpcmn:bgp_afi_safi_global;
                     description "Address family name and subsequent address family name";
                 }
 
