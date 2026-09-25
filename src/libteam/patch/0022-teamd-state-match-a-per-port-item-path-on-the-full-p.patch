@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Karthik Siruvalam <karthik@nexthop.ai>
+Date: Tue, 22 Sep 2026 09:10:28 +0000
+Subject: [PATCH] teamd: state: match a per-port item path on the full port
+ name
+
+__find_by_item_path() resolves the port in ports.<ifname>.<subpath> with
+strncmp(tdport->ifname, token, strlen(token)), i.e. a prefix match. If
+another member of the same team has a longer name that starts with the
+requested one and comes first in the port list, the item is read from or
+written to the wrong port: on a team with veth_a and veth_a2,
+
+    teamdctl team0 state item set ports.veth_a.runner.macsec_gate false
+
+flipped veth_a2. SONiC member names make this realistic (Ethernet4 vs
+Ethernet40, Ethernet12 vs Ethernet120 in the same PortChannel), and
+runner.macsec_gate is driven by teammgr through this path. Require the
+port name length to match as well.
+
+Signed-off-by: Karthik Siruvalam <karthik@nexthop.ai>
+---
+ teamd/teamd_state.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/teamd/teamd_state.c b/teamd/teamd_state.c
+index 0714880..07008fe 100644
+--- a/teamd/teamd_state.c
++++ b/teamd/teamd_state.c
+@@ -318,7 +318,11 @@ static int __find_by_item_path(struct teamd_state_val_item **p_item,
+ 		subpath = ifname_end + 1;
+ 
+ 		teamd_for_each_tdport(cur_tdport, ctx) {
+-			if (!strncmp(cur_tdport->ifname, ifname_start,
++			/* Full-name match: a plain strncmp over ifname_len would
++			 * also accept any longer port name that merely starts
++			 * with the requested one (Ethernet4 vs Ethernet40). */
++			if (strlen(cur_tdport->ifname) == ifname_len &&
++			    !strncmp(cur_tdport->ifname, ifname_start,
+ 				     ifname_len)) {
+ 				tdport = cur_tdport;
+ 				break;
