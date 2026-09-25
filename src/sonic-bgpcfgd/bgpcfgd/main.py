@@ -22,6 +22,7 @@ from .managers_bbr import BBRMgr, BGP_BBR_TABLE_NAME
 from .managers_bgp import BGPPeerMgrBase
 from .managers_db import BGPDataBaseMgr
 from .managers_intf import InterfaceMgr
+from .managers_nht import NhtMgr
 from .managers_setsrc import ZebraSetSrc
 from .managers_static_rt import StaticRouteMgr
 from .managers_rm import RouteMapMgr
@@ -120,6 +121,8 @@ def do_work():
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
+        # Nexthop Tracking Manager
+        NhtMgr(common_objs, "CONFIG_DB", "NEXTHOP_TRACKING"),
     ]
 
     if device_info.is_chassis():
