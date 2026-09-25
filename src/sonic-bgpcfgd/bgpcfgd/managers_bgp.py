@@ -200,6 +200,28 @@ class BGPPeerMgrBase(Manager):
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
         return
 
+    def _has_invalid_dynamic_peer_name(self, data):
+        name = data.get("name")
+        return (self.peer_type == "dynamic"
+                and isinstance(name, str)
+                and ("\r" in name or "\n" in name))
+
+    def _has_invalid_dynamic_peer_key(self, key):
+        return (self.peer_type == "dynamic"
+                and isinstance(key, str)
+                and ("\r" in key or "\n" in key))
+
+    def handler(self, key, op, data):
+        if self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
+            return
+        if (op == swsscommon.SET_COMMAND
+                and self._has_invalid_dynamic_peer_name(data)):
+            log_err("BGP_PEER_RANGE name must not contain line breaks")
+            return
+
+        return super(BGPPeerMgrBase, self).handler(key, op, data)
+
     def parse_key(self, key):
         """Validate and normalize a BGP peer table key."""
         if not isinstance(key, str):
@@ -242,6 +264,13 @@ class BGPPeerMgrBase(Manager):
         :param key: key of the changed table
         :param data: the data associated with the change
         """
+        if self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
+            return True
+        if self._has_invalid_dynamic_peer_name(data):
+            log_err("BGP_PEER_RANGE name must not contain line breaks")
+            return True
+
         key_parts = self.parse_key(key)
         if key_parts is None:
             return True
@@ -557,6 +586,10 @@ class BGPPeerMgrBase(Manager):
         'DEL' handler for the BGP PEER tables
         :param key: key of the neighbor
         """
+        if self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
+            return
+
         key_parts = self.parse_key(key)
         if key_parts is None:
             return
