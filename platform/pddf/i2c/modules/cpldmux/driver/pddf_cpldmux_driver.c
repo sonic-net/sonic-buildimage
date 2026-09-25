@@ -226,17 +226,12 @@ static void cpld_mux_remove(struct platform_device *pdev)
 {
     struct i2c_mux_core *muxc  = platform_get_drvdata(pdev);
     struct i2c_adapter *adap = muxc->parent;
-    PDDF_CPLDMUX_PDATA *cpldmux_pdata = pdev->dev.platform_data;
 
     i2c_mux_del_adapters(muxc);
     if (muxc->priv)
         kfree(muxc->priv);
     i2c_put_adapter(adap);
 
-    if (cpldmux_pdata) {
-        pddf_dbg(CPLDMUX, KERN_DEBUG "%s: Freeing cpldmux platform data\n", __FUNCTION__);
-        kfree(cpldmux_pdata);
-    }
 }
 
 static const struct platform_device_id mux_ids[] = {
