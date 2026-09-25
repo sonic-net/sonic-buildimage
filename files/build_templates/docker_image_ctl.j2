@@ -1,5 +1,5 @@
 #!/bin/bash
-{%- set bridged_containers = ["dhcp_server", "redfish"] %}
+{%- set bridged_containers = ["dhcp_server"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
@@ -699,13 +699,16 @@ start() {
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
-    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
 {%- if docker_container_name == "redfish" %}
-        # redfish uses bridge networking with port mapping (-p 443:18080)
-        NET="bridge"
-{%- else %}
-        NET="host"
+    # Read the Redfish listen port from CONFIG_DB (REDFISH|config|port),
+    # defaulting to 443, and pass it to the container so bmcweb binds it.
+    REDFISH_PORT=$($SONIC_DB_CLI CONFIG_DB HGET "REDFISH|config" "port" 2> /dev/null)
+    [ -z "$REDFISH_PORT" ] && REDFISH_PORT=443
+    REDFISH_OPT=" --env REDFISH_PORT=$REDFISH_PORT "
 {%- endif %}
+
+    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
+        NET="host"
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
@@ -877,6 +880,9 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "dash-ha" %}
         -v /var/log/dash-ha:/var/log/dash-ha:rw \
+{%- endif %}
+{%- if docker_container_name == "redfish" %}
+        $REDFISH_OPT \
 {%- endif %}
 {%- if docker_container_name == "database" %}
         $DB_OPT \
