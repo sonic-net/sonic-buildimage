@@ -1,0 +1,5 @@
+libcareplus (1.0.2-1) unstable; urgency=medium
+
+  * Initial packaging for SONiC, based on upstream v1.0.2.
+
+ -- yuezhou.jk <yuezhou.jk@alibaba-inc.com>  Fri, 07 Aug 2026 00:00:00 +0000
