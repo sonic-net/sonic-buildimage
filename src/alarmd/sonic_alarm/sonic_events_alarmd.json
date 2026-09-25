@@ -1,0 +1,64 @@
+{
+    "events": [
+        {
+            "name": "PSU_MISSING",
+            "severity": "CRITICAL",
+            "enable": "true",
+            "message": "Absent"
+        },
+        {
+            "name": "PSU_POWER_BAD",
+            "severity": "CRITICAL",
+            "enable": "true",
+            "message": "Power Not OK"
+        },
+        {
+            "name": "PSU_VOLTAGE_OOR",
+            "severity": "MAJOR",
+            "enable": "true",
+            "message": "Voltage Out of Range"
+        },
+        {
+            "name": "PSU_CURRENT_OOR",
+            "severity": "MAJOR",
+            "enable": "true",
+            "message": "Current Out of Range"
+        },
+        {
+            "name": "PSU_FAN_FAULT",
+            "severity": "MAJOR",
+            "enable": "true",
+            "message": "Fan Fault"
+        },
+        {
+            "name": "PSU_TEMP_FAULT",
+            "severity": "MAJOR",
+            "enable": "true",
+            "message": "Temperature Fault"
+        },
+        {
+            "name": "FAN_MISSING",
+            "severity": "MAJOR",
+            "enable": "true",
+            "message": "Absent"
+        },
+        {
+            "name": "FAN_FAULT",
+            "severity": "MAJOR",
+            "enable": "true",
+            "message": "Fault"
+        },
+        {
+            "name": "FAN_UNDER_SPEED",
+            "severity": "MINOR",
+            "enable": "true",
+            "message": "Under Speed"
+        },
+        {
+            "name": "FAN_OVER_SPEED",
+            "severity": "MINOR",
+            "enable": "true",
+            "message": "Over Speed"
+        }
+    ]
+}
