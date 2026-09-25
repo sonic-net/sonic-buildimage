@@ -11,6 +11,10 @@ module sonic-bgp-sentinel {
         prefix stypes;
     }
 
+    import sonic-extension {
+        prefix ext;
+    }
+
     organization
         "SONiC";
 
@@ -27,6 +31,8 @@ module sonic-bgp-sentinel {
 
     container sonic-bgp-sentinel {
         container BGP_SENTINELS {
+            ext:create-only;
+
             list BGP_SENTINELS_LIST {
                 key "sentinel_name";
 

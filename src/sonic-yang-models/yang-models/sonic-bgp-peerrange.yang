@@ -19,6 +19,10 @@ module sonic-bgp-peerrange {
         prefix svnet;
     }
 
+    import sonic-extension {
+        prefix ext;
+    }
+
     organization
         "SONiC";
 
@@ -35,6 +39,8 @@ module sonic-bgp-peerrange {
 
     container sonic-bgp-peerrange {
         container BGP_PEER_RANGE {
+            ext:create-only;
+
             list BGP_PEER_RANGE_LIST {
                 description "This list supports BGP_PEER_RANGE_TEMPLATE configurations with vnet and vrf support";
                 key "vrf_name peer_range_name";
