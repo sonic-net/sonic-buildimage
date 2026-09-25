@@ -40,6 +40,25 @@ static void test_attr_payload_size(void)
     assert(!iccp_netlink_attr_can_advance(NULL, RTA_SPACE(1)));
 }
 
+static void test_parse_rtattrs_rejects_malformed_headers(void)
+{
+    struct rtattr attr = {0};
+    struct rtattr *tb[NDA_MAX + 1] = {0};
+
+    attr.rta_type = NDA_DST;
+    attr.rta_len = RTA_LENGTH(0);
+    tb[NDA_DST] = &attr;
+    assert(iccp_netlink_parse_rtattrs(tb, NDA_MAX, &attr,
+                                     sizeof(attr) - 1) == -EINVAL);
+    assert(tb[NDA_DST] == NULL);
+
+    attr.rta_len = sizeof(attr) - 1;
+    tb[NDA_DST] = &attr;
+    assert(iccp_netlink_parse_rtattrs(tb, NDA_MAX, &attr,
+                                     sizeof(attr)) == -EINVAL);
+    assert(tb[NDA_DST] == NULL);
+}
+
 static void test_parse_rtattrs(void)
 {
     uint8_t buffer[RTA_SPACE(4) + RTA_SPACE(6)] = {0};
@@ -185,6 +204,7 @@ static void test_ipv6_neighbor_attrs(void)
 int main(void)
 {
     test_attr_payload_size();
+    test_parse_rtattrs_rejects_malformed_headers();
     test_parse_rtattrs();
     test_ipv4_neighbor_attrs();
     test_ipv6_neighbor_attrs();
