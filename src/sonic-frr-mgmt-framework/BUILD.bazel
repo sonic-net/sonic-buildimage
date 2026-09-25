@@ -1,0 +1,176 @@
+load("@aspect_rules_py//py:defs.bzl", "py_library")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@sonic_build_infra//python:pytest_test.bzl", "sonic_py_pytest_test")
+load("@tar.bzl", "tar")
+
+py_library(
+    name = "frrcfgd_lib",
+    srcs = glob(["frrcfgd/**/*.py"]),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+)
+
+py_library(
+    name = "tests_lib",
+    srcs = glob(["tests/*.py"]),
+    imports = ["."],
+)
+
+_TEMPLATE_FILES = [
+    "templates/bfdd/bfdd.conf.j2",
+    "templates/bgpd/bgpd.conf.j2",
+    "templates/bgpd/bgpd.conf.db.j2",
+    "templates/bgpd/bgpd.conf.db.route_map.j2",
+    "templates/bgpd/bgpd.conf.db.pref_list.j2",
+    "templates/bgpd/bgpd.conf.db.nbr_or_peer.j2",
+    "templates/bgpd/bgpd.conf.db.nbr_af.j2",
+    "templates/bgpd/bgpd.conf.db.comm_list.j2",
+    "templates/bgpd/bgpd.conf.db.addr_family.j2",
+    "templates/bgpd/bgpd.conf.db.addr_family.evpn.j2",
+    "templates/ospfd/ospfd.conf.j2",
+    "templates/ospfd/ospfd.conf.db.area.j2",
+    "templates/ospfd/ospfd.conf.db.comm_list.j2",
+    "templates/ospfd/ospfd.conf.db.distributeroute.j2",
+    "templates/ospfd/ospfd.conf.db.interface.j2",
+    "templates/ospfd/ospfd.conf.db.policyrange.j2",
+    "templates/ospfd/ospfd.conf.db.vlink.j2",
+    "templates/staticd/staticd.conf.j2",
+    "templates/staticd/staticd.db.conf.j2",
+    "templates/staticd/staticd.db.default_route.conf.j2",
+    "templates/frr/frr.conf.j2",
+]
+
+# Map setup.py `data_files=[('sonic/frrcfgd', [...])]` to py_wheel
+# `data_files`: `<src>` → `data/sonic/frrcfgd/<basename>` inside the wheel.
+# Result matches Make wheel layout: `sonic_frr_mgmt_framework-1.0.data/data/sonic/frrcfgd/*.j2`.
+_DATA_FILES = {
+    src: "data/sonic/frrcfgd/" + src.split("/")[-1]
+    for src in _TEMPLATE_FILES
+}
+
+py_wheel(
+    name = "wheel",
+    # setup.py `name`. py_wheel normalises this to sonic_frr_mgmt_framework
+    # for the .whl filename, but writes it verbatim into METADATA's Name
+    # field, so it has to carry the dashes to match the Make wheel.
+    distribution = "sonic-frr-mgmt-framework",
+    version = "1.0",
+    # setup.py `description` / `url`.
+    summary = "Utility to dynamically configuration FRR based on config DB data update event",
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    requires = [
+        "jinja2>=2.10",
+        "netaddr==0.8.0",
+        "pyyaml>=6.0.1",
+    ],
+    entry_points = {
+        "console_scripts": [
+            "frrcfgd = frrcfgd.frrcfgd:main",
+        ],
+    },
+    data_files = _DATA_FILES,
+    # bdist_wheel emits top_level.txt listing every top-level import name
+    # setup.py's find_packages() returns; here that's `frrcfgd` (real package)
+    # and `tests` (the tests/ dir has an __init__.py, so find_packages picks
+    # it up). Matches the Make wheel's <dist-info>/top_level.txt byte-for-byte.
+    extra_distinfo_files = {
+        ":top_level_txt": "top_level.txt",
+    },
+    deps = [
+        ":frrcfgd_lib",
+        ":tests_lib",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# top_level.txt content: mirrors the Make wheel produced by `setup.py
+# bdist_wheel`, which lists everything find_packages() returns.
+write_file(
+    name = "top_level_txt",
+    out = "top_level.txt",
+    content = [
+        "frrcfgd",
+        "tests",
+        "",
+    ],
+)
+
+write_file(
+    name = "frrcfgd_console_script",
+    out = "frrcfgd_bin",
+    content = [
+        "#!/usr/bin/python3",
+        "# -*- coding: utf-8 -*-",
+        "import re",
+        "import sys",
+        "from frrcfgd.frrcfgd import main",
+        "if __name__ == '__main__':",
+        "    sys.argv[0] = re.sub(r'(-script\\.pyw|\\.exe)?$', '', sys.argv[0])",
+        "    sys.exit(main())",
+    ],
+)
+
+tar(
+    name = "install",
+    srcs = [
+        "frrcfgd/__init__.py",
+        "frrcfgd/frrcfgd.py",
+        ":frrcfgd_console_script",
+    ] + _TEMPLATE_FILES,
+    mtree = [
+        "./usr/lib/python3/dist-packages/frrcfgd/__init__.py uid=0 gid=0 mode=0644 type=file content=$(location frrcfgd/__init__.py)",
+        "./usr/lib/python3/dist-packages/frrcfgd/frrcfgd.py uid=0 gid=0 mode=0644 type=file content=$(location frrcfgd/frrcfgd.py)",
+        "./usr/local/bin/frrcfgd uid=0 gid=0 mode=0755 type=file content=$(location :frrcfgd_console_script)",
+    ] + [
+        # setup.py `data_files=[('sonic/frrcfgd', [...])]` is a RELATIVE path, so
+        # `pip3 install` lays it under the install prefix (/usr/local on Debian)
+        # => /usr/local/sonic/frrcfgd/. docker-fpm-frr/docker_init.sh consumes it
+        # via `sonic-cfggen -T /usr/local/sonic/frrcfgd`, so the templates MUST
+        # land there (NOT /usr/share/sonic/frrcfgd).
+        "./usr/local/sonic/frrcfgd/" + src.split("/")[-1] +
+        " uid=0 gid=0 mode=0644 type=file content=$(location " + src + ")"
+        for src in _TEMPLATE_FILES
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# =============================================================================
+# Unit tests. Bazel equivalent of the Make-side test step in slave.mk's
+# SONIC_PYTHON_WHEELS recipe:
+#     pip3 install ".[testing]" && pip3 uninstall --yes <self>
+#     timeout ... python3 -m pytest        # gate: wheel is built only if green
+#
+# `tests_lib` above stays non-testonly because the wheel depends on it (setup.py
+# packages `tests` and Make ships it inside the docker image), so the deps are
+# layered on here instead.
+#
+# The cleanest suite in this batch: swsscommon is never imported. Both test files
+# replace the whole swsscommon.swsscommon module with a MagicMock through
+# patch.dict('sys.modules') before importing frrcfgd, so nothing reaches a live
+# redis and no SONiC library has to be staged.
+# =============================================================================
+py_library(
+    name = "pytest_lib",
+    testonly = True,
+    deps = [
+        ":frrcfgd_lib",
+        ":tests_lib",
+        # frrcfgd.py imports netaddr at module level (setup.py install_requires).
+        "@sonic_frr_mgmt_pip//netaddr",
+        "@sonic_frr_mgmt_pip//pytest",
+    ],
+)
+
+_TEST_FILES = [
+    "test_config.py",
+    "test_constructor.py",
+]
+
+[sonic_py_pytest_test(
+    name = f[:-len(".py")],
+    test_file = "tests/" + f,
+    # venv name from bazel/pyproject.toml [project].name.
+    venv = "sonic-frr-mgmt-framework",
+    deps = [":pytest_lib"],
+) for f in _TEST_FILES]
