@@ -40,11 +40,16 @@ if [ -z "$syslog_counter" ]; then
     syslog_counter="false"
 fi
 
-# With RELP, https://github.com/sonic-net/sonic-buildimage/pull/18113, the
-# logs from containers will be queued during host rsyslog restart.
-# To restart rsyslog unconditionally when system reboots or rsyslog config
-# is updated allows the rsyslog service to rebind correctly.
+TMPFILE=$(mktemp /tmp/rsyslog.conf.XXXXXX)
+trap 'rm -f "$TMPFILE"' EXIT
+
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\", \"syslog_counter\": \"$syslog_counter\"}" \
-    > /etc/rsyslog.conf
+    > "$TMPFILE"
+
+if ! cp "$TMPFILE" /etc/rsyslog.conf; then
+    echo "Failed to update /etc/rsyslog.conf; not restarting rsyslog" >&2
+    exit 1
+fi
+
 systemctl restart rsyslog
