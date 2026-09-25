@@ -10,6 +10,9 @@
 # bmcweb-activate binds the port we want and hands the socket over the way
 # systemd would, so bmcweb serves where it is configured to. exec keeps the pid
 # supervisord is watching.
+#
+# REDFISH_PORT is passed in by the container control script (redfish.sh), which
+# reads REDFISH|config|port from CONFIG_DB at 'docker create' time.
 
 set -u
 
@@ -18,20 +21,16 @@ BMCWEB_ACTIVATE="${BMCWEB_ACTIVATE:-/usr/bin/bmcweb-activate}"
 
 DEFAULT_PORT=443
 
-# sonic-db-cli aborts in this container, so read the mounted redis socket
-# directly. The database id is the fixed SONiC one from
-# /var/run/redis/sonic-db/database_config.json.
-REDIS_SOCK="${BMCWEB_REDIS_SOCK:-/var/run/redis/redis.sock}"
-CONFIG_DB_ID="${BMCWEB_CONFIG_DB_ID:-4}"
-
 log() { logger -t bmcweb-start "$*"; echo "bmcweb-start: $*"; }
 
-# Any read failure leaves the default in place: an unreachable CONFIG_DB must
-# not stop the API from coming up, and the standard port is the safe answer.
-PORT="$(redis-cli -s "${REDIS_SOCK}" -n "${CONFIG_DB_ID}" \
-        HGET 'REDFISH|config' port 2>/dev/null)"
+# An invalid port must not stop the API from coming up; the standard port is
+# the safe answer.
+PORT="${REDFISH_PORT:-${DEFAULT_PORT}}"
 case "${PORT}" in
-    ''|*[!0-9]*) PORT="${DEFAULT_PORT}" ;;
+    ''|*[!0-9]*)
+        log "configured port '${PORT}' is not a number; using ${DEFAULT_PORT}"
+        PORT="${DEFAULT_PORT}"
+        ;;
 esac
 if [ "${PORT}" -lt 1 ] || [ "${PORT}" -gt 65535 ]; then
     log "configured port is out of range; using ${DEFAULT_PORT}"

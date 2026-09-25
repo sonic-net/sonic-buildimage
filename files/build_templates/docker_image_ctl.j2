@@ -699,6 +699,14 @@ start() {
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
+{%- if docker_container_name == "redfish" %}
+    # Read the Redfish listen port from CONFIG_DB (REDFISH|config|port),
+    # defaulting to 443, and pass it to the container so bmcweb binds it.
+    REDFISH_PORT=$($SONIC_DB_CLI CONFIG_DB HGET "REDFISH|config" "port" 2> /dev/null)
+    [ -z "$REDFISH_PORT" ] && REDFISH_PORT=443
+    REDFISH_OPT=" --env REDFISH_PORT=$REDFISH_PORT "
+{%- endif %}
+
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
         NET="host"
 
@@ -872,6 +880,9 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "dash-ha" %}
         -v /var/log/dash-ha:/var/log/dash-ha:rw \
+{%- endif %}
+{%- if docker_container_name == "redfish" %}
+        $REDFISH_OPT \
 {%- endif %}
 {%- if docker_container_name == "database" %}
         $DB_OPT \
