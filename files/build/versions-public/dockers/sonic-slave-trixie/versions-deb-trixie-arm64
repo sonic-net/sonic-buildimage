@@ -1,3 +1,5 @@
+base-files==13.8+deb13u7
+bash==5.2.37-2+b10
 bc==1.07.1-4+b1
 binfmt-support==2.2.2-7+b1
 binutils-aarch64-linux-gnu==2.44-3
@@ -77,5 +79,6 @@ shim-unsigned==16.1-2~deb13u1
 squashfs-tools==1:4.6.1-1+b1
 t1utils==1.41-4+b1
 time==1.9-0.2+b1
+tzdata==2026c-0+deb13u1
 xdelta3==3.0.11-dfsg-1.2+b1
 xmlstarlet==1.6.1-4+b1
