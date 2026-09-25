@@ -140,11 +140,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 		client_ptr = (struct i2c_client *)get_device_table(device_ptr->i2c_name);
 		if (client_ptr)
 		{
-			pddf_dbg(CPLD, KERN_ERR "Removing %s client: 0x%p\n", device_ptr->i2c_name, (void *)client_ptr);
 			char *pdata = client_ptr->dev.platform_data;
+			pddf_dbg(CPLD, KERN_ERR "Removing %s client: 0x%p\n", device_ptr->i2c_name, (void *)client_ptr);
 			i2c_unregister_device(client_ptr);
 			delete_device_table(device_ptr->i2c_name);
-			/* the client name string was allocated here at create time */
 			kfree(pdata);
 		}
 		else

@@ -180,11 +180,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         client_ptr = (struct i2c_client *)get_device_table(cdata->i2c_name);
         if (client_ptr)
         {
-            pddf_dbg(FAN, KERN_ERR "Removing %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
             FAN_PDATA *pdata = client_ptr->dev.platform_data;
+            pddf_dbg(FAN, KERN_ERR "Removing %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
             i2c_unregister_device(client_ptr);
             delete_device_table(cdata->i2c_name);
-            /* the platform data was allocated here at create time */
             if (pdata) {
                 kfree(pdata->fan_attrs);
                 kfree(pdata);
