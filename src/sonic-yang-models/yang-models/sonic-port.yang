@@ -255,6 +255,35 @@ module sonic-port{
 					description "Enable or disable fast link-up on the port";
 				}
 
+				leaf learn_mode {
+					description
+						"MAC address learning mode for the port bridge port. portmgr
+						 propagates this value from CONFIG_DB to APPL_DB and portsorch
+						 applies it as the SAI bridge-port FDB learning mode. When unset,
+						 hardware learning is used.";
+					type enumeration {
+						enum drop {
+							description "Drop packets with an unknown source MAC and do not learn.";
+						}
+						enum disable {
+							description "Do not learn new source MACs. Forwarding is unaffected.";
+						}
+						enum hardware {
+							description "Learn source MACs in hardware. This is the default.";
+						}
+						enum cpu_trap {
+							description "Trap packets with an unknown source MAC to the CPU and do not learn in hardware.";
+						}
+						enum cpu_log {
+							description "Copy packets with an unknown source MAC to the CPU for logging and do not learn in hardware.";
+						}
+						enum notification {
+							description "Raise an FDB event for an unknown source MAC and do not learn in hardware.";
+						}
+					}
+					default hardware;
+				}
+
 
 			} /* end of list PORT_LIST */
 
