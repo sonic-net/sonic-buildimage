@@ -773,7 +773,20 @@ RUN eatmydata apt install -y python-is-python3
 # TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
 {%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
 ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
-RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
+RUN curl -fsSL -o /tmp/bazelisk-release ${bazelisk_url} \
+ && chmod 755 /tmp/bazelisk-release \
+ && BAZELISK_VERSION=$(/tmp/bazelisk-release bazeliskVersion | sed -n 's/^Bazelisk version: //p') \
+ && test -n "${BAZELISK_VERSION}" \
+ && mkdir /tmp/bazelisk-build \
+ && cd /tmp/bazelisk-build \
+ && GOTOOLCHAIN=local go mod init sonic.local/bazelisk-build \
+ && GOTOOLCHAIN=local go get github.com/bazelbuild/bazelisk@${BAZELISK_VERSION} \
+ && GOTOOLCHAIN=local CGO_ENABLED=0 GOOS=linux GOARCH={{ CONFIGURED_ARCH }} \
+    go build -mod=readonly -trimpath -buildvcs=false \
+    -ldflags="-s -w -X github.com/bazelbuild/bazelisk/core.BazeliskVersion=${BAZELISK_VERSION}" \
+    -o /usr/local/bin/bazel github.com/bazelbuild/bazelisk \
+ && go version -m /usr/local/bin/bazel \
+ && rm -rf /tmp/bazelisk-release /tmp/bazelisk-build /root/go/pkg/mod /root/.cache/go-build
 {% endif -%}
 
 # Install Rust
