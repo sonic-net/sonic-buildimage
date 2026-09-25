@@ -5,9 +5,9 @@ Subject: [PATCH] Object saving/loading removed
 
 ---
  doc/scapy/usage.rst | 35 -----------------------------------
- scapy/utils.py      | 37 +++----------------------------------
+ scapy/utils.py      | 39 ++++++++++++++-----------------------
  test/regression.uts | 17 -----------------
- 3 files changed, 3 insertions(+), 86 deletions(-)
+ 3 files changed, 4 insertions(+), 87 deletions(-)
 
 diff --git a/doc/scapy/usage.rst b/doc/scapy/usage.rst
 index 1202d9cc..ed3184f9 100644
@@ -59,6 +59,15 @@ diff --git a/scapy/utils.py b/scapy/utils.py
 index e6a432e8..9b7ad905 100644
 --- a/scapy/utils.py
 +++ b/scapy/utils.py
+@@ -15,7 +15,7 @@
+ 
+ import argparse
+ import array
+-import base64
++import base64  # noqa: F401  # re-exported via scapy.all; used by pinned tests
+ import collections
+ import decimal
+ import difflib
 @@ -25,7 +25,6 @@ import inspect
  import locale
  import math
