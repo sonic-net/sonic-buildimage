@@ -789,6 +789,7 @@ ifneq ($(BLDENV), )
 endif
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
+	$(Q)./ciena/stage-submodule-patches.sh
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 
 	$(Q)$(SONIC_WT_GITDIR_FIXUP)
@@ -826,6 +827,7 @@ showtag:
 init :
 	$(Q)git submodule update --init --recursive
 	$(Q)git submodule foreach --recursive '[ -f .git ] && echo "gitdir: $$(realpath --relative-to=. $$(cut -d" " -f2 .git))" > .git'
+	$(Q)./ciena/stage-submodule-patches.sh
 
 .ONESHELL : reset
 reset :
