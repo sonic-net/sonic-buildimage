@@ -1,0 +1,249 @@
+module sonic-optical-amplifier {
+  yang-version 1.1;
+  namespace "http://github.com/sonic-net/sonic-optical-amplifier";
+  prefix opt-amp;
+
+  organization
+    "SONiC";
+  contact
+    "SONiC";
+  description
+    "OTN_OA and OTN_OSC YANG Module for SONiC OS";
+
+  revision 2026-06-01 {
+    description
+      "First revision, derived from openconfig yang model";
+    reference
+      "openconfig-optical-amplifier.yang, version 2019-12-06";
+  }
+
+  typedef optical-amplifier-type {
+    type enumeration {
+      enum EDFA {
+        description
+          "Erbium doped fiber amplifer (EDFA)";
+      }
+      enum FORWARD_RAMAN {
+        description
+          "Forward pumping Raman amplifier";
+      }
+      enum BACKWARD_RAMAN {
+        description
+          "Backward pumping Raman amplifier";
+      }
+      enum HYBRID {
+        description
+          "Hybrid backward pumping Raman + EDFA amplifier";
+      }
+    }
+    description
+      "Type definition for different types of optical amplifiers.
+       Derived from the OPTICAL_AMPLIFIER_TYPE identity in
+       openconfig-optical-amplifier.yang";
+  }
+
+  typedef optical-amplifier-mode {
+    type enumeration {
+      enum CONSTANT_POWER {
+        description
+          "Constant power mode. In constant power mode, the amplifier
+           will maintain a constant output power by adjusting the
+           amplifier gain and/or related variable optical attenuators";
+      }
+      enum CONSTANT_GAIN {
+        description
+          "Constant gain mode. In constant gain mode, the amplifier
+           will maintain a constant amplifier gain";
+      }
+      enum DYNAMIC_GAIN {
+        description
+          "Dynamic gain mode. In dynamic gain mode, the amplifier will
+           automatically adjust gain to stay within parameters defined
+           by target-gain, min-gain and max-gain";
+      }
+    }
+    description
+      "Type definition for different types of optical amplifier
+       operating modes. Derived from the OPTICAL_AMPLIFIER_MODE
+       identity in openconfig-optical-amplifier.yang";
+  }
+
+  typedef gain-range {
+    type enumeration {
+      enum LOW_GAIN_RANGE {
+        description
+          "LOW gain range setting";
+      }
+      enum MID_GAIN_RANGE {
+        description
+          "MID gain range setting";
+      }
+      enum HIGH_GAIN_RANGE {
+        description
+          "HIGH gain range setting";
+      }
+      enum FIXED_GAIN_RANGE {
+        description
+          "Fixed or non-switched gain amplfier";
+      }
+    }
+    description
+      "Base type for expressing the gain range for a switched gain
+       amplifier. Derived from the GAIN_RANGE identity in
+       openconfig-optical-amplifier.yang";
+  }
+
+  typedef fiber-type-profile {
+    type enumeration {
+      enum DSF {
+        description
+          "Dispersion shifted fiber";
+      }
+      enum LEAF {
+        description
+          "Large effective area fiber";
+      }
+      enum SSMF {
+        description
+          "Standard single mode fiber";
+      }
+      enum TWC {
+        description
+          "True wave classic";
+      }
+      enum TWRS {
+        description
+          "True wave reduced slope";
+      }
+    }
+    description
+      "Type definition for different profiles of fiber types.
+       Derived from the FIBER_TYPE_PROFILE identity in
+       openconfig-optical-amplifier.yang";
+  }
+
+  container sonic-optical-amplifier {
+    description
+      "Top-level container for the OTN optical amplifier configuration";
+    container OTN_OA {
+      description
+        "Enclosing container for list of amplifiers";
+      list OTN_OA_LIST {
+        key "name";
+        description
+          "List of optical amplifiers, keyed by amplifier name";
+        leaf name {
+          type string;
+          description
+            "User-defined name assigned to identify a specific amplifier
+             in the device";
+        }
+        leaf type {
+          type optical-amplifier-type;
+          description
+            "Type of the amplifier";
+        }
+        leaf target-gain {
+          type decimal64 {
+            fraction-digits 2;
+            range "0..max";
+          }
+          units "dB";
+          description
+            "Positive gain applied by the amplifier. This is used
+             when the amp-mode is in CONSTANT_GAIN or DYNAMIC_GAIN
+             mode to set the target gain that the amplifier should
+             achieve.";
+        }
+        leaf min-gain {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dB";
+          description
+            "The minimum allowed gain of the amplifier. This is used
+             when the amp-mode is in CONSTANT_POWER or DYNAMIC_GAIN mode
+             to prevent the gain from dropping below a desired threshold.
+             If left empty, the platform will apply a minimum gain based
+             on hardware specifications.";
+        }
+        leaf max-gain {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dB";
+          description
+            "The maximum allowed gain of the amplifier. This is used
+             when the amp-mode is in CONSTANT_POWER or DYNAMIC_GAIN mode
+             to prevent the gain from exceeding a desired threshold. If
+             left empty, the platform will apply a maximum gain based on
+             hardware specifications.";
+        }
+        leaf target-gain-tilt {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dB";
+          description
+            "Gain tilt control";
+        }
+        leaf gain-range {
+          type gain-range;
+          description
+            "Selected gain range.  The gain range is a platform-defined
+             value indicating the switched gain amplifier setting";
+        }
+        leaf amp-mode {
+          type optical-amplifier-mode;
+          description
+            "The operating mode of the amplifier";
+        }
+        leaf target-output-power {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dBm";
+          description
+            "Output optical power of the amplifier.";
+        }
+        leaf max-output-power {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dBm";
+          description
+            "The maximum optical output power of the amplifier. This
+             may be used to prevent the output power from exceeding a
+             desired threshold.";
+        }
+        leaf enabled {
+          type boolean;
+          description
+            "Turns power on / off to the amplifiers gain module.";
+        }
+        leaf fiber-type-profile {
+          type fiber-type-profile;
+          description
+            "The fiber type profile specifies details about the
+             fiber type which are needed to accurately determine
+             the gain and perform efficient amplification. This is
+             only needed for Raman type amplifiers.";
+        }
+      }
+    }
+    container OTN_OSC {
+      description
+        "Enclosing container for list of supervisory channels";
+      list OTN_OSC_LIST {
+        key "interface";
+        description
+          "List of optical supervisory channels, keyed by interface";
+        leaf interface {
+          type string;
+          description
+            "Reference to an OSC interface";
+        }
+      }
+    }
+  }
+}

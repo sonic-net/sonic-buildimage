@@ -224,6 +224,8 @@ yang_files = [
     'sonic-fast-linkup.yang',
     'sonic-alarm.yang',
     'sonic-event.yang',
+    'sonic-optical-amplifier.yang',
+    'sonic-optical-attenuator.yang',
 ]
 
 class my_build_py(build_py):
