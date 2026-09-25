@@ -42,6 +42,7 @@
 #include "../include/mlacp_sync_update.h"
 #include "../include/system.h"
 #include "../include/scheduler.h"
+#include "../include/iccp_utils.h"
 
 #include <signal.h>
 
@@ -444,6 +445,18 @@ static void mlacp_sync_send_syncDoneData(struct CSM* csm)
  * Sync Receiver APIs
  *
  *****************************************************************/
+static bool mlacp_is_valid_ifname_field(const char *name, size_t field_size)
+{
+    const char *terminator;
+
+    if (!name)
+        return false;
+
+    terminator = memchr(name, '\0', field_size);
+    return terminator != NULL &&
+           iccp_is_interface_name_valid(name, terminator - name);
+}
+
 static void mlacp_sync_recv_sysConf(struct CSM* csm, struct Msg* msg)
 {
     mLACPSysConfigTLV* sysconf = NULL;
@@ -487,19 +500,25 @@ static void mlacp_sync_recv_portState(struct CSM* csm, struct Msg* msg)
 
 static void mlacp_sync_recv_aggConf(struct CSM* csm, struct Msg* msg)
 {
-    mLACPAggConfigTLV* portconf = NULL;
+    mLACPAggConfigTLV portconf;
 
-    portconf = (mLACPAggConfigTLV*)&(msg->buf[sizeof(ICCHdr)]);
-    if (mlacp_fsm_update_Agg_conf(csm, portconf) == MCLAG_ERROR)
+    if (iccp_parse_agg_config_tlv(msg->buf, msg->len, &portconf) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Received invalid Aggregator Config TLV");
+        mlacp_sync_send_nak_handler(csm, msg);
+        return;
+    }
+
+    if (mlacp_fsm_update_Agg_conf(csm, &portconf) == MCLAG_ERROR)
     {
         mlacp_sync_send_nak_handler(csm, msg);
         MLACP_SET_ICCP_RX_DBG_COUNTER(csm,
-            portconf->icc_parameter.type, ICCP_DBG_CNTR_STS_ERR);
+            portconf.icc_parameter.type, ICCP_DBG_CNTR_STS_ERR);
     }
     else
     {
         MLACP_SET_ICCP_RX_DBG_COUNTER(csm,
-            portconf->icc_parameter.type, ICCP_DBG_CNTR_STS_OK);
+            portconf.icc_parameter.type, ICCP_DBG_CNTR_STS_OK);
     }
 
     return;
@@ -575,27 +594,38 @@ static void mlacp_sync_recv_syncReq(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_portChanInfo(struct CSM* csm, struct Msg* msg)
 {
     mLACPPortChannelInfoTLV* portconf = NULL;
-    size_t tlv_len;
+    size_t declared_tlv_len;
+    size_t required_tlv_len;
     int count;
 
     portconf = (mLACPPortChannelInfoTLV*)&(msg->buf[sizeof(ICCHdr)]);
 
-    /* Validate that msg is large enough to hold the TLV header */
-    if (msg->len < sizeof(ICCHdr) + sizeof(mLACPPortChannelInfoTLV))
+    if (iccp_validate_tlv(
+            msg->buf, msg->len, sizeof(mLACPPortChannelInfoTLV),
+            NULL, &declared_tlv_len) != 0)
     {
-        ICCPD_LOG_WARN(__FUNCTION__, "Received PortChannel Info TLV too short for header: %zu", msg->len);
+        ICCPD_LOG_WARN(__FUNCTION__, "Received invalid PortChannel Info TLV");
         return;
     }
 
-    /* Validate num_of_vlan_id against actual message length */
     count = ntohs(portconf->num_of_vlan_id);
-    tlv_len = sizeof(ICCHdr) + sizeof(mLACPPortChannelInfoTLV)
-              + (size_t)count * sizeof(struct mLACPVLANData);
-    if (tlv_len > msg->len)
+    required_tlv_len = sizeof(mLACPPortChannelInfoTLV)
+                       + (size_t)count * sizeof(struct mLACPVLANData);
+    if (required_tlv_len > declared_tlv_len)
     {
         ICCPD_LOG_WARN(__FUNCTION__,
-            "PortChannel Info num_of_vlan_id %d exceeds msg len %zu, dropping",
-            count, msg->len);
+            "PortChannel Info num_of_vlan_id %d exceeds TLV len %zu, dropping",
+            count, declared_tlv_len);
+        return;
+    }
+
+    if (portconf->if_name_len >= sizeof(portconf->if_name) ||
+        !mlacp_is_valid_ifname_field(
+            portconf->if_name, sizeof(portconf->if_name)) ||
+        portconf->if_name_len != strlen(portconf->if_name))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+            "PortChannel Info contains an invalid interface name");
         return;
     }
 
@@ -619,6 +649,14 @@ static void mlacp_sync_recv_peerLlinkInfo(struct CSM* csm, struct Msg* msg)
     mLACPPeerLinkInfoTLV* peerlink = NULL;
 
     peerlink = (mLACPPeerLinkInfoTLV*)&(msg->buf[sizeof(ICCHdr)]);
+    if (!mlacp_is_valid_ifname_field(
+            peerlink->if_name, sizeof(peerlink->if_name)))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+            "PeerLink Info contains an invalid interface name");
+        return;
+    }
+
     mlacp_fsm_update_peerlink_info( csm, peerlink);
     MLACP_SET_ICCP_RX_DBG_COUNTER(csm,
         peerlink->icc_parameter.type, ICCP_DBG_CNTR_STS_OK);
@@ -629,28 +667,42 @@ static void mlacp_sync_recv_peerLlinkInfo(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_macInfo(struct CSM* csm, struct Msg* msg)
 {
     struct mLACPMACInfoTLV* mac_info = NULL;
-    size_t tlv_len;
+    size_t declared_tlv_len;
+    size_t required_tlv_len;
     int count;
 
     mac_info = (struct mLACPMACInfoTLV *)&(msg->buf[sizeof(ICCHdr)]);
 
-    /* Validate that msg is large enough to hold the TLV header */
-    if (msg->len < sizeof(ICCHdr) + sizeof(struct mLACPMACInfoTLV))
+    if (iccp_validate_tlv(
+            msg->buf, msg->len, sizeof(struct mLACPMACInfoTLV),
+            NULL, &declared_tlv_len) != 0)
     {
-        ICCPD_LOG_WARN(__FUNCTION__, "Received MAC Info TLV too short for header: %zu", msg->len);
+        ICCPD_LOG_WARN(__FUNCTION__, "Received invalid MAC Info TLV");
         return;
     }
 
-    /* Validate num_of_entry against actual message length */
     count = ntohs(mac_info->num_of_entry);
-    tlv_len = sizeof(ICCHdr) + sizeof(struct mLACPMACInfoTLV)
-              + (size_t)count * sizeof(struct mLACPMACData);
-    if (tlv_len > msg->len)
+    required_tlv_len = sizeof(struct mLACPMACInfoTLV)
+                       + (size_t)count * sizeof(struct mLACPMACData);
+    if (required_tlv_len > declared_tlv_len)
     {
         ICCPD_LOG_WARN(__FUNCTION__,
-            "MAC Info num_of_entry %d exceeds msg len %zu, dropping",
-            count, msg->len);
+            "MAC Info num_of_entry %d exceeds TLV len %zu, dropping",
+            count, declared_tlv_len);
         return;
+    }
+
+    for (int index = 0; index < count; ++index)
+    {
+        if (!mlacp_is_valid_ifname_field(
+                mac_info->MacEntry[index].ifname,
+                sizeof(mac_info->MacEntry[index].ifname)))
+        {
+            ICCPD_LOG_WARN(__FUNCTION__,
+                "MAC Info entry %d contains an invalid interface name",
+                index);
+            return;
+        }
     }
 
     mlacp_fsm_update_mac_info_from_peer(csm, mac_info);
@@ -663,28 +715,42 @@ static void mlacp_sync_recv_macInfo(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_arpInfo(struct CSM* csm, struct Msg* msg)
 {
     struct mLACPARPInfoTLV* arp_info = NULL;
-    size_t tlv_len;
+    size_t declared_tlv_len;
+    size_t required_tlv_len;
     int count;
 
     arp_info = (struct mLACPARPInfoTLV *)&(msg->buf[sizeof(ICCHdr)]);
 
-    /* Validate that msg is large enough to hold the TLV header */
-    if (msg->len < sizeof(ICCHdr) + sizeof(struct mLACPARPInfoTLV))
+    if (iccp_validate_tlv(
+            msg->buf, msg->len, sizeof(struct mLACPARPInfoTLV),
+            NULL, &declared_tlv_len) != 0)
     {
-        ICCPD_LOG_WARN(__FUNCTION__, "Received ARP Info TLV too short for header: %zu", msg->len);
+        ICCPD_LOG_WARN(__FUNCTION__, "Received invalid ARP Info TLV");
         return;
     }
 
-    /* Validate num_of_entry against actual message length */
     count = ntohs(arp_info->num_of_entry);
-    tlv_len = sizeof(ICCHdr) + sizeof(struct mLACPARPInfoTLV)
-              + (size_t)count * sizeof(struct ARPMsg);
-    if (tlv_len > msg->len)
+    required_tlv_len = sizeof(struct mLACPARPInfoTLV)
+                       + (size_t)count * sizeof(struct ARPMsg);
+    if (required_tlv_len > declared_tlv_len)
     {
         ICCPD_LOG_WARN(__FUNCTION__,
-            "ARP Info num_of_entry %d exceeds msg len %zu, dropping",
-            count, msg->len);
+            "ARP Info num_of_entry %d exceeds TLV len %zu, dropping",
+            count, declared_tlv_len);
         return;
+    }
+
+    for (int index = 0; index < count; ++index)
+    {
+        if (!mlacp_is_valid_ifname_field(
+                arp_info->ArpEntry[index].ifname,
+                sizeof(arp_info->ArpEntry[index].ifname)))
+        {
+            ICCPD_LOG_WARN(__FUNCTION__,
+                "ARP Info entry %d contains an invalid interface name",
+                index);
+            return;
+        }
     }
 
     mlacp_fsm_update_arp_info(csm, arp_info);
@@ -697,28 +763,42 @@ static void mlacp_sync_recv_arpInfo(struct CSM* csm, struct Msg* msg)
 static void mlacp_sync_recv_ndiscInfo(struct CSM *csm, struct Msg *msg)
 {
     struct mLACPNDISCInfoTLV *ndisc_info = NULL;
-    size_t tlv_len;
+    size_t declared_tlv_len;
+    size_t required_tlv_len;
     int count;
 
     ndisc_info = (struct mLACPNDISCInfoTLV *)&(msg->buf[sizeof(ICCHdr)]);
 
-    /* Validate that msg is large enough to hold the TLV header */
-    if (msg->len < sizeof(ICCHdr) + sizeof(struct mLACPNDISCInfoTLV))
+    if (iccp_validate_tlv(
+            msg->buf, msg->len, sizeof(struct mLACPNDISCInfoTLV),
+            NULL, &declared_tlv_len) != 0)
     {
-        ICCPD_LOG_WARN(__FUNCTION__, "Received NDISC Info TLV too short for header: %zu", msg->len);
+        ICCPD_LOG_WARN(__FUNCTION__, "Received invalid NDISC Info TLV");
         return;
     }
 
-    /* Validate num_of_entry against actual message length */
     count = ntohs(ndisc_info->num_of_entry);
-    tlv_len = sizeof(ICCHdr) + sizeof(struct mLACPNDISCInfoTLV)
-              + (size_t)count * sizeof(struct NDISCMsg);
-    if (tlv_len > msg->len)
+    required_tlv_len = sizeof(struct mLACPNDISCInfoTLV)
+                       + (size_t)count * sizeof(struct NDISCMsg);
+    if (required_tlv_len > declared_tlv_len)
     {
         ICCPD_LOG_WARN(__FUNCTION__,
-            "NDISC Info num_of_entry %d exceeds msg len %zu, dropping",
-            count, msg->len);
+            "NDISC Info num_of_entry %d exceeds TLV len %zu, dropping",
+            count, declared_tlv_len);
         return;
+    }
+
+    for (int index = 0; index < count; ++index)
+    {
+        if (!mlacp_is_valid_ifname_field(
+                ndisc_info->NdiscEntry[index].ifname,
+                sizeof(ndisc_info->NdiscEntry[index].ifname)))
+        {
+            ICCPD_LOG_WARN(__FUNCTION__,
+                "NDISC Info entry %d contains an invalid interface name",
+                index);
+            return;
+        }
     }
 
     mlacp_fsm_update_ndisc_info(csm, ndisc_info);
@@ -924,7 +1004,7 @@ void mlacp_fsm_transit(struct CSM* csm)
     struct Msg* msg = NULL;
     static MLACP_APP_STATE_E prev_state = MLACP_SYNC_SYSCONF;
     ICCHdr* icc_hdr = NULL;
-    ICCParameter* icc_param = NULL;
+    uint16_t tlv_type;
     int have_msg = 1;
 
     if (csm == NULL)
@@ -981,10 +1061,11 @@ void mlacp_fsm_transit(struct CSM* csm)
             {
                 have_msg = 1;
                 icc_hdr = (ICCHdr*)msg->buf;
-                icc_param = (ICCParameter*)&msg->buf[sizeof(ICCHdr)];
-                /*ICCPD_LOG_DEBUG("mlacp_fsm", "  SYNC: Message Type = %X, TLV=%s, Len=%d", icc_hdr->ldp_hdr.msg_type, get_tlv_type_string(icc_param->type), msg->len);*/
+                /*ICCPD_LOG_DEBUG("mlacp_fsm", "  SYNC: Message Type = %X, Len=%d", icc_hdr->ldp_hdr.msg_type, msg->len);*/
 
-                if (icc_hdr->ldp_hdr.msg_type == MSG_T_NOTIFICATION && icc_param->type == TLV_T_NAK)
+                if (icc_hdr->ldp_hdr.msg_type == MSG_T_NOTIFICATION &&
+                    iccp_get_tlv_type(msg->buf, msg->len, &tlv_type) == 0 &&
+                    tlv_type == TLV_T_NAK)
                 {
                     mlacp_sync_recv_nak_handler(csm, msg);
                     free(msg->buf);
@@ -1295,16 +1376,78 @@ static void mlacp_sync_recv_nak_handler(struct CSM* csm,  struct Msg* msg)
 * ***************************************/
 static void mlacp_sync_receiver_handler(struct CSM* csm, struct Msg* msg)
 {
-    ICCParameter *icc_param;
+    size_t minimum_tlv_len;
+    uint16_t tlv_type;
 
     /* No receive message...*/
     if (!csm || !msg)
         return;
 
-    icc_param = (ICCParameter*)&(msg->buf[sizeof(ICCHdr)]);
+    if (iccp_get_tlv_type(msg->buf, msg->len, &tlv_type) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+                       "Received ICCP message too short for TLV header: %zu",
+                       msg->len);
+        return;
+    }
 
-    /*fprintf(stderr, " Recv Type [%d]\n", icc_param->type);*/
-    switch (icc_param->type)
+    switch (tlv_type)
+    {
+        case TLV_T_MLACP_SYSTEM_CONFIG:
+            minimum_tlv_len = sizeof(mLACPSysConfigTLV);
+            break;
+        case TLV_T_MLACP_AGGREGATOR_CONFIG:
+            minimum_tlv_len = offsetof(mLACPAggConfigTLV, agg_name);
+            break;
+        case TLV_T_MLACP_AGGREGATOR_STATE:
+            minimum_tlv_len = sizeof(mLACPAggPortStateTLV);
+            break;
+        case TLV_T_MLACP_SYNC_DATA:
+            minimum_tlv_len = sizeof(mLACPSyncDataTLV);
+            break;
+        case TLV_T_MLACP_SYNC_REQUEST:
+            minimum_tlv_len = sizeof(mLACPSyncReqTLV);
+            break;
+        case TLV_T_MLACP_PORT_CHANNEL_INFO:
+            minimum_tlv_len = sizeof(mLACPPortChannelInfoTLV);
+            break;
+        case TLV_T_MLACP_PEERLINK_INFO:
+            minimum_tlv_len = sizeof(mLACPPeerLinkInfoTLV);
+            break;
+        case TLV_T_MLACP_MAC_INFO:
+            minimum_tlv_len = sizeof(struct mLACPMACInfoTLV);
+            break;
+        case TLV_T_MLACP_ARP_INFO:
+            minimum_tlv_len = sizeof(struct mLACPARPInfoTLV);
+            break;
+        case TLV_T_MLACP_NDISC_INFO:
+            minimum_tlv_len = sizeof(struct mLACPNDISCInfoTLV);
+            break;
+        case TLV_T_MLACP_HEARTBEAT:
+            minimum_tlv_len = sizeof(struct mLACPHeartbeatTLV);
+            break;
+        case TLV_T_MLACP_WARMBOOT_FLAG:
+            minimum_tlv_len = sizeof(struct mLACPWarmbootTLV);
+            break;
+        case TLV_T_MLACP_IF_UP_ACK:
+            minimum_tlv_len = sizeof(struct mLACPIfUpAckTLV);
+            break;
+        default:
+            minimum_tlv_len = sizeof(ICCParameter);
+            break;
+    }
+
+    if (iccp_validate_tlv(
+            msg->buf, msg->len, minimum_tlv_len, NULL, NULL) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+                       "Received invalid TLV 0x%x with message length %zu",
+                       tlv_type, msg->len);
+        return;
+    }
+
+    /*fprintf(stderr, " Recv Type [%d]\n", tlv_type);*/
+    switch (tlv_type)
     {
         case TLV_T_MLACP_SYSTEM_CONFIG:
             mlacp_sync_recv_sysConf(csm, msg);
@@ -1377,7 +1520,7 @@ static void mlacp_sync_receiver_handler(struct CSM* csm, struct Msg* msg)
 
         default:
             ICCPD_LOG_ERR("ICCP_FSM", "Receive unsupported msg 0x%x from peer",
-                icc_param->type);
+                tlv_type);
             break;
     }
 
@@ -1481,6 +1624,15 @@ static void mlacp_stage_sync_send_handler(struct CSM* csm, struct Msg* msg)
 
             if (icc_hdr->ldp_hdr.msg_type == MSG_T_RG_APP_DATA && icc_param->type == TLV_T_MLACP_SYNC_REQUEST)
             {
+                if (iccp_validate_tlv(
+                        msg->buf, msg->len, sizeof(mLACPSyncReqTLV),
+                        NULL, NULL) != 0)
+                {
+                    ICCPD_LOG_WARN(__FUNCTION__,
+                        "Received invalid Synchronization Request TLV");
+                    return;
+                }
+
                 mlacp_sync_req = (mLACPSyncReqTLV*)&msg->buf[sizeof(ICCHdr)];
                 MLACP(csm).wait_for_sync_data = 1;
                 MLACP(csm).sync_req_num = ntohs(mlacp_sync_req->req_num);
