@@ -91,6 +91,12 @@ static ssize_t show_pddf_cpld_data(struct device *dev, struct device_attribute *
     return ret;
 }
 
+static void cpld_free_pdata(void *pdata)
+{
+	/* the client name string */
+	kfree(pdata);
+}
+
 static ssize_t do_device_operation(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
 {
 	PDDF_ATTR *ptr = (PDDF_ATTR *)da;
@@ -121,7 +127,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 			if (!IS_ERR(client_ptr)) {
 				i2c_put_adapter(adapter);
 				pddf_dbg(CPLD, KERN_ERR "Created %s client: 0x%p\n", device_ptr->i2c_name, (void *)client_ptr);
-				add_device_table(device_ptr->i2c_name, (void*)client_ptr);
+				add_device_table_owned(device_ptr->i2c_name, (void*)client_ptr, cpld_free_pdata, THIS_MODULE);
 			}
 			else {
 				i2c_put_adapter(adapter);
@@ -140,11 +146,9 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 		client_ptr = (struct i2c_client *)get_device_table(device_ptr->i2c_name);
 		if (client_ptr)
 		{
-			char *pdata = client_ptr->dev.platform_data;
 			pddf_dbg(CPLD, KERN_ERR "Removing %s client: 0x%p\n", device_ptr->i2c_name, (void *)client_ptr);
 			i2c_unregister_device(client_ptr);
 			delete_device_table(device_ptr->i2c_name);
-			kfree(pdata);
 		}
 		else
 		{

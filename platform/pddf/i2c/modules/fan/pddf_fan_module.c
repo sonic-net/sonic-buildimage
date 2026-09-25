@@ -141,6 +141,16 @@ struct i2c_board_info *i2c_get_fan_board_info(FAN_DATA *fdata, NEW_DEV_ATTR *cda
 }
 
 
+static void fan_free_pdata(void *pdata)
+{
+    FAN_PDATA *d = pdata;
+    if (d)
+    {
+        kfree(d->fan_attrs);
+        kfree(d);
+    }
+}
+
 static ssize_t do_device_operation(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
 {
     PDDF_ATTR *ptr = (PDDF_ATTR *)da;
@@ -166,7 +176,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         {
             i2c_put_adapter(adapter);
             pddf_dbg(FAN, KERN_ERR "Created a %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
-            add_device_table(cdata->i2c_name, (void*)client_ptr);
+            add_device_table_owned(cdata->i2c_name, (void*)client_ptr, fan_free_pdata, THIS_MODULE);
         }
         else 
         {
@@ -180,14 +190,9 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         client_ptr = (struct i2c_client *)get_device_table(cdata->i2c_name);
         if (client_ptr)
         {
-            FAN_PDATA *pdata = client_ptr->dev.platform_data;
             pddf_dbg(FAN, KERN_ERR "Removing %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
             i2c_unregister_device(client_ptr);
             delete_device_table(cdata->i2c_name);
-            if (pdata) {
-                kfree(pdata->fan_attrs);
-                kfree(pdata);
-            }
         }
         else
         {
