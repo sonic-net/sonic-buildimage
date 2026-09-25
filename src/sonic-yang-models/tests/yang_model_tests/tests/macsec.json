@@ -14,6 +14,10 @@
         "desc": "Invalid CAK character",
         "eStrKey": "Pattern"
     },
+    "INVALID_CAK_SALT_PREFIX": {
+        "desc": "Invalid Type-7 CAK salt prefix (first two chars must be digits)",
+        "eStrKey": "Pattern"
+    },
     "INVALID_CIPHER_LOWERCASE": {
         "desc": "Invalid cipher with lowercase",
         "eStrKey": "Pattern"

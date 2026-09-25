@@ -103,6 +103,12 @@ class TestConfigMACsec(object):
                 "--cipher_suite=GCM-AES-256"], obj=cfgdb)
         assert result.exit_code != 0
 
+        # Invalid primary cak Type-7 salt prefix
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test",
+                "--primary_cak=B063647040534355560e000802065d574d400e000e030307075f0e5050000e5541","--primary_ckn=01234567890123456789012345678912",
+                "--cipher_suite=GCM-AES-128"], obj=cfgdb)
+        assert result.exit_code != 0
+
 
     def test_macsec_port(self, mock_cfgdb):
         cfgdb = mock_cfgdb
