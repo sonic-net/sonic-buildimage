@@ -16,6 +16,9 @@ RUN apt-get update      && \
         libjsoncpp26 \
         libhiredis1.1.0 \
         dbus \
+        openssl \
+        inotify-tools \
+        redis-tools \
     && rm -rf /var/lib/apt/lists/*
 
 {% if docker_sonic_redfish_debs.strip() -%}
@@ -26,21 +29,19 @@ RUN apt-get update      && \
 {{ install_debian_packages(docker_sonic_redfish_debs.split(' ')) }}
 {%- endif %}
 
-# Create necessary directories and local bmcweb user/groups for Redfish mTLS
-# The client certificate CN must match this username (e.g., CN=bmcweb)
+# Create necessary directories for bmcweb.
+# No local user by design: access is decided by mTLS and the trusted common
+# names in CONFIG_DB.
 RUN mkdir -p /etc/bmcweb && \
     mkdir -p /var/lib/bmcweb && \
     mkdir -p /usr/share/www && \
-    groupadd -f redfish && \
-    groupadd -f priv-admin && \
-    groupadd -f priv-operator && \
-    groupadd -f priv-user && \
-    useradd -m -s /bin/bash bmcweb && \
-    echo "bmcweb:bmcweb" | chpasswd && \
-    usermod -aG redfish,priv-admin,priv-operator,priv-user bmcweb
+    mkdir -p /etc/ssl/certs/https && \
+    mkdir -p /etc/ssl/certs/authority
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor/"]
+COPY ["stage-credentials.sh", "/usr/bin/stage-credentials.sh"]
+RUN chmod +x /usr/bin/stage-credentials.sh
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
 
