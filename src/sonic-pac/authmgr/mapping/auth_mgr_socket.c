@@ -776,11 +776,26 @@ int handle_async_resp_data(int *listen_sock)
 int authmgrMabDataSend(mab_pac_cmd_t *req, char *resp, unsigned int *len)
 {
   struct sockaddr_in saddr;
-  int fd, rc;
+  unsigned int capacity;
+  ssize_t sent_count;
+  ssize_t received_count;
+  int fd, rc = -1;
   struct hostent *local_host;
   char *ptr = (char *)req;
   struct sockaddr_in client;
   socklen_t clientlen = sizeof(client);
+
+  if (!len)
+  {
+    return -1;
+  }
+
+  capacity = *len;
+  *len = 0;
+  if (!req || !resp || capacity == 0)
+  {
+    return -1;
+  }
 
   /* open the socket to MAB server */
   fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -793,10 +808,14 @@ int authmgrMabDataSend(mab_pac_cmd_t *req, char *resp, unsigned int *len)
   saddr.sin_family = AF_INET;  
   saddr.sin_port = htons(3734);     
   local_host = gethostbyname("127.0.0.1");
+  if (!local_host)
+  {
+    fprintf(stderr, "gethostbyname failed\n");
+    goto close_soc;
+  }
   saddr.sin_addr = *((struct in_addr *)local_host->h_addr);
 
-  rc = connect(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in));
-  if (-1 == rc)
+  if (connect(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in)) == -1)
   {
     fprintf(stderr, "connect failed [%s]\n", strerror(errno));
     goto close_soc;
@@ -809,23 +828,36 @@ int authmgrMabDataSend(mab_pac_cmd_t *req, char *resp, unsigned int *len)
       fd, inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
   /* Send the command req */
-  rc = send(fd, ptr, sizeof(mab_pac_cmd_t), 0);
+  sent_count = send(fd, ptr, sizeof(mab_pac_cmd_t), 0);
+  if (sent_count < 0)
+  {
+    fprintf(stderr, "send failed [%s]\n", strerror(errno));
+    goto close_soc;
+  }
+  if (sent_count != (ssize_t)sizeof(mab_pac_cmd_t))
+  {
+    fprintf(stderr, "short send [%zd of %zu bytes]\n",
+            sent_count, sizeof(mab_pac_cmd_t));
+    goto close_soc;
+  }
   AUTHMGR_EVENT_TRACE (AUTHMGR_TRACE_CLIENT, 0,
     "fd : %d Successfully sent data (len %lu bytes): %s",
 	fd,  sizeof(mab_pac_cmd_t), req->cmd);
 
   /* read the resp */
-    rc = recv(fd, resp, *len, NULL);
-
-    *len = 0;
-    if (rc)
-    {
-      *len = rc;
-    }
+  received_count = recv(fd, resp, capacity - 1, 0);
+  if (received_count < 0)
+  {
+    fprintf(stderr, "recv failed [%s]\n", strerror(errno));
+    goto close_soc;
+  }
+  resp[received_count] = '\0';
+  *len = (unsigned int)received_count;
+  rc = 0;
 
 close_soc:
   close(fd);
-  return 0;
+  return rc;
 }
 
 
