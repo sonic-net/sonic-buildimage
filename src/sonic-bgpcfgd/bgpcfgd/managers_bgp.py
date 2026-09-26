@@ -12,6 +12,28 @@ from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
 
 
+BGP_IDENTIFIER_MAX_LEN = 255
+
+
+def is_bgp_identifier_valid(identifier):
+    """Return whether an identifier is safe to use as one FRR CLI token."""
+    if (not isinstance(identifier, str) or not identifier or
+            len(identifier) > BGP_IDENTIFIER_MAX_LEN or
+            identifier in ('.', '..') or identifier[0] == '-'):
+        return False
+
+    return all(
+        ('A' <= char <= 'Z') or ('a' <= char <= 'z') or
+        ('0' <= char <= '9') or char in '_.-'
+        for char in identifier
+    )
+
+
+def is_interface_neighbor(neighbor, ports=None, interfaces=None):
+    """Return True if neighbor key is an interface name, not an IP address."""
+    return TemplateFabric.is_interface(neighbor, ports, interfaces)
+
+
 class BGPPeerGroupMgr(object):
     """ This class represents peer-group and routing policy for the peer_type """
     def __init__(self, common_objs, base_template):
@@ -110,6 +132,7 @@ class BGPPeerMgrBase(Manager):
         self.peer_type = peer_type
         self.require_loopback = require_loopback
         self.include_mgmt_interface = include_mgmt_interface
+        self.supports_unnumbered = peer_type in ('general', 'internal', 'voq_chassis')
         self.loopbacks = ["Loopback0"]
         self.post_dependencies_init_complete = False
 
@@ -136,6 +159,9 @@ class BGPPeerMgrBase(Manager):
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
         ]
+
+        if self.supports_unnumbered:
+            deps.append(("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, ""))
 
         if check_neig_meta:
             self.check_neig_meta = 'bgp' in self.constants \
@@ -174,13 +200,52 @@ class BGPPeerMgrBase(Manager):
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
         return
 
+    def parse_key(self, key):
+        """Validate and normalize a BGP peer table key."""
+        if not isinstance(key, str):
+            log_err("Invalid BGP peer table key: {!r}".format(key))
+            return None
+
+        vrf, nbr = self.split_key(key)
+        if self.peer_type == 'dynamic':
+            routing_instance_valid = is_bgp_identifier_valid(vrf)
+        else:
+            routing_instance_valid = swsscommon.isVrfNameValid(vrf)
+
+        if not routing_instance_valid:
+            log_err("Invalid routing instance in BGP peer table key: {!r}".format(key))
+            return None
+
+        if (not nbr or
+                any(char < '\x21' or char > '\x7e' for char in nbr)):
+            log_err("Invalid peer name in BGP peer table key: {!r}".format(key))
+            return None
+
+        if self.peer_type in ('dynamic', 'sentinels'):
+            if not is_bgp_identifier_valid(nbr):
+                log_err("Invalid peer name in BGP peer table key: {!r}".format(key))
+                return None
+        else:
+            try:
+                nbr = str(netaddr.IPAddress(nbr))
+            except (netaddr.AddrFormatError, TypeError, ValueError):
+                if (not self.supports_unnumbered or
+                        not swsscommon.isInterfaceNameValid(nbr)):
+                    log_err("Invalid neighbor address in BGP peer table key: {!r}".format(key))
+                    return None
+
+        return vrf, nbr
+
     def set_handler(self, key, data):
         """
          It runs on 'SET' command
         :param key: key of the changed table
         :param data: the data associated with the change
         """
-        vrf, nbr = self.split_key(key)
+        key_parts = self.parse_key(key)
+        if key_parts is None:
+            return True
+        vrf, nbr = key_parts
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             return self.add_peer(vrf, nbr, data)
@@ -209,7 +274,22 @@ class BGPPeerMgrBase(Manager):
         print_data = vrf, nbr, data
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
 
-        if "local_addr" not in data:
+        if self.supports_unnumbered:
+            ports = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME)
+            interfaces = self.directory.get_slot("LOCAL", "interfaces")
+            interface_neighbor = is_interface_neighbor(nbr, ports, interfaces)
+            if (not interface_neighbor
+                    and not TemplateFabric.is_ipv4(nbr)
+                    and not TemplateFabric.is_ipv6(nbr)):
+                log_err("Peer '%s' is neither a valid IP address nor present in the PORT or interface tables" % nbr)
+                return False
+        else:
+            interface_neighbor = is_interface_neighbor(nbr)
+
+        if interface_neighbor:
+            # Interface-based (unnumbered) neighbor: skip local_addr validation
+            pass
+        elif "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
@@ -222,10 +302,12 @@ class BGPPeerMgrBase(Manager):
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
             'CONFIG_DB__BGP_BBR': self.directory.get_slot('CONFIG_DB', 'BGP_BBR'),
+            'CONFIG_DB__BGP_DEVICE_GLOBAL': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
             'constants': self.constants,
             'bgp_asn': bgp_asn,
             'vrf': vrf,
             'neighbor_addr': nbr,
+            'is_interface_neighbor': interface_neighbor,
             'bgp_session': data,
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
@@ -475,7 +557,10 @@ class BGPPeerMgrBase(Manager):
         'DEL' handler for the BGP PEER tables
         :param key: key of the neighbor
         """
-        vrf, nbr = self.split_key(key)
+        key_parts = self.parse_key(key)
+        if key_parts is None:
+            return
+        vrf, nbr = key_parts
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             log_warn("Peer '(%s|%s)' has not been found" % (vrf, nbr))

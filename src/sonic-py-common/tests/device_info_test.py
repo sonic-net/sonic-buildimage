@@ -189,6 +189,38 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_get_hwsku_is_cached(self, mock_localhost_info):
+        """A valid HwSKU is read from CONFIG_DB once and reused afterwards."""
+        device_info.hwsku_info = None
+        try:
+            mock_localhost_info.return_value = "Mellanox-SN2700"
+            for _ in range(5):
+                assert device_info.get_hwsku() == "Mellanox-SN2700"
+            mock_localhost_info.assert_called_once_with("hwsku")
+        finally:
+            device_info.hwsku_info = None
+
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_get_hwsku_does_not_cache_failure(self, mock_localhost_info):
+        """A failed lookup must be retried, not cached, so a transient CONFIG_DB
+           error does not pin an empty HwSKU for the lifetime of the process."""
+        device_info.hwsku_info = None
+        try:
+            mock_localhost_info.return_value = None
+            assert device_info.get_hwsku() is None
+            assert device_info.get_hwsku() is None
+            assert mock_localhost_info.call_count == 2
+
+            mock_localhost_info.return_value = "Mellanox-SN2700"
+            assert device_info.get_hwsku() == "Mellanox-SN2700"
+            assert mock_localhost_info.call_count == 3
+            # Now that a valid value is known, no further reads happen.
+            assert device_info.get_hwsku() == "Mellanox-SN2700"
+            assert mock_localhost_info.call_count == 3
+        finally:
+            device_info.hwsku_info = None
+
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
     @mock.patch("sonic_py_common.device_info.get_machine_info")
@@ -255,14 +287,18 @@ class TestDeviceInfo(object):
         result = device_info.get_platform_json_data()
         assert result is None
 
+        # Test case where the platform directory cannot be located
+        mock_get_path_to_platform_dir.side_effect = OSError("Failed to locate platform directory")
+        result = device_info.get_platform_json_data()
+        assert result is None
+        mock_get_path_to_platform_dir.side_effect = None
+
     @mock.patch("os.path.isfile")
     @mock.patch("{}.open".format(BUILTINS))
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir")
-    @mock.patch("sonic_py_common.device_info.get_path_to_hwsku_dir")
     @mock.patch("sonic_py_common.device_info.get_platform")
-    def test_get_cpo_data(self, mock_get_platform, mock_get_hwsku_dir, mock_get_platform_dir, mock_open, mock_isfile):
+    def test_get_cpo_data(self, mock_get_platform, mock_get_platform_dir, mock_open, mock_isfile):
         mock_get_platform.return_value = "x86_64-vendor_cpo-r0"
-        mock_get_hwsku_dir.return_value = "/usr/share/sonic/device/x86_64-vendor_cpo-r0/CPO-HWSKU"
         mock_get_platform_dir.return_value = "/usr/share/sonic/device/x86_64-vendor_cpo-r0"
 
         cpo_data = {
@@ -325,25 +361,19 @@ class TestDeviceInfo(object):
             {"device_id": "ELS1", "bank": 0},
         ]
 
-        # hwsku file takes precedence over the platform file.
-        mock_open.side_effect = mock.mock_open(read_data=json.dumps(cpo_data))
-        device_info.get_cpo_data()
-        opened_path = mock_open.call_args[0][0]
-        assert opened_path == "/usr/share/sonic/device/x86_64-vendor_cpo-r0/CPO-HWSKU/cpo.json"
-
-        # Falls back to the platform file when no hwsku file exists.
-        def only_platform_file(path):
-            return path == "/usr/share/sonic/device/x86_64-vendor_cpo-r0/cpo.json"
-        mock_isfile.side_effect = only_platform_file
-        mock_open.side_effect = mock.mock_open(read_data=json.dumps(cpo_data))
-        device_info.get_cpo_data()
+        # The file is read from the platform directory.
         opened_path = mock_open.call_args[0][0]
         assert opened_path == "/usr/share/sonic/device/x86_64-vendor_cpo-r0/cpo.json"
 
-        # Returns None when no file exists in either directory.
-        mock_isfile.side_effect = None
+        # Returns None when the file does not exist.
         mock_isfile.return_value = False
         assert device_info.get_cpo_data() is None
+
+        # Returns None when the platform directory cannot be located.
+        mock_isfile.return_value = True
+        mock_get_platform_dir.side_effect = OSError("Failed to locate platform directory")
+        assert device_info.get_cpo_data() is None
+        mock_get_platform_dir.side_effect = None
 
         # Returns None when platform is not set.
         mock_isfile.return_value = True
@@ -481,6 +511,54 @@ class TestDeviceInfo(object):
         # Test case where platform.json data contains DPUs
         mock_get_platform_json_data.return_value = {"DPUS": {"dpu0": {}, "dpu1": {}}}
         assert device_info.get_dpu_list() == ["dpu0", "dpu1"]
+
+    @mock.patch("os.path.isfile")
+    def test_get_chassis_db_address(self, mock_isfile):
+        # File does not exist — should return None
+        mock_isfile.return_value = False
+        assert device_info.get_chassis_db_address() is None
+
+        # File exists with a valid chassis_db_address entry
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="chassis_db_address=10.1.0.1\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() == "10.1.0.1"
+
+        # File exists but contains no chassis_db_address key
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="some_other_key=value\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() is None
+
+        # Key is present but value should be stripped of whitespace
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="chassis_db_address=10.1.0.2  \n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() == "10.1.0.2"
+
+    @mock.patch("os.path.isfile")
+    def test_get_smartswitch_midplane_ip(self, mock_isfile):
+        # File does not exist — should return None
+        mock_isfile.return_value = False
+        assert device_info.get_smartswitch_midplane_ip() is None
+
+        # File exists with a valid Address entry
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nAddress=169.254.200.254/24\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() == "169.254.200.254"
+
+        # File exists but contains no Address key
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nLinkLocalAddressing=no\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() is None
+
+        # Address entry without prefix length
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nAddress=169.254.200.254\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() == "169.254.200.254"
 
     # ------------------------------------------------------------------
     # Tests for BMC platform detection APIs

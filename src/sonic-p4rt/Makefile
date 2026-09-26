@@ -36,7 +36,7 @@ DERIVED_TARGETS = $(SONIC_P4RT_DBG)
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	function cleanup {
 		# Note: make seems to hang if Bazel is still running
-		cd $(CURDIR)/sonic-pins && bazel $(BAZEL_OPTS) shutdown
+		cd $(CURDIR)/sonic-pins && (bazel $(BAZEL_OPTS) shutdown; rm -rf bazel-*)
 	}
 	trap cleanup EXIT
 
