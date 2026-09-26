@@ -341,5 +341,11 @@
     },
     "REBOOT_CAUSE": {
         "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    },
+    "BLACKBOX": {
+        "dcdc": {
+            "log_path": "/host/blackbox/dcdc",
+            "discard_duplicate_logs": true
+        }
     }
 }

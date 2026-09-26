@@ -40,6 +40,12 @@ try:
 except ImportError as e:
     component_present = False
 
+dcdc_present = True
+try:
+    from sonic_platform.dcdc import Dcdc
+except ImportError as e:
+    dcdc_present = False
+
 class PddfChassis(ChassisBase):
     """
     PDDF Generic Chassis class
@@ -50,6 +56,7 @@ class PddfChassis(ChassisBase):
     def __init__(self, pddf_data=None, pddf_plugin_data=None):
 
         ChassisBase.__init__(self)
+        self._dcdc_list = []
 
         self.pddf_obj = pddf_data if pddf_data else None
         self.plugin_data = pddf_plugin_data if pddf_plugin_data else None
@@ -118,6 +125,12 @@ class PddfChassis(ChassisBase):
             for i in range(self.platform_inventory.get('num_components', 0)):
                 component = Component(i, self.pddf_obj, self.plugin_data)
                 self._component_list.append(component)
+
+        if dcdc_present:
+            # DC/DC
+            for i in range(self.platform_inventory.get('num_dcdcs', 0)):
+                dcdc = Dcdc(i, self.pddf_obj, self.plugin_data)
+                self._dcdc_list.append(dcdc)
 
     def get_name(self):
         """
@@ -296,3 +309,101 @@ class PddfChassis(ChassisBase):
             syslog.syslog(syslog.LOG_WARNING, "{}".format(e))
         return self._watchdog
 
+    ##############################################
+    # DCDC methods
+    ##############################################
+
+    def get_num_dcdcs(self):
+        """
+        Retrieves the number of DC/DC converters available on this chassis
+
+        Returns:
+            An integer, the number of DC/DC converters available on this
+            chassis
+        """
+        return len(self._dcdc_list)
+
+    def get_all_dcdcs(self):
+        """
+        Retrieves all DC/DC converters available on this chassis
+
+        Returns:
+            A list of objects derived from DcdcBase representing all DC/DC
+            converters available on this chassis
+        """
+        return self._dcdc_list
+
+    def get_dcdc(self, index):
+        """
+        Retrieves DC/DC converter represented by (0-based) index <index>
+
+        Args:
+            index: An integer, the index (0-based) of the DC/DC converter to
+            retrieve
+
+        Returns:
+            An object derived from DcdcBase representing the specified DC/DC
+            converter
+        """
+        dcdc = None
+
+        try:
+            dcdc = self._dcdc_list[index]
+        except IndexError:
+            sys.stderr.write("DC/DC index {} out of range (0-{})\n".format(
+                index, len(self._dcdc_list) - 1))
+
+        return dcdc
+
+    ##############################################
+    # Device lookup
+    ##############################################
+
+    def get_all_devices(self, device_type):
+        """
+        Gets the list of devices of a specified type.
+
+        Args:
+            device_type: String corresponding to the DEVICE_TYPE member defined in
+                         the platform base classes.
+
+        Returns:
+            List of devices with DEVICE_TYPE equal to device_type.
+        """
+        device_type = device_type.lower()
+        if device_type == Sfp.DEVICE_TYPE.lower():
+            return self.get_all_sfps()
+        elif device_type == Psu.DEVICE_TYPE.lower():
+            return self.get_all_psus()
+        elif device_type == FanDrawer.DEVICE_TYPE.lower():
+            return self.get_all_fan_drawers()
+        elif device_type == Thermal.DEVICE_TYPE.lower():
+            return self.get_all_thermals()
+        elif dcdc_present and device_type == Dcdc.DEVICE_TYPE.lower():
+            return self.get_all_dcdcs()
+        return []
+
+    def get_device(self, device_type, index):
+        """
+        Gets a device of a specifc type and index.
+
+        Args:
+            device_type: String corresponding to the DEVICE_TYPE member defined in
+                         the platform base classes.
+            index: An integer, the index of the device to retrieve. The index format
+                   corresponds to that of the device type specified.
+
+        Returns:
+            Device object if one exists at the type and index, None otherwise.
+        """
+        if device_type == Sfp.DEVICE_TYPE.lower():
+            return self.get_sfp(index)
+        elif device_type == Psu.DEVICE_TYPE.lower():
+            return self.get_psu(index)
+        elif device_type == FanDrawer.DEVICE_TYPE.lower():
+            return self.get_fan_drawer(index)
+        elif device_type == Thermal.DEVICE_TYPE.lower():
+            return self.get_thermal(index)
+        elif dcdc_present and device_type == Dcdc.DEVICE_TYPE.lower():
+            return self.get_dcdc(index)
+        return None
