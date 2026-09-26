@@ -17,6 +17,7 @@ The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 #include <syslog.h>
 #include <stdlib.h>
 #include <pwd.h>
+#include <grp.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <ctype.h>
@@ -157,7 +158,10 @@ static void init_rnm(RADIUS_NSS_CONF_B * conf) {
 
     memset((char *) rnm, 0, sizeof(conf->rnm));
 
-    rnm[0].gid   = 999;
+    /* Keep the lowest management privilege level out of the docker group.
+     * Access to the Docker socket is root-equivalent on SONiC images. */
+    rnm[0].gid   = 100;
+    rnm[0].groups = "";
     rnm[0].gecos = "remote_user";
     rnm[0].shell = "/bin/bash";
     rnm[RADIUS_MAX_MPL-1].gid   = 1000;
@@ -173,6 +177,7 @@ static int user_add(const char* name, char* gid, char* sec_grp, char* gecos,
     int status = 0;
     int wstatus;
     char cmd[64];
+    const char *supplementary_groups = sec_grp ? sec_grp : "";
 
     snprintf(cmd, 63, "%s", USERADD);
 
@@ -194,9 +199,9 @@ static int user_add(const char* name, char* gid, char* sec_grp, char* gecos,
     } else if(pid == 0) {
 
         if (many_to_one)
-          execl(cmd, cmd, "-g", gid, "-G", sec_grp, "-c", gecos, "-m", "-s", shell, name, NULL);
+          execl(cmd, cmd, "-g", gid, "-G", supplementary_groups, "-c", gecos, "-m", "-s", shell, name, NULL);
         else
-          execl(cmd, cmd, "-U", "-G", sec_grp, "-c", unconfirmed_user, "-d", home, "-m", "-s", shell, name, NULL);
+          execl(cmd, cmd, "-U", "-G", supplementary_groups, "-c", unconfirmed_user, "-d", home, "-m", "-s", shell, name, NULL);
         syslog(LOG_ERR, "exec of %s failed with errno=%d", cmd, errno);
         return -1;
 
@@ -247,11 +252,23 @@ static int user_del(const char* name) {
     return status;
 }
 
-static int user_mod(const char* name, char* sec_grp) {
+static int user_mod(const char* name, char* gid, char* sec_grp,
+                    int update_primary_group) {
     pid_t pid, w;
     int status = 0;
     int wstatus;
     char cmd[64];
+    const char *supplementary_groups = sec_grp ? sec_grp : "";
+
+#if defined(TEST_RADIUS_NSS)
+    radius_test_user_mod_calls++;
+    snprintf(radius_test_last_user_mod_gid,
+        sizeof(radius_test_last_user_mod_gid), "%s",
+        update_primary_group ? gid : "");
+    snprintf(radius_test_last_user_mod_groups,
+        sizeof(radius_test_last_user_mod_groups), "%s", supplementary_groups);
+    return 0;
+#endif
 
     snprintf(cmd, 63, "%s", USERMOD);
 
@@ -272,7 +289,12 @@ static int user_mod(const char* name, char* sec_grp) {
 
     } else if(pid == 0) {
 
-        execl(cmd, cmd, "-G", sec_grp, "-c", name, name, NULL);
+        if (update_primary_group)
+            execl(cmd, cmd, "-g", gid, "-G", supplementary_groups,
+                "-c", name, name, NULL);
+        else
+            execl(cmd, cmd, "-G", supplementary_groups,
+                "-c", name, name, NULL);
         syslog(LOG_ERR, "exec of %s failed with errno=%d", cmd, errno);
         return -1;
 
@@ -539,6 +561,7 @@ int radius_update_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl) {
     struct passwd pw, *result = NULL;
     RADIUS_NSS_MPL * rnm = NULL;
     int status;
+    char sgid[16] = {0};
 
     /* Verify uid is not in the reserved range (<=1000).
      */
@@ -562,16 +585,188 @@ int radius_update_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl) {
         conf->prog, user);
 
     rnm = &((conf->rnm)[mpl-1]);
+    snprintf(sgid, sizeof(sgid), "%d", rnm->gid);
 
     if (conf->trace)
         dump_rnm(mpl, rnm, "update");
 
-    if(0 != user_mod(user, rnm->groups)) {
+    if(0 != user_mod(user, sgid, rnm->groups, conf->many_to_one)) {
       syslog(LOG_ERR, "%s: %s %s failed", conf->prog, USERMOD, user);
         return -1;
     }
     return 0;
 }
+
+static int radius_group_list_contains(const char *groups, const char *group)
+{
+    const char *start = groups ? groups : "";
+    const char *end;
+    size_t group_len = strlen(group);
+
+    while (*start) {
+        end = strchr(start, ',');
+        if (end == NULL)
+            end = start + strlen(start);
+        if ((size_t)(end - start) == group_len &&
+            strncmp(start, group, group_len) == 0)
+            return 1;
+        start = *end ? end + 1 : end;
+    }
+
+    return 0;
+}
+
+static int radius_group_list_count(const char *groups)
+{
+    int count = 0;
+    const char *start = groups ? groups : "";
+    const char *end;
+
+    while (*start) {
+        end = strchr(start, ',');
+        if (end == NULL)
+            end = start + strlen(start);
+        if (end != start)
+            count++;
+        start = *end ? end + 1 : end;
+    }
+
+    return count;
+}
+
+static int radius_supplementary_groups_match(RADIUS_NSS_CONF_B *conf,
+    const char *user, gid_t primary_gid, const char *expected_groups,
+    int *match)
+{
+    FILE *fp = NULL;
+    struct group grp, *result = NULL;
+    char buf[BUFLEN];
+    char **member;
+    int expected_count = radius_group_list_count(expected_groups);
+    int matched_count = 0;
+    int status = 0;
+
+    *match = 0;
+    if ((fp = fopen(ETC_GROUP, "r")) == NULL) {
+        syslog(LOG_ERR, "%s: fopen(\"%s\") failed: %d", conf->prog,
+            ETC_GROUP, errno);
+        return -1;
+    }
+
+    while ((status = fgetgrent_r(fp, &grp, buf, sizeof(buf), &result)) == 0 &&
+           result != NULL) {
+        char group_gid[32];
+        int user_is_member = 0;
+        int group_is_expected = radius_group_list_contains(expected_groups,
+            result->gr_name);
+
+        snprintf(group_gid, sizeof(group_gid), "%lu",
+            (unsigned long)result->gr_gid);
+        group_is_expected = group_is_expected ||
+            radius_group_list_contains(expected_groups, group_gid);
+
+        for (member = result->gr_mem; member && *member; member++) {
+            if (strcmp(*member, user) == 0) {
+                user_is_member = 1;
+                break;
+            }
+        }
+        if (user_is_member && !group_is_expected) {
+            fclose(fp);
+            return 0;
+        }
+        if (group_is_expected &&
+            (user_is_member || result->gr_gid == primary_gid))
+            matched_count++;
+    }
+
+    if (status != 0 && status != ENOENT) {
+        syslog(LOG_ERR, "%s: Failed to read %s: %d", conf->prog,
+            ETC_GROUP, status);
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+    *match = (matched_count == expected_count);
+    return 0;
+}
+
+static int radius_user_needs_update(RADIUS_NSS_CONF_B *conf,
+    const char *user, int mpl, int *needs_update)
+{
+    char buf[BUFLEN];
+    struct passwd pw, *result = NULL;
+    RADIUS_NSS_MPL *rnm = &((conf->rnm)[mpl-1]);
+    int groups_match = 0;
+
+    *needs_update = 1;
+    if (radius_getpwnam_r(conf->prog, user, &pw, buf, sizeof(buf),
+            &result) != 0)
+        return 0;
+
+    if (radius_supplementary_groups_match(conf, user, pw.pw_gid,
+            rnm->groups, &groups_match) != 0)
+        return -1;
+
+    *needs_update = (pw.pw_gid != rnm->gid || !groups_match);
+    return 0;
+}
+
+/*
+ * Reconcile only accounts whose primary or supplementary groups differ from
+ * the configured state. The lock and second check prevent concurrent logins
+ * from invoking usermod for the same stale many-to-one account.
+ *
+ * Return 1 if the account changed, 0 if it was already compliant, and -1 on
+ * failure.
+ */
+int radius_reconcile_user(RADIUS_NSS_CONF_B *conf, const char *user, int mpl)
+{
+    int lockfd = -1;
+    int needs_update = 0;
+    int status;
+
+    if (radius_user_needs_update(conf, user, mpl, &needs_update) != 0)
+        return -1;
+    if (!needs_update)
+        return 0;
+
+    lockfd = open(RADIUS_USER_LOCK,
+        O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
+    if (lockfd == -1) {
+        syslog(LOG_ERR, "%s: Failed to open user reconciliation lock: %d",
+            conf->prog, errno);
+        return -1;
+    }
+
+    do {
+        status = flock(lockfd, LOCK_EX);
+    } while (status == -1 && errno == EINTR);
+    if (status == -1) {
+        syslog(LOG_ERR, "%s: Failed to lock user reconciliation: %d",
+            conf->prog, errno);
+        close(lockfd);
+        return -1;
+    }
+
+    status = radius_user_needs_update(conf, user, mpl, &needs_update);
+    if (status == 0 && needs_update)
+        status = radius_update_user(conf, user, mpl);
+
+    flock(lockfd, LOCK_UN);
+    close(lockfd);
+
+    if (status != 0)
+        return -1;
+    return needs_update ? 1 : 0;
+}
+
+#if defined(TEST_RADIUS_NSS)
+char radius_test_last_user_mod_gid[16] = {0};
+char radius_test_last_user_mod_groups[128] = {0};
+int radius_test_user_mod_calls = 0;
+#endif
 
 int radius_create_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl,
     int unconfirmed) {
@@ -848,4 +1043,3 @@ int is_sshd_lookup(RADIUS_NSS_CONF_B * conf, const char * name) {
 
     return is_sshd_lookup_exit(0, fd, re);
 }
-
