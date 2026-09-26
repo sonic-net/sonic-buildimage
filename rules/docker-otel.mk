@@ -27,7 +27,6 @@ endif
 $(DOCKER_OTEL)_CONTAINER_NAME = otel
 $(DOCKER_OTEL)_RUN_OPT += -t
 $(DOCKER_OTEL)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_OTEL)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_OTEL)_RUN_OPT += -v /:/mnt/host:ro
 $(DOCKER_OTEL)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
 $(DOCKER_OTEL)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
