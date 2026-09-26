@@ -1,0 +1,14 @@
+[Unit]
+Description=Collect techsupport requested by a container
+
+[Service]
+Type=oneshot
+# Reuse the global and swss policies applied to orchagent core dumps.
+ExecStart=/usr/bin/python3 -c "from swsscommon.swsscommon import SonicV2Connector; \
+    from utilities_common import auto_techsupport_helper as ts; \
+    db = SonicV2Connector(use_unix_socket_path=True); \
+    db.connect(ts.CFG_DB); db.connect(ts.STATE_DB); \
+    enabled = db.get(ts.CFG_DB, ts.AUTO_TS, ts.CFG_STATE) == 'enabled' and \
+        db.get(ts.CFG_DB, ts.FEATURE.format('swss'), ts.CFG_STATE) == 'enabled'; \
+    ts.invoke_ts_command_rate_limited(db, 'sdk', {}, 'swss') if enabled else \
+        print('Automatic techsupport disabled globally or for swss; request skipped')"
