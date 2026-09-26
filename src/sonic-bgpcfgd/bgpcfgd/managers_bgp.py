@@ -246,11 +246,70 @@ class BGPPeerMgrBase(Manager):
         if key_parts is None:
             return True
         vrf, nbr = key_parts
+        if not self.validate_peer_data(data, nbr):
+            log_err("Peer '%s': rejected invalid field value" % key)
+            return True
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             return self.add_peer(vrf, nbr, data)
         else:
             return self.update_peer(vrf, nbr, data)
+
+    @staticmethod
+    def _valid_uint(value, minimum, maximum):
+        if (not isinstance(value, str) or not value.isascii() or
+                not value.isdigit() or len(value) > len(str(maximum))):
+            return False
+        return minimum <= int(value) <= maximum
+
+    @staticmethod
+    def validate_ip_ranges(value):
+        if not isinstance(value, str):
+            return False
+        ranges = value.split(',')
+        if any(not prefix or prefix.strip() != prefix for prefix in ranges):
+            return False
+        try:
+            for prefix in ranges:
+                netaddr.IPNetwork(prefix)
+        except (netaddr.AddrFormatError, TypeError, ValueError):
+            return False
+        return True
+
+    def validate_peer_data(self, data, peer_name=None):
+        """Check ConfigDB values before they are used in FRR commands."""
+        if not isinstance(data, dict):
+            return False
+        for value in data.values():
+            if (not isinstance(value, str) or
+                    any(ord(char) < 32 or ord(char) == 127 for char in value)):
+                return False
+
+        for field in ('asn', 'peer_asn'):
+            if field in data and not self._valid_uint(
+                    data[field], 1 if field == 'peer_asn' else 0, 4294967295):
+                return False
+        for field in ('keepalive', 'holdtime'):
+            if field in data and not self._valid_uint(data[field], 0, 65535):
+                return False
+        for field in ('rrclient', 'nhopself'):
+            if field in data and data[field] not in ('0', '1'):
+                return False
+        if 'admin_status' in data and data['admin_status'] not in ('up', 'down'):
+            return False
+        if 'ip_range' in data and not self.validate_ip_ranges(data['ip_range']):
+            return False
+        for field in ('local_addr', 'src_address'):
+            if field in data:
+                try:
+                    netaddr.IPNetwork(data[field])
+                except (netaddr.AddrFormatError, TypeError, ValueError):
+                    return False
+        if self.peer_type in ('dynamic', 'sentinels') and 'name' in data:
+            if (not is_bgp_identifier_valid(data['name']) or
+                    (peer_name is not None and data['name'] != peer_name)):
+                return False
+        return True
 
     def add_peer(self, vrf, nbr, data):
         """
@@ -573,15 +632,17 @@ class BGPPeerMgrBase(Manager):
         if self.peer_type == 'dynamic' or self.peer_type == 'sentinels':
             ip_ranges = self.directory.get(self.db_name, self.table_name, vrf + '|' + nbr).get("ip_range")
             if ip_ranges is not None:
-                ip_ranges = ip_ranges.split(',')
-                for ip_range in ip_ranges:
-                    log_debug("Deleting listen range for peer-group {}, ip_range {}".format(ip_range, nbr))
-                    cmd = self.templates["no listen range"].render(ip_range=ip_range, peer_group=nbr)
-                    ret_code = self.apply_op(cmd, vrf)
-                    if ret_code:
-                        log_info("Listen range '%s' for peer '(%s|%s)' has been disabled" % (ip_range, vrf, nbr))
-                    else:
-                        log_err("Listen range '%s' for peer '(%s|%s)' hasn't been disabled" % (ip_range, vrf, nbr))
+                if not self.validate_ip_ranges(ip_ranges):
+                    log_err("Peer '(%s|%s)': skipped invalid cached ip_range during delete" % (vrf, nbr))
+                else:
+                    for ip_range in ip_ranges.split(','):
+                        log_debug("Deleting listen range for peer-group {}, ip_range {}".format(ip_range, nbr))
+                        cmd = self.templates["no listen range"].render(ip_range=ip_range, peer_group=nbr)
+                        ret_code = self.apply_op(cmd, vrf)
+                        if ret_code:
+                            log_info("Listen range '%s' for peer '(%s|%s)' has been disabled" % (ip_range, vrf, nbr))
+                        else:
+                            log_err("Listen range '%s' for peer '(%s|%s)' hasn't been disabled" % (ip_range, vrf, nbr))
         
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
