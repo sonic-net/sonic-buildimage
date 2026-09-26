@@ -95,5 +95,95 @@
                 ]
             }
         }
+    },
+    "LOOPBACK_INTERFACE_VALID_DESCRIPTION": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "lo1",
+                        "description": "Router ID loopback"
+                    }
+                ]
+            }
+        }
+    },
+    "LOOPBACK_INTERFACE_INVALID_DESCRIPTION_LENGTH": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "lo1",
+                        "description": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"
+                    }
+                ]
+            }
+        }
+    },
+    "LOOPBACK_INTERFACE_VALID_VNET_NAME": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "lo1",
+                        "vnet_name": "Vnet1"
+                    }
+                ]
+            }
+        }
+    },
+    "LOOPBACK_INTERFACE_INVALID_VNET_NAME": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "lo1",
+                        "vnet_name": "NonExistentVnet"
+                    }
+                ]
+            }
+        }
     }
 }

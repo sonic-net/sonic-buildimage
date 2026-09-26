@@ -13,8 +13,16 @@ module sonic-loopback-interface {
         prefix vrf;
     }
 
+    import sonic-vnet {
+        prefix svnet;
+    }
+
     description
         "Loopback interface configuration for virtual interfaces used as router IDs and service IPs";
+
+    revision 2026-09-12 {
+        description "Add leaf description and leaf vnet_name";
+    }
 
     revision 2021-04-05 {
         description "Modify the type of vrf name";
@@ -44,6 +52,22 @@ module sonic-loopback-interface {
                     description "VRF instance to which this loopback interface is bound";
                     type leafref {
                         path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                    }
+                }
+
+                leaf vnet_name {
+                    description "Reference to the name of a VNET in sonic-vnet model";
+                    type leafref {
+                        path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                    }
+                }
+
+                leaf description {
+                    description "User-defined description for the loopback interface";
+                    type string {
+                        length 0..255 {
+                            error-message "Invalid description length, it must not exceed 255 characters.";
+                        }
                     }
                 }
 
