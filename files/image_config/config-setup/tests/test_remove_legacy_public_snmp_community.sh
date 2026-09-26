@@ -23,7 +23,14 @@ run_hook()
         bash "${hook}"
 }
 
-printf '#!/bin/bash\ncase "$2" in\n HLEN) echo 1 ;;\n HGET) echo RO ;;\n DEL) echo "$*" >>"${SONIC_DB_LOG}" ;;\nesac\n' >"${test_dir}/sonic-db-cli"
+cat >"${test_dir}/sonic-db-cli" <<'EOF'
+#!/bin/bash
+case "$2" in
+    HLEN) echo 1 ;;
+    HGET) echo RO ;;
+    DEL) echo "$*" >>"${SONIC_DB_LOG}" ;;
+esac
+EOF
 chmod +x "${test_dir}/sonic-db-cli"
 export SONIC_DB_LOG="${test_dir}/sonic-db.log"
 
