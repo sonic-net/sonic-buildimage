@@ -1412,7 +1412,7 @@ class TestJ2Files(TestCase):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
-        additional_data = "{\"udp_server_ip\": \"1.1.1.1\", \"hostname\": \"kvm-host\"}"
+        additional_data = "{\"udp_server_ip\": \"1.1.1.1\"}"
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
         self.run_script(argument, output_file=self.output_file)
@@ -1427,7 +1427,7 @@ class TestJ2Files(TestCase):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
-        additional_data = "{\"udp_server_ip\": \"1.1.1.1\", \"hostname\": \"kvm-host\", " + \
+        additional_data = "{\"udp_server_ip\": \"1.1.1.1\", " + \
                           "\"docker0_ip\": \"2.2.2.2\"}"
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
@@ -1439,13 +1439,52 @@ class TestJ2Files(TestCase):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
-        additional_data = "{\"udp_server_ip\": \"2.2.2.2\", \"hostname\": \"kvm-host\", " + \
+        additional_data = "{\"udp_server_ip\": \"2.2.2.2\", " + \
                           "\"docker0_ip\": \"2.2.2.2\"}"
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_hostname_fallback(self):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        additional_data = '{"udp_server_ip": "1.1.1.1"}'
+
+        for hostname in ({}, {'hostname': ''}):
+            with tempfile.NamedTemporaryFile(mode='w') as config_db_json:
+                json.dump({'DEVICE_METADATA': {'localhost': hostname}}, config_db_json)
+                config_db_json.flush()
+                argument = ['-j', config_db_json.name, '-t', conf_template, '-a', additional_data]
+                output = self.run_script(argument)
+
+            sonic_template_lines = [
+                line for line in output.splitlines() if line.startswith('$template SONiC')
+            ]
+            self.assertEqual(len(sonic_template_lines), 3)
+            self.assertTrue(all(' sonic ' in line for line in sonic_template_lines))
+
+    def test_rsyslog_conf_hostname_injection_stripped(self):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        payload = 'switch-t0\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = '{"udp_server_ip": "1.1.1.1"}'
+
+        with tempfile.NamedTemporaryFile(mode='w') as config_db_json:
+            json.dump({'DEVICE_METADATA': {'localhost': {'hostname': payload}}}, config_db_json)
+            config_db_json.flush()
+            argument = ['-j', config_db_json.name, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+        sonic_template_lines = [
+            line for line in output.splitlines() if line.startswith('$template SONiC')
+        ]
+        self.assertEqual(len(sonic_template_lines), 3)
+        self.assertTrue(all('switch-t0action(type=omprog binary=/tmp/evil)' in line
+                            for line in sonic_template_lines))
+        self.assertFalse(any(line.strip().startswith('action(type=') and 'omprog' in line
+                             for line in output.splitlines()))
 
     def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
         """welf_firewall_name injection payload must be collapsed to a harmless single line.
@@ -1462,7 +1501,6 @@ class TestJ2Files(TestCase):
         payload = 'fw1\naction(type="omprog" binary="/tmp/evil")'
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": "fw-host",
             "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": payload}},
         })
 
@@ -1488,7 +1526,6 @@ class TestJ2Files(TestCase):
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": "fw-host",
             "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": "clean-fw-name"}},
         })
 
@@ -1497,40 +1534,6 @@ class TestJ2Files(TestCase):
 
         self.assertIn('clean-fw-name', output,
                       'Clean welf_firewall_name value not found in rendered rsyslog.conf')
-
-    def test_rsyslog_conf_hostname_injection_stripped(self):
-        """DEVICE_METADATA hostname injection payload must be collapsed to a harmless single line.
-
-        Payload: 'host1\\naction(type="omprog" binary="/tmp/evil")'
-        hostname is rendered unquoted inside double-quoted $template directives with no prior
-        sanitization; without the newline strip the injected action() lands on its own line and
-        rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence in depth.
-        """
-        import json
-        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
-                                     'rsyslog.conf.j2')
-        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
-        payload = 'host1\naction(type="omprog" binary="/tmp/evil")'
-        additional_data = json.dumps({
-            "udp_server_ip": "1.1.1.1",
-            "hostname": payload,
-            "os_version": "1.0.0",
-        })
-
-        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
-        output = self.run_script(argument)
-
-        # 1. The $template directives must not be split across multiple lines.
-        template_lines = [l for l in output.splitlines() if l.startswith('$template SONiC')]
-        self.assertEqual(len(template_lines), 3,
-                         '$template directive was split across lines — newline strip failed')
-
-        # 2. The injected omprog directive must not appear as a standalone line.
-        for line in output.splitlines():
-            self.assertFalse(
-                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
-                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
-            )
 
     def test_rsyslog_conf_os_version_injection_stripped(self):
         """DEVICE_METADATA os_version injection payload must be collapsed to a harmless single line.
@@ -1551,7 +1554,6 @@ class TestJ2Files(TestCase):
         payload = '1.0.0\naction(type="omprog" binary="/tmp/evil")'
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": "clean-host",
             "os_version": payload,
             "forward_with_osversion": "true",
         })
@@ -1587,7 +1589,7 @@ class TestJ2Files(TestCase):
         os_version_payload = '1.0\r.0\\%beta'
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": hostname_payload,
+            "DEVICE_METADATA": {"localhost": {"hostname": hostname_payload}},
             "os_version": os_version_payload,
             "forward_with_osversion": "true",
         })
@@ -1622,7 +1624,7 @@ class TestJ2Files(TestCase):
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
         additional_data = json.dumps({
             "udp_server_ip": "1.1.1.1",
-            "hostname": "clean-host",
+            "DEVICE_METADATA": {"localhost": {"hostname": "clean-host"}},
             "os_version": "1.0.0",
         })
 

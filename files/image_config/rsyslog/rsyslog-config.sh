@@ -26,8 +26,6 @@ for feature in $bridged_syslog_features; do
     fi
 done
 
-hostname=$(hostname)
-
 syslog_with_osversion=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion")
 if [ -z "$syslog_with_osversion" ]; then
     syslog_with_osversion="false"
@@ -58,22 +56,20 @@ fi
 TMPFILE=$(mktemp /tmp/rsyslog.conf.XXXXXX)
 trap 'rm -f "$TMPFILE"' EXIT
 
-# Build the -a argument with jq so that hostname/os_version (which can
+# Build the -a argument with jq so that runtime values (which can
 # contain quotes, backslashes, or other JSON-breaking characters) are
 # safely encoded, rather than interpolated as raw strings into a
 # hand-built JSON literal. The rsyslog.conf.j2 template also strips
-# newlines/quotes/backslashes/percent signs from these values before
-# rendering them into $template directives; this jq encoding ensures the
-# JSON itself is well-formed so sonic-cfggen can parse it in the first
-# place.
+# newlines/quotes/backslashes/percent signs from values rendered into
+# $template directives; this jq encoding ensures the JSON itself is
+# well-formed so sonic-cfggen can parse it in the first place.
 json_args=$(jq -n \
     --arg udp_server_ip "$udp_server_ip" \
-    --arg hostname "$hostname" \
     --arg docker0_ip "$docker0_ip" \
     --arg forward_with_osversion "$syslog_with_osversion" \
     --arg os_version "$os_version" \
     --arg syslog_counter "$syslog_counter" \
-    '{udp_server_ip: $udp_server_ip, hostname: $hostname, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter}')
+    '{udp_server_ip: $udp_server_ip, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter}')
 
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "$json_args" \
