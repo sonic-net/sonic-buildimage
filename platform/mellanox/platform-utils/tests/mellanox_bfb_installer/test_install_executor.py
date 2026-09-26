@@ -34,20 +34,16 @@ class TestInstallExecutor(unittest.TestCase):
     def test_run_parallel_returns_zero_when_all_tasks_return_zero(self):
         from mellanox_bfb_installer import install_executor
 
-        task_fn = lambda idx, child_pids: 0
-        with mock.patch.object(install_executor, "signal") as mock_signal:
-            failed = install_executor.run_parallel(3, task_fn)
+        failed = install_executor.run_parallel(3, lambda _idx: 0)
         self.assertEqual(failed, 0)
-        mock_signal.signal.assert_called()
 
     def test_run_parallel_returns_count_of_failing_tasks(self):
         from mellanox_bfb_installer import install_executor
 
-        def task_fn(idx, child_pids):
+        def task_fn(idx):
             return 1 if idx % 2 == 1 else 0
 
-        with mock.patch.object(install_executor, "signal"):
-            failed = install_executor.run_parallel(4, task_fn)
+        failed = install_executor.run_parallel(4, task_fn)
         self.assertEqual(failed, 2)
 
     def test_run_parallel_invokes_task_fn_with_each_index(self):
@@ -55,66 +51,36 @@ class TestInstallExecutor(unittest.TestCase):
 
         seen = []
 
-        def task_fn(idx, child_pids):
+        def task_fn(idx):
             seen.append(idx)
             return 0
 
-        with mock.patch.object(install_executor, "signal"):
-            install_executor.run_parallel(3, task_fn)
+        install_executor.run_parallel(3, task_fn)
         self.assertEqual(sorted(seen), [0, 1, 2])
 
-    def test_run_parallel_registers_signal_handler_for_sigint_sigterm_sighup(self):
+    def test_run_parallel_does_not_take_over_signal_handling(self):
+        """Signals belong to the caller that supervises the installation transaction."""
         from mellanox_bfb_installer import install_executor
         import signal as sig
 
-        # Patch only signal.signal (the function) so SIGINT/SIGTERM/SIGHUP stay real
-        with mock.patch.object(install_executor.signal, "signal") as mock_signal_fn:
-            install_executor.run_parallel(1, lambda idx, child_pids: 0)
-        self.assertEqual(mock_signal_fn.call_count, 3)
-        calls = [c[0] for c in mock_signal_fn.call_args_list]
-        self.assertIn((sig.SIGINT, mock.ANY), calls)
-        self.assertIn((sig.SIGTERM, mock.ANY), calls)
-        self.assertIn((sig.SIGHUP, mock.ANY), calls)
+        with mock.patch.object(sig, "signal") as mock_signal_fn:
+            install_executor.run_parallel(1, lambda _idx: 0)
+        mock_signal_fn.assert_not_called()
 
     def test_run_parallel_counts_raised_exception_as_failure_and_logs(self):
         from mellanox_bfb_installer import install_executor
 
-        def task_fn(idx, child_pids):
+        def task_fn(idx):
             if idx == 1:
                 raise RuntimeError("task failed")
             return 0
 
         mock_log = mock.MagicMock()
-        with (
-            mock.patch.object(install_executor, "signal"),
-            mock.patch.object(install_executor, "logger", mock_log),
-        ):
+        with mock.patch.object(install_executor, "logger", mock_log):
             failed = install_executor.run_parallel(3, task_fn)
         self.assertEqual(failed, 1)
         mock_log.error.assert_called()
         self.assertIn("task failed", str(mock_log.error.call_args))
-
-    def test_kill_handler_kills_all_child_pids(self):
-        from mellanox_bfb_installer import install_executor
-        import signal as sig
-
-        # Task appends pids to the collection run_parallel passes; handler kills them
-        def task_fn(idx, child_pids):
-            child_pids.append(100)
-            child_pids.append(200)
-            return 0
-
-        with mock.patch.object(install_executor.signal, "signal") as mock_signal_fn:
-            install_executor.run_parallel(1, task_fn)
-        handler = mock_signal_fn.call_args_list[0][0][1]
-        with mock.patch.object(install_executor.os, "kill") as mock_kill:
-            with self.assertRaises(SystemExit):
-                handler()
-        self.assertEqual(mock_kill.call_count, 2)
-        killed = {c[0][0] for c in mock_kill.call_args_list}
-        self.assertEqual(killed, {100, 200})
-        for c in mock_kill.call_args_list:
-            self.assertEqual(c[0][1], sig.SIGKILL)
 
 
 if __name__ == "__main__":
