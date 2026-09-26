@@ -236,6 +236,10 @@ ENABLE_TRANSLIB_WRITE = y
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
 ENABLE_NATIVE_WRITE = y
 
+# GNMI_REDIS_POOL_SIZE - Set the Redis connection pool size for gNMI services.
+# Leave unset to use the go-redis default.
+GNMI_REDIS_POOL_SIZE ?=
+
 # INCLUDE_MACSEC - build docker-macsec for macsec support
 INCLUDE_MACSEC = y
 
