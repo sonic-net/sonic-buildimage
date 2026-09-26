@@ -109,7 +109,7 @@ class DhcpRelayd(object):
         self._disable_checkers(checkers_to_be_disabled)
 
         feature_table = self.db_connector.get_config_db_table("DEVICE_METADATA")
-        if feature_table.get("localhost", {}).get("has_sonic_dhcpv4_relay", "False") == "False":
+        if feature_table.get("localhost", {}).get("has_sonic_dhcpv4_relay", "True") == "False":
            self._start_dhcrelay_process(dhcp_interfaces, dhcp_server_ip, force_kill)
 
         # TODO dhcpmon is not ready for count packet for dhcp_server, hence comment invoke it for now
