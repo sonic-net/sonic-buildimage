@@ -107,7 +107,8 @@ if [[ "$IMAGENAME" == sonic-slave-* ]] && [ -f files/build/cargo-wrapper ]; then
 fi
 
 # Generate the version lock files
-scripts/versions_manager.py generate -t "$BUILDINFO_VERSION_PATH" -n "$IMAGENAME" -d "$DISTRO" -a "$ARCH"
+COMPNAME=${IMAGENAME%%-march-$ARCH}
+scripts/versions_manager.py generate -t "$BUILDINFO_VERSION_PATH" -n "$COMPNAME" -d "$DISTRO" -a "$ARCH"
 
 touch $BUILDINFO_VERSION_PATH/versions-deb
 
