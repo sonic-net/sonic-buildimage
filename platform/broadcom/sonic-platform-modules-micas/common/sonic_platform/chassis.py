@@ -628,6 +628,14 @@ class Chassis(ChassisBase):
             else: # None cpo port
                 self._sfp_list.append(Sfp(port_id))
 
+    def get_cpo(self, index):
+        """Return the legacy CPO object associated with a physical port."""
+        try:
+            port_object = self._sfp_list[index]
+        except (IndexError, TypeError):
+            return None
+        return port_object if isinstance(port_object, CPO) else None
+
     def get_watchdog(self):
         if self._watchdog is None:
             from sonic_platform.watchdog import Watchdog
