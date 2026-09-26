@@ -85,7 +85,7 @@ index dc8dc5ad..d1a8f3f1 100644
  
  	/* Become a root in new user NS. */
  	r = unshare(CLONE_NEWUSER);
-+	if (r != 0 && errno == EPERM) {
++	if (r != 0 && (errno == EPERM || errno == EINVAL)) {
 +		/* No permissions? Ignore. Will be handled later. */
 +		return;
 +	}
@@ -127,7 +127,7 @@ index dc8dc5ad..d1a8f3f1 100644
  	unshare_user();
  
  	r = unshare(CLONE_NEWNET | CLONE_NEWNS);
-+	if (r != 0 && errno == EPERM) {
++	if (r != 0 && (errno == EPERM || errno == EINVAL)) {
 +		/* The system is probably sandboxed somehow and we are unable
 +		 * to create a private netns. That seems questionable, because
 +		 * a point of a private netns is to sandbox an application.

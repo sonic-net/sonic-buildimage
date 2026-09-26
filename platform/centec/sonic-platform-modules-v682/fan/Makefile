@@ -1,0 +1,1 @@
+obj-m := fan_mcu.o
