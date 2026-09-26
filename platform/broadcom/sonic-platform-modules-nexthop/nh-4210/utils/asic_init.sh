@@ -93,6 +93,13 @@ fpga_1_read() {
   echo "$result"
 }
 
+function cleanup() {
+  # --end before the unlock, or a queued run's rows get deleted by ours.
+  nh_asic_powercycle --end
+  /usr/bin/flock -u ${LOCKFD}
+  logger -t $LOG_TAG -p $LOG_PRIO "Released ${LOCKFILE}"
+}
+
 function acquire_lock() {
   if [[ ! -f $LOCKFILE ]]; then
     touch $LOCKFILE
@@ -102,14 +109,9 @@ function acquire_lock() {
 
   exec {LOCKFD}>${LOCKFILE}
   /usr/bin/flock -x ${LOCKFD}
-  trap "/usr/bin/flock -u ${LOCKFD}" EXIT
+  trap cleanup EXIT
 
   logger -t $LOG_TAG -p $LOG_PRIO "Acquired ${LOCKFILE}"
-}
-
-function release_lock() {
-  /usr/bin/flock -u ${LOCKFD}
-  logger -t $LOG_TAG -p $LOG_PRIO "Released ${LOCKFILE}"
 }
 
 function clear_sticky_bits() {
@@ -201,7 +203,6 @@ override_hw_fan_speed_clamp
 
 if [ -f /disable_asic ]; then
   logger -p user.warning -t $LOG_TAG "ASIC init disabled due to /disable_asic file"
-  release_lock
   exit 0
 fi
 
@@ -211,6 +212,9 @@ if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
   logger -t $LOG_TAG -p $LOG_PRIO "Removing ASIC modules"
   /etc/init.d/opennsl-modules stop
 fi
+
+# The ASIC is down from here until cleanup runs.
+LOG_TAG="$LOG_TAG" nh_asic_powercycle --begin --xcvr-cache
 
 # Set DP_PWR_ON = 1
 # DP_PWR_ON should already be 1 in normal circumstances, but it's possible
@@ -267,14 +271,11 @@ for attempt in {0..2}; do
       logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
     fi
 
-    release_lock
     exit 0
   fi
 done
 
 logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not found after power cycle attempts, giving up, powering it down."
 fpga_0_write 0x90 0x0 "9:9"
-
-release_lock
 
 exit 1

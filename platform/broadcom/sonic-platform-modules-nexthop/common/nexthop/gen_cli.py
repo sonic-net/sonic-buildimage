@@ -4,13 +4,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import click
-import jinja2
 import json
 import os
 import sys
 import syslog
 
-from nexthop import feature_flags_lib, pcie_lib
+from nexthop import feature_flags_lib, gen_lib, pcie_lib
 from sonic_py_common import device_info
 
 PLATFORM_FOLDER = "/usr/share/sonic/platform"
@@ -37,14 +36,9 @@ def check_file_exists_if_not_default(filepath: str, default_filepath: str, param
 def generate_file_from_jinja2_template(
     template_filepath: str, variables: dict[str, str], output_filepath: str
 ):
-    loader = jinja2.FileSystemLoader(os.path.dirname(template_filepath))
-    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
-    j2_env = jinja2.Environment(loader=loader, keep_trailing_newline=True)
-    template = j2_env.get_template(os.path.basename(template_filepath))
-    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
-    output = template.render(variables)
-    with open(output_filepath, "w") as f:
-        f.write(output)
+    gen_lib.write_atomically(
+        gen_lib.render(template_filepath, variables), output_filepath
+    )
     syslog.syslog(syslog.LOG_INFO, f"Successfully generated {output_filepath}")
 
 def get_model_name(platform_json_filepath):

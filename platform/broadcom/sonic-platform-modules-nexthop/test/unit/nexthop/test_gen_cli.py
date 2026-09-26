@@ -373,11 +373,10 @@ def test_generate_pcie_yaml_success(gen_cli_module):
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json_base,
+            gen_cli_module.pcie_yaml,
             [
                 f"--template_filepath={template_path}",
                 f"--vars_filepath={vars_path}",
-                f"--platform_json_filepath={platform_json_path}",
                 f"--output_filepath={output_path}",
             ],
         )
