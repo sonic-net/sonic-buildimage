@@ -63,6 +63,12 @@ Depends: ${misc:Depends},
          sonic-platform-nexthop-4210
 Description: Modules for NH-4210 r0021
 
+Package: sonic-platform-nexthop-4210-r1032
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-4210
+Description: Modules for NH-4210 r1032
+
 Package: sonic-platform-nexthop-4020-r0
 Architecture: amd64
 Depends: ${misc:Depends},
