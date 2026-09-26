@@ -447,8 +447,18 @@ class Sysmonitor(ThreadTaskBase):
 
     #Displays the system ready status message on console
     def print_console_message(self, message):
-        with open('/dev/console', 'w') as console:
-            console.write("\n{} {}\n".format(datetime.now().strftime("%b %d %H:%M:%S.%f"), message))
+        # /dev/console is a best-effort, out-of-band notification: on some
+        # platforms (e.g. a virtual/simulated serial console) a write
+        # can transiently fail with OSError/IOError (such as EIO) even
+        # though the system status itself was already published via
+        # syslog and STATE_DB above. Do not let that surface as an ERR in
+        # the main event loop; fall back to a syslog NOTICE with the same
+        # message so it is not lost when the console write fails.
+        try:
+            with open('/dev/console', 'w') as console:
+                console.write("\n{} {}\n".format(datetime.now().strftime("%b %d %H:%M:%S.%f"), message))
+        except (OSError, IOError):
+            logger.log_notice("\n{} {}\n".format(datetime.now().strftime("%b %d %H:%M:%S.%f"), message))
 
     #Publish the system ready status message on logger,console and state db
     def publish_system_status(self, astate):
