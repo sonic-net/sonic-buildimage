@@ -1,0 +1,14 @@
+[Unit]
+Description=Rotate blackbox logs every 30 minutes
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+
+[Timer]
+Unit=blackbox-rotate-log.service
+
+# First run 30 minutes after boot, then every 30 minutes
+OnBootSec=30min
+OnUnitActiveSec=30min
+
+[Install]
+WantedBy=timers.target

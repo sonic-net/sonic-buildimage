@@ -16,3 +16,7 @@ systemctl enable adm1266-rtc-sync.timer
 systemctl start adm1266-rtc-sync.timer
 systemctl enable watchdog.timer
 systemctl start watchdog.timer
+systemctl enable blackbox-rotate-log.timer
+systemctl start blackbox-rotate-log.timer
+systemctl enable blackbox-poll.timer
+systemctl start blackbox-poll.timer

@@ -1,0 +1,11 @@
+[Unit]
+Description=Rotate blackbox logs
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nh_blackbox log rotate all
+
+[Install]
+WantedBy=multi-user.target

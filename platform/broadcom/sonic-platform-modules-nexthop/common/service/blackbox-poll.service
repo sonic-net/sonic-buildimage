@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll device blackboxes into the blackbox log
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nh_blackbox fetch --save --clear all
+
+[Install]
+WantedBy=multi-user.target
