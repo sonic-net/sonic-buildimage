@@ -1,7 +1,6 @@
 import docker
 import json
 import os
-import re
 import tempfile
 
 from swsscommon import swsscommon
@@ -215,20 +214,21 @@ class ServiceChecker(HealthChecker):
 
         with open(critical_processes_file, 'r') as file:
             for line in file:
-                # Try to match a line like "program:<process_name>" or "group:<group_name>"
-                match = re.match(r"^\s*((.+):(.*))*\s*$", line)
-                if match is None:
+                text = line.strip()
+                if not text:
+                    continue
+                identifier_key, separator, identifier_value = text.partition(":")
+                if not separator:
                     if container not in self.bad_containers:
                         self.bad_containers.add(container)
                         logger.log_error('Invalid syntax in critical_processes file of {}'.format(container))
                     continue
-                if match.group(1) is not None:
-                    identifier_key = match.group(2).strip()
-                    identifier_value = match.group(3).strip()
-                    if identifier_key == "program" and identifier_value:
-                        critical_process_list.append(identifier_value)
-                    elif identifier_key == "group" and identifier_value:
-                        critical_group_list.append(identifier_value)
+                identifier_key = identifier_key.strip()
+                identifier_value = identifier_value.strip()
+                if identifier_key == "program" and identifier_value:
+                    critical_process_list.append(identifier_value)
+                elif identifier_key == "group" and identifier_value:
+                    critical_group_list.append(identifier_value)
 
         return critical_process_list, critical_group_list
 
