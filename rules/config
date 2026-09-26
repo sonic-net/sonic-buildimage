@@ -161,6 +161,21 @@ ENABLE_FRR_SNMP_AGENT ?= y
 SONIC_DPKG_CACHE_METHOD ?= none
 SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 
+# Allow setting Bazel disk and repository caches in the host machine when building inside the container.
+# That way, Bazel caches are preserved across slave container runs.
+# Bazel will create two directories:
+#   - $(SONIC_BAZEL_CACHE_SOURCE)/disk_cache will hold the disk cache
+#   - $(SONIC_BAZEL_CACHE_SOURCE)/repository_cache will hold the repository cache
+#
+# Ref:
+#   - Disk cache: https://bazel.build/remote/caching#disk-cache
+SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
+
+# Build eligible dockers (those registered in SONIC_BAZEL_DOCKER_IMAGES) with
+# Bazel instead of the legacy `docker build` flow.
+# When disabled, fall back to the normal Make docker build.
+BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
+
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes
 
