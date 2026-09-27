@@ -27,8 +27,10 @@ endif
 	popd
 
 	# Move the newly built packages to the destination directory.
-	# Debian emits automatic debug packages as .ddeb; SONiC tracks them as .deb.
-	mv $(NDPPD_DBG:.deb=.ddeb) $(NDPPD_DBG)
+	# Accept either debug-package extension; SONiC records the .deb name.
+	if [ ! -f "$(NDPPD_DBG)" ] && [ -f "$(NDPPD_DBG:.deb=.ddeb)" ]; then \
+		mv "$(NDPPD_DBG:.deb=.ddeb)" "$(NDPPD_DBG)"; \
+	fi
 	mv $(DERIVED_TARGETS) $* $(DEST)/
 
 $(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)
