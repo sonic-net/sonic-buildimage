@@ -1278,8 +1278,8 @@ libsrt1.5-gnutls==1.5.1-1+deb12u1
 libssh-4==0.10.6-0+deb12u2
 libssh-gcrypt-4==0.10.6-0+deb12u2
 libssh2-1==1.10.0-3+deb12u1
-libssl-dev==3.0.20-1~deb12u2
-libssl3==3.0.20-1~deb12u2
+libssl-dev==3.0.22-1~deb12u1
+libssl3==3.0.22-1~deb12u1
 libstdc++-12-dev==12.2.0-14+deb12u1
 libstemmer0d==2.2.0-2
 libstrictures-perl==2.000006-1
@@ -1633,7 +1633,7 @@ opensp==1.5.2-13+b2
 openssh-client==1:9.2p1-2+deb12u10
 openssh-server==1:9.2p1-2+deb12u10
 openssh-sftp-server==1:9.2p1-2+deb12u10
-openssl==3.0.20-1~deb12u2
+openssl==3.0.22-1~deb12u1
 ovmf==2022.11-6+deb12u2
 packagekit==1.2.6-5+deb12u1
 packagekit-tools==1.2.6-5+deb12u1
