@@ -85,11 +85,6 @@ static struct sensor_device_attribute *xcvr_attr_list[MAX_XCVR_ATTRS] = {
     &sensor_dev_attr_xcvr_txfault,
 };
 
-static struct attribute *xcvr_attributes[MAX_XCVR_ATTRS] = {NULL};
-
-static const struct attribute_group xcvr_group = {
-    .attrs = xcvr_attributes,
-};
 
 enum xcvr_intf 
 {
@@ -161,13 +156,14 @@ static int xcvr_probe(struct i2c_client *client)
         }
         
         if (j<XCVR_ATTR_MAX)
-            xcvr_attributes[i] = &xcvr_attr_list[j]->dev_attr.attr;
+            data->attributes[i] = &xcvr_attr_list[j]->dev_attr.attr;
 
     }
-    xcvr_attributes[i] = NULL;
+    data->attributes[i] = NULL;
+    data->attribute_group.attrs = data->attributes;
 
     /* Register sysfs hooks */
-    status = sysfs_create_group(&client->dev.kobj, &xcvr_group);
+    status = sysfs_create_group(&client->dev.kobj, &data->attribute_group);
     if (status) {
         goto exit_free;
     }
@@ -195,7 +191,7 @@ static int xcvr_probe(struct i2c_client *client)
 
 
 exit_remove:
-    sysfs_remove_group(&client->dev.kobj, &xcvr_group);
+    sysfs_remove_group(&client->dev.kobj, &data->attribute_group);
 exit_free:
     kfree(data);
 exit:
@@ -218,7 +214,7 @@ static void xcvr_remove(struct i2c_client *client)
     }
 
     hwmon_device_unregister(data->xdev);
-    sysfs_remove_group(&client->dev.kobj, &xcvr_group);
+    sysfs_remove_group(&client->dev.kobj, &data->attribute_group);
     kfree(data);
 
     if (platdata_sub) {
