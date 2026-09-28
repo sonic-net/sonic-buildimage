@@ -2,8 +2,10 @@ From: Tamer Ahmed <tamerahmed@microsoft.com>
 Date: Tue, 15 Sep 2026 00:00:00 +0000
 Subject: [PATCH] zebra: revive a MAC's neighbours when the MAC becomes local again
 
-0126 stopped a kernel echo from clearing ZEBRA_NEIGH_LOCAL_INACTIVE and 0127
-closed the same hole in the duplicated same-MAC fast path. Both are needed,
+"zebra: do not let a kernel echo clear a neighbour's local-inactive state"
+stopped a kernel echo from clearing ZEBRA_NEIGH_LOCAL_INACTIVE, and
+"zebra: preserve and reconcile inactive MAC neighbours" closed the same hole
+in the duplicated same-MAC fast path. Both are needed,
 but together they leave the flag with no dependable way back: it is now only
 cleared by a neighbour update that arrives while the neighbour's MAC is
 already locally active.
