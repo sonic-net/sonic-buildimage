@@ -1,3 +1,17 @@
+diff --git a/debian/control b/debian/control
+index 40f820ae44..b30ac15e3d 100644
+--- a/debian/control
++++ b/debian/control
+@@ -39,7 +39,8 @@ Build-Depends: bison,
+ 	       protobuf-compiler (>=3.6.1) <pkg.frr.grpc>,
+ 	       protobuf-compiler-grpc (>=1.16.1) <pkg.frr.grpc>,
+                libprotobuf-dev (>=3.6.1) <pkg.frr.grpc>,
+-               libgoogle-perftools-dev <pkg.frr.tcmalloc>
++               libgoogle-perftools-dev <pkg.frr.tcmalloc>,
++               libcunit1-dev <!nocheck>
+ Standards-Version: 4.5.0.3
+ Homepage: https://www.frrouting.org/
+ Vcs-Browser: https://github.com/FRRouting/frr/tree/debian/master
 diff --git a/debian/rules b/debian/rules
 index 9d4f4047cb..ee28688003 100755
 --- a/debian/rules
