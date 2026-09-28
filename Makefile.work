@@ -68,12 +68,13 @@
 #  * ENABLE_VRF_STRICT: Enable VRF strict mode.
 #  *                 Default: unset
 #  *                 Values: y
-#  * BUILD_WITH_BAZEL_WHEN_AVAILABLE: Build targets registered in
-#  *                 SONIC_BAZEL_DOCKER_IMAGES with Bazel instead of the legacy
-#  *                 `docker build` flow.
-#  *                 When disabled they fall back to the normal Make docker build.
-#  *                 Default: n
-#  *                 Values: y,n
+#  * BAZEL_MIN_READINESS: Lowest readiness a component must declare, via
+#  *                 $(COMPONENT_FOO)_BAZEL_READINESS, for it to be built with Bazel.
+#  *                 Components below the bar fall back to the normal Make build.
+#  *                 For instance, if set to "stable", components that
+#  *                 self-label as "experimental" won't be built with Bazel.
+#  *                 Default: bazel_disabled
+#  *                 Values: bazel_disabled,experimental,stable
 ###############################################################################
 
 SHELL = /bin/bash
@@ -714,7 +715,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
 						   SBOM_STRICT=$(SBOM_STRICT) \
 						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
-						   BUILD_WITH_BAZEL_WHEN_AVAILABLE=$(BUILD_WITH_BAZEL_WHEN_AVAILABLE) \
+						   BAZEL_MIN_READINESS=$(BAZEL_MIN_READINESS) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash sonic-slave-run init reset

@@ -171,10 +171,15 @@ SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 #   - Disk cache: https://bazel.build/remote/caching#disk-cache
 SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
 
-# Build eligible dockers (those registered in SONIC_BAZEL_DOCKER_IMAGES) with
-# Bazel instead of the legacy `docker build` flow.
-# When disabled, fall back to the normal Make docker build.
-BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
+# Lowest readiness a component must declare for it to be built with Bazel.
+# A component opts in by setting $(DOCKER_FOO)_BAZEL_READINESS in its recipe.
+# Anything below this bar, or with no declared readiness at all,
+# falls back to the normal Make docker build.
+#
+#	bazel_disabled :  never build with Bazel
+#	experimental   :  build dockers declaring `experimental` or `stable`
+#	stable         :  build only dockers declaring `stable`
+BAZEL_MIN_READINESS ?= bazel_disabled
 
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes

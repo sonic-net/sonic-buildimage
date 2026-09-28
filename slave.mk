@@ -1350,11 +1350,46 @@ endif
 endif
 endif
 
-# Bazel dockers (opted in via SONIC_BAZEL_DOCKER_IMAGES in their recipe) are
-# built by the Bazel rule further below, not the normal `docker build` rule.
-# Drop them from DOCKER_IMAGES so they don't also get the normal recipe.
-# When Bazel is disabled, SONIC_BAZEL_DOCKER_IMAGES will be empty.
-# Same applies for `DOCKER_DBG_IMAGES`
+# A docker opts into the Bazel build by joining the SONIC_BAZEL_DOCKER_IMAGES
+# target group, and declaring how ready it is via $(DOCKER_FOO)_BAZEL_READINESS.
+BAZEL_READINESS_LEVELS := experimental stable
+
+# Ensure that `BAZEL_MIN_READINESS` is set to a valid filter
+BAZEL_READINESS_FILTERS := bazel_disabled $(BAZEL_READINESS_LEVELS)
+ifeq ($(filter $(BAZEL_MIN_READINESS),$(BAZEL_READINESS_FILTERS)),)
+$(error BAZEL_MIN_READINESS="$(BAZEL_MIN_READINESS)" is not a readiness value. Expected one of: $(BAZEL_READINESS_FILTERS))
+endif
+
+BAZEL_ACCEPTED_READINESS_bazel_disabled :=
+BAZEL_ACCEPTED_READINESS_experimental := experimental stable
+BAZEL_ACCEPTED_READINESS_stable := stable
+BAZEL_ACCEPTED_READINESS := $(BAZEL_ACCEPTED_READINESS_$(BAZEL_MIN_READINESS))
+
+# `SONIC_BAZEL_DOCKER_IMAGES` is the target group recipes register into.
+# It marks the dockers that *can* be built with Bazel.
+# It is narrowed below to the ones that actually will be, based on the `BAZEL_MIN_READINESS` filter.
+SONIC_BAZEL_CANDIDATE_DOCKER_IMAGES := $(SONIC_BAZEL_DOCKER_IMAGES)
+
+# Ensure that every member of the group sets a valid Bazel readiness level.
+$(foreach image,$(SONIC_BAZEL_CANDIDATE_DOCKER_IMAGES), \
+	$(if $(filter $($(image)_BAZEL_READINESS),$(BAZEL_READINESS_LEVELS)),, \
+		$(error $(image)_BAZEL_READINESS="$($(image)_BAZEL_READINESS)" is not a readiness level. Expected one of: $(BAZEL_READINESS_LEVELS))))
+
+# Ensure that nothing sets a readiness level outside the group, where it would silently do nothing.
+$(foreach image,$(filter-out $(SONIC_BAZEL_CANDIDATE_DOCKER_IMAGES),$(SONIC_DOCKER_IMAGES)), \
+	$(if $($(image)_BAZEL_READINESS), \
+		$(error $(image) sets _BAZEL_READINESS but is not in SONIC_BAZEL_DOCKER_IMAGES)))
+
+# Filter the group down to the dockers that clear the `BAZEL_MIN_READINESS` bar.
+SONIC_BAZEL_DOCKER_IMAGES := $(strip $(foreach image,$(SONIC_BAZEL_CANDIDATE_DOCKER_IMAGES), \
+		$(if $(filter $($(image)_BAZEL_READINESS),$(BAZEL_ACCEPTED_READINESS)),$(image))))
+
+# Make debug images inherit their parent's readiness.
+SONIC_BAZEL_DBG_DOCKER_IMAGES := $(filter $(SONIC_DOCKER_DBG_IMAGES), \
+		$(patsubst %.gz,%-$(DBG_IMAGE_MARK).gz,$(SONIC_BAZEL_DOCKER_IMAGES)))
+
+# Filter out Bazel-built dockers from general lists.
+# Dockers that didn't clear the `BAZEL_MIN_READINESS` bar stay in `DOCKER_IMAGES`.
 DOCKER_IMAGES := $(filter-out $(SONIC_BAZEL_DOCKER_IMAGES),$(DOCKER_IMAGES))
 DOCKER_DBG_IMAGES := $(filter-out $(SONIC_BAZEL_DBG_DOCKER_IMAGES),$(DOCKER_DBG_IMAGES))
 
