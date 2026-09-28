@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # stage-credentials.sh - bring externally provisioned certificates into the
-# locations bmcweb expects, enable mTLS enforcement, and fail closed once the
-# unit has been provisioned.
+# locations bmcweb expects, and fail closed once the unit has been
+# provisioned.
 #
 # bmcweb reads a single combined server PEM and a hashed CA truststore, only at
 # startup, and its paths are compile-time rather than arguments. The configured
@@ -10,7 +10,6 @@
 # them into what bmcweb reads and restarts it when they change.
 #
 # Configuration (CONFIG_DB, defaults apply when unset):
-#   REDFISH|config  port                    (read by the container start script)
 #   REDFISH|certs   server_crt              server certificate path
 #   REDFISH|certs   server_key              server private key path
 #   REDFISH|certs   ca_crt                  CA certificate path
@@ -35,7 +34,6 @@ set -u
 HTTPS_DIR="${BMCWEB_HTTPS_DIR:-/etc/ssl/certs/https}"
 AUTH_DIR="${BMCWEB_AUTH_DIR:-/etc/ssl/certs/authority}"
 SERVER_PEM="${HTTPS_DIR}/server.pem"
-PDATA="${BMCWEB_PDATA:-/bmcweb_persistent_data.json}"
 BMCWEB_BIN="${BMCWEB_BIN:-/usr/bin/bmcweb}"
 
 # Used when CONFIG_DB carries no REDFISH|certs entry.
@@ -121,11 +119,6 @@ fingerprint() {
         | sha256sum | awk '{print $1}'
 }
 
-# TLSStrict is enabled in bmcweb's persistent configuration.
-tls_strict_set() {
-    grep -q '"TLSStrict"[[:space:]]*:[[:space:]]*true' "${PDATA}" 2>/dev/null
-}
-
 # The staged output is complete and valid. Checked on the destination only, so
 # the answer does not depend on the source paths. Issuer differing from subject
 # is what separates a provisioned cert from bmcweb's self-signed fallback.
@@ -139,7 +132,6 @@ staged_ok() {
     local hash
     hash="$(openssl x509 -hash -noout -in "${AUTH_DIR}/CA-cert.pem" 2>/dev/null)"
     [ -n "${hash}" ] && [ -e "${AUTH_DIR}/${hash}.0" ] || return 1
-    tls_strict_set || return 1
 }
 
 # The unit has been provisioned at least once.
@@ -187,35 +179,7 @@ stage_certs() {
     log "staged server.pem and CA truststore from ${SERVER_CRT} and ${CA_CRT}"
 }
 
-# TLSStrict requires a verified client certificate; MTLSCommonNameParseMode 2
-# takes its CommonName as the session identity, which sonic-dbus-bridge
-# validates against client_crt_cname.
-#
-# Written only when TLSStrict is not already set, so renewals do not reset saved
-# sessions. bmcweb rewrites this file while running, so the caller must stop
-# bmcweb first.
-apply_auth_config() {
-    tls_strict_set && return 0
-
-    cat > "${PDATA}" <<EOF
-{
-  "auth_config": {
-    "BasicAuth": true,
-    "Cookie": true,
-    "SessionToken": true,
-    "XToken": true,
-    "TLS": true,
-    "TLSStrict": true,
-    "MTLSCommonNameParseMode": 2
-  },
-  "sessions": [],
-  "revision": 1
-}
-EOF
-    log "enabled mTLS enforcement (TLSStrict) in ${PDATA}"
-}
-
-# bmcweb reads certs and ${PDATA} only at startup, so changes need a bounce.
+# bmcweb reads its certificates only at startup, so changes need a bounce.
 # bmcweb is always started again, even after a failed stage, and the guard
 # decides whether that start is allowed. The stamp advances only on success:
 # advancing it on failure would pin the old certificate silently.
@@ -225,7 +189,6 @@ apply_and_bounce() {
     supervisorctl stop bmcweb >/dev/null 2>&1
     local rc=0
     if stage_certs; then
-        apply_auth_config
         mark_provisioned
         fingerprint > "${STAMP}" 2>/dev/null
     else
@@ -257,7 +220,7 @@ publish_status() {
         in_sync="true"
         last_error=""
     fi
-    if staged_ok && tls_strict_set; then
+    if staged_ok; then
         mtls="true"
     else
         mtls="false"
@@ -288,7 +251,6 @@ run_once() {
     # bmcweb has not started yet, so no bounce is needed. Staging now means its
     # first start already uses the real certificate.
     if stage_certs; then
-        apply_auth_config
         mark_provisioned
         fingerprint > "${STAMP}" 2>/dev/null
         log "staged provisioned credentials before bmcweb start"
@@ -301,11 +263,9 @@ run_once() {
 # restarts bmcweb. exec hands supervisord bmcweb itself.
 run_guard() {
     # Self-heal first, so a healthy unit never fails the gate spuriously.
-    # bmcweb is not running here, so writing ${PDATA} is safe.
     if ! staged_ok && certs_ready; then
         log "guard: staged certificates missing or invalid; re-staging from source"
         if stage_certs; then
-            apply_auth_config
             mark_provisioned
             fingerprint > "${STAMP}" 2>/dev/null
         fi
