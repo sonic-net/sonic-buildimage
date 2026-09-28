@@ -13,6 +13,11 @@ MRVL_SAI_URL_PREFIX = https://github.com/Marvell-switching/sonic-marvell-binarie
 MRVL_SAI = mrvllibsai_$(MRVL_SAI_VERSION)_$(PLATFORM_ARCH).deb
 $(MRVL_SAI)_URL = $(MRVL_SAI_URL_PREFIX)/$(MRVL_SAI)
 
+# The MRVL_SAI now has shlibs-based dependency description, is included
+# into build dependency graph. libsai.so consumers also should be updated.
+DOCKER_MGMT_FRAMEWORK = docker-sonic-mgmt-framework.gz
+$(DOCKER_MGMT_FRAMEWORK)_DEPENDS += $(MRVL_SAI)
+
 SONIC_ONLINE_DEBS += $(MRVL_SAI)
 $(MRVL_SAI)_SKIP_VERSION=y
 $(eval $(call add_conflict_package,$(MRVL_SAI),$(LIBSAIVS_DEV)))
