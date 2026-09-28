@@ -1,0 +1,45 @@
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Watches the CPLD console mux for as long as the console-monitor proxy for line
+# %i is running, and triggers a reconcile pass on every write.
+#
+# hw-management owns uart_sel on the power paths and never writes 3: every
+# power-off path writes 0, power_on() writes nothing, and only a physical
+# power-button-on writes 2. The proxy cannot notice -- the mux is outside the SoC
+# UART -- so without this the session stays "active" while carrying nothing.
+#
+# Event-driven rather than polled: uart_sel is an I2C register, so it is read
+# only when something has written it. Every writer found is a userspace
+# hw-management script, and a userspace write to a sysfs attribute raises
+# IN_MODIFY; reads do not (measured). pwr_down is watched too, because
+# power_on() only writes pwr_down -- that write is what says the host is back.
+#
+# No [Install] section: pulled in by the Wants= in the proxy drop-in, so it needs
+# no enablement (this package is a lazy installer whose postinst may not run).
+# BindsTo + After: it stops before the proxy on the way down, so nothing reacts
+# to the detach writing 0.
+[Unit]
+Description=Watch the CPLD console mux for console line %i
+BindsTo=console-monitor-proxy@%i.service
+After=console-monitor-proxy@%i.service
+
+[Path]
+PathModified=/run/hw-management/system/uart_sel
+PathModified=/run/hw-management/system/pwr_down
+Unit=nvidia-bmc-console-mux-reconcile@%i.service
