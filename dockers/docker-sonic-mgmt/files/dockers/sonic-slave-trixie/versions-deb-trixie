@@ -133,9 +133,9 @@ efibootmgr==18-2
 emacsen-common==3.0.8
 enchant-2==2.8.2+dfsg1-3
 equivs==2.3.2
-exim4-base==4.98.2-1+deb13u4
-exim4-config==4.98.2-1+deb13u4
-exim4-daemon-light==4.98.2-1+deb13u4
+exim4-base==4.98.2-1+deb13u5
+exim4-config==4.98.2-1+deb13u5
+exim4-daemon-light==4.98.2-1+deb13u5
 expat==2.8.3-1~deb13u1
 fakeroot==1.37.1.1-1
 fastjar==2:0.98-7
