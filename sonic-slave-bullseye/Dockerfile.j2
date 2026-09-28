@@ -590,8 +590,7 @@ RUN pip3 uninstall -y enum34
 RUN pip3 install j2cli==0.3.10
 
 # For sonic-mgmt-framework
-# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
-RUN pip3 install "PyYAML==5.4.1" --no-build-isolation
+
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN pip3 install "lxml==4.9.1"
 {%- endif %}
