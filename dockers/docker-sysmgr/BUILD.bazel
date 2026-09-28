@@ -17,7 +17,7 @@ write_file(
     out = "config_status",
     content = [
         "# Config files managed by sonic-config-engine",
-        "", # Intentional trailing newline
+        "",  # Intentional trailing newline
     ],
 )
 
