@@ -850,6 +850,13 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
 
+        for i3c_controller_name in dev.get("i3c_controllers", []):
+            ret = self.create_multifpgapci_i3c_controller(
+                self.data[i3c_controller_name], ops
+            )
+            if ret != 0:
+                return create_ret.append(ret)
+
         return create_ret.append(ret)
 
     def create_multifpgapci_spi_controller(
@@ -912,6 +919,40 @@ class PddfParse():
             spi_device_attr["chip_select"],
         )
         return self.runcmd(cmd)
+
+    def create_multifpgapci_i3c_controller(
+        self,
+        i3c_controller: dict[str, dict[str, ...]],
+        ops,
+    ) -> int:
+        device_parent = i3c_controller["dev_info"]["device_parent"]
+        fpga_bdf = self.data[device_parent]["dev_info"]["device_bdf"]
+        for command in i3c_controller.get("i3c_mode_commands", []):
+            if "enable" in command:
+                ret = self.runcmd(command["enable"])
+                if ret != 0:
+                    return ret
+
+        # Create I3C Controller. i3c_controller_idx is renamed to
+        # new_i3c_master so it is written last and triggers instantiation
+        # after all config attrs are staged. I3C targets are auto-discovered
+        # via DAA, so there is no downstream device-creation step.
+        attr_to_sysfs_name_override = {
+            "i3c_controller_idx": "new_i3c_master",
+        }
+        sysfs_key_value = {
+            attr_to_sysfs_name_override.get(k, k): v
+            for k, v in i3c_controller["dev_attr"].items()
+        }
+        ret = self.create_device(
+            attr=sysfs_key_value,
+            path="pddf/devices/multifpgapci/{}/i3c".format(fpga_bdf),
+            ops=ops,
+        )
+        if ret != 0:
+            return ret
+
+        return 0
 
     def create_multifpgapci_gpio_device(self, bdf, gpio_dev, ops):
         for line in gpio_dev.keys():
@@ -996,6 +1037,30 @@ class PddfParse():
             spi_device_name
         )
         return self.runcmd(cmd)
+
+    def delete_multifpgapci_i3c_controller(
+        self,
+        i3c_controller: dict[str, dict[str, ...]],
+        ops: str,
+    ) -> int:
+        i3c_controller_index = i3c_controller["dev_attr"]["i3c_controller_idx"]
+
+        # Delete the I3C controller. Its DAA-discovered targets are torn down
+        # by the controller driver when the platform device is unregistered.
+        device_parent = i3c_controller["dev_info"]["device_parent"]
+        bdf = self.data[device_parent]["dev_info"]["device_bdf"]
+        cmd = f"echo {i3c_controller_index} > /sys/kernel/pddf/devices/multifpgapci/{bdf}/i3c/del_i3c_master"
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return ret
+
+        for command in i3c_controller.get("i3c_mode_commands", []):
+            if "disable" in command:
+                ret = self.runcmd(command["disable"])
+                if ret != 0:
+                    return ret
+
+        return 0
 
     def delete_eeprom_device(self, dev, ops):
         if "EEPROM" in self.data['PLATFORM']['pddf_dev_types'] and \
@@ -1122,6 +1187,11 @@ class PddfParse():
         for spi_controller_name in dev.get("spi_controllers", []):
             self.delete_multifpgapci_spi_controller(
                 self.data[spi_controller_name], ops
+            )
+
+        for i3c_controller_name in dev.get("i3c_controllers", []):
+            self.delete_multifpgapci_i3c_controller(
+                self.data[i3c_controller_name], ops
             )
 
         bdf = dev['dev_info']['device_bdf']
@@ -2356,6 +2426,18 @@ class PddfParse():
             )
         return [ret]
 
+    def multifpgapci_i3c_controller_parse(
+        self, i3c_controller: dict[str, dict[str, ...]], ops: dict[str, ...]
+    ) -> int:
+        ret = getattr(self, ops["cmd"] + "_multifpgapci_i3c_controller")(i3c_controller, ops)
+        if ret != 0:
+            print(
+                "{}_i3c_controller() cmd failed for {}".format(
+                    ops["cmd"], i3c_controller["dev_attr"]["i3c_controller_name"]
+                )
+            )
+        return [ret]
+
     # 'create' and 'show_attr' ops returns an array
     # 'delete', 'show' and 'validate' ops return None
     def dev_parse(self, dev, ops):
@@ -2427,6 +2509,9 @@ class PddfParse():
 
         if attr['device_type'] == 'SPI_DEVICE':
             return self.multifpgapci_spi_device_parse(dev, ops)
+
+        if attr['device_type'] == 'I3C_CONTROLLER':
+            return self.multifpgapci_i3c_controller_parse(dev, ops)
 
     def is_supported_sysled_state(self, sysled_name, sysled_state):
         if not sysled_name in self.data.keys():
