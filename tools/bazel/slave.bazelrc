@@ -9,8 +9,6 @@
 # (e.g. bazel build --config=slave ...).
 # However, startup options cannot be gated by configuration, so we must resort to composing bazelrc files.
 
-startup --output_user_root=/bazel_cache/output_user_root
-
 # Caches for the slave
 #
 # Set the disk and repository caches to a mounted volume in the slave.
