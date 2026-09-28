@@ -19,9 +19,14 @@ _WATCHDOG_PUNCH_DAEMON_ARM_SECONDS = 300
 
 
 def _pause_watchdog_punching(duration: datetime.timedelta) -> None:
-    """Creates the pause file."""
+    """Stop watchdog.timer arming the watchdog, for at most `duration`.
+
+    Writes a CLOCK_MONOTONIC deadline to the pause file, so the pause expires
+    on its own (nothing can clean up after a SIGKILL) and an NTP step cannot
+    expire it early.
+    """
     try:
-        pause_until_ts: int = int(time.time() + duration.total_seconds())
+        pause_until_ts: int = int(time.monotonic() + duration.total_seconds())
         with open(_WATCHDOG_PAUSE_FILE_PATH, "w") as f:
             f.write(str(pause_until_ts))
     except OSError as e:
@@ -32,8 +37,42 @@ def _pause_watchdog_punching(duration: datetime.timedelta) -> None:
 
 
 def _unpause_watchdog_punching() -> None:
-    # Remove the watchdog pause file to unpause
+    """Let watchdog.timer arm the watchdog again."""
     _WATCHDOG_PAUSE_FILE_PATH.unlink(missing_ok=True)
+
+
+def _punching_paused() -> bool:
+    """Whether a live pause is in effect.
+
+    A pause past its deadline, or an unreadable or malformed pause file,
+    counts as unpaused: the safe default is an armed watchdog.
+    """
+    try:
+        deadline = int(_WATCHDOG_PAUSE_FILE_PATH.read_text().strip())
+    except FileNotFoundError:
+        return False
+    except (OSError, ValueError) as e:
+        _logger.log_error(
+            f"Unusable watchdog pause file, treating punching as unpaused: {e}"
+        )
+        return False
+    return time.monotonic() < deadline
+
+
+def arm_from_timer() -> None:
+    """Arm the watchdog for the punch interval, unless punching is paused.
+
+    Checks the pause before constructing a chassis, and does nothing on a
+    platform without a watchdog.
+    """
+    if _punching_paused():
+        return
+    from sonic_platform.platform import Platform  # deferred: avoids an import cycle
+
+    watchdog = Platform().get_chassis().get_watchdog()
+    if watchdog is None:
+        return
+    watchdog.arm_from_daemon()
 
 
 class Watchdog(WatchdogBase):
@@ -141,7 +180,11 @@ class Watchdog(WatchdogBase):
     def arm_from_daemon(self) -> int:
         """Arm the watchdog with a predefined timeout.
         Meant to be called by watchdog punching.
+
+        Returns 0 without arming while punching is paused.
         """
+        if _punching_paused():
+            return 0
         return self._do_real_arm(_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS)
 
     def arm(self, seconds: int) -> int:
@@ -153,8 +196,8 @@ class Watchdog(WatchdogBase):
         method should arm the watchdog with the *next greater* available
         value.
 
-        Assumes an active punching timer that arms the watchdog for 6
-        minutes (360 seconds), which is paused when `arm` is called and
+        Assumes an active punching timer that arms the watchdog for 5
+        minutes (300 seconds), which is paused when `arm` is called and
         successfully arms the watchdog. The punching is paused until
         `disarm` is called.
 

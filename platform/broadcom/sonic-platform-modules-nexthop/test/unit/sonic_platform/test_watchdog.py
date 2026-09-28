@@ -1,6 +1,7 @@
 import datetime
 import pytest
 import os
+import pathlib
 import tempfile
 
 from unittest.mock import patch, ANY, create_autospec
@@ -23,31 +24,80 @@ class TestWatchdogHelpers:
     def setup(self, watchdog_module):
         self.watchdog_module = watchdog_module
 
-    def test_pause_watchdog_punching(self):
-        expected_timestamp = 105
-        with (
-            tempfile.NamedTemporaryFile() as test_pause_file,
-            patch.object(
-                self.watchdog_module,
-                "_WATCHDOG_PAUSE_FILE_PATH",
-                test_pause_file.name,
-            ),
-            patch("time.time", return_value=100),
-        ):
-            self.watchdog_module._pause_watchdog_punching(datetime.timedelta(seconds=5))
+    def test_pause_punching_records_the_deadline(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pause_file = pathlib.Path(tmpdir) / "watchdog.pause"
+            with (
+                patch.object(
+                    self.watchdog_module, "_WATCHDOG_PAUSE_FILE_PATH", pause_file
+                ),
+                patch("time.monotonic", return_value=100),
+            ):
+                self.watchdog_module._pause_watchdog_punching(
+                    datetime.timedelta(seconds=5)
+                )
 
-            actual_timestamp = int(test_pause_file.read())
-            assert actual_timestamp == expected_timestamp
+                assert int(pause_file.read_text()) == 105
+
+    @pytest.mark.parametrize(
+        "contents,now,expected",
+        [
+            ("200", 100, True),    # deadline ahead
+            ("200", 200, False),   # deadline reached
+            ("200", 300, False),   # deadline passed
+            ("", 100, False),      # malformed -> arm rather than stay paused
+            ("not-a-ts", 100, False),
+        ],
+    )
+    def test_punching_paused_honours_the_deadline(self, contents, now, expected):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pause_file = pathlib.Path(tmpdir) / "watchdog.pause"
+            pause_file.write_text(contents)
+            with (
+                patch.object(
+                    self.watchdog_module, "_WATCHDOG_PAUSE_FILE_PATH", pause_file
+                ),
+                patch("time.monotonic", return_value=now),
+            ):
+                assert self.watchdog_module._punching_paused() is expected
+
+    def test_punching_paused_is_false_without_a_pause_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pause_file = pathlib.Path(tmpdir) / "watchdog.pause"
+            with patch.object(
+                self.watchdog_module, "_WATCHDOG_PAUSE_FILE_PATH", pause_file
+            ):
+                assert self.watchdog_module._punching_paused() is False
+
+    def test_pause_punching_writes_the_file_resume_removes_it(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pause_file = pathlib.Path(tmpdir) / "watchdog.pause"
+            with patch.object(
+                self.watchdog_module, "_WATCHDOG_PAUSE_FILE_PATH", pause_file
+            ):
+                self.watchdog_module._pause_watchdog_punching(datetime.timedelta(seconds=900))
+                assert pause_file.exists()
+
+                self.watchdog_module._unpause_watchdog_punching()
+                assert not pause_file.exists()
+
+    def test_resume_punching_tolerates_a_missing_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pause_file = pathlib.Path(tmpdir) / "watchdog.pause"
+            with patch.object(
+                self.watchdog_module, "_WATCHDOG_PAUSE_FILE_PATH", pause_file
+            ):
+                self.watchdog_module._unpause_watchdog_punching()
 
 
 @pytest.fixture
-def mock_pause_watchdog_punching(watchdog_module):
+def mock_pause_punching(watchdog_module):
     """Mock for _pause_watchdog_punching."""
     return create_autospec(watchdog_module._pause_watchdog_punching)
 
 
 @pytest.fixture
-def mock_unpause_watchdog_punching(watchdog_module):
+def mock_resume_punching(watchdog_module):
     """Mock for _unpause_watchdog_punching."""
     return create_autospec(watchdog_module._unpause_watchdog_punching)
 
@@ -57,11 +107,11 @@ class TestWatchdogAPI:
     def setup(
         self,
         watchdog_module,
-        mock_pause_watchdog_punching,
-        mock_unpause_watchdog_punching,
+        mock_pause_punching,
+        mock_resume_punching,
     ):
-        watchdog_module._pause_watchdog_punching = mock_pause_watchdog_punching
-        watchdog_module._unpause_watchdog_punching = mock_unpause_watchdog_punching
+        watchdog_module._pause_watchdog_punching = mock_pause_punching
+        watchdog_module._unpause_watchdog_punching = mock_resume_punching
         with tempfile.NamedTemporaryFile() as test_pause_file:
             watchdog_module._WATCHDOG_PAUSE_FILE_PATH = test_pause_file.name
 
@@ -252,7 +302,7 @@ class TestWatchdogAPI:
         mock_update_watchdog_countdown_value,
         mock_toggle_watchdog_reboot,
         mock_toggle_watchdog_counter_enable,
-        mock_pause_watchdog_punching,
+        mock_pause_punching,
     ):
         # Set up
         timeout = 1
@@ -268,14 +318,34 @@ class TestWatchdogAPI:
         self.watchdog.arm(timeout)
 
         # Assert
-        mock_pause_watchdog_punching.assert_called_once_with(
+        mock_pause_punching.assert_called_once_with(
             datetime.timedelta(seconds=1)
+        )
+
+    def test_arm_from_daemon_skips_while_punching_is_paused(
+        self, watchdog_module, mock_do_real_arm
+    ):
+        # The enforcement point for the pause deadline: the timer must not hand a
+        # counter to a platform whose FPGA the reload has unmapped.
+        self.watchdog._do_real_arm = mock_do_real_arm
+        with patch.object(watchdog_module, "_punching_paused", return_value=True):
+            assert self.watchdog.arm_from_daemon() == 0
+        mock_do_real_arm.assert_not_called()
+
+    def test_arm_from_daemon_arms_once_the_pause_has_expired(
+        self, watchdog_module, mock_do_real_arm
+    ):
+        self.watchdog._do_real_arm = mock_do_real_arm
+        with patch.object(watchdog_module, "_punching_paused", return_value=False):
+            self.watchdog.arm_from_daemon()
+        mock_do_real_arm.assert_called_once_with(
+            watchdog_module._WATCHDOG_PUNCH_DAEMON_ARM_SECONDS
         )
 
     def test_arm_should_unpause_punching_on_error(
         self,
         mock_do_real_arm,
-        mock_unpause_watchdog_punching,
+        mock_resume_punching,
     ):
         # Set up
         mock_do_real_arm.return_value = -1
@@ -285,7 +355,7 @@ class TestWatchdogAPI:
         self.watchdog.arm(1)
 
         # Assert
-        mock_unpause_watchdog_punching.assert_called_once()
+        mock_resume_punching.assert_called_once()
 
     def test_disarm_stops_counter(
         self,
@@ -310,7 +380,7 @@ class TestWatchdogAPI:
         self,
         mock_toggle_watchdog_reboot,
         mock_toggle_watchdog_counter_enable,
-        mock_unpause_watchdog_punching,
+        mock_resume_punching,
     ):
         # Set up
         self.watchdog._toggle_watchdog_reboot = mock_toggle_watchdog_reboot
@@ -323,13 +393,13 @@ class TestWatchdogAPI:
 
         # Assert
         assert actual_return_value
-        mock_unpause_watchdog_punching.assert_called_once()
+        mock_resume_punching.assert_called_once()
 
     def test_disarm_fails_do_not_resume_punching(
         self,
         mock_toggle_watchdog_reboot,
         mock_toggle_watchdog_counter_enable,
-        mock_unpause_watchdog_punching,
+        mock_resume_punching,
     ):
         # Set up
         mock_toggle_watchdog_reboot.side_effect = Exception()
@@ -343,7 +413,7 @@ class TestWatchdogAPI:
 
         # Assert
         assert not actual_return_value
-        mock_unpause_watchdog_punching.assert_not_called()
+        mock_resume_punching.assert_not_called()
 
     def test_get_remaining_time_when_not_armed(self, mock_read_watchdog_counter_enable):
         # Set up

@@ -138,6 +138,7 @@ struct fpgalogic_i2c {
 static struct fpgalogic_i2c fpgalogic_i2c[I2C_PCI_MAX_BUS];
 extern void __iomem *(*get_fpga_ctl_addr)(const char *);
 extern int (*pddf_i2c_multifpgapci_add_numbered_bus)(struct i2c_adapter *, int);
+extern void (*pddf_i2c_multifpgapci_del_bus)(struct i2c_adapter *);
 static int xiic_reinit(struct fpgalogic_i2c *i2c);
 
 
@@ -619,10 +620,24 @@ static int pddf_i2c_multifpgapci_add_numbered_bus_default (struct i2c_adapter *a
 {
     int ret = 0;
 
-    adap_data_init(adap, index);
+    ret = adap_data_init(adap, index);
+    if (ret)
+        return ret;
+
     adap->algo  = &axi_iic_algorithm;
     ret = i2c_add_numbered_adapter(adap);
-    return ret;
+    if (ret)
+        return ret;
+
+    __module_get(THIS_MODULE);
+    return 0;
+}
+
+static void pddf_i2c_multifpgapci_del_bus_default (struct i2c_adapter *adap)
+{
+    i2c_del_adapter(adap);
+    /* Nothing references our algo/algo_data any more. Must stay last. */
+    module_put(THIS_MODULE);
 }
 
 /*
@@ -667,12 +682,15 @@ static int __init pddf_custom_fpga_algo_init(void)
 {
 	pddf_dbg(FPGA, KERN_INFO "[%s]\n", __FUNCTION__);
 	pddf_i2c_multifpgapci_add_numbered_bus = pddf_i2c_multifpgapci_add_numbered_bus_default;
+	pddf_i2c_multifpgapci_del_bus = pddf_i2c_multifpgapci_del_bus_default;
 	return 0;
 }
 static void __exit pddf_custom_fpga_algo_exit(void)
 {
 	pddf_dbg(FPGA, KERN_INFO "[%s]\n", __FUNCTION__);
+	/* Reaching here means no adapter holds a reference on us. */
 	pddf_i2c_multifpgapci_add_numbered_bus = NULL;
+	pddf_i2c_multifpgapci_del_bus = NULL;
 	return;
 }
 
