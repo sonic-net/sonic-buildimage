@@ -39,8 +39,8 @@ CUR_BRKOUT_MODE = "brkout_mode"
 INTF_KEY = "interfaces"
 OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role"]
 
-BRKOUT_PATTERN = r'(\d{1,6})x(\d{1,6}G?)(\[(\d{1,6}G?,?)*\])?(\((\d{1,6})\))?'
-BRKOUT_PATTERN_GROUPS = 6
+BRKOUT_PATTERN = r'^(\d{1,6})x(\d{1,6}G?)(.*)$'
+BRKOUT_OPTION_PATTERN = r'\[[^\[\]]+\]|\(\d{1,6}\)'
 
 #
 # Helper Functions
@@ -251,6 +251,8 @@ class BreakoutCfg(object):
     class BreakoutModeEntry:
         def __init__(self, num_ports, default_speed, supported_speed, num_assigned_lanes=None):
             self.num_ports = int(num_ports)
+            if self.num_ports < 1:
+                raise RuntimeError("Number of breakout ports must be greater than zero")
             self.default_speed = self._speed_to_int(default_speed)
             self.supported_speed = set((self.default_speed, ))
             self._parse_supported_speed(supported_speed)
@@ -286,7 +288,10 @@ class BreakoutCfg(object):
             if not num_assigned_lanes.startswith('(') and not num_assigned_lanes.endswith(')'):
                 raise RuntimeError("Unsupported port breakout format!")
 
-            return int(num_assigned_lanes[1:-1])
+            parsed_num_assigned_lanes = int(num_assigned_lanes[1:-1])
+            if parsed_num_assigned_lanes < 1:
+                raise RuntimeError("Number of assigned lanes must be greater than zero")
+            return parsed_num_assigned_lanes
 
         def __eq__(self, other):
             if isinstance(other, BreakoutCfg.BreakoutModeEntry):
@@ -311,7 +316,12 @@ class BreakoutCfg(object):
         self._properties = properties
         self._lanes = properties ['lanes'].split(',')
         self._indexes = properties ['index'].split(',')
-        self._breakout_mode_entry = self._str_to_entries(bmode)
+        try:
+            self._breakout_mode_entry = self._str_to_entries(bmode)
+        except RuntimeError as e:
+            raise RuntimeError(
+                "Invalid breakout mode '{}' for interface '{}': {}".format(bmode, name, e)
+            )
         self._breakout_capabilities = None
 
         # Find specified breakout mode in port breakout mode capabilities
@@ -321,35 +331,55 @@ class BreakoutCfg(object):
                 break
 
         if not self._breakout_capabilities:
-            raise RuntimeError("Unsupported breakout mode {}!".format(bmode))
-
-    def _re_group_to_entry(self, group):
-        if len(group) != BRKOUT_PATTERN_GROUPS:
-            raise RuntimeError("Unsupported breakout mode format!")
-
-        num_ports, default_speed, supported_speed, _, num_assigned_lanes, _ = group
-        if not num_assigned_lanes:
-            num_assigned_lanes = len(self._lanes)
-
-        return BreakoutCfg.BreakoutModeEntry(num_ports, default_speed, supported_speed, num_assigned_lanes)
+            raise RuntimeError(
+                "Unsupported breakout mode '{}' for interface '{}'! Valid modes: {}".format(
+                    bmode,
+                    name,
+                    ", ".join(self._properties['breakout_modes'].keys())
+                )
+            )
 
     def _str_to_entries(self, bmode):
         """
-        Example of match_list for some breakout_mode using regex
-            Breakout Mode -------> Match_list
-            -----------------------------
-            2x25G(2)+1x50G(2) ---> [('2', '25G', None, '(2)', '2'), ('1', '50G', None, '(2)', '2')]
-            1x50G(2)+2x25G(2) ---> [('1', '50G', None, '(2)', '2'), ('2', '25G', None, '(2)', '2')]
-            1x100G[40G] ---------> [('1', '100G', '[40G]', None, None)]
-            2x50G ---------------> [('2', '50G', None, None, None)]
+        Parse each segment of a breakout mode. Supported-speed groups and the
+        assigned-lane group may appear in either order because both forms are
+        present in platform data.
         """
+        entries = []
+        for segment in bmode.split("+"):
+            match = re.match(BRKOUT_PATTERN, segment)
+            if not match:
+                raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
 
-        try:
-            groups_list = [re.match(BRKOUT_PATTERN, i).groups() for i in bmode.split("+")]
-        except Exception:
-            raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
+            num_ports, default_speed, options_text = match.groups()
+            options = re.findall(BRKOUT_OPTION_PATTERN, options_text)
+            if re.sub(r'\s+', '', ''.join(options)) != re.sub(r'\s+', '', options_text):
+                raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
 
-        return [self._re_group_to_entry(group) for group in groups_list]
+            supported_speeds = []
+            num_assigned_lanes = None
+            for option in options:
+                if option.startswith('['):
+                    supported_speeds.extend(speed.strip() for speed in option[1:-1].split(','))
+                elif num_assigned_lanes is None:
+                    num_assigned_lanes = option
+                else:
+                    raise RuntimeError('Breakout mode "{}" has multiple lane counts!'.format(bmode))
+
+            supported_speed = None
+            if supported_speeds:
+                supported_speed = '[{}]'.format(','.join(supported_speeds))
+            if num_assigned_lanes is None:
+                num_assigned_lanes = len(self._lanes)
+
+            entries.append(BreakoutCfg.BreakoutModeEntry(
+                num_ports,
+                default_speed,
+                supported_speed,
+                num_assigned_lanes
+            ))
+
+        return entries
 
     def get_config(self):
         # Ensure that we have corret number of configured lanes
@@ -430,7 +460,12 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
         # take default_brkout_mode from hwsku.json
         brkout_mode = hwsku_dict[INTF_KEY][intf][BRKOUT_MODE]
 
-        child_ports = get_child_ports(intf, brkout_mode, platform_json_file)
+        # Validate the per-port breakout selection against the cage's valid
+        # breakout_modes in platform.json and expand it into port entries.
+        try:
+            child_ports = get_child_ports(intf, brkout_mode, platform_json_file)
+        except RuntimeError as e:
+            raise RuntimeError("Invalid breakout mode '{}' for interface '{}': {}".format(brkout_mode, intf, e))
 
         # take optional fields from hwsku.json
         hwsku_entry = hwsku_dict[INTF_KEY]
@@ -451,13 +486,20 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
     return (ports, port_alias_map, port_alias_asic_map)
 
 
-def get_breakout_mode(hwsku=None, platform=None, port_config_file=None):
+def get_breakout_mode(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
     if not port_config_file:
-        port_config_file = device_info.get_path_to_port_config_file(hwsku)
+        if asic_name is not None:
+            asic_id = str(get_asic_id_from_name(asic_name))
+        else:
+            asic_id = None
+        port_config_file = device_info.get_path_to_port_config_file(hwsku, asic_id)
         if not port_config_file:
             return None
     if port_config_file.endswith('.json'):
-        hwsku_json_file = get_hwsku_file_name(hwsku, platform)
+        if hwsku_config_file:
+            hwsku_json_file = hwsku_config_file
+        else:
+            hwsku_json_file = get_hwsku_file_name(hwsku, platform)
         if not hwsku_json_file:
             raise Exception("'hwsku_json' file does not exist!!! This file is necessary to proceed forward.")
 

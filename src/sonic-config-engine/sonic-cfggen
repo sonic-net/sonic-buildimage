@@ -428,7 +428,13 @@ def main():
             sys.exit(1)
         deep_update(data, {'PORT': ports})
 
-        brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
+        brkout_table = get_breakout_mode(
+            hwsku,
+            platform,
+            args.port_config,
+            hwsku_config_file=args.hwsku_config,
+            asic_name=asic_name
+        )
         if  brkout_table is not None:
             deep_update(data, {'BREAKOUT_CFG': brkout_table})
 
