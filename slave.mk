@@ -1486,9 +1486,15 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES))
 
+# When running with Bazel, Make is not aware of changes to sources of containers (e.g. configuration files).
+# Therefore, we must always invoke Bazel, so that _it_ can track the source changes.
+.PHONY: FORCE_BAZEL
+FORCE_BAZEL:
+
 # Targets for building docker images (and debug images) with Bazel.
 $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
-		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
+		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE)) \
+		FORCE_BAZEL
 	$(HEADER)
 	bazel build //dockers/$*:$*.gz $(LOG)
 	out=$$(bazel cquery --output=files //dockers/$*:$*.gz 2>> $(PROJECT_ROOT)/$@.log)
@@ -1496,7 +1502,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz
 	$(FOOTER)
 
 $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform \
-		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
+		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE)) \
+		FORCE_BAZEL
 	$(HEADER)
 	bazel build //dockers/$*:$*-$(DBG_IMAGE_MARK).gz $(LOG)
 	out=$$(bazel cquery --output=files //dockers/$*:$*-$(DBG_IMAGE_MARK).gz 2>> $(PROJECT_ROOT)/$@.log)
