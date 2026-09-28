@@ -90,11 +90,18 @@ class AggregateAddressMgr(Manager):
         else:
             bbr_status = ""
         bbr_required = data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING
-        if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED) and bbr_required:
-            log_info("AggregateAddressMgr::BBR state is unknown and bbr-required is true. Skip the address %s" % prefix)
-            self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
-        elif bbr_status == BGP_BBR_STATUS_DISABLED and bbr_required:
-            log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % prefix)
+        if bbr_required and bbr_status != BGP_BBR_STATUS_ENABLED:
+            if bbr_status == BGP_BBR_STATUS_DISABLED:
+                log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % prefix)
+            else:
+                log_info("AggregateAddressMgr::BBR state is unknown and bbr-required is true. Skip the address %s" % prefix)
+            success, old_data = self.address_table.get(key)
+            if success:
+                old_data = dict(old_data)
+                if old_data.get(ADDRESS_STATE_KEY) == ADDRESS_ACTIVE_STATE:
+                    if not self.address_del_handler(key, old_data):
+                        log_err("AggregateAddressMgr::Failed to deactivate address %s" % prefix)
+                        return False
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         else:
             if self.address_set_handler(key, data):
