@@ -1,0 +1,8 @@
+DPATH       := $($(NEXTHOP_UTILS_WHL)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/nexthop-common/sonic-platform-nexthop-utils-wheel.mk
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files -- $(DPATH))
+
+$(NEXTHOP_UTILS_WHL)_CACHE_MODE  := GIT_CONTENT_SHA
+$(NEXTHOP_UTILS_WHL)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(NEXTHOP_UTILS_WHL)_DEP_FILES   := $(DEP_FILES)

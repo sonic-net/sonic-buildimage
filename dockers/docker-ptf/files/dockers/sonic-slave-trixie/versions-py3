@@ -43,7 +43,7 @@ fastentrypoints==0.12
 filelock==3.18.0
 fonttools==4.57.0
 fs==2.4.16
-fsspec==2026.7.0
+fsspec==2026.9.0
 gbp==0.9.38
 gcovr==7.2
 gpg==1.24.2

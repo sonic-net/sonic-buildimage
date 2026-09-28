@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import pexpect
 import sys
 import time
@@ -10,7 +11,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='test_login cmdline parser')
     parser.add_argument('-u', default="admin", help='login user name')
-    parser.add_argument('-P', default="YourPaSsWoRd", help='login password')
+    parser.add_argument('-P', default=os.environ.get("SONIC_PASSWORD", "YourPaSsWoRd"), help='login password')
     parser.add_argument('-N', default="Test@2022", help='new password')
     parser.add_argument('-p', type=int, default=9000, help='local port')
 
@@ -26,7 +27,8 @@ def main():
     i = 0
     while True:
         try:
-            p = pexpect.spawn("telnet 127.0.0.1 {}".format(args.p), timeout=600, logfile=sys.stdout, encoding='utf-8')
+            p = pexpect.spawn("telnet 127.0.0.1 {}".format(args.p), timeout=600, encoding='utf-8')
+            p.logfile_read = sys.stdout
             break
         except Exception as e:
             print(str(e))
