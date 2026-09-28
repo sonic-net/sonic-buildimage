@@ -51,7 +51,7 @@ libsasl2-2==2.1.28+dfsg-10
 libsasl2-modules-db==2.1.28+dfsg-10
 libsodium23==1.0.18-1+deb12u1
 libsqlite3-0==3.40.1-2+deb12u2
-libssh2-1==1.10.0-3+b1
+libssh2-1==1.10.0-3+deb12u1
 libssl-dev==3.0.11-1~deb12u2+fips
 libssl3==3.0.11-1~deb12u2+fips
 libtirpc-common==1.3.3+ds-1
@@ -76,11 +76,12 @@ python3-wheel==0.38.4-2
 python3.11==3.11.2-6+deb12u8
 python3.11-minimal==3.11.2-6+deb12u8
 readline-common==8.2-1.3
-redis-tools==5:7.0.15-1~deb12u9
+redis-tools==5:7.0.15-1~deb12u10
 rsync==3.2.7-1+deb12u6
 rsyslog==8.2302.0-1+deb12u1
 rsyslog-relp==8.2302.0-1+deb12u1
 socat==1.8.0.2-1
 symcrypt-openssl==0.1
+tzdata==2026c-0+deb12u1
 vim-common==2:9.0.1378-2+deb12u2
 vim-tiny==2:9.0.1378-2+deb12u2
