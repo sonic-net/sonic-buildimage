@@ -5,7 +5,7 @@ Subject: [PATCH] zebra: flush a local-inactive MAC once nothing pins it
 In external-learning mode a synced local MAC is programmed static and never
 ages out of the dataplane, so zebra has to flush it explicitly once the peer
 references are gone. zebra_evpn_sync_mac_del() already does that, but it is
-only one of the two places where the last reference can be released.
+only one of the places where the last reference can be released.
 
 zebra_evpn_mac_is_static() is true while either the MAC carries a peer flag
 or mac->sync_neigh_cnt is non zero, and BGP withdraws the MAC route and the
@@ -24,10 +24,18 @@ re-examines it. Observed on hardware after ten minutes of host silence: one
 leaf withdrew the MAC correctly while its peer kept it indefinitely.
 
 Move the disposition into zebra_evpn_mac_reeval_local_inactive() and call it
-from both release paths. It re-checks every condition and is idempotent, so
-whichever reference is released last performs the flush and the other call
-does nothing. Skip it when the caller defers the MAC dataplane update, since
-that caller reprograms the MAC itself.
+wherever the last reference can go: zebra_evpn_sync_mac_del() for the MAC's
+own peer flags, and the only two places that drop a sync-neigh reference,
+zebra_evpn_sync_neigh_static_chg() and zebra_evpn_local_neigh_deref_mac().
+The latter runs when a neighbour moves to a different MAC and can free the
+old MAC, so the MAC is looked up again by address before it is re-examined.
+The check is idempotent, so whichever reference is released last performs
+the flush and the other calls do nothing.
+
+zebra_evpn_sync_neigh_static_chg() skips it when the caller defers the MAC
+dataplane update. The only such caller, zebra_evpn_proc_sync_neigh_update(),
+always leaves the neighbour with a peer flag, so it can only take a
+reference there, never release the last one.
 
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
@@ -88,10 +96,10 @@ index dd76bce9a9..66421555fc 100644
  		zebra_evpn_sync_mac_dp_install(mac, false, false, __func__);
  }
 diff --git a/zebra/zebra_evpn_mac.h b/zebra/zebra_evpn_mac.h
-index ad2e8f590e..6c98c1364b 100644
+index d854233810..0aee54fb26 100644
 --- a/zebra/zebra_evpn_mac.h
 +++ b/zebra/zebra_evpn_mac.h
-@@ -188,6 +188,7 @@ static inline bool zebra_evpn_mac_is_ready_for_bgp(uint32_t flags)
+@@ -181,6 +181,7 @@ static inline bool zebra_evpn_mac_is_ready_for_bgp(uint32_t flags)
  }
  
  void zebra_evpn_mac_stop_hold_timer(struct zebra_mac *mac);
@@ -100,7 +108,7 @@ index ad2e8f590e..6c98c1364b 100644
  static inline void zebra_evpn_mac_clear_sync_info(struct zebra_mac *mac)
  {
 diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
-index cfc37559df..f0ae92edad 100644
+index cfc37559df..cd532b0f22 100644
 --- a/zebra/zebra_evpn_neigh.c
 +++ b/zebra/zebra_evpn_neigh.c
 @@ -403,6 +403,13 @@ void zebra_evpn_sync_neigh_static_chg(struct zebra_neigh *n, bool old_n_static,
@@ -117,3 +125,40 @@ index cfc37559df..f0ae92edad 100644
  }
  
  /* Neigh hold timer is used to age out peer-active flag.
+@@ -489,8 +496,10 @@ static void zebra_evpn_local_neigh_deref_mac(struct zebra_neigh *n,
+ {
+ 	struct zebra_mac *mac = n->mac;
+ 	struct zebra_evpn *zevpn = n->zevpn;
++	struct ethaddr macaddr;
+ 	bool old_static;
+ 	bool new_static;
++	bool unpinned = false;
+ 
+ 	n->mac = NULL;
+ 	if (!mac)
+@@ -500,6 +509,7 @@ static void zebra_evpn_local_neigh_deref_mac(struct zebra_neigh *n,
+ 		old_static = zebra_evpn_mac_is_static(mac);
+ 		--mac->sync_neigh_cnt;
+ 		new_static = zebra_evpn_mac_is_static(mac);
++		unpinned = old_static && !new_static;
+ 		if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH)
+ 			zlog_debug(
+ 				"sync-neigh deref mac vni %u ip %pIA mac %pEA ref %d",
+@@ -512,8 +522,17 @@ static void zebra_evpn_local_neigh_deref_mac(struct zebra_neigh *n,
+ 				false /* force_clear_static */, __func__);
+ 	}
+ 
++	macaddr = mac->macaddr;
+ 	listnode_delete(mac->neigh_list, n);
+ 	zebra_evpn_deref_ip2mac(zevpn, mac);
++
++	if (!unpinned)
++		return;
++
++	/* The deref can free the MAC, so find it again by address. */
++	mac = zebra_evpn_mac_lookup(zevpn, &macaddr);
++	if (mac)
++		zebra_evpn_mac_reeval_local_inactive(mac);
+ }
+ 
+ bool zebra_evpn_neigh_is_bgp_seq_ok(struct zebra_evpn *zevpn,
