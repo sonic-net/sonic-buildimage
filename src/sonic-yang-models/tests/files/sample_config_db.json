@@ -5,6 +5,14 @@
                     "vni" : "100"
                 }
         },
+        "NEXTHOP_TRACKING": {
+            "default|ipv4": {
+                "resolve_via_default": "false"
+            },
+            "Vrf_blue|ipv6": {
+                "resolve_via_default": "true"
+            }
+        },
         "SUBNET_DECAP": {
             "AZURE": {
                 "status": "enable",
