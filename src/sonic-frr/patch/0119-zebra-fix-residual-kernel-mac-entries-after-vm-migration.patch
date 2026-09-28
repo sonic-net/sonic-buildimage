@@ -1,0 +1,168 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: InspurSDN <sdn@ieisystem.com>
+Date: Mon, 31 Aug 2026 06:40:06 +0000
+Subject: [PATCH] zebra: Fix residual kernel MAC entries after VM migration
+
+When a VM migrates away, the local MAC becomes local again but the
+kernel may still hold an FDB entry that was installed on the bridge
+master. Removing it through the bridge interface is not always possible
+for entries that are scoped to the local interface only.
+
+Introduce a dedicated DPLANE_MAC_DEL_NO_BRIDGE update flag and a
+dplane_rem_mac_del_no_bridge() helper that enqueues a MAC delete using
+the local interface alone, without the NDA_MASTER attribute. zebra then
+uses it when a previously remote MAC transitions back to local so the
+residual kernel entry is cleaned up.
+
+Signed-off-by: InspurSDN <sdn@ieisystem.com>
+---
+ zebra/rt_netlink.c     | 17 ++++++++++++-----
+ zebra/zebra_dplane.c   | 21 ++++++++++++++++++++-
+ zebra/zebra_dplane.h   | 11 +++++++++++
+ zebra/zebra_evpn_mac.c |  7 +++++++
+ 4 files changed, 50 insertions(+), 6 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 98374219dd..fbba1fa753 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -4028,6 +4028,7 @@ static ssize_t netlink_neigh_update_msg_encode(
+ 	if (op == DPLANE_OP_MAC_INSTALL || op == DPLANE_OP_MAC_DELETE) {
+ 		vlanid_t vid = dplane_ctx_mac_get_vlan(ctx);
+ 		vni_t vni = dplane_ctx_mac_get_vni(ctx);
++		uint32_t update_flags = dplane_ctx_mac_get_update_flags(ctx);
+ 
+ 		if (vid > 0) {
+ 			if (!nl_attr_put16(&req->n, datalen, NDA_VLAN, vid))
+@@ -4039,9 +4040,11 @@ static ssize_t netlink_neigh_update_msg_encode(
+ 				return 0;
+ 		}
+ 
+-		if (!nl_attr_put32(&req->n, datalen, NDA_MASTER,
+-				   dplane_ctx_mac_get_br_ifindex(ctx)))
+-			return 0;
++		if (!(update_flags & DPLANE_MAC_DEL_NO_BRIDGE)) {
++			if (!nl_attr_put32(&req->n, datalen, NDA_MASTER,
++					   dplane_ctx_mac_get_br_ifindex(ctx)))
++				return 0;
++		}
+ 	}
+ 
+ 	if (op == DPLANE_OP_VTEP_ADD || op == DPLANE_OP_VTEP_DELETE) {
+@@ -4466,7 +4469,10 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+ 
+ 	update_flags = dplane_ctx_mac_get_update_flags(ctx);
+ 	if (update_flags & DPLANE_MAC_REMOTE) {
+-		flags |= NTF_SELF;
++		if (update_flags & DPLANE_MAC_DEL_NO_BRIDGE)
++			flags = NTF_SELF;
++		else
++			flags |= NTF_SELF;
+ 		if (dplane_ctx_mac_is_sticky(ctx)) {
+ 			/* NUD_NOARP prevents the entry from expiring */
+ 			state |= NUD_NOARP;
+@@ -4507,7 +4513,7 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+ 			vid_buf[0] = '\0';
+ 
+ 		zlog_debug(
+-			"Tx %s family %s IF %s(%u)%s %sMAC %pEA dst %pIA nhg %u%s%s%s%s%s",
++			"Tx %s family %s IF %s(%u)%s %sMAC %pEA dst %pIA nhg %u%s%s%s%s%s%s",
+ 			nl_msg_type_to_str(cmd), nl_family_to_str(AF_BRIDGE),
+ 			dplane_ctx_get_ifname(ctx), dplane_ctx_get_ifindex(ctx),
+ 			vid_buf, dplane_ctx_mac_is_sticky(ctx) ? "sticky " : "",
+@@ -4518,6 +4524,7 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+ 			(update_flags & DPLANE_MAC_SET_STATIC) ? " static" : "",
+ 			(update_flags & DPLANE_MAC_SET_INACTIVE) ? " inactive"
+ 								 : "",
++			(update_flags & DPLANE_MAC_DEL_NO_BRIDGE) ? " no_br" : "",
+ 			nfy ? " nfy" : "");
+ 	}
+ 
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index e30521fa32..f20f6466b9 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -5911,6 +5911,25 @@ enum zebra_dplane_result dplane_rem_mac_add(const struct interface *ifp,
+ 	return result;
+ }
+ 
++/*
++ * Enqueue vxlan/evpn mac delete for an entry that is not installed on a
++ * bridge master - the kernel entry is scoped to the local interface only.
++ */
++enum zebra_dplane_result dplane_rem_mac_del_no_bridge(const struct interface *ifp,
++						      const struct ethaddr *mac,
++						      struct ipaddr *vtep_ip)
++{
++	enum zebra_dplane_result result;
++	uint32_t update_flags = 0;
++
++	update_flags |= DPLANE_MAC_REMOTE | DPLANE_MAC_DEL_NO_BRIDGE;
++
++	/* Use common helper api */
++	result = mac_update_common(DPLANE_OP_MAC_DELETE, ifp, NULL, 0, mac, 0,
++				   vtep_ip, false, 0, update_flags);
++	return result;
++}
++
+ /*
+  * Enqueue vxlan/evpn mac delete.
+  */
+@@ -6027,7 +6046,7 @@ void dplane_mac_init(struct zebra_dplane_ctx *ctx, const struct interface *ifp,
+ 	/* Init the mac-specific data area */
+ 	memset(&ctx->u.macinfo, 0, sizeof(ctx->u.macinfo));
+ 
+-	ctx->u.macinfo.br_ifindex = br_ifp->ifindex;
++	ctx->u.macinfo.br_ifindex = br_ifp ? br_ifp->ifindex : 0;
+ 	ctx->u.macinfo.vtep_ip = *vtep_ip;
+ 	ctx->u.macinfo.mac = *mac;
+ 	ctx->u.macinfo.vni = vni;
+diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
+index c0df0d3057..004cf5618a 100644
+--- a/zebra/zebra_dplane.h
++++ b/zebra/zebra_dplane.h
+@@ -264,6 +264,10 @@ enum dplane_op_e {
+ #define DPLANE_MAC_WAS_STATIC   (1 << 1)
+ #define DPLANE_MAC_SET_STATIC   (1 << 2)
+ #define DPLANE_MAC_SET_INACTIVE (1 << 3)
++/* The kernel FDB entry is not associated with a bridge master and must be
++ * deleted using the local interface alone.
++ */
++#define DPLANE_MAC_DEL_NO_BRIDGE (1 << 4)
+ 
+ /* Neigh update flags - dplane_neigh_info.update_flags */
+ #define DPLANE_NEIGH_REMOTE       (1 << 0)
+@@ -1100,6 +1104,13 @@ enum zebra_dplane_result dplane_rem_mac_del(const struct interface *ifp,
+ 					    const struct ethaddr *mac, vni_t vni,
+ 					    struct ipaddr *vtep_ip);
+ 
++/* Enqueue an evpn mac delete for an entry that is not installed on a bridge
++ * master; the kernel entry is scoped to the local interface only.
++ */
++enum zebra_dplane_result dplane_rem_mac_del_no_bridge(const struct interface *ifp,
++						      const struct ethaddr *mac,
++						      struct ipaddr *vtep_ip);
++
+ /* Helper api to init an empty or new context for a MAC update */
+ void dplane_mac_init(struct zebra_dplane_ctx *ctx, const struct interface *ifp,
+ 		     const struct interface *br_ifp, vlanid_t vid, const struct ethaddr *mac,
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 389cc98076..0cbcfb13f4 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -2290,6 +2290,13 @@ int zebra_evpn_add_update_local_mac(struct zebra_vrf *zvrf,
+ 				do_dad = true;
+ 			}
+ 
++			/* The MAC is no longer remote, but the kernel may still
++			 * hold an FDB entry on the local port; remove it using
++			 * the local interface alone.
++			 */
++			dplane_rem_mac_del_no_bridge(zevpn->vxlan_if,
++						     &mac->macaddr, &vtep_ip);
++
+ 			UNSET_FLAG(mac->flags, ZEBRA_MAC_REMOTE);
+ 			UNSET_FLAG(mac->flags, ZEBRA_MAC_AUTO);
+ 			SET_FLAG(mac->flags, ZEBRA_MAC_LOCAL);
+-- 
+2.43.0
