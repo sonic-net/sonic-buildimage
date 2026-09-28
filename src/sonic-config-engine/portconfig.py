@@ -182,6 +182,9 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
             for intf_name in ports.keys():
                 if "alias" in ports[intf_name]:
                     port_alias_map[ports[intf_name]["alias"]] = intf_name
+                    if "asic_port_name" in ports[intf_name]:
+                        port_alias_asic_map[ports[intf_name]["alias"]] = ports[intf_name]["asic_port_name"]
+                        port_alias_map[ports[intf_name]["asic_port_name"]] = intf_name
             return (ports, port_alias_map, port_alias_asic_map)
 
     if asic_name is not None:
