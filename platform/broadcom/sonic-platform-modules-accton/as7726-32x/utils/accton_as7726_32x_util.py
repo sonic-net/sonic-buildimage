@@ -152,6 +152,7 @@ def dis_i2c_ir3570a(addr):
     status, output = getstatusoutput_noshell(cmd)
     cmd = ["i2cset", "-y", "0", "0x"+"%x"%addr, "0x12", "0x02"]
     status, output = getstatusoutput_noshell(cmd)
+    
     return status
 
 def ir3570_check():
@@ -213,7 +214,7 @@ def cpld_reset_mac():
 kos = [
 'depmod -ae',
 'modprobe i2c_dev',
-'modprobe i2c_mux_pca954x force_deselect_on_exit=1',
+'modprobe i2c_mux_pca954x',
 'modprobe ym2651y',
 'modprobe accton_as7726_32x_cpld',
 'modprobe accton_as7726_32x_fan',
@@ -262,7 +263,14 @@ def device_install():
             print(output)
             if FORCE == 0:
                 return status
-
+    
+     # set all pca954x idle_disconnect
+    cmd = 'echo -2 | tee /sys/bus/i2c/drivers/pca954x/*-00*/idle_state'
+    status, output = log_os_system(cmd, 1)
+    if status:
+        print(output)
+        if FORCE == 0:
+            return status
     for i in range(0,len(sfp_map)):
         status, output =log_os_system("echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-"+str(sfp_map[i])+"/new_device", 1)
         if status:
