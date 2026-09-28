@@ -99,6 +99,9 @@ platform/**/*.d
 !platform/**/etc/systemd/system/*.d
 !platform/**/etc/systemd/system.conf.d
 !platform/**/etc/modules-load.d
+# systemd drop-in dirs in a package's source tree -- "*.service.d", not a
+# make dependency file.
+!platform/**/systemd/*.service.d
 platform/**/*.cmd
 platform/**/*.order
 platform/broadcom/sonic-platform-modules-dell/s5232f/sonic_platform/ipmihelper.py
