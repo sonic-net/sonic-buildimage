@@ -1,0 +1,18 @@
+[Unit]
+Description=SONiC Alarm Monitoring Daemon
+After=sonic.target
+Requires=sonic.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/alarmd
+# on-failure: restart on crashes/signals but NOT on clean exit(1)
+# from missing config.  alarmd resolves the platform-specific
+# alarm_defs.json path itself and exits(1) if not found.
+Restart=on-failure
+RestartSec=30
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
