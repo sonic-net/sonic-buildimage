@@ -1,3 +1,9 @@
+{%- for interface_table in [INTERFACE, VLAN_INTERFACE, PORTCHANNEL_INTERFACE] %}
+{%- for key in interface_table %}
+{%- set name = key if key is string else key[0] %}
+{%- set _ = name | validate_interface_name %}
+{%- endfor %}
+{%- endfor %}
 #!/usr/bin/env bash
 
 function wait_until_iface_ready
@@ -26,22 +32,22 @@ function wait_until_iface_ready
 # Thus check if they are ready before launching dhcp6relay
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | validate_interface_name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% endfor %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | validate_interface_name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% if prefix | ipv6 %}
 {% if DHCP_RELAY and name in DHCP_RELAY %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | validate_interface_name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% endif %}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | validate_interface_name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% endfor %}
 
