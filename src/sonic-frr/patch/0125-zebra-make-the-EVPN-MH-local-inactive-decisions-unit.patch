@@ -28,12 +28,12 @@ the reference count reach zero.
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
 diff --git a/tests/zebra/subdir.am b/tests/zebra/subdir.am
-index 95bad06d54..eb7b08fcb9 100644
+index d9fcde80a9..e7594ba608 100644
 --- a/tests/zebra/subdir.am
 +++ b/tests/zebra/subdir.am
-@@ -39,3 +39,14 @@ tests_zebra_fpm_mac_test_SOURCES = tests/zebra/fpm_mac_test.c zebra/fpm_mac.c
- EXTRA_DIST += \
- 	tests/zebra/fpm_mac_test.py \
+@@ -15,3 +15,14 @@ EXTRA_DIST += \
+ 	tests/zebra/test_lm_plugin.py \
+ 	tests/zebra/test_lm_plugin.refout \
  	# end
 +
 +if ZEBRA
@@ -291,7 +291,7 @@ index 0000000000..e89c7286d4
 +
 +TestZebraEvpnMhDecisions.onesimple("test_zebra_evpn_mh_decisions: PASS")
 diff --git a/zebra/subdir.am b/zebra/subdir.am
-index f874af7f6a..3d2ad89eb6 100644
+index 9b86d2c5b7..09c2571a62 100644
 --- a/zebra/subdir.am
 +++ b/zebra/subdir.am
 @@ -159,6 +159,7 @@ nobase_pkginclude_HEADERS += \
@@ -343,7 +343,7 @@ index 66421555fc..524ec91773 100644
  		 * upd_neigh is excluded because it marks a MAC that has just
  		 * turned local or moved, and
 diff --git a/zebra/zebra_evpn_mac.h b/zebra/zebra_evpn_mac.h
-index 6c98c1364b..8fa9d481d5 100644
+index 0aee54fb26..ed9786ea98 100644
 --- a/zebra/zebra_evpn_mac.h
 +++ b/zebra/zebra_evpn_mac.h
 @@ -9,6 +9,8 @@
@@ -355,7 +355,7 @@ index 6c98c1364b..8fa9d481d5 100644
  #ifdef __cplusplus
  extern "C" {
  #endif
-@@ -176,7 +178,8 @@ struct rmac_walk_ctx {
+@@ -169,7 +171,8 @@ struct rmac_walk_ctx {
   */
  static inline bool zebra_evpn_mac_is_static(struct zebra_mac *mac)
  {
@@ -478,10 +478,10 @@ index 0000000000..83f6f71c8d
 +
 +#endif /* _FRR_ZEBRA_EVPN_MH_DECISIONS_H */
 diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
-index f0ae92edad..173311f3d1 100644
+index cd532b0f22..34738a9447 100644
 --- a/zebra/zebra_evpn_neigh.c
 +++ b/zebra/zebra_evpn_neigh.c
-@@ -1080,10 +1080,10 @@ void zebra_evpn_process_neigh_on_local_mac_inactive(struct zebra_evpn *zevpn,
+@@ -1092,10 +1092,10 @@ void zebra_evpn_process_neigh_on_local_mac_inactive(struct zebra_evpn *zevpn,
  	bool new_bgp_ready;
  
  	for (ALL_LIST_ELEMENTS_RO(zmac->neigh_list, node, n)) {
@@ -496,7 +496,7 @@ index f0ae92edad..173311f3d1 100644
  			continue;
  
  		old_bgp_ready = zebra_evpn_neigh_is_ready_for_bgp(n);
-@@ -1134,10 +1134,10 @@ void zebra_evpn_process_neigh_on_local_mac_active(struct zebra_evpn *zevpn,
+@@ -1146,10 +1146,10 @@ void zebra_evpn_process_neigh_on_local_mac_active(struct zebra_evpn *zevpn,
  		return;
  
  	for (ALL_LIST_ELEMENTS_RO(zmac->neigh_list, node, n)) {
@@ -511,7 +511,7 @@ index f0ae92edad..173311f3d1 100644
  			continue;
  
  		old_bgp_ready = zebra_evpn_neigh_is_ready_for_bgp(n);
-@@ -1525,18 +1525,18 @@ int zebra_evpn_local_neigh_update(struct zebra_evpn *zevpn,
+@@ -1537,18 +1537,18 @@ int zebra_evpn_local_neigh_update(struct zebra_evpn *zevpn,
  					UNSET_FLAG(n->flags,
  						   ZEBRA_NEIGH_ROUTER_FLAG);
  
@@ -538,7 +538,7 @@ index f0ae92edad..173311f3d1 100644
  				new_bgp_ready =
  					zebra_evpn_neigh_is_ready_for_bgp(n);
  
-@@ -1665,18 +1665,13 @@ int zebra_evpn_local_neigh_update(struct zebra_evpn *zevpn,
+@@ -1677,18 +1677,13 @@ int zebra_evpn_local_neigh_update(struct zebra_evpn *zevpn,
  							      : zmac->loc_seq;
  	}
  
