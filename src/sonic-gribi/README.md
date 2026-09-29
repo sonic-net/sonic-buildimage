@@ -12,7 +12,7 @@ switch.
                         fibtrack.Tracker ◀── applstate.Listener ◀── Redis pub/sub
 
 The gRIBI server is [openconfig/gribigo](https://github.com/openconfig/gribigo),
-with one patch (see Network instances). orchagent is untouched. Everything here is the translation between
+with two patches (see Network instances and Add cost). orchagent is untouched. Everything here is the translation between
 the two.
 
 | Package | Role |
@@ -47,6 +47,14 @@ The frame format is `sonic-swss-common/common/binaryserializer.h`: a `u64` pair
 count, then `(u64 len, bytes, u64 len, bytes)` pairs; pair 0 is
 `("APPL_DB", "ROUTE_TABLE")`, then per tuple `(key, fieldCount)` followed by
 the fields. Zero fields is a DEL.
+
+## Add cost
+
+gribigo v0.1.3 merged every added entry into its RIB with
+`ygot.MergeStructInto`, which rebuilds the whole table it merges into, so each
+add cost O(routes installed): about 2300 routes/s into an empty RIB, under 100
+by 75k. `patches/gribigo-rib-add-o1.patch` stores the entry directly, so an add
+costs the same at any RIB size.
 
 ## What FIB_PROGRAMMED means here
 
@@ -115,7 +123,7 @@ upstream release does.
 `build/bin/gribid` that needs neither Go nor any shared library on the switch.
 Build and test through `make` (or after `make`, with plain `go` commands,
 which use `vendor/`); a build straight from the module cache lacks the gribigo
-fix. If a parent directory has a `go.work` that does not list this module,
+fixes. If a parent directory has a `go.work` that does not list this module,
 prefix the commands with `GOWORK=off`.
 
     make

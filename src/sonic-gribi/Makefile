@@ -4,7 +4,8 @@ GO := go
 endif
 
 BUILD_DIR := build/bin
-PATCHES := $(wildcard patches/*.patch)
+# gribigo patches, in the order they apply.
+PATCHES := patches/gribigo-vrf-hook.patch patches/gribigo-rib-add-o1.patch
 VENDOR_STAMP := vendor/.patched
 
 # Static and pure Go: the binary runs in a container with no Go toolchain or
@@ -28,7 +29,7 @@ all: $(BUILD_DIR)/gribid
 $(VENDOR_STAMP): go.mod go.sum $(PATCHES)
 	rm -rf vendor
 	GOFLAGS=-modcacherw $(GO) mod vendor
-	patch -d vendor/github.com/openconfig/gribigo -p1 < patches/gribigo-vrf-hook.patch
+	for p in $(PATCHES); do patch -d vendor/github.com/openconfig/gribigo -p1 < $$p || exit 1; done
 	touch $@
 
 $(BUILD_DIR)/gribid: $(VENDOR_STAMP) $(shell find . -name '*.go' -not -path './vendor/*' -not -path './.gocache/*')
