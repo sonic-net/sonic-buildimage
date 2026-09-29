@@ -3800,6 +3800,17 @@ has no effect on a platform that has not added that include.
 each platform's own template logic) and is rejected by both YANG
 validation and the renderer if set via this table.
 
+`syncd` parses `/etc/sai.d/sai.profile` line by line, splitting each
+line on the first `=` and overwriting a `std::map` entry per key with
+no duplicate-key detection (`Syncd::loadProfileMap()` in
+`sonic-sairedis`). Since `sai_profile_dynamic.j2` is included at the
+end of the file, an entry in `SAI_PROFILE` silently overrides a
+hardcoded static default with the same key elsewhere in that hwsku's
+template — this is intentional, and is how tuning a key without an
+image rebuild is meant to work. Duplicate keys cannot occur within
+`SAI_PROFILE` itself, since CONFIG_DB stores it as a hash keyed
+uniquely by `name`.
+
 ```json
 {
     "SAI_PROFILE": {
