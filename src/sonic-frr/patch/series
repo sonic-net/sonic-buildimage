@@ -95,3 +95,4 @@
 0123-zebra-revive-a-MAC-s-neighbours-when-the-MAC-becomes.patch
 0124-zebra-flush-a-local-inactive-MAC-once-nothing-pins-it.patch
 0125-zebra-make-the-EVPN-MH-local-inactive-decisions-unit.patch
+0126-zebra-remove-a-MAC-s-VXLAN-entry-when-it-moves-to-a.patch
