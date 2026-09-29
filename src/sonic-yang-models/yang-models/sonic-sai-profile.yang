@@ -26,17 +26,21 @@ module sonic-sai-profile {
                 description "A SAI profile key/value entry keyed by name.";
 
                 leaf name {
-                    description "SAI profile key name. Must exactly match the SAI environment variable name expected by the vendor's SAI/SDK implementation, e.g. SAI_NUM_ECMP_MEMBERS.";
+                    description "SAI profile key name. Must exactly match the SAI environment variable name expected by the vendor's SAI/SDK implementation, e.g. SAI_NUM_ECMP_MEMBERS. SAI_INIT_CONFIG_FILE is reserved: it is a structural key selected by each platform's sai.profile.j2 template and must not be set via this table.";
                     type string {
                         length 1..255;
                         pattern "[A-Z][A-Z0-9_]*";
                     }
+                    must "current() != 'SAI_INIT_CONFIG_FILE'" {
+                        error-message "SAI_INIT_CONFIG_FILE is a reserved, structural SAI profile key and cannot be set via SAI_PROFILE.";
+                    }
                 }
 
                 leaf value {
-                    description "Value for this SAI profile key, rendered verbatim as a string. Interpretation/validation of the value is the vendor SAI/SDK implementation's responsibility, not this schema's.";
+                    description "Value for this SAI profile key, rendered verbatim as a string. Interpretation/validation of the value is the vendor SAI/SDK implementation's responsibility, not this schema's. Carriage return and line feed characters are disallowed, since each entry is rendered as exactly one KEY=VALUE line.";
                     type string {
                         length 1..255;
+                        pattern '[^\r\n]*';
                     }
                     mandatory true;
                 }

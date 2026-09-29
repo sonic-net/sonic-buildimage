@@ -12,3 +12,8 @@
 {# Write the contents of sai_ profile_filename to sai.profile file #}
 {{ sai_profile_contents }}
 SAI_NUM_ECMP_MEMBERS=64
+
+{# Additional, platform-specific SAI init-config key/value pairs supplied
+   dynamically via the SAI_PROFILE CONFIG_DB table. Renders nothing if the
+   table is absent/empty, so this is a no-op until an operator populates it. #}
+{% include 'sai_profile_dynamic.j2' %}

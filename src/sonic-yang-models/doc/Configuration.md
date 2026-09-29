@@ -3788,6 +3788,15 @@ read by `syncd` at startup and passed to the vendor SAI implementation.
 This avoids needing a schema or template change every time a new,
 vendor-specific SAI tunable needs to be exposed.
 
+Rendering only takes effect on a given platform once its
+`sai.profile.j2` opts in with
+`{% include 'sai_profile_dynamic.j2' %}` (see
+`files/build_templates/sai_profile_dynamic.j2`); configuring this table
+has no effect on a platform that has not added that include.
+`SAI_INIT_CONFIG_FILE` is reserved (it is a structural key selected by
+each platform's own template logic) and is rejected by both YANG
+validation and the renderer if set via this table.
+
 ```json
 {
     "SAI_PROFILE": {
@@ -3803,11 +3812,14 @@ vendor-specific SAI tunable needs to be exposed.
 
 **name** (list key): SAI profile key name. Must exactly match the SAI
 environment variable name expected by the vendor's SAI/SDK
-implementation, e.g. `SAI_NUM_ECMP_MEMBERS`.
+implementation, e.g. `SAI_NUM_ECMP_MEMBERS`. `SAI_INIT_CONFIG_FILE` is
+reserved and not allowed.
 
 **value**: Value for this SAI profile key, rendered verbatim as a
 string. Interpretation/validation of the value is the vendor SAI/SDK
-implementation's responsibility, not this schema's.
+implementation's responsibility, not this schema's. Carriage return and
+line feed characters are not allowed, since each entry is rendered as
+exactly one `KEY=VALUE` line.
 
 # For Developers
 

@@ -1,9 +1,20 @@
 {# Render every entry of the SAI_PROFILE CONFIG_DB table as a KEY=VALUE
    line. This is a generic, vendor-agnostic include: it makes no
    assumption about which keys are present, so it can be reused
-   unmodified by any hwsku's sai.profile.j2, across vendors. #}
+   unmodified by any hwsku's sai.profile.j2, across vendors.
+
+   Defense-in-depth: YANG validation (reserved-key "must" constraint and
+   the value's CR/LF-excluding pattern) only applies to config changes
+   made through the YANG-validated path. A direct sonic-db-cli write to
+   CONFIG_DB bypasses YANG, so the same two guards are re-applied here:
+   - SAI_INIT_CONFIG_FILE is reserved/structural (selected by each
+     platform's sai.profile.j2) and is never emitted from this table.
+   - CR/LF in a value is stripped so one entry can never expand into
+     more than one KEY=VALUE line. #}
 {%- if SAI_PROFILE is defined %}
 {%- for key, entry in SAI_PROFILE.items() %}
-{{ key }}={{ entry.value }}
+{%- if key != 'SAI_INIT_CONFIG_FILE' %}
+{{ key }}={{ entry.value | replace('\r', '') | replace('\n', ' ') }}
+{% endif %}
 {% endfor %}
 {%- endif %}

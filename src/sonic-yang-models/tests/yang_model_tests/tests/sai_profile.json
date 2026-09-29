@@ -10,5 +10,13 @@
     "SAI_PROFILE_WITH_MISSING_VALUE": {
         "desc": "Config SAI_PROFILE entry without mandatory value leaf.",
         "eStrKey": "Mandatory"
+    },
+    "SAI_PROFILE_WITH_RESERVED_NAME": {
+        "desc": "SAI_INIT_CONFIG_FILE is a reserved, structural key and must be rejected.",
+        "eStrKey": "Must"
+    },
+    "SAI_PROFILE_WITH_NEWLINE_IN_VALUE": {
+        "desc": "A value containing a newline would break the one-entry/one-line KEY=VALUE contract and must be rejected.",
+        "eStrKey": "Pattern"
     }
 }

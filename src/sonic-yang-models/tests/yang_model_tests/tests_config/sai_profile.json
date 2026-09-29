@@ -37,5 +37,29 @@
                 ]
             }
         }
+    },
+    "SAI_PROFILE_WITH_RESERVED_NAME": {
+        "sonic-sai-profile:sonic-sai-profile": {
+            "sonic-sai-profile:SAI_PROFILE": {
+                "SAI_PROFILE_LIST": [
+                    {
+                        "name": "SAI_INIT_CONFIG_FILE",
+                        "value": "/usr/share/sonic/hwsku/override.config.bcm"
+                    }
+                ]
+            }
+        }
+    },
+    "SAI_PROFILE_WITH_NEWLINE_IN_VALUE": {
+        "sonic-sai-profile:sonic-sai-profile": {
+            "sonic-sai-profile:SAI_PROFILE": {
+                "SAI_PROFILE_LIST": [
+                    {
+                        "name": "SAI_NUM_ECMP_MEMBERS",
+                        "value": "128\nSAI_INIT_CONFIG_FILE=/tmp/evil.bcm"
+                    }
+                ]
+            }
+        }
     }
 }

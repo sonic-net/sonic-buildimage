@@ -14,3 +14,7 @@
 SAI_NUM_ECMP_MEMBERS=128
 SAI_NHG_HIERARCHICAL_NEXTHOP=false
 
+{# Additional, platform-specific SAI init-config key/value pairs supplied
+   dynamically via the SAI_PROFILE CONFIG_DB table. Renders nothing if the
+   table is absent/empty, so this is a no-op until an operator populates it. #}
+{% include 'sai_profile_dynamic.j2' %}

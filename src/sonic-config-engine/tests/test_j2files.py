@@ -1734,6 +1734,32 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
+    def test_sai_profile_dynamic_template_render(self):
+        sai_profile_dynamic_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'build_templates',
+            'sai_profile_dynamic.j2'
+        )
+        test_list = {
+            'populated': {
+                'input': 'populated.json',
+                'output': 'sai_profile_dynamic_populated.txt'
+            },
+            'empty': {
+                'input': 'empty.json',
+                'output': 'sai_profile_dynamic_empty.txt'
+            },
+        }
+        for _, v in test_list.items():
+            input_file = os.path.join(
+                self.test_dir, 'data', 'sai_profile', v['input']
+            )
+            argument = ["-j", input_file, "-t", sai_profile_dynamic_template]
+            sample_output_file = os.path.join(
+                self.test_dir, 'data', 'sai_profile', v['output']
+            )
+            self.run_script(argument, output_file=self.output_file)
+            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
     def test_dns_template_render(self):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'resolv-config', 'resolv.conf.j2')
         static_dns_conf = os.path.join(self.test_dir, "data", "dns", "static_dns.json")
