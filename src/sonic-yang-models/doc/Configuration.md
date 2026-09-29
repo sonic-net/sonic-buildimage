@@ -3788,27 +3788,31 @@ read by `syncd` at startup and passed to the vendor SAI implementation.
 This avoids needing a schema or template change every time a new,
 vendor-specific SAI tunable needs to be exposed.
 
-Rendering only takes effect on a given platform once its
-`sai.profile.j2` opts in with
-`{% include 'sai_profile_dynamic.j2' %}` (see
-`src/sonic-config-engine/data/sai_profile_dynamic.j2`, installed to
-`/usr/share/sonic/templates` on every container image built from
-`docker-config-engine-trixie`, so it resolves at `syncd` startup);
-configuring this table
-has no effect on a platform that has not added that include.
-`SAI_INIT_CONFIG_FILE` is reserved (it is a structural key selected by
-each platform's own template logic) and is rejected by both YANG
-validation and the renderer if set via this table.
+Rendering is applied by `syncd`'s startup scripts
+(`syncd/scripts/syncd_init_common.sh` in `sonic-sairedis`), via a
+generic, vendor-agnostic helper, `apply_sai_profile_configdb()`, that
+renders the shared `src/sonic-config-engine/data/sai_profile_dynamic.j2`
+template (installed to `/usr/share/sonic/templates` on every container
+image built from `docker-config-engine-trixie`) with `sonic-cfggen -d`
+and appends its output as the very last step before a vendor's final
+profile file is handed to `syncd` (`-p <file>`). This is a no-op when
+`SAI_PROFILE` is empty/absent, so **no per-hwsku `sai.profile`/
+`sai.profile.j2` template change is required** to support this table —
+it currently covers Broadcom (`config_syncd_bcm`) and Mellanox
+(`config_syncd_mlnx`); other vendors can adopt it with a single call to
+the same helper. `SAI_INIT_CONFIG_FILE` is reserved (it is a structural
+key selected by each platform's own template logic) and is rejected by
+both YANG validation and the renderer if set via this table.
 
-`syncd` parses `/etc/sai.d/sai.profile` line by line, splitting each
+`syncd` parses the final profile file line by line, splitting each
 line on the first `=` and overwriting a `std::map` entry per key with
 no duplicate-key detection (`Syncd::loadProfileMap()` in
-`sonic-sairedis`). Since `sai_profile_dynamic.j2` is included at the
-end of the file, an entry in `SAI_PROFILE` silently overrides a
-hardcoded static default with the same key elsewhere in that hwsku's
-template — this is intentional, and is how tuning a key without an
-image rebuild is meant to work. Duplicate keys cannot occur within
-`SAI_PROFILE` itself, since CONFIG_DB stores it as a hash keyed
+`sonic-sairedis`). Because `apply_sai_profile_configdb()` appends last,
+after any vendor-specific static defaults or de-duplication, an entry
+in `SAI_PROFILE` always silently overrides a hardcoded static default
+with the same key — this is intentional, and is how tuning a key
+without an image rebuild is meant to work. Duplicate keys cannot occur
+within `SAI_PROFILE` itself, since CONFIG_DB stores it as a hash keyed
 uniquely by `name`.
 
 ```json
