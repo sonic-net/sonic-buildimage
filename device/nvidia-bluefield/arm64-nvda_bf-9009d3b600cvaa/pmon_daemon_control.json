@@ -3,5 +3,9 @@
     "skip_psud": true,
     "skip_fancontrol": true,
     "skip_chassisd": true,
-    "skip_ycabled": true
+    "skip_ycabled": true,
+    "use_rust_thermalctld": true,
+    "use_rust_syseepromd": true,
+    "use_rust_pcied": true,
+    "use_rust_stormond": true
 }

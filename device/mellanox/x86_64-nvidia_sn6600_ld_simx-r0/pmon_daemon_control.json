@@ -1,7 +1,9 @@
 {
-        "skip_ledd": true,
-        "skip_xcvrd": true,
-        "skip_psud": true,
-        "skip_pcied": true,
-        "skip_thermalctld": true
+    "skip_ledd": true,
+    "skip_xcvrd": true,
+    "skip_psud": true,
+    "skip_pcied": true,
+    "skip_thermalctld": true,
+    "use_rust_syseepromd": true,
+    "use_rust_stormond": true
 }
