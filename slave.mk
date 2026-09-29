@@ -1360,6 +1360,12 @@ ifeq ($(filter $(BAZEL_MIN_READINESS),$(BAZEL_READINESS_FILTERS)),)
 $(error BAZEL_MIN_READINESS="$(BAZEL_MIN_READINESS)" is not a readiness value. Expected one of: $(BAZEL_READINESS_FILTERS))
 endif
 
+ifneq ($(filter-out bazel_disabled,$(BAZEL_MIN_READINESS)),)
+ifneq ($(BLDENV),trixie)
+$(error BAZEL_MIN_READINESS=$(BAZEL_MIN_READINESS) requires a trixie slave, but this slave is $(BLDENV). Set BAZEL_MIN_READINESS=bazel_disabled, or build trixie only)
+endif
+endif
+
 BAZEL_ACCEPTED_READINESS_bazel_disabled :=
 BAZEL_ACCEPTED_READINESS_experimental := experimental stable
 BAZEL_ACCEPTED_READINESS_stable := stable
