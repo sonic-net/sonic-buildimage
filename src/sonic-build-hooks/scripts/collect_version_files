@@ -7,7 +7,6 @@ TARGET_PATH=$1
 [ -z "$TARGET_PATH" ] && TARGET_PATH=$POST_VERSION_PATH
 ARCH=$(dpkg --print-architecture)
 DIST=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2)
-([ -z "$DIST" ] && grep -q jessie /etc/os-release) && DIST=jessie
 
 mkdir -p $TARGET_PATH
 chmod a+rw $TARGET_PATH
