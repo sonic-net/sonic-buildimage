@@ -131,7 +131,7 @@ def _apply_pddf_spi_enable_commands(spi_device_name: str, pddf_config=None) -> N
                 # Capture output so hook commands (e.g. "fpga write32" printing
                 # "success") don't pollute the caller's stdout, which PDDF
                 # component get_cmds capture as the value.
-                subprocess.run(enable, shell=True, check=False, capture_output=True)
+                subprocess.run(shlex.split(enable), check=False, capture_output=True)
 
     parent_name = device.get("dev_info", {}).get("device_parent")
     if parent_name:
