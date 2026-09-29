@@ -220,7 +220,6 @@ The supported ASIC vendors are:
 * PLATFORM=marvell-teralynx
 * PLATFORM=mellanox
 * PLATFORM=centec
-* PLATFORM=nephos
 * PLATFORM=nvidia-bluefield
 * PLATFORM=vs
 
@@ -400,8 +399,6 @@ reproducibility notes, and known limitations.
     and Cavium switch ASIC (gzip tar archive)
   * docker-syncd-mlnx.gz: docker image for the daemon to sync database
     and Mellanox switch ASIC (gzip tar archive)
-  * docker-syncd-nephos.gz: docker image for the daemon to sync database
-    and Nephos switch ASIC (gzip tar archive)
   * docker-syncd-mrvl-teralynx.gz: docker image for the daemon to sync database
     and Marvell-Teralynx switch ASIC (gzip tar archive)
   * docker-syncd-mrvl-prestera.gz: docker image for the daemon to sync database
