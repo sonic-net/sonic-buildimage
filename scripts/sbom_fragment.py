@@ -173,7 +173,7 @@ def normalize_remote(url: str) -> str:
     """A submodule URL without a trailing `/` or literal `.git`.
 
     Not rstrip(".git"), which turns sonic-gnmi into sonic-gnm; not
-    removesuffix, which the buster slave's Python 3.7 lacks.
+    removesuffix, which needs Python 3.9+.
     """
     url = url.rstrip("/")
     if url.endswith(".git"):
