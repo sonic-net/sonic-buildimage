@@ -153,7 +153,7 @@ pyxdg==0.28
 pyyaml==6.0.2
 pyyaml-include==2.2
 redis==8.1.0
-regex==2026.9.10
+regex==2026.9.29
 requests==2.32.3
 roman==5.0
 scapy==2.6.1

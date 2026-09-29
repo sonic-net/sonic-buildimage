@@ -382,7 +382,7 @@ python3-distro==1.9.0-1
 python3-distro-info==1.7build1
 python3-gi==3.48.2-1
 python3-httplib2==0.20.4-3ubuntu0.1
-python3-jwt==2.7.0-1ubuntu0.1
+python3-jwt==2.7.0-1ubuntu0.2
 python3-launchpadlib==1.11.0-6
 python3-lazr.restfulclient==0.14.6-1
 python3-lazr.uri==1.0.6-3
