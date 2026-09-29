@@ -41,11 +41,22 @@
 #define CE1_CONTROL_REGISTER        (FMC_BASE_ADDR + 0x14)
 #define CE0_ADDRESS_RANGE_REGISTER  (FMC_BASE_ADDR + 0x30)
 #define CE1_ADDRESS_RANGE_REGISTER  (FMC_BASE_ADDR + 0x34)
+#define FMC_WDT2_CONTROL_STATUS_REGISTER          (FMC_BASE_ADDR + 0x64)
+#define FMC_WDT2_TIMER_RELOAD_VALUE_REGISTER      (FMC_BASE_ADDR + 0x68)
 
 /* SCU REGISTER ADDR */
 #define SCU_ADDR                    (0x1E6E2000)
-#define HARDWARE_STRAP_REGISTER     (SCU_ADDR + 0x70)
-#define REBOOT_CPU_REGISTER         (SCU_ADDR + 0x7C)
+/* AST25 */
+#define AST25_HARDWARE_STRAP_REGISTER             (SCU_ADDR + 0x70)
+#define AST25_REBOOT_CPU_REGISTER                 (SCU_ADDR + 0x7C)
+#define AST25_SILICON_REVISION_ID_REGISTER        (SCU_ADDR + 0x7C)
+
+/* AST26 */
+#define AST26_PROTECTION_KEY_REGISTER_1           (SCU_ADDR + 0)
+#define AST26_SILICON_REVISION_ID_REGISTER        (SCU_ADDR + 0x04)
+#define AST26_PROTECTION_KEY_REGISTER_2           (SCU_ADDR + 0x10)
+#define AST26_HARDWARE_STRAP_REGISTER             (SCU_ADDR + 0x500)
+#define AST26_HARDWARE_STRAP_REGISTER_CLEAR       (SCU_ADDR + 0x504)
 
 /* SCU KEY */
 #define UNLOCK_SCU_KEY              (0x1688A8A8)
@@ -66,6 +77,17 @@
 #define WATCHDOG2_TSR               (WATCHDOG_ADDR + 0x30)
 #define WATCHDOG2_CLEAR_STATUS      (WATCHDOG_ADDR + 0x34)
 #define WATCHDOG2_RESET_FUN_MASK    (WATCHDOG_ADDR + 0x3C)
+
+#define AST26_WATCHDOG2_ADDR_BASE         (0x1E785040)
+#define AST26_WATCHDOG2_RELOAD_VALUE      (AST26_WATCHDOG2_ADDR_BASE + 0x04)
+#define AST26_WATCHDOG2_COUNTER_RST       (AST26_WATCHDOG2_ADDR_BASE + 0x08)
+#define AST26_WATCHDOG2_CONTROL           (AST26_WATCHDOG2_ADDR_BASE + 0x0C)
+#define AST26_WATCHDOG2_TSR               (AST26_WATCHDOG2_ADDR_BASE + 0x10)
+#define AST26_WATCHDOG2_CLEAR_STATUS      (AST26_WATCHDOG2_ADDR_BASE + 0x14)
+#define AST26_WATCHDOG2_RESET_FUN_MASK_1  (AST26_WATCHDOG2_ADDR_BASE + 0x1C)
+#define AST26_WATCHDOG2_RESET_FUN_MASK_2  (AST26_WATCHDOG2_ADDR_BASE + 0x20)
+#define AST26_FMC_WATCHDOG_DISABLE      (0x0)
+#define DISABLE_AST26_WATCHDOG          (0x00000000)
 
 /* User Mode Command */
 #define WRITE_STATUS                (0x01)
@@ -164,6 +186,11 @@
 #define WATCHDOG_NEW_COUNT          (0x00050000)
 #define WATCHDOG_RELOAD_COUNTER     (0x4755)
 
+#define AST26_WATCHDOG_GATEMASK_2       (0x03FFFFF3)
+#define AST26_ENABLE_WATCH_CMD          (0x33)
+#define AST26_ENABLE_FMC_WATCH_CMD      (0x1)
+#define AST26_FMT_WATCHDOG_NEW_COUNT    (0x3)
+
 #define CE0_SPI_TYPE                (0x00000002)
 #define CE1_SPI_TYPE                (0x00000008)
 #define ERROR_COMMAND               (0x00000400)
@@ -190,7 +217,9 @@
 #define REGISTER_HEAD               (0x1e000000)
 #define DEFAULT_WIDTH               (16)
 #define MAX_FILENAME_LENGTH         (64)
-#define SEGMENT_ADDR_START(_r)      ((((_r) >> 16) & 0xFF) << 23)
+#define AST26_AHB_BASE_PHY_ADDR     (0x20000000)
+#define AST25_SEGMENT_ADDR_START(_r)      ((((_r) >> 16) & 0xFF) << 23)
+#define AST26_SEGMENT_ADDR_START(_r)      ((((_r) & 0xFFFF) << 16) | AST26_AHB_BASE_PHY_ADDR)
 
 typedef struct flash_info {
     uint32_t flash_size;
@@ -246,5 +275,40 @@ typedef enum flash_size {
     M64 = 0x04000000, /* 64M */
     M128 = 0x08000000, /* 128M */
 } flash_size_t;
+
+typedef enum ast25_bmc_id_list {
+    AST2500_A0  = 0x04000303,
+    AST2510_A0  = 0x04000103,
+    AST2520_A0  = 0x04000203,
+    AST2530_A0  = 0x04000403,
+
+    AST2500_A1  = 0x04010303,
+    AST2510_A1  = 0x04010103,
+    AST2520_A1  = 0x04010203,
+    AST2530_A1  = 0x04010403,
+
+    AST2500_A2  = 0x04030303,
+    AST2510_A2  = 0x04030103,
+    AST2520_A2  = 0x04030203,
+    AST2530_A2  = 0x04030403,
+
+    AST2600_A0  = 0x05000303,
+    AST2600_A1  = 0x05010303,
+    AST2600_A2  = 0x05010303,
+    AST2600_A3  = 0x05030303,
+
+    AST2620_A1  = 0x05010203,
+    AST2620_A2  = 0x05010203,
+    AST2620_A3  = 0x05030203,
+} ast25_bmc_id_list_t;
+
+
+typedef struct bmc_id_list_s {
+    uint32_t bmc_ids[64];
+    int bmc_type;
+    uint32_t bmc_id_reg;
+} bmc_id_list_t;
+
+
 
 #endif  /*_FW_UPGRADE_H_*/
