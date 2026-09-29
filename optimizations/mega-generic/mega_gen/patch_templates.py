@@ -124,6 +124,9 @@ def _patch_shared_ctl(
     selected_names = {s.container_name for s in specs}
     has_database = "database" in selected_names
     has_swss = "swss" in selected_names
+    has_teamd = "teamd" in selected_names
+    has_bgp = "bgp" in selected_names
+    has_pmon = "pmon" in selected_names
 
     # -----------------------------------------------------------------------
     # 1. preStartAction: insert mega elif before the final {%- else %} in
@@ -194,6 +197,22 @@ def _patch_shared_ctl(
     text = text.replace(old_wait, new_wait, 1)
 
     # stop()
+    #
+    # NOTE: mega is routed through the same branch as "database" here (bare
+    # `docker stop $DOCKERNAME`, no `-t <timeout>`, since "database" itself
+    # never uses one) -- so a plain `-t 60`-timeout elif added further down
+    # in the OTHER (non-database) branch of this same if/else (as teamd's
+    # and swss+asan's own elif-chain is) would be dead code for mega, same
+    # class of bug as finding #4's REDIS_MNT elif. Instead, bake the 60s
+    # timeout directly into mega's own `docker stop` call here, gated on
+    # whichever folded features actually need it.
+    stop_timeout_conditions = []
+    if has_teamd:
+        stop_timeout_conditions.append('docker_container_name == "' + container_name + '"')
+    if has_swss:
+        stop_timeout_conditions.append(
+            'docker_container_name == "' + container_name + '" and enable_asan == "y"'
+        )
     old_stop = (
         "stop() {\n"
         '    {%- if docker_container_name == "database" %}\n'
@@ -212,7 +231,16 @@ def _patch_shared_ctl(
             "    fi\n"
             "    {%- endif %}\n"
         )
-    new_stop += "    docker stop $DOCKERNAME"
+    if stop_timeout_conditions:
+        new_stop += (
+            '    {%- if ' + " or ".join(stop_timeout_conditions) + " %}\n"
+            "    docker stop -t 60 $DOCKERNAME\n"
+            "    {%- else %}\n"
+            "    docker stop $DOCKERNAME\n"
+            "    {%- endif %}"
+        )
+    else:
+        new_stop += "    docker stop $DOCKERNAME"
     text = text.replace(old_stop, new_stop, 1)
 
     # kill()
@@ -235,24 +263,26 @@ def _patch_shared_ctl(
     text = text.replace(old_kill, new_kill, 1)
 
     # -----------------------------------------------------------------------
-    # 5. HWSKU / DOCKERMOUNT: mega uses the database path (no HWSKU mount).
+    # 5. HWSKU / DOCKERMOUNT: mega hosts database (like the "database"
+    #    container) but ALSO hosts swss/orchagent when swss is folded in, and
+    #    orchagent needs the real HWSKU + /usr/share/sonic/hwsku mount (it
+    #    reads port_config.ini/sai.profile/buffer templates from there). So,
+    #    unlike plain "database", mega must NOT take the empty-HWSKU branch --
+    #    it must compute a real HWSKU/MOUNTPATH like every other non-database
+    #    container (left as the `{%- else %}` of the untouched conditional
+    #    below). See item 11 for the corresponding docker-create-flags elif
+    #    that emits both `$DB_OPT` and the hwsku mount for mega.
     # -----------------------------------------------------------------------
-    text = text.replace(
-        '    {%- if docker_container_name == "database" %}\n'
-        '    HWSKU=""\n'
-        '    MOUNTPATH=""',
-        '    {%- if docker_container_name in ["database", "' + container_name + '"] %}\n'
-        '    HWSKU=""\n'
-        '    MOUNTPATH=""',
-        1,
-    )
-    text = text.replace(
-        '        {%- if docker_container_name == "database" %}\n'
-        '        DOCKERMOUNT=""',
-        '        {%- if docker_container_name in ["database", "' + container_name + '"] %}\n'
-        '        DOCKERMOUNT=""',
-        1,
-    )
+    if has_swss:
+        # Extend the swss-only "make the hwsku mount rw if hwsku-init exists"
+        # check so it also applies when mega is standing in for swss.
+        text = text.replace(
+            '        HWSKU_MOUNT_MODE="ro"\n'
+            '        {%- if docker_container_name == "swss" %}',
+            '        HWSKU_MOUNT_MODE="ro"\n'
+            '        {%- if docker_container_name in ["swss", "' + container_name + '"] %}',
+            1,
+        )
 
     # -----------------------------------------------------------------------
     # 6. Creating new container echo: database path for mega.
@@ -279,23 +309,15 @@ def _patch_shared_ctl(
     )
 
     # -----------------------------------------------------------------------
-    # 8. REDIS_MNT: mega hosts redis → use /var/run/redis bind-mount
-    #    (like database, but with REDIS_MNT var since mega isn't database).
+    # 8. REDIS_MNT: unreachable for mega and removed. The whole
+    #    "database"/"dash-ha"/else block above is a single if/elif/else
+    #    chain, and item 9 (below) extends the *first* branch's condition to
+    #    also match mega, so mega always takes the `$DB_OPT` branch and never
+    #    reaches this elif/else -- inserting a mega-specific elif here would
+    #    just be dead code. `$REDIS_MNT` staying unset for mega is correct:
+    #    mega hosts its own redis-server locally (unix socket, no host bind
+    #    mount needed), same as why plain "database" doesn't set it either.
     # -----------------------------------------------------------------------
-    # Add mega before the generic else for REDIS_MNT
-    text = text.replace(
-        '    {%- elif docker_container_name == "dash-ha" %}\n'
-        '    REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"\n'
-        "    {%- else %}\n"
-        '    REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"',
-        '    {%- elif docker_container_name == "dash-ha" %}\n'
-        '    REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"\n'
-        '    {%- elif docker_container_name == "' + container_name + '" %}\n'
-        '    REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"\n'
-        "    {%- else %}\n"
-        '    REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"',
-        1,
-    )
 
     # -----------------------------------------------------------------------
     # 9. DB_OPT / chassis: mega needs the database path for DB_OPT.
@@ -331,9 +353,26 @@ def _patch_shared_ctl(
 
     # -----------------------------------------------------------------------
     # 11. docker create flags: add mega-specific caps/mounts/env inline.
+    #
+    #     Only truly *additional* ctl-template-level flags belong here --
+    #     everything a folded feature's own `.mk` already contributes is
+    #     already present in mega's generated `_RUN_OPT` (unioned by
+    #     gen_mega_mk.merge_run_opt and rendered via `docker_image_run_opt`
+    #     further up in the same `docker create` command), so repeating it
+    #     here would give docker a "Duplicate mount point" error. The only
+    #     flags that live *exclusively* in this shared template (never in any
+    #     `.mk`) are: swss's `-e ASIC_VENDOR`, bgp's frr mount (confirmed via
+    #     `rules/docker-fpm-frr.mk` -- it has no `/etc/frr` mount of its own,
+    #     only the shared ctl template does), the asan `/var/log/asan` mount,
+    #     and pmon's firmware/bmc mounts -- so we extend those existing
+    #     per-container-name blocks in place instead of hardcoding a parallel,
+    #     duplicate-prone list for mega.
     # -----------------------------------------------------------------------
-    mega_create_flags = _mega_docker_create_flags(container_name, has_swss)
-    # Insert after the bgp frr mount block
+    mega_create_flags = _mega_docker_create_flags(container_name, has_swss, has_bgp)
+    # Insert after the bgp frr mount block (unconditional insertion point --
+    # the block itself is a no-op unless bgp is folded in, in which case the
+    # anchor's own `{%- if docker_container_name == "bgp" %}` already covers
+    # it; mega's flags are gated on its own container name, independently).
     text = text.replace(
         '{%- if docker_container_name == "bgp" %}\n'
         "        -v /etc/sonic/frr/$DEV:/etc/frr:rw \\\n"
@@ -342,6 +381,72 @@ def _patch_shared_ctl(
         "        -v /etc/sonic/frr/$DEV:/etc/frr:rw \\\n"
         "{%- endif %}\n"
         + mega_create_flags,
+        1,
+    )
+
+    # 11a. swss's ASIC_VENDOR env is already keyed off `docker_container_name
+    #      == "swss"` and unconditional text, no patch needed there -- it's
+    #      emitted directly by `_mega_docker_create_flags` when `has_swss`.
+
+    # 11b. ASAN mount: extend to mega whenever swss is folded in (mega hosts
+    #      orchagent in that case, same as the real swss container). Note the
+    #      matching `mkdir -p /var/log/asan` at container-create time is
+    #      nested inside the swss-only block that item 7 already extends to
+    #      cover mega, so no separate patch is needed for that half.
+    if has_swss:
+        text = text.replace(
+            '{%- if docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}\n'
+            "        -v /var/log/asan/:/var/log/asan \\\n"
+            "{%- endif -%}",
+            '{%- if docker_container_name in ["swss", "syncd", "' + container_name + '"] and enable_asan == "y" %}\n'
+            "        -v /var/log/asan/:/var/log/asan \\\n"
+            "{%- endif -%}",
+            1,
+        )
+
+    # 11c. pmon's firmware/bmc mounts: extend to mega whenever pmon is folded
+    #      in (these live only in the shared template, never in a `.mk`).
+    if has_pmon:
+        text = text.replace(
+            '{%- if docker_container_name == "pmon" %}\n'
+            "    -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \\\n"
+            '    $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \\\n'
+            "    $(get_pmon_device_mounts) \\\n"
+            "{%- endif %}",
+            '{%- if docker_container_name in ["pmon", "' + container_name + '"] %}\n'
+            "    -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \\\n"
+            '    $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \\\n'
+            "    $(get_pmon_device_mounts) \\\n"
+            "{%- endif %}",
+            1,
+        )
+
+    # 11d. DB_OPT / hwsku mount: mega hosts the database (needs `$DB_OPT`'s
+    #      chassis/multi-ASIC redis wiring, same as "database") but, unlike
+    #      "database", also needs the real hwsku mount whenever swss is
+    #      folded in (orchagent reads port_config.ini/sai.profile/buffer
+    #      templates from it). Add a dedicated mega elif instead of letting
+    #      it fall into either branch verbatim.
+    mega_db_opt_lines = ['        $DB_OPT \\']
+    if has_swss:
+        mega_db_opt_lines.append(
+            "        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \\"
+        )
+    text = text.replace(
+        '{%- if docker_container_name == "database" %}\n'
+        "        $DB_OPT \\\n"
+        "{%- else %}\n"
+        "        -v /var/run/redis-chassis:/var/run/redis-chassis:ro \\\n"
+        "        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \\\n"
+        "{%- endif %}",
+        '{%- if docker_container_name == "database" %}\n'
+        "        $DB_OPT \\\n"
+        '{%- elif docker_container_name == "' + container_name + '" %}\n'
+        + "\n".join(mega_db_opt_lines) + "\n"
+        "{%- else %}\n"
+        "        -v /var/run/redis-chassis:/var/run/redis-chassis:ro \\\n"
+        "        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \\\n"
+        "{%- endif %}",
         1,
     )
 
@@ -355,6 +460,14 @@ def _patch_shared_ctl(
         'if [ "$DEV" == "chassisdb" ]; then',
         1,
     )
+
+    # -----------------------------------------------------------------------
+    # 13. Stop timeout: handled directly in the `stop()` patch above (mega
+    #     is routed through the "database" branch's bare `docker stop`, so
+    #     an elif in this OTHER, non-database branch of the same if/else
+    #     would be unreachable dead code for mega -- see the comment next
+    #     to `stop_timeout_conditions` above).
+    # -----------------------------------------------------------------------
 
     return text, warnings
 
@@ -467,34 +580,38 @@ def _mega_post_start_block(
     return "\n".join(lines)
 
 
-def _mega_docker_create_flags(container_name: str, has_swss: bool) -> str:
-    """Return the docker create flags block for the mega container."""
-    lines = [
-        '{%- if docker_container_name == "' + container_name + '" %}',
-        "        -t \\",
-        "        --pid=host --userns=host \\",
-        "        --cap-add=NET_ADMIN --cap-add=SYS_ADMIN --cap-add=SYS_RAWIO \\",
-        "        --cap-add=SYS_BOOT --cap-add=SYS_PTRACE --cap-add=DAC_OVERRIDE \\",
-        "        --security-opt apparmor=unconfined --security-opt seccomp=unconfined \\",
-        '        --security-opt="systempaths=unconfined" \\',
-        "        -v /etc/sonic:/etc/sonic:ro \\",
-        "        -v /etc/localtime:/etc/localtime:ro \\",
-        "        -v /etc/network/interfaces:/etc/network/interfaces:ro \\",
-        "        -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro \\",
-        "        -v /host/machine.conf:/host/machine.conf:ro \\",
-        "        -v /var/log/swss:/var/log/swss:rw \\",
-        "        -v /zmq_swss:/zmq_swss:rw \\",
-        "        -v /var/run/dbus:/var/run/dbus:rw \\",
-        "        -v /host/reboot-cause:/host/reboot-cause:rw \\",
-        "        -v /var/run/gnmi:/var/run/gnmi:rw \\",
-        "        -v /:/mnt/host:ro \\",
-        "        -v /tmp:/mnt/host/tmp:rw \\",
-        "        -v /var/tmp:/mnt/host/var/tmp:rw \\",
-        "        -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \\",
-        "        -v /etc/sonic/frr$DEV:/etc/frr:rw \\",
-    ]
+def _mega_docker_create_flags(container_name: str, has_swss: bool, has_bgp: bool) -> str:
+    """Return the docker create flags block for the mega container.
+
+    Deliberately *not* a copy of `_RUN_OPT`'s caps/security-opts/generic bind
+    mounts (`-t`, `--cap-add=...`, `--security-opt=...`, `/etc/sonic`,
+    `/etc/localtime`, `/etc/network/interfaces[.d]`, `/host/machine.conf`,
+    `/var/log/swss`, `/zmq_swss`, `/var/run/dbus`, `/var/run/gnmi`,
+    `/:/mnt/host`, `/tmp:/mnt/host/tmp`, `/var/tmp:/mnt/host/var/tmp`) --
+    every one of those is already unioned into mega's own `_RUN_OPT` by
+    `gen_mega_mk.merge_run_opt` from the folded features' own `.mk` files,
+    and `docker_image_run_opt` (which already includes the full `_RUN_OPT`
+    union) is rendered earlier in the same `docker create` command. Repeating
+    any `-v SRC:DST[:MODE]` mount here would give docker a "Duplicate mount
+    point" error at container-create time; repeating a non-mount flag
+    (`-t`/`--cap-add`/`--security-opt`) wouldn't error, but is still
+    pointless duplication.
+
+    The only flags that live *exclusively* in this shared ctl template (never
+    in any feature's own `.mk`, so never unioned) are handled here or as
+    separate, reusable per-container-name extensions in `_patch_shared_ctl`:
+    the ASAN `/var/log/asan` mount (item 11b), pmon's firmware/bmc mounts
+    (item 11c), and the `$DB_OPT`/hwsku mount pairing (item 11d). bgp's own
+    `/etc/frr` mount is emitted here (NOT reused from the real "bgp" anchor,
+    which never matches `docker_container_name == "mega"`) -- with the
+    correct `/etc/sonic/frr/$DEV` path (the original hardcoded copy of this
+    had a typo, `/etc/sonic/frr$DEV`, missing the slash before `$DEV`).
+    """
+    lines = ['{%- if docker_container_name == "' + container_name + '" %}']
     if has_swss:
         lines.append("        -e ASIC_VENDOR={{ sonic_asic_platform }} \\")
+    if has_bgp:
+        lines.append("        -v /etc/sonic/frr/$DEV:/etc/frr:rw \\")
     lines.append("{%- endif %}")
     return "\n".join(lines)
 
