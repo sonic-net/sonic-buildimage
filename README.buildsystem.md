@@ -189,7 +189,6 @@ $(SOME_DOCKER)_LOAD_DOCKERS += $(SOME_OTHER_DOCkER) # docker image from which th
 SONIC_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this group
 ```
 
-<a id="sonic-bazel-docker-images"></a>
 **SONIC_BAZEL_DOCKER_IMAGES**
 Target group for docker images that can be built with [Bazel](https://bazel.build/) instead of the legacy Make-based flow.
 
