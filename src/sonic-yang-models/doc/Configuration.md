@@ -3783,13 +3783,27 @@ The **NODE_CFG** table defines the node configuration details for platform compo
 
 The **SAI_PROFILE** table provides a generic, vendor-agnostic mechanism
 to inject arbitrary SAI init-config key/value pairs. Each entry is
-rendered as one `KEY=VALUE` line into `/etc/sai.d/sai.profile`, which is
-read by `syncd` at startup and passed to the vendor SAI implementation.
-This avoids needing a schema or template change every time a new,
-vendor-specific SAI tunable needs to be exposed.
+rendered as one `KEY=VALUE` line into a vendor's final SAI profile file
+(e.g. `/etc/sai.d/sai.profile` for Broadcom, `/tmp/sai.profile` for
+Mellanox), which is read by `syncd` at startup and passed to the
+vendor SAI implementation. This avoids needing a schema or template
+change every time a new, vendor-specific SAI tunable needs to be
+exposed.
+
+> **Scope of this PR (sonic-net/sonic-buildimage#29813):** this PR adds
+> only the `SAI_PROFILE` YANG model (`sonic-sai-profile.yang`) and the
+> shared rendering template
+> (`src/sonic-config-engine/data/sai_profile_dynamic.j2`, installed to
+> `/usr/share/sonic/templates` via `sonic-config-engine`'s packaging).
+> No hwsku `sai.profile`/`sai.profile.j2` in this repo is modified, and
+> no code in this repo actually invokes the template at `syncd`
+> startup — configuring `SAI_PROFILE` has no effect until the
+> `syncd`-side integration below merges. That integration lives in a
+> separate repo/PR, sonic-net/sonic-sairedis#2098, described next.
 
 Rendering is applied by `syncd`'s startup scripts
-(`syncd/scripts/syncd_init_common.sh` in `sonic-sairedis`), via a
+(`syncd/scripts/syncd_init_common.sh` in `sonic-sairedis`, see
+sonic-net/sonic-sairedis#2098), via a
 generic, vendor-agnostic helper, `apply_sai_profile_configdb()`, that
 renders the shared `src/sonic-config-engine/data/sai_profile_dynamic.j2`
 template (installed to `/usr/share/sonic/templates` on every container
