@@ -16,11 +16,6 @@ deb [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-backports main
 {% endfor %}
 {% for mirror_url in MIRROR_SECURITY_URLS.split(',') %}
 {% set dist_separator='/' %}{% if 'packages.trafficmanager.net/debian' in mirror_url %}{% set dist_separator='_' %}{% endif %}
-{% if DISTRIBUTION == 'buster' %}
-deb [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}{{ dist_separator }}updates main contrib non-free
-deb-src [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}{{ dist_separator }}updates main contrib non-free
-{% else %}
 deb [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-security main contrib {{ nonfree_component }}
 deb-src [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-security main contrib {{ nonfree_component }}
-{% endif %}
 {% endfor %}
