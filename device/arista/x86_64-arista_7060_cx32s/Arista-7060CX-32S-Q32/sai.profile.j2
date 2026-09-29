@@ -20,8 +20,3 @@ SAI_STATS_ST_CAPABILITY_SUPPORTED=0
 # BROADCOM_LEGACY_SAI_COMPAT: sai_get_stats_ext is not supported for switch objects on TH1 (BCM56960).
 # Setting to 0 disables use_sai_stats_ext in FlexCounter for COUNTER_TYPE_SWITCH.
 SAI_STATS_EXT_SWITCH_SUPPORTED=0
-
-{# Additional, platform-specific SAI init-config key/value pairs supplied
-   dynamically via the SAI_PROFILE CONFIG_DB table. Renders nothing if the
-   table is absent/empty, so this is a no-op until an operator populates it. #}
-{% include 'sai_profile_dynamic.j2' %}
