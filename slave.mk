@@ -1588,7 +1588,18 @@ DOCKER_LOAD_TARGETS += $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
 
 endif
 
-$(DOCKER_LOAD_TARGETS) : $(TARGET_PATH)/%.gz-load : .platform docker-start $$(TARGET_PATH)/$$*.gz
+# Check that there are no Bazel-built targets that expect a custom tag, and Bazel publishes only `:latest`
+ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD),y)
+ifneq ($(filter $(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES),$(SONIC_PACKAGES_LOCAL)),)
+$(error $(filter $(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES),$(SONIC_PACKAGES_LOCAL)) cannot be built with Bazel while in SONIC_PACKAGES_LOCAL with SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=y: Bazel tags images as :latest, but docker-image-load expects :$(SONIC_IMAGE_VERSION))
+endif
+endif
+
+DOCKER_LOAD_TARGETS += $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
+		      $(SONIC_BAZEL_DOCKER_IMAGES) \
+		      $(SONIC_BAZEL_DBG_DOCKER_IMAGES)))
+
+$(DOCKER_LOAD_TARGETS) :$(TARGET_PATH)/%.gz-load : .platform docker-start $$(TARGET_PATH)/$$*.gz
 	$(HEADER)
 	$(call docker-image-load,$*)
 	$(FOOTER)
