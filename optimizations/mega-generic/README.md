@@ -1,14 +1,22 @@
 # mega-generic: generic mega-container merge generator
 
-**Status: scaffold.** Feature auto-discovery (`mega_gen/auto_registry.py`),
-per-feature asset discovery (`mega_gen/discovery.py`), the supervisord merge
-engine (`mega_gen/supervisord_merge.py`), `rules/docker-mega.mk` generation
-(`mega_gen/gen_mega_mk.py`), and `dockers/docker-mega/Dockerfile.j2` +
+**Status: implemented, iterating on correctness.** Feature auto-discovery
+(`mega_gen/auto_registry.py`), per-feature asset discovery
+(`mega_gen/discovery.py`), the supervisord merge engine
+(`mega_gen/supervisord_merge.py`), `rules/docker-mega.mk` generation
+(`mega_gen/gen_mega_mk.py`), `dockers/docker-mega/Dockerfile.j2` +
 `docker-mega-init.sh` generation (`mega_gen/gen_dockerfile.py` +
-`mega_gen/gen_docker_init.py`) are implemented. The rest of the pipeline
-described in the `generic_mega-container_merge_script` plan (`ctl_parser.py`,
-`patch_templates.py`, `report.py`) does not exist yet; `mega_gen_cli.py
---apply` is still a stub that doesn't wire any of the above together yet.
+`mega_gen/gen_docker_init.py`), the shared build-template patches
+(`mega_gen/patch_templates.py` -- `docker_image_ctl.j2`, `init_cfg.json.j2`,
+`sonic_debian_extension.j2`, `per_namespace/syncd.service.j2`, `rules/config`,
+each folded feature's own `.mk`, plus `mega.service.j2` generation), and the
+dry-run summary/validation report (`mega_gen/report.py`) are all implemented
+and wired together by `mega_gen_cli.py --apply`. `ctl_parser.py` (a
+1000+-line parser for `docker_image_ctl.j2`'s per-container-name branches)
+exists but is currently unused by `patch_templates.py`, which instead patches
+the shared template with targeted, anchor-based text edits; see
+`mega_gen/report.py`'s `anchor_*` helpers for the idempotency pattern those
+edits follow.
 
 For any chosen feature subset, this generator will read each feature's
 original per-container source files in a sonic-buildimage tree and
@@ -20,11 +28,13 @@ needed to fold them into one container. See the plan for the full design.
 ```
 optimizations/mega-generic/
 ├── README.md
-├── mega_gen_cli.py          # CLI entry point
-├── features.default.yaml    # default feature list (used when --features omitted)
-├── test_supervisord_merge.py  # validation harness for supervisord_merge.py
-├── test_gen_mega_mk.py         # validation harness for gen_mega_mk.py
-├── test_gen_dockerfile.py      # validation harness for gen_dockerfile.py + gen_docker_init.py
+├── mega_gen_cli.py               # CLI entry point (--list-registry / --list-assets / --apply)
+├── features.default.yaml         # default feature list (used when --features omitted)
+├── test_supervisord_merge.py     # validation harness for supervisord_merge.py
+├── test_gen_mega_mk.py           # validation harness for gen_mega_mk.py
+├── test_gen_dockerfile.py        # validation harness for gen_dockerfile.py + gen_docker_init.py
+├── test_patch_templates.py       # renders the patched docker_image_ctl.j2 with Jinja2 and inspects `docker create`
+├── test_sonic_debian_extension.py  # validation harness for the sonic_debian_extension.j2 service filter
 └── mega_gen/
     ├── __init__.py
     ├── auto_registry.py      # auto-discovers feature -> docker-dir/mk/include-flag
@@ -32,7 +42,10 @@ optimizations/mega-generic/
     ├── supervisord_merge.py   # generic supervisord config merge engine
     ├── gen_mega_mk.py         # generates rules/docker-mega.mk
     ├── gen_docker_init.py     # generates per-feature preinit scripts + docker-mega-init.sh
-    └── gen_dockerfile.py      # generates dockers/docker-mega/Dockerfile.j2 (hybrid strategy)
+    ├── gen_dockerfile.py      # generates dockers/docker-mega/Dockerfile.j2 (hybrid strategy)
+    ├── patch_templates.py     # patches the shared build templates (docker_image_ctl.j2 etc.)
+    ├── ctl_parser.py          # standalone parser for docker_image_ctl.j2 (currently unused)
+    └── report.py              # dry-run summary, anchor_* idempotent-patch helpers, validate_dry_run
 ```
 
 ## Where this runs
@@ -44,7 +57,7 @@ is read-only and works against any sonic-buildimage checkout, including the
 local reference tree at `sonic-buildimage/` in this repo -- useful for
 poking at the registry without touching the VM.
 
-## Usage (current scaffold)
+## Usage
 
 ```bash
 # Show everything the generator can currently see in a tree:
@@ -62,8 +75,17 @@ python3 mega_gen_cli.py --sonic-root /path/to/sonic-buildimage \
 # base_image_files/, init script, .common.j2 variants:
 python3 mega_gen_cli.py --sonic-root /path/to/sonic-buildimage --list-assets
 
-# --apply (actually generate/patch dockers/docker-mega/*) is not implemented
-# yet -- it errors out on purpose rather than doing nothing silently.
+# Actually generate dockers/docker-mega/*, rules/docker-mega.mk, and the
+# shared-template patches, and write them under --out-dir (mirroring the
+# sonic-buildimage tree layout so the output can be diffed/copied straight
+# in):
+python3 mega_gen_cli.py --sonic-root /path/to/sonic-buildimage \
+    --apply --out-dir /tmp/mega-out
+
+# Without --apply, the CLI performs a dry run: it computes everything
+# --apply would write and prints report.validate_dry_run()'s summary
+# (per-feature asset coverage, warnings, and any structural problems found)
+# without touching any file.
 ```
 
 ## Feature registry

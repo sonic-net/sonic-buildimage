@@ -217,11 +217,18 @@ def main(argv: List[str] | None = None) -> int:
     if args.apply:
         return _run_apply(sonic_root, resolved.resolved, registry, args)
 
+    # Medium fix: the default (no --apply) dry run now actually calls
+    # report.validate_dry_run() and prints its summary, instead of just a
+    # one-line "nothing written" message -- gives the same discovery
+    # coverage / warnings / dependency-graph visibility --list-assets does,
+    # plus the explicit ok/errors verdict, without touching any file.
+    vr = validate_dry_run(sonic_root, resolved.resolved, registry)
+    print(format_dry_run_report(vr))
     print(
         "\n(dry run: nothing written. Pass --apply to run the full "
         "generation pipeline, or --list-registry to inspect discovery output.)"
     )
-    return 0
+    return 0 if vr.ok else 1
 
 
 def _run_apply(
