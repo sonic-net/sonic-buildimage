@@ -301,6 +301,24 @@ def check_scenario(sonic_root: Path, name: str, features: List[str]) -> bool:
         if f"docker-mega-{feat}-preinit.sh" in docker_init.orchestrator_text:
             problems.append(f"{feat}: static feature referenced in the orchestrator script")
 
+    # --- 11. database's supervisord.conf.j2 INSTANCES loop is fed real
+    # data (finding #3): the orchestrator must render the merged
+    # supervisord.conf using database_config.json (+ the is_protected_mode
+    # additional-data overlay), or database's own
+    # '{% for redis_inst in INSTANCES %}' loop never emits any
+    # [program:<redis_inst>] stanza and no redis instance ever starts. ------
+    if "database" in feature_names:
+        if "DB_CFG_FILE=" not in docker_init.orchestrator_text:
+            problems.append(
+                "database selected but the orchestrator never feeds "
+                "database_config.json to the merged supervisord.conf render"
+            )
+        if "is_protected_mode" not in docker_init.orchestrator_text:
+            problems.append(
+                "database selected but the orchestrator never recomputes "
+                "the is_protected_mode additional-data overlay"
+            )
+
     if problems:
         print(f"  FAIL ({len(problems)} problem(s)):")
         for p in problems:

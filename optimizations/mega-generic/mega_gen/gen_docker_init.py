@@ -424,6 +424,44 @@ def build_orchestrator(preinit_scripts: Sequence[PreinitScript]) -> str:
     lines.append("if [ -r /etc/sonic/config_db.json ]; then")
     lines.append("    CFGGEN_ARGS=\"$CFGGEN_ARGS -j /etc/sonic/config_db.json\"")
     lines.append("fi")
+    if any(ps.feature == "database" for ps in preinit_scripts):
+        lines.append("")
+        lines.append(
+            "# Finding #3 fix: the merged supervisord.conf.j2 template still"
+        )
+        lines.append(
+            "# contains database's own '{% for redis_inst, ... in INSTANCES %}'"
+        )
+        lines.append(
+            "# loop (see dockers/docker-database/supervisord.conf.j2) -- feed it"
+        )
+        lines.append(
+            "# the SAME database_config.json + additional_data_json (is_protected_mode"
+        )
+        lines.append(
+            "# overlay) the database preinit above itself uses to render its own"
+        )
+        lines.append(
+            "# supervisord.conf, or INSTANCES stays undefined and no redis-server"
+        )
+        lines.append("# programs get rendered at all.")
+        lines.append('DB_CFG_FILE="/var/run/redis/sonic-db/database_config.json"')
+        lines.append('if [ -r "$DB_CFG_FILE" ]; then')
+        lines.append('    CFGGEN_ARGS="$CFGGEN_ARGS -j $DB_CFG_FILE"')
+        lines.append(
+            "    DB_ADDITIONAL_DATA_JSON=$(jq -c "
+            "'{INSTANCES: .INSTANCES | map_values({is_protected_mode: "
+            "(.hostname == \"127.0.0.1\")})}' \"$DB_CFG_FILE\" 2>/dev/null || echo '{}')"
+        )
+        lines.append('    CFGGEN_ARGS="$CFGGEN_ARGS -a $DB_ADDITIONAL_DATA_JSON"')
+        lines.append("else")
+        lines.append(
+            "    echo '[docker-mega-init] WARNING: $DB_CFG_FILE not found "
+            "after database preinit -- supervisord.conf will render with no "
+            "redis-server programs' >&2"
+        )
+        lines.append("fi")
+        lines.append("")
     lines.append("if [ -z \"$CFGGEN_ARGS\" ]; then")
     lines.append("    echo '[docker-mega-init] WARNING: neither init_cfg.json nor config_db.json found, rendering supervisord.conf with empty config' >&2")
     lines.append("fi")
