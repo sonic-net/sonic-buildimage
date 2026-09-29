@@ -160,6 +160,35 @@ _RSYNC_EXCLUDES: Tuple[str, ...] = (
     "--exclude=resolv.conf",
     "--exclude=/etc/supervisor/conf.d/",
     "--exclude=/usr/bin/start.sh",
+    # --- identity/dpkg files: excluded from the wholesale rsync below and
+    # merged additively instead (see _IDENTITY_MERGE_FILES / the merge
+    # shell snippet appended to each rsync RUN block). Confirmed finding:
+    # sequentially rsyncing full per-feature rootfs's on top of each other
+    # would otherwise let the LAST feature's /etc/passwd,/etc/group,
+    # /etc/shadow,/etc/gshadow and /var/lib/dpkg/status* silently win,
+    # losing earlier features' special users (redis, frr, _lldpd, ...)
+    # and dpkg package records.
+    "--exclude=/etc/passwd",
+    "--exclude=/etc/group",
+    "--exclude=/etc/shadow",
+    "--exclude=/etc/gshadow",
+    "--exclude=/var/lib/dpkg/status",
+    "--exclude=/var/lib/dpkg/status-old",
+    "--exclude=/var/lib/dpkg/available",
+)
+
+# Identity files merged additively (by first ':'-delimited field, i.e. user/
+# group name) after each rsync-bucket feature's rootfs is copied in, instead
+# of being overwritten wholesale. New entries from that feature's image are
+# appended only if that name isn't already known (keeps whichever feature
+# defined it first -- order doesn't matter for correctness since UIDs/GIDs
+# for shared system accounts like redis/frr are fixed by the same Debian
+# packages/build args across every feature image).
+_IDENTITY_MERGE_FILES: Tuple[str, ...] = (
+    "/etc/passwd",
+    "/etc/group",
+    "/etc/shadow",
+    "/etc/gshadow",
 )
 
 _DOCKERFILE_MACROS_IMPORT = (
@@ -241,19 +270,38 @@ _FEATURE_POST_INSTALL_LINES: Dict[str, List[str]] = {
 }
 
 # Lines emitted right after a feature's own Dockerfile.common.j2 include
-# (and its extra-j2 supplement). database's sysctl config lives in the build
-# context via _FILES (unioned by _INCLUDE_DOCKER) but is COPYed in its own
-# Dockerfile.j2 outside the common.j2 fragment.
+# (and its extra-j2 supplement), for common.j2-bucket features only.
+# database's sysctl config lives in the build context via _FILES (unioned
+# by _INCLUDE_DOCKER) but is COPYed in its own Dockerfile.j2 outside the
+# common.j2 fragment -- this requires that feature's own build context
+# (`COPY --from=<ctx>`), which is only wired up for common-bucket features
+# here. For rsync-bucket features (the only bucket populated anywhere in
+# this tree today) this file is already brought in wholesale by the rsync
+# of that feature's own already-built image, so re-copying it would be both
+# redundant and (without --from=<ctx>) a build error (no such path in
+# mega's own build context). See _FEATURE_POST_COMMON_LINES_ANY below for
+# the bucket-independent counterpart.
 _FEATURE_POST_COMMON_LINES: Dict[str, List[str]] = {
     "database": [
-        'COPY ["files/90-sonic.conf", "/usr/lib/sysctl.d/"]',
+        'COPY --from={ctx} ["files/90-sonic.conf", "/usr/lib/sysctl.d/"]',
     ],
+}
+
+# Lines that must run once a feature's own files are present on disk,
+# regardless of *how* they got there (Dockerfile.common.j2 include or
+# rsync from the built image) -- applied to every selected feature after
+# both the common.j2-include loop and the rsync loop have run (finding #1:
+# gating this on common_bucket alone means it silently never fires, since
+# no Dockerfile.common.j2 exists anywhere in this tree today).
+_FEATURE_POST_COMMON_LINES_ANY: Dict[str, List[str]] = {
     "bgp": [
         "# --- FRR template symlinks (plan section 12) ---",
-        "# Dockerfile.common.j2's COPY places frr/ contents directly at",
-        "# /usr/share/sonic/templates/ (bgpd/, zebra/, etc.).  These guards",
-        "# ensure the template subdirs remain reachable even if a later rsync",
-        "# from another feature's built image relocates or overlays them.",
+        "# Defensive guard, not currently expected to fire in the rsync",
+        "# bucket: bgp's own Dockerfile.j2 COPYs its 'frr' source dir",
+        "# straight onto /usr/share/sonic/templates/ (bgpd/, zebra/, etc.",
+        "# already at the top level, verified against dockers/docker-fpm-frr/",
+        "# Dockerfile.j2), so bgp's own rsynced image needs no symlinks. Kept",
+        "# in case a future Dockerfile.common.j2 nests them under frr/.",
         "RUN for d in bgpd zebra staticd common; do \\",
         "    if [ ! -e /usr/share/sonic/templates/$d ] && \\",
         "       [ -d /usr/share/sonic/templates/frr/$d ]; then \\",
@@ -644,7 +692,11 @@ def generate_dockerfile(
 
     # Per-feature direct apt-get/pip installs (not in Dockerfile.common.j2,
     # not handled by _INCLUDE_DOCKER -- see _FEATURE_PRE_INSTALL_LINES).
-    for spec in common_bucket:
+    # Applied to every selected feature regardless of bucket: since no
+    # Dockerfile.common.j2 exists anywhere in this tree today, gating this
+    # on common_bucket alone means it silently never fires (confirmed
+    # finding -- see README "Known limitations").
+    for spec in ordered:
         pre = _FEATURE_PRE_INSTALL_LINES.get(spec.feature)
         if pre:
             lines.extend(pre)
@@ -693,26 +745,11 @@ def generate_dockerfile(
         lines.append("")
 
     # Per-feature post-install cleanup (see _FEATURE_POST_INSTALL_LINES).
-    for spec in common_bucket:
+    # Applied regardless of bucket -- see the pre-install loop above.
+    for spec in ordered:
         post = _FEATURE_POST_INSTALL_LINES.get(spec.feature)
         if post:
             lines.extend(post)
-
-    if "bgp" in selected_names:
-        lines.append(
-            "# --- bgp (FRR): user/group creation, required for FRR daemons'"
-        )
-        lines.append(
-            "# privs_init() (plan section 12, \"FRR user/group creation\") -- bgp's"
-        )
-        lines.append(
-            "# own Dockerfile.j2 does this itself, OUTSIDE its Dockerfile.common.j2,"
-        )
-        lines.append("# so it must be replicated explicitly here. ---")
-        lines.append("RUN groupadd -g ${frr_user_gid} frr")
-        lines.append("RUN useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr")
-        lines.append("RUN chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/")
-        lines.append("")
 
     for spec in common_bucket:
         ctx = build_context_name(spec.stem)
@@ -734,7 +771,7 @@ def generate_dockerfile(
             )
         post_common = _FEATURE_POST_COMMON_LINES.get(spec.feature)
         if post_common:
-            lines.extend(post_common)
+            lines.extend(line.format(ctx=ctx) for line in post_common)
         lines.append("")
 
     for spec in ordered:
@@ -768,8 +805,46 @@ def generate_dockerfile(
             f"RUN --mount=type=bind,from={spec.feature}-layer,target=/svc \\"
         )
         lines.append(
-            f"    rsync -axAX --omit-dir-times --no-D {exclude_args} /svc/ /"
+            f"    rsync -axAX --omit-dir-times --no-D {exclude_args} /svc/ / && \\"
         )
+        lines.append(
+            "    for f in " + " ".join(_IDENTITY_MERGE_FILES) + "; do \\"
+        )
+        lines.append(
+            "        awk -F: 'NR==FNR{seen[$1];next} !($1 in seen)' "
+            "\"$f\" \"/svc$f\" >> \"$f\" 2>/dev/null || true; \\"
+        )
+        lines.append("    done")
+        lines.append("")
+
+    # Per-feature lines that must run once the feature's own files are
+    # actually present on disk -- via the rsync just above (the only bucket
+    # populated in this tree today) or a future Dockerfile.common.j2
+    # include. Applied regardless of bucket (see _FEATURE_POST_COMMON_LINES_ANY
+    # / finding #1).
+    for spec in ordered:
+        post_common = _FEATURE_POST_COMMON_LINES_ANY.get(spec.feature)
+        if post_common:
+            lines.extend(post_common)
+            lines.append("")
+
+    if "bgp" in selected_names:
+        lines.append(
+            "# --- bgp (FRR): user/group creation + ownership fix-up, "
+            "required for FRR daemons' privs_init() (plan section 12). Run "
+            "AFTER every rsync above so /etc/frr already exists (bgp's own "
+            "rsynced image already ships it) and so this never races the "
+            "identity-file merge step. Guarded so it's a no-op if the merge "
+            "already brought 'frr' in from bgp's own /etc/passwd,/etc/group. ---"
+        )
+        lines.append(
+            "RUN getent group frr >/dev/null 2>&1 || groupadd -g ${frr_user_gid} frr"
+        )
+        lines.append(
+            "RUN id frr >/dev/null 2>&1 || "
+            "useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr"
+        )
+        lines.append("RUN mkdir -p /etc/frr && chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/")
         lines.append("")
 
     lines.append(
@@ -805,7 +880,11 @@ def generate_dockerfile(
     lines.append("ENV IMAGE_VERSION=$image_version")
 
     # Per-feature final-stage ENV vars (see _FEATURE_FINAL_STAGE_LINES).
-    for spec in common_bucket:
+    # Applied regardless of bucket -- ENV instructions are per-stage and
+    # are NOT carried over by rsync_from_builder_stage() (it copies files,
+    # not the Dockerfile ENV table), so this must be set explicitly here
+    # even for rsync-bucket features whose built image already sets it.
+    for spec in ordered:
         final = _FEATURE_FINAL_STAGE_LINES.get(spec.feature)
         if final:
             lines.extend(final)

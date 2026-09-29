@@ -184,6 +184,52 @@ def check_scenario(sonic_root: Path, name: str, features: List[str]) -> bool:
             f"with 'bgp' selected={('bgp' in feature_names)}"
         )
 
+    # --- 5d. identity-file merge present for every rsync-bucket feature,
+    # and none of /etc/passwd,/etc/group,/etc/shadow,/etc/gshadow or the
+    # dpkg status DB are rsynced wholesale (finding #2: sequential
+    # whole-rootfs rsync must not let the last feature's copy silently
+    # clobber earlier features' special users, e.g. redis/frr/_lldpd) -----
+    for feat in result.rsync_bucket_features:
+        block_re = re.compile(
+            rf"from={re.escape(feat)}-layer.*?(?=\n\n|\Z)", re.DOTALL
+        )
+        m = block_re.search(text)
+        assert m, f"{feat}: could not locate its own rsync RUN block"
+        block = m.group(0)
+        if "--exclude=/etc/passwd" not in block:
+            problems.append(f"{feat}: rsync block doesn't exclude /etc/passwd from the wholesale copy")
+        if "--exclude=/var/lib/dpkg/status" not in block:
+            problems.append(f"{feat}: rsync block doesn't exclude /var/lib/dpkg/status from the wholesale copy")
+        if "awk -F:" not in block:
+            problems.append(f"{feat}: rsync block has no identity-file merge step (awk -F:)")
+
+    # --- 5e. FRR user/group/chown fix-up runs AFTER every rsync block, not
+    # before (finding #2: chown -R /etc/frr/ before rsync fails outright if
+    # /etc/frr doesn't exist yet in the chosen base image) ----------------
+    if "bgp" in feature_names:
+        last_rsync_end = 0
+        for feat in result.rsync_bucket_features:
+            for m in re.finditer(rf"from={re.escape(feat)}-layer", text):
+                last_rsync_end = max(last_rsync_end, m.end())
+        chown_match = re.search(r"chown -R \$\{frr_user_uid\}:\$\{frr_user_gid\} /etc/frr/", text)
+        assert chown_match, "bgp selected but FRR chown line is missing"
+        if last_rsync_end and chown_match.start() < last_rsync_end:
+            problems.append(
+                "FRR chown/groupadd/useradd fix-up runs BEFORE a rsync-bucket "
+                "feature's rsync block -- /etc/frr may not exist yet"
+            )
+
+    # --- 5f. per-feature pre/post-install lines fire regardless of bucket
+    # (finding #1: gating these on common_bucket alone means they silently
+    # never fire, since no Dockerfile.common.j2 exists anywhere in this
+    # tree today) -----------------------------------------------------------
+    if "database" in feature_names and "RUN apt-get install -y redis-tools redis-server" not in text:
+        problems.append("database selected but its pre-install apt lines are missing")
+    if "swss" in feature_names and "RUN apt-get purge -y build-essential python3-dev" not in text:
+        problems.append("swss selected but its post-install cleanup line is missing")
+    if "database" in feature_names and 'ENV INCLUDE_SYSTEM_EVENTD=' not in text:
+        problems.append("database selected but final-stage ENV INCLUDE_SYSTEM_EVENTD is missing")
+
     # --- 6. start.sh relocation, exactly once per feature that has one ---
     for feat in feature_names:
         spec = next(s for s in specs if s.feature == feat)
