@@ -3779,6 +3779,36 @@ The **NODE_CFG** table defines the node configuration details for platform compo
 
 **fully-qualified-name**: Fully qualified hierarchy path for the component.
 
+### SAI_PROFILE
+
+The **SAI_PROFILE** table provides a generic, vendor-agnostic mechanism
+to inject arbitrary SAI init-config key/value pairs. Each entry is
+rendered as one `KEY=VALUE` line into `/etc/sai.d/sai.profile`, which is
+read by `syncd` at startup and passed to the vendor SAI implementation.
+This avoids needing a schema or template change every time a new,
+vendor-specific SAI tunable needs to be exposed.
+
+```json
+{
+    "SAI_PROFILE": {
+        "SAI_NUM_ECMP_MEMBERS": {
+            "value": "128"
+        },
+        "SAI_NHG_HIERARCHICAL_NEXTHOP": {
+            "value": "false"
+        }
+    }
+}
+```
+
+**name** (list key): SAI profile key name. Must exactly match the SAI
+environment variable name expected by the vendor's SAI/SDK
+implementation, e.g. `SAI_NUM_ECMP_MEMBERS`.
+
+**value**: Value for this SAI profile key, rendered verbatim as a
+string. Interpretation/validation of the value is the vendor SAI/SDK
+implementation's responsibility, not this schema's.
+
 # For Developers
 
 ## Generating Application Config by Jinja2 Template

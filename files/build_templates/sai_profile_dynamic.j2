@@ -1,0 +1,9 @@
+{# Render every entry of the SAI_PROFILE CONFIG_DB table as a KEY=VALUE
+   line. This is a generic, vendor-agnostic include: it makes no
+   assumption about which keys are present, so it can be reused
+   unmodified by any hwsku's sai.profile.j2, across vendors. #}
+{%- if SAI_PROFILE is defined %}
+{%- for key, entry in SAI_PROFILE.items() %}
+{{ key }}={{ entry.value }}
+{% endfor %}
+{%- endif %}

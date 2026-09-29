@@ -1,0 +1,41 @@
+{
+    "SAI_PROFILE_WITH_CORRECT_VALUES": {
+        "sonic-sai-profile:sonic-sai-profile": {
+            "sonic-sai-profile:SAI_PROFILE": {
+                "SAI_PROFILE_LIST": [
+                    {
+                        "name": "SAI_NUM_ECMP_MEMBERS",
+                        "value": "128"
+                    },
+                    {
+                        "name": "SAI_NHG_HIERARCHICAL_NEXTHOP",
+                        "value": "false"
+                    }
+                ]
+            }
+        }
+    },
+    "SAI_PROFILE_WITH_INVALID_NAME": {
+        "sonic-sai-profile:sonic-sai-profile": {
+            "sonic-sai-profile:SAI_PROFILE": {
+                "SAI_PROFILE_LIST": [
+                    {
+                        "name": "sai_num_ecmp_members",
+                        "value": "128"
+                    }
+                ]
+            }
+        }
+    },
+    "SAI_PROFILE_WITH_MISSING_VALUE": {
+        "sonic-sai-profile:sonic-sai-profile": {
+            "sonic-sai-profile:SAI_PROFILE": {
+                "SAI_PROFILE_LIST": [
+                    {
+                        "name": "SAI_NUM_ECMP_MEMBERS"
+                    }
+                ]
+            }
+        }
+    }
+}

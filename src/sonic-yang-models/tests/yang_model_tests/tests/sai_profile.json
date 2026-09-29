@@ -1,0 +1,14 @@
+{
+    "SAI_PROFILE_WITH_CORRECT_VALUES": {
+        "desc": "CONFIG SAI_PROFILE TABLE WITH ALL THE CORRECT VALUES"
+    },
+    "SAI_PROFILE_WITH_INVALID_NAME": {
+        "desc": "Referring invalid SAI_PROFILE key name (lowercase not allowed).",
+        "eStrKey": "Pattern",
+        "eStr": ["[A-Z][A-Z0-9_]*"]
+    },
+    "SAI_PROFILE_WITH_MISSING_VALUE": {
+        "desc": "Config SAI_PROFILE entry without mandatory value leaf.",
+        "eStrKey": "Mandatory"
+    }
+}
