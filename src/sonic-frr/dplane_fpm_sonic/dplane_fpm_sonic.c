@@ -43,6 +43,7 @@
 #include "lib/command.h"
 #include "lib/memory.h"
 #include "lib/network.h"
+#include "lib/netlink_parser.h"
 #include "lib/ns.h"
 #include "lib/frr_pthread.h"
 #include "lib/termtable.h"

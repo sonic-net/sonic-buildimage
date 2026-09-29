@@ -1,22 +1,35 @@
-From 735552bed6594e60faacb6a36af8c9816bb3e123 Mon Sep 17 00:00:00 2001
-From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
-Date: Tue, 19 Aug 2025 23:41:53 +0000
-Subject: zebra : EVPN VXLAN MH extern mode: Update debug print for
- NDA_PROTOCOL
+From ca8eeb6efae9201c097c1c86088e0cf8454bd0eb Mon Sep 17 00:00:00 2001
+From: Patrice Brissette <patricebrissette@gmail.com>
+Date: Tue, 5 May 2026 17:06:04 -0400
+Subject: [PATCH] zebra: print NDA_PROTOCOL attribute in netlink debug output
 
-This is to update netlink debug print,
- to print 'protocol' i.e NDA_PROTOCOL field for netlink messages.
+Add support for displaying the NDA_PROTOCOL attribute in zebra's
+netlink debug output. This allows operators to see the protocol
+field value when debugging MAC/neighbor entries, which is useful
+for distinguishing between entries learned via different mechanisms
+(e.g., zebra control plane vs hardware data plane).
 
-Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
-Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+The protocol value is displayed as both the numeric value and its
+symbolic name (e.g., "193 (hw)") using nl_rtproto_to_str() for
+better readability.
+
+Changes:
+- Add NDA_PROTOCOL case to neigh_rta2str() for attribute name mapping
+- Add NDA_PROTOCOL parsing in nlneigh_dump() to display protocol value
+  with symbolic name
+
+Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
-(cherry picked from commit a4d7bb5623084d098e37f390fcad87f479683f09)
+(cherry picked from commit 55d41949d67d822f2f3fce771db292f82df37dae)
+---
+ zebra/debug_nl.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/zebra/debug_nl.c b/zebra/debug_nl.c
-index d1d65f1e3..3b476073e 100644
+index e7297c762a..5d0a121967 100644
 --- a/zebra/debug_nl.c
 +++ b/zebra/debug_nl.c
-@@ -571,6 +571,8 @@ const char *neigh_rta2str(int type)
+@@ -572,6 +572,8 @@ const char *neigh_rta2str(int type)
  		return "MASTER";
  	case NDA_LINK_NETNSID:
  		return "LINK_NETNSID";
@@ -25,7 +38,7 @@ index d1d65f1e3..3b476073e 100644
  	default:
  		return "UNKNOWN";
  	}
-@@ -1146,6 +1148,7 @@ static void nlneigh_dump(struct ndmsg *ndm, size_t msglen)
+@@ -1147,6 +1149,7 @@ static void nlneigh_dump(struct ndmsg *ndm, size_t msglen)
  	char bytestr[16];
  	char dbuf[128];
  	unsigned short rta_type;
@@ -33,18 +46,18 @@ index d1d65f1e3..3b476073e 100644
  
  #ifndef NDA_RTA
  #define NDA_RTA(ndm)                                                           \
-@@ -1200,7 +1203,10 @@ next_rta:
+@@ -1201,7 +1204,10 @@ next_rta:
  		vid = *(uint16_t *)RTA_DATA(rta);
  		zlog_debug("      %d", vid);
  		break;
 -
 +	case NDA_PROTOCOL:
 +		protocol = *(uint8_t *)RTA_DATA(rta);
-+		zlog_debug("      %d", protocol);
++		zlog_debug("      %u (%s)", protocol, nl_rtproto_to_str(protocol));
 +		break;
  	default:
  		/* NOTHING: unhandled. */
  		break;
 -- 
-2.43.0
+2.34.1
 

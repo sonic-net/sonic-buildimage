@@ -1,8 +1,8 @@
-From 2c69d638436f6e809c9fa2bbf8f2f8f3199f8db3 Mon Sep 17 00:00:00 2001
+From cdc8d8f1fa95ecf39d0f6cbda3822534830a2eb7 Mon Sep 17 00:00:00 2001
 From: Deepak Singhal <deepsinghal@microsoft.com>
 Date: Thu, 2 Apr 2026 05:00:25 +0000
-Subject: [PATCH] SONiC-ONLY: zebra: skip if_add_update in speed timer for unready
- interfaces
+Subject: [PATCH] SONiC-ONLY: zebra: skip if_add_update in speed timer for
+ unready interfaces
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -30,10 +30,10 @@ Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/zebra/interface.c b/zebra/interface.c
-index 52c2619eed..f9b31260a3 100644
+index 6e8d2b9de3..cdece35ba4 100644
 --- a/zebra/interface.c
 +++ b/zebra/interface.c
-@@ -81,7 +81,8 @@ static void if_zebra_speed_update(struct event *thread)
+@@ -104,7 +104,8 @@ static void zebra_if_speed_update_ctx(struct zebra_dplane_ctx *ctx, struct inter
  		zlog_info("%s: %s old speed: %u new speed: %u", __func__,
  			  ifp->name, ifp->speed, new_speed);
  		if_update_state_speed(ifp, new_speed);
