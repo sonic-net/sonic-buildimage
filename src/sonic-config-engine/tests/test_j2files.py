@@ -1747,6 +1747,18 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                 'input': 'empty.json',
                 'output': 'sai_profile_dynamic_empty.txt'
             },
+            # Exercises the direct-CONFIG_DB-write safety guards (which
+            # exist because such writes bypass YANG validation): a key
+            # that is exactly the reserved SAI_INIT_CONFIG_FILE, a key
+            # that embeds '=' to smuggle that reserved key past a
+            # first-'='-split parser, and a key containing CR/LF must
+            # all be dropped entirely; CR/LF in a value must be
+            # normalized (CR stripped, LF collapsed to a space) rather
+            # than allowed to produce extra profile lines.
+            'malicious': {
+                'input': 'malicious.json',
+                'output': 'sai_profile_dynamic_malicious.txt'
+            },
         }
         for _, v in test_list.items():
             input_file = os.path.join(
