@@ -147,8 +147,6 @@ else ifeq ($(BLDENV), bookworm)
 SLAVE_DIR = sonic-slave-bookworm
 else ifeq ($(BLDENV), bullseye)
 SLAVE_DIR = sonic-slave-bullseye
-else ifeq ($(BLDENV), buster)
-SLAVE_DIR = sonic-slave-buster
 else
 SLAVE_DIR = sonic-slave-jessie
 endif
