@@ -553,7 +553,7 @@ RUN eatmydata apt-get install -y golang-go \
  && ln -sf /usr/lib/go-1.19 /usr/local/go
 {%- endif %}
 
-RUN pip3 install --upgrade pip==24.2
+RUN pip3 install --upgrade pip
 RUN apt-get purge -y python3-pip
 
 {%- if CONFIGURED_ARCH == "armhf" %}
@@ -583,7 +583,7 @@ RUN pip3 install pytest-runner==5.2
 RUN pip3 install mockredispy==2.9.3
 RUN pip3 install pyfakefs
 
-RUN pip3 install pillow==10.0.1
+RUN pip3 install pillow
 
 # For p4 build
 RUN pip3 install \
