@@ -2967,6 +2967,11 @@
                 "max_events": "1024"
             }
         },
+        "SAI_PROFILE": {
+            "SAI_NUM_ECMP_MEMBERS": {
+                "value": "32"
+            }
+        },
         "SYSTEM_DEFAULTS": {
             "tunnel_qos_remap": {
                 "status": "enabled"
