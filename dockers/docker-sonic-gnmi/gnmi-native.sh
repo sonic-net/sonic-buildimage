@@ -196,5 +196,21 @@ if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "null" ]; then
     fi
 fi
 
+# RECORDS gNMI subscription target (optional).
+# Feature-detected: only builds whose telemetry binary understands -records_dir
+# get this wiring, so it is a safe no-op on images without the RECORDS feature.
+if /usr/sbin/telemetry --help 2>&1 | grep -q -- "-records_dir"; then
+    RECORDS_DIR=$(extract_field "$GNMI" '.records_dir')
+    if [ -z "$RECORDS_DIR" ] || [ "$RECORDS_DIR" == "null" ]; then
+        RECORDS_DIR="/mnt/host/var/log/swss"
+    fi
+    TELEMETRY_ARGS+=" -records_dir $RECORDS_DIR"
+
+    RECORDS_TZ=$(extract_field "$GNMI" '.records_tz')
+    if [ -n "$RECORDS_TZ" ] && [ "$RECORDS_TZ" != "null" ]; then
+        TELEMETRY_ARGS+=" -records_tz $RECORDS_TZ"
+    fi
+fi
+
 echo "gnmi args: $TELEMETRY_ARGS"
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}
