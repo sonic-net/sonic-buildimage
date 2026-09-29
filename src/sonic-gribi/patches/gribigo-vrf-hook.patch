@@ -1,0 +1,63 @@
+From bd22b9d0c1ba21b772d2ca1251434cf47d787c87 Mon Sep 17 00:00:00 2001
+From: randy-nexthop <randy@nexthop.ai>
+Date: Mon, 28 Sep 2026 10:41:22 -0700
+Subject: [PATCH] rib: new network instances inherit the post-change hook
+
+server.New sets the post-change hook before WithVRFs adds network
+instances, and AddNetworkInstance built the new RIBHolder without it, so
+changes in any non-default instance never reached the hook. Keep the hook
+on the RIB and apply it to instances added later.
+
+---
+ rib/rib.go | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/rib/rib.go b/rib/rib.go
+index 4c2cd6b..192a83b 100644
+--- a/rib/rib.go
++++ b/rib/rib.go
+@@ -146,6 +146,11 @@ type RIB struct {
+ 	// can be fully resolved in the RIB. In the current implementation it
+ 	// is called only for IPv4 entries.
+ 	resolvedEntryHook ResolvedEntryFn
++
++	// postChangeHook is the hook most recently passed to SetPostChangeHook.
++	// It is kept so that network instances added later inherit it. Protected
++	// by nrMu.
++	postChangeHook RIBHookFn
+ }
+ 
+ // RIBHolder is a container for a set of RIBs.
+@@ -339,6 +344,9 @@ type pendingEntry struct {
+ // SetPostChangeHook assigns the supplied hook to all network instance RIBs within
+ // the RIB structure.
+ func (r *RIB) SetPostChangeHook(fn RIBHookFn) {
++	r.nrMu.Lock()
++	defer r.nrMu.Unlock()
++	r.postChangeHook = fn
+ 	for _, nir := range r.niRIB {
+ 		nir.mu.Lock()
+ 		nir.postChangeHook = fn
+@@ -361,7 +369,7 @@ func (r *RIB) NetworkInstanceRIB(s string) (*RIBHolder, bool) {
+ }
+ 
+ // AddNetworkInstance adds a new network instance with the specified name
+-// to the RIB.
++// to the RIB. The new instance inherits any hook set by SetPostChangeHook.
+ func (r *RIB) AddNetworkInstance(name string) error {
+ 	r.nrMu.Lock()
+ 	defer r.nrMu.Unlock()
+@@ -378,7 +386,9 @@ func (r *RIB) AddNetworkInstance(name string) error {
+ 		rhOpt = append(rhOpt, DisableForwardReferences())
+ 	}
+ 
+-	r.niRIB[name] = NewRIBHolder(name, rhOpt...)
++	rh := NewRIBHolder(name, rhOpt...)
++	rh.postChangeHook = r.postChangeHook
++	r.niRIB[name] = rh
+ 	return nil
+ }
+ 
+-- 
+2.43.0
+
