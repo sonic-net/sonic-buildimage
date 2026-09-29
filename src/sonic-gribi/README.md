@@ -48,6 +48,23 @@ count, then `(u64 len, bytes, u64 len, bytes)` pairs; pair 0 is
 `("APPL_DB", "ROUTE_TABLE")`, then per tuple `(key, fieldCount)` followed by
 the fields. Zero fields is a DEL.
 
+## Batching
+
+orchagent drains and commits one ZeroMQ frame at a time, and each commit has a
+fixed cost. So the RIB hook does not send a route when gribigo installs it; it
+queues the write, and the queue leaves as one frame when any of these happens:
+
+- gribigo has run every operation of a ModifyRequest (the wrapper flushes before
+  it reads the next request), or a Flush RPC has finished;
+- the queue holds `-zmq-batch-max` routes (default 1024, orchagent's `-b`);
+- `-zmq-batch-linger` (default 50ms) has passed since the first queued write.
+  gribigo takes about 50 µs per route, so a large request takes a while to run;
+  the linger bounds how long a route waits for it. `0` disables the timer.
+
+A frame is also cut before it reaches half of orchagent's 16 MiB receive buffer.
+Writes keep their RIB order, and orchagent merges writes to one key within a
+frame, last one wins. A failed send fails every route in the frame.
+
 ## Add cost
 
 gribigo v0.1.3 merged every added entry into its RIB with
@@ -133,7 +150,9 @@ prefix the commands with `GOWORK=off`.
 Flags given explicitly override the `GRIBI` table: `-listen`,
 `-fib-ack-timeout`, `-debug`, `-reflection`, `-insecure` (ignore
 `GRIBI|certs`), and `-vrf` (repeatable; replaces the `VRF` table as the
-list of network instances). `-zmq` and `-redis` locate orchagent and Redis.
+list of network instances). `-zmq` and `-redis` locate orchagent and Redis;
+`-zmq-batch-max` and `-zmq-batch-linger` tune [batching](#batching). Routes
+are logged one per line only at debug level.
 
 ## Verifying
 

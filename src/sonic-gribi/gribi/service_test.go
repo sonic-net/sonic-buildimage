@@ -48,7 +48,37 @@ type rig struct {
 	mu      sync.Mutex
 	sent    []string // route keys the hook announced, in order
 	deleted []string
+	flushes []flushed // what the hook had announced at each Flush
 	sentCh  chan string
+}
+
+type flushed struct{ sent, deleted int }
+
+// Flush is the Flusher: it records how far the hook had got.
+func (r *rig) Flush() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.flushes = append(r.flushes, flushed{len(r.sent), len(r.deleted)})
+}
+
+// waitFlush blocks until a Flush sees the hook at want.
+func (r *rig) waitFlush(t *testing.T, want flushed) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		r.mu.Lock()
+		got := append([]flushed(nil), r.flushes...)
+		r.mu.Unlock()
+		for _, f := range got {
+			if f == want {
+				return
+			}
+		}
+		time.Sleep(time.Millisecond)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	t.Fatalf("no Flush saw %+v; flushes %+v", want, r.flushes)
 }
 
 func newRig(t *testing.T, ackTimeout time.Duration, vrfs ...string) *rig {
@@ -59,7 +89,7 @@ func newRig(t *testing.T, ackTimeout time.Duration, vrfs ...string) *rig {
 		t.Fatalf("server.New: %v", err)
 	}
 	log := slog.New(slog.NewTextHandler(testWriter{t}, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	svc := New(gs, r.tracker, ackTimeout, log)
+	svc := New(gs, r.tracker, r, ackTimeout, log)
 	r.svc = svc
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
@@ -507,6 +537,7 @@ func TestGetAndFlushDelegate(t *testing.T) {
 		t.Fatalf("Flush: %v", err)
 	}
 	r.waitSent(t, "10.20.0.0/16")
+	r.waitFlush(t, flushed{sent: 1, deleted: 1}) // the Flush RPC's deletes leave together
 	r.mu.Lock()
 	deleted := append([]string(nil), r.deleted...)
 	r.mu.Unlock()
@@ -519,5 +550,39 @@ func TestGetAndFlushDelegate(t *testing.T) {
 	}
 	if n := len(got.GetEntry()); n != 0 {
 		t.Fatalf("Get after Flush returned %d entries", n)
+	}
+}
+
+// A request's route writes are flushed once gribigo has run all of its
+// operations, without waiting for the client's next message.
+func TestRecvFlushesAtTheEndOfEachRequest(t *testing.T) {
+	r := newRig(t, 30*time.Second)
+	ctx := context.Background()
+	c := r.client(t, ctx, true, 1)
+
+	const n = 50
+	entries := topology("10.20.0.0/16")
+	for i := 1; i < n; i++ {
+		entries = append(entries, fluent.IPv4Entry().WithNetworkInstance(ni).WithPrefix(fmt.Sprintf("10.%d.0.0/16", 20+i)).WithNextHopGroup(10))
+	}
+	c.Modify().AddEntry(t, entries...) // one ModifyRequest
+	r.waitFlush(t, flushed{sent: n})
+
+	r.mu.Lock()
+	for _, f := range r.flushes {
+		if f.sent > 0 && f.sent < n {
+			t.Errorf("flushed in the middle of the request: %+v", r.flushes)
+		}
+	}
+	keys := append([]string(nil), r.sent...)
+	r.mu.Unlock()
+	for _, k := range keys {
+		r.tracker.Done(k, nil)
+	}
+	if err := await(t, c, 10*time.Second); err != nil {
+		t.Fatalf("Await: %v", err)
+	}
+	for i := 0; i < n; i++ {
+		wantRoute(t, c, fmt.Sprintf("10.%d.0.0/16", 20+i), constants.Add, fluent.InstalledInFIB)
 	}
 }

@@ -60,6 +60,8 @@ var (
 	redisAddr    = flag.String("redis", "localhost:6379", "SONiC Redis; read for NEIGH_TABLE and the route response channel")
 	ackTimeout   = flag.Duration("fib-ack-timeout", 0, "how long a route may wait for orchagent's response before FIB_FAILED (default: GRIBI|config fib_ack_timeout)")
 	startTimeout = flag.Duration("start-timeout", 10*time.Second, "how long startup may wait for Redis and the subscription")
+	batchMax     = flag.Int("zmq-batch-max", adapter.DefaultBatchMax, "most routes per ZeroMQ frame to orchagent")
+	batchLinger  = flag.Duration("zmq-batch-linger", adapter.DefaultBatchLinger, "longest a route write waits to share a frame; 0 sends only at the end of each request or when a frame is full")
 	vrfs         stringList
 
 	// Not -v: glog, which gribigo imports, registers that flag itself and a
@@ -203,7 +205,8 @@ func run(log *slog.Logger) error {
 	defer producer.Close()
 	log.Info("connected to orchagent", "zmq", *zmqEndpoint)
 
-	programmer := adapter.New(producer, neigh.NewRedis(rdb, cfgDB), tracker, log)
+	programmer := adapter.New(producer, neigh.NewRedis(rdb, cfgDB), tracker,
+		adapter.Batch{Max: *batchMax, Linger: *batchLinger}, log)
 
 	extra, err := networkInstances(ctx, cfgDB, log)
 	if err != nil {
@@ -226,7 +229,7 @@ func run(log *slog.Logger) error {
 		opts = append(opts, grpc.Creds(creds))
 	}
 	grpcSrv := grpc.NewServer(opts...)
-	svc := gribi.New(gs, tracker, cfg.FIBAckTimeout, log)
+	svc := gribi.New(gs, tracker, programmer, cfg.FIBAckTimeout, log)
 	fibResults, err := config.FIBResultsReported(ctx, cfgDB)
 	if err != nil {
 		return err
@@ -253,7 +256,9 @@ func run(log *slog.Logger) error {
 		"tls", cfg.TLS(),
 		"mutual_tls", cfg.CACert != "",
 		"network_instances", append([]string{server.DefaultNetworkInstanceName}, extra...),
-		"fib_ack_timeout", cfg.FIBAckTimeout.String())
+		"fib_ack_timeout", cfg.FIBAckTimeout.String(),
+		"zmq_batch_max", *batchMax,
+		"zmq_batch_linger", batchLinger.String())
 
 	serveErr := make(chan error, 1)
 	go func() {
@@ -276,6 +281,7 @@ func run(log *slog.Logger) error {
 		// last told. Reversing that is the controller's decision.
 		log.Info("shutting down; programmed routes are left in place")
 		grpcSrv.GracefulStop()
+		programmer.Flush() // whatever the last request queued
 		return nil
 	}
 }

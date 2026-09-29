@@ -81,7 +81,11 @@ type rig struct {
 	tracker *fibtrack.Tracker
 }
 
-func newRig(t *testing.T) *rig {
+func newRig(t *testing.T) *rig { t.Helper(); return newBatchRig(t, Batch{}) }
+
+// newBatchRig is newRig with explicit batching. Its hooks are called through
+// r.p.OnChange, not the flushing helpers below.
+func newBatchRig(t *testing.T, batch Batch) *rig {
 	t.Helper()
 	sender := &fakeSender{}
 	tracker := fibtrack.New()
@@ -95,7 +99,7 @@ func newRig(t *testing.T) *rig {
 		"Vrfblue|10.0.0.57": "Ethernet8",
 	}
 	log := slog.New(slog.NewTextHandler(testWriter{t}, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	return &rig{p: New(sender, resolver, tracker, log), sender: sender, tracker: tracker}
+	return &rig{p: New(sender, resolver, tracker, batch, log), sender: sender, tracker: tracker}
 }
 
 type testWriter struct{ t *testing.T }
@@ -105,9 +109,16 @@ func (w testWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (r *rig) add(e ygot.ValidatedGoStruct)             { r.p.OnChange(constants.Add, 0, ni, e) }
-func (r *rig) del(e ygot.ValidatedGoStruct)             { r.p.OnChange(constants.Delete, 0, ni, e) }
-func (r *rig) addIn(n string, e ygot.ValidatedGoStruct) { r.p.OnChange(constants.Add, 0, n, e) }
+// on runs one hook and flushes, as the end of a one-operation request would,
+// so each hook's writes arrive as one frame.
+func (r *rig) on(op constants.OpType, ts int64, n string, e ygot.ValidatedGoStruct) {
+	r.p.OnChange(op, ts, n, e)
+	r.p.Flush()
+}
+
+func (r *rig) add(e ygot.ValidatedGoStruct)             { r.on(constants.Add, 0, ni, e) }
+func (r *rig) del(e ygot.ValidatedGoStruct)             { r.on(constants.Delete, 0, ni, e) }
+func (r *rig) addIn(n string, e ygot.ValidatedGoStruct) { r.on(constants.Add, 0, n, e) }
 
 // outcome returns the tracker's answer for key, or the error string when the
 // slot is still open (so a test can tell "failed at once" from "sent").
@@ -256,7 +267,7 @@ func TestReplaceRouteToOtherGroup(t *testing.T) {
 	r.add(nhg(11, mem{2, 1}))
 	r.add(v4("10.20.0.0/16", 10))
 	wantTuples(t, r.sender.last(t, 1), set("10.20.0.0/16", "10.0.0.57", "PortChannel101", "1"))
-	r.p.OnChange(constants.Replace, 0, ni, v4("10.20.0.0/16", 11))
+	r.on(constants.Replace, 0, ni, v4("10.20.0.0/16", 11))
 	wantTuples(t, r.sender.last(t, 2), set("10.20.0.0/16", "10.0.0.59", "PortChannel102", "1"))
 
 	// The route no longer depends on group 10 ...
@@ -278,7 +289,7 @@ func TestNHGReplaceReprogramsDependents(t *testing.T) {
 	r.add(v4("10.22.0.0/16", 11))
 	r.sender.last(t, 3)
 
-	r.p.OnChange(constants.Replace, 0, ni, nhg(10, mem{1, 1}, mem{2, 1}))
+	r.on(constants.Replace, 0, ni, nhg(10, mem{1, 1}, mem{2, 1}))
 	// One frame carrying both dependents, sorted, and nothing for 10.22.
 	wantTuples(t, r.sender.last(t, 4),
 		set("10.20.0.0/16", "10.0.0.57,10.0.0.59", "PortChannel101,PortChannel102", "1,1"),
@@ -304,7 +315,7 @@ func TestNextHopReplaceReprogramsDependents(t *testing.T) {
 	r.add(v4("10.22.0.0/16", 12))
 	r.sender.last(t, 3)
 
-	r.p.OnChange(constants.Replace, 0, ni, nh(1, "10.0.0.59"))
+	r.on(constants.Replace, 0, ni, nh(1, "10.0.0.59"))
 	wantTuples(t, r.sender.last(t, 4),
 		set("10.20.0.0/16", "10.0.0.59", "PortChannel102", "1"),
 		set("10.21.0.0/16", "10.0.0.59", "PortChannel102", "1"),
@@ -324,7 +335,7 @@ func TestNextHopChangeThatBreaksOneRouteStillSendsTheRest(t *testing.T) {
 	// Group 11 now also names a next hop with no neighbor: 10.21 fails,
 	// 10.20 must still go out.
 	r.add(nh(3, "192.0.2.1"))
-	r.p.OnChange(constants.Replace, 0, ni, nhg(11, mem{1, 1}, mem{3, 1}))
+	r.on(constants.Replace, 0, ni, nhg(11, mem{1, 1}, mem{3, 1}))
 	if got := r.sender.all(); len(got) != 2 {
 		t.Fatalf("got %d frames, want 2: %+v", len(got), got)
 	}
@@ -332,7 +343,7 @@ func TestNextHopChangeThatBreaksOneRouteStillSendsTheRest(t *testing.T) {
 		t.Fatalf("10.21 outcome = %v, want an immediate error", err)
 	}
 	// And a next-hop change on nh 1 reprograms only the renderable route.
-	r.p.OnChange(constants.Replace, 0, ni, nh(1, "10.0.0.61"))
+	r.on(constants.Replace, 0, ni, nh(1, "10.0.0.61"))
 	wantTuples(t, r.sender.last(t, 3), set("10.20.0.0/16", "10.0.0.61", "PortChannel103", "1"))
 }
 
@@ -377,7 +388,7 @@ func TestVRFKey(t *testing.T) {
 	r.addIn("blue", nhg(10, mem{1, 1}))
 	r.addIn("blue", v4("10.20.0.0/16", 10))
 	wantTuples(t, r.sender.last(t, 1), set("Vrfblue:10.20.0.0/16", "10.0.0.57", "Ethernet8", "1"))
-	r.p.OnChange(constants.Delete, 0, "blue", v4("10.20.0.0/16", 10))
+	r.on(constants.Delete, 0, "blue", v4("10.20.0.0/16", 10))
 	wantTuples(t, r.sender.last(t, 2), swsszmq.Tuple{Key: "Vrfblue:10.20.0.0/16"})
 }
 
@@ -490,15 +501,164 @@ func TestConcurrentHooks(t *testing.T) {
 			for i := 0; i < routes; i++ {
 				r.addIn(n, v4(fmt.Sprintf("10.%d.%d.0/24", c, i), 10))
 			}
-			r.p.OnChange(constants.Replace, 0, n, nhg(10, mem{1, 1}))
+			r.on(constants.Replace, 0, n, nhg(10, mem{1, 1}))
 			for i := 0; i < routes; i++ {
-				r.p.OnChange(constants.Delete, 0, n, v4(fmt.Sprintf("10.%d.%d.0/24", c, i), 10))
+				r.on(constants.Delete, 0, n, v4(fmt.Sprintf("10.%d.%d.0/24", c, i), 10))
 			}
 		}(c)
 	}
 	wg.Wait()
-	// Per client: routes SETs, one batched reprogram, routes DELs.
-	if got := len(r.sender.all()); got != clients*(2*routes+1) {
-		t.Fatalf("got %d frames, want %d", got, clients*(2*routes+1))
+	// Per client: routes SETs, a reprogram of every route, routes DELs. A
+	// flush from one client may carry another's writes, so count tuples.
+	got := 0
+	for _, f := range r.sender.all() {
+		got += len(f.tuples)
+	}
+	if got != clients*3*routes {
+		t.Fatalf("sent %d tuples, want %d", got, clients*3*routes)
+	}
+}
+
+// install adds nh 1 and group 10 without sending anything.
+func (r *rig) install() {
+	r.p.OnChange(constants.Add, 0, ni, nh(1, "10.0.0.57"))
+	r.p.OnChange(constants.Add, 0, ni, nhg(10, mem{1, 1}))
+}
+
+func route(i int) string { return fmt.Sprintf("10.%d.%d.0/24", 20+i/256, i%256) }
+
+func TestWritesWaitForFlush(t *testing.T) {
+	r := newBatchRig(t, Batch{})
+	r.install()
+	const n = 300
+	var want []swsszmq.Tuple
+	for i := 0; i < n; i++ {
+		r.p.OnChange(constants.Add, 0, ni, v4(route(i), 10))
+		want = append(want, set(route(i), "10.0.0.57", "PortChannel101", "1"))
+	}
+	if got := r.sender.all(); len(got) != 0 {
+		t.Fatalf("%d frames sent before Flush", len(got))
+	}
+	r.p.Flush()
+	wantTuples(t, r.sender.last(t, 1), want...)
+	r.p.Flush() // nothing queued: no empty frame
+	r.sender.last(t, 1)
+}
+
+func TestSameKeyKeepsOrderInOneFrame(t *testing.T) {
+	r := newBatchRig(t, Batch{})
+	r.install()
+	r.p.OnChange(constants.Add, 0, ni, v4("10.20.0.0/16", 10))
+	r.p.OnChange(constants.Delete, 0, ni, v4("10.20.0.0/16", 10))
+	r.p.OnChange(constants.Add, 0, ni, v4("10.20.0.0/16", 10))
+	r.p.Flush()
+	s := set("10.20.0.0/16", "10.0.0.57", "PortChannel101", "1")
+	wantTuples(t, r.sender.last(t, 1), s, swsszmq.Tuple{Key: "10.20.0.0/16"}, s)
+}
+
+func TestReprogramJoinsTheQueue(t *testing.T) {
+	r := newBatchRig(t, Batch{})
+	r.install()
+	r.p.OnChange(constants.Add, 0, ni, nh(2, "10.0.0.59"))
+	r.p.OnChange(constants.Add, 0, ni, v4("10.20.0.0/16", 10))
+	r.p.OnChange(constants.Replace, 0, ni, nhg(10, mem{1, 1}, mem{2, 1}))
+	r.p.OnChange(constants.Add, 0, ni, v4("10.21.0.0/16", 10))
+	r.p.Flush()
+	ecmp := func(k string) swsszmq.Tuple {
+		return set(k, "10.0.0.57,10.0.0.59", "PortChannel101,PortChannel102", "1,1")
+	}
+	wantTuples(t, r.sender.last(t, 1),
+		set("10.20.0.0/16", "10.0.0.57", "PortChannel101", "1"), ecmp("10.20.0.0/16"), ecmp("10.21.0.0/16"))
+}
+
+func TestFullBatchIsSentAtOnce(t *testing.T) {
+	r := newBatchRig(t, Batch{Max: 4})
+	r.install()
+	for i := 0; i < 10; i++ {
+		r.p.OnChange(constants.Add, 0, ni, v4(route(i), 10))
+	}
+	frames := r.sender.all()
+	if len(frames) != 2 || len(frames[0].tuples) != 4 || len(frames[1].tuples) != 4 {
+		t.Fatalf("before Flush got %+v, want two frames of 4", frames)
+	}
+	r.p.Flush()
+	if f := r.sender.last(t, 3); len(f.tuples) != 2 {
+		t.Fatalf("last frame has %d tuples, want 2", len(f.tuples))
+	}
+}
+
+func TestFrameStaysUnderByteLimit(t *testing.T) {
+	r := newBatchRig(t, Batch{Max: 1 << 20})
+	r.install()
+	one := set(route(0), "10.0.0.57", "PortChannel101", "1").EncodedSize()
+	n := maxBatchBytes/one + 10
+	for i := 0; i < n; i++ {
+		r.p.OnChange(constants.Add, 0, ni, v4(fmt.Sprintf("10.%d.%d.%d/32", i>>16&255, i>>8&255, i&255), 10))
+	}
+	r.p.Flush()
+	frames := r.sender.all()
+	total := 0
+	for _, f := range frames {
+		if _, err := swsszmq.Encode("APPL_DB", RouteTable, f.tuples); err != nil {
+			t.Fatal(err)
+		}
+		size := 0
+		for _, tu := range f.tuples {
+			size += tu.EncodedSize()
+		}
+		if size > maxBatchBytes {
+			t.Fatalf("frame of %d bytes, limit %d", size, maxBatchBytes)
+		}
+		total += len(f.tuples)
+	}
+	if len(frames) < 2 || total != n {
+		t.Fatalf("got %d frames carrying %d tuples, want >= 2 frames carrying %d", len(frames), total, n)
+	}
+}
+
+func TestLingerFlushesWithoutFlush(t *testing.T) {
+	r := newBatchRig(t, Batch{Linger: 20 * time.Millisecond})
+	r.install()
+	start := time.Now()
+	r.p.OnChange(constants.Add, 0, ni, v4("10.20.0.0/16", 10))
+	r.p.OnChange(constants.Add, 0, ni, v4("10.21.0.0/16", 10))
+	for len(r.sender.all()) == 0 {
+		if time.Since(start) > 2*time.Second {
+			t.Fatal("linger never flushed")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if waited := time.Since(start); waited < 20*time.Millisecond {
+		t.Fatalf("flushed after %v, before the 20ms linger", waited)
+	}
+	if f := r.sender.last(t, 1); len(f.tuples) != 2 {
+		t.Fatalf("linger frame has %d tuples, want 2", len(f.tuples))
+	}
+	// The timer re-arms for the next batch.
+	r.p.OnChange(constants.Add, 0, ni, v4("10.22.0.0/16", 10))
+	deadline := time.Now().Add(2 * time.Second)
+	for len(r.sender.all()) < 2 {
+		if time.Now().After(deadline) {
+			t.Fatal("linger did not re-arm")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	// Wait out the timer's flush (it holds the lock while it logs), so it
+	// cannot log after the test returns.
+	r.p.Flush()
+}
+
+func TestSendErrorFailsEveryKeyInTheFrame(t *testing.T) {
+	r := newBatchRig(t, Batch{})
+	r.install()
+	r.sender.err = errors.New("zmq: send timeout")
+	for i := 0; i < 3; i++ {
+		r.p.OnChange(constants.Add, 0, ni, v4(route(i), 10))
+	}
+	r.p.Flush()
+	for i := 0; i < 3; i++ {
+		if err := r.outcome(route(i)); err == nil || !strings.Contains(err.Error(), "send timeout") {
+			t.Fatalf("%s outcome = %v, want the send error", route(i), err)
+		}
 	}
 }

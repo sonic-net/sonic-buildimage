@@ -10,6 +10,10 @@
 // FIB_PROGRAMMED or FIB_FAILED. Next hops and next-hop groups have no SONiC
 // object of their own and pass through untouched, as does everything for a
 // RIB_ACK-only session.
+//
+// The wrapper also marks where each request ends: the RIB hook only queues
+// route writes, and the wrapper flushes them once gribigo has run every
+// operation of a ModifyRequest, or a Flush RPC.
 package gribi
 
 import (
@@ -31,22 +35,29 @@ import (
 	"github.com/sonic-net/sonic-gribi/routekey"
 )
 
+// Flusher sends the route writes the RIB hook has queued.
+type Flusher interface {
+	Flush()
+}
+
 // Service implements spb.GRIBIServer over a gribigo server.
 type Service struct {
 	spb.UnimplementedGRIBIServer
 
 	srv        *server.Server
 	tracker    *fibtrack.Tracker
+	flusher    Flusher
 	ackTimeout time.Duration
 	log        *slog.Logger
 	// noFIBAck, when set, is why RIB_AND_FIB_ACK sessions are refused.
 	noFIBAck string
 }
 
-// New wraps srv. ackTimeout bounds how long a route waits for orchagent
-// before the client is told FIB_FAILED.
-func New(srv *server.Server, tracker *fibtrack.Tracker, ackTimeout time.Duration, log *slog.Logger) *Service {
-	return &Service{srv: srv, tracker: tracker, ackTimeout: ackTimeout, log: log}
+// New wraps srv. flusher sends the hook's queued writes at the end of each
+// request. ackTimeout bounds how long a route waits for orchagent before the
+// client is told FIB_FAILED.
+func New(srv *server.Server, tracker *fibtrack.Tracker, flusher Flusher, ackTimeout time.Duration, log *slog.Logger) *Service {
+	return &Service{srv: srv, tracker: tracker, flusher: flusher, ackTimeout: ackTimeout, log: log}
 }
 
 // RefuseFIBAck makes Modify reject RIB_AND_FIB_ACK sessions with reason,
@@ -78,8 +89,9 @@ func (s *Service) Get(req *spb.GetRequest, stream spb.GRIBI_GetServer) error {
 }
 
 // Flush delegates to gribigo. The RIB hook fires a Delete per entry, so the
-// routes leave the switch too.
+// routes leave the switch too, in one batch once gribigo is done.
 func (s *Service) Flush(ctx context.Context, req *spb.FlushRequest) (*spb.FlushResponse, error) {
+	defer s.flusher.Flush()
 	return s.srv.Flush(ctx, req)
 }
 
@@ -117,7 +129,13 @@ type modifyStream struct {
 // io.EOF is held back until every operation has had its result passed to
 // Send, or ackTimeout has passed (an entry with an unresolved dependency is
 // never answered).
+//
+// gribigo calls Recv again only after it has run every operation of the
+// previous request through the RIB hook, so this is where that request's
+// route writes leave, as one batch, before we wait for the next request or
+// for the answers after a half-close.
 func (m *modifyStream) Recv() (*spb.ModifyRequest, error) {
+	m.svc.flusher.Flush()
 	req, err := m.GRIBI_ModifyServer.Recv()
 	if err == io.EOF {
 		m.awaitAnswers()

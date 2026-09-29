@@ -42,17 +42,22 @@ type Tuple struct {
 // IsDelete reports whether the tuple deletes its key.
 func (t Tuple) IsDelete() bool { return len(t.Fields) == 0 }
 
+// EncodedSize is the number of bytes t adds to a frame.
+func (t Tuple) EncodedSize() int {
+	size := pairSize(t.Key, strconv.Itoa(len(t.Fields)))
+	for _, fv := range t.Fields {
+		size += pairSize(fv.Field, fv.Value)
+	}
+	return size
+}
+
 // Encode serialises tuples for db/table into one frame.
 func Encode(db, table string, tuples []Tuple) ([]byte, error) {
 	pairs := 1
 	size := lenSize + pairSize(db, table)
 	for _, t := range tuples {
-		count := strconv.Itoa(len(t.Fields))
 		pairs += 1 + len(t.Fields)
-		size += pairSize(t.Key, count)
-		for _, fv := range t.Fields {
-			size += pairSize(fv.Field, fv.Value)
-		}
+		size += t.EncodedSize()
 	}
 	if size >= MaxFrameSize {
 		return nil, fmt.Errorf("swsszmq: frame of %d bytes exceeds the %d byte limit", size, MaxFrameSize)

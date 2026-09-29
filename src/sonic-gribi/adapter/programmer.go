@@ -13,6 +13,13 @@
 // lists. The Programmer keeps a mirror of the RIB's next hops and groups
 // purely so that when a group or next hop changes it can re-render every
 // route that depends on it.
+//
+// Route writes are batched. orchagent drains and commits one ZeroMQ frame at
+// a time, so a frame per route costs it a fixed per-commit overhead per
+// route. The hook therefore only queues its writes; the queue leaves as one
+// frame when the caller calls Flush (at the end of each ModifyRequest and
+// Flush RPC), when it reaches Batch.Max tuples, or Batch.Linger after its
+// first write, whichever comes first.
 package adapter
 
 import (
@@ -43,6 +50,23 @@ const RouteTable = "ROUTE_TABLE"
 // tells these routes from fpmsyncd's on the same table.
 const Protocol = "gribi"
 
+// Batch defaults: DefaultBatchMax matches orchagent's -b 1024, and
+// DefaultBatchLinger bounds how long a slow ModifyRequest can hold a route.
+const (
+	DefaultBatchMax    = 1024
+	DefaultBatchLinger = 50 * time.Millisecond
+)
+
+// maxBatchBytes keeps a frame well under orchagent's receive buffer even for
+// wide ECMP groups.
+const maxBatchBytes = swsszmq.MaxFrameSize / 2
+
+// Batch bounds how route writes are coalesced into frames.
+type Batch struct {
+	Max    int           // tuples per frame; 0 => DefaultBatchMax
+	Linger time.Duration // longest a queued write waits for Flush; 0 => no timer
+}
+
 // resolveTimeout bounds a NEIGH_TABLE lookup. The hook runs on the gRIBI
 // Modify path, so a slow Redis must not stall the client indefinitely.
 const resolveTimeout = 2 * time.Second
@@ -53,18 +77,76 @@ type Programmer struct {
 	neigh   neigh.Resolver
 	tracker *fibtrack.Tracker
 	log     *slog.Logger
+	batch   Batch
 
-	// One mutex for every network instance: gribigo runs one Modify
-	// goroutine per client, and hooks from two clients must not interleave
-	// their writes on the single ordered socket.
-	mu  sync.Mutex
-	nis map[string]*mirror
+	// One mutex for every network instance and the queue: gribigo runs one
+	// Modify goroutine per client, and hooks from two clients must not
+	// interleave their writes on the single ordered socket.
+	mu      sync.Mutex
+	nis     map[string]*mirror
+	pending []swsszmq.Tuple // queued writes, in RIB order
+	bytes   int             // encoded size of pending
+	linger  *time.Timer     // flushes pending; nil until first armed
 }
 
 // New wires a programmer. Every ROUTE_TABLE write is announced to tracker
-// before it is sent, so a response can never arrive unannounced.
-func New(sender swsszmq.Sender, resolver neigh.Resolver, tracker *fibtrack.Tracker, log *slog.Logger) *Programmer {
-	return &Programmer{sender: sender, neigh: resolver, tracker: tracker, log: log, nis: map[string]*mirror{}}
+// when it is queued, before it is sent, so a response can never arrive
+// unannounced.
+func New(sender swsszmq.Sender, resolver neigh.Resolver, tracker *fibtrack.Tracker, batch Batch, log *slog.Logger) *Programmer {
+	if batch.Max <= 0 {
+		batch.Max = DefaultBatchMax
+	}
+	return &Programmer{sender: sender, neigh: resolver, tracker: tracker, batch: batch, log: log, nis: map[string]*mirror{}}
+}
+
+// Flush sends every queued write now. It is safe to call at any time and
+// from any goroutine; with nothing queued it does nothing.
+func (p *Programmer) Flush() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.flushLocked()
+}
+
+// queue appends one write, flushing first if it would push the frame past
+// maxBatchBytes and after if the frame is full. p.mu must be held.
+func (p *Programmer) queue(t swsszmq.Tuple) {
+	size := t.EncodedSize()
+	if len(p.pending) > 0 && p.bytes+size > maxBatchBytes {
+		p.flushLocked()
+	}
+	if len(p.pending) == 0 && p.batch.Linger > 0 {
+		if p.linger == nil {
+			p.linger = time.AfterFunc(p.batch.Linger, p.Flush)
+		} else {
+			p.linger.Reset(p.batch.Linger)
+		}
+	}
+	p.pending = append(p.pending, t)
+	p.bytes += size
+	if len(p.pending) >= p.batch.Max {
+		p.flushLocked()
+	}
+}
+
+// flushLocked sends pending as one frame. A failed send fails every key in
+// it. p.mu must be held.
+func (p *Programmer) flushLocked() {
+	if len(p.pending) == 0 {
+		return
+	}
+	if p.linger != nil {
+		p.linger.Stop()
+	}
+	tuples := p.pending
+	p.pending, p.bytes = nil, 0
+	if err := p.sender.Send(context.Background(), RouteTable, tuples...); err != nil {
+		p.log.Error("send routes", "count", len(tuples), "error", err)
+		for _, t := range tuples {
+			p.tracker.Done(t.Key, err)
+		}
+		return
+	}
+	p.log.Debug("sent routes", "count", len(tuples))
 }
 
 // OnChange is the rib.RIBHookFn. The int64 is gribigo's timestamp, not an
@@ -98,18 +180,13 @@ func (p *Programmer) OnChange(op constants.OpType, _ int64, ni string, e ygot.Va
 
 func (p *Programmer) route(op constants.OpType, ni string, m *mirror, prefix string, nhg uint64, nhgNI string) {
 	key := routekey.For(ni, prefix)
-	ctx := context.Background()
 
 	switch op {
 	case constants.Delete:
 		m.forgetRoute(prefix)
 		p.tracker.SentDelete(key)
-		if err := p.sender.Send(ctx, RouteTable, swsszmq.Tuple{Key: key}); err != nil {
-			p.log.Error("delete route", "key", key, "error", err)
-			p.tracker.Done(key, err)
-			return
-		}
-		p.log.Info("deleted route", "key", key)
+		p.queue(swsszmq.Tuple{Key: key})
+		p.log.Debug("deleted route", "key", key)
 
 	case constants.Add, constants.Replace:
 		if nhgNI != "" && nhgNI != ni {
@@ -124,12 +201,8 @@ func (p *Programmer) route(op constants.OpType, ni string, m *mirror, prefix str
 			return
 		}
 		p.tracker.Sent(key)
-		if err := p.sender.Send(ctx, RouteTable, tuple); err != nil {
-			p.log.Error("program route", "key", key, "error", err)
-			p.tracker.Done(key, err)
-			return
-		}
-		p.log.Info("programmed route", "key", key, "fields", fieldSummary(tuple))
+		p.queue(tuple)
+		p.log.Debug("programmed route", "key", key, "fields", fieldSummary(tuple))
 
 	default:
 		p.log.Warn("ignoring unknown operation on route", "key", key, "op", op.String())
@@ -171,13 +244,12 @@ func (p *Programmer) nextHop(op constants.OpType, ni string, m *mirror, nh *aft.
 	}
 }
 
-// reprogram re-renders every route in prefixes and sends the survivors in one
-// frame, so orchagent applies a group change to all its routes in one batch.
+// reprogram re-renders every route in prefixes and queues the survivors, so
+// orchagent applies a group change to all its routes in one batch.
 func (p *Programmer) reprogram(ni string, m *mirror, prefixes []string) {
 	if len(prefixes) == 0 {
 		return
 	}
-	var tuples []swsszmq.Tuple
 	var keys []string
 	for _, prefix := range prefixes {
 		key := routekey.For(ni, prefix)
@@ -187,20 +259,12 @@ func (p *Programmer) reprogram(ni string, m *mirror, prefixes []string) {
 			continue
 		}
 		p.tracker.Sent(key)
-		tuples = append(tuples, tuple)
+		p.queue(tuple)
 		keys = append(keys, key)
 	}
-	if len(tuples) == 0 {
-		return
+	if len(keys) > 0 {
+		p.log.Info("reprogrammed routes after next-hop change", "ni", ni, "count", len(keys), "keys", keys)
 	}
-	if err := p.sender.Send(context.Background(), RouteTable, tuples...); err != nil {
-		p.log.Error("reprogram routes", "count", len(tuples), "error", err)
-		for _, k := range keys {
-			p.tracker.Done(k, err)
-		}
-		return
-	}
-	p.log.Info("reprogrammed routes after next-hop change", "ni", ni, "count", len(tuples), "keys", keys)
 }
 
 // fail records a route the adapter refused to send. The client gets a real
