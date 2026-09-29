@@ -1069,27 +1069,40 @@ def _patch_sonic_debian_extension(
     """Add service alias symlinks and a service-registration filter for
     features folded into mega in ``sonic_debian_extension.j2``.
 
-    F17 fix: in addition to the alias symlinks, wrap the installer_services
-    loop with a keep-list filter so folded features' ``.service`` units are
-    NOT registered alongside mega (the aliases handle backward-compat refs).
-    The reference PoC does this with a ``mega_keep_services`` set.
+    F17 fix (Finding #5): wrap the installer_services loop with a
+    *deny-list* filter that drops ONLY the ``.service``/``@.service`` units
+    of features that were actually folded into mega (they get alias
+    symlinks below instead). Every other, non-folded service (dhcp_relay,
+    telemetry, mux, nat, gbsyncd, ...) is left completely untouched and
+    keeps being registered exactly as it is for a stock build.
+
+    An earlier version of this patch used an *allow*-list (only
+    syncd/mega/pmon kept), which silently dropped every non-folded
+    service's systemd unit from the installed image -- confirmed as a
+    real regression by rendering ``sonic_debian_extension.j2`` for a
+    default-feature build and finding services like ``dhcp_relay.service``
+    missing from the generated ``$GENERATED_SERVICE_FILE`` logic.
 
     Symlinks + filter are injected just before the
     ``# PLATFORM-SPECIFIC SERVICE FILTERING`` comment at the end.
     """
     warnings: List[str] = []
 
-    # F17: add a keep-list filter around the service registration loop.
+    # F17: add a deny-list filter around the service registration loop.
     # The stock template has:
     #   {% for service in installer_services.split(' ') -%}
     #   if [ -f {{service}} ]; then ...
-    # We inject a {% if service.strip('"') in mega_keep_services %} guard.
-    keep_services = sorted({"syncd.service", "syncd@.service",
-                            f"{container_name}.service"} |
-                           {s for s in ["pmon.service"] if s.split(".")[0] not in folded_features})
-    keep_set_line = (
-        '{%- set mega_keep_services = ['
-        + ', '.join(f"'{s}'" for s in sorted(keep_services))
+    # We inject a {% if service.strip('"') not in mega_drop_services %} guard
+    # that drops only the folded features' own .service/@.service units
+    # (syncd is never folded, so it's never in folded_features here).
+    drop_services = sorted(
+        {f"{feat}.service" for feat in folded_features}
+        | {f"{feat}@.service" for feat in folded_features}
+        | {f"{feat}-chassis.service" for feat in folded_features}
+    )
+    drop_set_line = (
+        '{%- set mega_drop_services = ['
+        + ', '.join(f"'{s}'" for s in drop_services)
         + '] -%}'
     )
 
@@ -1102,14 +1115,16 @@ def _patch_sonic_debian_extension(
         # Find the endfor that closes this loop (first one after the loop)
         endfor_idx = text.find(endfor_marker, loop_idx)
         if endfor_idx >= 0:
-            # Insert the keep-set definition before the loop
+            # Insert the drop-set definition before the loop
             # Insert {% if %} right after the for line, and {% endif %} before endfor
             new_text = (
                 text[:loop_idx]
-                + "{# mega-gen: only register surviving services; folded ones get alias symlinks below #}\n"
-                + keep_set_line + "\n"
+                + "{# mega-gen: drop only folded features' own service units; "
+                  "they get alias symlinks below. Every non-folded service is "
+                  "left registered exactly as in a stock build. #}\n"
+                + drop_set_line + "\n"
                 + loop_marker + "\n"
-                + "{% if service.strip('\"') in mega_keep_services -%}\n"
+                + "{% if service.strip('\"') not in mega_drop_services -%}\n"
                 + text[loop_idx + len(loop_marker) + 1:endfor_idx]
                 + "{% endif -%}\n"
                 + endfor_marker
