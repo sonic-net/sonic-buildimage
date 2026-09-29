@@ -86,6 +86,15 @@ CANONICAL_ORDER: Tuple[str, ...] = (
 PRIORITY_BAND_START = 10
 PRIORITY_BAND_WIDTH = 20
 
+# The minimal "core" set of features whose critical_processes are included
+# in conservative-mode critical_processes (Finding #8): database's redis
+# instances, swss's ASIC-programming daemons, bgp's routing daemons, and
+# teamd's LAG daemons -- crashing any of these genuinely warrants a full
+# mega-container restart. Every other folded feature (lldp, snmp, gnmi,
+# radv, eventd, sysmgr, pmon) is excluded from conservative mode even if it
+# ships its own critical_processes file.
+_CONSERVATIVE_CORE_FEATURES: Tuple[str, ...] = ("database", "swss", "bgp", "teamd")
+
 # ---------------------------------------------------------------------------
 # Generic INI-ish parser for supervisord stanzas.
 # ---------------------------------------------------------------------------
@@ -774,23 +783,43 @@ def merge_supervisord(
         + "\n"
     )
 
-    # F12 fix: conservative critical_processes.  In a single-supervisord
-    # mega container, a "critical" process exit tears down the WHOLE
-    # container (all 30+ programs).  The reference PoC deliberately marks
-    # only orchagent as critical -- losing the ASIC-programming process is
-    # worth a full restart, but losing e.g. lldpd or snmp-subagent is not.
-    # When conservative mode is on (the default), emit only the swss
-    # critical_processes entry (which contains `program:orchagent`).  When
-    # off, emit the full union (useful for debugging / completeness audits).
+    # F12 fix (Finding #8): conservative critical_processes.  In a
+    # single-supervisord mega container, a "critical" process exit tears
+    # down the WHOLE container (all 30+ programs), so conservative mode
+    # only marks processes whose crash genuinely warrants a full restart
+    # of the data/control plane as critical -- not every folded feature's
+    # own critical_processes (e.g. losing lldpd or snmp-subagent shouldn't
+    # restart orchagent/bgpd/redis too).
+    #
+    # An earlier version of this used ONLY swss's own critical_processes
+    # entry (and a hardcoded "program:orchagent" fallback when swss wasn't
+    # selected), which meant a redis, bgpd/zebra or teamsyncd crash would
+    # never trigger a restart even though those are just as core to the
+    # data/control plane as orchagent. _CONSERVATIVE_CORE_FEATURES below
+    # is the documented, minimal "core" set (database's redis instances,
+    # swss's ASIC-programming daemons, bgp's routing daemons, teamd's
+    # LAG daemons) -- each one present and selected contributes its own
+    # critical_processes entries; conservative mode is still much smaller
+    # than the full union (lldp/snmp/gnmi/radv/eventd/sysmgr/pmon are
+    # excluded even when they ship their own critical_processes).
+    #
+    # `conservative_critical` remains a caller-configurable bool (see
+    # `merge_supervisord`'s signature) for anyone who wants the full
+    # union instead (debugging / completeness audits).
     if conservative_critical:
-        swss_d = features_data.get("swss")
-        if swss_d and swss_d["crit_text"]:
-            critical_text = swss_d["crit_text"].rstrip() + "\n"
+        crit_parts = []
+        for feat in _CONSERVATIVE_CORE_FEATURES:
+            d = features_data.get(feat)
+            if d and d["crit_text"]:
+                crit_parts.append(f"; --- {feat} ---\n{d['crit_text'].rstrip()}")
+        if crit_parts:
+            critical_text = "\n\n".join(crit_parts) + "\n"
         else:
             critical_text = "program:orchagent\n"
             warnings.append(
-                "conservative_critical: swss not in selected features or has "
-                "no critical_processes -- falling back to a hardcoded "
+                "conservative_critical: none of the core features "
+                f"{_CONSERVATIVE_CORE_FEATURES} are selected or have a "
+                "critical_processes file -- falling back to a hardcoded "
                 "'program:orchagent' entry"
             )
     else:

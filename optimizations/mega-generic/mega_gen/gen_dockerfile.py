@@ -854,7 +854,15 @@ def generate_dockerfile(
     lines.append(f'COPY ["{docker_init_result.orchestrator_filename}", "/usr/bin/"]')
     lines.append(f"RUN chmod 755 /usr/bin/{docker_init_result.orchestrator_filename}")
     lines.append('COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]')
-    lines.append('COPY ["critical_processes", "/etc/supervisor"]')
+    if docker_init_result.critical_processes_is_template:
+        # Finding #8 fix: at least one folded feature's own critical_processes
+        # is a Jinja2 template (database/swss/bgp) -- ship it as a template
+        # under the same conventional templates dir docker-mega-init.sh
+        # (gen_docker_init.py) renders from at ENTRYPOINT time, instead of a
+        # plain static COPY of unrendered Jinja text.
+        lines.append('COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]')
+    else:
+        lines.append('COPY ["critical_processes", "/etc/supervisor"]')
     lines.append("")
 
     lines.append(

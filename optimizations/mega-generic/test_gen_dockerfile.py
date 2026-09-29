@@ -319,6 +319,51 @@ def check_scenario(sonic_root: Path, name: str, features: List[str]) -> bool:
                 "the is_protected_mode additional-data overlay"
             )
 
+    # --- 12. critical_processes template rendering (finding #8): when any
+    # selected feature's own critical_processes is itself a Jinja2 template
+    # (database/swss/bgp all are), the merged file must be shipped as
+    # critical_processes.j2 to /usr/share/sonic/templates/ AND rendered by
+    # the orchestrator with sonic-cfggen -- never a plain static COPY of
+    # raw unrendered Jinja text to /etc/supervisor/critical_processes. -----
+    templated_crit_features = {"database", "swss", "bgp"} & set(feature_names)
+    if templated_crit_features:
+        if not docker_init.critical_processes_is_template:
+            problems.append(
+                f"{sorted(templated_crit_features)} selected (own a templated "
+                "critical_processes.j2) but "
+                "docker_init.critical_processes_is_template is False"
+            )
+        if 'COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]' not in text:
+            problems.append(
+                "templated critical_processes selected but Dockerfile doesn't "
+                "COPY critical_processes.j2 to /usr/share/sonic/templates/"
+            )
+        if 'COPY ["critical_processes", "/etc/supervisor"]' in text:
+            problems.append(
+                "templated critical_processes selected but Dockerfile still "
+                "does the plain static COPY (would ship unrendered Jinja text)"
+            )
+        if (
+            "sonic-cfggen $CFGGEN_ARGS -t "
+            "/usr/share/sonic/templates/critical_processes.j2 "
+            "> /etc/supervisor/critical_processes"
+        ) not in docker_init.orchestrator_text:
+            problems.append(
+                "templated critical_processes selected but the orchestrator "
+                "never renders critical_processes.j2 with sonic-cfggen"
+            )
+    else:
+        if docker_init.critical_processes_is_template:
+            problems.append(
+                "no feature with a templated critical_processes selected but "
+                "docker_init.critical_processes_is_template is True"
+            )
+        if 'COPY ["critical_processes", "/etc/supervisor"]' not in text:
+            problems.append(
+                "no templated critical_processes selected but Dockerfile "
+                "doesn't do the plain static COPY"
+            )
+
     if problems:
         print(f"  FAIL ({len(problems)} problem(s)):")
         for p in problems:

@@ -270,6 +270,17 @@ class DockerInitResult:
     supervisord.conf's `[program:X]` stanzas are already folded into mega's
     own merged conf by `supervisord_merge.py`."""
 
+    critical_processes_is_template: bool = False
+    """True if any selected feature's own `critical_processes` is itself a
+    Jinja2 template (e.g. database's `{% for redis_inst, ... in INSTANCES %}`
+    loop, or swss's `{% if DEVICE_METADATA... %}`) -- when true, the
+    orchestrator itself renders the merged `critical_processes.j2`
+    (`supervisord_merge.py`'s output) via `sonic-cfggen` right alongside the
+    supervisord.conf.j2 render (Finding #8 fix), and `gen_dockerfile.py` must
+    ship the merged file as `critical_processes.j2` (to
+    `/usr/share/sonic/templates/`) instead of a plain, static `COPY` to
+    `/etc/supervisor/critical_processes`."""
+
     warnings: List[str] = field(default_factory=list)
 
 
@@ -342,7 +353,10 @@ def build_preinit_scripts(
     return scripts, static_features, warnings
 
 
-def build_orchestrator(preinit_scripts: Sequence[PreinitScript]) -> str:
+def build_orchestrator(
+    preinit_scripts: Sequence[PreinitScript],
+    critical_processes_is_template: bool = False,
+) -> str:
     """The single `docker-mega-init.sh` that becomes mega's own ENTRYPOINT:
     create every selected feature's isolation dir, run each stripped
     preinit in canonical order (each is its own bash process -- deliberate,
@@ -469,6 +483,39 @@ def build_orchestrator(preinit_scripts: Sequence[PreinitScript]) -> str:
         "sonic-cfggen $CFGGEN_ARGS -t /usr/share/sonic/templates/supervisord.conf.j2 "
         "> /etc/supervisor/conf.d/supervisord.conf"
     )
+    if critical_processes_is_template:
+        lines.append("")
+        lines.append(
+            "# Finding #8 fix: at least one folded feature's own"
+        )
+        lines.append(
+            "# critical_processes is itself a Jinja2 template (e.g. database's"
+        )
+        lines.append(
+            "# '{% for redis_inst, ... in INSTANCES %}' loop) -- the merged"
+        )
+        lines.append(
+            "# critical_processes union (supervisord_merge.py's output) was"
+        )
+        lines.append(
+            "# therefore shipped as critical_processes.j2 (not the plain,"
+        )
+        lines.append(
+            "# static 'critical_processes' name) so it gets rendered here with"
+        )
+        lines.append(
+            "# the SAME $CFGGEN_ARGS as supervisord.conf.j2 above, instead of"
+        )
+        lines.append(
+            "# copying raw unrendered Jinja text into /etc/supervisor/critical_processes"
+        )
+        lines.append(
+            "# (which system-health's service_checker.py would flag as invalid syntax)."
+        )
+        lines.append(
+            "sonic-cfggen $CFGGEN_ARGS -t /usr/share/sonic/templates/critical_processes.j2 "
+            "> /etc/supervisor/critical_processes"
+        )
     lines.append("")
     lines.append("exec /usr/local/bin/supervisord")
     lines.append("")
@@ -481,11 +528,15 @@ def generate_docker_init(specs: Sequence[FeatureSpec]) -> DockerInitResult:
     the tree (only reads each feature's own init script/template) -- writes
     nothing itself; see module docstring."""
     scripts, static_features, warnings = build_preinit_scripts(specs)
-    orchestrator_text = build_orchestrator(scripts)
+    critical_is_template = any(
+        s.critical_processes_is_template for s in specs if s.critical_processes is not None
+    )
+    orchestrator_text = build_orchestrator(scripts, critical_is_template)
     return DockerInitResult(
         preinit_scripts=scripts,
         orchestrator_text=orchestrator_text,
         static_features=static_features,
+        critical_processes_is_template=critical_is_template,
         warnings=warnings,
     )
 

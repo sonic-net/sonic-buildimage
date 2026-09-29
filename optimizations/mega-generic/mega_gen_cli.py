@@ -292,7 +292,11 @@ def _run_apply(
 
     # supervisord.conf.j2 + critical_processes
     generated_files[f"{mega_docker_dir}/supervisord.conf.j2"] = sup_result.supervisord_conf_text
-    generated_files[f"{mega_docker_dir}/critical_processes"] = sup_result.critical_processes_text
+    critical_is_template = bool(
+        df_result.docker_init and df_result.docker_init.critical_processes_is_template
+    )
+    critical_filename = "critical_processes.j2" if critical_is_template else "critical_processes"
+    generated_files[f"{mega_docker_dir}/{critical_filename}"] = sup_result.critical_processes_text
 
     # docker-mega-init.sh + preinit scripts
     if df_result.docker_init:
