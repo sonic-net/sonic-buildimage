@@ -55,11 +55,11 @@ class ThermalUtil(object):
             THERMAL_NUM_5_IDX: ['54', '4c'],
            }
     thermal_sysfspath ={
-    THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/55-0048/hwmon/hwmon*/temp1_input"],  
-    THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/55-0049/hwmon/hwmon*/temp1_input"],  
-    THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/55-004a/hwmon/hwmon*/temp1_input"],
-    THERMAL_NUM_4_IDX: ["/sys/bus/i2c/devices/55-004b/hwmon/hwmon*/temp1_input"],        
-    THERMAL_NUM_5_IDX: ["/sys/bus/i2c/devices/54-004c/hwmon/hwmon*/temp1_input"],     
+    THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/55-0048/hwmon/hwmon*/temp1_input", "MB_RearMAC_temp"],
+    THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/55-0049/hwmon/hwmon*/temp1_input", "MB_FrontMAC_temp"],
+    THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/55-004a/hwmon/hwmon*/temp1_input", "MB_LeftCenter_temp"],
+    THERMAL_NUM_4_IDX: ["/sys/bus/i2c/devices/55-004b/hwmon/hwmon*/temp1_input", "CB_temp"],
+    THERMAL_NUM_5_IDX: ["/sys/bus/i2c/devices/54-004c/hwmon/hwmon*/temp1_input", "FB_temp"],
     }
   
     def _get_thermal_val(self, thermal_num):
@@ -102,6 +102,9 @@ class ThermalUtil(object):
 
     def get_thermal_to_device_path(self, thermal_num):
         return self.thermal_sysfspath[thermal_num][0]
+
+    def get_thermal_to_device_name(self, thermal_num):
+        return self.thermal_sysfspath[thermal_num][1]
 
     def get_thermal_1_val(self):      
         return self._get_thermal_node_val(self.THERMAL_NUM_1_IDX)
