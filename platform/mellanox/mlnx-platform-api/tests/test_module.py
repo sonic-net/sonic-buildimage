@@ -344,6 +344,13 @@ class TestModule:
                 for index, file_name in enumerate(file_name_list):
                     test_file_path = file_name
                     assert m.get_reboot_cause() == reboot_cause_list[index]
+
+            # get_midplane_down_reason() shares reboot_cause_map, so it reports the same
+            # (cause, description) pairs as get_reboot_cause() for every reset-cause file.
+            with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
+                for index, file_name in enumerate(file_name_list):
+                    test_file_path = file_name
+                    assert m.get_midplane_down_reason() == reboot_cause_list[index]
             
             # Test subprocess exception case
             mock_check_output.side_effect = subprocess.CalledProcessError(1, 'mlxreg')

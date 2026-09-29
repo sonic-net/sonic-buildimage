@@ -40,6 +40,12 @@ class TestPdb:
         assert pdb.get_revision() == 'N/A'
         assert pdb.get_presence() is True
         assert pdb.is_replaceable() is False
+        assert pdb.get_position_in_parent() == 1
+
+    def test_pdb_position_in_parent_is_unique(self):
+        # Entity-MIB derives entPhysicalIndex from position_in_parent, so equal
+        # positions collapse every PDB onto a single OID.
+        assert [Pdb(i).get_position_in_parent() for i in range(2)] == [1, 2]
 
     @mock.patch('os.path.exists', mock.MagicMock(return_value=False))
     def test_pdb_no_thermal(self):

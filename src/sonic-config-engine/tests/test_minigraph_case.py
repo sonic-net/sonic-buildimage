@@ -277,7 +277,7 @@ class TestCfgGenCaseInsensitive(TestCase):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "KUBERNETES_MASTER[\'SERVER\']"]
         output = self.run_script(argument)
         self.assertEqual(json.loads(output.strip().replace("'", "\"")),
-                json.loads('{"ip": "10.10.10.10", "disable": "True"}'))
+                json.loads('{"ip": "10.10.10.10", "disable": "True", "port": "18443"}'))
 
     def test_minigraph_mgmt_port(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "MGMT_PORT"]

@@ -48,6 +48,8 @@ input(type="imrelp" address="{{docker0_ip}}" port="2514")
 ###########################
 #### GLOBAL DIRECTIVES ####
 ###########################
+{% set hostname = ((DEVICE_METADATA | default({})).get('localhost', {})).get('hostname') | default('sonic', true) | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set os_version = os_version | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set format = gconf.get('format', 'standard') -%}
 {% set fw_name = gconf.get('welf_firewall_name', hostname) -%}
 #

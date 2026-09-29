@@ -24,27 +24,30 @@ platform = os.environ.get("CONFIGURED_PLATFORM", None)
 platform = platform.lower() if platform else platform
 if platform is None:
     raise Exception("CONFIGURED_PLATFORM environment variable is not set")
-if not platform in ("mellanox", "nvidia-bluefield"):
+SUPPORTED_PLATFORMS = ("mellanox", "nvidia-bluefield", "aspeed")
+if platform not in SUPPORTED_PLATFORMS:
+    expected = ", ".join(f"\"{p}\"" for p in SUPPORTED_PLATFORMS)
     raise Exception(
         f"Invalid environment variable value for CONFIGURED_PLATFORM: \"{platform}\"."
-        " Expected \"mellanox\" or \"nvidia-bluefield\"."
+        f" Expected one of {expected}."
     )
-is_bluefield = platform == "nvidia-bluefield"
+
+# Keep in step with the packages selection in setup.py.
+SKIP_REASONS = {
+    "nvidia-bluefield": "dpu-installer not supported on nvidia-bluefield platform",
+    "aspeed": "mellanox_bfb_installer not packaged for the SONiC BMC (aspeed)",
+}
 
 
 def pytest_collection_modifyitems(config, items):
-    if is_bluefield:
-        # Skip the bfb installer tests if the platform is nvidia-bluefield.
-        # That platform is the DPU platform. The dpu-installer is designed to work from the main
-        # host of a Smart Switch.
+    skip_reason = SKIP_REASONS.get(platform)
+    if skip_reason:
         conftest_dir = Path(__file__).parent.resolve()
-        skip_marker = pytest.mark.skip(
-            reason="Skipping because dpu-installer not supported on nvidia-bluefield platform"
-        )
+        skip_marker = pytest.mark.skip(reason=f"Skipping because {skip_reason}")
         for item in items:
             if conftest_dir in item.path.parents:
                 # Paranoid checks: Don't accidentally skip other tests! Ensure the test to skip
-                # is in THIS directory. Ensure the platform is nvidia-bluefield.
+                # is in THIS directory. Ensure the platform is one that does not ship it.
                 assert item.path.parts[-2] == conftest_dir.name == "mellanox_bfb_installer"
-                assert platform == "nvidia-bluefield"
+                assert platform in SKIP_REASONS
                 item.add_marker(skip_marker)
