@@ -1,0 +1,10 @@
+{
+    "FEATURE": {
+        "swss": {
+            "state": "disabled"
+        },
+        "syncd": {
+            "state": "disabled"
+        }
+    }
+}
