@@ -3791,7 +3791,10 @@ vendor-specific SAI tunable needs to be exposed.
 Rendering only takes effect on a given platform once its
 `sai.profile.j2` opts in with
 `{% include 'sai_profile_dynamic.j2' %}` (see
-`files/build_templates/sai_profile_dynamic.j2`); configuring this table
+`src/sonic-config-engine/data/sai_profile_dynamic.j2`, installed to
+`/usr/share/sonic/templates` on every container image built from
+`docker-config-engine-trixie`, so it resolves at `syncd` startup);
+configuring this table
 has no effect on a platform that has not added that include.
 `SAI_INIT_CONFIG_FILE` is reserved (it is a structural key selected by
 each platform's own template logic) and is rejected by both YANG

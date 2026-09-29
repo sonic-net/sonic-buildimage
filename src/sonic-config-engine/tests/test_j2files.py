@@ -1736,8 +1736,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
     def test_sai_profile_dynamic_template_render(self):
         sai_profile_dynamic_template = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'build_templates',
-            'sai_profile_dynamic.j2'
+            self.test_dir, '..', 'data', 'sai_profile_dynamic.j2'
         )
         test_list = {
             'populated': {

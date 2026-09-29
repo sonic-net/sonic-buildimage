@@ -3,6 +3,14 @@
    assumption about which keys are present, so it can be reused
    unmodified by any hwsku's sai.profile.j2, across vendors.
 
+   This file lives under sonic-config-engine's data/ dir (not
+   files/build_templates/) so setup.py's data_files glob installs it
+   into /usr/share/sonic/templates as part of the sonic-config-engine
+   package itself. That is what makes it resolve inside containers
+   such as syncd (built FROM docker-config-engine-trixie, which
+   installs this package), not just on the host rootfs where
+   sai.profile.j2 is not actually rendered.
+
    Defense-in-depth: YANG validation (the key-name pattern, the
    reserved-key "must" constraint, and the value's CR/LF-excluding
    pattern) only applies to config changes made through the
