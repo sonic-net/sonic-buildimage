@@ -11,8 +11,8 @@
 # systemd would, so bmcweb serves where it is configured to. exec keeps the pid
 # supervisord is watching.
 #
-# REDFISH_PORT is passed in by the container control script (redfish.sh), which
-# reads REDFISH|config|port from CONFIG_DB at 'docker create' time.
+# The port is read from CONFIG_DB (REDFISH|config|port) on every start, so a
+# change takes effect when bmcweb or the redfish service is restarted.
 
 set -u
 
@@ -23,9 +23,10 @@ DEFAULT_PORT=443
 
 log() { logger -t bmcweb-start "$*"; echo "bmcweb-start: $*"; }
 
-# An invalid port must not stop the API from coming up; the standard port is
-# the safe answer.
-PORT="${REDFISH_PORT:-${DEFAULT_PORT}}"
+# An unset, unreadable or invalid port must not stop the API from coming up;
+# the standard port is the safe answer.
+PORT="$(sonic-db-cli CONFIG_DB HGET "REDFISH|config" port 2>/dev/null)"
+PORT="${PORT:-${DEFAULT_PORT}}"
 case "${PORT}" in
     ''|*[!0-9]*)
         log "configured port '${PORT}' is not a number; using ${DEFAULT_PORT}"
