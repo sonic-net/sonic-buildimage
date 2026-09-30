@@ -1783,7 +1783,7 @@ python3-lazr.uri==1.0.6-3
 python3-lazy-object-proxy==1.9.0-1+b1
 python3-lib2to3==3.11.2-3
 python3-logilab-common==1.9.8-1
-python3-lxml==4.9.2-1+b1
+python3-lxml==4.9.2-1+deb12u1
 python3-lz4==4.0.2+dfsg-1+b2
 python3-m2crypto==0.38.0-4+b1
 python3-magic==2:0.4.26-3

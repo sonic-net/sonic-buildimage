@@ -211,6 +211,11 @@ jobs:
             if [ $(GROUP_NAME) == nvidia-bluefield ]; then
               make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb
             fi
+            if [ $(GROUP_NAME) == aspeed-arm64 ]; then
+              make $BUILD_OPTIONS target/sonic-$(GROUP_NAME)-tftp-install.tar
+              # Drop the intermediate bundle dir; its payload is already in the tar and the eMMC image
+              rm -rf target/aspeed-tftp
+            fi
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi
         displayName: "Build sonic image"
