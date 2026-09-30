@@ -4,6 +4,7 @@ import os
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from bgpcfgd import manager as manager_mod
+from bgpcfgd.managers_intf import InterfaceMgr
 from . import swsscommon_test
 from .util import load_constants, render_constants
 from swsscommon import swsscommon
@@ -369,16 +370,13 @@ def test_unnumbered_peer_manager_depends_on_port_table():
     for constant in load_constant_files():
         peers = load_constants(constant)['constants']['bgp']['peers']
         port_dependency = ("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "")
-        portchannel_dependency = ("CONFIG_DB", "PORTCHANNEL", "")
         for peer_type in ("general", "internal", "voq_chassis"):
             dependencies = constructor(constant, peer_type=peer_type).deps
             assert port_dependency in dependencies
-            assert portchannel_dependency not in dependencies
         for peer_type in ("dynamic", "monitors", "sentinels"):
             if peer_type in peers:
                 dependencies = constructor(constant, peer_type=peer_type).deps
                 assert port_dependency not in dependencies
-                assert portchannel_dependency not in dependencies
 
 
 def test_add_unnumbered_peer_from_port_table():
@@ -407,7 +405,7 @@ def test_add_unnumbered_peer_from_interface_table():
             )
 
 
-def test_late_portchannel_neighbor_converges():
+def test_late_portchannel_interface_neighbor_converges():
     for constant in load_constant_files():
         for peer_type, peer_group in (
             ("general", "PEER_UNNUMBERED"),
@@ -421,6 +419,7 @@ def test_late_portchannel_neighbor_converges():
             )
             satisfy_non_port_dependencies(m)
             m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet0", {})
+            intf_mgr = InterfaceMgr(m.common_objs, "CONFIG_DB", swsscommon.CFG_LAG_INTF_TABLE_NAME)
 
             m.handler(
                 "PortChannel101",
@@ -429,7 +428,11 @@ def test_late_portchannel_neighbor_converges():
             )
             assert len(m.set_queue) == 1
 
-            m.directory.put("CONFIG_DB", "PORTCHANNEL", "PortChannel101", {})
+            intf_mgr.handler(
+                "PortChannel101",
+                manager_mod.swsscommon.SET_COMMAND,
+                {'ipv6_use_link_local_only': 'enable'}
+            )
 
             assert m.set_queue == []
             assert any(
@@ -478,7 +481,7 @@ def test_defer_non_ip_neighbor_missing_from_interface_tables(mocked_log_debug):
         res = m.set_handler("EthernetFuture0", {'asn': '65200', 'name': 'TOR'})
         assert not res, "Expect False return value"
         mocked_log_debug.assert_called_with(
-            "Peer 'EthernetFuture0' is not yet present in the PORT, PORTCHANNEL, or interface tables"
+            "Peer 'EthernetFuture0' is not yet present in the PORT or interface tables"
         )
 
 
