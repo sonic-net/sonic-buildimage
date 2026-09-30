@@ -1,0 +1,89 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 15 Sep 2026 00:00:00 +0000
+Subject: [PATCH] zebra: preserve and reconcile inactive MAC neighbours
+
+Two ordering holes remain after a MAC goes locally inactive in EVPN-MH
+external-learning mode.
+
+First, zebra_evpn_local_neigh_update() has a duplicated same-MAC fast path
+which returns before the general local-inactive handling. Unlike the general
+path, it unconditionally clears ZEBRA_NEIGH_LOCAL_INACTIVE whenever the
+kernel reports local_inactive as false. With reachable-only advertisement
+disabled that value is hardcoded false, so a kernel echo can still turn an
+inactive neighbour back into a non-proxy advertisement.
+
+Second, a synced MAC can already be local-inactive when its dataplane delete
+arrives. This happens when the peer-active hold timer expires first and
+leaves the MAC retained as peer-proxy. zebra_evpn_del_local_mac() currently
+retires the MAC's neighbours only inside the transition which first sets
+ZEBRA_MAC_LOCAL_INACTIVE. If the flag is already set, any neighbour that
+stayed active or was learned in between keeps a non-proxy MAC-IP route alive.
+The peer continues reporting the segment as active and the leaves settle
+into complementary peer-active/peer-proxy states without withdrawing the
+MAC.
+
+Observed on hardware after ten minutes of host silence: one leaf retained
+the link-local neighbour as PI and the other as X, while the MAC was
+local-inactive on both and absent from STATE_DB.
+
+Apply the same liveness guard in both neighbour-update paths, and always
+reconcile local neighbours when a synced MAC delete is handled. The walker
+is idempotent: it ignores non-local and already locally inactive neighbours,
+so repeated dataplane delete echoes do not duplicate neighbour updates.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 8fd72a2b1e..22150a3af0 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -2403,15 +2403,17 @@
+ 				zebra_evpn_mac_is_ready_for_bgp(mac->flags);
+ 			zebra_evpn_mac_send_add_del_to_client(mac, old_bgp_ready,
+ 							      new_bgp_ready);
+-
+-			/* the neighbours behind this MAC are no longer locally
+-			 * reachable either, and unless they follow, the MAC-IP
+-			 * route stays non-proxy and the ES peers never start
+-			 * the hold timer that retires the MAC
+-			 */
+-			zebra_evpn_process_neigh_on_local_mac_inactive(zevpn, mac);
+ 		}
+ 
++		/* Always reconcile the neighbours behind an inactive MAC. The MAC
++		 * may have gone inactive earlier through a peer-proxy transition,
++		 * before the dataplane delete arrived. In that case the MAC update
++		 * above is already complete, but a neighbour learned in between can
++		 * still be locally active and keep a non-proxy MAC-IP route alive.
++		 * The walker is idempotent and skips neighbours already inactive.
++		 */
++		zebra_evpn_process_neigh_on_local_mac_inactive(zevpn, mac);
++
+ 		/* In EXT-LEARN mode as well, the MAC will be reprogrammed as static,
+ 		 * post age out, until proxy is withdrawn
+ 		 */
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index ddb933e8f2..e033755ffb 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -1464,12 +1464,18 @@
+ 					UNSET_FLAG(n->flags,
+ 						   ZEBRA_NEIGH_ROUTER_FLAG);
+ 
+-				if (local_inactive)
++				if (local_inactive) {
+ 					SET_FLAG(n->flags,
+ 						 ZEBRA_NEIGH_LOCAL_INACTIVE);
+-				else
++				} else if (zebra_evpn_mh_do_adv_reachable_neigh_only() ||
++					   !CHECK_FLAG(zmac->flags,
++						       ZEBRA_MAC_LOCAL_INACTIVE)) {
++					/* This duplicated fast path must preserve inactivity
++					 * under the same conditions as the general path below.
++					 */
+ 					UNSET_FLAG(n->flags,
+ 						   ZEBRA_NEIGH_LOCAL_INACTIVE);
++				}
+ 				new_bgp_ready =
+ 					zebra_evpn_neigh_is_ready_for_bgp(n);
+ 
