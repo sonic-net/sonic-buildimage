@@ -187,9 +187,9 @@ libgtk-3-0t64==3.24.41-4ubuntu1.3
 libgtk-3-bin==3.24.41-4ubuntu1.3
 libgtk-3-common==3.24.41-4ubuntu1.3
 libharfbuzz0b==8.3.0-2build2
-libheif-plugin-aomdec==1.17.6-1ubuntu4.8
-libheif-plugin-aomenc==1.17.6-1ubuntu4.8
-libheif1==1.17.6-1ubuntu4.8
+libheif-plugin-aomdec==1.17.6-1ubuntu4.9
+libheif-plugin-aomenc==1.17.6-1ubuntu4.9
+libheif1==1.17.6-1ubuntu4.9
 libhwasan0==14.2.0-4ubuntu2~24.04.1
 libibverbs1==50.0-2ubuntu0.2
 libice6==2:1.0.10-1build3
@@ -276,7 +276,8 @@ libsnmp40t64==5.9.4+dfsg-1.1ubuntu3.2
 libsodium23==1.0.18-1ubuntu0.24.04.1
 libsqlite3-0==3.45.1-1ubuntu2.8
 libssh-4==0.10.6-2ubuntu0.5
-libssl-dev==3.0.13-0ubuntu3.15
+libssl-dev==3.0.13-0ubuntu3.16
+libssl3t64==3.0.13-0ubuntu3.16
 libstdc++-13-dev==13.3.0-6ubuntu2~24.04.1
 libstemmer0d==2.2.0-4build1
 libsystemd-shared==255.4-1ubuntu8.17
@@ -355,7 +356,7 @@ openjdk-21-jre-headless==21.0.12.1+1-1~24.04.4
 openssh-client==1:9.6p1-3ubuntu13.19
 openssh-server==1:9.6p1-3ubuntu13.19
 openssh-sftp-server==1:9.6p1-3ubuntu13.19
-openssl==3.0.13-0ubuntu3.15
+openssl==3.0.13-0ubuntu3.16
 packagekit==1.2.8-2ubuntu1.5
 packagekit-tools==1.2.8-2ubuntu1.5
 parallel==20231122+ds-1
