@@ -191,6 +191,44 @@ def structural_checks(result: MergeResult) -> List[str]:
             f"starter_features ({result.starter_features})"
         )
 
+    # Finding #9: the shared [program:start] itself, when present, must (a)
+    # NOT wait_for the default rsyslogd:running edge if any non-starter
+    # feature precedes the first starter feature in canonical order (it
+    # should instead wait on that non-starter feature's inferred terminal
+    # program, e.g. swss/bgp -- so teamd/lldp/etc. don't race against them),
+    # and (b) never use a bare `set -e; a; b; c` chain (one failing feature's
+    # start.sh would silently skip every subsequent one).
+    start_block_m = re.search(r"^\[program:start\]\n(.*?)(?=\n\[|\Z)", text, re.MULTILINE | re.DOTALL)
+    if start_block_m and result.starter_features:
+        start_block = start_block_m.group(1)
+        if "set -e" in start_block:
+            problems.append(
+                "shared [program:start] command still uses 'set -e' -- one "
+                "feature's start.sh failing would abort/skip every subsequent "
+                "feature's start.sh in the same shared program"
+            )
+        wf_m = re.search(r"^dependent_startup_wait_for=(\S+)$", start_block, re.MULTILINE)
+        wf_value = wf_m.group(1) if wf_m else None
+        first_starter_idx = next(
+            (i for i, f in enumerate(result.feature_order) if f in result.starter_features),
+            None,
+        )
+        has_non_starter_before = (
+            first_starter_idx is not None
+            and any(
+                f not in result.starter_features
+                for f in result.feature_order[:first_starter_idx]
+            )
+        )
+        if has_non_starter_before and wf_value == "rsyslogd:running":
+            problems.append(
+                "shared [program:start] still waits on the default "
+                "rsyslogd:running even though a non-starter feature (e.g. "
+                "swss/bgp/database) precedes the first starter feature in "
+                f"canonical order (feature_order={result.feature_order}) -- "
+                "it should wait on that feature's own terminal program instead"
+            )
+
     return problems
 
 

@@ -43,7 +43,15 @@ to touch a line. Concretely this module:
    mega container starts as one sequential chain (feature i's entry point
    waits on feature i-1's inferred terminal program) instead of every
    feature's independent entry point racing on the now-shared
-   `rsyslogd:running`/`start:exited` events in parallel.
+   `rsyslogd:running`/`start:exited` events in parallel. The shared
+   `[program:start]` (point 3 above) is chained the same way: it waits on
+   the terminal program of the last non-starter feature that precedes the
+   first starter feature in canonical order (typically swss/bgp), mirroring
+   the real per-container systemd `After=swss.service` teamd/lldp both
+   declare, instead of racing against swss/bgp on `rsyslogd:running`. Its
+   merged command is also failure-tolerant (`a || echo ...; b || echo ...`,
+   not `set -e; a; b`) so one folded feature's `start.sh` failing doesn't
+   silently skip every other folded feature's `start.sh` (Finding #9).
 6. Emits one `[group:<feature>]` wrapper per feature (skipped, with a
    warning, for features whose program names are Jinja-dynamic, e.g.
    `docker-database`'s `INSTANCES` loop -- supervisord's `programs=` list
@@ -630,6 +638,18 @@ def merge_supervisord(
     priority_bands: Dict[str, int] = {}
     grouped_features: List[str] = []
     prev_terminal: Optional[Tuple[str, str]] = None
+    # Finding #9: the shared `[program:start]` (teamd/lldp/snmp/gnmi/radv/
+    # eventd's start.sh scripts, folded into one program -- see Phase 3)
+    # must start no earlier than the LAST non-starter feature that precedes
+    # the first starter feature in canonical order (typically swss and/or
+    # bgp) -- mirroring the real systemd `After=swss.service` teamd/lldp
+    # both declare -- instead of racing against it on the shared
+    # `rsyslogd:running` event like every other feature's own entry point.
+    # Captured once, the first time a starter feature is reached, from
+    # whatever `prev_terminal` already is at that point (i.e. the terminal
+    # program of the last-processed non-starter feature).
+    starter_wait_edge: Optional[str] = None
+    seen_starter = False
 
     for idx, spec in enumerate(ordered):
         feat = spec.feature
@@ -640,6 +660,20 @@ def merge_supervisord(
         base = PRIORITY_BAND_START + idx * PRIORITY_BAND_WIDTH
         priority_bands[feat] = base
         is_starter = feat in starter_features
+
+        if is_starter and not seen_starter:
+            seen_starter = True
+            if prev_terminal is not None:
+                starter_wait_edge = f"{prev_terminal[0]}:{prev_terminal[1]}"
+            else:
+                warnings.append(
+                    "no non-starter feature precedes the first starter "
+                    "feature (teamd/lldp/snmp/gnmi/radv/eventd) with an "
+                    "inferable terminal program -- the shared [program:start] "
+                    "keeps its default rsyslogd:running dependency, meaning "
+                    "it may start concurrently with swss/bgp instead of "
+                    "strictly after them"
+                )
 
         injected: List[str] = []
         if d["pbase_var"]:
@@ -758,10 +792,21 @@ def merge_supervisord(
         warnings.append("no [program:rsyslogd] found in any selected feature")
 
     if starter_features:
-        commands = [f"/opt/sonic/core-services/{f}/start.sh" for f in starter_features]
+        # Finding #9 (failure tolerance): each folded feature's start.sh
+        # originally ran as its OWN supervisord program in its OWN
+        # container -- one feature's start.sh failing never affected any
+        # other. Now that they're sequential commands in ONE shared bash
+        # invocation, a plain `set -e; a; b; c` chain would let feature 1's
+        # failure silently skip features 2..N entirely. Wrap each command so
+        # its own failure is logged but doesn't abort the rest.
+        commands = [
+            f'/opt/sonic/core-services/{f}/start.sh || '
+            f'echo "mega: start.sh for {f} failed (rc=$?)" >&2'
+            for f in starter_features
+        ]
         any_autostart = any(features_data[f]["starter_autostart"] for f in starter_features)
         shared.append("[program:start]")
-        shared.append(f"command=/bin/bash -c 'set -e; {'; '.join(commands)}'")
+        shared.append(f"command=/bin/bash -c '{'; '.join(commands)}'")
         shared.append(f"priority={min(priority_bands[f] for f in starter_features)}")
         shared.append(f"autostart={'true' if any_autostart else 'false'}")
         shared.append("autorestart=false")
@@ -771,7 +816,12 @@ def merge_supervisord(
         shared.append("stderr_logfile=NONE")
         shared.append("stderr_syslog=true")
         shared.append("dependent_startup=true")
-        shared.append("dependent_startup_wait_for=rsyslogd:running")
+        # Finding #9 (ordering): wait for the last non-starter feature's
+        # (typically swss/bgp's) terminal program instead of racing on
+        # rsyslogd:running -- mirrors the real per-container systemd
+        # `After=swss.service` teamd/lldp both declare. See `starter_wait_edge`
+        # computation in Phase 2 above.
+        shared.append(f"dependent_startup_wait_for={starter_wait_edge or 'rsyslogd:running'}")
         shared.append("")
 
     body = (
