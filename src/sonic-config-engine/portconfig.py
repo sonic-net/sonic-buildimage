@@ -502,13 +502,9 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
     return (ports, port_alias_map, port_alias_asic_map)
 
 
-def get_breakout_mode(hwsku=None, platform=None, port_config_file=None, asic_name=None):
+def get_breakout_mode(hwsku=None, platform=None, port_config_file=None):
     if not port_config_file:
-        if asic_name is not None:
-            asic_id = str(get_asic_id_from_name(asic_name))
-        else:
-            asic_id = None
-        port_config_file = device_info.get_path_to_port_config_file(hwsku, asic_id)
+        port_config_file = device_info.get_path_to_port_config_file(hwsku)
         if not port_config_file:
             return None
     if port_config_file.endswith('.json'):
