@@ -42,10 +42,11 @@ Forwarded: not-needed
  			retval = pam_peap_authenticate(user_name, password,
 --- a/src/radpeapclient.h
 +++ b/src/radpeapclient.h
-@@ -88,6 +88,7 @@
+@@ -88,6 +88,8 @@
  #define PAM_AUTHINFO_UNAVAIL			9
  
  #define EAP_MESSAGE_MAX			253
++#define PEAP_MAX_IDENTITY_LEN		(EAP_MESSAGE_MAX - sizeof(eap_pkt_t))
 +#define PEAP_MAX_RADIUS_PACKET_SIZE	4096
  #define MAX_EAP_PACKETS			 26		/* Maximum RADIUS Packet size is 4096
  							   Maximum EAP Packets is 4096/256=16
@@ -61,7 +62,7 @@ Forwarded: not-needed
 --- a/src/radpeapclient.c
 +++ b/src/radpeapclient.c
 @@ -274,0 +275,5 @@
-+	if (eap_pkt_size > EAP_MESSAGE_MAX) {
++	if (strlen(eap_identity_str) > PEAP_MAX_IDENTITY_LEN) {
 +		peap_log_debug("compose_eap_identity_pkt: EAP Identity exceeds one RADIUS attribute\n");
 +		return -1;
 +	}
@@ -155,7 +156,7 @@ Forwarded: not-needed
 +	*datagram_consumed = TRUE;
 @@ -1678,0 +1691,1 @@
 +	  *datagram_consumed = FALSE;
-@@ -1679,17 +1706,40 @@
+@@ -1679,17 +1708,48 @@
   *              RADIUS_PACKET * rep
   */
  static RADIUS_PACKET *
@@ -181,6 +182,14 @@ Forwarded: not-needed
 +	}
 +	if (rep->id != request->id) {
 +		peap_log_debug("rad_peap_recv: reply id mismatch\n");
++		*ignore_reply = TRUE;
++		rad_free(&rep);
++		return 0;
++	}
++	if ((rep->code != PW_AUTHENTICATION_ACK) &&
++		(rep->code != PW_AUTHENTICATION_REJECT) &&
++		(rep->code != PW_ACCESS_CHALLENGE)) {
++		peap_log_debug("rad_peap_recv: unexpected response code\n");
 +		*ignore_reply = TRUE;
 +		rad_free(&rep);
 +		return 0;
@@ -324,7 +333,7 @@ Forwarded: not-needed
  
  	/* Take the initial cleint_state, to start with we user it here */
  	client_state = peap_instance.client_state;
-@@ -3115,29 +3188,38 @@
+@@ -3115,29 +3198,38 @@
  
  		peap_log_debug("handle_req_rep: after rad_peap_send \n");
  
