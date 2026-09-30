@@ -16,9 +16,6 @@ import os
 import sys
 import types
 
-import pytest
-import yaml
-
 TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
 SCRIPT_PATH = os.path.join(TESTS_DIR, "..", "snmp_yml_to_configdb.py")
 
@@ -161,6 +158,14 @@ class TestLoadSnmpYaml:
         assert result["snmp_rocommunities"] == ["public", "public2"]
         assert result["snmp_rwcommunities"] == ["private"]
 
+    def test_empty_file_returns_empty_dict(self, tmp_path):
+        # An empty file parses to None via yaml.safe_load; load_snmp_yaml
+        # normalizes this to {} so callers see the more specific
+        # apply_snmp_location "does not exist" log instead of the generic
+        # missing-file exit path.
+        path = _write_yaml(tmp_path, "")
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) == {}
+
     def test_unsafe_python_tag_is_rejected(self, tmp_path):
         # A YAML type tag that would instruct an unsafe loader
         # (yaml.FullLoader) to construct an arbitrary Python object / invoke
@@ -171,8 +176,9 @@ class TestLoadSnmpYaml:
         )
         path = _write_yaml(tmp_path, malicious_yaml)
 
-        with pytest.raises(yaml.YAMLError):
-            snmp_yml_to_configdb.load_snmp_yaml(path)
+        snmp_yml_to_configdb.logger.messages.clear()
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) is None
+        assert any(level == "ERROR" for level, _ in snmp_yml_to_configdb.logger.messages)
 
     def test_unsafe_tag_in_location_is_rejected(self, tmp_path):
         malicious_yaml = (
@@ -181,8 +187,7 @@ class TestLoadSnmpYaml:
         )
         path = _write_yaml(tmp_path, malicious_yaml)
 
-        with pytest.raises(yaml.YAMLError):
-            snmp_yml_to_configdb.load_snmp_yaml(path)
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) is None
 
     def test_full_loader_would_have_accepted_python_tuple_tag(self, tmp_path):
         """Guard against silently reverting to yaml.FullLoader.
@@ -205,8 +210,7 @@ class TestLoadSnmpYaml:
             "snmp_location: lab1\n",
         )
 
-        with pytest.raises(yaml.YAMLError):
-            snmp_yml_to_configdb.load_snmp_yaml(path)
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) is None
 
 
 class TestApplySnmpCommunities:
