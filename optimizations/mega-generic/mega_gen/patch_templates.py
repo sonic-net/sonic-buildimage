@@ -846,19 +846,25 @@ def _patch_init_cfg(
     new_text = "\n".join(out_lines)
 
     # --- Add mega as a core (always_enabled) feature ---
-    feature_key_pat = re.compile(r'^(\s*"FEATURE":\s*\{)', re.MULTILINE)
-    m = feature_key_pat.search(new_text)
-    if m:
-        mega_append_line = (
-            f'{{% do features.append(("{container_name}", "always_enabled", false, "enabled")) %}}\n'
-        )
-        insert_pos = m.start()
-        new_text = new_text[:insert_pos] + mega_append_line + new_text[insert_pos:]
+    mega_append_line = (
+        f'{{% do features.append(("{container_name}", "always_enabled", false, "enabled")) %}}\n'
+    )
+    if mega_append_line in new_text:
+        # Idempotency guard: --apply may be re-run against an already-patched
+        # working tree (e.g. after a source fix elsewhere); don't stack
+        # another duplicate "mega" row into the FEATURE table each time.
+        pass
     else:
-        warnings.append(
-            "init_cfg.json.j2: could not locate the '\"FEATURE\":' key to "
-            "insert mega's tuple before it -- mega feature row NOT added"
-        )
+        feature_key_pat = re.compile(r'^(\s*"FEATURE":\s*\{)', re.MULTILINE)
+        m = feature_key_pat.search(new_text)
+        if m:
+            insert_pos = m.start()
+            new_text = new_text[:insert_pos] + mega_append_line + new_text[insert_pos:]
+        else:
+            warnings.append(
+                "init_cfg.json.j2: could not locate the '\"FEATURE\":' key to "
+                "insert mega's tuple before it -- mega feature row NOT added"
+            )
 
     return new_text, warnings
 
