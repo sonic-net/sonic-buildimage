@@ -26,12 +26,7 @@ class CustomField(Enum):
 
     SECONDARY_SERIAL_NUMBER = (0x01, "Custom Serial Number")
     REGULATORY_MODEL_NUMBER = (0x02, "Regulatory Model Number")
-<<<<<<< HEAD
-    SWITCH_HOST_SERIAL_NUMBER = (0x03, "Switch Host Serial Number")
-=======
     SWITCH_HOST_SERIAL_NUMBER = (0x03, "Switch-Host Serial Number")
-    FRU_INVENTORY = (0x04, "FRU Inventory")
->>>>>>> 1b5c797ad (NOS-7444: Fix the string to Switch-Host (#10068))
 
     def __init__(self, code, display_name):
         self.code = code
