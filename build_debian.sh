@@ -303,11 +303,13 @@ sudo cp files/docker/docker.service.conf $_
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
 ## Create password for the default user
 ## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
+set +x
 if [ -n "$PASSWORD" ]; then
-    echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+    printf '%s:%s\n' "$USERNAME" "$PASSWORD" | sudo LANG=C chroot "$FILESYSTEM_ROOT" chpasswd
 else
     sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
 fi
+set -x
 
 ## Create redis group
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
@@ -594,17 +596,21 @@ run_organization_build_hook post-sonic-config-directory
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
 export username="${USERNAME}"
+set +x
 export password="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)"
-j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json
+j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json > /dev/null
+unset password
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 600 /etc/sonic/default_users.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:shadow /etc/sonic/default_users.json
 
 # BMC config info
 export bmc_nos_account_username="${BMC_NOS_ACCOUNT_USERNAME}"
 export bmc_root_account_default_password="${BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD}"
-j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json
+j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json > /dev/null
+unset bmc_root_account_default_password
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/bmc_config.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/bmc_config.json
+set -x
 
 # SED TPM bank addresses (platform-specific)
 if [[ $CONFIGURED_PLATFORM == mellanox ]]; then
