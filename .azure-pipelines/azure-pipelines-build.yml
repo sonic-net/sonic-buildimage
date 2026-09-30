@@ -103,12 +103,6 @@ jobs:
             syncd_rpc_image: yes
             platform_rpc: mlnx
 
-        - name: nephos
-          variables:
-            dbg_image: yes
-            docker_syncd_rpc_image: yes
-            platform_rpc: nephos
-
         - name: pensando
           pool: sonicso1ES-arm64
           variables:
@@ -235,4 +229,3 @@ jobs:
           BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
           ManifestDirPath: 'target/'
           BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-
