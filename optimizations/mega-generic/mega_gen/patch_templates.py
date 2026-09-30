@@ -469,6 +469,40 @@ def _patch_shared_ctl(
     #     to `stop_timeout_conditions` above).
     # -----------------------------------------------------------------------
 
+    # -----------------------------------------------------------------------
+    # 14. Database helper functions (item 10): `waitForAllInstanceDatabase
+    #     ConfigJsonFilesReady` / `waitForFileToBeValidJson` /
+    #     `setPlatformLagIdBoundaries` are defined in a
+    #     `{%- if docker_container_name == "database" %} ... {%- endif %}`
+    #     block of their own, separate from postStartAction's own if/elif
+    #     chain (item 2 above only patches postStartAction's *body*, it
+    #     can't also add these helper *definitions* since they live outside
+    #     the function). Extend that guard so mega gets the same helper
+    #     definitions, and call the wait in mega's postStartAction (item 2)
+    #     before the redis PING loop, exactly like plain "database" does --
+    #     without it, mega's multi-ASIC database_config.json rendering race
+    #     (see the real template's comment above the call) is unguarded.
+    # -----------------------------------------------------------------------
+    if has_database:
+        anchor = (
+            '{%- if docker_container_name == "database" %}\n'
+            "\n"
+            "function setPlatformLagIdBoundaries()"
+        )
+        replacement = (
+            '{%- if docker_container_name in ["database", "' + container_name + '"] %}\n'
+            "\n"
+            "function setPlatformLagIdBoundaries()"
+        )
+        if anchor not in text:
+            warnings.append(
+                "docker_image_ctl.j2: could not find database helper-function "
+                "guard anchor — waitForAllInstanceDatabaseConfigJsonFilesReady "
+                "NOT extended to mega"
+            )
+        else:
+            text = text.replace(anchor, replacement, 1)
+
     return text, warnings
 
 
@@ -482,7 +516,8 @@ def _mega_pre_start_block(has_database: bool) -> str:
             "        docker cp $WARM_DIR/dump.rdb ${DOCKERNAME}:/var/lib/redis/dump.rdb",
             "    else",
             "        echo -n > /tmp/mega_empty_dump.rdb",
-            "        docker cp /tmp/mega_empty_dump.rdb ${DOCKERNAME}:/var/lib/redis/dump.rdb",
+            "        docker cp /tmp/mega_empty_dump.rdb ${DOCKERNAME}:/var/lib/redis/",
+            "        docker cp /tmp/mega_empty_dump.rdb ${DOCKERNAME}:/var/lib/redis_bmp/",
             "    fi",
         ])
     return "\n".join(lines)
@@ -501,6 +536,7 @@ def _mega_post_start_block(
         lines.extend([
             "    WARM_DIR=/host/warmboot$DEV",
             "",
+            "    waitForAllInstanceDatabaseConfigJsonFilesReady",
             "    until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&",
             "             ($(docker exec -i ${DOCKERNAME} sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do",
             "        sleep 1",

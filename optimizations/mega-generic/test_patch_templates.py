@@ -208,6 +208,23 @@ def check_scenario(sonic_root: Path, name: str, features: List[str]) -> bool:
                 f"(enable_asan={asan}) mega stop() 60s-timeout presence ({has_60}) != expected ({expect_60})"
             )
 
+        # --- 7b. Finding #10: database extras -- redis_bmp dump.rdb copy in
+        # preStartAction, and waitForAllInstanceDatabaseConfigJsonFilesReady
+        # (definition + call before the redis PING loop) iff database
+        # selected, matching the original database container's own behavior.
+        has_database = "database" in selected
+        redis_bmp_present = "docker cp /tmp/mega_empty_dump.rdb ${DOCKERNAME}:/var/lib/redis_bmp/" in rendered
+        wait_fn_present = "function waitForAllInstanceDatabaseConfigJsonFilesReady" in rendered
+        wait_call_present = rendered.count("waitForAllInstanceDatabaseConfigJsonFilesReady") >= 2
+        if has_database and not redis_bmp_present:
+            problems.append(f"(enable_asan={asan}) database selected but no redis_bmp dump.rdb copy in mega preStartAction")
+        if not has_database and redis_bmp_present:
+            problems.append(f"(enable_asan={asan}) redis_bmp dump.rdb copy present without database selected")
+        if has_database and not wait_fn_present:
+            problems.append(f"(enable_asan={asan}) database selected but waitForAllInstanceDatabaseConfigJsonFilesReady not defined for mega")
+        if has_database and not wait_call_present:
+            problems.append(f"(enable_asan={asan}) database selected but waitForAllInstanceDatabaseConfigJsonFilesReady not called in mega postStartAction")
+
     # --- 8. real container names unaffected (no regression) ---
     for real_name in _REGRESSION_CONTAINER_NAMES:
         for asan in ("n", "y"):
