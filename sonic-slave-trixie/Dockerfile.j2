@@ -494,6 +494,37 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libverto-dev \
         systemtap-sdt-dev \
         xvfb \
+# For rsyslog
+        zlib1g-dev \
+        libzstd-dev \
+        libhiredis-dev \
+        libevent-dev \
+        default-libmysqlclient-dev \
+        libpq-dev \
+        libmongoc-dev \
+        libcurl4-openssl-dev \
+        librdkafka-dev \
+        libkrb5-dev \
+        libgnutls28-dev \
+        libssl-dev \
+        librelp-dev \
+        libestr-dev \
+        liblognorm-dev \
+        libfastjson-dev \
+        libczmq-dev \
+        libsnmp-dev \
+        uuid-dev \
+        libsystemd-dev \
+        pkgconf \
+        bison \
+        flex \
+        procps \
+        python3 \
+        libfaketime \
+        lsof \
+        logrotate \
+        iproute2 \
+        curl \
 # For nvidia-bluefield sdk compilation
         cython3 \
         pandoc \
@@ -561,21 +592,16 @@ RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN eatmydata apt-get install -y golang golang-go
 {%- if INCLUDE_FIPS == "y" %}
 RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
  && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
- && eatmydata dpkg -i golang-go.deb golang-src.deb \
+ && eatmydata apt-get install -y ./golang-go.deb ./golang-src.deb \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
  && rm golang-go.deb golang-src.deb
-{%- else %}
-{%- if CONFIGURED_ARCH == "armhf" %}
-RUN eatmydata apt-get install -y golang-go \
- && ln -sf /usr/lib/go-1.24 /usr/local/go
+ENV PATH=/usr/local/go/bin:$PATH
 {%- else %}
 RUN eatmydata apt-get install -y -t trixie-backports golang-go \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go
-{%- endif %}
 {%- endif %}
 
 # For building sonic-utilities
