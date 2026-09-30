@@ -377,7 +377,7 @@ MAC_DEFAULT_PARAM = [
 
 DRIVERLISTS = [
     {"name": "i2c_ismt", "delay": 0},
-    {"name": "wb_i2c_i801", "delay": 0},
+    {"name": "wb_i2c_i801 i2c_adapter_nr=1", "delay": 0},
     {"name": "i2c_dev", "delay": 0},
     {"name": "i2c_algo_bit", "delay": 0},
     {"name": "i2c_gpio", "delay": 0},
@@ -422,7 +422,7 @@ DRIVERLISTS_OLD_VERSION = [
     {"name": "wb_gpio_c3000", "delay": 0},
     {"name": "wb_gpio_c3000_device", "delay": 0},
     {"name": "i2c_ismt", "delay": 0},
-    {"name": "wb_i2c_i801", "delay": 0},
+    {"name": "wb_i2c_i801 i2c_adapter_nr=1", "delay": 0},
     {"name": "i2c_dev", "delay": 0},
     {"name": "i2c_algo_bit", "delay": 0},
     {"name": "i2c_gpio", "delay": 0},
