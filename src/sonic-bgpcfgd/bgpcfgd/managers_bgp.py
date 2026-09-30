@@ -211,15 +211,39 @@ class BGPPeerMgrBase(Manager):
                 and isinstance(key, str)
                 and ("\r" in key or "\n" in key))
 
-    def handler(self, key, op, data):
+    def validate_peer_name(self, key, data):
+        """Reject malformed types and newlines in BGP peer identifiers."""
         if self._has_invalid_dynamic_peer_key(key):
             log_err("BGP_PEER_RANGE key must not contain line breaks")
-            return
-        if (op == swsscommon.SET_COMMAND
-                and self._has_invalid_dynamic_peer_name(data)):
+            return False
+        if self._has_invalid_dynamic_peer_name(data):
             log_err("BGP_PEER_RANGE name must not contain line breaks")
-            return
+            return False
+        if self.peer_type == 'sentinels':
+            if not isinstance(key, str) or '\r' in key or '\n' in key:
+                log_err("Invalid BGP peer table key: {!r}".format(key))
+                return False
+        if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis', 'sentinels'):
+            name = data.get('name')
+            if name is not None and not isinstance(name, str):
+                log_err("Peer name must be a string for key {!r}".format(key))
+                return False
+            if name is not None and ('\r' in name or '\n' in name):
+                if not isinstance(key, str):
+                    log_err("Invalid BGP peer table key: {!r}".format(key))
+                    return False
+                vrf, nbr = self.split_key(key)
+                log_err("Peer '(%s|%s)' name must not contain newline characters" % (vrf, nbr))
+                return False
+        return True
 
+    def handler(self, key, op, data):
+        # Permanently invalid SETs must not wait in the dependency queue.
+        if op == swsscommon.SET_COMMAND and not self.validate_peer_name(key, data):
+            return
+        if op != swsscommon.SET_COMMAND and self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
+            return
         return super(BGPPeerMgrBase, self).handler(key, op, data)
 
     def parse_key(self, key):
@@ -264,12 +288,8 @@ class BGPPeerMgrBase(Manager):
         :param key: key of the changed table
         :param data: the data associated with the change
         """
-        if self._has_invalid_dynamic_peer_key(key):
-            log_err("BGP_PEER_RANGE key must not contain line breaks")
-            return True
-        if self._has_invalid_dynamic_peer_name(data):
-            log_err("BGP_PEER_RANGE name must not contain line breaks")
-            return True
+        if not self.validate_peer_name(key, data):
+            return True  # Consume invalid direct calls and queued replays without retrying.
 
         key_parts = self.parse_key(key)
         if key_parts is None:

@@ -19,7 +19,7 @@ from fixtures.test_helpers_eeprom import EepromTestMixin
 @pytest.fixture(scope="function", autouse=True)
 def eeprom_utils_module():
     """Loads the module before each test. This is to let conftest.py inject deps first."""
-    from nexthop import eeprom_utils
+    from nexthop_utils import eeprom_utils
     return eeprom_utils
 
 
