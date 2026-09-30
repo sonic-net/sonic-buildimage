@@ -110,19 +110,19 @@ make init
 
 ### **Step 6: Configure for the Build**
 ```
-NOJESSIE=1 NOBUSTER=1 NOBULLSEYE=1 BLDENV=bookworm DOCKER_BUILDKIT=0 KEEP_SLAVE_ON=yes SONIC_BUILD_JOBS=4 make configure PLATFORM=marvell PLATFORM_ARCH=arm64
+NOJESSIE=1 NOBULLSEYE=1 BLDENV=bookworm DOCKER_BUILDKIT=0 KEEP_SLAVE_ON=yes SONIC_BUILD_JOBS=4 make configure PLATFORM=marvell PLATFORM_ARCH=arm64
 ```
 
 ### **Step 7: Build the ARM64 Image**
 ```
 Execute Arm64 build using QEMU emulator environment.  
-NOJESSIE=1 NOBUSTER=1 NOBULLSEYE=1 BLDENV=bookworm MULTIARCH_QEMU_ENVIRON=y make SONIC_BUILD_JOBS=4 target/sonic-marvell-arm64.bin
+NOJESSIE=1 NOBULLSEYE=1 BLDENV=bookworm MULTIARCH_QEMU_ENVIRON=y make SONIC_BUILD_JOBS=4 target/sonic-marvell-arm64.bin
 ```
 ## **Expected Errors and Workarounds**
 
 ### **Error at \`libnl\`**
 ```
-$ NOJESSIE=1 NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=4 /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target_arm64.log
+$ NOJESSIE=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=4 /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target_arm64.log
 .....
 libtool: link: gcc -g -O2 -ffile-prefix-map=/sonic/src/libnl3/libnl3-3.7.0=. -fstack-protector-strong -Wformat -Werror=format-security -Wl,-z -Wl,relro -o tests/check-direct tests/check_direct-check-direct.o li
 b/.libs/libnl-3.a lib/.libs/libnl-nf-3.a lib/.libs/libnl-genl-3.a lib/.libs/libnl-route-3.a tests/.libs/libnl-test-util.a /sonic/src/libnl3/libnl3-3.7.0/lib/.libs/libnl-nf-3.a /sonic/src/libnl3/libnl3-3.7.0/lib/
@@ -263,7 +263,7 @@ fi
 
 ## **Console Output**
 ```
-$~/arm-testing/sonic-buildimage_bookworm$ NOJESSIE=1 NOBUSTER=1 NOBULLSEYE=1 BLDENV=bookworm SONIC_BUILD_JOBS=4 MULTIARCH_QEMU_ENVIRON=y /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target.log
+$~/arm-testing/sonic-buildimage_bookworm$ NOJESSIE=1 NOBULLSEYE=1 BLDENV=bookworm SONIC_BUILD_JOBS=4 MULTIARCH_QEMU_ENVIRON=y /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target.log
 ....
 [ 01 ] [ target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb ]
 [ 02 ] [ target/debs/bookworm/syncd_1.0.0_arm64.deb ]
