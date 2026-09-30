@@ -20,8 +20,16 @@ FULL_SNMP_COMM_LIST = ['snmp_rocommunity', 'snmp_rocommunities', 'snmp_rwcommuni
 INSECURE_DEFAULT_COMMUNITIES = {'public', 'private'}
 
 
+def _canonicalize_for_netsnmp_comparison(community):
+    """Strip quote/backslash chars Net-SNMP's tokenizer strips at parse
+    time, so a quoted/escaped default (e.g. '"public"') is still caught."""
+    for ch in ('"', "'", '\\'):
+        community = community.replace(ch, '')
+    return community
+
+
 def _is_insecure_default(community):
-    if community in INSECURE_DEFAULT_COMMUNITIES:
+    if _canonicalize_for_netsnmp_comparison(community) in INSECURE_DEFAULT_COMMUNITIES:
         logger.log_warning("Ignoring insecure default snmp.yml community '{}'".format(community))
         return True
     return False

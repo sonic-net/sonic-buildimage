@@ -430,6 +430,35 @@ class TestJ2Files(TestCase):
         self.assertIn('rocommunity Public\n', output)
         self.assertIn('rocommunity6 Public\n', output)
 
+    def test_snmpd_community_quoted_insecure_default_rejected(self):
+        # Net-SNMP's config tokenizer strips wrapping double quotes, so
+        # '"public"' is read by snmpd as the bare 'public' token. Must be
+        # rejected like the unquoted default, not rendered as its own
+        # community string.
+        communities = {
+            '"public"': {'TYPE': 'RO'},
+            "'private'": {'TYPE': 'RW'},
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('rocommunity public\n', output)
+        self.assertNotIn('rocommunity6 public\n', output)
+        self.assertNotIn('rwcommunity private\n', output)
+        self.assertNotIn('rwcommunity6 private\n', output)
+        self.assertNotIn('"public"', output)
+        self.assertNotIn("'private'", output)
+
+    def test_snmpd_community_quote_stripped_for_legitimate_value(self):
+        # A legitimate (non-default) community containing a quote/backslash
+        # is sanitized rather than rejected outright.
+        communities = {'my"com\\munity': {'TYPE': 'RO'}}
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity mycommunity\n', output)
+        self.assertIn('rocommunity6 mycommunity\n', output)
+
     def test_snmpd_user_rendering(self):
         users = {
             'readuser': {

@@ -250,6 +250,21 @@ class TestApplySnmpCommunities:
         snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
         assert db.set_entry_calls == [("SNMP_COMMUNITY", "Public", {"TYPE": "RO"})]
 
+    def test_insecure_default_quoted_variant_rejected(self):
+        # Net-SNMP's config tokenizer strips wrapping double quotes when
+        # parsing rocommunity/rwcommunity, so '"public"' would still
+        # activate the 'public' community once rendered -- reject it too.
+        db = _FakeConfigDB()
+        yaml_snmp_info = {"snmp_rocommunity": '"public"'}
+        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        assert db.set_entry_calls == []
+
+    def test_insecure_default_escaped_variant_rejected(self):
+        db = _FakeConfigDB()
+        yaml_snmp_info = {"snmp_rwcommunity": "pri\\vate"}
+        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        assert db.set_entry_calls == []
+
 
 class TestApplySnmpLocation:
     def test_location_present_and_not_yet_set(self):
