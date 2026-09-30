@@ -1233,7 +1233,7 @@ class TestJ2Files(TestCase):
             'missing-resolve_as fallback payload created a standalone injected directive'
         )
         self.assertIn(
-            'servernoselect6.6.6.6 10.20.30.40noselect6.6.6.6\n',
+            'server 10.20.30.40noselect6.6.6.6\n',
             output,
             'missing-resolve_as fallback payload was not collapsed onto a single server line'
         )
