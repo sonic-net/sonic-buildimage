@@ -179,6 +179,9 @@ endef
 # Recursive wildcard function
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
+# Recursive wildcard function that returns files only
+rfilewildcard=$(foreach f,$(wildcard $1*),$(if $(wildcard $f/.),$(call rfilewildcard,$f/,$2),$(filter $(subst *,%,$2),$f)))
+
 expand = $(foreach d,$(1),$(call expand,$($(d)_$(2)),$(2))) $(1)
 
 ###############################################################################

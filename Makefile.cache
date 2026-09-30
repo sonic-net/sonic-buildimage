@@ -534,15 +534,19 @@ $(foreach pkg, $(SONIC_RFS_TARGETS), \
 # sibling .patch/ files to its _DEP_FILES (hashed via git hash-object from the super-repo
 # root by the .dep rule, exactly where these files live). This is generic: any package
 # that gains a sibling .patch/ dir is tracked automatically, with no per-.dep edit.
-# $(wildcard) reads the working tree, so an as-yet-uncommitted patch also perturbs the
-# key (never a stale hit). Quilt series dirs are flat (series + *.patch), so a
-# single-level glob is sufficient.
+# Wildcard expansion reads the working tree, so an as-yet-uncommitted patch also
+# perturbs the key (never a stale hit). Recursively track every file in the patch tree,
+# including extensionless quilt inputs, without adding directories. A stable manifest
+# of the file paths makes additions, removals, and renames invalidate cache metadata.
 $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS) \
         $(SONIC_MAKE_FILES) $(SONIC_PYTHON_STDEB_DEBS) $(SONIC_PYTHON_WHEELS) \
         $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES) $(SONIC_INSTALL_PKGS) $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_MOD_SRC_PATH:=$(if $($(pkg)_SRC_PATH),$($(pkg)_SRC_PATH),$($(pkg)_PATH))) \
         $(eval __pkg_src := $(patsubst %/,%,$($(pkg)_MOD_SRC_PATH))) \
-        $(eval $(pkg)_DEP_FILES += $(if $(__pkg_src),$(wildcard $(__pkg_src).patch/*))) \
+        $(eval $(pkg)_PATCH_FILES := $(if $(__pkg_src),$(call rfilewildcard,$(__pkg_src).patch/,*))) \
+        $(eval __pkg_patch_list := $($(pkg)_DST_PATH)/$(pkg).patches) \
+        $(eval $(pkg)_PATCH_LIST_FILE := $(if $(__pkg_src),$(if $(or $(wildcard $(__pkg_src).patch/.),$(wildcard $(__pkg_patch_list))),$(__pkg_patch_list)))) \
+        $(eval $(pkg)_DEP_FILES += $($(pkg)_PATCH_FILES) $($(pkg)_PATCH_LIST_FILE)) \
         $(eval $(pkg)_BASE_PATH:=$(if $($(pkg)_BASE_PATH),$($(pkg)_BASE_PATH),$(CURDIR))) \
         $(eval $(pkg)_DEP_FLAGS_FILE:=$($(pkg)_DST_PATH)/$(pkg).flags) \
         $(eval $(pkg)_MOD_DEP_FILE:=$($(pkg)_DST_PATH)/$(pkg).dep) \
@@ -562,16 +566,18 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
     )
 
 
-# DPGK framework creates three dependency files for each target.
+# DPGK framework creates dependency metadata files for each target.
 #         1. Flags file (.flags)
-#         2. Dependency file (.dep),
-#         3. Dependency SHA hash file (.sha)
-#         4. If the target is a submodule, corresponding dependency file and hash file are created
+#         2. Quilt patch path manifest when applicable (.patches)
+#         3. Dependency file (.dep)
+#         4. Dependency SHA hash file (.sha)
+#         5. If the target is a submodule, corresponding dependency file and hash file are created
 #             sub module dependency file (.smdep)
 #             sub module hash file (.smsha)
 #         For example: following are the cache framework files for bash module
 #             target/debs/stretch/bash_4.3-14_amd64.deb             => Final debian package
 #             target/debs/stretch/bash_4.3-14_amd64.deb.flags       => Environment Flag file
+#             target/debs/stretch/bash_4.3-14_amd64.deb.patches     => Quilt patch path manifest
 #             target/debs/stretch/bash_4.3-14_amd64.deb.dep         => Dependency files list
 #             target/debs/stretch/bash_4.3-14_amd64.deb.dep.sha     => SHA Hash file
 #
@@ -643,6 +649,25 @@ $(eval $(call FLAGS_DEP_RULES, $(SONIC_PYTHON_WHEELS), $(PYTHON_WHEELS_PATH),fla
 $(eval $(call FLAGS_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), $(TARGET_PATH),flags))
 $(eval $(call FLAGS_DEP_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH),flags))
 $(eval $(call FLAGS_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),flags))
+
+
+# Rules for the quilt patch path manifest.
+#
+# The double-colon rule without prerequisites runs whenever the manifest is considered.
+# Its timestamp changes only when the sorted patch path list changes.
+define PATCH_LIST_RULES
+$(addsuffix .patches,$(addprefix $(2)/, $(1))) :: $(2)/%.patches :
+	@$$(file >$$@.tmp,$$(sort $$($$*_PATCH_FILES)))
+	@cmp -s $$@.tmp $$@ || cp $$@.tmp $$@
+	@rm -f $$@.tmp
+endef
+$(eval $(call PATCH_LIST_RULES, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), $(DEBS_PATH)))
+$(eval $(call PATCH_LIST_RULES, $(SONIC_MAKE_FILES), $(FILES_PATH)))
+$(eval $(call PATCH_LIST_RULES, $(SONIC_PYTHON_STDEB_DEBS), $(PYTHON_DEBS_PATH)))
+$(eval $(call PATCH_LIST_RULES, $(SONIC_PYTHON_WHEELS), $(PYTHON_WHEELS_PATH)))
+$(eval $(call PATCH_LIST_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), $(TARGET_PATH)))
+$(eval $(call PATCH_LIST_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH)))
+$(eval $(call PATCH_LIST_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH)))
 
 
 
@@ -756,7 +781,7 @@ SONIC_CACHE_CLEAN_DEBS = $(addsuffix -clean,$(addprefix $(DEBS_PATH)/, \
            $(SONIC_EXTRA_DEBS)))
 $(SONIC_CACHE_CLEAN_DEBS) :: $(DEBS_PATH)/%-clean : .platform $$(addsuffix -clean,$$(addprefix $(DEBS_PATH)/,$$($$*_MAIN_DEB)))
 	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
-        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE) $($*_PATCH_LIST_FILE)
 
 
 # Clean all the DEP and SHA files for all the FILES target
@@ -766,7 +791,7 @@ SONIC_CACHE_CLEAN_FILES = $(addsuffix -clean,$(addprefix $(FILES_PATH)/, \
            $(SONIC_MAKE_FILES)))
 $(SONIC_CACHE_CLEAN_FILES) :: $(FILES_PATH)/%-clean : .platform
 	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
-        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE) $($*_PATCH_LIST_FILE)
 
 
 # Clean all the DEP and SHA files for all the DOCKER target
@@ -778,7 +803,7 @@ SONIC_CACHE_CLEAN_TARGETS = $(addsuffix -clean,$(addprefix $(TARGET_PATH)/, \
                $(SONIC_INSTALLERS)))
 $(SONIC_CACHE_CLEAN_TARGETS) :: $(TARGET_PATH)/%-clean : .platform
 	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
-        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE) $($*_PATCH_LIST_FILE)
 
 
 # Clean all the DEP and SHA files for all the PYTHON DEBS target
@@ -786,7 +811,7 @@ SONIC_CACHE_CLEAN_STDEB_DEBS = $(addsuffix -clean,$(addprefix $(PYTHON_DEBS_PATH
              $(SONIC_PYTHON_STDEB_DEBS)))
 $(SONIC_CACHE_CLEAN_STDEB_DEBS) :: $(PYTHON_DEBS_PATH)/%-clean : .platform
 	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
-        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE) $($*_PATCH_LIST_FILE)
 
 
 # Clean all the DEP and SHA files for all the PYTHON WHEELS target
@@ -794,7 +819,7 @@ SONIC_CACHE_CLEAN_WHEELS = $(addsuffix -clean,$(addprefix $(PYTHON_WHEELS_PATH)/
              $(SONIC_PYTHON_WHEELS)))
 $(SONIC_CACHE_CLEAN_WHEELS) :: $(PYTHON_WHEELS_PATH)/%-clean : .platform
 	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
-        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE) $($*_PATCH_LIST_FILE)
 
 .PHONY: cclean
 cclean:: $(SONIC_CACHE_CLEAN_DEBS) $(SONIC_CACHE_CLEAN_FILES) $(SONIC_CACHE_CLEAN_TARGETS) \
