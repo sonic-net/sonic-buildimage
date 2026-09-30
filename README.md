@@ -246,18 +246,18 @@ make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 make target/sonic-marvell-prestera-armhf.bin
 ```
 
-To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian buster
+To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian bookworm
 using cross-compilation, run the following commands:
 
 ```shell
 # Execute make configure once to configure ASIC and ARCH for cross-compilation build
 
-NOJESSIE=1 BLDENV=buster CROSS_BLDENV=1 \
+NOJESSIE=1 BLDENV=bookworm CROSS_BLDENV=1 \
 make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 
 # Execute Arm32 build using cross-compilation environment
 
-NOJESSIE=1 BLDENV=buster CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
+NOJESSIE=1 BLDENV=bookworm CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
 ```
 
 Running the above Arm32 build using cross-compilation instead of qemu emulator
