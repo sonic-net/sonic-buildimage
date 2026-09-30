@@ -1193,8 +1193,6 @@ static const struct pci_device_id i801_ids[] = {
 	{ 0, }
 };
 
-MODULE_DEVICE_TABLE(pci, i801_ids);
-
 #if defined CONFIG_X86 && defined CONFIG_DMI
 static unsigned char apanel_addr;
 

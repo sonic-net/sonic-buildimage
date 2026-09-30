@@ -28,7 +28,7 @@ DEV_MONITOR_PARAM = {
             "present": {"gettype": "i2c", "bus": 13, "loc": 0x1d, "offset": 0x42, "presentbit": 0, "okval": 0},
             "device": [
                 {"id": "psu2pmbus", "name": "wb_fsp1200", "bus": 10, "loc": 0x58, "attr": "hwmon"},
-                {"id": "psu2frue2", "name": "wb_24c02", "bus": 10, "loc": 0x50, "attr": "eeprom"},
+                {"id": "psu2frue2", "name": "24c02", "bus": 10, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
@@ -36,7 +36,7 @@ DEV_MONITOR_PARAM = {
             "present": {"gettype": "i2c", "bus": 13, "loc": 0x1d, "offset": 0x42, "presentbit": 1, "okval": 0},
             "device": [
                 {"id": "psu1pmbus", "name": "wb_fsp1200", "bus": 11, "loc": 0x58, "attr": "hwmon"},
-                {"id": "psu1frue2", "name": "wb_24c02", "bus": 11, "loc": 0x50, "attr": "eeprom"},
+                {"id": "psu1frue2", "name": "24c02", "bus": 11, "loc": 0x50, "attr": "eeprom"},
             ],
         },
     ],
@@ -45,56 +45,56 @@ DEV_MONITOR_PARAM = {
             "name": "fan7",
             "present": {"gettype": "i2c", "bus": 44, "loc": 0x0d, "offset": 0x5b, "presentbit": 0, "okval": 0},
             "device": [
-                {"id": "fan7frue2", "name": "wb_24c64", "bus": 43, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan7frue2", "name": "24c64", "bus": 43, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "fan5",
             "present": {"gettype": "i2c", "bus": 44, "loc": 0x0d, "offset": 0x5b, "presentbit": 1, "okval": 0},
             "device": [
-                {"id": "fan5frue2", "name": "wb_24c64", "bus": 42, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan5frue2", "name": "24c64", "bus": 42, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "fan3",
             "present": {"gettype": "i2c", "bus": 44, "loc": 0x0d, "offset": 0x5b, "presentbit": 2, "okval": 0},
             "device": [
-                {"id": "fan3frue2", "name": "wb_24c64", "bus": 41, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan3frue2", "name": "24c64", "bus": 41, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "fan1",
             "present": {"gettype": "i2c", "bus": 44, "loc": 0x0d, "offset": 0x5b, "presentbit": 3, "okval": 0},
             "device": [
-                {"id": "fan1frue2", "name": "wb_24c64", "bus":40, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan1frue2", "name": "24c64", "bus":40, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "fan8",
             "present": {"gettype": "i2c", "bus": 52, "loc": 0x0d, "offset": 0x5b, "presentbit": 0, "okval": 0},
             "device": [
-                {"id": "fan8frue2", "name": "wb_24c64", "bus": 51, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan8frue2", "name": "24c64", "bus": 51, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "fan6",
             "present": {"gettype": "i2c", "bus": 52, "loc": 0x0d, "offset": 0x5b, "presentbit": 1, "okval": 0},
             "device": [
-                {"id": "fan6frue2", "name": "wb_24c64", "bus": 50, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan6frue2", "name": "24c64", "bus": 50, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "fan4",
             "present": {"gettype": "i2c", "bus": 52, "loc": 0x0d, "offset": 0x5b, "presentbit": 2, "okval": 0},
             "device": [
-                {"id": "fan4frue2", "name": "wb_24c64", "bus": 49, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan4frue2", "name": "24c64", "bus": 49, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "fan2",
             "present": {"gettype": "i2c", "bus": 52, "loc": 0x0d, "offset": 0x5b, "presentbit": 3, "okval": 0},
             "device": [
-                {"id": "fan2frue2", "name": "wb_24c64", "bus": 48, "loc": 0x50, "attr": "eeprom"},
+                {"id": "fan2frue2", "name": "24c64", "bus": 48, "loc": 0x50, "attr": "eeprom"},
             ],
         },
     ],
@@ -102,39 +102,39 @@ DEV_MONITOR_PARAM = {
         {
             "name": "eeprom",
             "device": [
-                {"id": "eeprom_1", "name": "wb_24c02", "bus": 1, "loc": 0x56, "attr": "eeprom"},
-                {"id": "eeprom_2", "name": "wb_24c02", "bus": 1, "loc": 0x57, "attr": "eeprom"},
-                {"id": "eeprom_3", "name": "wb_24c02", "bus": 2, "loc": 0x51, "attr": "eeprom"},
-                {"id": "eeprom_4", "name": "wb_24c02", "bus": 3, "loc": 0x51, "attr": "eeprom"},
-                {"id": "eeprom_5", "name": "wb_24c02", "bus": 32, "loc": 0x52, "attr": "eeprom"},
-                {"id": "eeprom_6", "name": "wb_24c02", "bus": 12, "loc": 0x57, "attr": "eeprom"},
+                {"id": "eeprom_1", "name": "24c02", "bus": 1, "loc": 0x56, "attr": "eeprom"},
+                {"id": "eeprom_2", "name": "24c02", "bus": 1, "loc": 0x57, "attr": "eeprom"},
+                {"id": "eeprom_3", "name": "24c02", "bus": 2, "loc": 0x51, "attr": "eeprom"},
+                {"id": "eeprom_4", "name": "24c02", "bus": 3, "loc": 0x51, "attr": "eeprom"},
+                {"id": "eeprom_5", "name": "24c02", "bus": 32, "loc": 0x52, "attr": "eeprom"},
+                {"id": "eeprom_6", "name": "24c02", "bus": 12, "loc": 0x57, "attr": "eeprom"},
             ],
         },
         {
             "name": "oe_mcu",
             "device": [
-                {"id": "oe_mcu_1", "name": "wb_24c02", "bus": 24, "loc": 0x50, "attr": "eeprom"},
-                {"id": "oe_mcu_2", "name": "wb_24c02", "bus": 25, "loc": 0x50, "attr": "eeprom"},
-                {"id": "oe_mcu_3", "name": "wb_24c02", "bus": 26, "loc": 0x50, "attr": "eeprom"},
-                {"id": "oe_mcu_4", "name": "wb_24c02", "bus": 27, "loc": 0x50, "attr": "eeprom"},
-                {"id": "oe_mcu_5", "name": "wb_24c02", "bus": 28, "loc": 0x50, "attr": "eeprom"},
-                {"id": "oe_mcu_6", "name": "wb_24c02", "bus": 29, "loc": 0x50, "attr": "eeprom"},
-                {"id": "oe_mcu_7", "name": "wb_24c02", "bus": 30, "loc": 0x50, "attr": "eeprom"},
-                {"id": "oe_mcu_8", "name": "wb_24c02", "bus": 31, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_1", "name": "24c02", "bus": 24, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_2", "name": "24c02", "bus": 25, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_3", "name": "24c02", "bus": 26, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_4", "name": "24c02", "bus": 27, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_5", "name": "24c02", "bus": 28, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_6", "name": "24c02", "bus": 29, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_7", "name": "24c02", "bus": 30, "loc": 0x50, "attr": "eeprom"},
+                {"id": "oe_mcu_8", "name": "24c02", "bus": 31, "loc": 0x50, "attr": "eeprom"},
             ],
         },
         {
             "name": "tmp275",
             "device": [
-                {"id": "tmp275_1", "name": "wb_tmp275", "bus": 34, "loc": 0x4c, "attr": "hwmon"},
-                {"id": "tmp275_2", "name": "wb_tmp275", "bus": 35, "loc": 0x4d, "attr": "hwmon"},
-                {"id": "tmp275_3", "name": "wb_tmp275", "bus": 8, "loc": 0x48, "attr": "hwmon"},
-                {"id": "tmp275_4", "name": "wb_tmp275", "bus": 8, "loc": 0x49, "attr": "hwmon"},
-                {"id": "tmp275_5", "name": "wb_tmp275", "bus": 9, "loc": 0x48, "attr": "hwmon"},
-                {"id": "tmp275_6", "name": "wb_tmp275", "bus": 9, "loc": 0x49, "attr": "hwmon"},
-                {"id": "tmp275_7", "name": "wb_tmp275", "bus": 14, "loc": 0x48, "attr": "hwmon"},
-                {"id": "tmp275_8", "name": "wb_tmp275", "bus": 14, "loc": 0x49, "attr": "hwmon"},
-                {"id": "tmp275_9", "name": "wb_tmp275", "bus": 14, "loc": 0x4b, "attr": "hwmon"},
+                {"id": "tmp275_1", "name": "tmp275", "bus": 34, "loc": 0x4c, "attr": "hwmon"},
+                {"id": "tmp275_2", "name": "tmp275", "bus": 35, "loc": 0x4d, "attr": "hwmon"},
+                {"id": "tmp275_3", "name": "tmp275", "bus": 8, "loc": 0x48, "attr": "hwmon"},
+                {"id": "tmp275_4", "name": "tmp275", "bus": 8, "loc": 0x49, "attr": "hwmon"},
+                {"id": "tmp275_5", "name": "tmp275", "bus": 9, "loc": 0x48, "attr": "hwmon"},
+                {"id": "tmp275_6", "name": "tmp275", "bus": 9, "loc": 0x49, "attr": "hwmon"},
+                {"id": "tmp275_7", "name": "tmp275", "bus": 14, "loc": 0x48, "attr": "hwmon"},
+                {"id": "tmp275_8", "name": "tmp275", "bus": 14, "loc": 0x49, "attr": "hwmon"},
+                {"id": "tmp275_9", "name": "tmp275", "bus": 14, "loc": 0x4b, "attr": "hwmon"},
             ],
         },
         {
@@ -204,7 +204,7 @@ DEV_MONITOR_PARAM = {
         {
             "name": "ucd90160",
             "device": [
-                {"id": "ucd90160_1", "name": "wb_ucd90160", "bus": 5, "loc": 0x5f, "attr": "hwmon"},
+                {"id": "ucd90160_1", "name": "ucd90160", "bus": 5, "loc": 0x5f, "attr": "hwmon"},
             ],
         },
     ],
@@ -1081,50 +1081,50 @@ DRIVERLISTS = [
 
 DEVICE = [
     # eeprom
-    {"name": "wb_24c02", "bus": 1, "loc": 0x56},
-    {"name": "wb_24c02", "bus": 1, "loc": 0x57},
-    {"name": "wb_24c02", "bus": 2, "loc": 0x51},
-    {"name": "wb_24c02", "bus": 3, "loc": 0x51},
+    {"name": "24c02", "bus": 1, "loc": 0x56},
+    {"name": "24c02", "bus": 1, "loc": 0x57},
+    {"name": "24c02", "bus": 2, "loc": 0x51},
+    {"name": "24c02", "bus": 3, "loc": 0x51},
     # SCM
-    {"name": "wb_24c02", "bus": 32, "loc": 0x52},
+    {"name": "24c02", "bus": 32, "loc": 0x52},
     {"name": "ina3221", "bus": 33, "loc": 0x40},
     {"name": "ina3221", "bus": 33, "loc": 0x41},
     {"name": "ina3221", "bus": 33, "loc": 0x42},
-    {"name": "wb_tmp275", "bus": 34, "loc": 0x4c},
-    {"name": "wb_tmp275", "bus": 35, "loc": 0x4d},
+    {"name": "tmp275", "bus": 34, "loc": 0x4c},
+    {"name": "tmp275", "bus": 35, "loc": 0x4d},
     # CPU
-    {"name": "wb_ucd90160", "bus": 5, "loc": 0x5f},
+    {"name": "ucd90160", "bus": 5, "loc": 0x5f},
     {"name": "wb_xdpe12284", "bus": 5, "loc": 0x5e},
     {"name": "wb_xdpe12284", "bus": 5, "loc": 0x68},
     {"name": "wb_xdpe12284", "bus": 5, "loc": 0x6e},
     {"name": "wb_xdpe12284", "bus": 5, "loc": 0x70},
     # fanA
-    {"name": "wb_tmp275", "bus": 8, "loc": 0x48},
-    {"name": "wb_tmp275", "bus": 8, "loc": 0x49},
-    {"name": "wb_24c64", "bus": 40, "loc": 0x50},
-    {"name": "wb_24c64", "bus": 41, "loc": 0x50},
-    {"name": "wb_24c64", "bus": 42, "loc": 0x50},
-    {"name": "wb_24c64", "bus": 43, "loc": 0x50},
+    {"name": "tmp275", "bus": 8, "loc": 0x48},
+    {"name": "tmp275", "bus": 8, "loc": 0x49},
+    {"name": "24c64", "bus": 40, "loc": 0x50},
+    {"name": "24c64", "bus": 41, "loc": 0x50},
+    {"name": "24c64", "bus": 42, "loc": 0x50},
+    {"name": "24c64", "bus": 43, "loc": 0x50},
     # fanB
-    {"name": "wb_tmp275", "bus": 9, "loc": 0x48},
-    {"name": "wb_tmp275", "bus": 9, "loc": 0x49},
-    {"name": "wb_24c64", "bus": 48, "loc": 0x50},
-    {"name": "wb_24c64", "bus": 49, "loc": 0x50},
-    {"name": "wb_24c64", "bus": 50, "loc": 0x50},
-    {"name": "wb_24c64", "bus": 51, "loc": 0x50},
+    {"name": "tmp275", "bus": 9, "loc": 0x48},
+    {"name": "tmp275", "bus": 9, "loc": 0x49},
+    {"name": "24c64", "bus": 48, "loc": 0x50},
+    {"name": "24c64", "bus": 49, "loc": 0x50},
+    {"name": "24c64", "bus": 50, "loc": 0x50},
+    {"name": "24c64", "bus": 51, "loc": 0x50},
     # psu
-    {"name": "wb_24c02", "bus": 10, "loc": 0x50},
+    {"name": "24c02", "bus": 10, "loc": 0x50},
     {"name": "wb_fsp1200", "bus": 10, "loc": 0x58},
-    {"name": "wb_24c02", "bus": 11, "loc": 0x50},
+    {"name": "24c02", "bus": 11, "loc": 0x50},
     {"name": "wb_fsp1200", "bus": 11, "loc": 0x58},
     # MCB
     {"name": "ina3221", "bus": 12, "loc": 0x40},
     {"name": "ina3221", "bus": 12, "loc": 0x41},
-    {"name": "wb_24c02", "bus": 12, "loc": 0x57},
+    {"name": "24c02", "bus": 12, "loc": 0x57},
     # SMB
-    {"name": "wb_tmp275", "bus": 14, "loc": 0x48},
-    {"name": "wb_tmp275", "bus": 14, "loc": 0x49},
-    {"name": "wb_tmp275", "bus": 14, "loc": 0x4b},
+    {"name": "tmp275", "bus": 14, "loc": 0x48},
+    {"name": "tmp275", "bus": 14, "loc": 0x49},
+    {"name": "tmp275", "bus": 14, "loc": 0x4b},
     {"name": "ina3221", "bus": 56, "loc": 0x40},
     {"name": "ina3221", "bus": 56, "loc": 0x41},
     {"name": "ina3221", "bus": 57, "loc": 0x40},
@@ -1177,9 +1177,9 @@ DEVICE = [
     {"name": "ina3221", "bus": 90, "loc": 0x42},
     # RC32312
     {"name": "wb_rc32312", "bus": 72, "loc": 0x09},
-    {"name": "wb_24c64", "bus": 72, "loc": 0x50},
+    {"name": "24c64", "bus": 72, "loc": 0x50},
     {"name": "wb_rc32312", "bus": 73, "loc": 0x09},
-    {"name": "wb_24c64", "bus": 73, "loc": 0x50},
+    {"name": "24c64", "bus": 73, "loc": 0x50},
     # xdpe132g5c i2c
     {"name": "wb_xdpe132g5c", "bus": 64, "loc": 0x10},
     {"name": "wb_xdpe132g5c", "bus": 65, "loc": 0x10},
@@ -1187,7 +1187,7 @@ DEVICE = [
 ]
 
 OPTOE = [
-    {"name": "wb_24c02", "startbus": 24, "endbus": 31},
+    {"name": "24c02", "startbus": 24, "endbus": 31},
 ]
 
 REBOOT_CTRL_PARAM = {}
