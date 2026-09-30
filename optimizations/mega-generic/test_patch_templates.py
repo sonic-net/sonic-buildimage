@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import List, Tuple
@@ -56,7 +57,7 @@ sys.path.insert(0, str(HERE))
 from mega_gen.auto_registry import discover_registry, resolve_features
 from mega_gen.discovery import discover_features
 from mega_gen.gen_mega_mk import generate_mega_mk
-from mega_gen.patch_templates import generate_patches
+from mega_gen.patch_templates import MEGA_CONTAINER_NAME_DEFAULT, generate_patches
 
 SCENARIOS: List[Tuple[str, List[str]]] = [
     ("full_default_10", ["database", "swss", "bgp", "teamd", "lldp", "snmp", "gnmi", "radv", "eventd", "sysmgr"]),
@@ -234,6 +235,47 @@ def check_scenario(sonic_root: Path, name: str, features: List[str]) -> bool:
                 problems.append(
                     f"patching changed rendering for docker_container_name={real_name!r} (enable_asan={asan})"
                 )
+
+    # --- 9. Finding #6: mega lifecycle wrapper script exists, is valid
+    # bash, and correctly parameterized (SERVICE renamed but the
+    # syncd.sh-shared LOCKFILE path is NOT), and mega.service.j2 / the
+    # sonic_debian_extension.j2 install-script copy list route through it.
+    script_path = f"files/scripts/{MEGA_CONTAINER_NAME_DEFAULT}.sh"
+    script_text = patches.file_patches.get(script_path)
+    if script_text is None:
+        problems.append(f"{script_path} not generated (Finding #6 lifecycle wrapper missing)")
+    else:
+        if has_swss:
+            if f'SERVICE="{MEGA_CONTAINER_NAME_DEFAULT}"' not in script_text:
+                problems.append(f"{script_path}: SERVICE not set to '{MEGA_CONTAINER_NAME_DEFAULT}'")
+        else:
+            if 'SERVICE="${SCRIPT_NAME%.*}"' not in script_text:
+                problems.append(f"{script_path}: expected the database.sh-style dynamic SERVICE derivation")
+        if has_swss and 'LOCKFILE="/tmp/swss-syncd-lock$DEV"' not in script_text:
+            problems.append(f"{script_path}: swss-derived wrapper lost the shared syncd.sh LOCKFILE contract")
+        if has_swss and "docker kill swss" in script_text:
+            problems.append(f"{script_path}: still hardcodes 'docker kill swss' instead of the mega container name")
+        try:
+            proc = subprocess.run(
+                ["bash", "-n", "/dev/stdin"], input=script_text, text=True, capture_output=True
+            )
+        except FileNotFoundError:
+            proc = None
+        if proc is not None and proc.returncode != 0:
+            problems.append(f"{script_path}: bash -n syntax check failed: {proc.stderr.strip()}")
+
+        exec_dir = "/usr/local/bin"
+        for verb in ("start", "wait", "stop"):
+            if f"{exec_dir}/{MEGA_CONTAINER_NAME_DEFAULT}.sh {verb}" not in patches.mega_service_text:
+                problems.append(f"mega.service.j2: ExecStart* for '{verb}' does not route through {exec_dir}/{MEGA_CONTAINER_NAME_DEFAULT}.sh")
+
+        ext_text = patches.file_patches.get("files/build_templates/sonic_debian_extension.j2", "")
+        expect_copy = (
+            f"sudo LANG=C cp $SCRIPTS_DIR/{MEGA_CONTAINER_NAME_DEFAULT}.sh "
+            f"$FILESYSTEM_ROOT/usr/local/bin/{MEGA_CONTAINER_NAME_DEFAULT}.sh"
+        )
+        if expect_copy not in ext_text:
+            problems.append("sonic_debian_extension.j2: missing script-copy line for the mega lifecycle wrapper")
 
     if problems:
         print("  FAIL:")

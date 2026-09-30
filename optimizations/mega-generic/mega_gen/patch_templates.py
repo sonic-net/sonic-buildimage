@@ -1101,6 +1101,7 @@ def _patch_sonic_debian_extension(
     text: str,
     folded_features: FrozenSet[str],
     container_name: str,
+    has_lifecycle_script: bool = False,
 ) -> Tuple[str, List[str]]:
     """Add service alias symlinks and a service-registration filter for
     features folded into mega in ``sonic_debian_extension.j2``.
@@ -1218,6 +1219,27 @@ def _patch_sonic_debian_extension(
             "alias symlinks appended to end of file"
         )
 
+    # Finding #6: install the mega lifecycle wrapper script (Finding #6;
+    # see `_generate_mega_lifecycle_script`) next to the other per-feature
+    # `files/scripts/*.sh` wrappers, so `mega.service.j2`'s
+    # `/usr/local/bin/<container_name>.sh` ExecStart* lines resolve.
+    if has_lifecycle_script:
+        copy_anchor = (
+            "sudo LANG=C cp $SCRIPTS_DIR/swss.sh $FILESYSTEM_ROOT/usr/local/bin/swss.sh"
+        )
+        copy_line = (
+            f"\nsudo LANG=C cp $SCRIPTS_DIR/{container_name}.sh "
+            f"$FILESYSTEM_ROOT/usr/local/bin/{container_name}.sh"
+        )
+        if copy_anchor not in new_text:
+            warnings.append(
+                "sonic_debian_extension.j2: could not find the swss.sh "
+                "script-copy anchor -- mega lifecycle wrapper script NOT "
+                "installed (Finding #6 left unfixed for this run)"
+            )
+        else:
+            new_text = new_text.replace(copy_anchor, copy_anchor + copy_line, 1)
+
     return new_text, warnings
 
 
@@ -1226,15 +1248,119 @@ def _patch_sonic_debian_extension(
 # ---------------------------------------------------------------------------
 
 
+def _generate_mega_lifecycle_script(
+    sonic_root: Path,
+    container_name: str,
+    has_swss: bool,
+    warnings: List[str],
+) -> Optional[str]:
+    """Generate ``files/scripts/<container_name>.sh``, the systemd
+    ``ExecStartPre``/``ExecStart``/``ExecStop`` lifecycle wrapper installed
+    to ``/usr/local/bin/<container_name>.sh`` (NOT to be confused with
+    ``/usr/bin/<container_name>.sh``, the per-container ``docker create``
+    ctl script rendered from ``docker_image_ctl.j2`` -- two different
+    scripts, two different directories, same basename, no collision).
+
+    Finding #6: without this, mega's systemd unit called the raw ctl script
+    directly, bypassing every bit of lifecycle coordination the ORIGINAL
+    per-feature ``.sh`` wrappers provide (DB flush on cold boot, warm/fast
+    reboot detection, and -- when swss is folded in -- the syncd peer
+    start/stop coordination ``swss.sh`` performs, which the mega ctl-script
+    patches for ``wait()``/``stop()`` only partially replace with a bare
+    best-effort ``systemctl start/stop syncd$DEV``).
+
+    * ``has_swss`` -> return a parameterized copy of the real
+      ``files/scripts/swss.sh`` (679 lines of warm/fast-reboot DB flush,
+      TSA/TSB, and syncd/gbsyncd peer coordination). Only two literal
+      "swss" occurrences need changing to generalize it (everything else
+      already reads through the ``$SERVICE`` variable):
+        - ``SERVICE="swss"`` -> ``SERVICE="<container_name>"``.
+        - the hardcoded ``docker kill swss`` / ``debug "Killing Docker
+          swss..."`` fallback in ``stop()`` (taken only on warm/fast
+          reboot) -> ``docker kill ${SERVICE}$DEV`` / a matching debug
+          message, consistent with how the rest of the script already
+          refers to the container.
+      ``LOCKFILE="/tmp/swss-syncd-lock$DEV"`` is deliberately LEFT
+      UNCHANGED: ``files/scripts/syncd.sh`` (syncd's own, unmodified,
+      never-folded lifecycle script) hardcodes that exact same path as
+      its own lock file -- it is a fixed cross-script contract between
+      "swss" and "syncd" specifically, not something derived from either
+      script's own container name, so renaming it here would silently
+      break the very peer-lock coordination this fix exists to preserve.
+    * not ``has_swss`` -> return the real ``files/scripts/database.sh``
+      verbatim. Unlike ``swss.sh``, it already derives ``SERVICE`` from
+      its own script filename (``SERVICE="${SCRIPT_NAME%.*}"``), so it
+      needs zero changes to work correctly when installed as
+      ``<container_name>.sh`` -- and it already gives mega WARM_BOOT/
+      FAST_BOOT-aware stop() semantics that the previous direct-to-ctl-
+      script wiring had cannot provide at all.
+
+    Returns ``None`` (with a warning appended) if the source script isn't
+    found.
+    """
+    src_name = "swss.sh" if has_swss else "database.sh"
+    src_path = sonic_root / "files" / "scripts" / src_name
+    if not src_path.is_file():
+        warnings.append(
+            f"files/scripts/{src_name} not found -- mega lifecycle wrapper "
+            f"script NOT generated (Finding #6 left unfixed for this run)"
+        )
+        return None
+
+    text = src_path.read_text(errors="replace")
+
+    if has_swss:
+        service_anchor = 'SERVICE="swss"'
+        if service_anchor not in text:
+            warnings.append(
+                "files/scripts/swss.sh: could not find SERVICE=\"swss\" -- "
+                "mega lifecycle wrapper NOT generated"
+            )
+            return None
+        text = text.replace(service_anchor, f'SERVICE="{container_name}"', 1)
+
+        kill_anchor = (
+            '        debug "Killing Docker swss..."\n'
+            "        /usr/bin/docker kill swss &> /dev/null || "
+            'debug "Docker swss is not running ($?) ..."'
+        )
+        kill_replacement = (
+            '        debug "Killing Docker ${SERVICE}$DEV..."\n'
+            "        /usr/bin/docker kill ${SERVICE}$DEV &> /dev/null || "
+            'debug "Docker ${SERVICE}$DEV is not running ($?) ..."'
+        )
+        if kill_anchor not in text:
+            warnings.append(
+                "files/scripts/swss.sh: could not find the hardcoded "
+                "'docker kill swss' fallback in stop() -- mega's warm/fast "
+                "reboot path would still try to kill a container literally "
+                "named 'swss', which doesn't exist for mega"
+            )
+        else:
+            text = text.replace(kill_anchor, kill_replacement, 1)
+
+    return text
+
+
 def _generate_mega_service(
     folded_features: FrozenSet[str],
     container_name: str,
     has_database: bool,
+    has_lifecycle_script: bool,
 ) -> str:
     """Generate ``files/build_templates/mega.service.j2``.
 
     Dependencies: ``database.service`` (unless mega IS database), plus
     ``config-setup.service``, and all core requirements.
+
+    ``has_lifecycle_script`` selects between routing through the new
+    ``/usr/local/bin/<container_name>.sh`` wrapper (Finding #6; see
+    ``_generate_mega_lifecycle_script``) -- matching how the real
+    ``swss.service.j2``/``database.service.j2`` invoke their own
+    ``files/scripts/*.sh`` wrappers rather than the raw ctl script -- or
+    falling back to the previous direct ``/usr/bin/<container_name>.sh``
+    wiring when the wrapper couldn't be generated (e.g. source script
+    missing from the tree).
     """
     lines = [
         "[Unit]",
@@ -1261,9 +1387,10 @@ def _generate_mega_service(
     lines.append("[Service]")
     lines.append("User=root")
     lines.append(f"Environment=sonic_asic_platform={{{{ sonic_asic_platform }}}}")
-    lines.append(f"ExecStartPre=/usr/bin/{container_name}.sh start")
-    lines.append(f"ExecStart=/usr/bin/{container_name}.sh wait")
-    lines.append(f"ExecStop=/usr/bin/{container_name}.sh stop")
+    exec_dir = "/usr/local/bin" if has_lifecycle_script else "/usr/bin"
+    lines.append(f"ExecStartPre={exec_dir}/{container_name}.sh start")
+    lines.append(f"ExecStart={exec_dir}/{container_name}.sh wait")
+    lines.append(f"ExecStop={exec_dir}/{container_name}.sh stop")
     lines.append("Restart=always")
     lines.append("RestartSec=10")
     lines.append("")
@@ -1295,6 +1422,15 @@ def generate_patches(
     result = PatchResult()
     folded_names: FrozenSet[str] = frozenset(s.container_name for s in specs)
     has_database = "database" in folded_names
+    has_swss = "swss" in folded_names
+
+    # --- 0. Finding #6: mega lifecycle wrapper script ---
+    lifecycle_script_text = _generate_mega_lifecycle_script(
+        sonic_root, container_name, has_swss, result.warnings
+    )
+    has_lifecycle_script = lifecycle_script_text is not None
+    if lifecycle_script_text is not None:
+        result.file_patches[f"files/scripts/{container_name}.sh"] = lifecycle_script_text
 
     # --- 1. docker_image_ctl.j2 --- patch the SHARED template ---
     ctl_path = sonic_root / "files" / "build_templates" / "docker_image_ctl.j2"
@@ -1363,7 +1499,9 @@ def generate_patches(
     ext_path = sonic_root / "files" / "build_templates" / "sonic_debian_extension.j2"
     if ext_path.is_file():
         text = ext_path.read_text(errors="replace")
-        new_text, w = _patch_sonic_debian_extension(text, folded_names, container_name)
+        new_text, w = _patch_sonic_debian_extension(
+            text, folded_names, container_name, has_lifecycle_script
+        )
         result.warnings.extend(w)
         if new_text != text:
             result.file_patches[
@@ -1372,7 +1510,7 @@ def generate_patches(
 
     # --- 8. mega.service.j2 ---
     result.mega_service_text = _generate_mega_service(
-        folded_names, container_name, has_database
+        folded_names, container_name, has_database, has_lifecycle_script
     )
     result.file_patches[
         f"files/build_templates/{container_name}.service.j2"
