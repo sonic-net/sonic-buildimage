@@ -24,7 +24,20 @@ SCRIPT_PATH = os.path.join(TESTS_DIR, "..", "snmp_yml_to_configdb.py")
 
 
 def _setup_fakes():
-    """Create fake swsscommon/sonic_py_common.logger modules before import."""
+    """Create fake swsscommon/sonic_py_common.logger modules before import.
+
+    Returns the prior sys.modules entries so they can be restored afterward.
+    """
+    saved = {
+        name: sys.modules.get(name, _UNSET)
+        for name in (
+            "swsscommon",
+            "swsscommon.swsscommon",
+            "sonic_py_common",
+            "sonic_py_common.logger",
+        )
+    }
+
     swss_pkg = types.ModuleType("swsscommon")
     swss_common_mod = types.ModuleType("swsscommon.swsscommon")
 
@@ -83,12 +96,28 @@ def _setup_fakes():
         sys.modules["sonic_py_common"] = sonic_py_common_pkg
     sys.modules["sonic_py_common.logger"] = logger_mod
 
+    return saved
 
-_setup_fakes()
+
+def _restore_real_modules(saved):
+    """Put back whatever was in sys.modules before _setup_fakes()."""
+    for name, prior in saved.items():
+        if prior is _UNSET:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = prior
+
+
+_UNSET = object()
+_saved_modules = _setup_fakes()
 
 _spec = importlib.util.spec_from_file_location("snmp_yml_to_configdb", SCRIPT_PATH)
 snmp_yml_to_configdb = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(snmp_yml_to_configdb)
+
+# The script already bound ConfigDBConnector/Logger into its own namespace,
+# so restore the real modules now to avoid leaking the fakes into other tests.
+_restore_real_modules(_saved_modules)
 
 
 class _FakeConfigDB:
