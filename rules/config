@@ -543,3 +543,24 @@ SBOM_INCLUDE_LICENSES ?= y
 # (SPDX conversion, provenance emit, license resolution) always
 # warn-and-continue regardless.
 SBOM_STRICT ?= y
+
+# OPTIMIZE_SUPD_S6 - replace supervisord with s6-overlay as PID 1 / process
+# supervisor in all derived docker containers (docker-base-trixie).
+# The supervisord2s6 shim converts each container's supervisord.conf into an
+# s6-rc service tree at startup; the supervisorctl shim keeps system-health
+# and monit working. Default off; enable in a profile (e.g. config.EMBEDDED)
+# when the s6-based supervisor is desired.
+OPTIMIZE_SUPD_S6 ?= n
+
+# OPTIMIZE_CLI - enable the sonic-utilities warm fork-server daemon
+# (sonic-cli-daemon) that accelerates `show`/`config` execution and Tab
+# completion by running commands inside an already-warm, pre-imported
+# process instead of cold-starting Python on every invocation.
+# Exported to the sonic-utilities build (setup.py) and sonic-utilities-data
+# package (debian/rules), both of which read this same OPTIMIZE_CLI name
+# from the environment: when not "y", the feature's Python modules
+# (show/config's cli_entry.py, utilities_common/cli_server.py) and the
+# cli-daemon systemd unit/doc are excluded from the build entirely, not
+# just disabled at runtime. Default off; enable in a profile (e.g.
+# config.EMBEDDED) when the optimization is desired.
+OPTIMIZE_CLI ?= n
