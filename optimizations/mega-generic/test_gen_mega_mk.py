@@ -260,6 +260,51 @@ def check_scenario(sonic_root: Path, name: str, features: List[str]) -> bool:
                 "expected a warning naming p4rt's /etc/sonic mode override, found none"
             )
 
+    # --- 10. Finding #11: ASAN ifeq guard tracking -------------------------
+    # docker-orchagent.mk/docker-fpm-frr.mk/docker-teamd.mk all wrap their
+    # own `--cap-add=SYS_PTRACE` in `ifeq ($(ENABLE_ASAN), y) ... endif` --
+    # verify the generated .mk re-applies that SAME guard when every
+    # contributor of the flag agreed on it, and never emits it bare unless
+    # some OTHER selected feature (e.g. gnmi) also wants it unconditionally.
+    if "--cap-add=SYS_PTRACE" in result.run_opt:
+        any_unconditional_contributor = any(
+            spec.feature == "gnmi" for spec in specs
+        )
+        guarded_block = re.search(
+            r'ifeq \(\$\(ENABLE_ASAN\), y\)\n\$\(DOCKER_MEGA\)_RUN_OPT \+= --cap-add=SYS_PTRACE\nendif',
+            result.mk_text,
+        )
+        text_outside_guard = (
+            result.mk_text.replace(guarded_block.group(0), "", 1) if guarded_block else result.mk_text
+        )
+        bare_line = re.search(
+            r'^\$\(DOCKER_MEGA\)_RUN_OPT \+= --cap-add=SYS_PTRACE$', text_outside_guard, re.MULTILINE
+        )
+        if any_unconditional_contributor:
+            if not bare_line:
+                problems.append(
+                    "expected --cap-add=SYS_PTRACE to be emitted UNCONDITIONALLY "
+                    "(gnmi wants it regardless of ENABLE_ASAN) but no bare line found"
+                )
+            if guarded_block:
+                problems.append(
+                    "--cap-add=SYS_PTRACE should not be ifeq-guarded when gnmi "
+                    "(an unconditional contributor) is selected"
+                )
+        else:
+            if not guarded_block:
+                problems.append(
+                    "expected --cap-add=SYS_PTRACE to be wrapped in "
+                    "'ifeq ($(ENABLE_ASAN), y) ... endif' (every contributor "
+                    "guarded it identically) but no such block found in "
+                    f"generated .mk"
+                )
+            if bare_line:
+                problems.append(
+                    "--cap-add=SYS_PTRACE emitted unconditionally even though "
+                    "every selected contributor guarded it with ENABLE_ASAN"
+                )
+
     print(f"  base_load_docker:          {result.base_load_docker}")
     print(f"  load_dockers:              {result.load_dockers}")
     print(f"  rsync_load_docker_features:{result.rsync_load_docker_features}")

@@ -229,21 +229,72 @@ def run_opt_units_of(text: str, docker_var: str) -> List[str]:
     file order, NOT deduplicated (`merge_run_opt` does the cross-feature
     union/collision-checking).
 
-    KNOWN LIMITATION (shared by every other scanner in this module): this is
-    a flat per-line regex scan with no `ifeq`/`endif` tracking, so a
+    NOTE: this flat scan does NOT itself track `ifeq`/`endif` nesting -- a
     `_RUN_OPT` line wrapped in e.g. `ifeq ($(ENABLE_ASAN), y)` (several
-    features' `--cap-add=SYS_PTRACE`) is picked up unconditionally,
-    regardless of that build flag's actual value. This doesn't corrupt the
-    *merge* (the flag still just dedupes against any other contributor
-    requesting the same value), but it means mega may end up with a flag
-    some contributor only wanted conditionally. Same simplification
-    `auto_registry.py` explicitly avoids for install-line detection but
-    every other suffix-scanner here (`_LOAD_DOCKERS`, `_INSTALL_*`, the
-    shutdown-order fields) already makes -- consistent, not new."""
+    features' `--cap-add=SYS_PTRACE`) is still returned unconditionally by
+    THIS function. Conditional emission is handled separately by
+    `run_opt_unit_guards_of()` below, which `generate_mega_mk()` consults to
+    wrap the corresponding `$(DOCKER_MEGA)_RUN_OPT` line in the SAME `ifeq`
+    guard in the generated `.mk` (see `merge_run_opt`'s `unit_guards`)."""
     units: List[str] = []
     for rhs in _own_suffix_rhs_lines(text, docker_var, "_RUN_OPT"):
         units.extend(_tokenize_run_opt_rhs(rhs))
     return units
+
+
+# A single-condition `ifeq`/`ifneq (COND)` opener, e.g. `ifeq ($(ENABLE_ASAN), y)`.
+_IFEQ_OPEN_RE = re.compile(r"^\s*(ifeq|ifneq)\s*\((.+)\)\s*$")
+_IFDEF_OPEN_RE = re.compile(r"^\s*(ifdef|ifndef)\s+(\S+)\s*$")
+_ENDIF_RE = re.compile(r"^\s*endif\s*$")
+_ELSE_RE = re.compile(r"^\s*else\b")
+
+
+def run_opt_unit_guards_of(text: str, docker_var: str) -> Dict[str, str]:
+    """`{unit: guard_condition_text}` for every `_RUN_OPT` flag unit this
+    feature's own docker var defines INSIDE an `ifeq`/`ifneq`/`ifdef`/`ifndef`
+    block (e.g. `--cap-add=SYS_PTRACE` inside `ifeq ($(ENABLE_ASAN), y)`).
+    Units defined outside any such block are simply absent from the returned
+    dict (unconditional).
+
+    Line-based scan with a condition stack -- handles simple, non-`else`
+    single-condition blocks (the only form actually used by any current
+    `_RUN_OPT` guard in this tree: `ENABLE_ASAN` in docker-orchagent.mk,
+    docker-fpm-frr.mk, docker-teamd.mk, all bare `ifeq (...) ... endif`, no
+    `else`). If an `else` is encountered while a guard is active, the guard
+    is conservatively dropped (treated as unconditional from that point) --
+    correctly handling Make's if/else semantics for an arbitrary condition
+    would need to synthesize a negated condition string, which isn't
+    reliably expressible as a single reusable `ifeq (...)` clause; no
+    current `_RUN_OPT` guard needs it, so this is deliberately not built."""
+    var_pat = re.compile(rf"^\s*\$\({re.escape(docker_var)}\)_RUN_OPT\s*[+:]?=\s*(.+?)\s*$")
+    guards: Dict[str, str] = {}
+    stack: List[Optional[str]] = []  # None once an `else` poisons that level
+    for line in text.splitlines():
+        m_open = _IFEQ_OPEN_RE.match(line)
+        m_ifdef = _IFDEF_OPEN_RE.match(line)
+        if m_open:
+            stack.append(f"{m_open.group(1)} ({m_open.group(2)})")
+            continue
+        if m_ifdef:
+            stack.append(f"{m_ifdef.group(1)} {m_ifdef.group(2)}")
+            continue
+        if _ENDIF_RE.match(line):
+            if stack:
+                stack.pop()
+            continue
+        if _ELSE_RE.match(line):
+            if stack:
+                stack[-1] = None
+            continue
+        active_guard = stack[-1] if stack else None
+        if active_guard is None:
+            continue
+        m_var = var_pat.match(line)
+        if not m_var:
+            continue
+        for unit in _tokenize_run_opt_rhs(m_var.group(1)):
+            guards.setdefault(unit, active_guard)
+    return guards
 
 
 # `-v SRC:DST[:MODE]` bind mounts (the dominant docker-create bind-mount
@@ -287,8 +338,20 @@ class RunOptMergeResult:
 
     warnings: List[str] = field(default_factory=list)
 
+    unit_guards: Dict[str, str] = field(default_factory=dict)
+    """`{unit: guard_condition}` for units that should be wrapped in an
+    `ifeq (guard_condition) ... endif` block instead of emitted bare (Finding
+    #11 -- e.g. `--cap-add=SYS_PTRACE` only under `ifeq ($(ENABLE_ASAN), y)`).
+    Only opaque units are ever guarded here (see `merge_run_opt`'s
+    `specs_unit_guards` parameter); a unit contributed unconditionally by ANY
+    feature is treated as unconditional overall (the more permissive, safer
+    default when features disagree)."""
 
-def merge_run_opt(specs_units: Dict[str, List[str]]) -> RunOptMergeResult:
+
+def merge_run_opt(
+    specs_units: Dict[str, List[str]],
+    specs_unit_guards: Optional[Dict[str, Dict[str, str]]] = None,
+) -> RunOptMergeResult:
     """Merge `{feature: [unit, ...]}` (see `run_opt_units_of`, one entry per
     selected feature, each already in that feature's own file order) into
     one `_RUN_OPT` unit list for mega. Three unit classes, each merged
@@ -317,13 +380,27 @@ def merge_run_opt(specs_units: Dict[str, List[str]]) -> RunOptMergeResult:
       `--privileged`, any other opaque unit): plain exact-string dedup,
       first-seen order across features. `--privileged` gets no special
       treatment by design (per-project scope decision, not an oversight).
+
+    `specs_unit_guards` (optional, Finding #11): `{feature: {unit: guard}}`
+    from `run_opt_unit_guards_of()`, one entry per feature whose own
+    `_RUN_OPT` had at least one guarded (`ifeq`-wrapped) unit. Only opaque
+    units are checked for a guard; if a given opaque unit is contributed by
+    at least one feature WITHOUT a guard (or with a different guard than
+    another contributor), it's treated as unconditional -- the guard is only
+    honored when every contributor of that exact unit agrees on the exact
+    same guard text. Surfaced on the result as `unit_guards`.
     """
     warnings: List[str] = []
     opaque_seen: List[str] = []
     mounts: Dict[str, List[Tuple[str, str, str]]] = {}  # dst -> [(src, mode, feature)]
     ports: Dict[str, List[Tuple[str, str]]] = {}  # host_port -> [(feature, unit)]
+    specs_unit_guards = specs_unit_guards or {}
+    # unit -> set of guard conditions seen across its contributors (a bare
+    # None entry means at least one contributor had it unguarded).
+    opaque_guard_candidates: Dict[str, set] = {}
 
     for feature, units in specs_units.items():
+        feature_guards = specs_unit_guards.get(feature, {})
         for unit in units:
             mount = _parse_bind_mount(unit)
             if mount is not None:
@@ -336,6 +413,7 @@ def merge_run_opt(specs_units: Dict[str, List[str]]) -> RunOptMergeResult:
                 continue
             if unit not in opaque_seen:
                 opaque_seen.append(unit)
+            opaque_guard_candidates.setdefault(unit, set()).add(feature_guards.get(unit))
 
     mount_units: List[str] = []
     for dst, contributors in mounts.items():
@@ -388,7 +466,18 @@ def merge_run_opt(specs_units: Dict[str, List[str]]) -> RunOptMergeResult:
             if unit not in port_units:
                 port_units.append(unit)
 
-    return RunOptMergeResult(units=opaque_seen + mount_units + port_units, warnings=warnings)
+    unit_guards: Dict[str, str] = {}
+    for unit, guard_set in opaque_guard_candidates.items():
+        if len(guard_set) == 1:
+            (only_guard,) = guard_set
+            if only_guard is not None:
+                unit_guards[unit] = only_guard
+
+    return RunOptMergeResult(
+        units=opaque_seen + mount_units + port_units,
+        warnings=warnings,
+        unit_guards=unit_guards,
+    )
 
 
 # The four warm/fast-reboot shutdown-ordering fields (see `generate_manifest`
@@ -589,6 +678,7 @@ def generate_mega_mk(
         suffix: [] for suffix in _SHUTDOWN_ORDER_SUFFIXES
     }
     run_opt_units_by_feature: Dict[str, List[str]] = {}
+    run_opt_guards_by_feature: Dict[str, Dict[str, str]] = {}
 
     for spec in specs:
         entry = spec.registry_entry
@@ -623,6 +713,7 @@ def generate_mega_mk(
                 shutdown_order_raw[suffix].append((tok, spec.feature))
 
         run_opt_units_by_feature[spec.feature] = run_opt_units_of(text, entry.docker_var)
+        run_opt_guards_by_feature[spec.feature] = run_opt_unit_guards_of(text, entry.docker_var)
 
     # --- base layer selection: swss-layer if swss selected, else config-engine ---
     base_load_docker: Optional[str] = None
@@ -709,7 +800,7 @@ def generate_mega_mk(
         )
 
     # --- _RUN_OPT: merge with collision resolution (see merge_run_opt) ---
-    run_opt_result = merge_run_opt(run_opt_units_by_feature)
+    run_opt_result = merge_run_opt(run_opt_units_by_feature, run_opt_guards_by_feature)
     warnings.extend(run_opt_result.warnings)
 
     # --- shutdown ordering: keep only references outside the selected set ---
@@ -879,7 +970,13 @@ def generate_mega_mk(
             "# database's $DB_OPT) still need a new 'mega' branch from ctl_parser.py."
         )
         for unit in run_opt_result.units:
-            lines.append(f"$({docker_var})_RUN_OPT += {unit}")
+            guard = run_opt_result.unit_guards.get(unit)
+            if guard is not None:
+                lines.append(guard)
+                lines.append(f"$({docker_var})_RUN_OPT += {unit}")
+                lines.append("endif")
+            else:
+                lines.append(f"$({docker_var})_RUN_OPT += {unit}")
         lines.append("")
 
     if shutdown_order:
