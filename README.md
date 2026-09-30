@@ -252,12 +252,12 @@ using cross-compilation, run the following commands:
 ```shell
 # Execute make configure once to configure ASIC and ARCH for cross-compilation build
 
-NOJESSIE=1 BLDENV=bookworm CROSS_BLDENV=1 \
+BLDENV=bookworm CROSS_BLDENV=1 \
 make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 
 # Execute Arm32 build using cross-compilation environment
 
-NOJESSIE=1 BLDENV=bookworm CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
+BLDENV=bookworm CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
 ```
 
 Running the above Arm32 build using cross-compilation instead of qemu emulator
