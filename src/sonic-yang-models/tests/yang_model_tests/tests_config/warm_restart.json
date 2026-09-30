@@ -5,7 +5,19 @@
                 "WARM_RESTART_LIST": [{
                         "module": "bgp",
                         "bgp_eoiu": true,
-                        "bgp_timer": 500
+                        "bgp_timer": 500,
+                        "eoiu_hold_timer": 5
+                }]
+            }
+        }
+    },
+
+    "WARM_RESTART_TEST_NON_BGP_MODULE": {
+        "sonic-warm-restart:sonic-warm-restart": {
+            "sonic-warm-restart:WARM_RESTART": {
+                "WARM_RESTART_LIST": [{
+                        "module": "swss",
+                        "neighsyncd_timer": 200
                 }]
             }
         }
@@ -55,6 +67,17 @@
         }
     },
 
+    "WARM_RESTART_WITH_MUST_CONDITION_FAILURE_TEST_FOR_EOIU_HOLD_TIMER": {
+        "sonic-warm-restart:sonic-warm-restart": {
+            "sonic-warm-restart:WARM_RESTART": {
+                "WARM_RESTART_LIST": [{
+                        "module": "teamd",
+                        "eoiu_hold_timer": 5
+                }]
+            }
+        }
+    },
+
     "WARM_RESTART_TEST_WITH_INCORRECT_BGP_TIMER": {
         "sonic-warm-restart:sonic-warm-restart": {
             "sonic-warm-restart:WARM_RESTART": {
@@ -83,6 +106,17 @@
                 "WARM_RESTART_LIST": [{
                         "module": "swss",
                         "neighsyncd_timer": 0
+                }]
+            }
+        }
+    },
+
+    "WARM_RESTART_TEST_WITH_INCORRECT_EOIU_HOLD_TIMER": {
+        "sonic-warm-restart:sonic-warm-restart": {
+            "sonic-warm-restart:WARM_RESTART": {
+                "WARM_RESTART_LIST": [{
+                        "module": "bgp",
+                        "eoiu_hold_timer": 3601
                 }]
             }
         }
