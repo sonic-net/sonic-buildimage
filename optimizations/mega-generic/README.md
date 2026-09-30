@@ -369,3 +369,57 @@ python3 -m mega_gen.gen_dockerfile --sonic-root /path/to/sonic-buildimage \
 # shared-path-retargeting sanity):
 python3 test_gen_dockerfile.py --sonic-root /path/to/sonic-buildimage
 ```
+
+## Known limitations
+
+These are real gaps identified by static review and, where feasible,
+partially or fully fixed; the ones below are deliberately left as
+documented limitations rather than implemented, because a correct fix
+requires either changes outside this tree or a much larger structural
+change than the surrounding fix pass, and there is no execution
+environment available here to validate the riskier option end-to-end:
+
+- **Redis-dependent preinit scripts still run before redis is up**
+  (bgp/swss/teamd/snmp/radv's own init scripts call `sonic-cfggen -d`,
+  which reads CONFIG_DB from redis). `docker-mega-init.sh` tolerates the
+  resulting failures (`|| true`) rather than blocking the whole
+  ENTRYPOINT, and `database`'s own preinit is special-cased so the merged
+  `supervisord.conf.j2` still gets fed `database_config.json` +
+  `additional_data_json` (so redis-server programs render correctly --
+  this part *is* fixed). The remaining features' `-d`-dependent config
+  (bgpd/zebra.conf, teamd/snmp/radv templates) is only regenerated the
+  next time something re-invokes `sonic-cfggen -d` at runtime (e.g. a
+  config reload), not automatically once redis comes up. A full fix
+  would convert each of these into a `[program:preinit-<feat>]`
+  supervisord one-shot gated on `redis-server:running` via
+  `dependent_startup_wait_for`, with that feature's real entry program(s)
+  in turn waiting on the one-shot's `:exited` state -- this touches the
+  core chaining logic in `supervisord_merge.py` broadly enough (every
+  affected feature's terminal-program wait-edges) that it was judged too
+  risky to land without a real container boot to validate against.
+- **Multi-ASIC / chassis database extras** (`chassisdb`, `link_namespace`
+  midplane veth wiring) are not reproduced for mega; only the
+  single-ASIC `redis`/`redis_bmp` dump-restore and
+  `waitForAllInstanceDatabaseConfigJsonFilesReady` wait were ported (see
+  `_mega_pre_start_block`/`_mega_post_start_block` in
+  `patch_templates.py`). Chassis/multi-ASIC topologies are out of scope
+  for the current acceptance criteria (single-ASIC default-feature
+  builds) and would need a dedicated follow-up.
+- **External per-feature container-name references in `sonic-utilities`**
+  (e.g. `docker exec teamd ...`, `config feature state`, the `FEATURE`
+  table's per-feature service names used by `container_checker` and
+  `featured`) are not repointed. `sonic-utilities` is a separate
+  submodule (`src/sonic-utilities`) -- this generator only patches files
+  inside `sonic-buildimage` itself, per repo convention ("do NOT modify
+  files in `src/` directly"). The systemd-unit-level portion of the same
+  problem (services in `files/build_templates/*.service(.j2)` that
+  reference a folded feature's `.service` name) *is* handled, by
+  `patch_templates.py`'s `_fan_in_scan`/`_repoint_service_refs`.
+- **`ctl_parser.py`** (~1000 lines) remains unused. It could in principle
+  replace some of `patch_templates.py`'s hand-written anchor-based edits
+  (e.g. the database pre/postStart block copying used for the
+  multi-ASIC fix above) with a structured per-container-name block
+  parser, but rewiring `patch_templates.py` onto it is an orthogonal
+  refactor with its own regression risk, not required by any of the
+  findings' acceptance criteria, so it is left in place rather than
+  wired in or removed.
