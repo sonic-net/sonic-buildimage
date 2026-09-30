@@ -33,6 +33,10 @@ class SRv6Mgr(Manager):
         self.sid_vrf_deps = {}
 
     def _track_vrf_dependency(self, key, vrf_dep):
+        old_dep = self.sid_vrf_deps.get(key)
+        if old_dep is not None and old_dep != vrf_dep:
+            # key was re-configured with a different decap_vrf before the old one resolved
+            self._release_vrf_dependency(key)
         self.sid_vrf_deps[key] = vrf_dep
         self.vrf_dep_sids.setdefault(vrf_dep, set()).add(key)
         if vrf_dep not in self.deps:
@@ -83,6 +87,13 @@ class SRv6Mgr(Manager):
         ip_prefix = key.split("|")[1].lower()
         key = "{}|{}".format(locator_name, ip_prefix)
         prefix_len = int(ip_prefix.split("/")[1])
+
+        # drop any stale queued update for this key; this update supersedes it
+        self.set_queue = [
+            (queued_key, queued_data)
+            for queued_key, queued_data in self.set_queue
+            if "{}|{}".format(queued_key.split("|")[0], queued_key.split("|")[1].lower()) != key
+        ]
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
             log_warn("Found a SRv6 SID config entry with a locator that does not exist yet: {} | {}".format(key, data))

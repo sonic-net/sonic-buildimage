@@ -282,3 +282,39 @@ def test_uDT46_shared_vrf_dependency_cleanup():
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
     assert vrf_dep not in sid_mgr.deps
     assert "Vrf1" not in sid_mgr.directory.notify["APPL_DB__VRF_TABLE"]
+
+def test_uDT46_vrf_change_before_either_exists():
+    """A SID re-configured to a different decap_vrf before either VRF exists must not be
+    programmed against the stale, superseded VRF once it is created."""
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    key = "loc1|FCBB:BBBB:1:F2::/64"
+    norm_key = "loc1|fcbb:bbbb:1:f2::/64"
+
+    # Deferred waiting for Vrf1
+    sid_mgr.handler(key, 'SET', {'action': 'uDT46', 'decap_vrf': 'Vrf1'})
+    vrf1_dep = ("APPL_DB", "VRF_TABLE", "Vrf1")
+    assert sid_mgr.sid_vrf_deps[norm_key] == vrf1_dep
+    assert norm_key in sid_mgr.vrf_dep_sids[vrf1_dep]
+
+    # Same SID re-configured to Vrf2 before either VRF exists; must supersede the Vrf1 wait
+    sid_mgr.handler(key, 'SET', {'action': 'uDT46', 'decap_vrf': 'Vrf2'})
+    vrf2_dep = ("APPL_DB", "VRF_TABLE", "Vrf2")
+    assert sid_mgr.sid_vrf_deps[norm_key] == vrf2_dep
+    assert vrf1_dep not in sid_mgr.vrf_dep_sids
+    assert vrf1_dep not in sid_mgr.deps
+    assert len(sid_mgr.set_queue) == 1
+
+    # Creating Vrf1 must not program the superseded SID
+    push_list_called = []
+    sid_mgr.cfg_mgr.push_list = lambda cmds: push_list_called.append(cmds)
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, norm_key.replace("/", "\\"))
+    assert not push_list_called
+
+    # Creating Vrf2 must program the SID with the latest configured VRF
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf2", {})
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, norm_key.replace("/", "\\"))
+    _, sid_cmd = sid_mgr.directory.get(sid_mgr.db_name, sid_mgr.table_name, norm_key.replace("/", "\\"))
+    assert 'vrf Vrf2' in sid_cmd
