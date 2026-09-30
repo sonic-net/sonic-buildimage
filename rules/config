@@ -234,6 +234,11 @@ ENABLE_SNMP ?= y
 AUTORESTART_SNMP ?= y
 DELAY_SNMP ?= y
 
+# INCLUDE_REDFISH - enable the redfish feature entry in init_cfg.json
+# (aspeed BMC platforms only; a no-op everywhere else). Referenced by
+# files/build_templates/init_cfg.json.j2 as include_redfish.
+INCLUDE_REDFISH ?= n
+
 # INCLUDE_LLDP - build docker-lldp for LLDP support
 INCLUDE_LLDP ?= y
 ENABLE_LLDP ?= y
@@ -564,3 +569,10 @@ OPTIMIZE_SUPD_S6 ?= n
 # just disabled at runtime. Default off; enable in a profile (e.g.
 # config.EMBEDDED) when the optimization is desired.
 OPTIMIZE_CLI ?= n
+
+# OPTIMIZE_FIT_DE_DUPLICATION - generate the Marvell-Prestera FIT image at
+# install time (per sub-platform, single-config) instead of baking a static
+# multi-config FIT at build time. Saves ~94 MB per image by avoiding three
+# identical kernel+initrd copies (one per sub-platform load address).
+# Requires mkimage on the installer environment. Default off.
+OPTIMIZE_FIT_DE_DUPLICATION ?= n

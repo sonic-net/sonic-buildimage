@@ -777,10 +777,24 @@ def generate_dockerfile(
     for spec in ordered:
         if spec.feature not in start_sh_features:
             continue
-        ctx = build_context_name(spec.stem)
+        # common_bucket features are wired via --build-context, which maps
+        # to the feature's own source dir on disk -- "start.sh" (relative)
+        # is correct there since the source dir has it at its root.
+        # rsync_bucket features only exist as the `FROM ... AS
+        # {feature}-layer` stage declared above, i.e. a *built image*, so
+        # the source must be the path start.sh is actually installed at
+        # inside that image -- every docker-*/Dockerfile.j2 in this tree
+        # COPYs its own start.sh to /usr/bin/, so that's the absolute path
+        # to pull it back out from.
+        if spec.dockerfile_common is not None:
+            ctx = build_context_name(spec.stem)
+            src = "start.sh"
+        else:
+            ctx = f"{spec.feature}-layer"
+            src = "/usr/bin/start.sh"
         iso = ISOLATION_DIR_FMT.format(feature=spec.feature)
         lines.append(
-            f'COPY --from={ctx} ["start.sh", "{iso}/start.sh"]'
+            f'COPY --from={ctx} ["{src}", "{iso}/start.sh"]'
         )
         lines.append(f"RUN chmod 755 {iso}/start.sh")
     if start_sh_features:
