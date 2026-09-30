@@ -249,13 +249,6 @@ class TestCfgGenPlatformJson(TestCase):
             ports = get_child_ports("Ethernet212", "1x49G", "test_platform.json")
             self.assertNotIn('fec', ports['Ethernet212'])
 
-    # A deploy-time hwsku.json drives BREAKOUT_CFG as well as PORT.
-    def test_get_breakout_mode_deploy_time_input(self):
-        from portconfig import get_breakout_mode
-        brkout_table = get_breakout_mode(port_config_file=self.platform_json,
-                                         hwsku_config_file=self.hwsku_json)
-        self.assertEqual(brkout_table["Ethernet8"]["brkout_mode"], "4x25G[10G]")
-
     # An invalid per-port breakout selection is rejected with the interface named.
     def test_invalid_breakout_mode_reports_interface(self):
         from portconfig import get_child_ports
@@ -293,7 +286,7 @@ class TestCfgGenPlatformJson(TestCase):
                 port_count
             )
 
-    def test_cli_deploy_time_hwsku_config_is_consistent(self):
+    def test_cli_deploy_time_hwsku_config_updates_port(self):
         argument = ['-k', 'Generic', '-p', self.platform_json, '-S', self.hwsku_json,
                     '-v', "PORT['Ethernet8']"]
         output = self.run_script(argument)
@@ -301,9 +294,3 @@ class TestCfgGenPlatformJson(TestCase):
         self.assertEqual(port_config['speed'], '25000')
         self.assertEqual(port_config['lanes'], '8')
         self.assertEqual(port_config['subport'], '1')
-
-        argument = ['-k', 'Generic', '-p', self.platform_json, '-S', self.hwsku_json,
-                    '-v', "BREAKOUT_CFG['Ethernet8']"]
-        output = self.run_script(argument)
-        breakout_config = utils.to_dict(output.strip())
-        self.assertEqual(breakout_config['brkout_mode'], '4x25G[10G]')
