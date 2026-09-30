@@ -2,7 +2,7 @@
 # Start with a minimal pipeline that you can customize to build and deploy your code.
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
-# Build and push sonic-slave-[trixie|bookworm|bullseye|buster|jessie] images for amd64/armhf/arm64
+# Build and push sonic-slave-[trixie|bookworm|bullseye|jessie] images for amd64/armhf/arm64
 parameters:
 - name: arch
   type: string
@@ -16,7 +16,6 @@ parameters:
   - trixie
   - bookworm
   - bullseye
-  - buster
   - jessie
 - name: registry_url
   type: string

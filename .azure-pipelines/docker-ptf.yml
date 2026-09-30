@@ -118,7 +118,7 @@ stages:
         BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT 
                       SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 $(VERSION_CONTROL_OPTIONS)"
 
-        make NOBUSTER=1 NOBULLSEYE=1 NOBOOKWORM=1 $BUILD_OPTIONS configure PLATFORM=vs
+        make NOBULLSEYE=1 NOBOOKWORM=1 $BUILD_OPTIONS configure PLATFORM=vs
         make -f Makefile.work BLDENV=trixie $BUILD_OPTIONS target/docker-ptf.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
         cp $(Pipeline.Workspace)/vs-images/target/sonic*-vs.img.gz $(Build.ArtifactStagingDirectory)/target/
