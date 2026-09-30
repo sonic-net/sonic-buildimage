@@ -28,7 +28,7 @@ read_labels_test_data = {
         common_test.RETVAL: 0,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--show-labels", "--no-headers"]
+             "--show-labels", "--no-headers", "--", "none"]
         ],
         common_test.PROC_OUT: [
             "none Ready <role> 10d v1.28.0 foo=bar,hello=world"
@@ -45,7 +45,7 @@ read_labels_test_data = {
         common_test.RETVAL: -1,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--show-labels", "--no-headers"]
+             "--show-labels", "--no-headers", "--", "none"]
         ],
         common_test.POST: {
         },
@@ -56,7 +56,7 @@ read_labels_test_data = {
         common_test.RETVAL: -1,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--show-labels", "--no-headers"]
+             "--show-labels", "--no-headers", "--", "none"]
         ],
         common_test.PROC_OUT: [""],
         common_test.PROC_ERR: ["command failed"],
@@ -70,11 +70,11 @@ write_labels_test_data = {
     0: {
         common_test.DESCR: "write labels: skip/overwrite/new",
         common_test.RETVAL: 0,
-        common_test.ARGS: { "foo": "bar", "hello": "World!", "test": "ok" },
+        common_test.ARGS: { "foo": "bar", "hello": "World", "test": "ok" },
         common_test.PROC_CMD: [
-["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"],
-["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello-"],
-["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello=World!", "test=ok"]
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "--show-labels", "--no-headers", "--", "none"],
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "--", "none", "hello-"],
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "--", "none", "hello=World", "test=ok"]
  ],
         common_test.PROC_OUT: ["none Ready <role> 10d v1.28.0 foo=bar,hello=world", "", ""]
     },
@@ -83,7 +83,7 @@ write_labels_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: { "foo": "bar", "hello": "world" },
         common_test.PROC_CMD: [
-["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"]
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "--show-labels", "--no-headers", "--", "none"]
  ],
         common_test.PROC_OUT: ["none Ready <role> 10d v1.28.0 foo=bar,hello=world"]
     },
@@ -92,19 +92,18 @@ write_labels_test_data = {
         common_test.ARGS: { "any": "thing" },
         common_test.RETVAL: -1,
         common_test.PROC_CMD: [
-["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"]
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "--show-labels", "--no-headers", "--", "none"]
 ],
         common_test.PROC_ERR: ["read failed"]
     },
     3: {
-        common_test.DESCR: "write labels: injection attempt in name and value is not executed",
+        common_test.DESCR: "write labels: injection attempt in name and value is skipped as invalid",
         common_test.RETVAL: 0,
         common_test.ARGS: { "foo; id>/tmp/pwned #": "bar; rm -rf / #" },
         common_test.PROC_CMD: [
-["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"],
-["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "foo; id>/tmp/pwned #=bar; rm -rf / #"]
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "--show-labels", "--no-headers", "--", "none"]
  ],
-        common_test.PROC_OUT: ["", ""]
+        common_test.PROC_OUT: [""]
     }
 }
 
@@ -115,17 +114,17 @@ join_test_data = {
         common_test.ARGS: ["10.3.157.24", 6443, "true", False],
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "drain", "none",
-             "--ignore-daemonsets"],
+             "--request-timeout", "20s", "drain", "--ignore-daemonsets",
+             "--", "none"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "delete", "node", "none"],
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "systemctl stop kubelet",
-            "modprobe br_netfilter",
-            "mkdir -p {}".format(CNI_DIR),
-            "cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR),
-            "systemctl start kubelet",
+             "--request-timeout", "20s", "delete", "node", "--", "none"],
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["systemctl", "stop", "kubelet"],
+            ["modprobe", "br_netfilter"],
+            ["mkdir", "-p", CNI_DIR],
+            ["cp", FLANNEL_CONF_FILE, CNI_DIR],
+            ["systemctl", "start", "kubelet"],
             ["kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
              "--node-name", "none"]
         ],
@@ -139,17 +138,17 @@ join_test_data = {
         common_test.ARGS: ["10.3.157.24", 6443, "false", False],
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "drain", "none",
-             "--ignore-daemonsets"],
+             "--request-timeout", "20s", "drain", "--ignore-daemonsets",
+             "--", "none"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "delete", "node", "none"],
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "systemctl stop kubelet",
-            "modprobe br_netfilter",
-            "mkdir -p {}".format(CNI_DIR),
-            "cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR),
-            "systemctl start kubelet",
+             "--request-timeout", "20s", "delete", "node", "--", "none"],
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["systemctl", "stop", "kubelet"],
+            ["modprobe", "br_netfilter"],
+            ["mkdir", "-p", CNI_DIR],
+            ["cp", FLANNEL_CONF_FILE, CNI_DIR],
+            ["systemctl", "start", "kubelet"],
             ["kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
              "--node-name", "none"]
         ],
@@ -164,8 +163,8 @@ join_test_data = {
         common_test.NO_INIT: True,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--no-headers"],
-            "systemctl start kubelet"
+             "--no-headers", "--", "none"],
+            ["systemctl", "start", "kubelet"]
         ],
         common_test.PROC_OUT: ["none   Ready   <role>   10d   v1.28.0", ""]
     },
@@ -186,16 +185,16 @@ reset_test_data = {
         common_test.ARGS: [False],
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--no-headers"],
+             "--no-headers", "--", "none"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "drain", "none",
-             "--ignore-daemonsets"],
+             "--request-timeout", "20s", "drain", "--ignore-daemonsets",
+             "--", "none"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "delete", "node", "none"],
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "rm -f {}".format(KUBE_ADMIN_CONF),
-            "systemctl stop kubelet"
+             "--request-timeout", "20s", "delete", "node", "--", "none"],
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["rm", "-f", KUBE_ADMIN_CONF],
+            ["systemctl", "stop", "kubelet"]
         ],
         common_test.PROC_OUT: ["none   Ready   <role>   10d   v1.28.0", "", "", "", "", "", ""]
     },
@@ -205,10 +204,10 @@ reset_test_data = {
         common_test.ARGS: [False],
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "drain", "none",
-             "--ignore-daemonsets"],
+             "--request-timeout", "20s", "drain", "--ignore-daemonsets",
+             "--", "none"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-             "--request-timeout", "20s", "delete", "node", "none"],
+             "--request-timeout", "20s", "delete", "node", "--", "none"],
             "kubeadm reset -f",
             "rm -rf {}".format(CNI_DIR),
             "rm -f {}".format(KUBE_ADMIN_CONF),
@@ -220,10 +219,10 @@ reset_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: [True],
         common_test.PROC_CMD: [
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "rm -f {}".format(KUBE_ADMIN_CONF),
-            "systemctl stop kubelet"
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["rm", "-f", KUBE_ADMIN_CONF],
+            ["systemctl", "stop", "kubelet"]
         ]
     },
     2: {
@@ -231,7 +230,7 @@ reset_test_data = {
         common_test.RETVAL: -1,
         common_test.ARGS: [False],
         common_test.PROC_CMD: [
-            "systemctl stop kubelet"
+            ["systemctl", "stop", "kubelet"]
         ]
     }
 }
@@ -327,19 +326,21 @@ tag_latest_test_data = {
     }
 }
 
+DOCKER_IMAGES_CMD = ["docker", "images", "--format", "{{.Repository}} {{.Tag}} {{.ID}}"]
+
 clean_image_test_data = {
     0: {
         common_test.DESCR: "Clean image successfuly(kube to kube)",
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
         common_test.PROC_CMD: [
-            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
-            "docker rmi 744d3a09062f --force"
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "744d3a09062f", "--force"]
         ],
         common_test.PROC_OUT: [
-            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.96 744d3a09062f\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6e",
             ""
         ],
         common_test.PROC_CODE: [
@@ -352,13 +353,13 @@ clean_image_test_data = {
         common_test.RETVAL: 1,
         common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
         common_test.PROC_CMD: [
-            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
-            "docker rmi 744d3a09062f --force"
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "744d3a09062f", "--force"]
         ],
         common_test.PROC_OUT: [
-            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.96 744d3a09062f\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6e",
             ""
         ],
         common_test.PROC_CODE: [
@@ -367,44 +368,63 @@ clean_image_test_data = {
         ]
     },
     2: {
-        common_test.DESCR: "Clean image failed(no image found)",
+        common_test.DESCR: "Clean image failed(docker images command failed)",
         common_test.RETVAL: 1,
         common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
         common_test.PROC_CMD: [
-            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'"
+            DOCKER_IMAGES_CMD
         ],
         common_test.PROC_OUT: [
             ""
+        ],
+        common_test.PROC_ERR: [
+            "Cannot connect to the Docker daemon"
+        ],
+        common_test.PROC_CODE: [
+            1
         ]
     },
     3: {
-        common_test.DESCR: "Clean image failed(current image doesn't exist)",
+        common_test.DESCR: "Clean image (current image doesn't exist)",
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
         common_test.PROC_CMD: [
-            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
-            ""
+            DOCKER_IMAGES_CMD
         ],
         common_test.PROC_OUT: [
-            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f",
-            ""
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.96 744d3a09062f"
         ],
         common_test.PROC_CODE: [
             0
         ]
     },
     4: {
+        common_test.DESCR: "Clean image (no images match feat, unrelated images present)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-bgp 20201231.96 744d3a09062f"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    5: {
         common_test.DESCR: "Clean image successfuly(local to kube)",
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "20201231.84", ""],
         common_test.PROC_CMD: [
-            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
-            "docker rmi docker-sonic-telemetry:20201231.74"
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "docker-sonic-snmp:20201231.74"]
         ],
         common_test.PROC_OUT: [
-            "docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            "docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6e",
             ""
         ],
         common_test.PROC_CODE: [
@@ -412,24 +432,243 @@ clean_image_test_data = {
             0
         ]
     },
-    5: {
+    6: {
         common_test.DESCR: "Clean image successfuly(local to dry-kube to kube)",
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
         common_test.PROC_CMD: [
-            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
-            "docker rmi sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker tag 507f8d28bf6e sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker rmi docker-sonic-telemetry:20201231.74"
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "sonick8scue.azurecr.io/docker-sonic-snmp:20201231.74"],
+            ["docker", "tag", "507f8d28bf6e", "sonick8scue.azurecr.io/docker-sonic-snmp:20201231.74"],
+            ["docker", "rmi", "docker-sonic-snmp:20201231.74"]
         ],
         common_test.PROC_OUT: [
-            "docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6f\n\
-             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6g",
+            "docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6f\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6g",
+            "",
+            "",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0,
+            0,
+            0
+        ]
+    },
+    7: {
+        common_test.DESCR: "Clean image failed(dry-kube step1: remove remote failed, no further steps run)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "sonick8scue.azurecr.io/docker-sonic-snmp:20201231.74"]
+        ],
+        common_test.PROC_OUT: [
+            "docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6f\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6g",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            1
+        ]
+    },
+    8: {
+        common_test.DESCR: "Clean image failed(dry-kube step2: tag failed, no further steps run)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "sonick8scue.azurecr.io/docker-sonic-snmp:20201231.74"],
+            ["docker", "tag", "507f8d28bf6e", "sonick8scue.azurecr.io/docker-sonic-snmp:20201231.74"]
+        ],
+        common_test.PROC_OUT: [
+            "docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6f\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6g",
+            "",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0,
+            1
+        ]
+    },
+    9: {
+        common_test.DESCR: "Clean image failed(dry-kube step3: remove local failed)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "sonick8scue.azurecr.io/docker-sonic-snmp:20201231.74"],
+            ["docker", "tag", "507f8d28bf6e", "sonick8scue.azurecr.io/docker-sonic-snmp:20201231.74"],
+            ["docker", "rmi", "docker-sonic-snmp:20201231.74"]
+        ],
+        common_test.PROC_OUT: [
+            "docker-sonic-snmp 20201231.74 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6f\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6g",
+            "",
+            "",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0,
+            0,
+            1
+        ]
+    },
+    10: {
+        common_test.DESCR: "Clean image failed(malformed docker images output)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.96 744d3a09062f"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    11: {
+        common_test.DESCR: "Clean image successfuly(no stale images to remove)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6e\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 507f8d28bf6f"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    12: {
+        common_test.DESCR: "Clean image successfuly(multiple stale images removed as independent argv elements)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "id2", "id3", "--force"]
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 id0\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.74 id1\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.60 id2\n"
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.50 id3",
             ""
         ],
         common_test.PROC_CODE: [
             0,
             0
         ]
+    },
+    13: {
+        common_test.DESCR: "Clean image (feat contains quote/semicolon injection payload, not interpolated)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ['snmp"; rm -rf / #', "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    14: {
+        common_test.DESCR: "Clean image (feat contains pipe injection payload, not interpolated)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp | cat /etc/passwd", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    15: {
+        common_test.DESCR: "Clean image (feat contains command substitution injection payload, not interpolated)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp$(reboot)", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    16: {
+        common_test.DESCR: "Clean image (feat contains backtick injection payload, not interpolated)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp`reboot`", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    17: {
+        common_test.DESCR: "Clean image (feat contains spaces/newline injection payload, not interpolated)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp\nreboot", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e"
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    18: {
+        common_test.DESCR: "Clean image (repository containing shell metacharacters stays one argv element)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", ""],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD,
+            ["docker", "rmi", "docker-sonic-snmp$(reboot):20201231.74"]
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-snmp 20201231.84 507f8d28bf6f\n"
+            "docker-sonic-snmp$(reboot) 20201231.74 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0
+        ]
+    },
+    19: {
+        common_test.DESCR: "Clean image failed(docker images times out)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            DOCKER_IMAGES_CMD
+        ],
+        common_test.TRIGGER_THROW: True
     },
 }
 
@@ -439,7 +678,7 @@ is_ready_as_k8s_node_test_data = {
         common_test.RETVAL: True,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--no-headers"]
+             "--no-headers", "--", "none"]
         ],
         common_test.PROC_OUT: ["none   Ready   <role>   10d   v1.28.0"],
         common_test.PROC_KILLED: 0
@@ -449,7 +688,7 @@ is_ready_as_k8s_node_test_data = {
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--no-headers"]
+             "--no-headers", "--", "none"]
         ],
         common_test.PROC_OUT: ["none   NotReady   <role>   10d   v1.28.0"],
         common_test.PROC_KILLED: 0
@@ -459,7 +698,7 @@ is_ready_as_k8s_node_test_data = {
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--no-headers"]
+             "--no-headers", "--", "none"]
         ],
         common_test.PROC_ERR: ["connection refused"],
         common_test.PROC_KILLED: 0
@@ -469,7 +708,7 @@ is_ready_as_k8s_node_test_data = {
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--no-headers"]
+             "--no-headers", "--", "none"]
         ],
         common_test.PROC_OUT: [""],
         common_test.PROC_KILLED: 0
@@ -480,7 +719,7 @@ is_ready_as_k8s_node_test_data = {
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-             "none", "--no-headers"]
+             "--no-headers", "--", "none"]
         ],
         common_test.PROC_KILLED: 1
     }
@@ -659,18 +898,13 @@ clusters:\n\
         with patch("kube_commands.os.path.exists", return_value=True), \
                 patch("kube_commands.get_device_name",
                       return_value=hostile_hostname), \
-                patch("kube_commands._run_command_list") as run_list, \
-                patch("kube_commands._run_command"):
+                patch("kube_commands._run_command_list") as run_list:
             kube_commands._do_reset()
 
-        assert run_list.call_args_list == [
-            ((["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-               "--request-timeout", "20s", "drain", hostile_hostname,
-               "--ignore-daemonsets"],), {"timeout": 60}),
-            ((["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-               "--request-timeout", "20s", "delete", "node",
-               hostile_hostname],), {"timeout": 60})
-        ]
+        # An invalid (non DNS-1123) hostname must not reach kubectl/kubeadm
+        # at all; _do_reset() should refuse and no-op instead of passing
+        # the hostile value through argv.
+        assert run_list.call_args_list == []
 
     def test_run_command_list_disables_shell_and_enforces_timeout(self):
         proc = MagicMock()

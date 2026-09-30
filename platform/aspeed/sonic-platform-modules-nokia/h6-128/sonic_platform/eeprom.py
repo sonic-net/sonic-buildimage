@@ -35,6 +35,7 @@ class Eeprom(TlvInfoDecoder):
         self.service_tag = ''
         self.manuf_date = ''
         self.revision = ''
+        self.eeprom_tlv_dict = {}
 
     def _load_system_eeprom(self):
         """
@@ -42,6 +43,7 @@ class Eeprom(TlvInfoDecoder):
         to the codes defined as per ONIE TlvInfo EEPROM format and fills
         them in a dictionary.
         """
+        self.eeprom_tlv_dict.clear()
         try:
             # Read System EEPROM as per ONIE TlvInfo EEPROM format.
             self.eeprom_data = self.read_eeprom()
@@ -54,10 +56,8 @@ class Eeprom(TlvInfoDecoder):
             self.service_tag = 'NA'
             self.manuf_date = 'NA'
             self.revision = 'NA'
-            self.eeprom_tlv_dict = dict()
         else:
             eeprom = self.eeprom_data
-            self.eeprom_tlv_dict = dict()
 
             if not self.is_valid_tlvinfo_header(eeprom):
                 sonic_logger.log_warning("Invalid system eeprom TLV header")
