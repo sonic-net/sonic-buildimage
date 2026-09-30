@@ -161,6 +161,16 @@ struct i2c_board_info *i2c_get_psu_board_info(PSU_DATA *pdata, NEW_DEV_ATTR *cda
 }
 
 
+static void psu_free_pdata(void *pdata)
+{
+    PSU_PDATA *d = pdata;
+    if (d)
+    {
+        kfree(d->psu_attrs);
+        kfree(d);
+    }
+}
+
 static ssize_t do_device_operation(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
 {
     PDDF_ATTR *ptr = (PDDF_ATTR *)da;
@@ -187,7 +197,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         {
             i2c_put_adapter(adapter);
             pddf_dbg(PSU, KERN_ERR "Created a %s client: 0x%p\n", cdata->i2c_name , (void *)client_ptr);
-            add_device_table(cdata->i2c_name, (void*)client_ptr);
+            add_device_table_owned(cdata->i2c_name, (void*)client_ptr, psu_free_pdata, THIS_MODULE);
         }
         else
         {
