@@ -27,7 +27,7 @@
 {% set len = pf_prefix.split('/')[1] %}
 {% set rb = pf_len.split('..')[0] %}
 {% set re = pf_len.split('..')[1] %}
-{% if rb > len %}
+{% if rb|int > len|int %}
 {{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_prefix}} ge {{rb}} le {{re}}
 {% else %}
 {{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_prefix}} le {{re}}
