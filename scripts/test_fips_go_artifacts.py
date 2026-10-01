@@ -10,9 +10,6 @@ import tempfile
 import unittest
 from urllib.parse import parse_qs, urlsplit
 
-import jinja2
-
-
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_URL = "https://packages.trafficmanager.net/public"
 
@@ -138,11 +135,6 @@ class FipsGoArtifactsTest(unittest.TestCase):
                         self.assertEqual(values["FIPS_GOLANG_URL_PREFIX"], "")
 
     def test_slave_template(self):
-        environment = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(ROOT),
-            undefined=jinja2.StrictUndefined,
-        )
-        template = environment.get_template("sonic-slave-trixie/Dockerfile.j2")
         for arch in ("amd64", "arm64", "armhf"):
             for cross_build in ("n", "y"):
                 for include_fips in ("n", "y"):
@@ -160,7 +152,11 @@ class FipsGoArtifactsTest(unittest.TestCase):
                             INCLUDE_FIPS=include_fips,
                             MULTIARCH_QEMU_ENVIRON="n",
                         )
-                        rendered = template.render(**context)
+                        rendered = subprocess.run(
+                            ["j2", str(ROOT / "sonic-slave-trixie/Dockerfile.j2")],
+                            env=dict(os.environ, **context), cwd=ROOT,
+                            text=True, capture_output=True, check=True,
+                        ).stdout
                         downloads = dict(re.findall(
                             r"wget -O golang-(go|src)\.deb '([^']+)'", rendered,
                         ))
