@@ -1278,8 +1278,8 @@ libsrt1.5-gnutls==1.5.1-1+deb12u1
 libssh-4==0.10.6-0+deb12u2
 libssh-gcrypt-4==0.10.6-0+deb12u2
 libssh2-1==1.10.0-3+deb12u1
-libssl-dev==3.0.20-1~deb12u2
-libssl3==3.0.20-1~deb12u2
+libssl-dev==3.0.22-1~deb12u1
+libssl3==3.0.22-1~deb12u1
 libstdc++-12-dev==12.2.0-14+deb12u1
 libstemmer0d==2.2.0-2
 libstrictures-perl==2.000006-1
@@ -1633,7 +1633,7 @@ opensp==1.5.2-13+b2
 openssh-client==1:9.2p1-2+deb12u10
 openssh-server==1:9.2p1-2+deb12u10
 openssh-sftp-server==1:9.2p1-2+deb12u10
-openssl==3.0.20-1~deb12u2
+openssl==3.0.22-1~deb12u1
 ovmf==2022.11-6+deb12u2
 packagekit==1.2.6-5+deb12u1
 packagekit-tools==1.2.6-5+deb12u1
@@ -1783,7 +1783,7 @@ python3-lazr.uri==1.0.6-3
 python3-lazy-object-proxy==1.9.0-1+b1
 python3-lib2to3==3.11.2-3
 python3-logilab-common==1.9.8-1
-python3-lxml==4.9.2-1+b1
+python3-lxml==4.9.2-1+deb12u1
 python3-lz4==4.0.2+dfsg-1+b2
 python3-m2crypto==0.38.0-4+b1
 python3-magic==2:0.4.26-3
