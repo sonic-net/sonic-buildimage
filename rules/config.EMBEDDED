@@ -140,7 +140,11 @@ DELAY_ROUTER_ADVERTISER = n
 # Embedded Optimizations
 OPTIMIZE_CLI = y
 OPTIMIZE_SUPD_S6 = y
-OPTIMIZE_FIT_DE_DUPLICATION = y
+# Disabled pending investigation of a "Wrong Image Format for bootm command" /
+# "can't get kernel image!" boot failure seen with the install-time FIT
+# generation path (OPTIMIZE_FIT_DE_DUPLICATION=y). Falls back to the
+# known-working static multi-config sonic_fit.its built into the image.
+OPTIMIZE_FIT_DE_DUPLICATION = n
 
 # ---------------------------------------------------------------------------
 # Core docker — services to collapse into the single core container.

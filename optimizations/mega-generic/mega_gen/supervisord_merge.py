@@ -727,9 +727,29 @@ def merge_supervisord(
                     f"and supervisord's programs= list must be static"
                 )
             else:
-                names = [
-                    s.name.strip() for s in d["real_stanzas"] if s.kind == "program"
+                # A stanza with jinja_depth_at_header > 0 (e.g. bgp's bfdd,
+                # wrapped in `{% if frr_mgmt_framework_config == "true" %}`)
+                # is only in the rendered output in *some* variants. Putting
+                # it in this static programs= list anyway makes supervisord
+                # fail outright ("unknown program ... bfdd") whenever that
+                # variant renders without it -- so such names are excluded
+                # here the same way a for-loop's dynamic names already are.
+                conditional = [
+                    s.name.strip() for s in d["real_stanzas"]
+                    if s.kind == "program" and s.jinja_depth_at_header > 0
                 ]
+                names = [
+                    s.name.strip() for s in d["real_stanzas"]
+                    if s.kind == "program" and s.jinja_depth_at_header == 0
+                ]
+                if conditional:
+                    warnings.append(
+                        f"{feat}: omitted conditionally-rendered program(s) "
+                        f"{','.join(conditional)} from [group:{feat}]'s "
+                        f"programs= list -- they only exist in some rendered "
+                        f"variants and supervisord's programs= list must "
+                        f"name only unconditionally-present programs"
+                    )
                 if names:
                     group_blocks.append(
                         f"[group:{feat}]\nprograms={','.join(names)}"

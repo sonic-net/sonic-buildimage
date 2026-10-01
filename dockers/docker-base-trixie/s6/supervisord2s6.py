@@ -5,7 +5,12 @@ Two modes:
   * shim mode (default, installed as /usr/local/bin/supervisord): parse the
     already-rendered supervisord config chain + critical_processes, generate the
     s6-rc source tree under /etc/s6-overlay, then exec /init. This makes s6 the
-    only supervisor — there is intentionally no supervisord fallback.
+    supervisor for ordinary containers. s6-overlay's /init requires being the
+    container's actual PID 1 and refuses to run otherwise ("can only run as
+    pid 1") -- which is never the case for a container started with
+    --pid=host (e.g. EMBEDDED's "mega" container, for swss's host PID-namespace
+    visibility). For that case only, skip the s6 conversion entirely and exec
+    the real supervisord (REAL_SUPERVISORD) with the original argv instead.
   * offline mode (--emit-only): generate the tree from explicit --config /
     --critical into --out / --bundle-out, without exec'ing. Used to verify the
     converter against each container's captured config before building.
@@ -36,11 +41,17 @@ import shlex
 import shutil
 
 HALT_CMD = "/run/s6/basedir/bin/halt"
+REAL_SUPERVISORD = "/usr/local/bin/supervisord.real"
 DEFAULT_BASE_CONF = "/etc/supervisor/supervisord.conf"
 DEFAULT_CONFD_GLOB = "/etc/supervisor/conf.d/*.conf"
 DEFAULT_CRITICAL = "/etc/supervisor/critical_processes"
 S6_RC_D = "/etc/s6-overlay/s6-rc.d"
 S6_BUNDLE_D = "/etc/s6-overlay/user-bundles.d"
+# s6-overlay ships its own built-in sources under S6_RC_D (and, on releases
+# older than 3.2.3.2, even the "user"/"user2" bundle definitions themselves
+# live there). generate() must never delete the whole directory -- only the
+# subdirectories *this script* created on a previous run, tracked here.
+MANIFEST_PATH = "/etc/s6-overlay/.supervisord2s6-generated"
 
 IGNORE_SECTION_PREFIXES = ("supervisord", "unix_http_server", "supervisorctl",
                            "rpcinterface:", "include", "eventlistener:")
@@ -177,12 +188,34 @@ def _write(path, content, mode=0o644):
     os.chmod(path, mode)
 
 
-def generate(progs, prog_order, deps, types, critical, outdir, bundledir):
-    if os.path.isdir(outdir):
-        shutil.rmtree(outdir)
-    os.makedirs(outdir)
+def _read_manifest(path):
+    try:
+        with open(path) as f:
+            return {line.strip() for line in f if line.strip()}
+    except FileNotFoundError:
+        return set()
+
+
+def _write_manifest(path, names):
+    with open(path, "w") as f:
+        f.writelines(n + "\n" for n in names)
+
+
+def generate(progs, prog_order, deps, types, critical, outdir, bundledir,
+             manifest_path=MANIFEST_PATH):
+    # Only remove subdirectories *we* generated on a previous run (per the
+    # manifest) -- never touch anything else that happens to live in outdir
+    # (e.g. s6-overlay's own built-in service/bundle sources). This is safe
+    # even if outdir doesn't exist yet (first-ever run in a fresh container).
+    os.makedirs(outdir, exist_ok=True)
+    for stale in _read_manifest(manifest_path):
+        stale_dir = os.path.join(outdir, stale)
+        if os.path.isdir(stale_dir):
+            shutil.rmtree(stale_dir)
     for pname in prog_order:
         sd = os.path.join(outdir, pname)
+        if os.path.isdir(sd):  # regenerating a name we (or a stale manifest) left behind
+            shutil.rmtree(sd)
         os.makedirs(os.path.join(sd, "dependencies.d"), exist_ok=True)
         t = types[pname]
         _write(os.path.join(sd, "type"), t + "\n")
@@ -214,6 +247,7 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir):
         for tgt in deps.get(pname, []):
             if tgt in progs:  # prune dangling edges
                 open(os.path.join(sd, "dependencies.d", tgt), "w").close()
+    _write_manifest(manifest_path, prog_order)
 
     ud = os.path.join(bundledir, "user")
     if os.path.isdir(ud):
@@ -253,15 +287,27 @@ def main(argv):
         sections, order = parse_ini(files)
         critical = read_critical(crit or DEFAULT_CRITICAL)
         progs, prog_order, deps, types = build_model(sections, order, critical)
+        outdir = out or "./s6-rc.d"
+        # scope the manifest to this offline --out tree, not the real
+        # container path, so repeated verification runs don't need root
+        # and don't depend on (or corrupt) a real /etc/s6-overlay
+        emit_manifest = os.path.join(os.path.dirname(outdir.rstrip("/")) or ".",
+                                      ".supervisord2s6-generated")
         generate(progs, prog_order, deps, types, critical,
-                 out or "./s6-rc.d", bundle or "./user-bundles.d")
+                 outdir, bundle or "./user-bundles.d",
+                 manifest_path=emit_manifest)
         for p in prog_order:
             d = ",".join(t for t in deps.get(p, []) if t in progs) or "-"
             star = "*" if p in critical and types[p] == "longrun" else " "
             print("  %-18s %-8s deps=%-24s crit=%s" % (p, types[p], d, star.strip() or "no"))
         return 0
 
-    # shim mode: parse supervisord's -c if present, generate, exec /init
+    # shim mode: parse supervisord's -c if present, generate, exec /init.
+    # Exception: a --pid=host container is never its own namespace's PID 1,
+    # and s6-overlay's /init hard-refuses to run as anything else, so there
+    # s6 can't supervise at all -- fall back to the real supervisord untouched.
+    if os.getpid() != 1:
+        os.execv(REAL_SUPERVISORD, ["supervisord"] + argv)
     cfg = None
     for i, a in enumerate(argv):
         if a == "-c" and i + 1 < len(argv):

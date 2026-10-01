@@ -1,7 +1,7 @@
 [Unit]
 Description=Otel container
 Requires=database.service
-Before=swss.service
+Before=mega.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200
