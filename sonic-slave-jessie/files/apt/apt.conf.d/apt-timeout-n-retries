@@ -1,7 +1,0 @@
-# Instruct apt-get to timeout after 20 seconds and retry 3 times before giving up. 
-# This can help mitigate issues with slow or unreliable network connections when using apt-get in Docker builds.
-
-Acquire::http::Timeout "20";
-Acquire::https::Timeout "20";
-Acquire::ftp::Timeout "20";
-Acquire::Retries "3";
