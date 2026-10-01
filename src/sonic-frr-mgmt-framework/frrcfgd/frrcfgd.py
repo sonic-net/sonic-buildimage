@@ -17,6 +17,7 @@ import logging
 import netaddr
 import io
 import struct
+from frrcfgd.traffic_shift import TrafficShift
 
 class CachedDataWithOp:
     OP_NONE = 0
@@ -79,6 +80,7 @@ class BgpdClientMgr(threading.Thread):
     PROXY_SERVER_ADDR = '/etc/frr/bgpd_client_sock'
     ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd']
     TABLE_DAEMON = {
+            'BGP_DEVICE_GLOBAL': ['bgpd'],
             'DEVICE_METADATA': ['bgpd'],
             'BGP_GLOBALS': ['bgpd'],
             'BGP_GLOBALS_AF': ['bgpd'],
@@ -2349,6 +2351,8 @@ class BGPConfigDaemon:
             self.config_db.connect()
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, '[bgp cfgd] Failed connecting to config DB with exception:' + str(e))
+        self.traffic_shift = TrafficShift(self.config_db, self.__run_tsa_commands,
+                                         self.__validate_bgp_table_input)
         db_entry = self.config_db.get_entry('DEVICE_METADATA', 'localhost')
         if 'bgp_asn' in db_entry and self.__bgp_asn_is_valid(db_entry['bgp_asn']):
             self.metadata_asn = db_entry['bgp_asn']
@@ -2496,6 +2500,8 @@ class BGPConfigDaemon:
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
             ('DEVICE_METADATA', self.metadata_handler),
+            ('BGP_DEVICE_GLOBAL', self.device_global_handler),
+            ('LOOPBACK_INTERFACE', self.loopback_handler),
             ('BGP_GLOBALS', self.bgp_global_handler),
             ('BGP_GLOBALS_AF', self.bgp_af_handler),
             ('PREFIX_SET', self.bgp_table_handler_common),
@@ -2544,12 +2550,45 @@ class BGPConfigDaemon:
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
+        tsa_data = self.config_db.get_entry('BGP_DEVICE_GLOBAL', 'STATE')
+        if self.bgp_asn or self.metadata_asn is not None:
+            self.__recover_tsa()
+        if tsa_data.get('tsa_enabled') == 'true':
+            self.traffic_shift.enabled = True
         if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
                     self.__replay_table_entry(table, key, data)
+        self.device_global_handler('BGP_DEVICE_GLOBAL', 'STATE', tsa_data)
+
+    def __recover_tsa(self):
+        self.traffic_shift.recover(subprocess.check_output(
+            ['vtysh', '-c', 'show running-config'], text=True))
+
+    def __run_tsa_commands(self, commands):
+        command = ['vtysh']
+        for item in commands:
+            command += ['-c', item]
+        return self.__run_command('BGP_DEVICE_GLOBAL', command)
+
+    def device_global_handler(self, table, key, data):
+        if key != 'STATE':
+            return
+        state = (data or {}).get('tsa_enabled', 'false')
+        if state not in ('true', 'false'):
+            syslog.syslog(syslog.LOG_ERR, 'Invalid TSA state: {}'.format(state))
+            return
+        enabled = state == 'true'
+        if enabled or self.traffic_shift.enabled:
+            if not self.traffic_shift.apply(enabled):
+                syslog.syslog(syslog.LOG_ERR, 'Failed to apply TSA state: {}'.format(state))
+                self.__recover_tsa()
+
+    def loopback_handler(self, table, key, data):
+        if self.traffic_shift.enabled:
+            self.traffic_shift.apply(True)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -3070,7 +3109,17 @@ class BGPConfigDaemon:
                 cmd_prefix = ['configure terminal',
                               'router bgp {} vrf {}'.format(local_asn, vrf),
                               'address-family {} {}'.format(af, ip_type)]
-                if not key_map.run_command(self, table, data, cmd_prefix, nbr):
+                # Keep the isolation policy attached while updating AF attributes.
+                tsa_policy = None
+                if self.traffic_shift.enabled and af in ('ipv4', 'ipv6'):
+                    if not self.traffic_shift.apply(True):
+                        continue
+                    tsa_policy = data.pop('route_map_out', None)
+                success = key_map.run_command(self, table, data, cmd_prefix, nbr)
+                if tsa_policy is not None:
+                    tsa_policy.status = CachedDataWithOp.STAT_SUCC
+                    data['route_map_out'] = tsa_policy
+                if not success:
                     syslog.syslog(syslog.LOG_ERR, 'failed running BGP neighbor AF config command')
                     continue
             elif table == 'COMMUNITY_SET' or table == 'EXTENDED_COMMUNITY_SET':
@@ -4138,6 +4187,8 @@ class BGPConfigDaemon:
 
     def bgp_global_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'keepalive', 'holdtime'}])
+        if self.traffic_shift.enabled:
+            self.traffic_shift.apply(True)
 
     def bgp_af_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'ebgp_route_distance', 'ibgp_route_distance', 'local_route_distance'},

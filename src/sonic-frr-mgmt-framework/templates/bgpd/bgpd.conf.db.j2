@@ -20,6 +20,7 @@ bgp as-path access-list {{key}} permit {{path}}
 {% endif %}
 {# ------------------------------------------------------------------------------------ #}
 {% include "bgpd.conf.db.comm_list.j2" %}
+{% include "bgpd.conf.db.tsa.j2" %}
 {# ------------------------------------------------------------------------------------ #}
 {% if BGP_GLOBALS is defined and BGP_GLOBALS|length > 0 %}
 {% for vrf, bgp_sess in BGP_GLOBALS.items() %}

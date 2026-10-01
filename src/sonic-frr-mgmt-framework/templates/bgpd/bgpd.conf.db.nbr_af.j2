@@ -118,7 +118,12 @@
 {% endif %}
 {# ------- route-map in end --------------------------- #}
 {# ------- route-map out --------------------------- #}
-{% if 'route_map_out' in n_af_val %}
+{% set tsa_enabled = BGP_DEVICE_GLOBAL is defined and BGP_DEVICE_GLOBAL.get('STATE', {}).get('tsa_enabled') == 'true' %}
+{% set tsa_group = (BGP_NEIGHBOR | default({})).get((vrf, nbr_name), {}).get('peer_group_name') %}
+{% set tsa_original = (n_af_val.get('route_map_out', []) | last) | default('') %}
+{% if tsa_enabled and af_str in ['ipv4', 'ipv6'] and not (not tsa_original and (vrf, tsa_group, af) in BGP_PEER_GROUP_AF | default({})) %}
+  neighbor {{nbr_name}} route-map FRRCFGD_TSA_{{vrf}}_{{af_str}}{{'_' ~ tsa_original if tsa_original else ''}} out
+{% elif 'route_map_out' in n_af_val %}
 {% for map in n_af_val['route_map_out'] %}
   neighbor {{nbr_name}} route-map {{map}} out
 {% endfor %}
