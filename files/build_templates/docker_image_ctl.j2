@@ -770,6 +770,23 @@ start() {
 
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
+    # Derive PREDEFINED_DEV_PCI_BUS from asic.conf (the single source of truth,
+    # same derivation as platform/mellanox/files/sx-kernel.sh) so the host sx
+    # driver and the syncd SDK use an identical module->PCI-bus map.
+    if [ "${NUM_ASIC:-1}" -gt 1 ]; then
+        PREDEFINED_DEV_PCI_BUS=""
+        for i in $(seq 0 $((NUM_ASIC-1))); do
+            dev_id_var="DEV_ID_ASIC_$i"
+            dev_id="${!dev_id_var}"
+            if [ -n "$dev_id" ]; then
+                if [ -n "$PREDEFINED_DEV_PCI_BUS" ]; then
+                    PREDEFINED_DEV_PCI_BUS="${PREDEFINED_DEV_PCI_BUS},$((i+1))@${dev_id}"
+                else
+                    PREDEFINED_DEV_PCI_BUS="$((i+1))@${dev_id}"
+                fi
+            fi
+        done
+    fi
     if [[ $DEV != "" ]]; then
         mkdir -p /dev/shm/asic$DEV
         mkdir -p /var/log/sdk_dbg/$DEV
@@ -824,6 +841,7 @@ start() {
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /sys/module/sx_netdev:/sys/module/sx_netdev:rw \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
+        $(if [ -n "$PREDEFINED_DEV_PCI_BUS" ]; then echo "-e PREDEFINED_DEV_PCI_BUS=$PREDEFINED_DEV_PCI_BUS"; fi) \
         $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
