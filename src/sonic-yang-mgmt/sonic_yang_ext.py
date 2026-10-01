@@ -11,8 +11,6 @@ import traceback
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from sonic_yang_path import SonicYangPathMixin
 
-from _libyang import lib
-
 if TYPE_CHECKING:
     from sonic_yang import SonicYang
 
@@ -112,9 +110,6 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         return True
 
-    def _isConfigFalse(self, node):
-        return bool(node.cdata.flags & lib.LYS_CONFIG_R)
-
     def _createDBTableToModuleMap(self):
         """
         Populate self.confDbYangMap[<table_name>] = {
@@ -140,18 +135,22 @@ class SonicYangExtMixin(SonicYangPathMixin):
             if top.name() != m.name():
                 raise SonicYangException("topLevelContainer mismatch {}:{}".format(
                     top.name(), m.name()))
-            if self._isConfigFalse(top):
+            if top.config_false():
                 self.configFalseModules.add(m.name())
                 continue
+            hasConfigTable = False
             for table in top.children(types=(ly.SNode.CONTAINER,)):
-                if self._isConfigFalse(table):
-                    self.configFalseModules.add(m.name())
+                if table.config_false():
                     continue
+                hasConfigTable = True
                 self.confDbYangMap[table.name()] = {
                     'module': m.name(),
                     'topLevelContainer': top.name(),
                     'container': table,
                 }
+
+            if not hasConfigTable:
+                self.configFalseModules.add(m.name())
 
     """
     Get module, topLevelContainer(TLC) and container SNode for a config DB table
