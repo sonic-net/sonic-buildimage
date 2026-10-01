@@ -768,6 +768,37 @@ class ModuleXcvrMixin:
     # today, but a port that answers only today's call sites fails in pmon the
     # first time upstream adds one, so the set is kept complete.
 
+    def get_serial(self):
+        api = self.get_xcvr_api()
+        return api.get_serial() if api is not None else None
+
+    def get_voltage(self):
+        api = self.get_xcvr_api()
+        if api is not None:
+            voltage = api.get_voltage()
+            if voltage == "N/A":
+                return 0.0
+            return voltage
+        return None
+
+    def get_tx_bias(self):
+        api = self.get_xcvr_api()
+        if api is not None:
+            tx_bias = api.get_tx_bias()
+            if isinstance(tx_bias, list) and "N/A" in tx_bias:
+                return [0.0 for _ in tx_bias]
+            return tx_bias
+        return None
+
+    def get_rx_power(self):
+        api = self.get_xcvr_api()
+        if api is not None:
+            rx_power = api.get_rx_power()
+            if isinstance(rx_power, list) and "N/A" in rx_power:
+                return [0.0 for _ in rx_power]
+            return rx_power
+        return None
+
     def get_tx_power(self):
         api = self.get_xcvr_api()
         return api.get_tx_power() if api is not None else None
