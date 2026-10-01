@@ -182,9 +182,37 @@ class TestSurface:
         Absent rather than inherited, so that wanting one is a deliberate edit
         rather than a silent read of the wrong hardware.
         """
-        for name in ('get_rx_power', 'get_tx_bias', 'get_voltage',
-                     'get_transceiver_bulk_status'):
-            assert not hasattr(CpoPort, name), name
+        assert not hasattr(CpoPort, 'get_transceiver_bulk_status')
+
+    @pytest.mark.parametrize('name', ('get_serial', 'get_voltage', 'get_tx_bias', 'get_rx_power'))
+    def test_a_per_field_getter_resolves_past_device_base(self, name):
+        """DeviceBase stubs satisfy hasattr but raise, so pin the real owner."""
+        assert getattr(CpoPort, name) is getattr(ModuleXcvrMixin, name)
+
+    @pytest.mark.parametrize('name', ('get_serial', 'get_voltage', 'get_tx_bias', 'get_rx_power'))
+    def test_a_per_field_getter_asks_the_api(self, name, cpo):
+        api = mock.MagicMock()
+        with mock.patch.object(cpo, 'get_xcvr_api', return_value=api):
+            assert getattr(cpo, name)() is getattr(api, name).return_value
+
+    @pytest.mark.parametrize('name,raw,expected', [
+        ('get_voltage', 'N/A', 0.0),
+        ('get_tx_bias', ['N/A'] * 8, [0.0] * 8),
+        ('get_rx_power', ['N/A'] * 8, [0.0] * 8),
+    ])
+    def test_a_per_field_getter_reports_unsupported_as_zero(self, name, raw, expected, cpo):
+        api = mock.MagicMock()
+        getattr(api, name).return_value = raw
+        with mock.patch.object(cpo, 'get_xcvr_api', return_value=api):
+            assert getattr(cpo, name)() == expected
+
+    @pytest.mark.parametrize('name', ('get_serial', 'get_voltage', 'get_tx_bias', 'get_rx_power'))
+    def test_a_per_field_getter_answers_nothing_without_an_api(self, name, cpo):
+        with mock.patch.object(cpo, 'get_xcvr_api', return_value=None):
+            assert getattr(cpo, name)() is None
+
+    def test_a_cpo_port_is_not_replaceable(self, cpo):
+        assert cpo.is_replaceable() is False
 
     @pytest.mark.parametrize('name,args', UNSUPPORTED)
     def test_what_it_cannot_answer_refuses_rather_than_lying(self, name, args, cpo):

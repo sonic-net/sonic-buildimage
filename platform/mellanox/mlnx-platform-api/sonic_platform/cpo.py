@@ -110,6 +110,15 @@ class CpoPort(ModuleXcvrMixin, ModuleSysfsMixin, CpoBase):
     def get_asic_id(self):
         return self.asic_id
 
+    def is_replaceable(self):
+        """The optical engine is co-packaged with the ASIC, so a CPO port
+        cannot be replaced in the field the way a pluggable module can.
+
+        Returns:
+            bool: False
+        """
+        return False
+
     def __str__(self):
         return f'CPO port {self.index} (OE {self.oe.sdk_index} bank {self.oe.bank})'
 
