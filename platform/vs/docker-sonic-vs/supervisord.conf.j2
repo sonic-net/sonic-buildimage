@@ -118,3 +118,20 @@ stderr_syslog=true
 
 {% set lldp_priority_base = 34 %}
 {% include "supervisord.conf.lldp.j2" %}
+
+# macsecmgrd translates CONFIG_DB MACSEC_* into APPL_DB for macsecorch, and
+# forks /sbin/wpa_supplicant itself per port (cfgmgr/macsecmgr.cpp), so
+# wpa_supplicant needs no program of its own.
+[program:macsecmgrd]
+command=/usr/bin/macsecmgrd
+priority=36
+autostart=false
+autorestart=false
+startsecs=0
+stopwaitsecs=60
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start.sh:exited
