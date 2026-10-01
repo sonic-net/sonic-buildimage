@@ -801,10 +801,11 @@ start() {
 {%- if docker_container_name == "syncd" %}
     # --privileged used to fully open the device cgroup; without it, only explicitly
     # granted devices are accessible, so grant the host device nodes opennsl-modules.init
-    # creates via --device=. Which nodes exist depends on is_ltsw_chip (a runtime setting
-    # from platform_env.conf, not known at image-build time): legacy-th picks its set at
-    # runtime, dnx creates linux_ngbde alongside the classic set unconditionally. Check
-    # each path individually so only the devices actually present on this host get mounted.
+    # creates via --device=. This covers all broadcom syncd images (standard XGS, legacy-th,
+    # and dnx). Which nodes exist depends on is_ltsw_chip (a runtime setting from
+    # platform_env.conf, not known at image-build time): most chip families pick their set at
+    # runtime, dnx creates linux_ngbde alongside the classic set unconditionally. Check each
+    # path individually so only the devices actually present on this host get mounted.
     BRCM_DEV_MNT=""
     for _brcm_dev in /dev/linux_ngbde /dev/linux_ngknet /dev/linux_ngknetcb \
                      /dev/linux-kernel-bde /dev/linux-user-bde /dev/linux-bcm-knet /dev/linux-bcm-bde /dev/linux-knet-cb; do
