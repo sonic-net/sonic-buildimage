@@ -1,0 +1,84 @@
+{
+  "container": "dhcp_relay",
+  "ctl_script": "/usr/bin/dhcp_relay.sh",
+  "redis_user": "dhcp_relay",
+  "secret_file": "/etc/sonic/firebreak/dhcp_relay.redis.secret",
+  "acl_strict_patterns": true,
+  "instances": {
+    "redis": {
+      "unix_socket": "/var/run/redis/redis.sock",
+      "tcp_port": 6379,
+      "select": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "commands": [
+        "ping",
+        "auth",
+        "hello",
+        "select",
+        "info",
+        "echo",
+        "get",
+        "mget",
+        "hget",
+        "hmget",
+        "hgetall",
+        "hexists",
+        "hlen",
+        "hkeys",
+        "hvals",
+        "scan",
+        "hscan",
+        "keys",
+        "type",
+        "strlen",
+        "exists",
+        "ttl",
+        "subscribe",
+        "psubscribe",
+        "unsubscribe",
+        "punsubscribe",
+        "pubsub",
+        "hset",
+        "hmset",
+        "hdel",
+        "del",
+        "publish",
+        "config|get",
+        "client|info",
+        "client|setname",
+        "client|getname",
+        "acl|whoami",
+        "multi",
+        "exec",
+        "discard"
+      ],
+      "read_key_patterns": [
+        "*"
+      ],
+      "write_key_patterns": [
+        "DHCP*"
+      ],
+      "channel_patterns": [
+        "__keyspace@4__:*"
+      ]
+    }
+  },
+  "omit_sockets": [
+    "redis_bmp.sock",
+    "redis2.sock",
+    "redis3.sock",
+    "redis_chassis.sock"
+  ],
+  "egress_allow_ipv4": [
+    "127.0.0.1"
+  ],
+  "egress_deny_default": true,
+  "required_processes": [
+    "dhcprelayd",
+    "supervisor-proc-exit-listener"
+  ]
+}

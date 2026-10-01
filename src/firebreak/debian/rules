@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+# dpkg-buildpackage entry. The .deb itself is built by the repo Makefile
+# with dpkg-deb (no debhelper).
+
+ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
+DEB := sonic-firebreak_1.4_all.deb
+
+build:
+	$(MAKE) -C $(ROOT) deb
+
+binary-indep: build
+	cp -f $(ROOT)/$(DEB) $(ROOT)/../$(DEB)
+	mkdir -p $(ROOT)/debian
+	printf '%s net optional\n' $(DEB) > $(ROOT)/debian/files
+
+binary-arch:
+	@true
+
+binary: binary-indep binary-arch
+
+clean:
+	$(MAKE) -C $(ROOT) clean
+	rm -f $(ROOT)/debian/files
+
+.PHONY: build binary binary-indep binary-arch clean

@@ -1,0 +1,3 @@
+/etc/sonic/firebreak/dhcp_relay.json
+/etc/sonic/firebreak/otel.json
+/etc/sonic/firebreak/snmp.json
