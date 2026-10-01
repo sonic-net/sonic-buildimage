@@ -30,6 +30,9 @@ EOF
 
 cat > "${STUB_BIN}/sonic-db-cli" <<'EOF'
 #!/bin/bash
+if [[ "${3:-}" == "DEVICE_METADATA|localhost" && "${4:-}" == "type" ]]; then
+    printf '%s\n' "${GNMI_TEST_DEVICE_TYPE:-}"
+fi
 exit 0
 EOF
 
@@ -69,7 +72,7 @@ run_launcher() {
                 server_key: "/server.key",
                 ca_crt: "/ca.crt"
             },
-            gnmi: {port: "50052", client_auth: "false"}
+            gnmi: {port: "50052", client_auth: "true"}
         }')"
     else
         GNMI_TEST_CONFIG="$(jq -cn --arg user_auth "$1" '{
@@ -80,13 +83,46 @@ run_launcher() {
             },
             gnmi: {
                 port: "50052",
+                client_auth: "true",
+                user_auth: $user_auth
+            }
+        }')"
+    fi
+    export GNMI_TEST_CONFIG
+    GNMI_TEST_DEVICE_TYPE="" PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" | tail -n 1
+}
+
+run_no_tls_launcher() {
+    if (( $# == 0 )); then
+        GNMI_TEST_CONFIG="$(jq -cn '{
+            certs: null,
+            x509: null,
+            gnmi: {port: "50052", client_auth: "false"}
+        }')"
+    else
+        GNMI_TEST_CONFIG="$(jq -cn --arg user_auth "$1" '{
+            certs: null,
+            x509: null,
+            gnmi: {
+                port: "50052",
                 client_auth: "false",
                 user_auth: $user_auth
             }
         }')"
     fi
     export GNMI_TEST_CONFIG
-    PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" | tail -n 1
+    GNMI_TEST_DEVICE_TYPE="" PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" | tail -n 1
+}
+
+run_dpu_launcher() {
+    GNMI_TEST_CONFIG="$(jq -cn '{
+        certs: null,
+        x509: null,
+        gnmi: {port: "50052", client_auth: "false"}
+    }')"
+    export GNMI_TEST_CONFIG
+    GNMI_TEST_DEVICE_TYPE="SmartSwitchDPU" PATH="${STUB_BIN}:${PATH}" \
+        "${TEST_SCRIPT}" | tail -n 1
 }
 
 output="$(run_launcher)"
@@ -116,5 +152,29 @@ assert_contains_once "explicit password is forwarded" \
     "${output}" "--client_auth password"
 assert_not_contains "explicit password does not configure certificate lookup" \
     "${output}" "--config_table_name GNMI_CLIENT_CERT"
+
+output="$(run_no_tls_launcher)"
+assert_contains_once "missing noTLS user_auth uses application authentication" \
+    "${output}" "--client_auth password,jwt"
+assert_not_contains "missing noTLS user_auth does not request certificate lookup" \
+    "${output}" "--config_table_name GNMI_CLIENT_CERT"
+
+output="$(run_no_tls_launcher '')"
+assert_contains_once "empty noTLS user_auth uses application authentication" \
+    "${output}" "--client_auth password,jwt"
+
+output="$(run_no_tls_launcher 'cert')"
+assert_contains_once "explicit noTLS certificate mode is forwarded for fail-closed startup" \
+    "${output}" "--client_auth cert"
+
+output="$(run_dpu_launcher)"
+assert_contains_once "DPU without certificates uses ephemeral TLS" \
+    "${output}" "--insecure"
+assert_contains_once "DPU ephemeral TLS accepts a proxy without a client certificate" \
+    "${output}" "--allow_no_client_auth"
+assert_contains_once "DPU TLS retains its certificate default" \
+    "${output}" "--client_auth cert"
+assert_not_contains "DPU compatibility mode does not require proxy password or JWT" \
+    "${output}" "--client_auth password,jwt"
 
 echo "gnmi-native user_auth launcher tests passed"
