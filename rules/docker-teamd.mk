@@ -37,7 +37,6 @@ ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_TEAMD)_RUN_OPT += --cap-add=SYS_PTRACE
 endif
 $(DOCKER_TEAMD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_TEAMD)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 
 $(DOCKER_TEAMD)_BASE_IMAGE_FILES += teamdctl:/usr/bin/teamdctl
 

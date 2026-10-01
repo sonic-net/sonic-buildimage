@@ -39,7 +39,6 @@ ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_FPM_FRR)_RUN_OPT += --cap-add=SYS_PTRACE
 endif
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += vtysh:/usr/bin/vtysh
