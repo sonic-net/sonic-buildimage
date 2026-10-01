@@ -10,6 +10,7 @@ This module provides functions to set up mocks for dependencies
 that are not available in test environments.
 """
 
+import os
 import types
 
 from unittest.mock import MagicMock, Mock
@@ -87,6 +88,31 @@ def mock_syslog_modules():
     }
 
 
+def mock_sonic_platform_package():
+    """Set up a minimal sonic_platform package mock.
+
+    This prevents the real sonic_platform/__init__.py from running,
+    which does 'from sonic_platform import *' and triggers circular imports.
+    Instead, we create a minimal package that just sets up __path__ so
+    Python can find submodules.
+    """
+    # Find the actual sonic_platform directory path
+    fixtures_dir = os.path.dirname(os.path.abspath(__file__))
+    sonic_platform_path = os.path.join(fixtures_dir, "../../common/sonic_platform")
+    sonic_platform_path = os.path.abspath(sonic_platform_path)
+
+    # Create a minimal package module that doesn't do the wildcard import
+    sonic_platform = types.ModuleType("sonic_platform")
+    # Set __path__ to the real sonic_platform directory so Python can find submodules
+    sonic_platform.__path__ = [sonic_platform_path]
+    sonic_platform.__file__ = os.path.join(sonic_platform_path, "__init__.py")
+    sonic_platform.__all__ = []  # Empty __all__ to prevent wildcard imports
+
+    return {
+        "sonic_platform": sonic_platform,
+    }
+
+
 def fake_some_base_modules():
     """Returns fake bases for some modules that their derived classes are required to be real.
 
@@ -148,6 +174,7 @@ def dependencies_dict() -> dict[str, types.ModuleType]:
     results = {}
     for module in MOCK_MODULES:
         results[module] = Mock()
+    results.update(mock_sonic_platform_package())
     results.update(mock_syslog_modules())
     results.update(fake_some_base_modules())
     results.update(fake_swsscommon_modules())
