@@ -45,17 +45,47 @@ def _fmt_uptime(seconds):
     return "%d:%02d:%02d" % (s // 3600, (s % 3600) // 60, s % 60)
 
 
-def cmd_status(_args):
+def _display_name(dirname, path):
+    # supervisord prints "group:program" for processes that belong to a
+    # [group:X] section; the converter records that mapping in a
+    # "supervisor-name" file alongside the service definition since the s6
+    # service directory itself must still be named after the bare program
+    # (dependencies.d/ edges reference it). Fall back to the bare dirname
+    # for ungrouped programs or if the marker is missing.
+    try:
+        with open(os.path.join(path, "supervisor-name")) as f:
+            name = f.read().strip()
+            if name:
+                return name
+    except OSError:
+        pass
+    return dirname
+
+
+def cmd_status(args):
     try:
         entries = sorted(os.listdir(SCANDIR))
     except FileNotFoundError:
         return 0
-    for name in entries:
-        path = os.path.join(SCANDIR, name)
+    wanted = list(args)
+    matched = set()
+    for dirname in entries:
+        path = os.path.join(SCANDIR, dirname)
         if not os.path.isdir(path):
             continue
-        if name in SKIP_EXACT or name.startswith(SKIP_PREFIXES):
+        if dirname in SKIP_EXACT or dirname.startswith(SKIP_PREFIXES):
             continue
+        name = _display_name(dirname, path)
+        # supervisorctl status <name> [<name> ...] filters to just those
+        # processes; a bare "supervisorctl status" lists everything. Accept
+        # either the bare program name or the group-qualified name so both
+        # conventions work (readiness_probe.sh uses the former, a
+        # "group:program" filter would use the latter).
+        if wanted and name not in wanted and dirname not in wanted:
+            continue
+        matched.add(name)
+        if dirname in wanted:
+            matched.add(dirname)
         st = _svstat(path)
         if st is None:
             continue
@@ -68,7 +98,27 @@ def cmd_status(_args):
         else:
             # down/exited -> report a non-RUNNING state so checks can react
             print("%-32s EXITED    %s" % (name, st))
-    return 0
+    rc = 0
+    for name in wanted:
+        if name not in matched:
+            print("%s: ERROR (no such process)" % name)
+            rc = 1
+    return rc
+
+
+def _resolve(name):
+    """Resolve a bare or "group:program" name to its s6 service dir name."""
+    path = os.path.join(SCANDIR, name)
+    if os.path.isdir(path):
+        return name
+    try:
+        for dirname in os.listdir(SCANDIR):
+            dpath = os.path.join(SCANDIR, dirname)
+            if os.path.isdir(dpath) and _display_name(dirname, dpath) == name:
+                return dirname
+    except FileNotFoundError:
+        pass
+    return name
 
 
 def cmd_ctl(action, args):
@@ -77,7 +127,7 @@ def cmd_ctl(action, args):
     flag = {"start": "-u", "stop": "-d", "restart": "-r"}[action]
     rc = 0
     for name in args:
-        path = os.path.join(SCANDIR, name)
+        path = os.path.join(SCANDIR, _resolve(name))
         if not os.path.isdir(path):
             print("%s: ERROR (no such process)" % name)
             rc = 1

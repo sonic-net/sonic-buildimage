@@ -29,6 +29,7 @@ actually do:
     itself tolerates.
 """
 import os
+import re
 import sys
 import glob
 import shlex
@@ -113,7 +114,25 @@ def resolve_config_files(explicit):
     return files
 
 
-def read_critical(path):
+def parse_groups(sections, order):
+    """Map program name -> group name for every [group:X] section (supervisord's
+    programs=a,b,c grouping, e.g. dhcp-relay/dhcp-server-ipv4). Used both to
+    expand group: entries in critical_processes and to reproduce supervisord's
+    "group:program" status naming (see supervisorctl's _display_name)."""
+    group_of = {}
+    for name in order:
+        if not name.startswith("group:"):
+            continue
+        gname = name.split(":", 1)[1].strip()
+        for p in sections[name].get("programs", "").split(","):
+            p = p.strip()
+            if p:
+                group_of[p] = gname
+    return group_of
+
+
+def read_critical(path, group_of=None):
+    group_of = group_of or {}
     names = set()
     try:
         with open(path) as f:
@@ -124,11 +143,27 @@ def read_critical(path):
                 for chunk in line.split():
                     if chunk.startswith("program:"):
                         names.add(chunk.split(":", 1)[1].strip())
-                    # group: is unused in this image; would need supervisorctl
-                    # expansion, so we skip it here.
+                    elif chunk.startswith("group:"):
+                        gname = chunk.split(":", 1)[1].strip()
+                        names.update(p for p, g in group_of.items() if g == gname)
     except (FileNotFoundError, IsADirectoryError, PermissionError):
         pass
     return names
+
+
+def parse_environment(raw):
+    """Parse a supervisord `environment=A="1",B=2` directive into [(k, v), ...],
+    interpolating %(ENV_X)s against our own environment the way supervisord
+    expands it from the parent process environment."""
+    pairs = []
+    for k, v in re.findall(r'''([^,=\s]+)=("[^"]*"|'[^']*'|[^,]*)''', raw):
+        v = v.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+            v = v[1:-1]
+        v = re.sub(r"%\(ENV_([A-Za-z_][A-Za-z0-9_]*)\)s",
+                   lambda m: os.environ.get(m.group(1), ""), v)
+        pairs.append((k.strip(), v))
+    return pairs
 
 
 def build_model(sections, order, critical):
@@ -167,8 +202,10 @@ def _execline_quote(arg):
     return '"' + arg.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def _command_line(argv, user):
+def _command_line(argv, user, env_pairs=None):
     parts = ["with-contenv"]
+    if env_pairs:
+        parts += ["s6-env"] + [_execline_quote("%s=%s" % (k, v)) for k, v in env_pairs]
     if user:
         parts += ["s6-setuidgid", user]
     parts += [_execline_quote(a) for a in argv]
@@ -181,7 +218,8 @@ def _write(path, content, mode=0o644):
     os.chmod(path, mode)
 
 
-def generate(progs, prog_order, deps, types, critical, outdir, bundledir):
+def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of=None):
+    group_of = group_of or {}
     os.makedirs(outdir, exist_ok=True)
     # Only remove service directories this converter created on a previous
     # run (tracked via MANAGED_MARKER); leave every s6-overlay-owned service
@@ -197,9 +235,17 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir):
         t = types[pname]
         _write(os.path.join(sd, "type"), t + "\n")
         _write(os.path.join(sd, MANAGED_MARKER), "")
+        # supervisorctl status prints "group:program" for grouped processes
+        # (service_checker.py's group: critical-process expansion and
+        # docker-dhcp-relay's start.sh both rely on this exact format); record
+        # it since the s6 service dir itself must stay named after the bare
+        # program for dependencies.d/ edges to resolve.
+        display_name = "%s:%s" % (group_of[pname], pname) if pname in group_of else pname
+        _write(os.path.join(sd, "supervisor-name"), display_name + "\n")
         argv = shlex.split(progs[pname]["command"])
         user = progs[pname].get("user")
-        cmd = _command_line(argv, user)
+        env_pairs = parse_environment(progs[pname].get("environment", ""))
+        cmd = _command_line(argv, user, env_pairs)
         if t == "longrun":
             _write(os.path.join(sd, "run"),
                    "#!/command/execlineb -P\n" + cmd + "\n", 0o755)
@@ -261,9 +307,10 @@ def convert(config=None, critical_path=DEFAULT_CRITICAL, outdir=S6_RC_D,
             bundledir=S6_BUNDLE_D):
     files = resolve_config_files(config)
     sections, order = parse_ini(files)
-    critical = read_critical(critical_path)
+    group_of = parse_groups(sections, order)
+    critical = read_critical(critical_path, group_of)
     progs, prog_order, deps, types = build_model(sections, order, critical)
-    generate(progs, prog_order, deps, types, critical, outdir, bundledir)
+    generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of)
     return progs, prog_order, deps, types, critical
 
 
@@ -283,11 +330,12 @@ def main(argv):
         # in emit mode we bypass include/conf.d discovery and use the file given
         files = [cfg] if cfg else resolve_config_files(None)
         sections, order = parse_ini(files)
-        critical = read_critical(crit or DEFAULT_CRITICAL)
+        group_of = parse_groups(sections, order)
+        critical = read_critical(crit or DEFAULT_CRITICAL, group_of)
         progs, prog_order, deps, types = build_model(sections, order, critical)
         out = out or "./s6-rc.d"
         generate(progs, prog_order, deps, types, critical,
-                 out, bundle or os.path.join(out, "user"))
+                 out, bundle or os.path.join(out, "user"), group_of)
         for p in prog_order:
             d = ",".join(t for t in deps.get(p, []) if t in progs) or "-"
             star = "*" if p in critical and types[p] == "longrun" else " "

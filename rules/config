@@ -234,11 +234,6 @@ ENABLE_SNMP ?= y
 AUTORESTART_SNMP ?= y
 DELAY_SNMP ?= y
 
-# INCLUDE_REDFISH - enable the redfish feature entry in init_cfg.json
-# (aspeed BMC platforms only; a no-op everywhere else). Referenced by
-# files/build_templates/init_cfg.json.j2 as include_redfish.
-INCLUDE_REDFISH ?= n
-
 # INCLUDE_LLDP - build docker-lldp for LLDP support
 INCLUDE_LLDP ?= y
 ENABLE_LLDP ?= y
@@ -329,6 +324,14 @@ endif # SONIC_PROFILE
 # setting: kept outside the SONIC_PROFILE block so it applies to stock and
 # profile builds alike (profiles do not redefine it).
 ENABLE_HOST_SERVICE_ON_START ?= y
+
+# INCLUDE_REDFISH - enable the redfish feature entry in init_cfg.json
+# (aspeed BMC platforms only; a no-op everywhere else). Referenced by
+# files/build_templates/init_cfg.json.j2 as include_redfish. Kept outside the
+# SONIC_PROFILE block (like ENABLE_HOST_SERVICE_ON_START above) since none of
+# the profiles redefine it; otherwise it would be entirely unset under any
+# SONIC_PROFILE=<NAME> build.
+INCLUDE_REDFISH ?= n
 
 # INCLUDE_PTF - build docker-ptf and docker-ptf-sai test containers.
 # These are only needed for PTF (Packet Test Framework) testing and are
