@@ -175,11 +175,11 @@ fi
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
 # Certificate authentication cannot run over noTLS, so keep the loopback TCP
-# fallback authenticated with password/JWT. TLS defaults remain certificate
-# based; File.Stat/Get independently reject TCP requests when application
-# authentication is unavailable, including DPU ephemeral-TLS compatibility mode.
+# fallback authenticated with password/JWT. UDS-only and TLS modes retain their
+# certificate default; File.Stat/Get independently reject TCP requests when
+# application authentication is unavailable, including DPU ephemeral-TLS mode.
 if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
-    if [[ "$NO_TLS" == "true" ]]; then
+    if [[ "$NO_TLS" == "true" && "$PORT" -ne 0 ]]; then
         USER_AUTH="password,jwt"
     else
         USER_AUTH="cert"
