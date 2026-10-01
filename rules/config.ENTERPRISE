@@ -1,0 +1,117 @@
+# SONIC_PROFILE=ENTERPRISE
+#
+INCLUDE_STP = y
+ENABLE_STP = y
+AUTORESTART_STP = y
+DELAY_STP = n
+
+# SNMP remains the primary enterprise NMS integration protocol.
+INCLUDE_SNMP = y
+ENABLE_SNMP = y
+AUTORESTART_SNMP = y
+DELAY_SNMP = y
+
+INCLUDE_LLDP = y
+ENABLE_LLDP = y
+AUTORESTART_LLDP = y
+DELAY_LLDP = y
+
+INCLUDE_MGMT_FRAMEWORK = y
+ENABLE_MGMT_FRAMEWORK = y
+AUTORESTART_MGMT_FRAMEWORK = y
+DELAY_MGMT_FRAMEWORK = y
+
+INCLUDE_SFLOW = y
+ENABLE_SFLOW = y
+AUTORESTART_SFLOW = y
+DELAY_SFLOW = y
+
+INCLUDE_SYSTEM_TELEMETRY = y
+ENABLE_SYSTEM_TELEMETRY = y
+AUTORESTART_SYSTEM_TELEMETRY = y
+DELAY_SYSTEM_TELEMETRY = y
+
+INCLUDE_RESTAPI = y
+ENABLE_RESTAPI = y
+AUTORESTART_RESTAPI = y
+DELAY_RESTAPI = n
+
+INCLUDE_NAT = y
+ENABLE_NAT = y
+AUTORESTART_NAT = y
+DELAY_NAT = n
+
+INCLUDE_DHCP_RELAY = y
+ENABLE_DHCP_RELAY = y
+AUTORESTART_DHCP_RELAY = y
+DELAY_DHCP_RELAY = n
+
+INCLUDE_DHCP_SERVER = y
+ENABLE_DHCP_SERVER = y
+AUTORESTART_DHCP_SERVER = y
+DELAY_DHCP_SERVER = n
+
+INCLUDE_MACSEC = y
+ENABLE_MACSEC = y
+AUTORESTART_MACSEC = y
+DELAY_MACSEC = n
+
+# LACP port-channels for uplink/downlink redundancy and IPv6 RA for host
+# auto-configuration are both common on modern enterprise LANs.
+INCLUDE_TEAMD = y
+ENABLE_TEAMD = y
+AUTORESTART_TEAMD = y
+DELAY_TEAMD = n
+
+INCLUDE_ROUTER_ADVERTISER = y
+ENABLE_ROUTER_ADVERTISER = y
+AUTORESTART_ROUTER_ADVERTISER = y
+DELAY_ROUTER_ADVERTISER = n
+
+# Event notifications and gNMI-based management stay on for operational
+# visibility even outside hyperscale telemetry pipelines.
+INCLUDE_SYSTEM_EVENTD = y
+ENABLE_SYSTEM_EVENTD = y
+AUTORESTART_SYSTEM_EVENTD = y
+DELAY_SYSTEM_EVENTD = n
+
+INCLUDE_SYSTEM_GNMI = y
+ENABLE_SYSTEM_GNMI = y
+AUTORESTART_SYSTEM_GNMI = y
+DELAY_SYSTEM_GNMI = y
+
+# BMP (BGP Monitoring Protocol): built into the image but OFF at boot.
+# Enable at runtime with: config feature state bmp enabled
+INCLUDE_SYSTEM_BMP = y
+ENABLE_SYSTEM_BMP = n
+AUTORESTART_SYSTEM_BMP = y
+DELAY_SYSTEM_BMP = n
+
+# ---------------------------------------------------------------------------
+# Optional containers NOT active in this profile.
+# Listed explicitly so the full feature set is visible in one place for review.
+# ---------------------------------------------------------------------------
+
+# OTEL (High-Frequency Telemetry): datacenter-oriented observability; excluded.
+INCLUDE_SYSTEM_OTEL = n
+ENABLE_SYSTEM_OTEL = n
+AUTORESTART_SYSTEM_OTEL = n
+DELAY_SYSTEM_OTEL = n
+
+# ICCPD (MC-LAG control): datacenter dual-ToR feature; excluded.
+INCLUDE_ICCPD = n
+ENABLE_ICCPD = n
+AUTORESTART_ICCPD = n
+DELAY_ICCPD = n
+
+# MUX (dual-ToR / Gemini): datacenter redundancy feature; excluded.
+INCLUDE_MUX = n
+ENABLE_MUX = n
+AUTORESTART_MUX = n
+DELAY_MUX = n
+
+# P4RT (P4Runtime): not used in enterprise deployments; excluded.
+INCLUDE_P4RT = n
+ENABLE_P4RT = n
+AUTORESTART_P4RT = n
+DELAY_P4RT = n
