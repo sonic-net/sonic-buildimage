@@ -149,7 +149,15 @@ rules/config.user:
 	$(Q)echo -n ""
 
 include rules/config
+-include rules/config.organization
+ifneq ($(SONIC_PROFILE),)
+ifeq ($(wildcard rules/config.$(SONIC_PROFILE)),)
+$(error SONIC_PROFILE=$(SONIC_PROFILE) was requested but rules/config.$(SONIC_PROFILE) does not exist. Run 'make list-sonic-profiles' to see available profiles)
+endif
+include rules/config.$(SONIC_PROFILE)
+endif
 -include rules/config.user
+include rules/config-eventd-defaults.mk
 include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
@@ -572,6 +580,7 @@ SONIC_SLAVE_USER_BUILD = \
 
 SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            -f slave.mk \
+                           SONIC_PROFILE=$(SONIC_PROFILE) \
                            PLATFORM=$(PLATFORM) \
                            PLATFORM_ARCH=$(PLATFORM_ARCH) \
                            MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON)  \
@@ -714,6 +723,61 @@ endif
 
 docker-cleanup:
 	$(Q)$(docker-image-cleanup)
+
+###############################################################################
+## SONiC Deployment Profiles inspection targets
+###############################################################################
+
+# Literal '#' for recipe echo (make treats a bare # as the start of a comment).
+POUND := \#
+# Canonical list of optional docker features controlled by the SONiC Deployment
+# Profiles scheme. Most use the four variables INCLUDE_/ENABLE_/AUTORESTART_/
+# DELAY_<FEATURE>;
+SONIC_PROFILE_FEATURES = SYSTEM_GNMI SYSTEM_BMP SYSTEM_EVENTD SYSTEM_TELEMETRY \
+                          SYSTEM_OTEL ICCPD STP SNMP LLDP SFLOW MGMT_FRAMEWORK \
+                          RESTAPI NAT DHCP_RELAY DHCP_SERVER P4RT MACSEC TEAMD \
+                          ROUTER_ADVERTISER MUX REDFISH
+
+.PHONY: show-sonic-profile
+show-sonic-profile:
+	@echo "SONIC_PROFILE: $(if $(SONIC_PROFILE),$(SONIC_PROFILE),{NULL} $(POUND) Defaults)"
+	@echo
+	@printf "%-20s %-9s %-8s %-13s %-7s\n" FEATURE INCLUDE ENABLE AUTORESTART DELAY
+	@printf "%-20s %-9s %-8s %-13s %-7s\n" -------- ------- ------ ----------- -----
+	@$(foreach f,$(SONIC_PROFILE_FEATURES),printf "%-20s %-9s %-8s %-13s %-7s\n" "$(f)" "$(filter y,$(INCLUDE_$(f)))" "$(filter y,$(ENABLE_$(f)))" "$(filter y,$(AUTORESTART_$(f)))" "$(filter y,$(DELAY_$(f)))";)
+	@echo
+	@echo "y = on; blank = off (variable set to n or left unset). INCLUDE=y means"
+	@echo "built into the image; ENABLE=y means started on boot."
+
+.PHONY: list-sonic-profiles
+list-sonic-profiles:
+	@echo "Available SONIC_PROFILE values (rules/config.<NAME>):"
+	@for f in rules/config.*; do \
+		[ "$$f" = "rules/config.user" ] && continue; \
+		echo "  $${f#rules/config.}"; \
+	done
+
+# Generate rules/docker-mega.mk + dockers/docker-mega/ from CORE_DOCKER_SERVICES.
+# Usage:  make SONIC_PROFILE=EMBEDDED gen-mega-docker
+# The generated files are written directly into the sonic-buildimage tree so
+# the normal build can consume them as-is (inspect the diff with git diff
+# before committing).
+.PHONY: gen-mega-docker
+gen-mega-docker:
+	@[ -n "$(CORE_DOCKER_SERVICES)" ] || { \
+		echo "ERROR: CORE_DOCKER_SERVICES is not set."; \
+		echo "       Pass SONIC_PROFILE=<profile> that defines it, e.g.:"; \
+		echo "         make SONIC_PROFILE=EMBEDDED gen-mega-docker"; \
+		exit 1; }
+	$(eval _MEGA_FEATURES := $(subst $(eval) ,$(comma),$(strip $(CORE_DOCKER_SERVICES))))
+	@echo "[mega-gen] SONIC_PROFILE=$(SONIC_PROFILE)"
+	@echo "[mega-gen] features : $(_MEGA_FEATURES)"
+	@echo "[mega-gen] out-dir  : $(CURDIR)"
+	cd optimizations/mega-generic && python3 mega_gen_cli.py \
+		--sonic-root $(CURDIR) \
+		--features "$(_MEGA_FEATURES)" \
+		--apply \
+		--out-dir $(CURDIR)
 
 .PHONY: sonic-build-hooks
 sonic-build-hooks:

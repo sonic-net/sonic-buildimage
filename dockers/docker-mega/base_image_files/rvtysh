@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# The command rvtysh can be run as root priviledge by any user without password, only allow to execute readonly commands.
+
+# The options in the show command cannot contains any charactors to run multiple sub-commands potentially, such as "\n", "\r", "|", "&", "$" and ";".
+if printf -- "$*" | grep -qPz '[\n\r|&$;]'; then
+    echo "Not allow to run the command, please use the comand 'sudo vtysh' instead." 1>&2
+    exit 1
+fi
+
+# The sub commands must start with "show"
+LAST_PARAM=
+for param in "$@"
+do
+    if [ "$LAST_PARAM" == "-c" ] && [[ "$param" != show*  ]]; then
+        echo "Not allow to run the command '$param', please use the comand 'sudo vtysh' instead." 1>&2
+        exit 1
+    fi
+    LAST_PARAM=$param
+done
+
+vtysh "$@"
