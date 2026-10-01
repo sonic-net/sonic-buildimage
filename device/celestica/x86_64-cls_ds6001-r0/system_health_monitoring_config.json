@@ -1,0 +1,15 @@
+{
+    "services_to_ignore": [
+        "routeCheck"
+    ],
+    "devices_to_ignore": [
+        "fan.direction"
+    ],
+    "user_defined_checkers": [],
+    "polling_interval": 60,
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "mix_blink_4hz"
+    }
+}
