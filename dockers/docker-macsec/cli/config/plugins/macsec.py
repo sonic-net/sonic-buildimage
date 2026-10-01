@@ -1,15 +1,11 @@
 import click
-import datetime
 import re
 import utilities_common.cli as clicommon
 from sonic_py_common import multi_asic
-from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
+from swsscommon.swsscommon import ConfigDBConnector
 from utilities_common.constants import DEFAULT_NAMESPACE
 from utilities_common.db import Db
 
-MKA_SESSION_TABLE = "MACSEC_MKA_SESSION_TABLE"
-MKA_PARTICIPANT_TABLE = "MACSEC_MKA_PARTICIPANT_TABLE"
-MKA_STALE_THRESHOLD_SECONDS = 60
 SUPPORTED_CKN_LENGTHS = (32, 64)
 
 
@@ -142,181 +138,12 @@ def normalize_ckn(ckn):
     return ckn.lower()
 
 
-def get_command_namespace():
-    ctx = click.get_current_context()
-    while ctx is not None:
-        if "namespace" in ctx.params:
-            return ctx.params["namespace"] or DEFAULT_NAMESPACE
-        ctx = ctx.parent
-    return DEFAULT_NAMESPACE
-
-
-def parse_utc_timestamp(timestamp):
-    if not timestamp:
-        return None
-    try:
-        value = timestamp
-        if value.endswith("Z"):
-            value = value[:-1] + "+00:00"
-        parsed = datetime.datetime.fromisoformat(value)
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=datetime.timezone.utc)
-        return parsed.astimezone(datetime.timezone.utc)
-    except (AttributeError, TypeError, ValueError):
-        return None
-
-
-def session_preflight_errors(session, profile, now):
-    errors = []
-    expected = {
-        "profile": profile,
-        "query_status": "ok",
-        "config_status": "in-sync",
-        "kay_status": "active",
-        "authenticated": "false",
-        "secured": "true",
-        "failed": "false",
-    }
-    for field, expected_value in expected.items():
-        actual_value = session.get(field)
-        if actual_value != expected_value:
-            errors.append(
-                "{} is {} (expected {})".format(
-                    field, actual_value if actual_value is not None else "missing", expected_value
-                )
-            )
-
-    last_updated = parse_utc_timestamp(session.get("last_updated"))
-    if last_updated is None:
-        errors.append("last_updated is missing or invalid")
-    else:
-        age = max(0, (now - last_updated).total_seconds())
-        if age > MKA_STALE_THRESHOLD_SECONDS:
-            errors.append(
-                "state is stale ({:.0f}s old, maximum {}s)".format(
-                    age, MKA_STALE_THRESHOLD_SECONDS
-                )
-            )
-    return errors
-
-
-def participant_preflight_errors(participants, primary_ckn, fallback_ckn,
-                                 selected_role):
-    expected_roles = {
-        normalize_ckn(primary_ckn): "true",
-        normalize_ckn(fallback_ckn): "false",
-    }
-    actual_ckns = set(participants)
-    expected_ckns = set(expected_roles)
-    errors = []
-
-    missing_ckns = expected_ckns - actual_ckns
-    extra_ckns = actual_ckns - expected_ckns
-    if missing_ckns:
-        errors.append("missing participant CKN(s): {}".format(", ".join(sorted(missing_ckns))))
-    if extra_ckns:
-        errors.append("unexpected participant CKN(s): {}".format(", ".join(sorted(extra_ckns))))
-
-    for ckn, expected_is_primary in expected_roles.items():
-        participant = participants.get(ckn)
-        if participant is None:
-            continue
-        actual_is_primary = participant.get("is_primary")
-        if actual_is_primary != expected_is_primary:
-            errors.append(
-                "participant {} has is_primary={} (expected {})".format(
-                    ckn,
-                    actual_is_primary if actual_is_primary is not None else "missing",
-                    expected_is_primary,
-                )
-            )
-
-    selected_ckn = normalize_ckn(primary_ckn if selected_role == "primary" else fallback_ckn)
-    selected = participants.get(selected_ckn)
-    expected_selected_role = "true" if selected_role == "primary" else "false"
-    if selected is not None and selected.get("is_primary") != expected_selected_role:
-        errors.append(
-            "selected old CKN {} does not have the configured {} role".format(
-                selected_ckn, selected_role
-            )
-        )
-
-    alternate_ckn = normalize_ckn(fallback_ckn if selected_role == "primary" else primary_ckn)
-    alternate = participants.get(alternate_ckn)
-    expected_alternate_role = "false" if selected_role == "primary" else "true"
-    if alternate is not None:
-        if alternate.get("is_primary") != expected_alternate_role:
-            errors.append(
-                "alternate CKN {} has the wrong configured role".format(alternate_ckn)
-            )
-        if alternate.get("active") != "true":
-            errors.append("alternate CKN {} is not active".format(alternate_ckn))
-        try:
-            live_peers = int(alternate.get("live_peers", ""))
-        except (TypeError, ValueError):
-            live_peers = -1
-        if live_peers < 1:
-            errors.append("alternate CKN {} has no live peer".format(alternate_ckn))
-    return errors
-
-
-def validate_attached_ports(config_db, namespace, profile, primary_ckn,
-                            fallback_ckn, selected_role):
-    attached_ports = []
+def profile_is_attached(config_db, profile):
     for port in config_db.get_keys("PORT") or []:
         port_entry = config_db.get_entry("PORT", port)
         if port_entry.get("macsec") == profile:
-            attached_ports.append(port)
-
-    if not attached_ports:
-        return
-    if not fallback_ckn:
-        click.get_current_context().fail(
-            "Cannot update attached profile {} without a configured alternate CA".format(profile)
-        )
-
-    state_db = SonicV2Connector(use_unix_socket_path=True, namespace=str(namespace))
-    state_db.connect(state_db.STATE_DB)
-    separator = state_db.get_db_separator(state_db.STATE_DB)
-    now = datetime.datetime.now(datetime.timezone.utc)
-    port_failures = []
-
-    for port in sorted(attached_ports):
-        errors = []
-        session_key = separator.join((MKA_SESSION_TABLE, port))
-        session = state_db.get_all(state_db.STATE_DB, session_key)
-        if not session:
-            errors.append("session state is missing")
-        else:
-            errors.extend(session_preflight_errors(session, profile, now))
-
-        participant_prefix = separator.join((MKA_PARTICIPANT_TABLE, port)) + separator
-        participant_keys = state_db.keys(
-            state_db.STATE_DB, participant_prefix + "*"
-        ) or []
-        participants = {}
-        for participant_key in participant_keys:
-            ckn = participant_key[len(participant_prefix):].lower()
-            if not ckn or ckn in participants:
-                errors.append("participant state is ambiguous")
-                continue
-            participants[ckn] = state_db.get_all(state_db.STATE_DB, participant_key)
-
-        errors.extend(
-            participant_preflight_errors(
-                participants, primary_ckn, fallback_ckn, selected_role
-            )
-        )
-        if errors:
-            qualified_port = "{} ({})".format(port, namespace) if namespace else port
-            port_failures.append("{}: {}".format(qualified_port, "; ".join(errors)))
-
-    if port_failures:
-        click.get_current_context().fail(
-            "MACsec key rotation safety preflight failed:\n  {}".format(
-                "\n  ".join(port_failures)
-            )
-        )
+            return True
+    return False
 
 
 #
@@ -417,11 +244,15 @@ def update_profile(profile, old_ckn, new_ckn, new_cak):
     validate_cak(ctx, "configured primary_cak", primary_cak, cipher_suite)
     validate_ckn(ctx, "configured primary_ckn", primary_ckn)
     validate_fallback_pair(ctx, fallback_cak, fallback_ckn)
-    if fallback_cak is not None:
-        validate_cak(ctx, "configured fallback_cak", fallback_cak, cipher_suite)
-        validate_ckn(ctx, "configured fallback_ckn", fallback_ckn)
-        if normalize_ckn(primary_ckn) == normalize_ckn(fallback_ckn):
-            ctx.fail("{} has duplicate primary and fallback CKNs".format(profile))
+    if fallback_cak is None:
+        ctx.fail(
+            "profile {} has no fallback CA; create a new profile to replace "
+            "a primary-only configuration".format(profile)
+        )
+    validate_cak(ctx, "configured fallback_cak", fallback_cak, cipher_suite)
+    validate_ckn(ctx, "configured fallback_ckn", fallback_ckn)
+    if normalize_ckn(primary_ckn) == normalize_ckn(fallback_ckn):
+        ctx.fail("{} has duplicate primary and fallback CKNs".format(profile))
 
     validate_ckn(ctx, "old_ckn", old_ckn)
     validate_ckn(ctx, "new_ckn", new_ckn)
@@ -445,15 +276,17 @@ def update_profile(profile, old_ckn, new_ckn, new_cak):
     if normalized_new == other_ckn:
         ctx.fail("new_ckn must differ from the other configured CKN")
 
-    namespace = get_command_namespace()
-    validate_attached_ports(
-        config_db, namespace, profile, primary_ckn, fallback_ckn, selected_role
-    )
+    attached = profile_is_attached(config_db, profile)
 
     replacement = dict(profile_entry)
     replacement["{}_cak".format(selected_role)] = new_cak
     replacement["{}_ckn".format(selected_role)] = new_ckn
     config_db.set_entry("MACSEC_PROFILE", profile, replacement)
+    if attached:
+        click.echo(
+            "Desired MACsec profile updated; runtime key rotation may be "
+            "deferred per port until safe."
+        )
 
 
 #
