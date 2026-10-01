@@ -23,8 +23,12 @@ def rule_values(distro, arch, include_fips="y"):
         "FIPS_GOLANG_URL_PREFIX",
         "FIPS_PACKAGE_ALL",
         "SONIC_MAKE_DEBS",
+        "FIPS_CACHE_FLAGS",
     )
-    source = "include {}\nprint:\n".format(ROOT / "rules/sonic-fips.mk")
+    source = "include {}\ninclude {}\n".format(
+        ROOT / "rules/sonic-fips.mk", ROOT / "rules/sonic-fips.dep",
+    )
+    source += "FIPS_CACHE_FLAGS = $($(SYMCRYPT_OPENSSL)_DEP_FLAGS)\nprint:\n"
     source += "\t@printf '%s\\n' " + " ".join(
         "'$({})'".format(name) for name in names
     ) + "\n"
@@ -33,6 +37,8 @@ def rule_values(distro, arch, include_fips="y"):
             "make", "--no-print-directory", "-f", "-", "print",
             "BLDENV=" + distro, "CONFIGURED_ARCH=" + arch,
             "BUILD_PUBLIC_URL=" + PUBLIC_URL, "INCLUDE_FIPS=" + include_fips,
+            "SRC_PATH=" + str(ROOT / "src"),
+            "SONIC_COMMON_FLAGS_LIST=common-cache-flags",
         ],
         input=source, text=True, capture_output=True, check=True,
     )
@@ -40,6 +46,19 @@ def rule_values(distro, arch, include_fips="y"):
 
 
 class FipsGoArtifactsTest(unittest.TestCase):
+    def test_cache_flags(self):
+        for distro in ("trixie", "bookworm", "bullseye"):
+            for arch in ("amd64", "arm64", "armhf"):
+                for include_fips in ("n", "y"):
+                    with self.subTest(
+                        distro=distro, arch=arch, fips=include_fips,
+                    ):
+                        values = rule_values(distro, arch, include_fips)
+                        self.assertEqual(
+                            values["FIPS_CACHE_FLAGS"],
+                            "common-cache-flags " + include_fips,
+                        )
+
     def assert_artifact_url(self, url, arch, filename):
         parsed = urlsplit(url)
         self.assertEqual(parsed.scheme, "https")
