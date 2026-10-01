@@ -26,7 +26,7 @@ class CustomField(Enum):
 
     SECONDARY_SERIAL_NUMBER = (0x01, "Custom Serial Number")
     REGULATORY_MODEL_NUMBER = (0x02, "Regulatory Model Number")
-    SWITCH_HOST_SERIAL_NUMBER = (0x03, "Switch Host Serial Number")
+    SWITCH_HOST_SERIAL_NUMBER = (0x03, "Switch-Host Serial Number")
 
     def __init__(self, code, display_name):
         self.code = code
