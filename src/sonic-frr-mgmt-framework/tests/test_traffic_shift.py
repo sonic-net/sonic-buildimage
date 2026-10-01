@@ -1,5 +1,6 @@
 import copy
 import ipaddress
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -98,6 +99,97 @@ ip prefix-list FRRCFGD_TSA_default_ip seq 5 permit 10.0.0.1/32
     assert not shift.enabled
 
 
+@pytest.mark.parametrize('enabled', [True, False])
+def test_restart_cleans_binding_for_removed_af(tsa, enabled):
+    shift, tables, run = tsa
+    del tables['BGP_PEER_GROUP_AF'][('default', 'PG', 'ipv4_unicast')]
+    shift.recover('''router bgp 65000
+ neighbor PG peer-group
+ address-family ipv4 unicast
+  neighbor PG route-map FRRCFGD_TSA_default_ipv4_OLD_OUT out
+ exit-address-family
+exit
+route-map FRRCFGD_TSA_default_ipv4_OLD_OUT permit 10
+''')
+    assert shift.bindings == {
+        ('BGP_PEER_GROUP_AF', ('default', 'PG', 'ipv4_unicast')):
+            ('65000', 'FRRCFGD_TSA_default_ipv4_OLD_OUT')}
+    assert shift.apply(enabled)
+    commands = run.call_args.args[0]
+    detach = 'no neighbor PG route-map FRRCFGD_TSA_default_ipv4_OLD_OUT out'
+    cleanup = 'no route-map FRRCFGD_TSA_default_ipv4_OLD_OUT'
+    assert commands.index(detach) < commands.index(cleanup)
+    policy = 'FRRCFGD_TSA_default_ipv6_OUT6' if enabled else 'OUT6'
+    assert 'neighbor PG route-map {} out'.format(policy) in commands
+
+
+def test_recover_scopes_bindings_to_bgp_vrf_and_unicast_af(tsa):
+    shift, tables, run = tsa
+    shift.recover('''router bgp 65000
+ neighbor PG peer-group
+ address-family ipv4 unicast
+  neighbor PG route-map FRRCFGD_TSA_default_ipv4_OUT4 out
+ exit-address-family
+ address-family l2vpn evpn
+  neighbor PG route-map FRRCFGD_TSA_IGNORED out
+ exit-address-family
+exit
+router bgp 65002 vrf Vrf_red
+ address-family ipv6 unicast
+  neighbor 2001:db8::2 route-map FRRCFGD_TSA_Vrf_red_ipv6_OUT6 out
+  neighbor 2001:db8::3 route-map USER_OUT out
+ exit-address-family
+exit
+router ospf
+ address-family ipv4 unicast
+  neighbor PG route-map FRRCFGD_TSA_IGNORED out
+exit
+''')
+    assert shift.bindings == {
+        ('BGP_PEER_GROUP_AF', ('default', 'PG', 'ipv4_unicast')):
+            ('65000', 'FRRCFGD_TSA_default_ipv4_OUT4'),
+        ('BGP_NEIGHBOR_AF', ('Vrf_red', '2001:db8::2', 'ipv6_unicast')):
+            ('65002', 'FRRCFGD_TSA_Vrf_red_ipv6_OUT6')}
+    assert shift.enabled  # A binding alone still needs reconciliation.
+    shift.recover('')
+    assert not shift.bindings and not shift.enabled
+
+
+@pytest.mark.parametrize('peer_exists', [True, False])
+def test_recovered_binding_cleanup_does_not_recreate_deleted_peer(tsa, peer_exists):
+    shift, tables, run = tsa
+    tables['BGP_GLOBALS']['Vrf_red'] = {'local_asn': '65002'}
+    if peer_exists:
+        tables['BGP_NEIGHBOR'][('Vrf_red', '2001:db8::2')] = {'asn': '65003'}
+    shift.recover('''router bgp 65002 vrf Vrf_red
+ address-family ipv6 unicast
+  neighbor 2001:db8::2 route-map FRRCFGD_TSA_Vrf_red_ipv6_OUT6 out
+ exit-address-family
+exit
+route-map FRRCFGD_TSA_Vrf_red_ipv6_OUT6 permit 10
+''')
+    assert shift.apply(False)
+    commands = run.call_args.args[0]
+    detach = 'no neighbor 2001:db8::2 route-map FRRCFGD_TSA_Vrf_red_ipv6_OUT6 out'
+    assert (detach in commands) == peer_exists
+    if peer_exists:
+        index = commands.index(detach)
+        assert commands[index - 2:index] == ['router bgp 65002 vrf Vrf_red',
+                                          'address-family ipv6 unicast']
+    assert 'no route-map FRRCFGD_TSA_Vrf_red_ipv6_OUT6' in commands
+
+
+def test_apply_reads_each_af_table_once(tsa):
+    shift, tables, run = tsa
+    assert shift.apply(True)
+    shift.config_db.get_table.reset_mock()
+    del tables['BGP_PEER_GROUP_AF'][('default', 'PG', 'ipv4_unicast')]
+    assert shift.apply(True)
+    calls = [call.args[0] for call in shift.config_db.get_table.call_args_list]
+    assert calls.count('BGP_PEER_GROUP_AF') == 1
+    assert calls.count('BGP_NEIGHBOR_AF') == 1
+
+
 def test_loopback_exemptions_are_vrf_scoped(tsa):
     shift, tables, run = tsa
     tables['LOOPBACK_INTERFACE']['Loopback1'] = {'vrf_name': 'Vrf_red'}
@@ -178,6 +270,89 @@ def test_device_global_handler_and_live_af_update():
         daemon.traffic_shift.apply.assert_called_with(True)
         assert not any('route-map NEW_OUT out' in str(c) for c in run.call_args_list)
         assert daemon.table_data_cache['BGP_PEER_GROUP_AF&&default|PG|ipv4_unicast']['route_map_out'] == ['NEW_OUT']
+
+
+@pytest.mark.parametrize('error', [FileNotFoundError('vtysh unavailable'),
+                                 subprocess.CalledProcessError(1, ['vtysh'])])
+def test_recovery_failure_preserves_last_known_state(tsa, error):
+    from tests.test_config import mockmapping
+    with patch.dict('sys.modules', **mockmapping):
+        from frrcfgd.frrcfgd import BGPConfigDaemon
+        shift, tables, run = tsa
+        assert shift.apply(True)
+        state = copy.deepcopy((shift.enabled, shift.route_maps, shift.prefixes, shift.bindings))
+        daemon = BGPConfigDaemon.__new__(BGPConfigDaemon)
+        daemon.traffic_shift = shift
+        with patch('frrcfgd.frrcfgd.subprocess.check_output', side_effect=error), \
+                patch('frrcfgd.frrcfgd.syslog.syslog') as log:
+            assert not daemon._BGPConfigDaemon__recover_tsa()
+        assert (shift.enabled, shift.route_maps, shift.prefixes, shift.bindings) == state
+        assert any('Failed to recover TSA state' in str(call) for call in log.call_args_list)
+
+
+@pytest.mark.parametrize('handler', ['enable', 'disable', 'loopback', 'global',
+                                   'BGP_NEIGHBOR_AF', 'BGP_PEER_GROUP_AF'])
+@pytest.mark.parametrize('recovery_fails', [False, True])
+def test_all_apply_failures_are_logged_and_recovered(handler, recovery_fails):
+    from tests.test_config import mockmapping
+    with patch.dict('sys.modules', **mockmapping), \
+            patch('frrcfgd.frrcfgd.g_run_command', return_value=True) as run:
+        from frrcfgd.frrcfgd import BGPConfigDaemon
+        daemon = BGPConfigDaemon()
+        daemon.traffic_shift = MagicMock(enabled=True)
+        daemon.traffic_shift.apply.return_value = False
+        daemon.bgp_asn['default'] = '65000'
+        daemon.table_data_cache = {}
+        run.reset_mock()
+        error = subprocess.CalledProcessError(1, ['vtysh']) if recovery_fails else None
+        with patch('frrcfgd.frrcfgd.subprocess.check_output', return_value='running config',
+                   side_effect=error) as read, \
+                patch('frrcfgd.frrcfgd.syslog.syslog') as log:
+            if handler in ('enable', 'disable'):
+                daemon.device_global_handler('BGP_DEVICE_GLOBAL', 'STATE',
+                                             {'tsa_enabled': 'true' if handler == 'enable' else 'false'})
+            elif handler == 'loopback':
+                daemon.loopback_handler('LOOPBACK_INTERFACE', 'Loopback0|10.0.0.1/32', {})
+            elif handler == 'global':
+                daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'local_asn': '65000'})
+            else:
+                peer = 'Ethernet0' if handler == 'BGP_NEIGHBOR_AF' else 'PG'
+                key = 'default|{}|ipv4_unicast'.format(peer)
+                daemon.bgp_table_handler_common(handler, key, {'route_map_out': ['NEW_OUT']})
+                run.assert_not_called()
+                assert not daemon.table_data_cache.get(handler + '&&' + key, {})
+        daemon.traffic_shift.apply.assert_called_once_with(handler != 'disable')
+        read.assert_called_once()
+        if recovery_fails:
+            daemon.traffic_shift.recover.assert_not_called()
+            assert daemon.traffic_shift.enabled
+            assert any('Failed to recover TSA state' in str(call) for call in log.call_args_list)
+        else:
+            daemon.traffic_shift.recover.assert_called_once_with('running config')
+        assert any('Failed to apply TSA state' in str(call) for call in log.call_args_list)
+
+
+@pytest.mark.parametrize('state', ['true', 'false'])
+def test_startup_survives_unready_vtysh(state):
+    from tests.test_config import mockmapping
+    with patch.dict('sys.modules', **mockmapping):
+        from frrcfgd.frrcfgd import BGPConfigDaemon
+        with patch('frrcfgd.frrcfgd.ExtConfigDBConnector') as connector, \
+                patch('frrcfgd.frrcfgd.g_run_command', return_value=True), \
+                patch('frrcfgd.frrcfgd.subprocess.check_output',
+                      side_effect=subprocess.CalledProcessError(1, ['vtysh'])), \
+                patch('frrcfgd.frrcfgd.syslog.syslog') as log:
+            db = connector.return_value
+            db.get_entry.side_effect = lambda table, key: (
+                {'docker_routing_config_mode': 'unified', 'use_template_render_for_restore': 'false'}
+                if table == 'DEVICE_METADATA' else {'tsa_enabled': state})
+            db.get_table.side_effect = lambda table: (
+                {'default': {'local_asn': '65000'}} if table == 'BGP_GLOBALS' else {})
+            db.get_table_data.return_value = {}
+            db.serialize_key.side_effect = lambda key: '|'.join(key) if isinstance(key, tuple) else key
+            daemon = BGPConfigDaemon()
+        assert daemon.traffic_shift.enabled == (state == 'true')
+        assert any('Failed to recover TSA state' in str(call) for call in log.call_args_list)
 
 
 def test_startup_replay_never_temporarily_restores_transit_policy():

@@ -24,7 +24,34 @@ class TrafficShift:
         self.prefixes = set(re.findall(
             r'^(ip|ipv6) prefix-list (' + self.PREFIX + r'\S+) (?:seq \d+ )?permit (\S+)',
             running_config, re.MULTILINE))
-        self.enabled = bool(self.route_maps or self.prefixes)
+        self.bindings = {}
+        asn = vrf = af = None
+        peer_groups = set()
+        for line in running_config.splitlines():
+            line = line.strip()
+            if line.startswith('router '):
+                router = re.fullmatch(r'router bgp (\S+)(?: vrf (\S+))?', line)
+                asn = router[1] if router else None
+                vrf = (router[2] or 'default') if router else None
+                af = None
+                peer_groups.clear()
+            elif line == 'exit':
+                asn = vrf = af = None
+            elif asn is not None:
+                group = re.fullmatch(r'neighbor (\S+) peer-group', line)
+                family = re.fullmatch(r'address-family (ipv4|ipv6) unicast', line)
+                binding = re.fullmatch(r'neighbor (\S+) route-map (' + self.PREFIX + r'\S+) out', line)
+                if group:
+                    peer_groups.add(group[1])
+                elif line.startswith('address-family '):
+                    af = family[1] + '_unicast' if family else None
+                elif line == 'exit-address-family':
+                    af = None
+                elif af and binding:
+                    peer, name = binding.groups()
+                    table = 'BGP_PEER_GROUP_AF' if peer in peer_groups else 'BGP_NEIGHBOR_AF'
+                    self.bindings[(table, (vrf, peer, af))] = (asn, name)
+        self.enabled = bool(self.route_maps or self.prefixes or self.bindings)
 
     def apply(self, enabled):
         if enabled:
@@ -57,8 +84,10 @@ class TrafficShift:
         metadata_asn = self.config_db.get_entry('DEVICE_METADATA', 'localhost').get('bgp_asn')
         neighbors = self.config_db.get_table('BGP_NEIGHBOR')
         peer_af = self.config_db.get_table('BGP_PEER_GROUP_AF')
+        af_tables = {'BGP_PEER_GROUP_AF': peer_af,
+                     'BGP_NEIGHBOR_AF': self.config_db.get_table('BGP_NEIGHBOR_AF')}
         for table in self.AF_TABLES:
-            for key, entry in self.config_db.get_table(table).items():
+            for key, entry in af_tables[table].items():
                 if not isinstance(key, tuple) or len(key) != 3:
                     continue
                 vrf, peer, af_type = key
@@ -100,7 +129,7 @@ class TrafficShift:
                 commands += ['exit-address-family', 'exit']
 
         for (table, key), (asn, name) in self.bindings.items():
-            if key in self.config_db.get_table(table):
+            if key in af_tables[table]:
                 continue
             vrf, peer, af_type = key
             # Do not recreate a neighbor that was deleted along with its AF row.

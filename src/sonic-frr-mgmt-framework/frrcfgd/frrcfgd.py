@@ -2564,8 +2564,21 @@ class BGPConfigDaemon:
         self.device_global_handler('BGP_DEVICE_GLOBAL', 'STATE', tsa_data)
 
     def __recover_tsa(self):
-        self.traffic_shift.recover(subprocess.check_output(
-            ['vtysh', '-c', 'show running-config'], text=True))
+        try:
+            running_config = subprocess.check_output(
+                ['vtysh', '-c', 'show running-config'], text=True)
+        except (OSError, subprocess.SubprocessError) as error:
+            syslog.syslog(syslog.LOG_ERR, 'Failed to recover TSA state: {}'.format(error))
+            return False
+        self.traffic_shift.recover(running_config)
+        return True
+
+    def __apply_tsa(self, enabled):
+        if self.traffic_shift.apply(enabled):
+            return True
+        syslog.syslog(syslog.LOG_ERR, 'Failed to apply TSA state: {}'.format(enabled))
+        self.__recover_tsa()
+        return False
 
     def __run_tsa_commands(self, commands):
         command = ['vtysh']
@@ -2582,13 +2595,11 @@ class BGPConfigDaemon:
             return
         enabled = state == 'true'
         if enabled or self.traffic_shift.enabled:
-            if not self.traffic_shift.apply(enabled):
-                syslog.syslog(syslog.LOG_ERR, 'Failed to apply TSA state: {}'.format(state))
-                self.__recover_tsa()
+            self.__apply_tsa(enabled)
 
     def loopback_handler(self, table, key, data):
         if self.traffic_shift.enabled:
-            self.traffic_shift.apply(True)
+            self.__apply_tsa(True)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -3112,7 +3123,7 @@ class BGPConfigDaemon:
                 # Keep the isolation policy attached while updating AF attributes.
                 tsa_policy = None
                 if self.traffic_shift.enabled and af in ('ipv4', 'ipv6'):
-                    if not self.traffic_shift.apply(True):
+                    if not self.__apply_tsa(True):
                         continue
                     tsa_policy = data.pop('route_map_out', None)
                 success = key_map.run_command(self, table, data, cmd_prefix, nbr)
@@ -4188,7 +4199,7 @@ class BGPConfigDaemon:
     def bgp_global_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'keepalive', 'holdtime'}])
         if self.traffic_shift.enabled:
-            self.traffic_shift.apply(True)
+            self.__apply_tsa(True)
 
     def bgp_af_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'ebgp_route_distance', 'ibgp_route_distance', 'local_route_distance'},
