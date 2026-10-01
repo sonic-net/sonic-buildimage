@@ -34,6 +34,7 @@ if [[ "$DEVICE_TYPE" == "SmartSwitchDPU" || "$SWITCH_TYPE" == "dpu" ]]; then
     IS_SMART_SWITCH_DPU=true
 fi
 DPU_EPHEMERAL_TLS=false
+NO_TLS=false
 if [[ "$IS_SMART_SWITCH_DPU" == "true" ]]; then
     DPU_TLS_CONFIG="$CERTS"
     if [[ -z "$DPU_TLS_CONFIG" ]]; then
@@ -84,6 +85,7 @@ elif [ -n "$X509" ]; then
     fi
 else
     TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
+    NO_TLS=true
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -172,11 +174,16 @@ else
 fi
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
-# Fail-closed default: if user_auth is unset (missing GNMI CONFIG_DB entry or
-# missing field), force cert mode. Without this, --client_auth is omitted and
-# authentication ends up disabled entirely.
+# Certificate authentication cannot run over noTLS, so keep the loopback TCP
+# fallback authenticated with password/JWT. TLS defaults remain certificate
+# based; File.Stat/Get independently reject TCP requests when application
+# authentication is unavailable, including DPU ephemeral-TLS compatibility mode.
 if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
-    USER_AUTH="cert"
+    if [[ "$NO_TLS" == "true" ]]; then
+        USER_AUTH="password,jwt"
+    else
+        USER_AUTH="cert"
+    fi
 fi
 if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
