@@ -248,3 +248,49 @@ class TestCfgGenPlatformJson(TestCase):
 
             ports = get_child_ports("Ethernet212", "1x49G", "test_platform.json")
             self.assertNotIn('fec', ports['Ethernet212'])
+
+    # An invalid per-port breakout selection is rejected with the interface named.
+    def test_invalid_breakout_mode_reports_interface(self):
+        from portconfig import get_child_ports
+        with self.assertRaises(RuntimeError) as ctx:
+            get_child_ports("Ethernet0", "9x1G", self.platform_json)
+        self.assertIn("Ethernet0", str(ctx.exception))
+
+    def test_invalid_breakout_mode_rejects_trailing_characters(self):
+        from portconfig import get_child_ports
+        with self.assertRaises(RuntimeError):
+            get_child_ports("Ethernet0", "1x100G[40G]garbage", self.platform_json)
+
+    def test_invalid_breakout_mode_rejects_zero_ports(self):
+        from portconfig import get_child_ports
+        with self.assertRaises(RuntimeError):
+            get_child_ports("Ethernet0", "0x100G[40G]", self.platform_json)
+
+    def test_breakout_mode_parser_accepts_platform_variants(self):
+        from portconfig import BreakoutCfg
+        variants = [
+            ("2x400G[200G, 100G]", 8, 2),
+            ("4x25G(4)[10G,1G]", 4, 4),
+            ("8x50G[25G][10G]", 8, 8),
+        ]
+        for mode, lane_count, port_count in variants:
+            properties = {
+                "index": ",".join(["1"] * lane_count),
+                "lanes": ",".join(str(i) for i in range(lane_count)),
+                "breakout_modes": {
+                    mode: ["Eth1/{}".format(i + 1) for i in range(port_count)]
+                }
+            }
+            self.assertEqual(
+                len(BreakoutCfg("Ethernet0", mode, properties).get_config()),
+                port_count
+            )
+
+    def test_cli_deploy_time_hwsku_config_updates_port(self):
+        argument = ['-k', 'Generic', '-p', self.platform_json, '-S', self.hwsku_json,
+                    '-v', "PORT['Ethernet8']"]
+        output = self.run_script(argument)
+        port_config = utils.to_dict(output.strip())
+        self.assertEqual(port_config['speed'], '25000')
+        self.assertEqual(port_config['lanes'], '8')
+        self.assertEqual(port_config['subport'], '1')
