@@ -1,6 +1,0 @@
-depmod -a
-
-/usr/local/bin/platform_api_mgnt.sh install
-
-systemctl enable platform-modules-silverstone.service
-systemctl start platform-modules-silverstone.service
