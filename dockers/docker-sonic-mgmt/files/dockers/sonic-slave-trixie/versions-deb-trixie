@@ -115,7 +115,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.8.1-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.8.2-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -1221,9 +1221,9 @@ libplexus-xml-java==3.0.1-2
 libpmem1==1.13.1-1.1+b1
 libpmix-dev==5.0.7-1
 libpmix2t64==5.0.7-1
-libpng-dev==1.6.48-1+deb13u5
-libpng-tools==1.6.48-1+deb13u5
-libpng16-16t64==1.6.48-1+deb13u5
+libpng-dev==1.6.48-1+deb13u6
+libpng-tools==1.6.48-1+deb13u6
+libpng16-16t64==1.6.48-1+deb13u6
 libpocketsphinx3==0.8+5prealpha+1-15+b4
 libpod-constants-perl==0.19-2
 libpod-parser-perl==1.67-1
@@ -1385,7 +1385,8 @@ libss2==1.47.2-3+b12
 libssh-4==0.11.5-0+deb13u1
 libssh2-1-dev==1.11.1-1+deb13u2
 libssh2-1t64==1.11.1-1+deb13u2
-libssl-dev==3.5.7-1~deb13u2
+libssl-dev==3.5.7-1~deb13u3
+libssl3t64==3.5.7-1~deb13u3
 libstdc++-14-dev==14.2.0-19
 libstemmer0d==2.2.0-4+b2
 libstrictures-perl==2.000006-1
@@ -1760,7 +1761,8 @@ opensp==1.5.2-15.2
 openssh-client==1:10.0p1-7+deb13u4
 openssh-server==1:10.0p1-7+deb13u4
 openssh-sftp-server==1:10.0p1-7+deb13u4
-openssl==3.5.7-1~deb13u2
+openssl==3.5.7-1~deb13u3
+openssl-provider-legacy==3.5.7-1~deb13u3
 ovmf==2025.02-8+deb13u1
 pahole==1.30-1
 pandoc==3.1.11.1+ds-2

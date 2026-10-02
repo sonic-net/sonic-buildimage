@@ -1,7 +1,7 @@
 adduser==3.137ubuntu1
 adwaita-icon-theme==46.0-1
 alsa-topology-conf==1.2.5.1-2
-alsa-ucm-conf==1.2.10-1ubuntu5.14
+alsa-ucm-conf==1.2.10-1ubuntu5.15
 appstream==1.0.2-1build6
 apt-transport-https==2.8.3
 apt-utils==2.8.3
@@ -38,7 +38,7 @@ dirmngr==2.4.4-2ubuntu17.6
 distro-info-data==0.72-0ubuntu0.24.04.1
 dmsetup==2:1.02.185-3ubuntu3.2
 docker-buildx-plugin==0.37.1-1~ubuntu.24.04~noble
-docker-ce-cli==5:29.8.1-1~ubuntu.24.04~noble
+docker-ce-cli==5:29.8.2-1~ubuntu.24.04~noble
 docker-compose-plugin==5.5.1-1~ubuntu.24.04~noble
 dpkg-dev==1.22.6ubuntu6.6
 fakeroot==1.33-1
@@ -159,7 +159,7 @@ libfile-fcntllock-perl==0.22-4ubuntu5
 libfontconfig1==2.15.0-1.1ubuntu2
 libfreetype6==2.13.2+dfsg-1ubuntu0.1
 libfribidi0==1.0.13-3build1
-libgbm1==25.2.8-0ubuntu0.24.04.2
+libgbm1==25.2.8-0ubuntu0.24.04.3
 libgcc-13-dev==13.3.0-6ubuntu2~24.04.1
 libgd3==2.3.3-9ubuntu5
 libgdbm-compat4t64==1.23-5.1build1
@@ -170,12 +170,12 @@ libgdk-pixbuf2.0-common==2.42.10+dfsg-3ubuntu3.3
 libgif7==5.2.2-1ubuntu1.2
 libgirepository-1.0-1==1.80.1-1
 libgl1==1.7.0-1build1
-libgl1-mesa-dri==25.2.8-0ubuntu0.24.04.2
+libgl1-mesa-dri==25.2.8-0ubuntu0.24.04.3
 libglib2.0-0t64==2.80.0-6ubuntu3.9
 libglib2.0-bin==2.80.0-6ubuntu3.9
 libglib2.0-data==2.80.0-6ubuntu3.9
 libglvnd0==1.7.0-1build1
-libglx-mesa0==25.2.8-0ubuntu0.24.04.2
+libglx-mesa0==25.2.8-0ubuntu0.24.04.3
 libglx0==1.7.0-1build1
 libgomp1==14.2.0-4ubuntu2~24.04.1
 libgpm2==1.20.7-11
@@ -292,6 +292,7 @@ libvulkan1==1.3.275.0-1build1
 libwayland-client0==1.22.0-2.1build1
 libwayland-cursor0==1.22.0-2.1build1
 libwayland-egl1==1.22.0-2.1build1
+libwayland-server0==1.22.0-2.1build1
 libwebp7==1.3.2-0.4build3
 libwrap0==7.6.q-33
 libx11-6==2:1.8.7-1build1
@@ -325,7 +326,7 @@ libxml2-dev==2.9.14+dfsg-1.3ubuntu3.9
 libxmlb2==0.3.24-1~ubuntu0.24.04.1
 libxmu6==2:1.1.3-3build2
 libxmuu1==2:1.1.3-3build2
-libxpm4==1:3.5.17-1ubuntu0.24.04.1
+libxpm4==1:3.5.17-1ubuntu0.24.04.2
 libxrandr2==2:1.5.2-2build1
 libxrender1==1:0.9.10-1.1build1
 libxshmfence1==1.3-1build5
@@ -338,7 +339,7 @@ libxv1==2:1.0.11-1.1build1
 libxxf86dga1==2:1.1.5-1build1
 libxxf86vm1==1:1.1.4-1build4
 libyaml-0-2==0.2.5-1build1
-linux-libc-dev==6.8.0-142.142
+linux-libc-dev==6.8.0-146.146
 logrotate==3.21.0-2build1
 lsb-release==12.0-2
 lto-disabled-list==47
@@ -346,8 +347,8 @@ make==4.3-4.1build2
 manpages==6.7-2
 manpages-dev==6.7-2
 media-types==10.1.0
-mesa-libgallium==25.2.8-0ubuntu0.24.04.2
-mesa-vulkan-drivers==25.2.8-0ubuntu0.24.04.2
+mesa-libgallium==25.2.8-0ubuntu0.24.04.3
+mesa-vulkan-drivers==25.2.8-0ubuntu0.24.04.3
 ncurses-term==6.4+20240113-1ubuntu2.2
 netbase==6.4
 networkd-dispatcher==2.2.4-1
