@@ -1,4 +1,4 @@
-From 49f2da445651f5ca822138290c599dfb9503afe9 Mon Sep 17 00:00:00 2001
+From 1fd073093dc0957532595547cac725dd0572f3ce Mon Sep 17 00:00:00 2001
 From: "Mrinmoy Ghosh (mrghosh)" <mrghosh@cisco.com>
 Date: Fri, 14 Mar 2025 23:09:49 -0400
 Subject: [PATCH] SVI Deletion handling, BGP sync message (#145) (#159)
@@ -15,14 +15,14 @@ Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 ---
- zebra/zebra_evpn_neigh.c | 50 ++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 50 insertions(+)
+ zebra/zebra_evpn_neigh.c | 43 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 43 insertions(+)
 
 diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
-index c095cdb289..ac990e6f08 100644
+index d32bf07994..d5a0159985 100644
 --- a/zebra/zebra_evpn_neigh.c
 +++ b/zebra/zebra_evpn_neigh.c
-@@ -559,15 +559,49 @@ int zebra_evpn_neigh_del(struct zebra_evpn *zevpn, struct zebra_neigh *n)
+@@ -565,15 +565,49 @@ int zebra_evpn_neigh_del(struct zebra_evpn *zevpn, struct zebra_neigh *n)
  	return 0;
  }
  
@@ -72,7 +72,7 @@ index c095cdb289..ac990e6f08 100644
  	if (CHECK_FLAG(n->flags, ZEBRA_NEIGH_ES_PEER_ACTIVE)) {
  		struct zebra_ns *zns = NULL;
  		struct interface *ifp = NULL;
-@@ -636,12 +670,28 @@ struct zebra_neigh *zebra_evpn_proc_sync_neigh_update(
+@@ -642,12 +676,21 @@ struct zebra_neigh *zebra_evpn_proc_sync_neigh_update(
  	bool set_dp_inactive = false;
  	bool created;
  	ifindex_t ifindex = 0;
@@ -85,13 +85,6 @@ index c095cdb289..ac990e6f08 100644
  
 +	if (n && zebra_evpn_neigh_del_if_svi_unresolved(n, &old_mac))
 +		n = NULL;
-+
-+	if (!n && ifindex == IFINDEX_INTERNAL) {
-+		if (old_mac && CHECK_FLAG(old_mac->flags, ZEBRA_MAC_AUTO)
-+		    && !zebra_evpn_mac_in_use(old_mac))
-+			zebra_evpn_mac_del(zevpn, old_mac);
-+		return NULL;
-+	}
 +
 +	if (old_mac && old_mac != mac
 +	    && CHECK_FLAG(old_mac->flags, ZEBRA_MAC_AUTO)

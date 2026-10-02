@@ -1,4 +1,4 @@
-From 6d3e889e0fbd9bb32f213a4a48a1f4310a1178ff Mon Sep 17 00:00:00 2001
+From 31d35c64833c48aff54c3a8946488d6b44d1161f Mon Sep 17 00:00:00 2001
 From: Patrice Brissette <patricebrissette@gmail.com>
 Date: Wed, 6 May 2026 09:26:47 -0400
 Subject: [PATCH] zebra: mac sync update/del/expiry in extern_learn mode
@@ -23,12 +23,14 @@ Netlink MAC Update processing:
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 (cherry picked from commit 6c2d55b5488361124905b11801e96f804f101993)
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 ---
  zebra/zebra_evpn_mac.c | 84 +++++++++++++++++++++++++++++-------------
- zebra/zebra_evpn_mh.c  |  3 +-
+ zebra/zebra_evpn_mh.c  | 10 +++--
  zebra/zebra_evpn_mh.h  |  1 +
  zebra/zebra_neigh.c    | 14 +++++++
- 4 files changed, 75 insertions(+), 27 deletions(-)
+ 4 files changed, 81 insertions(+), 28 deletions(-)
 
 diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
 index 6e0f1bbeeb..5f9f84f34e 100644
@@ -157,10 +159,19 @@ index 6e0f1bbeeb..5f9f84f34e 100644
  
  		return 0;
 diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
-index 625d2a6863..2a6b7591d0 100644
+index 625d2a6863..ac924210be 100644
 --- a/zebra/zebra_evpn_mh.c
 +++ b/zebra/zebra_evpn_mh.c
-@@ -2293,8 +2293,7 @@ static void zebra_evpn_es_setup_evis(struct zebra_evpn_es *es)
+@@ -62,6 +62,8 @@ static void zebra_evpn_mh_clear_protodown_es(struct zebra_evpn_es *es);
+ static void zebra_evpn_mh_startup_delay_timer_start(const char *rc);
+ static void zebra_evpn_es_vtep_local_set(struct zebra_evpn_es_vtep *es_vtep);
+ static void zebra_evpn_es_vtep_local_clear(struct zebra_evpn_es_vtep *es_vtep);
++static void zebra_evpn_es_bypass_update_macs(struct zebra_evpn_es *es,
++					     struct interface *ifp, bool bypass);
+ 
+ esi_t zero_esi_buf, *zero_esi = &zero_esi_buf;
+ 
+@@ -2293,8 +2295,7 @@ static void zebra_evpn_es_setup_evis(struct zebra_evpn_es *es)
  	}
  }
  
@@ -170,6 +181,18 @@ index 625d2a6863..2a6b7591d0 100644
  {
  	vlanid_t vid;
  	struct zebra_if *zif;
+@@ -2524,7 +2525,10 @@ static void zebra_evpn_es_local_info_set(struct zebra_evpn_es *es,
+ 	/* if there any local macs referring to the ES as dest we
+ 	 * need to clear the contents and start over
+ 	 */
+-	zebra_evpn_es_flush_local_macs(es, zif->ifp, true);
++	if (zebra_mac_ext_learn_mode())
++		zebra_evpn_es_bypass_update_macs(es, zif->ifp, false);
++	else
++		zebra_evpn_es_flush_local_macs(es, zif->ifp, true);
+ 
+ 	/* inherit EVPN protodown flags on the access port */
+ 	zebra_evpn_mh_update_protodown_es(es, true /*resync_dplane*/);
 diff --git a/zebra/zebra_evpn_mh.h b/zebra/zebra_evpn_mh.h
 index 96a94bfbc0..007aae6451 100644
 --- a/zebra/zebra_evpn_mh.h
