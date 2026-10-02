@@ -1,7 +1,7 @@
 """Common flags used througout the project."""
 
 CFLAGS_COMMON = [
-    "-std=c++14", # If we used Bazel-built protobuf, we'd have to bump to c++17.
+    "-std=c++14",  # If we used Bazel-built protobuf, we'd have to bump to c++17.
     "-Wall",
     "-fPIC",
     "-Wno-write-strings",

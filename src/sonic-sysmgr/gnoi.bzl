@@ -1,5 +1,8 @@
 """Utilities to build gnoi."""
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_import.bzl", "cc_import")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load(
     "@sonic_protobuf//:defs.bzl",
     "WELL_KNOWN_PROTO_PATH",
@@ -69,7 +72,7 @@ def gnoi_cc_protos(name):
     # Replicate Make's librebootgnoi exactly.
     # This will be shipped in the sysmgr deb package and container image.
     # TODO(bazel-ready): We may want to statically link this instead when we no longer have to keep Make equivalence.
-    native.cc_binary(
+    cc_binary(
         name = _LIBRARY,
         srcs = sources + headers,
         includes = includes,
@@ -80,13 +83,11 @@ def gnoi_cc_protos(name):
         # but that's not what Make does, so we should respect it.
         deps = ["@sonic_protobuf//:libprotobuf_headers"],
     )
-
-    native.cc_import(
+    cc_import(
         name = name + "_import",
         shared_library = ":" + _LIBRARY,
     )
-
-    native.cc_library(
+    cc_library(
         name = name,
         hdrs = headers,
         includes = includes,

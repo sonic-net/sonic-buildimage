@@ -8,7 +8,6 @@ bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.3", dev_dependency = Tr
 bazel_dep(name = "rules_cc", version = "0.2.14")
 bazel_dep(name = "tar.bzl", version = "0.10.5")
 bazel_dep(name = "bazel_lib", version = "3.1.1")
-
 bazel_dep(name = "rules_distroless", version = "0.0.0.commit-01bb79d7eef4eb3ce9511d3dfaf0ab386bd8d12d")
 bazel_dep(name = "sonic-build-infra", version = "0.0.4-83b4e9d963f7f268d06983a8c954fc5d6d93ce2b", repo_name = "sonic_build_infra")
 bazel_dep(name = "sonic-swss-common", version = "0.0.0-e11c139e59e990bd4cd406ff93b64270fd36e7c1", repo_name = "sonic_swss_common")

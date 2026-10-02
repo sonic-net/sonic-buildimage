@@ -46,9 +46,9 @@ cc_binary(
     linkopts = LDFLAGS_ASAN,
     visibility = ["//:__subpackages__"],
     deps = [
+        ":gnoi_cc_protos",
         ":proto_compat",
         ":reboot_dbus",
-        ":gnoi_cc_protos",
         "@sonic_swss_common//:libswsscommon_shared",
         "@trixie//libdbus-c++-dev:libdbus-c++",
     ],
