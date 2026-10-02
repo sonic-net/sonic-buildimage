@@ -113,7 +113,7 @@ def test_update_peer_invalid_admin_status(mocked_log_err):
         m = constructor(constant)
         res = m.set_handler("10.10.10.1", {"admin_status": "invalid"})
         assert res, "Expect True return value for peer update"
-        mocked_log_err.assert_called_with("Peer 'default|10.10.10.1': Can't update the peer. It has wrong attribute value attr['admin_status'] = 'invalid'")
+        mocked_log_err.assert_called_with("Peer '10.10.10.1': rejected invalid field value")
 
 def test_peer_key_validation():
     for constant in load_constant_files():
@@ -151,6 +151,53 @@ def test_invalid_peer_keys_are_ignored():
         m.del_handler("default|10.10.10.1" + chr(10))
 
         m.cfg_mgr.push.assert_not_called()
+
+
+def test_peer_field_validation():
+    m = constructor(load_constant_files()[0])
+    assert m.validate_peer_data({
+        'asn': '65200', 'holdtime': '180', 'keepalive': '60',
+        'local_addr': '30.30.30.30', 'name': 'TOR edge',
+        'nhopself': '0', 'rrclient': '1',
+    })
+
+    for field, value in (
+        ('asn', '-1'), ('asn', '4294967296'), ('peer_asn', '0'),
+        ('holdtime', '65536'), ('keepalive', 'sixty'),
+        ('rrclient', '2'), ('nhopself', 'yes'),
+        ('admin_status', 'disabled'), ('local_addr', 'not-an-address'),
+        ('src_address', 'not-an-address'), ('ip_range', '10.0.0.0/24,invalid'),
+        ('name', 'TOR\tEdge'), ('description', 'bad\rvalue'),
+    ):
+        assert not m.validate_peer_data({field: value}), (field, value)
+    assert not m.validate_peer_data(None)
+
+    m.cfg_mgr.push.reset_mock()
+    assert m.set_handler('30.30.30.1', {'asn': 'not-a-number'})
+    m.cfg_mgr.push.assert_not_called()
+
+
+def test_dynamic_peer_field_validation():
+    m = constructor(load_constant_files()[0], peer_type='dynamic')
+    assert m.validate_peer_data({
+        'name': 'DynNbr1', 'peer_asn': '65200',
+        'ip_range': '10.0.0.0/24,10.0.1.0/24',
+        'src_address': '10.0.0.1',
+    }, 'DynNbr1')
+    assert not m.validate_peer_data({'name': 'OtherPeer'}, 'DynNbr1')
+    assert not m.validate_peer_data({'name': 'peer name'}, 'peer name')
+    assert not m.validate_ip_ranges('10.0.0.0/24,')
+
+
+def test_dynamic_peer_delete_skips_invalid_cached_range():
+    m = constructor(load_constant_files()[0], peer_type='dynamic')
+    m.peers.add(('default', 'DynNbr1'))
+    m.directory.put('CONFIG_DB', swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME,
+                    'default|DynNbr1', {'ip_range': 'invalid range'})
+    with patch.object(m, 'apply_op', return_value=True) as apply_op:
+        m.del_handler('DynNbr1')
+    assert all('no bgp listen range' not in call.args[0]
+               for call in apply_op.call_args_list)
 
 def test_add_peer():
     for constant in load_constant_files():
