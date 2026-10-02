@@ -107,7 +107,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.8.1-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.8.2-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -126,7 +126,7 @@ equivs==2.3.1
 exim4-base==4.96-15+deb12u10
 exim4-config==4.96-15+deb12u10
 exim4-daemon-light==4.96-15+deb12u10
-expat==2.5.0-1+deb12u3
+expat==2.5.0-1+deb12u4
 fakeroot==1.31-1.2
 fig2dev==1:3.2.8b-3+deb12u2
 file==1:5.44-3
@@ -599,8 +599,8 @@ libevent-openssl-2.1-7==2.1.12-stable-8+deb12u1
 libevent-pthreads-2.1-7==2.1.12-stable-8+deb12u1
 libexception-class-perl==1.45-1
 libexecs0==1.3-2
-libexpat1==2.5.0-1+deb12u3
-libexpat1-dev==2.5.0-1+deb12u3
+libexpat1==2.5.0-1+deb12u4
+libexpat1-dev==2.5.0-1+deb12u4
 libexplain-dev==1.4.D001-12+b1
 libexplain51==1.4.D001-12+b1
 libexporter-tiny-perl==1.006000-1
