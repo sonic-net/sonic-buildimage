@@ -95,6 +95,28 @@
             "value": "INGRESS"
         }
     },
+    "ACL_TABLE_DEFAULT_VALUE_PRIORITY": {
+        "desc": "ACL_TABLE with no priority leaf inherits the YANG default 100.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-acl:sonic-acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='NO-NSW-PACL-V4']/ACL_TABLE_NAME",
+            "key": "sonic-acl:priority",
+            "value": 100
+        }
+    },
+    "ACL_TABLE_VALID_PRIORITY": {
+        "desc": "ACL_TABLE LOAD PRIORITY FIELD SUCCESSFULLY.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-acl:sonic-acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='NO-NSW-PACL-V4']/ACL_TABLE_NAME",
+            "key": "sonic-acl:priority",
+            "value": 200
+        }
+    },
+    "ACL_TABLE_INVALID_PRIORITY": {
+        "desc": "Configure ACL_TABLE priority out of the uint32 range.",
+        "eStrKey" : "Bounds"
+    },
     "ACL_TABLE_STAGE_SERVICES": {
         "desc": "ACL_TABLE LOAD STAGE SERVICES SUCCESSFULLY.",
         "eStrKey" : "Verify",
