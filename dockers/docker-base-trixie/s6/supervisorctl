@@ -1,0 +1,125 @@
+#!/bin/bash
+
+# Containers that cannot run s6-overlay (started with --pid=host, where the
+# entrypoint is not PID 1) fall back to the real supervisord; talk to it with
+# the real supervisorctl in that case.
+if [ ! -d /run/s6-rc ]; then
+    exec python3 -c "from supervisor.supervisorctl import main; main()" "$@"
+fi
+
+function one_status()
+{
+    local service=$1
+    local status_str is_up pid uptime since_tai64 svc_status since_ts since
+
+    # Single call to s6-svstat, read all fields at once
+    status_str=$(/command/s6-svstat -o up,pid,updownfor,updownsince /run/service/$service 2>/dev/null)
+    [[ -z "$status_str" ]] && {
+        printf "%-32s %-9s %s\n" "$service" "UNKNOWN" "not found"
+        return 1
+    }
+
+    # Parse fields using bash read (faster than multiple cut/echo calls)
+    read -r is_up pid uptime since_tai64 <<<"$status_str"
+
+    if [[ "$is_up" == "true" ]]; then
+        svc_status='RUNNING'
+        printf "%-32s %-9s pid %d, uptime %d:%02d:%02d\n" "$service" "$svc_status" "$pid" $((uptime/3600)) $((uptime%3600/60)) $((uptime%60))
+    else
+        svc_status='EXITED'
+        # Only convert date if service is actually stopped (avoid unnecessary calls)
+        if [[ -n "$since_tai64" && "$since_tai64" != "0" ]]; then
+            since_ts=$(/command/s6-tai64nlocal <<<"$since_tai64" 2>/dev/null)
+            since=$(date -d "$since_ts UTC" '+%b %d %I:%M %p' 2>/dev/null || echo "unknown")
+        else
+            since="unknown"
+        fi
+        printf "%-32s %-9s %s\n" "$service" "$svc_status" "$since"
+    fi
+}
+
+function status()
+{
+    local service=$1
+    if [[ -z "$service" ]]; then
+        while IFS= read -r service; do
+            one_status "$service"
+        done < <(/command/s6-rc-db list longruns)
+    else
+        one_status "$service"
+    fi
+}
+
+function start()
+{
+    local service=$1
+    if [[ -z "$service" ]]; then
+        /command/s6-rc -u start user
+    else
+        /command/s6-svc -uwU -T 0 -- /run/s6-rc/servicedirs/"$service"
+    fi
+}
+
+function stop()
+{
+    local service=$1
+    if [[ -z "$service" ]]; then
+        /command/s6-rc -d stop user
+    else
+        /command/s6-svc -dwD -T 0 -- /run/s6-rc/servicedirs/"$service"
+    fi
+}
+
+function signal()
+{
+    local sig=$1
+    local service=$2
+
+    if [[ -z "$sig" || -z "$service" ]]; then
+        echo "Usage: supervisorctl signal SIGNAL SERVICE" >&2
+        return 1
+    fi
+
+    local flag=
+
+    case "${sig^^}" in
+        ALRM|SIGALRM)     flag="-a" ;;
+        ABRT|SIGABRT)     flag="-b" ;;
+        QUIT|SIGQUIT)     flag="-q" ;;
+        HUP|SIGHUP)       flag="-h" ;;
+        KILL|SIGKILL)     flag="-k" ;;
+        TERM|SIGTERM)     flag="-t" ;;
+        INT|SIGINT)       flag="-i" ;;
+        USR1|SIGUSR1)     flag="-1" ;;
+        USR2|SIGUSR2)     flag="-2" ;;
+        STOP|SIGSTOP)     flag="-p" ;;
+        CONT|SIGCONT)     flag="-c" ;;
+        WINCH|SIGWINCH)   flag="-y" ;;
+
+        *)
+            echo "Unsupported signal: $sig" >&2
+            return 1
+            ;;
+    esac
+
+    /command/s6-svc "$flag" -- /run/s6-rc/servicedirs/"$service"
+}
+
+case "$1" in
+    start|stop|status)
+        "$1" "$2"
+        ;;
+    signal)
+        signal "$2" "$3"
+        ;;
+    restart)
+        stop "$2"
+        start "$2"
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status|signal}"
+        exit 1
+        ;;
+esac
+
+exit 0

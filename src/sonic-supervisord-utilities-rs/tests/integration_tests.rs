@@ -343,6 +343,31 @@ fn test_supervisor_termination_logic() {
 }
 
 #[test]
+fn test_supervisor_pid_selection() {
+    use sonic_supervisord_utilities_rs::proc_exit_listener::supervisor_pid;
+
+    // Default path (no S6_SUPERVISED): the parent is signalled, exactly as
+    // upstream supervisord behaviour - /proc is not even consulted.
+    std::env::remove_var("S6_SUPERVISED");
+    assert_eq!(supervisor_pid(), nix::unistd::getppid());
+
+    // Gated path: PID 1 is used only when it really is s6-svscan (inside an
+    // s6-overlay container); anywhere else (--pid=host fallback, the build
+    // host) the parent is still signalled.
+    std::env::set_var("S6_SUPERVISED", "1");
+    let pid1_is_s6 = std::fs::read_to_string("/proc/1/comm")
+        .map(|c| c.trim() == "s6-svscan")
+        .unwrap_or(false);
+    let expected = if pid1_is_s6 {
+        nix::unistd::Pid::from_raw(1)
+    } else {
+        nix::unistd::getppid()
+    };
+    assert_eq!(supervisor_pid(), expected);
+    std::env::remove_var("S6_SUPERVISED");
+}
+
+#[test]
 fn test_autorestart_logic() {
     // Test the auto-restart decision logic that would be used in the main function
     // We test the get_autorestart_state function which determines the behavior

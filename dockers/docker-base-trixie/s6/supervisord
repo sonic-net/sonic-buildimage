@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+# Containers started with --pid=host share the host PID namespace so this
+# process is not PID 1.  s6-overlay requires being PID 1, so fall back to
+# real supervisord in that case.
+if [ $$ -ne 1 ]; then
+    exec python3 -c "from supervisor.supervisord import main; main()"
+fi
+
+# Create s6-rc.d directory for s6-rc service management
+rm -rf /etc/s6-overlay/s6-rc.d/
+
+EVENT_FIFO_DIR=/var/run/event_listener
+EVENT_FIFO=${EVENT_FIFO_DIR}/input
+
+# Create event listener fifo pipe
+rm -rf ${EVENT_FIFO_DIR}
+mkdir -p ${EVENT_FIFO_DIR}
+[ -p "${EVENT_FIFO}" ] || mkfifo ${EVENT_FIFO}
+chmod 600 ${EVENT_FIFO}
+
+/usr/bin/create_s6_config.py /etc/supervisor/conf.d/ /etc/s6-overlay/s6-rc.d/ /etc/supervisor/critical_processes
+# Remove supervisord watchdog_processes configuration files to avoid conflicts in tests
+rm -rf /etc/supervisor/watchdog_processes
+# Start s6-rc service management
+exec /init

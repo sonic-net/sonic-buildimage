@@ -575,6 +575,174 @@ mod tests {
         test_listener.test_main_snmp().unwrap();
     }
 
+    /// The S6_SUPERVISED tests mutate process-global environment variables;
+    /// serialize them so they cannot race each other.
+    static S6_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Poller that reports stdin readable exactly once, like the edge-triggered
+    /// mio poller after one burst write to the event pipe. A second poll means
+    /// the listener went back to waiting while events were still buffered.
+    struct OneShotPoller {
+        calls: u32,
+    }
+
+    impl Poller for OneShotPoller {
+        fn poll(&mut self, events: &mut mio::Events, timeout: Option<std::time::Duration>) -> std::io::Result<()> {
+            self.calls += 1;
+            if self.calls > 1 {
+                panic!("listener polled again with events still buffered (burst not drained)");
+            }
+            MockPoller::new().poll(events, timeout)
+        }
+
+        fn register(&self, _stdin_fd: std::os::unix::io::RawFd, _token: Token) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn event(name: &str, payload: &str) -> String {
+        format!("ver:3.0 server:supervisor eventname:{} len:{}\n{}", name, payload.len(), payload)
+    }
+
+    /// Poller that counts its poll() calls and otherwise behaves like
+    /// MockPoller (always reports stdin readable).
+    struct CountingPoller {
+        calls: std::sync::Arc<std::sync::atomic::AtomicU32>,
+    }
+
+    impl Poller for CountingPoller {
+        fn poll(&mut self, events: &mut mio::Events, timeout: Option<std::time::Duration>) -> std::io::Result<()> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            MockPoller::new().poll(events, timeout)
+        }
+
+        fn register(&self, _stdin_fd: std::os::unix::io::RawFd, _token: Token) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Under s6 (S6_SUPERVISED=1) several events arrive in one read (e.g. the
+    /// burst at container start, then a crash): the EXITED event of a critical
+    /// process behind them must be acted on without waiting for another wakeup.
+    #[test]
+    fn test_burst_exit_event_handled_without_new_wakeup() {
+        use std::os::unix::io::FromRawFd;
+
+        let _env_guard = S6_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+        let mut injector = InjectorPP::new();
+        injector
+            .when_called(injectorpp::func!(fn (nix::sys::signal::kill)(nix::unistd::Pid, nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_pid: nix::unistd::Pid, _signal: nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>,
+                returns: Ok(())
+            ));
+        std::env::set_var("NAMESPACE_PREFIX", "asic");
+        std::env::set_var("S6_SUPERVISED", "1");
+
+        let mut burst = String::new();
+        for p in ["portsyncd", "neighsyncd", "orchagent"] {
+            burst += &event("PROCESS_STATE_RUNNING",
+                            &format!("processname:{} groupname:{} from_state:STARTING", p, p));
+        }
+        burst += &event("PROCESS_STATE_EXITED",
+                        "processname:orchagent groupname:orchagent from_state:RUNNING expected:0");
+
+        let (read_fd, write_fd) = nix::unistd::pipe().unwrap();
+        // Keep the write end open: EOF must not be what ends the loop.
+        let _write_guard = guard(write_fd, |fd| {
+            let _ = nix::unistd::close(fd);
+        });
+        assert_eq!(nix::unistd::write(write_fd, burst.as_bytes()).unwrap(), burst.len());
+        let stdin = unsafe { std::fs::File::from_raw_fd(read_fd) };
+
+        let args = Args {
+            container_name: "swss".to_string(),
+            use_unix_socket_path: true,
+        };
+        let critical_path = format!("{}/tests/etc/supervisor/critical_processes", env!("CARGO_MANIFEST_DIR"));
+        let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
+        let mock_configdb = MockConfigDB::new().expect("Failed to create mock ConfigDB");
+
+        // Returns Ok(()) right after terminating the supervisor on the EXITED
+        // event. Before the fix the listener handled one event, polled again
+        // and the OneShotPoller panicked.
+        let result = main_with_parsed_args_and_stdin(args, stdin, &critical_path, &watch_path,
+                                                     &mock_configdb, OneShotPoller { calls: 0 });
+        std::env::remove_var("NAMESPACE_PREFIX");
+        std::env::remove_var("S6_SUPERVISED");
+        match result {
+            Ok(()) => {}
+            Err(e) => {
+                let msg = e.to_string();
+                assert!(msg.contains("event publisher") || msg.contains("EventPublisher"),
+                        "unexpected error: {}", msg);
+                println!("EventPublisher unavailable in this environment, loop not reached: {}", msg);
+            }
+        }
+    }
+
+    /// Without S6_SUPERVISED the supervisord flow is unchanged: the listener
+    /// returns to the poller after every handled event (the protocol is
+    /// ack-driven there), so the same four-event burst takes four wakeups.
+    #[test]
+    fn test_default_path_polls_once_per_event() {
+        use std::os::unix::io::FromRawFd;
+
+        let _env_guard = S6_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+        let mut injector = InjectorPP::new();
+        injector
+            .when_called(injectorpp::func!(fn (nix::sys::signal::kill)(nix::unistd::Pid, nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_pid: nix::unistd::Pid, _signal: nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>,
+                returns: Ok(())
+            ));
+        std::env::set_var("NAMESPACE_PREFIX", "asic");
+        std::env::remove_var("S6_SUPERVISED");
+
+        let mut burst = String::new();
+        for p in ["portsyncd", "neighsyncd", "orchagent"] {
+            burst += &event("PROCESS_STATE_RUNNING",
+                            &format!("processname:{} groupname:{} from_state:STARTING", p, p));
+        }
+        burst += &event("PROCESS_STATE_EXITED",
+                        "processname:orchagent groupname:orchagent from_state:RUNNING expected:0");
+
+        let (read_fd, write_fd) = nix::unistd::pipe().unwrap();
+        let _write_guard = guard(write_fd, |fd| {
+            let _ = nix::unistd::close(fd);
+        });
+        assert_eq!(nix::unistd::write(write_fd, burst.as_bytes()).unwrap(), burst.len());
+        let stdin = unsafe { std::fs::File::from_raw_fd(read_fd) };
+
+        let args = Args {
+            container_name: "swss".to_string(),
+            use_unix_socket_path: true,
+        };
+        let critical_path = format!("{}/tests/etc/supervisor/critical_processes", env!("CARGO_MANIFEST_DIR"));
+        let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
+        let mock_configdb = MockConfigDB::new().expect("Failed to create mock ConfigDB");
+
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+        let result = main_with_parsed_args_and_stdin(args, stdin, &critical_path, &watch_path,
+                                                     &mock_configdb, CountingPoller { calls: calls.clone() });
+        std::env::remove_var("NAMESPACE_PREFIX");
+        match result {
+            Ok(()) => {
+                // One poller wakeup per event, exactly as upstream today.
+                assert_eq!(calls.load(Ordering::SeqCst), 4,
+                           "default path must poll once per handled event");
+            }
+            Err(e) => {
+                let msg = e.to_string();
+                assert!(msg.contains("event publisher") || msg.contains("EventPublisher"),
+                        "unexpected error: {}", msg);
+                println!("EventPublisher unavailable in this environment, loop not reached: {}", msg);
+            }
+        }
+    }
+
     #[test]
     fn test_progressive_time_mocking() {
         // Test progressive time mocking
