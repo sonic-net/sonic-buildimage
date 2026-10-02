@@ -37,7 +37,9 @@
 
 #include "lib/zebra.h"
 #include <linux/rtnetlink.h>
+#include <linux/neighbour.h>
 #include "lib/json.h"
+#include "lib/jhash.h"
 #include "lib/libfrr.h"
 #include "lib/frratomic.h"
 #include "lib/command.h"
@@ -52,11 +54,17 @@
 #include "zebra/zebra_mpls.h"
 #include "zebra/zebra_router.h"
 #include "zebra/zebra_vxlan_private.h"
+#include "zebra/zebra_vxlan.h"
+#include "zebra/zebra_evpn.h"
+#include "zebra/zebra_evpn_mac.h"
+#include "zebra/zebra_evpn_mh.h"
+#include "zebra/zebra_neigh.h"
 #include "zebra/kernel_netlink.h"
 #include "zebra/rt_netlink.h"
 #include "zebra/debug.h"
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
+#include "fpm_mac.h"
 #include "lib/srv6.h"
 #include "lib/vrf.h"
 #include <nexthopgroup/c-api/nexthopgroup_capi.h>
@@ -691,6 +699,279 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 			 &fnc->t_connect);
 }
 
+/* Parsed on the FPM thread by fpm_mac_decode(), applied on zebra's main thread. */
+DEFINE_MTYPE_STATIC(ZEBRA, FPM_LOCAL_MAC, "FPM local MAC");
+DEFINE_MTYPE_STATIC(ZEBRA, FPM_ASIC_MAC, "FPM ASIC MAC");
+
+/*
+ * The MACs fpmsyncd last reported the ASIC has, by VLAN and MAC. zebra flushes
+ * local MACs expecting them to be relearnt, and holds some local-inactive
+ * until the dataplane reports activity. Over FPM nothing reports a MAC the
+ * ASIC keeps again, so this is what gives it back. Main thread only.
+ */
+PREDECL_HASH(fpm_asic_macs);
+
+struct fpm_asic_mac {
+	struct fpm_asic_macs_item item;
+	struct fpm_local_mac flm;
+};
+
+static int fpm_asic_mac_cmp(const struct fpm_asic_mac *a,
+			    const struct fpm_asic_mac *b)
+{
+	if (a->flm.vid != b->flm.vid)
+		return a->flm.vid < b->flm.vid ? -1 : 1;
+
+	return memcmp(a->flm.mac, b->flm.mac, ETH_ALEN);
+}
+
+static uint32_t fpm_asic_mac_hash(const struct fpm_asic_mac *am)
+{
+	return jhash(am->flm.mac, ETH_ALEN, am->flm.vid);
+}
+
+DECLARE_HASH(fpm_asic_macs, struct fpm_asic_mac, item, fpm_asic_mac_cmp,
+	     fpm_asic_mac_hash);
+
+static struct fpm_asic_macs_head asic_macs = INIT_HASH(asic_macs);
+
+static struct fpm_asic_mac *fpm_asic_mac_find(uint16_t vid, const uint8_t *mac)
+{
+	struct fpm_asic_mac key = {};
+
+	key.flm.vid = vid;
+	memcpy(key.flm.mac, mac, ETH_ALEN);
+
+	return fpm_asic_macs_find(&asic_macs, &key);
+}
+
+static void fpm_asic_mac_note(const struct fpm_local_mac *flm)
+{
+	struct fpm_asic_mac *am = fpm_asic_mac_find(flm->vid, flm->mac);
+
+	if (am) {
+		am->flm = *flm;
+		return;
+	}
+
+	am = XCALLOC(MTYPE_FPM_ASIC_MAC, sizeof(*am));
+	am->flm = *flm;
+	fpm_asic_macs_add(&asic_macs, am);
+}
+
+static void fpm_asic_mac_forget(uint16_t vid, const uint8_t *mac)
+{
+	struct fpm_asic_mac *am = fpm_asic_mac_find(vid, mac);
+
+	if (!am)
+		return;
+
+	fpm_asic_macs_del(&asic_macs, am);
+	XFREE(MTYPE_FPM_ASIC_MAC, am);
+}
+
+static struct zebra_mac *fpm_mac_lookup(struct interface *ifp,
+					struct interface *br_if, vlanid_t vid,
+					const struct ethaddr *mac)
+{
+	struct zebra_evpn *zevpn = zebra_evpn_map_vlan(ifp, br_if, vid);
+
+	return zevpn ? zebra_evpn_mac_lookup(zevpn, mac) : NULL;
+}
+
+/* An Ethernet Segment peer holds the MAC, so zebra keeps its kernel entry. */
+static bool fpm_mac_pinned(struct zebra_mac *zmac)
+{
+	return zmac && CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL) &&
+	       zebra_evpn_mac_is_static(zmac);
+}
+
+/*
+ * The ASIC no longer has the MAC. zebra's MAC flags track both sources, the
+ * ASIC (ZEBRA_MAC_LOCAL) and an Ethernet Segment peer's route
+ * (ZEBRA_MAC_ES_PEER_ACTIVE/PROXY). While the peer still advertises the MAC
+ * zebra keeps it local-inactive and rewrites the kernel entry itself;
+ * otherwise the entry fpm_local_mac_learnt() added goes.
+ */
+static void fpm_local_mac_gone(struct interface *ifp, struct interface *br_if,
+			       vlanid_t vid, struct ethaddr *mac)
+{
+	zebra_vxlan_local_mac_del(ifp, br_if, mac, vid);
+
+	if (fpm_mac_pinned(fpm_mac_lookup(ifp, br_if, vid, mac)))
+		return;
+
+	dplane_local_mac_del(ifp, br_if, vid, mac);
+}
+
+static struct interface *fpm_mac_bridge_port(int ifindex,
+					     struct interface **br_if)
+{
+	struct interface *ifp;
+	struct zebra_if *zif;
+
+	/* By ifindex in the namespace, like zebra's kernel FDB path: a bridge port
+	 * is not tied to a VRF. Only bridge ports carry MACs.
+	 */
+	ifp = if_lookup_by_index_per_nsid(NS_DEFAULT, ifindex);
+	if (!ifp) {
+		zlog_warn("%s: unknown ifindex %d", __func__, ifindex);
+		return NULL;
+	}
+
+	zif = ifp->info;
+	if (!zif || !zif->brslave_info.br_if) {
+		zlog_warn("%s: %s is not a bridge slave", __func__, ifp->name);
+		return NULL;
+	}
+
+	*br_if = zif->brslave_info.br_if;
+	return ifp;
+}
+
+static void fpm_local_mac_learnt(struct interface *ifp, struct interface *br_if,
+				 const struct fpm_local_mac *flm)
+{
+	struct ethaddr mac;
+
+	memcpy(mac.octet, flm->mac, ETH_ALEN);
+
+	/* The ASIC learnt this MAC, not the kernel, so nothing else would put it
+	 * in the bridge FDB and the kernel would keep probing a reachable host.
+	 * In mac-ext-learn mode zebra only writes local-inactive entries, so this
+	 * is the only writer of an active one, including after a move between
+	 * ports. Queued ahead of any write the update below makes, so zebra's
+	 * lands last.
+	 */
+	dplane_local_mac_add(ifp, br_if, flm->vid, &mac, flm->sticky, 0, 0);
+
+	zebra_vxlan_local_mac_add_update(ifp, br_if, &mac, flm->vid,
+					 flm->sticky, false, false);
+}
+
+/*
+ * SONiC to FRR: a MAC the local ASIC learnt or aged out, from fpmsyncd.
+ *
+ * Runs on zebra's main thread: the interface table and the EVPN MAC hashes are
+ * owned by it and are not safe to touch from the FPM thread.
+ */
+static void fpm_apply_local_mac(struct event *t)
+{
+	struct fpm_local_mac *flm = EVENT_ARG(t);
+	struct interface *br_if = NULL;
+	struct interface *ifp;
+	struct ethaddr mac;
+
+	ifp = fpm_mac_bridge_port(flm->ifindex, &br_if);
+	if (!ifp || flm->del) {
+		/* Forgotten first, so the kernel entry removal below is not
+		 * taken for a flush.
+		 */
+		fpm_asic_mac_forget(flm->vid, flm->mac);
+		if (ifp) {
+			memcpy(mac.octet, flm->mac, ETH_ALEN);
+			fpm_local_mac_gone(ifp, br_if, flm->vid, &mac);
+		}
+		goto done;
+	}
+
+	fpm_asic_mac_note(flm);
+	fpm_local_mac_learnt(ifp, br_if, flm);
+
+done:
+	XFREE(MTYPE_FPM_LOCAL_MAC, flm);
+}
+
+/*
+ * zebra wrote or removed the kernel entry of a local MAC. Where the ASIC still
+ * has the MAC, zebra has to hold it active, and nothing would report it again:
+ * - Other than this module's own removals, which forget the MAC first, zebra
+ *   only removes the entry to flush a MAC it expects to be relearnt, as when
+ *   an Ethernet Segment is configured on the port.
+ * - In mac-ext-learn mode zebra writes the entry only for a local-inactive
+ *   MAC, as when an Ethernet Segment peer's route turns a remote MAC local.
+ */
+static void fpm_local_mac_recheck(struct event *t)
+{
+	struct fpm_local_mac *flm = EVENT_ARG(t);
+	struct interface *br_if = NULL;
+	struct fpm_asic_mac *am;
+	struct interface *ifp;
+	struct zebra_mac *zmac;
+	struct ethaddr mac;
+
+	am = fpm_asic_mac_find(flm->vid, flm->mac);
+	if (!am)
+		goto done;
+
+	ifp = fpm_mac_bridge_port(am->flm.ifindex, &br_if);
+	if (!ifp)
+		goto done;
+
+	/* A remote route took the MAC over; if the host moved, the ASIC reports
+	 * it gone, otherwise its next frame is learnt here again.
+	 */
+	memcpy(mac.octet, am->flm.mac, ETH_ALEN);
+	zmac = fpm_mac_lookup(ifp, br_if, am->flm.vid, &mac);
+	if (zmac && CHECK_FLAG(zmac->flags, ZEBRA_MAC_REMOTE))
+		goto done;
+
+	/* An entry written for an active MAC, such as the one
+	 * fpm_local_mac_learnt() writes, agrees with the ASIC.
+	 */
+	if (!flm->del &&
+	    !(zmac && CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL_INACTIVE)))
+		goto done;
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: giving %pEA vlan %u on %s back to zebra",
+			   __func__, &mac, am->flm.vid, ifp->name);
+	fpm_local_mac_learnt(ifp, br_if, &am->flm);
+
+done:
+	XFREE(MTYPE_FPM_LOCAL_MAC, flm);
+}
+
+/* Runs on the dataplane thread; the record belongs to the main thread. */
+static void fpm_local_mac_write_seen(const struct zebra_dplane_ctx *ctx)
+{
+	struct fpm_local_mac *flm;
+
+	flm = XCALLOC(MTYPE_FPM_LOCAL_MAC, sizeof(*flm));
+	flm->ifindex = dplane_ctx_get_ifindex(ctx);
+	flm->vid = dplane_ctx_mac_get_vlan(ctx);
+	memcpy(flm->mac, dplane_ctx_mac_get_addr(ctx)->octet, ETH_ALEN);
+	flm->del = dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_DELETE;
+
+	event_add_event(zrouter.master, fpm_local_mac_recheck, flm, 0, NULL);
+}
+
+/*
+ * Local (ASIC-learned) MAC arriving from SONiC over the FPM channel.
+ *
+ * Bridge FDB entries share RTM_NEWNEIGH/RTM_DELNEIGH with IP neighbours, so the
+ * caller selects this path on ndm_family == AF_BRIDGE. Feeding the MAC through
+ * the same entry point the kernel path uses keeps the EVPN state machine and its
+ * multihoming semantics unchanged. Only the netlink buffer is decoded here;
+ * everything reaching into zebra state is handed to the main thread.
+ */
+static void fpm_read_local_mac(struct nlmsghdr *hdr)
+{
+	struct fpm_local_mac decoded;
+	struct fpm_local_mac *flm;
+
+	if (!fpm_mac_decode(hdr, &decoded)) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: ignoring unusable MAC message", __func__);
+		return;
+	}
+
+	flm = XCALLOC(MTYPE_FPM_LOCAL_MAC, sizeof(*flm));
+	*flm = decoded;
+
+	event_add_event(zrouter.master, fpm_apply_local_mac, flm, 0, NULL);
+}
+
 static void fpm_read(struct event *t)
 {
 	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
@@ -860,6 +1141,28 @@ static void fpm_read(struct event *t)
  				stream_pulldown(fnc->ibuf);
 			}
 			break;
+		case RTM_NEWNEIGH:
+		case RTM_DELNEIGH: {
+			struct ndmsg *ndm;
+
+			if (hdr->nlmsg_len < NLMSG_LENGTH(sizeof(struct ndmsg))) {
+				zlog_warn("%s: [seq=%u] invalid neighbour message length %u",
+					  __func__, hdr->nlmsg_seq,
+					  hdr->nlmsg_len);
+				break;
+			}
+
+			ndm = NLMSG_DATA(hdr);
+			if (ndm->ndm_family != AF_BRIDGE) {
+				if (IS_ZEBRA_DEBUG_FPM)
+					zlog_debug("%s: ignoring non-bridge neighbour message",
+						   __func__);
+				break;
+			}
+
+			fpm_read_local_mac(hdr);
+			break;
+		}
 		default:
 			if (IS_ZEBRA_DEBUG_FPM)
 				zlog_debug(
@@ -2743,6 +3046,16 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 	case DPLANE_OP_MAC_INSTALL:
 	case DPLANE_OP_MAC_DELETE:
+		/* FRR to SONiC: remote MACs, which zebra learnt from BGP EVPN.
+		 * Local MACs originate from fpmsyncd, so echoing them back is a
+		 * loop. It is also unsafe: dplane_local_mac_add() only sets the
+		 * type of its stack vtep to IPADDR_NONE, and the encoder still
+		 * emits a 16 byte NDA_DST from that never-initialised union.
+		 */
+		if (!CHECK_FLAG(dplane_ctx_mac_get_update_flags(ctx),
+				DPLANE_MAC_REMOTE))
+			return 0;
+
 		rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf));
 		if (rv <= 0) {
 			zlog_err("%s: netlink_macfdb_update_ctx failed",
@@ -3517,6 +3830,8 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 
 static int fpm_nl_finish_late(struct fpm_nl_ctx *fnc)
 {
+	struct fpm_asic_mac *am;
+
 	/* Stop the running thread. */
 	frr_pthread_stop(fnc->fthread, NULL);
 
@@ -3527,6 +3842,10 @@ static int fpm_nl_finish_late(struct fpm_nl_ctx *fnc)
 	stream_free(fnc->obuf);
 	free(gfnc);
 	gfnc = NULL;
+
+	while ((am = fpm_asic_macs_pop(&asic_macs)))
+		XFREE(MTYPE_FPM_ASIC_MAC, am);
+	fpm_asic_macs_fini(&asic_macs);
 
 	return 0;
 }
@@ -3574,6 +3893,12 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 		ctx = dplane_provider_dequeue_in_ctx(prov);
 		if (ctx == NULL)
 			break;
+
+		if ((dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_INSTALL ||
+		     dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_DELETE) &&
+		    !CHECK_FLAG(dplane_ctx_mac_get_update_flags(ctx),
+				DPLANE_MAC_REMOTE))
+			fpm_local_mac_write_seen(ctx);
 
 		/*
 		 * Skip all notifications if not connected, we'll walk the RIB
@@ -3652,6 +3977,10 @@ static int fpm_nl_new(struct event_loop *tm)
 	install_element(CONFIG_NODE, &no_fpm_use_nhg_cmd);
 	install_element(CONFIG_NODE, &fpm_use_route_replace_cmd);
 	install_element(CONFIG_NODE, &no_fpm_use_route_replace_cmd);
+
+	/* SONiC runs zebra in mac-ext-learn mode only to learn local MACs over FPM. */
+	if (zebra_mac_ext_learn_mode())
+		zebra_neigh_set_dplane_mac_learning(true);
 
 	return 0;
 }

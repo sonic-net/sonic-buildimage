@@ -19,7 +19,6 @@
 0026-SONiC-ONLY-Translate-tableid-for-dplane-route-notify.patch
 0027-Dont-skip-kernel-routes-uninstall.patch
 0028-zebra-EVPN-VXLAN-Multihome-extern-mode-Enable-kernel.patch
-0029-zebra-New-protocol-RTPROT_HW-for-hardware-learnt-MAC.patch
 0030-doc-zebra-Doc-update-for-zebra-option-kernel-mac-ext.patch
 0031-zebra-EVPN-VXLAN-MH-extern-mode-Update-debug-print-f.patch
 0032-zebra-ARP-ND-Suppression-disabled-for-kernel-mac-ext.patch
@@ -87,4 +86,7 @@
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
 0117-zebra-Allow-quick-flaps-of-interfaces-to-be-handled.patch
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
+0118-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
 0119-bgpd-fix-aggregate-route-counter.patch
+0127-zebra-let-a-dataplane-module-learn-local-MACs.patch
+0128-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch
