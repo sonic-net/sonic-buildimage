@@ -15,14 +15,11 @@ SNMP_YML_PATH = '/etc/sonic/snmp.yml'
 
 FULL_SNMP_COMM_LIST = ['snmp_rocommunity', 'snmp_rocommunities', 'snmp_rwcommunity', 'snmp_rwcommunities']
 
-# Guessable by any attacker without needing to observe traffic; reject them
-# rather than seeding into ConfigDB.
 INSECURE_DEFAULT_COMMUNITIES = {'public', 'private'}
 
 
 def _canonicalize_for_netsnmp_comparison(community):
-    """Strip quote/backslash chars Net-SNMP's tokenizer strips at parse
-    time, so a quoted/escaped default (e.g. '"public"') is still caught."""
+    """Strip characters Net-SNMP's tokenizer removes before comparison."""
     for ch in ('"', "'", '\\'):
         community = community.replace(ch, '')
     return community
@@ -48,8 +45,16 @@ def load_snmp_yaml(path):
         logger.log_info('{} does not exist'.format(path))
         return None
 
-    with open(path, 'r') as yaml_file:
-        return yaml.safe_load(yaml_file)
+    try:
+        with open(path, 'r') as yaml_file:
+            yaml_snmp_info = yaml.safe_load(yaml_file)
+    except yaml.YAMLError as e:
+        logger.log_error('Failed to parse YAML file {}: {}'.format(path, e))
+        return None
+
+    # Normalize an empty file's None result to {} so it hits
+    # apply_snmp_location's specific log instead of looking like a missing file.
+    return yaml_snmp_info if yaml_snmp_info is not None else {}
 
 
 def apply_snmp_communities(db, yaml_snmp_info, snmp_config_db_communities):

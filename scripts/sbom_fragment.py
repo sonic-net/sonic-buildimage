@@ -476,6 +476,36 @@ def _vendor_supplier_from_url(url: Optional[str]) -> Optional[str]:
     return None
 
 
+# sonic-net submodules that rebuild a Debian source package rather than
+# hold code SONiC wrote. Their .debs keep the identity every other SONiC
+# rebuild of a Debian package has, `pkg:deb/sonic/<name>@<version>`,
+# instead of the repository's.
+#
+# The kernel is why. Named `pkg:github/sonic-net/sonic-linux-kernel@<sha>`,
+# the four .debs it builds — linux-image, linux-kbuild and both
+# linux-headers — shared one package URL, so the aggregator collapsed
+# them into a single component named after whichever fragment loaded
+# first. The linux-image the image installs, the package a scanner
+# matches kernel CVEs against, arrived from observation as its own
+# `pkg:deb` component and never merged with that one, because the
+# ecosystem is part of the dedupe key. So the pedigree listing every
+# patch the kernel carries, and each CVE a patch's `resolves` names, sat
+# on a component no advisory matches, while the kernel the patches fix
+# had none. As `pkg:deb` it merges with the observed package the way
+# openssl or bash do, picking up the `distro` and `upstream=linux`
+# qualifiers advisory matching needs.
+#
+# The submodule and its commit are not lost: they stay in
+# externalReferences and the `sonic:submodule_commit` property.
+_DEBIAN_REBUILD_SUBMODULES = ("sonic-linux-kernel",)
+
+
+def _submodule_repo(submodule: dict) -> str:
+    """The repository name a submodule URL ends in, without `.git`."""
+    repo = (submodule.get("url") or "").rstrip("/").rsplit("/", 1)[-1]
+    return repo[:-len(".git")] if repo.endswith(".git") else repo
+
+
 def build_purl(meta: dict, submodule: Optional[dict]) -> str:
     """Construct a PURL appropriate to the artifact + source provenance.
 
@@ -488,7 +518,9 @@ def build_purl(meta: dict, submodule: Optional[dict]) -> str:
     if meta["kind"] == "deb":
         # Heuristic: when source is a sonic-net submodule, use the github
         # PURL as primary identity. Otherwise it's an apt-style deb.
-        if submodule and is_sonic_net_url(submodule.get("url")):
+        if (submodule and is_sonic_net_url(submodule.get("url"))
+                and _submodule_repo(submodule)
+                not in _DEBIAN_REBUILD_SUBMODULES):
             repo = submodule["url"].rsplit("/", 1)[-1]
             sha = (submodule.get("commit") or "")[:12]
             return sbom_purl.build(

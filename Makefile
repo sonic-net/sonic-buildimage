@@ -39,6 +39,15 @@ ifeq ($(NOTRIXIE),0)
 BUILD_TRIXIE=1
 endif
 
+# Bazel components only support a subset of configurations.
+# Fail fast if we're trying to build with Bazel for anything other than trixie.
+ifneq ($(filter-out bazel_disabled,$(BAZEL_MIN_READINESS)),)
+BAZEL_NON_TRIXIE_BUILDS := $(strip $(BUILD_JESSIE) $(BUILD_STRETCH) $(BUILD_BUSTER) $(BUILD_BULLSEYE) $(BUILD_BOOKWORM))
+ifneq ($(BAZEL_NON_TRIXIE_BUILDS),)
+$(error BAZEL_MIN_READINESS=$(BAZEL_MIN_READINESS) only supports trixie builds: Bazel dockers require the trixie base. Re-run with trixie only, e.g. NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 NOBOOKWORM=1 NOTRIXIE=0, or set BAZEL_MIN_READINESS=bazel_disabled.)
+endif
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini

@@ -16,15 +16,25 @@ import os
 import sys
 import types
 
-import pytest
-import yaml
-
 TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
 SCRIPT_PATH = os.path.join(TESTS_DIR, "..", "snmp_yml_to_configdb.py")
 
 
 def _setup_fakes():
-    """Create fake swsscommon/sonic_py_common.logger modules before import."""
+    """Create fake swsscommon/sonic_py_common.logger modules before import.
+
+    Returns the prior sys.modules entries so they can be restored afterward.
+    """
+    saved = {
+        name: sys.modules.get(name, _UNSET)
+        for name in (
+            "swsscommon",
+            "swsscommon.swsscommon",
+            "sonic_py_common",
+            "sonic_py_common.logger",
+        )
+    }
+
     swss_pkg = types.ModuleType("swsscommon")
     swss_common_mod = types.ModuleType("swsscommon.swsscommon")
 
@@ -83,12 +93,28 @@ def _setup_fakes():
         sys.modules["sonic_py_common"] = sonic_py_common_pkg
     sys.modules["sonic_py_common.logger"] = logger_mod
 
+    return saved
 
-_setup_fakes()
+
+def _restore_real_modules(saved):
+    """Put back whatever was in sys.modules before _setup_fakes()."""
+    for name, prior in saved.items():
+        if prior is _UNSET:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = prior
+
+
+_UNSET = object()
+_saved_modules = _setup_fakes()
 
 _spec = importlib.util.spec_from_file_location("snmp_yml_to_configdb", SCRIPT_PATH)
 snmp_yml_to_configdb = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(snmp_yml_to_configdb)
+
+# The script already bound ConfigDBConnector/Logger into its own namespace,
+# so restore the real modules now to avoid leaking the fakes into other tests.
+_restore_real_modules(_saved_modules)
 
 
 class _FakeConfigDB:
@@ -132,6 +158,14 @@ class TestLoadSnmpYaml:
         assert result["snmp_rocommunities"] == ["public", "public2"]
         assert result["snmp_rwcommunities"] == ["private"]
 
+    def test_empty_file_returns_empty_dict(self, tmp_path):
+        # An empty file parses to None via yaml.safe_load; load_snmp_yaml
+        # normalizes this to {} so callers see the more specific
+        # apply_snmp_location "does not exist" log instead of the generic
+        # missing-file exit path.
+        path = _write_yaml(tmp_path, "")
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) == {}
+
     def test_unsafe_python_tag_is_rejected(self, tmp_path):
         # A YAML type tag that would instruct an unsafe loader
         # (yaml.FullLoader) to construct an arbitrary Python object / invoke
@@ -142,8 +176,9 @@ class TestLoadSnmpYaml:
         )
         path = _write_yaml(tmp_path, malicious_yaml)
 
-        with pytest.raises(yaml.YAMLError):
-            snmp_yml_to_configdb.load_snmp_yaml(path)
+        snmp_yml_to_configdb.logger.messages.clear()
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) is None
+        assert any(level == "ERROR" for level, _ in snmp_yml_to_configdb.logger.messages)
 
     def test_unsafe_tag_in_location_is_rejected(self, tmp_path):
         malicious_yaml = (
@@ -152,8 +187,7 @@ class TestLoadSnmpYaml:
         )
         path = _write_yaml(tmp_path, malicious_yaml)
 
-        with pytest.raises(yaml.YAMLError):
-            snmp_yml_to_configdb.load_snmp_yaml(path)
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) is None
 
     def test_full_loader_would_have_accepted_python_tuple_tag(self, tmp_path):
         """Guard against silently reverting to yaml.FullLoader.
@@ -176,8 +210,7 @@ class TestLoadSnmpYaml:
             "snmp_location: lab1\n",
         )
 
-        with pytest.raises(yaml.YAMLError):
-            snmp_yml_to_configdb.load_snmp_yaml(path)
+        assert snmp_yml_to_configdb.load_snmp_yaml(path) is None
 
 
 class TestApplySnmpCommunities:
@@ -222,18 +255,14 @@ class TestApplySnmpCommunities:
         snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_location": "lab1"}, {})
         assert db.set_entry_calls == []
 
-    # 'public'/'private' are guessable by any attacker; ZTP-seeded
-    # snmp.yml must not be able to configure them.
     def test_insecure_default_ro_scalar_rejected(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rocommunity": "public"}
-        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rocommunity": "public"}, {})
         assert db.set_entry_calls == []
 
     def test_insecure_default_rw_scalar_rejected(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rwcommunity": "private"}
-        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rwcommunity": "private"}, {})
         assert db.set_entry_calls == []
 
     def test_insecure_default_mixed_with_valid_in_list_only_valid_written(self):
@@ -243,26 +272,18 @@ class TestApplySnmpCommunities:
         assert db.set_entry_calls == [("SNMP_COMMUNITY", "monitoring-ro", {"TYPE": "RO"})]
 
     def test_insecure_default_case_variant_is_not_rejected(self):
-        # SNMP community strings are case-sensitive on the wire; 'Public' is
-        # not the well-known default and must not be over-blocked.
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rocommunity": "Public"}
-        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rocommunity": "Public"}, {})
         assert db.set_entry_calls == [("SNMP_COMMUNITY", "Public", {"TYPE": "RO"})]
 
     def test_insecure_default_quoted_variant_rejected(self):
-        # Net-SNMP's config tokenizer strips wrapping double quotes when
-        # parsing rocommunity/rwcommunity, so '"public"' would still
-        # activate the 'public' community once rendered -- reject it too.
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rocommunity": '"public"'}
-        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rocommunity": '"public"'}, {})
         assert db.set_entry_calls == []
 
     def test_insecure_default_escaped_variant_rejected(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rwcommunity": "pri\\vate"}
-        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rwcommunity": "pri\\vate"}, {})
         assert db.set_entry_calls == []
 
 

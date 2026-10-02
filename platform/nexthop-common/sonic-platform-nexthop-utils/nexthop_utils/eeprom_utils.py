@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-import sys
 import struct
 
 from dataclasses import dataclass
 from enum import Enum
+
 
 try:
     from sonic_platform_base.sonic_eeprom import eeprom_tlvinfo
@@ -229,6 +229,94 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
             tlv_start = tlv_end
         return new_e
 
+    def set_eeprom(self, e: bytearray, cmd_args: list[str]) -> bytearray:
+        """
+        Overrides parent class method to support multiple vendor extension TLVs
+        with the same type (0xFD) but different IANA + custom field code.
+        For example, Nexthop's "Custom Serial Number" (0x01) and
+        "Regulatory Model Number" (0x02) can co-exist even though they
+        share the same type (0xFD).
+
+        Returns the new contents of the EEPROM where the given `cmd_args` are applied
+        to the given EEPROM data `e`. Each command must be in the format of
+        "{type} = {payload}", where payload is space-separated hexidecimal numbers
+        and type must be parsable into an integer.
+        """
+        # Split commands into two lists: one for vendor ext, one for everything else.
+        cmd_args_for_vendor_ext = []
+        cmd_args_without_vendor_ext = []
+        for arg_str in cmd_args:
+            for arg in arg_str.split(","):
+                tlv_bytes = self._encode_arg_to_tlv_bytes(arg)
+                # type is at 0th byte
+                if tlv_bytes[0] == self._TLV_CODE_VENDOR_EXT:
+                    cmd_args_for_vendor_ext.append(arg)
+                else:
+                    cmd_args_without_vendor_ext.append(arg)
+
+        # Use parent class to set non-vendor ext TLV (where duplicate type is not allowed).
+        if cmd_args_without_vendor_ext:
+            print("EEPROM data with updated fields:")
+            e = eeprom_tlvinfo.TlvInfoDecoder.set_eeprom(
+                self, e, cmd_args_without_vendor_ext
+            )
+
+        if not cmd_args_for_vendor_ext:
+            return e
+
+        # Remove header and checksum which will be re-calculated and re-added later
+        e = self._remove_header_and_checksum_tlv(e)
+        # Set vendor ext TLVs. Duplicate type (0xFD) is allowed,
+        # but duplicate (IANA + custom field code) is not allowed
+        # and will be overwritten.
+        for arg in cmd_args_for_vendor_ext:
+            tlv_bytes = self._encode_arg_to_tlv_bytes(arg)
+            old_tlv_start = self._find_tlv_vendor_ext_start_offset(
+                e, iana=tlv_bytes[2:6], custom_field_code=tlv_bytes[6]
+            )
+            if old_tlv_start is not None:
+                # Replace existing TLV with new one
+                # TLV schema:
+                # Byte | Name
+                # ------------
+                # 0    |  Type
+                # 1    |  Payload length
+                # 2+   |  Payload (variable length)
+                old_tlv_end = old_tlv_start + 2 + e[old_tlv_start + 1]
+                e = e[:old_tlv_start] + tlv_bytes + e[old_tlv_end:]
+            else:
+                e += tlv_bytes
+        # Add back header
+        if self._TLV_HDR_ENABLED:
+            # Assuming CRC-32 is used, its length is 6 bytes (type + length + 4-byte value)
+            total_len = len(e) + 6
+            # Header schema:
+            # Byte | Name
+            # ------------
+            # 0-7  |  ID String
+            # 8    |  Header version
+            # 9-10 |  Total length (for the bytes to follow; not including header)
+            e = (
+                self._TLV_INFO_ID_STRING
+                + bytearray([self._TLV_INFO_VERSION])
+                + bytearray([(total_len >> 8) & 0xFF, total_len & 0xFF])
+                + e
+            )
+        # Add back checksum TLV. We assume CRC-32 is used, so it matches the length in the header.
+        # Checksum is calculated from the start of header to the end of checksum TL but not V.
+        assert self._TLV_CODE_CRC_32 != self._TLV_CODE_UNDEFINED
+        e = e + bytearray([self._TLV_CODE_CRC_32]) + bytearray([4])
+        e += self.encode_checksum(self.calculate_checksum(e))
+
+        # Print out the contents.
+        print("EEPROM data with updated vendor extensions:")
+        self.decode_eeprom(e)
+
+        if len(e) > min(self._TLV_INFO_MAX_LEN, self.eeprom_max_len):
+            raise ValueError("There is not enough room in the EEPROM to save data.")
+
+        return e
+
     def decode_eeprom(self, e):
         visitor = NexthopEepromDecodeVisitor()
         self.visit_eeprom(e, visitor)
@@ -285,11 +373,6 @@ def get_at24_eeprom_paths(root=""):
                     results.append(eeprom_path)
     return results
 
-def decode_eeprom(eeprom_path: str):
-    eeprom_class = Eeprom(eeprom_path, start=0, status="", ro=True)
-    eeprom = eeprom_class.read_eeprom()
-    # will print out contents
-    eeprom_class.decode_eeprom(eeprom)
 
 def program_eeprom(
     eeprom_path,
