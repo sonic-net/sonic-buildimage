@@ -15,8 +15,8 @@ RUN apt-get update      && \
         libdaemon0         \
         libjansson4        \
         libpython3.11      \
-        libjemalloc2        \
-        ebtables
+        libjemalloc2       \
+        nftables
 
 {% if docker_stp_debs.strip() -%}
 # Copy locally-built Debian package dependencies
