@@ -9,10 +9,10 @@ Subject: [PATCH] Add plugin support to bash.
  bash-5.2.37/configure     |  18 +-
  bash-5.2.37/configure.ac  |  10 +
  bash-5.2.37/execute_cmd.c |  35 +++-
- bash-5.2.37/plugin.c      | 428 ++++++++++++++++++++++++++++++++++++++
+ bash-5.2.37/plugin.c      | 427 ++++++++++++++++++++++++++++++++++++++
  bash-5.2.37/plugin.h      |  79 +++++++
  bash-5.2.37/shell.c       |  12 ++
- 8 files changed, 583 insertions(+), 16 deletions(-)
+ 8 files changed, 582 insertions(+), 16 deletions(-)
  create mode 100644 bash-5.2.37/plugin.c
  create mode 100644 bash-5.2.37/plugin.h
 
@@ -324,7 +324,7 @@ new file mode 100644
 index 0000000..bbbd324
 --- /dev/null
 +++ b/bash-5.2.37/plugin.c
-@@ -0,0 +1,428 @@
+@@ -0,0 +1,427 @@
 +/* plugin.c -- Bash plugin support. */
 +
 +/* Copyright (C) 1987-2016 Free Software Foundation, Inc.
@@ -402,6 +402,7 @@ index 0000000..bbbd324
 +#include "bashintl.h"
 +
 +#include "shell.h"
++#include "variables.h"
 +#include <y.tab.h>    /* use <...> so we pick it up from the build directory */
 +#include "error.h"
 +#include "flags.h"
@@ -737,9 +738,7 @@ index 0000000..bbbd324
 +     char *cmd;
 +     char **argv;
 +{
-+    const char* shell_level_str = get_string_value ("SHLVL");
-+    const int shell_level = atoi (shell_level_str);
-+
++    /* Report the level, but do not use it to decide authorization. */
 +    if (absolute_program (cmd)) {
 +        // find real path for relative path command
 +        char resolved_path[PATH_MAX];
@@ -879,4 +878,3 @@ index ebd8965..5a7604a 100644
  static int
 -- 
 2.51.0.windows.1
-

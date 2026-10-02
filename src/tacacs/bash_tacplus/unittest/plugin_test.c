@@ -167,6 +167,19 @@ void testcase_on_shell_execve_denined() {
 	CU_ASSERT_STRING_EQUAL(mock_syslog_message_buffer, "test_command authorize failed by TACACS+ with given arguments, not executing\n");
 }
 
+/* Imported SHLVL can make this value arbitrarily large. It must not bypass
+ * authorization, including for commands run from a nested shell. */
+void testcase_on_shell_execve_high_shell_level_denied() {
+	char *testargv[] = {"arg1", "arg2", NULL};
+
+	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT);
+	int result = on_shell_execve("test_user", 999, "test_command", testargv);
+
+	CU_ASSERT_NOT_EQUAL(result, 0);
+	CU_ASSERT_STRING_EQUAL(mock_syslog_message_buffer,
+		"test_command authorize failed by TACACS+ with given arguments, not executing\n");
+}
+
 /* Test on_shell_execve authorization failed */
 void testcase_on_shell_execve_failed() {
 	char *testargv[2];
@@ -244,6 +257,7 @@ int main(void) {
 	  || !CU_add_test(ste, "Test testcase_check_and_load_changed_tacacs_config()...\n", testcase_check_and_load_changed_tacacs_config)
 	  || !CU_add_test(ste, "Test testcase_on_shell_execve_success()...\n", testcase_on_shell_execve_success)
 	  || !CU_add_test(ste, "Test testcase_on_shell_execve_denined()...\n", testcase_on_shell_execve_denined)
+	  || !CU_add_test(ste, "Test testcase_on_shell_execve_high_shell_level_denied()...\n", testcase_on_shell_execve_high_shell_level_denied)
 	  || !CU_add_test(ste, "Test testcase_on_shell_execve_failed()...\n", testcase_on_shell_execve_failed)
 	  || !CU_add_test(ste, "Test testcase_is_local_user_unknown()...\n", testcase_is_local_user_unknown)
 	  || !CU_add_test(ste, "Test testcase_is_local_user_not_found()...\n", testcase_is_local_user_not_found)

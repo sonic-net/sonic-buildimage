@@ -12,6 +12,7 @@ all:
 test:
 	# run unit test, if UT failed, build will break
 	./plugin_test
+	bash test_enable_dynamic_builtins.sh
 
 clean:
 	rm *.o
