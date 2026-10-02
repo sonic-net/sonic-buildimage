@@ -358,6 +358,11 @@ class MicasCpo(CpoBase):
     The virtual module of a port is its OE bank and the ELS that feeds it.
     The OE is fixed, so the virtual module is present when its ELS is,
     matching the presence reported by the legacy port object.
+
+    xcvrd calls the SfpBase transceiver methods (get_transceiver_info,
+    get_transceiver_threshold_info, get_lpmode, ...) on the objects that
+    get_cpo() returns. Methods not defined here or in CpoBase are served
+    by the legacy port object, as they were before get_cpo() existed.
     """
 
     def __init__(self, port):
@@ -365,6 +370,12 @@ class MicasCpo(CpoBase):
         super().__init__(MICAS_CPO_HARDWARE_ID,
                          MicasOe(port, bank=int(port.get_oe_bank_id() % OE_BANK_NUM)),
                          MicasElsfp(port))
+
+    def __getattr__(self, name):
+        port = self.__dict__.get("port")
+        if port is None or name.startswith("__"):
+            raise AttributeError(name)
+        return getattr(port, name)
 
     def get_name(self):
         return self.port.get_name()
