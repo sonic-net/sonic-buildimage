@@ -801,10 +801,11 @@ RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.1
 # Cargo.lock into the produced binary's .dep-v0 ELF section. Syft reads
 # that section at SBOM scan time, giving SONiC SBOMs full per-crate
 # visibility for Rust packages without source-tree changes to any
-# debian/rules file. Pinned for reproducibility. CARGO_HOME=$RUST_ROOT
+# debian/rules file. Pinned for reproducibility (>= 0.6.6 required to
+# parse Rust edition 2024 crates, see #29881). CARGO_HOME=$RUST_ROOT
 # ensures the binary lands at /usr/.cargo/bin/cargo-auditable (in PATH
 # for all users) rather than /root/.cargo/bin/ (root-only).
-RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.6.4
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.7.6
 
 # rust-audit-info is the official CLI for reading the .dep-v0 section
 # that cargo-auditable embedded. scripts/sbom_fragment.py invokes it
