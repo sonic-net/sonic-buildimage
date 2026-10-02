@@ -15,4 +15,4 @@ insmod_jc42_drv()
 {
     modprobe jc42 &>/dev/null
 }
-insmod_jc42_drv()
+insmod_jc42_drv
