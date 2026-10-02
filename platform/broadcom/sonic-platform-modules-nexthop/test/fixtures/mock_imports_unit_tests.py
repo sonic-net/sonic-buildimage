@@ -125,7 +125,35 @@ def fake_some_base_modules():
     interface_mock.inband_prefix.return_value = "Ethernet-IB"
     interface_mock.recirc_prefix.return_value = "Ethernet-Rec"
 
+    device_base = Mock()
+    device_base.DeviceBase = type("DeviceBase", (object,), {"__init__": lambda self, *a, **k: None})
+
+    class _PddfDcdc:
+        """Mirrors sonic_platform_pddf_base.pddf_dcdc.PddfDcdc's constructor."""
+        DEVICE_TYPE = "dcdc"
+
+        def __init__(self, index, pddf_data=None, pddf_plugin_data=None):
+            if not pddf_data or not pddf_plugin_data:
+                raise ValueError("PDDF JSON data error")
+            self.pddf_obj = pddf_data
+            self.plugin_data = pddf_plugin_data
+            self.platform = self.pddf_obj.get_platform()
+            self.dcdc_index = index
+            self.dcdc_obj_name = "DCDC{0}".format(self.dcdc_index)
+            self.dcdc_obj = self.pddf_obj.data[self.dcdc_obj_name]
+
+        def get_name(self):
+            return self.dcdc_obj_name
+
+        def get_presence(self):
+            return True
+
+    pddf_dcdc = Mock()
+    pddf_dcdc.PddfDcdc = _PddfDcdc
+
     return {
+        "sonic_platform_base.device_base": device_base,
+        "sonic_platform_pddf_base.pddf_dcdc": pddf_dcdc,
         "sonic_platform_base.sonic_thermal_control.thermal_json_object": thermal_json_object,
         "sonic_platform_base.sonic_thermal_control.thermal_info_base": thermal_info_base,
         "sonic_platform_base.sonic_thermal_control.thermal_action_base": thermal_action_base,

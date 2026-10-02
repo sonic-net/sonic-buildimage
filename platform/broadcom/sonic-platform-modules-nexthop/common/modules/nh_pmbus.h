@@ -491,6 +491,9 @@ extern const struct regulator_ops pmbus_regulator_ops;
 
 void nh_pmbus_clear_cache(struct i2c_client *client);
 void nh_pmbus_set_update(struct i2c_client *client, u8 reg, bool update);
+void nh_pmbus_lock(struct i2c_client *client);
+int nh_pmbus_lock_interruptible(struct i2c_client *client);
+void nh_pmbus_unlock(struct i2c_client *client);
 int nh_pmbus_set_page(struct i2c_client *client, int page, int phase);
 int nh_pmbus_read_word_data(struct i2c_client *client, int page, int phase,
 			 u8 reg);
