@@ -1,0 +1,89 @@
+{
+    "FDB_VALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "65",
+                        "speed": "25000",
+                        "mtu": "9100",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "admin_status": "up",
+                        "mtu": "9100"
+                    }
+                ]
+            }
+        },
+        "sonic-fdb:sonic-fdb": {
+            "sonic-fdb:FDB": {
+                "FDB_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac": "00:11:22:33:44:55",
+                        "port": "Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+    "FDB_WITH_NON_EXIST_VLAN": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "65",
+                        "speed": "25000",
+                        "mtu": "9100",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-fdb:sonic-fdb": {
+            "sonic-fdb:FDB": {
+                "FDB_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac": "00:11:22:33:44:55",
+                        "port": "Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+    "FDB_WITH_NON_EXIST_PORT": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "admin_status": "up",
+                        "mtu": "9100"
+                    }
+                ]
+            }
+        },
+        "sonic-fdb:sonic-fdb": {
+            "sonic-fdb:FDB": {
+                "FDB_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac": "00:11:22:33:44:55",
+                        "port": "Ethernet99"
+                    }
+                ]
+            }
+        }
+    }
+}
