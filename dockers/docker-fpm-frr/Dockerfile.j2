@@ -41,7 +41,7 @@ RUN useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr
 
 RUN chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/
 
-COPY ["docker_init.sh", "/usr/bin/"]
+COPY ["docker_init.sh", "frr_config_validator.py", "/usr/bin/"]
 
 {% include "Dockerfile.common.j2" %}
 
