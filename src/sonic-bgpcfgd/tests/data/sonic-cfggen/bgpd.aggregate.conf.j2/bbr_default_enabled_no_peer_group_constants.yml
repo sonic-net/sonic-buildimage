@@ -1,0 +1,8 @@
+constants:
+  bgp:
+    bbr:
+      enabled: true
+      default_state: "enabled"
+    peers:
+      general:
+        template_dir: "general"

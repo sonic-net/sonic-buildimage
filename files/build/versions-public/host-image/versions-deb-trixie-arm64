@@ -16,8 +16,8 @@ gpiod==2.2.1-2+deb13u1
 ifmetric==0.3-5+b1
 kernel-mft-dkms-modules-6.12.41+deb13-sonic-arm64==4.36.0
 kexec-tools==1:2.0.29-2+b1
-libc-dev-bin==2.41-12+deb13u3
-libc6-dev==2.41-12+deb13u3
+libc-dev-bin==2.41-12+deb13u4
+libc6-dev==2.41-12+deb13u4
 libdashapi==1.0.0
 libgpiod3==2.2.1-2+deb13u1
 libprotobuf32t64==3.21.12-11+deb13u1

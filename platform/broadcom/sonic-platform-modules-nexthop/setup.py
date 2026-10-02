@@ -17,6 +17,7 @@ setup(
         "sonic_platform": "common/sonic_platform",
         "nexthop": "common/nexthop",
     },
+    install_requires=["nexthop-utils"],
     tests_require=["pytest"],
     classifiers=[
         "Development Status :: 3 - Alpha",

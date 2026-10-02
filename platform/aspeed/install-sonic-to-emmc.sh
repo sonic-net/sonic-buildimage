@@ -184,12 +184,24 @@ fw_setenv fit_name_old "" || { log_error "Failed to set fit_name_old"; exit 1; }
 fw_setenv sonic_version_2 "None" || { log_error "Failed to set sonic_version_2"; exit 1; }
 fw_setenv linuxargs_old "" || { log_error "Failed to set linuxargs_old"; exit 1; }
 
+# Set the U-Boot `baudrate` variable to CONSOLE_SPEED so an eMMC install
+# leaves the console rate under SONiC's control rather than inheriting whatever
+# U-Boot's environment happened to carry.
+SAVED_BAUD=$(fw_printenv -n baudrate 2>/dev/null || true)
+if [ "$SAVED_BAUD" != "$CONSOLE_SPEED" ]; then
+    log_warn "Overriding U-Boot baudrate ($SAVED_BAUD) with CONSOLE_SPEED ($CONSOLE_SPEED)"
+fi
+fw_setenv baudrate "$CONSOLE_SPEED" || { log_error "Failed to set baudrate"; exit 1; }
+log_info "U-Boot baudrate set to $CONSOLE_SPEED"
+
 # Kernel command line arguments
 fw_setenv linuxargs "$LINUXARGS" || { log_error "Failed to set linuxargs"; exit 1; }
 
-# Boot commands
-fw_setenv sonic_boot_load "ext4load ${DISK_INTERFACE} 0:${DEMO_PART} \${loadaddr} \${fit_name}" || { log_error "Failed to set sonic_boot_load"; exit 1; }
-fw_setenv sonic_boot_load_old "ext4load ${DISK_INTERFACE} 0:${DEMO_PART} \${loadaddr} \${fit_name_old}" || { log_error "Failed to set sonic_boot_load_old"; exit 1; }
+# Boot commands. `mmc dev 0` first: a WDT SoC reset restarts the SoC without resetting the
+# eMMC card, leaving U-Boot on marginal timing where the large FIT read fails; re-selecting
+# the device forces a full re-init and re-tune. DISK_INTERFACE is mmc here by definition.
+fw_setenv sonic_boot_load "mmc dev 0; ext4load ${DISK_INTERFACE} 0:${DEMO_PART} \${loadaddr} \${fit_name}" || { log_error "Failed to set sonic_boot_load"; exit 1; }
+fw_setenv sonic_boot_load_old "mmc dev 0; ext4load ${DISK_INTERFACE} 0:${DEMO_PART} \${loadaddr} \${fit_name_old}" || { log_error "Failed to set sonic_boot_load_old"; exit 1; }
 fw_setenv sonic_bootargs "setenv bootargs root=UUID=${UUID} rw rootwait panic=1 \${linuxargs}" || { log_error "Failed to set sonic_bootargs"; exit 1; }
 fw_setenv sonic_bootargs_old "setenv bootargs root=UUID=${UUID} rw rootwait panic=1 \${linuxargs_old}" || { log_error "Failed to set sonic_bootargs_old"; exit 1; }
 fw_setenv sonic_image_1 "run sonic_bootargs; run sonic_boot_load; bootm \${loadaddr}#conf-\${bootconf}" || { log_error "Failed to set sonic_image_1"; exit 1; }
