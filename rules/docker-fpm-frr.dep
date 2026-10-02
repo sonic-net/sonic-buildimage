@@ -2,6 +2,7 @@
 DPATH       := $($(DOCKER_FPM_FRR)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-fpm-frr.mk rules/docker-fpm-frr.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += dockers/dockerfile-macros.j2
 DEP_FILES   += $(shell git ls-files $(DPATH))
 
 $(DOCKER_FPM_FRR)_CACHE_MODE  := GIT_CONTENT_SHA 
