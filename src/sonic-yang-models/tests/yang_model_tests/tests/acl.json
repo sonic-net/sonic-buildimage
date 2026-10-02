@@ -38,6 +38,13 @@
         "desc": "Configure non-existing ACL_TABLE in ACL_RULE.",
         "eStrKey" : "LeafRef"
     },
+    "ACL_RULE_WITH_VALID_POLICER_ACTION": {
+        "desc": "Configure ACL_RULE with valid POLICER_ACTION."
+    },
+    "ACL_RULE_WITH_INVALID_POLICER_ACTION": {
+        "desc": "Configure ACL_RULE with non-existing POLICER_ACTION.",
+        "eStrKey" : "LeafRef"
+    },
     "ACL_RULE_IP_TYPE_SRC_IPV6ANY": {
         "desc": "Configure IP_TYPE as ipv6any and SRC_IPV6 in ACL_RULE."
     },

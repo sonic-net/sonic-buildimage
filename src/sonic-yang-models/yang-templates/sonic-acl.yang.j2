@@ -41,6 +41,10 @@ module sonic-acl {
 		prefix sms;
 	}
 
+	import sonic-policer {
+		prefix policer;
+	}
+
 	description "ACL YANG Module for SONiC OS";
 
 	revision 2019-07-01 {
@@ -94,6 +98,13 @@ module sonic-acl {
 				leaf INNER_SRC_MAC_REWRITE_ACTION {
 					description "Inner Source Mac-adress rewrite action mapped to mac address";
 					type yang:mac-address;
+				}
+
+				leaf POLICER_ACTION {
+					description "Policer to apply to matching packets, referencing a POLICER entry";
+					type leafref {
+						path "/policer:sonic-policer/policer:POLICER/policer:POLICER_LIST/policer:name";
+					}
 				}
 
 				leaf IP_TYPE {
