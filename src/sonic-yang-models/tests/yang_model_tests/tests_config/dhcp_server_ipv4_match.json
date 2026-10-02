@@ -1,0 +1,597 @@
+{
+    "DHCP_SERVER_IPV4_MATCH_VALID_IP_BINDING": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "mx-port",
+                        "type": "circuit_id",
+                        "value": "Ethernet0"
+                    },
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-a",
+                        "matches": [
+                            "mx-port",
+                            "maia-vendor"
+                        ],
+                        "ips": [
+                            "192.0.2.20",
+                            "192.0.2.21"
+                        ]
+                    },
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-fallback",
+                        "matches": [
+                            "mx-port"
+                        ],
+                        "ips": [
+                            "192.0.2.22"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALID_RANGE_BINDING": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "maia-range",
+                        "range": [
+                            "192.0.2.30",
+                            "192.0.2.39"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-range",
+                        "matches": [
+                            "maia-vendor"
+                        ],
+                        "ranges": [
+                            "maia-range"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_MAX_LENGTH_BOUNDARIES": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+                        "type": "option60",
+                        "value": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "matches": [
+                            "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+                        ],
+                        "ips": [
+                            "192.0.2.20"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_TYPE_ABSENT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "value": "MAIA-A"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_ABSENT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_TYPE_INVALID": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "client-mac",
+                        "type": "mac",
+                        "value": "00:11:22:33:44:55"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_NAME_EMPTY": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_NAME_OVERLENGTH": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_EMPTY": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": ""
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_OVERLENGTH": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_MATCHES_ABSENT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-a",
+                        "ips": [
+                            "192.0.2.20"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_MATCH": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-a",
+                        "matches": [
+                            "missing-match"
+                        ],
+                        "ips": [
+                            "192.0.2.20"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_INTERFACE": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan2000",
+                        "binding": "maia-a",
+                        "matches": [
+                            "maia-vendor"
+                        ],
+                        "ips": [
+                            "192.0.2.20"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_BOTH_IPS_AND_RANGES": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "maia-range",
+                        "range": [
+                            "192.0.2.30",
+                            "192.0.2.39"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-a",
+                        "matches": [
+                            "maia-vendor"
+                        ],
+                        "ips": [
+                            "192.0.2.20"
+                        ],
+                        "ranges": [
+                            "maia-range"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_POOL_ABSENT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-a",
+                        "matches": [
+                            "maia-vendor"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_RANGE": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "maia-range",
+                        "range": [
+                            "192.0.2.30",
+                            "192.0.2.39"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-a",
+                        "matches": [
+                            "maia-vendor"
+                        ],
+                        "ranges": [
+                            "missing-range"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_INVALID_IP": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "maia-a",
+                        "matches": [
+                            "maia-vendor"
+                        ],
+                        "ips": [
+                            "999.1.1.1"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_NAME_EMPTY": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "",
+                        "matches": [
+                            "maia-vendor"
+                        ],
+                        "ips": [
+                            "192.0.2.20"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING_NAME_OVERLENGTH": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "mode": "MATCH",
+                        "gateway": "192.0.2.1",
+                        "netmask": "255.255.255.0",
+                        "lease_time": 900,
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH": {
+                "DHCP_SERVER_IPV4_MATCH_LIST": [
+                    {
+                        "name": "maia-vendor",
+                        "type": "option60",
+                        "value": "MAIA-A"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_BINDING": {
+                "DHCP_SERVER_IPV4_BINDING_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "binding": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "matches": [
+                            "maia-vendor"
+                        ],
+                        "ips": [
+                            "192.0.2.20"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

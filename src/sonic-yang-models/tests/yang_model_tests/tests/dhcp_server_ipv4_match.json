@@ -1,0 +1,91 @@
+{
+    "DHCP_SERVER_IPV4_MATCH_VALID_IP_BINDING": {
+        "desc": "Configure MATCH mode with multiple conditions and bindings sharing a condition."
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALID_RANGE_BINDING": {
+        "desc": "Configure MATCH mode with a condition bound to a named range."
+    },
+    "DHCP_SERVER_IPV4_MATCH_MAX_LENGTH_BOUNDARIES": {
+        "desc": "Accept 255-character match names, match values, and binding names."
+    },
+    "DHCP_SERVER_IPV4_MATCH_TYPE_ABSENT": {
+        "desc": "Reject a match condition without a type.",
+        "eStrKey": "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_ABSENT": {
+        "desc": "Reject a match condition without a value.",
+        "eStrKey": "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_MATCH_TYPE_INVALID": {
+        "desc": "Reject an unsupported match condition type.",
+        "eStrKey": "InvalidValue"
+    },
+    "DHCP_SERVER_IPV4_MATCH_NAME_EMPTY": {
+        "desc": "Reject an empty match condition name.",
+        "eStr": [
+            "Invalid length for match condition name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_NAME_OVERLENGTH": {
+        "desc": "Reject a match condition name longer than 255 characters.",
+        "eStr": [
+            "Invalid length for match condition name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_EMPTY": {
+        "desc": "Reject an empty match condition value.",
+        "eStr": [
+            "Invalid length for match condition value"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_OVERLENGTH": {
+        "desc": "Reject a match condition value longer than 255 characters.",
+        "eStr": [
+            "Invalid length for match condition value"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_MATCHES_ABSENT": {
+        "desc": "Reject a binding without any match conditions.",
+        "eStrKey": "MinElements"
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_MATCH": {
+        "desc": "Reject a binding that references a nonexistent match condition.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_INTERFACE": {
+        "desc": "Reject a binding that references a nonexistent DHCP interface.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_BINDING_BOTH_IPS_AND_RANGES": {
+        "desc": "Reject a binding with both direct IPs and named ranges.",
+        "eStr": [
+            "Exactly one of 'ips' or 'ranges' must be configured"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_POOL_ABSENT": {
+        "desc": "Reject a binding without direct IPs or named ranges.",
+        "eStr": [
+            "Exactly one of 'ips' or 'ranges' must be configured"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_RANGE": {
+        "desc": "Reject a binding that references a nonexistent range.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_BINDING_INVALID_IP": {
+        "desc": "Reject a binding with an invalid IPv4 address.",
+        "eStrKey": "Pattern"
+    },
+    "DHCP_SERVER_IPV4_BINDING_NAME_EMPTY": {
+        "desc": "Reject an empty binding name.",
+        "eStr": [
+            "Invalid length for DHCP binding name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_NAME_OVERLENGTH": {
+        "desc": "Reject a binding name longer than 255 characters.",
+        "eStr": [
+            "Invalid length for DHCP binding name"
+        ]
+    }
+}

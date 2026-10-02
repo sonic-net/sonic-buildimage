@@ -33,6 +33,10 @@ module sonic-dhcp-server-ipv4 {
 
     description "DHCP_SERVER_IPV4 YANG module for SONiC OS";
 
+    revision 2026-08-22 {
+        description "Add match condition based DHCPv4 address assignment";
+    }
+
     revision 2023-07-19 {
         description "Initial version";
     }
@@ -82,6 +86,7 @@ module sonic-dhcp-server-ipv4 {
                     mandatory true;
                     type enumeration {
                         enum PORT;
+                        enum MATCH;
                     }
                 }
 
@@ -257,5 +262,104 @@ module sonic-dhcp-server-ipv4 {
             /* end of DHCP_SERVER_IPV4_PORT_LIST */
         }
         /* end of DHCP_SERVER_IPV4_PORT container */
+
+        container DHCP_SERVER_IPV4_MATCH {
+
+            description "Named DHCPv4 packet match conditions";
+
+            list DHCP_SERVER_IPV4_MATCH_LIST {
+
+                description "A named exact-match condition for conditional DHCP IP assignment";
+
+                key "name";
+
+                leaf name {
+                    description "Name of match condition";
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for match condition name";
+                        }
+                    }
+                }
+
+                leaf type {
+                    description "DHCP packet field to match";
+                    mandatory true;
+                    type enumeration {
+                        enum circuit_id;
+                        enum option60;
+                    }
+                }
+
+                leaf value {
+                    description "Exact value to match; circuit_id uses the SONiC port alias";
+                    mandatory true;
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for match condition value";
+                        }
+                    }
+                }
+            }
+            /* end of DHCP_SERVER_IPV4_MATCH_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4_MATCH container */
+
+        container DHCP_SERVER_IPV4_BINDING {
+
+            description "Match condition based DHCPv4 IP pool bindings";
+
+            list DHCP_SERVER_IPV4_BINDING_LIST {
+
+                description "Associates DHCP match conditions with an IPv4 address pool";
+
+                key "name binding";
+
+                leaf name {
+                    description "Name of DHCP interface";
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4/dhcp-server-ipv4:DHCP_SERVER_IPV4_LIST/dhcp-server-ipv4:name";
+                    }
+                }
+
+                leaf binding {
+                    description "User-defined binding name";
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for DHCP binding name";
+                        }
+                    }
+                }
+
+                leaf-list matches {
+                    description "Match conditions combined using logical AND";
+                    min-elements 1;
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH_LIST/dhcp-server-ipv4:name";
+                    }
+                    ordered-by user;
+                }
+
+                leaf-list ips {
+                    description "Assigned IPv4 addresses";
+                    type inet:ipv4-address;
+                    ordered-by user;
+                }
+
+                leaf-list ranges {
+                    description "Named IPv4 address ranges";
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE_LIST/dhcp-server-ipv4:name";
+                    }
+                    ordered-by user;
+                }
+
+                must "((count(ips) > 0) and (count(ranges) = 0)) or ((count(ranges) > 0) and (count(ips) = 0))" {
+                    error-message "Exactly one of 'ips' or 'ranges' must be configured";
+                }
+            }
+            /* end of DHCP_SERVER_IPV4_BINDING_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4_BINDING container */
     }
 }
