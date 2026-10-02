@@ -1,4 +1,4 @@
-From aa514625b762d85e7e133938f8afbbbb110cb993 Mon Sep 17 00:00:00 2001
+From 42155a2312c3181497d6ba7718e807e96b36290f Mon Sep 17 00:00:00 2001
 From: Stepan Blyschak <stepanb@nvidia.com>
 Date: Thu, 20 Oct 2022 13:19:31 +0000
 Subject: [PATCH] zebra: add L3VNI EVPN FPM encapsulation metadata
@@ -9,6 +9,8 @@ FPM path, including VNI and remote MAC preservation.
 Original-patch-id: f5f0018266c98ad96cdbe69ae60d501de21e5600
 Signed-off-by: Kishore Kunal <kishore.kunal@broadcom.com>
 Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
 ---
  lib/frrlua.c         |  2 +-
  lib/nexthop.c        |  1 +
@@ -32,10 +34,10 @@ index c95475cf2c..ea1c2351f2 100644
  	}
  	lua_pushinteger(L, nexthop->nh_encap_type);
 diff --git a/lib/nexthop.c b/lib/nexthop.c
-index e46ed340ec..19236aa2e7 100644
+index ca2b102e59..39effce3d6 100644
 --- a/lib/nexthop.c
 +++ b/lib/nexthop.c
-@@ -935,6 +935,7 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
+@@ -941,6 +941,7 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
  	memcpy(&copy->rmap_src, &nexthop->rmap_src, sizeof(nexthop->rmap_src));
  	memcpy(&copy->rmac, &nexthop->rmac, sizeof(nexthop->rmac));
  	copy->rparent = rparent;
@@ -69,14 +71,14 @@ index c154714dfd..8e6474fe33 100644
  
  	/* EVPN router's MAC.
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index a77050f12d..bd5816f916 100644
+index a77050f12d..6cc9821f5e 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
 @@ -2239,6 +2239,7 @@ static int netlink_route_nexthop_encap(bool fpm, struct nlmsghdr *n,
  				       size_t nlen, const struct nexthop *nh)
  {
  	struct rtattr *nest;
-+	struct vxlan_nh_encap* encap_data;
++	const struct vxlan_nh_encap *encap_data;
  
  	if (!fpm)
  		return true;

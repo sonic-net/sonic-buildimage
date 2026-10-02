@@ -28,7 +28,6 @@
 0035-tests-topotests-EVPN-VXLAN-MH-extern-learn-mode-test.patch
 0036-bgpd-install-evpn-failure-logging.patch
 0065-SONiC-ONLY-bgpd-reduce-suppress-fib-advertisement-delay-to-50ms.patch
-0066-SONiC-ONLY-zebra-skip-if-add-update-in-speed-timer-for-unready-ifp.patch
 0070-SONiC-ONLY-Enable-sharpd-daemon-for-testing.patch
 0073-Trigger-neighbour-probe-when-the-hold-timer-starts.patch
 0074-SVI-Deletion-handling-BGP-sync-message-145-159.patch
