@@ -9,6 +9,8 @@ systemctl enable system-ledd.service
 systemctl start --no-block system-ledd.service
 systemctl enable transceiver-init.service
 systemctl start transceiver-init.service
+systemctl enable read-mgmt-switch-version.service
+systemctl start read-mgmt-switch-version.service
 systemctl enable bcm-intf-init.service
 systemctl enable voltage-margin-init.service
 systemctl start voltage-margin-init.service

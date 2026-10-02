@@ -9,6 +9,7 @@
                 "ONIE": {},
                 "TPM": {},
                 "NVMe": {},
+                "MGMT_SWITCH": {},
                 "DPM1": {},
                 "DPM2": {},
                 "DPM3": {},

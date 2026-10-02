@@ -14,6 +14,11 @@ NEXTHOP_KOMODO_PLATFORM_MODULE = sonic-platform-nexthop-komodo_1.0_amd64.deb
 $(NEXTHOP_KOMODO_PLATFORM_MODULE)_PLATFORM = nexthop-komodo
 $(eval $(call add_extra_package,$(NEXTHOP_COMMON_PLATFORM_MODULE),$(NEXTHOP_KOMODO_PLATFORM_MODULE)))
 
+# CF2 CPU Card
+NEXTHOP_CF2_PLATFORM_MODULE = sonic-platform-nexthop-cf2_1.0_amd64.deb
+$(NEXTHOP_CF2_PLATFORM_MODULE)_PLATFORM = nexthop-cf2
+$(eval $(call add_extra_package,$(NEXTHOP_COMMON_PLATFORM_MODULE),$(NEXTHOP_CF2_PLATFORM_MODULE)))
+
 # NH-4010
 NEXTHOP_4010_PLATFORM_MODULE = sonic-platform-nexthop-4010_1.0_amd64.deb
 $(NEXTHOP_4010_PLATFORM_MODULE)_PLATFORM = nexthop-4010

@@ -503,6 +503,9 @@
                 "name": "NVMe"
             },
             {
+                "name": "MGMT_SWITCH"
+            },
+            {
                 "name": "DPM1"
             },
             {

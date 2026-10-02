@@ -9,7 +9,7 @@
     "num_voltage_sensors" : 24,
     "num_current_sensors" : 8,
     "num_nexthop_fpga_asic_temp_sensors": 2,
-    "num_components": 6,
+    "num_components": 7,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
     "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
@@ -161,6 +161,21 @@
           { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F NVMe {}" }
       ]
   },
+  "COMPONENT7": {
+    "comp_attr": {
+      "name": "MGMT_SWITCH",
+      "type": "mgmt_switch",
+      "description": "Management switch",
+      "boot_type": "cold"
+    },
+    "attr_list": [
+      { "attr_name": "version", "get_cmd": "read_mgmt_switch_version.py" },
+      { "attr_name": "model", "get_cmd": "echo 'N/A'" },
+      { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
+      { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
+      { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} MGMT_SWITCH {}" }
+    ]
+  },
   "SYSTEM": {
     "dev_info": {
       "device_type": "CPU",
@@ -286,9 +301,7 @@
         {"msi_domain": 0, "hw_irq": 14}
       ]
     },
-{%- if platform == 'x86_64-nexthop_4010-r1' %}
-    "spi_controllers": ["CPUCARD_SPI_CONTROLLER"],
-{%- endif %}
+    "spi_controllers": [{% if platform == 'x86_64-nexthop_4010-r1' %}"CPUCARD_SPI_CONTROLLER", {% endif %}"MGMT_SWITCH_SPI_CONTROLLER"],
     "gpio": {
       "line0": {
         "attr_list": [
@@ -13442,6 +13455,49 @@
     }
   },
 {%- endif %}
+  "MGMT_SWITCH_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50800",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 1,
+      "spi_controller_name": "MGMT_SWITCH_SPI_CONTROLLER",
+      "spi_controller_idx": 3
+    },
+    "spi_devices": ["MGMT-SWITCH-EEPROM"]
+  },
+  "MGMT-SWITCH-EEPROM": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "MGMT-SWITCH-EEPROM",
+      "device_parent": "MGMT_SWITCH_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0xC 0x6",
+        "disable": "fpga write32 CPUCARD_FPGA 0xC 0x4"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x80 0x0"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x68 0x13",
+        "disable": "fpga write32 CPUCARD_FPGA 0x68 0x3"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "dh2228fv",
+      "max_speed_hz": 1000000,
+      "chip_select": 0
+    }
+  },
   "WATCHDOG": {
     "dev_info": {
       "device_type": "WATCHDOG",
