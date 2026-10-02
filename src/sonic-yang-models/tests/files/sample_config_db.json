@@ -1516,6 +1516,19 @@
                 "encap_tc_to_queue_map": "tc_to_q_map1"
             }
         },
+        "GRIBI": {
+            "certs": {
+                "ca_crt": "/etc/sonic/tls/ca.crt",
+                "server_crt": "/etc/sonic/tls/gribi.crt",
+                "server_key": "/etc/sonic/tls/gribi.key"
+            },
+            "config": {
+                "port": "9340",
+                "fib_ack_timeout": "30",
+                "log_level": "info",
+                "enable_reflection": "false"
+            }
+        },
         "RESTAPI": {
             "certs": {
                 "ca_crt": "/etc/sonic/credentials/ame_root.pem",

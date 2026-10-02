@@ -43,6 +43,7 @@
   * [FABRIC_PORT](#fabric-port)
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
   * [GNMI](#gnmi)
+  * [GRIBI](#gribi)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
@@ -1522,6 +1523,37 @@ GNMI (gRPC Network Management Interface) related configuration is defined in the
     }
 }
 ```
+
+### GRIBI
+
+Configuration for gribid, the gRIBI agent in the `gribi` container. Every
+field is optional. Without `certs`, gRIBI is served without TLS; with
+`server_crt` and `server_key`, over TLS; with `ca_crt` as well, clients must
+present a certificate signed by it. Routes can be programmed into any VRF in
+the `VRF` table that exists when gribid starts.
+
+```
+{
+"GRIBI": {
+    "certs": {
+        "server_crt": "/etc/sonic/tls/gribi.crt",
+        "server_key": "/etc/sonic/tls/gribi.key",
+        "ca_crt": "/etc/sonic/tls/ca.crt"
+    },
+    "config": {
+        "port": "9340",
+        "fib_ack_timeout": "30",
+        "log_level": "info",
+        "enable_reflection": "false"
+    }
+}
+}
+```
+
+gribid needs orchagent's ZeroMQ route channel (`SYSTEM_DEFAULTS|swss_zmq`
+`status` `enabled`). FIB acknowledgements also need `DEVICE_METADATA|localhost`
+`suppress-fib-pending` `enabled`, without which orchagent reports no route
+results and gribid refuses `RIB_AND_FIB_ACK` sessions.
 
 ### Hash
 

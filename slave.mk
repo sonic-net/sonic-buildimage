@@ -255,6 +255,10 @@ ifeq ($(SONIC_INCLUDE_P4RT),y)
 INCLUDE_P4RT = y
 endif
 
+ifeq ($(SONIC_INCLUDE_GRIBI),y)
+INCLUDE_GRIBI = y
+endif
+
 # Pre-built Bazel is not available for armhf, so exclude P4RT
 # TODO(PINS): Remove when Bazel binaries are available for armhf
 ifeq ($(CONFIGURED_ARCH),armhf)
@@ -526,6 +530,7 @@ $(info "INCLUDE_NAT"                     : "$(INCLUDE_NAT)")
 $(info "INCLUDE_DHCP_RELAY"              : "$(INCLUDE_DHCP_RELAY)")
 $(info "INCLUDE_DHCP_SERVER"             : "$(INCLUDE_DHCP_SERVER)")
 $(info "INCLUDE_P4RT"                    : "$(INCLUDE_P4RT)")
+$(info "INCLUDE_GRIBI"                   : "$(INCLUDE_GRIBI)")
 $(info "INCLUDE_VS_DASH_SAI"             : "$(INCLUDE_VS_DASH_SAI)")
 $(info "INCLUDE_KUBERNETES"              : "$(INCLUDE_KUBERNETES)")
 $(info "INCLUDE_KUBERNETES_MASTER"       : "$(INCLUDE_KUBERNETES_MASTER)")
@@ -1846,6 +1851,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_restapi="$(INCLUDE_RESTAPI)"
 	export include_nat="$(INCLUDE_NAT)"
 	export include_p4rt="$(INCLUDE_P4RT)"
+	export include_gribi="$(INCLUDE_GRIBI)"
 	export include_snmp="$(INCLUDE_SNMP)"
 	export include_lldp="$(INCLUDE_LLDP)"
 	export include_redfish="$(INCLUDE_REDFISH)"

@@ -1,0 +1,111 @@
+module sonic-gribi {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-gribi";
+    prefix gribi;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "gRIBI agent (gribid) configuration";
+
+    revision 2026-09-28 {
+        description "First Revision";
+    }
+
+    typedef file-path {
+        type string {
+            pattern '(/[a-zA-Z0-9_.-]+)+';
+        }
+        description "Absolute path of a file on the switch.";
+    }
+
+    container sonic-gribi {
+
+        description "Top level container for gRIBI agent configuration";
+
+        container GRIBI {
+
+            description "gRIBI server certificate and runtime configuration";
+
+            container certs {
+                description "TLS certificate paths for the gRIBI server. With
+                             server_crt and server_key set, gRIBI is served over
+                             TLS; with ca_crt as well, clients must present a
+                             certificate that ca_crt signed.";
+
+                must "(not(server_crt) and not(server_key)) or (server_crt and server_key)" {
+                    error-message "server_crt and server_key must be configured together.";
+                }
+                must "not(ca_crt) or server_crt" {
+                    error-message "ca_crt requires server_crt and server_key.";
+                }
+
+                leaf server_crt {
+                    type file-path;
+                    description "Local path of the server certificate (PEM).";
+                }
+
+                leaf server_key {
+                    type file-path;
+                    description "Local path of the server private key (PEM).";
+                }
+
+                leaf ca_crt {
+                    type file-path;
+                    description "Local path of the CA certificate used to verify clients (PEM).";
+                }
+            }
+
+            container config {
+                description "gRIBI server runtime configuration";
+
+                leaf port {
+                    type inet:port-number {
+                        range 1..65535;
+                    }
+                    default 9340;
+                    description "TCP port gribid serves gRIBI on.";
+                }
+
+                leaf fib_ack_timeout {
+                    type uint16 {
+                        range 1..3600;
+                    }
+                    units seconds;
+                    default 30;
+                    description "How long a route waits for orchagent's response
+                                 before its gRIBI operation is reported as
+                                 FIB_FAILED.";
+                }
+
+                leaf log_level {
+                    type enumeration {
+                        enum debug;
+                        enum info;
+                        enum warn;
+                        enum error;
+                    }
+                    default info;
+                    description "gribid log level.";
+                }
+
+                leaf enable_reflection {
+                    type boolean;
+                    default false;
+                    description "Register gRPC server reflection, which lets
+                                 generic clients such as grpcurl discover the
+                                 gRIBI service.";
+                }
+            }
+        }
+    }
+}

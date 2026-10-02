@@ -1,0 +1,43 @@
+{
+    "GRIBI_TABLE_WITH_VALID_CONFIG": {
+        "desc": "GRIBI table with every field set."
+    },
+    "GRIBI_TABLE_WITHOUT_CERTS": {
+        "desc": "GRIBI table with no certs, served without TLS."
+    },
+    "GRIBI_TABLE_WITH_SERVER_CERT_ONLY": {
+        "desc": "GRIBI table with a key pair and no CA (server-only TLS)."
+    },
+    "GRIBI_TABLE_WITH_INVALID_PORT": {
+        "desc": "GRIBI port 0 is out of range.",
+        "eStrKey": "Range"
+    },
+    "GRIBI_TABLE_WITH_INVALID_FIB_ACK_TIMEOUT": {
+        "desc": "GRIBI fib_ack_timeout above 3600 is out of range.",
+        "eStrKey": "Range"
+    },
+    "GRIBI_TABLE_WITH_INVALID_LOG_LEVEL": {
+        "desc": "GRIBI log_level must be one of the enumerated levels.",
+        "eStrKey": "InvalidValue"
+    },
+    "GRIBI_TABLE_WITH_INVALID_REFLECTION": {
+        "desc": "GRIBI enable_reflection must be a boolean.",
+        "eStrKey": "InvalidValue"
+    },
+    "GRIBI_TABLE_WITH_RELATIVE_CERT_PATH": {
+        "desc": "GRIBI certificate paths must be absolute.",
+        "eStrKey": "Pattern"
+    },
+    "GRIBI_TABLE_WITH_CERT_BUT_NO_KEY": {
+        "desc": "GRIBI server_crt without server_key.",
+        "eStr": [
+            "server_crt and server_key must be configured together"
+        ]
+    },
+    "GRIBI_TABLE_WITH_CA_BUT_NO_SERVER_CERT": {
+        "desc": "GRIBI ca_crt without a server key pair.",
+        "eStr": [
+            "ca_crt requires server_crt and server_key"
+        ]
+    }
+}
