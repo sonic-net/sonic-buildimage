@@ -38,19 +38,33 @@
 {% endif %}
 {% endif %}
 {% if 'bfd' in nbr_or_peer and nbr_or_peer['bfd'] == 'true' %}
+{% if 'detection_multiplier' in nbr_or_peer and 'required_minimum_receive' in nbr_or_peer and 'desired_minimum_tx_interval' in nbr_or_peer %}
+  neighbor {{name_or_ip}} bfd {{nbr_or_peer['detection_multiplier']}} {{nbr_or_peer['required_minimum_receive']}} {{nbr_or_peer['desired_minimum_tx_interval']}}
+{% else %}
  neighbor {{name_or_ip}} bfd
+{% endif %}
+{% endif %}
+{% if 'bfd_strict_mode' in nbr_or_peer %}
+{% if nbr_or_peer['bfd_strict_mode'] == 'true' %}
+ neighbor {{name_or_ip}} bfd strict
+{% else %}
+ no neighbor {{name_or_ip}} bfd strict
+{% endif %}
 {% endif %}
 {% if 'ttl_security_hops' in nbr_or_peer %}
  neighbor {{name_or_ip}} ttl-security hops {{nbr_or_peer['ttl_security_hops']}}
 {% endif %}
 {% if 'auth_password' in nbr_or_peer %}
- neighbor {{name_or_ip}} password {{nbr_or_peer['auth_password']}} encrypted
+ neighbor {{name_or_ip}} password {{nbr_or_peer['auth_password']}}
 {% endif %}
 {% if 'solo_peer' in nbr_or_peer and nbr_or_peer['solo_peer'] == 'true' %}
  neighbor {{name_or_ip}} solo
 {% endif %}
 {% if 'peer_port' in nbr_or_peer %}
  neighbor {{name_or_ip}} port {{nbr_or_peer['peer_port']}}
+{% endif %}
+{% if 'tcp_mss' in nbr_or_peer %}
+ neighbor {{name_or_ip}} tcp-mss {{nbr_or_peer['tcp_mss']}}
 {% endif %}
 {% if 'passive_mode' in nbr_or_peer and nbr_or_peer['passive_mode'] == 'true' %}
  neighbor {{name_or_ip}} passive
@@ -100,4 +114,7 @@
 {% endif %}
 {% if 'override_capability' in nbr_or_peer and nbr_or_peer['override_capability'] == 'true' %}
  neighbor {{name_or_ip}} override-capability
+{% endif %}
+{% if 'graceful_restart_enable' in nbr_or_peer and nbr_or_peer['graceful_restart_enable'] == 'true' %}
+ neighbor {{name_or_ip}} graceful-restart
 {% endif %}
