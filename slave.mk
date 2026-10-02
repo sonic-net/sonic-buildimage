@@ -1771,6 +1771,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(LIBNSS_RADIUS) \
                 $(LIBPAM_TACPLUS) \
                 $(LIBNSS_TACPLUS) \
+                $(LIBCAREPLUS) \
                 $(MONIT) \
                 $(OPENSSH_SERVER) \
                 $(PYTHON3_SWSSCOMMON) \

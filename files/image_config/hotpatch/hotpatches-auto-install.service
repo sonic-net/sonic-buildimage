@@ -1,0 +1,14 @@
+[Unit]
+Description=Reapply persisted SONiC function hotpatches
+Wants=database.service syncd.service
+After=database.service syncd.service
+ConditionPathIsDirectory=/usr/share/sonic/hotpatches
+
+[Service]
+Type=oneshot
+User=root
+TimeoutStartSec=10min
+ExecStart=/usr/local/bin/hotpatches-auto-install
+
+[Install]
+WantedBy=multi-user.target
