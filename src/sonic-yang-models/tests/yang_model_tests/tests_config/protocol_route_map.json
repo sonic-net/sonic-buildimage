@@ -1,0 +1,264 @@
+{
+    "PROTOCOL_ROUTE_MAP_VALID": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_FROM_BGP" },
+                    { "name": "RM_FROM_OSPF6" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp",
+                        "route_map": "RM_FROM_BGP"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "ospf6",
+                        "route_map": "RM_FROM_OSPF6"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_VALID_NAMED_VRF": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    { "name": "Vrf_red" }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_STATIC_V4" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "Vrf_red",
+                        "addr_family": "IPv4",
+                        "protocol": "static",
+                        "route_map": "RM_STATIC_V4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_NON_EXIST_RT_MAP": {
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp",
+                        "route_map": "RM_DOES_NOT_EXIST"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_NON_EXIST_VRF": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "Vrf_does_not_exist",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_MISSING_RT_MAP": {
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_INVALID_PROTOCOL": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "magic",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_INVALID_ADDR_FAMILY": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPvX",
+                        "protocol": "bgp",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_AFI_PROTO_MISMATCH_V4_OSPF6": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "ospf6",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_AFI_PROTO_MISMATCH_V6_OSPF": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "ospf",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_AFI_PROTO_MISMATCH_V4_RIPNG": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "ripng",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_AFI_PROTO_MISMATCH_V6_RIP": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "rip",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PROTOCOL_ROUTE_MAP_AFI_PROTO_MISMATCH_V6_EIGRP": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "eigrp",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    }
+}
