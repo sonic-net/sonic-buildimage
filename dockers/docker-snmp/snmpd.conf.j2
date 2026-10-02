@@ -48,20 +48,30 @@ view   systemonly  included   .1.3.6.1.2.1.25.1
 host reaching UDP/161. To restrict by source, bind an ACL_TABLE of type
 CTRLPLANE with services ["SNMP"] (see Configuration.md). The well-known
 default community strings ('public'/'private') are never rendered, even
-via a ConfigDB bypass write or Net-SNMP quote/escape smuggling. #}
+disguised as a Net-SNMP quoted token (e.g. '"public"'), which Net-SNMP's
+config tokenizer unwraps back to the bare 'public' token at parse time
+when the quotes bound the *entire* token. A quote/backslash that is not
+the whole-token quoting delimiter has no special meaning to Net-SNMP and
+is read back literally, so it must never be stripped from the emitted
+value -- doing so would silently activate a different credential than
+the one configured. #}
 {% set insecure_default_communities = ['public', 'private'] %}
 
-{% macro sanitize_community(community) %}
-{#- Strip whitespace/control chars plus quote/backslash chars that
-Net-SNMP's config tokenizer strips or unescapes at parse time (e.g. a
-value of '"public"' is read by snmpd as the bare token 'public'). #}
-{{- community | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') | replace('"', '') | replace("'", '') | replace('\\', '') -}}
+{% macro canonical_for_insecure_check(community) %}
+{#- Only unwrap the exact whole-token quoting pattern Net-SNMP itself
+recognizes, purely to detect quoted/escaped smuggling of a well-known
+default. This value is never emitted. #}
+{%- if community|length > 1 and ((community[0] == '"' and community[-1] == '"') or (community[0] == "'" and community[-1] == "'")) -%}
+{{- community[1:-1] | replace('\\', '') -}}
+{%- else -%}
+{{- community -}}
+{%- endif -%}
 {% endmacro %}
 
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
-{% set safe_community = sanitize_community(community) %}
-{% if SNMP_COMMUNITY[community]['TYPE'] == 'RO' and safe_community not in insecure_default_communities %}
+{% set safe_community = community | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% if SNMP_COMMUNITY[community]['TYPE'] == 'RO' and canonical_for_insecure_check(safe_community) not in insecure_default_communities %}
 rocommunity {{ safe_community }}
 rocommunity6 {{ safe_community }}
 {% endif %}
@@ -70,8 +80,8 @@ rocommunity6 {{ safe_community }}
 
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
-{% set safe_community = sanitize_community(community) %}
-{% if SNMP_COMMUNITY[community]['TYPE'] == 'RW' and safe_community not in insecure_default_communities %}
+{% set safe_community = community | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% if SNMP_COMMUNITY[community]['TYPE'] == 'RW' and canonical_for_insecure_check(safe_community) not in insecure_default_communities %}
 rwcommunity {{ safe_community }}
 rwcommunity6 {{ safe_community }}
 {% endif %}
