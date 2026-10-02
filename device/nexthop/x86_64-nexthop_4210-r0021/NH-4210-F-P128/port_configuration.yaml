@@ -3627,9 +3627,6 @@ device:
 ---
 device:
     0:
-        TM_MIRROR_ON_DROP_CONTROL:
-            RESERVED_LIMIT_CELLS: 6666
-
         TM_MIRROR_ON_DROP_PROFILE:
             ?
                 TM_MIRROR_ON_DROP_PROFILE_ID: 0
@@ -3647,18 +3644,6 @@ device:
             :
                 TM_MC_Q_ID: 0
                 PORT_ID: 0
-...
----
-device:
-    0:
-        TM_DROP_CONGESTION_NOTIFICATION_CONTROL:
-            RESERVED_LIMIT_CELLS: 6666
-...
----
-device:
-    0:
-        TM_CNP_CONTROL:
-            RESERVED_LIMIT_CELLS: 6266
 ...
 
 ### THDR Limits
