@@ -3,6 +3,9 @@
 !
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+{% if bgp_session['local_as'] is defined %}
+  neighbor {{ neighbor_addr }} local-as {{ bgp_session['local_as'] }} no-prepend replace-as
+{% endif %}
 {# set the bgp neighbor timers if they have not default values #}
 {% if     (bgp_session['keepalive'] is defined and bgp_session['keepalive'] | int != 60)
       or  (bgp_session['holdtime'] is defined  and bgp_session['holdtime']  | int != 180) %}
