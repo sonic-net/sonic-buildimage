@@ -24,37 +24,25 @@ int is_debug_on = DEBUG_IGNORE;
  */
 int firmware_upgrade_debug(void)
 {
-    int size;
+    int value;
     FILE *fp;
-    char debug_info[DEBUG_INFO_LEN];
 
     fp = fopen(DEBUG_FILE, "r");
     if (fp == NULL) {
         return DEBUG_IGNORE;
     }
 
-    mem_clear(debug_info, DEBUG_INFO_LEN);
-    size = fread(debug_info, DEBUG_INFO_LEN - 1, 1, fp);
-    if (size < 0) {
-        fclose(fp);
+    value = fgetc(fp);
+    fclose(fp);
+
+    switch (value) {
+    case '1':
+        return DEBUG_APP_ON;
+    case '3':
+        return DEBUG_ALL_ON;
+    case '0':
+        return DEBUG_OFF;
+    default:
         return DEBUG_IGNORE;
     }
-
-    if (strncmp(debug_info, DEBUG_ON_INFO, 1) == 0) {
-        fclose(fp);
-        return DEBUG_APP_ON;
-    }
-
-    if (strncmp(debug_info, DEBUG_ON_ALL, 1) == 0) {
-        fclose(fp);
-        return DEBUG_ALL_ON;
-    }
-
-    if (strncmp(debug_info, DEBUG_OFF_INFO, 1) == 0) {
-        fclose(fp);
-        return DEBUG_OFF;
-    }
-
-    fclose(fp);
-    return DEBUG_IGNORE;
 }
