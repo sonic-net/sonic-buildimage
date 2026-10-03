@@ -1,0 +1,215 @@
+{
+    "LLR_PORT_VALID_STATIC": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "eth0",
+                        "lanes": "65",
+                        "speed": 800000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-llr-port:sonic-llr-port": {
+            "sonic-llr-port:LLR_PORT": {
+                "LLR_PORT_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "llr_mode": "static",
+                        "llr_local": "enabled",
+                        "llr_remote": "disabled"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PORT_VALID_WITH_PROFILE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "eth0",
+                        "lanes": "65",
+                        "speed": 800000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_800000_40m_profile",
+                        "max_outstanding_frames": 264,
+                        "max_outstanding_bytes": 135000
+                    }
+                ]
+            }
+        },
+        "sonic-llr-port:sonic-llr-port": {
+            "sonic-llr-port:LLR_PORT": {
+                "LLR_PORT_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "llr_mode": "static",
+                        "llr_local": "enabled",
+                        "llr_remote": "enabled",
+                        "llr_profile": "llr_800000_40m_profile"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PORT_INVALID_LLR_MODE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "eth0",
+                        "lanes": "65",
+                        "speed": 800000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-llr-port:sonic-llr-port": {
+            "sonic-llr-port:LLR_PORT": {
+                "LLR_PORT_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "llr_mode": "auto",
+                        "llr_local": "enabled",
+                        "llr_remote": "disabled"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PORT_INVALID_LLR_LOCAL": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "eth0",
+                        "lanes": "65",
+                        "speed": 800000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-llr-port:sonic-llr-port": {
+            "sonic-llr-port:LLR_PORT": {
+                "LLR_PORT_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "llr_mode": "static",
+                        "llr_local": "on",
+                        "llr_remote": "disabled"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PORT_INVALID_LLR_REMOTE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "eth0",
+                        "lanes": "65",
+                        "speed": 800000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-llr-port:sonic-llr-port": {
+            "sonic-llr-port:LLR_PORT": {
+                "LLR_PORT_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "llr_mode": "static",
+                        "llr_local": "disabled",
+                        "llr_remote": "yes"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PORT_INVALID_PORT_REF": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "eth0",
+                        "lanes": "65",
+                        "speed": 800000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-llr-port:sonic-llr-port": {
+            "sonic-llr-port:LLR_PORT": {
+                "LLR_PORT_LIST": [
+                    {
+                        "port": "EthernetXXX",
+                        "llr_mode": "static",
+                        "llr_local": "enabled",
+                        "llr_remote": "disabled"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PORT_INVALID_PROFILE_REF": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "eth0",
+                        "lanes": "65",
+                        "speed": 800000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_800000_40m_profile",
+                        "max_outstanding_frames": 264,
+                        "max_outstanding_bytes": 135000
+                    }
+                ]
+            }
+        },
+        "sonic-llr-port:sonic-llr-port": {
+            "sonic-llr-port:LLR_PORT": {
+                "LLR_PORT_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "llr_mode": "static",
+                        "llr_local": "enabled",
+                        "llr_remote": "enabled",
+                        "llr_profile": "llr_nonexistent_profile"
+                    }
+                ]
+            }
+        }
+    }
+}
