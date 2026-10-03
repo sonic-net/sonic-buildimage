@@ -1,0 +1,10 @@
+constants:
+  bgp:
+    bbr:
+      enabled: true
+      default_state: "enabled"
+    peers:
+      general:
+        bbr:
+          PEER_V4:
+            - ipv4
