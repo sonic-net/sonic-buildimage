@@ -216,43 +216,74 @@ class TestLoadSnmpYaml:
 class TestApplySnmpCommunities:
     def test_scalar_rocommunity_written(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rocommunity": "public"}
+        yaml_snmp_info = {"snmp_rocommunity": "monitoring-ro"}
         snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
-        assert db.set_entry_calls == [("SNMP_COMMUNITY", "public", {"TYPE": "RO"})]
+        assert db.set_entry_calls == [("SNMP_COMMUNITY", "monitoring-ro", {"TYPE": "RO"})]
 
     def test_scalar_rwcommunity_written(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rwcommunity": "private"}
+        yaml_snmp_info = {"snmp_rwcommunity": "monitoring-rw"}
         snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
-        assert db.set_entry_calls == [("SNMP_COMMUNITY", "private", {"TYPE": "RW"})]
+        assert db.set_entry_calls == [("SNMP_COMMUNITY", "monitoring-rw", {"TYPE": "RW"})]
 
     def test_list_rocommunities_written(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rocommunities": ["public", "public2"]}
+        yaml_snmp_info = {"snmp_rocommunities": ["monitoring-ro1", "monitoring-ro2"]}
         snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
         assert db.set_entry_calls == [
-            ("SNMP_COMMUNITY", "public", {"TYPE": "RO"}),
-            ("SNMP_COMMUNITY", "public2", {"TYPE": "RO"}),
+            ("SNMP_COMMUNITY", "monitoring-ro1", {"TYPE": "RO"}),
+            ("SNMP_COMMUNITY", "monitoring-ro2", {"TYPE": "RO"}),
         ]
 
     def test_list_rwcommunities_written(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rwcommunities": ["private", "private2"]}
+        yaml_snmp_info = {"snmp_rwcommunities": ["monitoring-rw1", "monitoring-rw2"]}
         snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
         assert db.set_entry_calls == [
-            ("SNMP_COMMUNITY", "private", {"TYPE": "RW"}),
-            ("SNMP_COMMUNITY", "private2", {"TYPE": "RW"}),
+            ("SNMP_COMMUNITY", "monitoring-rw1", {"TYPE": "RW"}),
+            ("SNMP_COMMUNITY", "monitoring-rw2", {"TYPE": "RW"}),
         ]
 
     def test_existing_communities_are_not_rewritten(self):
         db = _FakeConfigDB()
-        yaml_snmp_info = {"snmp_rocommunity": "public"}
-        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {"public"})
+        yaml_snmp_info = {"snmp_rocommunity": "monitoring-ro"}
+        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {"monitoring-ro"})
         assert db.set_entry_calls == []
 
     def test_no_community_keys_present_is_a_no_op(self):
         db = _FakeConfigDB()
         snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_location": "lab1"}, {})
+        assert db.set_entry_calls == []
+
+    def test_insecure_default_ro_scalar_rejected(self):
+        db = _FakeConfigDB()
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rocommunity": "public"}, {})
+        assert db.set_entry_calls == []
+
+    def test_insecure_default_rw_scalar_rejected(self):
+        db = _FakeConfigDB()
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rwcommunity": "private"}, {})
+        assert db.set_entry_calls == []
+
+    def test_insecure_default_mixed_with_valid_in_list_only_valid_written(self):
+        db = _FakeConfigDB()
+        yaml_snmp_info = {"snmp_rocommunities": ["public", "monitoring-ro"]}
+        snmp_yml_to_configdb.apply_snmp_communities(db, yaml_snmp_info, {})
+        assert db.set_entry_calls == [("SNMP_COMMUNITY", "monitoring-ro", {"TYPE": "RO"})]
+
+    def test_insecure_default_case_variant_is_not_rejected(self):
+        db = _FakeConfigDB()
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rocommunity": "Public"}, {})
+        assert db.set_entry_calls == [("SNMP_COMMUNITY", "Public", {"TYPE": "RO"})]
+
+    def test_insecure_default_quoted_variant_rejected(self):
+        db = _FakeConfigDB()
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rocommunity": '"public"'}, {})
+        assert db.set_entry_calls == []
+
+    def test_insecure_default_escaped_variant_rejected(self):
+        db = _FakeConfigDB()
+        snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rwcommunity": "pri\\vate"}, {})
         assert db.set_entry_calls == []
 
 
