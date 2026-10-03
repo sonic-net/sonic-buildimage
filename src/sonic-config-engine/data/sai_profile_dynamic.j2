@@ -1,0 +1,36 @@
+{# Render every entry of the SAI_PROFILE CONFIG_DB table as a KEY=VALUE
+   line. This is a generic, vendor-agnostic include: it makes no
+   assumption about which keys are present, so it can be reused
+   unmodified by any hwsku's sai.profile.j2, across vendors.
+
+   This file lives under sonic-config-engine's data/ dir (not
+   files/build_templates/) so setup.py's data_files glob installs it
+   into /usr/share/sonic/templates as part of the sonic-config-engine
+   package itself. That is what makes it resolve inside containers
+   such as syncd (built FROM docker-config-engine-trixie, which
+   installs this package), not just on the host rootfs where
+   sai.profile.j2 is not actually rendered.
+
+   Defense-in-depth: YANG validation (the key-name pattern, the
+   reserved-key "must" constraint, and the value's CR/LF-excluding
+   pattern) only applies to config changes made through the
+   YANG-validated path. A direct sonic-db-cli write to CONFIG_DB
+   bypasses YANG, so the same guards are re-applied here:
+   - A key containing '=', CR, or LF is dropped entirely: consumers
+     that split each line on the first '=' would otherwise
+     mis-parse a key like "SAI_INIT_CONFIG_FILE=/tmp/evil" (with
+     value "x") as the reserved key SAI_INIT_CONFIG_FILE with value
+     "/tmp/evil=x", and CR/LF in a key can inject another profile
+     line exactly like CR/LF in a value can.
+   - SAI_INIT_CONFIG_FILE is reserved/structural (selected by each
+     platform's sai.profile.j2) and is never emitted from this table.
+   - CR/LF in a value is stripped so one entry can never expand into
+     more than one KEY=VALUE line. #}
+{%- if SAI_PROFILE is defined %}
+{%- for key, entry in SAI_PROFILE.items() %}
+{%- if key != 'SAI_INIT_CONFIG_FILE'
+      and (key | replace('=', '') | replace('\r', '') | replace('\n', '')) == key %}
+{{ key }}={{ entry.value | replace('\r', '') | replace('\n', ' ') }}
+{% endif %}
+{% endfor %}
+{%- endif %}

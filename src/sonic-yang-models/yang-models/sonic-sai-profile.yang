@@ -1,0 +1,50 @@
+module sonic-sai-profile {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-sai-profile";
+    prefix sai-profile;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "SAI_PROFILE table YANG Module for SONiC. Provides a generic, vendor-agnostic mechanism to inject arbitrary SAI init-config key/value pairs, rendered into /etc/sai.d/sai.profile, without requiring per-key schema changes as new SAI knobs are introduced.";
+
+    revision 2025-09-29 {
+        description "Initial revision.";
+    }
+
+    container sonic-sai-profile {
+
+        container SAI_PROFILE {
+
+            description "SAI_PROFILE table in config_db.json. Each entry maps directly to one KEY=VALUE line written into /etc/sai.d/sai.profile at syncd startup.";
+
+            list SAI_PROFILE_LIST {
+                key "name";
+                description "A SAI profile key/value entry keyed by name.";
+
+                leaf name {
+                    description "SAI profile key name. Must exactly match the SAI environment variable name expected by the vendor's SAI/SDK implementation, e.g. SAI_NUM_ECMP_MEMBERS. SAI_INIT_CONFIG_FILE is reserved: it is a structural key selected by each platform's sai.profile.j2 template and must not be set via this table.";
+                    type string {
+                        length 1..255;
+                        pattern "[A-Z][A-Z0-9_]*";
+                    }
+                    must "current() != 'SAI_INIT_CONFIG_FILE'" {
+                        error-message "SAI_INIT_CONFIG_FILE is a reserved, structural SAI profile key and cannot be set via SAI_PROFILE.";
+                    }
+                }
+
+                leaf value {
+                    description "Value for this SAI profile key, rendered verbatim as a string. Interpretation/validation of the value is the vendor SAI/SDK implementation's responsibility, not this schema's. Carriage return and line feed characters are disallowed, since each entry is rendered as exactly one KEY=VALUE line.";
+                    type string {
+                        length 1..255;
+                        pattern '[^\r\n]*';
+                    }
+                    mandatory true;
+                }
+            }
+        }
+    }
+}

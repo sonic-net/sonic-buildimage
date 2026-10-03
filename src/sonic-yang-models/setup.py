@@ -181,6 +181,7 @@ yang_files = [
     'sonic-route-common.yang',
     'sonic-route-map.yang',
     'sonic-routing-policy-sets.yang',
+    'sonic-sai-profile.yang',
     'sonic-scheduler.yang',
     'sonic-serial-console.yang',
     'sonic-sflow.yang',

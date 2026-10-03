@@ -3779,6 +3779,80 @@ The **NODE_CFG** table defines the node configuration details for platform compo
 
 **fully-qualified-name**: Fully qualified hierarchy path for the component.
 
+### SAI_PROFILE
+
+The **SAI_PROFILE** table provides a generic, vendor-agnostic mechanism
+to inject arbitrary SAI init-config key/value pairs. Each entry is
+rendered as one `KEY=VALUE` line into a vendor's final SAI profile file
+(e.g. `/etc/sai.d/sai.profile` for Broadcom, `/tmp/sai.profile` for
+Mellanox), which is read by `syncd` at startup and passed to the
+vendor SAI implementation. This avoids needing a schema or template
+change every time a new, vendor-specific SAI tunable needs to be
+exposed.
+
+> **Scope of this PR (sonic-net/sonic-buildimage#29813):** this PR adds
+> only the `SAI_PROFILE` YANG model (`sonic-sai-profile.yang`) and the
+> shared rendering template
+> (`src/sonic-config-engine/data/sai_profile_dynamic.j2`, installed to
+> `/usr/share/sonic/templates` via `sonic-config-engine`'s packaging).
+> No hwsku `sai.profile`/`sai.profile.j2` in this repo is modified, and
+> no code in this repo actually invokes the template at `syncd`
+> startup — configuring `SAI_PROFILE` has no effect until the
+> `syncd`-side integration below merges. That integration lives in a
+> separate repo/PR, sonic-net/sonic-sairedis#2098, described next.
+
+Rendering is applied by `syncd`'s startup scripts
+(`syncd/scripts/syncd_init_common.sh` in `sonic-sairedis`, see
+sonic-net/sonic-sairedis#2098), via a
+generic, vendor-agnostic helper, `apply_sai_profile_configdb()`, that
+renders the shared `src/sonic-config-engine/data/sai_profile_dynamic.j2`
+template (installed to `/usr/share/sonic/templates` on every container
+image built from `docker-config-engine-trixie`) with `sonic-cfggen -d`
+and appends its output as the very last step before a vendor's final
+profile file is handed to `syncd` (`-p <file>`). This is a no-op when
+`SAI_PROFILE` is empty/absent, so **no per-hwsku `sai.profile`/
+`sai.profile.j2` template change is required** to support this table —
+it currently covers Broadcom (`config_syncd_bcm`) and Mellanox
+(`config_syncd_mlnx`); other vendors can adopt it with a single call to
+the same helper. `SAI_INIT_CONFIG_FILE` is reserved (it is a structural
+key selected by each platform's own template logic) and is rejected by
+both YANG validation and the renderer if set via this table.
+
+`syncd` parses the final profile file line by line, splitting each
+line on the first `=` and overwriting a `std::map` entry per key with
+no duplicate-key detection (`Syncd::loadProfileMap()` in
+`sonic-sairedis`). Because `apply_sai_profile_configdb()` appends last,
+after any vendor-specific static defaults or de-duplication, an entry
+in `SAI_PROFILE` always silently overrides a hardcoded static default
+with the same key — this is intentional, and is how tuning a key
+without an image rebuild is meant to work. Duplicate keys cannot occur
+within `SAI_PROFILE` itself, since CONFIG_DB stores it as a hash keyed
+uniquely by `name`.
+
+```json
+{
+    "SAI_PROFILE": {
+        "SAI_NUM_ECMP_MEMBERS": {
+            "value": "128"
+        },
+        "SAI_NHG_HIERARCHICAL_NEXTHOP": {
+            "value": "false"
+        }
+    }
+}
+```
+
+**name** (list key): SAI profile key name. Must exactly match the SAI
+environment variable name expected by the vendor's SAI/SDK
+implementation, e.g. `SAI_NUM_ECMP_MEMBERS`. `SAI_INIT_CONFIG_FILE` is
+reserved and not allowed.
+
+**value**: Value for this SAI profile key, rendered verbatim as a
+string. Interpretation/validation of the value is the vendor SAI/SDK
+implementation's responsibility, not this schema's. Carriage return and
+line feed characters are not allowed, since each entry is rendered as
+exactly one `KEY=VALUE` line.
+
 # For Developers
 
 ## Generating Application Config by Jinja2 Template
