@@ -9,11 +9,11 @@ $(DOCKER_CONFIG_ENGINE_TRIXIE)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(PYTHON3_SWSSCOMMON) \
                                           $(SONIC_DB_CLI) \
                                           $(SONIC_EVENTD) \
-                                          $(SONIC_SUPERVISORD_UTILITIES_RS)
+                                          $(SONIC_SUPERVISORD_UTILITIES_RS) \
+                                          $(SONIC_CONTAINERCFGD_RS)
 $(DOCKER_CONFIG_ENGINE_TRIXIE)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                                   $(SONIC_YANG_MGMT_PY3) \
-                                                  $(SONIC_YANG_MODELS_PY3) \
-                                                  $(SONIC_CONTAINERCFGD)
+                                                  $(SONIC_YANG_MODELS_PY3)
 $(DOCKER_CONFIG_ENGINE_TRIXIE)_PYTHON_WHEELS += $(SONIC_CONFIG_ENGINE_PY3) \
                                                   $(SONIC_SUPERVISORD_UTILITIES)
 $(DOCKER_CONFIG_ENGINE_TRIXIE)_LOAD_DOCKERS += $(DOCKER_BASE_TRIXIE)
@@ -28,7 +28,9 @@ $(DOCKER_CONFIG_ENGINE_TRIXIE)_DBG_DEPENDS = $($(DOCKER_BASE_TRIXIE)_DBG_DEPENDS
                                              $(LIBYANG3_DBG) \
                                              $(PYTHON3_SWSSCOMMON_DBG) \
                                              $(SONIC_DB_CLI_DBG) \
-                                             $(SONIC_EVENTD_DBG)
+                                             $(SONIC_EVENTD_DBG) \
+                                             $(SONIC_SUPERVISORD_UTILITIES_RS_DBG) \
+                                             $(SONIC_CONTAINERCFGD_RS_DBG)
 $(DOCKER_CONFIG_ENGINE_TRIXIE)_DBG_IMAGE_PACKAGES = $($(DOCKER_BASE_TRIXIE)_DBG_IMAGE_PACKAGES)
 
 SONIC_DOCKER_IMAGES += $(DOCKER_CONFIG_ENGINE_TRIXIE)
