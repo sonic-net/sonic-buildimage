@@ -338,6 +338,10 @@ MODULE_PARM_DESC(disable_features, "Disable selected driver features:\n"
 	"\t\t  0x10  don't use interrupts\n"
 	"\t\t  0x20  disable SMBus Host Notify ");
 
+static int i2c_adapter_nr = -1;
+module_param(i2c_adapter_nr, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(i2c_adapter_nr, "Optional I2C adapter number. If set to a non-negative value, use a numbered adapter; otherwise use automatic allocation.");
+
 static void i801_setscl(struct i801_priv *priv, unsigned int level)
 {
     int pin_status;
@@ -1189,8 +1193,6 @@ static const struct pci_device_id i801_ids[] = {
 	{ 0, }
 };
 
-MODULE_DEVICE_TABLE(pci, i801_ids);
-
 #if defined CONFIG_X86 && defined CONFIG_DMI
 static unsigned char apanel_addr;
 
@@ -2012,7 +2014,13 @@ static int i801_probe(struct pci_dev *dev, const struct pci_device_id *id)
 
 	snprintf(priv->adapter.name, sizeof(priv->adapter.name),
 		"SMBus I801 adapter at %04lx", priv->smba);
-	err = i2c_add_adapter(&priv->adapter);
+//	err = i2c_add_adapter(&priv->adapter);
+        if (i2c_adapter_nr >= 0) {
+                priv->adapter.nr = i2c_adapter_nr;
+                err = i2c_add_numbered_adapter(&priv->adapter);
+        } else {
+                err = i2c_add_adapter(&priv->adapter);
+        }
 	if (err) {
 		i801_acpi_remove(priv);
 		return err;
