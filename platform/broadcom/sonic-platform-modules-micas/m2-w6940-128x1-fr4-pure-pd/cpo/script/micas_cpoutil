@@ -127,7 +127,7 @@ def logical_port_to_physical_port_index(port_name):
     return physical_port
 
 try:
-    from cpoutil import cpoutilbase
+    from micas_cpoutil import cpoutilbase
     cpo_util = cpoutilbase()
 except KeyError:
     cpo_util = None

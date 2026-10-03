@@ -643,7 +643,7 @@ def oe_reset(args, port_mapping):
         oe_list = [oe_index - CPO_PLATFORM_CONFIG.get("oe_index_start_index") for oe_index in oe_index_list]
         for oe_index in oe_list:
             byte = byte & ~(0x01 << oe_index)
-        from cpoutil import os_command_i2cset_oe_reset_byte
+        from micas_cpoutil import os_command_i2cset_oe_reset_byte
         result = os_command_i2cset_oe_reset_byte(byte)
         if result != 0:
             return False, ""
