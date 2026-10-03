@@ -1,4 +1,4 @@
-From 6232d03dae0fda42a2ffe4b9e719b4a3c7c2fce8 Mon Sep 17 00:00:00 2001
+From 64486964ce470f2565edea69bcad9ff87cbfb186 Mon Sep 17 00:00:00 2001
 From: Deepak Singhal <deepsinghal@microsoft.com>
 Date: Mon, 14 Sep 2026 18:13:19 +0000
 Subject: [PATCH] build: keep tcmalloc in DT_NEEDED
@@ -55,7 +55,7 @@ Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index b3a360473b..60227b7796 100644
+index 8778c24f2d..6ae1ff508c 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -235,7 +235,7 @@ AC_ARG_ENABLE(tcmalloc,
@@ -67,7 +67,7 @@ index b3a360473b..60227b7796 100644
   ;;
    no)  tcmalloc_enabled=false ;;
    *) AC_MSG_ERROR([bad value ${enableval} for --enable-tcmalloc]) ;;
-@@ -909,7 +909,7 @@ AC_ARG_ENABLE(gperf-tcmalloc,
+@@ -912,7 +912,7 @@ AC_ARG_ENABLE(gperf-tcmalloc,
    AC_MSG_CHECKING([for gperftools tcmalloc])
    AC_CHECK_LIB([tcmalloc], [MallocExtension_ReleaseToSystem], [
  gperf_tcmalloc_enabled=true
