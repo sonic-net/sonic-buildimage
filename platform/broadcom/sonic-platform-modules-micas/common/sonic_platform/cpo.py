@@ -28,6 +28,9 @@ try:
     from sonic_platform_base.sonic_xcvr.mem_maps.broadcom.bailly import BaillyMemMap
     from sonic_platform_base.sonic_xcvr.codes.broadcom.bailly import BaillyCodes
     from sonic_platform_base.sonic_xcvr.xcvr_eeprom import XcvrEeprom
+    from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoApiFactory, CpoBase, CpoHardwareInfo
+    from sonic_platform_base.sonic_xcvr.cpo.oe import OeBase
+    from sonic_platform_base.sonic_xcvr.cpo.elsfp import ElsfpBase
     from sonic_py_common import device_info
     from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
 
@@ -274,4 +277,103 @@ class CPO(CpoOptoeBase):
         return False
 
     def get_reset_status(self):
+        return False
+
+
+# Bailly CPO hardware is selected by the Micas endpoint API factories below,
+# so the generic OE and ELSFP identifiers are not used.
+MICAS_CPO_HARDWARE_ID = CpoHardwareInfo(oe_id=None, elsfp_id=None)
+
+
+class BaillyOeApiFactory(CpoApiFactory):
+    def create_api(self):
+        device = self._device
+        mem_map = BaillyMemMap(BaillyCodes, bank=device.bank,
+                               base_page=device.port.get_els_base_page())
+        return BaillyApi(XcvrEeprom(device.read_eeprom, device.write_eeprom, mem_map))
+
+
+class BaillyElsfpApiFactory(CpoApiFactory):
+    def create_api(self):
+        # Imported here so that the platform still loads with a
+        # sonic-platform-common that predates the Bailly ELSFP API.
+        from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_elsfp import BaillyElsfpApi
+        from sonic_platform_base.sonic_xcvr.mem_maps.broadcom.bailly import BaillyElsfpMemMap
+
+        device = self._device
+        mem_map = BaillyElsfpMemMap(BaillyCodes, base_page=device.port.get_els_base_page())
+        return BaillyElsfpApi(XcvrEeprom(device.read_eeprom, device.write_eeprom, mem_map))
+
+
+class CpoEndpointMixin(object):
+    """
+    Access an OE or ELS endpoint through the EEPROM of the legacy CPO port
+    object. Bailly exposes both endpoints in the optical engine's EEPROM.
+    """
+
+    def __init__(self, port, bank=0):
+        self.port = port
+        super().__init__(MICAS_CPO_HARDWARE_ID, bank=bank)
+
+    def read_eeprom(self, offset, num_bytes):
+        return self.port.read_eeprom(offset, num_bytes)
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        return self.port.write_eeprom(offset, num_bytes, write_buffer)
+
+
+class MicasOe(CpoEndpointMixin, OeBase):
+    def _make_api_factory(self):
+        return BaillyOeApiFactory(self)
+
+    def get_name(self):
+        return "OE{}".format(self.port.get_oe_id())
+
+    def get_presence(self):
+        # The optical engine is not field replaceable.
+        return True
+
+    def is_replaceable(self):
+        return False
+
+
+class MicasElsfp(CpoEndpointMixin, ElsfpBase):
+    def _make_api_factory(self):
+        return BaillyElsfpApiFactory(self)
+
+    def get_name(self):
+        return "ELS{}".format(self.port.get_els_id())
+
+    def get_presence(self):
+        return self.port.get_els_presence()
+
+    def is_replaceable(self):
+        return True
+
+
+class MicasCpo(CpoBase):
+    """
+    CpoBase view of a legacy Micas CPO port object.
+
+    The virtual module of a port is its OE bank and the ELS that feeds it.
+    The OE is fixed, so the virtual module is present when its ELS is,
+    matching the presence reported by the legacy port object.
+    """
+
+    def __init__(self, port):
+        self.port = port
+        super().__init__(MICAS_CPO_HARDWARE_ID,
+                         MicasOe(port, bank=int(port.get_oe_bank_id() % OE_BANK_NUM)),
+                         MicasElsfp(port))
+
+    def get_name(self):
+        return self.port.get_name()
+
+    def get_presence(self):
+        return bool(self.port.get_presence())
+
+    def get_position_in_parent(self):
+        return int(self.port._port_id)
+
+    def is_replaceable(self):
         return False
