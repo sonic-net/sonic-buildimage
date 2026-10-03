@@ -3,9 +3,14 @@ steps:
   - script: |
       set -ex
       tar_branch=origin/$(System.PullRequest.TargetBranchName)
-      # Check if k8s master entrance script is changed
+      # Check if Kubernetes master build inputs are changed
       K8S_MASTER_CHANGED=NO
-      if git diff $tar_branch..HEAD --name-only | grep -F files/image_config/kubernetes/kubernetes_master_entrance.sh; then
+      if git diff $tar_branch..HEAD --name-only | grep -Fq 'files/image_config/kubernetes/'; then
+        K8S_MASTER_CHANGED=YES
+      elif git diff --unified=0 $tar_branch..HEAD -- \
+        rules/config build_debian.sh slave.mk Makefile.cache \
+        files/build_templates/sonic_debian_extension.j2 | \
+        grep -Eq '^[+-].*(MASTER_|include_kubernetes_master|INCLUDE_KUBERNETES_MASTER)'; then
         K8S_MASTER_CHANGED=YES
       fi
       set +x
