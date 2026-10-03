@@ -117,7 +117,7 @@ stages:
 
         BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y \
                 SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT $(VERSION_CONTROL_OPTIONS)"
-        make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=generic
+        make NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=generic
         make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-sonic-mgmt.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
       env:
