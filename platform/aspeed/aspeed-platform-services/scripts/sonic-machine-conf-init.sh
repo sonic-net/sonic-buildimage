@@ -47,17 +47,21 @@ elif echo "$MODEL" | grep -qi -e "AST2700-A1 Spc6" -e "AST2700-A2 Spc6"; then
     PLATFORM="arm64-aspeed_nvidia_ast2700_bmc-r0"
     MACHINE="aspeed_ast2700"
     log "Detected NVIDIA SPC6 BMC platform"
-elif echo "$COMPATIBLE" | grep -q "aspeed,ast2700-evb"; then
-    PLATFORM="arm64-aspeed_ast2700_evb-r0"
-    MACHINE="aspeed_ast2700"
-    log "Detected Aspeed AST2700 EVB platform"
 elif echo "$COMPATIBLE" | grep -q "arista_goldfinch-r0"; then
    PLATFORM="arm64-arista_goldfinch-r0"
    MACHINE="aspeed_ast2700"
    log "Detected Arista Goldfinch platform"
+elif echo "$COMPATIBLE" | grep -q "micas,m2-w6950-128oc"; then
+    PLATFORM="arm64-micas_m2-w6950-128oc-r0"
+    MACHINE="aspeed_ast2700"
+    log "Detected Micas M2-W6950-128OC BMC platform"
+elif echo "$COMPATIBLE" | grep -q "aspeed,ast2700-evb"; then
+    PLATFORM="arm64-aspeed_ast2700_evb-r0"
+    MACHINE="aspeed_ast2700"
+    log "Detected Aspeed AST2700 EVB platform"
 else
     log "ERROR: Unknown hardware. Compatible: $COMPATIBLE, model: $MODEL"
-    log "Supported platforms: nexthop-b27-r0, nvidia-spc6-bmc, aspeed_ast2700_evb, arista_goldfinch-r0"
+    log "Supported platforms: nexthop-b27-r0, nvidia-spc6-bmc, aspeed_ast2700_evb, arista_goldfinch-r0, micas-m2-w6950-128oc"
     exit 1
 fi
 
@@ -77,4 +81,3 @@ cat "$MACHINE_CONF" | tee -a "$LOG_FILE"
 log "Machine configuration initialization complete"
 
 exit 0
-

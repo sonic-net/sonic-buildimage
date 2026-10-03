@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) 2023, Advanced Micro Devices, Inc. All rights reserved.
+ */
+
+#ifndef INCLUDE_APML_LIB64CONFIG_H_
+#define INCLUDE_APML_LIB64CONFIG_H_
+
+// This file is generated on build.
+
+#define apml64_VERSION_MAJOR @apml_VERSION_MAJOR@
+#define apml64_VERSION_MINOR @apml_VERSION_MINOR@
+#define apml64_VERSION_PATCH @apml_VERSION_PATCH@
+#define apml64_VERSION_BUILD "@apml_VERSION_BUILD@"
+
+#endif  // INCLUDE_APML_LIB64CONFIG_H_
