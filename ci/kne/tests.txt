@@ -1,0 +1,5 @@
+# Tests a buildimage pull request runs on each KNE lab (t0, t1, and t1-lag).
+# One entry per line, relative to sonic-mgmt tests/: a file, a folder, or file::test_name.
+# Blank lines and lines starting with # are ignored.
+# The lab scripts stay in sonic-mgmt. This file only chooses tests.
+bgp/test_bgp_fact.py
