@@ -135,12 +135,22 @@ class SonicYangExtMixin(SonicYangPathMixin):
             if top.name() != m.name():
                 raise SonicYangException("topLevelContainer mismatch {}:{}".format(
                     top.name(), m.name()))
+            if top.config_false():
+                self.configFalseModules.add(m.name())
+                continue
+            hasConfigTable = False
             for table in top.children(types=(ly.SNode.CONTAINER,)):
+                if table.config_false():
+                    continue
+                hasConfigTable = True
                 self.confDbYangMap[table.name()] = {
                     'module': m.name(),
                     'topLevelContainer': top.name(),
                     'container': table,
                 }
+
+            if not hasConfigTable:
+                self.configFalseModules.add(m.name())
 
     """
     Get module, topLevelContainer(TLC) and container SNode for a config DB table
