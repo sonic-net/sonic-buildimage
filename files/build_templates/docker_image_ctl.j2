@@ -770,6 +770,18 @@ start() {
 
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
+    # Bind-mount the PTP clock nodes the sx_core driver registers for the ASIC.
+    # They live directly under /dev with a dynamically allocated minor, so
+    # neither the /dev/sxdevs mount nor the per-ASIC sxcdev mounts cover them.
+    # phcsync needs the node to sync the ASIC clock to CLOCK_REALTIME, and
+    # without it the sync loop silently no-ops. Previously --privileged exposed
+    # the whole host /dev implicitly. Re-evaluated on every container create,
+    # so a node re-registered by an sx_core reload is picked up.
+    PTP_MNT=""
+    for _ptp_dev in /dev/ptp[0-9]*; do
+        [ -e "$_ptp_dev" ] && PTP_MNT="$PTP_MNT -v $_ptp_dev:$_ptp_dev:rw"
+    done
+
     if [[ $DEV != "" ]]; then
         mkdir -p /dev/shm/asic$DEV
         mkdir -p /var/log/sdk_dbg/$DEV
@@ -824,7 +836,7 @@ start() {
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /sys/module/sx_netdev:/sys/module/sx_netdev:rw \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
-        $ASIC_MNT \
+        $ASIC_MNT $PTP_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
