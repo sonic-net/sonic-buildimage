@@ -39,7 +39,7 @@ distro-info-data==0.72-0ubuntu0.24.04.1
 dmsetup==2:1.02.185-3ubuntu3.2
 docker-buildx-plugin==0.37.1-1~ubuntu.24.04~noble
 docker-ce-cli==5:29.8.2-1~ubuntu.24.04~noble
-docker-compose-plugin==5.5.1-1~ubuntu.24.04~noble
+docker-compose-plugin==5.6.0-1~ubuntu.24.04~noble
 dpkg-dev==1.22.6ubuntu6.6
 fakeroot==1.33-1
 fontconfig==2.15.0-1.1ubuntu2
@@ -159,7 +159,7 @@ libfile-fcntllock-perl==0.22-4ubuntu5
 libfontconfig1==2.15.0-1.1ubuntu2
 libfreetype6==2.13.2+dfsg-1ubuntu0.1
 libfribidi0==1.0.13-3build1
-libgbm1==25.2.8-0ubuntu0.24.04.3
+libgbm1==25.2.8-0ubuntu0.24.04.4
 libgcc-13-dev==13.3.0-6ubuntu2~24.04.1
 libgd3==2.3.3-9ubuntu5
 libgdbm-compat4t64==1.23-5.1build1
@@ -170,12 +170,12 @@ libgdk-pixbuf2.0-common==2.42.10+dfsg-3ubuntu3.3
 libgif7==5.2.2-1ubuntu1.2
 libgirepository-1.0-1==1.80.1-1
 libgl1==1.7.0-1build1
-libgl1-mesa-dri==25.2.8-0ubuntu0.24.04.3
+libgl1-mesa-dri==25.2.8-0ubuntu0.24.04.4
 libglib2.0-0t64==2.80.0-6ubuntu3.9
 libglib2.0-bin==2.80.0-6ubuntu3.9
 libglib2.0-data==2.80.0-6ubuntu3.9
 libglvnd0==1.7.0-1build1
-libglx-mesa0==25.2.8-0ubuntu0.24.04.3
+libglx-mesa0==25.2.8-0ubuntu0.24.04.4
 libglx0==1.7.0-1build1
 libgomp1==14.2.0-4ubuntu2~24.04.1
 libgpm2==1.20.7-11
@@ -292,7 +292,6 @@ libvulkan1==1.3.275.0-1build1
 libwayland-client0==1.22.0-2.1build1
 libwayland-cursor0==1.22.0-2.1build1
 libwayland-egl1==1.22.0-2.1build1
-libwayland-server0==1.22.0-2.1build1
 libwebp7==1.3.2-0.4build3
 libwrap0==7.6.q-33
 libx11-6==2:1.8.7-1build1
@@ -347,8 +346,8 @@ make==4.3-4.1build2
 manpages==6.7-2
 manpages-dev==6.7-2
 media-types==10.1.0
-mesa-libgallium==25.2.8-0ubuntu0.24.04.3
-mesa-vulkan-drivers==25.2.8-0ubuntu0.24.04.3
+mesa-libgallium==25.2.8-0ubuntu0.24.04.4
+mesa-vulkan-drivers==25.2.8-0ubuntu0.24.04.4
 ncurses-term==6.4+20240113-1ubuntu2.2
 netbase==6.4
 networkd-dispatcher==2.2.4-1
@@ -364,7 +363,6 @@ parallel==20231122+ds-1
 patch==2.7.6-7build3
 pci.ids==0.0~2024.03.31-1ubuntu0.1
 perl==5.38.2-3.2ubuntu0.6
-perl-base==5.38.2-3.2ubuntu0.6
 perl-modules-5.38==5.38.2-3.2ubuntu0.6
 pinentry-curses==1.2.1-3ubuntu5
 polkitd==124-2ubuntu1.24.04.4
