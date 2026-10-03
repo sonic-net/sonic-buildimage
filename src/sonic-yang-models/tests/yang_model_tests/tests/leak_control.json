@@ -2,6 +2,13 @@
     "LEAK_CONTROL_POLICY_DEFAULT": {
         "desc": "Load leak control policy with default enabled settings"
     },
+    "LEAK_CONTROL_POLICY_MAJOR_THRESHOLD": {
+        "desc": "Load leak control policy with major leak actions and a MIN-N threshold of 3"
+    },
+    "LEAK_CONTROL_POLICY_INVALID_MAJOR_THRESHOLD": {
+        "desc": "Load leak control policy with system_major_leak_num_min_sensors below the floor (1 < 2)",
+        "eStrKey": "Range"
+    },
     "LEAK_CONTROL_POLICY_DISABLED": {
         "desc": "Load leak control policy with both policies disabled"
     },
