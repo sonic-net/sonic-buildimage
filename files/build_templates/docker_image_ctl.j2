@@ -1,5 +1,5 @@
 #!/bin/bash
-{%- set bridged_containers = ["dhcp_server", "redfish"] %}
+{%- set bridged_containers = ["dhcp_server"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
@@ -62,9 +62,7 @@ get_pmon_device_cgroup_rules() {
 {%- endif %}
 
 {%- if docker_container_name in bridged_containers %}
-{#- redfish.service runs as the sonicadmin user, so its rule check needs sudo. #}
-{%- set ipt = "sudo iptables" if docker_container_name == "redfish" else "iptables" %}
-BRIDGE_SYSLOG_CHECK=({{ ipt }} -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment {{ docker_container_name }}_syslog -j ACCEPT)
+BRIDGE_SYSLOG_CHECK=(iptables -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment {{ docker_container_name }}_syslog -j ACCEPT)
 BRIDGE_SYSLOG_WAIT_SECS=10
 {%- endif %}
 
@@ -695,12 +693,7 @@ start() {
     {%- endif %}
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
-{%- if docker_container_name == "redfish" %}
-        # redfish uses bridge networking with port mapping (-p 443:18080)
-        NET="bridge"
-{%- else %}
         NET="host"
-{%- endif %}
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
