@@ -248,3 +248,51 @@ class TestCfgGenPlatformJson(TestCase):
 
             ports = get_child_ports("Ethernet212", "1x49G", "test_platform.json")
             self.assertNotIn('fec', ports['Ethernet212'])
+
+    @mock.patch('portconfig.readJson')
+    def test_subport_for_mixed_width_breakout(self, mock_read_json):
+        test_platform_json = {
+            "interfaces": {
+                "Ethernet192": {
+                    "index": "25,25,25,25,25,25,25,25",
+                    "lanes": "192,193,194,195,196,197,198,199",
+                    "breakout_modes": {
+                        "8x100G[50G]": [
+                            "etp25a", "etp25b", "etp25c", "etp25d",
+                            "etp25e", "etp25f", "etp25g", "etp25h"
+                        ],
+                        "4x100G[50G](4)+1x400G[200G](4)": [
+                            "etp25a", "etp25b", "etp25c", "etp25d", "etp25e"
+                        ],
+                        "1x400G[200G](4)+4x100G[50G](4)": [
+                            "etp25a", "etp25b", "etp25c", "etp25d", "etp25e"
+                        ]
+                    }
+                }
+            }
+        }
+        mock_read_json.return_value = test_platform_json
+
+        from portconfig import get_child_ports
+
+        expected_subports = {
+            "8x100G[50G]": ["1", "2", "3", "4", "5", "6", "7", "8"],
+            "4x100G[50G](4)+1x400G[200G](4)": ["1", "2", "3", "4", "2"],
+            "1x400G[200G](4)+4x100G[50G](4)": ["1", "5", "6", "7", "8"]
+        }
+
+        for breakout_mode, expected in expected_subports.items():
+            ports = get_child_ports("Ethernet192", breakout_mode, "test_platform.json")
+            port_configs = [ports[name] for name in sorted(
+                ports, key=lambda name: int(name.replace("Ethernet", "")))]
+            self.assertEqual(
+                [port["subport"] for port in port_configs],
+                expected
+            )
+
+            for port in port_configs:
+                lanes = [int(lane) for lane in port["lanes"].split(",")]
+                subport_lane_offset = (
+                    (int(port["subport"]) - 1) * len(lanes)
+                )
+                self.assertEqual(subport_lane_offset, lanes[0] - 192)
