@@ -37,7 +37,7 @@ libgcc-s1-armhf-cross==14.2.0-19cross1
 libgomp1-armhf-cross==14.2.0-19cross1
 libjudy-dev==1.0.5-5.1+b1
 libjudydebian1==1.0.5-5.1+b1
-libnode115==20.19.2+dfsg-1+deb13u2
+libnode115==20.19.2+dfsg-1+deb13u3
 libstdc++6-armhf-cross==14.2.0-19cross1
 libubsan1-armhf-cross==14.2.0-19cross1
 libunicode-map-perl==0.112-13+b4
@@ -57,8 +57,8 @@ node-corepack==0.24.0-5
 node-minimatch==9.0.3-6
 node-undici==7.3.0+dfsg1+~cs24.12.11-1
 node-xtend==4.0.2-3
-nodejs==20.19.2+dfsg-1+deb13u2
-nodejs-doc==20.19.2+dfsg-1+deb13u2
+nodejs==20.19.2+dfsg-1+deb13u3
+nodejs-doc==20.19.2+dfsg-1+deb13u3
 os-prober==1.83
 patchutils==0.4.2-1+b1
 pbzip2==1.1.13-1+b1
