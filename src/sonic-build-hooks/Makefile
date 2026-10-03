@@ -14,26 +14,30 @@ INSTALL_PATH = $(BUILD_ROOT_DIR)/usr/local/share/buildinfo
 SYMBOL_LINK_PATH = $(BUILD_ROOT_DIR)/usr/sbin
 SCRIPTS_PATH = $(INSTALL_PATH)/scripts
 HOOKS_PATH = $(INSTALL_PATH)/hooks
+DH_COMMANDS_PATH = $(BUILD_ROOT_DIR)/usr/bin
+DH_SEQUENCE_PATH = $(BUILD_ROOT_DIR)/usr/share/perl5/Debian/Debhelper/Sequence/
 DPKGTOOL = $(shell which dpkg-deb)
 
 
-# If the depk-deb not installed, use the docker container to make the debian package
+# If the dpkg-deb not installed, use the docker container to make the debian package
 ifeq ($(shell which dpkg-deb),)
-BUILD_COMMAND=docker run --user $(shell id -u):$(shell id -g) --rm -v $(shell pwd):/build debian:buster bash -c 'cd /build; dpkg-deb --build $(TMP_DIR)/$(SONIC_BUILD_HOOKS) $(SONIC_BUILD_HOOKS_TARGET)'
+BUILD_COMMAND=docker run --user $(shell id -u):$(shell id -g) --rm -v $(shell pwd):/build debian:trixie bash -c 'cd /build; dpkg-deb --build $(TMP_DIR)/$(SONIC_BUILD_HOOKS) $(SONIC_BUILD_HOOKS_TARGET)'
 else
 BUILD_COMMAND=dpkg-deb -Zxz --build $(TMP_DIR)/$(SONIC_BUILD_HOOKS) $(SONIC_BUILD_HOOKS_TARGET)
 endif
 
-DEPENDS := $(shell find scripts hooks debian -type f)
+DEPENDS := $(shell find scripts hooks debhelper debian -type f)
 $(SONIC_BUILD_HOOKS_TARGET): $(DEPENDS)
 	@rm -rf $(BUILDINFO_DIR)/$(SONIC_BUILD_HOOKS) $(TMP_DIR)
-	@mkdir -p $(DEBIAN_DIR) $(SCRIPTS_PATH) $(HOOKS_PATH) $(SYMBOL_LINK_PATH) $(TRUSTED_GPG_PATH) $(BUILDINFO_DIR)
+	@mkdir -p $(DEBIAN_DIR) $(SCRIPTS_PATH) $(HOOKS_PATH) $(SYMBOL_LINK_PATH) $(TRUSTED_GPG_PATH) $(BUILDINFO_DIR) $(DH_COMMANDS_PATH) $(DH_SEQUENCE_PATH)
 	@chmod 0775 $(DEBIAN_DIR)
 	@cp debian/* $(DEBIAN_DIR)/
 	@cp scripts/* $(SCRIPTS_PATH)/
 	@cp hooks/* $(HOOKS_PATH)/
 	@set -e; for url in $$(echo $(TRUSTED_GPG_URLS) | sed 's/[,;]/ /g'); do wget -q "$$url" -P "$(TRUSTED_GPG_PATH)/"; done
 	@for f in $(SYMBOL_LINKS); do ln -s $(SYMBOL_LINKS_SRC_DIR)/$$f $(SYMBOL_LINK_PATH)/$$f; done
+	@cp debhelper/commands/* $(DH_COMMANDS_PATH)/
+	@cp debhelper/sequence/* $(DH_SEQUENCE_PATH)/
 	@$(BUILD_COMMAND)
 
 all: $(SONIC_BUILD_HOOKS_TARGET)
