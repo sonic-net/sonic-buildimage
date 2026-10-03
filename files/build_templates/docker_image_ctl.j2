@@ -792,6 +792,24 @@ start() {
     fi
 {%- endif %}
 {%- endif %}
+{%- if sonic_asic_platform == "broadcom" %}
+{%- if docker_container_name == "syncd" %}
+    # --privileged used to fully open the device cgroup; without it, only explicitly
+    # granted devices are accessible, so grant the host device nodes opennsl-modules.init
+    # creates via --device=. This covers all broadcom syncd images (standard XGS, legacy-th,
+    # and dnx). Which nodes exist depends on is_ltsw_chip (a runtime setting from
+    # platform_env.conf, not known at image-build time): most chip families pick their set at
+    # runtime, dnx creates linux_ngbde alongside the classic set unconditionally. Check each
+    # path individually so only the devices actually present on this host get mounted.
+    BRCM_DEV_MNT=""
+    for _brcm_dev in /dev/linux_ngbde /dev/linux_ngknet /dev/linux_ngknetcb \
+                     /dev/linux-kernel-bde /dev/linux-user-bde /dev/linux-bcm-knet /dev/linux-bcm-bde /dev/linux-knet-cb; do
+        if [ -e "$_brcm_dev" ]; then
+            BRCM_DEV_MNT="$BRCM_DEV_MNT --device=$_brcm_dev:$_brcm_dev:rwm"
+        fi
+    done
+{%- endif %}
+{%- endif %}
 {%- if docker_container_name == "pmon" %}
     # Build --device-cgroup-rule flags from the hot-plug bus/FRU majors.
     PMON_DEVICE_CGROUP_RULES=()
@@ -853,6 +871,7 @@ start() {
 {%- if docker_container_name == "syncd" %}
         --shm-size=${SYNCD_SHM_SIZE:-512m} \
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
+        $BRCM_DEV_MNT \
 {%- endif %}
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
