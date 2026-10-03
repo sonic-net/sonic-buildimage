@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-dh_kerneldeps - calculate kernel dependencies for kernel modules
+dh_kerneldeps - determine kernel dependencies for kernel modules
 
 =cut
 
@@ -12,16 +12,17 @@ use Cwd;
 use File::Find;
 use Debian::Debhelper::Dh_Lib;
 use Dpkg::Substvars;
+use Dpkg::Deps;
 
 our $VERSION = DH_BUILTIN_VERSION;
 
 =head1 SYNOPSIS
 
-B<dh_kerneldeps> [S<I<debhelper options>>] [B<-L>I<package>] [B<-l>I<directory>] [B<-X>I<item>] [S<B<--> I<params>>]
+B<dh_kerneldeps> [S<I<debhelper options>>] [B<-X>I<item>]
 
 =head1 DESCRIPTION
 
-B<dh_kernel> is a debhelper program that is responsible for calculating
+B<dh_kerneldeps> is a debhelper program that is responsible for calculating
 kernel dependencies for kernel modules that are compiled and packaged.
 
 =head1 OPTIONS
@@ -31,7 +32,7 @@ kernel dependencies for kernel modules that are compiled and packaged.
 =item B<-X>I<item>, B<--exclude=>I<item>
 
 Exclude files that contain F<item> anywhere in their filename from being
-passed to B<dpkg-shlibdeps>. This will make their dependencies be ignored.
+processed. This will make their kernel dependency be ignored.
 This may be useful in some situations, but use it with caution. This option
 may be used more than once to exclude more than one thing.
 
@@ -46,14 +47,12 @@ B<${kernel:Depends}> to the Depends list.
 
 =cut
 
-init(options => {
-	"L|libpackage=s@" => \$dh{LIBPACKAGE},
-});
+init(options => {});
 
 on_pkgs_in_parallel {
 	my $is_kernel_module = sub {
 		my ($file) = @_;
-		my $ff = qx(readelf --wide -S $file);
+		my $ff = qx_cmd('readelf', '--wide', '-S', $file);
 		return 1 if $ff =~ m/\s+\.modinfo\s+/;
 		return 0;
 	};
@@ -114,7 +113,10 @@ on_pkgs_in_parallel {
 
 		$substvars->load($varlistfile) if -e $varlistfile;
 		$substvars->filter(remove => sub { $_[0] =~ m/^\Q$varnameprefix\E:/ });
-		$substvars->set_as_used("$varnameprefix:Depends", (join ', ', @packages) );
+        my $obj = deps_parse(join ', ', @packages);
+        error(g_('invalid dependency got generated: %s'), join(', ', @packages)) unless defined $obj;
+		$obj->sort();
+		$substvars->set_as_required("$varnameprefix:Depends", "$obj" );
 		$substvars->save($varlistfilenew);
 
 		# Replace old file by new one
@@ -125,6 +127,8 @@ on_pkgs_in_parallel {
 
 =head1 SEE ALSO
 
-This program is a part of sonic-build-tools.
+L<debhelper(7)>
+
+This program is a part of sonic-build-hooks.
 
 =cut
