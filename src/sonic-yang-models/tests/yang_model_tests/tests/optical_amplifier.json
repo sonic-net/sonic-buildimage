@@ -1,0 +1,9 @@
+{
+    "VALID_OTN_OA": {
+        "desc": "Load valid OTN_OA configuration"
+    },
+
+    "VALID_OTN_OSC": {
+        "desc": "Load valid OTN_OSC configuration"
+    }
+}
