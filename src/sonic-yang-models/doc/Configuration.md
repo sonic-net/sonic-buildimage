@@ -102,6 +102,7 @@
   * [RADIUS](#radius)
   * [Static DNS](#static-dns)
   * [ASIC_SENSORS](#asic_sensors)
+  * [GEARBOX_SENSORS](#gearbox_sensors)
   * [SRv6](#srv6)
   * [DPU](#dpu-configuration)
   * [REMOTE_DPU](#remote_dpu-configuration)
@@ -3560,6 +3561,23 @@ The ASIC_SENSORS table introduces the asic sensors polling configuration when th
             "interval": "10"
         },
         "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
+        }
+    }
+}
+```
+
+### GEARBOX_SENSORS
+
+The GEARBOX_SENSORS table introduces the gearbox sensors polling configuration when they are available on the platform.
+
+```json
+{
+    "GEARBOX_SENSORS": {
+        "GEARBOX_SENSORS_POLLER_INTERVAL": {
+            "interval": "60"
+        },
+        "GEARBOX_SENSORS_POLLER_STATUS": {
             "admin_status": "enable"
         }
     }
