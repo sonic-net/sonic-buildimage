@@ -76,9 +76,10 @@
                         "dhcpv6_servers": [
                             "2001:1::2"
                         ],
-                        "rfc6939_support": "true",
-                        "name": "Vlan400",
-                        "interface_id": "true",
+                        "dhcpv6_option": {
+                            "rfc6939_support": "true",
+                            "interface_id": "true"
+                        },
                         "name": "Vlan400"
                     }
                 ]
@@ -91,8 +92,10 @@
                 "DHCP_RELAY_LIST": [
                     {
                         "name": "Vlan500",
-                        "rfc6939_support": "False",
-                        "interface_id": "False"
+                        "dhcpv6_option": {
+                            "rfc6939_support": "False",
+                            "interface_id": "False"
+                        }
                     }
                 ]
             }
