@@ -52,9 +52,10 @@ init(options => {});
 on_pkgs_in_parallel {
 	my $is_kernel_module = sub {
 		my ($file) = @_;
-		my $ff = qx_cmd('readelf', '--wide', '-S', $file);
-		return 1 if $ff =~ m/\s+\.modinfo\s+/;
-		return 0;
+		open(my $fd, '-|', 'readelf', '--wide', '-S', $file) or return 0;
+		my $ff = do { local $/;  <$fd> };
+		close $fd;
+		return $ff =~ m/\s+\.modinfo\s+/ ? 1 : 0;
 	};
 
 	my $get_kernel_module_vermagic = sub {
