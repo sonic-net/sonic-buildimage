@@ -1,0 +1,6 @@
+s6500-32x/scripts/s6500-32x-init.sh  usr/local/bin
+s6500-32x/utils/pddf_32x_fan_control_sensor_refresh.py usr/local/bin
+s6500-32x/service/s6500-32x-init.service etc/systemd/system
+s6500-32x/service/fan-auto-control-32x-init.service etc/systemd/system
+s6500-32x/systemd/pddf-platform-init.service etc/systemd/system
+s6500-32x/*.whl usr/share/sonic/device/arm64-unipoe_s6500_32x-r0/pddf/
