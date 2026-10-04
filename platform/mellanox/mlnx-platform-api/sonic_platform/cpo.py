@@ -57,6 +57,9 @@ class CpoPort(ModuleXcvrMixin, ModuleSysfsMixin, CpoBase):
     """
 
     NUMBER_OF_BANKS = 4
+    # The laser source has 8 lasers in one bank; only bank 0 of its pages
+    # 1Ah/1Bh holds data, whichever OE bank the port is on.
+    ELSFP_BANK = 0
 
     def __init__(self, sfp_index, bank_id, oe_id, els_id, asic_id='asic0'):
         hardware_id = CpoHardwareInfo(oe_id=OeId.NVIDIA_SPC6_CPO, elsfp_id=None)
@@ -64,7 +67,7 @@ class CpoPort(ModuleXcvrMixin, ModuleSysfsMixin, CpoBase):
         # Instantiating the devices is what wires their api factories, so
         # there is no api code here: get_xcvr_api() builds lazily off these.
         oe = NvidiaSysfsOe(hardware_id, bank=bank_id, sdk_index=oe_id, asic_index=asic_index)
-        elsfp = NvidiaSysfsElsfp(hardware_id, bank=bank_id, sdk_index=oe_id, asic_index=asic_index)
+        elsfp = NvidiaSysfsElsfp(hardware_id, bank=self.ELSFP_BANK, sdk_index=oe_id, asic_index=asic_index)
         CpoBase.__init__(self, hardware_id, oe, elsfp)
 
         self.index = sfp_index + 1

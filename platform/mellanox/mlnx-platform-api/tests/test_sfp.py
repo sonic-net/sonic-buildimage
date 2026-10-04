@@ -448,7 +448,7 @@ class TestSfp:
         # on bank 2 no longer silently gets a bank-0 api.
         sfp = CpoPort(0, 2, 5, 0)
         assert sfp.oe.bank == 2
-        assert sfp.elsfp.bank == 2
+        assert sfp.elsfp.bank == CpoPort.ELSFP_BANK
         assert sfp.bank_id == 2
 
     def test_cpo_fill_change_event(self):

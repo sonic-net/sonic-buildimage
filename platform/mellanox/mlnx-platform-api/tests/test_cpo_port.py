@@ -25,8 +25,8 @@ contract must resolve, and the ones a CPO port cannot answer must raise rather
 than quietly return None.
 
 The rest pins the composition itself: identity held once on the optical
-engine, EEPROM reaching the module through it, and both devices carrying the
-port's bank.
+engine, EEPROM reaching the module through it, the engine carrying the port's
+bank and the laser source its single one.
 """
 
 import inspect
@@ -253,11 +253,14 @@ class TestComposition:
         # the factories dispatch on for both halves.
         assert cpo.hardware_id.elsfp_id is None
 
-    def test_both_devices_address_the_same_module_and_bank(self, cpo):
+    def test_both_devices_address_the_same_module(self, cpo):
         for device in (cpo.oe, cpo.elsfp):
             assert device.sdk_index == 3
             assert device.asic_index == 0
-            assert device.bank == 2
+
+    def test_the_engine_takes_the_ports_bank_and_the_laser_source_its_only_one(self, cpo):
+        assert cpo.oe.bank == 2
+        assert cpo.elsfp.bank == 0
 
     def test_instantiating_the_devices_is_what_wires_the_api_factories(self, cpo):
         assert type(cpo.oe._api_factory).__name__ == 'OeApiFactory'
