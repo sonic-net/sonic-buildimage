@@ -1,10 +1,11 @@
 import typing
 from natsort import natsorted
 import datetime
-import pickle
+import hashlib
+import json
 import os
 import copy
-import json
+import tempfile
 import click
 from tabulate import tabulate
 
@@ -14,7 +15,7 @@ from utilities_common.cli import UserCache
 from sonic_py_common import device_info
 
 CACHE_MANAGER = UserCache(app_name="macsec")
-CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}")
+CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}.json")
 
 DB_CONNECTOR = None
 COUNTER_TABLE = None
@@ -63,9 +64,10 @@ class MACsecSA(MACsecAppMeta, MACsecCounters):
         meta = sorted(self.meta.items(), key=lambda x: x[0])
         counters = copy.deepcopy(self.counters)
         if cache:
+            cached_counters = cache.get("counters", {})
             for k, v in counters.items():
-                if k in cache.counters and k.startswith("SAI_MACSEC_SA_STAT"):
-                    counters[k] = int(counters[k]) - int(cache.counters[k])
+                if k in cached_counters and k.startswith("SAI_MACSEC_SA_STAT"):
+                    counters[k] = int(counters[k]) - int(cached_counters[k])
         counters = sorted(counters.items(), key=lambda x: x[0])
         buffer += tabulate(meta + counters)
         buffer = "\n".join(["\t\t" + line for line in buffer.splitlines()])
@@ -250,17 +252,57 @@ def create_macsec_profiles_objs(profile_name: str) -> typing.List[MACsecCfgMeta]
     return objs
 
 
-def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
+def cache_find(cache: dict, target: MACsecAppMeta) -> dict:
     if not cache or not cache["objs"]:
         return None
     for obj in cache["objs"]:
-        if type(obj) == type(target) and obj.key == target.key:
+        if obj["type"] == type(target).__name__ and obj["key"] == target.key:
             # MACsec SA may be refreshed by a cycle that use the same key
             # So, use the SA as the identifier
-            if isinstance(obj, MACsecSA) and obj.sak != target.sak:
+            if isinstance(target, MACsecSA) and obj["sak_hash"] != _sak_hash(target.sak):
                 continue
             return obj
     return None
+
+
+def _sak_hash(sak: str) -> str:
+    return hashlib.sha256(sak.encode("utf-8")).hexdigest()
+
+
+def _cache_entry(obj: MACsecAppMeta) -> dict:
+    entry = {
+        "type": type(obj).__name__,
+        "key": obj.key,
+    }
+    if isinstance(obj, MACsecSA):
+        entry["sak_hash"] = _sak_hash(obj.sak)
+        entry["counters"] = obj.counters
+    return entry
+
+
+def _save_cache(path: str, cache: dict) -> None:
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=os.path.dirname(path),
+                prefix=".macsecstats-", delete=False) as cache_file:
+            temp_path = cache_file.name
+            json.dump(cache, cache_file)
+            cache_file.flush()
+            os.fsync(cache_file.fileno())
+        os.replace(temp_path, path)
+        temp_path = None
+    finally:
+        if temp_path is not None and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def _load_cache(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as cache_file:
+        cache = json.load(cache_file)
+    if cache.get("version") != 1 or not isinstance(cache.get("objs"), list):
+        raise ValueError("Unsupported MACsec cache format")
+    return cache
 
 
 @click.command()
@@ -337,7 +379,7 @@ class MacsecContext(object):
 
         cache = {}
         if os.path.isfile(CACHE_FILE.format(self.multi_asic.current_namespace)):
-            cache = pickle.load(open(CACHE_FILE.format(self.multi_asic.current_namespace), "rb"))
+            cache = _load_cache(CACHE_FILE.format(self.multi_asic.current_namespace))
 
         if not dump_file:
             if cache and cache["time"] and objs:
@@ -347,12 +389,11 @@ class MacsecContext(object):
                 print(obj.dump_str(cache_obj))
         else:
             dump_obj = {
-                "time": datetime.datetime.now(),
-                "objs": objs
+                "version": 1,
+                "time": str(datetime.datetime.now()),
+                "objs": [_cache_entry(obj) for obj in objs]
             }
-            with open(CACHE_FILE.format(self.multi_asic.current_namespace), 'wb') as dump_file:
-                pickle.dump(dump_obj, dump_file)
-                dump_file.flush()
+            _save_cache(CACHE_FILE.format(self.multi_asic.current_namespace), dump_obj)
 
     @multi_asic_util.run_on_multi_asic
     def show_post_status(self):

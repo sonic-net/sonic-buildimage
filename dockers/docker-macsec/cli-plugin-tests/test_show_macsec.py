@@ -10,6 +10,36 @@ import show_macsec
 
 
 class TestShowMACsec(object):
+    def test_cache_json_round_trip_preserves_sa_counter_baseline(self, tmp_path):
+        cached_sa = show_macsec.MACsecIngressSA.__new__(show_macsec.MACsecIngressSA)
+        cached_sa.key = "MACSEC_INGRESS_SA_TABLE:Ethernet0:sci:0"
+        cached_sa.sak = "sak-a"
+        cached_sa.counters = {"SAI_MACSEC_SA_STAT_OCTETS_ENCRYPTED": "120"}
+
+        target_sa = show_macsec.MACsecIngressSA.__new__(show_macsec.MACsecIngressSA)
+        target_sa.key = cached_sa.key
+        target_sa.sak = cached_sa.sak
+        target_sa.an = "0"
+        target_sa.meta = {"state": "active"}
+        target_sa.counters = {"SAI_MACSEC_SA_STAT_OCTETS_ENCRYPTED": "125"}
+
+        path = tmp_path / "macsecstats.json"
+        cache = {
+            "version": 1,
+            "time": "2026-10-05 12:00:00",
+            "objs": [show_macsec._cache_entry(cached_sa)],
+        }
+        show_macsec._save_cache(str(path), cache)
+
+        loaded_cache = show_macsec._load_cache(str(path))
+        cached_entry = show_macsec.cache_find(loaded_cache, target_sa)
+        rotated_sa = show_macsec.MACsecIngressSA.__new__(show_macsec.MACsecIngressSA)
+        rotated_sa.key = target_sa.key
+        rotated_sa.sak = "sak-b"
+
+        assert "5" in target_sa.dump_str(cached_entry)
+        assert show_macsec.cache_find(loaded_cache, rotated_sa) is None
+
     def test_plugin_registration(self):
         cli = MagicMock()
         show_macsec.register(cli)
