@@ -3247,6 +3247,14 @@
                 "admin_status": "enable"
             }
         },
+        "GEARBOX_SENSORS": {
+            "GEARBOX_SENSORS_POLLER_INTERVAL": {
+                "interval": "60"
+            },
+            "GEARBOX_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
+            }
+        },
         "SRV6_MY_LOCATORS": {
             "loc1": {
                 "prefix": "fcbb:bbbb:1::"
