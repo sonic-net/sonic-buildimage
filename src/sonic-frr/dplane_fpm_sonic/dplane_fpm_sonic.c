@@ -1000,7 +1000,7 @@ static void fpm_connect(struct event *t)
 	sock = socket(fnc->addr.ss_family, SOCK_STREAM, 0);
 	if (sock == -1) {
 		flog_err(EC_LIB_SOCKET, "%s: fpm socket failed: %s", __func__,
-			 strerror(errno));
+			 safe_strerror(errno));
 		event_add_timer(fnc->fthread->master, fpm_connect, fnc, 3,
 				 &fnc->t_connect);
 		return;

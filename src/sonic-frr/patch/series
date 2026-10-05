@@ -1,4 +1,4 @@
-# Patches for FRR 10.7.1
+# This series applies on Git commit f8c0b08dcb (frr-10.7.1)
 0001-SONiC-ONLY-Reduce-severity-of-Vty-connected-from-message.patch
 0003-SONiC-ONLY-nexthops-compare-vrf-only-if-ip-type.patch
 0004-SONiC-ONLY-frr-remove-frr-log-outchannel-to-var-log-frr.log.patch
