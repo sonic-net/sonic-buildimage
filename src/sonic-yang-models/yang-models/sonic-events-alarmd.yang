@@ -1,0 +1,38 @@
+module sonic-events-alarmd {
+    namespace "http://github.com/sonic-net/sonic-events-alarmd";
+    prefix events-alarmd;
+    yang-version 1.1;
+
+    import sonic-events-common {
+        prefix evtcmn;
+        revision-date 2022-12-01;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC alarmd events";
+
+    revision 2026-08-04 {
+        description
+            "alarmd alarm events.";
+    }
+
+    container sonic-events-alarmd {
+        container alarm {
+            description
+                "Alarm raised or cleared by alarmd (the alarm policy engine).
+                 The specific alarm type is carried in the type-id leaf (for
+                 example PSU_MISSING or FAN_FAULT), and the action leaf carries
+                 RAISE or CLEAR. Severity is assigned by eventd from the event
+                 profile (/etc/evprofile/default.json), keyed by type-id, so it
+                 is not declared per event here.";
+
+            uses evtcmn:sonic-events-cmn;
+        }
+    }
+}
