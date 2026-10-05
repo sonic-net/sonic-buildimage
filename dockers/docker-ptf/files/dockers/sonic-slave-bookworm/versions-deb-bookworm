@@ -1074,10 +1074,11 @@ libpci-dev==1:3.9.0-4
 libpci3==1:3.9.0-4
 libpciaccess0==0.17-2
 libpcre16-3==2:8.39-15
-libpcre2-16-0==10.42-1+deb12u1
-libpcre2-32-0==10.42-1+deb12u1
-libpcre2-dev==10.42-1+deb12u1
-libpcre2-posix3==10.42-1+deb12u1
+libpcre2-16-0==10.42-1+deb12u2
+libpcre2-32-0==10.42-1+deb12u2
+libpcre2-8-0==10.42-1+deb12u2
+libpcre2-dev==10.42-1+deb12u2
+libpcre2-posix3==10.42-1+deb12u2
 libpcre3==2:8.39-15
 libpcre3-dev==2:8.39-15
 libpcre32-3==2:8.39-15
