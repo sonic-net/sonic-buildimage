@@ -24,6 +24,9 @@
 {% if 'peer_group_name' in nbr_or_peer %}
  neighbor {{name_or_ip}} {{ns_intf.intf_arg}}peer-group {{nbr_or_peer['peer_group_name']}}
 {% endif %}
+{% if 'v6only' in nbr_or_peer and nbr_or_peer['v6only'] == 'true' %}
+ neighbor {{name_or_ip}} {{ns_intf.intf_arg}}v6only
+{% endif %}
 {% if 'local_asn' in nbr_or_peer %}
  neighbor {{name_or_ip}} local-as {{nbr_or_peer['local_asn']}}
 {% endif %}
