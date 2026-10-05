@@ -18,7 +18,7 @@ else
     udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 fi
 
-bridged_syslog_features="dhcp_server redfish"
+bridged_syslog_features="dhcp_server"
 for feature in $bridged_syslog_features; do
     if [ -n "$(sonic-db-cli CONFIG_DB keys "FEATURE|$feature")" ]; then
         docker0_ip=$(ip -o -4 addr list docker0 | awk '{print $4}' | cut -d/ -f1)
