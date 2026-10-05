@@ -38,6 +38,9 @@ RUN mkdir -p /etc/bmcweb && \
     mkdir -p /etc/ssl/certs/https && \
     mkdir -p /etc/ssl/certs/authority
 
+COPY ["bmcweb-start.sh", "/usr/bin/bmcweb-start.sh"]
+RUN chmod +x /usr/bin/bmcweb-start.sh
+
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["stage-credentials.sh", "/usr/bin/stage-credentials.sh"]

@@ -8,8 +8,6 @@
 !
 {% block sys_init %}
 hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
-password zebra
-enable password zebra
 {% endblock sys_init %}
 !
 {% block interfaces %}
@@ -71,4 +69,3 @@ log syslog informational
 log facility local4
 {% endblock logging %}
 !
-
