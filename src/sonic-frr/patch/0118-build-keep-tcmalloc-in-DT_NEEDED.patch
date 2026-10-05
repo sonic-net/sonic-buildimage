@@ -1,0 +1,81 @@
+From 6232d03dae0fda42a2ffe4b9e719b4a3c7c2fce8 Mon Sep 17 00:00:00 2001
+From: Deepak Singhal <deepsinghal@microsoft.com>
+Date: Mon, 14 Sep 2026 18:13:19 +0000
+Subject: [PATCH] build: keep tcmalloc in DT_NEEDED
+
+Both tcmalloc options append the library to the global LIBS, so it reaches
+every daemon's link line:
+
+  --enable-tcmalloc        LIBS="$LIBS -ltcmalloc_minimal"
+  --enable-gperf-tcmalloc  LIBS="$LIBS -ltcmalloc"
+
+gcc on Debian and Ubuntu links with --as-needed by default. It keeps a
+DT_NEEDED entry for a library when the binary's own objects reference a symbol
+that library defines. Daemons allocate through lib/'s XMALLOC/XFREE macros, so
+the malloc-family references sit in libfrr, and the linker drops libtcmalloc
+from the daemons:
+
+  zebra : libfrr.so.0 libmlag_pb.so.0 libyang.so.3 libjson-c.so.5 libc.so.6
+  bgpd  : libfrr.so.0 libm.so.6 libpcre2-posix.so.3 libtcmalloc.so.4 ...
+
+bgpd keeps it because one of its objects calls free() directly. Membership
+therefore depends on where a malloc-family symbol happens to be referenced.
+
+libfrr.so.0 still lists libtcmalloc, so it is loaded, at depth 2. The global
+symbol scope is searched breadth-first, so libc.so.6 sits at depth 1 and wins
+malloc. The dynamic linker resolves the same libfrr.so.0 according to the
+executable that loaded it:
+
+  zebra : binding file libfrr.so.0 to libc.so.6        : normal symbol `malloc'
+  bgpd  : binding file libfrr.so.0 to libtcmalloc.so.4 : normal symbol `malloc'
+
+Those daemons run on glibc malloc while reporting tcmalloc enabled. zebra holds
+the RIB and is the largest memory consumer of the set.
+
+Wrap both libraries in a --no-as-needed region so the linker keeps them.
+--push-state/--pop-state confines --no-as-needed to this one library, so every
+other dependency keeps its as-needed treatment.
+
+The flags and the library travel as a single -Wl group on purpose. libtool
+splits a -Wl, list into individual -Wl, arguments and keeps them adjacent. A
+bare -ltcmalloc moves to the end of the link line, past any trailing
+--as-needed, which restores the original behaviour:
+
+  in  : -Wl,--no-as-needed -ltcmalloc -Wl,--as-needed
+  out : -Wl,--no-as-needed -Wl,--as-needed ./.libs/libfrr.so -ltcmalloc
+
+Measured on master with --enable-tcmalloc: zebra gains libtcmalloc_minimal.so.4
+in DT_NEEDED, and LD_DEBUG=bindings shows the allocator symbols resolving to
+tcmalloc. Daemons that already carried tcmalloc stay as they are.
+
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+(cherry picked from commit 54620ebb950f0fdc29854ad2dfc9db19641c2f4e)
+---
+ configure.ac | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index b3a360473b..60227b7796 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -235,7 +235,7 @@ AC_ARG_ENABLE(tcmalloc,
+ 	AS_HELP_STRING([--enable-tcmalloc], [Turn on tcmalloc]),
+ [case "${enableval}" in
+   yes) tcmalloc_enabled=true
+-LIBS="$LIBS -ltcmalloc_minimal"
++LIBS="$LIBS -Wl,--push-state,--no-as-needed,-ltcmalloc_minimal,--pop-state"
+  ;;
+   no)  tcmalloc_enabled=false ;;
+   *) AC_MSG_ERROR([bad value ${enableval} for --enable-tcmalloc]) ;;
+@@ -909,7 +909,7 @@ AC_ARG_ENABLE(gperf-tcmalloc,
+   AC_MSG_CHECKING([for gperftools tcmalloc])
+   AC_CHECK_LIB([tcmalloc], [MallocExtension_ReleaseToSystem], [
+ gperf_tcmalloc_enabled=true
+-LIBS="$LIBS -ltcmalloc"
++LIBS="$LIBS -Wl,--push-state,--no-as-needed,-ltcmalloc,--pop-state"
+ AC_DEFINE([HAVE_TCMALLOC], [1], [Enable tcmalloc])
+   ], [AC_MSG_ERROR([tcmalloc specified but libtcmalloc not found, or missing apis])])
+  ;;
+-- 
+2.34.1
+

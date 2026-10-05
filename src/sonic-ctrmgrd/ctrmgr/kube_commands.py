@@ -6,6 +6,7 @@ import fcntl
 import inspect
 import json
 import os
+import re
 import shutil
 import ssl
 import subprocess
@@ -32,6 +33,54 @@ K8S_CA_URL = "https://{}:{}/api/v1/namespaces/default/configmaps/kube-root-ca.cr
 AME_CRT = "/etc/sonic/credentials/restapiserver.crt"
 AME_KEY = "/etc/sonic/credentials/restapiserver.key"
 
+
+# DNS-1123 label grammar per RFC 1123 / Kubernetes:
+#   lower-case alphanumeric + hyphen, starts and ends alphanumeric, <= 63 chars.
+# Used for node names.
+_DNS1123_LABEL = re.compile(r"\A[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?\Z")
+
+# Kubernetes label-key syntax: optional DNS-1123-subdomain prefix + "/", then
+# a name segment of alphanumeric/[-._] up to 63 chars, starting and ending
+# alphanumeric. Empty deletion suffix ("key-") is handled by _valid_label_arg.
+_K8S_LABEL_NAME = re.compile(
+    r"\A(?:[A-Za-z0-9]([-A-Za-z0-9_.]{0,251}[A-Za-z0-9])?/)?"
+    r"[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?\Z")
+
+# Kubernetes label-value syntax: empty, or alphanumeric/[-._] up to 63 chars
+# starting and ending alphanumeric.
+_K8S_LABEL_VALUE = re.compile(
+    r"\A(|[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?)\Z")
+
+
+def _valid_node_name(name):
+    return isinstance(name, str) and bool(_DNS1123_LABEL.match(name))
+
+
+def _valid_label_arg(arg):
+    """A kubectl label positional is either 'key=value' (add/overwrite) or
+    'key-' (delete). Validate the key against K8s label-name grammar and
+    the value (if present) against label-value grammar."""
+    if not isinstance(arg, str):
+        return False
+    if arg.endswith("-") and "=" not in arg:
+        return bool(_K8S_LABEL_NAME.match(arg[:-1]))
+    if "=" in arg:
+        name, _, value = arg.partition("=")
+        return bool(_K8S_LABEL_NAME.match(name)) and bool(_K8S_LABEL_VALUE.match(value))
+    return False
+
+
+def _get_validated_device_name():
+    """Return the node name if it matches DNS-1123, else empty string.
+    Empty return short-circuits the calling kubectl/kubeadm operation
+    without emitting an unsafe argv."""
+    name = get_device_name()
+    if not _valid_node_name(name):
+        log_error("Refusing kubectl/kubeadm call: hostname {!r} is not a valid "
+                  "DNS-1123 label".format(name))
+        return ""
+    return name
+
 def log_debug(m):
     msg = "{}: {}".format(inspect.stack()[1][3], m)
     print(msg)
@@ -57,35 +106,13 @@ def get_device_name():
     return str(device_info.get_hostname()).lower()
 
 
-def _run_command(cmd, timeout=60):
-    """ Run shell command and return exit code, along with stdout. """
-    ret = 0
-    try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-        (o, e) = proc.communicate(timeout=timeout)
-        output = to_str(o)
-        err = to_str(e)
-        ret = proc.returncode
-    except subprocess.TimeoutExpired as error:
-        proc.kill()
-        output = ""
-        err = str(error)
-        ret = -1
-
-    log_debug("cmd:{}\nret={}".format(cmd, ret))
-    if output:
-        log_debug("out:{}".format(output))
-    if err:
-        log_debug("err:{}".format(err))
-
-    return (ret, output.strip(), err.strip())
-
-
 def _run_command_list(cmd, timeout=5):
-    """ Run command as a list with shell=False to avoid shell metacharacter injection.
-    Use this for commands assembled from untrusted input (e.g. CONFIG_DB/STATE_DB values).
-    cmd must be a list.
+    """ Run command as an argv list with shell=False.
+
+    This is the only command runner in this module; a `shell=True` variant
+    used to exist alongside it, but every caller now assembles argv, so the
+    shell-string codepath was removed to eliminate the metacharacter-injection
+    landmine for future refactors.
     """
     ret = 0
     try:
@@ -113,9 +140,12 @@ def _run_command_list(cmd, timeout=5):
 def kube_read_labels():
     """ Read current labels on node and return as dict. """
     labels = {}
+    node = _get_validated_device_name()
+    if not node:
+        return (-1, labels)
     ret, out, _ = _run_command_list([
         "kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-        get_device_name(), "--show-labels", "--no-headers"
+        "--show-labels", "--no-headers", "--", node,
     ], timeout=60)
 
     if ret == 0:
@@ -138,8 +168,11 @@ def kube_read_labels():
 def kube_write_labels(set_labels):
     """ Set given set_labels.
     """
-    KUBECTL_SET_BASE = ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-                        "label", "--overwrite", "nodes", get_device_name()]
+    node = _get_validated_device_name()
+    if not node:
+        return -1
+    KUBECTL_LABEL_BASE = ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+                          "label", "--overwrite", "nodes"]
 
     ret, node_labels = kube_read_labels()
     if ret != 0:
@@ -150,6 +183,9 @@ def kube_write_labels(set_labels):
     del_label_args = []
     add_label_args = []
     for (name, val) in set_labels.items():
+        if not _valid_label_arg("{}={}".format(name, val)):
+            log_error("Skipping label with invalid key or value: {!r}={!r}".format(name, val))
+            continue
         skip = False
         if name in node_labels:
             if val != node_labels[name]:
@@ -166,8 +202,10 @@ def kube_write_labels(set_labels):
     if add_label_args:
         # First remove if any
         if del_label_args:
-            (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + del_label_args)
-        (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + add_label_args)
+            (ret, _, _) = _run_command_list(
+                KUBECTL_LABEL_BASE + ["--", node] + del_label_args)
+        (ret, _, _) = _run_command_list(
+            KUBECTL_LABEL_BASE + ["--", node] + add_label_args)
 
         log_debug("{} kube labels {} ret={}".format(
             "Applied" if ret == 0 else "Failed to apply", add_label_args, ret))
@@ -190,9 +228,12 @@ def func_get_labels(args):
 
 def is_ready_as_k8s_node():
     """ Check if current node status is ready or not from k8s cluster """
+    node = _get_validated_device_name()
+    if not node:
+        return False
     ret, out, _ = _run_command_list([
         "kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
-        get_device_name(), "--no-headers"
+        "--no-headers", "--", node,
     ], timeout=60)
     if ret != 0:
         log_debug("Failed to get node from Kube cluster")
@@ -347,42 +388,48 @@ c.  In Master check if all system pods are running good.
 def _do_reset(pending_join = False):
     # Drain & delete self from cluster. If not, the next join would fail
     #
+    node = _get_validated_device_name()
+    if not node:
+        return
     if os.path.exists(KUBE_ADMIN_CONF):
         _run_command_list([
             "kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-            "--request-timeout", "20s", "drain", get_device_name(),
-            "--ignore-daemonsets"
+            "--request-timeout", "20s", "drain", "--ignore-daemonsets",
+            "--", node,
         ], timeout=60)
 
         _run_command_list([
             "kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-            "--request-timeout", "20s", "delete", "node", get_device_name()
+            "--request-timeout", "20s", "delete", "node", "--", node,
         ], timeout=60)
 
-    _run_command("kubeadm reset -f")
-    _run_command("rm -rf {}".format(CNI_DIR))
+    _run_command_list(["kubeadm", "reset", "-f"], timeout=60)
+    _run_command_list(["rm", "-rf", CNI_DIR], timeout=60)
     if not pending_join:
-        _run_command("rm -f {}".format(KUBE_ADMIN_CONF))
-    _run_command("systemctl stop kubelet")
+        _run_command_list(["rm", "-f", KUBE_ADMIN_CONF], timeout=60)
+    _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
 
 def _do_join(server, port, insecure):
     err = ""
     out = ""
     ret = 0
+    node = _get_validated_device_name()
+    if not node:
+        return (-1, "", "Refusing kubeadm join: invalid device name")
     try:
         _gen_cli_kubeconf(server, port, insecure)
         _do_reset(True)
-        _run_command("modprobe br_netfilter")
+        _run_command_list(["modprobe", "br_netfilter"], timeout=60)
         # Copy flannel.conf
-        _run_command("mkdir -p {}".format(CNI_DIR))
-        _run_command("cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR))
-        (ret, _, _) = _run_command("systemctl start kubelet")
+        _run_command_list(["mkdir", "-p", CNI_DIR], timeout=60)
+        _run_command_list(["cp", FLANNEL_CONF_FILE, CNI_DIR], timeout=60)
+        (ret, _, _) = _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
 
         if ret == 0:
             (ret, out, err) = _run_command_list([
                 "kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
-                "--node-name", get_device_name()
+                "--node-name", node,
             ], timeout=360)
             log_debug("ret = {}".format(ret))
 
@@ -417,7 +464,7 @@ def kube_join_master(server, port, insecure, force=False):
         return (-1, "", "")
 
     if ((not force) and is_connected(server)):
-        _run_command("systemctl start kubelet")
+        _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
         err = "Master {} is already connected. "
         err += "Reset or join with force".format(server)
     else:
@@ -446,7 +493,7 @@ def kube_reset_master(force):
     if ret == 0:
         _do_reset()
     else:
-        _run_command("systemctl stop kubelet")
+        _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
     return (ret, err)
 

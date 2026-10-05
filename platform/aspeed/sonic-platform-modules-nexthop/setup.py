@@ -13,6 +13,9 @@ setup(
     package_dir={
         "sonic_platform": "common/sonic_platform",
     },
+    install_requires=[
+        "nexthop-utils",
+    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Plugins",
