@@ -180,12 +180,16 @@ RUN tmpdir=$(mktemp -d) \
 COPY debs/sonic-device-data_*.deb debs/
 RUN dpkg -i debs/sonic-device-data_*.deb
 
-# Install dash-pipeline-utils
-COPY ["files/github_get.py", "/usr/bin"]
-RUN tmpdir=$(mktemp -d) \
-    && cd "$tmpdir" \
-    && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
-    && cd utils \
+# Install dash-pipeline-utils through the wget version-control hook
+RUN DASH_ARCHIVE_URL=https://github.com/sonic-net/DASH/archive/refs/heads/main.tar.gz \
+    && tmpdir=$(mktemp -d) \
+    && mkdir "$tmpdir/utils" \
+    && wget --no-verbose --tries=3 -O "$tmpdir/dash-main.tar.gz" "$DASH_ARCHIVE_URL" \
+    && tar -xzf "$tmpdir/dash-main.tar.gz" \
+        -C "$tmpdir/utils" \
+        --strip-components=3 \
+        --wildcards 'DASH-main/dash-pipeline/utils/*' \
+    && cd "$tmpdir/utils" \
     && python3 setup.py bdist_wheel \
     && uv pip install --no-cache dist/dash_pipeline_utils*.whl \
     && cd / \

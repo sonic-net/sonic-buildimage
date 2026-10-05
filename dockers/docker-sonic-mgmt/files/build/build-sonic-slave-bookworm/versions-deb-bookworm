@@ -1,0 +1,15 @@
+libnl-3-200==3.7.0-0.2+b1sonic1
+libnl-3-dev==3.7.0-0.2+b1sonic1
+libnl-cli-3-200==3.7.0-0.2+b1sonic1
+libnl-cli-3-dev==3.7.0-0.2+b1sonic1
+libnl-genl-3-200==3.7.0-0.2+b1sonic1
+libnl-genl-3-dev==3.7.0-0.2+b1sonic1
+libnl-nf-3-200==3.7.0-0.2+b1sonic1
+libnl-nf-3-dev==3.7.0-0.2+b1sonic1
+libnl-route-3-200==3.7.0-0.2+b1sonic1
+libnl-route-3-dev==3.7.0-0.2+b1sonic1
+libswsscommon==1.0.0
+libyang-dev==3.12.2-1
+libyang3==3.12.2-1
+python3-libyang==3.1.0-1
+python3-swsscommon==1.0.0

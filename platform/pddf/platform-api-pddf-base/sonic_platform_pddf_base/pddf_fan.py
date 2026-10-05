@@ -14,6 +14,7 @@
 
 try:
     from sonic_platform_base.fan_base import FanBase
+    from .pddf_fan_conversion import build_fan_conversion
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -33,6 +34,13 @@ class PddfFan(FanBase):
         self.pddf_obj = pddf_data
         self.plugin_data = pddf_plugin_data
         self.platform = self.pddf_obj.get_platform()
+        fan_plugin_data = self.plugin_data.get('FAN', {})
+        self._pwm_to_duty_cycle = build_fan_conversion(
+            fan_plugin_data, 'pwm_to_duty_cycle'
+        )
+        self._duty_cycle_to_pwm = build_fan_conversion(
+            fan_plugin_data, 'duty_cycle_to_pwm'
+        )
 
         if tray_idx < 0 or tray_idx >= self.platform['num_fantrays']:
             print("Invalid fantray index %d\n" % tray_idx)
@@ -220,8 +228,7 @@ class PddfFan(FanBase):
             else:
                 fpwm = int(float(output['status']))
 
-            pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-            speed_percentage = int(round(pwm_to_dc(fpwm)))
+            speed_percentage = int(round(self._pwm_to_duty_cycle.convert(fpwm)))
 
             return speed_percentage
 
@@ -290,8 +297,7 @@ class PddfFan(FanBase):
             else:
                 fpwm = int(float(output['status']))
 
-            pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-            speed_percentage = int(round(pwm_to_dc(fpwm)))
+            speed_percentage = int(round(self._pwm_to_duty_cycle.convert(fpwm)))
             target_speed = speed_percentage
 
         return target_speed
@@ -331,8 +337,7 @@ class PddfFan(FanBase):
                 print("Setting fan speed is not allowed !")
                 return False
             else:
-                duty_cycle_to_pwm = eval(self.plugin_data['FAN']['duty_cycle_to_pwm'])
-                pwm = int(round(duty_cycle_to_pwm(speed)))
+                pwm = int(round(self._duty_cycle_to_pwm.convert(speed)))
 
                 status = False
                 idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index
