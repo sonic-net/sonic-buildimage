@@ -21,7 +21,7 @@
 #            box that boots with certificates installed serves them directly.
 #   --guard  Gate every bmcweb start: re-stage from source when the staged files
 #            are missing or invalid, refuse to start when the unit is
-#            provisioned and none are valid, otherwise exec bmcweb.
+#            provisioned and none are valid, otherwise exec bmcweb-start.sh.
 #   --watch  Watch the source and staged locations; restage and bounce bmcweb on
 #            install, rotation or tampering. Reconciles every
 #            ${BMCWEB_WATCH_INTERVAL}s and publishes status to STATE_DB.
@@ -34,7 +34,7 @@ set -u
 HTTPS_DIR="${BMCWEB_HTTPS_DIR:-/etc/ssl/certs/https}"
 AUTH_DIR="${BMCWEB_AUTH_DIR:-/etc/ssl/certs/authority}"
 SERVER_PEM="${HTTPS_DIR}/server.pem"
-BMCWEB_BIN="${BMCWEB_BIN:-/usr/bin/bmcweb}"
+BMCWEB_START="${BMCWEB_START:-/usr/bin/bmcweb-start.sh}"
 
 # Used when CONFIG_DB carries no REDFISH|certs entry.
 DEFAULT_SERVER_CRT="/etc/sonic/redfish/redfishserver.cer"
@@ -55,19 +55,12 @@ INTERVAL="${BMCWEB_WATCH_INTERVAL:-60}"
 # Certificate status (STATE_DB).
 STATUS_KEY="REDFISH_CERT_STATUS|global"
 
-# This container is bridge networked, so 127.0.0.1 is its own loopback and not
-# redis. sonic-db-cli aborts on this image, so use the mounted socket with the
-# fixed database ids from /var/run/redis/sonic-db/database_config.json.
-REDIS_SOCK="${BMCWEB_REDIS_SOCK:-/var/run/redis/redis.sock}"
-CONFIG_DB_ID="${BMCWEB_CONFIG_DB_ID:-4}"
-STATE_DB_ID="${BMCWEB_STATE_DB_ID:-6}"
-
 # A failure returns non-zero and an empty result, so callers fall back to their
 # defaults rather than act on a half-read configuration.
-redis_cmd() {
+db_cmd() {
     local db="$1"
     shift
-    redis-cli -s "${REDIS_SOCK}" -n "${db}" "$@" 2>/dev/null
+    sonic-db-cli "${db}" "$@" 2>/dev/null
 }
 
 log() { logger -t stage-credentials "$*"; echo "stage-credentials: $*"; }
@@ -77,9 +70,9 @@ log() { logger -t stage-credentials "$*"; echo "stage-credentials: $*"; }
 # A read failure leaves the defaults in place: an unreachable CONFIG_DB must
 # never stop a provisioned unit from staging its certificates.
 load_config() {
-    SERVER_CRT="$(redis_cmd "${CONFIG_DB_ID}" HGET 'REDFISH|certs' server_crt)"
-    SERVER_KEY="$(redis_cmd "${CONFIG_DB_ID}" HGET 'REDFISH|certs' server_key)"
-    CA_CRT="$(redis_cmd "${CONFIG_DB_ID}" HGET 'REDFISH|certs' ca_crt)"
+    SERVER_CRT="$(db_cmd CONFIG_DB HGET 'REDFISH|certs' server_crt)"
+    SERVER_KEY="$(db_cmd CONFIG_DB HGET 'REDFISH|certs' server_key)"
+    CA_CRT="$(db_cmd CONFIG_DB HGET 'REDFISH|certs' ca_crt)"
 
     [ -n "${SERVER_CRT}" ] || SERVER_CRT="${DEFAULT_SERVER_CRT}"
     [ -n "${SERVER_KEY}" ] || SERVER_KEY="${DEFAULT_SERVER_KEY}"
@@ -225,7 +218,7 @@ publish_status() {
     else
         mtls="false"
     fi
-    redis_cmd "${STATE_DB_ID}" HSET "${STATUS_KEY}" \
+    db_cmd STATE_DB HSET "${STATUS_KEY}" \
         source_fingerprint "${src_fp}" \
         applied_fingerprint "${applied}" \
         served_serial "${serial}" \
@@ -279,7 +272,7 @@ run_guard() {
         log "guard: unit was provisioned before and no valid staged certificate exists; refusing to start bmcweb"
         exit 1
     fi
-    exec "${BMCWEB_BIN}"
+    exec "${BMCWEB_START}"
 }
 
 run_watch() {

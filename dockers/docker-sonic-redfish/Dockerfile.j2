@@ -18,7 +18,6 @@ RUN apt-get update      && \
         dbus \
         openssl \
         inotify-tools \
-        redis-tools \
     && rm -rf /var/lib/apt/lists/*
 
 {% if docker_sonic_redfish_debs.strip() -%}
