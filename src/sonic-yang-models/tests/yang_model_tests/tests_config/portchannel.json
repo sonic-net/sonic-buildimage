@@ -28,7 +28,7 @@
                         "lacp_key": "auto",
                         "name": "PortChannel0001",
                         "fast_rate": "false",
-                        "fallback" : "false",
+                        "fallback" : "none",
                         "mode" :  "routed"
                     }
                 ]
