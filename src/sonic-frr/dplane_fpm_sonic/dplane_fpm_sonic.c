@@ -935,6 +935,62 @@ done:
 	XFREE(MTYPE_FPM_LOCAL_MAC, flm);
 }
 
+static struct event *t_asic_macs_give_back;
+
+/*
+ * zebra read the local MACs of an L2VNI, or of all of them, which it takes from
+ * this module rather than the kernel. Give it those the ASIC has that it lacks
+ * or holds inactive.
+ */
+static void fpm_asic_macs_give_back(struct event *t)
+{
+	struct interface *br_if = NULL;
+	struct fpm_asic_mac *am;
+	unsigned int given = 0;
+	struct zebra_evpn *zevpn;
+	struct interface *ifp;
+	struct zebra_mac *zmac;
+	struct ethaddr mac;
+
+	frr_each (fpm_asic_macs, &asic_macs, am) {
+		ifp = fpm_mac_bridge_port(am->flm.ifindex, &br_if);
+		if (!ifp)
+			continue;
+
+		zevpn = zebra_evpn_map_vlan(ifp, br_if, am->flm.vid);
+		if (!zevpn)
+			continue;
+
+		/* As in fpm_local_mac_recheck(): a remote route owns the MAC, and
+		 * an active local one already agrees with the ASIC.
+		 */
+		memcpy(mac.octet, am->flm.mac, ETH_ALEN);
+		zmac = zebra_evpn_mac_lookup(zevpn, &mac);
+		if (zmac && (CHECK_FLAG(zmac->flags, ZEBRA_MAC_REMOTE) ||
+			     (CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL) &&
+			      !CHECK_FLAG(zmac->flags,
+					  ZEBRA_MAC_LOCAL_INACTIVE))))
+			continue;
+
+		given++;
+		fpm_local_mac_learnt(ifp, br_if, &am->flm);
+	}
+
+	if (given)
+		zlog_info("%s: gave zebra %u MAC(s) the ASIC has", __func__,
+			  given);
+}
+
+/* Runs inside zebra's VNI processing, so the MACs follow once it is done. One
+ * pass serves a burst of reads, such as one per L2VNI.
+ */
+static int fpm_dplane_mac_read(struct zebra_evpn *zevpn)
+{
+	event_add_event(zrouter.master, fpm_asic_macs_give_back, NULL, 0,
+			&t_asic_macs_give_back);
+	return 0;
+}
+
 /* Runs on the dataplane thread; the record belongs to the main thread. */
 static void fpm_local_mac_write_seen(const struct zebra_dplane_ctx *ctx)
 {
@@ -3977,6 +4033,8 @@ static int fpm_nl_new(struct event_loop *tm)
 
 	if (IS_ZEBRA_DEBUG_DPLANE)
 		zlog_debug("%s register status: %d", prov_name, rv);
+
+	hook_register(zebra_dplane_mac_read, fpm_dplane_mac_read);
 
 	install_node(&fpm_node);
 	install_element(ENABLE_NODE, &fpm_show_status_cmd);
