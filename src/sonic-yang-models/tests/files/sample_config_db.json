@@ -2675,6 +2675,19 @@
                 "type": "SPAN",
                 "dst_port": "Ethernet7",
                 "src_port": "Ethernet3,Ethernet4"
+            },
+            "sflow0": {
+                "type": "SFLOW",
+                "src_ip": "10.1.1.1",
+                "dst_ip": "11.1.1.1",
+                "udp_dst_port": "6343",
+                "dscp": "8",
+                "ttl": "64",
+                "queue": "0",
+                "src_port": "Ethernet3",
+                "direction": "RX",
+                "sample_rate": "1000",
+                "truncate_size": "128"
             }
         },
 
