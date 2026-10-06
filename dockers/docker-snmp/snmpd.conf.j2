@@ -66,15 +66,21 @@ value is never emitted.
     whitespace. Any trailing content is parsed separately, either as a
     comment or another directive argument such as a source restriction
     (e.g. '"private"0.0.0.0/0' still has community 'private').
+    If no closing quote exists, Net-SNMP consumes through end-of-line and
+    still returns the token without the unmatched opening quote.
   - A backslash is dropped and the following character is kept literally
     by Net-SNMP whether or not it appears inside quotes (e.g. unquoted
     'pri\vate' parses as community 'private'), so backslashes are always
     removed for this check, quoted or not. #}
 {%- set rest = community[1:] -%}
-{%- if community|length > 1 and community[0] in ('"', "'") and community[0] in rest -%}
+{%- if community|length > 1 and community[0] in ('"', "'") -%}
+{%- if community[0] in rest -%}
 {%- set parts = rest.split(community[0], 1) -%}
 {%- set inner = parts[0] -%}
 {{- inner | replace('\\', '') -}}
+{%- else -%}
+{{- rest | replace('\\', '') -}}
+{%- endif -%}
 {%- else -%}
 {{- community | replace('\\', '') -}}
 {%- endif -%}

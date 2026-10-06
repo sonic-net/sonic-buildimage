@@ -1042,6 +1042,23 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertNotIn('"public"localhost', output)
         self.assertNotIn('"private"0.0.0.0/0', output)
 
+    def test_snmpd_community_unmatched_leading_quote_rejected(self):
+        # Net-SNMP removes an unmatched leading quote and consumes the token
+        # through end-of-line, so these still activate the bare defaults.
+        communities = {
+            '"public': {'TYPE': 'RO'},
+            "'private": {'TYPE': 'RW'},
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('rocommunity public\n', output)
+        self.assertNotIn('rocommunity6 public\n', output)
+        self.assertNotIn('rwcommunity private\n', output)
+        self.assertNotIn('rwcommunity6 private\n', output)
+        self.assertNotIn('"public', output)
+        self.assertNotIn("'private", output)
+
     def test_snmpd_community_unquoted_escaped_default_rejected(self):
         # Net-SNMP drops a backslash and keeps the following character
         # literally whether or not it appears inside quotes, so an

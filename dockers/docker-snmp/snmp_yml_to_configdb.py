@@ -25,6 +25,8 @@ def _canonicalize_for_netsnmp_comparison(community):
         closing_quote = community.find(quote, 1)
         if closing_quote != -1:
             community = community[1:closing_quote]
+        else:
+            community = community[1:]
 
     return community.replace('\\', '')
 
