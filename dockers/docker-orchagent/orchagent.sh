@@ -56,7 +56,7 @@ mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 readonly DPU_BATCH_SIZE=125000
 
-LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
+LOCALHOST_SWITCHTYPE=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
 if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
     # Set orchagent pop batch size to 128 for faster link notification handling 
     # during route-churn
@@ -103,12 +103,12 @@ if [[ "$NAMESPACE_ID" ]]; then
 fi
 
 # Enable async swss recorder when explicitly configured
-ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "SYSTEM_DEFAULTS|async_rec" "status")
+ASYNC_SWSS_REC=$(sonic-db-cli -s CONFIG_DB hget "SYSTEM_DEFAULTS|async_rec" "status")
 if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
     ORCHAGENT_ARGS+="-A "
 fi
 
-SUPPRESS_FIB_CONFIG=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending"`
+SUPPRESS_FIB_CONFIG=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending"`
 if [ "$SUPPRESS_FIB_CONFIG" == "enabled" ]; then
     ORCHAGENT_ARGS+="-F "
 fi
@@ -149,8 +149,8 @@ fi
 
 # Enable the shared northbound ZMQ listener for route and DASH producers.
 # VS keeps Redis-based DASH tests unless route or DASH ZMQ explicitly needs it.
-LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
-DASH_ZMQ=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "orch_northbond_dash_zmq_enabled"`
+LOCALHOST_SUBTYPE=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
+DASH_ZMQ=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "orch_northbond_dash_zmq_enabled"`
 if [[ x"${platform}" == x"vs" && x"${SWSS_ZMQ}" != x"true" && x"${DASH_ZMQ}" != x"true" ]]; then
     # Keep default VS DASH ingestion on Redis.
     :
@@ -168,13 +168,13 @@ else
 fi
 
 # Enable ring buffer
-ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
 if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -R"
 fi
 
 # Add heartbeat interval when enabled
-HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
+HEARTBEAT_INTERVAL=`sonic-db-cli -s CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
 if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
     ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
 fi
