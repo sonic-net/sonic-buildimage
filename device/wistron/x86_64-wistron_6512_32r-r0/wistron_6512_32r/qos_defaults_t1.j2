@@ -18,6 +18,18 @@
             "7":"7"
         }
     },
+    "MAP_PFC_PRIORITY_TO_QUEUE": {
+        "AZURE": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+    },
     "TC_TO_PRIORITY_GROUP_MAP": {
     "AZURE": {
         "0": "0",
@@ -98,12 +110,63 @@
             "63": "1"
         }
     },
+    "SCHEDULER": {
+        "scheduler.0": {
+            "type"  : "DWRR",
+            "weight": "1"
+        },
+        "scheduler.1": {
+            "type"  : "DWRR",
+            "weight": "1"
+        }
+    },
+    "QUEUE": {
+{% for port in port_names_list %}
+        "{{ port }}|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile"  : "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile"  : "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|1": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|2": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|5": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|6": {
+            "scheduler": "scheduler.0"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
     "PORT_QOS_MAP": {
 {% for port in port_names_list %}
        "{{ port }}": {
             "tc_to_pg_map": "AZURE",
             "tc_to_queue_map": "AZURE",
             "dscp_to_tc_map": "AZURE",
+            "pfc_to_queue_map": "AZURE",
             "pfc_enable": "3,4"
         }{% if not loop.last %},{% endif %}
 

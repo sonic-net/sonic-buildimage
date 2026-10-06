@@ -1,0 +1,72 @@
+#!/bin/bash
+
+REBOOT_CAUSE_FILE="/host/reboot-cause/reboot-cause.txt"
+REBOOT_CAUSE_POWER_LOSS="Power Loss"
+REBOOT_CAUSE_THERMAL_OVERLOAD_CPU="Thermal Overload: CPU"
+REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC="Thermal Overload: ASIC"
+REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER="Thermal Overload: Other"
+REBOOT_CAUSE_INSUFFICIENT_FAN_SPEED="Insufficient Fan Speed"
+REBOOT_CAUSE_WATCHDOG="Watchdog"
+REBOOT_CAUSE_HARDWARE_OTHER="Hardware - Other"
+REBOOT_CAUSE_HARDWARE_BIOS="BIOS"
+REBOOT_CAUSE_HARDWARE_CPU="Reset from CPU"
+REBOOT_CAUSE_HARDWARE_BUTTON="Push button"
+REBOOT_CAUSE_HARDWARE_RESET_FROM_ASIC="Reset from ASIC"
+REBOOT_CAUSE_NON_HARDWARE="Non-Hardware"
+
+WATCHDOG_REBOOT_CHECK()
+{
+        #log=$(ipmitool mc watchdog get)
+        #echo "ipmi watchdog: ${log}"
+        #reboot_cause=$(echo ${log} | grep 'Timer Expiration Flags' | awk '{print $4}')
+        reboot_cause=$(ipmitool mc watchdog get | grep 'Timer Expiration Flags' | awk '{print $4}')
+        echo "[reboot-cause] : ${reboot_cause}"
+        if [[ $reboot_cause == 0x10 ]]; then
+                echo "$REBOOT_CAUSE_WATCHDOG" > $REBOOT_CAUSE_FILE
+                echo "Watchdog" > $REBOOT_CAUSE_FILE
+                log=$(cat ${REBOOT_CAUSE_FILE})
+                echo "[reboot-cause.txt] : $log"
+                echo "reboot cause by watchdog"
+        fi
+
+        #bit7 = thermal throtle condition
+        #bit6 = fan fail condition
+        #bit5 = fpga register 0x31 bit4
+        #bit4 = fpga register 0x53 bit6
+        #bit3 = fpga register 0x54 bit5
+        #bit2 = fpga register 0x54 bit2
+        #bit1 = fpga register 0x54 bit0
+        #bit0 = fpga register 0x72 bit5
+	val=$(ipmitool raw 0x30 0x35 | xargs)
+	reboot_cause=$((16#${val}))
+	echo "[reversed reboot-cause] : ${reboot_cause}"
+        if [[ $reboot_cause -ne 0x00 ]]; then
+                reboot_cause=$((~reboot_cause & 0xFF))
+                echo "[hardware reboot-cause] : ${reboot_cause}"
+                if [[ $((reboot_cause & 0x80)) -ne 0 ]]; then
+                        reboot_reason=$REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER
+                elif [[ $((reboot_cause & 0x40)) -ne 0 ]]; then
+                        reboot_reason=$REBOOT_CAUSE_INSUFFICIENT_FAN_SPEED
+                elif [[ $((reboot_cause & 0x10)) -ne 0 ]]; then
+                        reboot_reason=$REBOOT_CAUSE_WATCHDOG
+                elif [[ $((reboot_cause & 0x20)) -ne 0 ]]; then
+                        reboot_reason=$CPU_PLATFORM_RESET
+                elif [[ $((reboot_cause & 0x08)) -ne 0 ]]; then
+                        reboot_reason=$REBOOT_CAUSE_HARDWARE_BUTTON
+                elif [[ $((reboot_cause & 0x04)) -ne 0 ]]; then
+                        reboot_reason=$REBOOT_CAUSE_HARDWARE_CPU
+                elif [[ $((reboot_cause & 0x02)) -ne 0 ]]; then
+                        reboot_reason=$REBOOT_CAUSE_POWER_LOSS
+                elif [[ $((reboot_cause & 0x01)) -ne 0 ]]; then
+                        reboot_reason=$REBOOT_CAUSE_HARDWARE_OTHER
+                fi
+                echo "reboot_reason: $reboot_reason"
+                echo "$reboot_reason" > $REBOOT_CAUSE_FILE
+                log=$(cat ${REBOOT_CAUSE_FILE})
+                echo "[reboot-cause.txt] : $log"
+                echo "reboot cause by $reboot_reason"
+        fi
+
+}
+
+WATCHDOG_REBOOT_CHECK

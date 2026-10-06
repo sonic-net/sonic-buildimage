@@ -37,6 +37,8 @@ struct wistron_psu_data {
 	long             p_in;
 	long             p_out;
 	int              temp_input;
+	unsigned int        temp_max;
+	unsigned int        temp_crit;
 	int              pwm;
 	int              fault;
 	u8               mfr_id[MFR_VENDOR_NAME_LENGTH];
@@ -60,6 +62,8 @@ enum wistron_psu_sysfs_attributes {
 	PSU_P_IN,
 	PSU_P_OUT,
 	PSU_TEMP1_INPUT,
+	PSU_TEMP1_MAX,
+	PSU_TEMP1_CRIT,
 	PSU_PWM,
 	PSU_FAULT,
 	PSU_MFR_ID,
@@ -78,6 +82,8 @@ static SENSOR_DEVICE_ATTR(curr2_input,   S_IWUSR | S_IRUGO, get_value,  set_valu
 static SENSOR_DEVICE_ATTR(power1_input,  S_IWUSR | S_IRUGO, get_value,  set_value, PSU_P_IN);
 static SENSOR_DEVICE_ATTR(power2_input,  S_IWUSR | S_IRUGO, get_value,  set_value, PSU_P_OUT);
 static SENSOR_DEVICE_ATTR(temp1_input,   S_IWUSR | S_IRUGO, get_value,  set_value, PSU_TEMP1_INPUT);
+static SENSOR_DEVICE_ATTR(temp1_max,   S_IWUSR | S_IRUGO, get_value,  set_value, PSU_TEMP1_MAX);
+static SENSOR_DEVICE_ATTR(temp1_crit,   S_IWUSR | S_IRUGO, get_value,  set_value, PSU_TEMP1_CRIT);
 static SENSOR_DEVICE_ATTR(pwm,   S_IWUSR | S_IRUGO, get_value,  set_value, PSU_PWM);
 static SENSOR_DEVICE_ATTR(fault,		 S_IWUSR | S_IRUGO, get_value,  set_value, PSU_FAULT);
 static SENSOR_DEVICE_ATTR(vendor,        S_IWUSR | S_IRUGO, get_value,  set_value, PSU_MFR_ID);
@@ -96,6 +102,8 @@ static struct attribute *wistron_psu_attributes[] = {
 	&sensor_dev_attr_power1_input.dev_attr.attr,
 	&sensor_dev_attr_power2_input.dev_attr.attr,
 	&sensor_dev_attr_temp1_input.dev_attr.attr,
+	&sensor_dev_attr_temp1_max.dev_attr.attr,
+	&sensor_dev_attr_temp1_crit.dev_attr.attr,
 	&sensor_dev_attr_pwm.dev_attr.attr,
 	&sensor_dev_attr_fault.dev_attr.attr,
 	&sensor_dev_attr_vendor.dev_attr.attr,
@@ -179,6 +187,12 @@ static ssize_t get_value(struct device *dev, struct device_attribute *da, char *
 		case PSU_TEMP1_INPUT:
 			ret_count = sprintf(buf, "%d", data->temp_input);
 			break;
+		case PSU_TEMP1_MAX:
+			ret_count = sprintf(buf, "%d", data->temp_max);
+			break;
+		case PSU_TEMP1_CRIT:
+			ret_count = sprintf(buf, "%d", data->temp_crit);
+			break;
 		case PSU_PWM:
 			ret_count = sprintf(buf, "%d", data->pwm);
 			break;
@@ -248,6 +262,16 @@ static ssize_t set_value(struct device *dev, struct device_attribute *da, const 
 			break;
 		case PSU_TEMP1_INPUT:
 			error = kstrtoint(buf, 10, &data->temp_input);
+			if (error)
+				goto exit_err;
+			break;
+		case PSU_TEMP1_MAX:
+			error = kstrtoint(buf, 10, &data->temp_max);
+			if (error)
+				goto exit_err;
+			break;
+		case PSU_TEMP1_CRIT:
+			error = kstrtoint(buf, 10, &data->temp_crit);
 			if (error)
 				goto exit_err;
 			break;

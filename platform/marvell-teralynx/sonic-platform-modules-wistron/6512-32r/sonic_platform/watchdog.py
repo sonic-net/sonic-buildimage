@@ -20,9 +20,11 @@ proc_output = namedtuple('proc_output', 'stdout stderr')
 
 WDT_COMMON_ERROR = -1
 
+#kick will also enable watchdog
 IPMI_WDT_EN_KICK_CMD = ["ipmitool", "mc", "watchdog", "reset"]
 IPMI_WDT_OFF_CMD = ["ipmitool", "mc", "watchdog", "off"]
-IPMI_WDT_SET_TIMEOUT_CMD = ["ipmitool", "raw", "0x6", "0x24", "0x4", "0x0", "0x0", "0x0"]
+IPMI_WDT_SET_TIMEOUT_CMD = ["ipmitool", "raw", "0x6", "0x24", "0x4", "0x03", "0x01", "0x10", "0x64", "0x0"]
+watchdog_cmd = ["ipmitool", "raw", "0x6", "0x24", "0x4", "0x03", "0x01", "0x10"]
 #IPMI_WDT_GET_TIMEOUT_CMD = "ipmitool mc watchdog get | grep Present | awk '{print $3}'"
 #IPMI_WDT_GET_STATUS_CMD = "ipmitool mc watchdog get | grep 'Timer Is' | awk '{printf $4}'"
 
@@ -98,11 +100,12 @@ class Watchdog(WatchdogBase):
         @param seconds - timeout in seconds
         @return is the actual set timeout
         """
+        global watchdog_cmd
         ipmi_timeout = seconds * 10;
-        cmd = ["ipmitool", "raw", "0x6", "0x24", "0x4", "0x0", "0x0", "0x0"]
-        cmd.append(str(ipmi_timeout % 256))
-        cmd.append(str(int(ipmi_timeout / 256)))
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        watchdog_cmd = ["ipmitool", "raw", "0x6", "0x24", "0x4", "0x3", "0x1", "0x10"]
+        watchdog_cmd.append(str(ipmi_timeout % 256))
+        watchdog_cmd.append(str(int(ipmi_timeout / 256)))
+        p = subprocess.Popen(watchdog_cmd, stdout=subprocess.PIPE)
         p.communicate()
 
         return seconds
@@ -126,7 +129,7 @@ class Watchdog(WatchdogBase):
         """
         ret = WDT_COMMON_ERROR
 
-        if seconds < 0 or seconds > 500:
+        if seconds < 10 or seconds > 500:
             return ret
 
         try:
@@ -136,7 +139,9 @@ class Watchdog(WatchdogBase):
             if self.armed:
                 self._keepalive()
             else:
+                self._settimeout(seconds)
                 self._enable()
+                self.armed = True
 
             ret = self.timeout
         except IOError as e:

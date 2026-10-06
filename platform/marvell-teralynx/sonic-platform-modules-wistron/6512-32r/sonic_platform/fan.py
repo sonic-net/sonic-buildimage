@@ -83,7 +83,7 @@ class Fan(FanBase):
             if direction is None:
                 return self.FAN_DIRECTION_EXHAUST
 
-        return self.FAN_DIRECTION_EXHAUST if int(direction) == 0 else self.FAN_DIRECTION_INTAKE
+        return self.FAN_DIRECTION_EXHAUST if int(direction) == 1 else self.FAN_DIRECTION_INTAKE
 
 
     def get_speed(self):

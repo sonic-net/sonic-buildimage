@@ -17,7 +17,7 @@ except ImportError as e:
 NUM_FAN = 14
 NUM_FANTRAY = 7
 NUM_PSU = 2
-NUM_THERMAL = 8
+NUM_THERMAL = 44
 NUM_SFP = 32
 NUM_COMPONENT = 6
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
@@ -184,9 +184,9 @@ class Chassis(ChassisBase):
     def get_sfp(self, index):
         sfp = None
         try:
-            sfp = self._sfp_list[index]
+            sfp = self._sfp_list[index - 1]
         except IndexError:
-            sys.stderr.write("SFP index {} out of range (0-{})\n".format(index, len(self._sfp_list)-1))
+            sys.stderr.write("SFP index {} out of range (1-{})\n".format(index, len(self._sfp_list)))
 
         return sfp
 
@@ -237,13 +237,13 @@ class Chassis(ChassisBase):
                     change_event = True
                     if cur_presence[port] == 1:
                         if self._read_sfp_eeprom_to_buffer(port):
-                            port_dict[port] = '1'
+                            port_dict[port + 1] = '1'
                             self._transceiver_presence[port] = 1
                         else:
                             cur_presence[port] = 0
                             self._transceiver_presence[port] = 0
                     else:
-                        port_dict[port] = '0'
+                        port_dict[port + 1] = '0'
                         self._clear_sfp_eeprom_buffer(port)
                         self._transceiver_presence[port] = 0
 
