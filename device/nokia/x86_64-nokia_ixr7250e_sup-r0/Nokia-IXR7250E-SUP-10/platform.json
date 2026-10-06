@@ -321,5 +321,11 @@
         "sfps": [
         ]
     },
-    "interfaces": {}
+    "interfaces": {},
+    "module_admin_status_change_allowed": {
+        "allowed_list": ["FABRIC-CARD0","FABRIC-CARD1",
+           "FABRIC-CARD2","FABRIC-CARD3","FABRIC-CARD4",
+           "FABRIC-CARD5","FABRIC-CARD6","FABRIC-CARD7"
+        ]
+    }
 }

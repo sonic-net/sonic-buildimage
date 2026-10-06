@@ -280,5 +280,8 @@
     "asic_sensors": {
         "poll_interval": "10",
         "poll_admin_status": "enable"
+    },
+    "module_admin_status_change_allowed": {
+        "allowed_list": []
     }
 }
