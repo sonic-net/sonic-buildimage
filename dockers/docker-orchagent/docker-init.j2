@@ -59,7 +59,8 @@ ASIC_ID="asic$NAMESPACE_ID"
 if [ -f "$IS_SUPERVISOR" ]; then 
     if [ -f "$USE_PCI_ID_IN_CHASSIS_STATE_DB" ]; then
         while true; do
-            PCI_ID=$(sonic-db-cli -s CHASSIS_STATE_DB HGET "CHASSIS_FABRIC_ASIC_TABLE|$ASIC_ID" asic_pci_address)
+            # CHASSIS_STATE_DB may be remote, so use its configured endpoint policy.
+            PCI_ID=$(sonic-db-cli CHASSIS_STATE_DB HGET "CHASSIS_FABRIC_ASIC_TABLE|$ASIC_ID" asic_pci_address)
             if [ -z "$PCI_ID" ]; then
                 sleep 3
             else
