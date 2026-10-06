@@ -865,7 +865,7 @@ clusters:\n\
 
             if REQUEST_VERIFY in ct_data:
                 mock_reqget.assert_called_once()
-                request_kwargs = mock_reqget.call_args.kwargs
+                request_kwargs = mock_reqget.call_args[1]
                 assert request_kwargs["cert"] == (AME_CRT, AME_KEY)
                 assert request_kwargs["timeout"] == 10
                 if ct_data[REQUEST_VERIFY]:
