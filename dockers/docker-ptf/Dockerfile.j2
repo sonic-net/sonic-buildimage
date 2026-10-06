@@ -155,7 +155,7 @@ RUN curl --fail --show-error --location -o /tmp/grpcurl-release.json "https://ap
     && GRPCURL_VERSION=$(python3 -c 'import json; print(json.load(open("/tmp/grpcurl-release.json"))["tag_name"])') \
     && git clone --depth 1 --branch "${GRPCURL_VERSION}" https://github.com/fullstorydev/grpcurl.git /tmp/grpcurl \
     && cd /tmp/grpcurl \
-    && go get google.golang.org/grpc@v1.82.1 \
+    && go get google.golang.org/grpc@v1.83.2 \
     && go get github.com/go-jose/go-jose/v4@latest \
     && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
     && go mod tidy \
@@ -456,7 +456,7 @@ RUN GNMIC_REV=653dc5dd4ddcd3bd4197317875a10c1ce8b06653 \
     && git clone https://github.com/openconfig/gnmic.git /tmp/gnmic \
     && cd /tmp/gnmic \
     && git checkout "${GNMIC_REV}" \
-    && go get google.golang.org/grpc@v1.82.1 \
+    && go get google.golang.org/grpc@v1.83.2 \
     && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
     && go mod tidy \
     && go build -o /usr/local/bin/gnmic . \
