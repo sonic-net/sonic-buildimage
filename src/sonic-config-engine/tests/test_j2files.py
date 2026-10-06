@@ -1004,6 +1004,38 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertIn('rocommunity my"com\\munity\n', output)
         self.assertIn('rocommunity6 my"com\\munity\n', output)
 
+    def test_snmpd_community_quoted_default_with_trailing_comment_rejected(self):
+        # Closing a quote ends that Net-SNMP token even with no following
+        # whitespace, so a trailing bare '#' starts a comment to end of
+        # line: snmpd reads '"public"#' as the bare community 'public'.
+        # Verified against installed snmpd 5.9.1 that this grants access.
+        communities = {
+            '"public"#': {'TYPE': 'RO'},
+            "'private'#trailing": {'TYPE': 'RW'},
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('rocommunity public\n', output)
+        self.assertNotIn('rocommunity6 public\n', output)
+        self.assertNotIn('rwcommunity private\n', output)
+        self.assertNotIn('rwcommunity6 private\n', output)
+        self.assertNotIn('"public"#', output)
+        self.assertNotIn("'private'#trailing", output)
+
+    def test_snmpd_community_unquoted_escaped_default_rejected(self):
+        # Net-SNMP drops a backslash and keeps the following character
+        # literally whether or not it appears inside quotes, so an
+        # unquoted 'pri\vate' is read as the bare community 'private'.
+        # Verified against installed snmpd 5.9.1 that this grants access.
+        communities = {'pri\\vate': {'TYPE': 'RW'}}
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('rwcommunity private\n', output)
+        self.assertNotIn('rwcommunity6 private\n', output)
+        self.assertNotIn('pri\\vate', output)
+
     def test_snmpd_user_rendering(self):
         users = {
             'readuser': {

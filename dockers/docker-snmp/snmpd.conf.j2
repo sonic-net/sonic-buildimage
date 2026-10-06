@@ -58,13 +58,31 @@ the one configured. #}
 {% set insecure_default_communities = ['public', 'private'] %}
 
 {% macro canonical_for_insecure_check(community) %}
-{#- Only unwrap the exact whole-token quoting pattern Net-SNMP itself
-recognizes, purely to detect quoted/escaped smuggling of a well-known
-default. This value is never emitted. #}
-{%- if community|length > 1 and ((community[0] == '"' and community[-1] == '"') or (community[0] == "'" and community[-1] == "'")) -%}
-{{- community[1:-1] | replace('\\', '') -}}
+{#- Mirror what Net-SNMP's config tokenizer actually parses the token as,
+purely to detect quoted/escaped smuggling of a well-known default. This
+value is never emitted.
+  - Closing a quote ends that token even with no following whitespace, so
+    Net-SNMP then treats a trailing bare '#' as a comment to end of line
+    (e.g. '"public"#' parses as community 'public'). Any other trailing
+    content after the closing quote is parsed as a separate, further
+    argument (e.g. a source-restriction host) rather than part of the
+    community, so it is handled as a plain unquoted token below instead.
+  - A backslash is dropped and the following character is kept literally
+    by Net-SNMP whether or not it appears inside quotes (e.g. unquoted
+    'pri\vate' parses as community 'private'), so backslashes are always
+    removed for this check, quoted or not. #}
+{%- set rest = community[1:] -%}
+{%- if community|length > 1 and community[0] in ('"', "'") and community[0] in rest -%}
+{%- set parts = rest.split(community[0], 1) -%}
+{%- set inner = parts[0] -%}
+{%- set trailing = parts[1] -%}
+{%- if trailing == '' or trailing[0] == '#' -%}
+{{- inner | replace('\\', '') -}}
 {%- else -%}
-{{- community -}}
+{{- community | replace('\\', '') -}}
+{%- endif -%}
+{%- else -%}
+{{- community | replace('\\', '') -}}
 {%- endif -%}
 {% endmacro %}
 
