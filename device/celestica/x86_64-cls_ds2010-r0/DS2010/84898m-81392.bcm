@@ -1,0 +1,313 @@
+### PHY CONFIGURATION FORMAT
+### phy_init_config_<feature>:<PHY_ID>=<VALUE>
+
+### CHIP ID Configuration format
+### phy_init_config_chip_id:<PHY_ID> = <CHIP_ID>
+### BCM84898M PHY#1
+phy_init_config_chip_id:0 = 84898M
+phy_init_config_chip_id:1 = 84898M
+phy_init_config_chip_id:2 = 84898M
+phy_init_config_chip_id:3 = 84898M
+phy_init_config_chip_id:4 = 84898M
+phy_init_config_chip_id:5 = 84898M
+phy_init_config_chip_id:6 = 84898M
+phy_init_config_chip_id:7 = 84898M
+
+phy_init_config_macsec:0 = 0
+phy_init_config_macsec:1 = 0
+phy_init_config_macsec:2 = 0
+phy_init_config_macsec:3 = 0
+phy_init_config_macsec:4 = 0
+phy_init_config_macsec:5 = 0
+phy_init_config_macsec:6 = 0
+phy_init_config_macsec:7 = 0
+
+
+### BCM84898M PHY#2
+phy_init_config_chip_id:32 = 84898M
+phy_init_config_chip_id:33 = 84898M
+phy_init_config_chip_id:34 = 84898M
+phy_init_config_chip_id:35 = 84898M
+phy_init_config_chip_id:36 = 84898M
+phy_init_config_chip_id:37 = 84898M
+phy_init_config_chip_id:38 = 84898M
+phy_init_config_chip_id:39 = 84898M
+
+phy_init_config_macsec:32 = 0
+phy_init_config_macsec:33 = 0
+phy_init_config_macsec:34 = 0
+phy_init_config_macsec:35 = 0
+phy_init_config_macsec:36 = 0
+phy_init_config_macsec:37 = 0
+phy_init_config_macsec:38 = 0
+phy_init_config_macsec:39 = 0
+
+
+### BCM84898M PHY#3
+phy_init_config_chip_id:64 = 84898M
+phy_init_config_chip_id:65 = 84898M
+phy_init_config_chip_id:66 = 84898M
+phy_init_config_chip_id:67 = 84898M
+phy_init_config_chip_id:68 = 84898M
+phy_init_config_chip_id:69 = 84898M
+phy_init_config_chip_id:70 = 84898M
+phy_init_config_chip_id:71 = 84898M
+
+phy_init_config_macsec:64 = 0
+phy_init_config_macsec:65 = 0
+phy_init_config_macsec:66 = 0
+phy_init_config_macsec:67 = 0
+phy_init_config_macsec:68 = 0
+phy_init_config_macsec:69 = 0
+phy_init_config_macsec:70 = 0
+phy_init_config_macsec:71 = 0
+
+### BCM84898M PHY#4
+
+phy_init_config_chip_id:96 = 84898M
+phy_init_config_chip_id:97 = 84898M
+phy_init_config_chip_id:98 = 84898M
+phy_init_config_chip_id:99 = 84898M
+phy_init_config_chip_id:100 = 84898M
+phy_init_config_chip_id:101 = 84898M
+phy_init_config_chip_id:102 = 84898M
+phy_init_config_chip_id:103 = 84898M
+
+phy_init_config_macsec:96 = 0
+phy_init_config_macsec:97 = 0
+phy_init_config_macsec:98 = 0
+phy_init_config_macsec:99 = 0
+phy_init_config_macsec:100 = 0
+phy_init_config_macsec:101 = 0
+phy_init_config_macsec:102 = 0
+phy_init_config_macsec:103 = 0
+
+
+
+### BCM84898M PHY#5
+
+phy_init_config_chip_id:256 = 84898M
+phy_init_config_chip_id:257 = 84898M
+phy_init_config_chip_id:258 = 84898M
+phy_init_config_chip_id:259 = 84898M
+phy_init_config_chip_id:260 = 84898M
+phy_init_config_chip_id:261 = 84898M
+phy_init_config_chip_id:262 = 84898M
+phy_init_config_chip_id:263 = 84898M
+
+phy_init_config_macsec:256 = 0
+phy_init_config_macsec:257 = 0
+phy_init_config_macsec:258 = 0
+phy_init_config_macsec:259 = 0
+phy_init_config_macsec:260 = 0
+phy_init_config_macsec:261 = 0
+phy_init_config_macsec:262 = 0
+phy_init_config_macsec:263 = 0
+
+
+### BCM84898M PHY#6
+
+phy_init_config_chip_id:288 = 84898M
+phy_init_config_chip_id:289 = 84898M
+phy_init_config_chip_id:290 = 84898M
+phy_init_config_chip_id:291 = 84898M
+phy_init_config_chip_id:292 = 84898M
+phy_init_config_chip_id:293 = 84898M
+phy_init_config_chip_id:294 = 84898M
+phy_init_config_chip_id:295 = 84898M
+
+phy_init_config_macsec:288 = 0
+phy_init_config_macsec:289 = 0
+phy_init_config_macsec:290 = 0
+phy_init_config_macsec:291 = 0
+phy_init_config_macsec:292 = 0
+phy_init_config_macsec:293 = 0
+phy_init_config_macsec:294 = 0
+phy_init_config_macsec:295 = 0
+
+### BCM81392 MACsec PHY#1
+phy_init_config_chip_id:336 = 81392
+phy_init_config_macsec:336 = 0
+phy_init_config_pll1:336= 1
+phy_init_config_tx_drv:336=0
+
+### BCM81392 MACsec PHY#2
+phy_init_config_chip_id:376 = 81392
+phy_init_config_macsec:376 = 0
+phy_init_config_pll1:376= 1
+phy_init_config_tx_drv:376=0
+
+
+### phy_lane_property:<UNIQUE_GLOBAL_LANE_NUMBER> = <PHYID>,<if_side>,<local_lane_no>,<tx_lane_map>,<rx_lane_map>,<tx_polarity>,<rx_polarity>
+### BCM84898M PHY#1
+# Line side lanes
+phy_lane_property:0 = 0, 0, 0, 0, 0, 0, 0
+phy_lane_property:1 = 1, 0, 1, 0, 0, 0, 0
+phy_lane_property:2 = 2, 0, 2, 0, 0, 0, 0
+phy_lane_property:3 = 3, 0, 3, 0, 0, 0, 0
+phy_lane_property:4 = 4, 0, 4, 0, 0, 0, 0
+phy_lane_property:5 = 5, 0, 5, 0, 0, 0, 0
+phy_lane_property:6 = 6, 0, 6, 0, 0, 0, 0
+phy_lane_property:7 = 7, 0, 7, 0, 0, 0, 0
+
+
+# System side lanes
+phy_lane_property:8  = 0, 1, 0, 0, 0, 0, 0
+phy_lane_property:9  = 1, 1, 1, 0, 0, 0, 0
+phy_lane_property:10 = 2, 1, 2, 0, 0, 0, 0
+phy_lane_property:11 = 3, 1, 3, 0, 0, 0, 0
+phy_lane_property:12 = 4, 1, 4, 0, 0, 0, 0
+phy_lane_property:13 = 5, 1, 5, 0, 0, 0, 0
+phy_lane_property:14 = 6, 1, 6, 0, 0, 0, 0
+phy_lane_property:15 = 7, 1, 7, 0, 0, 0, 0
+
+### BCM84898M PHY#2
+#Line side configurations
+phy_lane_property:16 = 32, 0, 0, 0, 0, 0, 0
+phy_lane_property:17 = 33, 0, 1, 0, 0, 0, 0
+phy_lane_property:18 = 34, 0, 2, 0, 0, 0, 0
+phy_lane_property:19 = 35, 0, 3, 0, 0, 0, 0
+phy_lane_property:20 = 36, 0, 4, 0, 0, 0, 0
+phy_lane_property:21 = 37, 0, 5, 0, 0, 0, 0
+phy_lane_property:22 = 38, 0, 6, 0, 0, 0, 0
+phy_lane_property:23 = 39, 0, 7, 0, 0, 0, 0
+
+#System side configurations
+phy_lane_property:24 = 32, 1, 0, 0, 0, 0, 0
+phy_lane_property:25 = 33, 1, 1, 0, 0, 0, 0
+phy_lane_property:26 = 34, 1, 2, 0, 0, 0, 0
+phy_lane_property:27 = 35, 1, 3, 0, 0, 0, 0
+phy_lane_property:28 = 36, 1, 4, 0, 0, 0, 0
+phy_lane_property:29 = 37, 1, 5, 0, 0, 0, 0
+phy_lane_property:30 = 38, 1, 6, 0, 0, 0, 0
+phy_lane_property:31 = 39, 1, 7, 0, 0, 0, 0
+
+### BCM84898M PHY#3
+#Line side configurations
+phy_lane_property:32 = 64, 0, 0, 0, 0, 0, 0
+phy_lane_property:33 = 65, 0, 1, 0, 0, 0, 0
+phy_lane_property:34 = 66, 0, 2, 0, 0, 0, 0
+phy_lane_property:35 = 67, 0, 3, 0, 0, 0, 0
+phy_lane_property:36 = 68, 0, 4, 0, 0, 0, 0
+phy_lane_property:37 = 69, 0, 5, 0, 0, 0, 0
+phy_lane_property:38 = 70, 0, 6, 0, 0, 0, 0
+phy_lane_property:39 = 71, 0, 7, 0, 0, 0, 0
+
+#System side configurations
+phy_lane_property:40 = 64, 1, 0, 0, 0, 0, 0
+phy_lane_property:41 = 65, 1, 1, 0, 0, 0, 0
+phy_lane_property:42 = 66, 1, 2, 0, 0, 0, 0
+phy_lane_property:43 = 67, 1, 3, 0, 0, 0, 0
+phy_lane_property:44 = 68, 1, 4, 0, 0, 0, 0
+phy_lane_property:45 = 69, 1, 5, 0, 0, 0, 0
+phy_lane_property:46 = 70, 1, 6, 0, 0, 0, 0
+phy_lane_property:47 = 71, 1, 7, 0, 0, 0, 0
+
+
+### BCM84898M PHY#4
+#Line side configurations
+phy_lane_property:48 = 96, 0, 0, 0, 0, 0, 0
+phy_lane_property:49 = 97, 0, 1, 0, 0, 0, 0
+phy_lane_property:50 = 98, 0, 2, 0, 0, 0, 0
+phy_lane_property:51 = 99, 0, 3, 0, 0, 0, 0
+phy_lane_property:52 = 100, 0, 4, 0, 0, 0, 0
+phy_lane_property:53 = 101, 0, 5, 0, 0, 0, 0
+phy_lane_property:54 = 102, 0, 6, 0, 0, 0, 0
+phy_lane_property:55 = 103, 0, 7, 0, 0, 0, 0
+
+#System side configurations
+phy_lane_property:56 = 96, 1, 0, 0, 0, 0, 0
+phy_lane_property:57 = 97, 1, 1, 0, 0, 0, 0
+phy_lane_property:58 = 98, 1, 2, 0, 0, 0, 0
+phy_lane_property:59 = 99, 1, 3, 0, 0, 0, 0
+phy_lane_property:60 = 100, 1, 4, 0, 0, 0, 0
+phy_lane_property:61 = 101, 1, 5, 0, 0, 0, 0
+phy_lane_property:62 = 102, 1, 6, 0, 0, 0, 0
+phy_lane_property:63 = 103, 1, 7, 0, 0, 0, 0
+
+
+### BCM84898M PHY#5
+#Line side configurations
+phy_lane_property:64 = 256, 0, 0, 0, 0, 0, 0
+phy_lane_property:65 = 257, 0, 1, 0, 0, 0, 0
+phy_lane_property:66 = 258, 0, 2, 0, 0, 0, 0
+phy_lane_property:67 = 259, 0, 3, 0, 0, 0, 0
+phy_lane_property:68 = 260, 0, 4, 0, 0, 0, 0
+phy_lane_property:69 = 261, 0, 5, 0, 0, 0, 0
+phy_lane_property:70 = 262, 0, 6, 0, 0, 0, 0
+phy_lane_property:71 = 263, 0, 7, 0, 0, 0, 0
+
+#System side configurations
+phy_lane_property:72 = 256, 1, 0, 0, 0, 0, 0
+phy_lane_property:73 = 257, 1, 1, 0, 0, 0, 0
+phy_lane_property:74 = 258, 1, 2, 0, 0, 0, 0
+phy_lane_property:75 = 259, 1, 3, 0, 0, 0, 0
+phy_lane_property:76 = 260, 1, 4, 0, 0, 0, 0
+phy_lane_property:77 = 261, 1, 5, 0, 0, 0, 0
+phy_lane_property:78 = 262, 1, 6, 0, 0, 0, 0
+phy_lane_property:79 = 263, 1, 7, 0, 0, 0, 0
+
+
+### BCM84898M PHY#6
+#Line side configurations
+phy_lane_property:80 = 288, 0, 0, 0, 0, 0, 0
+phy_lane_property:81 = 289, 0, 1, 0, 0, 0, 0
+phy_lane_property:82 = 290, 0, 2, 0, 0, 0, 0
+phy_lane_property:83 = 291, 0, 3, 0, 0, 0, 0
+phy_lane_property:84 = 292, 0, 4, 0, 0, 0, 0
+phy_lane_property:85 = 293, 0, 5, 0, 0, 0, 0
+phy_lane_property:86 = 294, 0, 6, 0, 0, 0, 0
+phy_lane_property:87 = 295, 0, 7, 0, 0, 0, 0
+
+#System side configurations
+phy_lane_property:88 = 288, 1, 0, 0, 0, 0, 0
+phy_lane_property:89 = 289, 1, 1, 0, 0, 0, 0
+phy_lane_property:90 = 290, 1, 2, 0, 0, 0, 0
+phy_lane_property:91 = 291, 1, 3, 0, 0, 0, 0
+phy_lane_property:92 = 292, 1, 4, 0, 0, 0, 0
+phy_lane_property:93 = 293, 1, 5, 0, 0, 0, 0
+phy_lane_property:94 = 294, 1, 6, 0, 0, 0, 0
+phy_lane_property:95 = 295, 1, 7, 0, 0, 0, 0
+
+### BCM81392 MACsec PHY#1
+#Line side configurations
+phy_lane_property:96 = 336, 0, 0, 0, 0, 0, 0
+phy_lane_property:97 = 336, 0, 1, 1, 1, 0, 0
+phy_lane_property:98 = 336, 0, 2, 2, 2, 0, 0
+phy_lane_property:99 = 336, 0, 3, 3, 3, 0, 0
+phy_lane_property:100 = 336, 0, 4, 4, 4, 0, 0
+phy_lane_property:101 = 336, 0, 5, 5, 5, 0, 0
+phy_lane_property:102 = 336, 0, 6, 6, 6, 0, 0
+phy_lane_property:103 = 336, 0, 7, 7, 7, 0, 0
+
+#System side configurations
+phy_lane_property:104 = 336, 1, 0, 0, 0, 0, 0
+phy_lane_property:105 = 336, 1, 1, 1, 1, 0, 0
+phy_lane_property:106 = 336, 1, 2, 2, 2, 0, 0
+phy_lane_property:107 = 336, 1, 3, 3, 3, 0, 0
+phy_lane_property:108 = 336, 1, 4, 4, 4, 0, 0
+phy_lane_property:109 = 336, 1, 5, 5, 5, 0, 0
+phy_lane_property:110 = 336, 1, 6, 6, 6, 0, 0
+phy_lane_property:111 = 336, 1, 7, 7, 7, 0, 0
+
+
+### BCM81392 MACsec PHY#2
+#Line side configurations
+phy_lane_property:112 = 376, 0, 0, 0, 0, 0, 0
+phy_lane_property:113 = 376, 0, 1, 1, 1, 0, 0
+phy_lane_property:114 = 376, 0, 2, 2, 2, 0, 0
+phy_lane_property:115 = 376, 0, 3, 3, 3, 0, 0
+phy_lane_property:116 = 376, 0, 4, 4, 4, 0, 0
+phy_lane_property:117 = 376, 0, 5, 5, 5, 0, 0
+phy_lane_property:118 = 376, 0, 6, 6, 6, 0, 0
+phy_lane_property:119 = 376, 0, 7, 7, 7, 0, 0
+
+#System side configurations
+phy_lane_property:120 = 376, 1, 0, 0, 0, 0, 0
+phy_lane_property:121 = 376, 1, 1, 1, 1, 0, 0
+phy_lane_property:122 = 376, 1, 2, 2, 2, 0, 0
+phy_lane_property:123 = 376, 1, 3, 3, 3, 0, 0
+phy_lane_property:124 = 376, 1, 4, 4, 4, 0, 0
+phy_lane_property:125 = 376, 1, 5, 5, 5, 0, 0
+phy_lane_property:126 = 376, 1, 6, 6, 6, 0, 0
+phy_lane_property:127 = 376, 1, 7, 7, 7, 0, 0
