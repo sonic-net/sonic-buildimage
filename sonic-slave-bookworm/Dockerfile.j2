@@ -65,16 +65,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY ["pip.conf", "/etc/pip.conf"]
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
-RUN eatmydata apt-get install -y python3 python3-pip
+RUN eatmydata apt-get install -y python3 python3-pip python3-venv
 RUN eatmydata apt-get install -y python3-minimal:$arch python3.11:$arch python3:$arch python3-dev:$arch python3-setuptools:$arch
 RUN apt-get download python3-distutils && eatmydata dpkg --force-all -i python3-distutils*
 RUN apt-get download python3-pip && eatmydata dpkg --force-all -i python3-pip*
 RUN which pip3 && pip3 install enum34
-RUN pip3 install virtualenv
 
 # Create target arm python3 virtual environments with all required packages installed
 RUN mkdir /python_virtualenv
-RUN cd /python_virtualenv && python3 -m virtualenv --copies -p /usr/bin/python3 env3
+RUN cd /python_virtualenv && python3 -m venv --copies env3
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install setuptools==66.1.1 setuptools-scm==8.0.4 setuptools-scm-git-archive==1.4.1 wheel==0.38.4 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==6.0.1 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3
 
@@ -553,16 +552,13 @@ RUN eatmydata apt-get install -y golang-go \
  && ln -sf /usr/lib/go-1.19 /usr/local/go
 {%- endif %}
 
-RUN pip3 install --upgrade pip
-RUN apt-get purge -y python3-pip
-
 {%- if CONFIGURED_ARCH == "armhf" %}
 # Allow only manylinux wheels on armhf, to ensure that binaries/libraries work correctly on armhf
 COPY ["disable-non-manylinux.patch", "/"]
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN patch -p1 -i /disable-non-manylinux.patch /python_virtualenv/env3/lib/python3.11/site-packages/pip/_vendor/packaging/tags.py
 {%- else %}
-RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-packages/pip/_vendor/packaging/tags.py
+RUN patch -p1 -i /disable-non-manylinux.patch /usr/lib/python3/dist-packages/pip/_vendor/packaging/tags.py
 {%- endif %}
 {%- endif %}
 
