@@ -8,6 +8,8 @@ class MockConfigDb(object):
 
     def __init__(self, **kwargs):
         self.handlers = {}
+        self.init_kwargs = kwargs
+        self.connect_kwargs = None
 
     @staticmethod
     def set_config_db(test_config_db):
@@ -30,7 +32,10 @@ class MockConfigDb(object):
         return MockConfigDb.CONFIG_DB
 
     def connect(self, wait_for_init=True, retry_on=True):
-        pass
+        self.connect_kwargs = {
+            'wait_for_init': wait_for_init,
+            'retry_on': retry_on,
+        }
 
     def close(self, db_name):
         pass

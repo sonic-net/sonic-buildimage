@@ -2,11 +2,13 @@ class MockConnector(object):
     STATE_DB = None
     data = {}
 
-    def __init__(self, host):
-        pass
+    def __init__(self, *args, **kwargs):
+        self.init_args = args
+        self.init_kwargs = kwargs
+        self.connected_db = None
 
     def connect(self, db_id):
-        pass
+        self.connected_db = db_id
 
     def get(self, db_id, key, field):
         return MockConnector.data[key][field]
@@ -35,5 +37,4 @@ class MockConnector(object):
         keys = self.keys(db_id, pattern)
         for key in keys:
             self.delete(db_id, key)
-
 
