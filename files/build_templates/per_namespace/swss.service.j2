@@ -23,6 +23,7 @@ Environment=sonic_asic_platform={{ sonic_asic_platform }}
 ExecStartPre=/usr/local/bin/swss.sh start{% if multi_instance == 'true' %} %i{% endif %}
 ExecStart=/usr/local/bin/swss.sh wait{% if multi_instance == 'true' %} %i{% endif %}
 ExecStop=/usr/local/bin/swss.sh stop{% if multi_instance == 'true' %} %i{% endif %}
+TimeoutStopSec=240
 RestartSec=30
 
 [Install]
