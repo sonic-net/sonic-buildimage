@@ -50,11 +50,15 @@ fi
 # Use a private, uniquely-named temp directory instead of fixed /tmp paths:
 # /tmp is world-writable, so a fixed path could be pre-created as a symlink by
 # a local attacker before this script (which runs as root) writes to it.
+# Scope the restrictive umask to just this directory's creation so it does not
+# affect permissions of files created later in the script (e.g. by sonic-cfggen).
+_OLD_UMASK="$(umask)"
 umask 077
 TMP_DIR=$(mktemp -d /tmp/interfaces-config.XXXXXX) || {
     echo "interfaces-config: failed to create temporary directory" >&2
     exit 1
 }
+umask "${_OLD_UMASK}"
 
 ZTP_PORT_DATA="${TMP_DIR}/ztp_port_data.json"
 ZTP_INPUT="${TMP_DIR}/ztp_input.json"
