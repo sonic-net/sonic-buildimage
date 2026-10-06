@@ -557,9 +557,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # docker Python API package is needed by Ansible docker module as well as some SONiC applications
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'docker==7.1.0'
 
-# Install scapy
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-scapy
-
 ## Note: keep pip installed for maintenance purpose
 
 # Install GCC, needed for building/installing some Python packages

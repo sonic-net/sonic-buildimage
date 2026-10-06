@@ -333,6 +333,8 @@ endif
 include $(PLATFORM_PATH)/rules.mk
 endif
 
+$(foreach installer,$(SONIC_INSTALLERS),$(eval $(installer)_PYTHON_WHEELS += $(SCAPY)))
+
 ifeq ($(USERNAME),)
 override USERNAME := $(DEFAULT_USERNAME)
 else
