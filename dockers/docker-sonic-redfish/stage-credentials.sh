@@ -36,10 +36,11 @@ AUTH_DIR="${BMCWEB_AUTH_DIR:-/etc/ssl/certs/authority}"
 SERVER_PEM="${HTTPS_DIR}/server.pem"
 BMCWEB_START="${BMCWEB_START:-/usr/bin/bmcweb-start.sh}"
 
-# Used when CONFIG_DB carries no REDFISH|certs entry.
-DEFAULT_SERVER_CRT="/etc/sonic/redfish/redfishserver.cer"
-DEFAULT_SERVER_KEY="/etc/sonic/redfish/redfishserver.key"
-DEFAULT_CA_CRT="/etc/sonic/credentials/ROOT_CERTIFICATE.pem"
+# Used when CONFIG_DB carries no REDFISH|certs entry: the certificates the REST
+# API server is provisioned with.
+DEFAULT_SERVER_CRT="/etc/sonic/credentials/restapiserver.crt"
+DEFAULT_SERVER_KEY="/etc/sonic/credentials/restapiserver.key"
+DEFAULT_CA_CRT="/etc/sonic/credentials/restapica.crt"
 
 # Set on the first successful staging and never removed here, so the unit
 # stays marked as provisioned once it has been.
