@@ -21,7 +21,7 @@ memlist_enable=1
 reglist_enable=1
 scache_filename=/tmp/brcm_bcm_scache
 schan_intr_enable=0
-stable_size=0x5500000
+stable_size=0x8000000
 tdma_timeout_usec=3000000
 
 pfc_deadlock_seq_control=1
