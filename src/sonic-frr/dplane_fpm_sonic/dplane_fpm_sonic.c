@@ -1109,6 +1109,22 @@ static bool has_srv6_localsid_nexthop(struct zebra_dplane_ctx *ctx)
 	return false;
 }
 
+/*
+ * fpmsyncd reads an EVPN route's VNI and router MAC only from inline route
+ * nexthops, and zebra's nexthop group messages carry no VxLAN encap, so EVPN
+ * routes go out inline with groups on too.
+ */
+static bool has_evpn_nexthop(struct zebra_dplane_ctx *ctx)
+{
+	struct nexthop *nexthop;
+
+	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop))
+		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN))
+			return true;
+
+	return false;
+}
+
 /**
  * Resets the SRv6 routes FPM flags so we send all SRv6 routes again.
  */
@@ -2643,6 +2659,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	uint64_t obytes, obytes_peak;
 	enum dplane_op_e op = dplane_ctx_get_op(ctx);
 	struct nexthop *nexthop;
+	bool use_nhg = fnc->use_nhg;
 
 	/*
 	 * If we were configured to not use next hop groups, then quit as soon
@@ -2663,6 +2680,13 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		zlog_debug("%s: discard default table route", __func__);
 		return 0;
 	}
+
+	/* Only a route context holds the nexthop group this reads. */
+	if (use_nhg &&
+	    (op == DPLANE_OP_ROUTE_INSTALL || op == DPLANE_OP_ROUTE_UPDATE ||
+	     op == DPLANE_OP_ROUTE_DELETE) &&
+	    has_evpn_nexthop(ctx))
+		use_nhg = false;
 
 	nl_buf_len = 0;
 
@@ -2697,7 +2721,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		} else {
 			rv = netlink_route_multipath_msg_encode(RTM_DELROUTE, ctx,
 								nl_buf, sizeof(nl_buf),
-								true, fnc->use_nhg, false);
+								true, use_nhg, false);
 			if (rv <= 0) {
 				flog_err(
 					EC_ZEBRA_FPM_ENCODE_FAIL,
@@ -2730,7 +2754,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		} else {
 			rv = netlink_route_multipath_msg_encode(
 				RTM_NEWROUTE, ctx, &nl_buf[nl_buf_len],
-				sizeof(nl_buf) - nl_buf_len, true, fnc->use_nhg,
+				sizeof(nl_buf) - nl_buf_len, true, use_nhg,
 				fnc->use_route_replace);
 			if (rv <= 0) {
 				flog_err(
