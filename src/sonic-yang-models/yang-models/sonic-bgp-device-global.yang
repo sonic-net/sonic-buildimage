@@ -12,6 +12,10 @@ module sonic-bgp-device-global {
     description
         "SONIC Device-specific BGP global data";
 
+    revision 2026-10-06 {
+        description "Add BGP_DEVICE_GLOBAL_AF table with per-AFI-SAFI install_backup_path (BGP PIC Local) control, restricted to unicast address families";
+    }
+
     revision 2026-04-28 {
         description "Add chassis_tsa_supported to select CHASSIS_APP_DB vs per-linecard TSA orchestration";
     }
@@ -95,6 +99,55 @@ module sonic-bgp-device-global {
             /* end of CONFED container */
         }
         /* end of BGP_DEVICE_GLOBAL container */
+
+        container BGP_DEVICE_GLOBAL_AF {
+
+            description "Per-address-family BGP device global settings (BGP_DEVICE_GLOBAL_AF part of config_db.json)";
+
+            list BGP_DEVICE_GLOBAL_AF_LIST {
+
+                key "afi_safi";
+
+                description "Each entry controls BGP behavior for one address family across the entire device.
+                             Key is the AFI-SAFI string, e.g. ipv4_unicast, ipv6_unicast,
+                             ipv4_multicast, ipv6_multicast, l2vpn_evpn.";
+
+                leaf afi_safi {
+                    type string;
+                    description "Address family identifier, e.g. ipv4_unicast, ipv6_unicast,
+                                 ipv4_multicast, ipv6_multicast, l2vpn_evpn";
+                }
+
+                leaf install_backup_path {
+                    must "current() = 'disabled' or
+                          contains(current()/../afi_safi, '_unicast')" {
+                        error-message "install_backup_path is supported only for unicast address families (ipv4_unicast, ipv6_unicast)!";
+                    }
+                    type enumeration {
+                        enum disabled {
+                            description "No backup path installation (default). BGP will not pre-program
+                                         alternate next-hops for fast failover.";
+                        }
+                        enum pic {
+                            description "Prefix Independent Convergence (PIC): install a single backup
+                                         next-hop so that route failover triggers a fast local dataplane
+                                         swap without waiting for BGP reconvergence.";
+                        }
+                        enum pic-ecmp {
+                            description "PIC with ECMP backup paths: install multiple backup next-hops,
+                                         enabling load-balanced fast failover across all available
+                                         alternate paths.";
+                        }
+                    }
+                    default disabled;
+                    description "Controls BGP Prefix Independent Convergence (PIC) backup path
+                                 installation for this address family across the device.
+                                 Translated to FRR 'install backup-path [ecmp]' in the address-family block.";
+                }
+            }
+            /* end of BGP_DEVICE_GLOBAL_AF_LIST */
+        }
+        /* end of BGP_DEVICE_GLOBAL_AF container */
     }
     /* end of container sonic-bgp-device-global */
 }
