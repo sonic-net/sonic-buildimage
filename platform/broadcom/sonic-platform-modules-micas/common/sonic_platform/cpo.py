@@ -338,8 +338,38 @@ class MicasOe(CpoEndpointMixin, OeBase):
 
 
 class MicasElsfp(CpoEndpointMixin, ElsfpBase):
+    """
+    ELS endpoint of a Bailly CPO port. The ELS registers are the RLM pages
+    0xB0-0xB2 of the OE EEPROM, offset by the ELS base page. Accesses outside
+    those pages would reach the OE or the other ELS of the OE, so they are
+    rejected.
+    """
+
+    RLM_FIRST_PAGE = 0xB0
+    RLM_PAGE_COUNT = 3
+
     def _make_api_factory(self):
         return BaillyElsfpApiFactory(self)
+
+    def _rlm_address_range(self):
+        # CMIS upper page P (offsets 128-255) of bank 0 occupies linear
+        # offsets (P + 1) * 128 through (P + 2) * 128 - 1.
+        first_page = self.RLM_FIRST_PAGE + self.port.get_els_base_page()
+        return (first_page + 1) * 128, (first_page + 1 + self.RLM_PAGE_COUNT) * 128
+
+    def _in_rlm_pages(self, offset, num_bytes):
+        start, end = self._rlm_address_range()
+        return num_bytes > 0 and start <= offset and offset + num_bytes <= end
+
+    def read_eeprom(self, offset, num_bytes):
+        if not self._in_rlm_pages(offset, num_bytes):
+            return None
+        return super().read_eeprom(offset, num_bytes)
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        if not self._in_rlm_pages(offset, num_bytes):
+            return False
+        return super().write_eeprom(offset, num_bytes, write_buffer)
 
     def get_name(self):
         return "ELS{}".format(self.port.get_els_id())
