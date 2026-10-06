@@ -9,10 +9,10 @@
                 "name": "Scd(addr=0000:00:18.7)"
             },
             {
-                "name": "Scd(addr=0000:03:00.0)"
+                "name": "ShearwaterSysCpld(addr=13-0023)"
             },
             {
-                "name": "ShearwaterSysCpld(addr=13-0023)"
+                "name": "Scd(addr=0000:03:00.0)"
             }
         ],
         "fans": [],
@@ -113,6 +113,34 @@
             },
             {
                 "name": "TH5 Diode 2",
+                "controllable": false
+            },
+            {
+                "name": "P0V8_VDD",
+                "controllable": false
+            },
+            {
+                "name": "P0V9_AVDD_0",
+                "controllable": false
+            },
+            {
+                "name": "P0V9_AVDD_1",
+                "controllable": false
+            },
+            {
+                "name": "P0V75_AVDD_0",
+                "controllable": false
+            },
+            {
+                "name": "P0V75_AVDD_1",
+                "controllable": false
+            },
+            {
+                "name": "P3V3_OPTICS_A",
+                "controllable": false
+            },
+            {
+                "name": "P3V3_OPTICS_B",
                 "controllable": false
             }
         ],
