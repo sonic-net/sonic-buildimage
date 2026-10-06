@@ -4,12 +4,33 @@ Date: Thu, 9 Jul 2026 00:00:00 +0000
 Subject: [PATCH] Add TraceId authorization config flag
 
 ---
- support.c | 2 ++
- support.h | 1 +
- 2 files changed, 3 insertions(+)
+ Makefile.am    |  6 ++++++
+ support.c      |  2 ++
+ support.h      |  2 ++
+ support_test.c | 72 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 82 insertions(+)
+ create mode 100644 support_test.c
 
+diff --git a/Makefile.am b/Makefile.am
+index 2ac9ea0..e78413b 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -68,6 +68,12 @@ pam_tacplus_la_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir)/libtac/include
+ pam_tacplus_la_LDFLAGS = -module -avoid-version
+ pam_tacplus_la_LIBADD = libtac.la
+-
++
++check_PROGRAMS = support_test
++TESTS = support_test
++support_test_SOURCES = support_test.c
++support_test_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir) -I $(top_srcdir)/libtac/include
++support_test_LDADD = libtacsupport.la libtac.la
++
+ EXTRA_DIST = pam_tacplus.spec libtac.pc.in libtacsupport.pc.in
+ if DOC
+ dist_doc_DATA = sample.pam README.md AUTHORS ChangeLog
 diff --git a/support.c b/support.c
-index 81f3466..0000000 100644
+index 81f3466..0edfab6 100644
 --- a/support.c
 +++ b/support.c
 @@ -414,6 +414,8 @@ int _pam_parse_arg (const char *arg, char* current_secret, uint current_secret_b
@@ -22,7 +43,7 @@ index 81f3466..0000000 100644
          _pam_log (LOG_WARNING, "unrecognized option: %s", arg);
      }
 diff --git a/support.h b/support.h
-index 1989530..0000000 100644
+index 1989530..5ffd43d 100644
 --- a/support.h
 +++ b/support.h
 @@ -43,6 +43,7 @@
@@ -33,5 +54,92 @@ index 1989530..0000000 100644
  
  typedef struct {
      struct addrinfo *addr;
+@@ -57,6 +58,7 @@ extern char tac_prompt[64];
+ extern struct addrinfo *tac_source_addr;
+-
++
+ int _pam_parse (int, const char **);
++int _pam_parse_arg (const char *, char *, uint);
+ unsigned long _resolve_name (char *);
+ unsigned long _getserveraddr (char *serv);
+ int validate_not_sshd_bad_pass(const char *pass);
+diff --git a/support_test.c b/support_test.c
+new file mode 100644
+index 0000000..50618bc
+--- /dev/null
++++ b/support_test.c
+@@ -0,0 +1,72 @@
++#include "support.h"
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++static int failures;
++
++static void expect_traceid_flag(const char *test_name, int ctrl, int expected)
++{
++    int enabled = (ctrl & TRACE_ID_AUTHORIZATION_FLAG) != 0;
++
++    if (enabled != expected) {
++        fprintf(stderr, "%s: expected traceid flag %s, got ctrl=0x%x\n",
++                test_name, expected ? "enabled" : "disabled", ctrl);
++        failures++;
++    }
++}
++
++static void test_parse_arg(void)
++{
++    char secret[256] = {0};
++    int ctrl = _pam_parse_arg("traceid_authorization", secret, sizeof(secret));
++
++    expect_traceid_flag("parse argument", ctrl, 1);
++}
++
++static void test_parse_config(const char *contents, int expected,
++                              const char *test_name)
++{
++    char path[] = "/tmp/pam_tacplus_support_test.XXXXXX";
++    int fd = mkstemp(path);
++    FILE *file;
++    int ctrl;
++
++    if (fd < 0) {
++        perror("mkstemp");
++        failures++;
++        return;
++    }
++
++    file = fdopen(fd, "w");
++    if (file == NULL) {
++        perror("fdopen");
++        close(fd);
++        unlink(path);
++        failures++;
++        return;
++    }
++
++    if (fputs(contents, file) == EOF || fclose(file) != 0) {
++        perror("write config");
++        unlink(path);
++        failures++;
++        return;
++    }
++
++    ctrl = parse_config_file(path);
++    unlink(path);
++    expect_traceid_flag(test_name, ctrl, expected);
++}
++
++int main(void)
++{
++    test_parse_arg();
++    test_parse_config("debug traceid_authorization\n", 1,
++                      "parse enabled config");
++    test_parse_config("debug\n", 0, "parse config without option");
++
++    return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
++}
 -- 
 2.17.1.windows.2
