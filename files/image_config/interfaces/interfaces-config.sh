@@ -38,18 +38,12 @@ function resolvconf_updates_restore() {
     fi
 }
 
-# Do not run DNS configuration update during the shutdowning of the management interface. 
-# This operation is redundant as there will be an update after the start of the interface.
-resolvconf_updates_disable
-
-if [[ $(ifquery --running eth0) ]]; then
-    wait_networking_service_done
-    ifdown --force eth0
-fi
-
 # Use a private, uniquely-named temp directory instead of fixed /tmp paths:
 # /tmp is world-writable, so a fixed path could be pre-created as a symlink by
 # a local attacker before this script (which runs as root) writes to it.
+# Created before any disruptive side effects below (disabling DNS updates,
+# bringing down eth0) so a mktemp failure exits cleanly without leaving the
+# system in a half-reconfigured state.
 # Scope the restrictive umask to just this directory's creation so it does not
 # affect permissions of files created later in the script (e.g. by sonic-cfggen).
 _OLD_UMASK="$(umask)"
@@ -72,6 +66,15 @@ trap cleanup EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+# Do not run DNS configuration update during the shutdowning of the management interface. 
+# This operation is redundant as there will be an update after the start of the interface.
+resolvconf_updates_disable
+
+if [[ $(ifquery --running eth0) ]]; then
+    wait_networking_service_done
+    ifdown --force eth0
+fi
 
 # Check if ZTP DHCP policy has been installed
 if [[ -e /etc/network/ifupdown2/policy.d/ztp_dhcp.json ]]; then
