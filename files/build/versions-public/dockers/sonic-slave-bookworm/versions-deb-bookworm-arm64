@@ -22,7 +22,7 @@ libgomp1-armhf-cross==12.2.0-14cross1
 libhwasan0==12.2.0-14+deb12u1
 libnanomsg-dev==1.1.5+dfsg-1.1
 libnanomsg5==1.1.5+dfsg-1.1
-libnode108==18.20.4+dfsg-1~deb12u2
+libnode108==18.20.4+dfsg-1~deb12u3
 libstdc++6-armhf-cross==12.2.0-14cross1
 libubsan1-armhf-cross==12.2.0-14cross1
 libxslt1-dev==1.1.35-1+deb12u4
@@ -34,8 +34,8 @@ node-busboy==1.6.0+~cs2.6.0-2
 node-cjs-module-lexer==1.2.2+dfsg-5
 node-undici==5.15.0+dfsg1+~cs20.10.9.3-1+deb12u4
 node-xtend==4.0.2-3
-nodejs==18.20.4+dfsg-1~deb12u2
-nodejs-doc==18.20.4+dfsg-1~deb12u2
+nodejs==18.20.4+dfsg-1~deb12u3
+nodejs-doc==18.20.4+dfsg-1~deb12u3
 os-prober==1.81
 shim-helpers-arm64-signed==1+16.1+2~deb12u1
 shim-signed==1.51~1+deb12u1+16.1-2~deb12u1

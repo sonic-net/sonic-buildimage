@@ -749,7 +749,6 @@ clusters:\n\
         kube_commands.KUBELET_YAML = kubelet_yaml
         kube_commands.CNI_DIR = CNI_DIR
         kube_commands.FLANNEL_CONF_FILE = FLANNEL_CONF_FILE
-        kube_commands.SERVER_ADMIN_URL = "file://{}".format(self.admin_conf_file)
         kube_commands.KUBE_ADMIN_CONF = KUBE_ADMIN_CONF
         kube_commands.AME_CRT = AME_CRT
         kube_commands.AME_KEY = AME_KEY

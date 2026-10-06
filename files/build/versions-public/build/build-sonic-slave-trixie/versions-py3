@@ -14,14 +14,14 @@ inotify==0.2.12
 ipaddress==1.0.23
 isoduration==20.11.0
 jsondiff==2.2.1
-jsonschema==4.19.2
+jsonschema==2.6.0
 jsonschema-specifications==2023.12.1
 libyang==3.1.0
 netaddr==0.8.0
 pddf-platform==1.0
 prettyprinter==0.18.0
 pycairo==1.26.1
-pytest-mock==3.15.1
+pytest-mock==3.16.0
 pytest-xdist==3.8.0
 python_arptable==0.0.2
 referencing==0.36.2
