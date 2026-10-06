@@ -13,7 +13,7 @@ liblist-moreutils-xs-perl==0.430-4+b1
 libmpich12==4.3.0+really4.2.1-1
 libnanomsg-dev==1.1.5+dfsg-1.1
 libnanomsg5==1.1.5+dfsg-1.1
-libnode115==20.19.2+dfsg-1+deb13u2
+libnode115==20.19.2+dfsg-1+deb13u3
 libsereal-decoder-perl==5.004+ds-1+b4
 libxslt1-dev==1.1.35-1.2+deb13u3
 node-acorn==8.8.1+ds+~cs25.17.7-2
@@ -24,6 +24,6 @@ node-corepack==0.24.0-5
 node-minimatch==9.0.3-6
 node-undici==7.3.0+dfsg1+~cs24.12.11-1
 node-xtend==4.0.2-3
-nodejs==20.19.2+dfsg-1+deb13u2
-nodejs-doc==20.19.2+dfsg-1+deb13u2
+nodejs==20.19.2+dfsg-1+deb13u3
+nodejs-doc==20.19.2+dfsg-1+deb13u3
 python3-zopfli==0.2.3.post1-1

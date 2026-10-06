@@ -89,7 +89,7 @@ libsensors5==1:3.6.0-7.1
 libsnmp-base==5.9.3+dfsg-2+deb12u1
 libsnmp40==5.9.3+dfsg-2+deb12u1
 libsodium-dev==1.0.18-1+deb12u1
-libssl3==3.0.20-1~deb12u2
+libssl3==3.0.22-1~deb12u1
 libtcmalloc-minimal4==2.10-1
 libteam-utils==1.31-1
 libtirpc-dev==1.3.3+ds-1
@@ -107,7 +107,7 @@ netbase==6.4
 openssh-client==1:9.2p1-2+deb12u10
 openssh-server==1:9.2p1-2+deb12u10
 openssh-sftp-server==1:9.2p1-2+deb12u10
-openssl==3.0.20-1~deb12u2
+openssl==3.0.22-1~deb12u1
 pci.ids==0.0~2023.04.11-1
 pinentry-curses==1.2.1-1
 pkgconf==1.8.1-1

@@ -13,7 +13,7 @@ libdaemon0==0.14-7.1
 libdbus-1-3==1.14.10-1~deb12u1
 libelf1==0.188-2.1
 libestr0==0.1.11-1
-libexpat1==2.5.0-1+deb12u3
+libexpat1==2.5.0-1+deb12u4
 libfastjson4==1.2304.0-1
 libgcrypt20==1.10.1-3+deb12u1
 libgdbm-compat4==1.23-3
@@ -80,7 +80,7 @@ redis-tools==5:7.0.15-1~deb12u10
 rsync==3.2.7-1+deb12u6
 rsyslog==8.2302.0-1+deb12u1
 rsyslog-relp==8.2302.0-1+deb12u1
-socat==1.8.0.2-1
+socat==1.8.0.3-1+deb13u1
 symcrypt-openssl==0.1
 tzdata==2026c-0+deb12u1
 vim-common==2:9.0.1378-2+deb12u2
