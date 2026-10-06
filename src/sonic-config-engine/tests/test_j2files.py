@@ -1023,6 +1023,25 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertNotIn('"public"#', output)
         self.assertNotIn("'private'#trailing", output)
 
+    def test_snmpd_community_quoted_default_with_trailing_source_rejected(self):
+        # A suffix after a closed leading quote is parsed as the next
+        # directive argument. It does not change the quoted community token,
+        # so this would otherwise activate the forbidden 'private' community
+        # with 0.0.0.0/0 as its source restriction.
+        communities = {
+            '"public"localhost': {'TYPE': 'RO'},
+            '"private"0.0.0.0/0': {'TYPE': 'RW'},
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('rocommunity public\n', output)
+        self.assertNotIn('rocommunity6 public\n', output)
+        self.assertNotIn('rwcommunity private\n', output)
+        self.assertNotIn('rwcommunity6 private\n', output)
+        self.assertNotIn('"public"localhost', output)
+        self.assertNotIn('"private"0.0.0.0/0', output)
+
     def test_snmpd_community_unquoted_escaped_default_rejected(self):
         # Net-SNMP drops a backslash and keeps the following character
         # literally whether or not it appears inside quotes, so an

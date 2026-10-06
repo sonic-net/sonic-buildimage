@@ -19,10 +19,14 @@ INSECURE_DEFAULT_COMMUNITIES = {'public', 'private'}
 
 
 def _canonicalize_for_netsnmp_comparison(community):
-    """Strip characters Net-SNMP's tokenizer removes before comparison."""
-    for ch in ('"', "'", '\\'):
-        community = community.replace(ch, '')
-    return community
+    """Return the first community token as Net-SNMP parses it."""
+    if len(community) > 1 and community[0] in ('"', "'"):
+        quote = community[0]
+        closing_quote = community.find(quote, 1)
+        if closing_quote != -1:
+            community = community[1:closing_quote]
+
+    return community.replace('\\', '')
 
 
 def _is_insecure_default(community):

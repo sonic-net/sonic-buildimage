@@ -281,6 +281,13 @@ class TestApplySnmpCommunities:
         snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rocommunity": '"public"'}, {})
         assert db.set_entry_calls == []
 
+    def test_insecure_default_quoted_with_trailing_source_rejected(self):
+        db = _FakeConfigDB()
+        snmp_yml_to_configdb.apply_snmp_communities(
+            db, {"snmp_rwcommunity": '"private"0.0.0.0/0'}, {}
+        )
+        assert db.set_entry_calls == []
+
     def test_insecure_default_escaped_variant_rejected(self):
         db = _FakeConfigDB()
         snmp_yml_to_configdb.apply_snmp_communities(db, {"snmp_rwcommunity": "pri\\vate"}, {})
