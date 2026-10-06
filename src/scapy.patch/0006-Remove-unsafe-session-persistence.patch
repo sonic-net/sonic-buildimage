@@ -430,13 +430,7 @@ index b21a390d..a8f153ae 100644
  
  = Test temporary file creation
  ~ ci_only
-@@ -716,12 +679,22 @@ else:
- def interact_emulator(code_int, extra_args=[]):
-     try:
-         code_int.side_effect = lambda *args, **kwargs: lambda *args, **kwargs: None
-         interact(argv=["-s scapy1"] + extra_args, mybanner="What a test")
-     finally:
-         sys.ps1 = ">>> "
+@@ -722,6 +685,16 @@ def interact_emulator(code_int, extra_args=[]):
  
  interact_emulator()  # Default
  
