@@ -51,9 +51,9 @@ stages:
       workingDirectory: src
       displayName: "Build protobuf"
     - script: |
-        sudo dpkg -i protobuf-compiler_3.21.12-3_amd64.deb libprotoc32_3.21.12-3_amd64.deb \
-                      libprotobuf32_3.21.12-3_amd64.deb libprotobuf-dev_3.21.12-3_amd64.deb \
-                      libprotobuf-lite32_3.21.12-3_amd64.deb
+        sudo dpkg -i protobuf-compiler_3.21.12-3+deb12u1_amd64.deb libprotoc32_3.21.12-3+deb12u1_amd64.deb \
+                      libprotobuf32_3.21.12-3+deb12u1_amd64.deb libprotobuf-dev_3.21.12-3+deb12u1_amd64.deb \
+                      libprotobuf-lite32_3.21.12-3+deb12u1_amd64.deb
       workingDirectory: /tmp/artifacts
       displayName: "Install protobuf"
     - script: |
