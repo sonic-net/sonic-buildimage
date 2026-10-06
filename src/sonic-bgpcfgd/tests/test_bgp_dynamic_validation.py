@@ -201,7 +201,8 @@ def test_valid_dynamic_add_update_delete(dynamic_manager, key, entry, address, p
     m, state_table = dynamic_manager
     vrf, nbr = m.split_key(key)
     data = dict(peer_data(nbr), src_address=address, ip_range=prefix)
-    if entry == "ready":
+    # Direct set_handler calls model the path after manager dependencies are ready.
+    if entry in ("direct", "ready"):
         make_dependencies_ready(m)
     with patch("bgpcfgd.managers_bgp.log_err") as log_err:
         if entry == "direct":

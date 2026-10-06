@@ -534,15 +534,20 @@ $(foreach pkg, $(SONIC_RFS_TARGETS), \
 # sibling .patch/ files to its _DEP_FILES (hashed via git hash-object from the super-repo
 # root by the .dep rule, exactly where these files live). This is generic: any package
 # that gains a sibling .patch/ dir is tracked automatically, with no per-.dep edit.
-# $(wildcard) reads the working tree, so an as-yet-uncommitted patch also perturbs the
-# key (never a stale hit). Quilt series dirs are flat (series + *.patch), so a
-# single-level glob is sufficient.
+# The working tree is read directly, so an as-yet-uncommitted patch also perturbs the
+# key (never a stale hit). A quilt series may reference patches in sub-directories, so
+# the collection recurses; only non-directory entries are kept (a directory path would
+# make git hash-object fail in the .dep rule), and the list is sorted for a stable key.
+# find -L follows symlinks so a symlinked .patch dir (or nested subdir) is walked as a
+# directory and never emitted as a bare path to git hash-object, while symlinked patch
+# files (e.g. thrift.patch) are still hashed. The recursive find only runs for the rare
+# package that actually ships a .patch/ dir.
 $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS) \
         $(SONIC_MAKE_FILES) $(SONIC_PYTHON_STDEB_DEBS) $(SONIC_PYTHON_WHEELS) \
         $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES) $(SONIC_INSTALL_PKGS) $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_MOD_SRC_PATH:=$(if $($(pkg)_SRC_PATH),$($(pkg)_SRC_PATH),$($(pkg)_PATH))) \
         $(eval __pkg_src := $(patsubst %/,%,$($(pkg)_MOD_SRC_PATH))) \
-        $(eval $(pkg)_DEP_FILES += $(if $(__pkg_src),$(wildcard $(__pkg_src).patch/*))) \
+        $(eval $(pkg)_DEP_FILES += $(if $(__pkg_src),$(if $(wildcard $(__pkg_src).patch),$(shell find -L $(__pkg_src).patch ! -type d | LC_ALL=C sort)))) \
         $(eval $(pkg)_BASE_PATH:=$(if $($(pkg)_BASE_PATH),$($(pkg)_BASE_PATH),$(CURDIR))) \
         $(eval $(pkg)_DEP_FLAGS_FILE:=$($(pkg)_DST_PATH)/$(pkg).flags) \
         $(eval $(pkg)_MOD_DEP_FILE:=$($(pkg)_DST_PATH)/$(pkg).dep) \
