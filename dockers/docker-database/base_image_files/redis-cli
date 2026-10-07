@@ -1,10 +1,69 @@
 #!/bin/bash
 
 DOCKER_EXEC_FLAGS="i"
+REDIS_CONFIG_PATH="/var/run/redis/sonic-db/database_config.json"
+
+# Keep explicit network endpoints and modes that require TCP on redis-cli's
+# native connection path. Only inspect leading redis-cli options: once the Redis
+# command starts, option-looking arguments are command data.
+USE_UNIX_SOCKET=true
+REDIS_CLI_ARGS=("$@")
+ARG_INDEX=0
+while (( ARG_INDEX < ${#REDIS_CLI_ARGS[@]} )); do
+    arg="${REDIS_CLI_ARGS[$ARG_INDEX]}"
+    case "$arg" in
+        -h|-p|-s|-u|-4|-6|\
+        --tls|--sni|--cacert|--cacertdir|--insecure|--cert|--key|\
+        --tls-ciphers|--tls-ciphersuites|\
+        -c|--cluster|--slave|--replica|\
+        -v|--help|--version|--intrinsic-latency)
+            USE_UNIX_SOCKET=false
+            break
+            ;;
+        -X|-t|-a|--user|--pass|-r|-i|-n|-d|-D|\
+        --pipe-timeout|--lru-test|--rdb|--functions-rdb|\
+        --memkeys-samples|--keystats-samples|--cursor|--top|\
+        --pattern|--count|--quoted-pattern|--show-pushes|--eval|\
+        --test_hint|--test_hint_file)
+            # These options consume the next argument. Skip both so an option
+            # value such as a password of "-h" is not treated as an endpoint.
+            ((ARG_INDEX += 2))
+            ;;
+        -2|-3|-x|-e|--askpass|--raw|--no-raw|--quoted-input|--csv|\
+        --json|--quoted-json|--stat|--latency|--latency-history|\
+        --latency-dist|--mono|--pipe|--bigkeys|--memkeys|--keystats|\
+        --hotkeys|--scan|\
+        --ldb|--ldb-sync-mode|--verbose|--no-auth-warning)
+            ((ARG_INDEX += 1))
+            ;;
+        --)
+            break
+            ;;
+        *)
+            # This is either the Redis command or an option unknown to the
+            # installed redis-cli. In both cases, stop classifying arguments.
+            break
+            ;;
+    esac
+done
 
 # Determine whether stdout is on a terminal
 if [ -t 1 ] ; then
     DOCKER_EXEC_FLAGS+="t"
 fi
 
-docker exec -$DOCKER_EXEC_FLAGS database redis-cli "$@"
+if $USE_UNIX_SOCKET; then
+    if ! REDIS_SOCKET=$(jq -er '.INSTANCES.redis.unix_socket_path | select(type == "string" and length > 0)' "$REDIS_CONFIG_PATH"); then
+        echo "Unable to resolve the configured Redis Unix socket from $REDIS_CONFIG_PATH" >&2
+        exit 1
+    fi
+
+    if [ -z "$REDIS_SOCKET" ]; then
+        echo "Configured Redis Unix socket is empty in $REDIS_CONFIG_PATH" >&2
+        exit 1
+    fi
+
+    REDIS_CLI_ARGS=(-s "$REDIS_SOCKET" "${REDIS_CLI_ARGS[@]}")
+fi
+
+docker exec -$DOCKER_EXEC_FLAGS database redis-cli "${REDIS_CLI_ARGS[@]}"
