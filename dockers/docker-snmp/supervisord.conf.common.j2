@@ -9,6 +9,26 @@
 {% set _use_start_snmp = snmp_include_start is defined and snmp_include_start %}
 {% set _start_wait_for = snmp_start_wait_for | default("start:exited") %}
 {% if _use_start_snmp %}
+{# CONFIG_DB is populated after the image-wide start.sh exits, so wait for the #}
+{# SNMP community in a separate program rather than inside start-snmp.sh. This #}
+{# keeps waiting idempotent and re-runnable, and mirrors docker-dhcp-server's #}
+{# dhcpservd-ready/kea-dhcp4 split. Like that one, the dependency below is on #}
+{# :exited, so a timeout is reported loudly but does not wedge startup: the #}
+{# render still runs and is fail-closed (no community rendered, snmpd answers #}
+{# nothing, and the stock Debian snmpd.conf is replaced). #}
+[program:wait-for-snmp-config]
+command=/usr/bin/wait_for_snmp_config.sh
+priority={{ _pbase - 2 }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for={{ _start_wait_for }}
+
 [program:start-snmp]
 command=/usr/bin/start-snmp.sh
 priority={{ _pbase - 1 }}
@@ -20,7 +40,7 @@ stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
-dependent_startup_wait_for={{ _start_wait_for }}
+dependent_startup_wait_for=wait-for-snmp-config:exited
 {% endif %}
 
 [program:snmpd]
