@@ -115,7 +115,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.8.1-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.8.2-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -208,16 +208,8 @@ gnupg-utils==2.4.7-21+deb13u1+b5
 gnupg2==2.4.7-21+deb13u1
 gobject-introspection==1.84.0-1
 gobject-introspection-bin==1.84.0-1
-golang==2:1.24~2
-golang-1.24==1.24.4-1
-golang-1.24-doc==1.24.4-1
-golang-1.24-go==1.24.4-1
-golang-1.24-src==1.24.4-1
 golang-1.26-go==1.26.5-1~bpo13+1+fips
 golang-1.26-src==1.26.5-1~bpo13+1+fips
-golang-doc==2:1.24~2
-golang-go==2:1.24~2
-golang-src==2:1.24~2
 googletest==1.16.0-1
 gpg==2.4.7-21+deb13u1+b5
 gpg-agent==2.4.7-21+deb13u1+b5
@@ -471,6 +463,8 @@ libbrotli1==1.1.0-2+b7
 libbs2b0==3.1.0+dfsg-8+b1
 libbsd-dev==0.12.2-2
 libbsh-java==2.0b4-20
+libbson-1.0-0t64==1.30.4-1+deb13u3
+libbson-dev==1.30.4-1+deb13u3
 libbz2-dev==1.0.8-6
 libc-ares-dev==1.34.5-1+deb13u1
 libc-ares2==1.34.5-1+deb13u1
@@ -564,6 +558,8 @@ libcups2t64==2.4.10-3+deb13u2
 libcurl3t64-gnutls==8.14.1-2+deb13u5
 libcurl4-openssl-dev==8.14.1-2+deb13u5
 libcurl4t64==8.14.1-2+deb13u5
+libczmq-dev==4.2.1-3+b1
+libczmq4==4.2.1-3+b1
 libdaemon-dev==0.14-7.1+b3
 libdaemon0==0.14-7.1+b3
 libdata-dpath-perl==0.60-1
@@ -659,6 +655,7 @@ libepoxy-dev==1.5.10-2
 libepoxy0==1.5.10-2
 liberror-perl==0.17030-1
 liberror-prone-java==2.18.0-1
+libestr-dev==0.1.11-2
 libestr0==0.1.11-2
 libev4t64==1:4.33-2.1+b1
 libeval-closure-perl==0.14-3
@@ -679,6 +676,8 @@ libexporter-tiny-perl==1.006002-1
 libext2fs2t64==1.47.2-3+b12
 libfabric1==2.1.0-1.1
 libfakeroot==1.37.1.1-1
+libfaketime==0.9.10+2024-06-05+gba9ed5b2-0.6
+libfastjson-dev==1.2304.0-2
 libfastjson4==1.2304.0-2
 libfcgi-bin==2.4.5-0.1
 libfcgi-perl==0.82+ds-3+b2
@@ -892,6 +891,7 @@ libimport-into-perl==1.002005-2
 libindirect-perl==0.39-2+b4
 libinput-bin==1.28.1-1+deb13u1
 libinput10==1.28.1-1+deb13u1
+libintelrdfpmath-dev==2.0u3-1
 libio-compress-brotli-perl==0.004001-2+b3
 libio-html-perl==1.004-3
 libio-interactive-perl==1.027-1
@@ -991,6 +991,8 @@ liblockfile-bin==1.17-2
 liblockfile1==1.17-2
 liblog-any-adapter-screen-perl==0.141-1
 liblog-any-perl==1.717-1
+liblognorm-dev==2.0.6-5
+liblognorm-doc==2.0.6-5
 liblognorm5==2.0.6-5
 liblqr-1-0==0.4.2-2.1+b2
 liblsan0==14.2.0-19
@@ -1052,6 +1054,10 @@ libmnl0==1.0.5-3
 libmodule-implementation-perl==0.09-2
 libmodule-runtime-conflicts-perl==0.003-2
 libmodule-runtime-perl==0.018-1
+libmongoc-1.0-0t64==1.30.4-1+deb13u3
+libmongoc-dev==1.30.4-1+deb13u3
+libmongocrypt-dev==1.13.2-1+deb13u1
+libmongocrypt0==1.13.2-1+deb13u1
 libmoo-perl==2.005005-1
 libmoose-perl==2.2207-1+b3
 libmoosex-aliases-perl==0.11-2
@@ -1115,8 +1121,10 @@ libnpth0t64==1.8-3
 libnsl-dev==1.3.0-3+b3
 libnsl2==1.3.0-3+b3
 libnspr4==2:4.36-1
+libnspr4-dev==2:4.36-1
 libnss-systemd==257.13-1~deb13u1
 libnss3==2:3.110-1+deb13u4
+libnss3-dev==2:3.110-1+deb13u4
 libnuma-dev==2.0.19-1
 libnuma1==2.0.19-1
 libnumber-compare-perl==0.03-3
@@ -1178,10 +1186,11 @@ libpcap0.8t64==1.10.5-2
 libpci-dev==1:3.13.0-2
 libpci3==1:3.13.0-2
 libpciaccess0==0.17-3+b3
-libpcre2-16-0==10.46-1~deb13u2
-libpcre2-32-0==10.46-1~deb13u2
-libpcre2-dev==10.46-1~deb13u2
-libpcre2-posix3==10.46-1~deb13u2
+libpcre2-16-0==10.46-1~deb13u3
+libpcre2-32-0==10.46-1~deb13u3
+libpcre2-8-0==10.46-1~deb13u3
+libpcre2-dev==10.46-1~deb13u3
+libpcre2-posix3==10.46-1~deb13u3
 libpcsclite-dev==2.3.3-1
 libpcsclite1==2.3.3-1
 libpdfbox-java==1:1.8.16-5
@@ -1221,9 +1230,9 @@ libplexus-xml-java==3.0.1-2
 libpmem1==1.13.1-1.1+b1
 libpmix-dev==5.0.7-1
 libpmix2t64==5.0.7-1
-libpng-dev==1.6.48-1+deb13u5
-libpng-tools==1.6.48-1+deb13u5
-libpng16-16t64==1.6.48-1+deb13u5
+libpng-dev==1.6.48-1+deb13u6
+libpng-tools==1.6.48-1+deb13u6
+libpng16-16t64==1.6.48-1+deb13u6
 libpocketsphinx3==0.8+5prealpha+1-15+b4
 libpod-constants-perl==0.19-2
 libpod-parser-perl==1.67-1
@@ -1233,6 +1242,8 @@ libpopt-dev==1.19+dfsg-2
 libpopt0==1.19+dfsg-2
 libpostproc58==7:7.1.5-0+deb13u1
 libpotrace0==1.16-2+b2
+libpq-dev==17.11-0+deb13u1
+libpq5==17.11-0+deb13u1
 libproc-processtable-perl==0.636-1+b3
 libproc2-0==2:4.0.4-9
 libprotobuf-c-dev==1.5.1-1
@@ -1303,6 +1314,8 @@ libregexp-assemble-perl==0.38-2
 libregexp-pattern-license-perl==3.11.2-1
 libregexp-pattern-perl==0.2.14-2
 libregexp-wildcards-perl==1.05-3
+librelp-dev==1.11.0-2
+librelp0==1.11.0-2
 librevenge-0.0-0==0.0.5-3+b2
 librhash1==1.4.5-1
 librist4==0.2.11+dfsg-1
@@ -1352,6 +1365,7 @@ libslf4j-java==1.7.32-2
 libslirp0==4.8.0-1+deb13u1
 libsm-dev==2:1.2.6-1
 libsm6==2:1.2.6-1
+libsnappy-dev==1.2.2-1
 libsnappy-java==1.1.10.7-1
 libsnappy-jni==1.1.10.7-1
 libsnappy1v5==1.2.2-1
@@ -1385,7 +1399,8 @@ libss2==1.47.2-3+b12
 libssh-4==0.11.5-0+deb13u1
 libssh2-1-dev==1.11.1-1+deb13u2
 libssh2-1t64==1.11.1-1+deb13u2
-libssl-dev==3.5.7-1~deb13u2
+libssl-dev==3.5.7-1~deb13u3
+libssl3t64==3.5.7-1~deb13u3
 libstdc++-14-dev==14.2.0-19
 libstemmer0d==2.2.0-4+b2
 libstrictures-perl==2.000006-1
@@ -1494,6 +1509,8 @@ libusb-1.0-0-dev==2:1.0.28-1
 libusb-1.0-doc==2:1.0.28-1
 libusb-dev==2:0.1.12-35+b1
 libusbredirparser1t64==0.15.0-1
+libutf8proc-dev==2.9.0-1+b2
+libutf8proc3==2.9.0-1+b2
 libuv1t64==1.50.0-2
 libv4l-0t64==1.30.1-1
 libv4lconvert0t64==1.30.1-1
@@ -1689,7 +1706,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.107-1
+linux-libc-dev==6.12.111-1
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
@@ -1761,7 +1778,8 @@ opensp==1.5.2-15.2
 openssh-client==1:10.0p1-7+deb13u4
 openssh-server==1:10.0p1-7+deb13u4
 openssh-sftp-server==1:10.0p1-7+deb13u4
-openssl==3.5.7-1~deb13u2
+openssl==3.5.7-1~deb13u3
+openssl-provider-legacy==3.5.7-1~deb13u3
 ovmf==2025.02-8+deb13u1
 pahole==1.30-1
 pandoc==3.1.11.1+ds-2
