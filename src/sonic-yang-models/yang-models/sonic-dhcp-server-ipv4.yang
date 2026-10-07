@@ -33,6 +33,10 @@ module sonic-dhcp-server-ipv4 {
 
     description "DHCP_SERVER_IPV4 YANG module for SONiC OS";
 
+    revision 2026-08-22 {
+        description "Add match condition based DHCPv4 address assignment";
+    }
+
     revision 2023-07-19 {
         description "Initial version";
     }
@@ -257,5 +261,144 @@ module sonic-dhcp-server-ipv4 {
             /* end of DHCP_SERVER_IPV4_PORT_LIST */
         }
         /* end of DHCP_SERVER_IPV4_PORT container */
+
+        container DHCP_SERVER_IPV4_MATCH {
+
+            description "Named DHCPv4 packet match conditions";
+
+            list DHCP_SERVER_IPV4_MATCH_LIST {
+
+                description "A named exact-match condition for conditional DHCP IP assignment";
+
+                key "name";
+
+                leaf name {
+                    description "Name of match condition";
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for match condition name";
+                        }
+                        /* '|' is the Config DB key separator, so a name containing it
+                           cannot be recovered when the table key is split back into
+                           its YANG key leafs. */
+                        pattern "[^|]*" {
+                            error-message "Match condition name must not contain '|'";
+                        }
+                    }
+                }
+
+                leaf type {
+                    description "DHCP packet field to match";
+                    mandatory true;
+                    type enumeration {
+                        enum circuit_id;
+                        enum option60;
+                    }
+                }
+
+                leaf value {
+                    description "Exact value to match. For circuit_id this is the SONiC port
+                                 alias, the port name when the port has no alias, or a
+                                 PortChannel name. For option60 it is the vendor class string.";
+                    mandatory true;
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for match condition value";
+                        }
+                    }
+                    /* dhcp_relay stamps Option 82 sub-option 1 with the port alias, falling back
+                       to the port name when the port has no alias; PortChannels are stamped by
+                       name. A circuit_id that resolves to none of these can never match a packet,
+                       so reject it at configuration time rather than at service start. */
+                    /* not(x = v) rather than x != v: with an absent type the latter is false,
+                       which would mask the mandatory-node error. */
+                    must "not(../type = 'circuit_id') or " +
+                         "/port:sonic-port/port:PORT/port:PORT_LIST[port:alias = current()] or " +
+                         "/port:sonic-port/port:PORT/port:PORT_LIST[port:name = current() and not(port:alias)] or " +
+                         "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST[lag:name = current()]" {
+                        error-message "circuit_id value must match an existing port alias, an aliasless port name, or a PortChannel name";
+                        error-app-tag circuit-id-unknown-port;
+                    }
+                }
+            }
+            /* end of DHCP_SERVER_IPV4_MATCH_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4_MATCH container */
+
+        container DHCP_SERVER_IPV4_BINDING {
+
+            description "Match condition based DHCPv4 IP pool bindings";
+
+            list DHCP_SERVER_IPV4_BINDING_LIST {
+
+                description "Associates DHCP match conditions with an IPv4 address pool";
+
+                key "name binding";
+
+                leaf name {
+                    description "Name of DHCP interface";
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4/dhcp-server-ipv4:DHCP_SERVER_IPV4_LIST/dhcp-server-ipv4:name";
+                    }
+                }
+
+                leaf binding {
+                    description "User-defined binding name";
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for DHCP binding name";
+                        }
+                        /* See DHCP_SERVER_IPV4_MATCH_LIST/name: '|' is the Config DB
+                           key separator and cannot appear inside a key value. */
+                        pattern "[^|]*" {
+                            error-message "DHCP binding name must not contain '|'";
+                        }
+                    }
+                }
+
+                leaf-list matches {
+                    description "Match conditions combined using logical AND";
+                    min-elements 1;
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH_LIST/dhcp-server-ipv4:name";
+                    }
+                    ordered-by user;
+                }
+
+                leaf-list ips {
+                    description "Assigned IPv4 addresses";
+                    type inet:ipv4-address;
+                    ordered-by user;
+                }
+
+                leaf-list ranges {
+                    description "Named IPv4 address ranges";
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE_LIST/dhcp-server-ipv4:name";
+                    }
+                    ordered-by user;
+                }
+
+                must "((count(ips) > 0) and (count(ranges) = 0)) or ((count(ranges) > 0) and (count(ips) = 0))" {
+                    error-message "Exactly one of 'ips' or 'ranges' must be configured";
+                }
+
+                /* The matched packet fields are single valued and the conditions are ANDed,
+                   so two conditions of the same type can never both hold. dhcp_cfggen
+                   rejects such a binding, but that aborts generation of the entire Kea
+                   config, which is fatal at service start, so reject it at configuration
+                   time instead. Revisit if a future match type is multi valued. */
+                must "count(/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH_LIST[dhcp-server-ipv4:name = current()/matches][dhcp-server-ipv4:type = 'circuit_id']) <= 1" {
+                    error-message "A binding may reference at most one circuit_id match condition";
+                    error-app-tag duplicate-match-type;
+                }
+                must "count(/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH/dhcp-server-ipv4:DHCP_SERVER_IPV4_MATCH_LIST[dhcp-server-ipv4:name = current()/matches][dhcp-server-ipv4:type = 'option60']) <= 1" {
+                    error-message "A binding may reference at most one option60 match condition";
+                    error-app-tag duplicate-match-type;
+                }
+            }
+            /* end of DHCP_SERVER_IPV4_BINDING_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4_BINDING container */
     }
 }
