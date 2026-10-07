@@ -161,6 +161,26 @@ ENABLE_FRR_SNMP_AGENT ?= y
 SONIC_DPKG_CACHE_METHOD ?= none
 SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 
+# Allow setting Bazel disk and repository caches in the host machine when building inside the container.
+# That way, Bazel caches are preserved across slave container runs.
+# Bazel will create two directories:
+#   - $(SONIC_BAZEL_CACHE_SOURCE)/disk_cache will hold the disk cache
+#   - $(SONIC_BAZEL_CACHE_SOURCE)/repository_cache will hold the repository cache
+#
+# Ref:
+#   - Disk cache: https://bazel.build/remote/caching#disk-cache
+SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
+
+# Lowest readiness a component must declare for it to be built with Bazel.
+# A component opts in by setting $(DOCKER_FOO)_BAZEL_READINESS in its recipe.
+# Anything below this bar, or with no declared readiness at all,
+# falls back to the normal Make docker build.
+#
+#	bazel_disabled :  never build with Bazel
+#	experimental   :  build dockers declaring `experimental` or `stable`
+#	stable         :  build only dockers declaring `stable`
+BAZEL_MIN_READINESS ?= bazel_disabled
+
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes
 
@@ -235,6 +255,10 @@ ENABLE_TRANSLIB_WRITE = y
 
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
 ENABLE_NATIVE_WRITE = y
+
+# GNMI_REDIS_POOL_SIZE - Set the Redis connection pool size for gNMI services.
+# Leave unset to use the go-redis default.
+GNMI_REDIS_POOL_SIZE ?=
 
 # INCLUDE_MACSEC - build docker-macsec for macsec support
 INCLUDE_MACSEC = y

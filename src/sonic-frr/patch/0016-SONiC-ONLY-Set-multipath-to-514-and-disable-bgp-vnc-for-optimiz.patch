@@ -1,19 +1,17 @@
-[PATCH] Set multipath to 514 and disable bgp-vnc for optimization
-
+From 1f959475beab64a519e2df64af1c767031ca8afa Mon Sep 17 00:00:00 2001
 From: dgsudharsan <sudharsand@nvidia.com>
 Date: Wed, 4 Dec 2024 20:39:46 +0000
 Subject: [PATCH] Set multipath to 514 and disable bgp-vnc for optimization
 
-
 ---
- debian/rules |    3 +--
+ debian/rules | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/debian/rules b/debian/rules
-index e0b626fbf..41b6c9f57 100755
+index a301ae8710..18a2dd95b1 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -73,8 +73,7 @@ override_dh_auto_configure:
+@@ -87,8 +87,7 @@ override_dh_auto_configure:
  		--disable-protobuf \
  		--disable-zeromq \
  		--enable-ospfapi \
@@ -23,3 +21,6 @@ index e0b626fbf..41b6c9f57 100755
  		--enable-pcre2posix \
  		\
  		--enable-user=frr \
+-- 
+2.34.1
+

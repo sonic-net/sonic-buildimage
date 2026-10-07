@@ -21,9 +21,8 @@ Validate user selections and get corresponding device info, etc. for the system.
 
 from dataclasses import dataclass
 import logging
-import os
 import sys
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional
 
 from mellanox_bfb_installer import platform_dpu
 from mellanox_bfb_installer.platform_dpu import dpu2rshim, rshim2dpu
@@ -37,7 +36,7 @@ def _user_dpu_selection_to_dpus_from_platform_json(
     rshims: Optional[str],
     script_name: str,
     print_usage_callback: Callable[[], None],
-) -> Tuple[List[str], bool]:
+) -> List[str]:
 
     all_dpus_list: List[str] = sorted(platform_dpu.list_dpus())
     if not all_dpus_list:
@@ -49,8 +48,6 @@ def _user_dpu_selection_to_dpus_from_platform_json(
         sys.exit(1)
 
     target_dpu_list: List[str] = []
-    user_selected_all = False
-
     if dpus is not None and dpus.strip() == "":
         logger.error("If dpu parameter is provided, it cannot be empty!")
         print_usage_callback()
@@ -66,7 +63,6 @@ def _user_dpu_selection_to_dpus_from_platform_json(
         sys.exit(1)
     if dpus == "all" or rshims == "all":
         target_dpu_list = all_dpus_list
-        user_selected_all = True
     elif dpus:
         target_dpu_list = [s.strip() for s in dpus.split(",")]
         for dpu in target_dpu_list:
@@ -103,41 +99,13 @@ def _user_dpu_selection_to_dpus_from_platform_json(
         print_usage_callback()
         sys.exit(1)
 
-    return target_dpu_list, user_selected_all
-
-
-def _validate_config_files(config_paths: List[str]) -> None:
-    for config_file in config_paths:
-        if not os.path.isfile(config_file):
-            logger.error(
-                "Config provided %s is not a file! Please check the config file path",
-                config_file,
-            )
-            sys.exit(1)
-
-
-def _parse_config_paths(
-    configs: Optional[str], num_dpus: int, user_selected_all_dpus: bool
-) -> List[Optional[str]]:
-    if configs is None:
-        return [None] * num_dpus
-
-    config_list = [s.strip() for s in configs.split(",") if s.strip()]
-    if len(config_list) == 1:
-        _validate_config_files(config_list)
-        return [config_list[0]] * num_dpus
-    elif user_selected_all_dpus:
-        logger.error('Cannot specify "all" for dpus and more than one config file!')
+    duplicates = sorted({dpu for dpu in target_dpu_list if target_dpu_list.count(dpu) > 1})
+    if duplicates:
+        logger.error("The same DPU cannot be selected more than once: %s", ", ".join(duplicates))
+        print_usage_callback()
         sys.exit(1)
-    elif len(config_list) == num_dpus:
-        _validate_config_files(config_list)
-        return config_list
-    logger.error(
-        "Number of config files does not match the number of DPUs selected: %s and %s",
-        len(config_list),
-        num_dpus,
-    )
-    sys.exit(1)
+
+    return target_dpu_list
 
 
 @dataclass(frozen=True)
@@ -147,13 +115,11 @@ class TargetInfo:
     # Only used for detaching the dpu CX7 pci device. If this is None, it's not detected, so no need to detach.
     dpu_pci_bus_id: Optional[str]
     rshim_pci_bus_id: str
-    config_path: Optional[str]
 
 
 def get_targets(
     dpus: Optional[str],
     rshims: Optional[str],
-    configs: Optional[str],
     script_name: str,
     print_usage_callback: Callable[[], None],
 ) -> List[TargetInfo]:
@@ -165,16 +131,14 @@ def get_targets(
     Returns a list of TargetInfo objects, which is all the target-specific information needed to
     install the BFB image on the target DPU.
     """
-    target_dpus_list, user_selected_all_dpus = _user_dpu_selection_to_dpus_from_platform_json(
+    target_dpus_list = _user_dpu_selection_to_dpus_from_platform_json(
         dpus=dpus, rshims=rshims, script_name=script_name, print_usage_callback=print_usage_callback
     )
 
     dpus_detected_pci_bus_ids = platform_dpu.get_dpus_detected_pci_bus_ids()
 
-    config_paths = _parse_config_paths(configs, len(target_dpus_list), user_selected_all_dpus)
-
     target_devices = []
-    for dpu, config_path in zip(target_dpus_list, config_paths, strict=True):
+    for dpu in target_dpus_list:
         rshim = dpu2rshim(dpu)
         if not rshim:
             logger.error("DPU %s: No rshim mapping found!", dpu)
@@ -195,7 +159,6 @@ def get_targets(
                 rshim=rshim,
                 dpu_pci_bus_id=dpu_pci_bus_id,
                 rshim_pci_bus_id=rshim_pci_bus_id,
-                config_path=config_path,
             )
         )
 
