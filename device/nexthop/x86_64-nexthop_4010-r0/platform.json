@@ -430,6 +430,9 @@
             },
             {
                 "name": "NVMe"
+            },
+            {
+                "name": "MGMT_SWITCH"
             }
         ],
         "fans": [

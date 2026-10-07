@@ -14,6 +14,9 @@ MODULE_DIRS :=
 MODULE_DIRS += common
 # CPU Card
 MODULE_DIRS += komodo
+# CF2 shared utils (no kernel modules; utils/ only)
+MODULE_DIRS += cf2
+
 # SKU
 MODULE_DIRS += nh-4010
 MODULE_DIRS += nh-4210

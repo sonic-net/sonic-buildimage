@@ -9,7 +9,7 @@
     "num_voltage_sensors": 37,
     "num_current_sensors": 21,
     "num_nexthop_fpga_asic_temp_sensors": 2,
-    "num_components": 6,
+    "num_components": 7,
     "pddf_dev_types": {
       "description": " - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
       "MULTIFPGAPCIE": [
@@ -123,6 +123,21 @@
       {"attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4220-F NVMe {}"}
     ]
   },
+  "COMPONENT7": {
+    "comp_attr": {
+      "name": "MGMT_SWITCH",
+      "type": "mgmt_switch",
+      "description": "Management switch",
+      "boot_type": "cold"
+    },
+    "attr_list": [
+      {"attr_name": "version", "get_cmd": "read_mgmt_switch_version.py"},
+      {"attr_name": "model", "get_cmd": "echo 'N/A'"},
+      {"attr_name": "serial", "get_cmd": "echo 'N/A'"},
+      {"attr_name": "revision", "get_cmd": "echo 'N/A'"},
+      {"attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} MGMT_SWITCH {}"}
+    ]
+  },
   "SYSTEM": {
     "dev_info": {"device_type": "CPU", "device_name": "ROOT_COMPLEX", "device_parent": null},
     "i2c": {
@@ -209,7 +224,8 @@
       }
     },
     "spi_controllers": [
-      "CPUCARD_SPI_CONTROLLER"
+      "CPUCARD_SPI_CONTROLLER",
+      "MGMT_SWITCH_SPI_CONTROLLER"
     ]
   },
   "DPM1": {
@@ -5032,6 +5048,51 @@
     "dev_attr": {
       "spi_device_driver": "spi-nor",
       "max_speed_hz": 0,
+      "chip_select": 0
+    }
+  },
+  "MGMT_SWITCH_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50800",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 1,
+      "spi_controller_name": "MGMT_SWITCH_SPI_CONTROLLER",
+      "spi_controller_idx": 3
+    },
+    "spi_devices": [
+      "MGMT-SWITCH-EEPROM"
+    ]
+  },
+  "MGMT-SWITCH-EEPROM": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "MGMT-SWITCH-EEPROM",
+      "device_parent": "MGMT_SWITCH_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0xC 0x6",
+        "disable": "fpga write32 CPUCARD_FPGA 0xC 0x4"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x80 0x0"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x68 0x13",
+        "disable": "fpga write32 CPUCARD_FPGA 0x68 0x3"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "dh2228fv",
+      "max_speed_hz": 1000000,
       "chip_select": 0
     }
   },

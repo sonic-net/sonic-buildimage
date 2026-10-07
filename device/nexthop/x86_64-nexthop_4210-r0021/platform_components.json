@@ -10,6 +10,7 @@
                 "TPM": {},
                 "NVMe": {},
                 "ASIC_PCIE": {},
+                "MGMT_SWITCH": {},
                 "PSU1": {},
                 "PSU2": {},
                 "PSU3": {},
