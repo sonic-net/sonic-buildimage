@@ -1,6 +1,0 @@
-sonic-juniper-platform-modules (1.1) unstable; urgency=low
-
-  * Initial release: Add support for QFX5210.
-     -- Juniper Networks 
-          Ciju Rajan K <crajank@juniper.net> Tue, 30 July 2019
-
