@@ -198,7 +198,13 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
 
     # Read from 'platform.json' file
     if port_config_file.endswith('.json'):
-        return parse_platform_json_file(hwsku_config_file, port_config_file)
+        hwsku_json_file = hwsku_config_file
+        if not hwsku_json_file and hwsku is not None:
+            hwsku_json_file = get_hwsku_file_name(hwsku, platform)
+            if not hwsku_json_file:
+                return ({}, {}, {})
+
+        return parse_platform_json_file(hwsku_json_file, port_config_file)
 
     # If 'platform.json' file is not available, read from 'port_config.ini'
     else:

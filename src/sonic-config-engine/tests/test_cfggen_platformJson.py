@@ -314,3 +314,16 @@ class TestCfgGenPlatformJson(TestCase):
         self.assertEqual(output['Ethernet0']['lanes'], '0,1,2,3')
         self.assertEqual(output['Ethernet0']['alias'], 'Eth1')
         self.assertNotIn('Ethernet1', output)
+
+    def test_port_config_uses_legacy_hwsku_file_with_hwsku_name(self):
+        with mock.patch('portconfig.get_hwsku_file_name', return_value=self.hwsku_json) as get_hwsku_file:
+            ports, _, _ = get_port_config(
+                hwsku='Generic',
+                platform='generic',
+                port_config_file=self.platform_json
+            )
+
+        get_hwsku_file.assert_called_once_with('Generic', 'generic')
+        self.assertEqual(ports['Ethernet8']['speed'], '25000')
+        self.assertEqual(ports['Ethernet8']['lanes'], '8')
+        self.assertEqual(ports['Ethernet8']['subport'], '1')
