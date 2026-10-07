@@ -258,8 +258,11 @@ class TestCfgGenPlatformJson(TestCase):
 
     def test_invalid_breakout_mode_rejects_trailing_characters(self):
         from portconfig import get_child_ports
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(RuntimeError) as ctx:
             get_child_ports("Ethernet0", "1x100G[40G]garbage", self.platform_json)
+        self.assertIn("Ethernet0", str(ctx.exception))
+        self.assertIn("Valid modes:", str(ctx.exception))
+        self.assertIn("1x100G[40G]", str(ctx.exception))
 
     def test_invalid_breakout_mode_rejects_zero_ports(self):
         from portconfig import get_child_ports
