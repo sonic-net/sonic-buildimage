@@ -1,21 +1,20 @@
-[PATCH] Adding changes to write ip nht resolve-via-default
-
+From 7281bd85dc54e1bf0bd5a18975e00e45d771c135 Mon Sep 17 00:00:00 2001
 From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
 Date: Wed, 13 Nov 2024 23:12:22 -0800
 Subject: [PATCH] Adding changes to write ip nht resolve-via-default
  configuration for VRF in zebra
 
 ---
- zebra/zebra_vrf.c |   34 ++++++++++++++++++++++++++++++++++
- zebra/zebra_vrf.h |    1 +
- zebra/zebra_vty.c |    2 ++
+ zebra/zebra_vrf.c | 34 ++++++++++++++++++++++++++++++++++
+ zebra/zebra_vrf.h |  1 +
+ zebra/zebra_vty.c |  2 ++
  3 files changed, 37 insertions(+)
 
 diff --git a/zebra/zebra_vrf.c b/zebra/zebra_vrf.c
-index 3231b03b8..3beb552c6 100644
+index 8284dd2a65..f531202f9e 100644
 --- a/zebra/zebra_vrf.c
 +++ b/zebra/zebra_vrf.c
-@@ -666,6 +666,40 @@ int zebra_vrf_netns_handler_create(struct vty *vty, struct vrf *vrf,
+@@ -670,6 +670,40 @@ int zebra_vrf_netns_handler_create(struct vty *vty, struct vrf *vrf,
  	return CMD_SUCCESS;
  }
  
@@ -57,22 +56,22 @@ index 3231b03b8..3beb552c6 100644
  void zebra_vrf_init(void)
  {
 diff --git a/zebra/zebra_vrf.h b/zebra/zebra_vrf.h
-index f37e7dcc3..3bd100970 100644
+index ae440bed28..11ba847692 100644
 --- a/zebra/zebra_vrf.h
 +++ b/zebra/zebra_vrf.h
 @@ -252,6 +252,7 @@ extern vrf_id_t zebra_vrf_lookup_by_table(uint32_t table_id, ns_id_t ns_id);
  extern struct zebra_vrf *zebra_vrf_alloc(struct vrf *vrf);
- extern struct route_table *zebra_vrf_table(afi_t, safi_t, vrf_id_t);
+ extern struct route_table *zebra_vrf_table(afi_t afi, safi_t safi, vrf_id_t vrf_id);
  int zebra_vrf_lookup_tableid(vrf_id_t vrf_id, ns_id_t ns_id);
 +extern void zebra_vrf_config_write(struct vty *vty);
  
  /*
   * API to associate a VRF with a NETNS.
 diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
-index b4e35e49b..3fa935484 100644
+index 8029b70ece..00efc19603 100644
 --- a/zebra/zebra_vty.c
 +++ b/zebra/zebra_vty.c
-@@ -3702,6 +3702,8 @@ static int config_write_protocol(struct vty *vty)
+@@ -3839,6 +3839,8 @@ static int config_write_protocol(struct vty *vty)
  
  	zebra_pbr_config_write(vty);
  
@@ -81,3 +80,6 @@ index b4e35e49b..3fa935484 100644
  	if (!zebra_vxlan_get_accept_bgp_seq())
  		vty_out(vty, "no evpn accept-bgp-seq\n");
  
+-- 
+2.34.1
+
