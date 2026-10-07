@@ -40,6 +40,12 @@ module sonic-route-map {
     description
         "SONIC Route map YANG";
 
+    revision 2026-04-23 {
+        description
+            "Added support for additive keyword in set community,
+            set extended community, and set large-community operations.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -260,6 +266,13 @@ module sonic-route-map {
                     description "Match based on extended community value";
                 }
 
+                leaf match_large_community{
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:LARGE_COMMUNITY_SET/rpolsets:LARGE_COMMUNITY_SET_LIST/rpolsets:name";
+                    }
+                    description "Match based on large community value";
+                }
+
                 leaf match_as_path{
                     type leafref {
                         path "/rpolsets:sonic-routing-policy-sets/rpolsets:AS_PATH_SET/rpolsets:AS_PATH_SET_LIST/rpolsets:name";
@@ -336,7 +349,7 @@ module sonic-route-map {
                 leaf-list set_community_inline {
                     type string;
                     ordered-by user;
-                    description "Set community string";
+                    description "Set community string. Use 'none' as the only value to clear all communities.";
                 }
 
                 leaf set_community_ref {
@@ -349,7 +362,9 @@ module sonic-route-map {
                 leaf-list set_ext_community_inline {
                     type string;
                     ordered-by user;
-                    description "Set extended community string";
+                    description "Set extended community string (format: 'route-target:ASN:VALUE'
+                    or 'route-origin:ASN:VALUE'). Use 'none' as the only value to clear all extended communities.
+                    Note: Extended community is always additive unless cleared first with 'none'.";
                 }
 
                 leaf set_ext_community_ref {
@@ -357,6 +372,29 @@ module sonic-route-map {
                         path "/rpolsets:sonic-routing-policy-sets/rpolsets:EXTENDED_COMMUNITY_SET/rpolsets:EXTENDED_COMMUNITY_SET_LIST/rpolsets:name";
                     }
                     description "Refer extended community from extended community list";
+                }
+
+                leaf-list set_large_community_inline {
+                    type string;
+                    ordered-by user;
+                    description "Set large community string. Use 'none' as the only value to clear all large-communities.";
+                }
+
+                leaf set_large_community_ref {
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:LARGE_COMMUNITY_SET/rpolsets:LARGE_COMMUNITY_SET_LIST/rpolsets:name";
+                    }
+                    description "Refer large community from large community list";
+                }
+
+                leaf set_community_additive {
+                    when "../set_community_inline or ../set_community_ref or ../set_large_community_inline or ../set_large_community_ref";
+                    type boolean;
+                    default false;
+                    description
+                        "When true, append to existing communities instead of replacing them.
+                         Applies to both standard community and large-community.
+                         Note: Extended community is always additive in FRR.";
                 }
 
                 leaf set_tag {
