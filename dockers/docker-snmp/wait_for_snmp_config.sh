@@ -29,5 +29,5 @@ for i in $(seq 1 "$TIMEOUT"); do
 done
 
 logger -t wait-for-snmp-config -p daemon.error \
-    "timed out waiting for SNMP_COMMUNITY in CONFIG_DB after ${TIMEOUT}s; snmpd.conf will be rendered with no community and snmpd will not answer any query until SNMP_COMMUNITY is configured"
+    "timed out waiting for SNMP_COMMUNITY in CONFIG_DB after ${TIMEOUT}s; snmpd.conf will be rendered with no community and snmpd will not answer any query until SNMP_COMMUNITY is configured and start-snmp.sh is re-run"
 exit 1
