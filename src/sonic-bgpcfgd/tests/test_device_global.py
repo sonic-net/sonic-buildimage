@@ -64,6 +64,21 @@ def constructor(check_internal=False):
     cfg_mgr.update()
     return mgr
 
+
+@patch('bgpcfgd.managers_device_global.swsscommon.ConfigDBConnector')
+def test_confed_config_read_uses_unix_socket(mock_config_db):
+    mock_config_db.return_value.get_table.return_value = {}
+    mgr = bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.__new__(
+        bgpcfgd.managers_device_global.DeviceGlobalCfgMgr
+    )
+    mgr.table_name = "BGP_DEVICE_GLOBAL"
+    mgr.directory = MagicMock()
+
+    mgr.prime_confed_from_config_db()
+
+    mock_config_db.assert_called_once_with(use_unix_socket_path=True)
+    mock_config_db.return_value.connect.assert_called_once_with()
+
 #
 # TSA -----------------------------------------------------------------------------------------------------------------
 #

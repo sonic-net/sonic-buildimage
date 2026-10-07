@@ -272,7 +272,7 @@ class StaticRouteBfd(object):
 
     def reconciliation(self):
         #to use SonicV2Connector get_all method, DBConnector doesn't have get_all
-        db = swsscommon.SonicV2Connector()
+        db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
         db.connect(db.CONFIG_DB)
         db.connect(db.APPL_DB)
         db.connect(db.STATE_DB)

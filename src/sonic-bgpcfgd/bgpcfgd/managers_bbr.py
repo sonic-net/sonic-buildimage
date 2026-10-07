@@ -107,7 +107,7 @@ class BBRMgr(Manager):
         :return: BBR status from CONFIG_DB or None if not found
         """
         try:
-            config_db = swsscommon.ConfigDBConnector()
+            config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             if config_db is None:
                 log_info("BBRMgr::Failed to connect to CONFIG_DB, get BBR default state from constants.yml")
                 return None

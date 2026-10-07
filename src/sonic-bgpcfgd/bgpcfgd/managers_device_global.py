@@ -63,7 +63,7 @@ class DeviceGlobalCfgMgr(Manager):
         if not hasattr(swsscommon, "ConfigDBConnector"):
             return
         try:
-            config_db = swsscommon.ConfigDBConnector()
+            config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             config_db.connect()
             # get_table() may return None on a missing table or transient read
             # failure that does not raise; coalesce to {} so the membership test
