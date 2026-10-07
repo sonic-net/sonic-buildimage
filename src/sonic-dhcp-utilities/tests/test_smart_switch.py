@@ -154,14 +154,17 @@ def test_dhcp_dhcp_cfggen_generate(mock_swsscommon_dbconnector_init, mock_parse_
         dhcp_db_connector = DhcpDbConnector()
         dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                                                   kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2")
-        kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table = \
-            dhcp_cfg_generator.generate()
+        kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table, \
+            enabled_port_interfaces, enabled_match_interfaces, used_matches = dhcp_cfg_generator.generate()
         print(json.loads(kea_dhcp4_config))
         print(expected_kea_config)
         assert json.loads(kea_dhcp4_config) == expected_kea_config
         assert used_ranges == set()
         assert enabled_dhcp_interfaces == set(["bridge-midplane"])
+        assert enabled_port_interfaces == set(["bridge-midplane"])
+        assert enabled_match_interfaces == set()
         assert used_options == set(["option60", "option223"])
+        assert used_matches == set()
         expected_tables = set(["DpusTableEventChecker", "MidPlaneTableEventChecker", "VlanTableEventChecker",
                                "VlanIntfTableEventChecker", "DhcpRangeTableEventChecker", "VlanMemberTableEventChecker",
                                "DhcpOptionTableEventChecker", "DhcpPortTableEventChecker",

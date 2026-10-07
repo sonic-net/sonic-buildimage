@@ -7,6 +7,7 @@ import unicodedata
 
 
 SUPPORTED_TYPE = ["binary", "boolean", "ipv4-address", "string", "uint8", "uint16", "uint32"]
+SUPPORTED_MODE = ["PORT", "MATCH"]
 SUPPORTED_MATCH_TYPE = ["circuit_id", "option60"]
 
 
@@ -217,7 +218,7 @@ def predicates_overlap(first, second):
 
 
 def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrides=None,
-                           range_overrides=None, port_alias_map=None):
+                           range_overrides=None, port_alias_map=None, require_binding=False):
     bindings = {}
     prefix = "DHCP_SERVER_IPV4_BINDING|{}|".format(dhcp_interface)
     for key in dbconn.keys("CONFIG_DB", prefix + "*"):
@@ -226,6 +227,9 @@ def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrid
         bindings[candidate[0]] = candidate[1]
     if port_alias_map is None:
         port_alias_map = {}
+    if require_binding and not bindings:
+        click.get_current_context().fail("MATCH mode requires at least one binding on {}".format(dhcp_interface))
+
     predicates = {}
     for binding_name in sorted(bindings):
         predicates[binding_name] = validate_binding_entry(
@@ -288,6 +292,7 @@ def validate_match_update(dbconn, match_name, updated_entry, port_alias_map=None
             dhcp_interface,
             match_overrides={match_name: updated_entry},
             port_alias_map=port_alias_map,
+            require_binding=True,
         )
 
 
@@ -320,8 +325,8 @@ def dhcp_server_ipv4():
 @clicommon.pass_db
 def dhcp_server_ipv4_add(db, mode, lease_time, dup_gw_nm, gateway, netmask, dhcp_interface):
     ctx = click.get_current_context()
-    if mode != "PORT":
-        ctx.fail("Only mode PORT is supported")
+    if mode not in SUPPORTED_MODE:
+        ctx.fail("Only modes {} are supported".format(", ".join(SUPPORTED_MODE)))
     if not validate_str_type("uint32", lease_time):
         ctx.fail("lease_time is required and must be nonnegative integer")
     dbconn = db.db
@@ -385,8 +390,10 @@ def dhcp_server_ipv4_update(db, mode, lease_time, dup_gw_nm, gateway, netmask, d
         ctx.fail("Dhcp interface {} does not exist in config db".format(dhcp_interface))
     updates = {}
     if mode:
-        if mode != "PORT":
-            ctx.fail("Only mode PORT is supported")
+        if mode not in SUPPORTED_MODE:
+            ctx.fail("Only modes {} are supported".format(", ".join(SUPPORTED_MODE)))
+        if mode == "MATCH" and dbconn.get("CONFIG_DB", interface_key, "state") == "enabled":
+            validate_vlan_bindings(dbconn, dhcp_interface, require_binding=True)
         updates["mode"] = mode
     if lease_time:
         if not validate_str_type("uint32", lease_time):
@@ -422,6 +429,8 @@ def dhcp_server_ipv4_enable(db, dhcp_interface):
     dbconn = db.db
     key = "DHCP_SERVER_IPV4|" + dhcp_interface
     if dbconn.exists("CONFIG_DB", key):
+        if dbconn.get("CONFIG_DB", key, "mode") == "MATCH":
+            validate_vlan_bindings(dbconn, dhcp_interface, require_binding=True)
         dbconn.set("CONFIG_DB", key, "state", "enabled")
     else:
         ctx.fail("Failed to enable, dhcp interface {} does not exist".format(dhcp_interface))

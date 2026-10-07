@@ -1,9 +1,9 @@
 {
     "DHCP_SERVER_IPV4_MATCH_VALID_IP_BINDING": {
-        "desc": "Configure the MATCH tables with multiple conditions and bindings sharing a condition while the interface remains in PORT mode."
+        "desc": "Configure MATCH mode with multiple conditions and bindings sharing a condition."
     },
     "DHCP_SERVER_IPV4_MATCH_VALID_RANGE_BINDING": {
-        "desc": "Configure the MATCH tables with a condition bound to a named range while the interface remains in PORT mode."
+        "desc": "Configure MATCH mode with a condition bound to a named range."
     },
     "DHCP_SERVER_IPV4_MATCH_MAX_LENGTH_BOUNDARIES": {
         "desc": "Accept 255-character match names, match values, and binding names."

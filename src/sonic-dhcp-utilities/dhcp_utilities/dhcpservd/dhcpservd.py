@@ -6,16 +6,19 @@ import subprocess
 import sys
 import syslog
 import os
+import tempfile
 from .dhcp_cfggen import DhcpServCfgGenerator
 from .dhcp_lease import LeaseManager
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.common.dhcp_db_monitor import DhcpServdDbMonitor, DhcpServerTableCfgChangeEventChecker, \
     DhcpOptionTableEventChecker, DhcpRangeTableEventChecker, DhcpPortTableEventChecker, VlanIntfTableEventChecker, \
-    VlanMemberTableEventChecker, VlanTableEventChecker, MidPlaneTableEventChecker, DpusTableEventChecker
+    VlanMemberTableEventChecker, VlanTableEventChecker, MidPlaneTableEventChecker, DpusTableEventChecker, \
+    DhcpMatchTableEventChecker, DhcpBindingTableEventChecker
 from swsscommon import swsscommon
 
 KEA_DHCP4_CONFIG = "/etc/kea/kea-dhcp4.conf"
 KEA_DHCP4_PROC_NAME = "kea-dhcp4"
+KEA_VALIDATION_TIMEOUT = 30
 KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
 DHCPSERVD_READY_FLAG = "/tmp/dhcpservd_ready"
 REDIS_SOCK_PATH = "/var/run/redis/redis.sock"
@@ -23,18 +26,50 @@ DHCP_SERVER_IPV4_SERVER_IP = "DHCP_SERVER_IPV4_SERVER_IP"
 DHCP_SERVER_INTERFACE = "eth0"
 AF_INET = 2
 DEFAULT_SELECT_TIMEOUT = 5000  # millisecond
+RECOVERY_CHECKERS = {
+    "DhcpServerTableCfgChangeEventChecker",
+    "DhcpPortTableEventChecker",
+    "DhcpMatchTableEventChecker",
+    "DhcpBindingTableEventChecker",
+    "DhcpOptionTableEventChecker",
+    "DhcpRangeTableEventChecker",
+    "VlanTableEventChecker",
+    "VlanIntfTableEventChecker",
+    "VlanMemberTableEventChecker",
+    "MidPlaneTableEventChecker",
+    "DpusTableEventChecker"
+}
 
 
 class DhcpServd(object):
     enabled_checker = None
     dhcp_servd_monitor = None
 
-    def __init__(self, dhcp_cfg_generator, db_connector, monitor, kea_dhcp4_config_path=KEA_DHCP4_CONFIG):
+    def __init__(self, dhcp_cfg_generator, db_connector, monitor, kea_dhcp4_config_path=KEA_DHCP4_CONFIG,
+                 kea_dhcp4_binary=KEA_DHCP4_PROC_NAME):
         self.dhcp_cfg_generator = dhcp_cfg_generator
         self.db_connector = db_connector
         self.kea_dhcp4_config_path = kea_dhcp4_config_path
+        self.kea_dhcp4_binary = kea_dhcp4_binary
         self.dhcp_servd_monitor = monitor
         self.enabled_checker = None
+        self.used_range = set()
+        self.enabled_dhcp_interfaces = set()
+        self.enabled_port_interfaces = set()
+        self.enabled_match_interfaces = set()
+        self.used_options = set()
+        self.used_matches = set()
+        self.recovery_checkers = set()
+        self.reload_pending = False
+
+    def _enable_recovery_checkers(self):
+        if self.enabled_checker is None or self.dhcp_servd_monitor is None:
+            return
+        currently_enabled = self.enabled_checker | self.recovery_checkers
+        missing_checkers = RECOVERY_CHECKERS - currently_enabled
+        if missing_checkers:
+            self.dhcp_servd_monitor.enable_checkers(missing_checkers)
+            self.recovery_checkers |= missing_checkers
 
     def _notify_kea_dhcp4_proc(self):
         """
@@ -50,22 +85,86 @@ class DhcpServd(object):
 
     def dump_dhcp4_config(self):
         """
-        Generate kea-dhcp4 config file and dump it to config folder
+        Generate and validate a candidate config, then atomically activate it.
         """
-        kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, enable_checker = \
-            self.dhcp_cfg_generator.generate()
-        if self.enabled_checker is not None and self.enabled_checker != enable_checker:
+        try:
+            generation_result = self.dhcp_cfg_generator.generate()
+        except ValueError as error:
+            syslog.syslog(syslog.LOG_ERR, "Cannot generate Kea candidate config: {}".format(error))
+            self.reload_pending = True
+            self._enable_recovery_checkers()
+            return False
+        kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, enable_checker, \
+            enabled_port_interfaces, enabled_match_interfaces, used_matches = generation_result
+
+        config_dir = os.path.dirname(self.kea_dhcp4_config_path) or "."
+        candidate_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                dir=config_dir,
+                prefix=".{}.".format(os.path.basename(self.kea_dhcp4_config_path)),
+                delete=False
+            ) as candidate:
+                candidate.write(kea_dhcp4_config)
+                candidate.flush()
+                os.fsync(candidate.fileno())
+                candidate_path = candidate.name
+
+            validation = subprocess.run(
+                [self.kea_dhcp4_binary, "-t", candidate_path],
+                capture_output=True,
+                text=True,
+                timeout=KEA_VALIDATION_TIMEOUT
+            )
+            if validation.returncode != 0:
+                validation_output = validation.stderr.strip() or validation.stdout.strip()
+                syslog.syslog(
+                    syslog.LOG_ERR,
+                    "Kea rejected candidate config {}: {}".format(candidate_path, validation_output)
+                )
+                self.reload_pending = True
+                self._enable_recovery_checkers()
+                return False
+
+            os.replace(candidate_path, self.kea_dhcp4_config_path)
+            candidate_path = None
+        except (OSError, subprocess.SubprocessError) as error:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "Cannot validate or activate Kea candidate config: {}".format(error)
+            )
+            self.reload_pending = True
+            self._enable_recovery_checkers()
+            return False
+        finally:
+            if candidate_path is not None:
+                try:
+                    os.unlink(candidate_path)
+                except FileNotFoundError:
+                    pass
+
+        currently_enabled = (self.enabled_checker or set()) | self.recovery_checkers
+        if self.enabled_checker is not None and currently_enabled != enable_checker:
             # Has subcribe table and no equal, need to resubscribe
-            self.dhcp_servd_monitor.disable_checkers(self.enabled_checker - enable_checker)
-            self.dhcp_servd_monitor.enable_checkers(enable_checker - self.enabled_checker)
+            disabled_checkers = currently_enabled - enable_checker
+            enabled_checkers = enable_checker - currently_enabled
+            if disabled_checkers:
+                self.dhcp_servd_monitor.disable_checkers(disabled_checkers)
+            if enabled_checkers:
+                self.dhcp_servd_monitor.enable_checkers(enabled_checkers)
         self.enabled_checker = enable_checker
+        self.recovery_checkers = set()
+        self.reload_pending = False
         self.used_range = used_ranges
         self.enabled_dhcp_interfaces = enabled_dhcp_interfaces
+        self.enabled_port_interfaces = enabled_port_interfaces
+        self.enabled_match_interfaces = enabled_match_interfaces
         self.used_options = used_options
-        with open(self.kea_dhcp4_config_path, "w") as write_file:
-            write_file.write(kea_dhcp4_config)
+        self.used_matches = used_matches
         # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
         self._notify_kea_dhcp4_proc()
+        return True
 
     def _update_dhcp_server_ip(self):
         """
@@ -89,7 +188,9 @@ class DhcpServd(object):
     def start(self):
         start_time = time.time()
         syslog.syslog(syslog.LOG_INFO, "dhcpservd starting")
-        self.dump_dhcp4_config()
+        if not self.dump_dhcp4_config():
+            syslog.syslog(syslog.LOG_ERR, "Initial Kea configuration validation failed, exiting")
+            sys.exit(1)
         syslog.syslog(syslog.LOG_INFO, "dump_dhcp4_config done, elapsed=%.3fs" % (time.time() - start_time))
         self._update_dhcp_server_ip()
         syslog.syslog(syslog.LOG_INFO, "update_dhcp_server_ip done, elapsed=%.3fs" % (time.time() - start_time))
@@ -113,10 +214,13 @@ class DhcpServd(object):
 
     def wait(self):
         while True:
-            db_snapshot = {
+            db_snapshot = {} if self.reload_pending else {
                 "enabled_dhcp_interfaces": self.enabled_dhcp_interfaces,
+                "enabled_port_interfaces": self.enabled_port_interfaces,
+                "enabled_match_interfaces": self.enabled_match_interfaces,
                 "used_range": self.used_range,
-                "used_options": self.used_options
+                "used_options": self.used_options,
+                "used_matches": self.used_matches
             }
             res = self.dhcp_servd_monitor.check_db_update(db_snapshot)
             if res:
@@ -135,6 +239,8 @@ def main():
     checkers = []
     checkers.append(DhcpServerTableCfgChangeEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(DhcpPortTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(DhcpMatchTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(DhcpBindingTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(DhcpOptionTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(DhcpRangeTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(VlanTableEventChecker(sel, dhcp_db_connector.config_db))
