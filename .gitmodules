@@ -161,3 +161,4 @@
 [submodule "platform/broadcom/sonic-platform-modules-juniper"]
 	path = platform/broadcom/sonic-platform-modules-juniper
 	url = https://github.com/Juniper/sonic-platform-modules-juniper
+	branch = master
