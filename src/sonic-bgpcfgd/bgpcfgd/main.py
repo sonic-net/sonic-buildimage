@@ -1,3 +1,4 @@
+import importlib
 import os
 import signal
 import subprocess
@@ -27,6 +28,7 @@ from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
+from .managers_vrf import VRFMgr
 from .managers_srv6 import SRv6Mgr
 from .managers_prefix_list import PrefixListMgr
 from .managers_as_path import AsPathMgr
@@ -38,13 +40,24 @@ from .frr import FRR
 from .vars import g_debug
 
 
+def load_custom_managers(common_objs):
+    module_name = "{}.managers_custom".format(__package__)
+    try:
+        module = importlib.import_module(".managers_custom", __package__)
+    except ModuleNotFoundError as error:
+        if error.name != module_name:
+            raise
+        return []
+    return module.get_managers(common_objs)
+
+
 def do_work():
     """ Main function """
     st_rt_timer = StaticRouteTimer()
     thr = threading.Thread(target = st_rt_timer.run)
     thr.start()
     frr = FRR(["bgpd", "zebra", "staticd"])
-    frr.wait_for_daemons(seconds=20)
+    frr.wait_for_daemons(seconds=120)
 
     # Wait for mgmtd initial config load to avoid "Lock already taken on DS" error
     log_notice("Checking mgmtd datastore readiness...")
@@ -74,6 +87,7 @@ def do_work():
         # Config DB managers
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME),
+        BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME),
         # Interface managers
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_INTF_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME),
@@ -104,6 +118,8 @@ def do_work():
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # Bgp Aggregate Address Manager
         AggregateAddressMgr(common_objs, "CONFIG_DB", BGP_AGGREGATE_ADDRESS_TABLE_NAME),
+        # VRF Manager
+        VRFMgr(common_objs, "APPL_DB", "VRF_TABLE"),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
@@ -130,6 +146,15 @@ def do_work():
         log_notice("AsPath Manager is enabled for %s" % device_metadata["localhost"]["type"])
 
     managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
+
+    # Optional deployment-specific managers. A derived image may add a
+    # `managers_custom.py` module next to this file exposing
+    # `get_managers(common_objs) -> list` to register extra managers without
+    # patching this file. The module is absent upstream, so this is a no-op.
+    custom_managers = load_custom_managers(common_objs)
+    if custom_managers:
+        managers.extend(custom_managers)
+        log_notice("Loaded %d custom manager(s) from managers_custom" % len(custom_managers))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
@@ -162,4 +187,3 @@ def main():
         sys.exit(rc)
     except SystemExit:
         os._exit(rc)
-

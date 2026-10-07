@@ -1533,6 +1533,8 @@ def parse_meta(meta, hname):
                     kube_data["enable"] = value
                 elif name == "KubernetesServerIp":
                     kube_data["ip"] = value
+                elif name == "KubernetesServerPort":
+                    kube_data["port"] = value
                 elif name == 'MacSecProfile':
                     macsec_profile = parse_macsec_profile(value)
                 elif name == "RedundancyType":
@@ -2182,6 +2184,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 'ip': kube_data.get('ip', '')
             }
         }
+        if kube_data.get('port'):
+            results['KUBERNETES_MASTER']['SERVER']['port'] = kube_data['port']
 
     results['PEER_SWITCH'], mux_tunnel_name, peer_switch_ip = get_peer_switch_info(linkmetas, devices)
 
@@ -2199,21 +2203,6 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         else:
             results['DEVICE_METADATA']['localhost']['subtype'] = 'Supervisor'
 
-    # Enable tunnel_qos_remap if downstream_redundancy_types(T1) or redundancy_type(T0) = Gemini/Libra
-    enable_tunnel_qos_map = False
-    if platform and 'kvm' in platform:
-        enable_tunnel_qos_map = False
-    elif results['DEVICE_METADATA']['localhost']['type'].lower() == 'leafrouter' and ('gemini' in str(downstream_redundancy_types).lower() or 'libra' in str(downstream_redundancy_types).lower()):
-        enable_tunnel_qos_map = True
-    elif results['DEVICE_METADATA']['localhost']['type'].lower() == 'torrouter' and ('gemini' in str(redundancy_type).lower() or 'libra' in str(redundancy_type).lower()):
-        enable_tunnel_qos_map = True
-
-    if enable_tunnel_qos_map:
-        system_defaults['tunnel_qos_remap'] = {"status": "enabled"}
-
-    if len(system_defaults) > 0:
-        results['SYSTEM_DEFAULTS'] = system_defaults
-   
     if asic_name is not None:
         results['DEVICE_METADATA']['localhost']['asic_name'] =  asic_name
     
@@ -2601,6 +2590,30 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if is_storage_device:
         results['DEVICE_METADATA']['localhost']['storage_device'] = "true"
 
+    # Enable tunnel_qos_remap if downstream_redundancy_types(T1) or redundancy_type(T0) = Gemini/Libra
+    enable_tunnel_qos_map = False
+    if platform and 'kvm' in platform:
+        enable_tunnel_qos_map = False
+    elif results['DEVICE_METADATA']['localhost']['type'].lower() == 'leafrouter' and ('gemini' in str(downstream_redundancy_types).lower() or 'libra' in str(downstream_redundancy_types).lower()):
+        enable_tunnel_qos_map = True
+    elif results['DEVICE_METADATA']['localhost']['type'].lower() == 'torrouter' and ('gemini' in str(redundancy_type).lower() or 'libra' in str(redundancy_type).lower()):
+        enable_tunnel_qos_map = True
+
+    if enable_tunnel_qos_map:
+        system_defaults['tunnel_qos_remap'] = {"status": "enabled"}
+
+    enable_ip_decap = True
+    if switch_type == 'dpu':
+        enable_ip_decap = False
+    elif hwsku in ['Arista-7060X6-64PE-B-C512S2', 'Arista-7060X6-64PE-B-C448O16']:
+        enable_ip_decap = False
+    elif (platform and platform.startswith(('x86_64-nvidia', 'x86_64-mlnx')) and device_type in ('BackEndToRRouter', 'BackEndLeafRouter', 'BackEndSpineRouter') and not is_storage_device):
+        enable_ip_decap = False
+
+    system_defaults['ip_decap'] = {"status": "enabled" if enable_ip_decap else "disabled"}
+
+    results['SYSTEM_DEFAULTS'] = system_defaults
+
     # remove bgp monitor and slb peers for storage backend
     if is_storage_device and 'BackEnd' in current_device['type']:
         results['BGP_MONITORS'] = {}
@@ -2652,11 +2665,14 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             dns_conf = "/usr/share/sonic/templates/dns.j2"
         if os.path.isfile(dns_conf):
             text = ""
-            with open(dns_conf) as template_file:
-                # Semgrep does not allow to use jinja2 directly, but we do need jinja2 for SONiC
-                environment = jinja2.Environment(trim_blocks=True) # nosemgrep
-                dns_template = environment.from_string(template_file.read())
-                text = dns_template.render(results)
+            # A filesystem loader allows dns.j2 to include an optional
+            # organization template from the same directory.
+            environment = jinja2.Environment(  # nosemgrep
+                loader=jinja2.FileSystemLoader(os.path.dirname(dns_conf)),
+                trim_blocks=True
+            )
+            dns_template = environment.get_template(os.path.basename(dns_conf))
+            text = dns_template.render(results)
             try:
                 dns_res = json.loads(text)
             except ValueError as e:
@@ -2937,7 +2953,7 @@ def parse_chassis_hwsku(root,chassis_hostname):
         if child.tag == str(QName(ns, "PngDec")):
             devices = child.find(str(QName(ns, "Devices")))
             for device in devices.findall(str(QName(ns, "Device"))):
-                if chassis_hostname.lower() ==  device.find(str(QName(ns, "Hostname"))).text.lower():
+                if chassis_hostname and (chassis_hostname.lower() ==  device.find(str(QName(ns, "Hostname"))).text.lower()):
                     hwsku =  device.find(str(QName(ns, "HwSku"))).text
                     return hwsku
     return None

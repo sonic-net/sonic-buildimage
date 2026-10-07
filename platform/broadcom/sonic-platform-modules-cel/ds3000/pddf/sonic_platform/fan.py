@@ -173,11 +173,7 @@ class Fan(PddfFan):
             print("Setting fan speed is not allowed !")
             return False
 
-        if(self.plugin_data['FAN']['duty_cycle_to_pwm'].isnumeric()):
-            duty_cycle_to_pwm = int(self.plugin_data['FAN']['duty_cycle_to_pwm'])
-        else:
-            return False
-        pwm = int(round(duty_cycle_to_pwm(speed)))
+        pwm = int(round(self._duty_cycle_to_pwm.convert(speed)))
 
         if self._api_helper.is_bmc_present():
             status, data = self._api_helper.get_cmd_output(self.BMC_FAN_FSC_STATUS_CMD)

@@ -1,0 +1,3 @@
+include $(PLATFORM_PATH)/bfn-sai.dep
+include $(PLATFORM_PATH)/bfn-platform.dep
+include $(PLATFORM_PATH)/libsaithrift-dev.dep

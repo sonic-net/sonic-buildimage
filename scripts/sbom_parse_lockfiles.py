@@ -38,14 +38,33 @@ import base64
 import binascii
 import json
 import os
+import os
 import re
 import sys
 import tarfile
 from typing import Optional
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import sbom_purl  # noqa: E402  (needs the path set above)
+
 
 def warn(msg: str) -> None:
     sys.stderr.write(f"[sbom_parse_lockfiles.py] WARNING: {msg}\n")
+
+
+def _namespaced_purl(type_: str, name: str, version: str) -> str:
+    """Build a purl whose name may carry a namespace prefix.
+
+    A Go module path and a scoped npm package both put the namespace in
+    front of a `/`, and both need each segment encoded rather than the
+    whole string: `@types/node` is `%40types/node`, and a Go version
+    `v1.2.3+incompatible` needs its `+` escaped. Interpolating these was
+    how one package reached the document under two spellings.
+    """
+    ns, _, base = name.rpartition("/")
+    return sbom_purl.build(type_, base or name, version,
+                           namespace=ns or None)
 
 
 # ----------------------------------------------------------------------------
@@ -53,7 +72,28 @@ def warn(msg: str) -> None:
 # ----------------------------------------------------------------------------
 
 
-def parse_cargo_lock(text: str, scope: str) -> list:
+def _origin(scope: str, lockfile: str) -> list:
+    """Where a dependency was found: which scope, and which lockfile.
+
+    The scope is omitted when there is not one, rather than filled with
+    something that is not a scope — see scope_from_tarball_path.
+
+    The lockfile is recorded because it is the only thing that says which
+    binary a dependency ends up inside. A Go module is not something an image
+    depends on; it is compiled into a program, and the program is what the go.
+    sum sits beside. That path was read and thrown away, so nothing downstream
+    could attribute the dependency to anything, and the graph either hung it
+    off the image — asserting the image depends on a Go module — or nowhere.
+    """
+    out = []
+    if scope:
+        out.append({"name": "sonic:scope", "value": scope})
+    if lockfile:
+        out.append({"name": "sonic:lockfile", "value": lockfile})
+    return out
+
+
+def parse_cargo_lock(text: str, scope: str, lockfile: str = "") -> list:
     """Returns CycloneDX component dicts for every [[package]] entry."""
     components = []
     # Split on '[[package]]' boundaries. Skip the leading non-package preamble.
@@ -70,16 +110,17 @@ def parse_cargo_lock(text: str, scope: str) -> list:
         version = fields.get("version")
         if not name or not version:
             continue
+        purl = sbom_purl.build("cargo", name, version)
         comp = {
-            "bom-ref": f"pkg:cargo/{name}@{version}",
+            "bom-ref": purl,
             "type": "library",
             "name": name,
             "version": version,
-            "purl": f"pkg:cargo/{name}@{version}",
+            "purl": purl,
             "properties": [
                 {"name": "sonic:fragment_kind", "value": "lockfile"},
                 {"name": "sonic:lockfile_format", "value": "Cargo.lock"},
-                {"name": "sonic:scope", "value": scope},
+                *_origin(scope, lockfile),
             ],
         }
         checksum = fields.get("checksum")
@@ -123,7 +164,7 @@ def _h1_to_sha256_hex(h1: str) -> Optional[str]:
         return None
 
 
-def parse_go_sum(text: str, scope: str) -> list:
+def parse_go_sum(text: str, scope: str, lockfile: str = "") -> list:
     """Returns CycloneDX components for each Go module in go.sum.
 
     go.sum has two lines per module:
@@ -146,7 +187,7 @@ def parse_go_sum(text: str, scope: str) -> list:
         if key in seen:
             continue
         seen.add(key)
-        purl = f"pkg:golang/{mod}@{ver}"
+        purl = _namespaced_purl("golang", mod, ver)
         comp = {
             "bom-ref": purl,
             "type": "library",
@@ -156,7 +197,7 @@ def parse_go_sum(text: str, scope: str) -> list:
             "properties": [
                 {"name": "sonic:fragment_kind", "value": "lockfile"},
                 {"name": "sonic:lockfile_format", "value": "go.sum"},
-                {"name": "sonic:scope", "value": scope},
+                *_origin(scope, lockfile),
             ],
         }
         sha = _h1_to_sha256_hex(m.group("hash"))
@@ -171,7 +212,7 @@ def parse_go_sum(text: str, scope: str) -> list:
 # ----------------------------------------------------------------------------
 
 
-def parse_package_lock_json(text: str, scope: str) -> list:
+def parse_package_lock_json(text: str, scope: str, lockfile: str = "") -> list:
     """Parses npm v2/v3 package-lock.json. Older v1 format also supported."""
     components = []
     try:
@@ -192,7 +233,7 @@ def parse_package_lock_json(text: str, scope: str) -> list:
         if key in seen:
             continue
         seen.add(key)
-        purl = f"pkg:npm/{name}@{version}"
+        purl = _namespaced_purl("npm", name, version)
         comp = {
             "bom-ref": purl,
             "type": "library",
@@ -202,7 +243,7 @@ def parse_package_lock_json(text: str, scope: str) -> list:
             "properties": [
                 {"name": "sonic:fragment_kind", "value": "lockfile"},
                 {"name": "sonic:lockfile_format", "value": "package-lock.json"},
-                {"name": "sonic:scope", "value": scope},
+                *_origin(scope, lockfile),
             ],
         }
         integrity = info.get("integrity") or ""
@@ -231,7 +272,7 @@ def parse_package_lock_json(text: str, scope: str) -> list:
                 if (name, ver) in seen:
                     continue
                 seen.add((name, ver))
-                purl = f"pkg:npm/{name}@{ver}"
+                purl = _namespaced_purl("npm", name, ver)
                 components.append({
                     "bom-ref": purl,
                     "type": "library",
@@ -242,7 +283,7 @@ def parse_package_lock_json(text: str, scope: str) -> list:
                         {"name": "sonic:fragment_kind", "value": "lockfile"},
                         {"name": "sonic:lockfile_format",
                          "value": "package-lock.json"},
-                        {"name": "sonic:scope", "value": scope},
+                        *_origin(scope, lockfile),
                     ],
                 })
                 if "dependencies" in info:
@@ -259,7 +300,7 @@ def parse_package_lock_json(text: str, scope: str) -> list:
 _PNPM_PKG_RE = re.compile(r"^\s+/([^@:\s]+(?:/[^@:\s]+)*)@([^:\s]+):\s*$")
 
 
-def parse_pnpm_lock_yaml(text: str, scope: str) -> list:
+def parse_pnpm_lock_yaml(text: str, scope: str, lockfile: str = "") -> list:
     """Best-effort pnpm-lock.yaml parser without yaml dependency. pnpm
     lockfiles encode package identity as a key like '/foo@1.2.3:' under
     the 'packages:' map. Hash data is omitted in this minimal parser —
@@ -282,7 +323,7 @@ def parse_pnpm_lock_yaml(text: str, scope: str) -> list:
         if (name, version) in seen:
             continue
         seen.add((name, version))
-        purl = f"pkg:npm/{name}@{version}"
+        purl = _namespaced_purl("npm", name, version)
         components.append({
             "bom-ref": purl,
             "type": "library",
@@ -292,7 +333,7 @@ def parse_pnpm_lock_yaml(text: str, scope: str) -> list:
             "properties": [
                 {"name": "sonic:fragment_kind", "value": "lockfile"},
                 {"name": "sonic:lockfile_format", "value": "pnpm-lock.yaml"},
-                {"name": "sonic:scope", "value": scope},
+                *_origin(scope, lockfile),
             ],
         })
     return components
@@ -303,7 +344,7 @@ def parse_pnpm_lock_yaml(text: str, scope: str) -> list:
 # ----------------------------------------------------------------------------
 
 
-def parse_yarn_lock(text: str, scope: str) -> list:
+def parse_yarn_lock(text: str, scope: str, lockfile: str = "") -> list:
     """Parses yarn.lock v1 classic format. v2+ (berry) uses YAML which
     we skip here — most projects still use v1."""
     components = []
@@ -317,7 +358,7 @@ def parse_yarn_lock(text: str, scope: str) -> list:
         nonlocal cur_name, cur_version, cur_integrity, cur_resolved
         if cur_name and cur_version and (cur_name, cur_version) not in seen:
             seen.add((cur_name, cur_version))
-            purl = f"pkg:npm/{cur_name}@{cur_version}"
+            purl = _namespaced_purl("npm", cur_name, cur_version)
             comp = {
                 "bom-ref": purl,
                 "type": "library",
@@ -327,7 +368,7 @@ def parse_yarn_lock(text: str, scope: str) -> list:
                 "properties": [
                     {"name": "sonic:fragment_kind", "value": "lockfile"},
                     {"name": "sonic:lockfile_format", "value": "yarn.lock"},
-                    {"name": "sonic:scope", "value": scope},
+                    *_origin(scope, lockfile),
                 ],
             }
             if cur_integrity and cur_integrity.startswith(
@@ -389,14 +430,28 @@ _LOCKFILE_HANDLERS = {
 
 
 def scope_from_tarball_path(path: str) -> str:
-    """Derive a human-readable scope label from the tarball path.
+    """Derive a scope label from the tarball path, or nothing.
+
     target/versions/dockers/docker-fpm-frr/post-versions/lockfiles.tar.gz
         -> 'dockers/docker-fpm-frr'
     target/versions/host-image/post-versions/lockfiles.tar.gz
         -> 'host-image'
+
+    **Empty where the path is not a scope directory.** It used to return the
+    path itself, so a tarball harvested under target/versions/build/log-*/ —
+    which every build produces, and which parse_lockfiles() collects because it
+    walks everything under versions/ — gave its components a scope of
+    'target/versions/build/log-20260830011338/lockfiles.tar.gz'.
+
+    That is not a scope, and nothing downstream treats it as one: the
+    containment pass matches 'host-image' or 'dockers/<name>' and silently
+    places neither. Measured on a real image, **901 of 3,011 language
+    dependencies ended up in no dependency edge at all** for this reason. An
+    absent scope says "we do not know where this ran", which is true; a file
+    path says something false and defeats the matching as well.
     """
     m = re.search(r"versions/(.+?)/post-versions/", path)
-    return m.group(1) if m else path
+    return m.group(1) if m else ""
 
 
 def parse_tarball(tarball: str, components_out: list, stats: dict) -> None:
@@ -424,7 +479,7 @@ def parse_tarball(tarball: str, components_out: list, stats: dict) -> None:
             except Exception:
                 continue
             try:
-                comps = handler(text, scope)
+                comps = handler(text, scope, member.name)
             except Exception as e:
                 warn(f"parser {handler.__name__} failed on "
                      f"{member.name} in {tarball}: {e}")

@@ -13,7 +13,7 @@ moduledir = @plugindir@
 module_LTLIBRARIES = bash_tacplus.la
 bash_tacplus_la_SOURCES = bash_tacplus.h \
 bash_tacplus.c
-bash_tacplus_la_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir)/libtac/include
+bash_tacplus_la_CFLAGS = $(AM_CFLAGS) $(TACACS_DEVICE_TYPE_CFLAGS) -I $(top_srcdir)/libtac/include
 bash_tacplus_la_LDFLAGS = -module -avoid-version
 
 EXTRA_DIST = bash_tacplus.spec

@@ -46,7 +46,8 @@ INSTALL_ARISTA_FWUTIL = y
 endif
 
 ARISTA_FIRMWARE_VERSION = 202511.1
-ARISTA_FIRMWARE = arista-firmware_$(ARISTA_FIRMWARE_VERSION)_all.deb
+-include $(PLATFORM_PATH)/platform-modules-arista.organization.mk
+ARISTA_FIRMWARE ?= arista-firmware_$(ARISTA_FIRMWARE_VERSION)_all.deb
 $(ARISTA_FIRMWARE)_PATH = $(PLATFORM_PATH)/extra-debs
 $(ARISTA_FIRMWARE)_PLATFORM = $(ARISTA_PLATFORMS)
 

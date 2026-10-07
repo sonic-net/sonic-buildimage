@@ -37,7 +37,8 @@
     },
     "VNET_ROUTE_TEST_INVALID_NEXTHOP": {
         "desc": "VNET route configuration with invalid nexthop IP value (256.256.256.256) in VNET_ROUTE_LIST table.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["nexthop"]
     },
     "VNET_ROUTE_TEST_INVALID_NAME_FORMAT": {
         "desc": "VNET route configuration with invalid name format (missing prefix) in VNET_ROUTE_LIST table.",
@@ -45,7 +46,8 @@
     },
     "VNET_ROUTE_TEST_INVALID_PREFIX": {
         "desc": "VNET route configuration with invalid prefix format (300.100.4.0/24) in name field.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
     },
     "VNET_ROUTE_TEST_MISSING_NEXTHOP": {
         "desc": "VNET route configuration with missing mandatory attribute (nexthop) in VNET_ROUTE_LIST table.",
@@ -64,7 +66,8 @@
     },
     "VNET_ROUTE_TEST_INVALID_MULTI_NEXTHOP": {
         "desc": "VNET route configuration with invalid IP in comma-separated nexthop list.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["nexthop"]
     },
 
     "VNET_ROUTE_TUNNEL_MIN_TEST": {
@@ -86,7 +89,8 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_ENDPOINT": {
         "desc": "VNET route tunnel configuration with invalid endpoint IP value (256.256.256.256) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["endpoint"]
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MAC": {
@@ -106,7 +110,24 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX": {
         "desc": "VNET route tunnel configuration with invalid prefix format (300.168.1.0/24) in name field.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX_LEN": {
+        "desc": "VNET route tunnel configuration with invalid IPv4 prefix length (10.0.0.0/33) in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_IPV6_PREFIX": {
+        "desc": "VNET route tunnel configuration with IPv6 prefix in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_IPV6_PREFIX": {
+        "desc": "VNET route tunnel configuration with invalid IPv6 prefix format in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
     },
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
@@ -137,7 +158,8 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_ENDPOINT": {
         "desc": "VNET route tunnel configuration with invalid IP in comma-separated endpoint list.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["endpoint"]
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_MAC": {
@@ -169,5 +191,41 @@
     "VNET_ROUTE_TUNNEL_TEST_INVALID_CONSISTENT_HASHING": {
         "desc": "VNET route tunnel configuration with invalid consistent_hashing_buckets value (exceeds uint16 max).",
         "eStr": "does not satisfy the constraint"
+    },
+
+    "VNET_ROUTE_V6_PREFIX_TEST": {
+        "desc": "Valid VNET route configuration with IPv6 prefix and IPv4 nexthop in VNET_ROUTE_LIST table."
+    },
+
+    "VNET_ROUTE_V6_NEXTHOP_TEST": {
+        "desc": "Valid VNET route configuration with IPv6 prefix and IPv6 nexthop in VNET_ROUTE_LIST table."
+    },
+
+    "VNET_ROUTE_V6_MULTI_NEXTHOP_TEST": {
+        "desc": "Valid VNET route configuration with IPv6 prefix and multiple comma-separated IPv6 nexthops in VNET_ROUTE_LIST table."
+    },
+
+    "VNET_ROUTE_V6_INVALID_NEXTHOP_TEST": {
+        "desc": "VNET route configuration with invalid IPv6 nexthop value in VNET_ROUTE_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["nexthop"]
+    },
+
+    "VNET_ROUTE_TUNNEL_V6_PREFIX_TEST": {
+        "desc": "Valid VNET route tunnel configuration with IPv6 prefix and IPv4 endpoint in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_V6_ENDPOINT_TEST": {
+        "desc": "Valid VNET route tunnel configuration with IPv6 prefix and IPv6 endpoint in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_V6_MULTI_ENDPOINT_TEST": {
+        "desc": "Valid VNET route tunnel configuration with IPv6 prefix and multiple comma-separated IPv6 endpoints in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_V6_INVALID_ENDPOINT_TEST": {
+        "desc": "VNET route tunnel configuration with invalid IPv6 endpoint value in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["endpoint"]
     }
 }

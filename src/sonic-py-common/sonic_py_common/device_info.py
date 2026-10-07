@@ -5,8 +5,7 @@ import os
 import random
 import re
 import subprocess
-import yaml
-from natsort import natsorted
+from typing import List, Optional
 from sonic_py_common.general import getstatusoutput_noshell_pipe
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
 
@@ -21,6 +20,10 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
+
+# CPO configuration file name
+CPO_FILE = "cpo.json"
+
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
@@ -59,6 +62,7 @@ DPU_NAME_PREFIX = "dpu"
 # Cacheable Objects
 sonic_ver_info = {}
 hw_info_dict = {}
+hwsku_info = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -153,8 +157,23 @@ def get_hwsku():
     Returns:
         A string containing the device's hardware SKU identifier
     """
+    global hwsku_info
 
-    return get_localhost_info('hwsku')
+    # Cache the first valid answer so callers stop opening a CONFIG_DB connection on
+    # every call. A falsy result means the lookup failed, so it is deliberately not
+    # cached and the next call retries.
+    #
+    # Changing the HwSKU needs a config reload, which restarts everything under
+    # sonic.target, so containerized callers always see the new value. Host daemons
+    # outside that target (system-health, for one) are not restarted and keep the
+    # cached value until they are.
+    #
+    # The slot is unsynchronized on purpose: racing threads may both perform the
+    # read, but they store the same value, so the interleaving does not matter.
+    if not hwsku_info:
+        hwsku_info = get_localhost_info('hwsku')
+
+    return hwsku_info
 
 
 def get_platform_and_hwsku():
@@ -184,7 +203,11 @@ def get_platform_json_data():
     if not platform:
         return None
 
-    platform_path = get_path_to_platform_dir()
+    try:
+        platform_path = get_path_to_platform_dir()
+    except OSError:
+        return None
+
     if not platform_path:
         return None
 
@@ -199,6 +222,97 @@ def get_platform_json_data():
     except (json.JSONDecodeError, IOError, TypeError, ValueError):
         # Handle any file reading and JSON parsing errors
         return None
+
+
+def get_cpo_data() -> Optional[dict]:
+    """
+    Retrieve the data from the cpo.json file in the platform directory.
+
+    Lane fields are normalized from comma-separated strings ("41,42") into
+    lists of ints ([41, 42]); all other fields, including vendor-specific
+    ones, are returned verbatim. None is returned if the file does not exist
+    or cannot be parsed.
+    """
+    if not get_platform():
+        return None
+
+    try:
+        cpo_file = os.path.join(get_path_to_platform_dir(), CPO_FILE)
+    except OSError:
+        return None
+
+    if not os.path.isfile(cpo_file):
+        return None
+
+    try:
+        with open(cpo_file, 'r') as f:
+            cpo_data = json.loads(f.read())
+    except (json.JSONDecodeError, IOError, TypeError, ValueError):
+        # Handle any file reading and JSON parsing errors
+        return None
+
+    _normalize_cpo_data(cpo_data)
+    return cpo_data
+
+
+def _parse_lane_string(lane_string: str) -> List[int]:
+    """'41,42,43' -> [41, 42, 43]; tolerates spaces and a trailing comma."""
+    return [int(tok) for tok in lane_string.split(',') if tok.strip() != '']
+
+
+def _normalize_cpo_data(cpo_data: dict) -> None:
+    """
+    In-place normalization of the known lane fields from comma-separated
+    strings to lists of ints. All other fields (vendor-specific included) are
+    left untouched.
+
+    Example input:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": "41,42,43,44",
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        "1": "41,42",
+                        "2": "43,44"
+                    }
+                }
+            }
+        }
+
+    After _normalize_cpo_data(...) the same dict becomes:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": [41, 42, 43, 44],
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        1: [41, 42],
+                        2: [43, 44]
+                    }
+                }
+            }
+        }
+    """
+    for device in cpo_data.get('devices', {}).values():
+        device_type = device['device_type']
+        if device_type == 'optical_engine':
+            device['asic_lanes'] = _parse_lane_string(device['asic_lanes'])
+        elif device_type == 'external_laser_source':
+            device['laser_to_asic_lane_mapping'] = {
+                int(laser): _parse_lane_string(lanes)
+                for laser, lanes in device['laser_to_asic_lane_mapping'].items()
+            }
+        else:
+            raise ValueError(f'Unrecognized device_type: {device_type}')
 
 
 def get_asic_conf_file_path():
@@ -508,6 +622,47 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
 
     return None
 
+def get_path_to_system_port_config_file(hwsku=None, asic=None):
+    """
+    Retrieves the path to the device's port configuration file that has system port info
+    Args:
+        hwsku: a string, it is allowed to be passed in args because when loading the
+              initial configuration on the device, the HwSKU is not yet present in ConfigDB.
+        asic: a string , asic argument should be passed on multi-ASIC devices only,
+              it should be omitted on single-ASIC platforms.
+    Returns:
+        A string containing the path the the device's system port configuration file
+    """
+
+    """
+    This platform check is performed to make sure we return a None
+    in case of unit-tests within sonic-cfggen where platform is not expected to be
+    present because tests are not run on actual Hardware/Container.
+    TODO: refactor sonic-cfggen such that we can remove this check
+    """
+
+    platform = get_platform()
+    if not platform:
+        return None
+
+    if hwsku:
+        platform_path = get_path_to_platform_dir()
+        hwsku_path = os.path.join(platform_path, hwsku)
+    else:
+        (_, hwsku_path) = get_paths_to_platform_and_hwsku_dirs()
+
+    # Check for 'port_config.ini' file presence
+    port_configs = None
+    if asic:
+       port_configs = os.path.join(hwsku_path, asic, PORT_CONFIG_FILE)
+    else:
+        port_configs = os.path.join(hwsku_path, PORT_CONFIG_FILE)
+
+    if not os.path.isfile(port_configs):
+        port_configs = None
+
+    return port_configs
+
 def get_sonic_version_info():
     if not os.path.isfile(SONIC_VERSION_YAML_PATH):
         return None
@@ -516,6 +671,7 @@ def get_sonic_version_info():
     if sonic_ver_info:
         return sonic_ver_info
 
+    import yaml  # lazy: keep yaml (~3.2MB) off the module import surface
     with open(SONIC_VERSION_YAML_PATH) as stream:
         if yaml.__version__ >= "5.1":
             sonic_ver_info = yaml.full_load(stream)
@@ -748,7 +904,7 @@ def is_macsec_supported():
     if platform_env_conf_file_path is None:
         return supported
 
-    # Else open the file check for keyword - macsec_enabled -
+    # Else open the file check for keyword - generate system port config -
     with open(platform_env_conf_file_path) as platform_env_conf_file:
         for line in platform_env_conf_file:
             tokens = line.split('=')
@@ -758,6 +914,85 @@ def is_macsec_supported():
                 supported = tokens[1].strip()
                 break
     return int(supported)
+
+# Check if this platform needs to generate voq configs.
+def is_generate_voq():
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+
+    # platform_env.conf file not present for platform
+    if platform_env_conf_file_path is None:
+        return False
+
+    # Else open the file check for keyword - macsec_enabled -
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0].lower() == 'generate_system_port_config':
+                val = tokens[1].strip()
+                if val == '1':
+                    return True
+
+    return False
+
+# Get voq cofig data - number of cores
+def get_num_asic_cores():
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+
+    num_cores = 0
+    # platform_env.conf file not present for platform
+    if platform_env_conf_file_path is None:
+        return num_cores
+
+    # Else open the file check for keyword - macsec_enabled -
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0].lower() == 'num_cores':
+                num_cores = int(tokens[1].strip())
+
+    return num_cores
+# Get the chassis_db_address from the file /etc/sonic/chassisdb_address
+def get_chassis_db_address():
+    chassis_db_address_file_path = "/etc/sonic/chassisdb_address"
+    chassis_db_address = None
+
+    # The file /etc/sonic/chassisdb_address is not present
+    if not os.path.isfile(chassis_db_address_file_path):
+        return chassis_db_address
+
+    with open(chassis_db_address_file_path) as chassis_db_addr_conf:
+        for line in chassis_db_addr_conf:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].lower() == 'chassis_db_address':
+                chassis_db_address = tokens[1].strip()
+                break
+
+    return chassis_db_address
+
+
+def get_smartswitch_midplane_ip():
+    """Parse /usr/lib/systemd/network/bridge-midplane.network to get the NPU bridge-midplane IP.
+    This file is deployed on both NPU and DPU sides of a smartswitch."""
+    network_file = "/usr/lib/systemd/network/bridge-midplane.network"
+    if not os.path.isfile(network_file):
+        return None
+
+    with open(network_file) as f:
+        for line in f:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].strip().lower() == 'address':
+                # Strip prefix length (e.g. "169.254.200.254/24" -> "169.254.200.254")
+                return tokens[1].strip().split('/')[0]
+
+    return None
 
 
 def get_device_runtime_metadata():
@@ -774,6 +1009,7 @@ def get_device_runtime_metadata():
     runtime_metadata.update(macsec_support_metadata)
     return {'DEVICE_RUNTIME_METADATA': runtime_metadata }
 
+
 def get_npu_id_from_name(npu_name):
     if npu_name.startswith(NPU_NAME_PREFIX):
         return npu_name[len(NPU_NAME_PREFIX):]
@@ -786,6 +1022,7 @@ def get_namespaces():
     In a multi NPU platform, each NPU is in a Linux Namespace.
     This method returns list of all the Namespace present on the device
     """
+    from natsort import natsorted  # lazy: keep this ~4.2MB dependency off the module import surface
     ns_list = []
     for path in glob.glob(NAMESPACE_PATH_GLOB):
         ns = os.path.basename(path)
@@ -892,7 +1129,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs']):
+    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs', 'micas-vs']):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
@@ -1203,11 +1440,13 @@ def get_expected_asic_list():
     asic_list = []
 
     asic_list_file = get_expected_asic_list_file_path()
+    if asic_list_file is None or not os.path.exists(asic_list_file):
+        return asic_list
 
+    import yaml  # lazy: keep yaml (~3.2MB) off the module import surface
     try:
-        if asic_list_file is not None and os.path.exists(asic_list_file):
-            with open(asic_list_file, 'r') as file:
-                asic_list = yaml.safe_load(file)
+        with open(asic_list_file) as file:
+            asic_list = yaml.safe_load(file)
 
         # Ensure it's a list
         if not isinstance(asic_list, list):

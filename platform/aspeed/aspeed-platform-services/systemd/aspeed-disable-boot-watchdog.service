@@ -1,0 +1,14 @@
+[Unit]
+Description=AST2720 ABR Boot Watchdog Disarm
+DefaultDependencies=no
+After=local-fs-pre.target
+Before=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/aspeed-disable-boot-watchdog.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=local-fs.target
+

@@ -210,5 +210,79 @@
     },
     "ACL_INNERSRCMACREWRITE_NO_INNERSRCIP": {
         "desc": "Configure INNERSRCMACREWRITE ACL with no inner src IP"
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV4_SRC_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv4 SRC mask (SRC_IP + SRC_IP_MASK)."
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV4_DST_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv4 DST mask (DST_IP + DST_IP_MASK)."
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV6_SRC_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv6 SRC mask (SRC_IPV6 + SRC_IPV6_MASK)."
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV6_DST_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv6 DST mask (DST_IPV6 + DST_IPV6_MASK)."
+    },
+    "ACL_RULE_WITH_INVALID_IPV4_MASK": {
+        "desc": "Configure ACL_RULE with invalid SRC_IP_MASK address format.",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "SRC_IP_MASK"
+        ]
+    },
+    "ACL_RULE_WITH_INVALID_IPV6_MASK": {
+        "desc": "Configure ACL_RULE with invalid SRC_IPV6_MASK address format.",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "SRC_IPV6_MASK"
+        ]
+    },
+    "ACL_RULE_SRC_MASK_WITHOUT_IP": {
+        "desc": "SRC_IP_MASK without a paired SRC_IP must fail YANG validation.",
+        "eStr": [
+            "SRC_IP_MASK requires SRC_IP to be present"
+        ]
+    },
+    "ACL_RULE_SRC_MASK_WITH_CIDR_IP": {
+        "desc": "SRC_IP_MASK paired with a CIDR-notation SRC_IP must fail YANG validation.",
+        "eStr": [
+            "SRC_IP must be a plain host address"
+        ]
+    },
+    "ACL_RULE_DST_MASK_WITHOUT_IP": {
+        "desc": "DST_IP_MASK without a paired DST_IP must fail YANG validation.",
+        "eStr": [
+            "DST_IP_MASK requires DST_IP to be present"
+        ]
+    },
+    "ACL_RULE_DST_MASK_WITH_CIDR_IP": {
+        "desc": "DST_IP_MASK paired with a CIDR-notation DST_IP must fail YANG validation.",
+        "eStr": [
+            "DST_IP must be a plain host address"
+        ]
+    },
+    "ACL_RULE_IPV6_SRC_MASK_WITHOUT_IP": {
+        "desc": "SRC_IPV6_MASK without a paired SRC_IPV6 must fail YANG validation.",
+        "eStr": [
+            "SRC_IPV6_MASK requires SRC_IPV6 to be present"
+        ]
+    },
+    "ACL_RULE_IPV6_SRC_MASK_WITH_CIDR_IP": {
+        "desc": "SRC_IPV6_MASK paired with a prefix-notation SRC_IPV6 must fail YANG validation.",
+        "eStr": [
+            "SRC_IPV6 must be a plain host address"
+        ]
+    },
+    "ACL_RULE_IPV6_DST_MASK_WITHOUT_IP": {
+        "desc": "DST_IPV6_MASK without a paired DST_IPV6 must fail YANG validation.",
+        "eStr": [
+            "DST_IPV6_MASK requires DST_IPV6 to be present"
+        ]
+    },
+    "ACL_RULE_IPV6_DST_MASK_WITH_CIDR_IP": {
+        "desc": "DST_IPV6_MASK paired with a prefix-notation DST_IPV6 must fail YANG validation.",
+        "eStr": [
+            "DST_IPV6 must be a plain host address"
+        ]
     }
 }

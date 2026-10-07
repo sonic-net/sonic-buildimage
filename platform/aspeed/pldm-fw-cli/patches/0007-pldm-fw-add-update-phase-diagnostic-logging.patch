@@ -1,0 +1,148 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brian Carr <brcarr@nvidia.com>
+Date: Mon, 16 Jun 2026 04:02:00 +0300
+Subject: [PATCH 7/8] pldm-fw: add update-phase diagnostic logging
+
+Log UA update phase boundaries, RFD statistics, and blocking receive
+points so a hang shows exactly which PLDM message the UA is waiting for
+(transfer loop, VerifyComplete, or ApplyComplete) and how many bytes
+were actually transferred.
+
+Use info!/eprintln for the first 50 transfer waits (and every 1000th
+thereafter) so a low-RFD hang like offset 0 + tail blocks is visible
+with pldm-fw -d without flooding logs on a full ~16k-block transfer.
+
+---
+ pldm-fw/src/ua.rs | 66 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 62 insertions(+), 4 deletions(-)
+
+diff --git a/pldm-fw/src/ua.rs b/pldm-fw/src/ua.rs
+index 958381c..c4d8e91 100644
+--- a/pldm-fw/src/ua.rs	2026-08-06 07:30:33.057146241 +0300
++++ b/pldm-fw/src/ua.rs	2026-08-06 07:30:33.021145984 +0300
+@@ -382,11 +382,34 @@
+         )));
+     }
+ 
++    info!(
++        "UpdateComponent accepted: id=0x{:04x} index={index} \
++         file_size=0x{sz:08x} ({sz} bytes) version={}",
++        component.identifier,
++        component.version,
++    );
++
+     let start = chrono::Utc::now();
++    let mut rfd_accepted: u32 = 0;
++    let mut rfd_rejected: u32 = 0;
+ 
+     loop {
+         // we should be in update mode, handle incoming data requests
++        let rfd_seen = rfd_accepted + rfd_rejected;
++        if rfd_seen < 50 || (rfd_seen > 0 && rfd_seen % 1000 == 0) {
++            info!(
++                "waiting for FD command (0x15 RequestFirmwareData or \
++                 0x16 TransferComplete); accepted={rfd_accepted} \
++                 rejected={rfd_rejected} transferred={sz_done}/{sz}"
++            );
++        } else {
++            debug!(
++                "waiting for FD command; accepted={rfd_accepted} \
++                 rejected={rfd_rejected} transferred={sz_done}/{sz}"
++            );
++        }
+         let (fw_req, mut req_ep) = pldm::pldm_rx_req(listener)?;
++        debug!("received FD command 0x{:02x}", fw_req.cmd);
+ 
+         if fw_req.typ != PLDM_TYPE_FW {
+             return Err(PldmUpdateError::new_proto(format!(
+@@ -424,10 +447,18 @@
+                 };
+ 
+                 if let Some(cc) = err_cc {
+-                    debug!(
+-                        "rejecting RequestFirmwareData offset {offset} \
+-                         len {len} (image size {comp_size}) with cc 0x{cc:02x}"
+-                    );
++                    rfd_rejected += 1;
++                    if rfd_rejected <= 50 || rfd_rejected % 1000 == 0 {
++                        info!(
++                            "rejecting RequestFirmwareData offset {offset} \
++                             len {len} (image size {comp_size}) with cc 0x{cc:02x}"
++                        );
++                    } else {
++                        debug!(
++                            "rejecting RequestFirmwareData offset {offset} \
++                             len {len} (image size {comp_size}) with cc 0x{cc:02x}"
++                        );
++                    }
+                     let mut fw_resp = fw_req.response();
+                     fw_resp.cc = cc;
+                     pldm::pldm_tx_resp(&mut req_ep, &fw_resp)?;
+@@ -450,7 +481,20 @@
+ 
+                 pldm::pldm_tx_resp(&mut req_ep, &fw_resp)?;
+ 
++                rfd_accepted += 1;
+                 sz_done += len;
++                if rfd_accepted == 1 || rfd_accepted % 1000 == 0 {
++                    info!(
++                        "RFD #{rfd_accepted}: offset=0x{offset:08x} len=0x{len:x} \
++                         transferred={sz_done}/{sz}"
++                    );
++                }
++                if sz_done >= sz {
++                    eprintln!(
++                        "pldm-fw: all {sz} component bytes sent to FD; \
++                         waiting for TransferComplete (0x16)"
++                    );
++                }
+                 let elapsed = chrono::Utc::now() - start;
+ 
+                 let bps;
+@@ -486,6 +530,13 @@
+                 let res = fw_req.data[0];
+                 let elapsed = chrono::Utc::now() - start;
+ 
++                info!(
++                    "TransferComplete: result=0x{res:02x} accepted_rfd={rfd_accepted} \
++                     rejected_rfd={rfd_rejected} transferred={sz_done}/{sz} \
++                     duration={}s",
++                    elapsed.num_seconds()
++                );
++
+                 if res == 0 {
+                     let rate = elapsed
+                         .checked_div(sz_done as i32)
+@@ -524,7 +575,10 @@
+     }
+ 
+     /* Verify results.. */
++    eprintln!("pldm-fw: transfer phase done; waiting for VerifyComplete (0x17)");
++    info!("waiting for VerifyComplete (0x17)");
+     let (fw_req, mut req_ep) = pldm::pldm_rx_req(listener)?;
++    info!("received FD command 0x{:02x}", fw_req.cmd);
+     match fw_req.cmd {
+         0x17 => {
+             let res = fw_req.data[0];
+@@ -541,6 +595,7 @@
+                     "firmware verify failure (verify result 0x{res:02x}: {detail:?})"
+                 )));
+             }
++            info!("VerifyComplete: result=0x{res:02x} (success)");
+         }
+         _ => {
+             return Err(PldmUpdateError::new_update(
+@@ -554,7 +609,10 @@
+     drop(req_ep);
+ 
+     /* Apply */
++    eprintln!("pldm-fw: verify phase done; waiting for ApplyComplete (0x18)");
++    info!("waiting for ApplyComplete (0x18)");
+     let (fw_req, mut req_ep) = pldm::pldm_rx_req(listener)?;
++    info!("received FD command 0x{:02x}", fw_req.cmd);
+     let activation_modification = match fw_req.cmd {
+         0x18 => {
+             if fw_req.data.is_empty() {
+
+--
+2.49.0

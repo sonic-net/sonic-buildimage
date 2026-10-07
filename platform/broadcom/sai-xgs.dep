@@ -1,0 +1,15 @@
+#DPKG FRK
+XGS_DEP_FILES := $(SONIC_COMMON_FILES_LIST) platform/broadcom/sai-xgs.mk platform/broadcom/sai-xgs.dep
+XGS_DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
+
+# Include the remote artifact metadata because the package URL may be mutable.
+XGS_SAI_FLAGS := $(shell SKIP_BUILD_HOOK=y wget --spider --server-response $($(BRCM_XGS_SAI)_URL) $($(BRCM_XGS_SAI_DEV)_URL) 2>&1 \
+				 | grep -Ev -- '--|Date:|x-ms-request-id' | sha256sum | awk '{print $$1}')
+
+$(BRCM_XGS_SAI)_CACHE_MODE := GIT_CONTENT_SHA
+$(BRCM_XGS_SAI)_DEP_FLAGS  := $(SONIC_COMMON_FLAGS_LIST) $(XGS_SAI_FLAGS)
+$(BRCM_XGS_SAI)_DEP_FILES  := $(XGS_DEP_FILES)
+
+$(BRCM_XGS_SAI_DEV)_CACHE_MODE := GIT_CONTENT_SHA
+$(BRCM_XGS_SAI_DEV)_DEP_FLAGS  := $(SONIC_COMMON_FLAGS_LIST) $(XGS_SAI_FLAGS)
+$(BRCM_XGS_SAI_DEV)_DEP_FILES  := $(XGS_DEP_FILES)

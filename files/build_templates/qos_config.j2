@@ -118,6 +118,10 @@
                     {%- else %}
                         {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
                     {%- endif %}
+                {%- elif 'SpineRouter' in local_router_type %}
+                    {%- if 'LeafRouter' in neighbor_info.type %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- endif %}
                 {%- endif %}
             {%- else %}
                 {%- if PORT_DOWNLINK.append(port) %}{%- endif %}

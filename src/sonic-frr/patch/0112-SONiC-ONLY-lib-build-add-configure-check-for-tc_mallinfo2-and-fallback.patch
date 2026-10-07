@@ -1,15 +1,11 @@
-From 4ea7a83c0ba673f0735ec839fdcbe458cbf14c3c Mon Sep 17 00:00:00 2001
+From 16756f02ab1cee5655b1d0cb6b2961c48118c744 Mon Sep 17 00:00:00 2001
 From: Ravi Minnikanti <rminnikanti@marvell.com>
 Date: Thu, 16 Apr 2026 20:25:12 +0530
-Subject: [PATCH] lib, build: add configure check for tc_mallinfo2 and fallback
- to tc_mallinfo
+Subject: [PATCH] lib, build: support gperftools without tc_mallinfo2
 
-gperftools versions prior to 2.16 do not provide tc_mallinfo2().
-Add configure.ac check for tc_mallinfo2() availability and fall back
-to tc_mallinfo() with struct mallinfo when not available.
+gperftools versions before 2.16 expose tc_mallinfo() but not tc_mallinfo2(). Detect the newer API at configure time and retain the compatible fallback used by SONiC builds.
 
-This fixes build failures with libgoogle-perftools-dev in Debian
-trixie which ships gperftools 2.15.
+Original-SONiC-Patch: 0112-SONiC-ONLY-lib-build-add-configure-check-for-tc_mallinfo2-and-fallback.patch
 
 Signed-off-by: Ravi Minnikanti <rminnikanti@marvell.com>
 ---
@@ -18,10 +14,10 @@ Signed-off-by: Ravi Minnikanti <rminnikanti@marvell.com>
  2 files changed, 13 insertions(+)
 
 diff --git a/configure.ac b/configure.ac
-index 9458c2237b..622979b000 100644
+index 8778c24f2d..5ecda26f9d 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -917,6 +917,11 @@ AC_DEFINE([HAVE_TCMALLOC], [1], [Enable tcmalloc])
+@@ -920,6 +920,11 @@ AC_DEFINE([HAVE_TCMALLOC], [1], [Enable tcmalloc])
    *) AC_MSG_ERROR([bad value ${enableval} for --enable-gperf-tcmalloc]) ;;
  esac],[gperf_tcmalloc_enabled=false])
  
@@ -34,10 +30,10 @@ index 9458c2237b..622979b000 100644
  AS_IF([test "$with_crypto" = "openssl"], [
  AC_CHECK_LIB([crypto], [EVP_DigestInit], [LIBS="$LIBS -lcrypto"], [], [])
 diff --git a/lib/vty.c b/lib/vty.c
-index 39aa86645a..b541b783eb 100644
+index 07b2251da2..27ddb2df10 100644
 --- a/lib/vty.c
 +++ b/lib/vty.c
-@@ -3503,7 +3503,11 @@ DEFUN_NOSH (show_tcmalloc_stats,
+@@ -3334,7 +3334,11 @@ DEFUN_NOSH (show_tcmalloc_stats,
  	    "tcmalloc library info\n"
  	    "Show tcmalloc stats\n")
  {
@@ -49,7 +45,7 @@ index 39aa86645a..b541b783eb 100644
  	char buf[30];
  	size_t sval;
  	int major = 0, minor = 0;
-@@ -3513,7 +3517,11 @@ DEFUN_NOSH (show_tcmalloc_stats,
+@@ -3344,7 +3348,11 @@ DEFUN_NOSH (show_tcmalloc_stats,
  
  	vty_out(vty, "Tcmalloc version '%s' (%d.%d)\n", str, major, minor);
  
@@ -61,6 +57,3 @@ index 39aa86645a..b541b783eb 100644
  
  	vty_out(vty, "Tcmalloc mallinfo statistics:\n");
  	vty_out(vty, "  Total heap allocated:  %s\n",
--- 
-2.25.1
-

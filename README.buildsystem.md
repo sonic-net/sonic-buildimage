@@ -189,6 +189,45 @@ $(SOME_DOCKER)_LOAD_DOCKERS += $(SOME_OTHER_DOCkER) # docker image from which th
 SONIC_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this group
 ```
 
+**SONIC_BAZEL_DOCKER_IMAGES**
+Target group for docker images that can be built with [Bazel](https://bazel.build/) instead of the legacy Make-based flow.
+
+Each component can opt-into this mechanism by joining the group, and specifying how Bazel-ready it is:
+
+```make
+$(SOME_DOCKER)_BAZEL_READINESS = experimental # If consumers can try out the Bazel build, but shouldn't trust it fully.
+$(SOME_DOCKER)_BAZEL_READINESS = stable # If consumers should use the Bazel build as the canonical, and only fall back if really necessary.
+SONIC_BAZEL_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this target group
+```
+
+A docker outside the group is never built with Bazel. A docker in it must declare a readiness level, and a readiness level declared outside it is a build error.
+
+For now, the readiness level is a maintainer's judgement.
+
+- `experimental` means a maintainer has opened the Bazel build for the community to try, but still considers the Make-based build the canonical one.
+- `stable` means a maintainer vouches for the image in production terms, and considers the Bazel build canonical for that component. It deliberately does **not** mean the Bazel image is byte-identical to the Make-built one: a Bazel image may legitimately differ and still be the better artifact.
+
+The image is still registered in `SONIC_DOCKER_IMAGES` / `SONIC_INSTALL_DOCKER_IMAGES`, and still carries `_PATH`, `_VERSION` and `_PACKAGE_NAME`, so it is installed and listed in the sonic-package-manager catalog exactly as a Make-built one. Irrelevant attributes such as `_DEPENDS` and `_LOAD_DOCKERS` are declared unconditionally too, and are simply left unread whenever the Bazel path is selected.
+
+Debug images inherit their parent's readiness.
+
+To make a target build with Bazel, define its readiness, as well as a the base image it should have:
+
+```make
+SOME_DOCKER = some_docker.gz # name of your docker (must match dockers/<name>/BUILD.bazel)
+$(SOME_DOCKER)_BAZEL_BASE += $(SOME_BASE_DOCKER) # base docker(s) the Bazel build depends on
+$(SOME_DOCKER)_BAZEL_READINESS = experimental # how ready the Bazel build is
+SONIC_BAZEL_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this target group
+```
+
+When building, you can use the `BAZEL_MIN_READINESS` configuration knob (defined in **rules/config**):
+
+| `BAZEL_MIN_READINESS` | Components built with Bazel |
+| --- | --- |
+| `bazel_disabled` | none |
+| `experimental` | those declaring `experimental` or `stable` |
+| `stable` | those declaring `stable` |
+
 ## Tips & Tricks
 Although every target is built inside a sonic-slave container, which exits at the end of build, you can enter bash of sonic-slave using this command:
 ```

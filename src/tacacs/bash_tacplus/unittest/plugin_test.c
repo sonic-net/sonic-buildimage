@@ -93,10 +93,15 @@ void testcase_tacacs_authorization_success() {
 
 	// test connection success case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	reset_mock_attrib_pair();
 	int result = tacacs_authorization("test_user","tty0","test_host","test_command",testargv,2);
 
 	// wuthorization success
 	CU_ASSERT_EQUAL(result, 0);
+	CU_ASSERT_EQUAL(mock_attrib_pair_count, 1);
+	CU_ASSERT_STRING_EQUAL(mock_attrib_pair_name, "DeviceType");
+	CU_ASSERT_EQUAL(mock_attrib_pair_separator, '*');
+	CU_ASSERT_STRING_EQUAL(mock_attrib_pair_value, "Test Device Type");
 }
 
 /* Test authorization_with_host_and_tty get success case */

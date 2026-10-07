@@ -1,8 +1,10 @@
 {
     "chassis": {
-        "Goldfinch": {
+        "SKU_GOLDFINCH": {
             "component": {
-                "BIOS": {}
+                "Ast2720()": {},
+                "Uboot()": {},
+                "SysCpld(addr=12-0043)": {}
             }
         }
     }

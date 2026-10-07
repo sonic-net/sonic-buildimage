@@ -179,6 +179,9 @@ add_sonic_to_initramfs() {
 
     # Copy the INSTALLER payload
     cp $CDIR/$INSTALLER_PAYLOAD ./debian/
+    # A dockerfs of 4GiB or more is shipped next to the payload rather than inside it
+    unzip -l $CDIR/$INSTALLER_PAYLOAD $FILESYSTEM_DOCKERFS > /dev/null 2>&1 || \
+        cp $CDIR/$FILESYSTEM_DOCKERFS ./debian/
 
 cat > scripts/initrd-install << EOF
 #!/bin/bash

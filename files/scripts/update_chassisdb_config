@@ -58,11 +58,16 @@ def main():
            if delete_config:
                del data['DATABASES'][chassis_db]
 
-    with open(jsonfile, "w") as write_file:
-        data_publish = data_keep if keep_config else data
-        if port_number:
-            data_publish['INSTANCES']['redis_chassis']['port'] = int(port_number)
+    data_publish = data_keep if keep_config else data
+    if port_number:
+        data_publish['INSTANCES']['redis_chassis']['port'] = int(port_number)
+
+    # jsonfile is already visible to readers, so write a temp file and rename it into
+    # place. Truncating jsonfile directly exposes an empty file to concurrent readers.
+    temp_file = '{}.new'.format(jsonfile)
+    with open(temp_file, "w") as write_file:
         json.dump(data_publish, write_file, indent=4, separators=(',', ': '))
+    os.replace(temp_file, jsonfile)
     syslog.syslog(syslog.LOG_INFO,
                   'remove chassis_db from config file {}'.format(jsonfile))
 
