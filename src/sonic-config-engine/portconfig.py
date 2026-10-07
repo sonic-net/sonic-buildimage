@@ -406,6 +406,8 @@ class BreakoutCfg(object):
             if isinstance(other, BreakoutCfg.BreakoutModeEntry):
                 if self.num_ports != other.num_ports:
                     return False
+                if self.default_speed != other.default_speed:
+                    return False
                 if self.supported_speed != other.supported_speed:
                     return False
                 if self.num_assigned_lanes != other.num_assigned_lanes:

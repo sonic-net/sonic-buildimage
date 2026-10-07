@@ -269,6 +269,14 @@ class TestCfgGenPlatformJson(TestCase):
         with self.assertRaises(RuntimeError):
             get_child_ports("Ethernet0", "0x100G[40G]", self.platform_json)
 
+    def test_invalid_breakout_mode_rejects_swapped_default_speed(self):
+        from portconfig import get_child_ports
+        with self.assertRaises(RuntimeError) as ctx:
+            get_child_ports("Ethernet0", "1x40G[100G]", self.platform_json)
+        self.assertIn("Ethernet0", str(ctx.exception))
+        self.assertIn("Valid modes:", str(ctx.exception))
+        self.assertIn("1x100G[40G]", str(ctx.exception))
+
     def test_invalid_hwsku_breakout_values_report_valid_modes(self):
         from portconfig import parse_platform_json_file
 
