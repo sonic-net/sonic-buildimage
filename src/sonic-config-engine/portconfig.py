@@ -42,6 +42,11 @@ OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role"]
 BRKOUT_PATTERN = r'^(\d{1,6})x(\d{1,6}G?)(.*)$'
 BRKOUT_OPTION_PATTERN = r'\[[^\[\]]+\]|\(\d{1,6}\)'
 
+try:
+    STRING_TYPES = (basestring,)
+except NameError:
+    STRING_TYPES = (str,)
+
 #
 # Helper Functions
 #
@@ -565,6 +570,10 @@ def get_minimum_breakout_mode(interface, properties):
     return max(candidates, key=lambda candidate: candidate[0])[1]
 
 
+def get_valid_breakout_modes(properties):
+    return ", ".join(properties.get('breakout_modes', {}).keys())
+
+
 def parse_platform_json_file(hwsku_json_file, platform_json_file):
     ports = {}
     port_alias_map = {}
@@ -584,12 +593,32 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
         raise Exception("INTF_KEY is not present in hwsku file")
 
     for intf in port_dict[INTF_KEY]:
+        properties = port_dict[INTF_KEY][intf]
         if hwsku_dict is not None:
             if intf not in hwsku_dict[INTF_KEY]:
                 continue
-            brkout_mode = hwsku_dict[INTF_KEY][intf][BRKOUT_MODE]
+            hwsku_entry = hwsku_dict[INTF_KEY][intf]
+            if not isinstance(hwsku_entry, dict) or BRKOUT_MODE not in hwsku_entry:
+                raise RuntimeError(
+                    "Invalid breakout mode for interface '{}': missing '{}'. Valid modes: {}".format(
+                        intf,
+                        BRKOUT_MODE,
+                        get_valid_breakout_modes(properties)
+                    )
+                )
+
+            brkout_mode = hwsku_entry[BRKOUT_MODE]
+            if not isinstance(brkout_mode, STRING_TYPES) or not brkout_mode.strip():
+                raise RuntimeError(
+                    "Invalid breakout mode '{}' for interface '{}': expected a non-empty string. "
+                    "Valid modes: {}".format(
+                        brkout_mode,
+                        intf,
+                        get_valid_breakout_modes(properties)
+                    )
+                )
         else:
-            brkout_mode = get_minimum_breakout_mode(intf, port_dict[INTF_KEY][intf])
+            brkout_mode = get_minimum_breakout_mode(intf, properties)
 
         # Validate the per-port breakout selection against the cage's valid
         # breakout_modes in platform.json and expand it into port entries.
@@ -603,7 +632,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
                     brkout_mode,
                     intf,
                     e,
-                    ", ".join(port_dict[INTF_KEY][intf].get('breakout_modes', {}).keys())
+                    get_valid_breakout_modes(properties)
                 )
             )
 

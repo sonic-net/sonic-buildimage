@@ -269,6 +269,29 @@ class TestCfgGenPlatformJson(TestCase):
         with self.assertRaises(RuntimeError):
             get_child_ports("Ethernet0", "0x100G[40G]", self.platform_json)
 
+    def test_invalid_hwsku_breakout_values_report_valid_modes(self):
+        from portconfig import parse_platform_json_file
+
+        with open(self.platform_json) as platform_file:
+            platform_data = json.load(platform_file)
+
+        invalid_entries = [
+            {},
+            "invalid",
+            {'default_brkout_mode': None},
+            {'default_brkout_mode': 100},
+            {'default_brkout_mode': ''},
+        ]
+        for entry in invalid_entries:
+            hwsku_data = {INTF_KEY: {'Ethernet0': entry}}
+            with mock.patch('portconfig.readJson', side_effect=[platform_data, hwsku_data]):
+                with self.assertRaises(RuntimeError) as ctx:
+                    parse_platform_json_file('hwsku.json', 'platform.json')
+
+            self.assertIn("Ethernet0", str(ctx.exception))
+            self.assertIn("Valid modes:", str(ctx.exception))
+            self.assertIn("1x100G[40G]", str(ctx.exception))
+
     def test_breakout_mode_parser_accepts_platform_variants(self):
         from portconfig import BreakoutCfg
         variants = [
