@@ -133,3 +133,8 @@ sources.list.*
 
 # Generated mirror configs
 apt-retries-count
+
+# dpkg cache-validation script outputs
+poc-results/
+cache-validation-out/
+poc-run.log

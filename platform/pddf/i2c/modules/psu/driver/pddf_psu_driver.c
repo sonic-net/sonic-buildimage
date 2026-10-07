@@ -358,8 +358,6 @@ static void psu_remove(struct i2c_client *client)
 {
 	int i=0, ret = 0;
     struct psu_data *data = i2c_get_clientdata(client);
-	PSU_PDATA *platdata = (PSU_PDATA *)client->dev.platform_data; // use dev_get_platdata()
-	PSU_DATA_ATTR *platdata_sub = platdata->psu_attrs;
 	struct sensor_device_attribute *ptr = NULL;
 
 	if (pddf_psu_ops.pre_remove)
@@ -379,14 +377,6 @@ static void psu_remove(struct i2c_client *client)
 	}
     pddf_dbg(PSU, KERN_ERR "%s: Freed all the memory allocated for attributes\n", __FUNCTION__);
     kfree(data);
-	if (platdata_sub) {
-		printk(KERN_DEBUG "%s: Freeing platform subdata\n", __FUNCTION__);
-		kfree(platdata_sub);
-	}
-	if (platdata) {
-		printk(KERN_DEBUG "%s: Freeing platform data\n", __FUNCTION__);
-		kfree(platdata);
-	}
 
 	if (pddf_psu_ops.post_remove)
     {

@@ -375,5 +375,74 @@
                 ]
             }
         }
+    },
+    "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH": {
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "GLOBAL",
+                        "POLL_INTERVAL": 200,
+                        "BIG_RED_SWITCH": "disable"
+                    }
+                ]
+            }
+        }
+    },
+    "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH": {
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "GLOBAL",
+                        "BIG_RED_SWITCH": "on"
+                    }
+                ]
+            }
+        }
+    },
+    "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH_ENABLE": {
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "GLOBAL",
+                        "POLL_INTERVAL": 200,
+                        "BIG_RED_SWITCH": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "PFC_WDOG_WITH_BIG_RED_SWITCH_ON_NON_GLOBAL": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "action": "drop",
+                        "detection_time": 400,
+                        "restoration_time": 800,
+                        "BIG_RED_SWITCH": "enable"
+                    }
+                ]
+            }
+        }
     }
 }

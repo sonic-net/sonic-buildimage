@@ -6,6 +6,11 @@ import socket
 from swsscommon import swsscommon
 from ipaddress import ip_network, IPv4Network
 
+
+class InvalidIdentifierError(ValueError):
+    """Raised when a nexthop identifier is unsafe to render."""
+
+
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
     def __init__(self, common_objs, db, table):
@@ -33,7 +38,10 @@ class StaticRouteMgr(Manager):
     ROUTE_ADVERTISE_DISABLE_TAG = '2'
 
     def set_handler(self, key, data):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return True
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         arg_list    = lambda v: v.split(',') if len(v.strip()) != 0 else None
@@ -58,6 +66,8 @@ class StaticRouteMgr(Manager):
             ip_nh_set = IpNextHopSet(is_ipv6, bkh_list, nh_list, intf_list, dist_list, nh_vrf_list)
             cur_nh_set, cur_route_tag = self.static_routes.get(vrf, {}).get(ip_prefix, (IpNextHopSet(is_ipv6), route_tag))
             cmd_list = self.static_route_commands(ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag)
+        except InvalidIdentifierError:
+            return True
         except Exception as exc:
             log_crit("Got an exception %s: Traceback: %s" % (str(exc), traceback.format_exc()))
             return False
@@ -128,7 +138,10 @@ class StaticRouteMgr(Manager):
         return False
 
     def del_handler(self, key):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         if self.skip_appl_del(vrf, ip_prefix):
@@ -162,24 +175,41 @@ class StaticRouteMgr(Manager):
         key example: APPL_DB   vrf:5.5.5.0/24, 5.5.5.0/24, vrf:2001::0/64, 2001::0/64
                      CONFIG_DB vrf|5.5.5.0/24, 5.5.5.0/24, vrf|2001::0/64, 2001::0/64
         """
-        vrf = ""
-        prefix = ""
+        if not isinstance(key, str):
+            log_err("Invalid static route key {!r}".format(key))
+            return None
 
         if '|' in key:
-            return tuple(key.split('|', 1))
+            vrf, prefix = key.split('|', 1)
         else:
             try:
-                _ = ip_network(key)
                 vrf, prefix = 'default', key
+                ip_network(prefix, strict=False)
             except ValueError:
                 # key in APPL_DB
-                log_debug("static route key {} is not prefix only formart, split with ':'".format(key))
+                log_debug("static route key {!r} is not prefix-only format, split with ':'".format(key))
                 output = key.split(':', 1)
                 if len(output) < 2:
-                    log_debug("invalid input in APPL_DB {}".format(key))
-                    raise ValueError
+                    log_err("Invalid static route key {!r}".format(key))
+                    return None
                 vrf = output[0]
                 prefix = key[len(vrf)+1:]
+
+        if not swsscommon.isVrfNameValid(vrf):
+            log_err("Invalid VRF in static route key {!r}".format(key))
+            return None
+
+        if (not prefix or '%' in prefix or
+                any(char < '\x21' or char > '\x7e' for char in prefix)):
+            log_err("Invalid prefix in static route key {!r}".format(key))
+            return None
+
+        try:
+            ip_network(prefix, strict=False)
+        except ValueError:
+            log_err("Invalid prefix in static route key {!r}".format(key))
+            return None
+
         return vrf, prefix
 
     def static_route_commands(self, ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag):
@@ -268,9 +298,19 @@ class IpNextHop:
         self.ip = zero_ip(af_id) if dst_ip is None or dst_ip == '' else dst_ip
         self.interface = '' if if_name is None else if_name
         self.nh_vrf = '' if vrf is None else vrf
-        if not self.is_portchannel():
+        portchannel_nexthop = self.is_portchannel()
+        if self.interface and not swsscommon.isInterfaceNameValid(self.interface):
+            log_err("Invalid interface name for nexthop: {!r}".format(self.interface))
+            raise InvalidIdentifierError
+        if portchannel_nexthop and not swsscommon.isInterfaceNameValid(self.ip):
+            log_err("Invalid PortChannel name for nexthop: {!r}".format(self.ip))
+            raise InvalidIdentifierError
+        if self.nh_vrf and not swsscommon.isVrfNameValid(self.nh_vrf):
+            log_err("Invalid VRF name for nexthop: {!r}".format(self.nh_vrf))
+            raise InvalidIdentifierError
+        if not portchannel_nexthop:
             self.is_ip_valid()
-        if self.blackhole != 'true' and self.is_zero_ip() and not self.is_portchannel() and len(self.interface.strip()) == 0:
+        if self.blackhole != 'true' and self.is_zero_ip() and not portchannel_nexthop and len(self.interface.strip()) == 0:
             log_err('Mandatory attribute not found for nexthop')
             raise ValueError
     def __eq__(self, other):
@@ -325,5 +365,7 @@ class IpNextHopSet(set):
             try:
                 self.add(IpNextHop(af, item(bkh_list, idx), item(ip_list, idx), item(intf_list, idx),
                                    item(dist_list, idx), item(vrf_list, idx), ))
+            except InvalidIdentifierError:
+                raise
             except ValueError:
                 continue
