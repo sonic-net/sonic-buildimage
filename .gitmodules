@@ -9,7 +9,6 @@
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
 	url = https://github.com/yijingyan2/sonic-sairedis
-	branch = 202511
 [submodule "sonic-swss"]
 	path = src/sonic-swss
 	url = https://github.com/sonic-net/sonic-swss
