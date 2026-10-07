@@ -393,6 +393,10 @@ class MicasCpo(CpoBase):
     get_transceiver_threshold_info, get_lpmode, ...) on the objects that
     get_cpo() returns. Methods not defined here or in CpoBase are served
     by the legacy port object, as they were before get_cpo() existed.
+
+    Low-power mode and reset act on the virtual module through its OE, the
+    controller in joint mode. They use the OE's CMIS module controls through
+    the legacy port object, as before.
     """
 
     def __init__(self, port):
@@ -418,3 +422,18 @@ class MicasCpo(CpoBase):
 
     def is_replaceable(self):
         return False
+
+    # CpoBase leaves these hooks to the platform, so they are defined here
+    # rather than reaching the legacy port object through __getattr__.
+
+    def get_reset_status(self):
+        return self.port.get_reset_status()
+
+    def reset(self):
+        return self.port.reset()
+
+    def get_lpmode(self):
+        return self.port.get_lpmode()
+
+    def set_lpmode(self, lpmode):
+        return self.port.set_lpmode(lpmode)
