@@ -2677,7 +2677,7 @@
         {
           "msi_vector_num": 0,
           "irq_chip_name": "humm-msi-0",
-          "irq_line_mask": "0001ff00",
+          "irq_line_mask": "0001ff01",
           "interrupt_enable_reg": "170",
           "interrupt_status_reg": "174"
         },
@@ -2694,6 +2694,17 @@
           "irq_line_mask": "ffffffff",
           "interrupt_enable_reg": "180",
           "interrupt_status_reg": "184"
+        }
+      ]
+    }{% elif SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1d %}{
+      "num_msi_vectors": 1,
+      "msi_domains": [
+        {
+          "msi_vector_num": 0,
+          "irq_chip_name": "humm-msi-0",
+          "irq_line_mask": "00000001",
+          "interrupt_enable_reg": "170",
+          "interrupt_status_reg": "174"
         }
       ]
     }{% else %}{}{% endif %},
@@ -18263,7 +18274,12 @@
     "dev_attr": {
       "event_driven_power_cycle_control_reg_offset": "0x28",
       "event_driven_power_cycle_control_bit": 4,
-      "watchdog_counter_reg_offset": "0x1E0"
+      "watchdog_counter_reg_offset": "0x1E0",
+      "use_watchdog_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1d %}{
+        "msi_domain": 0,
+        "hw_irq": 0,
+        "watchdog_counter_msi_reg": "0x1D8"
+      }{% else %}{}{% endif %}
     }
   }
 }
