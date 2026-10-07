@@ -41,7 +41,7 @@
             "colmap": {"green":"green", "red":"amber"}
         },
 
-        "pwm_to_duty_cycle": "lambda pwm: (pwm*1.0)"
+        "pwm_to_duty_cycle": {"input_offset": 0, "multiplier": 1, "pre_divide_offset": 0, "divisor": 1, "output_offset": 0, "divide_before_multiply": false, "force_float": true}
     },
 
     "XCVR":

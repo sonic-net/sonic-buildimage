@@ -1,0 +1,74 @@
+Description: Bound PEAP response wait time
+ Discard unusable responses while preserving the configured server timeout.
+ Use a monotonic deadline so repeated unusable responses cannot extend the
+ response wait beyond that timeout.
+Author: Ashutosh Agrawal <ashu@cisco.com>
+Forwarded: not-needed
+---
+--- a/src/radpeapclient.c
++++ b/src/radpeapclient.c
+@@ -19,6 +19,7 @@
+ 
+ #include <stdio.h>
+ #include <stdarg.h>
++#include <time.h>
+ #include <stdlib.h>
+ #include <syslog.h>
+ #include "eap_tls.h"
+@@ -2576,2 +2576,4 @@
+-	ret = select(peap_instance.sockfd + 1, &set, NULL, NULL,
+-			response_timeout);
++	if ((response_timeout->tv_sec != 0) || (response_timeout->tv_usec != 0)) {
++		ret = select(peap_instance.sockfd + 1, &set, NULL, NULL,
++				response_timeout);
++	}
+@@ -2638,6 +2638,8 @@
+ 	int retval = 0;
+ 	uint8_t ignore_reply = FALSE;
+ 	struct timeval response_timeout = { 0 };
++	struct timespec response_deadline = { 0 };
++	struct timespec current_time = { 0 };
+ 
+ 	/* Take the initial cleint_state, to start with we user it here */
+ 	client_state = peap_instance.client_state;
+@@ -3202,14 +3202,37 @@
+ 
+ 		peap_log_debug("handle_req_rep: after rad_peap_send \n");
+ 
+-		response_timeout.tv_sec = 0;
+-		response_timeout.tv_usec = 0;
++		if (clock_gettime(CLOCK_MONOTONIC, &response_deadline) < 0) {
++			peap_log_debug("handle_req_rep: Failed to get response deadline: %s\n",
++				strerror(errno));
++			return -1;
++		}
+ 		if (peap_instance.cur_serv) {
+-			response_timeout.tv_sec =
++			response_deadline.tv_sec +=
+ 				((radius_server_t *)peap_instance.cur_serv)->timeout;
+ 		}
+ 
+ 		do {
++			long remaining_nsec;
++
++			if (clock_gettime(CLOCK_MONOTONIC, &current_time) < 0) {
++				peap_log_debug("handle_req_rep: Failed to read response timeout: %s\n",
++					strerror(errno));
++				return -1;
++			}
++			response_timeout.tv_sec =
++				response_deadline.tv_sec - current_time.tv_sec;
++			remaining_nsec = response_deadline.tv_nsec - current_time.tv_nsec;
++			if (remaining_nsec < 0) {
++				response_timeout.tv_sec--;
++				remaining_nsec += 1000000000L;
++			}
++			if (response_timeout.tv_sec < 0) {
++				response_timeout.tv_sec = 0;
++				response_timeout.tv_usec = 0;
++			} else {
++				response_timeout.tv_usec = remaining_nsec / 1000;
++			}
+ 			retval = wait_for_server_response(&response_timeout);
+ 			if (retval < 0) {
+ 				peap_log_debug("handle_req_rep:Error in getting server entry \n");
