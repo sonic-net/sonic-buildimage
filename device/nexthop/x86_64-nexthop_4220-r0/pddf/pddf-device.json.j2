@@ -161,7 +161,6 @@
     "dev_info": {"device_type": "MULTIFPGAPCIE", "device_name": "CPUCARD_FPGA", "device_parent": "PCIE0", "device_bdf": "{{cpu_card_fpga_bdf}}", "dev_attr": {}},
     "dev_attr": {"pwr_cycle_reg_offset": "0x8", "pwr_cycle_enable_word": "0xdeadbeef", "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} 0x0 --bits=0:7", "reg_width": 32},
     "use_msi": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}{
-      "min_fpga_version": "0x86",
       "num_msi_vectors": 1,
       "msi_domains": [
         {"msi_vector_num": 0, "irq_chip_name": "ko-msi-0", "irq_line_mask": "00007f73", "interrupt_enable_reg": "20", "interrupt_status_reg": "24"}
@@ -1133,7 +1132,6 @@
     "dev_info": {"device_type": "MULTIFPGAPCIE", "device_name": "SWITCHCARD_FPGA", "device_parent": "PCIE0", "device_bdf": "{{switchcard_fpga_bdf}}", "dev_attr": {}},
     "dev_attr": {"pwr_cycle_reg_offset": "0x4", "pwr_cycle_enable_word": "0xdeadbeef", "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_bdf}} 0x0 --bits=0:7", "reg_width": 32},
     "use_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x07 %}{
-      "min_fpga_version": "0x7",
       "num_msi_vectors": 3,
       "msi_domains": [
         {"msi_vector_num": 0, "irq_chip_name": "blkt-msi-0", "irq_line_mask": "00001f11", "interrupt_enable_reg": "170", "interrupt_status_reg": "174"},

@@ -1241,7 +1241,6 @@
       "reg_width": 32
     },
     "use_msi": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}{
-      "min_fpga_version": "0x86",
       "num_msi_vectors": 1,
       "msi_domains": [
         {
@@ -2673,7 +2672,6 @@
       "reg_width": 32
     },
     "use_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1f %}{
-      "min_fpga_version": "0x1f",
       "num_msi_vectors": 3,
       "msi_domains": [
         {
