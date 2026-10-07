@@ -294,3 +294,23 @@ class TestCfgGenPlatformJson(TestCase):
         self.assertEqual(port_config['speed'], '25000')
         self.assertEqual(port_config['lanes'], '8')
         self.assertEqual(port_config['subport'], '1')
+
+    def test_cli_port_config_does_not_require_hwsku_name(self):
+        direct_argument = ['-p', self.platform_json, '-S', self.hwsku_json,
+                           '--var-json', 'PORT']
+        hwsku_argument = ['-k', 'Generic', '-p', self.platform_json, '-S', self.hwsku_json,
+                          '--var-json', 'PORT']
+
+        direct_output = json.loads(self.run_script(direct_argument))
+        hwsku_output = json.loads(self.run_script(hwsku_argument))
+
+        self.assertDictEqual(direct_output, hwsku_output)
+
+    def test_cli_port_config_uses_platform_fallback_without_hwsku_config(self):
+        argument = ['-p', self.platform_json, '--var-json', 'PORT']
+        output = json.loads(self.run_script(argument))
+
+        self.assertEqual(output['Ethernet0']['speed'], '100000')
+        self.assertEqual(output['Ethernet0']['lanes'], '0,1,2,3')
+        self.assertEqual(output['Ethernet0']['alias'], 'Eth1')
+        self.assertNotIn('Ethernet1', output)
