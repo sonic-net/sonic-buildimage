@@ -1294,14 +1294,6 @@ IPV4 DHCP Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 incoming DHCPv4 packet. A condition is referenced by name from **DHCP_SERVER_IPV4_BINDING**;
 defining one on its own has no effect.
 
-**Note:** This change adds the schema for **DHCP_SERVER_IPV4_MATCH** and
-**DHCP_SERVER_IPV4_BINDING** only. The `mode` leaf of **DHCP_SERVER_IPV4** does not accept
-`MATCH` yet, and the DHCP server runtime does not read these two tables yet, so entries
-configured here are validated against the schema but do not affect address assignment. The
-address-selection and Kea-generation behavior described in the rest of this section takes
-effect once `MATCH` mode and the corresponding `dhcpservd` support are added in a follow-up
-change.
-
 | Field | Description |
 | ----- | ----------- |
 | name  | Key. User-defined name of the condition. Must not start or end with whitespace or control characters. Must not contain `\|` or `,`: these are the Config DB key separator and leaf-list separator respectively, so a name containing either cannot be referenced from **DHCP_SERVER_IPV4_BINDING**. |

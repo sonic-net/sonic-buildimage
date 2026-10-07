@@ -28,6 +28,62 @@ def dhcp_vlan200(mock_db):
 
 
 class TestConfigDHCPServerMatch:
+    def test_add_interface_in_match_mode(self, mock_db):
+        result = invoke(
+            mock_db,
+            IPV4_COMMAND.commands["add"],
+            [
+                "Vlan200",
+                "--mode=MATCH",
+                "--lease_time=1000",
+                "--gateway=100.1.2.2",
+                "--netmask=255.255.255.0",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan200", "mode") == "MATCH"
+
+    def test_update_disabled_interface_to_match_mode(self, mock_db):
+        result = invoke(mock_db, IPV4_COMMAND.commands["update"], ["Vlan300", "--mode=MATCH"])
+
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "mode") == "MATCH"
+
+    def test_update_enabled_interface_to_match_mode(self, mock_db):
+        result = invoke(mock_db, IPV4_COMMAND.commands["update"], ["Vlan100", "--mode=MATCH"])
+
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode") == "MATCH"
+
+    def test_update_enabled_interface_to_match_mode_without_binding(self, mock_db):
+        mock_db.delete("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-a")
+        mock_db.delete("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|fallback")
+
+        result = invoke(mock_db, IPV4_COMMAND.commands["update"], ["Vlan100", "--mode=MATCH"])
+
+        assert result.exit_code == 2
+        assert "requires at least one binding" in result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode") == "PORT"
+
+    def test_enable_match_interface_with_valid_bindings(self, mock_db):
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state", "disabled")
+
+        result = invoke(mock_db, IPV4_COMMAND.commands["enable"], ["Vlan100"])
+
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state") == "enabled"
+
+    def test_enable_match_interface_without_binding(self, mock_db):
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "mode", "MATCH")
+
+        result = invoke(mock_db, IPV4_COMMAND.commands["enable"], ["Vlan300"])
+
+        assert result.exit_code == 2
+        assert "requires at least one binding" in result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "state") == "disabled"
+
     def test_delete_interface_referenced_by_match_binding(self, mock_db):
         for key in list(mock_db.keys("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|*")):
             mock_db.delete("CONFIG_DB", key)

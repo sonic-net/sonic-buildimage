@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import hashlib
 import ipaddress
 import os
 import syslog
@@ -12,6 +13,8 @@ DHCP_SERVER_IPV4 = "DHCP_SERVER_IPV4"
 DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS = "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS"
 DHCP_SERVER_IPV4_RANGE = "DHCP_SERVER_IPV4_RANGE"
 DHCP_SERVER_IPV4_PORT = "DHCP_SERVER_IPV4_PORT"
+DHCP_SERVER_IPV4_MATCH = "DHCP_SERVER_IPV4_MATCH"
+DHCP_SERVER_IPV4_BINDING = "DHCP_SERVER_IPV4_BINDING"
 VLAN_INTERFACE = "VLAN_INTERFACE"
 VLAN_MEMBER = "VLAN_MEMBER"
 DPUS = "DPUS"
@@ -20,6 +23,9 @@ MID_PLANE_BRIDGE_SUBNET_ID = 10000
 PORT_MODE_CHECKER = ["DhcpServerTableCfgChangeEventChecker", "DhcpPortTableEventChecker", "DhcpRangeTableEventChecker",
                      "DhcpOptionTableEventChecker", "VlanTableEventChecker", "VlanIntfTableEventChecker",
                      "VlanMemberTableEventChecker"]
+MATCH_MODE_CHECKER = ["DhcpServerTableCfgChangeEventChecker", "DhcpMatchTableEventChecker",
+                      "DhcpBindingTableEventChecker", "DhcpRangeTableEventChecker", "DhcpOptionTableEventChecker",
+                      "VlanTableEventChecker", "VlanIntfTableEventChecker", "VlanMemberTableEventChecker"]
 SMART_SWITCH_CHECKER = ["DpusTableEventChecker", "MidPlaneTableEventChecker"]
 LEASE_UPDATE_SCRIPT_PATH = "/etc/kea/lease_update.sh"
 DEFAULT_LEASE_TIME = 900
@@ -29,6 +35,8 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 DHCP_OPTION_FILE = f"{SCRIPT_DIR}/dhcp_option.csv"
 SUPPORT_DHCP_OPTION_TYPE = ["binary", "boolean", "ipv4-address", "string", "uint8", "uint16", "uint32"]
 OPTION_DHCP_SERVER_ID = "54"
+SUPPORTED_MATCH_TYPES = ["circuit_id", "option60"]
+MAX_DHCP_OPTION_BYTES = 255
 
 
 class DhcpServCfgGenerator(object):
@@ -59,6 +67,9 @@ class DhcpServCfgGenerator(object):
             set of enabled dhcp interface
             set of used options
             set of db table need to be monitored
+            set of enabled PORT-mode interfaces
+            set of enabled MATCH-mode interfaces
+            set of match conditions used by enabled MATCH bindings
         """
         # Generate from running config_db
         # Get host name
@@ -75,7 +86,8 @@ class DhcpServCfgGenerator(object):
         mid_plane_table = self.db_connector.get_config_db_table(MID_PLANE_BRIDGE)
         mid_plane, dpus = self._parse_dpu(dpus_table, mid_plane_table) if smart_switch else ({}, {})
 
-        dhcp_server_ipv4, customized_options_ipv4, range_ipv4, port_ipv4 = self._get_dhcp_ipv4_tables_from_db()
+        dhcp_server_ipv4, customized_options_ipv4, range_ipv4, port_ipv4, match_ipv4, binding_ipv4 = \
+            self._get_dhcp_ipv4_tables_from_db()
         # Parse range table
         ranges = self._parse_range(range_ipv4)
 
@@ -89,15 +101,49 @@ class DhcpServCfgGenerator(object):
             }]
             dpus = ["{}|{}".format(mid_plane_name, dpu) for dpu in dpus]
         dhcp_members = vlan_members | set(dpus)
-        port_ips, used_ranges = self._parse_port(port_ipv4, dhcp_interfaces, dhcp_members, ranges)
+        port_ips, port_used_ranges = self._parse_port(port_ipv4, dhcp_interfaces, dhcp_members, ranges)
+        match_pools, match_client_classes, match_used_ranges, used_matches = self._parse_match_bindings(
+            dhcp_server_ipv4,
+            match_ipv4,
+            binding_ipv4,
+            dhcp_interfaces,
+            vlan_members,
+            ranges,
+            hostname
+        )
         customized_options = self._parse_customized_options(customized_options_ipv4)
         render_obj, enabled_dhcp_interfaces, used_options, subscribe_table = \
-            self._construct_obj_for_template(dhcp_server_ipv4, port_ips, hostname, customized_options, smart_switch)
+            self._construct_obj_for_template(
+                dhcp_server_ipv4,
+                port_ips,
+                hostname,
+                customized_options,
+                smart_switch,
+                match_pools,
+                match_client_classes
+            )
+        enabled_port_interfaces = {
+            name for name, config in dhcp_server_ipv4.items()
+            if config.get("state") == "enabled" and config.get("mode") == "PORT"
+        }
+        enabled_match_interfaces = {
+            name for name, config in dhcp_server_ipv4.items()
+            if config.get("state") == "enabled" and config.get("mode") == "MATCH"
+        }
 
         if smart_switch:
             subscribe_table |= set(SMART_SWITCH_CHECKER)
 
-        return self._render_config(render_obj), used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table
+        return (
+            self._render_config(render_obj),
+            port_used_ranges | match_used_ranges,
+            enabled_dhcp_interfaces,
+            used_options,
+            subscribe_table,
+            enabled_port_interfaces,
+            enabled_match_interfaces,
+            used_matches
+        )
 
     def _parse_dpu(self, dpus_table, mid_plane_table):
         """
@@ -180,6 +226,7 @@ class DhcpServCfgGenerator(object):
         self.kea_template = env.get_template(os.path.basename(kea_conf_template_path))
 
     def _parse_port_map_alias(self):
+        self.port_alias_map = {}
         port_table = self.db_connector.get_config_db_table("PORT")
         pc_table = self.db_connector.get_config_db_table("PORTCHANNEL")
         for port_name, item in port_table.items():
@@ -187,7 +234,10 @@ class DhcpServCfgGenerator(object):
         for pc_name in pc_table.keys():
             self.port_alias_map[pc_name] = pc_name
 
-    def _construct_obj_for_template(self, dhcp_server_ipv4, port_ips, hostname, customized_options, smart_switch=False):
+    def _construct_obj_for_template(self, dhcp_server_ipv4, port_ips, hostname, customized_options, smart_switch=False,
+                                    match_pools=None, match_client_classes=None):
+        match_pools = match_pools or {}
+        match_client_classes = match_client_classes or []
         subnets = []
         client_classes = []
         enabled_dhcp_interfaces = set()
@@ -258,6 +308,48 @@ class DhcpServCfgGenerator(object):
                     if "gateway" in dhcp_config:
                         subnet_obj["gateway"] = dhcp_config["gateway"]
                     subnets.append(subnet_obj)
+            elif dhcp_config["mode"] == "MATCH":
+                subscribe_table |= set(MATCH_MODE_CHECKER)
+                if dhcp_interface_name not in match_pools:
+                    raise ValueError("Cannot get DHCP MATCH binding config for {}".format(dhcp_interface_name))
+                curr_options = {}
+                dhcp_server_id_option = {}
+                if "customized_options" in dhcp_config:
+                    for option in dhcp_config["customized_options"]:
+                        used_options.add(option)
+                        if option not in customized_option_keys:
+                            syslog.syslog(syslog.LOG_WARNING, "Customized option {} configured for {} is not defined"
+                                          .format(option, dhcp_interface_name))
+                            continue
+                        current_option = {
+                            "always_send": customized_options[option]["always_send"],
+                            "value": customized_options[option]["value"],
+                            "option_type": customized_options[option]["option_type"],
+                            "id": customized_options[option]["id"]
+                        }
+                        if customized_options[option]["id"] == OPTION_DHCP_SERVER_ID:
+                            dhcp_server_id_option = current_option
+                        else:
+                            curr_options[option] = current_option
+                for dhcp_interface_ip, pools in match_pools[dhcp_interface_name].items():
+                    current_server_id_option = dhcp_server_id_option
+                    if not current_server_id_option:
+                        current_server_id_option = {
+                            "value": dhcp_interface_ip.split("/")[0],
+                            "always_send": "true"
+                        }
+                    subnet_obj = {
+                        "id": MID_PLANE_BRIDGE_SUBNET_ID if smart_switch else dhcp_interface_name.replace("Vlan", ""),
+                        "subnet": str(ipaddress.ip_network(dhcp_interface_ip, strict=False)),
+                        "pools": pools,
+                        "dhcp_server_id_option": current_server_id_option,
+                        "lease_time": dhcp_config["lease_time"] if "lease_time" in dhcp_config else DEFAULT_LEASE_TIME,
+                        "customized_options": curr_options
+                    }
+                    if "gateway" in dhcp_config:
+                        subnet_obj["gateway"] = dhcp_config["gateway"]
+                    subnets.append(subnet_obj)
+        client_classes.extend(match_client_classes)
         render_obj = {
             "subnets": subnets,
             "client_classes": client_classes,
@@ -273,13 +365,15 @@ class DhcpServCfgGenerator(object):
         """
         Get DHCP Server IPv4 related table from config_db.
         Returns:
-            Four table objects.
+            Six table objects.
         """
         dhcp_server_ipv4 = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4)
         customized_options_ipv4 = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS)
         range_ipv4 = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4_RANGE)
         port_ipv4 = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4_PORT)
-        return dhcp_server_ipv4, customized_options_ipv4, range_ipv4, port_ipv4
+        match_ipv4 = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4_MATCH)
+        binding_ipv4 = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4_BINDING)
+        return dhcp_server_ipv4, customized_options_ipv4, range_ipv4, port_ipv4, match_ipv4, binding_ipv4
 
     def _get_vlan_ipv4_interface(self, vlan_interface_keys):
         """
@@ -463,6 +557,322 @@ class DhcpServCfgGenerator(object):
                     ranges = [[str(range[0]), str(range[1])] for range in ranges]
                     port_ips[dhcp_interface_name][dhcp_interface_ip][port_name] = ranges
         return port_ips, used_ranges
+
+    @staticmethod
+    def _normalize_list(value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return value.split(",") if value else []
+        return list(value)
+
+    @staticmethod
+    def _merge_match_intervals(intervals):
+        merged = []
+        for start, end in sorted(intervals, key=lambda interval: interval[0]):
+            if not merged or int(start) > int(merged[-1][1]) + 1:
+                merged.append([start, end])
+            else:
+                merged[-1][1] = max(merged[-1][1], end)
+        return merged
+
+    @staticmethod
+    def _predicates_overlap(first, second):
+        return all(match_type not in second or second[match_type]["value"] == condition["value"]
+                   for match_type, condition in first.items())
+
+    @staticmethod
+    def _interval_sets_overlap(first, second):
+        for first_start, first_end in first:
+            for second_start, second_end in second:
+                if first_start <= second_end and second_start <= first_end:
+                    return True
+        return False
+
+    def _parse_match_condition(self, match_name, match_ipv4, hostname, condition_cache):
+        if match_name in condition_cache:
+            return condition_cache[match_name]
+        if match_name not in match_ipv4:
+            raise ValueError("Match {} does not exist".format(match_name))
+
+        config = match_ipv4[match_name]
+        match_type = config.get("type")
+        value = config.get("value")
+        if match_type not in SUPPORTED_MATCH_TYPES:
+            raise ValueError("Match {} has unsupported type {}".format(match_name, match_type))
+        if not isinstance(value, str) or not value:
+            raise ValueError("Match {} has an invalid value".format(match_name))
+
+        port_name = None
+        resolved_value = value
+        if match_type == "circuit_id":
+            ports = sorted(port for port, alias in self.port_alias_map.items() if alias == value)
+            if not ports:
+                raise ValueError("Circuit ID value {} does not match any port alias, "
+                                 "aliasless port name or PortChannel name".format(value))
+            if len(ports) > 1:
+                raise ValueError("Circuit ID value {} is ambiguous".format(value))
+            port_name = ports[0]
+            resolved_value = "{}:{}".format(hostname, value)
+
+        encoded_value = resolved_value.encode("utf-8")
+        if len(encoded_value) > MAX_DHCP_OPTION_BYTES:
+            raise ValueError("Match {} exceeds the DHCP option payload limit".format(match_name))
+        if match_type == "circuit_id":
+            atom = "relay4[1].exists and relay4[1].hex == 0x{}".format(encoded_value.hex())
+        else:
+            atom = "option[60].exists and option[60].hex == 0x{}".format(encoded_value.hex())
+
+        condition = {
+            "name": match_name,
+            "type": match_type,
+            "value": value,
+            "port": port_name,
+            "atom": atom
+        }
+        condition_cache[match_name] = condition
+        return condition
+
+    def _find_match_subnet(self, dhcp_interface_name, dhcp_interfaces, start, end):
+        if dhcp_interface_name not in dhcp_interfaces:
+            raise ValueError("Interface {} has no IPv4 subnet".format(dhcp_interface_name))
+        matching_subnets = [
+            interface for interface in dhcp_interfaces[dhcp_interface_name]
+            if start in interface["network"] and end in interface["network"]
+        ]
+        if not matching_subnets:
+            raise ValueError(
+                "Pool {}-{} is not in an IPv4 subnet of {}".format(start, end, dhcp_interface_name)
+            )
+        if len(matching_subnets) > 1:
+            raise ValueError(
+                "Pool {}-{} matches multiple IPv4 subnets of {}".format(start, end, dhcp_interface_name)
+            )
+        return matching_subnets[0]["ip"]
+
+    def _parse_binding_pools(self, dhcp_interface_name, binding_name, binding_config, dhcp_interfaces, ranges):
+        ips = self._normalize_list(binding_config.get("ips"))
+        range_names = self._normalize_list(binding_config.get("ranges"))
+        if bool(ips) == bool(range_names):
+            raise ValueError(
+                "Binding {}|{} must configure exactly one of ips or ranges".format(
+                    dhcp_interface_name, binding_name
+                )
+            )
+        values = ips if ips else range_names
+        if len(values) != len(set(values)):
+            raise ValueError("Binding {}|{} contains duplicate pool values".format(
+                dhcp_interface_name, binding_name
+            ))
+
+        intervals_by_subnet = {}
+        used_ranges = set()
+        if ips:
+            for ip in values:
+                try:
+                    address = ipaddress.ip_address(ip)
+                except ValueError:
+                    raise ValueError("Binding {}|{} contains invalid IP {}".format(
+                        dhcp_interface_name, binding_name, ip
+                    ))
+                if address.version != 4:
+                    raise ValueError("Binding {}|{} contains non-IPv4 address {}".format(
+                        dhcp_interface_name, binding_name, ip
+                    ))
+                subnet = self._find_match_subnet(
+                    dhcp_interface_name, dhcp_interfaces, address, address
+                )
+                intervals_by_subnet.setdefault(subnet, []).append([address, address])
+        else:
+            for range_name in values:
+                used_ranges.add(range_name)
+                if range_name not in ranges:
+                    raise ValueError("Range {} referenced by {}|{} does not exist".format(
+                        range_name, dhcp_interface_name, binding_name
+                    ))
+                start, end = ranges[range_name]
+                subnet = self._find_match_subnet(
+                    dhcp_interface_name, dhcp_interfaces, start, end
+                )
+                intervals_by_subnet.setdefault(subnet, []).append([start, end])
+
+        for subnet, intervals in intervals_by_subnet.items():
+            intervals_by_subnet[subnet] = self._merge_match_intervals(intervals)
+        return intervals_by_subnet, used_ranges
+
+    def _build_match_class_name(self, dhcp_interface_name, subnet, intervals, binding_keys):
+        if dhcp_interface_name.startswith("Vlan") and dhcp_interface_name[4:].isdigit():
+            interface_id = dhcp_interface_name[4:]
+        else:
+            interface_id = hashlib.sha256(dhcp_interface_name.encode("utf-8")).hexdigest()[:8]
+        interval_text = ",".join("{}-{}".format(start, end) for start, end in intervals)
+        hash_input = "|".join(
+            [dhcp_interface_name, subnet, interval_text] + sorted(binding_keys)
+        )
+        suffix = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()[:16]
+        return "sonic_match_{}_{}".format(interface_id, suffix)
+
+    def _parse_match_bindings(self, dhcp_server_ipv4, match_ipv4, binding_ipv4, dhcp_interfaces, vlan_members,
+                              ranges, hostname):
+        enabled_match_interfaces = {
+            name for name, config in dhcp_server_ipv4.items()
+            if config.get("state") == "enabled" and config.get("mode") == "MATCH"
+        }
+        if not enabled_match_interfaces:
+            return {}, [], set(), set()
+
+        bindings_by_interface = {name: [] for name in enabled_match_interfaces}
+        for binding_key, binding_config in binding_ipv4.items():
+            key_parts = binding_key.split("|", 1)
+            if len(key_parts) != 2 or key_parts[0] not in enabled_match_interfaces:
+                continue
+            bindings_by_interface[key_parts[0]].append((key_parts[1], binding_config))
+
+        condition_cache = {}
+        used_matches = set()
+        used_ranges = set()
+        compiled_pools = {}
+        client_classes = []
+
+        for dhcp_interface_name in sorted(enabled_match_interfaces):
+            interface_bindings = bindings_by_interface[dhcp_interface_name]
+            if not interface_bindings:
+                raise ValueError("MATCH mode requires at least one binding on {}".format(dhcp_interface_name))
+
+            normalized_bindings = []
+            for binding_name, binding_config in sorted(interface_bindings):
+                match_names = self._normalize_list(binding_config.get("matches"))
+                if not match_names:
+                    raise ValueError("Binding {}|{} must reference at least one match".format(
+                        dhcp_interface_name, binding_name
+                    ))
+                if len(match_names) != len(set(match_names)):
+                    raise ValueError("Binding {}|{} contains duplicate matches".format(
+                        dhcp_interface_name, binding_name
+                    ))
+
+                conditions = {}
+                for match_name in match_names:
+                    condition = self._parse_match_condition(
+                        match_name, match_ipv4, hostname, condition_cache
+                    )
+                    if condition["type"] in conditions:
+                        raise ValueError(
+                            "Binding {}|{} contains multiple matches of type {}".format(
+                                dhcp_interface_name, binding_name, condition["type"]
+                            )
+                        )
+                    if condition["type"] == "circuit_id" and \
+                       "{}|{}".format(dhcp_interface_name, condition["port"]) not in vlan_members:
+                        raise ValueError(
+                            "Circuit ID value {} is not a member of {}".format(
+                                condition["value"], dhcp_interface_name
+                            )
+                        )
+                    conditions[condition["type"]] = condition
+                    used_matches.add(match_name)
+
+                intervals_by_subnet, binding_used_ranges = self._parse_binding_pools(
+                    dhcp_interface_name,
+                    binding_name,
+                    binding_config,
+                    dhcp_interfaces,
+                    ranges
+                )
+                used_ranges |= binding_used_ranges
+                raw_predicate = " and ".join(
+                    "({})".format(conditions[match_type]["atom"])
+                    for match_type in SUPPORTED_MATCH_TYPES if match_type in conditions
+                )
+                normalized_bindings.append({
+                    "name": binding_name,
+                    "key": "{}|{}".format(dhcp_interface_name, binding_name),
+                    "conditions": conditions,
+                    "specificity": len(conditions),
+                    "raw_predicate": raw_predicate,
+                    "intervals_by_subnet": intervals_by_subnet
+                })
+
+            for index, first in enumerate(normalized_bindings):
+                for second in normalized_bindings[index + 1:]:
+                    if first["specificity"] == second["specificity"] and \
+                       self._predicates_overlap(first["conditions"], second["conditions"]):
+                        raise ValueError(
+                            "Bindings {} and {} overlap with equal specificity".format(
+                                first["key"], second["key"]
+                            )
+                        )
+                    common_subnets = set(first["intervals_by_subnet"]) & set(second["intervals_by_subnet"])
+                    for subnet in common_subnets:
+                        first_intervals = first["intervals_by_subnet"][subnet]
+                        second_intervals = second["intervals_by_subnet"][subnet]
+                        if first_intervals != second_intervals and \
+                           self._interval_sets_overlap(first_intervals, second_intervals):
+                            raise ValueError(
+                                "Bindings {} and {} have partially overlapping pools".format(
+                                    first["key"], second["key"]
+                                )
+                            )
+
+            for binding in normalized_bindings:
+                higher_predicates = sorted(
+                    other["raw_predicate"] for other in normalized_bindings
+                    if other["specificity"] > binding["specificity"] and
+                    self._predicates_overlap(binding["conditions"], other["conditions"])
+                )
+                effective_predicate = binding["raw_predicate"]
+                if higher_predicates:
+                    exclusions = " or ".join("({})".format(predicate) for predicate in higher_predicates)
+                    effective_predicate = "({}) and not ({})".format(
+                        binding["raw_predicate"], exclusions
+                    )
+                binding["effective_predicate"] = effective_predicate
+
+            pool_groups = {}
+            for binding in normalized_bindings:
+                for subnet, intervals in binding["intervals_by_subnet"].items():
+                    interval_key = tuple((str(start), str(end)) for start, end in intervals)
+                    pool_groups.setdefault((subnet, interval_key), []).append(binding)
+
+            compiled_pools[dhcp_interface_name] = {}
+            for (subnet, interval_key), grouped_bindings in sorted(pool_groups.items()):
+                binding_keys = sorted(binding["key"] for binding in grouped_bindings)
+                class_name = self._build_match_class_name(
+                    dhcp_interface_name, subnet, interval_key, binding_keys
+                )
+                effective_predicates = sorted(
+                    binding["effective_predicate"] for binding in grouped_bindings
+                )
+                class_condition = effective_predicates[0]
+                if len(effective_predicates) > 1:
+                    class_condition = " or ".join(
+                        "({})".format(predicate) for predicate in effective_predicates
+                    )
+                client_classes.append({
+                    "name": class_name,
+                    "condition": class_condition
+                })
+                syslog.syslog(
+                    syslog.LOG_INFO,
+                    "DHCP MATCH class {} maps to bindings {}".format(class_name, ",".join(binding_keys))
+                )
+                pools = compiled_pools[dhcp_interface_name].setdefault(subnet, [])
+                for start, end in interval_key:
+                    pools.append({
+                        "range": "{} - {}".format(start, end),
+                        "client_class": class_name
+                    })
+
+            for pools in compiled_pools[dhcp_interface_name].values():
+                pools.sort(
+                    key=lambda pool: (
+                        ipaddress.ip_address(pool["range"].split(" - ")[0]),
+                        pool["client_class"]
+                    )
+                )
+
+        client_classes.sort(key=lambda client_class: client_class["name"])
+        return compiled_pools, client_classes, used_ranges, used_matches
 
     def _read_dhcp_option(self, file_path):
         # TODO current only support unassigned options, use dict in case support more options in the future
