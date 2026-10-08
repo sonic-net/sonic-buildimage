@@ -1262,6 +1262,30 @@ clusters:\n\
         assert adapter.poolmanager.connection_pool_kw["server_hostname"] == \
             "k8s.example.com"
 
+    def test_request_k8s_ca_normalizes_absolute_tls_hostname(self):
+        response = MagicMock(ok=True, is_redirect=False, status_code=200)
+        request_session = MagicMock()
+        request_session.get.return_value = response
+        original_url = (
+            "https://k8s.example.com.:6443" + kube_commands.K8S_CA_PATH)
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session), \
+                patch("kube_commands.requests.utils.get_environ_proxies",
+                      return_value={}) as get_proxies:
+            assert kube_commands._request_k8s_ca(
+                "k8s.example.com.", 6443, ("10.3.157.24",),
+                "false") is response
+
+        adapter = request_session.mount.call_args[0][1]
+        assert adapter._server_hostname == "k8s.example.com"
+        assert adapter.poolmanager.connection_pool_kw["assert_hostname"] == \
+            "k8s.example.com"
+        assert adapter.poolmanager.connection_pool_kw["server_hostname"] == \
+            "k8s.example.com"
+        get_proxies.assert_called_once_with(original_url)
+        assert request_session.get.call_args[1]["headers"] == {
+            "Host": "k8s.example.com.:6443"}
+
     @patch("kube_commands.subprocess.Popen")
     def test_tag_latest(self, mock_subproc):
         common_test.set_kube_mock(mock_subproc)

@@ -161,7 +161,10 @@ class _PinnedHTTPSAdapter(requests.adapters.HTTPAdapter):
     """Connect to a validated IP while authenticating the configured host."""
 
     def __init__(self, server_hostname):
-        self._server_hostname = server_hostname
+        self._server_hostname = (
+            server_hostname[:-1]
+            if len(server_hostname) > 1 and server_hostname.endswith(".")
+            else server_hostname)
         super().__init__()
 
     def init_poolmanager(self, connections, maxsize, block=False,
