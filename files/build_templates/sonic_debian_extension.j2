@@ -279,6 +279,11 @@ install_deb_package $debs_path/bash_*.deb
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bashrc $FILESYSTEM_ROOT/etc/
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bash_logout $FILESYSTEM_ROOT/etc/
 
+# Allow TACACS+ authorization to receive a client-supplied trace ID.
+if ! sudo grep -Eq '^[[:space:]]*AcceptEnv[[:space:]]+([^#[:space:]]+[[:space:]]+)*SSH_CLIENT_TRACEID([[:space:]]|$)' "$FILESYSTEM_ROOT/etc/ssh/sshd_config"; then
+    echo "AcceptEnv SSH_CLIENT_TRACEID" | sudo tee -a "$FILESYSTEM_ROOT/etc/ssh/sshd_config" > /dev/null
+fi
+
 # Install readline's initialization file
 sudo cp -f $IMAGE_CONFIGS/readline/inputrc $FILESYSTEM_ROOT/etc/
 
