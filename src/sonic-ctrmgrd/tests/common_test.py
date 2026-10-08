@@ -688,6 +688,7 @@ class mock_reqget:
     def __init__(self):
         self.ok = True
         self.is_redirect = False
+        self.status_code = 200
 
     def json(self):
         return current_test_data.get(REQ, "")

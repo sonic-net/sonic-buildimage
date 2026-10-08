@@ -31,6 +31,7 @@ LOCK_FILE = "/var/lock/kube_join.lock"
 FLANNEL_CONF_FILE = "/usr/share/sonic/templates/kube_cni.10-flannel.conflist"
 CNI_DIR = "/etc/cni/net.d"
 K8S_CA_PATH = "/api/v1/namespaces/default/configmaps/kube-root-ca.crt"
+K8S_CA_TIMEOUT = 10
 AME_CRT = "/etc/sonic/credentials/restapiserver.crt"
 AME_KEY = "/etc/sonic/credentials/restapiserver.key"
 
@@ -100,6 +101,8 @@ def _validate_server_destination(server, port):
         if not (server.startswith("[") and server.endswith("]")):
             raise IOError("Kubernetes server has invalid IPv6 brackets")
         server = server[1:-1]
+    if "%" in server:
+        raise IOError("Kubernetes server IPv6 scope identifiers are not supported")
 
     try:
         port = int(port)
@@ -116,18 +119,28 @@ def _validate_server_destination(server, port):
         try:
             addrinfo = socket.getaddrinfo(
                 server, port, type=socket.SOCK_STREAM)
-            addresses = []
+        except OSError as error:
+            raise IOError("Kubernetes server cannot be resolved: {}".format(error))
+        addresses = []
+        try:
             for item in addrinfo:
+                if (item[0] == socket.AF_INET6 and len(item[4]) > 3 and
+                        item[4][3]):
+                    raise IOError(
+                        "Kubernetes server IPv6 scope identifiers are not supported")
                 address = ipaddress.ip_address(item[4][0])
                 if address not in addresses:
                     addresses.append(address)
-        except (OSError, ValueError) as error:
+        except ValueError as error:
             raise IOError("Kubernetes server cannot be resolved: {}".format(error))
 
     if bracketed and (not addresses or addresses[0].version != 6):
         raise IOError("Kubernetes server brackets require an IPv6 address")
     if not addresses:
         raise IOError("Kubernetes server did not resolve to an IP address")
+    if any(getattr(address, "scope_id", None) is not None
+           for address in addresses):
+        raise IOError("Kubernetes server IPv6 scope identifiers are not supported")
     prohibited = [str(address) for address in addresses
                   if _is_prohibited_address(address)]
     if prohibited:
@@ -181,7 +194,6 @@ def _request_k8s_ca(server, port, addresses, insecure):
         "cert": (AME_CRT, AME_KEY),
         "headers": {"Host": authority},
         "proxies": proxies,
-        "timeout": 10,
     }
     if insecure.lower() == "true":
         kwargs["verify"] = False
@@ -189,10 +201,13 @@ def _request_k8s_ca(server, port, addresses, insecure):
     last_error = None
     try:
         for address in addresses:
+            kwargs["timeout"] = K8S_CA_TIMEOUT
             url = "https://{}:{}{}".format(
                 _format_url_host(address), port, K8S_CA_PATH)
             try:
                 return session.get(url, **kwargs)
+            except requests.exceptions.ProxyError:
+                raise
             except (requests.ConnectionError, requests.Timeout) as error:
                 last_error = error
     finally:
@@ -435,7 +450,7 @@ users:
     """
     server, port, addresses = _validate_server_destination(server, port)
     r = _request_k8s_ca(server, port, addresses, insecure)
-    if r.is_redirect:
+    if 300 <= r.status_code < 400:
         raise IOError("Kubernetes CA download refused a redirect")
     if not r.ok:
         raise requests.RequestException("Something wrong with AME cert or something wrong about sonic role in k8s cluster")

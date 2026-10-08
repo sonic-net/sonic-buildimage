@@ -1019,6 +1019,26 @@ clusters:\n\
         with pytest.raises(IOError, match="bracket"):
             kube_commands._validate_server_destination(server, 6443)
 
+    @pytest.mark.parametrize("server", [
+        "2606:4700:4700::1111%eth0",
+        "[2606:4700:4700::1111%eth0]",
+    ])
+    def test_validate_server_destination_rejects_ipv6_scope(
+            self, server):
+        with pytest.raises(IOError, match="scope identifiers"):
+            kube_commands._validate_server_destination(server, 6443)
+
+    def test_validate_server_destination_rejects_scoped_dns_answer(self):
+        addrinfo = [
+            (socket.AF_INET6, socket.SOCK_STREAM, 6, "",
+             ("2606:4700:4700::1111", 6443, 0, 2)),
+        ]
+        with patch("kube_commands.socket.getaddrinfo",
+                   return_value=addrinfo):
+            with pytest.raises(IOError, match="scope identifiers"):
+                kube_commands._validate_server_destination(
+                    "k8s.example.com", 6443)
+
     @pytest.mark.parametrize("port", [0, 65536, "invalid", None])
     def test_validate_server_destination_rejects_invalid_port(self, port):
         with pytest.raises(IOError, match="port"):
@@ -1038,9 +1058,12 @@ clusters:\n\
         ("false", True),
         ("true", False),
     ])
+    @pytest.mark.parametrize("status_code", [300, 301, 305, 307, 308])
     def test_gen_cli_kubeconf_pins_dns_and_rejects_redirect(
-            self, insecure, expected_verify):
-        response = MagicMock(ok=True, is_redirect=True)
+            self, insecure, expected_verify, status_code):
+        response = MagicMock(
+            ok=True, is_redirect=status_code != 300,
+            status_code=status_code)
         addrinfo = [
             (socket.AF_INET, socket.SOCK_STREAM, 6, "",
              ("10.3.157.24", 6443)),
@@ -1070,7 +1093,8 @@ clusters:\n\
     ])
     def test_gen_cli_kubeconf_formats_pinned_ipv6_endpoint(
             self, server):
-        response = MagicMock(ok=True, is_redirect=True)
+        response = MagicMock(
+            ok=True, is_redirect=True, status_code=302)
         with patch("kube_commands.requests.Session") as request_session:
             request_session.return_value.get.return_value = response
             with pytest.raises(IOError, match="refused a redirect"):
@@ -1088,7 +1112,8 @@ clusters:\n\
 
     def test_gen_cli_kubeconf_writes_bracketed_ipv6_server(
             self, tmp_path):
-        response = MagicMock(ok=True, is_redirect=False)
+        response = MagicMock(
+            ok=True, is_redirect=False, status_code=200)
         response.json.return_value = {"data": {"ca.crt": "test"}}
         request_session = MagicMock()
         request_session.get.return_value = response
@@ -1135,12 +1160,52 @@ clusters:\n\
                 "false") is response
 
         assert [
-            call.args[0] for call in request_session.get.call_args_list
+            call[0][0] for call in request_session.get.call_args_list
         ] == [
             "https://[2001:4860:4860::8888]:6443" +
             kube_commands.K8S_CA_PATH,
             "https://10.3.157.24:6443" + kube_commands.K8S_CA_PATH,
         ]
+        request_session.close.assert_called_once_with()
+
+    def test_request_k8s_ca_uses_timeout_for_each_address(self):
+        response = MagicMock(ok=True, is_redirect=True)
+        request_session = MagicMock()
+        request_session.get.side_effect = [
+            kube_commands.requests.ReadTimeout("first address timed out"),
+            response,
+        ]
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session):
+            assert kube_commands._request_k8s_ca(
+                "k8s.example.com", 6443,
+                ("2001:4860:4860::8888", "10.3.157.24"),
+                "false") is response
+
+        timeouts = [
+            call[1]["timeout"]
+            for call in request_session.get.call_args_list
+        ]
+        assert timeouts == [
+            kube_commands.K8S_CA_TIMEOUT,
+            kube_commands.K8S_CA_TIMEOUT,
+        ]
+
+    def test_request_k8s_ca_does_not_retry_proxy_failure(self):
+        request_session = MagicMock()
+        request_session.get.side_effect = \
+            kube_commands.requests.exceptions.ProxyError(
+                "proxy unavailable")
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session):
+            with pytest.raises(
+                    kube_commands.requests.exceptions.ProxyError):
+                kube_commands._request_k8s_ca(
+                    "k8s.example.com", 6443,
+                    ("2001:4860:4860::8888", "10.3.157.24"),
+                    "false")
+
+        request_session.get.assert_called_once()
         request_session.close.assert_called_once_with()
 
     def test_request_k8s_ca_preserves_hostname_proxy_selection(self):
@@ -1159,7 +1224,7 @@ clusters:\n\
                 "false") is response
 
         get_proxies.assert_called_once_with(original_url)
-        assert request_session.get.call_args.kwargs["proxies"] == proxies
+        assert request_session.get.call_args[1]["proxies"] == proxies
 
     def test_pinned_https_adapter_preserves_tls_hostname(self):
         adapter = kube_commands._PinnedHTTPSAdapter("k8s.example.com")
