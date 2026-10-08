@@ -37,6 +37,7 @@ stages:
   pool: sonicso1ES-amd64-a
   variables:
   - group: Container-Registry
+  - group: OpenPSIRT
   - name: CACHE_MODE
     value: wcache
   - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
@@ -45,5 +46,7 @@ stages:
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobFilters: none
+      postSteps:
+      - template: upload-sbom-openpsirt.yml
       ${{ if contains(variables['Build.DefinitionName'], 'cross') }}:
         qemuOrCrossBuild: true

@@ -1,0 +1,20 @@
+# Sends each installer image's SBOM to OpenPSIRT after the image is archived.
+#
+# Runs as a postStep, after target/ has been moved to the artifact staging
+# directory. The branch the build ran from is the OpenPSIRT stream, so a
+# nightly of master and one of a release branch are tracked separately.
+#
+# Reads OPENPSIRT_URL and OPENPSIRT_API_KEY from the OpenPSIRT variable group.
+# armhf builds produce no SBOM. An upload failure marks the step as
+# succeeded with issues and leaves the build result alone.
+
+steps:
+- bash: ./scripts/sbom_upload_openpsirt.sh "$(Build.ArtifactStagingDirectory)/target"
+  displayName: "Upload SBOMs to OpenPSIRT"
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), ne(variables['PLATFORM_ARCH'], 'armhf'))
+  continueOnError: true
+  timeoutInMinutes: 60
+  env:
+    OPENPSIRT_URL: $(OPENPSIRT_URL)
+    OPENPSIRT_API_KEY: $(OPENPSIRT_API_KEY)
+    OPENPSIRT_STREAM: $(Build.SourceBranchName)
