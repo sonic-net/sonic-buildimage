@@ -215,6 +215,17 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
 }
 {%- endif %}
 
+# Returns the number of running process-supervisor processes inside a
+# container, regardless of whether the container uses classic supervisord
+# or the s6-overlay process supervisor (OPTIMIZE_SUPD_S6=y). This keeps the
+# readiness checks below working for both build configurations without
+# needing to know which one was used at build time.
+function getProcessSupervisorCount()
+{
+    local container="$1"
+    docker exec -i $container sh -c 'pgrep -x -c s6-svscan 2>/dev/null || pgrep -x -c supervisord 2>/dev/null'
+}
+
 function postStartAction()
 {
 {%- if docker_container_name == "database" %}
@@ -309,7 +320,7 @@ function postStartAction()
         # database will try to access to all other instance database-config.json. If other instance
         # database-config.json files are not ready yet, it will generate the sonic-db-cli core files.
 	waitForAllInstanceDatabaseConfigJsonFilesReady
-        until [[ ($(docker exec -i database$DEV pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
+        until [[ ($(getProcessSupervisorCount database$DEV) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
                  ($(docker exec -i database$DEV sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do
           sleep 1;
         done
@@ -381,7 +392,7 @@ function postStartAction()
         chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
-        until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
+        until [[ ($(getProcessSupervisorCount ${DOCKERNAME}) -gt 0) &&
                  ($(docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; do
            sleep 1
         done
