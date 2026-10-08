@@ -301,14 +301,15 @@ int xcvr_multifpgapci_read(XCVR_ATTR *info, int *output)
     struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL) {
-        printk(KERN_ERR "PDDF_XCVR: Doesn't support MULTIFPGAPCI read yet");
+        printk_ratelimited(KERN_ERR "PDDF_XCVR: Doesn't support MULTIFPGAPCI read yet");
         status = -1;
         goto ret;
     }
 
     pci_dev = (struct pci_dev *)get_device_table(info->devname);
     if (pci_dev == NULL) {
-        printk(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n", info->devname, info->aname);
+        printk_ratelimited(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n",
+                           info->devname, info->aname);
         status = -1;
         goto ret;
     }
@@ -318,7 +319,7 @@ int xcvr_multifpgapci_read(XCVR_ATTR *info, int *output)
 
 ret:
     if (status)
-        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
+        printk_ratelimited(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
 
     return status;
 }
@@ -331,14 +332,15 @@ int xcvr_multifpgapci_write(XCVR_ATTR *info, uint32_t val)
     struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
-        printk(KERN_ERR
+        printk_ratelimited(KERN_ERR
             "PDDF_XCVR: Doesn't support MULTIFPGAPCI read or write yet");
         return (-1);
     }
 
     pci_dev = (struct pci_dev *)get_device_table(info->devname);
     if (pci_dev == NULL) {
-        printk(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n", info->devname, info->aname);
+        printk_ratelimited(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n",
+                           info->devname, info->aname);
         status = -1;
         goto ret;
     }
@@ -364,7 +366,7 @@ int xcvr_multifpgapci_write(XCVR_ATTR *info, uint32_t val)
 
 ret:
     if (status)
-        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
+        printk_ratelimited(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
 
     return status;
 }
