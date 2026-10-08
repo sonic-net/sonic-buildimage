@@ -645,9 +645,10 @@ and reports problems as warnings on the run.
 | Bad key, refusal, server unreachable or failing | Warning. An unreachable server ends the run rather than waiting once per image |
 | Pull request, armhf and cross builds | The step does not run |
 
-The whole run is bounded at 15 minutes and the step at 20. The key is the
-secret pipeline variable `OPENPSIRT_API_KEY`, an OpenPSIRT pipeline key scoped
-to the `sonic` product. A definition without it uploads nothing.
+The whole run is bounded at 15 minutes and the step at 20. The key is
+`OPENPSIRT_API_KEY`, a secret in the `OpenPSIRT` variable group: an OpenPSIRT
+pipeline key scoped to the `sonic` product, so one key covers every branch and
+image. With the key unset the step uploads nothing.
 
 The script runs anywhere the files are:
 

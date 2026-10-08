@@ -4,9 +4,9 @@
 # directory. The branch the build ran from is the OpenPSIRT stream, so a
 # nightly of master and one of a release branch are tracked separately.
 #
-# OPENPSIRT_API_KEY is a secret variable on each pipeline definition rather
-# than a variable group: a group that is missing or not authorized stops the
-# whole run from queueing. Without the variable the step uploads nothing.
+# OPENPSIRT_API_KEY is a secret in the OpenPSIRT variable group, which the
+# official build's stage links. The key is scoped to the product, so one key
+# covers every branch and image. Without it the step uploads nothing.
 #
 # The script exits 0 whatever happens and reports problems as warnings, so
 # the build result is never changed by an upload. continueOnError and the
