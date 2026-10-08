@@ -17,6 +17,10 @@ module sonic-port{
 		prefix macsec;
 	}
 
+	import sonic-extension {
+		prefix ext;
+	}
+
 	description "PORT yang Module for SONiC OS";
 
 	revision 2019-07-01 {
@@ -81,6 +85,7 @@ module sonic-port{
 					type string {
 						length 1..128;
 					}
+					ext:create-only;
 				}
 
 				leaf mode {

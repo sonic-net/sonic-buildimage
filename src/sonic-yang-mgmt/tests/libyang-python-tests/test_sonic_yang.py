@@ -413,6 +413,75 @@ class Test_SonicYang(object):
 
         return sonic_yang_data
 
+    def test_get_create_only_fields_direct_and_refine(self):
+        """Pin create-only discovery for a direct leaf and refine-carried annotations.
+
+        Fourteen of the shipping create-only patterns come from refine on uses
+        sites; if libyang stopped copying refine extension instances onto the
+        refined node, those would silently drop. A direct leaf annotation
+        covers the non-refine path. Both must appear in get_create_only_fields().
+        """
+        data = _load_test_data()
+        yang_s = sy.SonicYang(str(data['yang_dir']))
+        yang_s.loadYangModel()
+        patterns = yang_s.get_create_only_fields()
+        # Direct ext:create-only on PORT/lanes in test-port.yang
+        assert ["PORT", "*", "lanes"] in patterns
+        # refine create-only on nested leaf (nested-uses-group → simple-fields)
+        assert ["TEST_GROUPING_TABLE", "*", "description"] in patterns
+        # refine create-only on a leaf nested-uses-group declares itself
+        # (matches shipping BGP refine placement)
+        assert ["TEST_GROUPING_TABLE", "*", "extra"] in patterns
+        # Cached on second call
+        assert yang_s.get_create_only_fields() is patterns
+
+    def test_get_create_only_fields_matches_expected_set(self, sonic_yang_data):
+        """Pin the shipping create-only pattern set produced by the schema walk.
+
+        CreateOnlyFilter unions discovery with a historical floor, but a partial
+        YANG result still means the producer drifted. This asserts the walk on
+        the installed models returns exactly the annotated set (26 patterns).
+        """
+        syc = sonic_yang_data['syc']
+
+        # Golden counterpart of sonic-utilities CreateOnlyFilter's
+        # _CREATE_ONLY_FIELDS_FALLBACK; update this when adding an annotation.
+        expected = [
+            ["PORT", "*", "lanes"],
+            ["LOOPBACK_INTERFACE", "*", "vrf_name"],
+            ["BGP_NEIGHBOR", "*", "asn"],
+            ["BGP_NEIGHBOR", "*", "holdtime"],
+            ["BGP_NEIGHBOR", "*", "keepalive"],
+            ["BGP_NEIGHBOR", "*", "local_addr"],
+            ["BGP_NEIGHBOR", "*", "name"],
+            ["BGP_NEIGHBOR", "*", "nhopself"],
+            ["BGP_NEIGHBOR", "*", "rrclient"],
+            ["BGP_PEER_RANGE", "*", "*"],
+            ["BGP_SENTINELS", "*", "*"],
+            ["BGP_MONITORS", "*", "asn"],
+            ["BGP_MONITORS", "*", "holdtime"],
+            ["BGP_MONITORS", "*", "keepalive"],
+            ["BGP_MONITORS", "*", "local_addr"],
+            ["BGP_MONITORS", "*", "name"],
+            ["BGP_MONITORS", "*", "nhopself"],
+            ["BGP_MONITORS", "*", "rrclient"],
+            ["MIRROR_SESSION", "*", "*"],
+            ["SCHEDULER", "*", "type"],
+            ["SCHEDULER", "*", "weight"],
+            ["SCHEDULER", "*", "meter_type"],
+            ["SCHEDULER", "*", "cir"],
+            ["SCHEDULER", "*", "cbs"],
+            ["SCHEDULER", "*", "pir"],
+            ["SCHEDULER", "*", "pbs"],
+        ]
+        actual = syc.get_create_only_fields()
+        assert sorted(tuple(p) for p in actual) == sorted(tuple(p) for p in expected)
+        # Sibling tables that share the BGP groupings must stay unannotated.
+        tables = {p[0] for p in actual}
+        assert "BGP_PEER_GROUP" not in tables
+        assert "BGP_INTERNAL_NEIGHBOR" not in tables
+        assert "BGP_VOQ_CHASSIS_NEIGHBOR" not in tables
+
     def test_validate_yang_models(self, sonic_yang_data):
         '''
         In this test, we validate yang models
