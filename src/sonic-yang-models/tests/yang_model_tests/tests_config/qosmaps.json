@@ -554,6 +554,30 @@
             }
         },
 
+        "sonic-tc-dot1p-map:sonic-tc-dot1p-map": {
+            "sonic-tc-dot1p-map:TC_TO_DOT1P_MAP": {
+                "TC_TO_DOT1P_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DOT1P_MAP": [
+                            {
+                                "tc": "0",
+                                "dot1p": "0"
+                            },
+                            {
+                                "tc":"1",
+                                "dot1p":"6"
+                            },
+                            {
+                                "tc": "7",
+                                "dot1p": "7"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
         "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
             "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
                 "DOT1P_TO_TC_MAP_LIST": [
@@ -706,6 +730,7 @@
                         "ifname": "Ethernet0",
                         "dscp_to_tc_map": "map1",
                         "tc_to_dscp_map": "map1",
+                        "tc_to_dot1p_map": "map1",
                         "tc_to_pg_map": "map1",
                         "tc_to_queue_map": "map1",
                         "pfc_to_queue_map": "map1",
@@ -1018,6 +1043,93 @@
                             {
                                 "tc":"2",
                                 "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DOT1P_MAP_CRETAE": {
+        "sonic-tc-dot1p-map:sonic-tc-dot1p-map": {
+            "sonic-tc-dot1p-map:TC_TO_DOT1P_MAP": {
+                "TC_TO_DOT1P_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DOT1P_MAP": [
+                            {
+                                "tc": "0",
+                                "dot1p": "0"
+                            },
+                            {
+                                "tc":"1",
+                                "dot1p":"6"
+                            },
+                            {
+                                "tc": "7",
+                                "dot1p": "7"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "TC_TO_DOT1P_MAP": [
+                            {
+                                "tc": "0",
+                                "dot1p": "0"
+                            },
+                            {
+                                "tc":"5",
+                                "dot1p":"2"
+                            },
+                            {
+                                "tc": "7",
+                                "dot1p": "7"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DOT1P_MAP_CREATE_INVALID_TC": {
+        "sonic-tc-dot1p-map:sonic-tc-dot1p-map": {
+            "sonic-tc-dot1p-map:TC_TO_DOT1P_MAP": {
+                "TC_TO_DOT1P_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DOT1P_MAP": [
+                            {
+                                "tc": "16",
+                                "dot1p": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dot1p":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DOT1P_MAP_CREATE_INVALID_DOT1P": {
+        "sonic-tc-dot1p-map:sonic-tc-dot1p-map": {
+            "sonic-tc-dot1p-map:TC_TO_DOT1P_MAP": {
+                "TC_TO_DOT1P_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DOT1P_MAP": [
+                            {
+                                "tc": "1",
+                                "dot1p": "8"
+                            },
+                            {
+                                "tc":"2",
+                                "dot1p":"2"
                             }
                         ]
                     }

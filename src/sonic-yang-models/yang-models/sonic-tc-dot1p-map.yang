@@ -1,0 +1,67 @@
+module sonic-tc-dot1p-map {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-tc-dot1p-map";
+
+    prefix tdot1pm;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "TC_TO_DOT1P_MAP yang Module for SONiC OS";
+
+    revision 2026-05-11 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-tc-dot1p-map {
+
+        container TC_TO_DOT1P_MAP {
+
+            description "Maps traffic class to 802.1p priorities for egress remarking.";
+
+            list TC_TO_DOT1P_MAP_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for map name.";
+                            error-app-tag map-name-invalid-length;
+                        }
+                    }
+                }
+
+                list TC_TO_DOT1P_MAP {
+
+                    key "tc";
+
+                    leaf tc {
+                        type stypes:tc_type;
+                    }
+
+                    leaf dot1p {
+                        type string {
+                            pattern "[0-7]?" {
+                                error-message "Invalid DOT1P";
+                                error-app-tag dot1p-invalid;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
