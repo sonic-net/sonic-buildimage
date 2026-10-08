@@ -206,8 +206,6 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
         hwsku_json_file = hwsku_config_file
         if not hwsku_json_file and hwsku is not None:
             hwsku_json_file = get_hwsku_file_name(hwsku, platform)
-            if not hwsku_json_file:
-                return ({}, {}, {})
 
         return parse_platform_json_file(hwsku_json_file, port_config_file)
 
@@ -626,15 +624,15 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
     return (ports, port_alias_map, port_alias_asic_map)
 
 
-def get_breakout_mode(hwsku=None, platform=None, port_config_file=None):
+def get_breakout_mode(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None):
     if not port_config_file:
         port_config_file = device_info.get_path_to_port_config_file(hwsku)
         if not port_config_file:
             return None
     if port_config_file.endswith('.json'):
-        hwsku_json_file = get_hwsku_file_name(hwsku, platform)
+        hwsku_json_file = hwsku_config_file or get_hwsku_file_name(hwsku, platform)
         if not hwsku_json_file:
-            raise Exception("'hwsku_json' file does not exist!!! This file is necessary to proceed forward.")
+            return None
 
         return parse_breakout_mode(hwsku_json_file)
     else:

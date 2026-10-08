@@ -312,19 +312,22 @@ class TestCfgGenPlatformJson(TestCase):
                 "1x100G(2)"
             )
 
-    def test_cli_port_config_does_not_require_hwsku_name(self):
-        direct_argument = ['-p', self.platform_json, '-S', self.hwsku_json,
-                           '--var-json', 'PORT']
-        hwsku_argument = ['-k', 'Generic', '-p', self.platform_json, '-S', self.hwsku_json,
-                          '--var-json', 'PORT']
+    def test_cli_port_config_requires_hwsku_name(self):
+        argument = ['-p', self.platform_json, '-S', self.hwsku_json,
+                    '--var-json', 'PORT']
+        self.assertEqual(self.run_script(argument), '')
 
-        direct_output = json.loads(self.run_script(direct_argument))
-        hwsku_output = json.loads(self.run_script(hwsku_argument))
+    def test_cli_port_config_uses_explicit_hwsku_config(self):
+        argument = ['-k', 'Generic', '-p', self.platform_json, '-S', self.hwsku_json,
+                    '--var-json', 'PORT']
+        output = json.loads(self.run_script(argument))
 
-        self.assertDictEqual(direct_output, hwsku_output)
+        self.assertEqual(output['Ethernet8']['speed'], '25000')
+        self.assertEqual(output['Ethernet8']['lanes'], '8')
+        self.assertEqual(output['Ethernet8']['subport'], '1')
 
     def test_cli_port_config_uses_platform_fallback_without_hwsku_config(self):
-        argument = ['-p', self.platform_json, '--var-json', 'PORT']
+        argument = ['-k', 'Generic', '-p', self.platform_json, '--var-json', 'PORT']
         output = json.loads(self.run_script(argument))
 
         self.assertEqual(output['Ethernet0']['speed'], '100000')
@@ -344,3 +347,16 @@ class TestCfgGenPlatformJson(TestCase):
         self.assertEqual(ports['Ethernet8']['speed'], '25000')
         self.assertEqual(ports['Ethernet8']['lanes'], '8')
         self.assertEqual(ports['Ethernet8']['subport'], '1')
+
+    def test_port_config_uses_platform_fallback_when_hwsku_file_is_missing(self):
+        with mock.patch('portconfig.get_hwsku_file_name', return_value=None) as get_hwsku_file:
+            ports, _, _ = get_port_config(
+                hwsku='Generic',
+                platform='generic',
+                port_config_file=self.platform_json
+            )
+
+        get_hwsku_file.assert_called_once_with('Generic', 'generic')
+        self.assertEqual(ports['Ethernet0']['speed'], '100000')
+        self.assertEqual(ports['Ethernet0']['lanes'], '0,1,2,3')
+        self.assertNotIn('Ethernet1', ports)

@@ -508,8 +508,8 @@ def main():
     group.add_argument("-M", "--device-description", help="device description xml file")
     group.add_argument("-k", "--hwsku", help="HwSKU")
     parser.add_argument("-n", "--namespace", help="namespace name", nargs='?', const=None, default=None)
-    parser.add_argument("-p", "--port-config", help="port config file", nargs='?', const=None)
-    parser.add_argument("-S", "--hwsku-config", help="hwsku config file, used with -p", nargs='?', const=None)
+    parser.add_argument("-p", "--port-config", help="port config file, used with -m or -k", nargs='?', const=None)
+    parser.add_argument("-S", "--hwsku-config", help="hwsku config file, used with -p and -m or -k", nargs='?', const=None)
     parser.add_argument("-y", "--yaml", help="yaml file that contains additional variables", action='append', default=[])
     parser.add_argument("-j", "--json", help="json file that contains additional variables", action='append', default=[])
     parser.add_argument("-a", "--additional-data", help="addition data, in json string")
@@ -555,12 +555,7 @@ def main():
             }}}
         deep_update(data, hardware_data)
 
-    generate_port_config = hwsku is not None or (
-        args.port_config is not None and
-        args.port_config.endswith('.json') and
-        args.minigraph is None
-    )
-    if generate_port_config:
+    if hwsku is not None:
         if args.port_config is None:
             args.port_config = device_info.get_path_to_port_config_file(hwsku, asic_id)
         load_namespace_config()
@@ -570,10 +565,14 @@ def main():
             sys.exit(1)
         deep_update(data, {'PORT': ports})
 
-        if hwsku is not None:
-            brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
-            if brkout_table is not None:
-                deep_update(data, {'BREAKOUT_CFG': brkout_table})
+        brkout_table = get_breakout_mode(
+            hwsku,
+            platform,
+            args.port_config,
+            hwsku_config_file=args.hwsku_config
+        )
+        if brkout_table is not None:
+            deep_update(data, {'BREAKOUT_CFG': brkout_table})
 
     _process_json(args, data)
 
