@@ -138,9 +138,6 @@ def _validate_server_destination(server, port):
         raise IOError("Kubernetes server brackets require an IPv6 address")
     if not addresses:
         raise IOError("Kubernetes server did not resolve to an IP address")
-    if any(getattr(address, "scope_id", None) is not None
-           for address in addresses):
-        raise IOError("Kubernetes server IPv6 scope identifiers are not supported")
     prohibited = [str(address) for address in addresses
                   if _is_prohibited_address(address)]
     if prohibited:

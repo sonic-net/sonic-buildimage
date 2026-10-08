@@ -840,14 +840,15 @@ clusters:\n\
     @patch("kube_commands.swsscommon.DBConnector")
     @patch("kube_commands.swsscommon.Table")
     @patch("kube_commands.subprocess.Popen")
-    def test_join(self, mock_subproc, mock_table, mock_conn, mock_reqget):
+    def test_join(self, mock_subproc, mock_table, mock_conn, mock_session):
         self.init()
-        common_test.set_kube_mock(mock_subproc, mock_table, mock_conn, mock_reqget)
+        common_test.set_kube_mock(mock_subproc, mock_table, mock_conn,
+                                  mock_session)
 
         for (i, ct_data) in join_test_data.items():
             lock_file = ""
             common_test.do_start_test("kube:join", i, ct_data)
-            mock_reqget.reset_mock()
+            mock_session.reset_mock()
 
             if not ct_data.get(common_test.NO_INIT, False):
                 os.system("rm -f {}".format(KUBE_ADMIN_CONF))
@@ -864,8 +865,8 @@ clusters:\n\
                 assert ret == ct_data[common_test.RETVAL]
 
             if REQUEST_VERIFY in ct_data:
-                mock_reqget.assert_called_once()
-                request_get = mock_reqget.return_value.get
+                mock_session.assert_called_once()
+                request_get = mock_session.return_value.get
                 request_get.assert_called_once()
                 request_kwargs = request_get.call_args[1]
                 assert request_kwargs["cert"] == (AME_CRT, AME_KEY)
@@ -876,7 +877,7 @@ clusters:\n\
                 else:
                     assert request_kwargs["verify"] is False
             else:
-                mock_reqget.assert_not_called()
+                mock_session.assert_not_called()
 
             if lock_file:
                 kube_commands.LOCK_FILE = lock_file
