@@ -298,10 +298,38 @@ def _save_cache(path: str, cache: dict) -> None:
 
 
 def _load_cache(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as cache_file:
-        cache = json.load(cache_file)
-    if cache.get("version") != 1 or not isinstance(cache.get("objs"), list):
-        raise ValueError("Unsupported MACsec cache format")
+    try:
+        with open(path, "r", encoding="utf-8") as cache_file:
+            cache = json.load(cache_file)
+    except (OSError, UnicodeError, ValueError):
+        return {}
+
+    if (not isinstance(cache, dict) or type(cache.get("version")) is not int or
+            cache["version"] != 1):
+        return {}
+    if not isinstance(cache.get("time"), str) or not isinstance(cache.get("objs"), list):
+        return {}
+
+    sa_types = {"MACsecIngressSA", "MACsecEgressSA"}
+    for obj in cache["objs"]:
+        if (not isinstance(obj, dict) or not isinstance(obj.get("type"), str) or
+                not isinstance(obj.get("key"), str)):
+            return {}
+        if obj["type"] in sa_types:
+            sak_hash = obj.get("sak_hash")
+            counters = obj.get("counters")
+            if (not isinstance(sak_hash, str) or len(sak_hash) != 64 or
+                    any(char not in "0123456789abcdef" for char in sak_hash) or
+                    not isinstance(counters, dict)):
+                return {}
+            for name, value in counters.items():
+                if (not isinstance(name, str) or isinstance(value, bool) or
+                        not isinstance(value, (str, int))):
+                    return {}
+                try:
+                    int(value)
+                except ValueError:
+                    return {}
     return cache
 
 
@@ -378,8 +406,9 @@ class MacsecContext(object):
                     objs += create_macsec_profiles_objs(profile_name)
 
         cache = {}
-        if os.path.isfile(CACHE_FILE.format(self.multi_asic.current_namespace)):
-            cache = _load_cache(CACHE_FILE.format(self.multi_asic.current_namespace))
+        cache_path = CACHE_FILE.format(self.multi_asic.current_namespace)
+        if not dump_file and os.path.isfile(cache_path):
+            cache = _load_cache(cache_path)
 
         if not dump_file:
             if cache and cache["time"] and objs:
@@ -393,7 +422,7 @@ class MacsecContext(object):
                 "time": str(datetime.datetime.now()),
                 "objs": [_cache_entry(obj) for obj in objs]
             }
-            _save_cache(CACHE_FILE.format(self.multi_asic.current_namespace), dump_obj)
+            _save_cache(cache_path, dump_obj)
 
     @multi_asic_util.run_on_multi_asic
     def show_post_status(self):

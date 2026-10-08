@@ -1,5 +1,6 @@
-import sys
+import json
 import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
@@ -39,6 +40,50 @@ class TestShowMACsec(object):
 
         assert "5" in target_sa.dump_str(cached_entry)
         assert show_macsec.cache_find(loaded_cache, rotated_sa) is None
+
+    def test_load_cache_ignores_malformed_cache_data(self, tmp_path):
+        malformed_values = [
+            "[]",
+            '{"version": 1, "time": "now", "objs": [{}]}',
+            '{"version": 1, "time": "now", "objs": [{"type": "MACsecIngressSA", "key": "sa"}]}',
+            '{"version": 1, "time": "now", "objs": [{"type": "MACsecIngressSA", "key": "sa", "sak_hash": "' +
+            "a" * 64 + '", "counters": {"octets": "invalid"}}]}',
+            '{"version": 1, "objs": []}',
+            '{"version": 1, "time": "now", "objs": [',
+        ]
+
+        for index, contents in enumerate(malformed_values):
+            path = tmp_path / "cache-{}.json".format(index)
+            path.write_text(contents, encoding="utf-8")
+            assert show_macsec._load_cache(str(path)) == {}
+
+    def test_show_ignores_malformed_cache(self, tmp_path, monkeypatch):
+        cache_path = tmp_path / "macsecstats.json"
+        cache_path.write_text("[]", encoding="utf-8")
+        monkeypatch.setattr(show_macsec, "CACHE_FILE", str(tmp_path / "macsecstats{}.json"))
+
+        result = CliRunner().invoke(show_macsec.macsec, [])
+
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(
+            result.exit_code, result.exception, result.exc_info)
+        assert "MACsec port(Ethernet1)" in result.output
+
+    def test_dump_file_replaces_cache_without_loading_it(self, tmp_path, monkeypatch):
+        cache_path = tmp_path / "macsecstats.json"
+        cache_path.write_text("[]", encoding="utf-8")
+        monkeypatch.setattr(show_macsec, "CACHE_FILE", str(tmp_path / "macsecstats{}.json"))
+
+        def unexpected_cache_load(path):
+            raise AssertionError("cache should not be loaded")
+
+        monkeypatch.setattr(show_macsec, "_load_cache", unexpected_cache_load)
+
+        result = CliRunner().invoke(show_macsec.macsec, ["--dump-file"])
+
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(
+            result.exit_code, result.exception, result.exc_info)
+        with open(cache_path, encoding="utf-8") as cache_file:
+            assert json.load(cache_file)["version"] == 1
 
     def test_plugin_registration(self):
         cli = MagicMock()
