@@ -2,171 +2,195 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 
-"""
-Unit tests for mellanox_bfb_installer.rshim_daemon module.
-"""
+"""Unit tests for global RShim service and config management."""
 
 import os
 import sys
-import unittest
 from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-
-class TestRshimDaemon(unittest.TestCase):
-    """Tests for rshim_daemon module."""
-
-    def test_start_rshim_daemon_success(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        with mock.patch.object(rshim_daemon.subprocess, "run") as mock_run:
-            mock_run.return_value = mock.MagicMock(returncode=0)
-            self.assertTrue(rshim_daemon.start_rshim_daemon("0", "0000:08:00.0"))
-            mock_run.assert_called_once()
-            # Check the subprocess.run call arguments strictly to make sure the io capturing isn't accidentally enabled.
-            pos_args = mock_run.call_args[0]
-            kwargs = mock_run.call_args[1]
-            self.assertEqual(len(pos_args), 1, "subprocess.run should be called with exactly one positional argument")
-            self.assertEqual(kwargs, {}, "subprocess.run should be called with no keyword arguments")
-            call_args = pos_args[0]
-            expected = [
-                "start-stop-daemon",
-                "--start",
-                "--quiet",
-                "--background",
-                "--make-pidfile",
-                "--pidfile",
-                "/var/run/rshim_0.pid",
-                "--exec",
-                rshim_daemon.RSHIM_BINARY,
-                "--",
-                "-f",
-                "-i",
-                "0",
-                "-d",
-                "pcie-0000:08:00.0",
-            ]
-            self.assertEqual(call_args, expected, "subprocess.run args")
-
-    def test_start_rshim_daemon_failure_logs_and_returns_false(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        mock_log = mock.MagicMock()
-        with (
-            mock.patch.object(rshim_daemon, "logger", mock_log),
-            mock.patch.object(rshim_daemon.subprocess, "run") as mock_run,
-        ):
-            mock_run.return_value = mock.MagicMock(returncode=1)
-            self.assertFalse(rshim_daemon.start_rshim_daemon("1", "0000:09:00.0"))
-            mock_log.error.assert_called_once()
-            # logger.error("Failed to start rshim for rshim%s", rid) -> args[0] is format string
-            self.assertIn("Failed to start rshim for rshim", mock_log.error.call_args[0][0])
-            self.assertEqual(mock_log.error.call_args[0][1], "1")
-
-    def test_stop_rshim_daemon_returns_false_when_no_pidfile(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        mock_log = mock.MagicMock()
-        with (
-            mock.patch.object(rshim_daemon, "logger", mock_log),
-            mock.patch.object(rshim_daemon.os.path, "isfile", return_value=False),
-            mock.patch.object(rshim_daemon.subprocess, "run") as mock_run,
-        ):
-            self.assertFalse(rshim_daemon.stop_rshim_daemon("0"))
-            mock_run.assert_not_called()
-            mock_log.warning.assert_called_once()
-            self.assertIn("missing pidfile", mock_log.warning.call_args[0][0])
-
-    def test_stop_rshim_daemon_calls_start_stop_daemon_when_pidfile_exists(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        with (
-            mock.patch.object(rshim_daemon.os.path, "isfile", return_value=True),
-            mock.patch.object(rshim_daemon.subprocess, "run") as mock_run,
-        ):
-            mock_run.return_value = mock.MagicMock(returncode=0)
-            self.assertTrue(rshim_daemon.stop_rshim_daemon("0"))
-            mock_run.assert_called_once()
-            # Check the subprocess.run call arguments strictly to make sure the io capturing isn't accidentally enabled.
-            pos_args = mock_run.call_args[0]
-            kwargs = mock_run.call_args[1]
-            self.assertEqual(len(pos_args), 1, "subprocess.run should be called with exactly one positional argument")
-            self.assertEqual(kwargs, {}, "subprocess.run should be called with no keyword arguments")
-            call_args = pos_args[0]
-            expected = [
-                "start-stop-daemon",
-                "--stop",
-                "--quiet",
-                "--pidfile",
-                "/var/run/rshim_0.pid",
-                "--remove-pidfile",
-                "--retry",
-                "TERM/15/KILL/5",
-            ]
-            self.assertEqual(len(call_args), len(expected), "subprocess.run args length")
-            self.assertEqual(call_args, expected, "subprocess.run args")
-
-    def test_stop_rshim_daemon_returns_false_on_nonzero_exit(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        mock_log = mock.MagicMock()
-        with (
-            mock.patch.object(rshim_daemon, "logger", mock_log),
-            mock.patch.object(rshim_daemon.os.path, "isfile", return_value=True),
-            mock.patch.object(rshim_daemon.subprocess, "run") as mock_run,
-        ):
-            mock_run.return_value = mock.MagicMock(returncode=1)
-            self.assertFalse(rshim_daemon.stop_rshim_daemon("1"))
-            mock_log.warning.assert_called_once()
-            self.assertIn("exit code", mock_log.warning.call_args[0][0])
-
-    def test_stop_rshim_daemon_returns_false_on_subprocess_exception(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        mock_log = mock.MagicMock()
-        with (
-            mock.patch.object(rshim_daemon, "logger", mock_log),
-            mock.patch.object(rshim_daemon.os.path, "isfile", return_value=True),
-            mock.patch.object(rshim_daemon.subprocess, "run", side_effect=OSError("boom")),
-        ):
-            self.assertFalse(rshim_daemon.stop_rshim_daemon("0"))
-            mock_log.error.assert_called_once()
-            self.assertIn("Failed to stop rshim", mock_log.error.call_args[0][0])
-
-    def test_wait_for_rshim_boot_returns_true_when_boot_exists(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        with mock.patch.object(rshim_daemon.os.path, "exists", return_value=True):
-            self.assertTrue(rshim_daemon.wait_for_rshim_boot("rshim0"))
-
-    def test_wait_for_rshim_boot_returns_false_and_logs_on_timeout(self):
-        from mellanox_bfb_installer import rshim_daemon
-
-        mock_log = mock.MagicMock()
-        with (
-            mock.patch.object(rshim_daemon, "logger", mock_log),
-            mock.patch.object(rshim_daemon.os.path, "exists", return_value=False),
-            mock.patch.object(rshim_daemon.time, "sleep"),  # avoid 10s sleep
-        ):
-            self.assertFalse(rshim_daemon.wait_for_rshim_boot("rshim0"))
-            mock_log.error.assert_called_once()
-            self.assertIn("Boot file did not appear after 10 seconds", mock_log.error.call_args[0][0])
+from mellanox_bfb_installer import rshim_daemon  # noqa: E402
 
 
-if __name__ == "__main__":
-    unittest.main()
+def _transaction(tmp_path, selected=("rshim0",)):
+    return rshim_daemon.RshimConfigTransaction(
+        {"rshim0": "0000:08:00.1", "rshim1": "0000:09:00.1"},
+        selected,
+        config_path=str(tmp_path / "rshim.conf"),
+    )
+
+
+def test_transaction_replaces_existing_config_and_removes_it(tmp_path):
+    config_path = tmp_path / "rshim.conf"
+    config_path.write_text("DROP_MODE 1\nrshim9 pcie-0000:ff:00.1\n")
+    transaction = _transaction(tmp_path)
+
+    assert transaction.apply()
+    assert config_path.read_text() == (
+        "FORCE_MODE 1\n"
+        "rshim0 pcie-0000:08:00.1\n"
+        "none pcie-0000:09:00.1\n"
+    )
+
+    assert transaction.remove()
+    assert not config_path.exists()
+
+
+def test_transaction_remove_is_idempotent(tmp_path):
+    config_path = tmp_path / "rshim.conf"
+    transaction = _transaction(tmp_path)
+
+    assert transaction.apply()
+    assert config_path.exists()
+    assert transaction.remove()
+    assert not config_path.exists()
+    assert transaction.remove()
+
+
+def test_transaction_preserves_existing_config_when_atomic_write_fails(tmp_path):
+    config_path = tmp_path / "rshim.conf"
+    config_path.write_text("ORIGINAL 1\n")
+    transaction = _transaction(tmp_path)
+
+    with mock.patch.object(
+        rshim_daemon, "_write_selected_config", side_effect=OSError("write failed")
+    ):
+        assert not transaction.apply()
+
+    assert config_path.read_text() == "ORIGINAL 1\n"
+
+
+def test_transaction_reapplies_survivor_set_and_removes_config(tmp_path):
+    config_path = tmp_path / "rshim.conf"
+    transaction = _transaction(tmp_path, selected=("rshim0", "rshim1"))
+    assert transaction.apply()
+
+    assert transaction.reapply(("rshim1",))
+    assert config_path.read_text() == (
+        "FORCE_MODE 1\n"
+        "none pcie-0000:08:00.1\n"
+        "rshim1 pcie-0000:09:00.1\n"
+    )
+
+    assert transaction.remove()
+    assert not config_path.exists()
+
+
+def test_render_contains_only_installer_mappings():
+    rendered = rshim_daemon._render_selected_config(
+        {"rshim0": "0000:08:00.1", "rshim1": "0000:09:00.1"},
+        ["rshim0"],
+    )
+
+    assert rendered == (
+        "FORCE_MODE 1\n"
+        "rshim0 pcie-0000:08:00.1\n"
+        "none pcie-0000:09:00.1\n"
+    )
+
+
+def test_read_rshim_backend_parses_dev_name(tmp_path):
+    misc = tmp_path / "misc"
+    misc.write_text("DISPLAY_LEVEL 0\nDEV_NAME pcie-0000:08:00.1\nBOOT_MODE 1\n")
+    real_open = open
+
+    def fake_open(path, *args, **kwargs):
+        assert path == "/dev/rshim0/misc"
+        return real_open(misc, *args, **kwargs)
+
+    with mock.patch("builtins.open", side_effect=fake_open):
+        assert rshim_daemon._read_rshim_backend("rshim0") == "pcie-0000:08:00.1"
+
+
+def test_read_rshim_backend_returns_none_when_unreadable():
+    with mock.patch("builtins.open", side_effect=OSError("no such device")):
+        assert rshim_daemon._read_rshim_backend("rshim0") is None
+
+
+def test_restart_and_stop_global_service():
+    with mock.patch.object(rshim_daemon.subprocess, "run") as run:
+        run.return_value.returncode = 0
+        assert rshim_daemon.restart_global_service()
+        assert rshim_daemon.stop_global_service()
+    assert run.call_args_list == [
+        mock.call(
+            ["systemctl", "restart", "rshim.service"],
+            timeout=rshim_daemon.SYSTEMCTL_TIMEOUT_SEC,
+        ),
+        mock.call(
+            ["systemctl", "stop", "rshim.service"],
+            timeout=rshim_daemon.SYSTEMCTL_TIMEOUT_SEC,
+        ),
+    ]
+
+
+def test_restart_global_service_returns_false_on_failure():
+    with mock.patch.object(rshim_daemon.subprocess, "run") as run:
+        run.return_value.returncode = 1
+        assert not rshim_daemon.restart_global_service()
+
+
+def test_systemctl_timeout_returns_false():
+    with mock.patch.object(
+        rshim_daemon.subprocess,
+        "run",
+        side_effect=rshim_daemon.subprocess.TimeoutExpired("systemctl", 40),
+    ):
+        assert not rshim_daemon.stop_global_service()
+
+
+def test_get_valid_selected_rshims_accepts_exact_mapping(monkeypatch):
+    monkeypatch.setattr(
+        rshim_daemon.os.path,
+        "exists",
+        lambda path: path == "/dev/rshim0/boot",
+    )
+    monkeypatch.setattr(rshim_daemon, "_read_rshim_backend", lambda _rshim: "pcie-0000:08:00.1")
+
+    assert rshim_daemon.get_valid_selected_rshims(
+        {"rshim0": "0000:08:00.1"}, ["rshim1"], timeout_secs=1
+    ) == {"rshim0"}
+
+
+def test_get_valid_selected_rshims_rejects_wrong_mapping(monkeypatch):
+    times = iter((0, 0, 2))
+    monkeypatch.setattr(rshim_daemon.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(rshim_daemon.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        rshim_daemon.os.path,
+        "exists",
+        lambda path: path == "/dev/rshim0/boot",
+    )
+    monkeypatch.setattr(
+        rshim_daemon, "_read_rshim_backend", lambda _rshim: "pcie-0000:09:00.1"
+    )
+
+    assert not rshim_daemon.get_valid_selected_rshims(
+        {"rshim0": "0000:08:00.1"}, ["rshim1"], timeout_secs=1
+    )
+
+
+def test_get_valid_selected_rshims_returns_partial_set(monkeypatch):
+    times = iter((0, 0, 2))
+    monkeypatch.setattr(rshim_daemon.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(rshim_daemon.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        rshim_daemon.os.path,
+        "exists",
+        lambda path: path == "/dev/rshim0/boot",
+    )
+    monkeypatch.setattr(
+        rshim_daemon,
+        "_read_rshim_backend",
+        lambda rshim: "pcie-0000:08:00.1" if rshim == "rshim0" else None,
+    )
+
+    valid = rshim_daemon.get_valid_selected_rshims(
+        {"rshim0": "0000:08:00.1", "rshim2": "0000:0a:00.1"},
+        ["rshim1"],
+        timeout_secs=1,
+    )
+
+    assert valid == {"rshim0"}

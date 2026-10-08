@@ -22,7 +22,6 @@ Unit tests for mellanox_bfb_installer.device_selection module.
 
 import os
 import sys
-import tempfile
 from unittest import mock
 
 import pytest
@@ -126,11 +125,10 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
 
         print_usage = mock.MagicMock()
         with mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1"]):
-            dpus, user_selected_all = device_selection._user_dpu_selection_to_dpus_from_platform_json(
+            dpus = device_selection._user_dpu_selection_to_dpus_from_platform_json(
                 dpus="all", rshims=None, script_name="test", print_usage_callback=print_usage
             )
         assert dpus == ["dpu0", "dpu1"]
-        assert user_selected_all
         print_usage.assert_not_called()
 
     def test_returns_all_dpus_when_rshims_all(self):
@@ -139,11 +137,10 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
 
         print_usage = mock.MagicMock()
         with mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1"]):
-            dpus, user_selected_all = device_selection._user_dpu_selection_to_dpus_from_platform_json(
+            dpus = device_selection._user_dpu_selection_to_dpus_from_platform_json(
                 dpus=None, rshims="all", script_name="test", print_usage_callback=print_usage
             )
         assert dpus == ["dpu0", "dpu1"]
-        assert user_selected_all
         print_usage.assert_not_called()
 
     def test_returns_dpu_list_when_dpus_comma_separated(self):
@@ -152,11 +149,10 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
 
         print_usage = mock.MagicMock()
         with mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1", "dpu2"]):
-            dpus, user_selected_all = device_selection._user_dpu_selection_to_dpus_from_platform_json(
+            dpus = device_selection._user_dpu_selection_to_dpus_from_platform_json(
                 dpus="dpu0,dpu2", rshims=None, script_name="test", print_usage_callback=print_usage
             )
         assert dpus == ["dpu0", "dpu2"]
-        assert not user_selected_all
         print_usage.assert_not_called()
 
     def test_exits_when_dpu_not_in_platform(self):
@@ -257,11 +253,10 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
             mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1", "dpu2"]),
             mock.patch.object(device_selection, "rshim2dpu", side_effect=rshim2dpu_mock),
         ):
-            dpus, user_selected_all = device_selection._user_dpu_selection_to_dpus_from_platform_json(
+            dpus = device_selection._user_dpu_selection_to_dpus_from_platform_json(
                 dpus=None, rshims="rshim0,rshim1", script_name="test", print_usage_callback=print_usage
             )
         assert dpus == ["dpu0", "dpu1"]
-        assert not user_selected_all
         print_usage.assert_not_called()
 
     def test_exits_when_rshim_has_no_dpu_mapping(self):
@@ -294,11 +289,10 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
 
         print_usage = mock.MagicMock()
         with mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1"]):
-            dpus, user_selected_all = device_selection._user_dpu_selection_to_dpus_from_platform_json(
+            dpus = device_selection._user_dpu_selection_to_dpus_from_platform_json(
                 dpus="dpu0 , dpu1", rshims=None, script_name="test", print_usage_callback=print_usage
             )
         assert dpus == ["dpu0", "dpu1"]
-        assert not user_selected_all
 
     def test_returns_single_dpu_when_rshims_single(self):
         """Returns single DPU when rshims is a single value."""
@@ -312,11 +306,10 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
             mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0"]),
             mock.patch.object(device_selection, "rshim2dpu", side_effect=rshim2dpu_mock),
         ):
-            dpus, user_selected_all = device_selection._user_dpu_selection_to_dpus_from_platform_json(
+            dpus = device_selection._user_dpu_selection_to_dpus_from_platform_json(
                 dpus=None, rshims="rshim0", script_name="test", print_usage_callback=print_usage
             )
         assert dpus == ["dpu0"]
-        assert not user_selected_all
 
     def test_exits_when_both_none(self):
         """_user_dpu_selection_to_dpus_from_platform_json exits when both dpus and rshims are None."""
@@ -338,123 +331,51 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
         mock_log.error.assert_called_once()
         assert "No dpus specified!" in mock_log.error.call_args[0][0]
 
-
-@pytest.fixture(scope="module")
-def config_paths_for_validation():
-    """Provides (existing_file_path, nonexistent_file_path) for _validate_config_files tests."""
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        existing = f.name
-    nonexistent = os.path.join(tempfile.gettempdir(), "nonexistent_bfb_installer_validate_98765")
-    try:
-        yield (existing, nonexistent)
-    finally:
-        os.unlink(existing)
-
-
-class TestValidateConfigFiles:
-    """Tests for _validate_config_files."""
-
-    def test_validate_config_files_success_single_file(self, config_paths_for_validation):
-        """_validate_config_files succeeds when all config paths are existing files (single)."""
+    def test_exits_when_dpus_list_has_duplicates(self):
+        """Exits when the same DPU is selected more than once through --dpu."""
         from mellanox_bfb_installer import device_selection
 
-        existing_path, _ = config_paths_for_validation
-        device_selection._validate_config_files([existing_path])
-        # No SystemExit raised
-
-    def test_validate_config_files_success_multiple_files(self, config_paths_for_validation):
-        """_validate_config_files succeeds when all config paths are existing files (multiple)."""
-        from mellanox_bfb_installer import device_selection
-
-        existing_path, _ = config_paths_for_validation
-        # Same file twice is valid for multiple configs
-        device_selection._validate_config_files([existing_path, existing_path])
-        # No SystemExit raised
-
-    def test_validate_config_files_exits_when_path_not_file(self, config_paths_for_validation):
-        """_validate_config_files exits when a config path is not a file."""
-        from mellanox_bfb_installer import device_selection
-
-        existing_path, nonexistent_path = config_paths_for_validation
+        print_usage = mock.MagicMock()
         mock_log = mock.MagicMock()
-        with mock.patch.object(device_selection, "logger", mock_log):
+        with (
+            mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1"]),
+            mock.patch.object(device_selection, "logger", mock_log),
+        ):
             with pytest.raises(SystemExit) as ctx:
-                device_selection._validate_config_files([existing_path, nonexistent_path])
-        assert isinstance(ctx.value, SystemExit)
+                device_selection._user_dpu_selection_to_dpus_from_platform_json(
+                    dpus="dpu0,dpu1,dpu0", rshims=None, script_name="test", print_usage_callback=print_usage
+                )
+        assert ctx.value.code == 1
+        print_usage.assert_called_once()
+        mock_log.error.assert_called_once()
+        assert "cannot be selected more than once" in mock_log.error.call_args[0][0]
+        assert mock_log.error.call_args[0][1] == "dpu0"
+
+    def test_exits_when_rshims_resolve_to_the_same_dpu(self):
+        """Exits when distinct rshims map to a single DPU, which would flash it twice."""
+        from mellanox_bfb_installer import device_selection
+
+        def rshim2dpu_mock(rshim):
+            return {"rshim0": "dpu0", "rshim0-alias": "dpu0"}.get(rshim)
+
+        print_usage = mock.MagicMock()
+        mock_log = mock.MagicMock()
+        with (
+            mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0"]),
+            mock.patch.object(device_selection, "rshim2dpu", side_effect=rshim2dpu_mock),
+            mock.patch.object(device_selection, "logger", mock_log),
+        ):
+            with pytest.raises(SystemExit) as ctx:
+                device_selection._user_dpu_selection_to_dpus_from_platform_json(
+                    dpus=None,
+                    rshims="rshim0,rshim0-alias",
+                    script_name="test",
+                    print_usage_callback=print_usage,
+                )
         assert ctx.value.code == 1
         mock_log.error.assert_called_once()
-        assert "is not a file" in mock_log.error.call_args[0][0]
-        assert nonexistent_path in mock_log.error.call_args[0]
-
-
-class TestParseConfigPaths:
-    """Tests for _parse_config_paths."""
-
-    def test_returns_none_list_when_configs_none(self):
-        """_parse_config_paths returns [None] * num_dpus when configs is None."""
-        from mellanox_bfb_installer import device_selection
-
-        result = device_selection._parse_config_paths(None, 3, False)
-        assert result == [None, None, None]
-
-    def test_success_single_file(self):
-        """_parse_config_paths returns a list with the same file for all DPUs when a single file is provided."""
-        from mellanox_bfb_installer import device_selection
-
-        config_path = "/path/to/config.json"
-        num_dpus = 2
-        user_selected_all_dpus = False
-        mock_validate = mock.MagicMock()
-        with mock.patch.object(device_selection, "_validate_config_files", mock_validate):
-            result = device_selection._parse_config_paths(config_path, num_dpus, user_selected_all_dpus)
-        assert result == [config_path] * num_dpus
-        mock_validate.assert_called_once_with([config_path])
-
-    def test_success_multiple_files_matching_num_dpus(self):
-        """_parse_config_paths returns config list when multiple files match num_dpus."""
-        from mellanox_bfb_installer import device_selection
-
-        configs_str = "/path/to/config1.json,/path/to/config2.json"
-        num_dpus = 2
-        user_selected_all_dpus = False
-        mock_validate = mock.MagicMock()
-        with mock.patch.object(device_selection, "_validate_config_files", mock_validate):
-            result = device_selection._parse_config_paths(configs_str, num_dpus, user_selected_all_dpus)
-        assert result == ["/path/to/config1.json", "/path/to/config2.json"]
-        mock_validate.assert_called_once_with(["/path/to/config1.json", "/path/to/config2.json"])
-
-    def test_exits_when_user_selected_all_dpus_and_multiple_configs(self):
-        """_parse_config_paths exits when user_selected_all_dpus is True and more than one config file is provided."""
-        from mellanox_bfb_installer import device_selection
-
-        configs_str = "/path/to/config1.json,/path/to/config2.json"
-        num_dpus = 2
-        user_selected_all_dpus = True
-        mock_log = mock.MagicMock()
-        with mock.patch.object(device_selection, "logger", mock_log):
-            with pytest.raises(SystemExit) as ctx:
-                device_selection._parse_config_paths(configs_str, num_dpus, user_selected_all_dpus)
-        assert isinstance(ctx.value, SystemExit)
-        assert ctx.value.code == 1
-        mock_log.error.assert_called_once()
-        assert 'Cannot specify "all" for dpus and more than one config file!' in mock_log.error.call_args[0][0]
-
-    def test_exits_when_config_count_mismatch(self):
-        """_parse_config_paths exits when number of config files does not match num_dpus."""
-        from mellanox_bfb_installer import device_selection
-
-        configs_str = "/path/to/config1.json,/path/to/config2.json"
-        num_dpus = 3
-        mock_log = mock.MagicMock()
-        with (mock.patch.object(device_selection, "logger", mock_log),):
-            with pytest.raises(SystemExit) as ctx:
-                device_selection._parse_config_paths(configs_str, num_dpus, False)
-        assert isinstance(ctx.value, SystemExit)
-        assert ctx.value.code == 1
-        mock_log.error.assert_called_once()
-        assert "Number of config files does not match" in mock_log.error.call_args[0][0]
-        assert mock_log.error.call_args[0][1] == 2
-        assert mock_log.error.call_args[0][2] == 3
+        assert "cannot be selected more than once" in mock_log.error.call_args[0][0]
+        assert mock_log.error.call_args[0][1] == "dpu0"
 
 
 class TestGetTargets:
@@ -497,7 +418,6 @@ class TestGetTargets:
             result = device_selection.get_targets(
                 dpus="all",
                 rshims=None,
-                configs=None,
                 script_name="test",
                 print_usage_callback=print_usage,
             )
@@ -507,12 +427,10 @@ class TestGetTargets:
         assert result[0].rshim == "rshim0"
         assert result[0].dpu_pci_bus_id == "0000:01:00.0"
         assert result[0].rshim_pci_bus_id == "0000:01:00.1"
-        assert result[0].config_path is None
         assert result[1].dpu == "dpu1"
         assert result[1].rshim == "rshim1"
         assert result[1].dpu_pci_bus_id == "0000:02:00.0"
         assert result[1].rshim_pci_bus_id == "0000:02:00.1"
-        assert result[1].config_path is None
 
     def test_returns_returns_targets_for_specified_dpus(self):
         """get_targets returns TargetInfo for specified dpus."""
@@ -561,7 +479,6 @@ class TestGetTargets:
             result = device_selection.get_targets(
                 dpus="dpu1,dpu3",
                 rshims=None,
-                configs=None,
                 script_name="test",
                 print_usage_callback=print_usage,
             )
@@ -570,67 +487,14 @@ class TestGetTargets:
         assert result[0].rshim == "rshim1"
         assert result[0].dpu_pci_bus_id == "0000:02:00.0"
         assert result[0].rshim_pci_bus_id == "0000:02:00.1"
-        assert result[0].config_path is None
         assert result[1].dpu == "dpu3"
         assert result[1].rshim == "rshim3"
         assert result[1].dpu_pci_bus_id == "0000:04:00.0"
         assert result[1].rshim_pci_bus_id == "0000:04:00.1"
-        assert result[1].config_path is None
 
-    def test_returns_target_info_with_config_paths(self):
-        """get_targets includes config_path when configs provided."""
+    def test_output_order_matches_user_input_order(self):
+        """get_targets maintains the DPU order provided by the user."""
         from mellanox_bfb_installer import device_selection
-        from mellanox_bfb_installer.device_selection import TargetInfo
-        from sonic_platform.device_data import DpuInterfaceEnum
-
-        print_usage = mock.MagicMock()
-        bus_ids = {
-            "dpu0": {
-                DpuInterfaceEnum.PCIE_INT.value: "0000:01:00.0",
-                DpuInterfaceEnum.RSHIM_PCIE_INT.value: "0000:02:00.0",
-            },
-            "dpu1": {
-                DpuInterfaceEnum.PCIE_INT.value: "0000:03:00.0",
-                DpuInterfaceEnum.RSHIM_PCIE_INT.value: "0000:04:00.0",
-            },
-        }
-        with (
-            mock.patch.object(
-                device_selection.platform_dpu,
-                "list_dpus",
-                return_value=["dpu0", "dpu1"],
-            ),
-            mock.patch.object(
-                device_selection.platform_dpu,
-                "get_dpus_detected_pci_bus_ids",
-                return_value=bus_ids,
-            ),
-            mock.patch.object(
-                device_selection,
-                "dpu2rshim",
-                side_effect=lambda dpu: {"dpu0": "rshim0", "dpu1": "rshim1"}.get(dpu),
-            ),
-            mock.patch.object(device_selection, "_parse_config_paths"),
-        ):
-            device_selection._parse_config_paths.return_value = [
-                "/etc/config1.json",
-                "/etc/config2.json",
-            ]
-            result = device_selection.get_targets(
-                dpus="all",
-                rshims=None,
-                configs="/etc/config1.json,/etc/config2.json",
-                script_name="test",
-                print_usage_callback=print_usage,
-            )
-        assert len(result) == 2
-        assert result[0].config_path == "/etc/config1.json"
-        assert result[1].config_path == "/etc/config2.json"
-
-    def test_output_order_matches_user_input_order_for_dpus_and_configs(self):
-        """get_targets maintains the order of dpus and configs in the user input."""
-        from mellanox_bfb_installer import device_selection
-        from mellanox_bfb_installer.device_selection import TargetInfo
         from sonic_platform.device_data import DpuInterfaceEnum
 
         print_usage = mock.MagicMock()
@@ -656,7 +520,6 @@ class TestGetTargets:
         dpu2rshim_map = {f"dpu{i}": f"rshim{i}" for i in range(4)}
         # User-provided order (random): indices 3, 1, 0, 2
         dpus_input = "dpu3,dpu1,dpu0,dpu2"
-        configs_input = "/cfg/dpu3.json,/cfg/dpu1.json,/cfg/dpu0.json,/cfg/dpu2.json"
         with (
             mock.patch.object(
                 device_selection.platform_dpu,
@@ -673,37 +536,28 @@ class TestGetTargets:
                 "dpu2rshim",
                 side_effect=lambda dpu: dpu2rshim_map.get(dpu),
             ),
-            mock.patch(
-                "mellanox_bfb_installer.device_selection.os.path.isfile",
-                return_value=True,
-            ),
         ):
             result = device_selection.get_targets(
                 dpus=dpus_input,
                 rshims=None,
-                configs=configs_input,
                 script_name="test",
                 print_usage_callback=print_usage,
             )
         assert len(result) == 4
         assert result[0].dpu == "dpu3"
         assert result[0].rshim == "rshim3"
-        assert result[0].config_path == "/cfg/dpu3.json"
         assert result[0].dpu_pci_bus_id == "0000:04:00.0"
         assert result[0].rshim_pci_bus_id == "0000:04:00.1"
         assert result[1].dpu == "dpu1"
         assert result[1].rshim == "rshim1"
-        assert result[1].config_path == "/cfg/dpu1.json"
         assert result[1].dpu_pci_bus_id == "0000:02:00.0"
         assert result[1].rshim_pci_bus_id == "0000:02:00.1"
         assert result[2].dpu == "dpu0"
         assert result[2].rshim == "rshim0"
-        assert result[2].config_path == "/cfg/dpu0.json"
         assert result[2].dpu_pci_bus_id == "0000:01:00.0"
         assert result[2].rshim_pci_bus_id == "0000:01:00.1"
         assert result[3].dpu == "dpu2"
         assert result[3].rshim == "rshim2"
-        assert result[3].config_path == "/cfg/dpu2.json"
         assert result[3].dpu_pci_bus_id == "0000:03:00.0"
         assert result[3].rshim_pci_bus_id == "0000:03:00.1"
 
@@ -738,7 +592,6 @@ class TestGetTargets:
                 device_selection.get_targets(
                     dpus="dpu0",
                     rshims=None,
-                    configs=None,
                     script_name="test",
                     print_usage_callback=print_usage,
                 )
@@ -776,7 +629,6 @@ class TestGetTargets:
                 device_selection.get_targets(
                     dpus="dpu0",
                     rshims=None,
-                    configs=None,
                     script_name="test",
                     print_usage_callback=print_usage,
                 )
@@ -827,7 +679,6 @@ class TestGetTargets:
             result = device_selection.get_targets(
                 dpus=None,
                 rshims="rshim0,rshim1",
-                configs=None,
                 script_name="test",
                 print_usage_callback=print_usage,
             )
@@ -836,12 +687,10 @@ class TestGetTargets:
         assert result[0].rshim == "rshim0"
         assert result[0].dpu_pci_bus_id == "0000:01:00.0"
         assert result[0].rshim_pci_bus_id == "0000:02:00.0"
-        assert result[0].config_path is None
         assert result[1].dpu == "dpu1"
         assert result[1].rshim == "rshim1"
         assert result[1].dpu_pci_bus_id == "0000:03:00.0"
         assert result[1].rshim_pci_bus_id == "0000:04:00.0"
-        assert result[1].config_path is None
 
     def test_returns_target_info_when_dpu_pci_bus_id_none(self):
         """get_targets succeeds when dpu_pci_bus_id is None (ISOLATED MODE)."""
@@ -877,7 +726,6 @@ class TestGetTargets:
             result = device_selection.get_targets(
                 dpus="dpu0",
                 rshims=None,
-                configs=None,
                 script_name="test",
                 print_usage_callback=print_usage,
             )
@@ -923,7 +771,6 @@ class TestGetTargets:
                 device_selection.get_targets(
                     dpus="dpu0",
                     rshims=None,
-                    configs=None,
                     script_name="test",
                     print_usage_callback=print_usage,
                 )
