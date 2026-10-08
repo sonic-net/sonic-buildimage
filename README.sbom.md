@@ -618,10 +618,10 @@ identical.
 
 ## Uploading to OpenPSIRT
 
-The official nightly build sends each installer image's SBOM to the
-[OpenPSIRT](https://github.com/nexthop-ai/openpsirt) instance at
-https://sonic-psirt.nexthop.ai. It scans each build, re-scans it as advisories
-are published, and tracks what changed from one build of a branch to the next.
+The official nightly build can send each installer image's SBOM to an
+[OpenPSIRT](https://github.com/nexthop-ai/openpsirt) instance. It scans each
+build, re-scans it as advisories are published, and tracks what changed from
+one build of a branch to the next.
 `.azure-pipelines/upload-sbom-openpsirt.yml` is a postStep of
 `.azure-pipelines/official-build.yml`, and it runs
 `scripts/sbom_upload_openpsirt.sh` over the archived `target/`.
@@ -645,15 +645,22 @@ and reports problems as warnings on the run.
 | Bad key, refusal, server unreachable or failing | Warning. An unreachable server ends the run rather than waiting once per image |
 | Pull request, armhf and cross builds | The step does not run |
 
-The whole run is bounded at 15 minutes and the step at 20. The key is
-`OPENPSIRT_API_KEY`, a secret in the `OpenPSIRT` variable group: an OpenPSIRT
-pipeline key scoped to the `sonic` product, so one key covers every branch and
-image. With the key unset the step uploads nothing.
+The whole run is bounded at 15 minutes and the step at 20.
+
+The step reads two variables from the `OpenPSIRT` variable group, which the
+official build's stage links:
+
+| Variable | Value |
+|---|---|
+| `OPENPSIRT_URL` | The instance's https URL |
+| `OPENPSIRT_API_KEY` | A pipeline key scoped to the `sonic` product, marked secret. One key covers every branch and image |
+
+With either unset the step uploads nothing.
 
 The script runs anywhere the files are:
 
 ```bash
-OPENPSIRT_URL=https://sonic-psirt.nexthop.ai \
+OPENPSIRT_URL=https://openpsirt.example.com \
 OPENPSIRT_API_KEY=opk_... \
 OPENPSIRT_BRANCH=master \
     scripts/sbom_upload_openpsirt.sh target/

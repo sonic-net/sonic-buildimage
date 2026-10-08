@@ -4,9 +4,10 @@
 # directory. The branch the build ran from is the OpenPSIRT stream, so a
 # nightly of master and one of a release branch are tracked separately.
 #
-# OPENPSIRT_API_KEY is a secret in the OpenPSIRT variable group, which the
-# official build's stage links. The key is scoped to the product, so one key
-# covers every branch and image. Without it the step uploads nothing.
+# OPENPSIRT_URL and OPENPSIRT_API_KEY come from the OpenPSIRT variable group,
+# which the official build's stage links. The key is scoped to the product,
+# so one key covers every branch and image. Without both the step uploads
+# nothing.
 #
 # The script exits 0 whatever happens and reports problems as warnings, so
 # the build result is never changed by an upload. continueOnError and the
@@ -21,6 +22,6 @@ steps:
   continueOnError: true
   timeoutInMinutes: 20
   env:
-    OPENPSIRT_URL: https://sonic-psirt.nexthop.ai
+    OPENPSIRT_URL: $(OPENPSIRT_URL)
     OPENPSIRT_API_KEY: $(OPENPSIRT_API_KEY)
     OPENPSIRT_BRANCH: $(Build.SourceBranch)
