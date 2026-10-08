@@ -167,4 +167,13 @@ assert_started
 assert_no_arg --insecure
 assert_no_arg --allow_no_client_auth
 
+optional_client_auth="$(jq -c '.gnmi.client_auth = "false"' <<< "${valid_certs}")"
+run_launcher docker-sonic-gnmi "${optional_client_auth}" SmartSwitchDPU
+assert_started
+assert_has_arg --allow_no_client_auth
+assert_has_arg /server.crt
+assert_has_arg /server.key
+assert_no_arg --insecure
+assert_no_arg --noTLS
+
 echo "native gNMI and legacy telemetry TLS fallback tests passed"
