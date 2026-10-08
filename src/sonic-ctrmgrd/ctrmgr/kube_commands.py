@@ -461,6 +461,8 @@ users:
     ame_key_raw = open(AME_KEY, "rb")
     ame_key_b64 = base64.b64encode(ame_key_raw.read()).decode("utf-8")
     client_kubeconfig_template_j2 = Template(client_kubeconfig_template)
+    # This template creates kubeconfig YAML rather than browser-rendered HTML.
+    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     client_kubeconfig = client_kubeconfig_template_j2.render(
         k8s_ca=k8s_ca_b64, vip=_format_url_host(server), port=port,
         ame_crt=ame_crt_b64, ame_key=ame_key_b64)
