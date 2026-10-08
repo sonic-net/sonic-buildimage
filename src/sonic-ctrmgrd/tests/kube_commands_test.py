@@ -865,9 +865,12 @@ clusters:\n\
 
             if REQUEST_VERIFY in ct_data:
                 mock_reqget.assert_called_once()
-                request_kwargs = mock_reqget.call_args[1]
+                request_get = mock_reqget.return_value.get
+                request_get.assert_called_once()
+                request_kwargs = request_get.call_args[1]
                 assert request_kwargs["cert"] == (AME_CRT, AME_KEY)
-                assert request_kwargs["timeout"] == 10
+                assert request_kwargs["timeout"] == \
+                    kube_commands.K8S_CA_TIMEOUT
                 if ct_data[REQUEST_VERIFY]:
                     assert request_kwargs.get("verify", True) is True
                 else:
@@ -892,13 +895,15 @@ clusters:\n\
         tls_error = kube_commands.requests.exceptions.SSLError(
                 "certificate verify failed")
 
-        with patch("kube_commands.requests.get", side_effect=tls_error), \
+        with patch("kube_commands.requests.Session") as request_session, \
                 patch("kube_commands.tempfile.mkstemp") as mock_mkstemp, \
                 patch("kube_commands.shutil.copyfile") as mock_copyfile:
+            request_session.return_value.get.side_effect = tls_error
             with pytest.raises(kube_commands.requests.exceptions.SSLError):
                 kube_commands._gen_cli_kubeconf(
                         "10.3.157.24", 6443, "false")
 
+        request_session.return_value.close.assert_called_once_with()
         mock_mkstemp.assert_not_called()
         mock_copyfile.assert_not_called()
 
