@@ -118,11 +118,18 @@ class DpuMgmtTrafficSecurityTests(unittest.TestCase):
         self.assertEqual(self.iptables_calls(), [])
 
     def test_decimal_ports_are_normalized(self):
-        for value, expected in (("1024", "1024"), ("001024", "1024"), ("0000", "0")):
+        for value, expected in (("1024", "1024"), ("001024", "1024"), ("65535", "65535")):
             with self.subTest(value=value):
                 result = self.run_bash('normalize_port "$1"', value)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.strip(), expected)
+
+    def test_out_of_range_and_oversized_ports_are_rejected(self):
+        for value in ("0", "1023", "65536", "9" * 100):
+            with self.subTest(value=value):
+                result = self.run_bash('normalize_port "$1"', value)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
 
 
 if __name__ == "__main__":
