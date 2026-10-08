@@ -58,5 +58,5 @@ tornado==6.5.10
 traitlets==5.16.1
 typing_extensions==4.16.0
 unittest-xml-reporting==4.0.0
-wcwidth==0.9.1
+wcwidth==0.9.2
 werkzeug==3.1.9
