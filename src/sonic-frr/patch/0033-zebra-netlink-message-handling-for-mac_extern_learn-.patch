@@ -1,30 +1,27 @@
-From 435d29d7edefe7680afa4abf1e5a76c4c1491798 Mon Sep 17 00:00:00 2001
-From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
-Date: Wed, 20 Aug 2025 01:44:26 +0000
-Subject: zebra: netlink message handling for mac_extern_learn mode
+From 532c89f7ec879078cabf716c802e571a8373cf3a Mon Sep 17 00:00:00 2001
+From: Patrice Brissette <patricebrissette@gmail.com>
+Date: Tue, 5 May 2026 17:07:56 -0400
+Subject: [PATCH] zebra: netlink message handling for mac_extern_learn mode
 
-Receive handling:
-- Debounce of AF_BRIDGE netlink message based on 'protocol' field ZEBRA
-- Update zlog to include protocol
-- Ignore feedback netlink from zebra based on protocol zebra
-- Ignore if "NTF_EXT_LEARNED" flag is not marked in the netlink message
-  for extern only mode of operation
-Send Operation:
-- Always mark MAC as NTF_EXT_LEARNED in extern only mode
-- Mark Sync MAC as NTF_E_MH_PEER_SYNC, only in extern only mode
-- Peer-Sync flag (i.e NTF_E_MH_PEER_SYNC) state print in Tx zlog
+Netlink message handling for MAC operations in kernel MAC external learn mode.
 
-Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
-Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+In this mode, MACs learned by both control plane and data plane are programmed
+in the kernel with the 'extern_learn' attribute set, disabling kernel-based
+MAC learning and aging. This patch handles netlink messages for MAC add/delete/
+update operations with proper extern_learn flag handling.
+
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
-(cherry picked from commit dc5676a7e1328eb5892fdc65410e4a7ff306bec2)
+(cherry picked from commit 734b34488136141ab7688c7f491745722e9d0596)
+---
+ zebra/rt_netlink.c | 153 +++++++++++++++++++++++++++++++--------------
+ 1 file changed, 107 insertions(+), 46 deletions(-)
 
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index be8cb3687..dbf61361e 100644
+index c1d41d1b03..9bbb6d226b 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -4154,6 +4154,7 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
+@@ -4155,6 +4155,7 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
  	vni_t vni = 0;
  	uint32_t nhg_id = 0;
  	enum dplane_op_e op;
@@ -32,7 +29,7 @@ index be8cb3687..dbf61361e 100644
  
  	ndm = NLMSG_DATA(h);
  
-@@ -4182,6 +4183,9 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
+@@ -4183,6 +4184,9 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
  
  	memcpy(&mac, RTA_DATA(tb[NDA_LLADDR]), ETH_ALEN);
  
@@ -42,7 +39,7 @@ index be8cb3687..dbf61361e 100644
  	if (tb[NDA_VLAN]) {
  		vid_present = 1;
  		vid = *(uint16_t *)RTA_DATA(tb[NDA_VLAN]);
-@@ -4225,12 +4229,10 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
+@@ -4228,12 +4232,10 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
  		vni = *(vni_t *)RTA_DATA(tb[NDA_SRC_VNI]);
  
  	if (IS_ZEBRA_DEBUG_KERNEL)
@@ -59,11 +56,11 @@ index be8cb3687..dbf61361e 100644
  
  	sticky = !!(ndm->ndm_flags & NTF_STICKY);
  
-@@ -4241,6 +4243,19 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
+@@ -4244,6 +4246,19 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
  		return 0;
  	}
  
-+	if (proto == RTPROT_ZEBRA) {
++	if (zebra_mac_ext_learn_mode() && proto == RTPROT_ZEBRA) {
 +		if (IS_ZEBRA_DEBUG_KERNEL)
 +			zlog_debug("        Dropping entry because of protocol zebra");
 +		return 0;
@@ -79,15 +76,15 @@ index be8cb3687..dbf61361e 100644
  	if (h->nlmsg_type == RTM_NEWNEIGH)
  		op = DPLANE_OP_NEIGH_INSTALL;
  	else if (h->nlmsg_type == RTM_DELNEIGH)
-@@ -4253,7 +4268,6 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
- 	dplane_ctx_set_ns_id(ctx, ns_id);
- 	dplane_ctx_set_ifindex(ctx, ndm->ndm_ifindex);
- 	dplane_ctx_mac_set_addr(ctx, &mac);
--	dplane_ctx_mac_set_nhg_id(ctx, nhg_id);
- 	dplane_ctx_mac_set_ndm_state(ctx, ndm->ndm_state);
- 	dplane_ctx_mac_set_ndm_flags(ctx, ndm->ndm_flags);
+@@ -4262,7 +4277,6 @@ static int netlink_macfdb_change(struct nlmsghdr *h, int len, ns_id_t ns_id)
  	dplane_ctx_mac_set_dst_present(ctx, dst_present);
-@@ -4477,6 +4491,7 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+ 	dplane_ctx_mac_set_vtep_ip(ctx, &vtep_ip);
+ 	dplane_ctx_mac_set_vid(ctx, vid);
+-	dplane_ctx_mac_set_nhg_id(ctx, nhg_id);
+ 	dplane_ctx_mac_set_dp_static(ctx, dp_static);
+ 	dplane_ctx_mac_set_local_inactive(ctx, local_inactive);
+ 	dplane_ctx_mac_set_vni(ctx, vni);
+@@ -4502,6 +4516,7 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
  	uint32_t update_flags;
  	bool nfy = false;
  	uint8_t nfy_flags = 0;
@@ -95,7 +92,7 @@ index be8cb3687..dbf61361e 100644
  	int proto = RTPROT_ZEBRA;
  
  	if (dplane_ctx_get_type(ctx) != 0)
-@@ -4488,33 +4503,72 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+@@ -4513,33 +4528,81 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
  	flags = NTF_MASTER;
  	state = NUD_REACHABLE;
  
@@ -106,6 +103,15 @@ index be8cb3687..dbf61361e 100644
 +		/* Update from zebra to kernel are always treated the same way:
 +		 * we are not relying on kernel to keep track of local vs remote
 +		 * and we are not using any form of ageing from it
++		 *
++		 * NOTE: nfy is intentionally NOT set to true in this mode.
++		 * In ext_learn mode, zebra does not use the LOCAL_INACTIVE
++		 * state machine or rely on kernel inactive-notify events.
++		 * Hardware is responsible for aging, and the receive path
++		 * filters out all entries with proto == RTPROT_ZEBRA to
++		 * prevent zebra from processing its own programming.
++		 * Therefore, requesting inactive-notify events is unnecessary
++		 * and would be ignored anyway.
 +		 */
  		if (dplane_ctx_mac_is_sticky(ctx)) {
 -			/* NUD_NOARP prevents the entry from expiring */
@@ -187,7 +193,7 @@ index be8cb3687..dbf61361e 100644
  	}
  
  	nhg_id = dplane_ctx_mac_get_nhg_id(ctx);
-@@ -4531,19 +4585,16 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+@@ -4555,26 +4618,24 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
  		else
  			vid_buf[0] = '\0';
  
@@ -204,6 +210,13 @@ index be8cb3687..dbf61361e 100644
 -			(update_flags & DPLANE_MAC_SET_INACTIVE) ? " inactive"
 -								 : "",
 -			nfy ? " nfy" : "");
+-	}
+-
+-	total = netlink_neigh_update_msg_encode(
+-		ctx, cmd, (const void *)dplane_ctx_mac_get_addr(ctx), ETH_ALEN,
+-		&vtep_ip, true, AF_BRIDGE, 0, flags, state, nhg_id, nfy,
+-		nfy_flags, false /*ext*/, 0 /*ext_flags*/, data, datalen,
+-		proto);
 +		zlog_debug("Tx %s family %s IF %s(%u)%s %sMAC %pEA dst %pIA nhg %u%s%s%s%s%s%s",
 +			   nl_msg_type_to_str(cmd), nl_family_to_str(AF_BRIDGE),
 +			   dplane_ctx_get_ifname(ctx), dplane_ctx_get_ifindex(ctx), vid_buf,
@@ -214,9 +227,17 @@ index be8cb3687..dbf61361e 100644
 +			   (update_flags & DPLANE_MAC_SET_INACTIVE) ? " inactive" : "",
 +			   (nda_ext_flags & NTF_E_MH_PEER_SYNC) ? " peer-sync" : "",
 +			   nfy ? " nfy" : "");
- 	}
++	}
++
++	total = netlink_neigh_update_msg_encode(ctx, cmd,
++						(const void *)dplane_ctx_mac_get_addr(ctx),
++						ETH_ALEN, &vtep_ip, true, AF_BRIDGE, 0, flags,
++						state, nhg_id, nfy, nfy_flags,
++						nda_ext_flags != 0 /*ext*/,
++						nda_ext_flags /*ext_flags*/, data, datalen, proto);
  
- 	total = netlink_neigh_update_msg_encode(
+ 	return total;
+ }
 -- 
-2.43.0
+2.34.1
 
