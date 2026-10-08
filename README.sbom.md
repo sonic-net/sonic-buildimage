@@ -17,7 +17,6 @@ every `target/sonic-<machine>.bin` when the build is invoked with
 - [Reproducibility](#reproducibility)
 - [Attestation and signing](#attestation-and-signing)
 - [Vulnerability scanning](#vulnerability-scanning)
-- [Uploading to OpenPSIRT](#uploading-to-openpsirt)
 - [Verification](#verification)
 - [Querying dependencies](#querying-dependencies)
 - [Known limitations](#known-limitations)
@@ -616,56 +615,6 @@ statement took effect: a statement that matched moves a finding to
 `Status changed:`, and one that matched nothing leaves both reports
 identical.
 
-## Uploading to OpenPSIRT
-
-The official nightly build can send each installer image's SBOM to an
-[OpenPSIRT](https://github.com/nexthop-ai/openpsirt) instance. It scans each
-build, re-scans it as advisories are published, and tracks what changed from
-one build of a branch to the next.
-`.azure-pipelines/upload-sbom-openpsirt.yml` is a postStep of
-`.azure-pipelines/official-build.yml`, and it runs
-`scripts/sbom_upload_openpsirt.sh` over the archived `target/`.
-
-| OpenPSIRT | Comes from |
-|---|---|
-| Product | `sonic` |
-| Stream | The branch the build ran from, `$(Build.SourceBranch)` without `refs/heads/` |
-| Variant | The image name: `sonic-broadcom-dnx.bin` is `broadcom-dnx`, `sonic-vs.img.gz` is `vs` |
-
-An upload never changes the build result. The script exits 0 in every case
-and reports problems as warnings on the run.
-
-| Case | Behavior |
-|---|---|
-| `sonic-aboot-<machine>.swi`, `sonic-<machine>.bfb` | Not sent. Each repackages the rootfs the same machine's `.bin` carries |
-| An SBOM with no image beside it | Not sent |
-| A branch name containing `/` | Not sent. A stream name is one segment |
-| Branch or variant not declared on the instance | Warning. An administrator declares it once |
-| Build time not newer than the one held | Logged. The build time is the HEAD commit, so a nightly of an unchanged branch has nothing new |
-| Bad key, refusal, server unreachable or failing | Warning. An unreachable server ends the run rather than waiting once per image |
-| Pull request, armhf and cross builds | The step does not run |
-
-The whole run is bounded at 15 minutes and the step at 20.
-
-The step reads two variables from the `OpenPSIRT` variable group, which the
-official build's stage links:
-
-| Variable | Value |
-|---|---|
-| `OPENPSIRT_URL` | The instance's https URL |
-| `OPENPSIRT_API_KEY` | A pipeline key scoped to the `sonic` product, marked secret. One key covers every branch and image |
-
-With either unset the step uploads nothing.
-
-The script runs anywhere the files are:
-
-```bash
-OPENPSIRT_URL=https://openpsirt.example.com \
-OPENPSIRT_API_KEY=opk_... \
-OPENPSIRT_BRANCH=master \
-    scripts/sbom_upload_openpsirt.sh target/
-```
-
 ## Verification
 
 ```bash
@@ -908,8 +857,6 @@ Files that exist for this design.
 | `scripts/sbom_vuln_diff.py` | Standalone drift analysis between two vuln reports. |
 | `scripts/sbom_cve_refs.py` | Which patches the build applies, and the CVEs each claims to fix. Shared by `sbom_fragment.py` and `sbom_extract_vex_from_patches.py` so the SBOM and the VEX statements cannot disagree about either. |
 | `scripts/sbom_extract_vex_from_patches.py` | Auto-VEX from CVE markers in patch metadata. |
-| `scripts/sbom_upload_openpsirt.sh` | Sends each installer image's SBOM to OpenPSIRT. |
-| `.azure-pipelines/upload-sbom-openpsirt.yml` | The official build's postStep that runs it. |
 | `vex/` | OpenVEX statements (curated at top level, auto in `vex/auto/`). |
 | `vex/README.md` | VEX schema and triage workflow. |
 | `src/sonic-build-hooks/scripts/collect_version_files` | Extended to harvest `copyrights.tar.gz` and `lockfiles.tar.gz` per scope when `ENABLE_SBOM=y`. |
