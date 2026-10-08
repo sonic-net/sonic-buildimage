@@ -1,0 +1,89 @@
+module sonic-optical-attenuator {
+  yang-version 1.1;
+  namespace "http://github.com/sonic-net/sonic-optical-attenuator";
+  prefix opt-att;
+
+  organization
+    "SONiC";
+  contact
+    "SONiC";
+  description
+    "OTN_ATTENUATOR YANG Module for SONiC OS";
+
+  revision 2026-06-01 {
+    description
+      "First revision, derived from openconfig yang model";
+    reference
+      "openconfig-optical-attenuator.yang, version 2019-07-19";
+  }
+
+  typedef optical-attenuator-mode {
+    type enumeration {
+      enum CONSTANT_POWER {
+        description
+          "In constant power mode, the attenuator will apply
+           attenuation such as to maintain a constant output power";
+      }
+      enum CONSTANT_ATTENUATION {
+        description
+          "In constant attenuation mode, the attenuator will apply
+           a constant attenuation";
+      }
+    }
+    description
+      "Type definition for different types of optical attenuator
+       operating modes. Derived from the OPTICAL_ATTENUATOR_MODE
+       identity in openconfig-optical-attenuator.yang";
+  }
+
+  container sonic-optical-attenuator {
+    description
+      "Top-level container for the OTN optical attenuator configuration";
+    container OTN_ATTENUATOR {
+      description
+        "Enclosing container for list of attenuators";
+      list OTN_ATTENUATOR_LIST {
+        key "name";
+        description
+          "List of optical attenuators, keyed by attenuator name";
+        leaf name {
+          type string;
+          description
+            "User-defined name assigned to identify a specific attenuator
+             in the device";
+        }
+        leaf attenuation-mode {
+          type optical-attenuator-mode;
+          description
+            "The operating mode of the attenuator";
+        }
+        leaf target-output-power {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dBm";
+          description
+            "Power level set on the output of attenuator.  This leaf is
+             only relevant when in CONSTANT_POWER mode.";
+        }
+        leaf attenuation {
+          type decimal64 {
+            fraction-digits 2;
+            range "0..max";
+          }
+          units "dB";
+          description
+            "Attenuation applied by the attenuator.  This leaf is only
+             relevant when in CONSTANT_ATTENUATION mode.";
+        }
+        leaf enabled {
+          type boolean;
+          description
+            "When true, attenuator is set to specified attenuation or varies to
+             maintain constant output power.  When false, the attenuator is set
+             max attenuation or blocked.";
+        }
+      }
+    }
+  }
+}
