@@ -94,16 +94,17 @@ normalize_port(){
         return 1
     fi
     port="${port#"${port%%[!0]*}"}"
-    printf '%s\n' "${port:-0}"
+    port=${port:-0}
+    if [[ ${#port} -gt 5 ]] || (( 10#$port < 1024 || 10#$port > 65535 )); then
+        echo "Provided port $1 is outside the valid range 1024-65535" >&2
+        return 1
+    fi
+    printf '%s\n' "$port"
 }
 
 port_use_validation(){
 	local port_l=("$@")
 	for port in "${port_l[@]}"; do
-		if (( 10#$port >= 0 && 10#$port <= 1023 )); then
-			echo "Provided port $port in range 0-1023, Please execute with a different port"
-			exit 1
-		fi
 		if netstat -tuln | awk '{print $4}' | grep -q ":$port\$"; then
 			echo "Provided port $port is in use by another process, Please execute with a different port"
 			exit 1
