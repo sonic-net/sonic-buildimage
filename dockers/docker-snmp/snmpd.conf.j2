@@ -46,50 +46,21 @@ view   systemonly  included   .1.3.6.1.2.1.25.1
 
 {# rocommunity/rwcommunity grant unauthenticated SNMPv1/v2c access to any
 host reaching UDP/161. To restrict by source, bind an ACL_TABLE of type
-CTRLPLANE with services ["SNMP"] (see Configuration.md). The well-known
-default community strings ('public'/'private') are never rendered, even
-disguised as a Net-SNMP quoted token (e.g. '"public"'), which Net-SNMP's
-config tokenizer unwraps back to the bare 'public' token at parse time
-when a leading quote is closed. Any suffix after that closing quote is
-parsed as subsequent directive arguments, not as part of the community.
-A quote that does not delimit a leading quoted token is read back
-literally, so it must never be stripped from the emitted value -- doing
-so would silently activate a different credential than the one
-configured. #}
+CTRLPLANE with services ["SNMP"] (see Configuration.md). ZTP-provided
+snmp.yml defaults can never seed the well-known community strings
+('public'/'private') into SNMP_COMMUNITY (see snmp_yml_to_configdb.py);
+an operator who explicitly configures one of those values anyway (e.g.
+for a lab) gets it rendered as configured, flagged with a warning
+comment below, rather than silently blocked. #}
 {% set insecure_default_communities = ['public', 'private'] %}
-
-{% macro canonical_for_insecure_check(community) %}
-{#- Mirror what Net-SNMP's config tokenizer actually parses the token as,
-purely to detect quoted/escaped smuggling of a well-known default. This
-value is never emitted.
-  - Closing a leading quote ends the community token even with no following
-    whitespace. Any trailing content is parsed separately, either as a
-    comment or another directive argument such as a source restriction
-    (e.g. '"private"0.0.0.0/0' still has community 'private').
-    If no closing quote exists, Net-SNMP consumes through end-of-line and
-    still returns the token without the unmatched opening quote.
-  - A backslash is dropped and the following character is kept literally
-    by Net-SNMP whether or not it appears inside quotes (e.g. unquoted
-    'pri\vate' parses as community 'private'), so backslashes are always
-    removed for this check, quoted or not. #}
-{%- set rest = community[1:] -%}
-{%- if community|length > 1 and community[0] in ('"', "'") -%}
-{%- if community[0] in rest -%}
-{%- set parts = rest.split(community[0], 1) -%}
-{%- set inner = parts[0] -%}
-{{- inner | replace('\\', '') -}}
-{%- else -%}
-{{- rest | replace('\\', '') -}}
-{%- endif -%}
-{%- else -%}
-{{- community | replace('\\', '') -}}
-{%- endif -%}
-{% endmacro %}
 
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
 {% set safe_community = community | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
-{% if SNMP_COMMUNITY[community]['TYPE'] == 'RO' and canonical_for_insecure_check(safe_community) not in insecure_default_communities %}
+{% if SNMP_COMMUNITY[community]['TYPE'] == 'RO' %}
+{% if safe_community in insecure_default_communities %}
+# WARNING: community '{{ safe_community }}' is a well-known default and is insecure; configure a non-default value unless this is an intentional, isolated lab/test deployment.
+{% endif %}
 rocommunity {{ safe_community }}
 rocommunity6 {{ safe_community }}
 {% endif %}
@@ -99,7 +70,10 @@ rocommunity6 {{ safe_community }}
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
 {% set safe_community = community | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
-{% if SNMP_COMMUNITY[community]['TYPE'] == 'RW' and canonical_for_insecure_check(safe_community) not in insecure_default_communities %}
+{% if SNMP_COMMUNITY[community]['TYPE'] == 'RW' %}
+{% if safe_community in insecure_default_communities %}
+# WARNING: community '{{ safe_community }}' is a well-known default and is insecure; configure a non-default value unless this is an intentional, isolated lab/test deployment.
+{% endif %}
 rwcommunity {{ safe_community }}
 rwcommunity6 {{ safe_community }}
 {% endif %}

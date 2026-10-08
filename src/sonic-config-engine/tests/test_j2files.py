@@ -931,9 +931,12 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                 for line in output.splitlines()
             ))
 
-    def test_snmpd_community_insecure_defaults_rejected(self):
-        # 'public'/'private' must never be rendered, even via a direct
-        # ConfigDB write bypassing YANG/ingestion validation.
+    def test_snmpd_community_insecure_default_rendered_with_warning(self):
+        # ZTP's snmp.yml can never seed 'public'/'private' into ConfigDB
+        # (see snmp_yml_to_configdb.py), so a SNMP_COMMUNITY entry using one
+        # of those values can only have arrived via an explicit operator
+        # action (CLI or direct write). That deliberate choice is honored
+        # and rendered, but flagged with a warning comment for visibility.
         communities = {
             'public': {'TYPE': 'RO'},
             'private': {'TYPE': 'RW'},
@@ -941,14 +944,16 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
         output = self.render_snmpd_community_conf(communities)
 
-        self.assertNotIn('rocommunity public\n', output)
-        self.assertNotIn('rocommunity6 public\n', output)
-        self.assertNotIn('rwcommunity private\n', output)
-        self.assertNotIn('rwcommunity6 private\n', output)
+        self.assertIn('rocommunity public\n', output)
+        self.assertIn('rocommunity6 public\n', output)
+        self.assertIn('rwcommunity private\n', output)
+        self.assertIn('rwcommunity6 private\n', output)
+        self.assertIn("# WARNING: community 'public' is a well-known default", output)
+        self.assertIn("# WARNING: community 'private' is a well-known default", output)
 
     def test_snmpd_community_insecure_default_mixed_with_valid(self):
-        # A legitimate community configured alongside a rejected default
-        # must still render normally.
+        # A legitimate community configured alongside an explicit insecure
+        # default must still render normally, without a warning of its own.
         communities = {
             'public': {'TYPE': 'RO'},
             'readcommunity': {'TYPE': 'RO'},
@@ -956,38 +961,22 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
         output = self.render_snmpd_community_conf(communities)
 
-        self.assertNotIn('rocommunity public\n', output)
+        self.assertIn('rocommunity public\n', output)
         self.assertIn('rocommunity readcommunity\n', output)
         self.assertIn('rocommunity6 readcommunity\n', output)
+        self.assertIn("# WARNING: community 'public' is a well-known default", output)
+        self.assertNotIn("# WARNING: community 'readcommunity'", output)
 
-    def test_snmpd_community_insecure_default_case_variant_not_rejected(self):
+    def test_snmpd_community_insecure_default_case_variant_not_warned(self):
         # SNMP community strings are case-sensitive on the wire; 'Public' is
-        # not the well-known default and must not be over-blocked.
+        # not the well-known default and must not be flagged.
         communities = {'Public': {'TYPE': 'RO'}}
 
         output = self.render_snmpd_community_conf(communities)
 
         self.assertIn('rocommunity Public\n', output)
         self.assertIn('rocommunity6 Public\n', output)
-
-    def test_snmpd_community_quoted_insecure_default_rejected(self):
-        # Net-SNMP's config tokenizer strips wrapping double quotes, so
-        # '"public"' is read by snmpd as the bare 'public' token. Must be
-        # rejected like the unquoted default, not rendered as its own
-        # community string.
-        communities = {
-            '"public"': {'TYPE': 'RO'},
-            "'private'": {'TYPE': 'RW'},
-        }
-
-        output = self.render_snmpd_community_conf(communities)
-
-        self.assertNotIn('rocommunity public\n', output)
-        self.assertNotIn('rocommunity6 public\n', output)
-        self.assertNotIn('rwcommunity private\n', output)
-        self.assertNotIn('rwcommunity6 private\n', output)
-        self.assertNotIn('"public"', output)
-        self.assertNotIn("'private'", output)
+        self.assertNotIn('# WARNING:', output)
 
     def test_snmpd_community_embedded_quote_preserved_literally(self):
         # A quote/backslash that is not the whole-token quoting delimiter
@@ -1004,73 +993,6 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertIn('rocommunity my"com\\munity\n', output)
         self.assertIn('rocommunity6 my"com\\munity\n', output)
 
-    def test_snmpd_community_quoted_default_with_trailing_comment_rejected(self):
-        # Closing a quote ends that Net-SNMP token even with no following
-        # whitespace, so a trailing bare '#' starts a comment to end of
-        # line: snmpd reads '"public"#' as the bare community 'public'.
-        # Verified against installed snmpd 5.9.1 that this grants access.
-        communities = {
-            '"public"#': {'TYPE': 'RO'},
-            "'private'#trailing": {'TYPE': 'RW'},
-        }
-
-        output = self.render_snmpd_community_conf(communities)
-
-        self.assertNotIn('rocommunity public\n', output)
-        self.assertNotIn('rocommunity6 public\n', output)
-        self.assertNotIn('rwcommunity private\n', output)
-        self.assertNotIn('rwcommunity6 private\n', output)
-        self.assertNotIn('"public"#', output)
-        self.assertNotIn("'private'#trailing", output)
-
-    def test_snmpd_community_quoted_default_with_trailing_source_rejected(self):
-        # A suffix after a closed leading quote is parsed as the next
-        # directive argument. It does not change the quoted community token,
-        # so this would otherwise activate the forbidden 'private' community
-        # with 0.0.0.0/0 as its source restriction.
-        communities = {
-            '"public"localhost': {'TYPE': 'RO'},
-            '"private"0.0.0.0/0': {'TYPE': 'RW'},
-        }
-
-        output = self.render_snmpd_community_conf(communities)
-
-        self.assertNotIn('rocommunity public\n', output)
-        self.assertNotIn('rocommunity6 public\n', output)
-        self.assertNotIn('rwcommunity private\n', output)
-        self.assertNotIn('rwcommunity6 private\n', output)
-        self.assertNotIn('"public"localhost', output)
-        self.assertNotIn('"private"0.0.0.0/0', output)
-
-    def test_snmpd_community_unmatched_leading_quote_rejected(self):
-        # Net-SNMP removes an unmatched leading quote and consumes the token
-        # through end-of-line, so these still activate the bare defaults.
-        communities = {
-            '"public': {'TYPE': 'RO'},
-            "'private": {'TYPE': 'RW'},
-        }
-
-        output = self.render_snmpd_community_conf(communities)
-
-        self.assertNotIn('rocommunity public\n', output)
-        self.assertNotIn('rocommunity6 public\n', output)
-        self.assertNotIn('rwcommunity private\n', output)
-        self.assertNotIn('rwcommunity6 private\n', output)
-        self.assertNotIn('"public', output)
-        self.assertNotIn("'private", output)
-
-    def test_snmpd_community_unquoted_escaped_default_rejected(self):
-        # Net-SNMP drops a backslash and keeps the following character
-        # literally whether or not it appears inside quotes, so an
-        # unquoted 'pri\vate' is read as the bare community 'private'.
-        # Verified against installed snmpd 5.9.1 that this grants access.
-        communities = {'pri\\vate': {'TYPE': 'RW'}}
-
-        output = self.render_snmpd_community_conf(communities)
-
-        self.assertNotIn('rwcommunity private\n', output)
-        self.assertNotIn('rwcommunity6 private\n', output)
-        self.assertNotIn('pri\\vate', output)
 
     def test_snmpd_user_rendering(self):
         users = {
