@@ -1114,11 +1114,11 @@ static bool has_srv6_localsid_nexthop(struct zebra_dplane_ctx *ctx)
  * nexthops, and zebra's nexthop group messages carry no VxLAN encap, so EVPN
  * routes go out inline with groups on too.
  */
-static bool has_evpn_nexthop(struct zebra_dplane_ctx *ctx)
+static bool nhg_has_evpn_nexthop(const struct nexthop_group *nhg)
 {
 	struct nexthop *nexthop;
 
-	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop))
+	for (ALL_NEXTHOPS_PTR(nhg, nexthop))
 		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN))
 			return true;
 
@@ -2685,8 +2685,21 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	if (use_nhg &&
 	    (op == DPLANE_OP_ROUTE_INSTALL || op == DPLANE_OP_ROUTE_UPDATE ||
 	     op == DPLANE_OP_ROUTE_DELETE) &&
-	    has_evpn_nexthop(ctx))
+	    nhg_has_evpn_nexthop(dplane_ctx_get_ng(ctx)))
 		use_nhg = false;
+
+	/*
+	 * No route names a group with an EVPN nexthop (a route on it has the
+	 * same nexthops, so it goes out inline), and fpmsyncd deletes a
+	 * NEXTHOP_GROUP_TABLE entry only once a route has named it, so the group
+	 * is not sent. Its members still are: the EVPN flag is not part of the
+	 * nexthop hash, so a group without it may share them.
+	 */
+	if ((op == DPLANE_OP_NH_INSTALL || op == DPLANE_OP_NH_UPDATE ||
+	     op == DPLANE_OP_NH_DELETE) &&
+	    dplane_ctx_get_nhe_nh_grp_count(ctx) &&
+	    nhg_has_evpn_nexthop(dplane_ctx_get_nhe_ng(ctx)))
+		return 0;
 
 	nl_buf_len = 0;
 
