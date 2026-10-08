@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+import time
+import sys
+import signal
+import subprocess
+import threading
+from sonic_py_common import daemon_base
+from swsscommon import swsscommon
+
+
+# TODO: Once we no longer support Python 2, we can eliminate this and get the
+# name using the 'name' field (e.g., `signal.SIGINT.name`) starting with Python 3.5
+SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n)
+                             for n in dir(signal) if n.startswith('SIG') and '_' not in n)
+
+SYSLOG_IDENTIFIER = "ufispaceAsicThermalMonitor"
+ASIC_TEMPERATURE_INFO_TABLE = "ASIC_SENSORS"
+ASIC_SENSORS_POLLER_INTERVAL_FIELD = 'ASIC_SENSORS_POLLER_INTERVAL'
+ASIC_SENSORS_POLLER_INTERVAL = "5"
+ASIC_SENSORS_POLLER_STATUS_FIELD = 'ASIC_SENSORS_POLLER_STATUS'
+POLLING_INTERVAL = 5
+DAEMON_START_DELAY_SECS = 60
+OPTICS_TEMP_HIGH_TRESHOLD = 70
+
+exit_code = 0
+is_first_run = True
+
+class AsicOpticThermalCtrlDaemon(daemon_base.DaemonBase):
+    def __init__(self, log_identifier):
+        super(AsicOpticThermalCtrlDaemon, self).__init__(log_identifier)
+
+        # Set minimum logging level to INFO
+        self.set_min_log_priority_info()
+        self.asic_thermal_tbl = None
+        self._update_optic_threshold = None
+
+        self.stop_event = threading.Event()
+
+        try:
+            import sonic_platform.platform
+            self.platform_chassis = sonic_platform.platform.Platform().get_chassis()
+            if not self.platform_chassis:
+                self.log_error("Platform_chassis is empty")
+                sys.exit(1)
+        except Exception as e:
+            self.log_error("Platform_chassis is empty")
+            sys.exit(1)
+
+    # Override signal handler from DaemonBase
+    def signal_handler(self, sig, frame):
+        """
+        Signal handler
+        :param sig: Signal number
+        :param frame: not used
+        :return:
+        """
+        FATAL_SIGNALS = [signal.SIGINT, signal.SIGTERM]
+        NONFATAL_SIGNALS = [signal.SIGHUP]
+
+        global exit_code
+
+        if sig in FATAL_SIGNALS:
+            self.log_info("Caught signal '{}' - exiting...".format(SIGNALS_TO_NAMES_DICT[sig]))
+            exit_code = 128 + sig  # Make sure we exit with a non-zero code so that supervisor will try to restart us
+            self.stop_event.set()
+        elif sig in NONFATAL_SIGNALS:
+            self.log_info("Caught signal '{}' - ignoring...".format(SIGNALS_TO_NAMES_DICT[sig]))
+        else:
+            self.log_warning("Caught unhandled signal '{}' - ignoring...".format(SIGNALS_TO_NAMES_DICT[sig]))
+
+    # Main daemon logic
+    def run(self):
+        global is_first_run
+        if is_first_run:
+            is_first_run = False
+            if self.stop_event.wait(DAEMON_START_DELAY_SECS):
+                return False
+
+        if self.stop_event.wait(POLLING_INTERVAL):
+            # We received a fatal signal
+            return False
+
+        self._enable_asic_thermal_monitor()
+        self._update_asic_thermal()
+        self._update_optic_thermal()
+        return True
+
+    def _enable_asic_thermal_monitor(self):
+        try:
+            if self.asic_thermal_tbl is None:
+                config_db = daemon_base.db_connect("CONFIG_DB")
+                self.asic_thermal_tbl = swsscommon.Table(config_db, ASIC_TEMPERATURE_INFO_TABLE)
+
+            keys = self.asic_thermal_tbl.getKeys()
+            if len(keys) == 0:
+                fvs1 = swsscommon.FieldValuePairs([("interval", ASIC_SENSORS_POLLER_INTERVAL)])
+                self.asic_thermal_tbl.set(ASIC_SENSORS_POLLER_INTERVAL_FIELD, fvs1)
+
+                fvs2 = swsscommon.FieldValuePairs([("admin_status", "enable")])
+                self.asic_thermal_tbl.set(ASIC_SENSORS_POLLER_STATUS_FIELD, fvs2)
+        except Exception as e:
+            self.asic_thermal_tbl = None
+            pass
+
+    def _update_asic_thermal(self):
+        thermal_list = self.platform_chassis.get_all_thermals()
+        default_index = 0
+
+        for _, thermal in enumerate(thermal_list, default_index):
+            if not thermal.__class__.__name__ == 'AsicThermal':
+                continue
+
+            try:
+                temp = thermal.get_temperature()
+                high_threshold = thermal.get_high_threshold()
+                cmd = [
+                        "ipmitool", "raw", "0x3c", "0x20", "0x0",
+                        str(thermal.sensor_db_index), str(int(temp)),
+                        "0x1"
+                ]
+
+                if temp != 0:
+                    if(high_threshold != 0 and temp > high_threshold):
+                        self.log_warning("ASIC thermal sensor {} temperature {} exceeds high threshold {}".format(thermal.get_name(), temp, high_threshold))
+                    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+            except Exception as e:
+                pass
+
+    def _update_optic_thermal(self):
+        sfp_list = self.platform_chassis.get_all_sfps()
+        default_index = 0
+        target_temp = 0
+        target_index = 0
+        for _, sfp in enumerate(sfp_list, default_index):
+            try:
+                temp = sfp.get_temperature()
+                if(int(temp) > target_temp):
+                    target_temp = int(temp)
+                    target_index = sfp.index
+            except Exception as e:
+                pass
+        try:
+            cmd = [
+                    "ipmitool", "raw", "0x3c", "0x20", "0x1",
+                    str(target_index), str(target_temp),
+                    "0x1"
+            ]
+
+            if target_temp != 0:
+                if(target_temp > OPTICS_TEMP_HIGH_TRESHOLD):
+                    self.log_warning("Port{} temperature {} exceeds high threshold {}".format(target_index, target_temp, OPTICS_TEMP_HIGH_TRESHOLD))
+
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+        except Exception as e:
+            pass
+#
+# Main =========================================================================
+#
+
+def main():
+    global exit_code
+    ctrl_daemon = AsicOpticThermalCtrlDaemon(SYSLOG_IDENTIFIER)
+    ctrl_daemon.log_info("Starting up...")
+
+    try:
+        while ctrl_daemon.run():
+            pass
+
+        ctrl_daemon.log_info("Shutting down...")
+    except KeyboardInterrupt:
+        exit_code = 128 + signal.SIGINT
+        ctrl_daemon.log_info("Caught signal 'SIGINT' (inside main) - exiting...")
+    return exit_code
+
+
+if __name__ == '__main__':
+    sys.exit(main())
