@@ -79,6 +79,21 @@ def test_confed_config_read_uses_unix_socket(mock_config_db):
     mock_config_db.assert_called_once_with(use_unix_socket_path=True)
     mock_config_db.return_value.connect.assert_called_once_with()
 
+
+@patch('bgpcfgd.managers_device_global.device_info.is_chassis', return_value=True)
+@patch('bgpcfgd.managers_device_global.swsscommon.SonicV2Connector')
+def test_chassis_tsa_status_keeps_chassis_app_db_on_tcp(mock_connector, mock_is_chassis):
+    connector = mock_connector.return_value
+    connector.CHASSIS_APP_DB = "CHASSIS_APP_DB"
+    connector.get.return_value = "true"
+    mgr = bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.__new__(
+        bgpcfgd.managers_device_global.DeviceGlobalCfgMgr
+    )
+
+    assert mgr.get_chassis_tsa_status() == "true"
+    mock_connector.assert_called_once_with(use_unix_socket_path=False)
+    connector.connect.assert_called_once_with("CHASSIS_APP_DB", False)
+
 #
 # TSA -----------------------------------------------------------------------------------------------------------------
 #
