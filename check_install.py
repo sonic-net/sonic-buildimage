@@ -7,15 +7,37 @@ import sys
 import time
 
 
-def main():
-
+def build_arg_parser():
     parser = argparse.ArgumentParser(description='test_login cmdline parser')
     parser.add_argument('-u', default="admin", help='login user name')
-    parser.add_argument('-P', default=os.environ.get("SONIC_PASSWORD", "YourPaSsWoRd"), help='login password')
-    parser.add_argument('-N', default="Test@2022", help='new password')
+    parser.add_argument('-P', default=None, help='login password (default: $SONIC_PASSWORD)')
+    parser.add_argument('-N', default=None, help='new password (default: $SONIC_NEW_PASSWORD)')
     parser.add_argument('-p', type=int, default=9000, help='local port')
+    return parser
 
+
+def resolve_credentials(parser, args):
+    """Resolve login/new passwords from CLI args, falling back to environment
+    variables. CLI arguments take precedence over environment variables.
+    Fails with an argparse error (no hardcoded fallback) if either value is
+    missing or empty.
+    """
+    login_password = args.P if args.P is not None else os.environ.get("SONIC_PASSWORD")
+    new_password = args.N if args.N is not None else os.environ.get("SONIC_NEW_PASSWORD")
+
+    if not login_password:
+        parser.error("login password must be provided via -P or the SONIC_PASSWORD environment variable")
+    if not new_password:
+        parser.error("new password must be provided via -N or the SONIC_NEW_PASSWORD environment variable")
+
+    return login_password, new_password
+
+
+def main():
+
+    parser = build_arg_parser()
     args = parser.parse_args()
+    login_password, new_password = resolve_credentials(parser, args)
 
     login_prompt = 'sonic login:'
     passwd_prompt = 'Password:'
@@ -48,7 +70,7 @@ def main():
             p.sendline(args.u)
         elif i == 1:
             # send password
-            p.sendline(args.P)
+            p.sendline(login_password)
             # Check for password change prompt
             try:
                 p.expect('Current password:', timeout=2)
@@ -56,22 +78,22 @@ def main():
                 break
             else:
                 # send old password for password prompt
-                p.sendline(args.P)
+                p.sendline(login_password)
                 p.expect(passwd_change_prompt[1])
                 # send new password
-                p.sendline(args.N)
+                p.sendline(new_password)
                 p.expect(passwd_change_prompt[2])
                 # retype new password
-                p.sendline(args.N)
+                p.sendline(new_password)
                 time.sleep(1)
                 # Restore default password
                 p.sendline('passwd {}'.format(args.u))
                 p.expect(passwd_change_prompt[0])
-                p.sendline(args.N)
+                p.sendline(new_password)
                 p.expect(passwd_change_prompt[1])
-                p.sendline(args.P)
+                p.sendline(login_password)
                 p.expect(passwd_change_prompt[2])
-                p.sendline(args.P)
+                p.sendline(login_password)
                 break
         elif i == 2:
             # fix a login timeout issue, caused by the login_prompt message mixed with the output message of the rc.local
