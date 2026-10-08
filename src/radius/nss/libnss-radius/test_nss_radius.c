@@ -72,6 +72,30 @@ static int write_privileged_account_state(void)
     return 0;
 }
 
+static int write_long_group_account_state(void)
+{
+    FILE *fp;
+    int i;
+
+    fp = fopen(ETC_PASSWD, "w");
+    if (fp == NULL)
+        return 1;
+    fprintf(fp, "remote_user:x:2001:100:remote_user:/home/remote_user:/bin/bash\n");
+    fclose(fp);
+
+    fp = fopen(ETC_GROUP, "w");
+    if (fp == NULL)
+        return 1;
+    fprintf(fp, "users:x:100:\n");
+    fprintf(fp, "docker:x:999:");
+    for (i = 0; i < 600; i++)
+        fprintf(fp, "member%04d,", i);
+    fprintf(fp, "remote_user\n");
+    fclose(fp);
+
+    return 0;
+}
+
 static int test_existing_user_group_reconciliation(void)
 {
     RADIUS_NSS_CONF_B conf = {0};
@@ -108,6 +132,13 @@ static int test_existing_user_group_reconciliation(void)
     radius_test_user_mod_calls = 0;
     status = radius_reconcile_user(&conf, "remote_user", 1);
     if (status != 0 || radius_test_user_mod_calls != 0)
+        return 1;
+
+    if (write_long_group_account_state() != 0)
+        return 1;
+    radius_test_user_mod_calls = 0;
+    status = radius_reconcile_user(&conf, "remote_user", 1);
+    if (status != 1 || radius_test_user_mod_calls != 1)
         return 1;
 
     conf.rnm[0].gid = 1000;

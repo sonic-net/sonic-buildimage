@@ -640,7 +640,8 @@ static int radius_supplementary_groups_match(RADIUS_NSS_CONF_B *conf,
 {
     FILE *fp = NULL;
     struct group grp, *result = NULL;
-    char buf[BUFLEN];
+    char *buf = NULL;
+    size_t buflen = BUFLEN;
     char **member;
     int expected_count = radius_group_list_count(expected_groups);
     int matched_count = 0;
@@ -653,11 +654,39 @@ static int radius_supplementary_groups_match(RADIUS_NSS_CONF_B *conf,
         return -1;
     }
 
-    while ((status = fgetgrent_r(fp, &grp, buf, sizeof(buf), &result)) == 0 &&
-           result != NULL) {
+    buf = malloc(buflen);
+    if (buf == NULL) {
+        syslog(LOG_ERR, "%s: Failed to allocate group buffer", conf->prog);
+        fclose(fp);
+        return -1;
+    }
+
+    for (;;) {
         char group_gid[32];
         int user_is_member = 0;
-        int group_is_expected = radius_group_list_contains(expected_groups,
+        int group_is_expected;
+
+        status = fgetgrent_r(fp, &grp, buf, buflen, &result);
+        if (status == ERANGE) {
+            char *larger;
+
+            if (buflen > (size_t)-1 / 2) {
+                status = ENOMEM;
+                break;
+            }
+            buflen *= 2;
+            larger = realloc(buf, buflen);
+            if (larger == NULL) {
+                status = ENOMEM;
+                break;
+            }
+            buf = larger;
+            continue;
+        }
+        if (status != 0 || result == NULL)
+            break;
+
+        group_is_expected = radius_group_list_contains(expected_groups,
             result->gr_name);
 
         snprintf(group_gid, sizeof(group_gid), "%lu",
@@ -672,6 +701,7 @@ static int radius_supplementary_groups_match(RADIUS_NSS_CONF_B *conf,
             }
         }
         if (user_is_member && !group_is_expected) {
+            free(buf);
             fclose(fp);
             return 0;
         }
@@ -683,10 +713,12 @@ static int radius_supplementary_groups_match(RADIUS_NSS_CONF_B *conf,
     if (status != 0 && status != ENOENT) {
         syslog(LOG_ERR, "%s: Failed to read %s: %d", conf->prog,
             ETC_GROUP, status);
+        free(buf);
         fclose(fp);
         return -1;
     }
 
+    free(buf);
     fclose(fp);
     *match = (matched_count == expected_count);
     return 0;
