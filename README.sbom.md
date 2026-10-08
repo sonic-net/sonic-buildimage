@@ -618,10 +618,10 @@ identical.
 
 ## Uploading to OpenPSIRT
 
-The official nightly build sends each installer image's SBOM to an
-[OpenPSIRT](https://github.com/nexthop-ai/openpsirt) instance, which scans
-it, re-scans it as advisories are published, and tracks what changed from
-one build of a branch to the next.
+The official nightly build sends each installer image's SBOM to the
+[OpenPSIRT](https://github.com/nexthop-ai/openpsirt) instance at
+https://sonic-psirt.nexthop.ai. It scans each build, re-scans it as advisories
+are published, and tracks what changed from one build of a branch to the next.
 `.azure-pipelines/upload-sbom-openpsirt.yml` is a postStep of
 `.azure-pipelines/official-build.yml`, and it runs
 `scripts/sbom_upload_openpsirt.sh` over the archived `target/`.
@@ -629,28 +629,32 @@ one build of a branch to the next.
 | OpenPSIRT | Comes from |
 |---|---|
 | Product | `sonic` |
-| Stream | The branch the build ran from, `$(Build.SourceBranchName)` |
-| Variant | The machine: `sonic-broadcom-dnx.bin` is `broadcom-dnx`, `sonic-vs.img.gz` is `vs` |
+| Stream | The branch the build ran from, `$(Build.SourceBranch)` without `refs/heads/` |
+| Variant | The image name: `sonic-broadcom-dnx.bin` is `broadcom-dnx`, `sonic-vs.img.gz` is `vs` |
+
+An upload never changes the build result. The script exits 0 in every case
+and reports problems as warnings on the run.
 
 | Case | Behavior |
 |---|---|
-| `sonic-aboot-<machine>.swi`, `sonic-<machine>.bfb` | Not sent. Each repackages the rootfs its machine's `.bin` carries |
-| An SBOM with no image beside it | Not sent. Debug and RPC images are renamed after they are built, and the sidecar left behind describes the build that ran last |
-| Branch or variant not declared on the instance | A warning. An administrator declares it once |
+| `sonic-aboot-<machine>.swi`, `sonic-<machine>.bfb` | Not sent. Each repackages the rootfs the same machine's `.bin` carries |
+| An SBOM with no image beside it | Not sent |
+| A branch name containing `/` | Not sent. A stream name is one segment |
+| Branch or variant not declared on the instance | Warning. An administrator declares it once |
 | Build time not newer than the one held | Logged. The build time is the HEAD commit, so a nightly of an unchanged branch has nothing new |
-| Bad key, or the server failing | The step fails as succeeded with issues. The build result is unchanged |
-| Pull request builds, armhf builds | The step does not run |
+| Bad key, refusal, server unreachable or failing | Warning. An unreachable server ends the run rather than waiting once per image |
+| Pull request, armhf and cross builds | The step does not run |
 
-The step reads `OPENPSIRT_URL` and `OPENPSIRT_API_KEY` from the `OpenPSIRT`
-variable group. The key is an OpenPSIRT pipeline key scoped to the `sonic`
-product. With the key unset the script uploads nothing and says so.
+The whole run is bounded at 15 minutes and the step at 20. The key is the
+secret pipeline variable `OPENPSIRT_API_KEY`, an OpenPSIRT pipeline key scoped
+to the `sonic` product. A definition without it uploads nothing.
 
 The script runs anywhere the files are:
 
 ```bash
 OPENPSIRT_URL=https://sonic-psirt.nexthop.ai \
 OPENPSIRT_API_KEY=opk_... \
-OPENPSIRT_STREAM=master \
+OPENPSIRT_BRANCH=master \
     scripts/sbom_upload_openpsirt.sh target/
 ```
 

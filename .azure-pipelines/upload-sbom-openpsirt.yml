@@ -4,17 +4,23 @@
 # directory. The branch the build ran from is the OpenPSIRT stream, so a
 # nightly of master and one of a release branch are tracked separately.
 #
-# Reads OPENPSIRT_URL and OPENPSIRT_API_KEY from the OpenPSIRT variable group.
-# armhf builds produce no SBOM. An upload failure marks the step as
-# succeeded with issues and leaves the build result alone.
+# OPENPSIRT_API_KEY is a secret variable on each pipeline definition rather
+# than a variable group: a group that is missing or not authorized stops the
+# whole run from queueing. Without the variable the step uploads nothing.
+#
+# The script exits 0 whatever happens and reports problems as warnings, so
+# the build result is never changed by an upload. continueOnError and the
+# timeout cover the script itself failing. Pull request, armhf and cross
+# builds do not run it: armhf produces no SBOM, and a cross build makes the
+# same image as the native definition for the same platform.
 
 steps:
 - bash: ./scripts/sbom_upload_openpsirt.sh "$(Build.ArtifactStagingDirectory)/target"
   displayName: "Upload SBOMs to OpenPSIRT"
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), ne(variables['PLATFORM_ARCH'], 'armhf'))
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), ne(variables['PLATFORM_ARCH'], 'armhf'), not(contains(variables['Build.DefinitionName'], 'cross')))
   continueOnError: true
-  timeoutInMinutes: 60
+  timeoutInMinutes: 20
   env:
-    OPENPSIRT_URL: $(OPENPSIRT_URL)
+    OPENPSIRT_URL: https://sonic-psirt.nexthop.ai
     OPENPSIRT_API_KEY: $(OPENPSIRT_API_KEY)
-    OPENPSIRT_STREAM: $(Build.SourceBranchName)
+    OPENPSIRT_BRANCH: $(Build.SourceBranch)
