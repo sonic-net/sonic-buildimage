@@ -19,5 +19,35 @@
     "VRF_TEST_WITH_VNI_OOR": {
         "desc": "Configure VRF with out of range VNI in VRF table.",
         "eStrKey": "Range"
+    },
+    "KERNEL_VRF_FALLBACK_ENABLED_TEST": {
+        "desc": "Enable global Linux kernel VRF fallback.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-vrf:sonic-vrf/KERNEL_VRF_FALLBACK/GLOBAL/status",
+            "key": "sonic-vrf:status",
+            "value": "enabled"
+        }
+    },
+    "KERNEL_VRF_FALLBACK_DISABLED_TEST": {
+        "desc": "Disable global Linux kernel VRF fallback.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-vrf:sonic-vrf/KERNEL_VRF_FALLBACK/GLOBAL/status",
+            "key": "sonic-vrf:status",
+            "value": "disabled"
+        }
+    },
+    "KERNEL_VRF_FALLBACK_MISSING_STATUS_TEST": {
+        "desc": "Reject a kernel VRF fallback entry without status.",
+        "eStrKey": "Mandatory"
+    },
+    "KERNEL_VRF_FALLBACK_INVALID_STATUS_TEST": {
+        "desc": "Reject an invalid kernel VRF fallback status.",
+        "eStrKey": "InvalidValue"
+    },
+    "KERNEL_VRF_FALLBACK_INVALID_KEY_TEST": {
+        "desc": "Reject a kernel VRF fallback entry whose key is not GLOBAL.",
+        "eStrKey": "UnknownElement"
     }
 }

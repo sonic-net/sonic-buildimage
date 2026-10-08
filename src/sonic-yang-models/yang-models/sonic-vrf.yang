@@ -15,6 +15,11 @@ module sonic-vrf {
     description
         "Virtual Routing and Forwarding (VRF) instance configuration for L3 traffic isolation";
 
+    revision 2026-07-02 {
+        description
+            "Added the global Linux kernel VRF fallback compatibility control and deprecated the legacy per-VRF control.";
+    }
+
     revision 2021-03-30 {
         description
             "Initial revision.";
@@ -42,8 +47,9 @@ module sonic-vrf {
                 leaf fallback {
                     type  boolean;
                     default false;
+                    status deprecated;
                     description
-                        "Enable/disable fallback feature which is useful for specified VRF user to access internet through global/main route.";
+                        "Deprecated legacy per-VRF fallback setting. This leaf is retained only for schema compatibility and does not override the global KERNEL_VRF_FALLBACK setting.";
                 }
 
                 leaf vni {
@@ -56,5 +62,25 @@ module sonic-vrf {
                 }
             } /* end of list VRF_LISt */
         } /* end of container VRf */
+
+        container KERNEL_VRF_FALLBACK {
+            description
+                "Global, dual-stack Linux kernel VRF route fallback compatibility configuration. This setting affects only the kernel forwarding path.";
+
+            container GLOBAL {
+                presence
+                    "Configure the singleton KERNEL_VRF_FALLBACK|GLOBAL row.";
+                description
+                    "Singleton global kernel VRF fallback configuration.";
+
+                leaf status {
+                    type stypes:admin_mode;
+                    mandatory true;
+                    status deprecated;
+                    description
+                        "Enable or disable legacy Linux kernel VRF fallback. Enabled permits fallback after a VRF route lookup miss. Disabled blocks fallback and is also the effective state when the table, key, or field is absent at runtime.";
+                }
+            } /* end of container GLOBAL */
+        } /* end of container KERNEL_VRF_FALLBACK */
     } /* end of container sonic-vrf */
 }/* end of module sonic-vrf */
