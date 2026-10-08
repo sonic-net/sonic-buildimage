@@ -39,7 +39,7 @@ from config_samples import generate_sample_config, get_available_config
 from functools import partial
 from minigraph import minigraph_encoder, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
 from minigraph_ext import parse_xml
-from portconfig import get_port_config, get_system_port_config
+from portconfig import get_port_config, get_breakout_mode, get_system_port_config
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common.bgp import validate_asn
 from sonic_py_common import device_info
@@ -556,7 +556,9 @@ def main():
         deep_update(data, hardware_data)
 
     generate_port_config = hwsku is not None or (
-        args.port_config is not None and args.minigraph is None
+        args.port_config is not None and
+        args.port_config.endswith('.json') and
+        args.minigraph is None
     )
     if generate_port_config:
         if args.port_config is None:
@@ -567,6 +569,11 @@ def main():
             print('Failed to get port config', file=sys.stderr)
             sys.exit(1)
         deep_update(data, {'PORT': ports})
+
+        if hwsku is not None:
+            brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
+            if brkout_table is not None:
+                deep_update(data, {'BREAKOUT_CFG': brkout_table})
 
     _process_json(args, data)
 

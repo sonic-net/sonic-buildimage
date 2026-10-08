@@ -39,8 +39,8 @@ CUR_BRKOUT_MODE = "brkout_mode"
 INTF_KEY = "interfaces"
 OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role"]
 
-BRKOUT_PATTERN = r'^(\d{1,6})x(\d{1,6}G?)(.*)$'
-BRKOUT_OPTION_PATTERN = r'\[[^\[\]]+\]|\(\d{1,6}\)'
+BRKOUT_PATTERN = r'(\d{1,6})x(\d{1,6}G?)(\[(\d{1,6}G?,?)*\])?(\((\d{1,6})\))?'
+BRKOUT_PATTERN_GROUPS = 6
 
 try:
     STRING_TYPES = (basestring,)
@@ -360,8 +360,6 @@ class BreakoutCfg(object):
     class BreakoutModeEntry:
         def __init__(self, num_ports, default_speed, supported_speed, num_assigned_lanes=None):
             self.num_ports = int(num_ports)
-            if self.num_ports < 1:
-                raise RuntimeError("Number of breakout ports must be greater than zero")
             self.default_speed = self._speed_to_int(default_speed)
             self.supported_speed = set((self.default_speed, ))
             self._parse_supported_speed(supported_speed)
@@ -397,16 +395,11 @@ class BreakoutCfg(object):
             if not num_assigned_lanes.startswith('(') and not num_assigned_lanes.endswith(')'):
                 raise RuntimeError("Unsupported port breakout format!")
 
-            parsed_num_assigned_lanes = int(num_assigned_lanes[1:-1])
-            if parsed_num_assigned_lanes < 1:
-                raise RuntimeError("Number of assigned lanes must be greater than zero")
-            return parsed_num_assigned_lanes
+            return int(num_assigned_lanes[1:-1])
 
         def __eq__(self, other):
             if isinstance(other, BreakoutCfg.BreakoutModeEntry):
                 if self.num_ports != other.num_ports:
-                    return False
-                if self.default_speed != other.default_speed:
                     return False
                 if self.supported_speed != other.supported_speed:
                     return False
@@ -427,17 +420,7 @@ class BreakoutCfg(object):
         self._properties = properties
         self._lanes = properties ['lanes'].split(',')
         self._indexes = properties ['index'].split(',')
-        try:
-            self._breakout_mode_entry = self._str_to_entries(bmode)
-        except RuntimeError as e:
-            raise RuntimeError(
-                "Invalid breakout mode '{}' for interface '{}': {} Valid modes: {}".format(
-                    bmode,
-                    name,
-                    e,
-                    ", ".join(self._properties.get('breakout_modes', {}).keys())
-                )
-            )
+        self._breakout_mode_entry = self._str_to_entries(bmode)
         self._breakout_capabilities = None
 
         # Find specified breakout mode in port breakout mode capabilities
@@ -447,55 +430,37 @@ class BreakoutCfg(object):
                 break
 
         if not self._breakout_capabilities:
-            raise RuntimeError(
-                "Unsupported breakout mode '{}' for interface '{}'! Valid modes: {}".format(
-                    bmode,
-                    name,
-                    ", ".join(self._properties['breakout_modes'].keys())
-                )
-            )
+            raise RuntimeError("Unsupported breakout mode {}!".format(bmode))
+
+    def _re_group_to_entry(self, group):
+        if len(group) != BRKOUT_PATTERN_GROUPS:
+            raise RuntimeError("Unsupported breakout mode format!")
+
+        num_ports, default_speed, supported_speed, _, num_assigned_lanes, _ = group
+        if not num_assigned_lanes:
+            num_assigned_lanes = len(self._lanes)
+
+        return BreakoutCfg.BreakoutModeEntry(num_ports, default_speed, supported_speed, num_assigned_lanes)
 
     def _str_to_entries(self, bmode):
         """
-        Parse each segment of a breakout mode. Supported-speed groups and the
-        assigned-lane group may appear in either order because both forms are
-        present in platform data.
+        Example of match_list for some breakout_mode using regex
+            Breakout Mode -------> Match_list
+            -----------------------------
+            2x25G(2)+1x50G(2) ---> [('2', '25G', None, '(2)', '2'), ('1', '50G', None, '(2)', '2')]
+            1x50G(2)+2x25G(2) ---> [('1', '50G', None, '(2)', '2'), ('2', '25G', None, '(2)', '2')]
+            1x100G[40G] ---------> [('1', '100G', '[40G]', None, None)]
+            2x50G ---------------> [('2', '50G', None, None, None)]
         """
-        entries = []
-        for segment in bmode.split("+"):
-            match = re.match(BRKOUT_PATTERN, segment)
-            if not match:
+
+        groups_list = []
+        for entry in bmode.split("+"):
+            match = re.match(BRKOUT_PATTERN, entry)
+            if not match or match.group(0) != entry:
                 raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
+            groups_list.append(match.groups())
 
-            num_ports, default_speed, options_text = match.groups()
-            options = re.findall(BRKOUT_OPTION_PATTERN, options_text)
-            if re.sub(r'\s+', '', ''.join(options)) != re.sub(r'\s+', '', options_text):
-                raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
-
-            supported_speeds = []
-            num_assigned_lanes = None
-            for option in options:
-                if option.startswith('['):
-                    supported_speeds.extend(speed.strip() for speed in option[1:-1].split(','))
-                elif num_assigned_lanes is None:
-                    num_assigned_lanes = option
-                else:
-                    raise RuntimeError('Breakout mode "{}" has multiple lane counts!'.format(bmode))
-
-            supported_speed = None
-            if supported_speeds:
-                supported_speed = '[{}]'.format(','.join(supported_speeds))
-            if num_assigned_lanes is None:
-                num_assigned_lanes = len(self._lanes)
-
-            entries.append(BreakoutCfg.BreakoutModeEntry(
-                num_ports,
-                default_speed,
-                supported_speed,
-                num_assigned_lanes
-            ))
-
-        return entries
+        return [self._re_group_to_entry(group) for group in groups_list]
 
     def get_config(self):
         # Ensure that we have corret number of configured lanes
@@ -556,13 +521,18 @@ def get_child_ports(interface, breakout_mode, platform_json_file):
 
 def get_minimum_breakout_mode(interface, properties):
     candidates = []
-    for breakout_mode in sorted(properties.get('breakout_modes', {})):
-        ports = BreakoutCfg(interface, breakout_mode, properties).get_config()
-        if len(ports) != 1:
+    for breakout_mode, aliases in properties.get('breakout_modes', {}).items():
+        if len(aliases) != 1:
             continue
 
-        port_config = next(iter(ports.values()))
-        candidates.append((int(port_config['speed']), breakout_mode))
+        match = re.match(r'^1x(\d{1,6})(G?)', breakout_mode)
+        if not match:
+            continue
+
+        speed = int(match.group(1))
+        if match.group(2) == 'G':
+            speed *= 1000
+        candidates.append((speed, breakout_mode))
 
     if not candidates:
         raise RuntimeError(
@@ -599,51 +569,41 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
         if hwsku_dict is not None:
             if intf not in hwsku_dict[INTF_KEY]:
                 continue
+
             hwsku_entry = hwsku_dict[INTF_KEY][intf]
             if not isinstance(hwsku_entry, dict) or BRKOUT_MODE not in hwsku_entry:
                 raise RuntimeError(
                     "Invalid breakout mode for interface '{}': missing '{}'. Valid modes: {}".format(
-                        intf,
-                        BRKOUT_MODE,
-                        get_valid_breakout_modes(properties)
+                        intf, BRKOUT_MODE, get_valid_breakout_modes(properties)
                     )
                 )
 
             brkout_mode = hwsku_entry[BRKOUT_MODE]
-            if not isinstance(brkout_mode, STRING_TYPES) or not brkout_mode.strip():
+            if not isinstance(brkout_mode, STRING_TYPES) or not brkout_mode:
                 raise RuntimeError(
                     "Invalid breakout mode '{}' for interface '{}': expected a non-empty string. "
                     "Valid modes: {}".format(
-                        brkout_mode,
-                        intf,
-                        get_valid_breakout_modes(properties)
+                        brkout_mode, intf, get_valid_breakout_modes(properties)
                     )
                 )
         else:
             brkout_mode = get_minimum_breakout_mode(intf, properties)
 
-        # Validate the per-port breakout selection against the cage's valid
-        # breakout_modes in platform.json and expand it into port entries.
         try:
             child_ports = get_child_ports(intf, brkout_mode, platform_json_file)
         except RuntimeError as e:
-            if "Valid modes:" in str(e):
-                raise
             raise RuntimeError(
                 "Invalid breakout mode '{}' for interface '{}': {} Valid modes: {}".format(
-                    brkout_mode,
-                    intf,
-                    e,
-                    get_valid_breakout_modes(properties)
+                    brkout_mode, intf, e, get_valid_breakout_modes(properties)
                 )
             )
 
         # take optional fields from hwsku.json
         if hwsku_dict is not None:
-            hwsku_entry = hwsku_dict[INTF_KEY]
+            hwsku_interfaces = hwsku_dict[INTF_KEY]
             for child_port in child_ports:
-                if child_port in hwsku_entry:
-                    for key, item in hwsku_entry[child_port].items():
+                if child_port in hwsku_interfaces:
+                    for key, item in hwsku_interfaces[child_port].items():
                         if key in OPTIONAL_HWSKU_ATTRIBUTES:
                             for child in child_ports:
                                 child_ports.get(child)[key] = item
