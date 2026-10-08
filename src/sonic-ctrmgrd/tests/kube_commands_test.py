@@ -998,6 +998,29 @@ clusters:\n\
                 kube_commands._validate_server_destination(
                     "k8s.example.com", 6443)
 
+    def test_validate_server_destination_rejects_malformed_hostname(self):
+        server = "{}.example.com".format("a" * 64)
+        with patch("kube_commands.socket.getaddrinfo",
+                   side_effect=UnicodeError("label empty or too long")):
+            with pytest.raises(IOError, match="cannot be resolved"):
+                kube_commands._validate_server_destination(server, 6443)
+
+    def test_do_join_handles_malformed_hostname(self):
+        server = "{}.example.com".format("a" * 64)
+        with patch("kube_commands._get_validated_device_name",
+                   return_value="sonic"), \
+                patch("kube_commands.socket.getaddrinfo",
+                      side_effect=UnicodeError("label empty or too long")), \
+                patch("kube_commands._troubleshoot_tips"), \
+                patch("kube_commands._do_reset") as reset:
+            ret, out, error = kube_commands._do_join(
+                server, 6443, "false")
+
+        assert ret == -1
+        assert out == ""
+        assert "cannot be resolved" in error
+        reset.assert_called_once_with()
+
     def test_validate_server_destination_preserves_safe_dns_addresses(self):
         addrinfo = [
             (socket.AF_INET6, socket.SOCK_STREAM, 6, "",

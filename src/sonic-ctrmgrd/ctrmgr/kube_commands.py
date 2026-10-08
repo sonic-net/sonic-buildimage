@@ -119,7 +119,7 @@ def _validate_server_destination(server, port):
         try:
             addrinfo = socket.getaddrinfo(
                 server, port, type=socket.SOCK_STREAM)
-        except OSError as error:
+        except (OSError, UnicodeError) as error:
             raise IOError("Kubernetes server cannot be resolved: {}".format(error))
         addresses = []
         try:
