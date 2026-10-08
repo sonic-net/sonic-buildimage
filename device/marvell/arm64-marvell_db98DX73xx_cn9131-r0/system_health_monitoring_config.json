@@ -1,0 +1,10 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": [
+        "asic",
+        "psu.temperature",
+        "fan",
+        "psu"
+    ],
+    "user_defined_checkers": []
+}
