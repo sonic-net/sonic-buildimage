@@ -1,4 +1,7 @@
 #!/bin/sh
+# Copyright 2026 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 # Nexthop U-Boot env vendor hook.
 #
 # Invoked by sonic-program-uboot-env.sh (aspeed-platform-services) after the
