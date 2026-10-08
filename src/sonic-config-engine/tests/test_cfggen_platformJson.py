@@ -263,13 +263,54 @@ class TestCfgGenPlatformJson(TestCase):
         ]
         for entry in invalid_entries:
             hwsku_data = {INTF_KEY: {'Ethernet0': entry}}
-            with mock.patch('portconfig.readJson', side_effect=[platform_data, hwsku_data]):
+            def read_json(filename):
+                return platform_data if 'platform' in filename else hwsku_data
+
+            with mock.patch('portconfig.readJson', side_effect=read_json):
                 with self.assertRaises(RuntimeError) as ctx:
                     parse_platform_json_file('hwsku.json', 'platform.json')
 
             self.assertIn("Ethernet0", str(ctx.exception))
             self.assertIn("Valid modes:", str(ctx.exception))
             self.assertIn("1x100G[40G]", str(ctx.exception))
+
+    def test_breakout_mode_parser_accepts_existing_platform_syntax(self):
+        from portconfig import BreakoutCfg
+
+        variants = [
+            ("4x25G(4)[10G,1G]", 4, 4),
+            ("2x400G[200G, 100G]", 8, 2),
+            ("8x50G[25G][10G]", 8, 8),
+        ]
+        for mode, lane_count, port_count in variants:
+            properties = {
+                "index": ",".join(["1"] * lane_count),
+                "lanes": ",".join(str(i) for i in range(lane_count)),
+                "breakout_modes": {
+                    mode: ["Eth1/{}".format(i + 1) for i in range(port_count)]
+                }
+            }
+            self.assertEqual(
+                len(BreakoutCfg("Ethernet0", mode, properties).get_config()),
+                port_count
+            )
+
+    def test_minimum_breakout_mode_uses_deterministic_tie_breaker(self):
+        from collections import OrderedDict
+        from portconfig import get_minimum_breakout_mode
+
+        modes = [
+            ("1x100G", ["Eth1"]),
+            ("1x100G(2)", ["Eth1"]),
+        ]
+        for ordered_modes in (modes, reversed(modes)):
+            properties = {
+                "breakout_modes": OrderedDict(ordered_modes)
+            }
+            self.assertEqual(
+                get_minimum_breakout_mode("Ethernet0", properties),
+                "1x100G(2)"
+            )
 
     def test_cli_port_config_does_not_require_hwsku_name(self):
         direct_argument = ['-p', self.platform_json, '-S', self.hwsku_json,

@@ -39,8 +39,8 @@ CUR_BRKOUT_MODE = "brkout_mode"
 INTF_KEY = "interfaces"
 OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role"]
 
-BRKOUT_PATTERN = r'(\d{1,6})x(\d{1,6}G?)(\[(\d{1,6}G?,?)*\])?(\((\d{1,6})\))?'
-BRKOUT_PATTERN_GROUPS = 6
+BRKOUT_PATTERN = r'^(\d{1,6})x(\d{1,6}G?)(.*)$'
+BRKOUT_OPTION_PATTERN = r'\[[^\[\]]+\]|\(\d{1,6}\)'
 
 try:
     STRING_TYPES = (basestring,)
@@ -432,35 +432,43 @@ class BreakoutCfg(object):
         if not self._breakout_capabilities:
             raise RuntimeError("Unsupported breakout mode {}!".format(bmode))
 
-    def _re_group_to_entry(self, group):
-        if len(group) != BRKOUT_PATTERN_GROUPS:
-            raise RuntimeError("Unsupported breakout mode format!")
-
-        num_ports, default_speed, supported_speed, _, num_assigned_lanes, _ = group
-        if not num_assigned_lanes:
-            num_assigned_lanes = len(self._lanes)
-
-        return BreakoutCfg.BreakoutModeEntry(num_ports, default_speed, supported_speed, num_assigned_lanes)
-
     def _str_to_entries(self, bmode):
         """
-        Example of match_list for some breakout_mode using regex
-            Breakout Mode -------> Match_list
-            -----------------------------
-            2x25G(2)+1x50G(2) ---> [('2', '25G', None, '(2)', '2'), ('1', '50G', None, '(2)', '2')]
-            1x50G(2)+2x25G(2) ---> [('1', '50G', None, '(2)', '2'), ('2', '25G', None, '(2)', '2')]
-            1x100G[40G] ---------> [('1', '100G', '[40G]', None, None)]
-            2x50G ---------------> [('2', '50G', None, None, None)]
+        Parse each segment of a breakout mode. Supported-speed groups and the
+        assigned-lane group may appear in either order.
         """
-
-        groups_list = []
-        for entry in bmode.split("+"):
-            match = re.match(BRKOUT_PATTERN, entry)
-            if not match or match.group(0) != entry:
+        entries = []
+        for segment in bmode.split("+"):
+            match = re.match(BRKOUT_PATTERN, segment)
+            if not match:
                 raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
-            groups_list.append(match.groups())
 
-        return [self._re_group_to_entry(group) for group in groups_list]
+            num_ports, default_speed, options_text = match.groups()
+            options = re.findall(BRKOUT_OPTION_PATTERN, options_text)
+            if re.sub(r'\s+', '', ''.join(options)) != re.sub(r'\s+', '', options_text):
+                raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
+
+            supported_speeds = []
+            num_assigned_lanes = None
+            for option in options:
+                if option.startswith('['):
+                    supported_speeds.extend(speed.strip() for speed in option[1:-1].split(','))
+                elif num_assigned_lanes is None:
+                    num_assigned_lanes = option
+                else:
+                    raise RuntimeError('Breakout mode "{}" has multiple lane counts!'.format(bmode))
+
+            supported_speed = None
+            if supported_speeds:
+                supported_speed = '[{}]'.format(','.join(supported_speeds))
+            if num_assigned_lanes is None:
+                num_assigned_lanes = len(self._lanes)
+
+            entries.append(BreakoutCfg.BreakoutModeEntry(
+                num_ports, default_speed, supported_speed, num_assigned_lanes
+            ))
+
+        return entries
 
     def get_config(self):
         # Ensure that we have corret number of configured lanes
@@ -539,7 +547,7 @@ def get_minimum_breakout_mode(interface, properties):
             "No single-port breakout mode is defined for interface '{}'".format(interface)
         )
 
-    return max(candidates, key=lambda candidate: candidate[0])[1]
+    return max(candidates, key=lambda candidate: (candidate[0], candidate[1]))[1]
 
 
 def get_valid_breakout_modes(properties):
