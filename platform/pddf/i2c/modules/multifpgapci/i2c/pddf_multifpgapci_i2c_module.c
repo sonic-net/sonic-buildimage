@@ -32,6 +32,22 @@ DEFINE_XARRAY(i2c_drvdata_map);
 int (*pddf_i2c_multifpgapci_add_numbered_bus)(struct i2c_adapter *, int) = NULL;
 EXPORT_SYMBOL(pddf_i2c_multifpgapci_add_numbered_bus);
 
+/*
+ * Counterpart of pddf_i2c_multifpgapci_add_numbered_bus. The algorithm module
+ * that installed adap->algo needs to know when an adapter goes away so it can
+ * drop the reference it took while the adapter was live.
+ */
+void (*pddf_i2c_multifpgapci_del_bus)(struct i2c_adapter *) = NULL;
+EXPORT_SYMBOL(pddf_i2c_multifpgapci_del_bus);
+
+static void multifpgapci_del_i2c_adapter(struct i2c_adapter *adap)
+{
+	if (pddf_i2c_multifpgapci_del_bus)
+		pddf_i2c_multifpgapci_del_bus(adap);
+	else
+		i2c_del_adapter(adap);
+}
+
 ssize_t new_i2c_adapter(struct device *dev, struct device_attribute *da,
 			const char *buf, size_t count)
 {
@@ -147,7 +163,7 @@ ssize_t del_i2c_adapter(struct device *dev, struct device_attribute *da,
 		 KERN_INFO "[%s] Attempting delete of bus index: %d\n",
 		 __FUNCTION__, index);
 
-	i2c_del_adapter(&i2c_privdata->i2c_adapters[index]);
+	multifpgapci_del_i2c_adapter(&i2c_privdata->i2c_adapters[index]);
 
 	i2c_privdata->i2c_adapter_registered[index] = false;
 
@@ -291,7 +307,9 @@ static void pddf_multifpgapci_i2c_detach(struct pci_dev *pci_dev,
 				 KERN_INFO "[%s] deleting i2c adapter: %s\n",
 				 __FUNCTION__,
 				 i2c_privdata->i2c_adapters[i].name);
-			i2c_del_adapter(&i2c_privdata->i2c_adapters[i]);
+			multifpgapci_del_i2c_adapter(
+				&i2c_privdata->i2c_adapters[i]);
+			i2c_privdata->i2c_adapter_registered[i] = false;
 		}
 	}
 	if (i2c_privdata->i2c_kobj) {
