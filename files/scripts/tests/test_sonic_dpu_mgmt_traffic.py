@@ -52,7 +52,7 @@ class DpuMgmtTrafficSecurityTests(unittest.TestCase):
         return subprocess.run(
             [BASH, "-c", 'source "$1"; PATH="$2:$PATH"; shift 2; ' + command,
              "test", bash_path(self.helpers), bash_path(self.bin), *args],
-            env=self.env, text=True, capture_output=True, timeout=10,
+            cwd=self.root, env=self.env, text=True, capture_output=True, timeout=10,
         )
 
     def iptables_calls(self):
