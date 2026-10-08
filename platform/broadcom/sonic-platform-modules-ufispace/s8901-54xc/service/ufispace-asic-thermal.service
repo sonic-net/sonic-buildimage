@@ -1,0 +1,17 @@
+[Unit]
+Description=Ufispace ASIC thermal monitor initialization service
+After=pddf-platform-init.service database.service swss.service syncd.service
+Requires=pddf-platform-init.service database.service swss.service syncd.service
+PartOf=pddf-platform-init.service database.service swss.service syncd.service
+DefaultDependencies=no
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/asic_thermal_monitor
+KillSignal=SIGTERM
+TimeoutStopSec=3
+Restart=on-failure
+RestartPreventExitStatus=0
+
+[Install]
+WantedBy=multi-user.target pddf-platform-init.service database.service swss.service syncd.service

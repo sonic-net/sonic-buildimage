@@ -2,7 +2,6 @@
     "services_to_ignore": [],
     "devices_to_ignore": [
         "asic",
-        "psu",
         "fan"
     ],
     "user_defined_checkers": [],

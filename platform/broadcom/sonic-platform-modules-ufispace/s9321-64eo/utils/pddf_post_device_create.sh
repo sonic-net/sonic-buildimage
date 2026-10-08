@@ -36,7 +36,7 @@ platform_firmware_versions() {
 
     bios_ver=$(cat /sys/class/dmi/id/bios_version)
     echo "BIOS: ${bios_ver}" >> $FIRMWARE_VERSION_FILE
-    
+
     VERARR=(`ipmitool raw 0x6 0x1 | cut -d ' ' -f 4,5,16,15,14`)
     echo "BMC: ${VERARR[0]}.${VERARR[1]}.${VERARR[4]}.${VERARR[3]}${VERARR[2]}" >> ${FIRMWARE_VERSION_FILE}
 }
@@ -84,6 +84,11 @@ function set_led_default_val {
 function diable_bmc_watchdog {
     echo "Disable BMC watchdog"
     timeout 3 ipmitool mc watchdog off
+}
+
+function set_bmc_sel_time {
+    echo "Set BMC sel time"
+    timeout 5 ipmitool sel time set now > /dev/null 2>&1
 }
 
 function set_mac_rov {
@@ -140,11 +145,23 @@ function set_mac_rov {
     fi
 }
 
+function execute_post_device_init {
+    local pddf_py_script="/usr/local/bin/pddf_post_device_create.py"
+
+    if [ -f "$pddf_py_script" ]; then
+        echo "Executing post device create Python script..."
+        if ! python3 "$pddf_py_script"; then
+            echo "[WARNING] Python script execution failed"
+        fi
+    fi
+}
 
 diable_bmc_watchdog
+set_bmc_sel_time
 enable_i2c_realy
 set_mac_rov
 enable_event_control
 set_led_default_val
 platform_firmware_versions
+execute_post_device_init
 echo "PDDF device post-create completed"
