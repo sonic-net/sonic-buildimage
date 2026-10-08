@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-import importlib
-import pkgutil
 import subprocess
 import sysconfig
 import tempfile
 from pathlib import Path
 
-import p4
 from google.protobuf.descriptor import FileDescriptor
 from google.protobuf.descriptor_pb2 import FileDescriptorSet
+from p4.bm import dataplane_interface_pb2
+from p4.config.v1 import p4info_pb2, p4types_pb2
+from p4.server.v1 import config_pb2
+from p4.tmp import p4config_pb2
+from p4.v1 import p4data_pb2, p4runtime_pb2
 
 
 def add_descriptor(
@@ -28,20 +30,19 @@ def add_descriptor(
 
 
 def main() -> None:
-    descriptors: dict[str, FileDescriptor] = {}
-    for module_info in pkgutil.walk_packages(p4.__path__, prefix="p4."):
-        if not module_info.name.endswith("_pb2"):
-            continue
-        descriptor = importlib.import_module(module_info.name).DESCRIPTOR
-        if not isinstance(descriptor, FileDescriptor):
-            raise TypeError(f"Invalid protobuf descriptor in {module_info.name}")
-        descriptors[descriptor.name] = descriptor
-    if not descriptors:
-        raise RuntimeError("No installed P4 protobuf bindings were found")
+    descriptors: tuple[FileDescriptor, ...] = (
+        dataplane_interface_pb2.DESCRIPTOR,
+        p4info_pb2.DESCRIPTOR,
+        p4types_pb2.DESCRIPTOR,
+        config_pb2.DESCRIPTOR,
+        p4config_pb2.DESCRIPTOR,
+        p4data_pb2.DESCRIPTOR,
+        p4runtime_pb2.DESCRIPTOR,
+    )
 
     descriptor_set = FileDescriptorSet()
     seen: set[str] = set()
-    for descriptor in descriptors.values():
+    for descriptor in descriptors:
         add_descriptor(descriptor, descriptor_set, seen)
 
     package_path = Path(sysconfig.get_path("purelib")).relative_to("/")
@@ -55,7 +56,7 @@ def main() -> None:
                 "/usr/bin/protoc",
                 f"--descriptor_set_in={descriptor_path}",
                 f"--python_out={output_path}",
-                *sorted(descriptors),
+                *sorted(descriptor.name for descriptor in descriptors),
             ],
             check=True,
         )
