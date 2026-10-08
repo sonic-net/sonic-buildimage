@@ -1677,7 +1677,16 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
 
-        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_switch_bmc_conf(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_switch_bmc.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 1}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
@@ -1686,7 +1695,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch.conf")
 
-        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
@@ -1695,7 +1704,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_dpu_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch_dpu.conf")
 
-        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
