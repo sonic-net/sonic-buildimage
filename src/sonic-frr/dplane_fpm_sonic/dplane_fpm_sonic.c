@@ -1037,6 +1037,31 @@ static void fpm_read_hw_mac(struct nlmsghdr *hdr)
 	event_add_event(zrouter.master, fpm_apply_hw_mac, hm, 0, NULL);
 }
 
+/* FRR to SONiC: a remote MAC, in the encoding fpm_mac_encode() documents. */
+static ssize_t fpm_remote_mac_encode(const struct zebra_dplane_ctx *ctx,
+				     uint8_t *buf, size_t buflen)
+{
+	const struct ipaddr *vtep = dplane_ctx_mac_get_vtep_ip(ctx);
+	struct fpm_remote_mac rm = {};
+
+	rm.ifindex = dplane_ctx_get_ifindex(ctx);
+	memcpy(rm.mac, dplane_ctx_mac_get_addr(ctx)->octet, ETH_ALEN);
+	rm.vid = dplane_ctx_mac_get_vlan(ctx);
+	rm.vni = dplane_ctx_mac_get_vni(ctx);
+	rm.nhg_id = dplane_ctx_mac_get_nhg_id(ctx);
+	rm.del = dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_DELETE;
+	rm.sticky = dplane_ctx_mac_is_sticky(ctx);
+	if (IS_IPADDR_V4(vtep)) {
+		rm.vtep_family = AF_INET;
+		memcpy(rm.vtep, &vtep->ipaddr_v4, sizeof(vtep->ipaddr_v4));
+	} else if (IS_IPADDR_V6(vtep)) {
+		rm.vtep_family = AF_INET6;
+		memcpy(rm.vtep, &vtep->ipaddr_v6, sizeof(vtep->ipaddr_v6));
+	}
+
+	return (ssize_t)fpm_mac_encode(&rm, buf, buflen);
+}
+
 static void fpm_read(struct event *t)
 {
 	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
@@ -3120,10 +3145,10 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				DPLANE_MAC_REMOTE))
 			return 0;
 
-		rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf));
+		rv = fpm_remote_mac_encode(ctx, nl_buf, sizeof(nl_buf));
 		if (rv <= 0) {
 			flog_err(EC_ZEBRA_FPM_ENCODE_FAIL,
-				 "%s: netlink_macfdb_update_ctx failed", __func__);
+				 "%s: fpm_mac_encode failed", __func__);
 			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
