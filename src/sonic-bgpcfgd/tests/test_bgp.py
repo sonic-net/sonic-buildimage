@@ -199,6 +199,25 @@ def test_dynamic_peer_delete_skips_invalid_cached_range():
     assert all('no bgp listen range' not in call.args[0]
                for call in apply_op.call_args_list)
 
+
+def test_dynamic_peer_delete_removes_valid_ranges_from_mixed_cached_list():
+    m = constructor(load_constant_files()[0], peer_type='dynamic')
+    m.peers.add(('default', 'DynNbr1'))
+    m.directory.put(
+        'CONFIG_DB', swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME,
+        'default|DynNbr1', {'ip_range': '10.0.0.0/24,bad,10.0.1.0/24'})
+
+    with patch.object(m, 'apply_op', return_value=True) as apply_op:
+        m.del_handler('DynNbr1')
+
+    commands = [call.args[0] for call in apply_op.call_args_list]
+    assert any('no bgp listen range 10.0.0.0/24' in command
+               for command in commands)
+    assert any('no bgp listen range 10.0.1.0/24' in command
+               for command in commands)
+    assert all('no bgp listen range bad' not in command
+               for command in commands)
+
 def test_add_peer():
     for constant in load_constant_files():
         m = constructor(constant)
