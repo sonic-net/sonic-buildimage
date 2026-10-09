@@ -133,7 +133,7 @@ class EcmpCalc:
         self.egress_ports = []
         self.debug = False
         
-        self.config_db = ConfigDBConnector()
+        self.config_db = ConfigDBConnector(use_unix_socket_path=True)
         self.appl_db = DBConnector(APPL_DB_NAME, 0)
         self.open_sdk_connection()
         self.init_ports_map()
