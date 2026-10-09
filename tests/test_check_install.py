@@ -17,99 +17,97 @@ LOGIN_SENTINEL = "login-S3cret!"
 NEW_SENTINEL = "new-S3cret!"
 
 
-def parse_and_resolve(argv, env):
-    """Helper: parse argv with env applied, returning (login, new) or raising
-    SystemExit (argparse error) like the real script would.
+def parse_args_with_env(argv, env):
+    """Test-only helper: build the parser under the given environment (so
+    the -P/-N argparse defaults observe it) and parse argv, mirroring what
+    main() does before validating the resolved values.
     """
-    parser = check_install.build_arg_parser()
-    args = parser.parse_args(argv)
     with mock.patch.dict(check_install.os.environ, env, clear=True):
-        return check_install.resolve_credentials(parser, args)
+        parser = check_install.build_arg_parser()
+        return parser.parse_args(argv)
 
 
-class ResolveCredentialsTest(unittest.TestCase):
+class ArgDefaultsTest(unittest.TestCase):
 
     def test_env_vars_only(self):
-        login, new = parse_and_resolve(
+        args = parse_args_with_env(
             [], {"SONIC_PASSWORD": LOGIN_SENTINEL, "SONIC_NEW_PASSWORD": NEW_SENTINEL}
         )
-        self.assertEqual(login, LOGIN_SENTINEL)
-        self.assertEqual(new, NEW_SENTINEL)
+        self.assertEqual(args.P, LOGIN_SENTINEL)
+        self.assertEqual(args.N, NEW_SENTINEL)
 
     def test_cli_args_only(self):
-        login, new = parse_and_resolve(
+        args = parse_args_with_env(
             ["-P", LOGIN_SENTINEL, "-N", NEW_SENTINEL], {}
         )
-        self.assertEqual(login, LOGIN_SENTINEL)
-        self.assertEqual(new, NEW_SENTINEL)
+        self.assertEqual(args.P, LOGIN_SENTINEL)
+        self.assertEqual(args.N, NEW_SENTINEL)
 
     def test_cli_overrides_env(self):
-        login, new = parse_and_resolve(
+        args = parse_args_with_env(
             ["-P", "cli-login", "-N", "cli-new"],
             {"SONIC_PASSWORD": LOGIN_SENTINEL, "SONIC_NEW_PASSWORD": NEW_SENTINEL},
         )
-        self.assertEqual(login, "cli-login")
-        self.assertEqual(new, "cli-new")
+        self.assertEqual(args.P, "cli-login")
+        self.assertEqual(args.N, "cli-new")
 
     def test_credentials_with_shell_metacharacters(self):
         tricky = "p@ss$(id)`whoami`;&|<>"
-        login, new = parse_and_resolve(
-            ["-P", tricky, "-N", NEW_SENTINEL], {}
-        )
-        self.assertEqual(login, tricky)
+        args = parse_args_with_env(["-P", tricky, "-N", NEW_SENTINEL], {})
+        self.assertEqual(args.P, tricky)
+
+    def test_no_hardcoded_fallback_when_unset(self):
+        args = parse_args_with_env([], {})
+        self.assertIsNone(args.P)
+        self.assertIsNone(args.N)
+
+
+class MissingCredentialValidationTest(unittest.TestCase):
+    """main() must reject missing/empty credentials immediately after
+    parse_args(), before any telnet connection (pexpect.spawn) is made.
+    """
 
     def test_missing_login_password_fails_before_spawn(self):
-        parser = check_install.build_arg_parser()
-        args = parser.parse_args(["-N", NEW_SENTINEL])
         with mock.patch.dict(check_install.os.environ, {}, clear=True), \
+                mock.patch.object(sys, "argv", ["check_install.py", "-N", NEW_SENTINEL]), \
                 mock.patch.object(check_install.pexpect, "spawn") as spawn_mock:
             stderr = io.StringIO()
             with redirect_stderr(stderr):
                 with self.assertRaises(SystemExit):
-                    check_install.resolve_credentials(parser, args)
+                    check_install.main()
             spawn_mock.assert_not_called()
             self.assertIn("login password", stderr.getvalue())
 
     def test_missing_new_password_fails_before_spawn(self):
-        parser = check_install.build_arg_parser()
-        args = parser.parse_args(["-P", LOGIN_SENTINEL])
         with mock.patch.dict(check_install.os.environ, {}, clear=True), \
+                mock.patch.object(sys, "argv", ["check_install.py", "-P", LOGIN_SENTINEL]), \
                 mock.patch.object(check_install.pexpect, "spawn") as spawn_mock:
             stderr = io.StringIO()
             with redirect_stderr(stderr):
                 with self.assertRaises(SystemExit):
-                    check_install.resolve_credentials(parser, args)
+                    check_install.main()
             spawn_mock.assert_not_called()
             self.assertIn("new password", stderr.getvalue())
 
     def test_empty_string_values_are_treated_as_missing(self):
-        parser = check_install.build_arg_parser()
-        args = parser.parse_args(["-P", "", "-N", NEW_SENTINEL])
-        with mock.patch.dict(check_install.os.environ, {}, clear=True):
+        with mock.patch.dict(check_install.os.environ, {}, clear=True), \
+                mock.patch.object(
+                    sys, "argv",
+                    ["check_install.py", "-P", "", "-N", NEW_SENTINEL],
+                ), \
+                mock.patch.object(check_install.pexpect, "spawn") as spawn_mock:
             stderr = io.StringIO()
             with redirect_stderr(stderr):
                 with self.assertRaises(SystemExit):
-                    check_install.resolve_credentials(parser, args)
-
-    def test_credentials_not_printed(self):
-        parser = check_install.build_arg_parser()
-        args = parser.parse_args(["-P", LOGIN_SENTINEL, "-N", NEW_SENTINEL])
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-        with mock.patch.dict(check_install.os.environ, {}, clear=True), \
-                redirect_stdout(stdout), redirect_stderr(stderr):
-            check_install.resolve_credentials(parser, args)
-        self.assertNotIn(LOGIN_SENTINEL, stdout.getvalue())
-        self.assertNotIn(LOGIN_SENTINEL, stderr.getvalue())
-        self.assertNotIn(NEW_SENTINEL, stdout.getvalue())
-        self.assertNotIn(NEW_SENTINEL, stderr.getvalue())
+                    check_install.main()
+            spawn_mock.assert_not_called()
 
 
 class ForcedPasswordChangeFlowTest(unittest.TestCase):
     """Exercise main()'s pexpect-driven flow with a fake pexpect child to
-    confirm the resolved login/new passwords (not raw args.P/args.N) are
-    used consistently in the forced-password-change sequence, and the
-    original password is restored afterward.
+    confirm args.P/args.N are used in the correct order for the forced-
+    password-change sequence, the original password is restored afterward,
+    and neither credential is printed.
     """
 
     def test_forced_password_change_restores_original(self):
@@ -148,23 +146,39 @@ class ForcedPasswordChangeFlowTest(unittest.TestCase):
 
         fake_child.expect.side_effect = expect_side_effect
 
+        stdout = io.StringIO()
+        stderr = io.StringIO()
         with mock.patch.object(check_install.pexpect, "spawn", return_value=fake_child), \
                 mock.patch.object(check_install.time, "sleep", return_value=None), \
                 mock.patch.object(
                     sys, "argv",
                     ["check_install.py", "-P", LOGIN_SENTINEL, "-N", NEW_SENTINEL],
                 ), \
-                mock.patch.dict(check_install.os.environ, {}, clear=True):
+                mock.patch.dict(check_install.os.environ, {}, clear=True), \
+                redirect_stdout(stdout), redirect_stderr(stderr):
             check_install.main()
 
-        # Login password sent first, then on forced-change: old password,
-        # new password (twice), then restore flow sends new->old->old.
-        self.assertIn(LOGIN_SENTINEL, sent)
-        self.assertIn(NEW_SENTINEL, sent)
-        # The very last password-bearing sendline in the restore sequence
-        # must be the original login password (password restored).
+        # Full filtered password-bearing send order must be exactly:
+        # login, login(old), new, new(retype), new(current, restore),
+        # login(new, restore), login(retype, restore).
         password_sends = [s for s in sent if s in (LOGIN_SENTINEL, NEW_SENTINEL)]
-        self.assertEqual(password_sends[-1], LOGIN_SENTINEL)
+        self.assertEqual(
+            password_sends,
+            [
+                LOGIN_SENTINEL,
+                LOGIN_SENTINEL,
+                NEW_SENTINEL,
+                NEW_SENTINEL,
+                NEW_SENTINEL,
+                LOGIN_SENTINEL,
+                LOGIN_SENTINEL,
+            ],
+        )
+
+        self.assertNotIn(LOGIN_SENTINEL, stdout.getvalue())
+        self.assertNotIn(LOGIN_SENTINEL, stderr.getvalue())
+        self.assertNotIn(NEW_SENTINEL, stdout.getvalue())
+        self.assertNotIn(NEW_SENTINEL, stderr.getvalue())
 
 
 if __name__ == '__main__':

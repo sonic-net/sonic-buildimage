@@ -152,13 +152,8 @@ wait_kvm_ready
 echo "to kill kvm:  sudo kill $kvm_pid"
 
 set +x
-new_password="$(python3 -c 'import secrets, string; alphabet = string.ascii_letters + string.digits; print("Aa1" + "".join(secrets.choice(alphabet) for _ in range(21)))')"
-
-SONIC_PASSWORD="$login_password" \
-SONIC_NEW_PASSWORD="$new_password" \
-    ./check_install.py -u "$SONIC_USERNAME" -p "$KVM_PORT"
-
-unset new_password login_password
+SONIC_PASSWORD="$login_password" ./check_install.py -u "$SONIC_USERNAME" -p "$KVM_PORT"
+unset login_password
 set -x
 
 kill $kvm_pid
