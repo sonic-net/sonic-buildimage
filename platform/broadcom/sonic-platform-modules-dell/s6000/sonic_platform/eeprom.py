@@ -27,7 +27,15 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+STATE_DB_NAME = 'STATE_DB'
 STATE_DB_INDEX = 6
+
+
+def _get_state_db_client():
+    from swsscommon.swsscommon import SonicDBConfig
+    return redis.Redis(
+        unix_socket_path=SonicDBConfig.getDbSock(STATE_DB_NAME),
+        db=STATE_DB_INDEX)
 
 # PSU eeprom fields in format required by EepromDecoder
 psu_eeprom_format = [
@@ -378,7 +386,7 @@ class EepromS6000(EepromDecoder):
         """
         Print out the contents of the EEPROM from database.
         """
-        client = redis.Redis(db=STATE_DB_INDEX)
+        client = _get_state_db_client()
         db_state = client.hget('EEPROM_INFO|State', 'Initialized')
         if db_state != '1':
             return -1
@@ -407,7 +415,7 @@ class EepromS6000(EepromDecoder):
         """
         Decode the contents of the EEPROM and update the contents to database
         """
-        client = redis.Redis(db=STATE_DB_INDEX)
+        client = _get_state_db_client()
         for blk_code in list(self._BLK_INFO.keys()):
             blk_name = self._BLK_INFO[blk_code]["name"]
             blk_start = self._BLK_INFO[blk_code]["offset"]
