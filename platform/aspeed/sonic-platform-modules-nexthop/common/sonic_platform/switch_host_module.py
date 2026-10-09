@@ -7,7 +7,6 @@ switch host CPU, including power management operations.
 
 import subprocess
 import json
-import os
 import sys
 import time
 
@@ -270,6 +269,9 @@ class SwitchHostModule(ModuleBase):
         """
         Read a single TLV from the switchcard EEPROM (ONIE TlvInfo format).
 
+        The EEPROM device is statically instantiated by the kernel device tree
+        at bus 10, address 0x50, so it is read directly via its sysfs path.
+
         Args:
             tlv_type: ONIE TLV type code, one of the TlvInfoDecoder._TLV_CODE_*
                       constants (e.g. TlvInfoDecoder._TLV_CODE_PRODUCT_NAME).
@@ -277,63 +279,14 @@ class SwitchHostModule(ModuleBase):
         Returns:
             str: TLV value as ASCII string, or "N/A" if missing / error.
         """
-        SWITCH_CARD_EEPROM_I2C_PATH = "/sys/bus/i2c/devices/i2c-10"
         SWITCH_CARD_EEPROM_PATH = "/sys/bus/i2c/devices/10-0050/eeprom"
-        CHIP_TYPE = "24c64"
-        INSTANTIATE_TIMEOUT_SEC = 1.0
-        created = False
-
-        # Helper: instantiate device if missing
-        def ensure_device():
-            nonlocal created
-            if os.path.exists(SWITCH_CARD_EEPROM_PATH):
-                return True
-
-            new_dev_path = SWITCH_CARD_EEPROM_I2C_PATH + "/new_device"
-            if not os.path.exists(new_dev_path):
-                return False
-
-            try:
-                with open(new_dev_path, "w") as f:
-                    f.write(f"{CHIP_TYPE} 0x50\n")
-                created = True
-            except OSError:
-                return False
-
-            # Poll for eeprom node to appear
-            deadline = time.time() + INSTANTIATE_TIMEOUT_SEC
-            while time.time() < deadline:
-                if os.path.exists(SWITCH_CARD_EEPROM_PATH):
-                    return True
-                time.sleep(0.05)
-
-            return os.path.exists(SWITCH_CARD_EEPROM_PATH)
-
-        # Helper: cleanup if we created the device
-        def cleanup():
-            if not created:
-                return
-            delete_path_bus = SWITCH_CARD_EEPROM_I2C_PATH + "/delete_device"
-            if not os.path.exists(delete_path_bus):
-                return
-            try:
-                with open(delete_path_bus, "w") as f:
-                    # Write only the device address, not the full bus-address notation
-                    # Kernel expects "0x50" not "10-0050"
-                    f.write("0x50\n")
-            except OSError:
-                pass
-
-        if not ensure_device():
-            return "N/A"
 
         try:
             with open(SWITCH_CARD_EEPROM_PATH, "rb") as f:
                 e = f.read()
-        except Exception:
+        except Exception as err:
+            sys.stderr.write(f"SwitchHost: EEPROM read failed: {err}\n")
             return "N/A"
-        finally:
-            cleanup()
 
         # Parse TlvInfo header
         if len(e) < 11 or e[0:7] != b"TlvInfo":
