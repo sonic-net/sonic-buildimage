@@ -395,8 +395,8 @@ class MicasCpo(CpoBase):
     by the legacy port object, as they were before get_cpo() existed.
 
     Low-power mode and reset act on the virtual module through its OE, the
-    controller in joint mode. They use the OE's CMIS module controls through
-    the legacy port object, as before.
+    controller in joint mode; Tx-disable acts on the port's own OE bank.
+    They use the OE's CMIS controls through the legacy port object, as before.
     """
 
     def __init__(self, port):
@@ -437,3 +437,9 @@ class MicasCpo(CpoBase):
 
     def set_lpmode(self, lpmode):
         return self.port.set_lpmode(lpmode)
+
+    def get_tx_disable(self):
+        return self.port.get_tx_disable()
+
+    def tx_disable(self, tx_disable):
+        return self.port.tx_disable(tx_disable)
