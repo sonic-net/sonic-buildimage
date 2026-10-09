@@ -20,7 +20,7 @@ try:
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
-STATE_DB_INDEX = 6
+STATE_DB = "STATE_DB"
 
 #
 # TlvInfo Format - This eeprom format was defined by Cumulus Networks
@@ -736,7 +736,10 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
             A redis client instance
         """
         if not self._redis_client:
-            self._redis_client = redis.Redis(db=STATE_DB_INDEX)
+            from swsscommon.swsscommon import SonicDBConfig
+            self._redis_client = redis.Redis(
+                unix_socket_path=SonicDBConfig.getDbSock(STATE_DB),
+                db=SonicDBConfig.getDbId(STATE_DB))
         return self._redis_client
 
     def _redis_hget(self, key, field):

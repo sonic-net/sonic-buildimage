@@ -12,9 +12,7 @@ from sonic_py_common import syslogger
 
 QSFP_STAT_CTRL_CPLD_ADDR = "0x2"
 apiHelper = APIHelper()
-LOCALHOST = "127.0.0.1"
-REDIS_PORT = 6379
-CONFIG_DB = 4
+CONFIG_DB = "CONFIG_DB"
 DISABLE_CONTAINER_LIST = ["snmp", "dhcp_relay", "mgmt_framework"]
 
 SYSLOG_IDENTIFIER = 'dpu_pensando_util'
@@ -91,8 +89,12 @@ def setup_platform_components_json(slot_id):
 def disable_unused_containers():
     try:
         import redis
+        from swsscommon.swsscommon import SonicDBConfig
 
-        r = redis.StrictRedis(host=LOCALHOST, port=REDIS_PORT, db=CONFIG_DB, decode_responses=True)
+        r = redis.StrictRedis(
+            unix_socket_path=SonicDBConfig.getDbSock(CONFIG_DB),
+            db=SonicDBConfig.getDbId(CONFIG_DB),
+            decode_responses=True)
 
         for feature in DISABLE_CONTAINER_LIST:
             key = f"FEATURE|{feature}"
