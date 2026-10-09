@@ -82,7 +82,7 @@ def apply_snmp_location(db, yaml_snmp_info, snmp_general_keys):
 
 
 def main():
-    db = ConfigDBConnector()
+db = ConfigDBConnector(use_unix_socket_path=True)
     db.connect()
 
     snmp_comm_config_db = db.get_table('SNMP_COMMUNITY')
