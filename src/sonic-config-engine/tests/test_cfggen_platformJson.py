@@ -248,3 +248,127 @@ class TestCfgGenPlatformJson(TestCase):
 
             ports = get_child_ports("Ethernet212", "1x49G", "test_platform.json")
             self.assertNotIn('fec', ports['Ethernet212'])
+
+    def test_invalid_hwsku_breakout_selection_reports_valid_modes(self):
+        from portconfig import parse_platform_json_file
+
+        with open(self.platform_json) as platform_file:
+            platform_data = json.load(platform_file)
+
+        invalid_entries = [
+            {},
+            "invalid",
+            {'default_brkout_mode': None},
+            {'default_brkout_mode': '1x100G[40G]garbage'},
+        ]
+        for entry in invalid_entries:
+            hwsku_data = {INTF_KEY: {'Ethernet0': entry}}
+            def read_json(filename):
+                return platform_data if 'platform' in filename else hwsku_data
+
+            with mock.patch('portconfig.readJson', side_effect=read_json):
+                with self.assertRaises(RuntimeError) as ctx:
+                    parse_platform_json_file('hwsku.json', 'platform.json')
+
+            self.assertIn("Ethernet0", str(ctx.exception))
+            self.assertIn("Valid modes:", str(ctx.exception))
+            self.assertIn("1x100G[40G]", str(ctx.exception))
+
+    def test_breakout_mode_parser_accepts_existing_platform_syntax(self):
+        from portconfig import BreakoutCfg
+
+        variants = [
+            ("4x25G(4)[10G,1G]", 4, 4),
+            ("2x400G[200G, 100G]", 8, 2),
+            ("8x50G[25G][10G]", 8, 8),
+        ]
+        for mode, lane_count, port_count in variants:
+            properties = {
+                "index": ",".join(["1"] * lane_count),
+                "lanes": ",".join(str(i) for i in range(lane_count)),
+                "breakout_modes": {
+                    mode: ["Eth1/{}".format(i + 1) for i in range(port_count)]
+                }
+            }
+            self.assertEqual(
+                len(BreakoutCfg("Ethernet0", mode, properties).get_config()),
+                port_count
+            )
+
+    def test_minimum_breakout_mode_uses_deterministic_tie_breaker(self):
+        from collections import OrderedDict
+        from portconfig import get_minimum_breakout_mode
+
+        modes = [
+            ("1x100G", ["Eth1"]),
+            ("1x100G(2)", ["Eth1"]),
+        ]
+        for ordered_modes in (modes, reversed(modes)):
+            properties = {
+                "breakout_modes": OrderedDict(ordered_modes)
+            }
+            self.assertEqual(
+                get_minimum_breakout_mode("Ethernet0", properties),
+                "1x100G(2)"
+            )
+
+    def test_cli_port_config_requires_hwsku_name(self):
+        argument = ['-p', self.platform_json, '-S', self.hwsku_json,
+                    '--var-json', 'PORT']
+        self.assertEqual(self.run_script(argument), '')
+
+    def test_cli_port_config_uses_explicit_hwsku_config(self):
+        argument = ['-k', 'Generic', '-p', self.platform_json, '-S', self.hwsku_json,
+                    '--var-json', 'PORT']
+        output = json.loads(self.run_script(argument))
+
+        self.assertEqual(output['Ethernet8']['speed'], '25000')
+        self.assertEqual(output['Ethernet8']['lanes'], '8')
+        self.assertEqual(output['Ethernet8']['subport'], '1')
+
+    def test_cli_port_config_uses_platform_fallback_without_hwsku_config(self):
+        argument = ['-k', 'Generic', '-p', self.platform_json, '--var-json', 'PORT']
+        output = json.loads(self.run_script(argument))
+
+        self.assertEqual(output['Ethernet0']['speed'], '100000')
+        self.assertEqual(output['Ethernet0']['lanes'], '0,1,2,3')
+        self.assertEqual(output['Ethernet0']['alias'], 'Eth1')
+        self.assertNotIn('Ethernet1', output)
+
+    def test_port_config_uses_legacy_hwsku_file_with_hwsku_name(self):
+        with mock.patch('portconfig.get_hwsku_file_name', return_value=self.hwsku_json) as get_hwsku_file:
+            ports, _, _ = get_port_config(
+                hwsku='Generic',
+                platform='generic',
+                port_config_file=self.platform_json
+            )
+
+        get_hwsku_file.assert_called_once_with('Generic', 'generic')
+        self.assertEqual(ports['Ethernet8']['speed'], '25000')
+        self.assertEqual(ports['Ethernet8']['lanes'], '8')
+        self.assertEqual(ports['Ethernet8']['subport'], '1')
+
+    def test_port_config_uses_legacy_hwsku_file_without_hwsku_name(self):
+        with mock.patch('portconfig.get_hwsku_file_name', return_value=self.hwsku_json) as get_hwsku_file:
+            ports, _, _ = get_port_config(
+                platform='generic',
+                port_config_file=self.platform_json
+            )
+
+        get_hwsku_file.assert_called_once_with(None, 'generic')
+        self.assertEqual(ports['Ethernet8']['speed'], '25000')
+        self.assertEqual(ports['Ethernet8']['lanes'], '8')
+        self.assertEqual(ports['Ethernet8']['subport'], '1')
+
+    def test_port_config_uses_platform_fallback_when_hwsku_file_is_missing(self):
+        with mock.patch('portconfig.get_hwsku_file_name', return_value=None) as get_hwsku_file:
+            ports, _, _ = get_port_config(
+                hwsku='Generic',
+                platform='generic',
+                port_config_file=self.platform_json
+            )
+
+        get_hwsku_file.assert_called_once_with('Generic', 'generic')
+        self.assertEqual(ports['Ethernet0']['speed'], '100000')
+        self.assertEqual(ports['Ethernet0']['lanes'], '0,1,2,3')
+        self.assertNotIn('Ethernet1', ports)

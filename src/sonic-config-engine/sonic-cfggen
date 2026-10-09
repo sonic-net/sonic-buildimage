@@ -554,6 +554,8 @@ def main():
             'hwsku': hwsku
             }}}
         deep_update(data, hardware_data)
+
+    if hwsku is not None:
         if args.port_config is None:
             args.port_config = device_info.get_path_to_port_config_file(hwsku, asic_id)
         load_namespace_config()
@@ -563,8 +565,13 @@ def main():
             sys.exit(1)
         deep_update(data, {'PORT': ports})
 
-        brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
-        if  brkout_table is not None:
+        brkout_table = get_breakout_mode(
+            hwsku,
+            platform,
+            args.port_config,
+            hwsku_config_file=args.hwsku_config
+        )
+        if brkout_table is not None:
             deep_update(data, {'BREAKOUT_CFG': brkout_table})
 
     _process_json(args, data)
