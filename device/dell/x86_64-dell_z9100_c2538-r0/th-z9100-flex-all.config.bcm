@@ -665,6 +665,11 @@ phy_xaui_tx_polarity_flip_10.0=0x1
 phy_xaui_tx_polarity_flip_11.0=0x0
 phy_xaui_tx_polarity_flip_12.0=0x0
 
+# additional ports
+portmap_66=129:10
+portmap_100=131:10
+dport_map_port_66=33
+dport_map_port_100=34
 
 mmu_init_config="MSFT-TH-Tier0"
 
