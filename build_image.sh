@@ -3,6 +3,8 @@
 
 image_password=$PASSWORD
 unset PASSWORD
+image_new_password=$NEW_PASSWORD
+unset NEW_PASSWORD
 
 ## Enable debug output for script
 set -x -e
@@ -57,7 +59,7 @@ generate_kvm_image()
     sudo rm -f $KVM_IMAGE_DISK $KVM_IMAGE_DISK.gz
 
     set +x
-    if SONIC_USERNAME="$USERNAME" PASSWD="$image_password" sudo -E ./scripts/build_kvm_image.sh "$KVM_IMAGE_DISK" "$RECOVERY_ISO" "$OUTPUT_ONIE_IMAGE" "$KVM_IMAGE_DISK_SIZE" "${BOOT_FIRMWARE}"; then
+    if SONIC_USERNAME="$USERNAME" PASSWD="$image_password" NEW_PASSWD="$image_new_password" sudo -E ./scripts/build_kvm_image.sh "$KVM_IMAGE_DISK" "$RECOVERY_ISO" "$OUTPUT_ONIE_IMAGE" "$KVM_IMAGE_DISK_SIZE" "${BOOT_FIRMWARE}"; then
         build_status=0
     else
         build_status=$?

@@ -16,6 +16,8 @@
 #  * INSTALL_DEBUG_TOOLS: Install debug tools and debug symbol packages.
 #  * USERNAME: Desired username -- default at rules/config
 #  * PASSWORD: Desired password -- default at rules/config
+#  * NEW_PASSWORD: Desired temporary "new password" for the KVM build's forced
+#  *               first-login password-change verification -- default at rules/config
 #  * KEEP_SLAVE_ON: Keeps slave container up and active after building process concludes.
 #  *                Note that rm=true is still set, so once user quits from the docker
 #  *                           session, the docker will be removed.
@@ -464,6 +466,9 @@ DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
 
 export PASSWORD
 DOCKER_RUN += -e PASSWORD
+
+export NEW_PASSWORD
+DOCKER_RUN += -e NEW_PASSWORD
 
 # Mount the $(DOCKER_ROOT) to /var/lib/docker in the slave container, the overlay fs is not supported as dockerd root folder.
 ifneq ($(filter $(SONIC_SLAVE_DOCKER_DRIVER),overlay overlay2),)
