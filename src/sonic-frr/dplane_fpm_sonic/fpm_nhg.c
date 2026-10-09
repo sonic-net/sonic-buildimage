@@ -1616,20 +1616,25 @@ static void fpm_nhg_record_rib_id(struct fpm_nhg_tables *t,
 	}
 
 	/*
-	 * Repoint unconditionally, including when the id was already known:
-	 * another object may have claimed it in between, and the recorder of
-	 * the route event just processed is the current mapping.
+	 * Steal the entry only when it has no live references: re-pointing a
+	 * referenced entry would drop its routes from the accounting, and the
+	 * reverse lookup would then forget a zebra NHG id that routes still
+	 * map. A live entry keeps its current owner until the owner's last
+	 * route releases it. This route's id still lands on its own object's
+	 * list above, so the object view keeps showing it.
 	 */
 	e = hash_get(t->by_rib_id, &ref, fpm_nhg_rib_entry_alloc);
 	if (e->obj != obj) {
+		if (e->refcount > 0) {
+			FPM_NHG_DEBUG("rib nhg %u keeps owner dplane NHG %u (%u live ref(s)), not re-pointed to dplane NHG %u",
+				      rib_id, e->obj->dplane_id, e->refcount,
+				      obj->dplane_id);
+			return;
+		}
 		if (e->obj)
 			FPM_NHG_DEBUG("rib nhg %u re-pointed: dplane NHG %u -> dplane NHG %u",
 				      rib_id, e->obj->dplane_id, obj->dplane_id);
-		/* re-pointed at a different object: the old one keeps the id in
-		 * its own list until its last route releases it below.
-		 */
 		e->obj = obj;
-		e->refcount = 0;
 	}
 	e->refcount++;
 }
