@@ -504,11 +504,8 @@ int on_shell_execve (char *user, int shell_level, char *cmd, char **argv)
         argc++;
     }
 
-    if (shell_level > 2) {
-        // when shell_level > 1, it's a recursive command in shell script.
-        output_debug("Recursive command %s ignored.\n", cmd);
-        return 0;
-    }
+    /* Shell depth originates in SHLVL, which a user can set before starting
+     * Bash or change later. Never exempt nested commands from authorization. */
 
     // reload config file when tacacs config changed
     check_and_load_changed_tacacs_config();
