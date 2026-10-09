@@ -13,7 +13,13 @@ RUN sed -i 's|http://.*.ubuntu.com|http://azure.archive.ubuntu.com|g' /etc/apt/s
 RUN apt-get update
 
 RUN apt-get install -f -y net-tools supervisor rsyslog  python3-pip
-RUN pip3 install --break-system-packages supervisord-dependent-startup
+RUN pip3 install --break-system-packages --no-cache-dir \
+    supervisord-dependent-startup \
+    googleapis-common-protos==1.66.0 \
+    protobuf==5.29.6 \
+    thrift==0.24.0 \
+    && pip3 check \
+    && rm -rf /root/.cache/uv
 RUN apt-get purge -y python3-pip && rm -rf /var/lib/apt/lists/*
 
 COPY ["start.sh", "/usr/bin/"]
@@ -21,10 +27,20 @@ COPY ["start.sh", "/usr/bin/"]
 ## COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 ## COPY ["critical_processes", "/etc/supervisor/"]
 
+FROM base AS p4-bindings
+
+RUN apt-get update && apt-get install -y --no-install-recommends protobuf-compiler
+COPY ["regenerate_p4_bindings.py", "/tmp/"]
+RUN PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python python3 /tmp/regenerate_p4_bindings.py
+
+FROM base AS runtime
+COPY --from=p4-bindings /p4-bindings/ /
+RUN python3 -c "from p4.v1 import p4runtime_pb2; from p4.config.v1 import p4info_pb2"
+
 FROM scratch
 
 # RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
-COPY --from=base / /
+COPY --from=runtime / /
 
 ## ENTRYPOINT ["/usr/bin/supervisord"]
 ENTRYPOINT ["/usr/bin/start.sh"]
