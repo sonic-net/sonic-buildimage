@@ -7,6 +7,7 @@ Usage: python ledswitch_monitor.py {start|stop}
 """
 
 import redis
+from swsscommon.swsscommon import SonicDBConfig
 import threading
 import time
 import subprocess
@@ -74,8 +75,14 @@ class LedSwitchMonitor:
     def connect_redis(self):
         """Connect to Redis databases"""
         try:
-            self.redis_db4 = redis.Redis(host='127.0.0.1', port=6379, db=4, decode_responses=True)
-            self.redis_db6 = redis.Redis(host='127.0.0.1', port=6379, db=6, decode_responses=True)
+            self.redis_db4 = redis.Redis(
+                unix_socket_path=SonicDBConfig.getDbSock("CONFIG_DB"),
+                db=SonicDBConfig.getDbId("CONFIG_DB"),
+                decode_responses=True)
+            self.redis_db6 = redis.Redis(
+                unix_socket_path=SonicDBConfig.getDbSock("STATE_DB"),
+                db=SonicDBConfig.getDbId("STATE_DB"),
+                decode_responses=True)
             # Test connection
             self.redis_db4.ping()
             self.redis_db6.ping()

@@ -148,7 +148,7 @@ class LedControl(LedControlBase):
 
         sonic_port_num = int(port_name[len(self.SONIC_PORT_NAME_PREFIX):])
 
-        swss = swsscommon.SonicV2Connector()
+        swss = swsscommon.SonicV2Connector(use_unix_socket_path=True)
         swss.connect(swss.APPL_DB)
 
         lanes = swss.get(

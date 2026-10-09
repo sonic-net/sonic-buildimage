@@ -72,7 +72,7 @@ class HwSKUInitBase():
                 data = json.load(f)
             port_config = data['PORT']
         else:
-            config_db = ConfigDBConnector()
+            config_db = ConfigDBConnector(use_unix_socket_path=True)
             config_db.connect()
             port_config = config_db.get_table('PORT')
         return {port : config for port, config in port_config.items() if config['role'] == 'Ext'}
