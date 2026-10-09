@@ -68,6 +68,7 @@ def load_logger(is_multi_asic=False):
     multi_asic_module.get_namespace_list = mock.Mock(
         return_value=["asic0", "asic1"]
     )
+    multi_asic_module.get_namespace_for_port = mock.Mock()
 
     sonic_py_common = types.ModuleType("sonic_py_common")
     sonic_py_common.__path__ = []
@@ -123,3 +124,53 @@ def test_multi_asic_config_db_connections_use_namespace_unix_sockets():
 
     assert module.ports_table == {"Ethernet0": {}, "Ethernet4": {}}
     assert module.drop_pkts == {"Ethernet0": 0, "Ethernet4": 0}
+    assert module.port_namespace_map == {
+        "Ethernet0": "asic0",
+        "Ethernet4": "asic1",
+    }
+
+
+def test_multi_asic_handler_uses_cached_port_namespaces():
+    module, _, _, _, _ = load_logger(is_multi_asic=True)
+    tc_result = mock.Mock(returncode=0, stdout="dropped 0", stderr="")
+
+    with mock.patch.object(
+        module, "interface_exists", return_value=True
+    ) as interface_exists, mock.patch.object(
+        module.subprocess, "run", return_value=tc_result
+    ) as run, mock.patch.object(
+        module.time, "sleep", side_effect=StopIteration
+    ):
+        try:
+            module.handler()
+        except StopIteration:
+            pass
+        else:
+            raise AssertionError("handler did not finish the test iteration")
+
+    assert module.get_port_namespace("Ethernet0") == "asic0"
+    assert module.get_port_namespace("Ethernet4") == "asic1"
+    assert module.get_port_namespace("Ethernet8") is None
+    module.multi_asic.get_namespace_for_port.assert_not_called()
+    assert interface_exists.call_args_list == [
+        mock.call("Ethernet0", "asic0"),
+        mock.call("Ethernet4", "asic1"),
+    ]
+    assert run.call_args_list == [
+        mock.call(
+            [
+                "ip", "netns", "exec", "asic0", "tc", "-s", "qdisc",
+                "show", "dev", "Ethernet0", "handle", "ffff:",
+            ],
+            capture_output=True,
+            text=True,
+        ),
+        mock.call(
+            [
+                "ip", "netns", "exec", "asic1", "tc", "-s", "qdisc",
+                "show", "dev", "Ethernet4", "handle", "ffff:",
+            ],
+            capture_output=True,
+            text=True,
+        ),
+    ]

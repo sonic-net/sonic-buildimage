@@ -14,6 +14,7 @@ logger.log_info("Starting DHCP DoS logger...")
 
 # Cache the multi-ASIC check result at startup
 is_multi_asic = multi_asic.is_multi_asic()
+port_namespace_map = {}
 
 if is_multi_asic:
     SonicDBConfig.initializeGlobalConfig()
@@ -24,7 +25,11 @@ if is_multi_asic:
             namespace=namespace,
         )
         config_db.connect()
-        ports_table.update(config_db.get_table('PORT'))
+        namespace_ports = config_db.get_table('PORT')
+        ports_table.update(namespace_ports)
+        port_namespace_map.update(
+            {port: namespace for port in namespace_ports}
+        )
 else:
     config_db = ConfigDBConnector(use_unix_socket_path=True)
     config_db.connect()
@@ -35,10 +40,7 @@ drop_pkts = {port: 0 for port in ports_table}
 
 #Get Linux network namespace for a port
 def get_port_namespace(port):
-    try:
-        return multi_asic.get_namespace_for_port(port)
-    except Exception:
-        return None
+    return port_namespace_map.get(port)
 
 #Check if interface exists for a port in the namespace
 def interface_exists(ifname, namespace=None):
