@@ -225,88 +225,14 @@ index ed1063e..3307761 100644
  
  #include "builtins/common.h"
  #include "builtins/builtext.h"	/* list of builtins */
-@@ -172,13 +176,13 @@ static int execute_function PARAMS((SHELL_VAR *, WORD_LIST *, int, struct fd_bit
- static int execute_builtin_or_function PARAMS((WORD_LIST *, sh_builtin_func_t *,
- 					    SHELL_VAR *,
- 					    REDIRECT *, struct fd_bitmap *, int));
--static void execute_subshell_builtin_or_function PARAMS((WORD_LIST *, REDIRECT *,
-+static void execute_subshell_builtin_or_function PARAMS((WORD_LIST *, WORD_LIST *, REDIRECT *,
- 						      sh_builtin_func_t *,
- 						      SHELL_VAR *,
- 						      int, int, int,
- 						      struct fd_bitmap *,
- 						      int));
--static int execute_disk_command PARAMS((WORD_LIST *, REDIRECT *, char *,
-+static int execute_disk_command PARAMS((WORD_LIST *, WORD_LIST *, REDIRECT *, char *,
- 				      int, int, int, struct fd_bitmap *, int));
- 
- static char *getinterp PARAMS((char *, int, int *));
-@@ -4730,7 +4734,7 @@ run_builtin:
- 	  if (async == 0)
- 	    subshell_level++;
- 	  execute_subshell_builtin_or_function
--	    (words, simple_command->redirects, builtin, func,
-+	    (words, simple_command->words, simple_command->redirects, builtin, func,
- 	     pipe_in, pipe_out, async, fds_to_close,
- 	     cmdflags);
- 	  subshell_level--;
-@@ -4811,7 +4815,7 @@ execute_from_filesystem:
-   if (already_forked == 0 && (cmdflags & CMD_NO_FORK) && fifos_pending() > 0)
-     cmdflags &= ~CMD_NO_FORK;
- #endif
--  result = execute_disk_command (words, simple_command->redirects, command_line,
-+  result = execute_disk_command (words, simple_command->words, simple_command->redirects, command_line,
- 			pipe_in, pipe_out, async, fds_to_close,
- 			cmdflags);
- 
-@@ -5316,10 +5320,11 @@ execute_shell_function (var, words)
-    to the command, REDIRECTS specifies redirections to perform before the
-    command is executed. */
- static void
--execute_subshell_builtin_or_function (words, redirects, builtin, var,
-+execute_subshell_builtin_or_function (words, original_words, redirects, builtin, var,
- 				      pipe_in, pipe_out, async, fds_to_close,
- 				      flags)
-      WORD_LIST *words;
-+     WORD_LIST *original_words;
-      REDIRECT *redirects;
-      sh_builtin_func_t *builtin;
-      SHELL_VAR *var;
-@@ -5405,7 +5410,7 @@ execute_subshell_builtin_or_function (words, redirects, builtin, var,
- 	      char *command_line;
- 
- 	      command_line = savestring (the_printed_command_except_trap ? the_printed_command_except_trap : "");
--	      r = execute_disk_command (words, (REDIRECT *)0, command_line,
-+	      r = execute_disk_command (words, original_words, (REDIRECT *)0, command_line,
- 		  -1, -1, async, (struct fd_bitmap *)0, flags|CMD_NO_FORK);
- 	    }
- 	  subshell_exit (r);
-@@ -5586,9 +5591,10 @@ setup_async_signals ()
- #endif
- 
- static int
--execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
-+execute_disk_command (words, original_words, redirects, command_line, pipe_in, pipe_out,
- 		      async, fds_to_close, cmdflags)
-      WORD_LIST *words;
-+     WORD_LIST *original_words;
-      REDIRECT *redirects;
-      char *command_line;
-      int pipe_in, pipe_out, async;
-@@ -5745,10 +5751,25 @@ execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
- 	  exit (execute_shell_function (hookf, wl));
- 	}
- 
-+#if defined (BASH_SHELL_EXECVE_PLUGIN)
-+      /*get original user input args for plugin*/
-+      char **original_args = strvec_from_word_list (original_words, 0, 0, (int *)NULL);
-+      result = invoke_plugin_on_shell_execve (current_user.user_name, command, original_args);
-+      xfree(original_args);
-+
-       /* Execve expects the command name to be in args[0].  So we
+@@ -5749,6 +5753,19 @@ execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
  	 leave it there, in the same format that the user used to
  	 type it in. */
        args = strvec_from_word_list (words, 0, 0, (int *)NULL);
++
++#if defined (BASH_SHELL_EXECVE_PLUGIN)
++      /* Authorize the exact argv passed to shell_execve after expansion. */
++      result = invoke_plugin_on_shell_execve (current_user.user_name, command, args);
 +
 +#if defined (DEBUG)
 +      itrace("invoke_plugin_on_shell_execve: failed invoke plugin with user:%s, command:%s, result: %d", current_user.user_name, command, result);
