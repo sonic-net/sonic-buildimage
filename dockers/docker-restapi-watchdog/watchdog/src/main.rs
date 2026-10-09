@@ -9,8 +9,7 @@ use redis::{Commands, Connection};
 #[cfg(test)]
 mod https_tests;
 
-const CONFIG_DB: i32 = 4;
-const REDIS_PORT: i32 = 6379;
+const CONFIG_DB_REDIS_URL: &str = "redis+unix:///var/run/redis/redis.sock?db=4";
 const WATCHDOG_PORT: i32 = 50100;
 const RESTAPI_HTTPS_PORT: i32 = 8081;
 const RESTAPI_CERTS: &str = "RESTAPI|certs";
@@ -24,7 +23,7 @@ struct HealthStatus {
 // Opens a Redis connection to CONFIG DB.
 // Returns None on any error (client creation or connection).
 fn redis_connect() -> Option<Connection> {
-    let client = match redis::Client::open(format!("redis://127.0.0.1:{}/{}", REDIS_PORT, CONFIG_DB)) {
+    let client = match redis::Client::open(CONFIG_DB_REDIS_URL) {
         Ok(c) => c,
         Err(e) => { eprintln!("Redis client error: {e}"); return None; }
     };

@@ -11,6 +11,7 @@ use redis::Commands;
 
 // Fail-open: if Redis is down or field is missing/invalid, default to 50051
 const DEFAULT_TELEMETRY_SERVICE_PORT: u16 = 50051;
+const CONFIG_DB_REDIS_URL: &str = "redis+unix:///var/run/redis/redis.sock?db=4";
 
 #[derive(Serialize)]
 struct HealthStatus {
@@ -164,7 +165,7 @@ struct TelemetrySecurityConfig {
 // Unified helper: open a Redis connection to DB 4 and fetch one hash field.
 // Returns None on any error (client creation, connection, or HGET failure).
 fn redis_hget(hash: &str, field: &str) -> Option<String> {
-    let client = match redis::Client::open("redis://127.0.0.1:6379/4") {
+    let client = match redis::Client::open(CONFIG_DB_REDIS_URL) {
         Ok(c) => c,
         Err(e) => { eprintln!("Redis client error {hash}.{field}: {e}"); return None; }
     };
