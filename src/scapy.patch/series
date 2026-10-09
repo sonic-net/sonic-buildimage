@@ -1,2 +1,3 @@
 0001-Fix-version-string-generation-when-scapy-is-a-submod.patch
 0004-Fix-fd-leak-in-worker-thread.patch
+0005-Remove-object-saving-loading.patch
