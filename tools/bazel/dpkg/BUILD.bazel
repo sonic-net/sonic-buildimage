@@ -1,0 +1,40 @@
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load(":defs.bzl", "PATH_INCLUDES")
+
+# Translate the paths dpkg filters under Make (/etc/dpkg/dpkg.cfg.d)
+# into the format bsdtar wants them.
+genrule(
+    name = "dpkg_patterns",
+    srcs = [
+        "dpkg_patterns.awk",
+        "//dockers/docker-base-trixie:dpkg_01_drop",
+    ],
+    outs = [
+        "dpkg_excludes.txt",
+        "dpkg_includes.txt",
+    ],
+    cmd = " ".join([
+        "$(execpath @gawk//:gawk)",
+        "-v excludes=$(execpath dpkg_excludes.txt)",
+        "-v includes=$(execpath dpkg_includes.txt)",
+        "-f $(execpath dpkg_patterns.awk)",
+        "$(execpath //dockers/docker-base-trixie:dpkg_01_drop)",
+    ]),
+    tools = ["@gawk"],
+    visibility = ["//visibility:public"],
+)
+
+write_file(
+    name = "declared_includes",
+    out = "declared_includes.txt",
+    # The trailing "" gives the final newline awk's print writes.
+    content = PATH_INCLUDES + [""],
+)
+
+diff_test(
+    name = "test_dpkg_patterns_up_to_date",
+    size = "small",
+    file1 = "declared_includes.txt",
+    file2 = "dpkg_includes.txt",
+)

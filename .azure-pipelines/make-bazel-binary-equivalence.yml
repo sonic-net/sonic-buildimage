@@ -1,0 +1,54 @@
+# Compares every Bazel-built binary against its Make-built counterpart.
+#
+# Deliberately turned off for now.
+# Eventually, we'll turn this into a nightly build which can fail, for monitoring purposes.
+# Later, we may want to turn it into a merge-gate.
+pr: none
+trigger: none
+
+# schedules:
+# - cron: "0 2 * * *"
+#   displayName: Nightly Bazel/Make binary equivalence
+#   branches:
+#     include:
+#       - master
+
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
+pool: sonicso1ES-amd64
+
+variables:
+- name: CACHE_MODE
+  # Read the shared dpkg cache, so that we don't have to rebuild all the debs for comparison.
+  value: rcache
+
+jobs:
+- job: binary_equivalence
+  displayName: Bazel/Make binary equivalence
+  timeoutInMinutes: 240
+  steps:
+  - checkout: self
+    submodules: recursive
+    # We should start from a clean checkout, to avoid a lot of edge cases.
+    clean: true
+
+  - script: |
+      set -e
+      CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs"
+      make configure PLATFORM=vs
+      CACHE_OPTIONS="${CACHE_OPTIONS}" BLDENV=trixie \
+        ./tools/bazel/test_equivalence.sh
+    displayName: Compare Bazel and Make binaries
+
+  # Publish the long equivalence report as an artifact.
+  # A summary will be printed on screen.
+  - publish: target/equivalence-report.json
+    artifact: equivalence-report
+    displayName: Archive the equivalence report
+    condition: always()

@@ -1,0 +1,19 @@
+"""Build file for the compareELF sources fetched by //:MODULE.bazel."""
+
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@rules_python//python:py_library.bzl", "py_library")
+
+py_library(
+    name = "elfcompare_tools",
+    srcs = ["elfcompare_tools.py"],
+    imports = ["."],
+)
+
+py_binary(
+    name = "elfcompare",
+    srcs = ["elfcompare.py"],
+    imports = ["."],
+    main = "elfcompare.py",
+    visibility = ["//visibility:public"],
+    deps = [":elfcompare_tools"],
+)

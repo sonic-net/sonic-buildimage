@@ -1,0 +1,48 @@
+# buildifier lives in its own package so the root package does not have to
+# load @buildifier_prebuilt.
+# Otherwise everyone would have to depend on buildifier_prebuilt.
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
+
+_EXCLUDE_PATTERNS = [
+    "./.git/*",
+    # Submodules are separate Bazel modules with their own buildifier targets,
+    # so they format themselves.
+    "./src/*",
+    # Vendored third-party BUILD files (lemming, nokia/fmt, ...).
+    "./platform/*",
+    # Build output from Make, which we don't want to lint.
+    "./target/*",
+    # Scratch from the Make/dpkg build.
+    "./dpkg/*",
+    # Generated docker filesystem roots.
+    "./fsroot*",
+]
+
+buildifier(
+    name = "buildifier",
+    exclude_patterns = _EXCLUDE_PATTERNS,
+    lint_mode = "fix",
+    mode = "fix",
+)
+
+buildifier(
+    name = "buildifier.check",
+    exclude_patterns = _EXCLUDE_PATTERNS,
+    lint_mode = "warn",
+    mode = "diff",
+)
+
+# Same check as :buildifier.check, but reachable from `bazel test`.
+#
+# no_sandbox is what makes this walk the whole repository instead of a fixed
+# list of srcs. It also means the test is not hermetic, and the rule tags it
+# no-cache, so it re-runs on every `bazel test`.
+buildifier_test(
+    name = "buildifier_test",
+    timeout = "short",
+    exclude_patterns = _EXCLUDE_PATTERNS,
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)
