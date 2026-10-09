@@ -43,13 +43,13 @@ class PddfAsicThermal(ThermalBase):
 
     def get_presence(self):
         # Check the DB for the sensor
-        db = SonicV2Connector()
+        db = SonicV2Connector(use_unix_socket_path=True)
         db.connect(db.STATE_DB)
         data_dict = db.get_all(db.STATE_DB, self.ASIC_TEMP_INFO)
         return "temperature_{}".format(self.sensor_db_index) in data_dict
 
     def get_temperature(self):
-        db = SonicV2Connector()
+        db = SonicV2Connector(use_unix_socket_path=True)
         db.connect(db.STATE_DB)
         data_dict = db.get_all(db.STATE_DB, self.ASIC_TEMP_INFO)
         temp_value = data_dict.get("temperature_{}".format(self.sensor_db_index))

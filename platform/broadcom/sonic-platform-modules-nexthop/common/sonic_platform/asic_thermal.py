@@ -72,7 +72,7 @@ class AsicThermal(PddfAsicThermal, MinMaxTempMixin, PidThermalMixin):
 
             desired_interval = desired_interval if desired_interval is not None else "10"
 
-            config_db = swsscommon.ConfigDBConnector()
+            config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             config_db.connect()
 
             asic_sensors_config = config_db.get_table("ASIC_SENSORS")

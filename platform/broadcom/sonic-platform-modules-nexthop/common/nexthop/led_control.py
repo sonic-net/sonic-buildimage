@@ -34,7 +34,7 @@ class LedControl(LedControlBase):
     """Platform specific LED control class"""
 
     def __init__(self):
-        self.db = SonicV2Connector()
+        self.db = SonicV2Connector(use_unix_socket_path=True)
         self.db.connect(self.db.APPL_DB)
         self.db.connect(self.db.CONFIG_DB)
         self.db.connect(self.db.STATE_DB)

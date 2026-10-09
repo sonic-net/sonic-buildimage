@@ -162,7 +162,7 @@ class Thermal(ThermalBase):
         """
         #read from state_db for asic temperature
         if self.index == 4:
-            db = SonicV2Connector()
+            db = SonicV2Connector(use_unix_socket_path=True)
             db.connect(db.STATE_DB)
             data_dict = db.get_all(db.STATE_DB, self.ASIC_TEMP_INFO)
             thermal_temperature = float(data_dict['maximum_temperature'])

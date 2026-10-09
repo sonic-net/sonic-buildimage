@@ -18,7 +18,7 @@ WARNING_STATUS_FIELD_NAME = 'warning_status'
 
 class TemperCheck(object):
     def __init__(self):
-        self.db = SonicV2Connector(host="127.0.0.1")
+        self.db = SonicV2Connector(use_unix_socket_path=True)
         self.db.connect(self.db.STATE_DB)
 
     def show(self):

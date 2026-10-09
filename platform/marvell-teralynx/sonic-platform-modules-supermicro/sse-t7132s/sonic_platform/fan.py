@@ -80,7 +80,7 @@ class Fan(FanBase):
         """
         # read part number from eeprom
         # psu fan follows the same rule
-        db = SonicV2Connector()
+        db = SonicV2Connector(use_unix_socket_path=True)
         db.connect(db.STATE_DB)
         eeprom_table = db.get_all(db.STATE_DB, 'EEPROM_INFO|0x22')
         if "Name" in eeprom_table and eeprom_table["Name"] == "Part Number" and "Value" in eeprom_table:

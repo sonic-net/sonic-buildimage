@@ -96,7 +96,7 @@ class PlatformMonitor:
             aligned_last_byte = format(int(int(str(last_byte), 16) + 1), '02x')
             mac_addr = mac_addr[:-2] + aligned_last_byte
             DBG_PRINT("start connect swss config-db to set device mac-address")
-            swss = swsscommon.SonicV2Connector()
+            swss = swsscommon.SonicV2Connector(use_unix_socket_path=True)
             swss.connect(swss.CONFIG_DB)
             swss.set(swss.CONFIG_DB, "DEVICE_METADATA|localhost", 'mac', mac_addr)
             mac_addr = swss.get(swss.CONFIG_DB, "DEVICE_METADATA|localhost", 'mac')
