@@ -12,6 +12,12 @@ Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/
 Defaults        env_keep += "SONIC_CLI_IFACE_MODE"
 Defaults        lecture = once
 Defaults        lecture_file = /etc/sudoers.lecture
+# sudo 1.9.16 (Debian trixie) enables use_pty by default. The PTY switch
+# discards queued terminal input, so when several commands are pasted into a
+# shell only the first sudo line executes. The TIOCSTI injection attack that
+# use_pty guards against is already prevented by the kernel (the legacy
+# TIOCSTI ioctl is disabled, dev.tty.legacy_tiocsti=0).
+Defaults        !use_pty
 
 # Host alias specification
 
