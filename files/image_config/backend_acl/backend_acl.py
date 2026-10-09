@@ -49,7 +49,7 @@ def _is_acl_table_present():
     return (acl_table != "Unknown" and bool(acl_table))
 
 def _is_switch_table_present():
-    state_db = SonicV2Connector(host='127.0.0.1')
+    state_db = SonicV2Connector(use_unix_socket_path=True)
     state_db.connect(state_db.STATE_DB, False)
     table_present = False
     wait_time = 0

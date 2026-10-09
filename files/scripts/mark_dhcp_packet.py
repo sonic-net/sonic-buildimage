@@ -24,7 +24,8 @@ class MarkDhcpPacket(object):
         Initializes the connector during the first call
         """
         if self.config_db_connector is None:
-            self.config_db_connector = swsscommon.ConfigDBConnector()
+            self.config_db_connector = swsscommon.ConfigDBConnector(
+                use_unix_socket_path=True)
             self.config_db_connector.connect()
 
         return self.config_db_connector
@@ -37,8 +38,7 @@ class MarkDhcpPacket(object):
         """
         if self.state_db_connector is None:
             self.state_db_connector = swsscommon.SonicV2Connector(
-                                                    host='127.0.0.1'
-                                                )
+                use_unix_socket_path=True)
             self.state_db_connector.connect(self.state_db_connector.STATE_DB)
 
         return self.state_db_connector
