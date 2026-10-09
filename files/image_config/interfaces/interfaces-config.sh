@@ -79,7 +79,7 @@ fi
 # Check if ZTP DHCP policy has been installed
 if [[ -e /etc/network/ifupdown2/policy.d/ztp_dhcp.json ]]; then
     # Obtain port operational state information
-    if ! redis-dump -d 0 -k "PORT_TABLE:Ethernet*" -y > "${ZTP_PORT_DATA}" ||
+    if ! redis-dump -s /var/run/redis/redis.sock -d 0 -k "PORT_TABLE:Ethernet*" -y > "${ZTP_PORT_DATA}" ||
        [[ ! -s "${ZTP_PORT_DATA}" ]]; then
         printf '{}\n' > "${ZTP_PORT_DATA}"
     fi

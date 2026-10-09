@@ -15,13 +15,13 @@ start()
     update_symlink
 
     has_static_mgmt_ip=false
-    mgmt_ip_cfg=$(redis-dump -d 4 -k "MGMT_INTERFACE|eth0|*" -y)
+    mgmt_ip_cfg=$(redis-dump -s /var/run/redis/redis.sock -d 4 -k "MGMT_INTERFACE|eth0|*" -y)
     if [[ $? -eq 0 && ${mgmt_ip_cfg} != "{}" ]]; then
         has_static_mgmt_ip=true
     fi
 
     has_static_dns=false
-    dns_cfg=$(redis-dump -d 4 -k "DNS_NAMESERVER*" -y)
+    dns_cfg=$(redis-dump -s /var/run/redis/redis.sock -d 4 -k "DNS_NAMESERVER*" -y)
     if [[ $? -eq 0 && ${dns_cfg} != "{}" ]]; then
         has_static_dns=true
     fi
