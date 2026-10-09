@@ -1922,31 +1922,44 @@ static bool build_c_nhgfull_from_obj(struct C_NextHopGroupFull *c_nhg,
 			/* Get the default SRv6 context which contains seg6's src IP */
 			struct zebra_srv6 *srv6 = zebra_srv6_get_default();
 
-			c_nhg->nh_srv6 = malloc(sizeof(struct C_nexthop_srv6));
-			if (c_nhg->nh_srv6) {
-				/* field copy from nexthop_srv6 to C_nexthop_srv6 */
-				/* seg6local_action */
-				c_nhg->nh_srv6->seg6local_action =
-					(enum C_seg6local_action_t)nh->nh_srv6->seg6local_action;
+			/*
+			 * A failed allocation fails the whole encode: the caller
+			 * rolls the context back and zebra learns the route was
+			 * not programmed. Emitting the object without its SIDs
+			 * would instead make fpmsyncd program a broken SRv6 NHG
+			 * that no later event repairs.
+			 */
+			c_nhg->nh_srv6 = XCALLOC(MTYPE_FPM_NHG, sizeof(*c_nhg->nh_srv6));
+			if (c_nhg->nh_srv6 == NULL) {
+				zlog_err("%s: cannot allocate SRv6 info for dplane NHG %u",
+					 __func__, obj->dplane_id);
+				return false;
+			}
 
-				/* seg6local_ctx */
-				memcpy(&c_nhg->nh_srv6->seg6local_ctx, &nh->nh_srv6->seg6local_ctx,
-					sizeof(struct C_seg6local_context));
+			/* field copy from nexthop_srv6 to C_nexthop_srv6 */
+			/* seg6local_action */
+			c_nhg->nh_srv6->seg6local_action =
+				(enum C_seg6local_action_t)nh->nh_srv6->seg6local_action;
 
-				/* seg6_src */
-				c_nhg->nh_srv6->seg6_src = srv6->encap_src_addr;
+			/* seg6local_ctx */
+			memcpy(&c_nhg->nh_srv6->seg6local_ctx, &nh->nh_srv6->seg6local_ctx,
+				sizeof(struct C_seg6local_context));
 
-				/* seg6_segs */
-				c_nhg->nh_srv6->seg6_segs = NULL;  // clear the pointer to avoid pointing to old address
-				/* set nexthop_srv6 seg6_segs if present */
-				if (nh->nh_srv6->seg6_segs != NULL) {
-					size_t total_size = sizeof(struct C_seg6_seg_stack) +
-								nh->nh_srv6->seg6_segs->num_segs * sizeof(struct in6_addr);
-					c_nhg->nh_srv6->seg6_segs = malloc(total_size);
-					if (c_nhg->nh_srv6->seg6_segs) {
-						memcpy(c_nhg->nh_srv6->seg6_segs, nh->nh_srv6->seg6_segs, total_size);
-					}
+			/* seg6_src */
+			c_nhg->nh_srv6->seg6_src = srv6->encap_src_addr;
+
+			/* set nexthop_srv6 seg6_segs if present */
+			if (nh->nh_srv6->seg6_segs != NULL) {
+				size_t total_size = sizeof(struct C_seg6_seg_stack) +
+							nh->nh_srv6->seg6_segs->num_segs * sizeof(struct in6_addr);
+
+				c_nhg->nh_srv6->seg6_segs = XMALLOC(MTYPE_FPM_NHG, total_size);
+				if (c_nhg->nh_srv6->seg6_segs == NULL) {
+					zlog_err("%s: cannot allocate SRv6 segment list for dplane NHG %u",
+						 __func__, obj->dplane_id);
+					return false;
 				}
+				memcpy(c_nhg->nh_srv6->seg6_segs, nh->nh_srv6->seg6_segs, total_size);
 			}
 		}
 	}
@@ -1976,12 +1989,12 @@ static void free_c_nexthopgroupfull(struct C_NextHopGroupFull *c_nhg)
 	if (c_nhg->nh_srv6) {
 		/* Free seg6_segs if present */
 		if (c_nhg->nh_srv6->seg6_segs) {
-			free(c_nhg->nh_srv6->seg6_segs);
+			XFREE(MTYPE_FPM_NHG, c_nhg->nh_srv6->seg6_segs);
 			c_nhg->nh_srv6->seg6_segs = NULL;
 		}
 
 		/* Free nh_srv6 itself */
-		free(c_nhg->nh_srv6);
+		XFREE(MTYPE_FPM_NHG, c_nhg->nh_srv6);
 		c_nhg->nh_srv6 = NULL;
 	}
 }
