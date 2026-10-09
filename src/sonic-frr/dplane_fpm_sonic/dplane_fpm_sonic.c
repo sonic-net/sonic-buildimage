@@ -1386,7 +1386,13 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	req->r.rtm_family = p->family;
 	req->r.rtm_dst_len = p->prefixlen;
 	req->r.rtm_scope = RT_SCOPE_UNIVERSE;
-	req->r.rtm_type = RTN_UNICAST;
+	/*
+	 * rtm_type and the RTA_DST added below only serve fpmsyncd's
+	 * offload-ack parsing in nhg-fib mode; default and
+	 * use-next-hop-groups keep the historical localsid wire format.
+	 */
+	if (gfnc->use_nhg_fib)
+		req->r.rtm_type = RTN_UNICAST;
 
 	if (cmd == RTM_DELSRV6LOCALSID)
 		req->r.rtm_protocol = zebra2proto(dplane_ctx_get_old_type(ctx));
@@ -1397,11 +1403,12 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		return 0;
 
 	/*
-	 * Also emit standard RTA_DST so fpmsyncd's offload-ack (which
-	 * rewrites nlmsg_type to RTM_NEWROUTE and echoes the body back)
-	 * can be parsed by zebra's regular route reader.
+	 * In nhg-fib mode, also emit standard RTA_DST so fpmsyncd's
+	 * offload-ack (which rewrites nlmsg_type to RTM_NEWROUTE and echoes
+	 * the body back) can be parsed by zebra's regular route reader.
 	 */
-	if (!nl_attr_put(&req->n, datalen, RTA_DST, &p->u.prefix, bytelen))
+	if (gfnc->use_nhg_fib &&
+	    !nl_attr_put(&req->n, datalen, RTA_DST, &p->u.prefix, bytelen))
 		return 0;
 
 	/* Table corresponding to this route. */
