@@ -1,4 +1,9 @@
+import sys
 from unittest.mock import MagicMock, call, patch
+
+from . import swsscommon_test
+
+sys.modules["swsscommon"] = swsscommon_test
 
 from bgpcfgd.runner import Runner
 from bgpcfgd.static_rt_timer import StaticRouteTimer
