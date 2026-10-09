@@ -1,0 +1,33 @@
+{# Private TSA wrappers preserve the configured outbound policy for loopbacks. #}
+{% if BGP_DEVICE_GLOBAL is defined and BGP_DEVICE_GLOBAL.get('STATE', {}).get('tsa_enabled') == 'true' %}
+{% for key in LOOPBACK_INTERFACE | default({}) %}
+{% if key is not string and key | length == 2 %}
+{% set protocol = 'ipv6' if ':' in key[1] else 'ip' %}
+{% set loopback_vrf = LOOPBACK_INTERFACE.get(key[0], {}).get('vrf_name', 'default') %}
+{{ protocol }} prefix-list FRRCFGD_TSA_{{ loopback_vrf }}_{{ protocol }} permit {{ key[1] | ip_network }}/{{ key[1] | prefixlen }}
+{% endif %}
+{% endfor %}
+{% set ns = namespace(maps=[]) %}
+{% for table_name, table in [('BGP_PEER_GROUP_AF', BGP_PEER_GROUP_AF | default({})), ('BGP_NEIGHBOR_AF', BGP_NEIGHBOR_AF | default({}))] %}
+{% for key, entry in table.items() %}
+{% if key | length == 3 and key[2] | lower in ['ipv4_unicast', 'ipv6_unicast'] %}
+{% set original = (entry.get('route_map_out', []) | last) | default('') %}
+{% set group = (BGP_NEIGHBOR | default({})).get((key[0], key[1]), {}).get('peer_group_name') %}
+{% if not (table_name == 'BGP_NEIGHBOR_AF' and not original and (key[0], group, key[2]) in BGP_PEER_GROUP_AF | default({})) %}
+{% set af = (key[2] | lower).split('_')[0] %}
+{% set protocol = 'ip' if af == 'ipv4' else 'ipv6' %}
+{% set name = 'FRRCFGD_TSA_' ~ key[0] ~ '_' ~ af ~ ('_' ~ original if original else '') %}
+{% if name not in ns.maps %}
+route-map {{ name }} permit 10
+ match {{ protocol }} address prefix-list FRRCFGD_TSA_{{ key[0] }}_{{ protocol }}
+{% if original %}
+ call {{ original }}
+{% endif %}
+!
+{% set ns.maps = ns.maps + [name] %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
