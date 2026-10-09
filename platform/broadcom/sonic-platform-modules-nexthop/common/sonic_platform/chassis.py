@@ -13,6 +13,8 @@ import sys
 import time
 
 from sonic_platform.dpm_base import timestamp_as_string
+from sonic_platform.blackbox_logger import BlackBoxLogger
+from sonic_platform.blackbox_manager import BlackBoxManager
 from sonic_platform.reboot_cause_manager import RebootCauseManager, RebootCause
 from sonic_platform.thermal import NexthopFpgaAsicThermal
 from sonic_platform.watchdog import Watchdog
@@ -57,6 +59,18 @@ class Chassis(PddfChassis):
         self._reboot_cause_manager = (
             RebootCauseManager(pddf_data.data, pddf_plugin_data) if (pddf_plugin_data and pddf_data) else None
         )
+        self._blackbox_manager = BlackBoxManager(
+            self._pddf_data,
+            self.plugin_data,
+            devices={key: self.get_all_devices(key) for key in (self.plugin_data or {}).get("BLACKBOX", {})},
+        )
+
+    def get_blackbox_manager(self) -> BlackBoxManager:
+        """Returns the blackbox manager."""
+        return self._blackbox_manager
+
+    def get_blackbox_logger(self, source: str) -> BlackBoxLogger | None:
+        return self._blackbox_manager.get_logger(source)
 
     # Provide the functions/variables below for which implementation is to be overwritten
 
