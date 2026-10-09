@@ -6,7 +6,6 @@
 
 try:
     from sonic_led.led_control_base import LedControlBase
-    from sonic_py_common import daemon_base
     from sonic_py_common import multi_asic
     from sonic_py_common import logger
     from sonic_py_common.interface import backplane_prefix, inband_prefix, recirc_prefix
@@ -63,7 +62,7 @@ class LedControl(LedControlBase):
 
         for namespace in namespaces:
             # Open a handle to the Application database, in all namespaces
-            appl_db[namespace] = daemon_base.db_connect("APPL_DB", namespace=namespace)
+            appl_db[namespace] = swsscommon.DBConnector("APPL_DB", 0, False, namespace)
             self.sst[namespace] = swsscommon.SubscriberStateTable(appl_db[namespace], swsscommon.APP_PORT_TABLE_NAME)
             self.sel.addSelectable(self.sst[namespace])
 

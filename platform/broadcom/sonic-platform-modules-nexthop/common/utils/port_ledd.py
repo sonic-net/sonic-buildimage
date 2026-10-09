@@ -37,8 +37,8 @@ class PortLedd(daemon_base.DaemonBase):
         self.sel = swsscommon.Select()
 
         # Subscribe to APPL_DB and STATE_DB events
-        self.appl_db = daemon_base.db_connect("APPL_DB")
-        self.state_db = daemon_base.db_connect("STATE_DB")
+        self.appl_db = swsscommon.DBConnector("APPL_DB", 0, False)
+        self.state_db = swsscommon.DBConnector("STATE_DB", 0, False)
 
         self.app_port_tbl = swsscommon.SubscriberStateTable(
             self.appl_db, swsscommon.APP_PORT_TABLE_NAME

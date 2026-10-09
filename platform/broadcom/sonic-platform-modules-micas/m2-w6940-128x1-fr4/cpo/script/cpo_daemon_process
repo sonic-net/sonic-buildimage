@@ -12,7 +12,7 @@ import json
 import fcntl
 import io
 import subprocess
-from sonic_py_common import device_info,daemon_base
+from sonic_py_common import device_info
 from swsscommon import swsscommon
 from oe_cmis_rw import oe_cmis_sysfs_rw, oe_cmis_i2c_rw
 from cmis_memory_map import cmis_memory_helper_base as cmis_memory_map_base
@@ -1330,13 +1330,13 @@ class database_monitor(threading.Thread):
             self.main_thread_stop_event.set()
 
     def task_worker(self):
-        appl_db = daemon_base.db_connect("APPL_DB", namespace="")
+        appl_db = swsscommon.DBConnector("APPL_DB", 0, False, "")
         sel = swsscommon.Select()
         port_tbl = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
         pro_port_tbl = swsscommon.ProducerStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
         sel.addSelectable(port_tbl)
         if port_config_init:
-            config_db = daemon_base.db_connect("CONFIG_DB", namespace="")
+            config_db = swsscommon.DBConnector("CONFIG_DB", 0, False, "")
             device_metadata_tbl = swsscommon.SubscriberStateTable(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
             sel.addSelectable(device_metadata_tbl)
         # Make sure this daemon started after all port configured
