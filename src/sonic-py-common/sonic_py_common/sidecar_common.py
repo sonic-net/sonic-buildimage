@@ -74,7 +74,7 @@ def _get_config_db() -> Optional[ConfigDBConnector]:
     global _config_db
     if _config_db is None:
         try:
-            db = ConfigDBConnector()
+            db = ConfigDBConnector(use_unix_socket_path=True)
             db.connect()
             _config_db = db
             logger.log_info("Connected to CONFIG_DB via ConfigDBConnector")
