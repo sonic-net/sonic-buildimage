@@ -1,0 +1,18 @@
+[Unit]
+Description=Ciena CN8140 Front-panel SFP/QSFP LED colour updater
+# CONFIG_DB (database.service) supplies per-port speed; platform.service has
+# already initialised the Rudra40 FPGA / plreg access by the time this runs.
+After=ciena-8140-platform.service database.service
+Requires=database.service
+Wants=ciena-8140-platform.service
+
+[Service]
+Type=simple
+ExecStart=/usr/share/sonic/device/x86_64-ciena-8140-r0/ciena-8140-led-fpga-init.sh watch
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

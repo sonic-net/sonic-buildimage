@@ -1,0 +1,24 @@
+[Unit]
+Description=Ciena CN8140 Platform Ready (STATUS LED solid green)
+After=sonic.target pmon.service
+Requires=ciena-8140-platform.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '\
+    echo 1 > /sys/class/leds/front:green:status/brightness; \
+    echo 0 > /sys/class/leds/front:green:status/blink; \
+    echo 0 > /sys/class/leds/front:yellow:alarm/brightness; \
+    echo 0 > /sys/class/leds/front:yellow:alarm/blink; \
+    logger -t ciena-8140-ready "STATUS LED set to solid green (platform ready)"'
+ExecStop=/bin/bash -c '\
+    echo 0 > /sys/class/leds/front:green:status/brightness; \
+    echo 0 > /sys/class/leds/front:green:status/blink; \
+    echo 1 > /sys/class/leds/front:yellow:alarm/brightness; \
+    echo 1 > /sys/class/leds/front:yellow:alarm/blink; \
+    logger -t ciena-8140-ready "STATUS LED set to blinking yellow (shutdown)"'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sonic.target

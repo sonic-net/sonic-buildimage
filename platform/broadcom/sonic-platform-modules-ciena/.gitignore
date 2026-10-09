@@ -1,0 +1,26 @@
+# Build artifacts
+*.ko
+*.o
+*.mod
+*.mod.c
+*.mod.o
+.*.cmd
+.*.d
+modules.order
+Module.symvers
+
+# Generated plreg tools (built from regmap/*.html by generate_plreg.py)
+*/utils/plreg
+
+# Python build artifacts
+*.egg-info/
+build/
+dist/
+__pycache__/
+*.pyc
+
+# Debian build artifacts
+debian/sonic-platform-ciena-*/
+debian/*.debhelper*
+debian/files
+debian/*.substvars
