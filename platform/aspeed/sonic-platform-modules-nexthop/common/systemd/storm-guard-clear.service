@@ -1,0 +1,13 @@
+[Unit]
+Description=Clear reboot-storm-guard counter on a successful boot
+# Run once past the last boot stage (systemd-late marker, 0x23), i.e. the
+# current boot reached steady state and any prior WDT reset has recovered.
+After=multi-user.target watchdog-stage-late.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/storm-guard-clear.sh
+
+[Install]
+WantedBy=multi-user.target

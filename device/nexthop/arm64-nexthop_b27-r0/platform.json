@@ -19,6 +19,7 @@
     "interfaces": {},
     "watchdog": {
         "boot_arm": true,
-        "shutdown_protect": true
+        "shutdown_protect": true,
+        "stage_scratch_reg": "0x14c3704c"
     }
 }
