@@ -10,11 +10,11 @@
 
 #include "fpm_mac.h"
 
-bool fpm_mac_decode(const struct nlmsghdr *hdr, struct fpm_local_mac *out)
+bool fpm_mac_decode(const struct nlmsghdr *hdr, struct fpm_hw_mac *out)
 {
 	const struct ndmsg *ndm;
 	struct rtattr *rta;
-	struct fpm_local_mac decoded;
+	struct fpm_hw_mac decoded;
 	bool have_mac = false;
 	int len;
 

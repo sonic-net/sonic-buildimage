@@ -67,7 +67,7 @@ static const uint8_t kMac[ETH_ALEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
 
 static void test_decode_add(void)
 {
-	struct fpm_local_mac out;
+	struct fpm_hw_mac out;
 	struct mac_msg m;
 	uint16_t vid = 100;
 
@@ -86,7 +86,7 @@ static void test_decode_add(void)
 
 static void test_decode_del_and_sticky(void)
 {
-	struct fpm_local_mac out;
+	struct fpm_hw_mac out;
 	struct mac_msg m;
 
 	msg_init(&m, RTM_DELNEIGH);
@@ -125,7 +125,7 @@ static void test_decode_del_and_sticky(void)
  * install the all-zero MAC. */
 static void test_decode_requires_lladdr(void)
 {
-	struct fpm_local_mac out;
+	struct fpm_hw_mac out;
 	struct mac_msg m;
 	uint16_t vid = 100;
 
@@ -135,10 +135,11 @@ static void test_decode_requires_lladdr(void)
 	CU_ASSERT_FALSE(fpm_mac_decode(&m.n, &out));
 }
 
-/* zebra also receives IP neighbour messages on this socket. */
+/* Netlink uses RTM_NEWNEIGH for IP neighbours too. fpmsyncd sends only bridge
+ * FDB entries, so anything else is rejected. */
 static void test_decode_rejects_non_bridge(void)
 {
-	struct fpm_local_mac out;
+	struct fpm_hw_mac out;
 	struct mac_msg m;
 
 	msg_init(&m, RTM_NEWNEIGH);
@@ -150,7 +151,7 @@ static void test_decode_rejects_non_bridge(void)
 
 static void test_decode_rejects_truncated_and_other_types(void)
 {
-	struct fpm_local_mac out;
+	struct fpm_hw_mac out;
 	struct mac_msg m;
 
 	msg_init(&m, RTM_NEWNEIGH);
@@ -167,7 +168,7 @@ static void test_decode_rejects_truncated_and_other_types(void)
  * VLAN behind either. */
 static void test_decode_ignores_malformed_vlan(void)
 {
-	struct fpm_local_mac out;
+	struct fpm_hw_mac out;
 	struct mac_msg m;
 	uint8_t short_vid = 5;
 
@@ -182,7 +183,7 @@ static void test_decode_ignores_malformed_vlan(void)
 /* A rejected message must not scribble on the caller's struct. */
 static void test_decode_leaves_output_untouched_on_failure(void)
 {
-	struct fpm_local_mac out;
+	struct fpm_hw_mac out;
 	struct mac_msg m;
 
 	memset(&out, 0xAB, sizeof(out));

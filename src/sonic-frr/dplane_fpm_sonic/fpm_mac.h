@@ -22,8 +22,8 @@
 #define NTF_STICKY 0x40
 #endif
 
-struct fpm_local_mac {
-	int ifindex;		/* bridge port the ASIC learnt the MAC on */
+struct fpm_hw_mac {
+	int ifindex;		/* bridge port the hardware learnt the MAC on */
 	uint8_t mac[ETH_ALEN];
 	uint16_t vid;		/* VLAN on that port, 0 when untagged */
 	bool del;		/* aged out, or no longer on the port */
@@ -48,6 +48,6 @@ struct fpm_local_mac {
  * NTF_STICKY is the EVPN sticky bit: the MAC may not move. NUD_NOARP only means
  * the entry does not age.
  */
-extern bool fpm_mac_decode(const struct nlmsghdr *hdr, struct fpm_local_mac *out);
+extern bool fpm_mac_decode(const struct nlmsghdr *hdr, struct fpm_hw_mac *out);
 
 #endif /* _FPM_MAC_H */
