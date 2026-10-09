@@ -7,15 +7,24 @@ import sys
 import time
 
 
-def main():
-
+def build_arg_parser():
     parser = argparse.ArgumentParser(description='test_login cmdline parser')
     parser.add_argument('-u', default="admin", help='login user name')
-    parser.add_argument('-P', default=os.environ.get("SONIC_PASSWORD", "YourPaSsWoRd"), help='login password')
-    parser.add_argument('-N', default="Test@2022", help='new password')
+    parser.add_argument('-P', default=os.environ.get("SONIC_PASSWORD"), help='login password')
+    parser.add_argument('-N', default=os.environ.get("SONIC_NEW_PASSWORD"), help='new password')
     parser.add_argument('-p', type=int, default=9000, help='local port')
+    return parser
 
+
+def main():
+
+    parser = build_arg_parser()
     args = parser.parse_args()
+
+    if not args.P:
+        parser.error("login password required: use -P or SONIC_PASSWORD")
+    if not args.N:
+        parser.error("new password required: use -N or SONIC_NEW_PASSWORD")
 
     login_prompt = 'sonic login:'
     passwd_prompt = 'Password:'

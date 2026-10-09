@@ -80,6 +80,13 @@ DEFAULT_USERNAME = admin
 # SSH login is blocked (PermitEmptyPasswords no). Set a real password on first login.
 DEFAULT_PASSWORD = YourPaSsWoRd
 
+# DEFAULT_NEW_PASSWORD - default temporary "new password" used only by
+# scripts/build_kvm_image.sh / check_install.py to drive the KVM build's
+# forced first-login password-change verification. It is used transiently
+# during that check and the original DEFAULT_PASSWORD is restored
+# immediately afterward; it is never written into the built image.
+DEFAULT_NEW_PASSWORD = YourNewPaSsWoRd
+
 # BMC_NOS_ACCOUNT_USERNAME - default BMC NOS account username
 BMC_NOS_ACCOUNT_USERNAME ?= yormnAnb
 
