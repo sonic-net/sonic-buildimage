@@ -5,7 +5,7 @@ def sonic_db_dump_load():
     import os.path
     import re
     import sys
-    from redisdl import dump, load
+    from redisdl import dump, dumps, load
     from swsscommon.swsscommon import SonicDBConfig, SonicDBKey
     from sonic_py_common import multi_asic
 
@@ -86,7 +86,10 @@ def sonic_db_dump_load():
             output = sys.stdout
 
         kwargs = options_to_kwargs(options)
-        dump(output, **kwargs)
+        if options.pretty:
+            output.write(dumps(**kwargs))
+        else:
+            dump(output, **kwargs)
 
         if options.output:
             output.close()

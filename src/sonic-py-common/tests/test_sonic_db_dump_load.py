@@ -1,3 +1,4 @@
+from io import StringIO
 import sys
 from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
 from swsscommon.swsscommon import SonicDBKey
@@ -24,6 +25,33 @@ def test_sonic_db_dump(
     )
     mock_getDbHostname.assert_called_once_with("APPL_DB", SonicDBKey())
     mock_getDbSock.assert_called_once_with("APPL_DB", SonicDBKey())
+    mock_getDbPort.assert_not_called()
+
+
+@patch("redisdl.RedisWrapper")
+@patch("sonic_py_common.multi_asic.is_multi_asic", return_value=False)
+@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis/redis.sock")
+@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
+@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6379)
+@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=2)
+@patch("sys.argv", ["sonic-db-dump", "-n", "COUNTERS_DB", "-y"])
+def test_sonic_db_dump_pretty_uses_unix_socket(
+        mock_getDbId, mock_getDbPort, mock_getDbHostname, mock_getDbSock,
+        mock_is_multi_asic, mock_redis):
+    mock_redis.return_value.keys.return_value = []
+
+    with patch("sys.stdout", new_callable=StringIO) as output:
+        sonic_db_dump_load()
+
+    assert output.getvalue() == "{}"
+    mock_redis.assert_called_once_with(
+        unix_socket_path="/var/run/redis/redis.sock",
+        password=None,
+        db=2,
+        charset="utf-8",
+    )
+    mock_getDbHostname.assert_called_once_with("COUNTERS_DB", SonicDBKey())
+    mock_getDbSock.assert_called_once_with("COUNTERS_DB", SonicDBKey())
     mock_getDbPort.assert_not_called()
 
 
