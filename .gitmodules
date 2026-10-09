@@ -162,3 +162,7 @@
 	path = platform/broadcom/sonic-platform-modules-juniper
 	url = https://github.com/Juniper/sonic-platform-modules-juniper
 	branch = master
+[submodule "device/juniper"]
+	path = device/juniper
+	url = https://github.com/Juniper/sonic-platform-metadata
+	branch = main
