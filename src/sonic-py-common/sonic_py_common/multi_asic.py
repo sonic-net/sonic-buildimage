@@ -45,7 +45,8 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
     Returns:
       handle to the config_db for a namespace
     """
-    config_db = swsscommon.ConfigDBConnector(namespace=namespace)
+    config_db = swsscommon.ConfigDBConnector(
+        use_unix_socket_path=True, namespace=namespace)
     config_db.connect()
     return config_db
 

@@ -32,7 +32,7 @@ class master_key_mgr:
     def __init__(self):
         if not self._initialized:
             self._file_path = CIPHER_PASS_FILE
-            self._config_db = ConfigDBConnector()
+            self._config_db = ConfigDBConnector(use_unix_socket_path=True)
             self._config_db.connect()
             self._initialized = True
 
@@ -250,4 +250,3 @@ class master_key_mgr:
         if data and 'key_encrypt' in data:
             return data['key_encrypt'].lower() == 'true'
         return False
-
