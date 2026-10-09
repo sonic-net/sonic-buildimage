@@ -21,6 +21,9 @@ try:
     import os
     import logging
     import math
+    import time
+    import fcntl
+    import hashlib
     from logging.handlers import RotatingFileHandler
     from platform_intf import *
     from sonic_platform_base.sonic_xcvr.bailly_optoe_base import CpoOptoeBase, get_cpo_json_data
@@ -275,3 +278,68 @@ class CPO(CpoOptoeBase):
 
     def get_reset_status(self):
         return False
+
+    THROTTLE_LOCK_DIR = "/var/lock/pddf-locks/cpo_eeprom"  # must share with pmon and host
+    MIN_READ_INTERVAL = 0.01   # 10ms
+    MIN_WRITE_INTERVAL = 0.02  # 20ms
+
+    def _lock_file_for(self, sys_path):
+        real = os.path.realpath(sys_path)
+        digest = hashlib.sha1(real.encode("utf-8")).hexdigest()
+        return os.path.join(self.THROTTLE_LOCK_DIR, digest + ".lock")
+
+    def _throttle_eeprom(self, sys_path, op):
+        os.makedirs(self.THROTTLE_LOCK_DIR, exist_ok=True)
+        lock_file = self._lock_file_for(sys_path)
+        with open(lock_file, "a+") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            f.seek(0)
+            try:
+                parts = f.read().split()
+                last = float(parts[0]) if parts else 0.0
+                last_op = parts[1] if len(parts) >= 2 else None
+            except (ValueError, IndexError):
+                last, last_op = 0.0, None
+
+            now = time.monotonic()
+            interval = self.MIN_WRITE_INTERVAL if last_op == "write" else self.MIN_READ_INTERVAL
+            wait = interval - (now - last)
+            if wait > 0:
+                self._cpolog(LOG_ERROR_LEVEL,
+                             "_throttle_eeprom {},{} wait: {}, last_op:{}, op:{}".format(
+                                 self._port_id, sys_path, wait, last_op, op))
+                time.sleep(wait)
+
+            f.seek(0)
+            f.truncate()
+            f.write("{} {}".format(time.monotonic(), op))
+            f.flush()
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+    def read_eeprom(self, offset, num_bytes):
+        sys_path = self.get_eeprom_path()
+        if not sys_path:
+            return None
+        try:
+            self._throttle_eeprom(sys_path, "read")
+            with open(sys_path, mode='rb', buffering=0) as f:
+                f.seek(offset)
+                ret = bytearray(f.read(num_bytes))
+                return ret
+        except (OSError, IOError, TypeError):
+            self._cpolog(LOG_ERROR_LEVEL, "read_eeprom error {}, offset: {}".format(self._port_id, offset))
+            return None
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        sys_path = self.get_eeprom_path()
+        if not sys_path:
+            return False
+        try:
+            self._throttle_eeprom(sys_path, "write")
+            with open(sys_path, mode='r+b', buffering=0) as f:
+                f.seek(offset)
+                f.write(write_buffer[0:num_bytes])
+            return True
+        except (OSError, IOError, TypeError):
+            self._cpolog(LOG_ERROR_LEVEL, "write_eeprom error {}, offset: {}".format(self._port_id, offset))
+            return False
