@@ -1507,7 +1507,7 @@ def hdl_admin_status_shutdown_msg(daemon, cmd_str, op, st_idx, args, data):
 
 class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
-        super(ExtConfigDBConnector, self).__init__()
+        super(ExtConfigDBConnector, self).__init__(use_unix_socket_path=True)
         self.nosort_attrs = ns_attrs if ns_attrs is not None else {}
         self.__listen_thread_running = False
     def raw_to_typed(self, raw_data, table = ''):
