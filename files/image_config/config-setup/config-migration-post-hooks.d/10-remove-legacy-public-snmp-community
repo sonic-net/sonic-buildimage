@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# The old factory YAML entry identifies configuration that can be migrated.
+# Leave a changed or absent entry, and any extended Config DB row, alone.
+remove_legacy_public_snmp_community()
+{
+    local snmp_config=${SNMP_CONFIG:-/etc/sonic/snmp.yml}
+    local config_db_path=${CONFIG_DB_PATH:-/etc/sonic/}
+    local sonic_db_cli=${SONIC_DB_CLI:-sonic-db-cli}
+    local config_db_files config_db_file config_db staged result row_size row_type
+
+    [ -f "${snmp_config}" ] || return 0
+    grep -Fxq 'snmp_rocommunity: public' "${snmp_config}" || return 0
+
+    if declare -F get_config_db_file_list >/dev/null; then
+        config_db_files=$(get_config_db_file_list) || return 1
+    else
+        config_db_files=${CONFIG_DB_FILES:-config_db.json}
+    fi
+
+    # Keep the YAML marker until every other update succeeds, so a failed
+    # migration can be retried without losing the source of the decision.
+    for config_db_file in ${config_db_files}; do
+        config_db="${config_db_path%/}/${config_db_file}"
+        [ -f "${config_db}" ] || continue
+
+        jq -e '.SNMP_COMMUNITY.public? == {"TYPE":"RO"}' "${config_db}" >/dev/null
+        result=$?
+        if [ "${result}" -eq 1 ]; then
+            continue
+        elif [ "${result}" -ne 0 ]; then
+            return 1
+        fi
+
+        staged=$(mktemp "${config_db}.XXXXXX") || return 1
+        if ! jq 'del(.SNMP_COMMUNITY.public)' "${config_db}" >"${staged}" ||
+           ! chmod --reference="${config_db}" "${staged}" ||
+           ! chown --reference="${config_db}" "${staged}" ||
+           ! mv "${staged}" "${config_db}"; then
+            rm -f "${staged}"
+            return 1
+        fi
+    done
+
+    # Warm boot retains the live database instead of loading the edited file.
+    if [ "${WARM_BOOT:-false}" = true ]; then
+        row_size=$("${sonic_db_cli}" CONFIG_DB HLEN 'SNMP_COMMUNITY|public') || return 1
+        if [ "${row_size}" = 1 ]; then
+            row_type=$("${sonic_db_cli}" CONFIG_DB HGET 'SNMP_COMMUNITY|public' TYPE) || return 1
+            if [ "${row_type}" = RO ]; then
+                "${sonic_db_cli}" CONFIG_DB DEL 'SNMP_COMMUNITY|public' || return 1
+            fi
+        fi
+    fi
+
+    staged=$(mktemp "${snmp_config}.XXXXXX") || return 1
+    if ! awk '$0 != "snmp_rocommunity: public"' "${snmp_config}" >"${staged}" ||
+       ! chmod --reference="${snmp_config}" "${staged}" ||
+       ! chown --reference="${snmp_config}" "${staged}" ||
+       ! mv "${staged}" "${snmp_config}"; then
+        rm -f "${staged}"
+        return 1
+    fi
+}
+
+remove_legacy_public_snmp_community
+result=$?
+return "${result}" 2>/dev/null || exit "${result}"
