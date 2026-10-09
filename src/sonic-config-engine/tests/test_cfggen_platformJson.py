@@ -348,6 +348,18 @@ class TestCfgGenPlatformJson(TestCase):
         self.assertEqual(ports['Ethernet8']['lanes'], '8')
         self.assertEqual(ports['Ethernet8']['subport'], '1')
 
+    def test_port_config_uses_legacy_hwsku_file_without_hwsku_name(self):
+        with mock.patch('portconfig.get_hwsku_file_name', return_value=self.hwsku_json) as get_hwsku_file:
+            ports, _, _ = get_port_config(
+                platform='generic',
+                port_config_file=self.platform_json
+            )
+
+        get_hwsku_file.assert_called_once_with(None, 'generic')
+        self.assertEqual(ports['Ethernet8']['speed'], '25000')
+        self.assertEqual(ports['Ethernet8']['lanes'], '8')
+        self.assertEqual(ports['Ethernet8']['subport'], '1')
+
     def test_port_config_uses_platform_fallback_when_hwsku_file_is_missing(self):
         with mock.patch('portconfig.get_hwsku_file_name', return_value=None) as get_hwsku_file:
             ports, _, _ = get_port_config(
