@@ -1780,6 +1780,14 @@ class IpNextHopSet(set):
                 return (af_id, new_prefix)
         return (None, None)
 
+class _EmptyConfigTables(object):
+    """Stands in for CONFIG_DB when priming BGPConfigDaemon's view of FRR in
+    split-unified mode, where FRR starts without the CONFIG_DB config."""
+    @staticmethod
+    def get_table(table):
+        return {}
+
+
 class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
@@ -2362,11 +2370,19 @@ class BGPConfigDaemon:
             self.use_template_render_for_restore = db_entry['use_template_render_for_restore']
         else:
             self.use_template_render_for_restore = 'true'
+        # The in-memory view of what FRR already has (ASNs, peer groups, route maps,
+        # prefix/community sets, static routes, ...) is primed from CONFIG_DB, which is
+        # right when FRR starts with that config. In split-unified mode docker_init.sh
+        # writes only a default zebra config, so FRR starts without it and the startup
+        # replay below applies it; the view then has to start empty, otherwise
+        # diff-based handlers (e.g. STATIC_ROUTE) see "no change" and the replay
+        # programs nothing.
+        init_db = _EmptyConfigTables() if self.config_mode == "split-unified" else self.config_db
         # VRF ==> local_as
         self.bgp_asn = {}
         # VRF ==> confederation peer list
         self.bgp_confed_peers = {}
-        glb_table = self.config_db.get_table('BGP_GLOBALS')
+        glb_table = init_db.get_table('BGP_GLOBALS')
         for vrf, entry in glb_table.items():
             self.__normalize_bgp_table_data('BGP_GLOBALS', entry)
             if not isVrfNameValid(vrf):
@@ -2386,8 +2402,8 @@ class BGPConfigDaemon:
         self.bgp_peer_group = {}
         # VRF ==> set of interface neighbor
         self.bgp_intf_nbr = {}
-        nbr_table = self.config_db.get_table('BGP_NEIGHBOR')
-        pg_table = self.config_db.get_table('BGP_PEER_GROUP')
+        nbr_table = init_db.get_table('BGP_NEIGHBOR')
+        pg_table = init_db.get_table('BGP_PEER_GROUP')
         for key, entry in pg_table.items():
             vrf, pg = key
             self.bgp_peer_group.setdefault(vrf, {})[pg] = BGPPeerGroup(vrf)
@@ -2406,7 +2422,7 @@ class BGPConfigDaemon:
                 self.bgp_intf_nbr.setdefault(vrf, set()).add(peer)
         # map_name ==> seq_no ==> operation
         self.route_map = {}
-        rtmap_table = self.config_db.get_table('ROUTE_MAP')
+        rtmap_table = init_db.get_table('ROUTE_MAP')
         for key, entry in rtmap_table.items():
             rtmap_name, seq_no = key
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Route_Map %s Seq_NO %s' % (rtmap_name, seq_no))
@@ -2414,26 +2430,26 @@ class BGPConfigDaemon:
                 self.route_map.setdefault(rtmap_name, {})[seq_no] = entry['route_operation']
 
         self.comm_set_list = {}
-        comm_table = self.config_db.get_table('COMMUNITY_SET')
+        comm_table = init_db.get_table('COMMUNITY_SET')
         for key, entry in comm_table.items():
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Community %s' % key)
             self.comm_set_list[key] = CommunityList(key, False)
             for k, v in entry.items():
                 self.comm_set_list[key].db_data_to_attr(k, v)
         self.extcomm_set_list = {}
-        extcomm_table = self.config_db.get_table('EXTENDED_COMMUNITY_SET')
+        extcomm_table = init_db.get_table('EXTENDED_COMMUNITY_SET')
         for key, entry in extcomm_table.items():
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Extended_Community %s' % key)
             self.extcomm_set_list[key] = CommunityList(key, True)
             for k, v in entry.items():
                 self.extcomm_set_list[key].db_data_to_attr(k, v)
         self.prefix_set_list = {}
-        pfx_set_table = self.config_db.get_table('PREFIX_SET')
+        pfx_set_table = init_db.get_table('PREFIX_SET')
         for key, entry in pfx_set_table.items():
             if 'mode' in entry:
                 syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix_Set %s mode %s' % (key, entry['mode']))
                 self.prefix_set_list[key] = MatchPrefixList(entry['mode'].lower())
-        pfx_table = self.config_db.get_table('PREFIX')
+        pfx_table = init_db.get_table('PREFIX')
         for key, entry in pfx_table.items():
             if len(key) == 4:
                 pfx_set_name, seq, ip_pfx, len_range = key
@@ -2449,7 +2465,7 @@ class BGPConfigDaemon:
                 except ValueError:
                     pass
         self.as_path_set_list = {}
-        aspath_table = self.config_db.get_table('AS_PATH_SET')
+        aspath_table = init_db.get_table('AS_PATH_SET')
         for key, entry in aspath_table.items():
             if 'as_path_set_member' in entry:
                 syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: AS_Path_Set %s member %s' % (key, entry['as_path_set_member']))
@@ -2457,7 +2473,7 @@ class BGPConfigDaemon:
         self.tag_set_list = {}
 
         self.af_aggr_list = {}
-        af_aggr_table = self.config_db.get_table('BGP_GLOBALS_AF_AGGREGATE_ADDR')
+        af_aggr_table = init_db.get_table('BGP_GLOBALS_AF_AGGREGATE_ADDR')
         for key, entry in af_aggr_table.items():
             vrf, af_type, ip_pfx = key
             af, _ = af_type.lower().split('_')
@@ -2471,14 +2487,14 @@ class BGPConfigDaemon:
                 self.af_aggr_list.setdefault(vrf, {})[norm_ip_pfx] = aggr_obj
 
         self.vrf_vni_map = {}
-        vrf_table = self.config_db.get_table('VRF')
+        vrf_table = init_db.get_table('VRF')
         for key, entry in vrf_table.items():
             if 'vni' in entry:
                 self.vrf_vni_map[key] = entry['vni']
 
         # VRF ==> ip_prefix ==> nexthop list
         self.static_route_list = {}
-        sroute_table = self.config_db.get_table('STATIC_ROUTE')
+        sroute_table = init_db.get_table('STATIC_ROUTE')
         get_list = lambda v: v.split(',') if v is not None else None
         for key, entry in sroute_table.items():
             if type(key) is tuple and len(key) == 2:
@@ -2540,11 +2556,22 @@ class BGPConfigDaemon:
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
-        self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
+        if self.config_mode == "split-unified":
+            # Filled by the startup replay below, see init_db above.
+            self.table_data_cache = {}
+        else:
+            self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
-        if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
+        # In split-unified mode docker_init.sh starts FRR with only a default zebra
+        # config in frr.conf and nothing else loads the CONFIG_DB routing tables
+        # into FRR, so frrcfgd has to replay them at startup; otherwise the routing
+        # configuration is silently lost at every bgp container start. In unified
+        # mode the replay is only needed when frr.conf was not rendered from the
+        # CONFIG_DB templates.
+        if (self.config_mode == "split-unified" or
+                (self.config_mode == "unified" and self.use_template_render_for_restore == 'false')):
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
