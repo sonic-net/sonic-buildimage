@@ -1,0 +1,3 @@
+{
+    "netconf_server": {% if NETCONF_SERVER is defined and "default" in NETCONF_SERVER.keys() %}{{ NETCONF_SERVER['default'] }}{% else %}""{% endif %}
+}
