@@ -11,6 +11,7 @@ import re
 dhcprelay = importlib.import_module('show.plugins.dhcp-relay')
 
 import utilities_common.cli as clicommon
+from swsscommon.swsscommon import SonicV2Connector
 
 # ============================================================
 # Constants
@@ -52,7 +53,7 @@ SUPPORTED_DHCPV6_TYPE = [
 
 def clear_dhcp_relay_ipv6_counter(interface):
     """Clear dhcp6relay STATE_DB counters."""
-    counter = dhcprelay.DHCPv6_Counter()
+    counter = dhcprelay.DHCPv6_Counter(use_unix_socket_path=True)
     counter_intf = counter.get_interface()
     if interface:
         counter.clear_table(interface)
@@ -63,7 +64,7 @@ def clear_dhcp_relay_ipv6_counter(interface):
 
 def clear_dhcp_relay_ipv4_vlan_counter(direction, pkt_type, interface):
     """Clear dhcp4relay STATE_DB per-vlan counters."""
-    counter = dhcprelay.DHCPv4_Counter()
+    counter = dhcprelay.DHCPv4_Counter(use_unix_socket_path=True)
     counter.clear_table(direction, pkt_type, interface)
 
 
@@ -232,7 +233,11 @@ def clear_dhcpmon_counters(
             .format(version_label)
         )
         return
-    if not is_vlan_interface_valid(interface, db.db):
+    if db is None:
+        db = SonicV2Connector(use_unix_socket_path=True)
+        for db_name in (db.CONFIG_DB, db.COUNTERS_DB, db.STATE_DB):
+            db.connect(db_name)
+    if not is_vlan_interface_valid(interface, db):
         ctx.fail("{} doesn't exist".format(interface))
         return
     with open(lock_file_path, "w") as lock_file:
@@ -240,20 +245,20 @@ def clear_dhcpmon_counters(
         try:
             fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             locked = True
-            clear_state_db_flags(db.db, state_table)
+            clear_state_db_flags(db, state_table)
             notified_vlans = notify_dhcpmon_processes(
                 interface, signal.SIGUSR1
             )
             paused_vlans = get_paused_vlans(
-                db.db, state_table, notified_vlans
+                db, state_table, notified_vlans
             )
             clear_dhcpmon_db_counters(
-                db.db, dir, type, paused_vlans,
+                db, dir, type, paused_vlans,
                 counter_table_prefix, supported_types
             )
             notify_dhcpmon_processes(interface, signal.SIGUSR2)
             failed_vlans = get_failed_vlans_for_table(
-                db.db, state_table, paused_vlans
+                db, state_table, paused_vlans
             )
             if failed_vlans:
                 failed_msg = ", ".join(
@@ -278,7 +283,7 @@ def clear_dhcpmon_counters(
             )
         finally:
             if locked:
-                clear_state_db_flags(db.db, state_table)
+                clear_state_db_flags(db, state_table)
             fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
@@ -353,11 +358,10 @@ def dhcp_relay_ipv6():
     '--type', type=click.Choice(SUPPORTED_DHCPV6_TYPE),
     required=False
 )
-@clicommon.pass_db
-def clear_dhcp_relay_ipv6_counters(db, interface, dir, type):
+def clear_dhcp_relay_ipv6_counters(interface, dir, type):
     """ Clear dhcpmon ipv6 counters (COUNTERS_DB) """
     clear_dhcpmon_counters(
-        db, interface, dir, type,
+        None, interface, dir, type,
         lock_file_path=DHCPMON_CLEAR_COUNTER_LOCK_FILE,
         state_table=DHCPV6_COUNTER_UPDATE_STATE_TABLE,
         counter_table_prefix=DHCPV6_COUNTER_TABLE_PREFIX,
@@ -385,11 +389,10 @@ def dhcp_relay_ipv4():
     '--type', type=click.Choice(SUPPORTED_DHCP_TYPE),
     required=False
 )
-@clicommon.pass_db
-def clear_dhcp_relay_ipv4_counters(db, interface, dir, type):
+def clear_dhcp_relay_ipv4_counters(interface, dir, type):
     """ Clear dhcpmon ipv4 counters (COUNTERS_DB) """
     clear_dhcpmon_counters(
-        db, interface, dir, type,
+        None, interface, dir, type,
         lock_file_path=DHCPMON_CLEAR_COUNTER_LOCK_FILE,
         state_table=DHCPV4_COUNTER_UPDATE_STATE_TABLE,
         counter_table_prefix=DHCPV4_COUNTER_TABLE_PREFIX,

@@ -118,8 +118,9 @@ def get_dhcp_helper_address(ctx, vlan):
 show_vlan.VlanBrief.register_column('DHCP Helper Address', get_dhcp_helper_address)
 
 class DHCPv4_Counter(object):
-    def __init__(self):
-        self.db = SonicV2Connector(use_unix_socket_path=False)
+    def __init__(self, use_unix_socket_path=False):
+        self.db = SonicV2Connector(
+            use_unix_socket_path=use_unix_socket_path)
         self.db.connect(self.db.COUNTERS_DB)
         self.table_name = DHCPv4_COUNTER_TABLE+ self.db.get_db_separator(self.db.COUNTERS_DB)
         self.packet_abbr = ['Un', 'Dis', 'Off', 'Req', 'Ack', 'Nack', 'Rel', 'Inf', 'Dec', 'Mal', 'Drp']
@@ -263,8 +264,9 @@ def ipv4_counters(dir, pkt_type, vlan):
 # ======================================================================
 
 class DHCPv6_Counter(object):
-    def __init__(self):
-        self.db = SonicV2Connector(use_unix_socket_path=False)
+    def __init__(self, use_unix_socket_path=False):
+        self.db = SonicV2Connector(
+            use_unix_socket_path=use_unix_socket_path)
         self.db.connect(self.db.STATE_DB)
         self.table_name = DHCPv6_COUNTER_TABLE + self.db.get_db_separator(self.db.STATE_DB)
         self.table_prefix_len = len(self.table_name)
