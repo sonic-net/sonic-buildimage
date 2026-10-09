@@ -345,6 +345,12 @@ else
 $(warning PASSWORD given on command line: could be visible to other users)
 endif
 
+ifeq ($(NEW_PASSWORD),)
+override NEW_PASSWORD := $(DEFAULT_NEW_PASSWORD)
+else
+$(warning NEW_PASSWORD given on command line: could be visible to other users)
+endif
+
 # ccache configuration - prepend /usr/lib/ccache to PATH so that gcc/g++/cc/c++
 # calls are intercepted by ccache symlinks. Cache is stored under target/ccache/
 # and persists across builds for near-instant recompilation of unchanged files.
@@ -2046,6 +2052,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 
 		USERNAME="$(USERNAME)" \
 		PASSWORD="$${PASSWORD}" \
+		NEW_PASSWORD="$(NEW_PASSWORD)" \
 		BMC_NOS_ACCOUNT_USERNAME="$(BMC_NOS_ACCOUNT_USERNAME)" \
 		BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD="$${BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD}" \
 		TARGET_MACHINE=$(dep_machine) \
