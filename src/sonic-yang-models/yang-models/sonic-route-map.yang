@@ -31,6 +31,10 @@ module sonic-route-map {
         prefix loopback;
     }
 
+    import sonic-vlan-sub-interface {
+        prefix vlan-sub-interface;
+    }
+
     organization
         "SONiC";
 
@@ -62,6 +66,9 @@ module sonic-route-map {
             //}
             type string {
                 pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+            }
+            type leafref {
+                path "/vlan-sub-interface:sonic-vlan-sub-interface/vlan-sub-interface:VLAN_SUB_INTERFACE/vlan-sub-interface:VLAN_SUB_INTERFACE_LIST/vlan-sub-interface:name";
             }
         }
     }
@@ -216,6 +223,9 @@ module sonic-route-map {
                         type string {
                             pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
                         }
+                        type leafref {
+                            path "/vlan-sub-interface:sonic-vlan-sub-interface/vlan-sub-interface:VLAN_SUB_INTERFACE/vlan-sub-interface:VLAN_SUB_INTERFACE_LIST/vlan-sub-interface:name";
+                        }
                     }
                     ordered-by user;
                     description
@@ -339,6 +349,44 @@ module sonic-route-map {
                     description "Set community string";
                 }
 
+                leaf description {
+                    type string {
+                        length "1..255";
+                    }
+                    description
+                        "Human-readable description for the route-map statement.
+                         This field is used to document the purpose of the routing
+                         policy statement.";
+                }
+
+                leaf next_statement {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description
+                        "Continue policy evaluation at a specific statement number.
+                         Used for implementing 'continue <seq>' behavior in route-maps.";
+                }
+
+                leaf on_match_next {
+                    type boolean;
+                    description
+                        "When true, continue to the next statement when the policy statement matches.
+                         This is the default behavior.";
+                }
+
+                leaf on_match_goto_statement {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    must "not(../on_match_next) or ../on_match_next = 'false'" {
+                        error-message "on_match_goto_statement cannot be used when on_match_next is true";
+                    }
+                    description
+                        "Statement number to jump to when the policy statement matches.
+                         Cannot be used together with on_match_next=true.";
+                }
+
                 leaf set_community_ref {
                     type leafref {
                         path "/rpolsets:sonic-routing-policy-sets/rpolsets:COMMUNITY_SET/rpolsets:COMMUNITY_SET_LIST/rpolsets:name";
@@ -359,12 +407,65 @@ module sonic-route-map {
                     description "Refer extended community from extended community list";
                 }
 
+                leaf-list set_large_community_inline {
+                    type string;
+                    description "Set large community string. Large community format is GlobalAdmin:LocalData1:LocalData2 (e.g., 650001:1:10). Append 'additive' to add to existing communities instead of replacing (e.g., '650001:1:10 additive')";
+                }
+
                 leaf set_tag {
                     type uint32;
                     description
                         "Value of the tag set member";
                 }
+
+                leaf set_src {
+                    type inet:ip-address;
+                    description
+                        "Set source IP address for route. Supports both IPv4 (e.g., 7.7.7.7)
+                         and IPv6 (e.g., 2004::7) addresses.";
+                }
             }
         }
+        container PROTOCOL_ROUTE_MAP {
+
+            description "Filter routing info exchanged between zebra and protocol";
+
+            list PROTOCOL_ROUTE_MAP_LIST {
+
+                key "vrf_name protocol addr_family";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        //type leafref {
+                        //    path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        //}
+                    }
+                    description "VRF name for protocol route map configuration";
+                }
+
+                leaf protocol {
+                    type string;
+                    description "IP protocols such as bgp, connected, ospf and static";
+                }
+
+                leaf addr_family {
+                    type string;
+                    description "Address family ipv4/ipv6";
+                }
+
+                leaf route_map {
+                    mandatory true;
+                    type leafref {
+                        path "../../../ROUTE_MAP_SET/ROUTE_MAP_SET_LIST/name";
+                    }
+                    description "Route map name to apply to the protocol";
+                }
+            }
+            /* end of PROTOCOL_ROUTE_MAP_LIST */
+        }
+        /* end of container PROTOCOL_ROUTE_MAP */
     }
 }

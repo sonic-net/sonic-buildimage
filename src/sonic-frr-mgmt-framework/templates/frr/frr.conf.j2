@@ -22,7 +22,13 @@ no fpm use-next-hop-groups
 ! Add fpm address for zebra
 fpm address 127.0.0.1
 !
+{% include "zebra.evpn_mh_global.conf.j2" %}
 {% include "zebra/zebra.interfaces.conf.j2" %}
+{% include "zebra.evpn_mh_interface.conf.j2" %}
+!
+{% include "zebra.vlan.conf.j2" %}
+!
+{% include "zebra.vrf.conf.j2" %}
 !
 {% if MGMT_VRF_CONFIG %}
 {% if MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == 'false' %}
