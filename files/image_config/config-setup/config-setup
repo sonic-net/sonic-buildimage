@@ -120,15 +120,21 @@ run_hookdir() {
     return $exit_status
 }
 
-# Reload minigraph.xml file on disk
-reload_minigraph()
+# Load minigraph.xml file on disk
+load_minigraph()
 {
-    echo "Reloading minigraph..."
     if [ -f /etc/sonic/golden_config_db.json ]; then
         config load_minigraph -y -n --override_config --golden_config_path '/etc/sonic/golden_config_db.json'
     else
         config load_minigraph -y -n
     fi
+}
+
+# Reload minigraph.xml file on disk
+reload_minigraph()
+{
+    echo "Reloading minigraph..."
+    load_minigraph
     config save -y
 }
 
@@ -330,6 +336,161 @@ do_config_initialization()
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 }
 
+# Not supported on chassis platforms (provisioned by minigraph or a migrated
+# config) or on fast/express boot
+multi_asic_config_initialization_supported()
+{
+    if [ -f /usr/share/sonic/device/$PLATFORM/chassisdb.conf ]; then
+        echo "Chassis platform detected, skipping multi-npu config initialization."
+        return 1
+    fi
+
+    case "$(cat /proc/cmdline)" in
+    *SONIC_BOOT_TYPE=fast*|*SONIC_BOOT_TYPE=express*|*fast-reboot*)
+        echo "Fast boot detected, skipping multi-npu config initialization."
+        return 1
+        ;;
+    esac
+
+    return 0
+}
+
+# config_db.json and every config_db<N>.json exist and are not empty
+multi_asic_config_db_complete()
+{
+    local asic_num=0
+
+    [ -s ${CONFIG_DB_JSON} ] || return 1
+    while [[ $asic_num -lt $NUM_ASIC ]]; do
+        [ -s ${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX} ] || return 1
+        ((asic_num = asic_num + 1))
+    done
+
+    return 0
+}
+
+# Neither config_db.json nor any config_db<N>.json exists
+multi_asic_config_db_absent()
+{
+    local asic_num=0
+
+    [ -e ${CONFIG_DB_JSON} ] && return 1
+    while [[ $asic_num -lt $NUM_ASIC ]]; do
+        [ -e ${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX} ] && return 1
+        ((asic_num = asic_num + 1))
+    done
+
+    return 0
+}
+
+# Generate factory default for each missing or empty config db file and
+# install them only if all succeed. A generated ASIC file needs a sub_role
+# (multi-npu CLI and daemons fail without one) and, unless the preset is
+# "empty", ports
+generate_multi_asic_factory_config()
+{
+    local asic_num=-1
+    local file
+    local error
+    local tmp_suffix=".factory.$$"
+    local -a ns_option
+    local -a generated=()
+
+    read -r -a PRESET <<< "$(head -n 1 /usr/share/sonic/device/$PLATFORM/default_sku 2>/dev/null)"
+    HW_KEY=${PRESET[0]}
+    DEFAULT_PRESET=${PRESET[1]}
+    if [ -z "${HW_KEY}" ] || [ -z "${DEFAULT_PRESET}" ]; then
+        echo "No HwSKU/preset found in /usr/share/sonic/device/$PLATFORM/default_sku, cannot generate factory default configuration"
+        return 1
+    fi
+
+    # Execute config initialization hooks
+    run_hookdir ${FACTORY_DEFAULT_HOOKS} ${CONFIG_SETUP_INITIALIZATION_FLAG}
+
+    # Remove files left by an interrupted run
+    rm -f ${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}*${CONFIG_DB_SUFFIX}.factory.*
+
+    while [[ $asic_num -lt $NUM_ASIC ]]; do
+        if [[ $asic_num -lt 0 ]]; then
+            file=${CONFIG_DB_JSON}
+            ns_option=()
+        else
+            file=${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX}
+            ns_option=(-n "asic$asic_num")
+        fi
+        ((asic_num = asic_num + 1))
+
+        if [ -s ${file} ]; then
+            echo "Keeping existing ${file}"
+            continue
+        fi
+
+        error=
+        if ! sonic-cfggen -H -k ${HW_KEY} "${ns_option[@]}" --preset ${DEFAULT_PRESET} > ${file}${tmp_suffix} || \
+           ! jq -e 'type == "object"' ${file}${tmp_suffix} > /dev/null 2>&1; then
+            error="sonic-cfggen failed"
+        elif [[ ${#ns_option[@]} -gt 0 ]] && \
+             ! jq -e '.DEVICE_METADATA.localhost.sub_role | type == "string" and length > 0' ${file}${tmp_suffix} > /dev/null 2>&1; then
+            error="no sub_role, check SUB_ROLE_ASIC_$((asic_num - 1)) in ${ASIC_CONF}"
+        elif [[ ${#ns_option[@]} -gt 0 && ${DEFAULT_PRESET} != empty ]] && \
+             ! jq -e '.PORT | type == "object" and length > 0' ${file}${tmp_suffix} > /dev/null 2>&1; then
+            error="no ports, check the port config of asic$((asic_num - 1))"
+        fi
+        if [ -n "${error}" ]; then
+            echo "Failed to generate factory default configuration ${file}: ${error}"
+            rm -f ${file}${tmp_suffix}
+            for file in "${generated[@]}"; do
+                rm -f ${file}${tmp_suffix}
+            done
+            return 1
+        fi
+        generated+=("${file}")
+    done
+
+    for file in "${generated[@]}"; do
+        mv -f ${file}${tmp_suffix} ${file}
+        echo "Generated factory default configuration ${file}"
+    done
+
+    return 0
+}
+
+# Create SONiC configuration for first time bootup of a multi-npu platform
+do_multi_asic_config_initialization()
+{
+    if ! multi_asic_config_initialization_supported; then
+        return 0
+    fi
+
+    if multi_asic_config_db_complete; then
+        echo "All config db files are present, loading them..."
+        reload_configdb || echo "Failed to load config db files"
+    # Minigraph replaces every namespace, so skip it for a partial set
+    elif multi_asic_config_db_absent && [ -r ${MINGRAPH_FILE} ]; then
+        echo "No config db files found but minigraph.xml is available, using minigraph..."
+        # Saving after a failed load would leave near-empty config db files
+        # that count as complete on the next boot
+        if load_minigraph; then
+            config save -y
+        else
+            echo "Failed to load minigraph"
+        fi
+    else
+        if ztp_is_enabled ; then
+            echo "Zero touch provisioning is not supported on multi-npu platforms, using factory default configuration..."
+        fi
+        echo "No configuration detected, generating factory default configuration..."
+        if generate_multi_asic_factory_config; then
+            reload_configdb || echo "Failed to load factory default configuration"
+        fi
+    fi
+
+    # Set even after a failure so that swss starts, as on single-npu; the
+    # missing config db files trigger another attempt on the next boot
+    rm -f /etc/sonic/pending_config_initialization
+    set_config_db_initialized "1"
+}
+
 # Restore config-setup post migration hooks from a backup copy
 copy_post_migration_hooks()
 {
@@ -517,13 +678,15 @@ boot_config()
         return 0
     fi
 
-    # For multi-npu platfrom we don't support config initialization. Assumption
-    # is there should be existing minigraph or config_db from previous image
-    # file system to trigger. pending_config_initialization will remain set
-    # for multi-npu platforms if we reach this case.
+    # Multi-npu adds a config db file per ASIC namespace; these are missing
+    # e.g. on the first boot after an ONIE install with nothing to migrate.
     if [[ ($NUM_ASIC -gt 1) ]]; then
+        if [ -e /etc/sonic/pending_config_initialization ] || \
+           ! multi_asic_config_db_complete; then
+            do_multi_asic_config_initialization
+        fi
         return 0
-    fi	
+    fi
 
     if [ -e /etc/sonic/pending_config_initialization ] || [ -e  ${CONFIG_SETUP_INITIALIZATION_FLAG} ]; then
         do_config_initialization
