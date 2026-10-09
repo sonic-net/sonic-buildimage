@@ -20,6 +20,40 @@
             }
         }
     },
+    "PORT_VALID_LEARN_MODE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "mtu": 9100,
+                        "mode": "trunk",
+                        "learn_mode": "disable"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_INVALID_LEARN_MODE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "mtu": 9100,
+                        "mode": "trunk",
+                        "learn_mode": "invalid"
+                    }
+                ]
+            }
+        }
+    },
     "PORT_TEST": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
