@@ -11,6 +11,7 @@ flag and rmac from the resolving nexthop, but not encap_data, so its FPM
 message carries the VNI with a zero router MAC. Copy it along with the
 rest.
 
+Original-SONiC-Patch: 0120-SONiC-ONLY-zebra-keep-the-EVPN-router-MAC-for-the-FPM-on-recursive-nexthops.patch
 Signed-off-by: Ryan Wolfe <rnwolfe@google.com>
 ---
  zebra/zebra_nhg.c | 3 +++

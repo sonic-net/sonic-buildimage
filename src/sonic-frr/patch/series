@@ -41,4 +41,4 @@
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
 0119-bgpd-fix-aggregate-route-counter.patch
-0120-zebra-keep-the-EVPN-router-MAC-for-the-FPM-on-recurs.patch
+0120-SONiC-ONLY-zebra-keep-the-EVPN-router-MAC-for-the-FPM-on-recursive-nexthops.patch
