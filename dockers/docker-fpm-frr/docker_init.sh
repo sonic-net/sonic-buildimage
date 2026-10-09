@@ -3,6 +3,8 @@
 mkdir -p /etc/frr
 mkdir -p /etc/supervisor/conf.d
 
+python3 /usr/bin/frr_config_validator.py || exit 1
+
 CFGGEN_PARAMS=" \
     -d \
     -y /etc/sonic/constants.yml \
