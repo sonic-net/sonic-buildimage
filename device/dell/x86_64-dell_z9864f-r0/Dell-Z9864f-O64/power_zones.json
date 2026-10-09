@@ -1,0 +1,17 @@
+{
+    "power-zones": {
+        "OSFP-LEFT": {
+            "ports": "Ethernet0-Ethernet120,Ethernet256-Ethernet360",
+            "budget_watts": 640.0,
+            "description": "ports 1-16,33-48"
+        },
+        "OSFP-RIGHT": {
+            "ports": "Ethernet128-Ethernet248,Ethernet368-Ethernet504",
+            "budget_watts": 640.0,
+            "description": "ports 17-32,49-64"
+        }
+    },
+    "power-zone-port-defaults": {
+        "Ethernet0-Ethernet504": { "priority": 128 }
+    }
+}
