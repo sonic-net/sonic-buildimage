@@ -51,8 +51,10 @@ RUN apt update &&            \
         jq                   \
 # for sairedis zmq rpc channel
         libzmq5              \
-        libwrap0            \
-        libatomic1
+        libwrap0             \
+        libatomic1{% if OPTIMIZE_SUPD_S6 == 'y' %}           \
+# for s6-overlay tarball extraction
+        xz-utils{% endif %}
 
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]
@@ -72,6 +74,49 @@ RUN pip3 install jinjanator
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
 RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
+
+{% if OPTIMIZE_SUPD_S6 == 'y' %}
+# --- s6-overlay: replace supervisord with s6 as PID 1 / process supervisor
+# for all derived containers. The supervisord2s6 shim converts each
+# container's already-rendered supervisord.conf into an s6-rc service tree at
+# startup and then execs /init. The supervisorctl shim answers `status` from
+# s6 so system-health and monit keep working.
+# Enabled when OPTIMIZE_SUPD_S6=y (e.g. SONIC_PROFILE=EMBEDDED).
+{# supervisord2s6 writes bundles under /etc/s6-overlay/user-bundles.d/{user,user2};
+   that path convention only exists since s6-overlay 3.2.3.2 (older releases kept
+   the "user"/"user2" bundle definitions inside /etc/s6-overlay/s6-rc.d itself).
+   Do not downgrade below 3.2.3.2 without also reworking supervisord2s6.py's
+   bundle paths, or s6-rc-compile will fail with "undefined service name user2". #}
+{% set s6_version = "3.2.3.2" %}
+# s6-overlay's /init refuses to run unless it's the container's real PID 1
+# ("s6-overlay-suexec: fatal: can only run as pid 1") -- which is never true
+# for a container started with --pid=host (e.g. the EMBEDDED "mega" container,
+# which inherits swss's need for host PID-namespace visibility). Keep a real
+# supervisord under a different name so supervisord2s6.py can fall back to it
+# for exactly those containers instead of attempting the impossible s6 exec.
+RUN pip3 install supervisor==4.3.0 && \
+    mv /usr/local/bin/supervisord /usr/local/bin/supervisord.real && \
+    mv /usr/local/bin/supervisorctl /usr/local/bin/supervisorctl.real
+{% if CONFIGURED_ARCH == "armhf" %}
+{% set s6_arch = "armhf" %}
+{% elif CONFIGURED_ARCH == "arm64" %}
+{% set s6_arch = "aarch64" %}
+{% else %}
+{% set s6_arch = "x86_64" %}
+{% endif %}
+{% set s6_base_url = "https://github.com/just-containers/s6-overlay/releases/download/v" + s6_version %}
+RUN curl -fsSL {{ s6_base_url }}/s6-overlay-noarch.tar.xz -o /tmp/s6-noarch.tar.xz && \
+    curl -fsSL {{ s6_base_url }}/s6-overlay-{{ s6_arch }}.tar.xz -o /tmp/s6-arch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-arch.tar.xz && \
+    rm -f /tmp/s6-noarch.tar.xz /tmp/s6-arch.tar.xz
+COPY ["s6/supervisord2s6.py", "/usr/local/bin/supervisord2s6"]
+COPY ["s6/supervisorctl", "/usr/local/bin/supervisorctl"]
+RUN chmod 0755 /usr/local/bin/supervisord2s6 /usr/local/bin/supervisorctl && \
+    ln -sf /usr/local/bin/supervisord2s6 /usr/local/bin/supervisord && \
+    ln -sf /usr/local/bin/supervisord2s6 /usr/bin/supervisord && \
+    ln -sf /usr/local/bin/supervisorctl  /usr/bin/supervisorctl
+{% endif %}
 
 # Uninstall unused dependencies
 RUN apt autoremove -y --purge

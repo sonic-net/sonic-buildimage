@@ -1,7 +1,7 @@
 [Unit]
 Description=DHCP server container
-Requires=swss.service
-After=swss.service
+Requires=mega.service
+After=mega.service
 After=syncd.service
 BindsTo=sonic.target
 After=sonic.target

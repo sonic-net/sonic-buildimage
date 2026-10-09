@@ -1122,7 +1122,10 @@ else
     sudo cp {{script}} $FILESYSTEM_ROOT/usr/bin/
 fi
 {% endfor %}
+{# mega-gen: drop only folded features' own service units; they get alias symlinks below. Every non-folded service is left registered exactly as in a stock build. #}
+{%- set mega_drop_services = ['bgp-chassis.service', 'bgp.service', 'bgp@.service', 'dhcp_relay-chassis.service', 'dhcp_relay.service', 'dhcp_relay@.service', 'eventd-chassis.service', 'eventd.service', 'eventd@.service', 'gnmi-chassis.service', 'gnmi.service', 'gnmi@.service', 'lldp-chassis.service', 'lldp.service', 'lldp@.service', 'mgmt-framework-chassis.service', 'mgmt-framework.service', 'mgmt-framework@.service', 'swss-chassis.service', 'swss.service', 'swss@.service', 'teamd-chassis.service', 'teamd.service', 'teamd@.service'] -%}
 {% for service in installer_services.split(' ') -%}
+{% if service.strip('"') not in mega_drop_services -%}
 if [ -f {{service}} ]; then
     sudo cp {{service}} $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 
@@ -1134,6 +1137,7 @@ if [ -f {{service}} ]; then
 
     echo "{{service}}" | sudo tee -a $GENERATED_SERVICE_FILE
 fi
+{% endif -%}
 {% endfor %}
 if [ -f iccpd.service ]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable iccpd.service
@@ -1144,6 +1148,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT umount -lf /sys
 
 # Copy service scripts (swss, syncd, bgp, teamd, lldp, radv)
 sudo LANG=C cp $SCRIPTS_DIR/swss.sh $FILESYSTEM_ROOT/usr/local/bin/swss.sh
+sudo LANG=C cp $SCRIPTS_DIR/mega.sh $FILESYSTEM_ROOT/usr/local/bin/mega.sh
 sudo LANG=C cp $SCRIPTS_DIR/syncd.sh $FILESYSTEM_ROOT/usr/local/bin/syncd.sh
 sudo LANG=C cp $SCRIPTS_DIR/syncd_common.sh $FILESYSTEM_ROOT/usr/local/bin/syncd_common.sh
 sudo LANG=C cp $SCRIPTS_DIR/gbsyncd.sh $FILESYSTEM_ROOT/usr/local/bin/gbsyncd.sh
@@ -1375,7 +1380,12 @@ sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 # Install syslog counter plugin
 install_deb_package $debs_path/syslog-counter_*.deb
 
-#############################################################################
+########################################################################
+# --- mega-gen: service alias symlinks for features folded into mega ---
+# These ensure systemd references to folded features resolve to mega.service.
+sudo ln -sf mega.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/swss.service
+
+#####
 # PLATFORM-SPECIFIC SERVICE FILTERING
 # This section MUST remain at the end of the file to ensure all services
 # have been added to GENERATED_SERVICE_FILE before filtering.

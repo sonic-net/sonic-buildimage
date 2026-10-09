@@ -152,6 +152,8 @@ function preStartAction()
             fi
         done
     fi
+{%- elif docker_container_name == "mega" %}
+    : # nothing
 {%- else %}
     : # nothing
 {%- endif %}
@@ -309,7 +311,10 @@ function postStartAction()
         # database will try to access to all other instance database-config.json. If other instance
         # database-config.json files are not ready yet, it will generate the sonic-db-cli core files.
 	waitForAllInstanceDatabaseConfigJsonFilesReady
-        until [[ ($(docker exec -i database$DEV pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
+        # Match either the legacy supervisord process or, when OPTIMIZE_SUPD_S6=y has
+        # replaced it with s6-overlay as PID 1, s6-svscan -- supervisord never runs in
+        # that case so an exact "supervisord" match alone would block here forever.
+        until [[ ($(docker exec -i database$DEV pgrep -c -x -- 'supervisord|s6-svscan') -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
                  ($(docker exec -i database$DEV sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do
           sleep 1;
         done
@@ -381,7 +386,8 @@ function postStartAction()
         chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
-        until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
+        # See the non-chassisdb branch above for why both process names are matched.
+        until [[ ($(docker exec -i ${DOCKERNAME} pgrep -c -x -- 'supervisord|s6-svscan') -gt 0) &&
                  ($(docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; do
            sleep 1
         done
@@ -433,6 +439,24 @@ function postStartAction()
     HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
     if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
         for f in $(docker exec -i eventd ls /etc/rsyslog.d/rsyslog_plugin_conf); do docker cp eventd:/etc/rsyslog.d/rsyslog_plugin_conf/$f /etc/rsyslog.d/; done
+        systemctl reset-failed rsyslog
+        systemctl restart rsyslog
+    fi
+{%- elif docker_container_name == "mega" %}
+
+    docker exec ${DOCKERNAME} rm -f /ready
+    if [[ "$BOOT_TYPE" == "fast" ]] && [[ -d /host/fast-reboot ]]; then
+        test -e /host/fast-reboot/fdb.json && docker cp /host/fast-reboot/fdb.json ${DOCKERNAME}:/
+        test -e /host/fast-reboot/arp.json && docker cp /host/fast-reboot/arp.json ${DOCKERNAME}:/
+        test -e /host/fast-reboot/default_routes.json && docker cp /host/fast-reboot/default_routes.json ${DOCKERNAME}:/
+        test -e /host/fast-reboot/media_config.json && docker cp /host/fast-reboot/media_config.json ${DOCKERNAME}:/
+        rm -fr /host/fast-reboot
+    fi
+    docker exec ${DOCKERNAME} touch /ready
+
+    HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
+    if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
+        for f in $(docker exec -i ${DOCKERNAME} ls /etc/rsyslog.d/rsyslog_plugin_conf 2>/dev/null); do docker cp ${DOCKERNAME}:/etc/rsyslog.d/rsyslog_plugin_conf/$f /etc/rsyslog.d/; done
         systemctl reset-failed rsyslog
         systemctl restart rsyslog
     fi
@@ -519,7 +543,7 @@ start() {
         MOUNTPATH="$MOUNTPATH/$DEV"
     fi
         HWSKU_MOUNT_MODE="ro"
-        {%- if docker_container_name == "swss" %}
+        {%- if docker_container_name in ["swss", "mega"] %}
         if [ -f "$MOUNTPATH/hwsku-init" ]; then
             HWSKU_MOUNT_MODE="rw"
         fi
@@ -578,7 +602,7 @@ start() {
         if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
             CONTAINER_EXISTS="yes"
             preStartAction
-            {%- if docker_container_name == "database" %}
+            {%- if docker_container_name in ["database", "mega"] %}
             echo "Starting existing ${DOCKERNAME} container"
             docker start ${DOCKERNAME}
             {%- else %}
@@ -594,7 +618,7 @@ start() {
         docker rm -f ${DOCKERNAME}
     fi
 
-    {%- if docker_container_name == "database" %}
+    {%- if docker_container_name in ["database", "mega"] %}
 
     echo "Creating new ${DOCKERNAME} container"
     if [ "$DATABASE_TYPE" != "chassisdb" ]; then
@@ -615,7 +639,7 @@ start() {
     echo "Creating new ${DOCKERNAME} container with HWSKU $HWSKU"
     {%- endif %}
 
-    {%- if docker_container_name == "swss" %}
+    {%- if docker_container_name in ["swss", "mega"] %}
     # Generate the asic_table.json and peripheral_table.json
     if [ ! -f /etc/sonic/asic_table.json ] && [ -f /usr/share/sonic/templates/asic_table.j2 ]; then
         sonic-cfggen -a '{"DEVICE_METADATA":{"localhost":{"platform":"'$PLATFORM'"}}}'  -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
@@ -659,7 +683,7 @@ start() {
                         for elem in data['INCLUDES'] if 'namespace' in elem or 'container_name' in elem ])); f.close()" $SONIC_DB_GLOBAL_JSON`
     fi
 
-    {%- if docker_container_name == "database" %}
+    {%- if docker_container_name in ["database", "mega"] %}
     start_chassis_db=0
     chassis_db_address=""
     chassisdb_config="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
@@ -694,7 +718,7 @@ start() {
 
         {%- if docker_container_name == "dash-ha" %}
         REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
-        {%- elif docker_container_name != "database" %}
+        {%- elif docker_container_name not in ["database", "mega"] %}
 
         if [ -n "$redis_dir_list" ]; then
             for redis_dir in $redis_dir_list
@@ -728,7 +752,7 @@ start() {
             REDIS_MNT=$REDIS_MNT" -v $redis_dir:$redis_dir:rw "
         fi
 
-        {%- if docker_container_name == "database" %}
+        {%- if docker_container_name in ["database", "mega"] %}
         NET="bridge"
         DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis:rw "
         {%- else %}
@@ -829,10 +853,14 @@ start() {
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
 {%- endif -%}
-{%- if docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
+{%- if docker_container_name in ["swss", "syncd", "mega"] and enable_asan == "y" %}
         -v /var/log/asan/:/var/log/asan \
 {%- endif -%}
 {%- if docker_container_name == "bgp" %}
+        -v /etc/sonic/frr/$DEV:/etc/frr:rw \
+{%- endif %}
+{%- if docker_container_name == "mega" %}
+        -e ASIC_VENDOR={{ sonic_asic_platform }} \
         -v /etc/sonic/frr/$DEV:/etc/frr:rw \
 {%- endif %}
 {%- if docker_container_name == "dash-ha" %}
@@ -840,6 +868,9 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "database" %}
         $DB_OPT \
+{%- elif docker_container_name == "mega" %}
+        $DB_OPT \
+        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \
 {%- else %}
         -v /var/run/redis-chassis:/var/run/redis-chassis:ro \
         -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \
@@ -884,7 +915,7 @@ start() {
     }
 
     preStartAction
-    {%- if docker_container_name == "database" %}
+    {%- if docker_container_name in ["database", "mega"] %}
     docker start $DOCKERNAME
     {%- else %}
     /usr/local/bin/container start ${DOCKERNAME}
@@ -893,7 +924,10 @@ start() {
 }
 
 wait() {
-    {%- if docker_container_name == "database" %}
+    {%- if docker_container_name in ["database", "mega"] %}
+    {%- if docker_container_name == "mega" %}
+    /bin/systemctl start syncd$DEV || true
+    {%- endif %}
     /usr/bin/docker-rs wait $DOCKERNAME
     {%- else %}
     /usr/local/bin/container wait $DOCKERNAME
@@ -901,8 +935,18 @@ wait() {
 }
 
 stop() {
-    {%- if docker_container_name == "database" %}
+    {%- if docker_container_name in ["database", "mega"] %}
+    {%- if docker_container_name == "mega" %}
+    if systemctl is-active --quiet syncd$DEV 2>/dev/null; then
+        echo "Co-stopping syncd$DEV"
+        systemctl stop syncd$DEV || true
+    fi
+    {%- endif %}
+    {%- if docker_container_name == "mega" or docker_container_name == "mega" and enable_asan == "y" %}
+    docker stop -t 60 $DOCKERNAME
+    {%- else %}
     docker stop $DOCKERNAME
+    {%- endif %}
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         ip netns delete "$NET_NS"
     fi
@@ -944,7 +988,10 @@ stop() {
 }
 
 kill() {
-    {%- if docker_container_name == "database" %}
+    {%- if docker_container_name in ["database", "mega"] %}
+    {%- if docker_container_name == "mega" %}
+    docker kill syncd$DEV 2>/dev/null || true
+    {%- endif %}
     docker kill $DOCKERNAME
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         ip netns delete "$NET_NS"
@@ -957,7 +1004,7 @@ kill() {
 DOCKERNAME={{docker_container_name}}
 OP=$1
 DEV=$2 # namespace/device number to operate on
-{%- if docker_container_name == "database" %}
+{%- if docker_container_name in ["database", "mega"] %}
 if [ "$DEV" == "chassisdb" ]; then
       DATABASE_TYPE="chassisdb"
       DOCKERNAME=$DOCKERNAME"-chassis"
