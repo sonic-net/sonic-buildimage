@@ -380,6 +380,12 @@ class BreakoutCfg(object):
                     'lanes': ','.join(lanes),
                     'speed': str(entry.default_speed),
                     'index': self._indexes[lane_id],
+                    # subport is a lane-offset-derived position, not a sequential
+                    # child-port index. Consumers compute the starting lane as
+                    # (subport - 1) * child_lane_count, so it is derived from the
+                    # cumulative lane offset and current child width. For
+                    # mixed-width breakout modes the values may repeat or be
+                    # non-contiguous (e.g. 4x100G(4)+1x400G(4) -> 1,2,3,4,2).
                     'subport': "0" if total_num_ports == 1 else str(
                         lane_id // lanes_per_port + 1
                     )

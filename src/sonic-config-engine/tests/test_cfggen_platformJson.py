@@ -266,6 +266,9 @@ class TestCfgGenPlatformJson(TestCase):
                         ],
                         "1x400G[200G](4)+4x100G[50G](4)": [
                             "etp25a", "etp25b", "etp25c", "etp25d", "etp25e"
+                        ],
+                        "2x400G[200G](4)+1x800G[400G](4)": [
+                            "etp25a", "etp25b", "etp25c"
                         ]
                     }
                 }
@@ -278,7 +281,9 @@ class TestCfgGenPlatformJson(TestCase):
         expected_subports = {
             "8x100G[50G]": ["1", "2", "3", "4", "5", "6", "7", "8"],
             "4x100G[50G](4)+1x400G[200G](4)": ["1", "2", "3", "4", "2"],
-            "1x400G[200G](4)+4x100G[50G](4)": ["1", "5", "6", "7", "8"]
+            "1x400G[200G](4)+4x100G[50G](4)": ["1", "5", "6", "7", "8"],
+            # Exact mode from issue #29427 (Mellanox-SN6600)
+            "2x400G[200G](4)+1x800G[400G](4)": ["1", "2", "2"]
         }
 
         for breakout_mode, expected in expected_subports.items():
