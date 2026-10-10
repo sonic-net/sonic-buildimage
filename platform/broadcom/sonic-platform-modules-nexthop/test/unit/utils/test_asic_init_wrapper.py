@@ -47,40 +47,128 @@ class TestIsWarmBootPostKexec:
         with patch("builtins.open", mock_open(read_data=cmdline)):
             assert wrapper.is_warm_boot_post_kexec() is True
 
-    def test_cold_boot(self, wrapper):
-        with patch("builtins.open", mock_open(read_data="BOOT_IMAGE=/boot/vmlinuz rw\n")):
-            assert wrapper.is_warm_boot_post_kexec() is False
-
     def test_fast_reboot_is_not_warm(self, wrapper):
         cmdline = "BOOT_IMAGE=/boot/vmlinuz SONIC_BOOT_TYPE=fast-reboot rw\n"
         with patch("builtins.open", mock_open(read_data=cmdline)):
             assert wrapper.is_warm_boot_post_kexec() is False
 
 
-class TestGetAsicBdfs:
-    def test_collects_asic_bus_vars_only(self, wrapper):
-        name_to_cmd = {
-            "asic_bus": "cmd_a",
-            "asic_0_bus": "cmd_b",
-            "cpu_card_fpga_bdf": "cmd_ignored",
-        }
-        bus_for_cmd = {"cmd_a": "01", "cmd_b": "0a"}
-        with (
-            patch.object(wrapper.pcie_lib, "get_var_name_to_cmd_map", autospec=True, return_value=name_to_cmd),
-            patch.object(wrapper.pcie_lib, "get_cmd_output", autospec=True, side_effect=lambda c: bus_for_cmd[c]),
-        ):
-            assert wrapper.get_asic_bdfs() == ["01:00.0", "0a:00.0"]
+class TestIsFastRebootPostKexec:
+    def test_fast_reboot_detected(self, wrapper):
+        cmdline = "BOOT_IMAGE=/boot/vmlinuz SONIC_BOOT_TYPE=fast-reboot rw\n"
+        with patch("builtins.open", mock_open(read_data=cmdline)):
+            assert wrapper.is_fast_reboot_post_kexec() is True
 
-    def test_skips_empty_bus(self, wrapper):
-        with (
-            patch.object(wrapper.pcie_lib, "get_var_name_to_cmd_map", autospec=True, return_value={"asic_bus": "c"}),
-            patch.object(wrapper.pcie_lib, "get_cmd_output", autospec=True, return_value=""),
-        ):
-            assert wrapper.get_asic_bdfs() == []
+    def test_warm_boot_is_not_fast(self, wrapper):
+        cmdline = "BOOT_IMAGE=/boot/vmlinuz SONIC_BOOT_TYPE=warm rw\n"
+        with patch("builtins.open", mock_open(read_data=cmdline)):
+            assert wrapper.is_fast_reboot_post_kexec() is False
 
-    def test_yaml_read_failure_returns_empty(self, wrapper):
-        with patch.object(wrapper.pcie_lib, "get_var_name_to_cmd_map", autospec=True, side_effect=FileNotFoundError):
-            assert wrapper.get_asic_bdfs() == []
+    def test_cold_boot_is_neither(self, wrapper):
+        with patch("builtins.open", mock_open(read_data="BOOT_IMAGE=/boot/vmlinuz rw\n")):
+            assert wrapper.is_warm_boot_post_kexec() is False
+            assert wrapper.is_fast_reboot_post_kexec() is False
+
+
+class TestStages:
+    def test_fast_reboot_pre_pddf_defers_reset(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper, "is_fast_reboot_post_kexec", return_value=True),
+            patch.object(wrapper, "handle_warm_boot_post_kexec", return_value=True),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            assert wrapper.main(["wrapper"]) == 0
+        execv.assert_not_called()
+        assert marker.exists()
+
+    def test_fast_reboot_deferral_failure_falls_back_to_reset(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper, "is_fast_reboot_post_kexec", return_value=True),
+            patch.object(wrapper, "handle_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            wrapper.main(["wrapper"])
+        execv.assert_called_once_with(
+            wrapper.ASIC_INIT_SCRIPT, [wrapper.ASIC_INIT_SCRIPT]
+        )
+        assert not marker.exists()
+
+    def test_cold_boot_resets_at_pre_pddf(self, wrapper):
+        with (
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=False),
+            patch.object(wrapper, "is_fast_reboot_post_kexec", return_value=False),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            wrapper.main(["wrapper", "arg1"])
+        execv.assert_called_once_with(
+            wrapper.ASIC_INIT_SCRIPT, [wrapper.ASIC_INIT_SCRIPT, "arg1"]
+        )
+
+    def test_pre_driver_runs_deferred_reset_and_consumes_marker(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        marker.touch()
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            wrapper.main(["wrapper", "--stage", "pre-driver"])
+        execv.assert_called_once_with(
+            wrapper.ASIC_INIT_SCRIPT, [wrapper.ASIC_INIT_SCRIPT]
+        )
+        assert not marker.exists()
+
+    def test_pre_driver_noop_without_marker(self, wrapper, tmp_path):
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(tmp_path / "absent")),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            assert wrapper.main(["wrapper", "--stage", "pre-driver"]) == 0
+        execv.assert_not_called()
+
+    def test_warm_boot_never_touches_marker_or_reset(self, wrapper, tmp_path):
+        marker = tmp_path / "deferred"
+        with (
+            patch.object(wrapper, "DEFERRED_RESET_MARKER", str(marker)),
+            patch.object(wrapper, "is_warm_boot_post_kexec", return_value=True),
+            patch.object(wrapper, "handle_warm_boot_post_kexec", return_value=True),
+            patch.object(wrapper.os, "execv") as execv,
+        ):
+            assert wrapper.main(["wrapper"]) == 0
+        execv.assert_not_called()
+        assert not marker.exists()
+
+
+class TestHandleWarmBootPostKexec:
+    """The BDF lookup itself is covered by TestGetPcieDeviceBdfs in test_pcie_lib.py."""
+
+    def test_disables_interrupts_on_every_present_asic(self, wrapper):
+        with (
+            patch.object(wrapper.pcie_lib, "get_pcie_device_bdfs", autospec=True,
+                         return_value=["01:00.0", "0a:00.0"]) as get_bdfs,
+            patch.object(wrapper, "asic_present_on_pci_bus", side_effect=[True, False]),
+            patch.object(wrapper, "disable_asic_pci_interrupts") as disable,
+        ):
+            assert wrapper.handle_warm_boot_post_kexec() is True
+
+        get_bdfs.assert_called_once_with(device_type=wrapper.pcie_lib.PcieDeviceType.ASIC)
+        disable.assert_called_once_with("01:00.0", "Warm boot")
+
+    def test_no_asic_bdfs_falls_back(self, wrapper):
+        with patch.object(wrapper.pcie_lib, "get_pcie_device_bdfs", autospec=True, return_value=[]):
+            assert wrapper.handle_warm_boot_post_kexec() is False
+
+    def test_no_asic_present_falls_back(self, wrapper):
+        with (
+            patch.object(wrapper.pcie_lib, "get_pcie_device_bdfs", autospec=True, return_value=["01:00.0"]),
+            patch.object(wrapper, "asic_present_on_pci_bus", return_value=False),
+        ):
+            assert wrapper.handle_warm_boot_post_kexec() is False
 
 
 class TestDisableAsicPciInterrupts:
