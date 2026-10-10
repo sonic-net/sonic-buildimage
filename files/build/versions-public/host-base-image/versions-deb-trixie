@@ -36,7 +36,7 @@ libgmp10==2:6.3.0+dfsg-3
 libhogweed6t64==3.10.1-1
 liblastlog2-2==2.41.5-0+deb13u1
 liblz4-1==1.10.0-4
-liblzma5==5.8.1-1+deb13u1
+liblzma5==5.8.1-1+deb13u2
 libmd0==1.1.0-2+b1
 libmount1==2.41.5-0+deb13u1
 libnettle8t64==3.10.1-1
