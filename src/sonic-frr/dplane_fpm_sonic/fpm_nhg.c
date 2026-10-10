@@ -56,16 +56,6 @@ DEFINE_MTYPE_STATIC(ZEBRA, FPM_NHG_FRAME, "FPM pending output frame");
 /* Scratch size for encoding one NHGFIB message before the framing guard. */
 #define FPM_NHG_MSG_BUF_SIZE 65536
 
-/* NHGFIB-only extension messages and JSON payload attribute. */
-enum fpm_nhg_nlmsg_type {
-	RTM_NEWNHGFIB = 5000,
-	RTM_DELNHGFIB = 5001,
-};
-
-enum fpm_nhg_nlattr_type {
-	FPM_NHA_JSON_STR = 2,
-};
-
 /*
  * All object lifecycle tracing goes through here so a single `debug zebra fpm`
  * turns the whole dplane NHG layer verbose, and so no call site pays for

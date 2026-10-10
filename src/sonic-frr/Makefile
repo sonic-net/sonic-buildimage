@@ -7,6 +7,7 @@ DERIVED_TARGET = $(FRR_PYTHONTOOLS) $(FRR_DBG) $(FRR_SNMP) $(FRR_SNMP_DBG)
 STG_PATCHED_BRANCH = $(FRR_TAG)-patched
 PATCHSET_SHA_FILE = ../.sonic-frr-patch-$(STG_PATCHED_BRANCH).sha1
 DPLANE_FPM_SONIC_MODULE = dplane_fpm_sonic/dplane_fpm_sonic.c dplane_fpm_sonic/fpm_nhg.c dplane_fpm_sonic/fpm_nhg.h
+DPLANE_FPM_SONIC_TESTS = dplane_fpm_sonic/tests/test_fpm_nhg.c dplane_fpm_sonic/tests/stubs.c
 
 # DEBEMAIL required by gpb dch
 export DEBEMAIL := sonicproject@googlegroups.com
@@ -47,6 +48,10 @@ endif
 	# Copy the sonic dplane module source file.
 	cp $(addprefix ../,$(DPLANE_FPM_SONIC_MODULE)) zebra/
 
+	# Copy the module unit tests next to the tree they build against.
+	mkdir -p tests/sonic
+	cp $(addprefix ../,$(DPLANE_FPM_SONIC_TESTS)) tests/sonic/
+
 	# Clean artifacts in frr/debian directory from previous run.
 	fakeroot debian/rules clean
 
@@ -67,6 +72,17 @@ ifeq ($(CROSS_BUILD_ENVIRON), y)
 	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc -P$${FRR_BUILD_PROFILES} -a$(CONFIGURED_ARCH) -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
 	dpkg-buildpackage -rfakeroot -b -us -uc -P$${FRR_BUILD_PROFILES} -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+endif
+
+ifeq ($(CROSS_BUILD_ENVIRON),)
+	# Build and run the dplane NHG unit tests against the tree the package
+	# was just built from (out-of-tree build dir: build/). Cross builds
+	# skip this: the test binary must run on the build host.
+	gcc -o /tmp/test_fpm_nhg tests/sonic/test_fpm_nhg.c tests/sonic/stubs.c \
+		zebra/fpm_nhg.c -Ibuild -I. \
+		-Lbuild/lib/.libs -lfrr -ljson-c -lnexthopgroup -lstdc++ \
+		-lpthread -lm
+	LD_LIBRARY_PATH=build/lib/.libs /tmp/test_fpm_nhg
 endif
 
 	popd
