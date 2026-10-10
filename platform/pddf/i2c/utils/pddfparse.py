@@ -11,7 +11,6 @@ import sys
 import time
 import unicodedata
 from sonic_py_common import device_info
-from sonic_platform_pddf_base.pddf_fpga_utils import is_supported_fpga
 from sonic_platform_pddf_base.pddf_platform_hooks import ChildCardEepromUnprogrammed
 
 import logging
@@ -36,15 +35,6 @@ DEFAULT_FPGA_REGISTER_WIDTH_BITS = 32
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 
-
-def should_fpga_use_msi(dev) -> bool:
-    if "use_msi" in dev:
-        check_fpga_version_cmd = dev.get("dev_attr", {}).get("check_fpga_version_cmd", "")
-        min_fpga_version = dev["use_msi"].get(
-            "min_fpga_version", "0x0"
-        )
-        return is_supported_fpga(check_fpga_version_cmd, min_fpga_version)
-    return False
 
 
 # --- CHILD_CARDS support -----------------------------------
@@ -779,7 +769,7 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c".format(bdf), ops)
         if ret != 0:
             return create_ret.append(ret)
-        if "channel_irq" in dev["i2c"]:
+        if dev["i2c"].get("channel_irq"):
             ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c-xiic".format(bdf), ops)
             if ret != 0:
                 return create_ret.append(ret)
@@ -792,15 +782,8 @@ class PddfParse():
 
         # TODO: add GPIO specific data stores
 
-        try:
-            use_msi = should_fpga_use_msi(dev)
-        except (RuntimeError, ValueError) as e:
-            bdf = dev["dev_info"].get("device_bdf", "<unknown>")
-            logger.exception("FPGA version check failed for device_bdf=%s: %s", bdf, e)
-            raise type(e)(
-                "FPGA version check failed for device_bdf=%s: %s" % (bdf, e)
-            ) from e
-        num_msi_vectors = dev["use_msi"]["num_msi_vectors"] if use_msi else 0
+        # An absent or empty use_msi block means no MSI support
+        num_msi_vectors = dev.get("use_msi", {}).get("num_msi_vectors", 0)
         reg_width = dev["dev_attr"].get("reg_width", DEFAULT_FPGA_REGISTER_WIDTH_BITS)
         cmd = f"echo 'fpgapci_init {num_msi_vectors} {reg_width}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
         ret = self.runcmd(cmd)
@@ -809,18 +792,29 @@ class PddfParse():
 
         # MSI domain mapped to MSI vector
         enabled_msi_domains: set[int] = set()
-        if use_msi:
-            for msi_domain in dev["use_msi"].get("msi_domains", []):
-                msi_vector_num = msi_domain["msi_vector_num"]
-                irq_chip_name = msi_domain["irq_chip_name"]
-                irq_line_mask = msi_domain["irq_line_mask"]
-                enable_reg = msi_domain["interrupt_enable_reg"]
-                status_reg = msi_domain["interrupt_status_reg"]
-                cmd = f"echo 'register_msi_domain {msi_vector_num} {irq_chip_name} {irq_line_mask} {enable_reg} {status_reg}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
-                ret = self.runcmd(cmd)
-                if ret != 0:
-                    return create_ret + [ret]
-                enabled_msi_domains.add(msi_vector_num)
+        for msi_domain in dev.get("use_msi", {}).get("msi_domains", []):
+            msi_vector_num = msi_domain["msi_vector_num"]
+            irq_chip_name = msi_domain["irq_chip_name"]
+            irq_line_mask = msi_domain["irq_line_mask"]
+            enable_reg = msi_domain["interrupt_enable_reg"]
+            status_reg = msi_domain["interrupt_status_reg"]
+            cmd = f"echo 'register_msi_domain {msi_vector_num} {irq_chip_name} {irq_line_mask} {enable_reg} {status_reg}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret + [ret]
+            enabled_msi_domains.add(msi_vector_num)
+
+        watchdog_data = self.data.get("WATCHDOG", {})
+        watchdog_msi = watchdog_data.get("dev_attr", {}).get("use_watchdog_msi", {})
+        watchdog_parent = watchdog_data.get("dev_info", {}).get("device_parent")
+        watchdog_parent_bdf = (
+            self.data.get(watchdog_parent, {}).get("dev_info", {}).get("device_bdf")
+        )
+        if watchdog_msi and watchdog_parent_bdf == bdf:
+            cmd = f"echo 'register_watchdog_msi {watchdog_msi['msi_domain']} {watchdog_msi['hw_irq']}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret + [ret]
 
         channel_irq = dev["i2c"].get("channel_irq", [])
         for bus in range(int(dev["i2c"]["dev_attr"]["num_virt_ch"], 16)):
