@@ -6,15 +6,29 @@ if [ "${RUNTIME_OWNER}" == "" ]; then
 fi
 
 CTR_SCRIPT="/usr/share/sonic/scripts/container_startup.py"
-if test -f ${CTR_SCRIPT}
+# IMAGE_VERSION is exported by the SONiC host when the feature container is
+# launched. In the monolithic docker-sonic-vs image the snmp start.sh runs as
+# an in-image supervisor program where IMAGE_VERSION is not set, and
+# container_startup.py aborts on the empty -v argument. Skip the kube/local
+# container bookkeeping when it (or the script) is unavailable.
+if test -f ${CTR_SCRIPT} && [ -n "${IMAGE_VERSION}" ]
 then
     ${CTR_SCRIPT} -f snmp -o ${RUNTIME_OWNER} -v ${IMAGE_VERSION}
 fi
 
 mkdir -p /etc/ssw /etc/snmp
 
-# Parse snmp.yml and insert the data in Config DB
-/usr/bin/snmp_yml_to_configdb.py
+# In the standalone docker-snmp container, IMAGE_VERSION is set and the
+# existing startup contract imports /etc/sonic/snmp.yml into CONFIG_DB. In the
+# monolithic docker-sonic-vs image, IMAGE_VERSION is unset and cSONiC loads its
+# complete config_db.json after the image-wide start.sh exits; there the
+# separate wait-for-snmp-config program has already waited for DEVICE_METADATA
+# and a configured SNMP community before this script runs, so that the render
+# below does not read an incomplete DB and no public fallback community has to
+# be baked into the image.
+if [ -n "${IMAGE_VERSION}" ]; then
+    /usr/bin/snmp_yml_to_configdb.py
+fi
 
 SONIC_CFGGEN_ARGS=" \
     -d \
