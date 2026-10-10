@@ -48,6 +48,14 @@ struct fpm_nhg_child {
 	uint16_t weight;
 };
 
+/*
+ * One (vrf, prefix) membership recorded on a leaf for by_resolved.
+ */
+struct fpm_nhg_resolved_member {
+	vrf_id_t vrf_id;
+	struct prefix p;
+};
+
 struct fpm_dplane_nhg {
 	uint64_t hash;        /* internal Merkle dedupe key */
 	uint32_t dplane_id;   /* wire id: NHGFIB id / depends / RTA_NH_ID */
@@ -55,7 +63,13 @@ struct fpm_dplane_nhg {
 	uint8_t level;        /* enum fpm_nhg_level */
 	uint32_t nhg_flags;   /* RECEIVED / RECURSIVE subset for JSON */
 	struct nexthop *nh;   /* defining nexthop (dup'd) */
-	struct prefix resolved_prefix; /* resolving prefix, when known */
+	/*
+	 * Resolving prefix. On an L-B object it is part of identity and of
+	 * by_resolved. On a leaf it is the last-seen value for the
+	 * resolved-via view; the leaf's indexed memberships live in
+	 * res_members below.
+	 */
+	struct prefix resolved_prefix;
 	vrf_id_t vrf_id;
 	/*
 	 * Zebra NHG id this object resolved through (PR #19252 resolved_via).
@@ -77,6 +91,15 @@ struct fpm_dplane_nhg {
 	uint16_t rib_nhg_id_count, rib_nhg_id_cap;
 	uint16_t num_children;
 	struct fpm_nhg_child *children; /* sorted by obj->hash */
+	/*
+	 * Leaves only: every (vrf, prefix) this leaf was ever seen resolved
+	 * through, mirrored in by_resolved. The leaf's identity cannot
+	 * include the prefix and no event ever retracts a membership, so
+	 * these accumulate for the object's whole life — and
+	 * fpm_nhg_remove() needs the full set to unindex it completely.
+	 */
+	struct fpm_nhg_resolved_member *res_members;
+	uint16_t res_member_count, res_member_cap;
 };
 
 /*
@@ -105,7 +128,14 @@ struct fpm_nhg_tables {
 	struct hash *by_id;
 	struct hash *route_map; /* fpm_nhg_route_key -> top (L-A) object */
 	struct hash *by_rib_id; /* zebra NHG id -> object (reverse index) */
-	/* (vrf, resolving prefix) -> a private bucket of resolved objects. */
+	/*
+	 * (vrf, resolving prefix) -> bucket of objects resolving through
+	 * it: the probe a route event uses to find its blast radius. L-B
+	 * entries are exact (the prefix is part of the group's identity);
+	 * leaf entries are a superset, kept grow-only because a leaf can
+	 * stand for several prefixes and no event ever retracts one — see
+	 * fpm_nhg_leaf_resolved_record().
+	 */
 	struct hash *by_resolved;
 	uint32_t next_id;
 	uint32_t *free_ids;

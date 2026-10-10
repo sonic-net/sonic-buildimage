@@ -410,7 +410,21 @@ struct fpm_nhg_resolved_bucket {
 
 /*
  * by_resolved: (vrf, resolving prefix) -> bucket of objects resolving through
- * it.
+ * it — the probe a route event uses to find its blast radius, the dplane-side
+ * counterpart of zebra's NHT registration list.
+ *
+ * L-B entries are exact: the resolving prefix is part of the group's dedupe
+ * hash, so it can never change under the object.
+ *
+ * Leaf entries are a superset. A leaf's identity cannot include the prefix
+ * (the wire object is identical whatever it resolved through), so one shared
+ * leaf stands for every prefix its events carried; and the plugin never
+ * learns that a route stopped resolving through a prefix, so a membership,
+ * once recorded on the leaf, is kept until the leaf dies. The index can
+ * therefore over-report for leaves, but it can never miss — the safe
+ * direction for a blast-radius walk, where a stale candidate is confirmed
+ * away by the walk's own matching while a missing one would strand a dead
+ * path.
  */
 static unsigned int fpm_nhg_resolved_key(const void *data)
 {
@@ -447,21 +461,21 @@ static void fpm_nhg_resolved_bucket_free(void *data)
 }
 
 /*
- * Index `obj` under its current resolving prefix. A no-op for an object
- * without one, and idempotent: the same object is never listed twice, so a
- * refresh that does not actually move the resolution costs nothing.
+ * Index `obj` under the key (vrf_id, p). A no-op for an unnamed prefix, and
+ * idempotent: the same object is never listed twice under one key.
  */
-static void fpm_nhg_resolved_add(struct fpm_nhg_tables *t,
-				 struct fpm_dplane_nhg *obj)
+static void fpm_nhg_resolved_add_key(struct fpm_nhg_tables *t,
+				     struct fpm_dplane_nhg *obj, vrf_id_t vrf_id,
+				     const struct prefix *p)
 {
 	struct fpm_nhg_resolved_bucket ref = {}, *b;
 	uint32_t i;
 
-	if (obj->resolved_prefix.family == AF_UNSPEC)
+	if (p->family == AF_UNSPEC)
 		return;
 
-	ref.vrf_id = obj->vrf_id;
-	ref.p = obj->resolved_prefix;
+	ref.vrf_id = vrf_id;
+	ref.p = *p;
 	b = hash_get(t->by_resolved, &ref, fpm_nhg_resolved_alloc);
 
 	for (i = 0; i < b->count; i++)
@@ -476,8 +490,64 @@ static void fpm_nhg_resolved_add(struct fpm_nhg_tables *t,
 	b->objs[b->count++] = obj;
 
 	FPM_NHG_DEBUG("resolved-index add %pFX vrf %u -> dplane NHG %u (%s), bucket now %u",
-		      &obj->resolved_prefix, obj->vrf_id, obj->dplane_id,
+		      p, vrf_id, obj->dplane_id,
 		      fpm_nhg_level_str(obj->level), b->count);
+}
+
+/*
+ * Index an L-B object under its own resolving prefix — the prefix that is
+ * part of its identity, which is what keeps the entry exact (see by_resolved
+ * above).
+ */
+static void fpm_nhg_resolved_add(struct fpm_nhg_tables *t,
+				 struct fpm_dplane_nhg *obj)
+{
+	fpm_nhg_resolved_add_key(t, obj, obj->vrf_id, &obj->resolved_prefix);
+}
+
+/*
+ * Record one resolution of a leaf: remember (vrf_id, p) on the object — the
+ * set fpm_nhg_remove() walks to unindex it completely — and index it under
+ * that key.
+ *
+ * Memberships are grow-only by design, bounded by the distinct prefixes this
+ * one gate was ever seen under. The plugin never learns that a route stopped
+ * resolving through a prefix, so nothing could ever decrement a membership,
+ * and "moving" the leaf to the newest prefix (as the display fields do) would
+ * silently drop it from the older prefixes' buckets while routes still
+ * resolve through them. Staying subscribed to every prefix ever seen makes
+ * the index a superset: it can over-report, it can never miss (see
+ * by_resolved above).
+ */
+static void fpm_nhg_leaf_resolved_record(struct fpm_nhg_tables *t,
+					 struct fpm_dplane_nhg *obj,
+					 vrf_id_t vrf_id,
+					 const struct prefix *p)
+{
+	uint16_t i;
+
+	for (i = 0; i < obj->res_member_count; i++) {
+		const struct fpm_nhg_resolved_member *m = &obj->res_members[i];
+
+		if (m->vrf_id == vrf_id && m->p.family == p->family &&
+		    m->p.prefixlen == p->prefixlen && prefix_same(&m->p, p))
+			return; /* already subscribed */
+	}
+
+	if (obj->res_member_count == obj->res_member_cap) {
+		obj->res_member_cap = obj->res_member_cap
+					      ? obj->res_member_cap * 2
+					      : 4;
+		obj->res_members =
+			XREALLOC(MTYPE_FPM_NHG, obj->res_members,
+				 obj->res_member_cap *
+					 sizeof(*obj->res_members));
+	}
+	obj->res_members[obj->res_member_count].vrf_id = vrf_id;
+	obj->res_members[obj->res_member_count].p = *p;
+	obj->res_member_count++;
+
+	fpm_nhg_resolved_add_key(t, obj, vrf_id, p);
 }
 
 /*
@@ -612,7 +682,25 @@ void fpm_nhg_insert(struct fpm_nhg_tables *t, struct fpm_dplane_nhg *obj)
 
 void fpm_nhg_remove(struct fpm_nhg_tables *t, struct fpm_dplane_nhg *obj)
 {
-	fpm_nhg_resolved_del_key(t, obj->vrf_id, &obj->resolved_prefix, obj);
+	/*
+	 * Unindex from every key this object is listed under: an L-B has its
+	 * one resolving prefix (part of its identity), a leaf has each
+	 * prefix it was ever seen resolved through (see
+	 * fpm_nhg_leaf_resolved_record()). Both rollback and last-ref unref
+	 * route through here; flush() bypasses this path, which is why it
+	 * cleans the buckets before freeing the objects they borrow.
+	 */
+	if (obj->level == FPM_NHG_L_C) {
+		uint16_t i;
+
+		for (i = 0; i < obj->res_member_count; i++)
+			fpm_nhg_resolved_del_key(t,
+						 obj->res_members[i].vrf_id,
+						 &obj->res_members[i].p, obj);
+	} else {
+		fpm_nhg_resolved_del_key(t, obj->vrf_id, &obj->resolved_prefix,
+					 obj);
+	}
 	hash_release(t->by_hash, obj);
 	hash_release(t->by_id, obj);
 }
@@ -631,6 +719,7 @@ static void fpm_nhg_obj_free(void *data)
 		nexthop_free(obj->nh);
 	XFREE(MTYPE_FPM_NHG, obj->rib_nhg_ids);
 	XFREE(MTYPE_FPM_NHG, obj->children);
+	XFREE(MTYPE_FPM_NHG, obj->res_members);
 	XFREE(MTYPE_FPM_NHG, obj);
 }
 
@@ -873,6 +962,11 @@ static struct fpm_dplane_nhg *fpm_nhg_get_leaf(struct fpm_nhg_tables *t,
 		 * gate now covered by a less specific locator prefix). Identity
 		 * is untouched — neither field is in the leaf key — and neither
 		 * reaches the wire, so no message follows from the update.
+		 *
+		 * Only the display fields follow the newest event; the index
+		 * membership does not move: other sharers of this object may
+		 * still resolve through the old prefix, so the leaf stays
+		 * subscribed to it too (see fpm_nhg_leaf_resolved_record()).
 		 */
 		if (resolved && resolved->family != AF_UNSPEC) {
 			if (obj->resolved_prefix.family != AF_UNSPEC &&
@@ -882,17 +976,11 @@ static struct fpm_dplane_nhg *fpm_nhg_get_leaf(struct fpm_nhg_tables *t,
 					      obj->dplane_id,
 					      &obj->resolved_prefix, obj->vrf_id,
 					      resolved, resolved_vrf);
-			/*
-			 * The refresh can move this leaf to a different
-			 * resolving prefix, so the index entry moves with it.
-			 * Both calls are no-ops when nothing actually changed.
-			 */
-			fpm_nhg_resolved_del_key(t, obj->vrf_id,
-						 &obj->resolved_prefix, obj);
 			obj->resolved_prefix = *resolved;
 			obj->vrf_id = resolved_vrf;
 			obj->resolved_via = resolved_via;
-			fpm_nhg_resolved_add(t, obj);
+			fpm_nhg_leaf_resolved_record(t, obj, resolved_vrf,
+						     resolved);
 		}
 		return obj;
 	}
@@ -910,17 +998,21 @@ static struct fpm_dplane_nhg *fpm_nhg_get_leaf(struct fpm_nhg_tables *t,
 		obj->nhg_flags = FPM_NHG_FLAG_RECEIVED;
 	/*
 	 * Resolving info for a leaf that stands in for a recursive nexthop
-	 * (the SRv6 top-level-only path): that nexthop still resolved through a
-	 * prefix, and the resolved-via view records which one. Set only on
-	 * creation, never patched onto a dedupe hit: the resolving prefix
-	 * follows from the gate, which the leaf key already digests, so every
-	 * sharer of this object resolved the same way.
+	 * (the SRv6 top-level-only path), or for a plain leaf zebra reached
+	 * through some covering prefix: the resolved-via view records which
+	 * one, and by_resolved indexes the leaf under it so a route event on
+	 * that prefix finds this leaf in its blast radius.
+	 *
+	 * The fields are the last-seen value (kept current on reuse above);
+	 * the index membership is grow-only, because one shared leaf can
+	 * stand for events with different prefixes and nothing ever retracts
+	 * a membership (see fpm_nhg_leaf_resolved_record()).
 	 */
 	if (resolved && resolved->family != AF_UNSPEC) {
 		obj->resolved_prefix = *resolved;
 		obj->vrf_id = resolved_vrf;
 		obj->resolved_via = resolved_via;
-		fpm_nhg_resolved_add(t, obj);
+		fpm_nhg_leaf_resolved_record(t, obj, resolved_vrf, resolved);
 	}
 	return obj;
 }
@@ -2371,10 +2463,12 @@ static void fpm_nhg_show_obj(const struct fpm_dplane_nhg *obj, void *arg)
 /*
  * `show fpm nhg-fib resolved-via`: the inverted view of the resolving info.
  *
- * Only L-B objects carry a resolving prefix, and several of them can share one
- * (they differ in label stack or in resolved members), so the mapping is
- * prefix -> set of dplane NHG ids. That set is exactly what depends on the
- * prefix.
+ * Reports the display value each object carries: L-B objects always have one
+ * (several can share a prefix, differing in label stack or resolved members),
+ * a leaf shows the last prefix its sharers were seen with. It is a diagnostic
+ * view of what the objects hold now, last-writer-wins included; for the
+ * blast-radius-grade mapping see by_resolved instead (L-B exact, leaf
+ * memberships a superset by design).
  *
  * Derived by walking the object table rather than from a dedicated index: the
  * view is diagnostic, so a scan cannot go stale against the objects it reports.
