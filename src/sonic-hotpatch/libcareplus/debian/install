@@ -1,0 +1,12 @@
+src/kpatch_gensrc usr/bin
+src/kpatch_make usr/bin
+src/kpatch_strip usr/bin
+src/kpatch_gensrc usr/libexec/libcareplus
+src/kpatch_make usr/libexec/libcareplus
+src/kpatch_strip usr/libexec/libcareplus
+src/libcare-cc usr/bin
+src/libcare-cxx usr/bin
+src/libcare-client usr/bin
+src/libcare-ctl usr/bin
+src/libcare-patch-make usr/bin
+src/libcare-dump usr/bin
