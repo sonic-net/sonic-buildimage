@@ -59,6 +59,7 @@
   * [MUX_CABLE](#mux_cable)
   * [MUX_LINKMGR](#mux_linkmgr)
   * [NEIGH](#neigh)
+  * [NEXTHOP\_TRACKING](#nexthop_tracking)
   * [NTP Global Configuration](#ntp-global-configuration)
   * [NTP Servers](#ntp-servers)
   * [Peer Switch](#peer-switch)
@@ -1957,6 +1958,47 @@ Static Nbr:
     }
 }
 ```
+
+### NEXTHOP_TRACKING
+
+The **NEXTHOP_TRACKING** table holds zebra nexthop tracking settings per VRF
+and address family. Each entry is keyed by `vrf_name|afi`, where `vrf_name`
+is `default` or a name from the **VRF** table and `afi` is `ipv4` or `ipv6`.
+
+`resolve_via_default` controls whether zebra may resolve a tracked nexthop
+through the default route (`0.0.0.0/0` or `::/0`). It maps to the FRR zebra
+commands `ip nht resolve-via-default` and `ipv6 nht resolve-via-default`; a
+value of `false` renders the `no` form. `sonic-cfggen` renders the value into
+the zebra startup configuration, and `bgpcfgd` (default VRF) or `frrcfgd`
+(default and user VRFs) applies changes at runtime.
+
+When the field or the whole entry is absent, the platform default applies.
+Deleting an entry restores the platform default at runtime.
+
+| VRF | AFI | Platform default |
+|---|---|---|
+| `default` | `ipv4` | enabled, unless `cloudtype` in `DEVICE_METADATA` is `Public` |
+| `default` | `ipv6` | disabled |
+| user VRF | `ipv4`, `ipv6` | enabled |
+
+```
+{
+    "NEXTHOP_TRACKING": {
+        "default|ipv4": {
+            "resolve_via_default": "false"
+        },
+        "Vrf_blue|ipv6": {
+            "resolve_via_default": "true"
+        }
+    }
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `vrf_name` | string | List key. `default` or a VRF name from the VRF table. |
+| `afi` | enumeration | List key. `ipv4` or `ipv6`. |
+| `resolve_via_default` | boolean | Optional. `true` lets tracked nexthops resolve through the default route; `false` prevents it. Absent means the platform default. |
 
 ### NTP Global Configuration
 
