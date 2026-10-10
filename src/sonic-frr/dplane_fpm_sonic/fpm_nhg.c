@@ -2369,55 +2369,158 @@ struct fpm_nhg_show_args {
 /* Max zebra NHG ids printed per object in the text form of `show fpm nhg-fib`. */
 #define FPM_NHG_SHOW_RIB_IDS 8
 
-static void fpm_nhg_show_obj(const struct fpm_dplane_nhg *obj, void *arg)
+/* One child edge of a snapshot: the member's dplane id and its weight. */
+struct fpm_nhg_show_child {
+	uint32_t dplane_id;
+	uint16_t weight;
+};
+
+/*
+ * One object copied out of the tables for rendering.
+ *
+ * The tables are mutated — and objects freed — under obuf_mutex by the FPM
+ * pthread and the zebra main-thread resync walk, so a printer that read live
+ * objects would have to hold that lock for the whole dump and stall route
+ * programming. The commands instead copy everything they render into these
+ * plain values (child ids, not child pointers) under the lock and print after
+ * releasing it.
+ */
+struct fpm_nhg_show_snap {
+	uint64_t hash;
+	uint32_t dplane_id;
+	uint32_t nhg_flags;
+	uint32_t refcount;
+	uint8_t level;
+	vrf_id_t vrf_id;
+	struct prefix resolved_prefix;
+	uint32_t resolved_via;
+	struct fpm_nhg_show_child *children; /* num_children entries */
+	uint16_t num_children;
+	uint32_t *rib_ids; /* rib_id_count entries */
+	uint16_t rib_id_count;
+};
+
+struct fpm_nhg_show_list {
+	struct fpm_nhg_show_snap *snaps;
+	uint32_t count, cap;
+};
+
+/* Copy everything the printers need out of `obj`. Requires the tables lock. */
+static void fpm_nhg_snap_from_obj(const struct fpm_dplane_nhg *obj,
+				  struct fpm_nhg_show_snap *s)
 {
-	struct fpm_nhg_show_args *sa = arg;
+	uint16_t i;
+
+	s->hash = obj->hash;
+	s->dplane_id = obj->dplane_id;
+	s->nhg_flags = obj->nhg_flags;
+	s->refcount = obj->refcount;
+	s->level = obj->level;
+	s->vrf_id = obj->vrf_id;
+	s->resolved_prefix = obj->resolved_prefix;
+	s->resolved_via = obj->resolved_via;
+
+	s->num_children = obj->num_children;
+	s->children = NULL;
+	if (obj->num_children) {
+		s->children = XCALLOC(MTYPE_TMP, obj->num_children *
+						       sizeof(*s->children));
+		for (i = 0; i < obj->num_children; i++) {
+			s->children[i].dplane_id =
+				obj->children[i].obj->dplane_id;
+			s->children[i].weight = obj->children[i].weight;
+		}
+	}
+
+	s->rib_id_count = obj->rib_nhg_id_count;
+	s->rib_ids = NULL;
+	if (obj->rib_nhg_id_count) {
+		s->rib_ids = XMALLOC(MTYPE_TMP,
+				     obj->rib_nhg_id_count * sizeof(*s->rib_ids));
+		memcpy(s->rib_ids, obj->rib_nhg_ids,
+		       obj->rib_nhg_id_count * sizeof(*s->rib_ids));
+	}
+}
+
+/* Append one object's snapshot. Requires the tables lock. */
+static void fpm_nhg_show_list_push(struct fpm_nhg_show_list *l,
+				   const struct fpm_dplane_nhg *obj)
+{
+	if (l->count == l->cap) {
+		l->cap = l->cap ? l->cap * 2 : 16;
+		l->snaps = XREALLOC(MTYPE_TMP, l->snaps,
+				    l->cap * sizeof(*l->snaps));
+	}
+	fpm_nhg_snap_from_obj(obj, &l->snaps[l->count++]);
+}
+
+static void fpm_nhg_show_list_free(struct fpm_nhg_show_list *l)
+{
+	uint32_t i;
+
+	for (i = 0; i < l->count; i++) {
+		XFREE(MTYPE_TMP, l->snaps[i].children);
+		XFREE(MTYPE_TMP, l->snaps[i].rib_ids);
+	}
+	XFREE(MTYPE_TMP, l->snaps);
+}
+
+static void fpm_nhg_snap_collect_cb(const struct fpm_dplane_nhg *obj,
+				    void *arg)
+{
+	fpm_nhg_show_list_push(arg, obj);
+}
+
+/* Render one snapshot. Callers must have released the tables lock. */
+static void fpm_nhg_show_snap(const struct fpm_nhg_show_snap *s,
+			      const struct fpm_nhg_show_args *sa)
+{
 	struct vty *vty = sa->vty;
 	char hashbuf[32];
 	uint16_t i;
 
-	snprintfrr(hashbuf, sizeof(hashbuf), "0x%016" PRIx64, obj->hash);
+	snprintfrr(hashbuf, sizeof(hashbuf), "0x%016" PRIx64, s->hash);
 
 	if (sa->jarray) {
 		struct json_object *jo = json_object_new_object();
 		struct json_object *jchildren, *jrib;
 
-		json_object_int_add(jo, "dplaneId", obj->dplane_id);
+		json_object_int_add(jo, "dplaneId", s->dplane_id);
 		json_object_string_add(jo, "level",
-				       fpm_nhg_level_str(obj->level));
-		json_object_int_add(jo, "flags", obj->nhg_flags);
-		json_object_int_add(jo, "refcount", obj->refcount);
+				       fpm_nhg_level_str(s->level));
+		json_object_int_add(jo, "flags", s->nhg_flags);
+		json_object_int_add(jo, "refcount", s->refcount);
 		json_object_string_add(jo, "hash", hashbuf);
 
 		jchildren = json_object_new_array();
-		for (i = 0; i < obj->num_children; i++) {
+		for (i = 0; i < s->num_children; i++) {
 			struct json_object *jc = json_object_new_object();
 
 			json_object_int_add(jc, "id",
-					    obj->children[i].obj->dplane_id);
+					    s->children[i].dplane_id);
 			json_object_int_add(jc, "weight",
-					    obj->children[i].weight);
+					    s->children[i].weight);
 			json_object_array_add(jchildren, jc);
 		}
 		json_object_object_add(jo, "children", jchildren);
 
 		/* L-B only: omitted entirely when there is no resolving info. */
-		if (obj->resolved_prefix.family != AF_UNSPEC) {
+		if (s->resolved_prefix.family != AF_UNSPEC) {
 			char pbuf[PREFIX_STRLEN];
 
 			snprintfrr(pbuf, sizeof(pbuf), "%pFX",
-				   &obj->resolved_prefix);
+				   &s->resolved_prefix);
 			json_object_string_add(jo, "resolvedVia", pbuf);
 			json_object_int_add(jo, "resolvingRibNhgId",
-					    obj->resolved_via);
+					    s->resolved_via);
 		}
-		json_object_int_add(jo, "vrfId", obj->vrf_id);
+		json_object_int_add(jo, "vrfId", s->vrf_id);
 
 		jrib = json_object_new_array();
-		for (i = 0; i < obj->rib_nhg_id_count; i++)
+		for (i = 0; i < s->rib_id_count; i++)
 			json_object_array_add(
 				jrib,
-				json_object_new_int64(obj->rib_nhg_ids[i]));
+				json_object_new_int64(s->rib_ids[i]));
 		json_object_object_add(jo, "ribNhgIds", jrib);
 
 		json_object_array_add(sa->jarray, jo);
@@ -2425,37 +2528,35 @@ static void fpm_nhg_show_obj(const struct fpm_dplane_nhg *obj, void *arg)
 	}
 
 	vty_out(vty, "Dplane NHG %u (%s) flags 0x%04x refcount %u hash %s\n",
-		obj->dplane_id, fpm_nhg_level_str(obj->level), obj->nhg_flags,
-		obj->refcount, hashbuf);
+		s->dplane_id, fpm_nhg_level_str(s->level), s->nhg_flags,
+		s->refcount, hashbuf);
 
-	if (obj->resolved_prefix.family != AF_UNSPEC)
+	if (s->resolved_prefix.family != AF_UNSPEC)
 		vty_out(vty, "  resolved via %pFX vrf %u rib nhg %u\n",
-			&obj->resolved_prefix, obj->vrf_id, obj->resolved_via);
+			&s->resolved_prefix, s->vrf_id, s->resolved_via);
 
-	if (obj->num_children) {
+	if (s->num_children) {
 		vty_out(vty, "  children:");
-		for (i = 0; i < obj->num_children; i++)
+		for (i = 0; i < s->num_children; i++)
 			vty_out(vty, " %u(w%u)",
-				obj->children[i].obj->dplane_id,
-				obj->children[i].weight);
+				s->children[i].dplane_id,
+				s->children[i].weight);
 		vty_out(vty, "\n");
 	}
 
-	if (obj->rib_nhg_id_count) {
+	if (s->rib_id_count) {
 		/*
 		 * The id list is uncapped (a widely shared object can collect
 		 * many), so bound the text form to keep one object on one
 		 * line. The json form above stays complete.
 		 */
-		uint16_t shown = MIN(obj->rib_nhg_id_count,
-				     FPM_NHG_SHOW_RIB_IDS);
+		uint16_t shown = MIN(s->rib_id_count, FPM_NHG_SHOW_RIB_IDS);
 
 		vty_out(vty, "  rib nhg ids:");
 		for (i = 0; i < shown; i++)
-			vty_out(vty, " %u", obj->rib_nhg_ids[i]);
-		if (shown < obj->rib_nhg_id_count)
-			vty_out(vty, " +%u more",
-				obj->rib_nhg_id_count - shown);
+			vty_out(vty, " %u", s->rib_ids[i]);
+		if (shown < s->rib_id_count)
+			vty_out(vty, " +%u more", s->rib_id_count - shown);
 		vty_out(vty, "\n");
 	}
 }
@@ -2527,35 +2628,44 @@ static int fpm_nhg_rv_cmp(const void *a, const void *b)
 	return 0;
 }
 
-static void fpm_nhg_show_resolved_via(struct vty *vty,
-				      struct json_object *jarray)
+/* Collect the entries. Requires the tables lock. */
+static void fpm_nhg_rv_fill(struct fpm_nhg_rv_collect *c)
 {
-	struct fpm_nhg_rv_collect c = {};
+	fpm_nhg_walk(show_tables, fpm_nhg_rv_collect_cb, c);
+}
+
+/*
+ * Render the collected entries. Callers must have released the tables lock:
+ * the collect copies plain values only, so the sorting and formatting below
+ * cannot stall route programming.
+ */
+static void fpm_nhg_rv_print(struct vty *vty, struct json_object *jarray,
+			     struct fpm_nhg_rv_collect *c)
+{
 	char pbuf[PREFIX_STRLEN];
 	uint32_t i, j, k;
 
-	fpm_nhg_walk(show_tables, fpm_nhg_rv_collect_cb, &c);
-	if (c.count == 0) {
+	if (c->count == 0) {
 		if (!jarray)
 			vty_out(vty, "No resolving prefixes recorded\n");
 		return;
 	}
-	qsort(c.ents, c.count, sizeof(*c.ents), fpm_nhg_rv_cmp);
+	qsort(c->ents, c->count, sizeof(*c->ents), fpm_nhg_rv_cmp);
 
 	if (!jarray)
 		vty_out(vty, "%-40s %-4s %-12s %s\n", "Resolving prefix",
 			"VRF", "Resolved by", "Dplane NHG ids");
 
-	for (i = 0; i < c.count; i = j) {
+	for (i = 0; i < c->count; i = j) {
 		/* collapse the run of entries sharing this (vrf, prefix) */
-		for (j = i + 1; j < c.count; j++) {
-			if (c.ents[j].vrf_id != c.ents[i].vrf_id ||
-			    c.ents[j].resolved_via != c.ents[i].resolved_via ||
-			    prefix_cmp(&c.ents[j].p, &c.ents[i].p) != 0)
+		for (j = i + 1; j < c->count; j++) {
+			if (c->ents[j].vrf_id != c->ents[i].vrf_id ||
+			    c->ents[j].resolved_via != c->ents[i].resolved_via ||
+			    prefix_cmp(&c->ents[j].p, &c->ents[i].p) != 0)
 				break;
 		}
 
-		snprintfrr(pbuf, sizeof(pbuf), "%pFX", &c.ents[i].p);
+		snprintfrr(pbuf, sizeof(pbuf), "%pFX", &c->ents[i].p);
 
 		/*
 		 * Only the resolving zebra NHG id is reported. It deliberately
@@ -2571,31 +2681,31 @@ static void fpm_nhg_show_resolved_via(struct vty *vty,
 			struct json_object *jids = json_object_new_array();
 
 			json_object_string_add(jo, "resolvedVia", pbuf);
-			json_object_int_add(jo, "vrfId", c.ents[i].vrf_id);
+			json_object_int_add(jo, "vrfId", c->ents[i].vrf_id);
 			json_object_int_add(jo, "resolvingRibNhgId",
-					    c.ents[i].resolved_via);
+					    c->ents[i].resolved_via);
 			for (k = i; k < j; k++)
 				json_object_array_add(
 					jids,
 					json_object_new_int64(
-						c.ents[k].dplane_id));
+						c->ents[k].dplane_id));
 			json_object_object_add(jo, "dplaneIds", jids);
 			json_object_array_add(jarray, jo);
 		} else {
-			if (c.ents[i].resolved_via)
+			if (c->ents[i].resolved_via)
 				vty_out(vty, "%-40s %-4u rib %-8u", pbuf,
-					c.ents[i].vrf_id,
-					c.ents[i].resolved_via);
+					c->ents[i].vrf_id,
+					c->ents[i].resolved_via);
 			else
 				vty_out(vty, "%-40s %-4u %-12s", pbuf,
-					c.ents[i].vrf_id, "-");
+					c->ents[i].vrf_id, "-");
 			for (k = i; k < j; k++)
-				vty_out(vty, " %u", c.ents[k].dplane_id);
+				vty_out(vty, " %u", c->ents[k].dplane_id);
 			vty_out(vty, "\n");
 		}
 	}
 
-	XFREE(MTYPE_TMP, c.ents);
+	XFREE(MTYPE_TMP, c->ents);
 }
 
 /*
@@ -2614,9 +2724,9 @@ static void fpm_nhg_show_resolved_via(struct vty *vty,
  * VRF id.
  */
 static void fpm_nhg_show_route(struct vty *vty, struct json_object *jarray,
+			       struct fpm_nhg_show_list *list,
 			       const char *prefix_str, const char *vrf_name)
 {
-	struct fpm_nhg_show_args sa = { .vty = vty, .jarray = jarray };
 	const struct fpm_dplane_nhg *obj;
 	struct fpm_nhg_route_key key;
 	struct zebra_vrf *zvrf;
@@ -2649,7 +2759,7 @@ static void fpm_nhg_show_route(struct vty *vty, struct json_object *jarray,
 		return;
 	}
 
-	fpm_nhg_show_obj(obj, &sa);
+	fpm_nhg_show_list_push(list, obj);
 }
 
 DEFUN(fpm_show_nhg_fib, fpm_show_nhg_fib_cmd,
@@ -2669,6 +2779,8 @@ DEFUN(fpm_show_nhg_fib, fpm_show_nhg_fib_cmd,
       JSON_STR)
 {
 	struct fpm_nhg_show_args sa = {};
+	struct fpm_nhg_show_list list = {};
+	struct fpm_nhg_rv_collect rv = {};
 	bool json = false, filter = false, rib_filter = false;
 	bool resolved_via = false, found = true;
 	const char *route_str = NULL, *vrf_str = NULL;
@@ -2712,14 +2824,18 @@ DEFUN(fpm_show_nhg_fib, fpm_show_nhg_fib_cmd,
 	 * fpm_nl_enqueue() from the fpm_rib_send() resync walk — together with
 	 * the messages describing those mutations. A reader that skipped the
 	 * mutex could see half-built objects (children array swapped in, count
-	 * not yet bumped) or follow a child pointer an unref just freed, so the
-	 * whole walk stays inside the same critical section.
+	 * not yet bumped) or follow a child pointer an unref just freed, so
+	 * the collection — and only the collection — stays inside the same
+	 * critical section: everything is copied out as plain values and
+	 * rendered after the lock is released, so a full dump cannot stall the
+	 * route programming this mutex serializes.
 	 */
 	frr_with_mutex (show_lock) {
 		if (route_str) {
-			fpm_nhg_show_route(vty, sa.jarray, route_str, vrf_str);
+			fpm_nhg_show_route(vty, sa.jarray, &list, route_str,
+					   vrf_str);
 		} else if (resolved_via) {
-			fpm_nhg_show_resolved_via(vty, sa.jarray);
+			fpm_nhg_rv_fill(&rv);
 		} else if (filter || rib_filter) {
 			const struct fpm_dplane_nhg *obj;
 
@@ -2734,11 +2850,23 @@ DEFUN(fpm_show_nhg_fib, fpm_show_nhg_fib_cmd,
 			else
 				obj = fpm_nhg_lookup_id(show_tables, filter_id);
 			if (obj)
-				fpm_nhg_show_obj(obj, &sa);
+				fpm_nhg_show_list_push(&list, obj);
 			else
 				found = false;
 		} else
-			fpm_nhg_walk(show_tables, fpm_nhg_show_obj, &sa);
+			fpm_nhg_walk(show_tables, fpm_nhg_snap_collect_cb,
+				     &list);
+	}
+
+	/* Lock released: render what was copied. */
+	if (resolved_via) {
+		fpm_nhg_rv_print(vty, sa.jarray, &rv);
+	} else {
+		uint32_t k;
+
+		for (k = 0; k < list.count; k++)
+			fpm_nhg_show_snap(&list.snaps[k], &sa);
+		fpm_nhg_show_list_free(&list);
 	}
 
 	if (sa.jarray) {
