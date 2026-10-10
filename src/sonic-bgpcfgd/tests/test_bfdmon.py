@@ -7,9 +7,9 @@ import bfdmon.bfdmon
 from bfdmon.bfdmon import BfdFrrMon
 
 @pytest.fixture
-@patch('swsscommon.swsscommon.Table')
-@patch('swsscommon.swsscommon.DBConnector', autospec=True)
-@patch('swsscommon.swsscommon.SonicV2Connector')
+@patch('bfdmon.bfdmon.swsscommon.Table')
+@patch('bfdmon.bfdmon.swsscommon.DBConnector', autospec=True)
+@patch('bfdmon.bfdmon.swsscommon.SonicV2Connector')
 def bfd_mon(mock_conn, mock_db, mock_tbl):
     #mock_conn.return_value.get_db_list.return_value = ['STATE_DB']
     m = BfdFrrMon()
