@@ -1,0 +1,146 @@
+{
+    "ARS_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "Ethernet1",
+                        "description": "Ethernet1",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet1",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "Ethernet2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet2",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "Ethernet3",
+                        "description": "Ethernet3",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet3",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_PROFILE": {
+                "ARS_PROFILE_LIST": [
+                    {
+                        "profile_name": "global",
+                        "algorithm": "ewma",
+                        "max_flows": "2048",
+   	                    "ars_nhg_path_selector_mode": "interface",
+                        "ars_lag_path_selector_mode": "interface"
+                    }
+                ]
+            },
+           "sonic-ars:ARS_INTERFACE": {
+                "ARS_INTERFACE_LIST": [
+                {
+                    "if_name": "Ethernet1",
+                    "scaling_factor": "100"
+                },
+                {
+                    "if_name": "Ethernet2",
+                    "scaling_factor": "1000"
+                }]
+           },
+           "sonic-ars:ARS_NEXTHOP": {
+                "ARS_NEXTHOP_LIST": [
+                {
+                    "vrf_name": "default",
+                    "nexthop_ip": "10.0.0.1"
+                },
+                {
+                    "vrf_name": "default",
+                    "nexthop_ip": "10.1.0.1"
+                }]
+           },
+           "sonic-ars:ARS_OBJECT": {
+                "ARS_OBJECT_LIST": [
+                {
+                    "ars_obj_name": "ars_obj_name",
+                    "assign_mode": "per_packet_quality"
+                }]
+           }
+       }
+    },
+    "ARS_TEST_TOO_MANY_PROFILES": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_PROFILE": {
+                "ARS_PROFILE_LIST": [
+                    {
+                        "profile_name": "group1",
+                        "algorithm": "ewma"
+                    },
+                    {
+                        "profile_name": "group2",
+                        "sampling_interval": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "ARS_TEST_INTERFACE_INVALID_LINK": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_INTERFACE": {
+                "ARS_INTERFACE_LIST": [
+                    {
+                        "if_name": "EthernetXXX"
+                    }
+                ]
+            }
+        }
+    },
+    "ARS_TEST_OBJECT_INVALID_MODE": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_OBJECT": {
+                "ARS_OBJECT_LIST": [
+                    {
+                        "ars_obj_name": "ars_obj_default",
+                        "assign_mode": "invalid_mode_value"
+                    }
+                ]
+            }
+        }
+    },
+    "ARS_TEST_OBJECT_REFERENCE_IN_PROFILE_INVALID": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_PROFILE": {
+                "ARS_PROFILE_LIST": [
+                    {
+                        "profile_name": "group1",
+                        "algorithm": "ewma",
+                        "default_ars_object": "ars_obj_default"
+                    }
+                ]
+            }
+        }
+    },
+    "ARS_TEST_NEXTHOP_INVALID_IP": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_NEXTHOP": {
+                "ARS_NEXTHOP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "nexthop_ip": "300.1.2.3"
+                    }
+                ]
+            }
+        }
+    }
+}
