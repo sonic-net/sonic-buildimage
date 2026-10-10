@@ -1812,6 +1812,7 @@ python3-pexpect==4.8.0-4
 python3-pickleshare==0.7.5-5
 python3-pil==9.4.0-1.1+deb12u1
 python3-pil.imagetk==9.4.0-1.1+deb12u1
+python3-pip==23.0.1+dfsg-1
 python3-pip-whl==23.0.1+dfsg-1
 python3-pkg-resources==66.1.1-1+deb12u2
 python3-platformdirs==2.6.0-1
