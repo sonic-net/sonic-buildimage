@@ -1,0 +1,55 @@
+From cd79a528dee3348c65cbf501cec4010e2e22d717 Mon Sep 17 00:00:00 2001
+From: mhchann <mhchann082@gmail.com>
+Date: Mon, 30 Jun 2025 16:37:28 +0800
+Subject: [PATCH 1/1] 0014-SNMP-ipv6-link-local-under-MGMT-VRF
+
+---
+ include/net-snmp/library/snmp_transport.h | 4 ++++
+ snmplib/transports/snmpUDPIPv6Domain.c    | 9 +++++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/include/net-snmp/library/snmp_transport.h b/include/net-snmp/library/snmp_transport.h
+index d005d45..966287b 100644
+--- a/include/net-snmp/library/snmp_transport.h
++++ b/include/net-snmp/library/snmp_transport.h
+@@ -169,6 +169,10 @@ typedef struct netsnmp_transport_s {
+     netsnmp_tmStateReference *tmStateRef;
+ #endif
+ 
++#if defined(HAVE_STRUCT_SOCKADDR_IN6_SIN6_SCOPE_ID)
++    uint32_t        sin6_scope_id;
++#endif
++
+     /* tunneled transports */
+     struct netsnmp_transport_s * base_transport;
+ 
+diff --git a/snmplib/transports/snmpUDPIPv6Domain.c b/snmplib/transports/snmpUDPIPv6Domain.c
+index e2f2b03..0c5e300 100644
+--- a/snmplib/transports/snmpUDPIPv6Domain.c
++++ b/snmplib/transports/snmpUDPIPv6Domain.c
+@@ -130,6 +130,11 @@ netsnmp_udp6_recv(netsnmp_transport *t, void *buf, int size,
+         }
+         *opaque = (void *) from;
+         *olength = sizeof(struct sockaddr_in6);
++#if defined(HAVE_STRUCT_SOCKADDR_IN6_SIN6_SCOPE_ID)
++        if (((struct sockaddr_in6 *) (*opaque))->sin6_scope_id != t->sin6_scope_id) {
++            ((struct sockaddr_in6 *) (*opaque))->sin6_scope_id = t->sin6_scope_id;
++        }
++#endif
+     }
+     return rc;
+ }
+@@ -316,6 +321,10 @@ netsnmp_udp6_transport_bind(netsnmp_transport *t,
+                     errno, strerror(errno)));
+         goto err;
+     }
++#if defined(HAVE_STRUCT_SOCKADDR_IN6_SIN6_SCOPE_ID)
++    else
++        t->sin6_scope_id = addr->sin6_scope_id; /* Record the scope id when socket binding */
++#endif
+ 
+     return 0;
+ 
+-- 
+2.25.1
+
