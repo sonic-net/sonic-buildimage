@@ -1,0 +1,17 @@
+[Unit]
+Description=saphy service
+Requires=platform_driver.service
+After=platform_driver.service
+
+PartOf=sonic.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/saphy_script.sh start
+KillMode=mixed
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=sonic.target
