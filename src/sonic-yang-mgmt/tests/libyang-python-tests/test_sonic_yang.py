@@ -441,7 +441,7 @@ class Test_SonicYang(object):
         # loaded in Data tree.
         assert len(syc.jIn) == numTables
         print("{}:{}".format(len(syc.xlateJson), len(syc.yangFiles)))
-        assert len(syc.xlateJson) == len(syc.yangFiles) - NON_CONFIG_YANG_FILES
+        assert len(syc.xlateJson) == len(syc.yangFiles) - len(syc.configFalseModules) - NON_CONFIG_YANG_FILES
         # Validate data tree
         validTree = False
         try:
