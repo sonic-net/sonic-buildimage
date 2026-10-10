@@ -3463,7 +3463,7 @@ An example is as follows:
 ```
 
 ### Prefix List
-Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
+Prefix list table stores a prefix-list base name and IP prefix separated by `|`. PrefixListMgr appends `_V4` or `_V6` to the base name according to the prefix address family and renders the corresponding FRR prefix-list command.
 
 The following optional fields are supported for dynamic prefix list configuration:
  Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
@@ -3482,7 +3482,7 @@ Examples:
 ```json
 {
     "PREFIX_LIST": {
-        "ANCHOR_PREFIX|fc00::/48": {},
+        "SUPPRESS_PREFIX|fc00::/48": {},
         "BGP_ALLOWED_IPV4|172.16.0.0/12": {
             "action": "permit",
             "seq": "200",
