@@ -688,6 +688,9 @@ start() {
     fi
     {%- elif docker_container_name == "dash-ha" %}
     REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
+    {%- elif docker_container_name in ["dhcp_relay", "otel", "snmp"] %}
+    # FIREBREAK switches this mount only after preparing credentials on enable.
+    REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- else %}
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
