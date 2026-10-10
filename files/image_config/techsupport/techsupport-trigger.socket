@@ -1,0 +1,11 @@
+[Unit]
+Description=Socket trigger for container-requested techsupport
+
+[Socket]
+ListenDatagram=/run/sonic/techsupport-trigger/trigger.sock
+SocketMode=0600
+# Consume the trigger and coalesce requests received during collection.
+FlushPending=yes
+
+[Install]
+WantedBy=sockets.target
