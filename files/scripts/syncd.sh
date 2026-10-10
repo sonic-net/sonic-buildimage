@@ -109,14 +109,6 @@ function startplatform() {
         fi
     fi
 
-    if [[ x"$sonic_asic_platform" == x"barefoot" ]]; then
-        is_usb0=$(ls /sys/class/net | grep usb0)
-        if [[ "$is_usb0" == "usb0" ]]; then
-            /usr/bin/ip link set usb0 down
-            /usr/bin/ip link set usb0 up
-        fi
-    fi
-
     if [[ x"$sonic_asic_platform" == x"nvidia-bluefield" ]]; then
         /usr/bin/bfnet.sh start
         if [[ $? != "0" ]]; then

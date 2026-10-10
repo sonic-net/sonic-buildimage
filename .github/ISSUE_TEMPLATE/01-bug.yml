@@ -27,7 +27,6 @@ body:
       description: Platform name
       options:
         - generic
-        - barefoot
         - broadcom
         - cavium
         - centec

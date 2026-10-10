@@ -543,25 +543,6 @@ write_platform_specific_cmdline() {
         cmdline_add logs_inram=on
         cmdline_add i2c-i801.disable_features=0x10
     fi
-    if [ "$sid" = "Alhambra" ]; then
-        aboot_machine=arista_7170_64c
-        flash_size=28000
-        cmdline_add hugepages=128
-    fi
-    if [ "$sid" = "Mineral" ]; then
-        aboot_machine=arista_7170_32c
-        flash_size=28000
-        cmdline_add hugepages=128
-    fi
-    if [ "$sid" = "MineralD" ]; then
-        aboot_machine=arista_7170_32cd
-        flash_size=28000
-        cmdline_add hugepages=128
-    fi
-    if [ "$sid" = "Woodleaf" ]; then
-        aboot_machine=arista_7170b_64c
-        cmdline_add hugepages=128
-    fi
     if [ "$sid" = "Lodoga" ]; then
         aboot_machine=arista_7050cx3_32s
         cmdline_add logs_inram=on
