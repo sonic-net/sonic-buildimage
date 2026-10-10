@@ -1,0 +1,15 @@
+# cargo --config file for the Rust pmon daemons (rules/sonic-pmon-daemons-rs.mk).
+#
+# Their workspace in sonic-platform-daemons takes these crates from git, at the
+# commits its Cargo.lock pins.  The image builds them from its own submodules
+# instead: the PyO3 bridge has to match the sonic-platform-common wheel the
+# same image installs, and swss-common the libswsscommon it links.
+#
+# Cargo resolves a path in a --config file from two directories above the file,
+# which for this one is the root of sonic-buildimage.
+[patch."https://github.com/sonic-net/sonic-platform-common.git"]
+platform-api      = { path = "src/sonic-platform-common/crates/platform-api" }
+platform-provider = { path = "src/sonic-platform-common/crates/platform-provider" }
+
+[patch."https://github.com/sonic-net/sonic-swss-common.git"]
+swss-common = { path = "src/sonic-swss-common/crates/swss-common" }
