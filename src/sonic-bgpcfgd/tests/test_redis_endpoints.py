@@ -3,10 +3,16 @@ from unittest.mock import MagicMock, call, patch
 
 from . import swsscommon_test
 
+original_swsscommon = sys.modules.get("swsscommon")
 sys.modules["swsscommon"] = swsscommon_test
-
-from bgpcfgd.runner import Runner
-from bgpcfgd.static_rt_timer import StaticRouteTimer
+try:
+    from bgpcfgd.runner import Runner
+    from bgpcfgd.static_rt_timer import StaticRouteTimer
+finally:
+    if original_swsscommon is None:
+        del sys.modules["swsscommon"]
+    else:
+        sys.modules["swsscommon"] = original_swsscommon
 
 
 @patch("bgpcfgd.static_rt_timer.swsscommon.SonicV2Connector")
@@ -27,7 +33,8 @@ def test_runner_keeps_only_chassis_database_on_tcp(
     mock_get_db_id, mock_select, mock_connector, mock_subscriber
 ):
     mock_get_db_id.side_effect = [6, 12]
-    mock_subscriber.return_value.getDbConnector.return_value.getDbId.return_value = 6
+    connector = mock_subscriber.return_value.getDbConnector.return_value
+    connector.getDbId.return_value = 6
     mock_subscriber.return_value.getTableName.return_value = "TABLE"
 
     runner = Runner(MagicMock())
