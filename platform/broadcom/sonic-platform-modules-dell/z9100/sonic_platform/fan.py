@@ -26,7 +26,7 @@ class Fan(FanBase):
     HWMON_NODE = os.listdir(HWMON_DIR)[0]
     MAILBOX_DIR = HWMON_DIR + HWMON_NODE
 
-    def __init__(self, fantray_index=1, fan_index=1, psu_fan=False):
+    def __init__(self, fantray_index=1, fan_index=1,psu_index=1, psu_fan=False):
         FanBase.__init__(self)
         self.is_psu_fan = psu_fan
         if not self.is_psu_fan:
@@ -46,11 +46,11 @@ class Fan(FanBase):
                         2 * self.fantrayindex - 1)
             self.max_fan_speed = MAX_Z9100_FAN_SPEED
         else:
-            # PSU Fan index starts from 11
-            self.fanindex = fan_index + 10
-            self.fan_presence_reg = "fan{}_fault".format(self.fanindex)
-            self.get_fan_speed_reg = "fan{}_input".format(self.fanindex)
-            self.get_fan_dir_reg = "fan{}_airflow".format(self.fanindex)
+
+            self.psuindex = psu_index
+            self.fan_presence_reg = "fan{}_fault".format(self.psuindex + 10)
+            self.get_fan_speed_reg = "fan{}_input".format(self.psuindex + 10)
+            self.get_fan_dir_reg = "fan{}_airflow".format(self.psuindex + 10)
             self.max_fan_speed = MAX_Z9100_PSU_FAN_SPEED
 
     def _get_pmc_register(self, reg_name):
@@ -80,7 +80,7 @@ class Fan(FanBase):
         if not self.is_psu_fan:
             return "FanTray{}-Fan{}".format(self.fantrayindex, self.fanindex)
         else:
-            return "PSU{} Fan".format(self.fanindex - 10)
+            return "PSU{} Fan".format(self.psuindex)
 
     def get_model(self):
         """
@@ -134,7 +134,24 @@ class Fan(FanBase):
                 status = True
 
         return status
+    
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return 1
 
+    def is_replaceable(self):
+        """
+        Indicate whether Fan is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+    
     def get_status(self):
         """
         Retrieves the operational status of the FAN
@@ -259,7 +276,9 @@ class Fan(FanBase):
             An integer, the percentage of full fan speed, in the range 0 (off)
                  to 100 (full speed)
         """
-        return  0
+        # Fan speeds are controlled by Smart-fussion FPGA.
+        # Return current speed to avoid false thermalctld alarm.
+        return self.get_speed()
 
 
 
