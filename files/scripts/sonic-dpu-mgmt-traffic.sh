@@ -24,22 +24,23 @@ add_rem_valid_iptable(){
     local op=$1
     local table=$2
     local chain=$3
+    local action
     shift 3
-    local rule="$@"
-    iptables -t $table -C $chain $rule &>/dev/null
+    local -a rule=("$@")
+    iptables -t "$table" -C "$chain" "${rule[@]}" &>/dev/null
     local exit_status=$?
     local exec_cond=0
     if [ "$op" = "enable" ]; then
-        exec_command="iptables -t $table -A $chain $rule"
+        action="-A"
         [ "$exit_status" -eq 0 ] || exec_cond=1 # Execute if rule is currently not present
     else
-        exec_command="iptables -t $table -D $chain $rule"
+        action="-D"
         [ "$exit_status" -ne 0 ] || exec_cond=1 # Execute if rule is currently present
     fi
     if [ "$exec_cond" -eq 1 ]; then
-        eval "$exec_command"
+        iptables -t "$table" "$action" "$chain" "${rule[@]}"
     else
-        echo "$exec_command not requried, will not be executed"
+        echo "iptables rule change not required, will not be executed"
     fi
 }
 
@@ -86,13 +87,24 @@ general_validation(){
     fi
 }
 
+normalize_port(){
+    local port=$1
+    if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+        echo "Provided port $port is not a decimal number" >&2
+        return 1
+    fi
+    port="${port#"${port%%[!0]*}"}"
+    port=${port:-0}
+    if [[ ${#port} -gt 5 ]] || (( 10#$port < 1024 || 10#$port > 65535 )); then
+        echo "Provided port $1 is outside the valid range 1024-65535" >&2
+        return 1
+    fi
+    printf '%s\n' "$port"
+}
+
 port_use_validation(){
 	local port_l=("$@")
 	for port in "${port_l[@]}"; do
-		if (( port >= 0 && port <= 1023 )); then
-			echo "Provided port $port in range 0-1023, Please execute with a different port"
-			exit 1
-		fi
 		if netstat -tuln | awk '{print $4}' | grep -q ":$port\$"; then
 			echo "Provided port $port is in use by another process, Please execute with a different port"
 			exit 1
@@ -128,7 +140,7 @@ inbound_validation(){
                 echo "${sorted_dpu_l[@]}"
             else
                 IFS=',' read -ra sel_dpu_names <<< "$arg_dpu_names"
-                validate_dpus ${sel_dpu_names[@]}
+                validate_dpus "${sel_dpu_names[@]}"
             fi
     fi
     #Port validation
@@ -140,7 +152,10 @@ inbound_validation(){
         usage
         exit 1
     fi
-    port_use_validation ${provided_ports[@]}
+    for index in "${!provided_ports[@]}"; do
+        provided_ports[index]=$(normalize_port "${provided_ports[index]}") || exit 1
+    done
+    port_use_validation "${provided_ports[@]}"
     for dpu in "${sel_dpu_names[@]}"; do
         midplane_int_name=$(redis-cli -n 4 hget "DPUS|$dpu" "midplane_interface")
         if [ -z "$midplane_int_name" ]; then
@@ -163,10 +178,10 @@ inbound_validation(){
 # Outbound Traffice forwarding control function
 ctrl_dpu_ob_forwarding(){
     local op=$1
-    control_forwarding $op
-    add_rem_valid_iptable $op nat POSTROUTING -o ${mgmt_iface}  -j MASQUERADE
-    add_rem_valid_iptable $op filter FORWARD -i ${mgmt_iface} -o ${midplane_iface} -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-    add_rem_valid_iptable $op filter FORWARD -i ${midplane_iface} -o ${mgmt_iface} -j ACCEPT
+    control_forwarding "$op"
+    add_rem_valid_iptable "$op" nat POSTROUTING -o "$mgmt_iface" -j MASQUERADE
+    add_rem_valid_iptable "$op" filter FORWARD -i "$mgmt_iface" -o "$midplane_iface" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+    add_rem_valid_iptable "$op" filter FORWARD -i "$midplane_iface" -o "$mgmt_iface" -j ACCEPT
     if [ "$op" = "enable" ]; then
         echo "Enabled DPU management outbound traffic Forwarding"
     else
@@ -177,15 +192,15 @@ ctrl_dpu_ob_forwarding(){
 ctrl_dpu_ib_forwarding(){
     local op=$1
     local dest_port=22
-    control_forwarding $op
-    add_rem_valid_iptable $op filter FORWARD -i ${midplane_iface} -o ${mgmt_iface} -p tcp -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-    add_rem_valid_iptable $op filter FORWARD -i ${mgmt_iface} -o ${midplane_iface} -p tcp --dport $dest_port -j ACCEPT
-    for index in ${!sel_dpu_names[@]}; do
+    control_forwarding "$op"
+    add_rem_valid_iptable "$op" filter FORWARD -i "$midplane_iface" -o "$mgmt_iface" -p tcp -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+    add_rem_valid_iptable "$op" filter FORWARD -i "$mgmt_iface" -o "$midplane_iface" -p tcp --dport "$dest_port" -j ACCEPT
+    for index in "${!sel_dpu_names[@]}"; do
         dpu_name="${sel_dpu_names[$index]}"
         dpu_midplane_ip="${midplane_ip_dict[$dpu_name]}"
         switch_port="${provided_ports[$index]}"
-        add_rem_valid_iptable $op nat POSTROUTING -p tcp -d $dpu_midplane_ip --dport $dest_port -j SNAT --to-source $midplane_gateway
-        add_rem_valid_iptable $op nat PREROUTING -i ${mgmt_iface}  -p tcp --dport $switch_port -j DNAT --to-destination $dpu_midplane_ip:$dest_port
+        add_rem_valid_iptable "$op" nat POSTROUTING -p tcp -d "$dpu_midplane_ip" --dport "$dest_port" -j SNAT --to-source "$midplane_gateway"
+        add_rem_valid_iptable "$op" nat PREROUTING -i "$mgmt_iface" -p tcp --dport "$switch_port" -j DNAT --to-destination "$dpu_midplane_ip:$dest_port"
     done
     if [ "$op" = "enable" ]; then
         echo "Enabled DPU management inbound traffic Forwarding"
@@ -251,7 +266,7 @@ case $1 in
                     fw_change="disable"
                 ;;
                 *)
-                    invalid_arg $1
+                    invalid_arg "$1"
                 ;;
             esac
         shift
@@ -272,14 +287,14 @@ case $1 in
                     fw_change="disable"
                 ;;
                 *)
-                    invalid_arg $1
+                    invalid_arg "$1"
                 ;;
             esac
         shift
         done
     ;;
     *)
-        invalid_arg $1
+        invalid_arg "$1"
     ;;
 esac
 
@@ -288,10 +303,10 @@ general_validation
 
 case $direction in
     outbound)
-        ctrl_dpu_ob_forwarding $operation
+        ctrl_dpu_ob_forwarding "$operation"
         ;;
     inbound)
         inbound_validation
-        ctrl_dpu_ib_forwarding $operation
+        ctrl_dpu_ib_forwarding "$operation"
         ;;
 esac
