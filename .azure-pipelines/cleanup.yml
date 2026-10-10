@@ -1,6 +1,10 @@
 steps:
 - script: |
     set -x
+    # Remove private signing material left by secure-boot builds.
+    sudo rm -f -- /etc/certificates/sonic-secure-boot-private.pem
+    sudo rmdir /etc/certificates 2>/dev/null || true
+
     # kill daemon process
     ps $(cat /tmp/azp_daemon_kill_docker_pid)
     sudo kill $(cat /tmp/azp_daemon_kill_docker_pid)
