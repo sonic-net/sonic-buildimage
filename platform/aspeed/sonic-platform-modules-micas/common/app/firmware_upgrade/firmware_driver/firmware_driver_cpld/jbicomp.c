@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: LicenseRef-scancode-jam-stapl */
+/* Jam STAPL Software License: see LICENSE.Jam-STAPL in this directory. */
+
 /****************************************************************************/
 /*                                                                          */
 /*  Module:         jbicomp.c                                               */

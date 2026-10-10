@@ -76,6 +76,10 @@ override_dh_auto_install:
 		pkg_suffix=$${mod}; \
 		if [ "$${mod}" = "M2-W6950-128OC" ]; then pkg_suffix=m2-w6950-128oc; fi; \
 		pkg_name=$(PACKAGE_PRE_NAME)-$${pkg_suffix}; \
+		if [ "$${mod}" = "common" ]; then \
+			install -D -m 0644 $(FIRMWARE_DRIVER_DIR)/firmware_driver_cpld/LICENSE.Jam-STAPL \
+				debian/$${pkg_name}/usr/share/doc/$${pkg_name}/LICENSE.Jam-STAPL; \
+		fi; \
 		dh_installdirs -p$${pkg_name} /lib/systemd/system; \
 		dh_installdirs -p$${pkg_name} /usr/local/bin; \
 		dh_installdirs -p$${pkg_name} etc/modules-load.d; \

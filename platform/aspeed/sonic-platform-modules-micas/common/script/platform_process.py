@@ -42,7 +42,7 @@ module_to_script = {
     "set_eth_mac": "set_eth_mac.py",
     "sff_temp_polling": "sff_temp_polling.py",
     "amd_ras": "amd_ras",
-    "apml_dimm_temp": "apml_dimm_temp",
+#    "apml_dimm_temp": "apml_dimm_temp",
     "platform_logic_monitor": "platform_logic_monitor.py",
     "event_notify": "event_notify.py",
     "bmc_pcie_dev_init": "bmc_pcie_dev_init.py",

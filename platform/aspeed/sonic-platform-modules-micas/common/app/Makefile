@@ -1,4 +1,4 @@
-SUBDIRS = apml app_demo dfd_debug firmware_upgrade
+SUBDIRS = app_demo dfd_debug firmware_upgrade
 
 all:
 	@for dir in $(SUBDIRS); do \
