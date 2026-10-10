@@ -784,6 +784,9 @@ static void dfd_ko_cfg_set_info_ctrl_mem_value(info_ctrl_t *info_ctrl, info_ctrl
         strscpy(info_ctrl->str_cons, buf_val, sizeof(info_ctrl->str_cons));
 #endif
         break;
+    case INFO_CTRL_VAL_TYPE:
+        info_ctrl->val_type = dfd_ko_cfg_get_enum_value_by_str(g_info_val_type_str, INFO_VAL_TYPE_END, buf_val);
+        break;
     case INFO_CTRL_MEM_INT_EXTRA1:
         dfd_ko_cfg_get_value_from_char(buf_val, &(info_ctrl->int_extra1), line_num);
         break;

@@ -13,10 +13,9 @@
 #include <linux/pmbus.h>
 #include <linux/init.h>
 #include <linux/delay.h>
-#include <linux/string.h>
-#include <linux/version.h>
-#include "wb_pmbus.h"
+#include "pmbus.h"
 #include "wb_vr_common.h"
+#include <wb_bsp_kernel_debug.h>
 
 #define PROXY_NAME "wb-vr-common"
 #define PMBUS_RETRY_SLEEP_TIME   (10000)   /* 10ms */
@@ -58,7 +57,7 @@ static int of_vr_common_config_init(struct platform_device *pdev, wb_vr_common_t
 
 static int vr_common_config_init(struct platform_device *pdev, wb_vr_common_t *wb_vr_common_dev)
 {
-    wb_vr_common_t *wb_vr_common_device;
+    wb_vr_common_device_t *wb_vr_common_device;
 
     if (pdev->dev.platform_data == NULL) {
         dev_err(&pdev->dev, "Failed to get platform data config.\n");
@@ -108,12 +107,23 @@ static int vr_common_probe(struct platform_device *pdev)
     }
     wb_vr_common_dev->adap = adapter;
 
-	client = i2c_new_dummy_device(adapter, wb_vr_common_dev->i2c_addr);
-	if (IS_ERR(client)) {
+    client = i2c_new_dummy_device(adapter, wb_vr_common_dev->i2c_addr);
+    if (IS_ERR(client)) {
         dev_err(&pdev->dev, "%s: new dummy i2c device failed\n", __func__);
         ret = PTR_ERR(client);
         goto put_adapter;
-	}
+    }
+
+    for(i = 0; i < PMBUS_RETRY_TIME; i++) {
+        ret = i2c_smbus_write_byte_data(client, PMBUS_PAGE, 0);
+        if (ret >= 0) {
+            break;
+        }
+        usleep_range(PMBUS_RETRY_SLEEP_TIME, PMBUS_RETRY_SLEEP_TIME + 1);
+    }
+    if (ret < 0) {
+        dev_info(&pdev->dev, "PMBus set page 0 failed!\n");
+    }
 
     /* Enable PEC if the controller supports it */
     for(i = 0; i < PMBUS_RETRY_TIME; i++) {
@@ -123,11 +133,12 @@ static int vr_common_probe(struct platform_device *pdev)
         }
         usleep_range(PMBUS_RETRY_SLEEP_TIME, PMBUS_RETRY_SLEEP_TIME + 1);
     }
-    if (ret >= 0 && (ret & PB_CAPABILITY_ERROR_CHECK)){
-        client->flags |= I2C_CLIENT_PEC;
-    }
+    // if (ret >= 0 && (ret & PB_CAPABILITY_ERROR_CHECK)){
+    //     client->flags |= I2C_CLIENT_PEC;
+    // }
 
     for(i = 0; i < PMBUS_RETRY_TIME; i++) {
+        mem_clear(buf, sizeof(buf));
         len = i2c_smbus_read_block_data(client, PMBUS_IC_DEVICE_ID, buf);
         if (len >= 0) {
             break;
@@ -184,10 +195,10 @@ put_adapter:
     return ret;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
-static int vr_common_remove(struct platform_device *pdev)
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
 static void vr_common_remove(struct platform_device *pdev)
+#else
+static int vr_common_remove(struct platform_device *pdev)
 #endif
 {
     wb_vr_common_t *wb_vr_common_dev;
@@ -197,10 +208,8 @@ static void vr_common_remove(struct platform_device *pdev)
     wb_vr_common_dev = platform_get_drvdata(pdev);
     if (wb_vr_common_dev == NULL) {
         dev_warn(&pdev->dev, "wb_vr_common_dev is NULL, exit\n");
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
         return 0;
-#else
-        return;
 #endif
     }
 
@@ -214,7 +223,7 @@ static void vr_common_remove(struct platform_device *pdev)
         goto exit;
     }
     if (adap != wb_vr_common_dev->adap) {
-        dev_warn(&pdev->dev, "i2c adapter-%d address changed, origin addr: %p, new addr: %p, skip to unregister i2c client: %d-%04x\n",
+        dev_warn(&pdev->dev, "i2c adapter-%d address changed, origin addr: %pK, new addr: %pK, skip to unregister i2c client: %d-%04x\n",
             i2c_bus, wb_vr_common_dev->adap, adap, i2c_bus, i2c_addr);
         goto exit_i2c_put;
     }
@@ -228,13 +237,16 @@ static void vr_common_remove(struct platform_device *pdev)
             dev_warn(&pdev->dev, "i2c client: %d-%04x already unregister\n", i2c_bus,i2c_addr);
         }
         wb_vr_common_dev->client = NULL;
+    } else {
+        dev_warn(&pdev->dev, "i2c client: %d-%04x is NULL\n", i2c_bus,i2c_addr);
     }
 exit_i2c_put:
     i2c_put_adapter(adap);
 exit:
     wb_vr_common_dev->adap = NULL;
     platform_set_drvdata(pdev, NULL);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
     return 0;
 #endif
 }
