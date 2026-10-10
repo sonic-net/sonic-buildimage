@@ -1,0 +1,449 @@
+From: Guillaume Valadon <guillaume.valadon@gitguardian.com>
+Subject: [PATCH] Remove unsafe session persistence
+
+Backport Scapy's removal of interactive session persistence from
+13621d1145b3435e9d03caf20997107a84435c0b. Python pickle data can invoke
+attacker-controlled callables during deserialization, so Scapy must not
+load an operator-selected session file.
+
+The backport also removes stale session examples and adds regression
+coverage that verifies all persistence APIs are absent and CLI -s is
+rejected before the requested file is opened.
+
+diff --git a/doc/scapy.1 b/doc/scapy.1
+index 395871a8..14482d19 100644
+--- a/doc/scapy.1
++++ b/doc/scapy.1
+@@ -15,12 +15,9 @@ packet generator, network scanner, network discovery, packet sniffer,
+ etc. It can for the moment replace hping, parts of nmap, arpspoof, arp-sk,
+ arping, tcpdump, tshark, p0f, ...
+ .PP
+-\fBScapy\fP uses the Python interpreter as a command board. That means that 
+-you can use directly Python language (assign variables, use loops, 
+-define functions, etc.) If you give a file a parameter when you run 
+-\fBScapy\fP, your session (variables, functions, instances, ...) will be saved 
+-when you leave the interpreter and restored the next time you launch
+-\fBScapy\fP. 
++\fBScapy\fP uses the Python interpreter as a command board. That means that
++you can use directly Python language (assign variables, use loops,
++define functions, etc.)
+ .PP
+ The idea is simple. Those kinds of tools do two things : sending packets 
+ and receiving answers. That's what \fBScapy\fP does : you define a set of 
+@@ -48,9 +45,6 @@ header-less mode, also reduces verbosity.
+ \fB\-d\fR
+ increase log verbosity. Can be used many times.
+ .TP
+-\fB\-s\fR FILE
+-use FILE to save/load session values (variables, functions, instances, ...) 
+-.TP
+ \fB\-p\fR PRESTART_FILE 
+ use PRESTART_FILE instead of $HOME/.config/scapy/prestart.py as pre-startup file
+ .TP
+diff --git a/doc/scapy/introduction.rst b/doc/scapy/introduction.rst
+index ab8b97cf..2abd6bb7 100644
+--- a/doc/scapy/introduction.rst
++++ b/doc/scapy/introduction.rst
+@@ -62,10 +62,9 @@ Interpreting results can help users that don't know what a port scan is, but it
+ Quick demo
+ ==========
+ 
+-First, we play a bit and create four IP packets at once. Let's see how it works. We first instantiate the IP class. Then, we instantiate it again and we provide a destination that is worth four IP addresses (/30 gives the netmask). Using a Python idiom, we develop this implicit packet in a set of explicit packets. Then, we quit the interpreter. As we provided a session file, the variables we were working on are saved, then reloaded::
++First, we play a bit and create four IP packets at once. Let's see how it works. We first instantiate the IP class. Then, we instantiate it again and we provide a destination that is worth four IP addresses (/30 gives the netmask). Using a Python idiom, we develop this implicit packet in a set of explicit packets. Then, we quit the interpreter::
+ 
+-    # ./run_scapy -s mysession
+-    New session [mysession]
++    # ./run_scapy
+     Welcome to Scapy (2.4.0)
+     >>> IP()
+     <IP |>
+@@ -78,14 +77,6 @@ First, we play a bit and create four IP packets at once. Let's see how it works.
+      <IP dst=207.171.175.30 |>, <IP dst=207.171.175.31 |>]
+     >>> ^D
+ 
+-::
+-
+-    # ./run_scapy -s mysession
+-    Using session [mysession]
+-    Welcome to Scapy (2.4.0)
+-    >>> ip
+-    <IP dst=<Net www.target.com/30> |>
+-
+ Now, let's manipulate some packets::
+ 
+     >>> IP()
+@@ -131,4 +122,3 @@ Learning Python
+ Scapy uses the Python interpreter as a command board. That means that you can directly use the Python language (assign variables, use loops, define functions, etc.)
+ 
+ If you are new to Python and you really don't understand a word because of that, or if you want to learn this language, take an hour to read the very good `Python tutorial <http://docs.python.org/tutorial/>`_  by Guido Van Rossum. After that, you'll know Python :) (really!). For a more in-depth tutorial `Dive Into Python <http://getpython3.com/diveintopython3/index.html>`_ is a very good start too.
+-
+diff --git a/doc/scapy/usage.rst b/doc/scapy/usage.rst
+index 93752c92..2c90d62e 100644
+--- a/doc/scapy/usage.rst
++++ b/doc/scapy/usage.rst
+@@ -984,24 +984,6 @@ We can reimport the produced binary string by selecting the appropriate first la
+     \x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e
+     \x1f !"#$%&\'()*+,-./01234567' |>>>>
+ 
+-Sessions
+-^^^^^^^^
+-
+-At last Scapy is capable of saving all session variables using the ``save_session()`` function:
+-
+->>> dir()
+-['__builtins__', 'conf', 'new_pkt', 'pkt', 'pkt_export', 'pkt_hex', 'pkt_raw', 'pkts']
+->>> save_session("session.scapy")
+-
+-Next time you start Scapy you can load the previous saved session using the ``load_session()`` command::
+-
+-    >>> dir()
+-    ['__builtins__', 'conf']
+-    >>> load_session("session.scapy")
+-    >>> dir()
+-    ['__builtins__', 'conf', 'new_pkt', 'pkt', 'pkt_export', 'pkt_hex', 'pkt_raw', 'pkts']
+-
+-
+ Making tables
+ -------------
+ 
+@@ -1912,4 +1894,3 @@ For example to guess OS from a single captured packet:
+     <Sniffed: TCP:339 UDP:2 ICMP:0 Other:156>
+ 
+ 
+-
+diff --git a/scapy/main.py b/scapy/main.py
+index c5ad0c74..cbed3750 100644
+--- a/scapy/main.py
++++ b/scapy/main.py
+@@ -14,14 +14,11 @@ import sys
+ import os
+ import getopt
+ import code
+-import gzip
+ import glob
+ import importlib
+ import io
+ from itertools import zip_longest
+ import logging
+-import pickle
+-import types
+ import warnings
+ from random import choice
+ 
+@@ -230,7 +227,7 @@ conf.color_theme = DefaultTheme()
+ def _usage():
+     # type: () -> None
+     print(
+-        "Usage: scapy.py [-s sessionfile] [-c new_startup_file] "
++        "Usage: scapy.py [-c new_startup_file] "
+         "[-p new_prestart_file] [-C] [-P] [-H]\n"
+         "Args:\n"
+         "\t-H: header-less start\n"
+@@ -439,116 +436,8 @@ def _scapy_exts():
+     return res
+ 
+ 
+-def save_session(fname="", session=None, pickleProto=-1):
+-    # type: (str, Optional[Dict[str, Any]], int) -> None
+-    """Save current Scapy session to the file specified in the fname arg.
+-
+-    params:
+-     - fname: file to save the scapy session in
+-     - session: scapy session to use. If None, the console one will be used
+-     - pickleProto: pickle proto version (default: -1 = latest)"""
+-    from scapy import utils
+-    from scapy.config import conf, ConfClass
+-    if not fname:
+-        fname = conf.session
+-        if not fname:
+-            conf.session = fname = utils.get_temp_file(keep=True)
+-    log_interactive.info("Saving session into [%s]", fname)
+-
+-    if not session:
+-        if conf.interactive_shell in ["ipython", "ptipython"]:
+-            from IPython import get_ipython
+-            session = get_ipython().user_ns
+-        else:
+-            session = builtins.__dict__["scapy_session"]
+-
+-    if not session:
+-        log_interactive.error("No session found ?!")
+-        return
+-
+-    ignore = session.get("_scpybuiltins", [])
+-    hard_ignore = ["scapy_session", "In", "Out", "open"]
+-    to_be_saved = session.copy()
+-
+-    for k in list(to_be_saved):
+-        i = to_be_saved[k]
+-        if k[0] == "_":
+-            del to_be_saved[k]
+-        elif hasattr(i, "__module__") and i.__module__.startswith("IPython"):
+-            del to_be_saved[k]
+-        elif isinstance(i, ConfClass):
+-            del to_be_saved[k]
+-        elif k in ignore or k in hard_ignore:
+-            del to_be_saved[k]
+-        elif isinstance(i, (type, types.ModuleType, types.FunctionType)):
+-            if k[0] != "_":
+-                log_interactive.warning("[%s] (%s) can't be saved.", k, type(i))
+-            del to_be_saved[k]
+-        else:
+-            try:
+-                pickle.dumps(i)
+-            except Exception:
+-                log_interactive.warning("[%s] (%s) can't be saved.", k, type(i))
+-
+-    try:
+-        os.rename(fname, fname + ".bak")
+-    except OSError:
+-        pass
+-
+-    f = gzip.open(fname, "wb")
+-    pickle.dump(to_be_saved, f, pickleProto)
+-    f.close()
+-
+-
+-def load_session(fname=None):
+-    # type: (Optional[Union[str, None]]) -> None
+-    """Load current Scapy session from the file specified in the fname arg.
+-    This will erase any existing session.
+-
+-    params:
+-     - fname: file to load the scapy session from"""
+-    from scapy.config import conf
+-    if fname is None:
+-        fname = conf.session
+-    try:
+-        s = pickle.load(gzip.open(fname, "rb"))
+-    except IOError:
+-        try:
+-            s = pickle.load(open(fname, "rb"))
+-        except IOError:
+-            # Raise "No such file exception"
+-            raise
+-
+-    scapy_session = builtins.__dict__["scapy_session"]
+-    s.update({k: scapy_session[k] for k in scapy_session["_scpybuiltins"]})
+-    scapy_session.clear()
+-    scapy_session.update(s)
+-    update_ipython_session(scapy_session)
+-
+-    log_loading.info("Loaded session [%s]", fname)
+-
+-
+-def update_session(fname=None):
+-    # type: (Optional[Union[str, None]]) -> None
+-    """Update current Scapy session from the file specified in the fname arg.
+-
+-    params:
+-     - fname: file to load the scapy session from"""
+-    from scapy.config import conf
+-    if fname is None:
+-        fname = conf.session
+-    try:
+-        s = pickle.load(gzip.open(fname, "rb"))
+-    except IOError:
+-        s = pickle.load(open(fname, "rb"))
+-    scapy_session = builtins.__dict__["scapy_session"]
+-    scapy_session.update(s)
+-    update_ipython_session(scapy_session)
+-
+-
+ @overload
+-def init_session(session_name,  # type: Optional[Union[str, None]]
+-                 mydict,  # type: Optional[Union[Dict[str, Any], None]]
++def init_session(mydict,  # type: Optional[Union[Dict[str, Any], None]]
+                  ret,  # type: Literal[True]
+                  ):
+     # type: (...) -> Dict[str, Any]
+@@ -556,21 +445,18 @@ def init_session(session_name,  # type: Optional[Union[str, None]]
+ 
+ 
+ @overload
+-def init_session(session_name,  # type: Optional[Union[str, None]]
+-                 mydict=None,  # type: Optional[Union[Dict[str, Any], None]]
++def init_session(mydict=None,  # type: Optional[Union[Dict[str, Any], None]]
+                  ret=False,  # type: Literal[False]
+                  ):
+     # type: (...) -> None
+     pass
+ 
+ 
+-def init_session(session_name,  # type: Optional[Union[str, None]]
+-                 mydict=None,  # type: Optional[Union[Dict[str, Any], None]]
++def init_session(mydict=None,  # type: Optional[Union[Dict[str, Any], None]]
+                  ret=False,  # type: bool
+                  ):
+     # type: (...) -> Union[Dict[str, Any], None]
+     from scapy.config import conf
+-    SESSION = {}  # type: Optional[Dict[str, Any]]
+ 
+     # Load Scapy
+     scapy_builtins = _scapy_builtins()
+@@ -578,39 +464,7 @@ def init_session(session_name,  # type: Optional[Union[str, None]]
+     # Load exts
+     scapy_builtins.update(_scapy_exts())
+ 
+-    if session_name:
+-        try:
+-            os.stat(session_name)
+-        except OSError:
+-            log_loading.info("New session [%s]", session_name)
+-        else:
+-            try:
+-                try:
+-                    SESSION = pickle.load(gzip.open(session_name, "rb"))
+-                except IOError:
+-                    SESSION = pickle.load(open(session_name, "rb"))
+-                log_loading.info("Using existing session [%s]", session_name)
+-            except ValueError:
+-                msg = "Error opening Python3 pickled session on Python2 [%s]"
+-                log_loading.error(msg, session_name)
+-            except EOFError:
+-                log_loading.error("Error opening session [%s]", session_name)
+-            except AttributeError:
+-                log_loading.error("Error opening session [%s]. "
+-                                  "Attribute missing", session_name)
+-
+-        if SESSION:
+-            if "conf" in SESSION:
+-                conf.configure(SESSION["conf"])
+-                conf.session = session_name
+-                SESSION["conf"] = conf
+-            else:
+-                conf.session = session_name
+-        else:
+-            conf.session = session_name
+-            SESSION = {"conf": conf}
+-    else:
+-        SESSION = {"conf": conf}
++    SESSION = {"conf": conf}  # type: Dict[str, Any]
+ 
+     SESSION.update(scapy_builtins)
+     SESSION["_scpybuiltins"] = scapy_builtins.keys()
+@@ -751,13 +605,11 @@ def interact(mydict=None, argv=None, mybanner=None, loglevel=logging.INFO):
+     STARTUP_FILE = DEFAULT_STARTUP_FILE
+     PRESTART_FILE = DEFAULT_PRESTART_FILE
+ 
+-    session_name = None
+-
+     if argv is None:
+         argv = sys.argv
+ 
+     try:
+-        opts = getopt.getopt(argv[1:], "hs:Cc:Pp:d:H")
++        opts = getopt.getopt(argv[1:], "hCc:Pp:d:H")
+         for opt, param in opts[0]:
+             if opt == "-h":
+                 _usage()
+@@ -765,8 +617,6 @@ def interact(mydict=None, argv=None, mybanner=None, loglevel=logging.INFO):
+                 conf.fancy_banner = False
+                 conf.verb = 1
+                 conf.logLevel = logging.WARNING
+-            elif opt == "-s":
+-                session_name = param
+             elif opt == "-c":
+                 STARTUP_FILE = param
+             elif opt == "-C":
+@@ -798,7 +648,7 @@ def interact(mydict=None, argv=None, mybanner=None, loglevel=logging.INFO):
+             default=DEFAULT_PRESTART,
+         )
+ 
+-    SESSION = init_session(session_name, mydict=mydict, ret=True)
++    SESSION = init_session(mydict=mydict, ret=True)
+ 
+     if STARTUP_FILE:
+         _read_config_file(
+@@ -1018,9 +868,5 @@ def interact(mydict=None, argv=None, mybanner=None, loglevel=logging.INFO):
+     else:
+         raise ValueError("Invalid conf.interactive_shell")
+ 
+-    if conf.session:
+-        save_session(conf.session, SESSION)
+-
+-
+ if __name__ == "__main__":
+     interact()
+diff --git a/test/regression.uts b/test/regression.uts
+index b21a390d..a8f153ae 100644
+--- a/test/regression.uts
++++ b/test/regression.uts
+@@ -622,53 +622,16 @@ try:
+ except SystemExit:
+     assert True
+ 
+-= Session test
+-
+-import builtins
+-
+-# This is automatic when using the console
+-def get_var(var):
+-    return builtins.__dict__["scapy_session"][var]
+-
+-def set_var(var, value):
+-    builtins.__dict__["scapy_session"][var] = value
+-
+-def del_var(var):
+-    del builtins.__dict__["scapy_session"][var]
+-
+-init_session(None, {"init_value": 123})
+-set_var("test_value", "8.8.8.8") # test_value = "8.8.8.8"
+-save_session()
+-del_var("test_value")
+-load_session()
+-update_session()
+-assert get_var("test_value") == "8.8.8.8" #test_value == "8.8.8.8"
+-assert get_var("init_value") == 123
+- 
+-= Session test with fname
+-
+-session_name = tempfile.mktemp()
+-init_session(session_name)
+-set_var("test_value", IP(dst="192.168.0.1")) # test_value = IP(dst="192.168.0.1")
+-save_session(fname="%s.dat" % session_name)
+-del_var("test_value")
+-
+-set_var("z", True) #z = True
+-load_session(fname="%s.dat" % session_name)
+-try:
+-    get_var("z")
+-    assert False
+-except:
+-    pass
++= Unsafe persistence APIs are unavailable
+ 
+-set_var("z", False) #z = False
+-update_session(fname="%s.dat" % session_name)
+-assert get_var("test_value").dst == "192.168.0.1" #test_value.dst == "192.168.0.1"
+-assert not get_var("z")
++import scapy.main
++import scapy.utils
+ 
+-= Clear session files
++for removed_name in ["save_session", "load_session", "update_session"]:
++    assert not hasattr(scapy.main, removed_name)
+ 
+-os.remove("%s.dat" % session_name)
++for removed_name in ["export_object", "import_object", "save_object", "load_object"]:
++    assert not hasattr(scapy.utils, removed_name)
+ 
+ = Test temporary file creation
+ ~ ci_only
+@@ -722,6 +685,16 @@ def interact_emulator(code_int, extra_args=[]):
+ 
+ interact_emulator()  # Default
+ 
++with mock.patch("builtins.open") as open_mock, \
++        mock.patch("scapy.main.log_loading.error") as error_mock:
++    try:
++        interact(argv=["scapy", "-s", "untrusted.session"], mybanner="What a test")
++        assert False
++    except SystemExit as e:
++        assert e.code == 1
++    assert not open_mock.called
++    assert "option -s not recognized" in str(error_mock.call_args[0][0])
++
+ try:
+     interact_emulator(extra_args=["-?"])  # Failing
+     assert False
