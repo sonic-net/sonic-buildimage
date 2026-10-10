@@ -98,7 +98,7 @@ class TunnelPacketHandler(object):
             (list) Tuples of a portchannel interface name (str) and
                    associated IPv4 address (str)
         """
-        if self._portchannel_intfs is None:
+        if not self._portchannel_intfs:
             intf_keys = self.config_db.get_keys(PORTCHANNEL_INTERFACE_TABLE)
             portchannel_intfs = []
 
@@ -385,7 +385,9 @@ class TunnelPacketHandler(object):
             else:
                 lag, _, fvs = lag_table.pop()
                 if self.sniffer_restart_required(lag, fvs):
-                    self.sniffer.stop()
+                    if self.sniffer and getattr(self.sniffer, 'running', False):
+                        self.sniffer.stop()
+                    self.sniffer = None
                     start = datetime.now()
                     # wait up to 3 seconds for the kernel interface to be synced with APPL_DB status
                     while (datetime.now() - start).seconds < 3:
