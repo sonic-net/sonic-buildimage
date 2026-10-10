@@ -295,10 +295,11 @@ class BGPPeerMgrBase(Manager):
         if key_parts is None:
             return True
         vrf, nbr = key_parts
-        if not self.validate_peer_data(data, nbr):
+        peer_key = (vrf, nbr)
+        validate_name = peer_key not in self.peers
+        if not self.validate_peer_data(data, nbr if validate_name else None):
             log_err("Peer '%s': rejected invalid field value" % key)
             return True
-        peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             return self.add_peer(vrf, nbr, data)
         else:
@@ -354,9 +355,10 @@ class BGPPeerMgrBase(Manager):
                     netaddr.IPNetwork(data[field])
                 except (netaddr.AddrFormatError, TypeError, ValueError):
                     return False
-        if self.peer_type in ('dynamic', 'sentinels') and 'name' in data:
+        if (peer_name is not None and
+                self.peer_type in ('dynamic', 'sentinels') and 'name' in data):
             if (not is_bgp_identifier_valid(data['name']) or
-                    (peer_name is not None and data['name'] != peer_name)):
+                    data['name'] != peer_name):
                 return False
         return True
 
