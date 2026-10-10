@@ -208,14 +208,8 @@ gnupg-utils==2.4.7-21+deb13u1+b5
 gnupg2==2.4.7-21+deb13u1
 gobject-introspection==1.84.0-1
 gobject-introspection-bin==1.84.0-1
-golang==2:1.24~2
-golang-1.24==1.24.4-1
-golang-1.24-doc==1.24.4-1
-golang-1.24-go==1.24.4-1+fips
-golang-1.24-src==1.24.4-1+fips
-golang-doc==2:1.24~2
-golang-go==2:1.24~2
-golang-src==2:1.24~2
+golang-1.26-go==1.26.5-1~bpo13+1+fips
+golang-1.26-src==1.26.5-1~bpo13+1+fips
 googletest==1.16.0-1
 gpg==2.4.7-21+deb13u1+b5
 gpg-agent==2.4.7-21+deb13u1+b5
