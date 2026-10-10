@@ -115,7 +115,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.8.2-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.9.0-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -1004,7 +1004,8 @@ liblwp-mediatypes-perl==6.04-2
 liblwp-protocol-https-perl==6.14-1
 liblz1==1.15-3
 liblz4-dev==1.10.0-4
-liblzma-dev==5.8.1-1+deb13u1
+liblzma-dev==5.8.1-1+deb13u2
+liblzma5==5.8.1-1+deb13u2
 liblzo2-2==2.10-3+b1
 liblzo2-dev==2.10-3+b1
 libmagic-mgc==1:5.46-5
@@ -1179,7 +1180,6 @@ libpci3==1:3.13.0-2
 libpciaccess0==0.17-3+b3
 libpcre2-16-0==10.46-1~deb13u3
 libpcre2-32-0==10.46-1~deb13u3
-libpcre2-8-0==10.46-1~deb13u3
 libpcre2-dev==10.46-1~deb13u3
 libpcre2-posix3==10.46-1~deb13u3
 libpcsclite-dev==2.3.3-1
@@ -1386,7 +1386,6 @@ libssh-4==0.11.5-0+deb13u1
 libssh2-1-dev==1.11.1-1+deb13u2
 libssh2-1t64==1.11.1-1+deb13u2
 libssl-dev==3.5.7-1~deb13u3
-libssl3t64==3.5.7-1~deb13u3
 libstdc++-14-dev==14.2.0-19
 libstemmer0d==2.2.0-4+b2
 libstrictures-perl==2.000006-1
@@ -1762,7 +1761,6 @@ openssh-client==1:10.0p1-7+deb13u4
 openssh-server==1:10.0p1-7+deb13u4
 openssh-sftp-server==1:10.0p1-7+deb13u4
 openssl==3.5.7-1~deb13u3
-openssl-provider-legacy==3.5.7-1~deb13u3
 ovmf==2025.02-8+deb13u1
 pahole==1.30-1
 pandoc==3.1.11.1+ds-2
@@ -2174,7 +2172,7 @@ xsltproc==1.1.35-1.2+deb13u3
 xtrans-dev==1.4.0-1
 xvfb==2:21.1.16-1.3+deb13u4
 xxd==2:9.1.1230-2
-xz-utils==5.8.1-1+deb13u1
+xz-utils==5.8.1-1+deb13u2
 zip==3.0-15+deb13u1
 zipcmp==1.11.3-2
 zipmerge==1.11.3-2
