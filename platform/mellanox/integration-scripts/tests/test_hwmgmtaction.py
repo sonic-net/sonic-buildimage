@@ -16,11 +16,13 @@
 # limitations under the License.
 #
 
+import os
 import sys
 import shutil
+import tempfile
 from unittest import mock, TestCase
 from pyfakefs.fake_filesystem_unittest import Patcher
-sys.path.append('../')
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from hwmgmt_helper import *
 from hwmgmt_kernel_patches import *
 
@@ -76,9 +78,12 @@ Integrate HW-MGMT 7.0030.0937 Changes
 
 """
 
+# Repo root: the checkout this file lives in (mounted at /sonic inside the sonic-slave container).
+BUILD_ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))
 REL_INPUTS_DIR = "platform/mellanox/integration-scripts/tests/data/"
-MOCK_INPUTS_DIR = "/sonic/" + REL_INPUTS_DIR
-MOCK_WRITE_FILE = MOCK_INPUTS_DIR + "test_writer_file.out"
+MOCK_INPUTS_DIR = BUILD_ROOT + "/" + REL_INPUTS_DIR
+# scratch file for the write_lines mock; keep it out of the checkout
+MOCK_WRITE_FILE = os.path.join(tempfile.gettempdir(), "hwmgmt_test_writer_file.out")
 MOCK_KCFG_DIR = MOCK_INPUTS_DIR + "/kconfig"
 
 def write_lines_mock(path, lines, raw=False):
@@ -108,7 +113,7 @@ def mock_hwmgmt_args():
                                 "--hw_mgmt_ver", "7.0030.0937",
                                 "--sb_msg", "/tmp/sb_msg.log",
                                 "--slk_msg", "/tmp/slk_msg.log",
-                                "--build_root", "/sonic",
+                                "--build_root", BUILD_ROOT,
                                 "--is_test"]):
         parser = create_parser()
         return parser.parse_args()
@@ -130,6 +135,13 @@ def check_file_content(path):
 @mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', REL_INPUTS_DIR+"aspeed_kconfig")
 class TestHwMgmtPostAction(TestCase):
     def setUp(self):
+        # the class decorators wrap test methods only; read_data() below runs outside them and the
+        # module under test binds SLK_* by star import, so patch what it reads for setUp as well
+        for name, value in (("hwmgmt_kernel_patches.SLK_SERIES", REL_INPUTS_DIR + "series"),
+                            ("hwmgmt_kernel_patches.SLK_PATCH_LOC", REL_INPUTS_DIR)):
+            patcher = mock.patch(name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.action = HwMgmtAction.get(mock_hwmgmt_args())
         self.action.read_data()
         self.kcfgaction = KConfigTask(mock_hwmgmt_args())
@@ -180,7 +192,7 @@ class TestHwMgmtPostAction(TestCase):
 
     def test_commit_msg(self):
         self.action.find_mlnx_hw_mgmt_markers()
-        root_dir = "/sonic/" + PATCH_TABLE_LOC + PATCHWORK_LOC.format("5.10")
+        root_dir = BUILD_ROOT + "/" + PATCH_TABLE_LOC + PATCHWORK_LOC.format("5.10")
         content = "patchwork_link: https://patchwork.ozlabs.org/project/linux-i2c/patch/20230215195322.21955-1-vadimp@nvidia.com/\n"
         file = "0188-i2c-mux-Add-register-map-based-mux-driver.patch.txt"
         table = load_patch_table(MOCK_INPUTS_DIR, "5.10")
@@ -291,7 +303,7 @@ def mock_aspeed_args():
                                 "--hw_mgmt_ver", "sonic-bmc-01",
                                 "--sb_msg", "/tmp/sb_msg.log",
                                 "--slk_msg", "/tmp/slk_msg.log",
-                                "--build_root", "/sonic",
+                                "--build_root", BUILD_ROOT,
                                 "--is_test"]):
         parser = create_parser()
         return parser.parse_args()
@@ -316,7 +328,7 @@ def mock_aspeed_only_args():
                                 "--hw_mgmt_ver", "sonic-bmc-01",
                                 "--sb_msg", "/tmp/sb_msg.log",
                                 "--slk_msg", "/tmp/slk_msg.log",
-                                "--build_root", "/sonic",
+                                "--build_root", BUILD_ROOT,
                                 "--is_test"]):
         parser = create_parser()
         return parser.parse_args()
@@ -401,7 +413,7 @@ class TestAspeedKConfig(TestCase):
             KCFGData.aspeed_base, KCFGData.aspeed_updated
         )
         with Patcher() as patcher:
-            aspeed_path = os.path.join("/sonic", SLK_KCONFIG_ASPEED)
+            aspeed_path = os.path.join(BUILD_ROOT, SLK_KCONFIG_ASPEED)
             patcher.fs.create_file(aspeed_path, contents="CONFIG_ARCH_ASPEED=y\n")
             with mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', SLK_KCONFIG_ASPEED):
                 with self.assertRaises(SystemExit):
@@ -429,7 +441,7 @@ class TestAspeedKConfig(TestCase):
         KCFGData.aspeed_incl = OrderedDict()
         KCFGData.aspeed_excl = OrderedDict()
         with Patcher() as patcher:
-            aspeed_path = os.path.join("/sonic", SLK_KCONFIG_ASPEED)
+            aspeed_path = os.path.join(BUILD_ROOT, SLK_KCONFIG_ASPEED)
             patcher.fs.create_file(aspeed_path, contents="CONFIG_ARCH_ASPEED=y\n")
             with mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', SLK_KCONFIG_ASPEED):
                 result = self.kcfgaction.get_aspeed_kconfig()

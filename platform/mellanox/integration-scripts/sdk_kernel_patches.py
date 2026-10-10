@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,10 +152,9 @@ class SDKAction(Action):
 
     def refresh_markers(self):
         print("-> INFO Refreshing Markers ")
-        (Data.i_sdk_start, Data.i_sdk_end) = FileHandler.find_marker_indices(Data.old_series, SDK_MARKER)
-        if Data.i_sdk_start < 0 or Data.i_sdk_end > len(Data.old_series):
-            print("-> FATAL mellanox_sdk marker not found. Couldn't continue.. exiting")
-            sys.exit(1)
+        # a missing end marker is reported as len(lines), which the old `> len()` guard never caught:
+        # the block then swallowed the rest of the series
+        (Data.i_sdk_start, Data.i_sdk_end) = FileHandler.find_marker_indices_checked(Data.old_series, SDK_MARKER, SLK_SERIES)
         print("-> INFO mellanox_sdk markers found. start: {}, end: {}".format(Data.i_sdk_start, Data.i_sdk_end))
 
     def fetch_patch_table(self, root_dir):
