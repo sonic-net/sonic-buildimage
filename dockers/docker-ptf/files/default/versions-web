@@ -1,3 +1,4 @@
+http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.debian.tar.xz==3f8c497b000b1ec30fb66f107f61107a
 http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.dsc==346672dc8c2fc303a133051205deedc7
 http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2.orig.tar.xz==3bb7e265e14eb5cb817e9608bb7a6baf
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-9.debian.tar.xz==a6038bad9d248deacd85c81a67e85217
@@ -9,11 +10,11 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3-2.debian.tar.xz==c4f4c43714cf0d226c605a9cfaba3d0b
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3-2.dsc==edb9e0d93d51d322676e230db212c9cb
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3.orig.tar.gz==f7cff5c6a848e34c474d35b72c017a7f
-https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==8db44b6c7453ceb9582c2c9f8f7b3abf
+https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==fb7e8baa90c8ea9e8e3c3a5190a0171b
 https://api.github.com/repos/influxdata/influxdb/releases/latest==02d3003449fa3871da56850a58528d38
-https://api.github.com/repos/nanomsg/nanomsg/releases/latest==bafd3ad923b429162a4fbbbcee30f78d
-https://api.github.com/repos/osrg/gobgp/releases/latest==39563d435dce41de735eef6897b94ac9
-https://api.github.com/repos/sflow/sflowtool/releases/latest==fec66c54551a440507788b58a918cae4
+https://api.github.com/repos/nanomsg/nanomsg/releases/latest==6e3be7094a1d2296f3b10893de16565b
+https://api.github.com/repos/osrg/gobgp/releases/latest==60e69e423847ca186a435759bbded1f0
+https://api.github.com/repos/sflow/sflowtool/releases/latest==4c42704655684893d738ffa11833d5fa
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.debian.tar.xz==a36598f37197fcad7228f22196dd7f2f
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.dsc==2d88ff65e3531c5dd0095cabac6ed27a
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz==b381405afd14e466e35d29a112480333
@@ -21,9 +22,9 @@ https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz.asc
 https://dl.influxdata.com/influxdb/releases/influxdb3-core-3.11.4_linux_amd64.tar.gz==d2d4c0b27231975dbbc83bb7cc03ec8e
 https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==bf259781802f31e42aa6a31a7f61c218
-https://github.com/nanomsg/nanomsg/archive/refs/tags/1.2.5.tar.gz==3dff579e167e78bdd316147055a361af
-https://go.dev/dl/?mode=json==48c756a95e025f8611fac6619b885c5e
-https://go.dev/dl/go1.27.1.linux-amd64.tar.gz==e5c9667c860c2202db75aeba9c3a21e8
+https://github.com/nanomsg/nanomsg/archive/refs/tags/1.3.0.tar.gz==4e80559a096c2683a8bacd7fab563e09
+https://go.dev/dl/?mode=json==69ce3d3d5fe0a0640b5e3abc867add59
+https://go.dev/dl/go1.27.2.linux-amd64.tar.gz==bed8c840bddfdc38964fc354151a616f
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7
 https://raw.githubusercontent.com/p4lang/ptf/main/ptf_nn/ptf_nn_agent.py==03bc36225077db7b05a8a42bd59b6a3d

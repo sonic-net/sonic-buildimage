@@ -1,3 +1,5 @@
+{#- I2C interrupts are not yet qualified; set to true to re-enable them. -#}
+{%- set I2C_IRQ_ENABLED = false -%}
 {
   "PLATFORM": {
     "num_psus": 2,
@@ -1297,7 +1299,7 @@
           "dev": "TMP464"
         }
       ],
-      "channel_irq": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}[
+      "channel_irq": {% if I2C_IRQ_ENABLED and CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}[
         {"msi_domain": 0, "hw_irq": 8},
         {"msi_domain": 0, "hw_irq": 9},
         {"msi_domain": 0, "hw_irq": 10},
@@ -2997,7 +2999,7 @@
           "dev": "PORT32"
         }
       ],
-      "channel_irq": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1f %}[
+      "channel_irq": {% if I2C_IRQ_ENABLED and SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1f %}[
         {"msi_domain": 0, "hw_irq": 8},
         {"msi_domain": 0, "hw_irq": 9},
         {"msi_domain": 0, "hw_irq": 10},
