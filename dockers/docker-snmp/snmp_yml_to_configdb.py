@@ -15,6 +15,28 @@ SNMP_YML_PATH = '/etc/sonic/snmp.yml'
 
 FULL_SNMP_COMM_LIST = ['snmp_rocommunity', 'snmp_rocommunities', 'snmp_rwcommunity', 'snmp_rwcommunities']
 
+INSECURE_DEFAULT_COMMUNITIES = {'public', 'private'}
+
+
+def _canonicalize_for_netsnmp_comparison(community):
+    """Return the first community token as Net-SNMP parses it."""
+    if len(community) > 1 and community[0] in ('"', "'"):
+        quote = community[0]
+        closing_quote = community.find(quote, 1)
+        if closing_quote != -1:
+            community = community[1:closing_quote]
+        else:
+            community = community[1:]
+
+    return community.replace('\\', '')
+
+
+def _is_insecure_default(community):
+    if _canonicalize_for_netsnmp_comparison(community) in INSECURE_DEFAULT_COMMUNITIES:
+        logger.log_warning("Ignoring insecure default snmp.yml community '{}'".format(community))
+        return True
+    return False
+
 
 def load_snmp_yaml(path):
     """Read and parse the ZTP-provided snmp.yml file.
@@ -49,19 +71,19 @@ def apply_snmp_communities(db, yaml_snmp_info, snmp_config_db_communities):
 
         if comm_type.startswith('snmp_rocommunities'):
             for community in yaml_snmp_info[comm_type]:
-                if community not in snmp_config_db_communities:
+                if community not in snmp_config_db_communities and not _is_insecure_default(community):
                     db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RO"})
         elif comm_type.startswith('snmp_rocommunity'):
             community = yaml_snmp_info['snmp_rocommunity']
-            if community not in snmp_config_db_communities:
+            if community not in snmp_config_db_communities and not _is_insecure_default(community):
                 db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RO"})
         elif comm_type.startswith('snmp_rwcommunities'):
             for community in yaml_snmp_info[comm_type]:
-                if community not in snmp_config_db_communities:
+                if community not in snmp_config_db_communities and not _is_insecure_default(community):
                     db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RW"})
         elif comm_type.startswith('snmp_rwcommunity'):
             community = yaml_snmp_info['snmp_rwcommunity']
-            if community not in snmp_config_db_communities:
+            if community not in snmp_config_db_communities and not _is_insecure_default(community):
                 db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RW"})
 
 

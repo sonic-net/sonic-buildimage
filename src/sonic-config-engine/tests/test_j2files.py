@@ -931,6 +931,69 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                 for line in output.splitlines()
             ))
 
+    def test_snmpd_community_insecure_default_rendered_with_warning(self):
+        # ZTP's snmp.yml can never seed 'public'/'private' into ConfigDB
+        # (see snmp_yml_to_configdb.py), so a SNMP_COMMUNITY entry using one
+        # of those values can only have arrived via an explicit operator
+        # action (CLI or direct write). That deliberate choice is honored
+        # and rendered, but flagged with a warning comment for visibility.
+        communities = {
+            'public': {'TYPE': 'RO'},
+            'private': {'TYPE': 'RW'},
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity public\n', output)
+        self.assertIn('rocommunity6 public\n', output)
+        self.assertIn('rwcommunity private\n', output)
+        self.assertIn('rwcommunity6 private\n', output)
+        self.assertIn("# WARNING: community 'public' is a well-known default", output)
+        self.assertIn("# WARNING: community 'private' is a well-known default", output)
+
+    def test_snmpd_community_insecure_default_mixed_with_valid(self):
+        # A legitimate community configured alongside an explicit insecure
+        # default must still render normally, without a warning of its own.
+        communities = {
+            'public': {'TYPE': 'RO'},
+            'readcommunity': {'TYPE': 'RO'},
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity public\n', output)
+        self.assertIn('rocommunity readcommunity\n', output)
+        self.assertIn('rocommunity6 readcommunity\n', output)
+        self.assertIn("# WARNING: community 'public' is a well-known default", output)
+        self.assertNotIn("# WARNING: community 'readcommunity'", output)
+
+    def test_snmpd_community_insecure_default_case_variant_not_warned(self):
+        # SNMP community strings are case-sensitive on the wire; 'Public' is
+        # not the well-known default and must not be flagged.
+        communities = {'Public': {'TYPE': 'RO'}}
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity Public\n', output)
+        self.assertIn('rocommunity6 Public\n', output)
+        self.assertNotIn('# WARNING:', output)
+
+    def test_snmpd_community_embedded_quote_preserved_literally(self):
+        # A quote/backslash that is not the whole-token quoting delimiter
+        # has no special meaning to Net-SNMP's config tokenizer and is read
+        # back literally. The emitted value must be byte-for-byte identical
+        # to what was configured -- stripping it would silently activate a
+        # different credential than the one the operator configured.
+        communities = {'o"ps1': {'TYPE': 'RW'}, 'my"com\\munity': {'TYPE': 'RO'}}
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rwcommunity o"ps1\n', output)
+        self.assertIn('rwcommunity6 o"ps1\n', output)
+        self.assertIn('rocommunity my"com\\munity\n', output)
+        self.assertIn('rocommunity6 my"com\\munity\n', output)
+
+
     def test_snmpd_user_rendering(self):
         users = {
             'readuser': {
