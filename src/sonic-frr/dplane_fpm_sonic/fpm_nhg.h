@@ -293,6 +293,20 @@ void fpm_nhg_debug_resolved_route(struct fpm_nhg_tables *t, vrf_id_t vrf_id,
 uint32_t fpm_nhg_count(struct fpm_nhg_tables *t);
 
 /*
+ * NHGFIB-only extension message types and JSON payload attribute. Part of the
+ * wire contract the encoders below and their tests assert against; the types
+ * sit well beyond the kernel's RTM_ range.
+ */
+enum fpm_nhg_nlmsg_type {
+	RTM_NEWNHGFIB = 5000,
+	RTM_DELNHGFIB = 5001,
+};
+
+enum fpm_nhg_nlattr_type {
+	FPM_NHA_JSON_STR = 2,
+};
+
+/*
  * Encode raw NHGFIB netlink payloads for one derived dplane object. FPM frame
  * construction and its length limit remain the caller's responsibility.
  */
