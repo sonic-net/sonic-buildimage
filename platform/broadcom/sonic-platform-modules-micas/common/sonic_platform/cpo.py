@@ -28,6 +28,9 @@ try:
     from sonic_platform_base.sonic_xcvr.mem_maps.broadcom.bailly import BaillyMemMap
     from sonic_platform_base.sonic_xcvr.codes.broadcom.bailly import BaillyCodes
     from sonic_platform_base.sonic_xcvr.xcvr_eeprom import XcvrEeprom
+    from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoApiFactory, CpoBase, CpoHardwareInfo
+    from sonic_platform_base.sonic_xcvr.cpo.oe import OeBase
+    from sonic_platform_base.sonic_xcvr.cpo.elsfp import ElsfpBase
     from sonic_py_common import device_info
     from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
 
@@ -275,3 +278,168 @@ class CPO(CpoOptoeBase):
 
     def get_reset_status(self):
         return False
+
+
+# Bailly CPO hardware is selected by the Micas endpoint API factories below,
+# so the generic OE and ELSFP identifiers are not used.
+MICAS_CPO_HARDWARE_ID = CpoHardwareInfo(oe_id=None, elsfp_id=None)
+
+
+class BaillyOeApiFactory(CpoApiFactory):
+    def create_api(self):
+        device = self._device
+        mem_map = BaillyMemMap(BaillyCodes, bank=device.bank,
+                               base_page=device.port.get_els_base_page())
+        return BaillyApi(XcvrEeprom(device.read_eeprom, device.write_eeprom, mem_map))
+
+
+class BaillyElsfpApiFactory(CpoApiFactory):
+    def create_api(self):
+        # Imported here so that the platform still loads with a
+        # sonic-platform-common that predates the Bailly ELSFP API.
+        from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_elsfp import BaillyElsfpApi
+        from sonic_platform_base.sonic_xcvr.mem_maps.broadcom.bailly import BaillyElsfpMemMap
+
+        device = self._device
+        mem_map = BaillyElsfpMemMap(BaillyCodes, base_page=device.port.get_els_base_page())
+        return BaillyElsfpApi(XcvrEeprom(device.read_eeprom, device.write_eeprom, mem_map))
+
+
+class CpoEndpointMixin(object):
+    """
+    Access an OE or ELS endpoint through the EEPROM of the legacy CPO port
+    object. Bailly exposes both endpoints in the optical engine's EEPROM.
+    """
+
+    def __init__(self, port, bank=0):
+        self.port = port
+        super().__init__(MICAS_CPO_HARDWARE_ID, bank=bank)
+
+    def read_eeprom(self, offset, num_bytes):
+        return self.port.read_eeprom(offset, num_bytes)
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        return self.port.write_eeprom(offset, num_bytes, write_buffer)
+
+
+class MicasOe(CpoEndpointMixin, OeBase):
+    def _make_api_factory(self):
+        return BaillyOeApiFactory(self)
+
+    def get_name(self):
+        return "OE{}".format(self.port.get_oe_id())
+
+    def get_presence(self):
+        # The optical engine is not field replaceable.
+        return True
+
+    def is_replaceable(self):
+        return False
+
+
+class MicasElsfp(CpoEndpointMixin, ElsfpBase):
+    """
+    ELS endpoint of a Bailly CPO port. The ELS registers are the RLM pages
+    0xB0-0xB2 of the OE EEPROM, offset by the ELS base page. Accesses outside
+    those pages would reach the OE or the other ELS of the OE, so they are
+    rejected.
+    """
+
+    RLM_FIRST_PAGE = 0xB0
+    RLM_PAGE_COUNT = 3
+
+    def _make_api_factory(self):
+        return BaillyElsfpApiFactory(self)
+
+    def _rlm_address_range(self):
+        # CMIS upper page P (offsets 128-255) of bank 0 occupies linear
+        # offsets (P + 1) * 128 through (P + 2) * 128 - 1.
+        first_page = self.RLM_FIRST_PAGE + self.port.get_els_base_page()
+        return (first_page + 1) * 128, (first_page + 1 + self.RLM_PAGE_COUNT) * 128
+
+    def _in_rlm_pages(self, offset, num_bytes):
+        start, end = self._rlm_address_range()
+        return num_bytes > 0 and start <= offset and offset + num_bytes <= end
+
+    def read_eeprom(self, offset, num_bytes):
+        if not self._in_rlm_pages(offset, num_bytes):
+            return None
+        return super().read_eeprom(offset, num_bytes)
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        if not self._in_rlm_pages(offset, num_bytes):
+            return False
+        return super().write_eeprom(offset, num_bytes, write_buffer)
+
+    def get_name(self):
+        return "ELS{}".format(self.port.get_els_id())
+
+    def get_presence(self):
+        return self.port.get_els_presence()
+
+    def is_replaceable(self):
+        return True
+
+
+class MicasCpo(CpoBase):
+    """
+    CpoBase view of a legacy Micas CPO port object.
+
+    The virtual module of a port is its OE bank and the ELS that feeds it.
+    The OE is fixed, so the virtual module is present when its ELS is,
+    matching the presence reported by the legacy port object.
+
+    xcvrd calls the SfpBase transceiver methods (get_transceiver_info,
+    get_transceiver_threshold_info, get_lpmode, ...) on the objects that
+    get_cpo() returns. Methods not defined here or in CpoBase are served
+    by the legacy port object, as they were before get_cpo() existed.
+
+    Low-power mode and reset act on the virtual module through its OE, the
+    controller in joint mode; Tx-disable acts on the port's own OE bank.
+    They use the OE's CMIS controls through the legacy port object, as before.
+    """
+
+    def __init__(self, port):
+        self.port = port
+        super().__init__(MICAS_CPO_HARDWARE_ID,
+                         MicasOe(port, bank=int(port.get_oe_bank_id() % OE_BANK_NUM)),
+                         MicasElsfp(port))
+
+    def __getattr__(self, name):
+        port = self.__dict__.get("port")
+        if port is None or name.startswith("__"):
+            raise AttributeError(name)
+        return getattr(port, name)
+
+    def get_name(self):
+        return self.port.get_name()
+
+    def get_presence(self):
+        return bool(self.port.get_presence())
+
+    def get_position_in_parent(self):
+        return int(self.port._port_id)
+
+    def is_replaceable(self):
+        return False
+
+    # CpoBase leaves these hooks to the platform, so they are defined here
+    # rather than reaching the legacy port object through __getattr__.
+
+    def get_reset_status(self):
+        return self.port.get_reset_status()
+
+    def reset(self):
+        return self.port.reset()
+
+    def get_lpmode(self):
+        return self.port.get_lpmode()
+
+    def set_lpmode(self, lpmode):
+        return self.port.set_lpmode(lpmode)
+
+    def get_tx_disable(self):
+        return self.port.get_tx_disable()
+
+    def tx_disable(self, tx_disable):
+        return self.port.tx_disable(tx_disable)

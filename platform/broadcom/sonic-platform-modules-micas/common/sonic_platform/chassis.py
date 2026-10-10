@@ -21,7 +21,7 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform_base.sonic_xcvr.bailly_optoe_base import get_cpo_json_data
     from sonic_platform.sfp import Sfp
-    from sonic_platform.cpo import CPO
+    from sonic_platform.cpo import CPO, MicasCpo
     from sonic_platform.psu import Psu
     # from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
@@ -627,6 +627,39 @@ class Chassis(ChassisBase):
                 self._sfp_list.append(CPO(port_id, oe_id, oe_bank_id, els_id, els_bank_id))
             else: # None cpo port
                 self._sfp_list.append(Sfp(port_id))
+
+        self._micas_cpo_list = [
+            MicasCpo(port) if isinstance(port, CPO) else None
+            for port in self._sfp_list
+        ]
+
+    # The legacy CPO objects remain in _sfp_list, which xcvrd still uses
+    # through get_sfp() for every port. ChassisBase does not allow a port in
+    # both _sfp_list and _cpo_list, so the CpoBase objects for those ports
+    # are kept in _micas_cpo_list and returned by the CPO accessors below.
+
+    _micas_cpo_list = ()
+
+    def construct_cpo_devices(self, cpo_data):
+        """
+        Called by ChassisBase.__init__ on platforms with cpo.json. The CpoBase
+        objects wrap the legacy CPO port objects, so they are created by
+        _init_port_mappings() after those port objects.
+        """
+        self._micas_cpo_list = []
+
+    def get_num_cpos(self):
+        return len(self.get_all_cpos())
+
+    def get_all_cpos(self):
+        return [cpo for cpo in self._micas_cpo_list if cpo is not None]
+
+    def get_cpo(self, index):
+        """Return the CpoBase object for a CPO physical port, or None."""
+        try:
+            return self._micas_cpo_list[index]
+        except (IndexError, TypeError):
+            return None
 
     def get_watchdog(self):
         if self._watchdog is None:
