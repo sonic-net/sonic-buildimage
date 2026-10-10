@@ -1,0 +1,55 @@
+Use os.read() instead of BufferedReader for the exabgp process API
+
+ExaBGP's reactor reads helper-process output with
+proc.stdout.read(16384). proc.stdout is a BufferedReader whose internal
+buffer (io.DEFAULT_BUFFER_SIZE, 8192) can hold bytes that select.poll()
+cannot see, because poll() watches the kernel fd. When a partial read
+returns between 8193 and 16383 bytes, CPython fills the internal buffer
+and keeps the surplus there. On the next reactor cycle poll() reports no
+data and the process is skipped.
+
+Mid-batch this is harmless because later writes re-trigger poll(), but at
+the tail of a batch the writer has finished, nothing re-triggers poll()
+and the buffered commands are lost. The HTTP API still returns 200, so the
+loss is silent: a large "announce route ...;withdraw route ..." batch is
+only partially applied.
+
+os.read() reads the kernel fd directly and never consumes more than it
+returns, so poll() and the reader always agree.
+
+Upstream issue:  https://github.com/Exa-Networks/exabgp/issues/1421
+Upstream fix:    https://github.com/Exa-Networks/exabgp/pull/1422
+SONiC tracking:  https://github.com/sonic-net/sonic-mgmt/issues/28034
+
+The upstream fix was merged to the exabgp 5.0 branch on 2026-09-06, after
+the latest release (5.0.13, 2026-08-24). No released version carries it, so
+it is applied here as a patch.
+
+When bumping exabgp, note how the Dockerfile step behaves:
+
+  * If the new version already contains the fix, the step detects the
+    patched call, skips this patch and the build succeeds. Delete this file
+    and the step at that point.
+
+  * If the new version still has the defect, this patch will NOT apply and
+    the build fails on purpose. 5.0 spells the same line differently
+    (buf = str(proc.stdout.read(16384), 'ascii') instead of
+    buf = str_ascii(proc.stdout.read(16384))), so the patch has to be
+    refreshed against the new source rather than force-applied.
+
+  * Upstream has moved the active reader to received_async() on the
+    development branch, leaving the sync received() as dead code. If a
+    future version ships both, patching received() alone is not enough --
+    check which one the reactor actually drives before refreshing.
+
+--- a/exabgp/reactor/api/processes.py
++++ b/exabgp/reactor/api/processes.py
+@@ -232,7 +232,7 @@
+                     # Calling next() on Linux and OSX works perfectly well
+                     # but not on OpenBSD where it always raise StopIteration
+                     # and only read() works (not even readline)
+-                    buf = str_ascii(proc.stdout.read(16384))
++                    buf = str_ascii(os.read(proc.stdout.fileno(), 16384))
+                     if buf == '' and poll is not None:
+                         # if proc.poll() is None then
+                         # process is fine, we received an empty line because
