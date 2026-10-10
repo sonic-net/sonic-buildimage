@@ -46,7 +46,6 @@ libmpfr6==4.2.2-1
 libnanomsg-dev==1.1.5+dfsg-1.1+b1
 libnanomsg5==1.1.5+dfsg-1.1+b1
 libpcre2-16-0==10.46-1~deb13u3
-libpcre2-8-0==10.46-1~deb13u3
 libpython3-dev==3.13.5-1
 libpython3.13-dev==3.13.5-2+deb13u5
 libqt5core5t64==5.15.15+dfsg-6+deb13u1
@@ -72,5 +71,5 @@ rpcsvc-proto==1.4.3-1
 shared-mime-info==2.4-5+b2
 syncd-rpc==1.0.0
 wget==1.25.0-2
-xz-utils==5.8.1-1+deb13u1
+xz-utils==5.8.1-1+deb13u2
 zlib1g-dev==1:1.3.dfsg+really1.3.1-1+b1

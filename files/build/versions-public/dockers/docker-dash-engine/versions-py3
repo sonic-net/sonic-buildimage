@@ -1,7 +1,7 @@
 cffi==2.1.1
 coverage==7.6.1
 cython==0.29.36
-getmac==0.9.5
+getmac==0.9.6
 googleapis-common-protos==1.56.4
 grpcio==1.84.0
 netifaces==0.11.0
@@ -15,7 +15,7 @@ pycparser==3.0
 pynng==0.9.0
 pypcap==1.3.0
 pyperclip==1.8.2
-scapy==2.7.0
+scapy==2.8.0
 scapy-helper==0.14.8
 setuptools==45.2.0
 six==1.17.0

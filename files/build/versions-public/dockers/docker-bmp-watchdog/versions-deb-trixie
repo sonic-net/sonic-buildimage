@@ -1,6 +1,7 @@
 apt-utils==3.0.3
 libboost-serialization1.83.0==1.83.0-4.2
 libhiredis1.1.0==1.2.0-6+b3
+liblzma5==5.8.1-1+deb13u2
 libnl-3-200==3.7.0-0.2+b1sonic1
 libnl-cli-3-200==3.7.0-0.2+b1sonic1
 libnl-genl-3-200==3.7.0-0.2+b1sonic1

@@ -193,6 +193,7 @@ liblognorm5==2.0.6-5
 liblsan0==14.2.0-19
 liblsof0==4.99.4+dfsg-2
 liblua5.1-0==5.1.5-11
+liblzma5==5.8.1-1+deb13u2
 liblzo2-2==2.10-3+b1
 libmagic-mgc==1:5.46-5
 libmagic1t64==1:5.46-5
@@ -466,5 +467,5 @@ x11-common==1:7.7+24+deb13u1
 xml-core==0.19
 xmlstarlet==1.6.1-4
 xxd==2:9.1.1230-2
-xz-utils==5.8.1-1+deb13u1
+xz-utils==5.8.1-1+deb13u2
 zstd==1.5.7+dfsg-1
