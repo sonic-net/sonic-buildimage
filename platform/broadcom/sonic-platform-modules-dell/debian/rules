@@ -14,7 +14,7 @@ MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f s5448f z9332f
 COMMON_DIR := common
 
 %:
-	dh $@ --with python3
+	dh $@ --with python3 --with kernel_modules
 
 override_dh_auto_configure:
 	(set -e; for mod in $(MODULE_DIRS); do \
