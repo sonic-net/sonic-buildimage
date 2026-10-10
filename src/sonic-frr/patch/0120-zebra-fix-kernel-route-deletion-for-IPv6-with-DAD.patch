@@ -1,0 +1,140 @@
+From dc8331fc60ce7b2a48dba0692e75073f83ef6131 Mon Sep 17 00:00:00 2001
+From: Justin Iurman <justin.iurman@6wind.com>
+Date: Mon, 24 Aug 2026 16:08:24 +0200
+Subject: [PATCH 1/2] zebra: fix kernel route deletion for IPv6 with DAD
+
+When an IPv6 address is added to an interface with DAD enabled, the
+kernel route enters the RIB before the connected address. When
+`connected_remove_kernel_for_connected()` later attempts to clean it
+up, the deletion silently fails because rib_delete() is called with
+a hardcoded metric of 0 instead of matching the actual metric (e.g.,
+256). This patch fixes the above by passing the route's exact metric,
+distance, flags and instance to ensure successful deletion and acts
+as a safety net. Note: this cannot be reproduced with dummy
+interfaces since they bypass DAD (and, therefore, related topotests
+should at some point take that into account).
+
+How to reproduce:
+
+$ sysctl net.ipv6.conf.mgmt0.accept_dad
+net.ipv6.conf.mgmt0.accept_dad = 1
+
+$ ip -details link show mgmt0
+2: mgmt0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether de:ad:de:01:02:03 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 parentbus virtio parentdev virtio1
+
+$ ip a a fd00:100::1/64 dev mgmt0
+
+$ ip -6 a s mgmt0
+2: mgmt0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 state UP qlen 1000
+    inet6 fd00:100::1/64 scope global
+       valid_lft forever preferred_lft forever
+
+$ ip -6 r
+fd00:100::/64 dev mgmt0 proto kernel metric 256 pref medium
+
+(before the fix)
+
+vtysh> show ipv6 route
+C>* fd00:100::/64 is directly connected, mgmt0, weight 1, 00:00:55
+K * fd00:100::/64 [0/256] is directly connected, mgmt0, weight 1, 00:00:57
+L>* fd00:100::1/128 is directly connected, mgmt0, weight 1, 00:00:55
+
+(after the fix)
+
+vtysh> show ipv6 route
+C>* fd00:100::/64 is directly connected, mgmt0, weight 1, 00:00:16
+L>* fd00:100::1/128 is directly connected, mgmt0, weight 1, 00:00:16
+
+Signed-off-by: Justin Iurman <justin.iurman@6wind.com>
+---
+ zebra/connected.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/connected.c b/zebra/connected.c
+index d30a07fb84b9..a288a327ac32 100644
+--- a/zebra/connected.c
++++ b/zebra/connected.c
+@@ -215,8 +215,8 @@ static void connected_remove_kernel_for_connected(afi_t afi, safi_t safi, struct
+ 	if (re->type != ZEBRA_ROUTE_KERNEL)
+ 		return;
+ 
+-	rib_delete(afi, SAFI_UNICAST, zvrf->vrf->vrf_id, ZEBRA_ROUTE_KERNEL, 0, 0, p, NULL, nh, 0,
+-		   zvrf->table_id, 0, 0, false);
++	rib_delete(afi, SAFI_UNICAST, zvrf->vrf->vrf_id, ZEBRA_ROUTE_KERNEL, re->instance,
++		   re->flags, p, NULL, nh, 0, zvrf->table_id, re->metric, re->distance, false);
+ }
+ 
+ /* Called from if_up(). */
+
+From a9284e8ccf766f430fc46976dedc3d4588fd54d1 Mon Sep 17 00:00:00 2001
+From: Justin Iurman <justin.iurman@6wind.com>
+Date: Tue, 25 Aug 2026 11:00:48 +0200
+Subject: [PATCH 2/2] tests: check kernel route deletion for IPv6+DAD
+
+Add a test inside zebra_multiple_connected to ensure an IPv6 kernel
+route is removed in favor of its corresponding connected route when
+DAD is enabled.
+
+Signed-off-by: Justin Iurman <justin.iurman@6wind.com>
+---
+ .../test_zebra_multiple_connected.py          | 39 +++++++++++++++++++
+ 1 file changed, 39 insertions(+)
+
+diff --git a/tests/topotests/zebra_multiple_connected/test_zebra_multiple_connected.py b/tests/topotests/zebra_multiple_connected/test_zebra_multiple_connected.py
+index 52f644a7b18d..a04e9d70e37c 100644
+--- a/tests/topotests/zebra_multiple_connected/test_zebra_multiple_connected.py
++++ b/tests/topotests/zebra_multiple_connected/test_zebra_multiple_connected.py
+@@ -19,6 +19,7 @@
+ import pytest
+ import json
+ from functools import partial
++from lib.common_config import step
+ from lib.topolog import logger
+ 
+ # Save the Current Working Directory to find configuration files.
+@@ -512,6 +513,44 @@ def _assert_zebra_kernel_routes_down(router, msg):
+     )
+ 
+ 
++def test_zebra_ipv6_dad_kernel_route():
++    "Test that a kernel route is deleted in favor of the connected one (IPv6 with DAD enabled)"
++
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    router = tgen.gears["r1"]
++    router.run("sysctl -w net.ipv6.conf.r1-eth0.accept_dad=1")
++    router.run("ip -6 address add 2001:db8:dead:beef::1/64 dev r1-eth0")
++
++    def _check_duplicated_kernel_route():
++        try:
++            routes = json.loads(router.vtysh_cmd("show ipv6 route json"))
++        except (json.JSONDecodeError, TypeError) as err:
++            return "failed to parse ipv6 routes: {}".format(err)
++
++        found_connected = False
++        for route_prefix, entries in routes.items():
++            if not route_prefix == "2001:db8:dead:beef::/64":
++                continue
++            for entry in entries:
++                if entry.get("protocol") == "connected":
++                    found_connected = True
++                elif entry.get("protocol") == "kernel":
++                    return "found ipv6 kernel route"
++
++        if not found_connected:
++            return "ipv6 connected route not found"
++        return None
++
++    step("IPv6 with DAD enabled: check for duplicated kernel route")
++    _, result = topotest.run_and_expect(
++        _check_duplicated_kernel_route, None, count=20, wait=1
++    )
++    assert result is None, result
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
