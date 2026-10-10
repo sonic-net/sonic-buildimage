@@ -1,0 +1,150 @@
+From: Ashutosh Agrawal <ashu@cisco.com>
+Subject: [PATCH] libtac: validate reply session and encoding policy
+
+Require each reply to match the current request session. Keep reply body
+encoding consistent with the locally selected policy while allowing unrelated
+header option bits. Add focused checks for both behaviors.
+
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -68,6 +68,12 @@ pam_tacplus_la_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir)/libtac/include
+ pam_tacplus_la_LDFLAGS = -module -avoid-version
+ pam_tacplus_la_LIBADD = libtac.la
+ 
++check_PROGRAMS = reply_validation_test
++TESTS = $(check_PROGRAMS)
++reply_validation_test_SOURCES = reply_validation_test.c
++reply_validation_test_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir)/libtac/include
++reply_validation_test_LDADD = libtac.la
++
+ EXTRA_DIST = pam_tacplus.spec libtac.pc.in libtacsupport.pc.in
+ if DOC
+ dist_doc_DATA = sample.pam README.md AUTHORS ChangeLog
+--- a/libtac/lib/crypt.c
++++ b/libtac/lib/crypt.c
+@@ -90,8 +90,8 @@ void _tac_crypt(u_char *buf, HDR *th, int length) {
+     int i;
+     u_char *pad;
+  
+-    /* null operation if no encryption requested */
+-    if((tac_secret != NULL) && (th->encryption == TAC_PLUS_ENCRYPTED_FLAG)) {
++    /* Follow the locally configured encoding policy. */
++    if(tac_encryption && (tac_secret != NULL)) {
+         pad = _tac_md5_pad(length, th);
+  
+         for (i=0; i<length; i++) {
+--- a/libtac/lib/hdr_check.c
++++ b/libtac/lib/hdr_check.c
+@@ -39,12 +39,19 @@ char *_tac_check_header(HDR *th, int type) {
+         TACSYSLOG((LOG_ERR, "%s: not a reply - seq_no %d not even",\
+             __FUNCTION__, th->seq_no))
+         return protocol_err_msg;
+-    } /* else if(ntohl(th->session_id) != session_id) {
++    } else if(ntohl(th->session_id) != session_id) {
+         TACSYSLOG((LOG_ERR,\
+             "%s: unrelated reply, received session_id %d != sent %d",\
+             __FUNCTION__, ntohl(th->session_id), session_id))
+         return protocol_err_msg;
+-    } */
++    } else if ((th->encryption & TAC_PLUS_UNENCRYPTED_FLAG) !=
++               ((tac_encryption && tac_secret != NULL) ?
++                   TAC_PLUS_ENCRYPTED_FLAG : TAC_PLUS_UNENCRYPTED_FLAG)) {
++        TACSYSLOG((LOG_ERR,\
++            "%s: reply encoding flag does not match local configuration",\
++            __FUNCTION__))
++        return protocol_err_msg;
++    }
+     
+     return NULL; /* header is ok */    
+ } /* check header */
+--- /dev/null
++++ b/reply_validation_test.c
+@@ -0,0 +1,88 @@
++#include <assert.h>
++#include <arpa/inet.h>
++#include <stdint.h>
++#include <string.h>
++
++#include "libtac.h"
++
++static HDR reply_header(void)
++{
++    HDR header;
++
++    memset(&header, 0, sizeof(header));
++    header.version = TAC_PLUS_VER_0;
++    header.type = TAC_PLUS_AUTHEN;
++    header.seq_no = 2;
++    header.encryption = TAC_PLUS_ENCRYPTED_FLAG;
++    header.session_id = htonl((uint32_t)session_id);
++    return header;
++}
++
++static void test_reply_header_validation(void)
++{
++    HDR header;
++
++    session_id = 0x12345678;
++    tac_secret = "shared secret";
++    tac_encryption = 1;
++    header = reply_header();
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) == NULL);
++    header.encryption |= TAC_PLUS_SINGLE_CONNECT_FLAG;
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) == NULL);
++
++    header.session_id = htonl((uint32_t)session_id + 1);
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) != NULL);
++
++    header = reply_header();
++    header.encryption = TAC_PLUS_UNENCRYPTED_FLAG;
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) != NULL);
++
++    tac_secret = NULL;
++    header.encryption = TAC_PLUS_ENCRYPTED_FLAG;
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) != NULL);
++    header.encryption = TAC_PLUS_UNENCRYPTED_FLAG;
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) == NULL);
++    header.encryption |= TAC_PLUS_SINGLE_CONNECT_FLAG;
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) == NULL);
++    header.encryption = TAC_PLUS_ENCRYPTED_FLAG | TAC_PLUS_SINGLE_CONNECT_FLAG;
++    assert(_tac_check_header(&header, TAC_PLUS_AUTHEN) != NULL);
++}
++
++static void test_crypt_uses_local_policy(void)
++{
++    HDR header;
++    unsigned char body[32] = "reply body";
++    unsigned char original[sizeof(body)];
++
++    session_id = 0x12345678;
++    tac_secret = "shared secret";
++    tac_encryption = 1;
++    header = reply_header();
++    header.encryption = TAC_PLUS_UNENCRYPTED_FLAG;
++    memcpy(original, body, sizeof(body));
++
++    _tac_crypt(body, &header, sizeof(body));
++    assert(memcmp(body, original, sizeof(body)) != 0);
++    _tac_crypt(body, &header, sizeof(body));
++    assert(memcmp(body, original, sizeof(body)) == 0);
++
++    tac_secret = NULL;
++    tac_encryption = 1;
++    header = reply_header();
++    memcpy(original, body, sizeof(body));
++    _tac_crypt(body, &header, sizeof(body));
++    assert(memcmp(body, original, sizeof(body)) == 0);
++
++    tac_secret = "shared secret";
++    tac_encryption = 0;
++    header.encryption = TAC_PLUS_ENCRYPTED_FLAG;
++    _tac_crypt(body, &header, sizeof(body));
++    assert(memcmp(body, original, sizeof(body)) == 0);
++}
++
++int main(void)
++{
++    test_reply_header_validation();
++    test_crypt_uses_local_policy();
++    return 0;
++}
