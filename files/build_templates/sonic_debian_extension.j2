@@ -446,8 +446,22 @@ sudo LANG=C cp $IMAGE_CONFIGS/warmboot-finalizer/warmboot-finalizer.service $FIL
 echo "warmboot-finalizer.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy watchdog-control files
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install watchdog
 sudo LANG=C cp $IMAGE_CONFIGS/watchdog-control/watchdog-control.sh $FILESYSTEM_ROOT/usr/local/bin/watchdog-control.sh
 sudo LANG=C cp $IMAGE_CONFIGS/watchdog-control/watchdog-control.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*($|#) ]] && continue
+    [[ "$line" == *"="* ]] || continue
+
+    key="${line%%=*}"
+    value="${line#*=}"
+    key="$(echo "$key" | xargs)"
+    value="$(echo "$value" | xargs)"
+
+    sudo sed -i "/^[[:space:]#]*${key}[[:space:]]*=.*/d" $FILESYSTEM_ROOT/etc/watchdog.conf
+    echo "${key} = ${value}" | sudo tee -a $FILESYSTEM_ROOT/etc/watchdog.conf > /dev/null
+done < $IMAGE_CONFIGS/watchdog-control/watchdog.conf
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable watchdog.service || true
 echo "watchdog-control.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy rsyslog configuration files and templates
@@ -1331,4 +1345,3 @@ sudo cp $IMAGE_CONFIGS/set-vrf-strict-mode/set-vrf-strict-mode.service $FILESYST
 # Install set-vrf-strict-mode service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-vrf-strict-mode
 {% endif %}
-
