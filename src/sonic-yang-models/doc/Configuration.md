@@ -2980,6 +2980,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
+- INSTALL_ON_KERNEL: Flag to also program the route into the kernel routing table (optional). It should be a boolean value, e.g. "true".
 
 ```
 {
@@ -2988,7 +2989,8 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
-        "consistent_hashing_buckets": "10"
+        "consistent_hashing_buckets": "10",
+        "install_on_kernel": "true"
     },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",
