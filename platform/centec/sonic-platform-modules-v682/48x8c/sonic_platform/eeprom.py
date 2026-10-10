@@ -115,7 +115,11 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid:
             return "N/A"
 
-        return results[2].decode('ascii')
+        ver = results[2][0]
+        ver_maj = ver / 16
+        ver_sub = ver % 16
+
+        return "%d.%d" % (int(ver_maj), ver_sub)
 
     def system_eeprom_info(self):
         """
