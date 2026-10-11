@@ -42,7 +42,7 @@ class Runner(object):
             if db_name == "CHASSIS_APP_DB":
                 self.db_connectors[db] = swsscommon.DBConnector(db_name, 0, True, '')
             else:
-                self.db_connectors[db] = swsscommon.DBConnector(db_name, 0)
+                self.db_connectors[db] = swsscommon.DBConnector(db_name, 0, False)
 
         if table_name not in self.callbacks[db]:
             conn = self.db_connectors[db]

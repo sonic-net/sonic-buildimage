@@ -1,19 +1,32 @@
 import pytest
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 from swsscommon import swsscommon
 import syslog
 import bfdmon.bfdmon
 from bfdmon.bfdmon import BfdFrrMon
 
 @pytest.fixture
-@patch('swsscommon.swsscommon.Table')
-@patch('swsscommon.swsscommon.DBConnector', autospec=True)
-@patch('swsscommon.swsscommon.SonicV2Connector')
+@patch('bfdmon.bfdmon.swsscommon.Table')
+@patch('bfdmon.bfdmon.swsscommon.DBConnector', autospec=True)
+@patch('bfdmon.bfdmon.swsscommon.SonicV2Connector')
 def bfd_mon(mock_conn, mock_db, mock_tbl):
     #mock_conn.return_value.get_db_list.return_value = ['STATE_DB']
     m = BfdFrrMon()
+    mock_db.assert_called_once_with("STATE_DB", 0, False)
     return m
+
+
+@patch('bfdmon.bfdmon.device_info.get_localhost_info', return_value='dpu')
+@patch('bfdmon.bfdmon.swsscommon.Table')
+@patch('bfdmon.bfdmon.swsscommon.DBConnector')
+def test_dpu_keeps_only_remote_state_db_on_tcp(mock_db, mock_table, mock_device_info):
+    BfdFrrMon()
+
+    assert mock_db.call_args_list == [
+        call("STATE_DB", 0, False),
+        call("DPU_STATE_DB", 0, True),
+    ]
 
 def test_constructor(bfd_mon):
     assert len(bfd_mon.local_v4_peers) == 0
