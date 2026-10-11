@@ -110,7 +110,9 @@ pub struct Args {
     #[arg(short = 'c', long = "container-name", required = true)]
     pub container_name: String,
 
-    #[arg(short = 's', long = "use-unix-socket-path")]
+    // This listener reads the local CONFIG_DB. Keep the explicit flag for
+    // compatibility with existing launcher configurations.
+    #[arg(short = 's', long = "use-unix-socket-path", default_value_t = true)]
     pub use_unix_socket_path: bool,
 }
 
@@ -548,7 +550,29 @@ fn terminate_supervisor() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::Parser;
     use log::{Level, LevelFilter, Log};
+
+    #[test]
+    fn test_unix_socket_is_default() {
+        let args = Args::try_parse_from([
+            "supervisor-proc-exit-listener",
+            "--container-name",
+            "swss",
+        ])
+        .unwrap();
+        assert!(args.use_unix_socket_path);
+
+        // Keep accepting the existing explicit flag used by older launchers.
+        let args = Args::try_parse_from([
+            "supervisor-proc-exit-listener",
+            "--container-name",
+            "swss",
+            "--use-unix-socket-path",
+        ])
+        .unwrap();
+        assert!(args.use_unix_socket_path);
+    }
 
     #[test]
     fn test_get_current_time() {
