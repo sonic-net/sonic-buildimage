@@ -24,6 +24,10 @@
 /* Mock syslog buffer */
 extern char mock_syslog_message_buffer[1024];
 
+/* Mock TraceId TACACS+ attribute state */
+extern char mock_tac_trace_id_attr_value[256];
+extern int mock_tac_trace_id_attr_count;
+
 /* Mock tac_add_attrib_pair state */
 extern int mock_attrib_pair_count;
 extern char mock_attrib_pair_name[128];
@@ -52,6 +56,9 @@ void set_memory_allocate_count(int count);
 
 /* Get memory allocate count for test*/
 int get_memory_allocate_count();
+
+/* Reset mocked TACACS+ attribute state */
+void reset_mock_tac_attrs();
 
 /* Reset the captured tac_add_attrib_pair state. */
 void reset_mock_attrib_pair();

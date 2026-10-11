@@ -185,6 +185,12 @@ module sonic-system-tacacs {
                     }
                     description "Source interface whose IP address is used for outgoing TACACS+ packets.";
                 }
+
+                leaf traceid_authorization {
+                    type boolean;
+                    default false;
+                    description "Enable adding validated SSH_CLIENT_TRACEID values as the TACACS+ traceid command authorization attribute.";
+                }
             }
         }
     }
