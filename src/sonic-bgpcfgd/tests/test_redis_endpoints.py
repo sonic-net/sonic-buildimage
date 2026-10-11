@@ -1,18 +1,7 @@
-import sys
 from unittest.mock import MagicMock, call, patch
 
-from . import swsscommon_test
-
-original_swsscommon = sys.modules.get("swsscommon")
-sys.modules["swsscommon"] = swsscommon_test
-try:
-    from bgpcfgd.runner import Runner
-    from bgpcfgd.static_rt_timer import StaticRouteTimer
-finally:
-    if original_swsscommon is None:
-        del sys.modules["swsscommon"]
-    else:
-        sys.modules["swsscommon"] = original_swsscommon
+from bgpcfgd.runner import Runner
+from bgpcfgd.static_rt_timer import StaticRouteTimer
 
 
 @patch("bgpcfgd.static_rt_timer.swsscommon.SonicV2Connector")
