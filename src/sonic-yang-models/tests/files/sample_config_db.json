@@ -135,7 +135,7 @@
                 "mtu": "9100",
                 "tpid": "0x8100",
                 "fast_rate": "false",
-                "fallback" : "true",
+                "fallback" : "single",
                 "mode":"routed",
                 "system_mac": "aa:bb:cc:dd:ee:ff"
             }
