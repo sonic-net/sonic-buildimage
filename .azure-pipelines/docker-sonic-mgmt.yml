@@ -155,12 +155,11 @@ stages:
     value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
   jobs:
   - job: sbom_vuln_scan
-    displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
-    # The SBOM is produced by the Build stage (ENABLE_SBOM=y); this job
-    # scans it with grype and reports CVEs. Informational only
-    # (continueOnError: true) so findings do not block the pipeline.
+    displayName: "SBOM-based vulnerability scan (docker-sonic-mgmt)"
+    # The Test stage already requires a successful Build. An unsuppressed,
+    # fixable MEDIUM+ finding must fail Test and prevent publishing as latest.
     pool: sonic-ubuntu-1c
-    continueOnError: true
+    continueOnError: false
     timeoutInMinutes: 30
     steps:
     - checkout: self
