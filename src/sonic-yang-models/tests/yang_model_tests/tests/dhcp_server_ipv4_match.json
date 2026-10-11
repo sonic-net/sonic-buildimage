@@ -1,0 +1,151 @@
+{
+    "DHCP_SERVER_IPV4_MATCH_VALID_IP_BINDING": {
+        "desc": "Configure the MATCH tables with multiple conditions and bindings sharing a condition while the interface remains in PORT mode."
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALID_RANGE_BINDING": {
+        "desc": "Configure the MATCH tables with a condition bound to a named range while the interface remains in PORT mode."
+    },
+    "DHCP_SERVER_IPV4_MATCH_MAX_LENGTH_BOUNDARIES": {
+        "desc": "Accept 255-character match names, match values, and binding names."
+    },
+    "DHCP_SERVER_IPV4_MATCH_TYPE_ABSENT": {
+        "desc": "Reject a match condition without a type.",
+        "eStrKey": "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_ABSENT": {
+        "desc": "Reject a match condition without a value.",
+        "eStrKey": "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_MATCH_TYPE_INVALID": {
+        "desc": "Reject an unsupported match condition type.",
+        "eStrKey": "InvalidValue"
+    },
+    "DHCP_SERVER_IPV4_MATCH_NAME_EMPTY": {
+        "desc": "Reject an empty match condition name.",
+        "eStr": [
+            "Invalid length for match condition name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_NAME_OVERLENGTH": {
+        "desc": "Reject a match condition name longer than 255 characters.",
+        "eStr": [
+            "Invalid length for match condition name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_EMPTY": {
+        "desc": "Reject an empty match condition value.",
+        "eStr": [
+            "Invalid length for match condition value"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_VALUE_OVERLENGTH": {
+        "desc": "Reject a match condition value longer than 255 characters.",
+        "eStr": [
+            "Invalid length for match condition value"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_MATCHES_ABSENT": {
+        "desc": "Reject a binding without any match conditions.",
+        "eStrKey": "MinElements"
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_MATCH": {
+        "desc": "Reject a binding that references a nonexistent match condition.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_INTERFACE": {
+        "desc": "Reject a binding that references a nonexistent DHCP interface.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_BINDING_BOTH_IPS_AND_RANGES": {
+        "desc": "Reject a binding with both direct IPs and named ranges.",
+        "eStr": [
+            "Exactly one of 'ips' or 'ranges' must be configured"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_POOL_ABSENT": {
+        "desc": "Reject a binding without direct IPs or named ranges.",
+        "eStr": [
+            "Exactly one of 'ips' or 'ranges' must be configured"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_NON_EXIST_RANGE": {
+        "desc": "Reject a binding that references a nonexistent range.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_BINDING_INVALID_IP": {
+        "desc": "Reject a binding with an invalid IPv4 address.",
+        "eStrKey": "Pattern"
+    },
+    "DHCP_SERVER_IPV4_BINDING_NAME_EMPTY": {
+        "desc": "Reject an empty binding name.",
+        "eStr": [
+            "Invalid length for DHCP binding name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_BINDING_NAME_OVERLENGTH": {
+        "desc": "Reject a binding name longer than 255 characters.",
+        "eStr": [
+            "Invalid length for DHCP binding name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_CIRCUIT_ID_VALID_ALIAS": {
+        "desc": "Accept a circuit_id matching an existing PORT alias."
+    },
+    "DHCP_SERVER_IPV4_MATCH_CIRCUIT_ID_UNKNOWN_ALIAS": {
+        "desc": "Reject a circuit_id referencing a non-existent port alias.",
+        "eStr": [
+            "circuit_id value must match an existing port alias, an aliasless port name, or a PortChannel name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_CIRCUIT_ID_NO_PORT_TABLE": {
+        "desc": "Reject a circuit_id when no PORT table exists.",
+        "eStr": [
+            "circuit_id value must match an existing port alias, an aliasless port name, or a PortChannel name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_CIRCUIT_ID_PORT_NAME_WITHOUT_ALIAS": {
+        "desc": "Accept a circuit_id naming an aliasless port, matching dhcp_relay fallback."
+    },
+    "DHCP_SERVER_IPV4_MATCH_CIRCUIT_ID_PORT_NAME_WITH_ALIAS": {
+        "desc": "Reject a port name as circuit_id when that port has an alias.",
+        "eStr": [
+            "circuit_id value must match an existing port alias, an aliasless port name, or a PortChannel name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_CIRCUIT_ID_PORTCHANNEL": {
+        "desc": "Accept a circuit_id naming an existing PortChannel."
+    },
+    "DHCP_SERVER_IPV4_MATCH_CIRCUIT_ID_OVERLENGTH_ALIAS": {
+        "desc": "Reject a 129-character circuit_id; PORT alias is limited to 128.",
+        "eStr": [
+            "circuit_id value must match an existing port alias, an aliasless port name, or a PortChannel name"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_OPTION60_SKIPS_PORT_CHECK": {
+        "desc": "Accept a long option60 value with no PORT table; the port check is type-gated."
+    },
+    "DHCP_SERVER_IPV4_MATCH_BINDING_DUPLICATE_OPTION60": {
+        "desc": "Reject a binding that ANDs two option60 conditions; option 60 is single valued.",
+        "eStr": [
+            "A binding may reference at most one option60 match condition"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_BINDING_DUPLICATE_CIRCUIT_ID": {
+        "desc": "Reject a binding that ANDs two circuit_id conditions; the ingress port is single valued.",
+        "eStr": [
+            "A binding may reference at most one circuit_id match condition"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_NAME_WITH_KEY_SEPARATOR": {
+        "desc": "Reject a match condition name containing '|', the Config DB key separator.",
+        "eStr": [
+            "Match condition name must not contain"
+        ]
+    },
+    "DHCP_SERVER_IPV4_MATCH_BINDING_NAME_WITH_KEY_SEPARATOR": {
+        "desc": "Reject a binding name containing '|', the Config DB key separator.",
+        "eStr": [
+            "DHCP binding name must not contain"
+        ]
+    }
+}
