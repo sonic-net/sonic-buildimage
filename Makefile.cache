@@ -233,9 +233,14 @@ define GET_MOD_DEP_SHA
 
 	$(if $(MDEBUG), $(info $(1)_MOD_DEP_PKGS: $($(1)_MOD_DEP_PKGS)))
 
-	# Warn if there is any missing dependency files
+	# Bazel archives have no Make dependency sidecars. Hash the published bytes
+	# instead: a source or module change can alter the base image without changing
+	# its legacy .flags/.dep.sha files (which may also be left from a Make build).
 	$(eval $(1)_DEP_MOD_SHA_FILES := $(foreach dfile,$($(1)_MOD_DEP_PKGS), \
-	                        $($(dfile)_DEP_FLAGS_FILE) $($(dfile)_MOD_HASH_FILE) $($(dfile)_SMOD_HASH_FILE)) )
+	                        $(if $(filter $(dfile),$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES)), \
+	                            $(TARGET_PATH)/$(dfile), \
+	                            $($(dfile)_DEP_FLAGS_FILE) $($(dfile)_MOD_HASH_FILE) $($(dfile)_SMOD_HASH_FILE))) )
+	# Warn if there is any missing dependency files
 	$(eval $(1)_DEP_FILES_MISSING := $(filter-out $(wildcard $($(1)_DEP_MOD_SHA_FILES)),$($(1)_DEP_MOD_SHA_FILES)) )
 	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependency file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
 

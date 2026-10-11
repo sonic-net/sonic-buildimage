@@ -221,6 +221,64 @@ $(addprefix $(TARGET_PATH)/,$(LEGACY_IMAGES)): $(TARGET_PATH)/%.gz: $(TARGET_PAT
             self.assertEqual((self.target / name).read_bytes(),
                              (("new " if active else "make ") + name).encode())
 
+    def add_make_consumer(self, base):
+        """Model a legacy Docker image that loads one selected parent archive."""
+        cache_include = f"include {ROOT / 'Makefile.cache'}"
+        self.makefile = self.makefile.replace(cache_include, f"""
+SONIC_DOCKER_IMAGES += consumer.gz
+consumer.gz_PATH = services/consumer
+consumer.gz_CACHE_MODE = GIT_CONTENT_SHA
+consumer.gz_DEP_FILES = source.txt
+consumer.gz_DEP_FLAGS = $(SONIC_COMMON_FLAGS_LIST)
+consumer.gz_LOAD_DOCKERS = {base}
+""" + cache_include)
+        self.makefile += f"""
+target/consumer.gz: target/{base} target/consumer.gz.dep
+\t$(call LOAD_CACHE,consumer.gz,$@)
+\tif [ -z '$(consumer.gz_CACHE_LOADED)' ]; then
+\t  cp target/{base} "$@"
+\t  printf '%s\\n' 'consumer built' >> consumer-calls
+\t  $(call SAVE_CACHE,consumer.gz,$@)
+\tfi
+"""
+
+    def assert_bazel_base_cache_invalidation(self, base):
+        self.add_make_consumer(base)
+        consumer = self.target / "consumer.gz"
+        cache_files = []
+        for payload in ("base A", "base B"):
+            self.environment["FAKE_BAZEL_PAYLOAD"] = payload
+            result = self.build(telemetry="y", archives=["consumer.gz"])
+            self.assert_success(result)
+            self.assertNotIn("Dependency file(s) are not found", result.stderr)
+            self.assertNotIn("fatal:", result.stderr)
+            self.assertEqual((self.target / base).read_text(), payload)
+            self.assertEqual(consumer.read_text(), payload)
+            cache_files.append(set(self.cache.glob("consumer.gz-*.tgz")))
+        self.assertEqual(len(cache_files[0]), 1)
+        self.assertEqual(len(cache_files[1]), 2)
+        self.assertLess(cache_files[0], cache_files[1])
+        # With unchanged base bytes, a clean checkout can reuse the correct
+        # child cache entry instead of rebuilding or restoring the old child.
+        consumer.unlink()
+        result = self.build(telemetry="y", archives=["consumer.gz"])
+        self.assert_success(result)
+        self.assertEqual(consumer.read_text(), "base B")
+        self.assertIn("[ CACHE::LOADED ]", (self.target / "consumer.gz.log").read_text())
+        self.assertEqual((self.root / "consumer-calls").read_text().splitlines(),
+                         ["consumer built", "consumer built"])
+        self.assertEqual(set(self.cache.glob("consumer.gz-*.tgz")), cache_files[1])
+
+    def test_bazel_runtime_base_changes_invalidate_make_child_cache(self):
+        """A changed Bazel base must not leave a Make child built from old bytes."""
+        self.assert_bazel_base_cache_invalidation("telemetry.gz")
+
+    def test_bazel_debug_base_ignores_stale_make_sidecars(self):
+        """Old Make metadata cannot identify the current Bazel debug archive."""
+        for suffix in (".flags", ".dep.sha"):
+            (self.target / ("telemetry-dbg.gz" + suffix)).write_text("old Make state\n")
+        self.assert_bazel_base_cache_invalidation("telemetry-dbg.gz")
+
     def test_warm_make_cache_replaces_bazel_archives_when_returning_to_make(self):
         """Restore Make bytes from a warm cache after a builder switch without rerunning producers
         or disturbing other images.
