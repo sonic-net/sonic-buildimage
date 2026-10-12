@@ -46,12 +46,13 @@ view   systemonly  included   .1.3.6.1.2.1.25.1
 
 {# rocommunity/rwcommunity grant unauthenticated SNMPv1/v2c access to any
 host reaching UDP/161. To restrict by source, bind an ACL_TABLE of type
-CTRLPLANE with services ["SNMP"] (see Configuration.md). ZTP-provided
-snmp.yml defaults can never seed the well-known community strings
-('public'/'private') into SNMP_COMMUNITY (see snmp_yml_to_configdb.py);
-an operator who explicitly configures one of those values anyway (e.g.
-for a lab) gets it rendered as configured, flagged with a warning
-comment below, rather than silently blocked. #}
+CTRLPLANE with services ["SNMP"] (see Configuration.md). The well-known
+community strings ('public'/'private') are never silently blocked here;
+whichever explicit source configured them into SNMP_COMMUNITY (e.g. an
+snmp.yml deployed out-of-band by HwProxy, or a direct ConfigDB write --
+see snmp_yml_to_configdb.py) is a deliberate choice, so the value is
+rendered as configured, flagged with a warning comment below for
+operational visibility. #}
 {% set insecure_default_communities = ['public', 'private'] %}
 
 {% if SNMP_COMMUNITY is defined %}
