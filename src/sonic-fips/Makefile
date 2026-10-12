@@ -21,7 +21,10 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	fi
 	for target in $(FIPS_PACKAGE_ALL); do
 	  filename=$$(basename $$target)
-	  url=$(FIPS_URL_PREFIX)/$$filename
+	  url="$(FIPS_URL_PREFIX)/$$filename"
+	  if [ -n "$(FIPS_GOLANG_URL_PREFIX)" ] && [[ "$$filename" == golang-* ]]; then
+	    url="$(FIPS_GOLANG_URL_PREFIX)/$${filename//+/%2B}"
+	  fi
 	  mkdir -p "$$(dirname $(DEST)/$$target)"
 	  curl -f -o "$(DEST)/$$target" "$$url"
 	  touch "$(DEST)/$$target"

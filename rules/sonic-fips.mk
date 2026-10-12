@@ -8,7 +8,9 @@ FIPS_OPENSSH_VERSION = 10.0p1-7+fips
 FIPS_PYTHON_MAIN_VERSION = 3.13
 FIPS_PYTHON_VERSION = 3.13.5-2+fips
 FIPS_GOLANG_MAIN_VERSION = 1.26
-FIPS_GOLANG_VERSION = 1.26.5-1~bpo13+1+fips
+FIPS_GOLANG_VERSION = 1.26.7-1+fips
+# Temporary pre-merge validation of sonic-net/sonic-fips#93, build 1235906.
+FIPS_GOLANG_URL_PREFIX = https://sonic-build.azurewebsites.net/api/sonic/artifacts?buildId=1235906&definitionId=412&artifactName=fips-symcrypt-$(CONFIGURED_ARCH)&target=
 FIPS_KRB5_VERSION = 1.21.3-5+fips
 endif
 

@@ -593,10 +593,15 @@ RUN eatmydata apt-get install -y kernel-wedge
 
 # For gobgp and telemetry build
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+RUN wget -O golang-go.deb '{{ FIPS_GOLANG_URL_PREFIX }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION | urlencode }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb '{{ FIPS_GOLANG_URL_PREFIX }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION | urlencode }}_all.deb' \
  && eatmydata apt-get install -y ./golang-go.deb ./golang-src.deb \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
+ && go_version=$(/usr/local/go/bin/go env GOVERSION) \
+ && go_fips140=$(/usr/local/go/bin/go env GOFIPS140) \
+ && printf 'FIPS Go toolchain: %s GOFIPS140=%s\n' "$go_version" "$go_fips140" \
+ && test "$go_version" = go1.26.7 \
+ && test "$go_fips140" = certified \
  && rm golang-go.deb golang-src.deb
 ENV PATH=/usr/local/go/bin:$PATH
 {%- else %}
