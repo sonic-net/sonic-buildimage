@@ -35,6 +35,7 @@ ARG OTEL_VERSION=0.144.0
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN wget -v -O /tmp/otelcol-contrib.deb \
         "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_armv7.deb" && \
+    echo "2b0560837d875432d0675d6f5302389cb2ce48b555390c569302ae5f643e8b13  /tmp/otelcol-contrib.deb" | sha256sum -c - && \
     dpkg --info /tmp/otelcol-contrib.deb && \
     (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
     ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
@@ -42,6 +43,7 @@ RUN wget -v -O /tmp/otelcol-contrib.deb \
 {% elif CONFIGURED_ARCH == "arm64" %}
 RUN wget -v -O /tmp/otelcol-contrib.deb \
         "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_arm64.deb" && \
+    echo "6e272d1c179d897e8d09877d5589979a01921887aed372447806dc7e1c54be18  /tmp/otelcol-contrib.deb" | sha256sum -c - && \
     dpkg --info /tmp/otelcol-contrib.deb && \
     (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
     ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
@@ -49,6 +51,7 @@ RUN wget -v -O /tmp/otelcol-contrib.deb \
 {% else %}
 RUN wget -v -O /tmp/otelcol-contrib.deb \
         "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_amd64.deb" && \
+    echo "e83278a763b9c7779f9facf3ac2356b7add8975a5f14d4606a625605f50eee94  /tmp/otelcol-contrib.deb" | sha256sum -c - && \
     dpkg --info /tmp/otelcol-contrib.deb && \
     (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
     ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \

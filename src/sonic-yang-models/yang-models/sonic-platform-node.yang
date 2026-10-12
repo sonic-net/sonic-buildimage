@@ -1,0 +1,76 @@
+module sonic-platform-node {
+    namespace "http://github.com/Azure/sonic-platform-node";
+    prefix pfm-node;
+
+    import sonic-extension {
+        prefix sonic-ext;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC PLATFORM NODE";
+
+    revision 2020-11-23 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-platform-node {
+
+        container NODE_CFG {
+
+            sonic-ext:db-name "CONFIG_DB";
+            list NODE_CFG_LIST {
+                key "nodename";
+
+                leaf nodename {
+                    type string;
+                }
+
+                leaf name {
+                    type string;
+                }
+
+                leaf node-id {
+                    type uint64;
+                }
+                leaf fully-qualified-name {
+                    type string;
+                }
+            }
+        }
+
+        container NODE_INFO {
+
+            sonic-ext:db-name "STATE_DB";
+            config false;
+            list NODE_INFO_LIST {
+                key "nodename";
+
+                leaf nodename {
+                    type string;
+                }
+
+                leaf name {
+                    type string;
+                }
+
+                leaf parent {
+                    type string;
+                }
+
+                leaf node-id {
+                    type uint64;
+                }
+                leaf fully-qualified-name {
+                    type string;
+                }
+            }
+        }
+    }
+}

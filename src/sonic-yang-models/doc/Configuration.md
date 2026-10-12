@@ -108,6 +108,7 @@
   * [VDPU](#vdpu-configuration)
   * [DASH HA Global Configuration](#dash-ha-global-configuration)
   * [Prefix List](#prefix-list)
+  * [NODE_CFG](#node_cfg)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -920,8 +921,16 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ### Console
 
-CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The item default_escape_char and escape_char are optional. It can be
-set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
+CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The items `default_escape_char` and `escape_char` are optional. They can be
+set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config.
+
+CONSOLE_PORT logging attributes (all optional):
+-   logging_enabled - Enable or disable console I/O logging for the line, allowed values: yes/no, default value: no
+-   log_file - Absolute path to the console log file (e.g. `/var/log/console-1.log`)
+-   logrotate_size - Maximum log file size before rotation, allowed pattern: numeric value with optional suffix `k`, `K`, `M`, or `G` (e.g. `10M`, `100K`)
+-   logrotate_count - Number of rotated log files to retain, allowed values: 1-100
+
+When logging is enabled via CLI and `log_file`, `logrotate_size`, or `logrotate_count` are not configured, runtime defaults are applied: log file `/var/log/console-<line>.log`, logrotate size `10M`, and logrotate count `10`.
 
 ```
 {
@@ -929,7 +938,11 @@ set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
     "1": {
         "baud_rate": "115200",
         "flow_control": "0",
-        "remote_device": "host-1"
+        "remote_device": "host-1",
+        "logging_enabled": "yes",
+        "log_file": "/var/log/console-1.log",
+        "logrotate_size": "10M",
+        "logrotate_count": "10"
     },
     "2": {
         "baud_rate": "9600",
@@ -2300,7 +2313,8 @@ name as object key and member list as attribute.
         "members": [
             "Ethernet54"
         ],
-        "mtu": "9100"
+        "mtu": "9100",
+        "lag_type": "LACP"
     },
     "PortChannel0004": {
         "admin_status": "up",
@@ -2311,7 +2325,8 @@ name as object key and member list as attribute.
         "mtu": "9100",
         "fallback": "false",
         "fast_rate": "true",
-        "system_mac": "aa:bb:cc:dd:ee:ff"
+        "system_mac": "aa:bb:cc:dd:ee:ff",
+        "lag_type": "LACP"
     }
   }
 }
@@ -3750,6 +3765,33 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 **dpu_bfd_probe_interval_in_ms**: Interval in milliseconds for DPU BFD probe.
 
 **dpu_bfd_probe_multiplier**: Number of DPU BFD probe failures before considering the probe as down.
+
+### NODE_CFG
+
+The **NODE_CFG** table defines the node configuration details for platform components (such as Integrated Circuits).
+
+```json
+{
+    "NODE_CFG": {
+        "integrated_circuit0": {
+            "name": "integrated_circuit0",
+            "node-id": "1",
+            "fully-qualified-name": "chassis/integrated_circuit0"
+        },
+        "integrated_circuit1": {
+            "name": "integrated_circuit1",
+            "node-id": "101",
+            "fully-qualified-name": "chassis/integrated_circuit1"
+        }
+    }
+}
+```
+
+**name**: Name of the platform component.
+
+**node-id**: Unique numeric identifier for the node.
+
+**fully-qualified-name**: Fully qualified hierarchy path for the component.
 
 # For Developers
 

@@ -31,6 +31,11 @@ case "$1" in
         # Enable USB network service
         echo "Enabling USB network service..."
         systemctl enable --now usb-network-init.service 2>/dev/null || true
+
+        # Enable cpe_ctrl cold-boot init service at boot-time init
+        # (ordered before sonic.target)
+        echo "Enabling cpe_ctrl cold-boot init service..."
+        systemctl enable cpe-ctrl-init.service 2>/dev/null || true
         ;;
 esac
 

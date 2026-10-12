@@ -1,0 +1,16 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {}
+    },
+    "neighbor_addr": "PortChannel101",
+    "bgp_session": {
+        "asn": "65200",
+        "name": "spine1"
+    },
+    "bgp_asn": "65100",
+    "constants": {
+        "deployment_id_asn_map": {
+            "5": "51111"
+        }
+    }
+}

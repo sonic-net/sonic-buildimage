@@ -80,6 +80,11 @@ MLX5_CORE_BIND_PATH = os.path.join(MLX5_CORE_DRIVER_PATH, "bind")
 
 WAIT_FOR_SHTDN = 120
 WAIT_FOR_DPU_READY = 180
+# Max time to wait for a re-enumerated DPU PCI function to have its BARs
+# assigned (become bindable) before binding mlx5_core.
+WAIT_FOR_PCI_BINDABLE = 10
+# Interval between PCI sysfs polls.
+PCI_POLL_INTERVAL = 0.1
 
 
 class OperationType(Enum):
@@ -240,14 +245,23 @@ class DpuCtlPlat():
         self.pci_dev_path = [path_map[interface] for interface in self.PCI_DEV_INTERFACES]
         return self.pci_dev_path
 
-    def write_file(self, file_name, content_towrite):
-        """Write given value to file only if file exists"""
+    def write_file(self, file_name, content_towrite, log_on_error=True):
+        """Write given value to file only if file exists.
+
+        When ``log_on_error`` is False the failure log is suppressed (both here
+        and in ``utils.write_file``) so a caller that expects and handles the
+        failure itself - e.g. a PCI bind that races the kernel autoprobe - can
+        decide the severity from the resulting state. The exception is still
+        raised to the caller in all cases.
+        """
         try:
             if self.verbosity:
                 self.log_debug(f'Writing {content_towrite} to file {file_name}')
-            utils.write_file(file_name, content_towrite, raise_exception=True)
+            utils.write_file(file_name, content_towrite, raise_exception=True,
+                             log_func=utils.logger.log_error if log_on_error else None)
         except Exception as e:
-            self.log_error(f'Failed to write {content_towrite} to file {file_name}')
+            if log_on_error:
+                self.log_error(f'Failed to write {content_towrite} to file {file_name}')
             raise type(e)(f"{self.dpu_name}:{str(e)}")
         return True
 
@@ -353,6 +367,57 @@ class DpuCtlPlat():
             self.log_error(f"Failed PCI Removal with error {e}")
         return False
 
+    def _dpu_pci_bind(self, pci_dev_path, bdf):
+        """Bind PCIE_INT to mlx5_core once the function is bindable.
+
+        A freshly re-enumerated function is visible in sysfs before the kernel
+        assigns its BARs; binding mlx5_core in that window fails with ENODEV.
+        Each line of the ``resource`` file is ``start end flags``; an
+        unassigned BAR reads all-zero, so a non-zero start means the device is
+        resourced and bindable. Wait for that before writing to
+        mlx5_core/bind.
+        """
+        resource = os.path.join(pci_dev_path, "resource")
+        deadline = time.monotonic() + WAIT_FOR_PCI_BINDABLE
+        while True:
+            try:
+                with open(resource) as resource_file:
+                    if any(int(line.split()[0], 16) for line in resource_file):
+                        break
+            except (OSError, ValueError, IndexError):
+                pass
+            if time.monotonic() >= deadline:
+                self.log_warning(
+                    f"PCI device {pci_dev_path} did not become bindable "
+                    f"within {WAIT_FOR_PCI_BINDABLE}s"
+                )
+                return
+            time.sleep(PCI_POLL_INTERVAL)
+
+        # The kernel autoprobe may have bound the device while we waited;
+        # skip the redundant manual bind (which would fail with EBUSY).
+        driver_link = os.path.join(pci_dev_path, "driver")
+        if os.path.exists(driver_link):
+            self.log_info(f"Driver already bound for {pci_dev_path}, skip bind")
+            return
+
+        with self.time_check_context(f"pci bind {pci_dev_path}"):
+            try:
+                # Suppress write_file()'s error log: autoprobe may still bind
+                # the device between the check above and this write. Decide on
+                # the final bound state, not on the errno.
+                self.write_file(MLX5_CORE_BIND_PATH, bdf, log_on_error=False)
+            except OSError:
+                if os.path.exists(driver_link) and \
+                        os.path.realpath(driver_link) == \
+                        os.path.realpath(MLX5_CORE_DRIVER_PATH):
+                    self.log_info(
+                        f"Driver bound concurrently for {pci_dev_path}, skip bind"
+                    )
+                    return
+                self.log_error(f"Failed to bind mlx5_core for {pci_dev_path}")
+                raise
+
     def dpu_pci_scan(self):
         """PCI Scan API
 
@@ -375,8 +440,7 @@ class DpuCtlPlat():
                 os.path.exists(pci_dev_path)
                 and os.path.exists(MLX5_CORE_BIND_PATH)
             ):
-                with self.time_check_context(f"pci bind {pci_dev_path}"):
-                    self.write_file(MLX5_CORE_BIND_PATH, bdf)
+                self._dpu_pci_bind(pci_dev_path, bdf)
             elif not os.path.exists(pci_dev_path):
                 self.log_warning(f"PCI device {pci_dev_path} not found")
             else:

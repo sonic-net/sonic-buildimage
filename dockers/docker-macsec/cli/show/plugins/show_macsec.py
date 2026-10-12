@@ -305,7 +305,12 @@ class MacsecContext(object):
         if not profile:
             COUNTER_TABLE = CounterTable(self.db.get_redis_client(self.db.COUNTERS_DB))
 
-            interface_names = [name.split(":")[1] for name in self.db.keys(self.db.APPL_DB, "MACSEC_PORT*")]
+            separator = self.db.get_db_separator(self.db.APPL_DB)
+            port_key_prefix = MACsecPort.get_appl_table_name() + separator
+            interface_names = [
+                name[len(port_key_prefix):]
+                for name in self.db.keys(self.db.APPL_DB, port_key_prefix + "*")
+            ]
             if interface_name is not None:
                 if interface_name not in interface_names:
                     return
@@ -315,7 +320,12 @@ class MacsecContext(object):
             for interface_name in natsorted(interface_names):
                 objs += create_macsec_objs(interface_name)
         else:
-            profile_names = [name.split("|")[1] for name in self.db.keys(self.db.CONFIG_DB, "MACSEC_PROFILE*")]
+            separator = self.db.get_db_separator(self.db.CONFIG_DB)
+            profile_key_prefix = MACsecProfile.get_cfg_table_name() + separator
+            profile_names = [
+                name[len(profile_key_prefix):]
+                for name in self.db.keys(self.db.CONFIG_DB, profile_key_prefix + "*")
+            ]
             objs = []
 
             for profile_name in natsorted(profile_names):

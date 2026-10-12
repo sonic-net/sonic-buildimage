@@ -1,22 +1,21 @@
-[PATCH] SRv6-vpn-route-and-sidlist-instal
-
+From e50070a80a8a2103c006fe4de98edb2e995b480e Mon Sep 17 00:00:00 2001
 From: "guozhongfeng.gzf" <guozhongfeng.gzf@alibaba-inc.com>
 Date: Fri, 20 Dec 2024 14:47:16 +0800
 Subject: [PATCH] SRv6-vpn-route-and-sidlist-instal
 
 Signed-off-by: guozhongfeng.gzf <guozhongfeng.gzf@alibaba-inc.com>
 ---
- lib/srv6.h           |    2 ++
- zebra/zebra_dplane.c |   16 ++++++++++++++++
- zebra/zebra_dplane.h |   13 +++++++++++++
- zebra/zebra_srv6.h   |   14 ++++++++++++++
+ lib/srv6.h           |  2 ++
+ zebra/zebra_dplane.c | 16 ++++++++++++++++
+ zebra/zebra_dplane.h | 13 +++++++++++++
+ zebra/zebra_srv6.h   | 14 ++++++++++++++
  4 files changed, 45 insertions(+)
 
 diff --git a/lib/srv6.h b/lib/srv6.h
-index 7e5e3abaa..991996ab4 100644
+index 5931d3c183..122631b4b2 100644
 --- a/lib/srv6.h
 +++ b/lib/srv6.h
-@@ -311,6 +311,8 @@ struct nexthop_srv6 {
+@@ -314,6 +314,8 @@ struct nexthop_srv6 {
  
  	/* SRv6 Headend-behaviour */
  	struct seg6_seg_stack *seg6_segs;
@@ -26,18 +25,18 @@ index 7e5e3abaa..991996ab4 100644
  
  /* SID format type */
 diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
-index ebedc7b2c..827d55d68 100644
+index 5a43fb188a..ba7cd65c48 100644
 --- a/zebra/zebra_dplane.c
 +++ b/zebra/zebra_dplane.c
-@@ -26,6 +26,7 @@
+@@ -27,6 +27,7 @@
  #include "zebra/zebra_pbr.h"
+ #include "zebra/zebra_l2.h"
  #include "zebra/zebra_neigh.h"
- #include "zebra/zebra_tc.h"
 +#include "zebra/zebra_srv6.h"
+ #include "zebra/zebra_tc.h"
+ #include "zebra/zebra_trace.h"
  #include "printfrr.h"
- 
- /* Memory types */
-@@ -82,6 +83,7 @@ const uint32_t DPLANE_DEFAULT_NEW_WORK = 100;
+@@ -85,6 +86,7 @@ const uint32_t DPLANE_DEFAULT_NEW_WORK = 100;
  struct dplane_nexthop_info {
  	uint32_t id;
  	uint32_t old_id;
@@ -45,7 +44,7 @@ index ebedc7b2c..827d55d68 100644
  	afi_t afi;
  	vrf_id_t vrf_id;
  	int type;
-@@ -427,6 +429,7 @@ struct zebra_dplane_ctx {
+@@ -486,6 +488,7 @@ struct zebra_dplane_ctx {
  	/* Support info for different kinds of updates */
  	union {
  		struct dplane_route_info rinfo;
@@ -53,7 +52,7 @@ index ebedc7b2c..827d55d68 100644
  		struct zebra_lsp lsp;
  		struct dplane_pw_info pw;
  		struct dplane_br_port_info br_port;
-@@ -2305,6 +2308,19 @@ int dplane_ctx_get_ns_sock(const struct zebra_dplane_ctx *ctx)
+@@ -2471,6 +2474,19 @@ int dplane_ctx_get_ns_sock(const struct zebra_dplane_ctx *ctx)
  #endif
  }
  
@@ -74,10 +73,10 @@ index ebedc7b2c..827d55d68 100644
  uint32_t dplane_ctx_get_nhe_id(const struct zebra_dplane_ctx *ctx)
  {
 diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
-index 1c03a2953..a0ee63b76 100644
+index b1585065a2..7fd2b8d3f0 100644
 --- a/zebra/zebra_dplane.h
 +++ b/zebra/zebra_dplane.h
-@@ -125,6 +125,16 @@ enum dplane_op_e {
+@@ -128,6 +128,16 @@ enum dplane_op_e {
  	DPLANE_OP_NH_UPDATE,
  	DPLANE_OP_NH_DELETE,
  
@@ -94,7 +93,7 @@ index 1c03a2953..a0ee63b76 100644
  	/* LSP update */
  	DPLANE_OP_LSP_INSTALL,
  	DPLANE_OP_LSP_UPDATE,
-@@ -594,6 +604,9 @@ const struct nexthop_group *dplane_ctx_get_ng(
+@@ -635,6 +645,9 @@ const struct nexthop_group *dplane_ctx_get_ng(
  const struct nexthop_group *dplane_ctx_get_old_ng(
  	const struct zebra_dplane_ctx *ctx);
  
@@ -105,10 +104,10 @@ index 1c03a2953..a0ee63b76 100644
   * this extra info.
   */
 diff --git a/zebra/zebra_srv6.h b/zebra/zebra_srv6.h
-index 1599fd7ad..05122144d 100644
+index 47511baa2f..8befdc4ff4 100644
 --- a/zebra/zebra_srv6.h
 +++ b/zebra/zebra_srv6.h
-@@ -209,6 +209,20 @@ struct zebra_srv6 {
+@@ -245,6 +245,20 @@ struct zebra_srv6 {
  	struct list *sid_blocks;
  };
  
@@ -129,3 +128,6 @@ index 1599fd7ad..05122144d 100644
  /* declare hooks for the basic API, so that it can be specialized or served
   * externally. Also declare a hook when those functions have been registered,
   * so that any external module wanting to replace those can react
+-- 
+2.34.1
+

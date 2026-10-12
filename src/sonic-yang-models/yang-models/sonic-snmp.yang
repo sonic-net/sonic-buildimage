@@ -59,7 +59,7 @@ module sonic-snmp {
         leaf name {
           type string {
               length "4..32";
-              pattern '[^ @,\\' +"']*" {
+              pattern '[^ @,\t\n\r\\' +"']*" {
                   error-message 'Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,"@", "," and "\")';
               }
           }
@@ -87,7 +87,7 @@ module sonic-snmp {
         leaf name {
           type string {
               length "4..32";
-              pattern '[^ :@,\\' +"']*" {
+              pattern '[^ :@,\t\n\r\\' +"']*" {
                   error-message 'Invalid snmp user string (Valid chars are ASCII printable except \
                                  SPACE, single quote,"@", ",", "\" and ":")';
               }
@@ -127,7 +127,7 @@ module sonic-snmp {
         leaf SNMP_USER_AUTH_PASSWORD {
           type string {
               length "0..64";
-              pattern '[^ @:]*' {
+              pattern '[^ @:\t\n\r]*' {
                   error-message 'Invalid snmp user authentication password (Valid chars are ASCII
                                  printable except ":" and"@")';
               }
@@ -151,7 +151,7 @@ module sonic-snmp {
           mandatory true;
           type string {
               length "0..64";
-              pattern '[^ @:]*' {
+              pattern '[^ @:\t\n\r]*' {
                   error-message 'Invalid snmp user encryption password (Valid chars are ASCII \
                                  printable except ":" and"@")';
               }

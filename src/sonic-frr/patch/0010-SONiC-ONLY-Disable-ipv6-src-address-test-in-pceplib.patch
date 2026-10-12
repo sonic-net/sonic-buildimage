@@ -1,16 +1,18 @@
-[PATCH] From dfe0158344ea581370dd2dba8e4db189cf369147 Mon Sep 17
-
+From 9ecbe0eba25b0f1fc00370f6ffd9b901faf05575 Mon Sep 17 00:00:00 2001
 From: Syed Hasan Raza Naqvi <syed.naqvi@broadcom.com>
 Date: Wed, 4 May 2022 05:11:01 +0000
- 00:00:00 2001 Subject: [PATCH] Disable ipv6 src address test in pcep. Docker
- lo interface  doesn't have ipv6 enabled. Socket bind returns cannot assign
- requested  address.
+Subject: [PATCH] pceplib: disable IPv6 source address bind in SONiC test
+
+The SONiC build container loopback does not enable IPv6. Use the unspecified
+IPv6 source address so the socket test does not fail with EADDRNOTAVAIL.
+
+Original-patch-commit: dfe0158344ea581370dd2dba8e4db189cf369147
 ---
- pceplib/test/pcep_socket_comm_test.c |    2 +-
+ pceplib/test/pcep_socket_comm_test.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/pceplib/test/pcep_socket_comm_test.c b/pceplib/test/pcep_socket_comm_test.c
-index c0b73c3db..4a70e49fb 100644
+index c0b73c3dbc..4a70e49fb7 100644
 --- a/pceplib/test/pcep_socket_comm_test.c
 +++ b/pceplib/test/pcep_socket_comm_test.c
 @@ -80,7 +80,7 @@ void pcep_socket_comm_test_setup()
@@ -22,3 +24,6 @@ index c0b73c3db..4a70e49fb 100644
  }
  
  void pcep_socket_comm_test_teardown()
+-- 
+2.34.1
+

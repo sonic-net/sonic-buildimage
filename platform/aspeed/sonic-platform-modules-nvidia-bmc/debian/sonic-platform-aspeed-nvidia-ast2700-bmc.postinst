@@ -11,9 +11,10 @@ case "$1" in
             exit 1
         fi
         DEVICE_DIR="/usr/share/sonic/device/${DEVICE_NAME}"
-        if [ -f "${DEVICE_DIR}"/*.whl ]; then
-            # Force reinstall to ensure this platform's wheel is installed
-            pip3 install --force-reinstall --no-deps "${DEVICE_DIR}"/*.whl
+        wheels=( "${DEVICE_DIR}"/*.whl )
+        if [ -e "${wheels[0]}" ]; then
+            # Force reinstall to ensure this platform's wheels are installed
+            pip3 install --force-reinstall --no-deps "${wheels[@]}"
         fi
 
         # Merge the platform's FEATURE overrides into init_cfg.json.

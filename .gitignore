@@ -88,6 +88,8 @@ platform/**/debian/*
 !platform/**/debian/compat
 !platform/**/debian/*.postinst
 !platform/**/debian/*.install
+!platform/**/debian/*.service
+!platform/**/debian/*.conf
 platform/**/build
 platform/**/*.ko
 platform/**/*.mod.c
@@ -129,3 +131,8 @@ sources.list.*
 
 # Generated mirror configs
 apt-retries-count
+
+# dpkg cache-validation script outputs
+poc-results/
+cache-validation-out/
+poc-run.log

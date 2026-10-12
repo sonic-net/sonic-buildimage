@@ -1,46 +1,189 @@
-From 3923c7bd4fe4805c3fa5962b510fa4b78831e71e Mon Sep 17 00:00:00 2001
-From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
-Date: Tue, 19 Aug 2025 16:21:29 +0000
-Subject: zebra : EVPN VXLAN Multihome extern mode: Enable
- --kernel-mac-ext-learn
+From 61f5efae72e57ccb49b995bfba423684716fdcfa Mon Sep 17 00:00:00 2001
+From: Patrice Brissette <patricebrissette@gmail.com>
+Date: Tue, 5 May 2026 16:10:53 -0400
+Subject: [PATCH] zebra: Enable --kernel-mac-ext-learn for hardware-based MAC
+ learning
 
 Introduction of "--kernel-mac-ext-learn" mode of operation in zebra.
 
-This is part of the change is to enable the
- option '--kernel-mac-ext-learn' in zebra.
+This change enables the option '--kernel-mac-ext-learn' in zebra to
+support hardware-based MAC learning and aging for platforms with ASIC
+capabilities.
+
+Scope:
+This is a GLOBAL zebra option that affects all MAC address handling
+system-wide, not limited to EVPN-MH. While designed primarily for
+EVPN VXLAN Multihoming scenarios, the implementation modifies kernel
+MAC programming behavior for all MACs regardless of their origin or
+protocol association.
+
+When enabled, zebra operates in a mode suitable for platforms where:
+- Hardware ASIC performs MAC learning and aging
+- Kernel aging should be disabled for all MACs
+- All MACs are marked as externally learned (NTF_EXT_LEARNED)
 
 Rationale:
-EVPN Multihoming External Mode Support is to enable platforms doing
-Hardware Based MAC Learning and Aging to support EVPN VXLAN Multihome.
+Modern data center switches with hardware acceleration can perform
+MAC learning and aging directly in the ASIC. This option enables
+FRR to cooperate with such hardware by:
+- Disabling kernel-based MAC aging
+- Marking all MACs as extern_learn in kernel
+- Allowing hardware to manage the data plane MAC lifecycle
+- Zebra managing the control plane (BGP EVPN advertisements, etc.)
 
-MAC's in this mode for both data and control plane will be
- marked and programmed as 'extern_only' in kernel, so that kernel aging
- is disabled for these MACs. Zebra along with Hardware(HW) will control
- these MACs for control plane and data plane respectively.
+Primary Use Case:
+EVPN VXLAN Multihoming deployments benefit most from this feature,
+as hardware-based MAC learning provides better performance and
+scalability than software-based approaches. However, the infrastructure
+is general-purpose and affects all MAC handling when enabled.
+
+MACs in this mode for both data and control plane will be marked and
+programmed as 'extern_only' in kernel, so that kernel aging is disabled
+for these MACs. Zebra along with Hardware(HW) will control these MACs
+for control plane and data plane respectively.
+
+Observability:
+The mode is exposed through multiple interfaces for operator visibility:
+- CLI: 'show zebra' displays "Kernel MAC External Learn: On/Off"
+- YANG: /frr-zebra:zebra/state/kernel-mac-ext-learn operational leaf
+- ZAPI: Advertised in ZEBRA_CAPABILITIES message to upper-level protocols
 
 Per File change summary:
+
 zebra/main.c:
-  Add option '--kernel-mac-ext-learn' in zebra startup.
-  Alignment changes for the other options to match the new option width
-  and keep description alignment consistent
+  - Add option '--kernel-mac-ext-learn' in zebra startup
+  - Alignment changes for other options to match new option width
+    and keep description alignment consistent
+
 zebra/zebra_router.c:
-   - zebra_router_init definition updation to pass
-      kernel_mac_ext_learn mode
-   - store kernel_mac_ext_learn in zrouter zav structure
+  - Update zebra_router_init definition to pass kernel_mac_ext_learn mode
+  - Store kernel_mac_ext_learn in zrouter.zav structure
+
 zebra/zebra_router.h:
-   - new bool field 'kernel_mac_ext_learn' in zebra_router, to
-     store extern only mode
-zebra/zebra_vxlan.h:
-   - Accessor for Extern Only mode i.e zebra_mac_ext_learn_mode
+  - New bool field 'kernel_mac_ext_learn' in zebra_architectural_values
+    to store extern only mode
+
+zebra/zebra_router.h:
+  - Accessor function zebra_mac_ext_learn_mode() for Extern Only mode
+
+zebra/zebra_vty.c:
+  - Add "Kernel MAC External Learn" status to 'show zebra' command output
+
+yang/frr-zebra.yang:
+  - Add kernel-mac-ext-learn operational state leaf
+
+zebra/zebra_nb.c, zebra/zebra_nb.h, zebra/zebra_nb_state.c:
+  - YANG northbound callbacks for kernel-mac-ext-learn state
+
+zebra/zapi_msg.c:
+  - Add kernel_mac_ext_learn to ZEBRA_CAPABILITIES message
+
+lib/zclient.h, lib/zclient.c:
+  - Add kernel_mac_ext_learn to zclient_capabilities structure
+  - Decode capability in client HELLO response
 
 Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
 Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
-(cherry picked from commit e2f14ac2779a08e70eab1096da9f6765845af226)
+(cherry picked from commit 38e178977b71fec85728a0161cffc76a869c7697)
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+---
+ doc/user/zebra.rst     | 23 +++++++++++++++++++++++
+ lib/zclient.c          |  2 ++
+ lib/zclient.h          |  1 +
+ yang/frr-zebra.yang    |  8 +++++++-
+ zebra/main.c           | 30 +++++++++++++++++++-----------
+ zebra/zapi_msg.c       |  1 +
+ zebra/zebra_nb.c       |  6 ++++++
+ zebra/zebra_nb.h       |  1 +
+ zebra/zebra_nb_state.c |  8 ++++++++
+ zebra/zebra_router.c   |  3 ++-
+ zebra/zebra_router.h   | 13 +++++++++++--
+ zebra/zebra_vty.c      |  3 +++
+ 12 files changed, 84 insertions(+), 15 deletions(-)
 
+diff --git a/doc/user/zebra.rst b/doc/user/zebra.rst
+index 7dcca8a339..81fbbc9682 100644
+--- a/doc/user/zebra.rst
++++ b/doc/user/zebra.rst
+@@ -122,6 +122,29 @@ Besides the common invocation options (:ref:`common-invocation-options`), the
+    8 bit values are scaled to a range of 1-254 and 16 bit values are
+    scaled to a range of 1-65534.
+ 
++.. option:: --kernel-mac-ext-learn
++
++   **Global option** that enables hardware-based MAC learning and aging mode.
++
++   This is a system-wide zebra option (not EVPN-MH specific) designed for
++   platforms with hardware ASIC capabilities that perform MAC learning and
++   aging in hardware rather than kernel software.
++
++   When enabled:
++
++   - All MAC addresses (regardless of origin) are programmed with the
++     'extern_learn' attribute in the kernel
++   - Kernel-based MAC learning and aging are disabled system-wide
++   - Hardware is responsible for MAC aging, zebra manages control plane
++   - ARP and Neighbor Discovery (ND) suppression are disabled
++   - Asymmetric IRB (Integrated Routing and Bridging) is not supported
++
++   **Primary use case**: EVPN VXLAN Multihoming deployments with hardware
++   acceleration, but the infrastructure affects all MAC handling globally.
++
++   **Scope**: This flag changes how zebra interacts with the kernel for
++   all MAC entries, not just those associated with EVPN or multihoming.
++
+ .. _interface-commands:
+ 
+ Configuration Addresses behaviour
+diff --git a/lib/zclient.c b/lib/zclient.c
+index 957b98c9ce..092a34bfa4 100644
+--- a/lib/zclient.c
++++ b/lib/zclient.c
+@@ -4467,6 +4467,8 @@ static int zclient_capability_decode(ZAPI_CALLBACK_ARGS)
+ 	STREAM_GETL(s, cap.ecmp);
+ 	STREAM_GETC(s, cap.role);
+ 	STREAM_GETC(s, cap.v6_with_v4_nexthop);
++	STREAM_FORWARD_GETP(s, 1); /* graceful restart */
++	STREAM_GETC(s, cap.kernel_mac_ext_learn);
+ 
+ 	if (zclient->zebra_capabilities)
+ 		(*zclient->zebra_capabilities)(&cap);
+diff --git a/lib/zclient.h b/lib/zclient.h
+index 9bd16247b4..85c132760c 100644
+--- a/lib/zclient.h
++++ b/lib/zclient.h
+@@ -288,6 +288,7 @@ struct zclient_capabilities {
+ 	bool mpls_enabled;
+ 	enum mlag_role role;
+ 	bool v6_with_v4_nexthop;
++	bool kernel_mac_ext_learn;
+ };
+ 
+ /* Graceful Restart Capabilities message */
+diff --git a/yang/frr-zebra.yang b/yang/frr-zebra.yang
+index 60c3c4dcc1..328e5b8ade 100644
+--- a/yang/frr-zebra.yang
++++ b/yang/frr-zebra.yang
+@@ -3233,7 +3233,13 @@ module frr-zebra {
+         type boolean;
+         description
+           "MPLS forwarding status.";
+-      }   
++      }
++      leaf kernel-mac-ext-learn {
++        type boolean;
++        description
++          "Kernel MAC external learn mode status.
++           Enabling hardware-based MAC learning and aging.";
++      }
+     }
+     // End of operational / state container
+   }
 diff --git a/zebra/main.c b/zebra/main.c
-index 67638afbb..d86753e9a 100644
+index ada1c151e9..4044c1d62b 100644
 --- a/zebra/main.c
 +++ b/zebra/main.c
 @@ -80,6 +80,7 @@ uint32_t rt_table_main_id = RT_TABLE_MAIN;
@@ -59,7 +202,7 @@ index 67638afbb..d86753e9a 100644
  #ifdef HAVE_NETLINK
  	{ "vrfwnetns", no_argument, NULL, 'n' },
  	{ "nl-bufsize", required_argument, NULL, 's' },
-@@ -359,6 +361,7 @@ int main(int argc, char **argv)
+@@ -388,6 +390,7 @@ int main(int argc, char **argv)
  	bool v6_with_v4_nexthop = false;
  	bool notify_on_ack = true;
  	bool nexthop_weight_16_bit = false;
@@ -67,7 +210,7 @@ index 67638afbb..d86753e9a 100644
  
  	zserv_path = NULL;
  
-@@ -373,22 +376,23 @@ int main(int argc, char **argv)
+@@ -402,22 +405,23 @@ int main(int argc, char **argv)
  #endif
  		    ,
  		    longopts,
@@ -76,17 +219,15 @@ index 67638afbb..d86753e9a 100644
 -		    "  -z, --socket                Set path of zebra socket\n"
 -		    "  -e, --ecmp                  Specify ECMP to use.\n"
 -		    "  -r, --retain                When program terminates, retain added route by zebra.\n"
--		    "  -A, --asic-offload          FRR is interacting with an asic underneath the linux kernel\n"
--		    "      --v6-with-v4-nexthops   Underlying dataplane supports v6 routes with v4 nexthops\n"
 +		    "  -b, --batch                Runs in batch mode\n"
 +		    "  -a, --allow_delete         Allow other processes to delete zebra routes\n"
 +		    "  -z, --socket               Set path of zebra socket\n"
 +		    "  -e, --ecmp                 Specify ECMP to use.\n"
 +		    "  -r, --retain               When program terminates, retain added route by zebra.\n"
-+		    "  -A, --asic-offload         FRR is interacting with an asic underneath the linux kernel\n"
-+		    "      --v6-with-v4-nexthops  Underlying dataplane supports v6 routes with v4 nexthops\n"
+ 		    "  -A, --asic-offload          FRR is interacting with an asic underneath the linux kernel\n"
+ 		    "      --v6-with-v4-nexthops   Underlying dataplane supports v6 routes with v4 nexthops\n"
  		    "      --nexthop-weight-16-bit Use 16 bit nexthop weights instead of 8\n"
-+		    "      --kernel-mac-ext-learn Enable kernel external learning for MAC\n"
++		    "      --kernel-mac-ext-learn  Enable hardware-based MAC learning (global, affects all MACs)\n"
  #ifdef HAVE_NETLINK
 -		    "  -s, --nl-bufsize            Set netlink receive buffer size\n"
 -		    "  -n, --vrfwnetns             Use NetNS as VRF backend (deprecated, use -w)\n"
@@ -103,7 +244,7 @@ index 67638afbb..d86753e9a 100644
  
  	while (1) {
  		int opt = frr_getopt(argc, argv, NULL);
-@@ -442,6 +446,9 @@ int main(int argc, char **argv)
+@@ -471,6 +475,9 @@ int main(int argc, char **argv)
  		case 'R':
  			rt_table_main_id = atoi(optarg);
  			break;
@@ -113,7 +254,7 @@ index 67638afbb..d86753e9a 100644
  #ifdef HAVE_NETLINK
  		case 'n':
  			fprintf(stderr,
-@@ -474,7 +481,8 @@ int main(int argc, char **argv)
+@@ -503,7 +510,8 @@ int main(int argc, char **argv)
  
  	/* Zebra related initialize. */
  	libagentx_init();
@@ -123,31 +264,68 @@ index 67638afbb..d86753e9a 100644
  	zserv_init();
  	zebra_rib_init();
  	zebra_if_init();
-diff --git a/zebra/zebra_evpn.h b/zebra/zebra_evpn.h
-index e6852eb59..41532cdef 100644
---- a/zebra/zebra_evpn.h
-+++ b/zebra/zebra_evpn.h
-@@ -18,6 +18,7 @@
- #include "zebra/zebra_l2.h"
- #include "zebra/interface.h"
- #include "zebra/zebra_vxlan.h"
-+#include "zebra/zebra_vxlan_if.h"
- 
- #ifdef __cplusplus
- extern "C" {
+diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
+index a716ede345..dd61d46935 100644
+--- a/zebra/zapi_msg.c
++++ b/zebra/zapi_msg.c
+@@ -2463,6 +2463,7 @@ static void zsend_capabilities(struct zserv *client, struct zebra_vrf *zvrf)
+ 	stream_putc(s, zebra_mlag_get_role());
+ 	stream_putc(s, zrouter.zav.v6_with_v4_nexthop);
+ 	stream_putc(s, zrouter.graceful_restart);
++	stream_putc(s, zrouter.zav.kernel_mac_ext_learn);
+ 	stream_putw_at(s, 0, stream_get_endp(s));
+ 	zserv_send_message(client, s);
+ }
+diff --git a/zebra/zebra_nb.c b/zebra/zebra_nb.c
+index e65fe53106..0f840a84c5 100644
+--- a/zebra/zebra_nb.c
++++ b/zebra/zebra_nb.c
+@@ -61,6 +61,12 @@ const struct frr_yang_module_info frr_zebra_info = {
+ 				.get_elem = zebra_state_mpls_forwarding_get_elem,
+ 			}
+ 		},
++		{
++			.xpath = "/frr-zebra:zebra/state/kernel-mac-ext-learn",
++			.cbs = {
++				.get_elem = zebra_state_kernel_mac_ext_learn_get_elem,
++			}
++		},
+ 		{
+ 			.xpath = "/frr-zebra:zebra/workqueue-hold-timer",
+ 			.cbs = {
+diff --git a/zebra/zebra_nb.h b/zebra/zebra_nb.h
+index 06ea28310e..f3153464f2 100644
+--- a/zebra/zebra_nb.h
++++ b/zebra/zebra_nb.h
+@@ -38,6 +38,7 @@ int zebra_ipv6_forwarding_destroy(struct nb_cb_destroy_args *args);
+ int zebra_workqueue_hold_timer_modify(struct nb_cb_modify_args *args);
+ struct yang_data *zebra_ipv6_forwarding_get_elem(struct nb_cb_get_elem_args *args);
+ struct yang_data *zebra_state_mpls_forwarding_get_elem(struct nb_cb_get_elem_args *args);
++struct yang_data *zebra_state_kernel_mac_ext_learn_get_elem(struct nb_cb_get_elem_args *args);
+ int zebra_zapi_packets_modify(struct nb_cb_modify_args *args);
+ int zebra_import_kernel_table_create(struct nb_cb_create_args *args);
+ int zebra_import_kernel_table_destroy(struct nb_cb_destroy_args *args);
+diff --git a/zebra/zebra_nb_state.c b/zebra/zebra_nb_state.c
+index 2a489d9e1e..fe4629c85c 100644
+--- a/zebra/zebra_nb_state.c
++++ b/zebra/zebra_nb_state.c
+@@ -1281,3 +1281,11 @@ struct yang_data *zebra_state_mpls_forwarding_get_elem(struct nb_cb_get_elem_arg
+ {
+ 	return yang_data_new_bool(args->xpath, mpls_enabled);
+ }
++
++/*
++ * XPath: /frr-zebra:zebra/state/kernel-mac-ext-learn
++ */
++struct yang_data *zebra_state_kernel_mac_ext_learn_get_elem(struct nb_cb_get_elem_args *args)
++{
++	return yang_data_new_bool(args->xpath, zrouter.zav.kernel_mac_ext_learn);
++}
 diff --git a/zebra/zebra_router.c b/zebra/zebra_router.c
-index bd6d5cae6..089d3ed48 100644
+index 27ae212073..4a56c62f8d 100644
 --- a/zebra/zebra_router.c
 +++ b/zebra/zebra_router.c
-@@ -15,6 +15,7 @@
- #include "zebra_mlag.h"
- #include "zebra_nhg.h"
- #include "zebra_neigh.h"
-+#include "zebra_evpn.h"
- #include "zebra/zebra_tc.h"
- #include "debug.h"
- #include "zebra_script.h"
-@@ -285,7 +286,7 @@ bool zebra_router_notify_on_ack(void)
+@@ -285,7 +285,7 @@ bool zebra_router_notify_on_ack(void)
  }
  
  void zebra_router_init(bool asic_offload, bool notify_on_ack, bool v6_with_v4_nexthop,
@@ -156,21 +334,21 @@ index bd6d5cae6..089d3ed48 100644
  {
  	zrouter.sequence_num = 0;
  
-@@ -346,6 +347,7 @@ void zebra_router_init(bool asic_offload, bool notify_on_ack, bool v6_with_v4_ne
+@@ -349,6 +349,7 @@ void zebra_router_init(bool asic_offload, bool notify_on_ack, bool v6_with_v4_ne
  	zrouter.zav.notify_on_ack = notify_on_ack;
  	zrouter.zav.v6_with_v4_nexthop = v6_with_v4_nexthop;
  	zrouter.zav.nexthop_weight_is_16bit = nexthop_weight_16_bit;
 +	zrouter.zav.kernel_mac_ext_learn = kernel_mac_ext_learn;
  
- 	/*
- 	 * If you start using asic_notification_nexthop_control
+ 	zrouter.backup_nhs_installed = false;
+ 
 diff --git a/zebra/zebra_router.h b/zebra/zebra_router.h
-index 4904f59bb..7aa3dabda 100644
+index f186ccb801..f0f96839f4 100644
 --- a/zebra/zebra_router.h
 +++ b/zebra/zebra_router.h
-@@ -141,7 +141,10 @@ struct zebra_architectural_values {
- 	 */
- 	bool asic_notification_nexthop_control;
+@@ -134,7 +134,10 @@ struct zebra_architectural_values {
+ 	bool supports_nhgs;
+ 
  	bool nexthop_weight_is_16bit;
 -
 +	/*
@@ -180,32 +358,36 @@ index 4904f59bb..7aa3dabda 100644
  };
  
  struct zebra_router {
-@@ -253,7 +256,7 @@ extern struct zebra_router zrouter;
+@@ -247,8 +250,14 @@ struct zebra_router {
+ extern struct zebra_router zrouter;
  extern uint32_t rcvbufsize;
  
++/* Returns true if zebra is operating in MAC-EXT-LEARN (kernel external MAC learning) mode */
++static inline bool zebra_mac_ext_learn_mode(void)
++{
++	return zrouter.zav.kernel_mac_ext_learn;
++}
++
  extern void zebra_router_init(bool asic_offload, bool notify_on_ack, bool v6_with_v4_nexthop,
 -			      bool nexthop_weight_16_bit);
 +			      bool nexthop_weight_16_bit, bool kernel_mac_ext_learn);
  extern void zebra_router_cleanup(void);
  extern void zebra_router_terminate(void);
  
-diff --git a/zebra/zebra_vxlan.h b/zebra/zebra_vxlan.h
-index ef4c39c06..95cdf70bd 100644
---- a/zebra/zebra_vxlan.h
-+++ b/zebra/zebra_vxlan.h
-@@ -40,6 +40,12 @@ is_vxlan_flooding_head_end(void)
- 	return (zvrf->vxlan_flood_ctrl == VXLAN_FLOOD_HEAD_END_REPL);
- }
+diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
+index 00efc19603..e5df141176 100644
+--- a/zebra/zebra_vty.c
++++ b/zebra/zebra_vty.c
+@@ -3931,6 +3931,9 @@ DEFUN (show_zebra,
+ 	ttable_add_row(table, "ASIC offload|%s",
+ 		       zrouter.zav.asic_offloaded ? "Used" : "Unavailable");
  
-+/* static function returning if the MAC-EXT-LEARN mode is set */
-+static inline bool zebra_mac_ext_learn_mode(void)
-+{
-+	return zrouter.zav.kernel_mac_ext_learn;
-+}
++	ttable_add_row(table, "Kernel MAC External Learn|%s",
++		       zrouter.zav.kernel_mac_ext_learn ? "On" : "Off");
 +
- /* VxLAN interface change flags of interest. */
- #define ZEBRA_VXLIF_LOCAL_IP_CHANGE     (1 << 0)
- #define ZEBRA_VXLIF_MASTER_CHANGE       (1 << 1)
+ 	ttable_add_row(table, "RA|%s",
+ 		       rtadv_compiled_in() ? "Compiled in" : "Not Compiled in");
+ 	ttable_add_row(table, "RFC 5549|%s",
 -- 
-2.43.0
+2.34.1
 

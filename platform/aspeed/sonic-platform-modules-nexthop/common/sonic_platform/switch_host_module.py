@@ -13,6 +13,7 @@ import time
 
 try:
     from sonic_platform_base.module_base import ModuleBase
+    from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
@@ -27,8 +28,9 @@ class SwitchHostModule(ModuleBase):
 
     # Hardware register constants
     CPE_CTRL_REG = "0x14C0B208"      # CPU reset control register
-    RESET_VALUE_ASSERT = "2"         # Write 2 => drive low (into reset)
-    RESET_VALUE_DEASSERT = "3"       # Write 3 => drive high (out of reset)
+    RESET_VALUE_MASK = 0x3           # Reset control occupies bits [1:0]
+    RESET_VALUE_ASSERT = 0x2         # Bits [1:0] = 2 => drive low (into reset)
+    RESET_VALUE_DEASSERT = 0x3       # Bits [1:0] = 3 => drive high (out of reset)
 
     def __init__(self, module_index=0):
         """
@@ -42,16 +44,25 @@ class SwitchHostModule(ModuleBase):
 
     def _write_reset_register(self, value):
         """
-        Write to the switch CPU reset register using devmem.
+        Set the reset control bits of the switch CPU reset register using devmem.
+
+        Read-modify-write: only bits [1:0] are updated, every other bit in the
+        register is preserved.
 
         Args:
-            value: Register value to write (str)
+            value: Reset control value (int); only bits [1:0] are used
 
         Returns:
             bool: True if operation succeeded, False otherwise
         """
+        current = self._read_reset_register()
+        if current == -1:
+            sys.stderr.write("Failed to read reset register before write\n")
+            return False
+
+        new_value = (current & ~self.RESET_VALUE_MASK) | (value & self.RESET_VALUE_MASK)
         try:
-            cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32", value]
+            cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32", f"0x{new_value:08X}"]
             result = subprocess.run(cmd, capture_output=True, timeout=5)
             if result.returncode != 0:
                 sys.stderr.write(f"devmem write failed: {result.stderr}\n")
@@ -66,15 +77,14 @@ class SwitchHostModule(ModuleBase):
         Read current value from switch CPU reset register.
 
         Returns:
-            int: 0 or 1 (CPU in reset or out of reset), -1 on error
+            int: Full 32-bit register value, -1 on error
         """
         try:
             cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32"]
             result = subprocess.run(cmd, capture_output=True, timeout=5, text=True)
             if result.returncode == 0:
                 # Parse hex value (e.g., "0x00000001")
-                value = int(result.stdout.strip(), 16)
-                return value & 0x1  # Extract bit 0: 0=in reset, 1=out of reset
+                return int(result.stdout.strip(), 16)
         except Exception as e:
             sys.stderr.write(f"Failed to read reset register: {e}\n")
         return -1
@@ -118,7 +128,7 @@ class SwitchHostModule(ModuleBase):
 
         Sequence:
           1. Assert reset (drive low)
-          2. Wait 2 seconds
+          2. Wait 6 seconds (>=5)
           3. Deassert reset (drive high)
 
         Returns:
@@ -131,9 +141,10 @@ class SwitchHostModule(ModuleBase):
             sys.stderr.write("SwitchHost: Failed to assert reset\n")
             return False
 
-        sys.stderr.write("SwitchHost: Reset asserted, waiting 2 seconds...\n")
+        # 5 seconds is the minimum wait time
+        sys.stderr.write("SwitchHost: Reset asserted, waiting 6 seconds...\n")
 
-        time.sleep(2)
+        time.sleep(6)
 
         # Step 3: Deassert reset (power on)
         if not self._write_reset_register(self.RESET_VALUE_DEASSERT):
@@ -255,12 +266,16 @@ class SwitchHostModule(ModuleBase):
         """
         raise NotImplementedError
 
-    def get_serial(self):
+    def _read_eeprom_tlv(self, tlv_type):
         """
-        Read the system/chassis serial number from the switch card EEPROM.
+        Read a single TLV from the switchcard EEPROM (ONIE TlvInfo format).
+
+        Args:
+            tlv_type: ONIE TLV type code, one of the TlvInfoDecoder._TLV_CODE_*
+                      constants (e.g. TlvInfoDecoder._TLV_CODE_PRODUCT_NAME).
 
         Returns:
-            str: Serial number string if found, else "N/A"
+            str: TLV value as ASCII string, or "N/A" if missing / error.
         """
         SWITCH_CARD_EEPROM_I2C_PATH = "/sys/bus/i2c/devices/i2c-10"
         SWITCH_CARD_EEPROM_PATH = "/sys/bus/i2c/devices/10-0050/eeprom"
@@ -303,7 +318,9 @@ class SwitchHostModule(ModuleBase):
                 return
             try:
                 with open(delete_path_bus, "w") as f:
-                    f.write("10-0050\n")
+                    # Write only the device address, not the full bus-address notation
+                    # Kernel expects "0x50" not "10-0050"
+                    f.write("0x50\n")
             except OSError:
                 pass
 
@@ -318,7 +335,7 @@ class SwitchHostModule(ModuleBase):
         finally:
             cleanup()
 
-        # Parse TlvInfo TLV 0x23
+        # Parse TlvInfo header
         if len(e) < 11 or e[0:7] != b"TlvInfo":
             return "N/A"
 
@@ -334,13 +351,20 @@ class SwitchHostModule(ModuleBase):
             if vend > len(e):
                 break
 
-            if t == 0x23:  # Serial Number TLV
+            if t == tlv_type:
                 return e[vstart:vend].decode("ascii", errors="ignore").strip()
 
-            if t == 0xFE:  # CRC TLV
+            if t == TlvInfoDecoder._TLV_CODE_CRC_32:
+                # CRC TLV marks end of meaningful data
                 break
 
             idx = vend
 
         return "N/A"
+
+    def get_serial(self):
+        """
+        Read the system/chassis serial number from the switch card EEPROM.
+        """
+        return self._read_eeprom_tlv(TlvInfoDecoder._TLV_CODE_SERIAL_NUMBER)
 

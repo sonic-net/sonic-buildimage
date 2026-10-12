@@ -15,104 +15,231 @@
 # limitations under the License.
 #
 
-"""
-Rshim daemon start/stop and wait for boot.
-"""
+"""Manage the global RShim service and its selected-only configuration."""
 
 import logging
 import os
 import subprocess
+import tempfile
 import time
+from typing import Dict, Iterable, Optional, Set
 
 logger = logging.getLogger(__name__)
 
-RSHIM_BINARY = "/usr/sbin/rshim"
-PIDFILE_DIR = "/var/run"
-BOOT_WAIT_TIMEOUT_SEC = 10
+RSHIM_CONFIG_PATH = "/etc/rshim.conf"
+RSHIM_SERVICE = "rshim.service"
+RSHIM_WAIT_TIMEOUT_SEC = 30
+SYSTEMCTL_TIMEOUT_SEC = 40
 
 
-def _pidfile_path(rid: str) -> str:
-    """Return path to pidfile for the given rshim id (e.g. '0' -> /var/run/rshim_0.pid)."""
-    return os.path.join(PIDFILE_DIR, f"rshim_{rid}.pid")
-
-
-def start_rshim_daemon(rid: str, pci_bus: str) -> bool:
-    """Start rshim daemon in background.
-
-    Returns True on success, False on failure.
-    """
-    pidfile = _pidfile_path(rid)
+def _run_systemctl(action: str) -> bool:
+    """Run one systemctl action for the global RShim service."""
     try:
         result = subprocess.run(
-            [
-                "start-stop-daemon",
-                "--start",
-                "--quiet",
-                "--background",
-                "--make-pidfile",
-                "--pidfile",
-                pidfile,
-                "--exec",
-                RSHIM_BINARY,
-                "--",
-                "-f",
-                "-i",
-                rid,
-                "-d",
-                f"pcie-{pci_bus}",
-            ],
+            ["systemctl", action, RSHIM_SERVICE],
+            timeout=SYSTEMCTL_TIMEOUT_SEC,
         )
-        if result.returncode != 0:
-            logger.error("Failed to start rshim for rshim%s: exit code %d", rid, result.returncode)
-            return False
-    except Exception as e:
-        logger.error("Failed to start rshim for rshim%s: %s", rid, e)
+    except subprocess.TimeoutExpired:
+        logger.error(
+            "Timed out after %d seconds waiting for systemctl to %s %s; "
+            "the systemd job may still be running",
+            SYSTEMCTL_TIMEOUT_SEC,
+            action,
+            RSHIM_SERVICE,
+        )
+        return False
+    except OSError as error:
+        logger.error("Failed to %s %s: %s", action, RSHIM_SERVICE, error)
+        return False
+    if result.returncode != 0:
+        logger.error(
+            "Failed to %s %s: exit code %d", action, RSHIM_SERVICE, result.returncode
+        )
         return False
     return True
 
 
-def stop_rshim_daemon(rid: str) -> bool:
-    """Stop rshim daemon if pidfile exists.
+def restart_global_service() -> bool:
+    """Restart the global RShim service.
 
-    Returns True on success, False on failure.
+    Returns:
+        ``True`` when systemd reports success.
     """
-    pidfile = _pidfile_path(rid)
+    return _run_systemctl("restart")
+
+
+def stop_global_service() -> bool:
+    """Stop the global RShim service.
+
+    Returns:
+        ``True`` when systemd reports success.
+    """
+    return _run_systemctl("stop")
+
+
+def _write_selected_config(
+    path: str,
+    mappings: Dict[str, str],
+    selected_rshims: Iterable[str],
+) -> None:
+    """Atomically write an installer-only RShim configuration."""
+    directory = os.path.dirname(path)
+    os.makedirs(directory, exist_ok=True)
+    fd, temporary_path = tempfile.mkstemp(prefix=f".{os.path.basename(path)}.", dir=directory)
+    replaced = False
     try:
-        if not os.path.isfile(pidfile):
-            logger.warning("Failed to stop rshim for rshim%s: missing pidfile %s", rid, pidfile)
+        with os.fdopen(fd, "w") as output:
+            output.write(_render_selected_config(mappings, selected_rshims))
+            output.flush()
+            os.fsync(output.fileno())
+            os.fchmod(output.fileno(), 0o644)
+        os.replace(temporary_path, path)
+        replaced = True
+    finally:
+        if not replaced:
+            try:
+                os.unlink(temporary_path)
+            except OSError:
+                pass
+
+
+def _render_selected_config(
+    mappings: Dict[str, str],
+    selected_rshims: Iterable[str],
+) -> str:
+    """Render the temporary config with deterministic selected and excluded mappings."""
+    selected = set(selected_rshims)
+    # Force Mode lets the host request ownership when another backend, such as the BMC over
+    # USB, already owns an RShim. It also creates /dev/rshim<N> before attachment, so callers
+    # must verify DEV_NAME rather than treating the device path as proof of a valid backend.
+    rendered_lines = ["FORCE_MODE 1"]
+    for rshim, bus_id in mappings.items():
+        owner = rshim if rshim in selected else "none"
+        rendered_lines.append(f"{owner} pcie-{bus_id}")
+    return "\n".join(rendered_lines) + "\n"
+
+
+class RshimConfigTransaction:
+    """Apply selected-only RShim configuration and remove it after installation."""
+
+    def __init__(
+        self,
+        mappings: Dict[str, str],
+        selected_rshims: Iterable[str],
+        config_path: str = RSHIM_CONFIG_PATH,
+    ) -> None:
+        """Initialize the transaction.
+
+        Args:
+            mappings: Ordered mapping of every platform RShim to its PCI BDF.
+            selected_rshims: RShim names that may be attached by the service.
+            config_path: RShim configuration to update.
+        """
+        self.mappings = mappings
+        self.selected_rshims = list(selected_rshims)
+        self.config_path = config_path
+        self.applied = False
+
+    def apply(self) -> bool:
+        """Replace any existing config with the temporary selected-only config."""
+        try:
+            _write_selected_config(
+                self.config_path,
+                self.mappings,
+                self.selected_rshims,
+            )
+        except OSError as error:
+            logger.error("Failed to apply selected-only RShim configuration: %s", error)
             return False
-        result = subprocess.run(
-            [
-                "start-stop-daemon",
-                "--stop",
-                "--quiet",
-                "--pidfile",
-                pidfile,
-                "--remove-pidfile",
-                "--retry",
-                "TERM/15/KILL/5",
-            ],
-        )
-        if result.returncode != 0:
-            logger.warning("Failed to stop rshim for rshim%s: exit code %d", rid, result.returncode)
+        self.applied = True
+        return True
+
+    def reapply(self, selected_rshims: Iterable[str]) -> bool:
+        """Atomically narrow an active transaction to a new selected RShim set."""
+        if not self.applied:
+            logger.error("Cannot reapply RShim configuration before the transaction is active")
             return False
-    except Exception as e:
-        logger.error("Failed to stop rshim for rshim%s: %s", rid, e)
-        return False
-    return True
+        try:
+            selected = list(selected_rshims)
+            _write_selected_config(
+                self.config_path,
+                self.mappings,
+                selected,
+            )
+        except OSError as error:
+            logger.error("Failed to reapply selected-only RShim configuration: %s", error)
+            return False
+        self.selected_rshims = selected
+        return True
+
+    def remove(self) -> bool:
+        """Remove the installer-owned RShim configuration."""
+        try:
+            os.unlink(self.config_path)
+        except FileNotFoundError:
+            pass
+        except OSError as error:
+            logger.error("Failed to remove RShim configuration: %s", error)
+            return False
+        self.applied = False
+        return True
 
 
-def wait_for_rshim_boot(rshim: str) -> bool:
-    """Poll /dev/{rshim}/boot for up to BOOT_WAIT_TIMEOUT_SEC seconds.
+def _read_rshim_backend(rshim: str) -> Optional[str]:
+    """Read the backend name exported by one RShim misc device."""
+    misc_path = f"/dev/{rshim}/misc"
+    try:
+        with open(misc_path, "r") as misc_file:
+            for line in misc_file:
+                fields = line.split(None, 1)
+                if len(fields) == 2 and fields[0] == "DEV_NAME":
+                    return fields[1].strip()
+    except OSError:
+        return None
+    return None
 
-    Returns True if boot file appeared, False otherwise.
+
+def get_valid_selected_rshims(
+    selected_mappings: Dict[str, str],
+    excluded_rshims: Iterable[str],
+    timeout_secs: int = RSHIM_WAIT_TIMEOUT_SEC,
+) -> Set[str]:
+    """Return selected RShims with valid backends after waiting for service startup.
+
+    Args:
+        selected_mappings: Selected RShim names mapped to expected PCI BDFs.
+        excluded_rshims: Platform RShim names that must not exist.
+        timeout_secs: Maximum number of seconds to wait.
+
+    Returns:
+        Selected RShim names with exact backend mappings. An unexpected excluded
+        RShim makes the complete result unsafe and returns an empty set.
     """
-    boot_path = f"/dev/{rshim}/boot"
-    timeout = BOOT_WAIT_TIMEOUT_SEC
-    while timeout > 0:
-        if os.path.exists(boot_path):
-            return True
+    deadline = time.monotonic() + timeout_secs
+    excluded = list(excluded_rshims)
+    valid_rshims = set()
+    excluded_valid = False
+    while time.monotonic() < deadline:
+        valid_rshims = {
+            rshim
+            for rshim, bus_id in selected_mappings.items()
+            if os.path.exists(f"/dev/{rshim}/boot") and
+            _read_rshim_backend(rshim) == f"pcie-{bus_id}"
+        }
+        excluded_valid = all(
+            not os.path.exists(f"/dev/{rshim}") for rshim in excluded
+        )
+        if len(valid_rshims) == len(selected_mappings) and excluded_valid:
+            return valid_rshims
         time.sleep(1)
-        timeout -= 1
-    logger.error("%s: Error: Boot file did not appear after 10 seconds", rshim)
-    return False
+
+    for rshim, bus_id in selected_mappings.items():
+        if rshim not in valid_rshims:
+            actual = _read_rshim_backend(rshim)
+            logger.error(
+                "%s maps to %s; expected pcie-%s", rshim, actual or "missing", bus_id
+            )
+    for rshim in excluded:
+        if os.path.exists(f"/dev/{rshim}"):
+            logger.error("Excluded RShim unexpectedly exists: %s", rshim)
+    return valid_rshims if excluded_valid else set()
