@@ -11,7 +11,7 @@ def build_arg_parser():
     parser = argparse.ArgumentParser(description='test_login cmdline parser')
     parser.add_argument('-u', default="admin", help='login user name')
     parser.add_argument('-P', default=os.environ.get("SONIC_PASSWORD"), help='login password')
-    parser.add_argument('-N', default=os.environ.get("SONIC_NEW_PASSWORD"), help='new password')
+    parser.add_argument('-N', help='new password')
     parser.add_argument('-p', type=int, default=9000, help='local port')
     return parser
 
@@ -23,8 +23,6 @@ def main():
 
     if not args.P:
         parser.error("login password required: use -P or SONIC_PASSWORD")
-    if not args.N:
-        parser.error("new password required: use -N or SONIC_NEW_PASSWORD")
 
     login_prompt = 'sonic login:'
     passwd_prompt = 'Password:'
@@ -64,6 +62,8 @@ def main():
             except pexpect.TIMEOUT:
                 break
             else:
+                if not args.N:
+                    parser.error("new password required: use -N")
                 # send old password for password prompt
                 p.sendline(args.P)
                 p.expect(passwd_change_prompt[1])

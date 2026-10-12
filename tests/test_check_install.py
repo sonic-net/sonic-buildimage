@@ -29,12 +29,18 @@ def parse_args_with_env(argv, env):
 
 class ArgDefaultsTest(unittest.TestCase):
 
-    def test_env_vars_only(self):
+    def test_login_password_env_var(self):
+        # -P falls back to SONIC_PASSWORD when not given on the CLI.
+        args = parse_args_with_env([], {"SONIC_PASSWORD": LOGIN_SENTINEL})
+        self.assertEqual(args.P, LOGIN_SENTINEL)
+
+    def test_new_password_has_no_env_fallback(self):
+        # -N must NOT fall back to SONIC_NEW_PASSWORD (or any other env var):
+        # it is a community-only, explicit-CLI-argument feature.
         args = parse_args_with_env(
             [], {"SONIC_PASSWORD": LOGIN_SENTINEL, "SONIC_NEW_PASSWORD": NEW_SENTINEL}
         )
-        self.assertEqual(args.P, LOGIN_SENTINEL)
-        self.assertEqual(args.N, NEW_SENTINEL)
+        self.assertIsNone(args.N)
 
     def test_cli_args_only(self):
         args = parse_args_with_env(
@@ -43,13 +49,11 @@ class ArgDefaultsTest(unittest.TestCase):
         self.assertEqual(args.P, LOGIN_SENTINEL)
         self.assertEqual(args.N, NEW_SENTINEL)
 
-    def test_cli_overrides_env(self):
+    def test_cli_overrides_env_for_login_password(self):
         args = parse_args_with_env(
-            ["-P", "cli-login", "-N", "cli-new"],
-            {"SONIC_PASSWORD": LOGIN_SENTINEL, "SONIC_NEW_PASSWORD": NEW_SENTINEL},
+            ["-P", "cli-login"], {"SONIC_PASSWORD": LOGIN_SENTINEL},
         )
         self.assertEqual(args.P, "cli-login")
-        self.assertEqual(args.N, "cli-new")
 
     def test_credentials_with_shell_metacharacters(self):
         tricky = "p@ss$(id)`whoami`;&|<>"
@@ -63,8 +67,11 @@ class ArgDefaultsTest(unittest.TestCase):
 
 
 class MissingCredentialValidationTest(unittest.TestCase):
-    """main() must reject missing/empty credentials immediately after
-    parse_args(), before any telnet connection (pexpect.spawn) is made.
+    """main() must reject a missing/empty login password (-P) immediately
+    after parse_args(), before any telnet connection (pexpect.spawn) is
+    made. -N has no such upfront requirement: it is only required if/when
+    the forced-password-change prompt is actually reached (see
+    ForcedPasswordChangeFlowTest below).
     """
 
     def test_missing_login_password_fails_before_spawn(self):
@@ -78,16 +85,11 @@ class MissingCredentialValidationTest(unittest.TestCase):
             spawn_mock.assert_not_called()
             self.assertIn("login password", stderr.getvalue())
 
-    def test_missing_new_password_fails_before_spawn(self):
-        with mock.patch.dict(check_install.os.environ, {}, clear=True), \
-                mock.patch.object(sys, "argv", ["check_install.py", "-P", LOGIN_SENTINEL]), \
-                mock.patch.object(check_install.pexpect, "spawn") as spawn_mock:
-            stderr = io.StringIO()
-            with redirect_stderr(stderr):
-                with self.assertRaises(SystemExit):
-                    check_install.main()
-            spawn_mock.assert_not_called()
-            self.assertIn("new password", stderr.getvalue())
+    def test_missing_new_password_is_not_required_upfront(self):
+        # Without -N, parse_args()/upfront validation must NOT raise: -N is
+        # only required later, if the forced-password-change prompt occurs.
+        args = parse_args_with_env(["-P", LOGIN_SENTINEL], {})
+        self.assertIsNone(args.N)
 
     def test_empty_string_values_are_treated_as_missing(self):
         with mock.patch.dict(check_install.os.environ, {}, clear=True), \
@@ -109,6 +111,32 @@ class ForcedPasswordChangeFlowTest(unittest.TestCase):
     password-change sequence, the original password is restored afterward,
     and neither credential is printed.
     """
+
+    def test_missing_new_password_fails_when_password_change_reached(self):
+        # -N is only required once the forced-password-change prompt
+        # ('Current password:') is actually reached. Telnet is already
+        # connected (spawn called) by that point -- unlike -P, this is not
+        # checked before spawn -- but the flow must still stop immediately
+        # once the prompt is hit, with no attempt to continue the sequence.
+        fake_child = mock.Mock()
+        expect_results = iter([
+            None,  # grub_selection
+            0,     # login_prompt
+            1,     # passwd_prompt
+            None,  # 'Current password:' succeeds -> forced change path
+        ])
+        fake_child.expect.side_effect = lambda *a, **k: next(expect_results)
+
+        with mock.patch.object(check_install.pexpect, "spawn", return_value=fake_child) as spawn_mock, \
+                mock.patch.object(check_install.time, "sleep", return_value=None), \
+                mock.patch.object(sys, "argv", ["check_install.py", "-P", LOGIN_SENTINEL]), \
+                mock.patch.dict(check_install.os.environ, {}, clear=True):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                with self.assertRaises(SystemExit):
+                    check_install.main()
+            spawn_mock.assert_called_once()
+            self.assertIn("new password", stderr.getvalue())
 
     def test_forced_password_change_restores_original(self):
         sent = []
