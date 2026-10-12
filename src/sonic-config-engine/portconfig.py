@@ -425,6 +425,8 @@ class BreakoutCfg(object):
         for supported_mode in self._properties['breakout_modes']:
             if self._breakout_mode_entry == self._str_to_entries(supported_mode):
                 self._breakout_capabilities = self._properties['breakout_modes'][supported_mode]
+                if isinstance(self._breakout_capabilities, STRING_TYPES):
+                    self._breakout_capabilities = [self._breakout_capabilities]
                 break
 
         if not self._breakout_capabilities:
@@ -526,8 +528,11 @@ def get_child_ports(interface, breakout_mode, platform_json_file):
 
 
 def get_minimum_breakout_mode(interface, properties):
+    """Select the highest-speed single-port mode, breaking speed ties lexically."""
     candidates = []
     for breakout_mode, aliases in properties.get('breakout_modes', {}).items():
+        if isinstance(aliases, STRING_TYPES):
+            aliases = [aliases]
         if len(aliases) != 1:
             continue
 
@@ -542,13 +547,15 @@ def get_minimum_breakout_mode(interface, properties):
 
     if not candidates:
         raise RuntimeError(
-            "No single-port breakout mode is defined for interface '{}'".format(interface)
+            "No single-port breakout mode is defined for interface '{}'. Valid modes: {}".format(
+                interface, _get_valid_breakout_modes(properties)
+            )
         )
 
     return max(candidates, key=lambda candidate: (candidate[0], candidate[1]))[1]
 
 
-def get_valid_breakout_modes(properties):
+def _get_valid_breakout_modes(properties):
     return ", ".join(properties.get('breakout_modes', {}).keys())
 
 
@@ -580,7 +587,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
             if not isinstance(hwsku_entry, dict) or BRKOUT_MODE not in hwsku_entry:
                 raise RuntimeError(
                     "Invalid breakout mode for interface '{}': missing '{}'. Valid modes: {}".format(
-                        intf, BRKOUT_MODE, get_valid_breakout_modes(properties)
+                        intf, BRKOUT_MODE, _get_valid_breakout_modes(properties)
                     )
                 )
 
@@ -589,7 +596,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
                 raise RuntimeError(
                     "Invalid breakout mode '{}' for interface '{}': expected a non-empty string. "
                     "Valid modes: {}".format(
-                        brkout_mode, intf, get_valid_breakout_modes(properties)
+                        brkout_mode, intf, _get_valid_breakout_modes(properties)
                     )
                 )
         else:
@@ -597,12 +604,12 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
 
         try:
             child_ports = get_child_ports(intf, brkout_mode, platform_json_file)
-        except RuntimeError as e:
+        except (RuntimeError, KeyError, ValueError) as e:
             raise RuntimeError(
                 "Invalid breakout mode '{}' for interface '{}': {} Valid modes: {}".format(
-                    brkout_mode, intf, e, get_valid_breakout_modes(properties)
+                    brkout_mode, intf, e, _get_valid_breakout_modes(properties)
                 )
-            )
+            ) from e
 
         # take optional fields from hwsku.json
         if hwsku_dict is not None:
