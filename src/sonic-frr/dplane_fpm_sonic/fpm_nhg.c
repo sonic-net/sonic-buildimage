@@ -37,6 +37,7 @@
 #include "lib/vty.h"
 #include "lib/vrf.h"
 #include "lib/frr_pthread.h" /* frr_with_mutex */
+#include "lib/netlink_parser.h" /* nl_attr_put()/32 */
 #include "zebra/rib.h" /* DECLARE_MGROUP(ZEBRA) */
 #include "zebra/debug.h" /* IS_ZEBRA_DEBUG_FPM */
 #include "zebra/zebra_srv6.h" /* zebra_srv6_get_default() */
