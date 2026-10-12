@@ -26,7 +26,7 @@ try:
     # from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
     from sonic_platform.thermal import Thermal
-    # from sonic_platform.watchdog import Watchdog
+    from sonic_platform.watchdog import Watchdog
     from sonic_platform.component import Component
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.dcdc import Dcdc, VoltageSensor, CurrentSensor
@@ -102,7 +102,7 @@ class Chassis(ChassisBase):
             print("EEPROM INIT ERROR %s" % str(err))
 
         # Initialize watchdog
-        # self._watchdog = Watchdog()
+        self._watchdog = None
         fantray_num = self.int_case.get_fan_total_number()
         for index in range(fantray_num):
             fandrawer = FanDrawer(self.int_case, index + 1)
@@ -627,3 +627,10 @@ class Chassis(ChassisBase):
                 self._sfp_list.append(CPO(port_id, oe_id, oe_bank_id, els_id, els_bank_id))
             else: # None cpo port
                 self._sfp_list.append(Sfp(port_id))
+
+    def get_watchdog(self):
+        if self._watchdog is None:
+            from sonic_platform.watchdog import Watchdog
+            self._watchdog = Watchdog()
+
+        return self._watchdog

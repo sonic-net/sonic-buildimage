@@ -170,7 +170,10 @@ shown after this list.
 - **SONiC-native code** (sonic-net submodule). Primary PURL:
   `pkg:github/sonic-net/<repo>@<commit>`. `externalReferences` records
   the submodule URL and pinned commit. No pedigree unless a sibling
-  `src/<pkg>.patch/` exists.
+  `src/<pkg>.patch/` exists. `sonic-linux-kernel` is the exception:
+  it rebuilds Debian's `linux` source, so its `.deb`s take the
+  `pkg:deb/sonic/<name>@<version>` identity instead. Being a submodule,
+  it gets no Debian `.dsc` ancestor (see the kernel entry below).
 
 - **Patched upstream Debian sources** (`dget` + sidecar patches in
   `src/<pkg>/patch/`). Primary: `pkg:deb/sonic/<name>@<version>`.
@@ -211,7 +214,12 @@ shown after this list.
   recorded from `files/build/versions/default/versions-docker`.
 
 - **Kernel and out-of-tree modules.** Linux kernel built from Debian
-  source + ~200 SONiC patches enumerated in pedigree. Each kernel
+  source + ~200 SONiC patches enumerated in pedigree. Each `.deb` the
+  kernel build produces — `linux-image`, `linux-kbuild` and both
+  `linux-headers` — is its own `pkg:deb/sonic/<name>@<version>`
+  component carrying that pedigree, so `linux-image` merges with the
+  package observed installed and the CVEs its patches `resolves` land
+  on the component scanners match kernel advisories against. Each kernel
   module (`opennsl-modules`, `sx-kernel`, `ionic-modules`, every
   `sonic-platform-modules-*`) has a `dependencies[]` edge pointing
   at the kernel image's `bom-ref` so consumers can reason about
@@ -632,7 +640,7 @@ parsing string properties. The bom-ref of a SONiC-built `.deb`
 matches its source identity — `pkg:github/sonic-net/<repo>@<commit>`
 for components built from a sonic-net submodule,
 `pkg:deb/sonic/<name>@<version>?arch=<arch>` for patched-upstream
-Debian sources.
+Debian sources, the kernel included.
 
 The graph is rooted at the image component, so a walk can start from
 the top rather than from a package you already knew to look for.

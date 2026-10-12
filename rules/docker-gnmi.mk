@@ -38,6 +38,9 @@ $(DOCKER_GNMI)_CONTAINER_NAME = gnmi
 $(DOCKER_GNMI)_RUN_OPT += -t
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+ifneq ($(strip $(GNMI_REDIS_POOL_SIZE)),)
+$(DOCKER_GNMI)_RUN_OPT += -e GNMI_REDIS_POOL_SIZE=$(GNMI_REDIS_POOL_SIZE)
+endif
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 # For disk space monitoring.
 $(DOCKER_GNMI)_RUN_OPT += -v /:/mnt/host:ro

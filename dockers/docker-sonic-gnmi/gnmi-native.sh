@@ -178,7 +178,7 @@ USER_AUTH=$(extract_field "$GNMI" '.user_auth')
 if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
     USER_AUTH="cert"
 fi
-if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ] && [  $USER_AUTH != "none" ]; then
+if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
     if [ $USER_AUTH == "cert" ]; then
