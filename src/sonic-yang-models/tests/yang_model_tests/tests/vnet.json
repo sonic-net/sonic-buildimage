@@ -227,5 +227,23 @@
         "desc": "VNET route tunnel configuration with invalid IPv6 endpoint value in VNET_ROUTE_TUNNEL_LIST table.",
         "eStrKey": "InvalidValue",
         "eStr": ["endpoint"]
+    },
+
+    "VNET_VALID_VXLAN_TUNNEL_LIST": {
+        "desc": "Valid VNET configuration using vxlan_tunnel_list instead of vxlan_tunnel."
+    },
+
+    "VNET_VALID_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
+        "desc": "Valid VNET configuration with both vxlan_tunnel and vxlan_tunnel_list configured."
+    },
+
+    "VNET_MISSING_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
+        "desc": "VNET configuration with neither vxlan_tunnel nor vxlan_tunnel_list configured.",
+        "eStr": ["At least one of vxlan_tunnel or vxlan_tunnel_list must be configured."]
+    },
+
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_VTEP": {
+        "desc": "VNET configuration with vxlan_tunnel_list referencing a non-existent VXLAN tunnel.",
+        "eStrKey": "LeafRef"
     }
 }

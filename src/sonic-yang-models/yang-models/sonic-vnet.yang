@@ -27,6 +27,13 @@ module sonic-vnet {
     description
         "Virtual Network (VNET) configuration for overlay networking using VxLAN tunnels";
 
+    revision 2026-10-12 {
+        description
+            "Add vxlan_tunnel_list leaf-list to VNET_LIST. vxlan_tunnel is no longer
+             mandatory on its own; at least one of vxlan_tunnel or vxlan_tunnel_list
+             must be configured.";
+    }
+
     revision 2023-04-25 {
         description
             "First revision.";
@@ -44,6 +51,10 @@ module sonic-vnet {
 
                 key "name";
 
+                must "boolean(vxlan_tunnel) or boolean(vxlan_tunnel_list)" {
+                    error-message "At least one of vxlan_tunnel or vxlan_tunnel_list must be configured.";
+                }
+
                 leaf name {
                     description "Unique alphanumeric name identifying the virtual network";
                     type string {
@@ -52,8 +63,16 @@ module sonic-vnet {
                 }
 
                 leaf vxlan_tunnel {
-                    mandatory true;
-                    description "A valid and active vxlan tunnel to be used with this vnet for traffic encapsulation.";
+                    description "A valid and active vxlan tunnel to be used with this vnet for traffic encapsulation.
+                                 Either this leaf or vxlan_tunnel_list must be configured.";
+                    type leafref {
+                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
+                }
+
+                leaf-list vxlan_tunnel_list {
+                    description "Set of valid and active vxlan tunnels to be used with this vnet for traffic
+                                 encapsulation. Either this leaf-list or vxlan_tunnel must be configured.";
                     type leafref {
                         path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
                     }
