@@ -1266,7 +1266,8 @@
                 "nat_zone": "1",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "enable",
-                "mac_addr": "12:34:56:78:90:ab"
+                "mac_addr": "12:34:56:78:90:ab",
+                "proxy_arp": "enabled"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",

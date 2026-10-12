@@ -107,6 +107,13 @@ module sonic-interface {
                     description "Packet action when a packet ingress and gets routed on the same IP interface";
                     type stypes:loopback_action;
                 }
+
+				leaf proxy_arp {
+					description "Enable or disable proxy ARP on the interface";
+					type string {
+						pattern "enabled|disabled";
+					}
+				}
 			}
 			/* end of INTERFACE_LIST */
 
