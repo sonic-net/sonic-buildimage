@@ -2,8 +2,6 @@
 
 login_password=$PASSWD
 unset PASSWD
-new_password=$NEW_PASSWD
-unset NEW_PASSWD
 set -x
 
 #  Copyright (C) 2014 Curt Brune <curt@cumulusnetworks.com>
@@ -154,8 +152,8 @@ wait_kvm_ready
 echo "to kill kvm:  sudo kill $kvm_pid"
 
 set +x
-SONIC_PASSWORD="$login_password" SONIC_NEW_PASSWORD="$new_password" ./check_install.py -u "$SONIC_USERNAME" -p "$KVM_PORT"
-unset login_password new_password
+SONIC_PASSWORD="$login_password" ./check_install.py -u "$SONIC_USERNAME" -p "$KVM_PORT"
+unset login_password
 set -x
 
 kill $kvm_pid
