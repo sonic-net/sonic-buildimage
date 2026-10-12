@@ -9,7 +9,8 @@
 # paths are therefore where certificates are delivered; this script reshapes
 # them into what bmcweb reads and restarts it when they change.
 #
-# Configuration (CONFIG_DB, defaults apply when unset):
+# Configuration (CONFIG_DB). With no server_crt, server_key and ca_crt
+# configured, nothing is staged and bmcweb serves its self-signed certificate:
 #   REDFISH|certs   server_crt              server certificate path
 #   REDFISH|certs   server_key              server private key path
 #   REDFISH|certs   ca_crt                  CA certificate path
@@ -36,12 +37,6 @@ AUTH_DIR="${BMCWEB_AUTH_DIR:-/etc/ssl/certs/authority}"
 SERVER_PEM="${HTTPS_DIR}/server.pem"
 BMCWEB_START="${BMCWEB_START:-/usr/bin/bmcweb-start.sh}"
 
-# Used when CONFIG_DB carries no REDFISH|certs entry: the certificates the REST
-# API server is provisioned with.
-DEFAULT_SERVER_CRT="/etc/sonic/credentials/restapiserver.crt"
-DEFAULT_SERVER_KEY="/etc/sonic/credentials/restapiserver.key"
-DEFAULT_CA_CRT="/etc/sonic/credentials/restapica.crt"
-
 # Set on the first successful staging and never removed here, so the unit
 # stays marked as provisioned once it has been.
 MARKER="${BMCWEB_MARKER:-/var/lib/bmcweb/provisioned}"
@@ -56,8 +51,7 @@ INTERVAL="${BMCWEB_WATCH_INTERVAL:-60}"
 # Certificate status (STATE_DB).
 STATUS_KEY="REDFISH_CERT_STATUS|global"
 
-# A failure returns non-zero and an empty result, so callers fall back to their
-# defaults rather than act on a half-read configuration.
+# A failure returns non-zero and an empty result, which reads as unconfigured.
 db_cmd() {
     local db="$1"
     shift
@@ -68,21 +62,25 @@ log() { logger -t stage-credentials "$*"; echo "stage-credentials: $*"; }
 
 # --- Configuration loading -------------------------------------------------
 
-# A read failure leaves the defaults in place: an unreachable CONFIG_DB must
-# never stop a provisioned unit from staging its certificates.
+# There are no default paths: certificates are taken only from where CONFIG_DB
+# says they are delivered. A read failure looks unconfigured, which stages
+# nothing; the guard checks the staged copy alone, so a provisioned unit still
+# starts on what it staged before.
 load_config() {
     SERVER_CRT="$(db_cmd CONFIG_DB HGET 'REDFISH|certs' server_crt)"
     SERVER_KEY="$(db_cmd CONFIG_DB HGET 'REDFISH|certs' server_key)"
     CA_CRT="$(db_cmd CONFIG_DB HGET 'REDFISH|certs' ca_crt)"
+}
 
-    [ -n "${SERVER_CRT}" ] || SERVER_CRT="${DEFAULT_SERVER_CRT}"
-    [ -n "${SERVER_KEY}" ] || SERVER_KEY="${DEFAULT_SERVER_KEY}"
-    [ -n "${CA_CRT}" ]     || CA_CRT="${DEFAULT_CA_CRT}"
+# All three paths are set. A partial entry is treated as unconfigured.
+configured() {
+    [ -n "${SERVER_CRT}" ] && [ -n "${SERVER_KEY}" ] && [ -n "${CA_CRT}" ]
 }
 
 # Parents of the configured paths, deduplicated: the server pair and the CA may
-# be delivered into different directories.
+# be delivered into different directories. Empty when unconfigured.
 source_dirs() {
+    configured || return 0
     printf '%s\n' "$(dirname "${SERVER_CRT}")" "$(dirname "${SERVER_KEY}")" \
                   "$(dirname "${CA_CRT}")" | sort -u
 }
@@ -92,6 +90,7 @@ source_dirs() {
 # All files present and parsing. Separate from staging so the watcher can test
 # readiness before stopping a healthy bmcweb.
 certs_ready() {
+    configured || return 1
     [ -f "${SERVER_CRT}" ] && \
     [ -f "${SERVER_KEY}" ] && \
     [ -f "${CA_CRT}" ]     || return 1
@@ -201,7 +200,10 @@ publish_status() {
     applied="$(cat "${STAMP}" 2>/dev/null || true)"
     serial="$(openssl x509 -noout -serial -in "${SERVER_PEM}" 2>/dev/null | cut -d= -f2)"
     now="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-    if ! certs_ready; then
+    if ! configured; then
+        in_sync="false"
+        last_error="REDFISH|certs not configured"
+    elif ! certs_ready; then
         in_sync="false"
         last_error="credentials not ready (missing files, unparseable cert, or cert/key mismatch)"
     elif [ "${src_fp}" != "${applied}" ]; then
@@ -233,6 +235,14 @@ publish_status() {
 # --- Modes -----------------------------------------------------------------
 
 run_once() {
+    if ! configured; then
+        if provisioned; then
+            log "WARNING: REDFISH|certs not configured on a provisioned unit; bmcweb will start only if a valid staged certificate is present"
+        else
+            log "REDFISH|certs not configured; bmcweb will use its self-signed cert"
+        fi
+        return 0
+    fi
     if ! certs_ready; then
         if provisioned; then
             # If the staged copy is gone too, the guard is about to fail closed.
