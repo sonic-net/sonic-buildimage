@@ -184,6 +184,16 @@ fw_setenv fit_name_old "" || { log_error "Failed to set fit_name_old"; exit 1; }
 fw_setenv sonic_version_2 "None" || { log_error "Failed to set sonic_version_2"; exit 1; }
 fw_setenv linuxargs_old "" || { log_error "Failed to set linuxargs_old"; exit 1; }
 
+# Set the U-Boot `baudrate` variable to CONSOLE_SPEED so an eMMC install
+# leaves the console rate under SONiC's control rather than inheriting whatever
+# U-Boot's environment happened to carry.
+SAVED_BAUD=$(fw_printenv -n baudrate 2>/dev/null || true)
+if [ "$SAVED_BAUD" != "$CONSOLE_SPEED" ]; then
+    log_warn "Overriding U-Boot baudrate ($SAVED_BAUD) with CONSOLE_SPEED ($CONSOLE_SPEED)"
+fi
+fw_setenv baudrate "$CONSOLE_SPEED" || { log_error "Failed to set baudrate"; exit 1; }
+log_info "U-Boot baudrate set to $CONSOLE_SPEED"
+
 # Kernel command line arguments
 fw_setenv linuxargs "$LINUXARGS" || { log_error "Failed to set linuxargs"; exit 1; }
 

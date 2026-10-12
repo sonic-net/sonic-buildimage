@@ -1,8 +1,11 @@
+import socket
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
-from bgpcfgd.managers_static_rt import StaticRouteMgr
+from bgpcfgd.managers_static_rt import IpNextHop, StaticRouteMgr
 from collections import Counter
 from swsscommon import swsscommon
 
@@ -51,6 +54,114 @@ def set_del_test(mgr, op, args, expected_ret, expected_cmds):
         assert set_del_test.push_list_called, "cfg_mgr.push_list wasn't called"
     else:
         assert not set_del_test.push_list_called, "cfg_mgr.push_list was called"
+
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
+       side_effect=lambda name: name != "vrf name")
+def test_static_route_key_validation(_):
+    accepted_keys = {
+        "10.1.0.1/24": ("default", "10.1.0.1/24"),
+        "vrfRED|2001:db8::1/64": ("vrfRED", "2001:db8::1/64"),
+        "Vrf-RED_1|10.1.0.0/24": ("Vrf-RED_1", "10.1.0.0/24"),
+        "mgmt:10.1.0.1/24": ("mgmt", "10.1.0.1/24"),
+    }
+    for key, expected in accepted_keys.items():
+        assert StaticRouteMgr.split_key(key) == expected
+
+    rejected_keys = (
+        "not-a-key",
+        "vrf name|10.1.0.0/24",
+        "vrfRED|not-a-prefix",
+        "vrfRED|10.1.0.0/24|extra",
+        "vrfRED|fe80::%scope/64",
+        "vrfRED|10.1.0.0/24\ninvalid",
+    )
+    for key in rejected_keys:
+        assert StaticRouteMgr.split_key(key) is None
+
+
+def test_skip_appl_del_preserves_raw_prefix_for_config_db_lookup():
+    prefix = "10.1.0.1/24"
+    mgr = constructor()
+    mgr.db_name = "APPL_DB"
+    mgr.static_routes["default"] = {prefix: (MagicMock(), "1")}
+    mgr.config_db = MagicMock()
+    mgr.config_db.CONFIG_DB = "CONFIG_DB"
+    mgr.config_db.get.side_effect = (
+        lambda _, key, field: "Ethernet0"
+        if key == "STATIC_ROUTE|{}".format(prefix) and field == "nexthop"
+        else None
+    )
+
+    assert mgr.skip_appl_del("default", prefix)
+    assert prefix not in mgr.static_routes["default"]
+
+
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
+       side_effect=lambda name: name != "vrf name")
+def test_invalid_static_route_keys_are_ignored(_):
+    mgr = constructor()
+    for key in ("not-a-key", "vrf name|10.1.0.0/24"):
+        set_del_test(
+            mgr,
+            "SET",
+            (key, {"nexthop": "10.0.0.57"}),
+            True,
+            [],
+        )
+        set_del_test(mgr, "DEL", (key,), None, [])
+
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
+       side_effect=lambda name: name != "bad vrf")
+@patch('bgpcfgd.managers_static_rt.swsscommon.isInterfaceNameValid',
+       side_effect=lambda name: name not in ("bad interface", "PortChannel0001\nexit"))
+def test_nexthop_identifier_validation(_, __):
+    IpNextHop(socket.AF_INET, None, "10.0.0.1", "Ethernet0", "10", "default")
+    IpNextHop(socket.AF_INET, None, "PortChannel0001", None, "10", "default")
+
+    with pytest.raises(ValueError):
+        IpNextHop(socket.AF_INET, None, "10.0.0.1", "bad interface", "10", "default")
+
+    with pytest.raises(ValueError):
+        IpNextHop(socket.AF_INET, None, "10.0.0.1", "Ethernet0", "10", "bad vrf")
+
+    with pytest.raises(ValueError):
+        IpNextHop(socket.AF_INET, None, "PortChannel0001\nexit", None, "10", "default")
+
+    mgr = constructor()
+    invalid_routes = (
+        {"nexthop": "10.0.0.1", "ifname": "bad interface"},
+        {"nexthop": "10.0.0.1", "ifname": "Ethernet0", "nexthop-vrf": "bad vrf"},
+        {"nexthop": "PortChannel0001\nexit"},
+        {
+            "nexthop": "10.0.0.1,10.0.0.2",
+            "ifname": "Ethernet0,bad interface",
+        },
+    )
+    for data in invalid_routes:
+        set_del_test(mgr, "SET", ("10.9.0.0/24", data), True, [])
+        assert not mgr.static_routes
+
+
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid', return_value=True)
+@patch('bgpcfgd.managers_static_rt.swsscommon.isInterfaceNameValid',
+       side_effect=lambda name: name != "Ethernet0\nexit")
+def test_invalid_identifier_update_preserves_last_known_good(_, __):
+    mgr = constructor()
+    key = "10.9.0.0/24"
+
+    assert mgr.set_handler(key, {
+        "nexthop": "10.0.0.1",
+        "ifname": "Ethernet0",
+    })
+    cached_route = mgr.static_routes["default"][key]
+    mgr.cfg_mgr.push_list.reset_mock()
+
+    assert mgr.set_handler(key, {
+        "nexthop": "10.0.0.1",
+        "ifname": "Ethernet0\nexit",
+    })
+    mgr.cfg_mgr.push_list.assert_not_called()
+    assert mgr.static_routes["default"][key] is cached_route
 
 def test_set():
     mgr = constructor()
@@ -1186,4 +1297,3 @@ def test_set_bfd_true():
             "exit"
         ]
     )
-

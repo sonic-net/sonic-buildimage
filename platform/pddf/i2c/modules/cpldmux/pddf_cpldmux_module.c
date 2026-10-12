@@ -212,6 +212,9 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 			pci_dev_put(((PDDF_CPLDMUX_PDATA *)plat_dev->dev.platform_data)->fpga_pci_dev);
 			platform_device_del(plat_dev);
 			delete_device_table(device_ptr->i2c_name);
+			/* drops the last reference: platform_device_release() frees
+			 * dev.platform_data along with the device */
+			platform_device_put(plat_dev);
 		}
 		else
 		{

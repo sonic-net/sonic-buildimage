@@ -16,8 +16,6 @@
 #
 
 import os
-from pathlib import Path
-import pytest
 
 
 platform = os.environ.get("CONFIGURED_PLATFORM", None)
@@ -38,16 +36,5 @@ SKIP_REASONS = {
     "aspeed": "mellanox_bfb_installer not packaged for the SONiC BMC (aspeed)",
 }
 
-
-def pytest_collection_modifyitems(config, items):
-    skip_reason = SKIP_REASONS.get(platform)
-    if skip_reason:
-        conftest_dir = Path(__file__).parent.resolve()
-        skip_marker = pytest.mark.skip(reason=f"Skipping because {skip_reason}")
-        for item in items:
-            if conftest_dir in item.path.parents:
-                # Paranoid checks: Don't accidentally skip other tests! Ensure the test to skip
-                # is in THIS directory. Ensure the platform is one that does not ship it.
-                assert item.path.parts[-2] == conftest_dir.name == "mellanox_bfb_installer"
-                assert platform in SKIP_REASONS
-                item.add_marker(skip_marker)
+# Skip collection before test imports on platforms that do not ship the installer.
+collect_ignore_glob = ["test_*.py"] if platform in SKIP_REASONS else []
