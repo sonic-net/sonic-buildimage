@@ -438,7 +438,8 @@ class TestCfgGenPlatformJson(TestCase):
 
         self.assertIn("Ethernet0", str(ctx.exception))
         self.assertIn("Valid modes: 1x25G", str(ctx.exception))
-        self.assertIsInstance(ctx.exception.__cause__, KeyError)
+        if utils.PY3x:
+            self.assertIsInstance(ctx.exception.__context__, KeyError)
 
     def test_port_config_uses_legacy_hwsku_file_with_hwsku_name(self):
         with mock.patch('portconfig.get_hwsku_file_name', return_value=self.hwsku_json) as get_hwsku_file:

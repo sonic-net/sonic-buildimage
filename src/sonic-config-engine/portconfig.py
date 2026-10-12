@@ -609,7 +609,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
                 "Invalid breakout mode '{}' for interface '{}': {} Valid modes: {}".format(
                     brkout_mode, intf, e, _get_valid_breakout_modes(properties)
                 )
-            ) from e
+            )
 
         # take optional fields from hwsku.json
         if hwsku_dict is not None:
