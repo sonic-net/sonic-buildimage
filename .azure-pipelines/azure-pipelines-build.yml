@@ -162,10 +162,11 @@ jobs:
               mv target/docker-sonic-vs.gz target/docker-sonic-vs-asan.gz
               # The normal image is built next in this same workspace. Its cache
               # key selects non-ASAN libsairedis, but LOAD_FROM_CACHE skips
-              # extraction when all same-named outputs already exist. Remove a
-              # derived ASAN output so the normal cache archive is restored, or
-              # libsairedis is rebuilt when that cache entry is absent.
-              rm -f target/debs/bookworm/syncd-vs_*.deb \
+              # extraction when all same-named outputs already exist. Remove the
+              # parent and derived ASAN outputs so the normal cache is restored,
+              # or libsairedis rebuilds them when that cache entry is absent.
+              rm -f target/debs/bookworm/libsairedis_*.deb \
+                    target/debs/bookworm/syncd-vs_*.deb \
                     target/debs/bookworm/syncd-vs-dbgsym_*.deb
             fi
             if [ "$(K8S_MASTER_CHANGED)" == 'YES' ]; then
