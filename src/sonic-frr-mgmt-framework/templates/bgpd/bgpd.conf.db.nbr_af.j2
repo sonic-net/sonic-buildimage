@@ -118,11 +118,13 @@
 {% endif %}
 {# ------- route-map in end --------------------------- #}
 {# ------- route-map out --------------------------- #}
+{# While TSA is enabled, bind the wrapper rendered by bgpd.conf.db.tsa.j2. #}
 {% set tsa_enabled = BGP_DEVICE_GLOBAL is defined and BGP_DEVICE_GLOBAL.get('STATE', {}).get('tsa_enabled') == 'true' %}
+{% set tsa_policy = (n_af_val.get('route_map_out', []) | last) | default('') %}
 {% set tsa_group = (BGP_NEIGHBOR | default({})).get((vrf, nbr_name), {}).get('peer_group_name') %}
-{% set tsa_original = (n_af_val.get('route_map_out', []) | last) | default('') %}
-{% if tsa_enabled and af_str in ['ipv4', 'ipv6'] and not (not tsa_original and (vrf, tsa_group, af) in BGP_PEER_GROUP_AF | default({})) %}
-  neighbor {{nbr_name}} route-map FRRCFGD_TSA_{{vrf}}_{{af_str}}{{'_' ~ tsa_original if tsa_original else ''}} out
+{% set tsa_inherits = not tsa_policy and (vrf, tsa_group, af) in BGP_PEER_GROUP_AF | default({}) %}
+{% if tsa_enabled and af_str in ['ipv4', 'ipv6'] and not tsa_inherits %}
+  neighbor {{nbr_name}} route-map FRRCFGD_TSA_{{vrf}}_{{af_str}}{{'_' ~ tsa_policy if tsa_policy else ''}} out
 {% elif 'route_map_out' in n_af_val %}
 {% for map in n_af_val['route_map_out'] %}
   neighbor {{nbr_name}} route-map {{map}} out

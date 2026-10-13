@@ -2550,6 +2550,8 @@ class BGPConfigDaemon:
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
+        # Recover TSA objects left in FRR, and mark TSA enabled before the
+        # replay so that replayed AF rows keep their wrappers.
         tsa_data = self.config_db.get_entry('BGP_DEVICE_GLOBAL', 'STATE')
         if self.bgp_asn or self.metadata_asn is not None:
             self.__recover_tsa()
@@ -3120,17 +3122,15 @@ class BGPConfigDaemon:
                 cmd_prefix = ['configure terminal',
                               'router bgp {} vrf {}'.format(local_asn, vrf),
                               'address-family {} {}'.format(af, ip_type)]
-                # Keep the isolation policy attached while updating AF attributes.
-                tsa_policy = None
-                if self.traffic_shift.enabled and af in ('ipv4', 'ipv6'):
+                run_data = data
+                if self.traffic_shift.enabled and af_type.lower() in ('ipv4_unicast', 'ipv6_unicast'):
+                    # While isolated, route_map_out is bound through its TSA wrapper.
                     if not self.__apply_tsa(True):
                         continue
-                    tsa_policy = data.pop('route_map_out', None)
-                success = key_map.run_command(self, table, data, cmd_prefix, nbr)
-                if tsa_policy is not None:
-                    tsa_policy.status = CachedDataWithOp.STAT_SUCC
-                    data['route_map_out'] = tsa_policy
-                if not success:
+                    run_data = {k: v for k, v in data.items() if k != 'route_map_out'}
+                    if 'route_map_out' in data:
+                        data['route_map_out'].status = CachedDataWithOp.STAT_SUCC
+                if not key_map.run_command(self, table, run_data, cmd_prefix, nbr):
                     syslog.syslog(syslog.LOG_ERR, 'failed running BGP neighbor AF config command')
                     continue
             elif table == 'COMMUNITY_SET' or table == 'EXTENDED_COMMUNITY_SET':
