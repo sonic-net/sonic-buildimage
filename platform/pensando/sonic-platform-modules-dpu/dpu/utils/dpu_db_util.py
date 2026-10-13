@@ -51,8 +51,15 @@ SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) for n in dir(signal) if n.s
 # operd event functions
 g_count = 0
 CRITICAL_EVENTS = [
-    2, 4, 6, 7, 11, 12, 15, 16, 17, 18, 19, 20, 4001, 4002
+    2, 4, 6, 7, 11, 12, 15, 16, 17, 18, 19, 20, 24, 28, 4001, 4002
 ]
+# Recovery events map to the critical event they clear. A critical event keeps
+# the data plane down until every condition it latched has been cleared, so
+# conditions that recover on their own do not need manual intervention.
+RECOVERY_EVENTS = {
+    13: 12,   # filesystem usage dropped back below threshold
+    25: 24    # system memory usage back to normal
+}
 NETWORK_EVENTS = [
     1001,   # "Port link is up"
     1002    # "Port link is down"
@@ -81,6 +88,7 @@ class EventHandler(logger.Logger):
         # operd attributes
         self.event_types = []
         self.event_types.extend(CRITICAL_EVENTS)
+        self.event_types.extend(RECOVERY_EVENTS.keys())
         self.event_types.extend(NETWORK_EVENTS)
         self.request_queue = queue.Queue()
         self.thread = None
@@ -89,10 +97,12 @@ class EventHandler(logger.Logger):
         # dpu state db update related attributes
         self.apiHelper = APIHelper()
         self.db = db
+        self.active_conditions = {}
         self.chassis = chassis
         slot = get_slot_id(self.chassis)
         self.slot_id = str(slot) if slot != -1 else 'UNDEFINED'
         self.table = f'{DPU_HEALTH_INFO_TABLE_NAME}|DPU{self.slot_id}'
+        self._reset_stale_data_plane_state()
 
     def _log_emerg(self, msg):
         # syslogger.SysLogger doesn't have LOG_EMERG, hence creating one
@@ -159,6 +169,56 @@ class EventHandler(logger.Logger):
         except Exception as e:
             log_err(f'Failed to populate dpu control plane entries due to {e}')
 
+    def _reset_stale_data_plane_state(self):
+        # DPU_STATE lives in the NPU's chassis db, so it outlives a DPU reboot
+        # or reimage. This process starts with no tracked conditions and
+        # fetch_dpu_status refuses to overwrite a down it does not own, so a
+        # latch from a previous boot would otherwise never clear. Conditions
+        # from a previous boot no longer apply: drop them and let this boot's
+        # events and fetch_dpu_status repopulate.
+        if self.db == None:
+            return
+        try:
+            stale = self.db.hget(self.table, 'dpu_data_plane_reason')
+            for name in ('dpu_data_plane_state', 'dpu_data_plane_time',
+                         'dpu_data_plane_reason'):
+                self.db.hdel(self.table, name)
+            if stale:
+                log_info(f"Cleared data plane state left over from a previous "
+                         f"boot, was: {stale}")
+        except Exception as e:
+            log_err(f'Failed to clear stale dpu data plane state due to {e}')
+
+    def _write_dpu_data_plane_db(self, state, reason):
+        if self.db == None:
+            return
+        fvs_data_plane_data = [
+            ('dpu_data_plane_state', state),
+            ('dpu_data_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
+            ('dpu_data_plane_reason', reason)
+        ]
+        for name, value in fvs_data_plane_data:
+            self.db.hset(self.table, name, value)
+
+    def _assert_dpu_condition(self, event_type, reason):
+        self.active_conditions[event_type] = reason
+        self._write_dpu_data_plane_db(
+            'down', ', '.join(self.active_conditions.values()))
+
+    def _clear_dpu_condition(self, event_type, reason):
+        # only conditions this process asserted are cleared, so a recovery
+        # event can never release a latch owned by an unrelated critical event
+        if event_type not in self.active_conditions:
+            return
+        del self.active_conditions[event_type]
+        if self.active_conditions:
+            self._write_dpu_data_plane_db(
+                'down', ', '.join(self.active_conditions.values()))
+            return
+        # fetch_dpu_status only defers to us while the state is down, so
+        # reporting up hands ownership of the data plane fields back to it
+        self._write_dpu_data_plane_db('up', reason)
+
     def _process_event(self, event):
         global g_count
 
@@ -170,6 +230,10 @@ class EventHandler(logger.Logger):
             log_err(f"Failed to process event due to {e}")
             return
 
+        # Message carries the formatted detail (path, threshold, mount point),
+        # Description is only the static text attached to the event type
+        event_reason = event_message if event_message else event_description
+
         try:
             if event_type in CRITICAL_EVENTS:
                 # log event
@@ -178,17 +242,16 @@ class EventHandler(logger.Logger):
                 self._log_emerg(f"Received event {event}")
 
                 # update dpu state db for data plane
-                if self.db == None:
-                    return
-                dpu_data_plane_status = 'down'
-                dpu_data_plane_reason = event_description
-                fvs_data_plane_data = [
-                    ('dpu_data_plane_state', dpu_data_plane_status),
-                    ('dpu_data_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
-                    ('dpu_data_plane_reason', dpu_data_plane_reason)
-                ]
-                for name, value in fvs_data_plane_data:
-                    self.db.hset(self.table, name, value)
+                self._assert_dpu_condition(event_type, event_reason)
+            elif event_type in RECOVERY_EVENTS:
+                # log event
+                g_count += 1
+                log_info(f"Event # {g_count} Time -> {time.asctime()}")
+                log_info(f"Received event {event}")
+
+                # update dpu state db for data plane
+                self._clear_dpu_condition(
+                    RECOVERY_EVENTS[event_type], event_reason)
         except Exception as e:
             log_err(f"Failed to update dpu state db data plane fields due to {e}")
 
