@@ -620,10 +620,7 @@ function check_add_bgp_dependency()
 function check_ports_present()
 {
     # Only checks for PORT entries; does not parse or validate their configuration.
-    if [[ -n "$($SONIC_DB_CLI CONFIG_DB KEYS 'PORT|*')" ]]; then
-        return 0
-    fi
-    return 1
+    [[ -n "$($SONIC_DB_CLI CONFIG_DB KEYS 'PORT|*')" ]]
 }
 
 function check_service_enabled()
