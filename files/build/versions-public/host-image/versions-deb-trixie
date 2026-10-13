@@ -409,6 +409,7 @@ readline-common==8.2-6
 resolvconf==1.94
 rshim==2.6.6
 rsyslog==8.2504.0-1+deb13u2
+rsyslog-openssl==8.2504.0-1+deb13u2
 rsyslog-relp==8.2504.0-1+deb13u2
 runit-helper==2.16.4
 sbsigntool==0.9.4-3.2+deb13u1

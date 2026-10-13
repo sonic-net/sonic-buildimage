@@ -16,6 +16,7 @@
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
 {% set rate_limit_interval = gconf.get('rate_limit_interval') -%}
 {% set rate_limit_burst = gconf.get('rate_limit_burst') -%}
+{% set tls_profiles = ssl_profiles | d({}) -%}
 
 global(net.enableDNS="off")
 
@@ -89,8 +90,25 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 
 {% set source = conf.get('source') -%}
 {% if source %}{% set source = source | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') %}{% endif -%}
-{% set port = conf.get('port', 514) | int(514) -%}
 {% set proto = conf.get('protocol', 'udp') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set transport_security = conf.get('transport_security', 'false') | string | lower -%}
+{% set use_tls = (proto == 'tls') or (transport_security in ['true', 'tls', 'enabled', '1']) -%}
+{% set profile_id = conf.get('tls_profile_id') -%}
+{% if profile_id %}{% set profile_id = profile_id | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') %}{% endif -%}
+{# Comma-separated server certificate names the remote server must present.
+   Required for TLS: x509/name only authenticates the server when rsyslog has a
+   permitted-peers list to compare against. Prefer exact DNS names: rsyslog
+   8.2504 and earlier match wildcard entries only against the certificate
+   subject CN, not SAN names, one DNS label per '*'. -#}
+{% set permitted_peers = conf.get('tls_permitted_peers') -%}
+{% if permitted_peers %}{% set permitted_peers = permitted_peers | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') | replace(' ', '') %}{% endif -%}
+{% set tls_ready = use_tls and profile_id and permitted_peers and tls_profiles.get(profile_id) -%}
+{% if use_tls -%}
+{% set proto = 'tcp' -%}
+{% set port = conf.get('port', 6514) | int(6514) -%}
+{% else -%}
+{% set port = conf.get('port', 514) | int(514) -%}
+{% endif -%}
 {% set vrf = conf.get('vrf', 'default') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set severity = conf.get('severity', gconf.get('severity', '*')) | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set filter = conf.get('filter') -%}
@@ -120,11 +138,25 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
     {% set options = options ~ ' Device="' ~ device ~ '"'-%}
 {% endif -%}
 
+{% if use_tls and not tls_ready %}
+# TLS requested for {{ server }} (profile {{ profile_id | d('unset') }}) but
+# tls_permitted_peers is {{ 'set' if permitted_peers else 'unset' }} and
+# /etc/sonic/ssl-certs/{{ profile_id | d('') }}/{ca-bundle,cert,key}.pem must all
+# be present. Skip this server; do not fall back to cleartext omfwd or to
+# an unauthenticated server.
+{% else %}
 {% if filter %}
 :msg, {{ fmodifier }}ereregex, "{{ regex | replace('\n', '') | replace('\r', '') | replace('"', '\\"') }}"
 {% endif %}
+{% if use_tls %}
+{% set cert_dir = '/etc/sonic/ssl-certs/' ~ profile_id -%}
+*.{{ severity }}
+action(type="omfwd" Target="{{ server | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}" Port="{{ port }}" Protocol="tcp" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000" StreamDriver="ossl" StreamDriverMode="1" StreamDriverAuthMode="x509/name" StreamDriverPermittedPeers="{{ permitted_peers }}" StreamDriver.CAFile="{{ cert_dir }}/ca-bundle.pem" StreamDriver.CertFile="{{ cert_dir }}/cert.pem" StreamDriver.KeyFile="{{ cert_dir }}/key.pem"{{ options }})
+{% else %}
 *.{{ severity }}
 action(type="omfwd" Target="{{ server | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000"{{ options }})
+{% endif %}
+{% endif %}
 {% endfor %}
 
 {% if syslog_counter and syslog_counter == "true" %}

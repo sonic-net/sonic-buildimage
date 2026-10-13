@@ -41,6 +41,79 @@ if [ -z "$syslog_counter" ]; then
     syslog_counter="false"
 fi
 
+# Profiles whose PEMs host-services copied to /etc/sonic/ssl-certs/<id>/.
+# The Jinja template only emits TLS omfwd for ids listed here so missing certs
+# never fall back to cleartext. The JSON is built with jq so directory names
+# are safely encoded.
+ssl_profiles_json="{}"
+if [ -d /etc/sonic/ssl-certs ]; then
+    for d in /etc/sonic/ssl-certs/*/; do
+        [ -d "$d" ] || continue
+        id=$(basename "$d")
+        if [ -f "${d}ca-bundle.pem" ] && [ -f "${d}cert.pem" ] && [ -f "${d}key.pem" ]; then
+            ssl_profiles_json=$(jq -c --arg id "$id" '. + {($id): true}' <<< "$ssl_profiles_json")
+        fi
+    done
+fi
+
+ssl_profile_ready() {
+    local id="$1"
+    local d="/etc/sonic/ssl-certs/${id}"
+    [ -n "$id" ] && [ -f "${d}/ca-bundle.pem" ] && [ -f "${d}/cert.pem" ] && [ -f "${d}/key.pem" ]
+}
+
+# (rsyslog-config restart without a CONFIG_DB SYSLOG_SERVER change) still
+# updates STATE_DB SYSLOG_SERVER|<addr> applied_transport_security.
+publish_syslog_tls_apply_state() {
+    local apply_ok="$1"
+    local key proto ts profile peers applied reason proto_lc ts_lc k found
+
+    mapfile -t cfg_keys < <(sonic-db-cli CONFIG_DB KEYS "SYSLOG_SERVER|*" 2>/dev/null || true)
+
+    while IFS= read -r k; do
+        [ -n "$k" ] || continue
+        found=0
+        for key in "${cfg_keys[@]}"; do
+            if [ "$k" = "$key" ]; then
+                found=1
+                break
+            fi
+        done
+        if [ "$found" -eq 0 ]; then
+            sonic-db-cli STATE_DB DEL "$k" >/dev/null 2>&1 || true
+        fi
+    done < <(sonic-db-cli STATE_DB KEYS "SYSLOG_SERVER|*" 2>/dev/null || true)
+
+    for key in "${cfg_keys[@]}"; do
+        [ -n "$key" ] || continue
+        proto=$(sonic-db-cli CONFIG_DB HGET "$key" protocol 2>/dev/null || true)
+        ts=$(sonic-db-cli CONFIG_DB HGET "$key" transport_security 2>/dev/null || true)
+        profile=$(sonic-db-cli CONFIG_DB HGET "$key" tls_profile_id 2>/dev/null || true)
+        peers=$(sonic-db-cli CONFIG_DB HGET "$key" tls_permitted_peers 2>/dev/null || true)
+        applied="false"
+        reason="NONE"
+        proto_lc=$(printf '%s' "$proto" | tr '[:upper:]' '[:lower:]')
+        ts_lc=$(printf '%s' "$ts" | tr '[:upper:]' '[:lower:]')
+        if [ "$proto_lc" = "tls" ] || [ "$ts_lc" = "true" ] || [ "$ts_lc" = "tls" ] || \
+           [ "$ts_lc" = "enabled" ] || [ "$ts_lc" = "1" ]; then
+            if [ -z "$profile" ]; then
+                reason="NO_PROFILE"
+            elif [ -z "$peers" ]; then
+                reason="NO_PERMITTED_PEERS"
+            elif ! ssl_profile_ready "$profile"; then
+                reason="NO_CERTIFICATE"
+            elif [ "$apply_ok" != "true" ]; then
+                reason="RSYSLOG_APPLY_FAILED"
+            else
+                applied="true"
+                reason="NONE"
+            fi
+        fi
+        sonic-db-cli STATE_DB HSET "$key" applied_transport_security "$applied" >/dev/null 2>&1 || true
+        sonic-db-cli STATE_DB HSET "$key" failure_reason "$reason" >/dev/null 2>&1 || true
+    done
+}
+
 # Generate config to a temp file so we can compare before restarting.
 # On Debian 13 (Trixie), rsyslog.service has systemd sandboxing directives
 # (PrivateTmp, ProtectSystem, etc.) that add ~4 seconds of overhead per
@@ -69,7 +142,8 @@ json_args=$(jq -n \
     --arg forward_with_osversion "$syslog_with_osversion" \
     --arg os_version "$os_version" \
     --arg syslog_counter "$syslog_counter" \
-    '{udp_server_ip: $udp_server_ip, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter}')
+    --argjson ssl_profiles "$ssl_profiles_json" \
+    '{udp_server_ip: $udp_server_ip, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter, ssl_profiles: $ssl_profiles}')
 
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "$json_args" \
@@ -79,8 +153,10 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
     # Config changed (or first boot) — install and restart
     if cp "$TMPFILE" /etc/rsyslog.conf; then
         systemctl restart rsyslog
+        publish_syslog_tls_apply_state true
     else
         echo "Failed to update /etc/rsyslog.conf; not restarting rsyslog" >&2
+        publish_syslog_tls_apply_state false
         exit 1
     fi
 else
@@ -92,4 +168,5 @@ else
         # Config unchanged — just signal rsyslog to re-open log files
         systemctl kill -s HUP rsyslog
     fi
+    publish_syslog_tls_apply_state true
 fi
