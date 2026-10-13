@@ -66,7 +66,7 @@ jaraco.functools==4.1.0
 jaraco.text==4.0.0
 jinja2==3.1.6
 jsonpatch==1.32
-jsonpath-ng==1.9.1
+jsonpath-ng==1.10.0
 jsonpickle==4.0.2+dfsg
 jsonpointer==2.4
 kiwisolver==1.4.7

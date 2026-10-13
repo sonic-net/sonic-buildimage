@@ -74,7 +74,7 @@ pure-eval==0.0.0
 pure_eval==0.2.4
 pyaml==26.7.0
 pybrctl==0.1.4
-pycparser==3.0
+pycparser==3.11
 pygments==2.21.0
 pygobject==3.50.0
 pynacl==1.6.2
@@ -281,7 +281,7 @@ ufolib2==0.17.1
 unicodedata2==15.1.0
 unittest-xml-reporting==4.0.0
 urllib3==2.3.0
-wcwidth==0.9.1
+wcwidth==0.9.2
 webencodings==0.5.1
 werkzeug==3.1.9
 wheel==0.46.1
