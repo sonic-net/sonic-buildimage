@@ -619,11 +619,9 @@ function check_add_bgp_dependency()
 }
 function check_ports_present()
 {
-    PORT_CONFIG_INI=/usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV/port_config.ini
-    HWSKU_JSON=/usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV/hwsku.json
-
-    if [[ -f $PORT_CONFIG_INI ]] || [[ -f $HWSKU_JSON ]]; then
-         return 0
+    # Only checks for PORT entries; does not parse or validate their configuration.
+    if [[ -n "$($SONIC_DB_CLI CONFIG_DB KEYS 'PORT|*')" ]]; then
+        return 0
     fi
     return 1
 }
