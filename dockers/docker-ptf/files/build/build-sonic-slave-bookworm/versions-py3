@@ -1,4 +1,4 @@
-ijson==3.5.1
+ijson==3.6.0
 jsondiff==2.2.1
 jsonpointer==3.2.1
 libyang==3.1.0
