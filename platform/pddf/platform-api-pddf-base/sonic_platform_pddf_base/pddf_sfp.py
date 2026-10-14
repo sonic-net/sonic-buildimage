@@ -6,6 +6,7 @@
 
 try:
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from sonic_platform_pddf_base.pddf_logger import logger
     import time
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -37,7 +38,7 @@ class PddfSfp(SfpOptoeBase):
         self._port_start = 0
         self._port_end = int(self.platform['num_ports'])
         if index < self._port_start or index >= self._port_end:
-            print("Invalid port index %d" % index)
+            logger.log_error("Invalid port index %d" % index)
             return
 
 	# 1-based port index
@@ -191,14 +192,14 @@ class PddfSfp(SfpOptoeBase):
         output = self.pddf_obj.get_attr_name_output(device, 'xcvr_lpmode')
 
         if not output:
-            print("get_lpmode_via_pin: port %d no sysfs output available" % self.port_index)
+            logger.log_error("get_lpmode_via_pin: port %d no sysfs output available" % self.port_index)
             return False
 
         try:
             status = int(output['status'].rstrip())
             return status == 1
         except (ValueError, KeyError) as e:
-            print("get_lpmode_via_pin: port %d failed to parse output: %s" % (self.port_index, str(e)))
+            logger.log_error("get_lpmode_via_pin: port %d failed to parse output: %s" % (self.port_index, str(e)))
             return False
 
     def get_lpmode(self):
@@ -229,7 +230,7 @@ class PddfSfp(SfpOptoeBase):
                 lpmode = power_set if power_override else True
 
         if lpmode is None:
-            print("get_lpmode: port %d EEPROM method failed" % self.port_index)
+            logger.log_error("get_lpmode: port %d EEPROM method failed" % self.port_index)
             lpmode = False
 
         return lpmode
@@ -274,7 +275,8 @@ class PddfSfp(SfpOptoeBase):
                     f.seek(0)
                     f.write('0')
                     status = True
-            except (IOError, OSError):
+            except (IOError, OSError) as e:
+                logger.log_error(f"Error trying to reset SFP: {e}({e.errno})")
                 status = False
         else:
             # Use common SfpOptoeBase implementation for reset
@@ -301,6 +303,7 @@ class PddfSfp(SfpOptoeBase):
             try:
                 f = open(path, 'r+')
             except IOError as e:
+                logger.log_error(f"Error disabling SFP TX: Couldn't open {path} due to {e}")
                 return False
 
             try:
@@ -311,6 +314,7 @@ class PddfSfp(SfpOptoeBase):
                 f.close()
                 status = True
             except IOError as e:
+                logger.log_error(f"Error disabling SFP TX: Couldn't write to {path} due to {e}")
                 status = False
         else:
             # Use common SfpOptoeBase implementation for tx_disable
@@ -334,7 +338,7 @@ class PddfSfp(SfpOptoeBase):
         path = self.pddf_obj.get_path(device, 'xcvr_lpmode')
 
         if not path:
-            print("set_lpmode_via_pin: port %d no sysfs path available" % self.port_index)
+            logger.log_error("set_lpmode_via_pin: port %d no sysfs path available" % self.port_index)
             return False
 
         try:
@@ -342,7 +346,7 @@ class PddfSfp(SfpOptoeBase):
                 f.write('1' if lpmode else '0')
             return True
         except IOError as e:
-            print("set_lpmode_via_pin: port %d FAILED: %s" % (self.port_index, str(e)))
+            logger.log_error("set_lpmode_via_pin: port %d FAILED: %s" % (self.port_index, str(e)))
             return False
 
     def set_lpmode(self, lpmode):
@@ -375,7 +379,7 @@ class PddfSfp(SfpOptoeBase):
                     status = self.set_power_override(True, False)
 
         if not status:
-            print("set_lpmode: port %d EEPROM method failed" % self.port_index)
+            logger.log_error("set_lpmode: port %d EEPROM method failed" % self.port_index)
 
         return status
 
