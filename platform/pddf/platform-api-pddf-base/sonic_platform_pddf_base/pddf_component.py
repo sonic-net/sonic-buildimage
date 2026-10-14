@@ -11,6 +11,7 @@ try:
     from sonic_platform_base.component_base import (ComponentBase, FW_AUTO_ERR_BOOT_TYPE, FW_AUTO_ERR_IMAGE,
                                                     FW_AUTO_UPDATED, FW_AUTO_SCHEDULED, FW_AUTO_ERR_UNKNOWN)
     from sonic_platform_base.device_base import DeviceBase
+    from sonic_platform_pddf_base.pddf_logger import logger
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -243,7 +244,11 @@ class PddfComponent(ComponentBase, DeviceBase):
             return FW_AUTO_ERR_BOOT_TYPE
 
         # Let RuntimeError bubble up
-        success = self._install_firmware(image_path)
+        try:
+            success = self._install_firmware(image_path)
+        except RuntimeError as e:
+            logger.log_error(f"{self.get_name()} firmware auto-update failed: {e}")
+            raise
         if not success:
             return FW_AUTO_ERR_IMAGE
 

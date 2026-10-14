@@ -3,11 +3,13 @@
 import fcntl
 import glob
 import json
+import logging
 import os
 import re
 import subprocess
 import time
 import unicodedata
+from sonic_platform_pddf_base.pddf_logger import logger
 from sonic_py_common import device_info
 
 bmc_cache = {}
@@ -18,6 +20,7 @@ HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 
 dirname = os.path.dirname(os.path.realpath(__file__))
+
 
 class PddfApi():
     def __init__(self):
@@ -52,13 +55,13 @@ class PddfApi():
     def runcmd(self, cmd):
         rc = os.system(cmd)
         if rc != 0:
-            print("%s -- command failed" % cmd)
+            logger.log_error("%s -- command failed" % cmd)
         return rc
 
     def get_cmd_output(self, cmd):
         result = subprocess.run(['/bin/bash', '-c', cmd], capture_output=True)
         if result.returncode != 0:
-            print("%s -- command failed" % cmd)
+            logger.log_error("%s -- command failed" % cmd)
 
         return result
 
@@ -588,12 +591,12 @@ class PddfApi():
             with open(node, 'r') as f:
                 status = f.read()
         except IOError:
-            print("PDDF_VERIFY_ERR: IOError: node:%s key:%s" % (node, key))
+            logger.log_error("PDDF_VERIFY_ERR: IOError: node:%s key:%s" % (node, key))
             return
 
         status = status.rstrip("\n\r")
         if attr[key] != status:
-            print("PDDF_VERIFY_ERR: node: %s switch:%s" % (node, status))
+            logger.log_error("PDDF_VERIFY_ERR: node: %s switch:%s" % (node, status))
 
     def verify_device(self, attr, path, ops):
         for key in attr.keys():
@@ -614,21 +617,21 @@ class PddfApi():
         if (os.path.exists(dir) or validate_type == 'client'):
             for sysfs in obj[validate_type]:
                 if not os.path.exists(sysfs):
-                    print("[SYSFS FILE] " + sysfs + ": does not exist")
+                    logger.log_error("[SYSFS FILE] " + sysfs + ": does not exist")
         else:
-            print("[SYSFS DIR] " + dir + ": does not exist")
+            logger.log_error("[SYSFS DIR] " + dir + ": does not exist")
 
     def validate_dsysfs_creation(self, obj, validate_type):
         if validate_type in obj.keys():
             # There is a possibility that some components dont have any device-self.data attr
             if not obj[validate_type]:
-                print("[SYSFS ATTR] for " + validate_type + ": empty")
+                logger.log_error("[SYSFS ATTR] for " + validate_type + ": empty")
             else:
                 for sysfs in obj[validate_type]:
                     if not os.path.exists(sysfs):
-                        print("[SYSFS FILE] " + sysfs + ": does not exist")
+                        logger.log_error("[SYSFS FILE] " + sysfs + ": does not exist")
         else:
-            print("[SYSFS DIR] " + dir + ": not configured")
+            logger.log_error(f"[SYSFS DIR] /sys/kernel/pddf/devices/{validate_type}: not configured")
 
     def verify_sysfs_data(self, verify_type):
         if (verify_type == 'LED'):
@@ -673,11 +676,11 @@ class PddfApi():
         if supported_type:
             if module_validation_status:
                 module_validation_status.append(":ERROR not loaded")
-                print(str(module_validation_status)[1:-1])
+                logger.log_error(str(module_validation_status)[1:-1])
             else:
-                print("Loaded")
+                logger.log_info("Loaded")
         else:
-            print(validate_type + " not configured")
+            logger.log_error(validate_type + " not configured")
 
     ###################################################################################################################
     #   PARSE DEFS
@@ -691,7 +694,7 @@ class PddfApi():
                 if str(val[0]).isdigit():
                     if val[0] != 0:
                         # in case if 'create' functions
-                        print("{}_psu_device failed for {}".format(ops['cmd'], ifce['dev']))
+                        logger.log_error("{}_psu_device failed for {}".format(ops['cmd'], ifce['dev']))
                         return val
                 else:
                     # in case of 'show_attr' functions
@@ -705,7 +708,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_fan_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_fan_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -716,7 +719,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_temp_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_temp_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -727,7 +730,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_voltage_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_voltage_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -738,7 +741,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_current_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_current_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -749,7 +752,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_cpld_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_cpld_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -760,7 +763,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_sysstatus_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_sysstatus_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -771,7 +774,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_gpio_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_gpio_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -782,7 +785,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_mux_device() cmd failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_mux_device() cmd failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
                     return ret
             else:
                 val.extend(ret)
@@ -815,7 +818,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_mux_device() cmd failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_mux_device() cmd failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
                     return ret
             else:
                 val.extend(ret)
@@ -829,7 +832,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_eeprom_device() cmd failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+                    logger.log_error("{}_eeprom_device() cmd failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -841,7 +844,7 @@ class PddfApi():
                 if str(ret[0]).isdigit():
                     if ret[0] != 0:
                         # in case if 'create' functions
-                        print("{}_xcvr_device() cmd failed for {}".format(ops['cmd'], ifce['dev']))
+                        logger.log_error("{}_xcvr_device() cmd failed for {}".format(ops['cmd'], ifce['dev']))
                         return ret
                 else:
                     val.extend(ret)
@@ -884,7 +887,7 @@ class PddfApi():
             if str(ret[0]).isdigit():
                 if ret[0] != 0:
                     # in case if 'create' functions
-                    print("{}_multifpgapci_device() cmd failed".format(ops['cmd']))
+                    logger.log_error("{}_multifpgapci_device() cmd failed".format(ops['cmd']))
                     return ret
             else:
                 val.extend(ret)
@@ -1120,12 +1123,17 @@ class PddfApi():
             output['mode']="i2c"
             node = self.get_path(device_name, attr_name)
             if node is None:
+                logger.log_debug(f"Attribute {attr_name} not configured for device {device_name}",
+                                 limit_key=(device_name, attr_name), max_log_count=1)
                 return {}
             try:
                 # Seen some errors in case of unencodable characters hence ignoring them in python3
                 with open(node, 'r', errors='ignore') as f:
                     output['status'] = f.read()
-            except IOError:
+            except IOError as err:
+                logger.log_error(f"I2C Access failed with device_name={device_name}, "
+                                 f"attr_name={attr_name}, node={node}, err={err}",
+                                 rate_limit=True, limit_key=(device_name, attr_name))
                 return {}
         return output
 
@@ -1142,11 +1150,16 @@ class PddfApi():
             output['mode'] = "i2c"
             node = self.get_path(device_name, attr_name)
             if node is None:
+                logger.log_debug(f"Attribute {attr_name} not configured for device {device_name}",
+                                 limit_key=(device_name, attr_name), max_log_count=1)
                 return {}
             try:
                 with open(node, 'w') as f:
                     f.write(str(val))
-            except IOError:
+            except IOError as err:
+                logger.log_error(f"I2C Access failed with device_name={device_name}, "
+                                 f"attr_name={attr_name}, node={node}, err={err}",
+                                 rate_limit=True, limit_key=(device_name, attr_name))
                 return {}
 
             output['status'] = True
