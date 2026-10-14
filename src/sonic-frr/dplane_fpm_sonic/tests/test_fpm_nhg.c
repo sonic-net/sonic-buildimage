@@ -15,6 +15,10 @@
  *               DELNHGFIB: in one batch every DEL precedes the NEWs
  *   assembly  - carried-over DELs first, this context's NEWs child-first,
  *               and the route frame last (NEWNHGFIB before NEWROUTE)
+ *   contrib   - commit-time membership counting: a route's build collects
+ *               (leaf, vrf, prefix) resolutions, the commit diff moves the
+ *               counts, zero unindexes the membership, and rollback/retry
+ *               move nothing
  */
 #include "config.h"
 
@@ -72,6 +76,21 @@ static struct nexthop *leaf_nh4(const char *gate, ifindex_t ifindex)
 	nh->ifindex = ifindex;
 	nh->weight = 1;
 	nh->vrf_id = 0;
+	return nh;
+}
+
+/* A plain leaf zebra reached through a covering prefix (the "res via"
+ * connected match): the resolving info sits on the leaf itself.
+ */
+static struct nexthop *leaf_nh4_res(const char *gate, ifindex_t ifindex,
+				    const char *res_prefix, uint32_t res_id)
+{
+	struct nexthop *nh = leaf_nh4(gate, ifindex);
+	struct prefix rp;
+
+	if (str2prefix(res_prefix, &rp) != 1)
+		abort();
+	nexthop_set_res_info(nh, res_id, &rp);
 	return nh;
 }
 
@@ -198,6 +217,12 @@ static void test_build(void)
 	CHECK(lb->resolved_prefix.family == AF_INET &&
 		      lb->resolved_prefix.prefixlen == 24,
 	      "resolved prefix wrong");
+	/* The recursive gate carries no resolving info of its own, so the
+	 * build collects nothing here: the resolution lives in the L-B
+	 * identity, not as a leaf membership.
+	 */
+	CHECK(newq.contrib_count == 0, "contribs %u", newq.contrib_count);
+	CHECK(leaf->res_member_count == 0, "members %u", leaf->res_member_count);
 	CHECK(fpm_nhg_count(&t) == 3, "count %u", fpm_nhg_count(&t));
 
 	/* Nothing committed: rollback destroys everything the build made. */
@@ -240,21 +265,26 @@ static void test_dedupe(void)
 	CHECK(topa != NULL && newq.count == 3, "first build");
 	if (!topa)
 		return;
-	fpm_nhg_staging_free(&newq);
 	route_key(&ka, "172.16.1.0/24");
-	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq);
+	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
 
-	/* An equal chain dedupes at every level: leaf, L-B and L-A. */
+	/* An equal chain dedupes at every level: leaf, L-B and L-A, and the
+	 * reuse stages nothing at all — no object, no contribution.
+	 */
 	hits0 = t.dedupe_hits;
 	topb = fpm_nhg_build(&t, rb, &newq);
 	CHECK(topb == topa, "equal chain did not dedupe");
 	CHECK(t.dedupe_hits - hits0 == 3, "dedupe hits +%" PRIu64,
 	      t.dedupe_hits - hits0);
 	CHECK(t.obj_created == 3, "created %" PRIu64, t.obj_created);
-	fpm_nhg_staging_free(&newq);
+	CHECK(newq.count == 0 && newq.contrib_count == 0,
+	      "reuse staged %u object(s) / %u contribution(s)", newq.count,
+	      newq.contrib_count);
 
 	route_key(&kb, "172.16.2.0/24");
-	fpm_nhg_route_commit(&t, &kb, topb, 1000, &delq);
+	fpm_nhg_route_commit(&t, &kb, topb, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
 	CHECK(topa->refcount == 2, "refcount %u", topa->refcount);
 
 	/* A changed gate derives a whole new tree. */
@@ -311,7 +341,7 @@ static void test_rollback(void)
 		return;
 	}
 	route_key(&ka, "172.16.1.0/24");
-	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq);
+	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq, &newq);
 	fpm_nhg_staging_free(&newq);
 
 	/* Route B reuses A's recursive subtree and adds a direct leaf: the
@@ -385,7 +415,7 @@ static void test_id_reuse(void)
 		return;
 	}
 	route_key(&ka, "172.16.1.0/24");
-	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq);
+	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq, &newq);
 	fpm_nhg_staging_free(&newq);
 
 	fpm_nhg_route_forget(&t, &ka, &delq);
@@ -515,6 +545,120 @@ static void test_assembly(void)
 	chain_free(r1);
 }
 
+/* -------------------------------------------------------------------------
+ * leaf membership contributions
+ * ------------------------------------------------------------------------- */
+
+static void test_contrib(void)
+{
+	struct fpm_nhg_staging newq = {};
+	struct fpm_nhg_del_queue delq = {};
+	struct fpm_nhg_route_key ka, kb;
+	struct nexthop *ra, *rb, *rc, *rd = NULL, *re = NULL;
+	struct fpm_dplane_nhg *topa, *topb, *topc, *topd = NULL, *tope = NULL;
+	struct fpm_dplane_nhg *leaf;
+	struct prefix p1, p2;
+	uint64_t created0;
+
+	printf("--- test_contrib\n");
+	tables_reset();
+
+	if (str2prefix("10.0.0.0/24", &p1) != 1 ||
+	    str2prefix("172.16.0.0/24", &p2) != 1)
+		abort();
+
+	/* A plain leaf reached through P1. A single non-recursive member
+	 * makes the L-A the leaf itself.
+	 */
+	ra = leaf_nh4_res("192.168.1.1/32", 5, "10.0.0.0/24", 1000);
+	topa = fpm_nhg_build(&t, ra, &newq);
+	CHECK(topa != NULL && topa->level == FPM_NHG_L_C, "build A failed");
+	if (!topa) {
+		fpm_nhg_rollback(&t, &newq);
+		fpm_nhg_staging_free(&newq);
+		chain_free(ra);
+		return;
+	}
+	leaf = topa;
+	route_key(&ka, "172.16.1.0/24");
+	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
+	CHECK(leaf->res_member_count == 1 && leaf->res_members[0].count == 1 &&
+		      prefix_same(&leaf->res_members[0].p, &p1),
+	      "initial membership wrong");
+
+	/* Re-committing an identical build moves nothing. */
+	rb = leaf_nh4_res("192.168.1.1/32", 5, "10.0.0.0/24", 1000);
+	topb = fpm_nhg_build(&t, rb, &newq);
+	CHECK(topb == topa, "identical chain must dedupe");
+	fpm_nhg_route_commit(&t, &ka, topb, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
+	CHECK(leaf->res_member_count == 1 && leaf->res_members[0].count == 1,
+	      "idempotent commit moved the count");
+
+	/* The same gate reached through P2 releases P1 and acquires P2, on
+	 * the very same shared leaf.
+	 */
+	rc = leaf_nh4_res("192.168.1.1/32", 5, "172.16.0.0/24", 1000);
+	topc = fpm_nhg_build(&t, rc, &newq);
+	CHECK(topc == leaf, "gate unchanged: the leaf must be shared");
+	if (!topc)
+		goto out;
+	fpm_nhg_route_commit(&t, &ka, topc, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
+	CHECK(leaf->res_member_count == 1 && leaf->res_members[0].count == 1 &&
+		      prefix_same(&leaf->res_members[0].p, &p2),
+	      "rebind must release P1 and keep only P2");
+
+	/* A rolled-back build leaves no trace, not even a fresh membership on
+	 * a shared leaf.
+	 */
+	rd = leaf_nh4_res("192.168.1.1/32", 5, "10.0.0.0/24", 1000);
+	created0 = t.obj_created;
+	topd = fpm_nhg_build(&t, rd, &newq);
+	CHECK(topd == leaf, "build D must reuse the leaf");
+	fpm_nhg_rollback(&t, &newq);
+	fpm_nhg_staging_free(&newq);
+	CHECK(t.obj_created == created0, "rollback left objects behind");
+	CHECK(leaf->res_member_count == 1 && leaf->res_members[0].count == 1 &&
+		      prefix_same(&leaf->res_members[0].p, &p2),
+	      "rollback must not touch the memberships");
+
+	/* A second route on the same gate and prefix raises the count;
+	 * forgetting one drops it back, forgetting the last unindexes the
+	 * leaf entirely.
+	 */
+	re = leaf_nh4_res("192.168.1.1/32", 5, "172.16.0.0/24", 1000);
+	tope = fpm_nhg_build(&t, re, &newq);
+	CHECK(tope == leaf, "equal chain must dedupe");
+	if (tope) {
+		route_key(&kb, "172.16.2.0/24");
+		fpm_nhg_route_commit(&t, &kb, tope, 1000, &delq, &newq);
+		fpm_nhg_staging_free(&newq);
+		CHECK(leaf->res_member_count == 1 &&
+			      leaf->res_members[0].count == 2,
+		      "shared count wrong");
+
+		fpm_nhg_route_forget(&t, &kb, &delq);
+		CHECK(leaf->res_member_count == 1 &&
+			      leaf->res_members[0].count == 1,
+		      "forget took too much");
+	}
+
+out:
+	fpm_nhg_route_forget(&t, &ka, &delq);
+	CHECK(t.obj_created == t.obj_deleted,
+	      "created %" PRIu64 " deleted %" PRIu64,
+	      t.obj_created, t.obj_deleted);
+
+	fpm_nhg_del_queue_free(&delq);
+	chain_free(ra);
+	chain_free(rb);
+	chain_free(rc);
+	chain_free(rd);
+	chain_free(re);
+}
+
 int main(void)
 {
 	zlog_aux_init("NHG_TEST: ", LOG_DEBUG);
@@ -525,6 +669,7 @@ int main(void)
 	test_rollback();
 	test_id_reuse();
 	test_assembly();
+	test_contrib();
 
 	fpm_nhg_tables_fini(&t);
 

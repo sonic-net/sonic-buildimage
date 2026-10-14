@@ -4201,10 +4201,10 @@ static void fpm_nhg_pending_dels_flush_locked(struct fpm_nl_ctx *fnc,
  *     caller can retry (or report the failure to zebra);
  *  4. write the batch in one piece and drop the carried-over DELs: they are
  *     on the wire now;
- *  5. only then mutate state (map upsert, ref of the new top, unref of the
- *     old one). The unref is what produces DEL ids, and it frees the objects
- *     as it goes — there is no undo past this point, which is exactly why it
- *     comes last: the write no longer depends on any of its results. The ids
+ *  5. only then mutate state (map upsert, membership diff, ref of the new
+ *     top, unref of the old one). The unref is what produces DEL ids, and it
+ *     frees the objects as it goes — there is no undo past this point, which
+ *     is exactly why it comes last: the write no longer depends on any of its results. The ids
  *     it produces are appended to fnc->pending_dels and ride out at the head
  *     of the next batch (or in the end-of-drain flush), which is where the
  *     need for any guessed DEL allowance disappears.
@@ -4423,7 +4423,6 @@ static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
 	/* One atomic write for the whole context. */
 	ret = fpm_frame_batch_write_locked(fnc, &batch, __func__);
 	fpm_nhg_frame_batch_free(&batch);
-	fpm_nhg_staging_free(&newq);
 
 	/*
 	 * The carried-over DELs are on the wire (or a resync was forced, which
@@ -4436,7 +4435,15 @@ static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
 		fpm_nhg_route_forget(&fnc->nhg_tables, &key, &fnc->pending_dels);
 	else
 		fpm_nhg_route_commit(&fnc->nhg_tables, &key, new_top,
-				     dplane_ctx_get_nhe_id(ctx), &fnc->pending_dels);
+				     dplane_ctx_get_nhe_id(ctx),
+				     &fnc->pending_dels, &newq);
+
+	/*
+	 * The commit takes over the build's contribution set, so the staging
+	 * must outlive it and is dropped only now (on the delete path there is
+	 * no build and nothing to consume).
+	 */
+	fpm_nhg_staging_free(&newq);
 
 	/*
 	 * Keep the deferred DEL list bounded. Left alone it grows for as long as

@@ -49,11 +49,16 @@ struct fpm_nhg_child {
 };
 
 /*
- * One (vrf, prefix) membership recorded on a leaf for by_resolved.
+ * One (vrf, prefix) membership a leaf is indexed under in by_resolved. count
+ * is the number of committed routes whose tree currently resolves through
+ * (vrf, prefix) to this leaf; the membership exists exactly while count is
+ * non-zero, and fpm_nhg_leaf_member_release() drops it — and its index entry
+ * — when the last such route lets go.
  */
 struct fpm_nhg_resolved_member {
 	vrf_id_t vrf_id;
 	struct prefix p;
+	uint32_t count;
 };
 
 struct fpm_dplane_nhg {
@@ -92,11 +97,10 @@ struct fpm_dplane_nhg {
 	uint16_t num_children;
 	struct fpm_nhg_child *children; /* sorted by obj->hash */
 	/*
-	 * Leaves only: every (vrf, prefix) this leaf was ever seen resolved
-	 * through, mirrored in by_resolved. The leaf's identity cannot
-	 * include the prefix and no event ever retracts a membership, so
-	 * these accumulate for the object's whole life — and
-	 * fpm_nhg_remove() needs the full set to unindex it completely.
+	 * Leaves only: the (vrf, prefix) memberships this leaf is currently
+	 * indexed under in by_resolved, each with its route count (see
+	 * struct fpm_nhg_resolved_member). Mirrored 1:1 by the index, so
+	 * fpm_nhg_remove() unindexes the leaf completely by walking this.
 	 */
 	struct fpm_nhg_resolved_member *res_members;
 	uint16_t res_member_count, res_member_cap;
@@ -132,9 +136,8 @@ struct fpm_nhg_tables {
 	 * (vrf, resolving prefix) -> bucket of objects resolving through
 	 * it: the probe a route event uses to find its blast radius. L-B
 	 * entries are exact (the prefix is part of the group's identity);
-	 * leaf entries are a superset, kept grow-only because a leaf can
-	 * stand for several prefixes and no event ever retracts one — see
-	 * fpm_nhg_leaf_resolved_record().
+	 * leaf entries follow the per-route contribution counts and are
+	 * exact too — see fpm_nhg_leaf_member_acquire().
 	 */
 	struct hash *by_resolved;
 	uint32_t next_id;
@@ -209,6 +212,23 @@ struct fpm_frame_batch {
 	uint32_t nhgfib_count;
 };
 
+/*
+ * One resolution a route's build used: the leaf and the (vrf, prefix) it was
+ * reached through. A committed route stores the set its built tree produced;
+ * the next build's set is diffed against it to move the per-membership
+ * counts, so a membership is released exactly when its last route lets go.
+ *
+ * obj is a borrowed pointer: every entry names a leaf in the route's current
+ * top object tree, which the route's own reference keeps alive until the
+ * build replacing it has been committed (the diff runs before the old top is
+ * unreffed).
+ */
+struct fpm_nhg_contrib {
+	struct fpm_dplane_nhg *obj;
+	vrf_id_t vrf_id;
+	struct prefix p;
+};
+
 struct fpm_nhg_staging {
 	struct fpm_dplane_nhg **objs;  /* objects needing RTM_NEWNHGFIB, child-first order */
 	/*
@@ -220,6 +240,16 @@ struct fpm_nhg_staging {
 	 * would leave the uint32.
 	 */
 	uint32_t count, cap;
+	/*
+	 * Contributions collected by this build: the (leaf, vrf, prefix)
+	 * resolutions its tree used, deduped. Consumed by the commit that
+	 * installs the build, or freed with the staging when the build is
+	 * rolled back — a context that never reaches the wire moves no
+	 * count. Bounded by the leaf attachments of one route's nexthop
+	 * tree; same growth argument as count/cap above.
+	 */
+	struct fpm_nhg_contrib *contribs;
+	uint32_t contrib_count, contrib_cap;
 };
 
 void fpm_nhg_staging_free(struct fpm_nhg_staging *s);
@@ -276,10 +306,16 @@ bool fpm_nhg_batch_add_staging(const struct fpm_nhg_staging *s,
 
 struct fpm_dplane_nhg *fpm_nhg_route_get(struct fpm_nhg_tables *t,
 					 const struct fpm_nhg_route_key *k);
+/*
+ * Install `new_top` as the route's object. `newq` is the build that produced
+ * it: its contribution set is consumed here (the staging is left with none),
+ * so the caller must keep it alive until this call and free it after.
+ */
 void fpm_nhg_route_commit(struct fpm_nhg_tables *t,
 			  const struct fpm_nhg_route_key *k,
 			  struct fpm_dplane_nhg *new_top, uint32_t rib_id,
-			  struct fpm_nhg_del_queue *delq);
+			  struct fpm_nhg_del_queue *delq,
+			  struct fpm_nhg_staging *newq);
 void fpm_nhg_route_forget(struct fpm_nhg_tables *t,
 			  const struct fpm_nhg_route_key *k,
 			  struct fpm_nhg_del_queue *delq);
