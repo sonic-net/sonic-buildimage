@@ -1,0 +1,180 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Karthik Siruvalam <karthik@nexthop.ai>
+Date: Tue, 22 Sep 2026 09:10:28 +0000
+Subject: [PATCH] teamd: lacp: add per-member MACsec gate (runner.macsec_gate
+ state item)
+
+When MKA times out on a PortChannel member the MACsec data plane is gone
+but the link stays up and LACP stays in sync, so teamd keeps the member
+enabled and traffic is hashed onto a link that can no longer carry it
+until the LACP timeout (~90 s with slow rate) expires it. Faking a
+carrier flap from orchagent to force a deselect (sonic-swss #4744) was
+rejected in review: it generates false link events and puts a second
+writer behind teamd's back on the kernel enabled bit. teamd has no knob
+to hold a member out of the distributor while its link and LACP stay up.
+
+Add one: runner.macsec_gate, a per-member bool exposed as a writable
+teamdctl state item. teammgr drives it from STATE_DB
+MACSEC_INGRESS_SA_TABLE: false once the member's last ingress SA is
+deleted, true when an SA is installed again or MACsec is unconfigured on
+the port.
+
+A closed gate does two things. Locally it is ANDed into the LACP
+enable/disable predicates, so teamd itself clears the kernel enabled bit
+and teamsyncd, APP_LAG_MEMBER_TABLE and orchagent follow through the
+existing path with no second writer; the LAG carrier and min_ports are
+recomputed immediately. Towards the partner it also stops advertising
+IN_SYNC (and so collecting/distributing) and a PDU is sent at once, so a
+standard 802.1AX partner of any vendor takes the link out of its
+distributor on that PDU instead of hashing onto a port whose MACsec
+engine drops everything. The link, the member netdev and the LACP
+exchange itself are left running, so MKA/EAPOL keep flowing and recovery
+is a plain re-enable on both ends, not an LACP renegotiation.
+
+The gate is fail-open (true) on port add and is not persisted across a
+teamd restart; teammgr re-asserts it from STATE_DB.
+
+    teamdctl <lag> state item set ports.<member>.runner.macsec_gate false
+    teamdctl <lag> state item get ports.<member>.runner.macsec_gate
+
+Signed-off-by: Karthik Siruvalam <karthik@nexthop.ai>
+---
+ teamd/teamd_runner_lacp.c | 76 +++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 74 insertions(+), 2 deletions(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 62fd4d6..9dd0070 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -246,6 +246,14 @@ struct lacp_port {
+ 	struct lacpdu_info __partner_last; /* last state before update */
+ 	int partner_retry_count;
+ 	bool periodic_on;
++	bool macsec_gate;		/* external forwarding gate, driven by teammgr via
++					 * teamdctl from STATE_DB MACSEC_INGRESS_SA_TABLE.
++					 * false = the member's MACsec session is down (no
++					 * ingress SA) so it must not carry traffic even
++					 * though its link is up and LACP is in sync.
++					 * Fail-open (true) on port add, not persisted across
++					 * a teamd restart; ANDed into the enable/disable
++					 * predicates and into the advertised IN_SYNC bit. */
+ 	struct lacp_port *agg_lead; /* leading port of aggregator.
+ 				     * NULL in case this port is not selected */
+ 	enum lacp_port_state state;
+@@ -630,6 +638,11 @@ static int lacp_port_should_be_enabled(struct lacp_port *lacp_port)
+ {
+ 	struct lacp *lacp = lacp_port->lacp;
+ 
++	/* A closed external gate overrides the LACP decision below: the
++	 * member must not carry traffic whatever LACP would decide. */
++	if (!lacp_port->macsec_gate)
++		return false;
++
+ 	if (lacp_port_selected(lacp_port) &&
+ 	    lacp_port->agg_lead == lacp->selected_agg_lead &&
+ 	    (lacp_port->partner.state & INFO_STATE_SYNCHRONIZATION ||
+@@ -642,6 +655,9 @@ static int lacp_port_should_be_disabled(struct lacp_port *lacp_port)
+ {
+ 	struct lacp *lacp = lacp_port->lacp;
+ 
++	if (!lacp_port->macsec_gate)
++		return true;
++
+ 	if (!lacp_port_selected(lacp_port) ||
+ 	    lacp_port->agg_lead != lacp->selected_agg_lead ||
+ 	    (!(lacp_port->partner.state & INFO_STATE_SYNCHRONIZATION) &&
+@@ -1295,6 +1311,18 @@ static void lacp_port_actor_init(struct lacp_port *lacp_port)
+ 	lacp_port_actor_system_update(lacp_port);
+ }
+ 
++/* Advertise IN_SYNC only while the MACsec gate is open. A closed gate means
++ * the member can carry traffic in neither direction (there is no SA to decrypt
++ * what the partner sends), so the partner has to be told to stop distributing
++ * onto it: per 802.1AX a cleared Partner.Sync takes the link out of
++ * collecting/distributing on the partner's next PDU, whatever vendor it is. */
++static bool lacp_port_advertise_sync(struct lacp_port *lacp_port)
++{
++	return lacp_port->macsec_gate &&
++	       lacp_port_selected(lacp_port) &&
++	       lacp_port_agg_selected(lacp_port);
++}
++
+ static void lacp_port_actor_update(struct lacp_port *lacp_port)
+ {
+ 	uint8_t state = 0;
+@@ -1303,8 +1331,7 @@ static void lacp_port_actor_update(struct lacp_port *lacp_port)
+ 		state |= INFO_STATE_LACP_ACTIVITY;
+ 	if (lacp_port->lacp->cfg.fast_rate)
+ 		state |= INFO_STATE_LACP_TIMEOUT;
+-	if (lacp_port_selected(lacp_port) &&
+-	    lacp_port_agg_selected(lacp_port)) {
++	if (lacp_port_advertise_sync(lacp_port)) {
+ 		state |= INFO_STATE_SYNCHRONIZATION;
+ 		state &= ~(INFO_STATE_COLLECTING | INFO_STATE_DISTRIBUTING);
+ 		if (lacp_port->partner.state & INFO_STATE_SYNCHRONIZATION)
+@@ -1856,6 +1883,7 @@ static int lacp_port_added(struct teamd_context *ctx,
+ 	lacp_port->tdport = tdport;
+ 	lacp_port->lacp = lacp;
+ 	lacp_port->partner_retry_count = LACP_CFG_DFLT_RETRY_COUNT;
++	lacp_port->macsec_gate = true;	/* fail-open until teammgr says otherwise */
+ 
+ 	err = lacp_port_load_config(ctx, lacp_port);
+ 	if (err) {
+@@ -2692,6 +2720,44 @@ static int lacp_port_state_aggregator_selected_set(struct teamd_context *ctx,
+ 	return 0;
+ }
+ 
++static int lacp_port_state_macsec_gate_get(struct teamd_context *ctx,
++					   struct team_state_gsc *gsc,
++					   void *priv)
++{
++	gsc->data.bool_val = lacp_port_gsc(gsc, priv)->macsec_gate;
++	return 0;
++}
++
++static int lacp_port_state_macsec_gate_set(struct teamd_context *ctx,
++					   struct team_state_gsc *gsc,
++					   void *priv)
++{
++	struct lacp_port *lacp_port = lacp_port_gsc(gsc, priv);
++	int err;
++
++	/* MACsec data-plane gate, driven by teammgr from STATE_DB
++	 * MACSEC_INGRESS_SA_TABLE: false once the member's last ingress SA is
++	 * deleted (MKA timeout), true when an SA is installed again or MACsec
++	 * is unconfigured on the port.
++	 *
++	 * Partner first: re-advertise our state (IN_SYNC follows the gate, see
++	 * lacp_port_advertise_sync) and send a PDU now, so the partner drops the
++	 * link from its distributor immediately rather than hashing onto a port
++	 * whose MACsec engine drops everything. Then re-run the gate-aware
++	 * enable/disable predicates so the kernel enabled state follows the
++	 * gate, and recompute the LAG carrier so min_ports reacts. The link and
++	 * the member netdev are untouched, so MKA/EAPOL keep flowing and the
++	 * session can recover; LACP keeps running throughout. */
++	lacp_port->macsec_gate = gsc->data.bool_val;
++	lacp_port_actor_update(lacp_port);
++	err = lacpdu_send(lacp_port);
++	if (err)
++		teamd_log_warn("%s: lacpdu_send after macsec_gate change failed (%d)",
++			       lacp_port->tdport->ifname, err);
++	lacp_port_update_enabled(lacp_port);
++	return lacp_update_carrier(lacp_port->lacp);
++}
++
+ static int lacp_port_state_state_get(struct teamd_context *ctx,
+ 				     struct team_state_gsc *gsc,
+ 				     void *priv)
+@@ -2742,6 +2808,12 @@ static const struct teamd_state_val lacp_port_state_vals[] = {
+ 		.getter = lacp_port_state_aggregator_selected_get,
+ 		.setter = lacp_port_state_aggregator_selected_set,
+ 	},
++	{
++		.subpath = "macsec_gate",
++		.type = TEAMD_STATE_ITEM_TYPE_BOOL,
++		.getter = lacp_port_state_macsec_gate_get,
++		.setter = lacp_port_state_macsec_gate_set,
++	},
+ 	{
+ 		.subpath = "state",
+ 		.type = TEAMD_STATE_ITEM_TYPE_STRING,
