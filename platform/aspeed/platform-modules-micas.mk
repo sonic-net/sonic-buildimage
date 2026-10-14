@@ -3,7 +3,7 @@
 
 # Common package - contains shared utilities for Micas Aspeed-based BMC cards
 MICAS_COMMON_PLATFORM_MODULE = sonic-platform-aspeed-micas-common_1.0_arm64.deb
-$(MICAS_COMMON_PLATFORM_MODULE)_SRC_PATH = $(PLATFORM_PATH)/sonic-platform-modules-micas
+$(MICAS_COMMON_PLATFORM_MODULE)_SRC_PATH = platform/aspeed/sonic-platform-modules-micas
 $(MICAS_COMMON_PLATFORM_MODULE)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
 $(MICAS_COMMON_PLATFORM_MODULE)_PLATFORM = arm64-micas-common
 SONIC_DPKG_DEBS += $(MICAS_COMMON_PLATFORM_MODULE)
