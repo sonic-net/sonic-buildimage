@@ -181,7 +181,7 @@ gfortran==4:14.2.0-1
 gfortran-14==14.2.0-19
 gfortran-14-x86-64-linux-gnu==14.2.0-19
 gfortran-x86-64-linux-gnu==4:14.2.0-1
-ghostscript==10.05.1~dfsg-1+deb13u2
+ghostscript==10.05.1~dfsg-1+deb13u3
 gir1.2-atk-1.0==2.56.2-1+deb13u2
 gir1.2-atspi-2.0==2.56.2-1+deb13u2
 gir1.2-cloudproviders-0.3.0==0.3.6-2
@@ -803,9 +803,9 @@ libgrpc++-dev==1.51.1-6
 libgrpc++1.51t64==1.51.1-6
 libgrpc-dev==1.51.1-6
 libgrpc29t64==1.51.1-6
-libgs-common==10.05.1~dfsg-1+deb13u2
-libgs10==10.05.1~dfsg-1+deb13u2
-libgs10-common==10.05.1~dfsg-1+deb13u2
+libgs-common==10.05.1~dfsg-1+deb13u3
+libgs10==10.05.1~dfsg-1+deb13u3
+libgs10-common==10.05.1~dfsg-1+deb13u3
 libgsl28==2.8+dfsg-5
 libgslcblas0==2.8+dfsg-5
 libgsm1==1.0.22-1+b2
