@@ -582,6 +582,12 @@ start() {
     fi
     {%- endif %}
 
+    {%- if sonic_asic_platform == "nvidia-bluefield" and docker_container_name == "syncd" %}
+    # A mount point survives 'mst stop', so syncd keeps seeing the nodes mst creates in it.
+    mkdir -p /dev/mst
+    mountpoint -q /dev/mst || mount --bind /dev/mst /dev/mst
+    {%- endif %}
+
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
         {%- if docker_container_name == "database" %}
@@ -858,6 +864,7 @@ start() {
         $(if [ -d /dev/infiniband ]; then echo "-v /dev/infiniband:/dev/infiniband"; fi) \
         $(if [ -d /dev/vfio ]; then echo "-v /dev/vfio:/dev/vfio"; fi) \
         $(if [ -e /dev/infiniband/rdma_cm ]; then echo "--device=/dev/infiniband/rdma_cm:/dev/infiniband/rdma_cm"; fi) \
+        -v /dev/mst:/dev/mst \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
