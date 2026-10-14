@@ -503,8 +503,8 @@ libre2-dev==20240702-3+b1
 libreadline8t64==8.2-6
 librhash1==1.4.5-1
 librist4==0.2.11+dfsg-1
-librsvg2-2==2.60.0+dfsg-1
-librsvg2-common==2.60.0+dfsg-1
+librsvg2-2==2.60.0+dfsg-1+deb13u1
+librsvg2-common==2.60.0+dfsg-1+deb13u1
 librtmp1==2.4+20151223.gitfa8646d.1-2+b5
 libsasl2-2==2.1.28+dfsg1-9
 libsasl2-modules==2.1.28+dfsg1-9
