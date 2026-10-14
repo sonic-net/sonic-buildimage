@@ -325,6 +325,13 @@ struct fpm_nhg_route_entry {
 	 * known to be dead: the object itself may still serve other routes.
 	 */
 	uint32_t rib_id;
+	/*
+	 * The (leaf, vrf, prefix) resolutions this route's committed tree
+	 * used; the set the next build is diffed against. NULL until the
+	 * first commit.
+	 */
+	struct fpm_nhg_contrib *contribs;
+	uint32_t contrib_count;
 };
 
 static unsigned int fpm_nhg_route_key_hash(const void *data)
@@ -407,15 +414,14 @@ struct fpm_nhg_resolved_bucket {
  * L-B entries are exact: the resolving prefix is part of the group's dedupe
  * hash, so it can never change under the object.
  *
- * Leaf entries are a superset. A leaf's identity cannot include the prefix
+ * Leaf entries are exact too. A leaf's identity cannot include the prefix
  * (the wire object is identical whatever it resolved through), so one shared
- * leaf stands for every prefix its events carried; and the plugin never
- * learns that a route stopped resolving through a prefix, so a membership,
- * once recorded on the leaf, is kept until the leaf dies. The index can
- * therefore over-report for leaves, but it can never miss — the safe
- * direction for a blast-radius walk, where a stale candidate is confirmed
- * away by the walk's own matching while a missing one would strand a dead
- * path.
+ * leaf stands for every prefix its events carried — but the subscription is
+ * not an untracked union: each (leaf, vrf, prefix) membership carries a count
+ * of the committed routes resolving through it, moved only at the commit
+ * point (see fpm_nhg_leaf_member_acquire()). The index therefore tracks
+ * exactly the live resolutions — a stale candidate cannot outlive its last
+ * route, and a live one is never dropped early.
  */
 static unsigned int fpm_nhg_resolved_key(const void *data)
 {
@@ -497,32 +503,84 @@ static void fpm_nhg_resolved_add(struct fpm_nhg_tables *t,
 }
 
 /*
- * Record one resolution of a leaf: remember (vrf_id, p) on the object — the
- * set fpm_nhg_remove() walks to unindex it completely — and index it under
- * that key.
- *
- * Memberships are grow-only by design, bounded by the distinct prefixes this
- * one gate was ever seen under. The plugin never learns that a route stopped
- * resolving through a prefix, so nothing could ever decrement a membership,
- * and "moving" the leaf to the newest prefix (as the display fields do) would
- * silently drop it from the older prefixes' buckets while routes still
- * resolve through them. Staying subscribed to every prefix ever seen makes
- * the index a superset: it can over-report, it can never miss (see
- * by_resolved above).
+ * One resolution a build used: collect (leaf, vrf_id, p) into the staging
+ * set, deduped. The membership itself is NOT created here — a build that
+ * fails and is rolled back must leave no trace — so memberships and their
+ * counts move only at the commit point (fpm_nhg_leaf_contrib_apply()).
  */
-static void fpm_nhg_leaf_resolved_record(struct fpm_nhg_tables *t,
+static void fpm_nhg_leaf_contrib_collect(struct fpm_nhg_staging *newq,
 					 struct fpm_dplane_nhg *obj,
 					 vrf_id_t vrf_id,
 					 const struct prefix *p)
 {
+	struct fpm_nhg_contrib *c;
+	uint32_t i;
+
+	if (p->family == AF_UNSPEC)
+		return;
+
+	for (i = 0; i < newq->contrib_count; i++) {
+		c = &newq->contribs[i];
+		if (c->obj == obj && c->vrf_id == vrf_id &&
+		    c->p.family == p->family &&
+		    c->p.prefixlen == p->prefixlen && prefix_same(&c->p, p))
+			return; /* this build already counts it */
+	}
+
+	if (newq->contrib_count == newq->contrib_cap) {
+		newq->contrib_cap = newq->contrib_cap
+					    ? newq->contrib_cap * 2
+					    : 4;
+		newq->contribs =
+			XREALLOC(MTYPE_FPM_NHG, newq->contribs,
+				 newq->contrib_cap *
+					 sizeof(*newq->contribs));
+	}
+	c = &newq->contribs[newq->contrib_count++];
+	c->obj = obj;
+	c->vrf_id = vrf_id;
+	c->p = *p;
+}
+
+static bool fpm_nhg_contrib_same(const struct fpm_nhg_contrib *a,
+				 const struct fpm_nhg_contrib *b)
+{
+	return a->obj == b->obj && a->vrf_id == b->vrf_id &&
+	       a->p.family == b->p.family && a->p.prefixlen == b->p.prefixlen &&
+	       prefix_same(&a->p, &b->p);
+}
+
+static struct fpm_nhg_resolved_member *
+fpm_nhg_leaf_member_find(struct fpm_dplane_nhg *obj, vrf_id_t vrf_id,
+			 const struct prefix *p)
+{
 	uint16_t i;
 
 	for (i = 0; i < obj->res_member_count; i++) {
-		const struct fpm_nhg_resolved_member *m = &obj->res_members[i];
+		struct fpm_nhg_resolved_member *m = &obj->res_members[i];
 
 		if (m->vrf_id == vrf_id && m->p.family == p->family &&
 		    m->p.prefixlen == p->prefixlen && prefix_same(&m->p, p))
-			return; /* already subscribed */
+			return m;
+	}
+	return NULL;
+}
+
+/*
+ * One more route resolves through (vrf_id, p) to this leaf: count the
+ * membership, creating it — and its by_resolved entry — on the first route.
+ */
+static void fpm_nhg_leaf_member_acquire(struct fpm_nhg_tables *t,
+					struct fpm_dplane_nhg *obj,
+					vrf_id_t vrf_id,
+					const struct prefix *p)
+{
+	struct fpm_nhg_resolved_member *m;
+
+	m = fpm_nhg_leaf_member_find(obj, vrf_id, p);
+	if (m) {
+		m->count++;
+		return;
 	}
 
 	if (obj->res_member_count == obj->res_member_cap) {
@@ -534,9 +592,10 @@ static void fpm_nhg_leaf_resolved_record(struct fpm_nhg_tables *t,
 				 obj->res_member_cap *
 					 sizeof(*obj->res_members));
 	}
-	obj->res_members[obj->res_member_count].vrf_id = vrf_id;
-	obj->res_members[obj->res_member_count].p = *p;
-	obj->res_member_count++;
+	m = &obj->res_members[obj->res_member_count++];
+	m->vrf_id = vrf_id;
+	m->p = *p;
+	m->count = 1;
 
 	fpm_nhg_resolved_add_key(t, obj, vrf_id, p);
 }
@@ -576,6 +635,41 @@ static void fpm_nhg_resolved_del_key(struct fpm_nhg_tables *t, vrf_id_t vrf_id,
 		hash_release(t->by_resolved, b);
 		fpm_nhg_resolved_bucket_free(b);
 	}
+}
+
+/*
+ * One fewer route resolves through (vrf_id, p) to this leaf: drop the
+ * membership — and its by_resolved entry — once the last route lets go.
+ *
+ * The member must exist: a contribution on a route entry exists exactly
+ * because a commit acquired it, and neither this object (kept alive by that
+ * route's reference) nor the other half of the count can have taken it away
+ * since.
+ */
+static void fpm_nhg_leaf_member_release(struct fpm_nhg_tables *t,
+					struct fpm_dplane_nhg *obj,
+					vrf_id_t vrf_id,
+					const struct prefix *p)
+{
+	struct fpm_nhg_resolved_member *m;
+	uint16_t idx;
+
+	m = fpm_nhg_leaf_member_find(obj, vrf_id, p);
+	assert(m != NULL);
+	assert(m->count > 0);
+	if (--m->count > 0)
+		return;
+
+	idx = (uint16_t)(m - obj->res_members);
+	memmove(&obj->res_members[idx], &obj->res_members[idx + 1],
+		(obj->res_member_count - idx - 1) * sizeof(*obj->res_members));
+	obj->res_member_count--;
+
+	FPM_NHG_DEBUG("release resolution %pFX vrf %u on dplane NHG %u (%s), %u member(s) left",
+		      p, vrf_id, obj->dplane_id,
+		      fpm_nhg_level_str(obj->level), obj->res_member_count);
+
+	fpm_nhg_resolved_del_key(t, vrf_id, p, obj);
 }
 
 static const struct fpm_nhg_resolved_bucket *
@@ -676,8 +770,8 @@ void fpm_nhg_remove(struct fpm_nhg_tables *t, struct fpm_dplane_nhg *obj)
 	/*
 	 * Unindex from every key this object is listed under: an L-B has its
 	 * one resolving prefix (part of its identity), a leaf has each
-	 * prefix it was ever seen resolved through (see
-	 * fpm_nhg_leaf_resolved_record()). Both rollback and last-ref unref
+	 * (vrf, prefix) membership currently counted on it (see
+	 * fpm_nhg_leaf_member_acquire()). Both rollback and last-ref unref
 	 * route through here; flush() bypasses this path, which is why it
 	 * cleans the buckets before freeing the objects they borrow.
 	 */
@@ -745,6 +839,9 @@ static void fpm_nhg_rib_ids_purge(struct fpm_nhg_tables *t,
 
 static void fpm_nhg_route_entry_free(void *data)
 {
+	struct fpm_nhg_route_entry *e = data;
+
+	XFREE(MTYPE_FPM_NHG, e->contribs);
 	XFREE(MTYPE_FPM_NHG, data);
 }
 
@@ -820,8 +917,11 @@ static void fpm_nhg_staging_push(struct fpm_nhg_staging *s,
 void fpm_nhg_staging_free(struct fpm_nhg_staging *s)
 {
 	XFREE(MTYPE_FPM_NHG, s->objs);
+	XFREE(MTYPE_FPM_NHG, s->contribs);
 	s->count = 0;
 	s->cap = 0;
+	s->contrib_count = 0;
+	s->contrib_cap = 0;
 }
 
 /*
@@ -954,10 +1054,11 @@ static struct fpm_dplane_nhg *fpm_nhg_get_leaf(struct fpm_nhg_tables *t,
 		 * is untouched — neither field is in the leaf key — and neither
 		 * reaches the wire, so no message follows from the update.
 		 *
-		 * Only the display fields follow the newest event; the index
-		 * membership does not move: other sharers of this object may
-		 * still resolve through the old prefix, so the leaf stays
-		 * subscribed to it too (see fpm_nhg_leaf_resolved_record()).
+		 * Only the display fields track the newest event. The counts
+		 * are not touched here: this build merely collects its
+		 * resolution, and the counts move at commit time, when the
+		 * diff against the route's previous set is applied — other
+		 * sharers keep their own counts meanwhile.
 		 */
 		if (resolved && resolved->family != AF_UNSPEC) {
 			if (obj->resolved_prefix.family != AF_UNSPEC &&
@@ -970,7 +1071,7 @@ static struct fpm_dplane_nhg *fpm_nhg_get_leaf(struct fpm_nhg_tables *t,
 			obj->resolved_prefix = *resolved;
 			obj->vrf_id = resolved_vrf;
 			obj->resolved_via = resolved_via;
-			fpm_nhg_leaf_resolved_record(t, obj, resolved_vrf,
+			fpm_nhg_leaf_contrib_collect(newq, obj, resolved_vrf,
 						     resolved);
 		}
 		return obj;
@@ -991,19 +1092,19 @@ static struct fpm_dplane_nhg *fpm_nhg_get_leaf(struct fpm_nhg_tables *t,
 	 * Resolving info for a leaf that stands in for a recursive nexthop
 	 * (the SRv6 top-level-only path), or for a plain leaf zebra reached
 	 * through some covering prefix: the resolved-via view records which
-	 * one, and by_resolved indexes the leaf under it so a route event on
-	 * that prefix finds this leaf in its blast radius.
+	 * one, and the resolution joins this build's contribution set, from
+	 * which by_resolved and the membership count are maintained at
+	 * commit.
 	 *
 	 * The fields are the last-seen value (kept current on reuse above);
-	 * the index membership is grow-only, because one shared leaf can
-	 * stand for events with different prefixes and nothing ever retracts
-	 * a membership (see fpm_nhg_leaf_resolved_record()).
+	 * the membership itself is created and counted only when this build
+	 * commits.
 	 */
 	if (resolved && resolved->family != AF_UNSPEC) {
 		obj->resolved_prefix = *resolved;
 		obj->vrf_id = resolved_vrf;
 		obj->resolved_via = resolved_via;
-		fpm_nhg_leaf_resolved_record(t, obj, resolved_vrf, resolved);
+		fpm_nhg_leaf_contrib_collect(newq, obj, resolved_vrf, resolved);
 	}
 	return obj;
 }
@@ -1571,9 +1672,75 @@ struct fpm_dplane_nhg *fpm_nhg_route_get(struct fpm_nhg_tables *t,
 	return e ? e->obj : NULL;
 }
 
+/*
+ * Move the per-membership counts from the route's previous contribution set
+ * to the build being committed: entries only in the old set release their
+ * membership, entries only in the new set acquire one, and the entry takes
+ * over the new set. Runs before the old top object is unreffed, so every
+ * leaf either set names is still alive.
+ */
+static void fpm_nhg_leaf_contrib_apply(struct fpm_nhg_tables *t,
+				       struct fpm_nhg_route_entry *e,
+				       struct fpm_nhg_staging *newq)
+{
+	const struct fpm_nhg_contrib *c;
+	uint32_t i, j, released = 0, acquired = 0;
+
+	for (i = 0; i < e->contrib_count; i++) {
+		c = &e->contribs[i];
+		for (j = 0; j < newq->contrib_count; j++)
+			if (fpm_nhg_contrib_same(c, &newq->contribs[j]))
+				break;
+		if (j == newq->contrib_count) {
+			fpm_nhg_leaf_member_release(t, c->obj, c->vrf_id,
+						    &c->p);
+			released++;
+		}
+	}
+
+	for (i = 0; i < newq->contrib_count; i++) {
+		c = &newq->contribs[i];
+		for (j = 0; j < e->contrib_count; j++)
+			if (fpm_nhg_contrib_same(c, &e->contribs[j]))
+				break;
+		if (j == e->contrib_count) {
+			fpm_nhg_leaf_member_acquire(t, c->obj, c->vrf_id,
+						    &c->p);
+			acquired++;
+		}
+	}
+
+	FPM_NHG_DEBUG("route %pFX table %u contributions: %u released, %u acquired, %u total",
+		      &e->key.p, e->key.table_id, released, acquired,
+		      newq->contrib_count);
+
+	XFREE(MTYPE_FPM_NHG, e->contribs);
+	e->contribs = newq->contribs;
+	e->contrib_count = newq->contrib_count;
+	newq->contribs = NULL;
+	newq->contrib_count = 0;
+	newq->contrib_cap = 0;
+}
+
+/*
+ * Release every membership this route held, before its entry goes away.
+ */
+static void fpm_nhg_leaf_contribs_drop(struct fpm_nhg_tables *t,
+				       struct fpm_nhg_route_entry *e)
+{
+	uint32_t i;
+
+	for (i = 0; i < e->contrib_count; i++)
+		fpm_nhg_leaf_member_release(t, e->contribs[i].obj,
+					    e->contribs[i].vrf_id,
+					    &e->contribs[i].p);
+	e->contrib_count = 0;
+}
+
 static void fpm_nhg_route_set(struct fpm_nhg_tables *t,
 			      const struct fpm_nhg_route_key *k,
-			      struct fpm_dplane_nhg *obj, uint32_t rib_id)
+			      struct fpm_dplane_nhg *obj, uint32_t rib_id,
+			      struct fpm_nhg_staging *newq)
 {
 	struct fpm_nhg_route_entry ref = { .key = *k }, *e;
 
@@ -1598,6 +1765,7 @@ static void fpm_nhg_route_set(struct fpm_nhg_tables *t,
 	e->obj = obj; /* replaces any previous object: caller unrefs the old */
 	e->rib_id = rib_id;
 	fpm_nhg_record_rib_id(t, obj, rib_id);
+	fpm_nhg_leaf_contrib_apply(t, e, newq);
 }
 
 static struct fpm_dplane_nhg *
@@ -1612,19 +1780,21 @@ fpm_nhg_route_pop(struct fpm_nhg_tables *t, const struct fpm_nhg_route_key *k)
 	obj = e->obj;
 	FPM_NHG_DEBUG("unbind route %pFX table %u from dplane NHG %u, rib nhg %u",
 		      &k->p, k->table_id, obj ? obj->dplane_id : 0, e->rib_id);
+	fpm_nhg_leaf_contribs_drop(t, e);
 	fpm_nhg_release_rib_id(t, obj, e->rib_id);
-	XFREE(MTYPE_FPM_NHG, e);
+	fpm_nhg_route_entry_free(e);
 	return obj;
 }
 
 void fpm_nhg_route_commit(struct fpm_nhg_tables *t,
 			  const struct fpm_nhg_route_key *k,
 			  struct fpm_dplane_nhg *new_top, uint32_t rib_id,
-			  struct fpm_nhg_del_queue *delq)
+			  struct fpm_nhg_del_queue *delq,
+			  struct fpm_nhg_staging *newq)
 {
 	struct fpm_dplane_nhg *old_top = fpm_nhg_route_get(t, k);
 
-	fpm_nhg_route_set(t, k, new_top, rib_id);
+	fpm_nhg_route_set(t, k, new_top, rib_id, newq);
 	fpm_nhg_ref(new_top);
 	if (old_top)
 		fpm_nhg_unref(t, old_top, delq);
@@ -2559,8 +2729,8 @@ static void fpm_nhg_show_snap(const struct fpm_nhg_show_snap *s,
  * (several can share a prefix, differing in label stack or resolved members),
  * a leaf shows the last prefix its sharers were seen with. It is a diagnostic
  * view of what the objects hold now, last-writer-wins included; for the
- * blast-radius-grade mapping see by_resolved instead (L-B exact, leaf
- * memberships a superset by design).
+ * blast-radius-grade mapping see by_resolved instead (L-B and leaf
+ * memberships are both exact there).
  *
  * Derived by walking the object table rather than from a dedicated index: the
  * view is diagnostic, so a scan cannot go stale against the objects it reports.
