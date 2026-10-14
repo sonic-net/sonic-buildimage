@@ -18,4 +18,5 @@ test:
 	    ./hwsku_json_checker $$f
 	done
 	./platform_asic_checker ../../../platform ../../../device
+	./cpo_checker -d ../../../device
 	popd
