@@ -1293,6 +1293,10 @@ sudo cp platform/mellanox/files/mlnx-fw-manager.service $FILESYSTEM_ROOT_USR_LIB
 sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/mlnx-fw-manager.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable mlnx-fw-manager.service
 
+# Install the upstream RShim 2.6.6 global service without enabling it.
+# sonic-bfb-installer owns its lifecycle and starts/stops it only while installing a BFB.
+sudo install -m 644 platform/mellanox/files/rshim.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+
 # Install mlnx-sonic-platform Python 3 package
 install_pip_package {{mlnx_platform_api_py3_wheel_path}}
 

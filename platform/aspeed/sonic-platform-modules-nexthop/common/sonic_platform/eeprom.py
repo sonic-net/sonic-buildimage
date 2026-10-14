@@ -12,7 +12,7 @@ class Eeprom(eeprom_utils.Eeprom):
 
     - Uses Nexthop Eeprom subclass so Vendor Extension TLVs
       (IANA 63074 + custom field codes) map to friendly names like
-      "Switch Host Serial Number".
+      "Switch-Host Serial Number".
     """
 
     def __init__(self):
