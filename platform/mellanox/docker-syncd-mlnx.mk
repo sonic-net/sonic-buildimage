@@ -61,7 +61,16 @@ $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 # The SX SDK opens the sx_core char device (/dev/sxdevs/sxcdev, major dynamically
 # allocated by the driver) and phcsync opens the PTP clock device (/dev/ptp*,
 # also dynamically allocated). A blanket rule mirrors the Broadcom SOC-init fix
-# and covers both; the node itself is bind-mounted (multi-ASIC) or via /dev/sxdevs
-# (single-ASIC).
+# and covers both. The cgroup rule only grants permission to use a device node;
+# the node must still be present in the container. /dev/sxdevs is bind-mounted by
+# docker_image_ctl.j2 (per-ASIC sxcdev for multi-ASIC, the whole directory for
+# single-ASIC), and /dev/ptp* is bind-mounted separately because it lives
+# directly under /dev rather than inside /dev/sxdevs.
 $(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='a *:* rwm'
+
+# phcsync calls clock_settime() on the ASIC PHC via phc_ctl, which the kernel
+# gates on CAP_SYS_TIME. Without it the write fails with EPERM and the ASIC
+# clock is never synced to CLOCK_REALTIME. --privileged used to grant this
+# implicitly; the capability set kept by the syncd hardening change does not.
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --cap-add=SYS_TIME
 
