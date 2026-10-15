@@ -20,6 +20,15 @@
 #ifndef _FPM_NHG_H
 #define _FPM_NHG_H
 
+/*
+ * The object model is pure C, but the unit tests are written against
+ * googletest (C++). Guard the declarations so the header can be included
+ * from both without a linkage mismatch.
+ */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <pthread.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -377,5 +386,9 @@ const char *fpm_nhg_fib_log_level_str(enum fib_log_level level);
  */
 void fpm_nhg_fib_log_register(void);
 void fpm_nhg_fib_log_init(enum fib_log_level *level);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _FPM_NHG_H */
