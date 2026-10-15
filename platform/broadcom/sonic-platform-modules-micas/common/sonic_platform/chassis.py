@@ -634,3 +634,10 @@ class Chassis(ChassisBase):
             self._watchdog = Watchdog()
 
         return self._watchdog
+
+    def get_cpo(self, index):
+        return None
+
+    def construct_cpo_devices(self, cpo_data):
+        self._cpo_list = None
+        return None

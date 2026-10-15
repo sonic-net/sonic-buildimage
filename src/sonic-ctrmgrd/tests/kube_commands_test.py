@@ -17,6 +17,7 @@ FLANNEL_CONF_FILE = "/tmp/flannel.conf"
 CNI_DIR = "/tmp/cni/net.d"
 AME_CRT = "/tmp/restapiserver.crt"
 AME_KEY = "/tmp/restapiserver.key"
+REQUEST_VERIFY = "request_verify"
 
 # kube_commands test cases
 # NOTE: Ensure state-db entry is complete in PRE as we need to
@@ -130,7 +131,8 @@ join_test_data = {
         ],
         common_test.REQ: {
             "data": {"ca.crt": "test"}
-        }
+        },
+        REQUEST_VERIFY: False
     },
     1: {
         common_test.DESCR: "Regular secure join",
@@ -154,7 +156,8 @@ join_test_data = {
         ],
         common_test.REQ: {
             "data": {"ca.crt": "test"}
-        }
+        },
+        REQUEST_VERIFY: True
     },
     2: {
         common_test.DESCR: "Skip join as already connected",
@@ -843,6 +846,7 @@ clusters:\n\
         for (i, ct_data) in join_test_data.items():
             lock_file = ""
             common_test.do_start_test("kube:join", i, ct_data)
+            mock_reqget.reset_mock()
 
             if not ct_data.get(common_test.NO_INIT, False):
                 os.system("rm -f {}".format(KUBE_ADMIN_CONF))
@@ -858,6 +862,18 @@ clusters:\n\
             if common_test.RETVAL in ct_data:
                 assert ret == ct_data[common_test.RETVAL]
 
+            if REQUEST_VERIFY in ct_data:
+                mock_reqget.assert_called_once()
+                request_kwargs = mock_reqget.call_args[1]
+                assert request_kwargs["cert"] == (AME_CRT, AME_KEY)
+                assert request_kwargs["timeout"] == 10
+                if ct_data[REQUEST_VERIFY]:
+                    assert request_kwargs.get("verify", True) is True
+                else:
+                    assert request_kwargs["verify"] is False
+            else:
+                mock_reqget.assert_not_called()
+
             if lock_file:
                 kube_commands.LOCK_FILE = lock_file
 
@@ -870,6 +886,20 @@ clusters:\n\
         # test to_str()
         f = "abcd"
         f == kube_commands.to_str(str.encode(f))
+
+    def test_tls_verification_failure_does_not_create_kubeconfig(self):
+        tls_error = kube_commands.requests.exceptions.SSLError(
+                "certificate verify failed")
+
+        with patch("kube_commands.requests.get", side_effect=tls_error), \
+                patch("kube_commands.tempfile.mkstemp") as mock_mkstemp, \
+                patch("kube_commands.shutil.copyfile") as mock_copyfile:
+            with pytest.raises(kube_commands.requests.exceptions.SSLError):
+                kube_commands._gen_cli_kubeconf(
+                        "10.3.157.24", 6443, "false")
+
+        mock_mkstemp.assert_not_called()
+        mock_copyfile.assert_not_called()
 
 
     @patch("kube_commands.subprocess.Popen")
