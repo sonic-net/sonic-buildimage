@@ -25,7 +25,6 @@ from swsscommon import swsscommon
 
 KUBE_ADMIN_CONF = "/etc/sonic/kube_admin.conf"
 KUBELET_YAML = "/var/lib/kubelet/config.yaml"
-SERVER_ADMIN_URL = "https://{}/admin.conf"
 LOCK_FILE = "/var/lock/kube_join.lock"
 FLANNEL_CONF_FILE = "/usr/share/sonic/templates/kube_cni.10-flannel.conflist"
 CNI_DIR = "/etc/cni/net.d"

@@ -1084,22 +1084,39 @@ SONIC_INSTALL_DEBS = $(addsuffix -install,$(addprefix $(DEBS_PATH)/, \
 $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) $(DEBS_PATH)/$$*
 	$(HEADER)
 	[ -f $(DEBS_PATH)/$* ] || { echo $(DEBS_PATH)/$* does not exist $(LOG) && false $(LOG) }
-	# wait for conflicted packages to be uninstalled
-	$(foreach deb, $($*_CONFLICT_DEBS), \
-		{ while dpkg -s $(firstword $(subst _, ,$(basename $(deb)))) | grep "^Version: $(word 2, $(subst _, ,$(basename $(deb))))" &> /dev/null; do echo "waiting for $(deb) to be uninstalled" $(LOG); sleep 1; done } )
-	# Use flock for serialized dpkg install - eliminates polling overhead from the
-	# previous mkdir/sleep-10 lock. Waiters block in the kernel until the lock is
-	# released, so there is zero wasted time between consecutive installs.
-ifneq ($(CROSS_BUILD_ENVIRON),y)
-	flock $(DEBS_PATH)/dpkg_lock.lk sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG)
-else
-	flock $(DEBS_PATH)/dpkg_lock.lk bash -c '\
-		sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* $(LOG) && \
-		rm -rf tmp && mkdir tmp && dpkg -x $(DEBS_PATH)/$* tmp && \
-		(sudo cp -rf tmp/usr/lib/python2*/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON2)/python2*/site-packages/ 2>/dev/null || true) && \
-		(sudo cp -rf tmp/usr/lib/python3/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON3)/python3.*/site-packages/ 2>/dev/null || true) \
-	'
-endif
+	# Serialize dpkg install and re-check CONFLICT_DEBS under dpkg_lock. The prior
+	# pre-lock wait had a TOCTOU race: a parallel -install (e.g. swss installing
+	# libsaivs-dev) could land between the wait and flock, causing dpkg overwrite
+	# failures for vendor SAI vs libsaivs-dev on parallel builds.
+	# Conflict is signaled with a marker file, not dpkg's exit 2 (fatal error).
+	while true; do \
+		rm -f $(DEBS_PATH)/$*.dpkg_conflict; \
+		flock $(DEBS_PATH)/dpkg_lock.lk bash -c '\
+			$(foreach deb, $($*_CONFLICT_DEBS), \
+				if dpkg -s $(firstword $(subst _, ,$(basename $(deb)))) 2>/dev/null | grep -Fqx "Version: $(word 2, $(subst _, ,$(basename $(deb))))" && \
+				   dpkg -s $(firstword $(subst _, ,$(basename $(deb)))) 2>/dev/null | grep -Eq "^Status: [^ ]+ [^ ]+ (installed|unpacked|half-installed|half-configured|triggers-pending|triggers-awaited)"; then \
+					touch $(DEBS_PATH)/$*.dpkg_conflict && exit 0; \
+					exit 1; \
+				fi; \
+			) \
+			$(if $(filter y,$(CROSS_BUILD_ENVIRON)),\
+			sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* && \
+			rm -rf tmp && mkdir tmp && dpkg -x $(DEBS_PATH)/$* tmp && \
+			(sudo cp -rf tmp/usr/lib/python2*/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON2)/python2*/site-packages/ 2>/dev/null || true) && \
+			(sudo cp -rf tmp/usr/lib/python3/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON3)/python3.*/site-packages/ 2>/dev/null || true),\
+			sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* \
+			) \
+		'; \
+		rc=$$?; \
+		if [ -f $(DEBS_PATH)/$*.dpkg_conflict ]; then \
+			rm -f $(DEBS_PATH)/$*.dpkg_conflict; \
+			echo "waiting for conflicting packages to be uninstalled before installing $*" $(LOG); \
+			sleep 1; \
+			continue; \
+		fi; \
+		if [ $$rc -eq 0 ]; then break; fi; \
+		exit $$rc; \
+	done $(LOG)
 	$(FOOTER)
 
 

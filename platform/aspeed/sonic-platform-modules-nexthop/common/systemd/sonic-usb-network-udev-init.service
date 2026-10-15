@@ -2,8 +2,8 @@
 Description=Aspeed USB Network Gadget udev Rules Initialization
 Documentation=https://github.com/sonic-net/sonic-buildimage
 DefaultDependencies=no
-After=local-fs.target systemd-udevd.service
-Requires=systemd-udevd.service
+After=local-fs.target systemd-udevd.service sonic-platform-init.service
+Requires=systemd-udevd.service sonic-platform-init.service
 Before=usb-network-init.service
 
 [Service]

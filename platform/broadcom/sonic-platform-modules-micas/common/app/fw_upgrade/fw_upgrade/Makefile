@@ -19,7 +19,7 @@ CFLAGS+=-Wall -W -g
 .PHONY: build
 build:make-dir $(addprefix $(BUILD_DIR)/,$(OBJ))
 	$(CC) -o $(ELF_FILE) $(addprefix $(BUILD_DIR)/,$(OBJ)) $(LINKFLAGS) $(LIB)
-
+	@if [ ! -d ${common_out_put_dir} ]; then mkdir -p ${common_out_put_dir} ;fi
 	cp -p $(ELF_FILE) $(common_out_put_dir)
 
 .PHONY: make-dir

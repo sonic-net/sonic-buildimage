@@ -2,7 +2,7 @@ adduser==3.152
 ca-certificates==20250419
 curl==8.14.1-2+deb13u5
 iproute2==6.15.0-1+sonic.0
-jq==1.7.1-6+deb13u3
+jq==1.7.1-6+deb13u4
 less==668-1
 libatomic1==14.2.0-19
 libbpf1==1:1.5.0-3
@@ -24,7 +24,7 @@ libgssapi-krb5-2==1.21.3-5+fips
 libidn2-0==2.3.8-2
 libjansson4==2.14-2+b3
 libjemalloc2==5.3.0-3
-libjq1==1.7.1-6+deb13u3
+libjq1==1.7.1-6+deb13u4
 libk5crypto3==1.21.3-5+fips
 libkeyutils1==1.6.3-6
 libkrb5-3==1.21.3-5+fips
@@ -32,6 +32,7 @@ libkrb5support0==1.21.3-5+fips
 libldap2==2.6.10+dfsg-1
 liblognorm5==2.0.6-5
 liblzf1==3.6-4+b3
+liblzma5==5.8.1-1+deb13u2
 libmnl0==1.0.5-3
 libncursesw6==6.5+20250216-2
 libnghttp2-14==1.64.0-1.1+deb13u1
@@ -90,11 +91,11 @@ python3-zipp==3.21.0-1
 python3.13==3.13.5-2+deb13u5
 python3.13-minimal==3.13.5-2+deb13u5
 readline-common==8.2-6
-redis-tools==5:8.0.2-3+deb13u2
-rsync==3.4.1+ds1-5+deb13u4
+redis-tools==5:8.0.2-3+deb13u3
+rsync==3.5.0+ds1-0+deb13u1
 rsyslog==8.2504.0-1+deb13u2
 rsyslog-relp==8.2504.0-1+deb13u2
-socat==1.8.0.2-1
+socat==1.8.0.3-1+deb13u1
 symcrypt-openssl==1.11.0
 vim-common==2:9.1.1230-2
 vim-tiny==2:9.1.1230-2

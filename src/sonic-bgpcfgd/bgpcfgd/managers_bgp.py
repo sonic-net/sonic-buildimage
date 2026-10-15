@@ -200,8 +200,25 @@ class BGPPeerMgrBase(Manager):
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
         return
 
+    def _has_invalid_dynamic_peer_name(self, data):
+        name = data.get("name")
+        return (self.peer_type == "dynamic"
+                and isinstance(name, str)
+                and ("\r" in name or "\n" in name))
+
+    def _has_invalid_dynamic_peer_key(self, key):
+        return (self.peer_type == "dynamic"
+                and isinstance(key, str)
+                and ("\r" in key or "\n" in key))
+
     def validate_peer_name(self, key, data):
-        """Reject malformed types and newlines in neighbor and sentinel names."""
+        """Reject malformed types and newlines in BGP peer identifiers."""
+        if self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
+            return False
+        if self._has_invalid_dynamic_peer_name(data):
+            log_err("BGP_PEER_RANGE name must not contain line breaks")
+            return False
         if self.peer_type == 'sentinels':
             if not isinstance(key, str) or '\r' in key or '\n' in key:
                 log_err("Invalid BGP peer table key: {!r}".format(key))
@@ -223,6 +240,9 @@ class BGPPeerMgrBase(Manager):
     def handler(self, key, op, data):
         # Permanently invalid SETs must not wait in the dependency queue.
         if op == swsscommon.SET_COMMAND and not self.validate_peer_name(key, data):
+            return
+        if op != swsscommon.SET_COMMAND and self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
             return
         return super(BGPPeerMgrBase, self).handler(key, op, data)
 
@@ -586,6 +606,10 @@ class BGPPeerMgrBase(Manager):
         'DEL' handler for the BGP PEER tables
         :param key: key of the neighbor
         """
+        if self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
+            return
+
         key_parts = self.parse_key(key)
         if key_parts is None:
             return
