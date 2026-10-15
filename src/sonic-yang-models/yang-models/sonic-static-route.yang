@@ -54,6 +54,35 @@ module sonic-static-route {
           default "false";
           description "Enable BFD monitoring for each nexthop, comma-separated per nexthop.";
         }
+        leaf distance {
+          type string {
+            pattern "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?),)*(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)";
+          }
+          default "0";
+          description
+            "Administrative Distance (preference) of the entry.  The
+             preference defines the order of selection when multiple
+             sources (protocols, static, etc.) contribute to the same
+             prefix entry.  The lower the preference, the more preferable the
+             prefix is.  When this value is not specified, the preference is
+             inherited from the default preference of the implementation for
+             static routes.";
+        }
+        leaf nexthop-vrf {
+          type string {
+            pattern "((((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)))?";
+          }
+          description
+            "VRF name of the nexthop. This is for vrf leaking";
+        }
+        leaf blackhole {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+          description
+            "blackhole refers to a route that, if matched, discards the message silently.";
+        }
       }
       list STATIC_ROUTE_LIST {
         key "vrf_name prefix";
