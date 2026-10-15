@@ -26,7 +26,8 @@ class Runner(object):
         self.db_connectors = {}
         self.selector = swsscommon.Select()
         self.callbacks = defaultdict(lambda: defaultdict(list))  # db -> table -> handlers[]
-        self.subscribers = set()
+        # (db, table) → SubscriberStateTable; insertion order is add_manager order.
+        self.subscribers = {}
 
     def add_manager(self, manager):
         """
@@ -44,10 +45,11 @@ class Runner(object):
             else:
                 self.db_connectors[db] = swsscommon.DBConnector(db_name, 0)
 
-        if table_name not in self.callbacks[db]:
+        sub_key = (db, table_name)
+        if sub_key not in self.subscribers:
             conn = self.db_connectors[db]
             subscriber = swsscommon.SubscriberStateTable(conn, table_name)
-            self.subscribers.add(subscriber)
+            self.subscribers[sub_key] = subscriber
             self.selector.addSelectable(subscriber)
         self.callbacks[db][table_name].append(manager.handler)
 
@@ -60,7 +62,7 @@ class Runner(object):
             elif state == self.selector.ERROR:
                 raise Exception("Received error from select")
 
-            for subscriber in self.subscribers:
+            for subscriber in self.subscribers.values():
                 while True:
                     key, op, fvs = subscriber.pop()
                     if not key:
