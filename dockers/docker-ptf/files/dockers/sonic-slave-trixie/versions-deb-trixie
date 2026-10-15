@@ -208,8 +208,8 @@ gnupg-utils==2.4.7-21+deb13u1+b5
 gnupg2==2.4.7-21+deb13u1
 gobject-introspection==1.84.0-1
 gobject-introspection-bin==1.84.0-1
-golang-1.26-go==1.26.5-1~bpo13+1+fips
-golang-1.26-src==1.26.5-1~bpo13+1+fips
+golang-1.26-go==1.26.7-1+fips
+golang-1.26-src==1.26.7-1+fips
 googletest==1.16.0-1
 gpg==2.4.7-21+deb13u1+b5
 gpg-agent==2.4.7-21+deb13u1+b5
@@ -1325,8 +1325,8 @@ librpm10==4.20.1+dfsg-3
 librpmio10==4.20.1+dfsg-3
 librrd-dev==1.7.2-4.2+b5
 librrd8t64==1.7.2-4.2+b5
-librsvg2-2==2.60.0+dfsg-1
-librsvg2-common==2.60.0+dfsg-1
+librsvg2-2==2.60.0+dfsg-1+deb13u1
+librsvg2-common==2.60.0+dfsg-1+deb13u1
 librtmp-dev==2.4+20151223.gitfa8646d.1-2+b5
 librtmp1==2.4+20151223.gitfa8646d.1-2+b5
 librubberband2==3.3.0+dfsg-2+b3
