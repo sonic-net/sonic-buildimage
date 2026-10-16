@@ -262,7 +262,7 @@
 
     "VNET_INVALID_VXLAN_TUNNEL_LIST_TOO_MANY": {
         "desc": "VNET list with three tunnels, including two IPv4 tunnels, is rejected.",
-        "eStr": ["vxlan_tunnel_list must not contain more than one IPv4 tunnel."]
+        "eStrKey": "MaxElements"
     },
 
     "VNET_VALID_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
