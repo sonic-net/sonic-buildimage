@@ -194,6 +194,7 @@ class BGPPeerMgrBase(Manager):
             deps,
             db_name,
             table_name,
+            batch_deps=True,
         )
 
         self.peers = self.load_peers()
