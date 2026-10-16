@@ -12,6 +12,12 @@ module sonic-static-route {
   description
     "STATIC ROUTE yang Module for SONiC OS";
 
+  revision 2026-07-21 {
+    description
+      "Align STATIC_ROUTE_TEMPLATE_LIST with STATIC_ROUTE_LIST (distance, nexthop-vrf, blackhole)
+       and add the route tag attribute to both lists.";
+  }
+
   revision 2022-03-17 {
     description
       "First Revision";
@@ -46,6 +52,48 @@ module sonic-static-route {
           }
           default "false";
           description "Advertise this static route to BGP, comma-separated per nexthop.";
+        }
+        leaf distance {
+          type string {
+            pattern "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?),)*(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)";
+          }
+          default "0";
+          description
+            "Administrative Distance (preference) of the entry.  The
+             preference defines the order of selection when multiple
+             sources (protocols, static, etc.) contribute to the same
+             prefix entry.  The lower the preference, the more preferable the
+             prefix is.  When this value is not specified, the preference is
+             inherited from the default preference of the implementation for
+             static routes.  Comma-separated list with one entry per nexthop.";
+        }
+        leaf nexthop-vrf {
+          type string {
+            pattern "((((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)))?";
+          }
+          description
+            "VRF name of the nexthop, used for VRF leaking. Comma-separated list with one
+             entry per nexthop.";
+        }
+        leaf blackhole {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+          description
+            "blackhole refers to a route that, if matched, discards the message silently.
+             Comma-separated list with one entry per nexthop.";
+        }
+        leaf tag {
+          type string {
+            pattern "(0|[1-9][0-9]{0,9})(,(0|[1-9][0-9]{0,9}))*";
+          }
+          default "0";
+          description
+            "Route tag applied to the static route (0-4294967295), comma-separated for multiple nexthops.
+             Value 0 means no tag is applied. Matches the FRR `tag (1-4294967295)` static-route parameter,
+             with 0 reserved to express the absence of a tag.
+             Note: Pattern allows up to 10 digits; values above 4294967295 will be rejected by application logic.";
         }
         leaf bfd {
           type string {
@@ -108,14 +156,15 @@ module sonic-static-route {
              prefix entry.  The lower the preference, the more preferable the
              prefix is.  When this value is not specified, the preference is
              inherited from the default preference of the implementation for
-             static routes.";
+             static routes.  Comma-separated list with one entry per nexthop.";
         }
         leaf nexthop-vrf {
           type string {
             pattern "((((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)))?";
           }
           description
-            "VRF name of the nexthop. This is for vrf leaking";
+            "VRF name of the nexthop, used for VRF leaking. Comma-separated list with one
+             entry per nexthop.";
         }
         leaf blackhole {
           type string {
@@ -123,7 +172,19 @@ module sonic-static-route {
           }
           default "false";
           description
-            "blackhole refers to a route that, if matched, discards the message silently.";
+            "blackhole refers to a route that, if matched, discards the message silently.
+             Comma-separated list with one entry per nexthop.";
+        }
+        leaf tag {
+          type string {
+            pattern "(0|[1-9][0-9]{0,9})(,(0|[1-9][0-9]{0,9}))*";
+          }
+          default "0";
+          description
+            "Route tag applied to the static route (0-4294967295), comma-separated for multiple nexthops.
+             Value 0 means no tag is applied. Matches the FRR `tag (1-4294967295)` static-route parameter,
+             with 0 reserved to express the absence of a tag.
+             Note: Pattern allows up to 10 digits; values above 4294967295 will be rejected by application logic.";
         }
       } /* end of list STATIC_ROUTE_LIST */
     } /* end of container STATIC_ROUTE */
