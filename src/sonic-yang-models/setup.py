@@ -165,6 +165,7 @@ yang_files = [
     'sonic-neigh.yang',
     'sonic-ntp.yang',
     'sonic-nvgre-tunnel.yang',
+    'sonic-ospfv2.yang',
     'sonic-passwh.yang',
     'sonic-pbh.yang',
     'sonic-peer-switch.yang',

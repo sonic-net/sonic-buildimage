@@ -1,0 +1,96 @@
+{
+    "OSPFV2_ROUTER_DEFAULT_VRF_TEST": {
+        "desc": "Configure OSPF router in default VRF with basic fields."
+    },
+    "OSPFV2_ROUTER_CUSTOM_VRF_TEST": {
+        "desc": "Configure OSPF router in a named VRF (leafref to VRF_LIST)."
+    },
+    "OSPFV2_ROUTER_ALL_PARAMS_TEST": {
+        "desc": "Configure OSPF router with all optional parameters."
+    },
+    "OSPFV2_ROUTER_AREA_TEST": {
+        "desc": "Configure OSPF area with MD5 authentication, shortcut, and filter lists."
+    },
+    "OSPFV2_ROUTER_AREA_STUB_TEST": {
+        "desc": "Configure OSPF totally-stubby area with default-cost."
+    },
+    "OSPFV2_ROUTER_AREA_NETWORK_TEST": {
+        "desc": "Assign a network prefix to an OSPF area."
+    },
+    "OSPFV2_ROUTER_AREA_VIRTUAL_LINK_TEST": {
+        "desc": "Configure OSPF virtual link with MD5 authentication and all timer fields."
+    },
+    "OSPFV2_ROUTER_AREA_RANGE_TEST": {
+        "desc": "Configure OSPF area range with metric, advertise flag, and substitue-prefix."
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_IMPORT_TEST": {
+        "desc": "Configure OSPF redistribute BGP routes (IMPORT direction) with route-map and metric."
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_DEFAULT_TEST": {
+        "desc": "Configure OSPF default-information originate with always flag."
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_EXPORT_TEST": {
+        "desc": "Configure OSPF distribute-list on EXPORT direction with access-list for BGP and STATIC protocols."
+    },
+    "OSPFV2_INTERFACE_TEST": {
+        "desc": "Configure OSPF on an interface with specific IP address, timers, and authentication."
+    },
+    "OSPFV2_INTERFACE_ALL_ADDR_TEST": {
+        "desc": "Configure OSPF on interface using 0.0.0.0 wildcard address."
+    },
+    "OSPFV2_PASSIVE_INTERFACE_TEST": {
+        "desc": "Configure OSPF passive interface (key-only table)."
+    },
+    "OSPFV2_INTERFACE_BFD_WITH_ADDR_TEST": {
+        "desc": "Configure OSPF interface with bfd-enable on an address-specific entry — bfd-enable is interface-wide and must only be set on the if_addr = 0.0.0.0 entry.",
+        "eStr": ["bfd-enable is an interface-wide setting"]
+    },
+    "OSPFV2_INTERFACE_NETWORK_TYPE_WITH_ADDR_TEST": {
+        "desc": "Configure OSPF interface with network-type on an address-specific entry — network-type is interface-wide and must only be set on the if_addr = 0.0.0.0 entry.",
+        "eStr": ["network-type is an interface-wide setting"]
+    },
+    "OSPFV2_ROUTER_INVALID_ROUTER_ID_TEST": {
+        "desc": "Configure OSPF router with invalid router-id (not an IPv4 address).",
+        "eStrKey": "Pattern"
+    },
+    "OSPFV2_ROUTER_INVALID_ABR_TYPE_TEST": {
+        "desc": "Configure OSPF router with invalid abr-type enum value.",
+        "eStr": ["Invalid"]
+    },
+    "OSPFV2_ROUTER_INVALID_WRITE_MULTIPLIER_TEST": {
+        "desc": "Configure OSPF router with write-multiplier=0 (valid range is 1..100).",
+        "eStr": ["range"]
+    },
+    "OSPFV2_ROUTER_AREA_INVALID_AUTH_TEST": {
+        "desc": "Configure OSPF area with invalid authentication enum value.",
+        "eStr": ["Invalid"]
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_INVALID_PROTOCOL_TEST": {
+        "desc": "Configure OSPF redistribute with invalid protocol enum value.",
+        "eStr": ["Invalid"]
+    },
+    "OSPFV2_INTERFACE_METRIC_ZERO_TEST": {
+        "desc": "Configure OSPF interface with metric=0 (valid range is 1..65535).",
+        "eStr": ["range"]
+    },
+    "OSPFV2_INTERFACE_HELLO_MULTIPLIER_DEAD_INTERVAL_TEST": {
+        "desc": "Configure OSPF interface with both dead-interval and hello-multiplier set — mutually exclusive.",
+        "eStr": ["mutually exclusive"]
+    },
+    "OSPFV2_VLINK_MD5_KEY_ID_ONLY_TEST": {
+        "desc": "Configure virtual-link with authentication-key-id but no authentication-md5-key — both must be set together.",
+        "eStr": ["authentication-key-id and authentication-md5-key must be set together"]
+    },
+    "OSPFV2_VLINK_MD5_KEY_ONLY_TEST": {
+        "desc": "Configure virtual-link with authentication-md5-key but no authentication-key-id — both must be set together.",
+        "eStr": ["authentication-key-id and authentication-md5-key must be set together"]
+    },
+    "OSPFV2_ROUTER_SPF_TIMER_ONE_OF_THREE_TEST": {
+        "desc": "Configure OSPF router with only spf-initial-delay set — all three SPF timer leaves must be set together.",
+        "eStr": ["spf-initial-delay, spf-maximum-delay and spf-throttle-delay must all be set together"]
+    },
+    "OSPFV2_ROUTER_SPF_TIMER_TWO_OF_THREE_TEST": {
+        "desc": "Configure OSPF router with spf-initial-delay and spf-maximum-delay but missing spf-throttle-delay — all three must be set together.",
+        "eStr": ["spf-initial-delay, spf-maximum-delay and spf-throttle-delay must all be set together"]
+    }
+}
