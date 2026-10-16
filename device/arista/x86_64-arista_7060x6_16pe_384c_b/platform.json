@@ -67,15 +67,6 @@
                     "controllable": false
                 },
                 "fans": []
-            },
-            {
-                "name": "psu2",
-                "voltage_high_threshold": false,
-                "voltage_low_threshold": false,
-                "status_led": {
-                    "controllable": false
-                },
-                "fans": []
             }
         ],
         "thermals": [
