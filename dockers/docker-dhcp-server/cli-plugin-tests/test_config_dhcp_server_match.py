@@ -1,5 +1,6 @@
 import sys
 
+import pytest
 from click.testing import CliRunner
 
 import utilities_common.cli as clicommon
@@ -18,6 +19,12 @@ def invoke(mock_db, command, args):
     db = clicommon.Db()
     db.db = mock_db
     return CliRunner().invoke(command, args, obj=db)
+
+
+@pytest.fixture
+def dhcp_vlan200(mock_db):
+    mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan200",
+                  dict(mock_db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100")))
 
 
 class TestConfigDHCPServerMatch:
@@ -70,7 +77,7 @@ class TestConfigDHCPServerMatch:
         assert "Match name must not contain" in result.output
 
     def test_match_add_name_with_other_punctuation(self, mock_db):
-        """Only the two separators are reserved; nothing else is restricted."""
+        """Non-reserved punctuation inside a valid key remains allowed."""
         result = invoke(
             mock_db,
             MATCH_COMMAND.commands["add"],
@@ -103,8 +110,7 @@ class TestConfigDHCPServerMatch:
         assert "Binding name must not contain" in result.output
 
     def test_binding_add_name_with_comma_allowed(self, mock_db):
-        """Binding names are a key component only, never a leaf-list member, so
-        they follow the model's [^|]* pattern and keep accepting ','."""
+        """Binding names are not leaf-list members, so commas remain valid."""
         result = invoke(
             mock_db,
             BINDING_COMMAND.commands["add"],
@@ -113,6 +119,122 @@ class TestConfigDHCPServerMatch:
 
         assert result.exit_code == 0, result.output
         assert mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia,b")
+
+    @pytest.mark.parametrize("kind", ["match", "binding"])
+    @pytest.mark.parametrize("operation", ["add", "update"])
+    @pytest.mark.parametrize("name", [
+        pytest.param(" padded", id="leading-space"),
+        pytest.param("padded ", id="trailing-space"),
+        pytest.param("\tpadded", id="tab"),
+        pytest.param("padded\n", id="LF"),
+        pytest.param("\u00a0padded", id="NBSP"),
+        pytest.param("padded\u2028", id="line-separator"),
+        pytest.param("\u2029padded", id="paragraph-separator"),
+        pytest.param("padded\x1b", id="non-whitespace-control"),
+    ])
+    def test_key_edge_whitespace_rejected(self, mock_db, dhcp_vlan200, kind, operation, name):
+        if kind == "match":
+            command = MATCH_COMMAND.commands[operation]
+            key = "DHCP_SERVER_IPV4_MATCH|" + name
+            before = {"type": "option60", "value": "OLD"}
+            args = [name, "--value", "NEW"]
+            if operation == "add":
+                args += ["--type", "option60"]
+        else:
+            command = BINDING_COMMAND.commands[operation]
+            key = "DHCP_SERVER_IPV4_BINDING|Vlan200|" + name
+            before = {"matches@": "vendor-a", "ips@": "100.1.2.20"}
+            args = ["Vlan200", name, "100.1.2.30", "--match", "vendor-a"]
+        if operation == "update":
+            mock_db.hmset("CONFIG_DB", key, dict(before))
+
+        result = invoke(mock_db, command, args)
+
+        assert result.exit_code == 2, result.output
+        assert "{} name must not have leading or trailing whitespace".format(kind.capitalize()) in result.output
+        if operation == "update":
+            assert mock_db.get_all("CONFIG_DB", key) == before
+        else:
+            assert not mock_db.exists("CONFIG_DB", key)
+
+    @pytest.mark.parametrize("operation", ["add", "update"])
+    @pytest.mark.parametrize("name", [" padded", "padded "])
+    def test_match_reference_edge_whitespace_rejected(self, mock_db, dhcp_vlan200, operation, name):
+        mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|" + name, {
+            "type": "option60", "value": "MAIA",
+        })
+        key = "DHCP_SERVER_IPV4_BINDING|Vlan200|new-binding"
+        before = {"matches@": "vendor-a", "ips@": "100.1.2.20"}
+        if operation == "update":
+            mock_db.hmset("CONFIG_DB", key, dict(before))
+
+        result = invoke(
+            mock_db, BINDING_COMMAND.commands[operation],
+            ["Vlan200", "new-binding", "100.1.2.30", "--match", name],
+        )
+
+        assert result.exit_code == 2, result.output
+        assert "Match name must not have leading or trailing whitespace" in result.output
+        if operation == "update":
+            assert mock_db.get_all("CONFIG_DB", key) == before
+        else:
+            assert not mock_db.exists("CONFIG_DB", key)
+
+    @pytest.mark.parametrize("kind", ["match", "binding"])
+    @pytest.mark.parametrize("name", ["a", "internal space", "two  spaces", "rack-1.site_a:x", "\u00e9"])
+    def test_valid_key_names_add_and_update(self, mock_db, dhcp_vlan200, kind, name):
+        if kind == "match":
+            group = MATCH_COMMAND
+            key = "DHCP_SERVER_IPV4_MATCH|" + name
+            add_args = [name, "--type", "option60", "--value", "OLD"]
+            update_args = [name, "--value", "NEW"]
+            expected = {"type": "option60", "value": "NEW"}
+        else:
+            group = BINDING_COMMAND
+            key = "DHCP_SERVER_IPV4_BINDING|Vlan200|" + name
+            add_args = ["Vlan200", name, "100.1.2.20", "--match", "vendor-a"]
+            update_args = ["Vlan200", name, "100.1.2.30"]
+            expected = {"matches@": "vendor-a", "ips@": "100.1.2.30"}
+
+        added = invoke(mock_db, group.commands["add"], add_args)
+        assert added.exit_code == 0, added.output
+        updated = invoke(mock_db, group.commands["update"], update_args)
+        assert updated.exit_code == 0, updated.output
+        assert mock_db.get_all("CONFIG_DB", key) == expected
+
+    @pytest.mark.parametrize("value", [" MAIA A ", "\u00a0MAIA\u00a0"])
+    def test_match_value_edge_whitespace_preserved(self, mock_db, value):
+        key = "DHCP_SERVER_IPV4_MATCH|new-vendor"
+        added = invoke(
+            mock_db, MATCH_COMMAND.commands["add"],
+            ["new-vendor", "--type", "option60", "--value", value],
+        )
+        assert added.exit_code == 0, added.output
+        assert mock_db.get("CONFIG_DB", key, "value") == value
+
+        updated_value = value + "\t"
+        updated = invoke(mock_db, MATCH_COMMAND.commands["update"], ["new-vendor", "--value", updated_value])
+        assert updated.exit_code == 0, updated.output
+        assert mock_db.get("CONFIG_DB", key, "value") == updated_value
+
+    @pytest.mark.parametrize("kind", ["match", "binding"])
+    def test_legacy_key_edge_whitespace_can_be_deleted(self, mock_db, kind):
+        if kind == "match":
+            group = MATCH_COMMAND
+            key = "DHCP_SERVER_IPV4_MATCH| legacy "
+            entry = {"type": "option60", "value": "MAIA"}
+            args = [" legacy "]
+        else:
+            group = BINDING_COMMAND
+            key = "DHCP_SERVER_IPV4_BINDING|Vlan200| legacy "
+            entry = {"matches@": "vendor-a", "ips@": "100.1.2.20"}
+            args = ["Vlan200", " legacy "]
+        mock_db.hmset("CONFIG_DB", key, entry)
+
+        result = invoke(mock_db, group.commands["del"], args)
+
+        assert result.exit_code == 0, result.output
+        assert not mock_db.exists("CONFIG_DB", key)
 
     def test_match_add_circuit_id_unknown_port(self, mock_db):
         """The model requires a circuit_id to name a real port even with no binding."""
