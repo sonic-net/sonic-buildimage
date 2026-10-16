@@ -9,7 +9,7 @@
     "num_voltage_sensors" : 24,
     "num_current_sensors" : 8,
     "num_nexthop_fpga_asic_temp_sensors": 2,
-    "num_components": 6,
+    "num_components": 8,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
     "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
@@ -159,6 +159,38 @@
           { "attr_name": "serial", "get_cmd": "cat /sys/class/nvme/nvme0/serial" },
           { "attr_name": "revision", "get_cmd": "echo N/A" },
           { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F NVMe {}" }
+      ]
+  },
+  "COMPONENT7": {
+      "comp_attr":{
+          "name": "PSU1",
+          "type": "psu",
+          "description": "Power Supply Unit 1",
+          "boot_type": "none"
+      },
+      "attr_list":
+      [
+          { "attr_name": "version", "get_cmd": "cat /sys/bus/i2c/devices/87-0058/psu_fw_version" },
+          { "attr_name": "model", "get_cmd": "cat /sys/bus/i2c/devices/87-0058/psu_model_name" },
+          { "attr_name": "serial", "get_cmd": "cat /sys/bus/i2c/devices/87-0058/psu_serial_num" },
+          { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
+          { "attr_name": "update", "get_cmd": "echo 'N/A'" }
+      ]
+  },
+  "COMPONENT8": {
+      "comp_attr":{
+          "name": "PSU2",
+          "type": "psu",
+          "description": "Power Supply Unit 2",
+          "boot_type": "none"
+      },
+      "attr_list":
+      [
+          { "attr_name": "version", "get_cmd": "cat /sys/bus/i2c/devices/88-0058/psu_fw_version" },
+          { "attr_name": "model", "get_cmd": "cat /sys/bus/i2c/devices/88-0058/psu_model_name" },
+          { "attr_name": "serial", "get_cmd": "cat /sys/bus/i2c/devices/88-0058/psu_serial_num" },
+          { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
+          { "attr_name": "update", "get_cmd": "echo 'N/A'" }
       ]
   },
   "SYSTEM": {
@@ -2160,6 +2192,14 @@
           "attr_cmpval": "0xff"
         },
         {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
+        },
+        {
           "attr_name": "psu_p_out",
           "attr_devaddr": "0x58",
           "attr_devtype": "pmbus",
@@ -2422,6 +2462,14 @@
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
           "attr_cmpval": "0xff"
+        },
+        {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_p_out",
