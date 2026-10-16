@@ -924,9 +924,9 @@ libmagickcore-6.q16-6-extra==8:6.9.11.60+dfsg-1.6+deb12u13
 libmagickwand-6.q16-6==8:6.9.11.60+dfsg-1.6+deb12u13
 libmail-sendmail-perl==0.80-3
 libmailtools-perl==2.21-2
-libmariadb-dev==1:10.11.18-0+deb12u1
-libmariadb-dev-compat==1:10.11.18-0+deb12u1
-libmariadb3==1:10.11.18-0+deb12u1
+libmariadb-dev==1:10.11.19-0+deb12u1
+libmariadb-dev-compat==1:10.11.19-0+deb12u1
+libmariadb3==1:10.11.19-0+deb12u1
 libmarkdown2==2.2.7-2
 libmath-base85-perl==0.5+dfsg-2
 libmaven-archiver-java==3.6.0-1
@@ -1597,7 +1597,7 @@ man-db==2.11.2-2
 man2html-base==1.6g-14
 manpages==6.03-2
 manpages-dev==6.03-2
-mariadb-common==1:10.11.18-0+deb12u1
+mariadb-common==1:10.11.19-0+deb12u1
 maven==3.8.7-1
 maven-debian-helper==2.6.3
 maven-repo-helper==1.11
