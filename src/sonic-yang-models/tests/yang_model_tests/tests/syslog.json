@@ -87,6 +87,46 @@
         "desc": "Invalid syslog server protocol",
         "eStrKey": "InvalidValue"
     },
+    "SYSLOG_SERVER_PROTOCOL_TLS": {
+        "desc": "Valid syslog server TLS protocol with tls_profile_id"
+    },
+    "SYSLOG_SERVER_PROTOCOL_TLS_MISSING_PROFILE": {
+        "desc": "TLS protocol without tls_profile_id must be rejected",
+        "eStr": ["tls_profile_id is required when protocol is tls"]
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_FALSE": {
+        "desc": "transport_security false without tls_profile_id must be accepted"
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_TRUE": {
+        "desc": "Valid transport_security true with tls_profile_id"
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_TRUE_MISSING_PROFILE": {
+        "desc": "transport_security true without tls_profile_id must be rejected",
+        "eStr": ["tls_profile_id is required when transport_security is true"]
+    },
+    "SYSLOG_SERVER_TLS_PROFILE_GNXI": {
+        "desc": "gnxi cannot be used as a syslog TLS profile",
+        "eStr": ["gnxi is the gNMI listener profile and cannot be used for syslog"]
+    },
+    "SYSLOG_SERVER_TLS_PROFILE_INVALID": {
+        "desc": "tls_profile_id must match [A-Za-z0-9._-]+",
+        "eStrKey": "Pattern"
+    },
+    "SYSLOG_SERVER_TLS_MISSING_PEERS": {
+        "desc": "TLS protocol without tls_permitted_peers must be rejected",
+        "eStr": ["tls_permitted_peers is required when protocol is tls"]
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_TRUE_MISSING_PEERS": {
+        "desc": "transport_security true without tls_permitted_peers must be rejected",
+        "eStr": ["tls_permitted_peers is required when transport_security is true"]
+    },
+    "SYSLOG_SERVER_TLS_PEERS_LIST_WILDCARD": {
+        "desc": "Comma-separated tls_permitted_peers with a leading wildcard label is accepted"
+    },
+    "SYSLOG_SERVER_TLS_PEERS_INVALID": {
+        "desc": "tls_permitted_peers with spaces or a bare wildcard must be rejected",
+        "eStrKey": "Pattern"
+    },
     "SYSLOG_SERVER_SEVERITY": {
         "desc": "Syslog server valid severity"
     },

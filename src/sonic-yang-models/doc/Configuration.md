@@ -2583,6 +2583,13 @@ address of the server is used as object key. Each server can be configurable.
             "protocol": "tcp",
             "severity": "notice",
             "vrf": "default"
+        },
+        "10.0.0.5": {
+            "port": "6514",
+            "protocol": "tls",
+            "transport_security": "true",
+            "tls_profile_id": "siem-east",
+            "tls_permitted_peers": "syslog-east.example.com"
         }
     }
 }
@@ -2590,9 +2597,14 @@ address of the server is used as object key. Each server can be configurable.
 
 * `filter` - determines if syslog will include or exclude messages specified by regex: `{include, exclude}`
 * `filter_regex` - filter messages by this regex: `string`
-* `port` - network port to use to connect to remote server: `integer: 1..65535`
-* `protocol` - network protocol to use to connect to remote server: `{tcp, udp}`
-* `severity` - per-server log severity, overrifes global one: `{emerg, alert, crit, error, warning, notice, info, debug}`
+* `port` - network port to use to connect to remote server: `integer: 1..65535` (default `514` for `udp`/`tcp`; default `6514` when `protocol` is `tls`)
+* `protocol` - network protocol to use to connect to remote server: `{udp, tcp, tls}`. `tls` uses TCP with the rsyslog `ossl` stream driver (host image includes `rsyslog-openssl`).
+* `transport_security` - when `true`, same as `protocol` `tls` (kept for OpenConfig transport-security mapping). Requires `tls_profile_id` and `tls_permitted_peers`.
+* `tls_profile_id` - gNSI Certz SSL profile id whose client PEMs are installed under `/etc/sonic/ssl-certs/<id>/` (`ca-bundle.pem`, `cert.pem`, `key.pem`). Required when `protocol` is `tls` or `transport_security` is `true`. The `gnxi` profile (gNMI listener) must not be used for syslog.
+* `tls_permitted_peers` - comma-separated DNS names the remote syslog server certificate must present (rsyslog `StreamDriverPermittedPeers`, `x509/name` authentication). Required for TLS. Prefer exact names from the server certificate SAN; with rsyslog 8.2504 and earlier, a wildcard entry such as `*.example.com` matches only the certificate subject CN (not SAN names), with `*` standing for one DNS label.
+* `severity` - per-server log severity, overrides global one: `{emerg, alert, crit, error, warning, notice, info, debug}`
+
+When TLS is configured, `rsyslog-config` renders `omfwd` only if the profile PEMs are present; otherwise that server is omitted from the generated config (no cleartext fallback). After apply, STATE_DB `SYSLOG_SERVER|<server_address>` may publish `applied_transport_security` and `failure_reason` (`NONE`, `NO_PROFILE`, `NO_PERMITTED_PEERS`, `NO_CERTIFICATE`, `RSYSLOG_APPLY_FAILED`) for operator visibility.
 
 
 ### System Port

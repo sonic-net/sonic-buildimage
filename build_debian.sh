@@ -366,6 +366,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     $bootloader_packages    \
     rsyslog                 \
     rsyslog-relp            \
+    rsyslog-openssl         \
     screen                  \
     hping3                  \
     tcptraceroute           \
@@ -537,6 +538,9 @@ sudo sed -i 's/^#ListenAddress ::/ListenAddress ::/' $FILESYSTEM_ROOT/etc/ssh/ss
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-systemd
 
 ## Config rsyslog
+sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/ssl-certs
+sudo chroot $FILESYSTEM_ROOT sh -c 'groupadd -f ssl-certs; id syslog >/dev/null 2>&1 && usermod -a -G ssl-certs syslog || true; chown root:ssl-certs /etc/sonic/ssl-certs; chmod 0750 /etc/sonic/ssl-certs'
+
 sudo augtool -r $FILESYSTEM_ROOT --autosave "
 rm /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments
 set /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments/1 -n
