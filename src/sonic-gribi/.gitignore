@@ -1,0 +1,17 @@
+# Build output
+/gribid
+/bin/
+/build/
+/.gocache/
+/vendor/
+
+# Go
+*.test
+*.out
+
+# buildimage's top-level .gitignore has a blanket `*.mod` (line 32), meant for
+# kernel module artefacts. It silently swallows go.mod, and a Go module without
+# one does not build. Negated here rather than by force-adding, so a later
+# `git add -A` cannot drop them again.
+!go.mod
+!**/go.mod

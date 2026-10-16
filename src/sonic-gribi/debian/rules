@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+
+# dpkg builds run without the .git directory, which Go's VCS stamping needs.
+export GOFLAGS += -buildvcs=false
+
+%:
+	dh $@

@@ -1,0 +1,15 @@
+Source: sonic-gribi
+Section: net
+Priority: optional
+Maintainer: Randy Zhu <randy@nexthop.ai>
+Uploaders: Alton Lo <alton@nexthop.ai>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.3
+XS-Go-Import-Path: github.com/sonic-net/sonic-gribi
+
+Package: sonic-gribi
+Architecture: any
+Depends: ${misc:Depends}
+Description: SONiC gRIBI agent
+ gribid serves gRIBI and programs the resulting routes into orchagent over
+ SONiC's ZeroMQ route channel.

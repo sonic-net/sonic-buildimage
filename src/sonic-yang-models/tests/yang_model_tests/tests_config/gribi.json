@@ -1,0 +1,104 @@
+{
+    "GRIBI_TABLE_WITH_VALID_CONFIG": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "certs": {
+                    "server_crt": "/etc/sonic/tls/gribi.crt",
+                    "server_key": "/etc/sonic/tls/gribi.key",
+                    "ca_crt": "/etc/sonic/tls/ca.crt"
+                },
+                "config": {
+                    "port": "9340",
+                    "fib_ack_timeout": "30",
+                    "log_level": "info",
+                    "enable_reflection": "false"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITHOUT_CERTS": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "config": {
+                    "port": "9559",
+                    "log_level": "debug",
+                    "enable_reflection": "true"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_SERVER_CERT_ONLY": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "certs": {
+                    "server_crt": "/etc/sonic/tls/gribi.crt",
+                    "server_key": "/etc/sonic/tls/gribi.key"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_INVALID_PORT": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "config": {
+                    "port": "0"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_INVALID_FIB_ACK_TIMEOUT": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "config": {
+                    "fib_ack_timeout": "3601"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_INVALID_LOG_LEVEL": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "config": {
+                    "log_level": "trace"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_INVALID_REFLECTION": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "config": {
+                    "enable_reflection": "yes"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_RELATIVE_CERT_PATH": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "certs": {
+                    "server_crt": "tls/gribi.crt",
+                    "server_key": "/etc/sonic/tls/gribi.key"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_CERT_BUT_NO_KEY": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "certs": {
+                    "server_crt": "/etc/sonic/tls/gribi.crt"
+                }
+            }
+        }
+    },
+    "GRIBI_TABLE_WITH_CA_BUT_NO_SERVER_CERT": {
+        "sonic-gribi:sonic-gribi": {
+            "sonic-gribi:GRIBI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/tls/ca.crt"
+                }
+            }
+        }
+    }
+}

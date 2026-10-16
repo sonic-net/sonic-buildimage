@@ -1,0 +1,134 @@
+From 0249ac59a089c7ab151c5db32f856eaf37fc97c7 Mon Sep 17 00:00:00 2001
+From: randy-nexthop <randy@nexthop.ai>
+Date: Tue, 29 Sep 2026 15:45:05 -0700
+Subject: [PATCH] rib: add entries in constant time
+
+Every doAdd* removed the old entry and then called
+ygot.MergeStructInto(r.r, candidate). MergeStructInto rebuilds each map
+it merges into, so every add copied the whole installed table: an IPv4
+add cost 177 us on an empty RIB and 1.4 ms at 10k entries, and the
+server slowed to under 100 routes/s by 75k.
+
+The candidate holds exactly one entry and is built afresh for each
+operation, so store that entry in the installed table directly. Per add
+this is now ~50 us and 793 allocations at 0, 10k or 100k entries.
+Replace semantics are unchanged: the old entry is still deleted first,
+so an implicit replace takes the candidate as it is.
+
+sonic-gribi's rib_cost_test.go fails on the old code (allocations per
+add grow with the RIB) and its BenchmarkAddIPv4 shows the per-add cost
+at three RIB sizes.
+
+---
+ rib/rib.go | 56 +++++++++++++++++++++++++++++++++---------------------
+ 1 file changed, 34 insertions(+), 22 deletions(-)
+
+diff --git a/rib/rib.go b/rib/rib.go
+index 192a83b..def8360 100644
+--- a/rib/rib.go
++++ b/rib/rib.go
+@@ -1322,6 +1322,24 @@ func (r *RIBHolder) ipv4Exists(prefix string) bool {
+ 	return ok
+ }
+ 
++// insertOne moves the single entry of a candidate RIB table into the
++// installed table *dst, allocating it on first use. It stands in for
++// ygot.MergeStructInto(r.r, candidate), which rebuilds every map it merges
++// into and so cost O(RIB size) per add. The candidate is built afresh for
++// each operation by candidateRIB, so its entry can be stored without a copy.
++func insertOne[K comparable, V any](dst *map[K]V, src map[K]V, what string) error {
++	if len(src) != 1 {
++		return fmt.Errorf("candidate RIB has %d %ss, want 1", len(src), what)
++	}
++	if *dst == nil {
++		*dst = map[K]V{}
++	}
++	for k, v := range src {
++		(*dst)[k] = v
++	}
++	return nil
++}
++
+ // doAddIPv4 adds an IPv4Entry holding the shortest possible lock on the RIB.
+ // It returns a bool indicating whether this was an implicit replace.
+ func (r *RIBHolder) doAddIPv4(pfx string, newRIB *aft.RIB) (bool, error) {
+@@ -1336,15 +1354,13 @@ func (r *RIBHolder) doAddIPv4(pfx string, newRIB *aft.RIB) (bool, error) {
+ 	// Check whether this is an implicit replace.
+ 	_, implicit := r.r.GetAfts().Ipv4Entry[pfx]
+ 
+-	// MergeStructInto doesn't completely replace a list entry if it finds a missing key,
+-	// so will append the two entries together.
+-	// We don't use Delete itself because it will deadlock (we already hold the lock).
++	// Remove any existing entry so that an implicit replace takes the candidate
++	// as it is. We don't use Delete itself because it will deadlock (we already
++	// hold the lock).
+ 	delete(r.r.GetAfts().Ipv4Entry, pfx)
+ 
+-	// TODO(robjs): consider what happens if this fails -- we may leave the RIB in
+-	// an inconsistent state.
+-	if err := ygot.MergeStructInto(r.r, newRIB); err != nil {
+-		return false, fmt.Errorf("cannot merge candidate RIB into existing RIB, %v", err)
++	if err := insertOne(&r.r.GetOrCreateAfts().Ipv4Entry, newRIB.Afts.Ipv4Entry, "IPv4 entry"); err != nil {
++		return false, err
+ 	}
+ 	return implicit, nil
+ }
+@@ -1491,10 +1507,8 @@ func (r *RIBHolder) doAddIPv6(pfx string, newRIB *aft.RIB) (bool, error) {
+ 
+ 	delete(r.r.GetAfts().Ipv6Entry, pfx)
+ 
+-	// TODO(robjs): consider what happens if this fails -- we may leave the RIB in
+-	// an inconsistent state.
+-	if err := ygot.MergeStructInto(r.r, newRIB); err != nil {
+-		return false, fmt.Errorf("cannot merge candidate RIB into existing RIB, %v", err)
++	if err := insertOne(&r.r.GetOrCreateAfts().Ipv6Entry, newRIB.Afts.Ipv6Entry, "IPv6 entry"); err != nil {
++		return false, err
+ 	}
+ 	return implicit, nil
+ }
+@@ -1655,15 +1669,13 @@ func (r *RIBHolder) doAddMPLS(label uint32, newRIB *aft.RIB) (bool, error) {
+ 	// Check whether this is an implicit replace.
+ 	_, implicit := r.r.GetAfts().LabelEntry[aft.UnionUint32(label)]
+ 
+-	// MergeStructInto doesn't completely replace a list entry if it finds a missing key,
+-	// so will append the two entries together.
+-	// We don't use Delete itself because it will deadlock (we already hold the lock).
++	// Remove any existing entry so that an implicit replace takes the candidate
++	// as it is. We don't use Delete itself because it will deadlock (we already
++	// hold the lock).
+ 	delete(r.r.GetAfts().LabelEntry, aft.UnionUint32(label))
+ 
+-	// TODO(robjs): consider what happens if this fails -- we may leave the RIB in
+-	// an inconsistent state.
+-	if err := ygot.MergeStructInto(r.r, newRIB); err != nil {
+-		return false, fmt.Errorf("cannot merge candidate RIB into existing RIB, %v", err)
++	if err := insertOne(&r.r.GetOrCreateAfts().LabelEntry, newRIB.Afts.LabelEntry, "label entry"); err != nil {
++		return false, err
+ 	}
+ 	return implicit, nil
+ }
+@@ -1980,8 +1992,8 @@ func (r *RIBHolder) doAddNHG(ID uint64, newRIB *aft.RIB) (bool, error) {
+ 	// Handle implicit replace.
+ 	delete(r.r.GetAfts().NextHopGroup, ID)
+ 
+-	if err := ygot.MergeStructInto(r.r, newRIB); err != nil {
+-		return false, fmt.Errorf("cannot merge candidate RIB into existing RIB, %v", err)
++	if err := insertOne(&r.r.GetOrCreateAfts().NextHopGroup, newRIB.Afts.NextHopGroup, "next-hop group"); err != nil {
++		return false, err
+ 	}
+ 	return wasReplace, nil
+ }
+@@ -2094,8 +2106,8 @@ func (r *RIBHolder) doAddNH(index uint64, newRIB *aft.RIB) (bool, error) {
+ 	// Handle implicit replace.
+ 	delete(r.r.GetAfts().NextHop, index)
+ 
+-	if err := ygot.MergeStructInto(r.r, newRIB); err != nil {
+-		return false, fmt.Errorf("cannot merge candidate RIB into existing RIB, %v", err)
++	if err := insertOne(&r.r.GetOrCreateAfts().NextHop, newRIB.Afts.NextHop, "next hop"); err != nil {
++		return false, err
+ 	}
+ 	return implicit, nil
+ }
+-- 
+2.43.0
+
