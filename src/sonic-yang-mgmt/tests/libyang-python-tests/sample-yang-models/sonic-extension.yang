@@ -1,0 +1,19 @@
+module sonic-extension {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-extension";
+    prefix sonic-extension;
+
+    description "Minimal sonic-extension for create-only discovery tests";
+
+    revision 2019-07-01 {
+        description "First Revision";
+    }
+
+    extension create-only {
+        description
+            "Test fixture copy of create-only. See sonic-yang-models template
+             for the full contract.";
+    }
+}

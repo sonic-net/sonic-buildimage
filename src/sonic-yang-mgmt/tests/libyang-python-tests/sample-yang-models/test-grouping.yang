@@ -5,6 +5,10 @@ module test-grouping {
 
     yang-version 1.1;
 
+    import sonic-extension {
+        prefix ext;
+    }
+
     revision 2024-01-01 {
         description "Test uses compilation with container/list/uses in groupings";
     }
@@ -58,7 +62,18 @@ module test-grouping {
 
                 uses group-with-container;
                 uses group-with-list;
-                uses nested-uses-group;
+                // create-only via refine: must survive libyang refine→target
+                // extension copy so get_create_only_fields() sees it.
+                // description is nested (nested-uses-group → simple-fields);
+                // extra is declared directly on nested-uses-group (shipping shape).
+                uses nested-uses-group {
+                    refine description {
+                        ext:create-only;
+                    }
+                    refine extra {
+                        ext:create-only;
+                    }
+                }
             }
         }
     }
