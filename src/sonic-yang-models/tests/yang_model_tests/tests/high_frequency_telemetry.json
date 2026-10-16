@@ -2,6 +2,10 @@
     "HIGH_FREQUENCY_TELEMETRY_VALID_CASE": {
         "desc": "Valid high frequency telemetry configuration."
     },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_POLL_INTERVAL_ZERO": {
+        "desc": "Profile poll interval must be greater than zero.",
+        "eStrKey": "Range"
+    },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_PORT": {
         "desc": "Invalid port.",
         "eStrKey": "Must"
@@ -13,6 +17,152 @@
     "HIGH_FREQUENCY_TELEMETRY_INVALID_STATS": {
         "desc": "Invalid stats.",
         "eStrKey": "Must"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_REF": {
+        "desc": "Invalid aggregator reference.",
+        "eStrKey": "LeafRef"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_COUNTER": {
+        "desc": "Invalid aggregator counter.",
+        "eStrKey": "Must"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_ROLLOVER_EXPLICIT_WIDTH": {
+        "desc": "A selected rollover counter can override its width explicitly."
+    },
+    "HIGH_FREQUENCY_TELEMETRY_ROLLOVER_DEFAULT_WIDTH": {
+        "desc": "Absence of a child row, rather than a defaulted child leaf, gives a selected rollover counter the documented effective 32-bit width."
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_PARENT_REF": {
+        "desc": "Rollover width entry must reference an existing aggregator.",
+        "eStrKey": "LeafRef"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_GROUP": {
+        "desc": "Rollover width group must be a supported group.",
+        "eStrKey": "None",
+        "eStr": [
+            "Invalid enumeration value"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_COUNTER": {
+        "desc": "Rollover width counter must be valid for its group.",
+        "eStrKey": "None",
+        "eStr": [
+            "counter_name is not valid for group_name"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_COUNTER_NOT_SELECTED": {
+        "desc": "Rollover width counter must be selected by its parent.",
+        "eStrKey": "None",
+        "eStr": [
+            "Rollover counter must be selected in the parent rollover_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_MISSING": {
+        "desc": "Rollover override rows require a bit width.",
+        "eStrKey": "Mandatory"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_ZERO": {
+        "desc": "Rollover bit width cannot be zero.",
+        "eStrKey": "Range"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_64": {
+        "desc": "Rollover bit width 64 is unsupported.",
+        "eStrKey": "Range"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_COUNTERS_MISSING": {
+        "desc": "Heatmap interval requires heatmap counters.",
+        "eStrKey": "None",
+        "eStr": [
+            "heatmap_interval and heatmap_counters must be configured together"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_INTERVAL_MISSING": {
+        "desc": "Heatmap configuration requires an interval.",
+        "eStrKey": "None",
+        "eStr": [
+            "heatmap_interval and heatmap_counters must be configured together"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_NAME": {
+        "desc": "Aggregator names cannot contain the CONFIG_DB key separator.",
+        "eStrKey": "None",
+        "eStr": [
+            "Aggregator name must not contain '|'"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_NAME_WHITESPACE": {
+        "desc": "Aggregator names cannot have leading or trailing whitespace.",
+        "eStrKey": "None",
+        "eStr": [
+            "Aggregator name must not have leading or trailing whitespace"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_WATERMARK_ROLLOVER": {
+        "desc": "Watermark selector is rejected by the watermark/current-occupancy rollover restriction.",
+        "eStrKey": "None",
+        "eStr": [
+            "Watermark and current-occupancy counters must not be configured in rollover_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_CURRENT_OCCUPANCY_ROLLOVER": {
+        "desc": "Current-occupancy counters cannot be rollover counters.",
+        "eStrKey": "None",
+        "eStr": [
+            "Watermark and current-occupancy counters must not be configured in rollover_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_PARENT_REF": {
+        "desc": "Histogram entry must reference an existing aggregator.",
+        "eStrKey": "LeafRef"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_GROUP": {
+        "desc": "Histogram group must be a supported group.",
+        "eStrKey": "None",
+        "eStr": [
+            "Invalid enumeration value"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_COUNTER": {
+        "desc": "Histogram counter must be valid for its group.",
+        "eStrKey": "None",
+        "eStr": [
+            "counter_name is not valid for group_name"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_COUNTER_NOT_SELECTED": {
+        "desc": "Histogram counter must be selected by its parent.",
+        "eStrKey": "None",
+        "eStr": [
+            "Histogram counter must be selected in the parent heatmap_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_EMPTY": {
+        "desc": "Histogram explicit bounds cannot be empty.",
+        "eStrKey": "MinElements"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_UNORDERED": {
+        "desc": "Histogram explicit bounds must be increasing.",
+        "eStrKey": "None",
+        "eStr": [
+            "explicit_bounds must be strictly increasing"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_DUPLICATE": {
+        "desc": "Histogram explicit bounds cannot contain duplicates.",
+        "eStrKey": "None",
+        "eStr": [
+            "uplicate",
+            "instance",
+            "explicit_bounds"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_RANGE": {
+        "desc": "Histogram explicit bounds cannot exceed 2^53.",
+        "eStrKey": "Range"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_TOO_MANY": {
+        "desc": "Histogram explicit bounds cannot contain more than 511 entries.",
+        "eStrKey": "MaxElements"
     },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE1": {
         "desc": "Invalid dummy table1.",
