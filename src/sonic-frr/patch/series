@@ -41,3 +41,8 @@
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
 0119-bgpd-fix-aggregate-route-counter.patch
+# EVPN L3 multihoming without an L2VNI, FRR PR #23304
+0120-zebra-unify-EVPN-neigh-MAC-linkage-through-ref-deref.patch
+0121-zebra-don-t-map-a-VNI-less-VLAN-on-a-VLAN-aware-brid.patch
+0122-bgpd-zebra-lib-tools-EVPN-L3-multihoming-without-an-.patch
+0123-tests-add-EVPN-L3MH-no-L2VNI-topotest.patch

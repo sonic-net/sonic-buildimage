@@ -1,0 +1,41 @@
+From 71a1f53cc9b4e2f2be56a060fb5128f04d4b2831 Mon Sep 17 00:00:00 2001
+From: Patrice Brissette <pbrisset@cisco.com>
+Date: Fri, 16 Oct 2026 12:26:32 -0400
+Subject: [PATCH 121/123] zebra: don't map a VNI-less VLAN on a VLAN-aware
+ bridge to an EVPN
+
+On a VLAN-aware bridge, zebra_evpn_map_vlan() looked up the VLAN's VNI and,
+when the VLAN had none, fell through to the walk meant for VLAN-unaware
+bridges. That walk ignores the VLAN and returns the EVPN of the first VXLAN
+device on the bridge, so a local MAC learned on a VLAN without a VNI was
+handed to an unrelated EVPN instance.
+
+On a VLAN-aware bridge the VLAN's access BD is authoritative, as it already
+is in zebra_evpn_from_svi(): return no EVPN when the VLAN has no VNI.
+
+Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
+---
+ zebra/zebra_evpn.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/zebra/zebra_evpn.c b/zebra/zebra_evpn.c
+index 945ec8541f..12622c5dd2 100644
+--- a/zebra/zebra_evpn.c
++++ b/zebra/zebra_evpn.c
+@@ -681,11 +681,10 @@ struct zebra_evpn *zebra_evpn_map_vlan(struct interface *ifp,
+ 	zif = br_if->info;
+ 	assert(zif);
+ 
+-	/* Special case for vlan */
++	/* The VLAN's access BD is authoritative; the walk below ignores the VLAN. */
+ 	if (IS_ZEBRA_IF_BRIDGE_VLAN_AWARE(zif)) {
+ 		vni_id = zebra_l2_bridge_if_vni_find(zif, vid);
+-		if (vni_id)
+-			return zebra_evpn_lookup(vni_id);
++		return vni_id ? zebra_evpn_lookup(vni_id) : NULL;
+ 	}
+ 
+ 	in_param.vid = vid;
+-- 
+2.54.0
+
