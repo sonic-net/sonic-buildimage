@@ -110,8 +110,10 @@ module sonic-syslog {
                 }
 
                 leaf port {
-                    description "Syslog server UDP port";
-                    type inet:port-number;
+                    description "Syslog server UDP port. Port 0 is rejected because Linux UDP sendto() returns EINVAL.";
+                    type inet:port-number {
+                        range "1..65535";
+                    }
                 }
 
                 leaf vrf {

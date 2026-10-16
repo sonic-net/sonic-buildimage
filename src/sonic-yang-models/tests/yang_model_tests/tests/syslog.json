@@ -14,6 +14,10 @@
         "desc": "Configure invalid PORT in SYSLOG_SERVER.",
         "eStrKey": "Bounds"
     },
+    "SYSLOG_SERVER_PORT_ZERO": {
+        "desc": "Configure SYSLOG_SERVER UDP port 0.",
+        "eStrKey": "Range"
+    },
     "SYSLOG_SERVER_INVALID_VRF": {
         "desc": "Configure invalid VRF in SYSLOG_SERVER.",
         "eStrKey": "InvalidValue"
