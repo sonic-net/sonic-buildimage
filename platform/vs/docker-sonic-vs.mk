@@ -11,7 +11,8 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG3_PY3) \
                               $(SONIC_UTILITIES_DATA) \
                               $(SONIC_HOST_SERVICES_DATA) \
-                              $(SYSMGR)
+                              $(SYSMGR) \
+                              $(WPASUPPLICANT)
 
 # Include feature dockers — auto-merges DEPENDS, PYTHON_WHEELS,
 # and provides --build-context for COPY --from=<feature> in Dockerfile.j2
@@ -22,6 +23,15 @@ $(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_NAT)
 $(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_SFLOW)
 $(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_ORCHAGENT)
 $(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_DATABASE)
+
+# docker-macsec cannot be composed in via _INCLUDE_DOCKER -- it is a trixie
+# docker against DOCKER_SWSS_LAYER_TRIXIE while this image is bookworm -- so take
+# the two things it contributes through a build context instead: the
+# wpa_supplicant.conf macsecmgrd points each forked supplicant at, and the
+# `config macsec` / `show macsec` CLI plugins, which ship inside that docker
+# rather than in the sonic-utilities wheel. Both are COPY --from=macsec below.
+# macsecmgrd itself already arrives with swss.
+$(DOCKER_SONIC_VS)_BUILD_CONTEXTS += --build-context macsec=$(DOCKERS_PATH)/docker-macsec
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \

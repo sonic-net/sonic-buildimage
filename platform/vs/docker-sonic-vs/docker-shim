@@ -1,0 +1,160 @@
+#!/bin/bash
+#
+# Single-container `docker` shim for sonic-utilities.
+#
+# This image composes the feature containers a real switch runs -- bgp, lldp,
+# teamd, swss, database and so on -- into one container. sonic-utilities still
+# assumes the per-feature layout in two places:
+#
+#   1. It decides whether `show ip bgp` exists at all by running
+#          docker ps --format '{{.Image}}\t{{.Names}}' | awk '$2 ~ /^bgp/' \
+#            | cut -d'-' -f3 | cut -d':' -f1
+#      (show/main.py, get_routing_stack). A shell pipeline exits 0 even when
+#      `docker` is missing, so the 'frr' default is overwritten with '' and the
+#      bgp subcommands are silently never registered.
+#
+#   2. It reaches daemons with `docker exec <feature> <cmd>` -- lldpctl for
+#      `show lldp table`, supervisorctl for feature control, cat for FRR conf.
+#
+# Translate those two into local equivalents. Anything else exits non-zero with
+# a message: a silent success is what turns "no such container" into a
+# confusing parse error further down the caller.
+
+set -u
+
+SELF="docker(shim)"
+
+# Feature "containers" this image provides. The image name is load-bearing:
+# get_routing_stack derives the routing stack from it via
+# `cut -d'-' -f3 | cut -d':' -f1`, so docker-fpm-frr:latest must yield "frr".
+#
+# macsec is listed for the same reason as the rest: the feature is present --
+# macsecmgrd runs under supervisord here -- and sonic-mgmt gates MACsec setup on
+# `docker ps | grep macsec` returning a row (enable_macsec_feature in
+# tests/common/macsec/macsec_config_helper.py). Reporting only the process would
+# leave that gate failing for a feature the image does provide.
+#
+# These run unconditionally under supervisord in this image. Note the list is not
+# the FEATURE table: that table has no syncd or sflow row even though both run
+# here, and it does carry dhcp_relay, which this image ships no daemon for.
+FEATURES_ALWAYS="database swss syncd bgp lldp teamd nat sflow macsec"
+
+# stp is the one composed feature that is off by default in init_cfg.json.j2, so
+# report it only once something has actually started it rather than always. Ask
+# the process table, not CONFIG_DB: get_routing_stack runs this at CLI import
+# time, so the answer must not depend on redis being up. `pgrep -x` is also what
+# the question really is -- whether stpd is running -- and it costs about 5ms
+# against the 109ms a supervisorctl RPC takes on a neighbour, which every `show`
+# would otherwise pay. A missing or failing pgrep leaves stp unlisted, which is
+# the safe direction.
+features() {
+    printf '%s' "$FEATURES_ALWAYS"
+    if pgrep -x stpd >/dev/null 2>&1; then
+        printf ' stp'
+    fi
+    printf '\n'
+}
+
+feature_image() {
+    case "$1" in
+        bgp)      printf 'docker-fpm-frr:latest\n' ;;
+        swss)     printf 'docker-orchagent:latest\n' ;;
+        syncd)    printf 'docker-syncd-vs:latest\n' ;;
+        lldp)     printf 'docker-lldp:latest\n' ;;
+        teamd)    printf 'docker-teamd:latest\n' ;;
+        nat)      printf 'docker-nat:latest\n' ;;
+        sflow)    printf 'docker-sflow:latest\n' ;;
+        macsec)   printf 'docker-macsec:latest\n' ;;
+        stp)      printf 'docker-stp:latest\n' ;;
+        database) printf 'docker-database:latest\n' ;;
+        *)        return 1 ;;
+    esac
+}
+
+cmd_ps() {
+    local format=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --format)     format="${2-}"; shift 2 || shift ;;
+            --format=*)   format="${1#--format=}"; shift ;;
+            -f|--filter)  shift 2 || shift ;;   # every feature is always "running" here
+            --filter=*|-f*) shift ;;
+            *)            shift ;;
+        esac
+    done
+
+    if [ -n "$format" ]; then
+        case "$format" in
+            *.Image*.Names*) for f in $(features); do printf '%s\t%s\n' "$(feature_image "$f")" "$f"; done ;;
+            *.Names*.Image*) for f in $(features); do printf '%s\t%s\n' "$f" "$(feature_image "$f")"; done ;;
+            *.Names*)        for f in $(features); do printf '%s\n' "$f"; done ;;
+            *.Image*)        for f in $(features); do feature_image "$f"; done ;;
+            *)               for f in $(features); do printf '%s\n' "$f"; done ;;
+        esac
+        return 0
+    fi
+
+    # Bare `docker ps`. STATUS names supervisord deliberately: these are not
+    # real containers, and the output should not pretend they are.
+    printf '%-14s %-26s %-18s %s\n' CONTAINER_ID IMAGE STATUS NAMES
+    for f in $(features); do
+        printf '%-14s %-26s %-18s %s\n' '-' "$(feature_image "$f")" 'Up (supervisord)' "$f"
+    done
+}
+
+cmd_exec() {
+    # Strip `docker exec` flags, including those that take a separate value,
+    # so `--user root bgp vtysh ...` does not mistake "root" for the container.
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -u|--user|-e|--env|-w|--workdir|--env-file|--detach-keys)
+                # A flag left without its value must not spin: `shift 2` with one
+                # argument remaining shifts nothing and returns 1, so the loop
+                # would never advance and the CLI would hang with no timeout.
+                shift 2 || shift ;;
+            -i|-t|-it|-ti|--interactive|--tty|-d|--detach|--privileged)
+                shift ;;
+            -*) shift ;;
+            *)  break ;;
+        esac
+    done
+
+    local container="${1-}"
+    if [ -z "$container" ]; then
+        echo "$SELF: exec requires a container name" >&2
+        exit 1
+    fi
+    shift
+
+    if ! feature_image "$container" >/dev/null 2>&1; then
+        echo "$SELF: no such container: $container" >&2
+        echo "$SELF: this image composes: $(features)" >&2
+        exit 1
+    fi
+
+    if [ $# -eq 0 ]; then
+        echo "$SELF: exec requires a command" >&2
+        exit 1
+    fi
+
+    # Every feature lives in this namespace, so the command runs here.
+    exec "$@"
+}
+
+case "${1-}" in
+    ps)
+        shift; cmd_ps "$@"
+        ;;
+    exec)
+        shift; cmd_exec "$@"
+        ;;
+    images)
+        # Truthful: a single-container image runs no containers of its own, so
+        # `show version`'s docker-image table is legitimately empty.
+        printf '%-32s %-16s %-14s %s\n' REPOSITORY TAG IMAGE_ID SIZE
+        ;;
+    *)
+        echo "$SELF: '${1-}' is not translated in a single-container image" >&2
+        exit 1
+        ;;
+esac
