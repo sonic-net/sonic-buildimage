@@ -1,0 +1,4 @@
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="ixgbe", KERNELS=="0000:08:00.0", NAME:="eth0"
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="ixgbe", KERNELS=="0000:08:00.1", NAME:="eth1"
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="ixgbe", KERNELS=="0000:07:00.0", NAME:="eth2"
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="ixgbe", KERNELS=="0000:07:00.1", NAME:="eth3"
