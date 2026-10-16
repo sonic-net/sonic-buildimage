@@ -512,9 +512,9 @@ set /files/etc/ssh/sshd_config/AllowAgentForwarding no
 ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
 rm /files/etc/ssh/sshd_config/PerSourcePenalties
-set /files/etc/ssh/sshd_config/PerSourcePenalties authfail:0
+set /files/etc/ssh/sshd_config/PerSourcePenalties authfail:1s
 ins #comment before /files/etc/ssh/sshd_config/PerSourcePenalties
-set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PerSourcePenalties]] "Disable penalty timer to allow for multiple passwords to be used, either local or remote/AAA"
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PerSourcePenalties]] "Short authfail penalty (not 0, which would disable brute-force throttling entirely) so multiple local/AAA password attempts keep working. PerSourcePenalties requires OpenSSH >= 9.8, shipped by this build's trixie target (SONIC_OS_VERSION=13)."
 save
 quit
 EOF
@@ -791,6 +791,38 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -A arm64 -O linux -T ramdisk -C gzip -d /boot/$INITRD_FILE /boot/u${INITRD_FILE}
             ## Overwriting the initrd image with uInitrd
             sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
+        elif [[ $CONFIGURED_PLATFORM == marvell-prestera ]] && [[ $OPTIMIZE_FIT_DE_DUPLICATION == y ]]; then
+            ## Install-time FIT deduplication (OPTIMIZE_FIT_DE_DUPLICATION=y).
+            ## Marvell has 3 sub-platforms (AC5x, CN9131, 7215-A1) that each
+            ## boot at different U-Boot load addresses. FIT ties "load" to
+            ## the image node (not the configuration node), and mkimage
+            ## does not dedupe identical /incbin/ data, so a single static
+            ## multi-config FIT baked at build time would /incbin/ the same
+            ## kernel+initrd payload three times (~141MB vs ~47MB optimal).
+            ## Instead, ship the kernel/initrd/DTBs plus the .its.j2
+            ## template as-is; platform_arm64.conf renders the template and
+            ## runs mkimage at install time, once it has detected which
+            ## single sub-platform (and load addresses) it is installing.
+            ##
+            ## generate_fit_image() (platform_arm64.conf) reads its DTB from
+            ## a plain path under the new image's /boot/ dir at INSTALL
+            ## time. At that point fs.squashfs has NOT been unpacked yet --
+            ## only whatever fs.zip's boot/ directory ships as real files
+            ## exists on disk -- so /usr/lib/linux-image-.../<vendor>/*.dtb
+            ## (inside the squashfs) is not reachable. Explicitly copy all
+            ## 3 sub-platform DTBs here (a few KB each) so every platform's
+            ## fdt_fname resolves to a real /boot/ file at install time,
+            ## regardless of which sub-platform is actually being installed.
+            KERNEL_DTB_DIR=$FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/marvell
+            for dtb in ac5-98dx35xx-rd.dtb 7215-ixs-a1.dtb cn9131-db-comexpress.dtb; do
+                if [ -f $KERNEL_DTB_DIR/$dtb ]; then
+                    sudo cp -v $KERNEL_DTB_DIR/$dtb $FILESYSTEM_ROOT/boot/
+                else
+                    echo "Error: $dtb not found under $KERNEL_DTB_DIR; cannot ship it for install-time FIT generation"
+                    exit 1
+                fi
+            done
+            sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its.j2 $FILESYSTEM_ROOT/boot/
         else
             # Check if sonic_fit.its uses placeholders (template-based)
             if grep -q "__KERNEL_VERSION__\|__KERNEL_PATH__" $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its 2>/dev/null; then
@@ -947,13 +979,4 @@ fi
 
 ## Compress together with /boot, /var/lib/docker and $PLATFORM_DIR as an installer payload zip file
 pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf platform.tar.gz -C $PLATFORM_DIR . && sudo zip -n .gz $OLDPWD/$INSTALLER_PAYLOAD -r boot/ platform.tar.gz; popd
-sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
-
-## A zip member of 4GiB or more forces the archive into the zip64 format, which the
-## busybox unzip shipped in ONIE cannot parse. Ship such a dockerfs next to the
-## payload instead of inside it; the installers pick up whichever layout is present.
-if [ $(stat -c %s $FILESYSTEM_DOCKERFS) -lt $((4 * 1024 * 1024 * 1024)) ]; then
-    sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_DOCKERFS
-else
-    echo "$FILESYSTEM_DOCKERFS is 4GiB or larger, shipping it outside $INSTALLER_PAYLOAD"
-fi
+sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS $FILESYSTEM_DOCKERFS
