@@ -18,7 +18,7 @@ from nexthop.fpga_lib import (
     name_to_bdf,
     dump_resource0,
 )
-from  nexthop.pddf_config_parser import load_pddf_device_config
+from  nexthop.pddf_loader import load_pddf_device_config
 
 def check_root_privileges():
     """Check if the current user has root privileges and exit if not."""
