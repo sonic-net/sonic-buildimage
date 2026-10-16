@@ -24,6 +24,8 @@ def mock_pddf_data(data: dict[str, dict]):
     """
     data_mock = Mock()
     data_mock.data = data
+    data_mock.get.side_effect = data.get
+    data_mock.get_platform.side_effect = lambda: data.get("PLATFORM", {})
     return data_mock
 
 

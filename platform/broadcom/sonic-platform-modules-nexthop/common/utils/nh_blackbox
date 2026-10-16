@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+# Copyright 2025 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+"""Nexthop blackbox utility.
+
+Fetches and clears device blackbox records on hardware, and rotates and
+displays the saved blackbox logs.
+"""
+
+import click
+import os
+import sys
+
+from sonic_platform.blackbox_manager import ALL_SOURCES, BlackBoxManager, BlackBoxSnapshot
+from sonic_platform.chassis import Chassis
+from sonic_platform.blackbox_logger import SkippedEntries
+
+
+def check_root_privileges() -> None:
+    """Checks if the current user has root privileges, exits if not."""
+    if os.getuid() != 0:
+        click.secho("Root privileges required for this operation", fg="red")
+        sys.exit(1)
+
+
+def _get_chassis() -> Chassis:
+    """Builds the platform chassis."""
+    return Chassis()
+
+
+def _get_manager() -> BlackBoxManager:
+    """Builds a BlackBoxManager from the platform chassis."""
+    return _get_chassis().get_blackbox_manager()
+
+
+def _validate_source(manager: BlackBoxManager, source: str) -> None:
+    """Aborts with a friendly error if a specific source is unknown."""
+    if source != ALL_SOURCES and source not in manager.sources:
+        raise click.BadParameter(
+            f"'{source}' is not a valid source. Valid options are: {manager.sources}"
+        )
+
+
+def _resolve_targets(manager: BlackBoxManager, source: str) -> list[str]:
+    """Returns the source names selected by SOURCE ('all' selects every source)."""
+    return manager.sources if source == ALL_SOURCES else [source]
+
+
+def _print_snapshot(manager: BlackBoxManager, snapshot: BlackBoxSnapshot) -> None:
+    """Decodes and prints a single blackbox snapshot."""
+    click.secho(
+        f"=== {snapshot.log_type}  {snapshot.gen_time}  (schema v{snapshot.schema_version}) ===",
+        fg="yellow",
+    )
+    records = manager.decode_blackbox_snapshot(snapshot)
+    if not records:
+        click.echo("(no records)")
+    all_records = [record for dev_records in records.values() for record in dev_records]
+    if not all_records:
+        return
+
+    # Size the name/key columns to the widest name and field key in this snapshot,
+    # so every record lines up regardless of format (records of the same type
+    # share a key set, so all e.g. DCDCs align identically).
+    name_width = max(len(record.name) for record in all_records)
+    key_width = max(
+        (len(key) for record in all_records for key in record.as_dict() if key != "name"),
+        default=0,
+    )
+    for record in all_records:
+        _print_record(record, name_width, key_width)
+
+
+def _print_record(record, name_width: int, key_width: int) -> None:
+    """Prints one record's fields, one field per line with the device name as a
+    left column, keys aligned, and continuation lines aligned under the value."""
+    indent = " " * (2 + name_width + 1 + key_width + 2)
+    first_row = True
+    for key, value in record.as_dict().items():
+        if key == "name":
+            continue
+        if isinstance(value, dict):
+            asserted = value.get("asserted") or []
+            value = value["raw"] + (f"  [{', '.join(asserted)}]" if asserted else "")
+        value = str(value).replace("\n", "\n" + indent)
+        label = record.name if first_row else ""
+        click.echo(f"  {label:<{name_width}} {key:<{key_width}}: {value}")
+        first_row = False
+    click.echo()
+
+
+@click.group()
+def blackbox() -> None:
+    """Fetches, clears, and displays device blackbox records."""
+
+
+@blackbox.command()
+@click.argument("source")
+@click.option("--save", is_flag=True, help="Also log the fetched snapshot to the log file")
+@click.option("--clear", is_flag=True, help="Clear each device's blackbox immediately after its records are read")
+def fetch(source: str, save: bool, clear: bool) -> None:
+    """Fetches a live blackbox snapshot from hardware (SOURCE, or 'all' for every source)."""
+    if clear and not save:
+        raise click.UsageError("--clear requires --save; refusing to clear records that won't be persisted")
+
+    check_root_privileges()
+
+    manager = _get_manager()
+    _validate_source(manager, source)
+
+    payloads = manager.fetch_blackbox(source, clear)
+    if not payloads:
+        click.echo("No blackbox records found")
+        return
+
+    for src, payload in payloads.items():
+        if save:
+            written = manager.write_blackbox_log(src, payload)
+            click.echo(f"{src}: logged" if written else f"{src}: no new records")
+        else:
+            _print_snapshot(manager, manager.build_snapshot(src, payload))
+
+
+@blackbox.command()
+@click.argument("source")
+def clear(source: str) -> None:
+    """Erases blackbox records stored on hardware (SOURCE, or 'all' for every source)."""
+    check_root_privileges()
+
+    manager = _get_manager()
+    _validate_source(manager, source)
+    manager.clear_blackbox(source)
+
+
+@blackbox.group()
+def log() -> None:
+    """Operates on the saved blackbox logs."""
+
+
+@log.command("rotate")
+@click.argument("source")
+def log_rotate(source: str) -> None:
+    """Rotates blackbox logs into history files (SOURCE, or 'all' for every source)."""
+    check_root_privileges()
+
+    manager = _get_manager()
+    _validate_source(manager, source)
+    manager.rotate_blackbox_logs(source)
+
+
+@log.command("clear")
+@click.argument("source")
+def log_clear(source: str) -> None:
+    """Erases the saved blackbox logs (SOURCE, or 'all' for every source)."""
+    check_root_privileges()
+
+    manager = _get_manager()
+    _validate_source(manager, source)
+    manager.clear_blackbox_log(source)
+
+
+@log.command("show-recent")
+@click.argument("source")
+def log_show_recent(source: str) -> None:
+    """Displays the most recent saved blackbox record (SOURCE, or 'all' for every source)."""
+    manager = _get_manager()
+    _validate_source(manager, source)
+
+    printed = False
+    for src in _resolve_targets(manager, source):
+        snapshot = manager.read_blackbox_log(src)
+        if snapshot is None:
+            continue
+        printed = True
+        click.secho(f"### source: {src} ###", fg="green")
+        _print_snapshot(manager, snapshot)
+
+    if not printed:
+        click.echo("No blackbox records found")
+
+
+@log.command("show-history")
+@click.argument("source")
+def log_show_history(source: str) -> None:
+    """Displays all saved blackbox records (SOURCE, or 'all' for every source)."""
+    manager = _get_manager()
+    _validate_source(manager, source)
+
+    printed = False
+    for src in _resolve_targets(manager, source):
+        snapshots, total, skipped = manager.read_all_blackbox_logs(src)
+        if not snapshots:
+            continue
+        printed = True
+        click.secho(f"### source: {src} (total {total}, skipped {skipped}) ###", fg="green")
+        for item in reversed(snapshots):
+            if isinstance(item, SkippedEntries):
+                click.secho(f"=== skipped {item.count} entries ===", fg="yellow")
+            else:
+                _print_snapshot(manager, item)
+
+    if not printed:
+        click.echo("No blackbox records found")
+
+
+@blackbox.group()
+def dcdc() -> None:
+    """DCDC-specific commands."""
+
+
+def _show_dcdc_statuses(verbosity: int, dcdc_statuses: dict) -> None:
+    """Displays DCDC status registers."""
+
+    def _format_dcdc_val(name: str, val: int) -> str:
+        """`0b0000_0001`-style binary formatting for one PMBus register value."""
+        width = dcdc.get_register_width(name)
+        bits = f"{val:0{width}b}"
+        nibbles = (bits[i:i + 4] for i in range(0, width, 4))
+        return f"0b{'_'.join(nibbles)}"
+
+    status_printed = False
+    for dcdc, record in dcdc_statuses.items():
+        msg = []
+        msg.append(f"{dcdc.get_name()} ({dcdc.get_model()}):")
+
+        if verbosity:
+            section_header = "global: "
+            for reg_name, set_bits in record.global_statuses_decoded.items():
+                if set_bits:
+                    formatted_val = _format_dcdc_val(reg_name, record.global_statuses.get(reg_name, 0))
+                    msg.append(section_header + f"[{reg_name}] {formatted_val} -> {', '.join(set_bits)}")
+                    section_header = " " * (len(section_header))
+
+            for rail_index, rail in enumerate(record.rail_statuses_decoded):
+                section_header = f"rail {rail_index}: "
+                for reg_name, set_bits in rail.items():
+                    if set_bits:
+                        formatted_val = _format_dcdc_val(reg_name, record.rail_statuses[rail_index].get(reg_name, 0))
+                        msg.append(section_header + f"[{reg_name}] {formatted_val} -> {', '.join(set_bits)}")
+                        section_header = " " * (len(section_header))
+        else:
+            global_statuses = [
+                f"[{name}] {_format_dcdc_val(name, val)}"
+                for name, val in record.global_statuses.items()
+            ]
+            if global_statuses:
+                msg.append(f"global: {', '.join(global_statuses)}")
+
+            for rail_index, rail in enumerate(record.rail_statuses):
+                rail_statuses = [f"[{name}] {_format_dcdc_val(name, val)}" for name, val in rail.items()]
+                if rail_statuses:
+                    msg.append(f"rail {rail_index}: {', '.join(rail_statuses)}")
+
+        if len(msg) > 1: # At least one status regsiter was displayed
+            for line in msg:
+                click.echo(line)
+            click.echo("")
+            status_printed = True
+
+    if status_printed == False:
+        click.echo("No active DCDC statuses found")
+
+
+@dcdc.command("read-statuses")
+@click.option("-v", "verbosity", flag_value=1, help="Show all active status bits with descriptions")
+def dcdc_read_statuses(verbosity: int) -> None:
+    """Reads status registers from all DCDC chips."""
+    check_root_privileges()
+
+    chassis = _get_chassis()
+    dcdc_statuses = {}
+    for dcdc_dev in chassis._dcdc_list:
+        dcdc_statuses[dcdc_dev] = dcdc_dev.read_statuses_via_debugfs()
+
+    _show_dcdc_statuses(verbosity, dcdc_statuses)
+
+
+if __name__ == "__main__":
+    blackbox()
