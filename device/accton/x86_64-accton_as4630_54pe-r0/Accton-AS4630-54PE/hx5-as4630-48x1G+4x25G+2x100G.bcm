@@ -1,4 +1,4 @@
-stable_size=76303168
+stable_size=0x5500000
 
 #polarity/lanemap is using TH2 style.
 core_clock_frequency=893
@@ -27,7 +27,19 @@ ifp_inports_support_enable=1
 #3x PM4x10Q (3 * 16 = 48 physical ports)
 #Doesn't support oversubscribe in Q mode
 #MCQ0
-port_gmii_mode_1=1 #Q mode 
+port_gmii_mode_1=1 #Q mode
+
+#riot vxlan
+#dport_map_direct=1
+flow_init_mode=1
+riot_enable=1
+riot_overlay_l3_intf_mem_size=4096
+riot_overlay_l3_egress_mem_size=8192
+l3_ecmp_levels=2
+riot_overlay_ecmp_resilient_hash_size=16384
+use_all_splithorizon_groups=1
+host_as_route_disable=1
+max_vp_lags=448
 
 #PHY4 U56 xx1, MDC/MDIO2, PHYADDR:0x00-0x07, 0x08
 port_phy_addr_1=0x40
