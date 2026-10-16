@@ -82,8 +82,12 @@ class PddfComponent(ComponentBase, DeviceBase):
             image_path: A string, path to firmware image
 
         Returns:
-            A string containing the component firmware update notification if required.
-            By default 'None' value will be used, which indicates that no actions are required
+            A string, "<TYPE> will be updated, please wait for completion!".
+            When post_flash_reboot is "cold", "warm" or "fast", the matching
+            reboot instruction is added.
+
+        Raises:
+            RuntimeError: post_flash_reboot has an unsupported value
         """
         type = self._get_attr("type").upper()
 
@@ -100,6 +104,7 @@ class PddfComponent(ComponentBase, DeviceBase):
             raise RuntimeError("Invalid post_flash_reboot value")
 
         msg = f"{type} will be updated, please wait for completion{action_msg}!"
+        return msg
 
     def get_firmware_version(self):
         """
