@@ -3,6 +3,7 @@ import utilities_common.cli as clicommon
 
 import ipaddress
 import string
+import unicodedata
 
 
 SUPPORTED_TYPE = ["binary", "boolean", "ipv4-address", "string", "uint8", "uint16", "uint32"]
@@ -60,6 +61,14 @@ def validate_name(value, name, forbidden=""):
     if any(char in value for char in forbidden):
         click.get_current_context().fail("{} must not contain {}".format(
             name, " or ".join("'{}'".format(char) for char in forbidden)))
+
+
+def validate_key_name(value, name, forbidden):
+    """Validate Config DB keys without normalizing their identity."""
+    validate_name(value, name, forbidden)
+    if any(unicodedata.category(char) in ("Cc", "Zs", "Zl", "Zp") for char in (value[0], value[-1])):
+        click.get_current_context().fail(
+            "{} must not have leading or trailing whitespace or control characters".format(name))
 
 
 def split_csv(value, name):
@@ -160,7 +169,7 @@ def resolve_port_alias(dbconn, alias):
 
 def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_overrides=None,
                            range_overrides=None):
-    validate_name(binding_name, "Binding name", "|")
+    validate_key_name(binding_name, "Binding name", "|")
     if not dbconn.exists("CONFIG_DB", "DHCP_SERVER_IPV4|" + dhcp_interface):
         click.get_current_context().fail("Interface {} is not a valid dhcp interface".format(dhcp_interface))
 
@@ -170,6 +179,7 @@ def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_ov
 
     conditions = {}
     for match_name in match_names:
+        validate_key_name(match_name, "Match name", "|,")
         match = get_match_entry(dbconn, match_name, match_overrides)
         match_type = match["type"]
         if match_type in conditions:
@@ -513,7 +523,7 @@ def dhcp_server_ipv4_match():
 @clicommon.pass_db
 def dhcp_server_ipv4_match_add(db, match_name, match_type, value):
     ctx = click.get_current_context()
-    validate_name(match_name, "Match name", "|,")
+    validate_key_name(match_name, "Match name", "|,")
     validate_name(value, "Match value")
     if match_type not in SUPPORTED_MATCH_TYPE:
         ctx.fail("Only match types {} are supported".format(", ".join(SUPPORTED_MATCH_TYPE)))
@@ -535,6 +545,7 @@ def dhcp_server_ipv4_match_add(db, match_name, match_type, value):
 @clicommon.pass_db
 def dhcp_server_ipv4_match_update(db, match_name, match_type, value):
     ctx = click.get_current_context()
+    validate_key_name(match_name, "Match name", "|,")
     dbconn = db.db
     key = "DHCP_SERVER_IPV4_MATCH|" + match_name
     if not dbconn.exists("CONFIG_DB", key):
@@ -607,7 +618,7 @@ def dhcp_server_ipv4_binding():
 def dhcp_server_ipv4_binding_add(db, dhcp_interface, binding_name, match_list, range_, ip_list):
     ctx = click.get_current_context()
     dbconn = db.db
-    validate_name(binding_name, "Binding name", "|")
+    validate_key_name(binding_name, "Binding name", "|")
 
     entry = {"matches@": build_match_field(match_list, binding_name)}
     entry.update(build_pool_fields(range_, ip_list))
