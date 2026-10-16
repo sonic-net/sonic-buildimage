@@ -1545,6 +1545,76 @@
             }
         }
     },
+    "ACL_RULE_WITH_VALID_POLICER_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "POLICER_ACTION": "test_policer",
+                        "PRIORITY": 9999,
+                        "RULE_NAME": "Rule_20",
+                        "SRC_IP": "10.0.0.1/32"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "policy_desc": "DATAACL",
+                        "ports": [
+                            ""
+                        ],
+                        "stage": "ingress",
+                        "type": "L3"
+                    }
+                ]
+            }
+        },
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [
+                    {
+                        "name": "test_policer",
+                        "meter_type": "packets",
+                        "mode": "sr_tcm",
+                        "cir": "5000",
+                        "cbs": "5000",
+                        "red_packet_action": "drop"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WITH_INVALID_POLICER_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "POLICER_ACTION": "non_existent_policer",
+                        "PRIORITY": 9999,
+                        "RULE_NAME": "Rule_20",
+                        "SRC_IP": "10.0.0.1/32"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "policy_desc": "DATAACL",
+                        "ports": [
+                            ""
+                        ],
+                        "stage": "ingress",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
     "ACL_RULE_VALID_TCP_FLAGS": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
