@@ -27,16 +27,27 @@ fi
 # Step 2: Create gadget configuration
 GADGET_DIR="/sys/kernel/config/usb_gadget/${GADGET_NAME}"
 
-# Remove existing gadget if present
+# Remove existing gadget if present. configfs cannot be removed with "rm -rf":
+# entries must go in reverse creation order (unbind the UDC, unlink the
+# function from the config, rmdir the leaves, then the gadget directory),
+# otherwise the removal fails silently and the gadget is never recreated.
 if [ -d "${GADGET_DIR}" ]; then
     logger -t usb-network "Removing existing gadget configuration..."
     # Disable gadget first
     if [ -f "${GADGET_DIR}/UDC" ]; then
         echo "" > "${GADGET_DIR}/UDC" 2>/dev/null || true
     fi
-    # Remove gadget directory and all contents
-    rm -rf "${GADGET_DIR}" 2>/dev/null || true
+    rm -f "${GADGET_DIR}/configs/c.1/${FUNCTION_TYPE}.${INTERFACE_NAME}"
+    rmdir "${GADGET_DIR}/configs/c.1/strings/0x409" "${GADGET_DIR}/configs/c.1" \
+          "${GADGET_DIR}/functions/${FUNCTION_TYPE}.${INTERFACE_NAME}" \
+          "${GADGET_DIR}/strings/0x409" 2>/dev/null || true
+    rmdir "${GADGET_DIR}" || true
 fi
+
+# Removing the gadget deletes the interface, and systemd then stops
+# ifup@bmc0.service (it is bound to the device unit). Wait for that ifdown
+# to finish so it does not hit the interface created below. No-op at boot.
+systemctl stop "ifup@${INTERFACE_NAME}.service" 2>/dev/null || true
 
 # Create new gadget
 logger -t usb-network "Creating USB gadget configuration..."
@@ -101,7 +112,6 @@ fi
 
 # Step 6: Configure network interface
 logger -t usb-network "Configuring network interface..."
-ip addr flush dev "${INTERFACE_NAME}" 2>/dev/null || true
 
 # Bring interface up (required for IPv6)
 ip link set "${INTERFACE_NAME}" up
@@ -112,8 +122,11 @@ sysctl -w net.ipv6.conf.${INTERFACE_NAME}.disable_ipv6=0 2>/dev/null || true
 # Step 6b: IP address configuration handled by /etc/network/interfaces
 # The interface configuration is managed through sonic-cfggen and interfaces.j2 template
 # which reads from bmc.json (DEVICE_METADATA['bmc']) and generates /etc/network/interfaces
-# This approach ensures consistent network configuration management across SONiC
-logger -t usb-network "IP configuration will be applied by networking.service from /etc/network/interfaces"
+# This approach ensures consistent network configuration management across SONiC.
+# The address is applied by networking.service (ifup -a) at boot and by
+# ifup@bmc0.service, pulled in by the udev rule in 70-usb-network.rules, whenever
+# the interface re-enumerates.
+logger -t usb-network "IP configuration will be applied by networking.service or ifup@${INTERFACE_NAME}.service from /etc/network/interfaces"
 
 # Wait a moment for interface to stabilize
 sleep 1
