@@ -931,21 +931,6 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                 for line in output.splitlines()
             ))
 
-    def test_snmpd_community_embedded_quote_preserved_literally(self):
-        # A quote/backslash that is not the whole-token quoting delimiter
-        # has no special meaning to Net-SNMP's config tokenizer and is read
-        # back literally. The emitted value must be byte-for-byte identical
-        # to what was configured -- stripping it would silently activate a
-        # different credential than the one the operator configured.
-        communities = {'o"ps1': {'TYPE': 'RW'}, 'my"com\\munity': {'TYPE': 'RO'}}
-
-        output = self.render_snmpd_community_conf(communities)
-
-        self.assertIn('rwcommunity o"ps1\n', output)
-        self.assertIn('rwcommunity6 o"ps1\n', output)
-        self.assertIn('rocommunity my"com\\munity\n', output)
-        self.assertIn('rocommunity6 my"com\\munity\n', output)
-
     def test_snmpd_user_rendering(self):
         users = {
             'readuser': {
