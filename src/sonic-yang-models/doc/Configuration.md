@@ -1304,6 +1304,11 @@ option 60) sent by the client.
  hostname and ingress interface, and the runtime expands the configured port alias,
  aliasless port name, or PortChannel name before comparing it. A value naming no
  existing interface is rejected because it could never match a packet.
+ The value must resolve to exactly one interface across the switch. A value shared
+ by multiple port aliases, or colliding with an aliasless port name or a PortChannel
+ name, is rejected as ambiguous. This does not impose global uniqueness on port
+ aliases: duplicate aliases remain permitted when no `circuit_id` condition uses
+ the ambiguous value. This check does not apply to `option60` values.
 
 **DHCP_SERVER_IPV4_BINDING** associates one or more match conditions with the addresses to
 hand out when they all match.

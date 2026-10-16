@@ -327,6 +327,13 @@ module sonic-dhcp-server-ipv4 {
                         error-message "circuit_id value must match an existing port alias, an aliasless port name, or a PortChannel name";
                         error-app-tag circuit-id-unknown-port;
                     }
+                    must "not(../type = 'circuit_id') or count(" +
+                         "/port:sonic-port/port:PORT/port:PORT_LIST[port:alias = current()] | " +
+                         "/port:sonic-port/port:PORT/port:PORT_LIST[port:name = current() and not(port:alias)] | " +
+                         "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST[lag:name = current()]) <= 1" {
+                        error-message "circuit_id value must not resolve to multiple interfaces";
+                        error-app-tag circuit-id-ambiguous-port;
+                    }
                 }
             }
             /* end of DHCP_SERVER_IPV4_MATCH_LIST */
