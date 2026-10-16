@@ -119,6 +119,30 @@ def test_main_swss_no_container(mock_time, mock_os_kill):
     mock_os_kill.assert_not_called()
 
 
+@mock.patch.dict(os.environ, {"S6_SUPERVISED": "1"})
+def test_supervisor_pid_under_s6():
+    # Gated by S6_SUPERVISED: when PID 1 is s6-svscan the container is
+    # stopped through PID 1.
+    with mock.patch("builtins.open", mock.mock_open(read_data="s6-svscan\n")):
+        assert supervisor_pid() == 1
+
+
+@mock.patch.dict(os.environ, {"S6_SUPERVISED": "1"})
+def test_supervisor_pid_s6_gate_pid_host_fallback():
+    # Gated, but PID 1 is not s6-svscan (--pid=host fallback): the parent is
+    # signalled.
+    with mock.patch("builtins.open", mock.mock_open(read_data="systemd\n")):
+        assert supervisor_pid() == os.getppid()
+
+
+def test_supervisor_pid_under_supervisord():
+    # Default path (no S6_SUPERVISED): the parent is signalled exactly as
+    # before, and /proc/1/comm is not even read.
+    os.environ.pop("S6_SUPERVISED", None)
+    with mock.patch("builtins.open", side_effect=AssertionError("default path must not read /proc")):
+        assert supervisor_pid() == os.getppid()
+
+
 @mock.patch('supervisor_proc_exit_listener.swsscommon.ConfigDBConnector', ConfigDBConnector)
 @mock.patch('supervisor_proc_exit_listener.os.kill')
 @mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic"})

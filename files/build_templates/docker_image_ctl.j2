@@ -332,10 +332,19 @@ function postStartAction()
         # database will try to access to all other instance database-config.json. If other instance
         # database-config.json files are not ready yet, it will generate the sonic-db-cli core files.
 	waitForAllInstanceDatabaseConfigJsonFilesReady
+{%- if DOCKER_PROCESS_MANAGER is defined and DOCKER_PROCESS_MANAGER == 's6' %}
+        # Under s6 the container init is s6-svscan, not supervisord; a
+        # successful redis PING already proves the service came up.
+        until [[ ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
+                 ($(docker exec -i database$DEV sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do
+          sleep 1;
+        done
+{%- else %}
         until [[ ($(docker exec -i database$DEV pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
                  ($(docker exec -i database$DEV sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do
           sleep 1;
         done
+{%- endif %}
 
         if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast") && -f $WARM_DIR/dump.rdb ]]; then
             # retain the dump file from last boot for debugging purposes
@@ -407,10 +416,16 @@ function postStartAction()
         chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
+{%- if DOCKER_PROCESS_MANAGER is defined and DOCKER_PROCESS_MANAGER == 's6' %}
+        until [[ ($(docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; do
+           sleep 1
+        done
+{%- else %}
         until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
                  ($(docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; do
            sleep 1
         done
+{%- endif %}
         if [[ -n "$lag_id_start" && -n "$lag_id_end" ]]; then
            setPlatformLagIdBoundaries
         fi

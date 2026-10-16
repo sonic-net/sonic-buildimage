@@ -68,7 +68,43 @@ RUN pip3 install jinjanator
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
 RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
+{% if DOCKER_PROCESS_MANAGER is defined and DOCKER_PROCESS_MANAGER == 's6' %}
+# Install the s6-overlay init and service manager.
+#
+# The /usr/local/bin/supervisord entrypoint is replaced by a wrapper that
+# converts the supervisord program definitions under /etc/supervisor/conf.d
+# into s6-rc services (s6/create_s6_config.py) and then execs the s6-overlay
+# /init as the container's PID 1. Containers that cannot run s6-overlay
+# (started with --pid=host, where the entrypoint is not PID 1) fall back to
+# the real supervisord, which is why supervisord and its dependent-startup
+# plugin stay installed above.
+ARG S6_OVERLAY_VERSION=3.2.1.0
 
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
+RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz
+
+{% if CONFIGURED_ARCH == "armhf" %}
+ARG S6_ARCH=armhf
+{% elif CONFIGURED_ARCH == "arm64" %}
+ARG S6_ARCH=aarch64
+{% else %}
+ARG S6_ARCH=x86_64
+{% endif %}
+
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz /tmp
+RUN tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
+    rm -f /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-${S6_ARCH}.tar.xz
+
+# Stop the container when stage 2 (service startup) fails
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=1
+ENV S6_VERBOSITY=2
+ENV S6_LOGGING=2
+
+COPY ["s6/create_s6_config.py", "/usr/bin/create_s6_config.py"]
+COPY ["s6/supervisord", "s6/supervisorctl", "/usr/local/bin/"]
+COPY ["s6/rsyslog-s6.conf", "/etc/rsyslog.d/s6.conf"]
+RUN chmod a+x /usr/bin/create_s6_config.py /usr/local/bin/supervisord /usr/local/bin/supervisorctl
+{% endif %}
 # Uninstall unused dependencies
 RUN apt autoremove -y --purge
 

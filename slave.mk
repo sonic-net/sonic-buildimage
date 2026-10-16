@@ -172,6 +172,13 @@ ifneq ($(strip $(SONIC_EXTRA_EXPORT_VARS)),)
 export $(SONIC_EXTRA_EXPORT_VARS)
 endif
 
+# Process manager (container init) used inside the SONiC dockers. Exported so
+# the Dockerfile.j2 and docker_image_ctl.j2 renders can condition on it.
+ifeq ($(filter supervisord s6,$(DOCKER_PROCESS_MANAGER)),)
+$(error DOCKER_PROCESS_MANAGER must be 'supervisord' or 's6', not '$(DOCKER_PROCESS_MANAGER)')
+endif
+export DOCKER_PROCESS_MANAGER
+
 
 ###############################################################################
 ## Version control related exports
@@ -556,6 +563,7 @@ $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
 $(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
 $(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
+$(info "DOCKER_PROCESS_MANAGER"          : "$(DOCKER_PROCESS_MANAGER)")
 $(info "ENABLE_SBOM"                     : "$(ENABLE_SBOM)")
 $(info "SBOM_FORMAT"                     : "$(SBOM_FORMAT)")
 $(info "SBOM_SCAN_TOOL"                  : "$(SBOM_SCAN_TOOL)")
