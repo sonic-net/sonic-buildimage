@@ -1,0 +1,30 @@
+{
+    "PLATFORM":
+    {
+        "std_perm_kos":
+        [
+
+        ],
+        "std_kos":
+        [
+
+        ],
+        "pddf_kos":
+        [
+
+        ],
+        "custom_kos":
+        [
+        ]
+    },
+    "SYSTEM":
+    {
+    },
+    "SMBUS0":
+    {
+    },
+    "EEPROM1":
+    {
+    }
+}
+

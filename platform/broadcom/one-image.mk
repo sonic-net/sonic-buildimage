@@ -62,6 +62,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(CEL_SEASTONE2_PLATFORM_MODULE) \
                                $(CEL_DS3000_PLATFORM_MODULE) \
                                $(CEL_DS1000_PLATFORM_MODULE) \
+			       $(CEL_DS6000_PLATFORM_MODULE) \
+			       $(CEL_DS6001_PLATFORM_MODULE) \
                                $(CEL_QUESTONE2_PLATFORM_MODULE) \
                                $(CEL_SILVERSTONE_V2_PLATFORM_MODULE) \
                                $(CEL_DS2000_PLATFORM_MODULE) \
