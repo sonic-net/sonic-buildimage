@@ -1,0 +1,19 @@
+[Unit]
+Description=mega container (mega - auto-generated)
+Requires=database.service config-setup.service
+After=database.service config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=0
+
+[Service]
+User=root
+Environment=sonic_asic_platform={{ sonic_asic_platform }}
+ExecStartPre=/usr/local/bin/mega.sh start
+ExecStart=/usr/local/bin/mega.sh wait
+ExecStop=/usr/local/bin/mega.sh stop
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=sonic.target

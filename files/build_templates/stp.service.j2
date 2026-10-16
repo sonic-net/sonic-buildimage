@@ -1,7 +1,7 @@
 [Unit]
 Description=STP container
-Requires=updategraph.service swss.service
-After=updategraph.service swss.service syncd.service
+Requires=updategraph.service mega.service
+After=updategraph.service mega.service syncd.service
 Before=ntp-config.service
 BindsTo=sonic.target
 After=sonic.target
