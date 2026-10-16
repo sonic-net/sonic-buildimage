@@ -28,6 +28,11 @@ module sonic-interface {
 
 	description "Physical Ethernet interface L3 configuration including IP addressing, VRF binding, and NAT zones";
 
+	revision 2026-05-21 {
+		description "Add send_redirects leaf to control ICMP redirects on physical interfaces";
+	}
+
+
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
 	}
@@ -101,6 +106,11 @@ module sonic-interface {
 				leaf mac_addr {
 					description "Assign administrator-provided MAC address to Interface";
 					type yang:mac-address;
+				}
+
+				leaf send_redirects {
+					description "Enable/disable ICMP redirects for the physical interface";
+					type boolean;
 				}
 
                 leaf loopback_action {

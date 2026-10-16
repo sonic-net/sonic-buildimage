@@ -18,6 +18,10 @@ module sonic-telemetry_client {
     description
         "TELEMETRY_CLIENT yang Module for SONiC OS";
 
+    revision 2026-07-21 {
+        description
+            "Add OC_YANG path_target for OpenConfig YANG subscriptions.";
+    }
     revision 2023-01-12 {
         description
             "First revision";
@@ -32,12 +36,13 @@ module sonic-telemetry_client {
         }
     }
     typedef path_target {
-        description "SONiC database target for telemetry subscriptions.";
+        description "SONiC database or OpenConfig YANG target for telemetry subscriptions.";
         type enumeration {
             enum APPL_DB;
             enum CONFIG_DB;
             enum COUNTERS_DB;
             enum STATE_DB;
+            enum OC_YANG;
             enum OTHERS;
         }
     }
@@ -120,7 +125,7 @@ module sonic-telemetry_client {
 
                 leaf path_target {
                     type path_target;
-                    description "Target database to subscribe to.";
+                    description "Target database to subscribe to. OC_YANG selects OpenConfig YANG paths.";
                 }
 
                 leaf paths {
