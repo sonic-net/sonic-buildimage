@@ -120,17 +120,45 @@ class PddfComponent(ComponentBase, DeviceBase):
 
     def get_available_firmware_version(self, image_path):
         """
-        Retrieves the available firmware version of the component
+        Retrieves the available (target) firmware version of the component.
 
-        Note: the firmware version will be read from image
+        Resolution order:
+          1. If the component defines an "available_version" command in
+             pddf-device.json, run it and return its output. This lets a
+             platform compute the target version at runtime instead of
+             hard-coding a static "version" in platform_components.json -- for
+             example a slot that may hold parts from different vendors/variants,
+             each with its own target firmware version. If the command string
+             contains "{}", it is formatted with image_path (the component's
+             "firmware" value), mirroring how the "update" command works.
+          2. Otherwise return "Unknown" (the historical default), so existing
+             platforms that do not define the command are unaffected.
+
+        Note: fwutil only calls this when a component omits the static "version"
+        key in platform_components.json.
 
         Args:
-            image_path: A string, path to firmware image
+            image_path: A string, path to firmware image / firmware directory.
 
         Returns:
-            A string containing the available firmware version of the component
+            A string containing the available firmware version, or "Unknown".
         """
-        # Used only if "version" is not in platform_components.json
+        available_version_cmd = self._get_cmd("available_version")
+        if available_version_cmd is not None:
+            try:
+                if "{}" in available_version_cmd and image_path is not None:
+                    available_version_cmd = available_version_cmd.format(image_path)
+                result = self.pddf_obj.get_cmd_output(available_version_cmd)
+                if getattr(result, "returncode", 1) == 0:
+                    output = result.stdout.decode("utf-8").strip()
+                    if output:
+                        return output
+            except Exception:
+                # Never let a platform helper break fwutil status rendering;
+                # fall through to the default below.
+                pass
+
+        # Default: version is read from the image by the platform, or unknown.
         return "Unknown"
 
     def _install_firmware(self, image_path):
