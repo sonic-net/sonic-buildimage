@@ -48,6 +48,7 @@ __all__ = [
     "GLOBALINITPARAM_PRE",
     "GLOBALINITCOMMAND_PRE",
     "SET_MAC_CONF",
+    "MGMT_LED_CONFIG",
     "DRVIER_UPDATE_CONF",
     "MONITOR_CONST",
     "PSU_FAN_FOLLOW",
@@ -161,6 +162,9 @@ GLOBALINITCOMMAND_PRE = module_product.INIT_COMMAND_PRE
 
 # Set eth mac address parameters
 SET_MAC_CONF = module_product.SET_MAC_CONF
+
+# mgmt led config parameters
+MGMT_LED_CONFIG = module_product.MGMT_LED_CONFIG
 
 # driver update config
 DRVIER_UPDATE_CONF = module_product.DRVIER_UPDATE_CONF

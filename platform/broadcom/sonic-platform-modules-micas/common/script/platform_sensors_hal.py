@@ -232,11 +232,11 @@ class Platoform_sensor_hal(object):
                 monitor_one_sensor_dict = OrderedDict()
                 monitor_one_sensor_dict['id'] = sensor_key
                 try:
-                    monitor_one_sensor_dict['dcdc_input'] = float(sensor_info["Value"]) / 1000
+                    monitor_one_sensor_dict['dcdc_input'] = float(sensor_info["Value"])
                     monitor_one_sensor_dict['dcdc_unit'] = sensor_info["Unit"]
-                    monitor_one_sensor_dict['dcdc_min'] = float(sensor_info["Min"]) / 1000
+                    monitor_one_sensor_dict['dcdc_min'] = float(sensor_info["Min"])
                     monitor_one_sensor_dict['dcdc_unit'] = sensor_info["Unit"]
-                    monitor_one_sensor_dict['dcdc_max'] = float(sensor_info["Max"]) / 1000
+                    monitor_one_sensor_dict['dcdc_max'] = float(sensor_info["Max"])
                     monitor_one_sensor_dict['dcdc_unit'] = sensor_info["Unit"]
                     monitor_one_sensor_dict["status"] = sensor_info["Status"]
                 except Exception:
