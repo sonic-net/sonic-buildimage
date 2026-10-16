@@ -287,6 +287,11 @@ module sonic-dhcp-server-ipv4 {
                         pattern "[^|,]*" {
                             error-message "Match condition name must not contain '|' or ','";
                         }
+                        /* Config DB keys must retain their identity during conversion.
+                           Cover Unicode separators as well as ASCII whitespace. */
+                        pattern '[^\p{Z}\p{Cc}]([\s\S]*[^\p{Z}\p{Cc}])?' {
+                            error-message "Match condition name must not have leading or trailing whitespace or control characters";
+                        }
                     }
                 }
 
@@ -355,6 +360,9 @@ module sonic-dhcp-server-ipv4 {
                            key separator and cannot appear inside a key value. */
                         pattern "[^|]*" {
                             error-message "DHCP binding name must not contain '|'";
+                        }
+                        pattern '[^\p{Z}\p{Cc}]([\s\S]*[^\p{Z}\p{Cc}])?' {
+                            error-message "DHCP binding name must not have leading or trailing whitespace or control characters";
                         }
                     }
                 }

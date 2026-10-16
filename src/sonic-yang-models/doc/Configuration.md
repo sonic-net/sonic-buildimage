@@ -1292,7 +1292,7 @@ change.
 
 | Field | Description |
 | ----- | ----------- |
-| name  | Key. User-defined name of the condition. Must not contain `\|` or `,`: these are the Config DB key separator and leaf-list separator respectively, so a name containing either cannot be referenced from **DHCP_SERVER_IPV4_BINDING**. |
+| name  | Key. User-defined name of the condition. Must not start or end with whitespace or control characters. Must not contain `\|` or `,`: these are the Config DB key separator and leaf-list separator respectively, so a name containing either cannot be referenced from **DHCP_SERVER_IPV4_BINDING**. |
 | type  | Packet field to match: `circuit_id` or `option60`. |
 | value | The exact value to match. |
 
@@ -1311,7 +1311,7 @@ hand out when they all match.
 | Field   | Description |
 | ------- | ----------- |
 | name    | Key, first part. DHCP interface, referencing **DHCP_SERVER_IPV4**. |
-| binding | Key, second part. User-defined name of the binding. |
+| binding | Key, second part. User-defined name of the binding. Must not start or end with whitespace or control characters, or contain `\|` (the Config DB key separator). |
 | matches | One or more **DHCP_SERVER_IPV4_MATCH** names, combined with logical AND. At most one condition per `type`. |
 | ips     | Assigned IPv4 addresses. Mutually exclusive with `ranges`. |
 | ranges  | Named **DHCP_SERVER_IPV4_RANGE** entries. Mutually exclusive with `ips`. |
