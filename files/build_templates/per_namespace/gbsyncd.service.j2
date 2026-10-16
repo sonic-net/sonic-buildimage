@@ -2,7 +2,11 @@
 [Unit]
 Description={{docker_container_name}} service
 Requires=database{% if use_instance_deps %}@%i{% endif %}.service config-setup.service
+{# ConditionPathExists=!...: gbsyncd does not start when gearbox_config.json exists (gearbox handled by gearsyncd in syncd). #}
+{# Platforms with a separate gbsyncd for external PHY omit this line when gearbox_config.json is present (see if below). #}
+{% if sonic_asic_platform != 'marvell-prestera' %}
 ConditionPathExists=!/usr/share/sonic/hwsku/gearbox_config.json
+{% endif %}
 After=database{% if use_instance_deps %}@%i{% endif %}.service config-setup.service
 After=interfaces-config.service
 After=swss{% if use_instance_deps %}@%i{% endif %}.service
