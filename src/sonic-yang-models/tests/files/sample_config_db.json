@@ -2139,8 +2139,9 @@
                 "enabled": "true",
                 "hello_time": "12",
                 "multiplier": "5",
-                "supp_mgmt_address_tlv": "true",
+                "supp_mgmt_address_tlv": "false",
                 "supp_system_capabilities_tlv": "false",
+                "mgmt_addr_interface": "Loopback0",
                 "system_name": "sonic",
                 "system_description": "sonic-system"
             }
