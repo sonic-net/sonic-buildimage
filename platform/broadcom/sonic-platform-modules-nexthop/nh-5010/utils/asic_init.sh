@@ -41,6 +41,13 @@ komodo_fpga_read() {
   fi
 }
 
+function cleanup() {
+  # --end before the unlock, or a queued run's rows get deleted by ours.
+  nh_asic_powercycle --end
+  /usr/bin/flock -u ${LOCKFD}
+  logger -t $LOG_TAG "Released ${LOCKFILE}"
+}
+
 function acquire_lock() {
   if [[ ! -f $LOCKFILE ]]; then
     touch $LOCKFILE
@@ -50,14 +57,9 @@ function acquire_lock() {
 
   exec {LOCKFD}>${LOCKFILE}
   /usr/bin/flock -x ${LOCKFD}
-  trap "/usr/bin/flock -u ${LOCKFD}" EXIT
+  trap cleanup EXIT
 
   logger -t $LOG_TAG "Acquired ${LOCKFILE}"
-}
-
-function release_lock() {
-  /usr/bin/flock -u ${LOCKFD}
-  logger -t $LOG_TAG "Released ${LOCKFILE}"
 }
 
 function enable_phy() {
@@ -179,6 +181,9 @@ check_fan_status
 
 acquire_lock
 
+# The ASIC is down from here until cleanup runs.
+LOG_TAG="$LOG_TAG" nh_asic_powercycle --begin
+
 if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
   logger -t $LOG_TAG -p $LOG_PRIO "Removing ASIC modules"
   /etc/init.d/opennsl-modules stop
@@ -212,7 +217,5 @@ if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
   /etc/init.d/opennsl-modules start
   logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
 fi
-
-release_lock
 
 exit 0
