@@ -3476,6 +3476,7 @@ int iccp_mclagsyncd_msg_handler(struct System *sys)
                 ICCPD_LOG_NOTICE("ICCP_FSM", "received %d pending bytes", len);
                 recv_len += len;
             }
+            num_bytes_rxed += recv_len;
         }
 
         msg_hdr = (struct IccpSyncdHDr *)(&msg_buf[pos]);
