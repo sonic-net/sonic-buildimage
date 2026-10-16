@@ -1,0 +1,10 @@
+Package: sonic-firebreak
+Version: 1.4
+Section: net
+Priority: optional
+Architecture: all
+Maintainer: Upscale AI <akrishna@upscaleai.com>
+Depends: python3
+Description: FIREBREAK host Redis ACL proxy and egress gate
+ Host daemon that applies per-container Redis ACL users, Unix proxies,
+ and cgroup egress policy for Tier-A SONiC containers.

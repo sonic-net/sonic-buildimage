@@ -307,6 +307,9 @@ install_deb_package $debs_path/sonic-host-services-data_*.deb
 install_deb_package $debs_path/sonic-ztp_*.deb
 {% endif %}
 
+# Install FIREBREAK into the host rootfs
+install_deb_package $debs_path/sonic-firebreak_1.4_all.deb
+
 {% for machine_debs in lazy_build_installer_debs.strip().split() -%}
 {% set machine, pkgname = machine_debs.split('|') %}
 if [[ -z "{{machine}}" || -n "{{machine}}" && $TARGET_MACHINE == "{{machine}}" ]]; then
