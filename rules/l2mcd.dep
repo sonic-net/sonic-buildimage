@@ -1,0 +1,14 @@
+
+SPATH       := $($(L2MCD)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/l2mcd.mk rules/l2mcd.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+SMDEP_SPATH   := $(SPATH)/sonic-l2mcd
+SMDEP_FILES := $(addprefix $(SMDEP_SPATH)/,$(shell cd $(SMDEP_SPATH) && git ls-files))
+$(L2MCD)_SMDEP_FILES := $(SMDEP_FILES)
+$(L2MCD)_SMDEP_PATHS := $(SMDEP_SPATH)
+
+$(L2MCD)_CACHE_MODE  := GIT_CONTENT_SHA
+$(L2MCD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(L2MCD)_DEP_FILES   := $(DEP_FILES)
