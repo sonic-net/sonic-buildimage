@@ -151,6 +151,7 @@ logger.log_notice(f"gnmi source set to {_GNMI_SRC}")
 # post-copy action (systemctl restart gnmi) would fail with "No such file or
 # directory".
 SYNC_ITEMS: List[SyncItem] = [
+    SyncItem("/usr/local/yang-models/sonic-grpc-authz.yang", "/usr/local/yang-models/sonic-grpc-authz.yang", mode=0o644),
     SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-gnmi-sidecar/k8s_pod_control.sh"),
     SyncItem(_GNMI_SRC, "/usr/local/bin/gnmi.sh"),
 ]
