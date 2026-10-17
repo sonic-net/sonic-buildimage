@@ -44,6 +44,20 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data['BMP'] = {}
         self.test_data['BMP']['table'] = {'bgp_neighbor_table': 'false', 'bgp_rib_in_table': 'false', 'bgp_rib_out_table': 'false'}
 
+    def test_database_connectors_use_unix_sockets(self):
+        MockConfigDb.set_config_db(self.test_data)
+
+        daemon = bmpcfgd.BMPCfgDaemon()
+
+        self.assertEqual(daemon.state_db_conn.init_args, ())
+        self.assertEqual(daemon.state_db_conn.init_kwargs, {'use_unix_socket_path': True})
+        self.assertEqual(daemon.state_db_conn.connected_db, bmpcfgd.BMP_STATE_DB)
+        self.assertEqual(daemon.config_db.init_kwargs, {'use_unix_socket_path': True})
+        self.assertEqual(daemon.config_db.connect_kwargs, {
+            'wait_for_init': True,
+            'retry_on': True,
+        })
+
     @mock.patch('subprocess.call')
     @mock.patch('bmpcfgd.BMPCfg.log_info')
     def test_bmpcfgd_neighbor_enable(self, mock_call, mock_log_info):
