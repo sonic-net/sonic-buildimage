@@ -4,7 +4,6 @@ import os
 import subprocess
 import time
 from sonic_py_common.logger import Logger
-from sonic_py_common import daemon_base
 from swsscommon import swsscommon
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig
 from sonic_py_common import multi_asic
@@ -15,12 +14,24 @@ logger.log_info("Starting DHCP DoS logger...")
 
 # Cache the multi-ASIC check result at startup
 is_multi_asic = multi_asic.is_multi_asic()
+port_namespace_map = {}
 
 if is_multi_asic:
     SonicDBConfig.initializeGlobalConfig()
-    ports_table = multi_asic.get_table('PORT')
+    ports_table = {}
+    for namespace in multi_asic.get_namespace_list():
+        config_db = ConfigDBConnector(
+            use_unix_socket_path=True,
+            namespace=namespace,
+        )
+        config_db.connect()
+        namespace_ports = config_db.get_table('PORT')
+        ports_table.update(namespace_ports)
+        port_namespace_map.update(
+            {port: namespace for port in namespace_ports}
+        )
 else:
-    config_db = ConfigDBConnector()
+    config_db = ConfigDBConnector(use_unix_socket_path=True)
     config_db.connect()
     ports_table = config_db.get_table('PORT')
 
@@ -29,10 +40,7 @@ drop_pkts = {port: 0 for port in ports_table}
 
 #Get Linux network namespace for a port
 def get_port_namespace(port):
-    try:
-        return multi_asic.get_namespace_for_port(port)
-    except Exception:
-        return None
+    return port_namespace_map.get(port)
 
 #Check if interface exists for a port in the namespace
 def interface_exists(ifname, namespace=None):
@@ -86,7 +94,10 @@ def wait_for_port_init_done():
         None (blocks until PortInitDone is received or timeout occurs)
     """
     MAX_WAIT_SECONDS = 300
-    appl_db = daemon_base.db_connect("APPL_DB")
+    # APPL_DB is hosted by the local Redis instance. Keep this call site
+    # explicit because daemon_base.db_connect() must also support named,
+    # remote databases such as CHASSIS_STATE_DB.
+    appl_db = swsscommon.DBConnector("APPL_DB", 0, False)
 
     sel = swsscommon.Select()
     sst = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
