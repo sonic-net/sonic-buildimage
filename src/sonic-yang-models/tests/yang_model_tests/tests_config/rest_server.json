@@ -1,0 +1,34 @@
+{
+    "REST_SERVER_TABLE_WITH_VALID_CONFIG": {
+        "sonic-rest-server:sonic-rest-server": {
+            "sonic-rest-server:REST_SERVER": {
+                "default": {
+                    "port": 443,
+                    "client_auth": "user",
+                    "log_level": 2,
+                    "server_crt": "/etc/sonic/credentials/restserver.crt",
+                    "server_key": "/etc/sonic/credentials/restserver.key",
+                    "ca_crt": "/etc/sonic/credentials/restca.crt"
+                }
+            }
+        }
+    },
+    "REST_SERVER_TABLE_WITH_INVALID_CLIENT_AUTH": {
+        "sonic-rest-server:sonic-rest-server": {
+            "sonic-rest-server:REST_SERVER": {
+                "default": {
+                    "client_auth": "invalid"
+                }
+            }
+        }
+    },
+    "REST_SERVER_TABLE_WITH_INVALID_PORT": {
+        "sonic-rest-server:sonic-rest-server": {
+            "sonic-rest-server:REST_SERVER": {
+                "default": {
+                    "port": 70000
+                }
+            }
+        }
+    }
+}
