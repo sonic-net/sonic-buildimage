@@ -202,8 +202,12 @@ class SonicYangExtMixin(SonicYangPathMixin):
             raise Exception("Value not found for {} in {}".format(keys, tableKey))
         # create the keyDict
         keyDict = dict()
+        # Let these new schemas validate the original keys. Trimming first hides
+        # forbidden whitespace and can change references or collapse distinct keys.
+        preserve_key = self.elementPath and self.elementPath[0] in (
+            "DHCP_SERVER_IPV4_MATCH", "DHCP_SERVER_IPV4_BINDING")
         for i in range(len(keyList)):
-            keyDict[keyList[i]] = value[i].strip()
+            keyDict[keyList[i]] = value[i] if preserve_key else value[i].strip()
 
         return keyDict
 
