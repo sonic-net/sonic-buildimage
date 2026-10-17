@@ -29,17 +29,17 @@ class Thermal(ThermalBase):
         self._api_helper = APIHelper()
         self.index = thermal_index
         self.THERMAL_LIST = [
-            ('CPU_Temp',        'CPU Temperature Sensor',                     '0x01'),
-            ('PCH_Temp',        'PCH Temperature Sensor',                     '0x0a'),
-            ('System_Temp',     'System Temperature Sensor',                  '0x0b'),
-            ('Peripheral_Temp', 'Peripheral Temperature Sensor',              '0x0c'),
-            ('Switch_Top-1',    'Switchboard Left Inlet Temperature Sensor',  '0xb4'),
-            ('Switch_Buttom-1', 'Switchboard Left Outlet Temperature Sensor', '0xb5'),
-            ('Switch_Top-2',    'Switchboard Right Inlet Temperature Sensor', '0xb6'),
-            ('Switch_Buttom-2', 'Switchboard Right Outlet Temperature Sensor','0xb7'),
-            ('Switch_Temp',     'Switch Temperature Sensor',                  '0xb8'),
+            ('CPU_Temp',        'CPU Temperature Sensor',                     '0x01', 'CPU Temp'        ),
+            ('PCH_Temp',        'PCH Temperature Sensor',                     '0x0a', 'PCH Temp'        ),
+            ('System_Temp',     'System Temperature Sensor',                  '0x0b', 'System Temp'     ),
+            ('Peripheral_Temp', 'Peripheral Temperature Sensor',              '0x0c', 'Peripheral Temp' ),
+            ('Switch_Top-1',    'Switchboard Left Inlet Temperature Sensor',  '0xb4', 'Switch Top-1'    ),
+            ('Switch_Bottom-1', 'Switchboard Left Outlet Temperature Sensor', '0xb5', 'Switch Bottom-1' ),
+            ('Switch_Top-2',    'Switchboard Right Inlet Temperature Sensor', '0xb6', 'Switch Top-2'    ),
+            ('Switch_Bottom-2', 'Switchboard Right Outlet Temperature Sensor','0xb7', 'Switch Bottom-2' ),
+            ('Switch_Temp',     'Switch Temperature Sensor',                  '0xb8', 'Switch'          ),
         ]
-        self.sensor_id = self.THERMAL_LIST[self.index][0]
+        self.sensor_id = self.THERMAL_LIST[self.index][3]
         self.sensor_des = self.THERMAL_LIST[self.index][1]
         self.sensor_reading_addr = self.THERMAL_LIST[self.index][2]
         self.minimum_thermal = self.get_temperature()
