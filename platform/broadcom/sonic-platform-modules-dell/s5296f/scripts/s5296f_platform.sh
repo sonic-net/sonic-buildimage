@@ -141,6 +141,19 @@ platform_firmware_versions() {
     echo "Slave CPLD 4: $((r_maj)).$((r_min))" >> $FIRMWARE_VERSION_FILE
 }
 
+install_python_api_package() {
+    device="/usr/share/sonic/device"
+    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+    pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl --force-reinstall -q --root-user-action=ignore
+}
+
+remove_python_api_package() {
+    rv=$(pip3 show sonic-platform > /dev/null 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        rv=$(pip3 uninstall -y sonic-platform > /dev/null 2>/dev/null)
+    fi
+}
+
 #This enables the led control for CPU and default states 
 switch_board_led_default() {
     resource="/sys/bus/pci/devices/0000:04:00.0/resource0"
@@ -160,6 +173,7 @@ if [ "$1" == "init" ]; then
     switch_board_qsfp "new_device"
     switch_board_modsel
     switch_board_led_default
+    install_python_api_package
     #python /usr/bin/qsfp_irq_enable.py
     platform_firmware_versions
     echo -2 > /sys/bus/i2c/drivers/pca954x/603-0074/idle_state
