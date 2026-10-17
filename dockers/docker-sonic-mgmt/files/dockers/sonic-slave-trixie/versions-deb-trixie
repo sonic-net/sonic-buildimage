@@ -136,7 +136,7 @@ equivs==2.3.2
 exim4-base==4.98.2-1+deb13u5
 exim4-config==4.98.2-1+deb13u5
 exim4-daemon-light==4.98.2-1+deb13u5
-expat==2.8.3-1~deb13u1
+expat==2.9.0-1~deb13u1
 fakeroot==1.37.1.1-1
 fastjar==2:0.98-7
 fig2dev==1:3.2.9a-4
@@ -668,8 +668,8 @@ libevent-openssl-2.1-7t64==2.1.13-stable-1~deb13u1
 libevent-pthreads-2.1-7t64==2.1.13-stable-1~deb13u1
 libexception-class-perl==1.45-1
 libexecs1==1.4-2+b2
-libexpat1==2.8.3-1~deb13u1
-libexpat1-dev==2.8.3-1~deb13u1
+libexpat1==2.9.0-1~deb13u1
+libexpat1-dev==2.9.0-1~deb13u1
 libexplain-dev==1.4.D001-16
 libexplain51t64==1.4.D001-16
 libexporter-tiny-perl==1.006002-1
@@ -1705,7 +1705,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.111-1
+linux-libc-dev==6.12.113-1
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
