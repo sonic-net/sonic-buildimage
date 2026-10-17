@@ -1,5 +1,5 @@
 bcrypt==5.0.0
-blessed==1.50.0
+blessed==1.51.0
 certifi==2026.7.22
 cffi==2.1.1
 charset-normalizer==3.5.2
@@ -11,13 +11,13 @@ dbus-python==1.5.0
 docker==7.2.0
 docker-image-py==0.2.0
 enlighten==1.14.1
-filelock==4.0.12
+filelock==4.2.0
 idna==3.20
 invoke==3.0.3
 jinxed==2.1.0
-jsonpatch==1.34
+jsonpatch==1.35
 lazy-object-proxy==1.12.0
-m2crypto==0.50.0
+m2crypto==0.51.0
 netifaces==0.11.0
 packaging==26.3
 paramiko==5.0.0

@@ -33,7 +33,7 @@ cpp-x86-64-linux-gnu==4:14.2.0-1
 cracklib-runtime==2.9.6-5.2+b1
 cron==3.0pl1-197
 cron-daemon-common==3.0pl1-197
-curl==8.14.1-2+deb13u5
+curl==8.14.1-2+deb13u7
 dbus==1.16.2-2
 dbus-bin==1.16.2-2
 dbus-daemon==1.16.2-2
@@ -129,8 +129,8 @@ libcrack2==2.9.6-5.2+b1
 libcrypt-dev==1:4.4.38-1
 libctf-nobfd0==2.44-3
 libctf0==2.44-3
-libcurl3t64-gnutls==8.14.1-2+deb13u5
-libcurl4t64==8.14.1-2+deb13u5
+libcurl3t64-gnutls==8.14.1-2+deb13u7
+libcurl4t64==8.14.1-2+deb13u7
 libdashapi==1.0.0
 libdbd-sqlite3-perl==1.76-1
 libdbi-perl==1.652-2~deb13u1

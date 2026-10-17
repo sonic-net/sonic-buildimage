@@ -1,11 +1,11 @@
 https://github.com/aristanetworks/swi-tools.git==11fb38f17333a190ed7421dc47448d765988a5d6
 https://github.com/CESNET/libyang-python.git==d8acc345aeb8d5b9644f7f2197ba6d8733e86378
-https://github.com/CESNET/libyang.git==47351e59e2965e350f9d4098f15ecbe6b3850f6f
+https://github.com/CESNET/libyang.git==f7e0cc1bc99ec9280af1010a94ba8dd8ef448f6d
 https://github.com/daveolson53/audisp-tacplus.git==559c9f22edd4f2dea0ecedffb3ad9502b12a75b6
 https://github.com/daveolson53/libnss-tacplus.git==19008ab68d9d504aa58eb34d5f564755a1613b8b
 https://github.com/dyninc/OpenBFDD.git==e35f43ad8d2b3f084e96a84c392528a90d05a287
-https://github.com/flashrom/flashrom.git==092b3fc81f958e65620d2e57c6e1727fb4eacc86
-https://github.com/FreeRADIUS/freeradius-server.git==eeafb9f12e720fc4e0f0961e8cb73fae90a4b690
+https://github.com/flashrom/flashrom.git==fb281f64bf58b547300a38ab9634711ddaf05e39
+https://github.com/FreeRADIUS/freeradius-server.git==d7b849f9b08e539a75316a52195ebd673e732ef2
 https://github.com/FreeRADIUS/pam_radius.git==36cf87d0d35f6e943b7038b196a768ce2d39eb7b
 https://github.com/fullstorydev/grpcurl.git==cf21d4aca5e9b69c06ecfa42d78e9fb942b980e8
 https://github.com/google/gnxi.git==4d4f71267f7c620606edf2e602f84faf3f82d65e

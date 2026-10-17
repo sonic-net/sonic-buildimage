@@ -75,7 +75,7 @@ cppcheck==2.17.1-2
 cppzmq-dev==4.10.0-1+b2
 cron==3.0pl1-197
 cron-daemon-common==3.0pl1-197
-curl==8.14.1-2+deb13u5
+curl==8.14.1-2+deb13u7
 cython3==3.0.11+dfsg-2+b1
 dbus==1.16.2-2
 dbus-bin==1.16.2-2
@@ -121,7 +121,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.9.0-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.9.1-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -194,7 +194,7 @@ gfortran==4:14.2.0-1
 gfortran-14==14.2.0-19
 gfortran-14-x86-64-linux-gnu==14.2.0-19
 gfortran-x86-64-linux-gnu==4:14.2.0-1
-ghostscript==10.05.1~dfsg-1+deb13u2
+ghostscript==10.05.1~dfsg-1+deb13u3
 gir1.2-atk-1.0==2.56.2-1+deb13u2
 gir1.2-atspi-2.0==2.56.2-1+deb13u2
 gir1.2-cloudproviders-0.3.0==0.3.6-2
@@ -585,9 +585,9 @@ libctf0==2.44-3
 libcunit1==2.1-3-dfsg-2.7+b1
 libcunit1-dev==2.1-3-dfsg-2.7+b1
 libcups2t64==2.4.10-3+deb13u2
-libcurl3t64-gnutls==8.14.1-2+deb13u5
-libcurl4-openssl-dev==8.14.1-2+deb13u5
-libcurl4t64==8.14.1-2+deb13u5
+libcurl3t64-gnutls==8.14.1-2+deb13u7
+libcurl4-openssl-dev==8.14.1-2+deb13u7
+libcurl4t64==8.14.1-2+deb13u7
 libdaemon-dev==0.14-7.1+b3
 libdaemon0==0.14-7.1+b3
 libdata-dpath-perl==0.60-1
@@ -842,9 +842,9 @@ libgrpc++-dev==1.51.1-6
 libgrpc++1.51t64==1.51.1-6
 libgrpc-dev==1.51.1-6
 libgrpc29t64==1.51.1-6
-libgs-common==10.05.1~dfsg-1+deb13u2
-libgs10==10.05.1~dfsg-1+deb13u2
-libgs10-common==10.05.1~dfsg-1+deb13u2
+libgs-common==10.05.1~dfsg-1+deb13u3
+libgs10==10.05.1~dfsg-1+deb13u3
+libgs10-common==10.05.1~dfsg-1+deb13u3
 libgsl28==2.8+dfsg-5
 libgslcblas0==2.8+dfsg-5
 libgsm1==1.0.22-1+b2
@@ -996,7 +996,7 @@ libjte2==1.22-4+b2
 libjtidy-java==7+svn20110807-6
 libjudy-dev==1.0.5-5.1+b1
 libjudydebian1==1.0.5-5.1+b1
-libjxl0.11==0.11.2-0.1~deb13u2
+libjxl0.11==0.11.2-0.1~deb13u3
 libjxr-tools==1.2~git20170615.f752187-5.3
 libjxr0t64==1.2~git20170615.f752187-5.3
 libk5crypto3==1.21.3-5+deb13u1
@@ -1360,8 +1360,8 @@ librpm10==4.20.1+dfsg-3
 librpmio10==4.20.1+dfsg-3
 librrd-dev==1.7.2-4.2+b5
 librrd8t64==1.7.2-4.2+b5
-librsvg2-2==2.60.0+dfsg-1
-librsvg2-common==2.60.0+dfsg-1
+librsvg2-2==2.60.0+dfsg-1+deb13u1
+librsvg2-common==2.60.0+dfsg-1+deb13u1
 librtmp-dev==2.4+20151223.gitfa8646d.1-2+b5
 librtmp1==2.4+20151223.gitfa8646d.1-2+b5
 librubberband2==3.3.0+dfsg-2+b3

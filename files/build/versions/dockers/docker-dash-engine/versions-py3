@@ -12,7 +12,7 @@ pip==26.2.1
 protobuf==3.20.0
 psutil==7.2.2
 ptf==0.12.0
-pycparser==3.0
+pycparser==3.11
 pygobject==3.48.2
 pynng==0.9.0
 pypcap==1.3.0

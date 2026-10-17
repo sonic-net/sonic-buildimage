@@ -11,7 +11,7 @@ dmsetup==2:1.02.185-3ubuntu3.2
 gir1.2-girepository-2.0==1.80.1-1
 gir1.2-glib-2.0==2.80.0-6ubuntu3.9
 javascript-common==11+nmu1
-libapparmor1==4.0.1really4.0.1-0ubuntu0.24.04.8
+libapparmor1==4.0.1really4.0.1-0ubuntu0.24.04.9
 libargon2-1==0~20190702+dfsg-4build1
 libblkid1==2.39.3-9ubuntu6.6
 libcryptsetup12==2:2.7.0-1ubuntu4.2
@@ -38,9 +38,9 @@ libpython3.12t64==3.12.3-1ubuntu0.17
 libsmartcols1==2.39.3-9ubuntu6.6
 libssl-dev==3.0.13-0ubuntu3.15
 libssl3t64==3.0.13-0ubuntu3.15
-libsystemd-shared==255.4-1ubuntu8.17
-libsystemd0==255.4-1ubuntu8.17
-libudev1==255.4-1ubuntu8.17
+libsystemd-shared==255.4-1ubuntu8.18
+libsystemd0==255.4-1ubuntu8.18
+libudev1==255.4-1ubuntu8.18
 libuuid1==2.39.3-9ubuntu6.6
 logrotate==3.21.0-2build1
 mount==2.39.3-9ubuntu6.6
@@ -60,10 +60,10 @@ python3.12-minimal==3.12.3-1ubuntu0.16
 rsyslog==8.2312.0-3ubuntu9.4
 shared-mime-info==2.4-4
 supervisor==4.2.5-1ubuntu0.1
-systemd==255.4-1ubuntu8.17
-systemd-dev==255.4-1ubuntu8.17
-systemd-resolved==255.4-1ubuntu8.17
-systemd-timesyncd==255.4-1ubuntu8.17
+systemd==255.4-1ubuntu8.18
+systemd-dev==255.4-1ubuntu8.18
+systemd-resolved==255.4-1ubuntu8.18
+systemd-timesyncd==255.4-1ubuntu8.18
 ucf==3.0043+nmu1
 util-linux==2.39.3-9ubuntu6.6
 xdg-user-dirs==0.18-1build1
