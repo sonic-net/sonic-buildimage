@@ -28,6 +28,12 @@ PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
 #    ;;
 #esac
 
+# cli-client routes to cli-server, a pre-fork server that avoids Python interpreter startup overhead.
+# First call starts cli-server in the background and runs normally; subsequent calls are fast.
+if command -v cli-client &>/dev/null; then
+    show() { cli-client show "$@"; }
+fi
+
 # enable bash completion in interactive shells
 if ! shopt -oq posix; then
     if [ -f /usr/share/bash-completion/bash_completion ]; then
