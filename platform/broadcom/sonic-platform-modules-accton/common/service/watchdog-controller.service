@@ -1,0 +1,17 @@
+[Unit]
+Description=watchdog control service
+Before=pmon.service
+
+[Service]
+ExecStartPre=/usr/local/bin/watchdogloader.py
+ExecStart=/usr/local/bin/watchdogd.py
+KillSignal=SIGTERM
+TimeoutStopSec=10
+Restart=always
+RestartSec=5
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
