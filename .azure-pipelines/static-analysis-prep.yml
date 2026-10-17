@@ -1,0 +1,99 @@
+# Static Analysis Preparation Pipeline
+#
+# Prepares a clean sonic-buildimage workspace with all submodules and
+# externally-fetched source trees fully initialized, ready for static
+# code analysis tools (bandit, semgrep, pylint, etc.).
+# No build is performed.
+#
+# All source acquisition logic lives in:
+#   .azure-pipelines/scripts/prepare_source.py
+
+trigger:
+  branches:
+    include:
+      - master
+      - 202*
+
+pr:
+  branches:
+    include:
+      - master
+      - 202*
+
+pool:
+  vmImage: 'ubuntu-22.04'
+
+steps:
+  - checkout: self
+    clean: true
+    submodules: recursive
+    fetchDepth: 1
+
+  - script: sudo apt-get install -y -q devscripts python3-jinja2
+    displayName: 'Install dependencies'
+
+  - script: |
+      python3 - << 'EOF'
+      import json, subprocess, os
+      from pathlib import Path
+
+      def resolve(var, arch="amd64"):
+          makefile = (
+              f"CONFIGURED_ARCH := {arch}\n"
+              f"BLDENV := trixie\n"
+              f"include rules/libnl3.mk\n"
+              f"include rules/sonic-fips.mk\n"
+              f"resolve: ; @echo $({var})\n"
+          )
+          r = subprocess.run(
+              ["make", "-f", "-", "--no-print-directory", "resolve"],
+              input=makefile, capture_output=True, text=True, check=False,
+          )
+          return r.stdout.strip()
+
+      arch = os.environ.get("CONFIGURED_ARCH", "amd64")
+      arch_map = {"amd64": "amd64", "arm64": "arm64v8", "armhf": "arm32v7"}
+
+      ctx = {
+          "DOCKER_USERNAME": "sonic",
+          "DOCKER_USERTAG": "latest",
+          "CONFIGURED_ARCH": arch,
+          "CONFIGURED_PLATFORM": "",
+          "DEFAULT_CONTAINER_REGISTRY": "",
+          "DOCKER_BASE_ARCH": arch_map.get(arch, arch),
+          "DOCKER_EXTRA_OPTS": "",
+          "ENABLE_ASAN": "n",
+          "FIPS_GOLANG_MAIN_VERSION": resolve("FIPS_GOLANG_MAIN_VERSION", arch),
+          "LIBNL3_VERSION_SONIC": resolve("LIBNL3_VERSION_SONIC", arch),
+      }
+      Path(".j2_context.json").write_text(json.dumps(ctx, indent=2))
+      print(json.dumps(ctx, indent=2))
+      EOF
+    displayName: 'Generate j2 context'
+
+  - script: |
+      python3 .azure-pipelines/scripts/prepare_source.py \
+        --repo-root . \
+        --summary
+    displayName: 'Prepare source tree'
+
+  - script: |
+      set -e
+      DEST=$(Agent.TempDirectory)/sonic-buildimage-source
+      mkdir -p "$DEST"
+      rsync -a --delete \
+        --exclude='.git' \
+        --exclude='target/' \
+        --exclude='fsroot*' \
+        --exclude='dpkg/' \
+        --exclude='src/p4lang/' \
+        --exclude='src/sonic-linux-kernel/' \
+        --exclude='src/grub2/' \
+        --exclude='src/sonic-device-data/' \
+        ./ "$DEST"/
+      echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
+    displayName: 'Stage source tree for publish'
+
+  - publish: $(Agent.TempDirectory)/sonic-buildimage-source
+    artifact: sonic-buildimage-source
+    displayName: 'Publish source tree for analysis jobs'
