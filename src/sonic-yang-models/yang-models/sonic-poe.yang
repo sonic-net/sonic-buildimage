@@ -1,0 +1,77 @@
+module sonic-poe {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-poe";
+
+    prefix poe;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "PoE YANG Module for SONiC OS";
+
+    revision 2024-06-13 {
+        description
+            "First Revision";
+    }
+
+    container sonic-poe {
+
+        container POE_PORT {
+
+            description "Power over Ethernet configuration (POE_PORT table in config_db.json)";
+
+            typedef poe-priority {
+
+                type enumeration {
+                    enum crit;
+                    enum high;
+                    enum low;
+                }
+            }
+
+            list POE_PORT_LIST {
+                key "ifname";
+                leaf ifname {
+                    type leafref {
+                        path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                    }
+                    description "Interface name from the PORT table in config_db.json";
+                }
+                leaf enabled {
+                    type stypes:mode-status;
+                    default disable;
+                    description "PoE status on port. [enable/disable]";
+                }
+                leaf pwr_limit {
+                    mandatory true;
+                    type string {
+                        length 1..255;
+                    }
+                    description "Power limit on PoE port. [0..999]";
+                }
+                leaf priority {
+                    type poe-priority;
+                    default high;
+                    description "Port priority level. [crit/high/low]";
+                }
+            }
+            /* end of POE_PORT_LIST */
+        }
+        /* end of container POE_PORT */
+    }
+    /* end of top-level container sonic-poe */
+}
+/* end of module sonic-poe */
