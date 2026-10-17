@@ -1,0 +1,84 @@
+pr: none
+trigger: none
+
+name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    endpoint: github.com_elybarneams
+    ref: master
+
+variables:
+- template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+- template: .azure-pipelines/template-variables.yml@buildimage
+- name: CACHE_MODE
+  value: rcache
+- name: ENABLE_FIPS
+  value: y
+- name: SKIP_CHECKOUT
+  value: true
+
+parameters:
+- name: SUBMODULE
+  type: string
+  default: ' '
+
+- name: COMMIT_ID
+  type: string
+  default: ' '
+
+stages:
+- stage: BuildSecureBootVS
+  pool: sonicso1ES-amd64
+  jobs:
+  - template: azure-pipelines-build.yml
+    parameters:
+      buildOptions: >-
+        USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y
+        INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}
+      preSteps:
+      - checkout: self
+        clean: true
+        submodules: recursive
+        fetchDepth: 0
+        path: s
+        displayName: Checkout code
+      - bash: |
+          set -euo pipefail
+          sudo apt-get update
+          secureboot_dir="$(Build.SourcesDirectory)/.secureboot-ci"
+          sudo apt-get install -y efitools ovmf python3-venv
+          python3 -m venv "$secureboot_dir/venv"
+          "$secureboot_dir/venv/bin/python" -m pip install \
+            --disable-pip-version-check virt-firmware==26.5.4
+          echo "##vso[task.prependpath]$secureboot_dir/venv/bin"
+          export PATH="$secureboot_dir/venv/bin:$PATH"
+
+          scripts/generate_secureboot_vs_artifacts.sh \
+            --workdir "$secureboot_dir" \
+            --output-vars "$secureboot_dir/sonic-vs_vars.fd" \
+            --build-id "$(Build.BuildId)"
+
+          {
+            echo "SECURE_UPGRADE_MODE := dev"
+            echo "SECURE_UPGRADE_DEV_SIGNING_KEY := $secureboot_dir/DB.key"
+            echo "SECURE_UPGRADE_SIGNING_CERT := $secureboot_dir/DB.crt"
+            echo "SECURE_UPGRADE_KERNEL_CAFILE := $secureboot_dir/DB.crt"
+            echo "SECURE_BOOT_DB_CERT := $secureboot_dir/DB.auth"
+          } >> rules/config.user
+        displayName: Generate ephemeral Secure Boot hierarchy
+      postSteps:
+      - bash: |
+          rm -rf "$(Build.SourcesDirectory)/.secureboot-ci"
+        condition: always()
+        displayName: Remove ephemeral Secure Boot private keys
+      jobGroups:
+      - name: vs
+        variables:
+          secure_boot_image: yes
+          secure_boot_vars_file: $(Build.SourcesDirectory)/.secureboot-ci/sonic-vs_vars.fd
+      SUBMODULE: ${{ parameters.SUBMODULE }}
+      COMMIT_ID: ${{ parameters.COMMIT_ID }}

@@ -46,6 +46,8 @@ jobs:
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
       platform_rpc: no
+      secure_boot_image: no
+      secure_boot_vars_file: ''
       ${{ if parameters.qemuOrCrossBuild }}:
         SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
         CACHE_MODE: 'none'
@@ -169,7 +171,23 @@ jobs:
               mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
               rm target/sonic-vs.img
             fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/docker-sonic-vs.gz
+            if [ "$(secure_boot_image)" == "yes" ]; then
+              make $BUILD_OPTIONS target/sonic-vs.img.gz
+              test -f "$(secure_boot_vars_file)"
+              test -f target/sonic-vs.img-uefi.img.gz
+              test -f target/sonic-vs.img-uefi_vars.fd
+              mv target/sonic-vs.img-uefi.img.gz target/sonic-vs.img.gz
+              secure_boot_dir="$(dirname "$(secure_boot_vars_file)")"
+              scripts/generate_secureboot_vs_artifacts.sh \
+                --workdir "$secure_boot_dir" \
+                --ovmf-vars target/sonic-vs.img-uefi_vars.fd \
+                --output-vars target/sonic-vs_vars.fd \
+                --build-id "$(Build.BuildId)" \
+                --reuse-keys
+            else
+              make $BUILD_OPTIONS target/sonic-vs.img.gz
+            fi
             make $BUILD_OPTIONS target/docker-ptf.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz
@@ -235,4 +253,3 @@ jobs:
           BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
           ManifestDirPath: 'target/'
           BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-
