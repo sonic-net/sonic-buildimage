@@ -97,6 +97,7 @@ mnet_uio_pdrv_genirq:
 mdev: KOPT+=$(ETH_KOPT)
 mdev: KSYMS+=$(KSYMS_MNIC)
 mdev: KSYMS+=$(KSYMS_UIO)
+mdev: mnic mnet_uio_pdrv_genirq
 mdev:
 	@echo "===> Building MDEV driver "
 	#$(MAKE) -C $(KSRC) V=1 M=$(KMOD_SRC_DIR)/mdev KBUILD_OUTPUT=$(KMOD_OUT_DIR) $(KOPT)
