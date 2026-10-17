@@ -7,7 +7,7 @@ KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
 
-MODULE_DIRS:= dx010 haliburton silverstone seastone2 ds1000 questone2 silverstone-v2 ds2000 ds3000
+MODULE_DIRS:= dx010 haliburton silverstone seastone2 ds1000 questone2 silverstone-v2 ds2000 ds3000 ds5000
 
 %:
 	dh $@
