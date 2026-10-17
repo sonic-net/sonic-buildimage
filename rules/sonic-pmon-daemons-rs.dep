@@ -1,0 +1,40 @@
+SPATH       := $($(SONIC_THERMALCTLD_RS)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-pmon-daemons-rs.mk rules/sonic-pmon-daemons-rs.dep
+DEP_FILES   += rules/sonic-pmon-daemons-rs.cargo.toml
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+# `pr_patch-*.diff` is dropped: sonic_ci commits its per-PR patch into the
+# submodule before computing dependencies, so `git ls-files` sees it, but the
+# file is gone by the time make runs the recipe -- "No rule to make target
+# src/sonic-platform-daemons/pr_patch-34.diff".  This rule is the only one in
+# the tree that names this submodule in SMDEP_PATHS, so it is the first to hit
+# that path.  Other rules filter the same way: sonic-host-services.dep drops
+# ^data, sonic-platform-common.dep drops ^sonic_sfp and ^sonic_eeprom.
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files | grep -v '^pr_patch-'))
+
+# sonic-platform-common, through DEP_FILES rather than a second SMDEP_PATH.
+#
+# The daemons reach the platform through the generated facade, and the two are
+# version-coupled in a way nothing else checks: a daemon built against a facade
+# whose `get_fans()` takes a column set, running against a wheel whose
+# `get_fans()` does not, raises TypeError on the first polling cycle.  Without
+# this, a facade-only change rebuilt the wheel and left the daemons -- and the
+# pmon image -- as they were.
+#
+# Not `SMDEP_PATHS += $(CPATH)`: the .smdep recipe writes and hashes its file
+# list from a single `$(*_MOD_SRC_PATH)` (Makefile.cache:632-633), so a second
+# submodule's files would be recorded under the wrong root and hashed from the
+# wrong directory.  DEP_FILES has no such `cd` (Makefile.cache:684) and takes
+# paths from the buildimage root, which is what these are.
+#
+# Only the two directories the daemons compile or import: `platform_api` is the
+# facade and its stub, `crates` is the trait, the PyO3 bridge and the provider.
+# The Python daemons' own sources live beside them and are not a dependency of
+# the Rust build.
+CPATH       := $(SRC_PATH)/sonic-platform-common
+DEP_FILES   += $(addprefix $(CPATH)/,$(shell cd $(CPATH) && git ls-files platform_api crates))
+
+$(SONIC_THERMALCTLD_RS)_CACHE_MODE  := GIT_CONTENT_SHA
+$(SONIC_THERMALCTLD_RS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SONIC_THERMALCTLD_RS)_DEP_FILES   := $(DEP_FILES)
+$(SONIC_THERMALCTLD_RS)_SMDEP_FILES := $(SMDEP_FILES)
+$(SONIC_THERMALCTLD_RS)_SMDEP_PATHS := $(SPATH)
