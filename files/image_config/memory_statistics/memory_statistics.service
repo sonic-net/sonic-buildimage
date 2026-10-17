@@ -1,0 +1,13 @@
+[Unit]
+Description=Memory Statistics Daemon
+After=network.target redis.service
+Requires=redis.service
+
+[Service]
+ExecStart=/usr/bin/memory_statistics_service.py
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=-/etc/memory_statistics/memory_statistics.conf
+
+[Install]
+WantedBy=multi-user.target 
