@@ -166,6 +166,7 @@ class TestChassis:
                 assert s.sdk_index == index
             iteration_num -= 1
 
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
     def test_reboot_cause(self):
         from sonic_platform import utils
@@ -215,6 +216,7 @@ class TestChassis:
             assert minor == value
             mock_file_content[file_path] = 0
 
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
     @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
     @mock.patch('sonic_platform.chassis.DeviceDataManager.is_platform_with_bmc')
@@ -232,6 +234,7 @@ class TestChassis:
             assert major == expected
             assert minor == ''
 
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=False))
     def test_reboot_cause_timeout(self):
         chassis = Chassis()
@@ -239,14 +242,121 @@ class TestChassis:
         assert major == chassis.REBOOT_CAUSE_NON_HARDWARE
         assert minor == ''
 
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_timeout_logs_error_on_hardware(self, mock_logger):
+        # Real hardware keeps the wait and the error when the flag never appears
+        major, minor = Chassis().get_reboot_cause()
+        assert major == Chassis.REBOOT_CAUSE_NON_HARDWARE
+        assert minor == ''
+        mock_logger.log_error.assert_called_once_with("Hardware reboot cause is not ready")
+
+    @staticmethod
+    def _make_reset_cause_tree(tmp_path, ready_content=None, reset_files=None):
+        """Build a fake reset cause tree; ready_content None means no config/ dir."""
+        config_dir = tmp_path / 'config'
+        system_dir = tmp_path / 'system'
+        system_dir.mkdir()
+        if ready_content is not None:
+            config_dir.mkdir()
+            (config_dir / 'reset_attr_ready').write_bytes(ready_content)
+        for name, content in (reset_files or {}).items():
+            (system_dir / name).write_bytes(content)
+        return str(config_dir / 'reset_attr_ready'), str(system_dir) + '/'
+
+    @pytest.mark.parametrize('ready_content, reset_files', [
+        (None, None),
+        (b'', None),
+        (b'0\n', None),
+        (b'2\n', None),
+        (b'ready\n', None),
+        # Reset attributes are not read while the ready flag is not set
+        (b'', {'reset_sw_pwr_off': b'1\n'}),
+    ], ids=['no-config-dir', 'empty-ready-flag', 'ready-flag-0', 'ready-flag-2', 'ready-flag-malformed',
+            'ready-flag-empty-with-attr'])
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.time.sleep')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_simx_not_ready_no_wait(self, mock_logger, mock_sleep, tmp_path, ready_content, reset_files):
+        from sonic_platform import utils
+        ready_file, system_root = self._make_reset_cause_tree(tmp_path, ready_content, reset_files)
+        with mock.patch('sonic_platform.chassis.REBOOT_CAUSE_READY_FILE', ready_file), \
+                mock.patch('sonic_platform.chassis.REBOOT_CAUSE_ROOT', system_root), \
+                mock.patch('sonic_platform.utils.read_int_from_file', wraps=utils.read_int_from_file) as mock_read_int:
+            major, minor = Chassis().get_reboot_cause()
+        assert major == Chassis.REBOOT_CAUSE_NON_HARDWARE
+        assert minor == ''
+        # The ready flag is read once and nothing else is read
+        mock_read_int.assert_called_once_with(ready_file, log_func=None)
+        mock_sleep.assert_not_called()
+        mock_logger.log_error.assert_not_called()
+        mock_logger.log_notice.assert_called_once()
+
+    @pytest.mark.parametrize('reset_content, expected', [
+        (b'1\n', Chassis.REBOOT_CAUSE_POWER_LOSS),
+        # NUL-padded attribute: not an integer, so it reads as 0
+        (b'1\n' + b'\x00' * 4094, Chassis.REBOOT_CAUSE_NON_HARDWARE),
+    ], ids=['clean-attr', 'nul-padded-attr'])
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_platform_with_bmc', MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.time.sleep')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_simx_mock_tree_ready(self, mock_logger, mock_sleep, tmp_path, reset_content, expected):
+        # With the ready flag set, SimX keeps reading the reset attributes as before
+        ready_file, system_root = self._make_reset_cause_tree(tmp_path, b'1\n', {'reset_sw_pwr_off': reset_content})
+        with mock.patch('sonic_platform.chassis.REBOOT_CAUSE_READY_FILE', ready_file), \
+                mock.patch('sonic_platform.chassis.REBOOT_CAUSE_ROOT', system_root):
+            major, minor = Chassis().get_reboot_cause()
+        assert major == expected
+        assert minor == ''
+        mock_sleep.assert_not_called()
+        mock_logger.log_error.assert_not_called()
+        mock_logger.log_notice.assert_not_called()
+
+    @pytest.mark.parametrize('is_simx', [True, False], ids=['simx', 'hardware'])
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value='warm-reboot'))
+    @mock.patch('sonic_platform.utils.is_host', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready')
+    @mock.patch('sonic_platform.chassis.Chassis._is_reboot_cause_ready')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_warm_reboot_skips_ready_check(self, mock_logger, mock_is_ready, mock_wait_ready, is_simx):
+        # The warm/fast reboot check still runs before the ready flag is looked at on either path
+        with mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=is_simx)):
+            major, minor = Chassis().get_reboot_cause()
+        assert major == Chassis.REBOOT_CAUSE_NON_HARDWARE
+        assert minor == ''
+        mock_is_ready.assert_not_called()
+        mock_wait_ready.assert_not_called()
+        mock_logger.log_notice.assert_not_called()
+        mock_logger.log_error.assert_not_called()
+
     @mock.patch('sonic_platform.utils.read_int_from_file')
-    @mock.patch('sonic_platform.chassis.time.sleep', mock.MagicMock())
-    def test_wait_reboot_cause_ready(self, mock_read_int):
-        mock_read_int.return_value = 1
+    @mock.patch('sonic_platform.chassis.time.sleep')
+    def test_wait_reboot_cause_ready(self, mock_sleep, mock_read_int):
+        from sonic_platform.chassis import REBOOT_CAUSE_MAX_WAIT_TIME, REBOOT_CAUSE_CHECK_INTERVAL
         chassis = Chassis()
+        mock_read_int.return_value = 1
         assert chassis._wait_reboot_cause_ready()
+        mock_sleep.assert_not_called()
+
+        # The flag appears while polling
+        mock_read_int.side_effect = [0, 0, 1]
+        assert chassis._wait_reboot_cause_ready()
+        assert mock_sleep.call_count == 2
+
+        # The flag never appears: poll for the full wait time, then give up
+        mock_sleep.reset_mock()
+        mock_read_int.reset_mock()
+        mock_read_int.side_effect = None
         mock_read_int.return_value = 0
         assert not chassis._wait_reboot_cause_ready()
+        assert mock_read_int.call_count == REBOOT_CAUSE_MAX_WAIT_TIME // REBOOT_CAUSE_CHECK_INTERVAL
+        assert mock_sleep.call_count == REBOOT_CAUSE_MAX_WAIT_TIME // REBOOT_CAUSE_CHECK_INTERVAL
+        mock_sleep.assert_called_with(REBOOT_CAUSE_CHECK_INTERVAL)
 
     def test_parse_warmfast_reboot_from_proc_cmdline(self):
         chassis = Chassis()
