@@ -6,6 +6,7 @@ class ConfigMgr(object):
         self.current_config_raw = None
         self.changes = ""
         self.peer_groups_to_restart = []
+        self.before_flush = []  # callables that push pending changes before a commit or a read of FRR
 
     def reset(self):
         """ Reset stored config """
@@ -14,8 +15,14 @@ class ConfigMgr(object):
         self.changes = ""
         self.peer_groups_to_restart = []
 
+    def run_before_flush(self):
+        """ Let deferred work push its changes before FRR is written or read """
+        for callback in self.before_flush:
+            callback()
+
     def update(self):
         """ Read current config from FRR """
+        self.run_before_flush()
         self.current_config = None
         self.current_config_raw = None
         out = self.frr.get_config()
@@ -55,6 +62,7 @@ class ConfigMgr(object):
         Write configuration change to FRR.
         :return: True if change was applied successfully, False otherwise
         """
+        self.run_before_flush()
         if self.changes.strip() == "":
             return True
         rc_write = self.frr.write(self.changes)
