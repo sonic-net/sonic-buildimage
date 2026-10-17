@@ -49,9 +49,13 @@ enum platform_type {
 
 static struct class *cpld_class = NULL;
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,10,0)
+static bool cpld_idr_is_empty(struct idr *idp);
+#endif
+
 struct cpld_data {
 	struct i2c_client *cpld_client;
-	char name[16];
+	char name[20];
 	u8 cpld_id;
 };
 
@@ -206,10 +210,22 @@ static int cpld_led_probe(struct i2c_client *client,
 
 	/* Test */
 	nr = ida_simple_get(&cpld_led_ida, 1, 99, GFP_KERNEL);
-	if (nr < 0)
-		goto err_out;
+	if (nr < 0) {
+		err = nr;
+		goto err_destroy_class;
+	}
 
 	led_data = kzalloc(sizeof(struct cpld_led_data), GFP_KERNEL);
+	if (!led_data) {
+		err = -ENOMEM;
+		goto err_remove_id;
+	}
+	err = snprintf(led_data->name, sizeof(led_data->name),
+		       "LED%d-data", nr);
+	if (err < 0 || (size_t)err >= sizeof(led_data->name)) {
+		err = -ENAMETOOLONG;
+		goto err_free_data;
+	}
 
 	port_dev = device_create(cpld_class, &client->dev, MKDEV(0,0), led_data, CPLD_LED_ID_FORMAT, nr);
 	if (IS_ERR(port_dev)) {
@@ -222,7 +238,6 @@ static int cpld_led_probe(struct i2c_client *client,
 
 	dev_info(&client->dev, "Register CPLDLED %d\n", nr);
 
-	sprintf(led_data->name, "LED%d-data", nr);
 	led_data->cpld_id = nr;
 	dev_set_drvdata(port_dev, led_data);
 	port_dev->init_name = led_data->name;
@@ -240,8 +255,20 @@ static int cpld_led_probe(struct i2c_client *client,
 
 	return 0;
 
-err_out:
-	return nr;
+err_free_data:
+	kfree(led_data);
+err_remove_id:
+	ida_simple_remove(&cpld_led_ida, nr);
+err_destroy_class:
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,10,0)
+	if (ida_is_empty(&cpld_led_ida)) {
+#else
+	if (cpld_idr_is_empty(&cpld_led_ida.idr)) {
+#endif
+		class_destroy(cpld_class);
+		cpld_class = NULL;
+	}
+	return err;
 }
 
 /* FIXME: for older kernel doesn't with idr_is_empty function, implement here */
