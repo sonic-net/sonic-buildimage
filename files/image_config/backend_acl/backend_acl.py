@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 import syslog
 import time
 
@@ -16,37 +17,77 @@ def log_info(msg):
     syslog.syslog(syslog.LOG_INFO, msg)
     syslog.closelog()
 
-def run_command(cmd, return_cmd=False):
-   log_info("executing cmd =  {}".format(cmd))
-   proc = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE)
-   out, err = proc.communicate()
-   if return_cmd:
-       if err:
-           return "Unknown"
 
-       if len(out) > 0:
-           return out.strip().decode('utf-8')
+def run_command(cmd):
+    log_info("executing cmd =  {}".format(cmd))
+    try:
+        proc = subprocess.run(
+            cmd,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+    except OSError as e:
+        log_info("command failed to start: {}".format(str(e)))
+        return False, ""
+
+    if proc.returncode != 0:
+        log_info(
+            "command failed with exit code {}: {}".format(
+                proc.returncode,
+                proc.stderr.strip()
+            )
+        )
+        return False, proc.stdout.strip()
+
+    if proc.stderr:
+        log_info("command wrote to stderr: {}".format(proc.stderr.strip()))
+
+    return True, proc.stdout.strip()
 
 def _get_device_type():
     """
     Get device type
     """
-    device_type = run_command([SONIC_CFGGEN_PATH, '-m', '-v', 'DEVICE_METADATA.localhost.type'], return_cmd=True)
+    success, device_type = run_command(
+        [SONIC_CFGGEN_PATH, '-d', '-v', 'DEVICE_METADATA.localhost.type']
+    )
+    if not success or not device_type:
+        log_info("Unable to determine device type from CONFIG_DB")
+        return None
+
     return device_type
 
 def _is_storage_device():
     """
     Check if the device is a storage device or not
     """
-    storage_device = run_command([SONIC_CFGGEN_PATH, '-d', '-v', 'DEVICE_METADATA.localhost.storage_device'], return_cmd=True)
+    success, storage_device = run_command(
+        [SONIC_CFGGEN_PATH, '-d', '-v', 'DEVICE_METADATA.localhost.storage_device']
+    )
+    if not success:
+        log_info("Unable to determine storage-device status from CONFIG_DB")
+        return None
+
+    if storage_device not in ("true", "false"):
+        log_info("Storage-device metadata is missing or invalid in CONFIG_DB")
+        return None
+
     return storage_device == "true"
 
 def _is_acl_table_present():
     """
     Check if acl table exists
     """
-    acl_table = run_command([SONIC_CFGGEN_PATH, '-d', '-v', 'ACL_TABLE.DATAACL'], return_cmd=True)
-    return (acl_table != "Unknown" and bool(acl_table))
+    success, acl_table = run_command(
+        [SONIC_CFGGEN_PATH, '-d', '-v', 'ACL_TABLE.DATAACL']
+    )
+    if not success:
+        log_info("Unable to determine DATAACL status from CONFIG_DB")
+        return None
+
+    return bool(acl_table)
 
 def _is_switch_table_present():
     state_db = SonicV2Connector(host='127.0.0.1')
@@ -74,21 +115,54 @@ def load_backend_acl(device_type):
     BACKEND_ACL_FILE = os.path.join('/', "etc", "sonic", "backend_acl.json")
 
     # this acl needs to be loaded only on a storage backend ToR. acl load will fail if the switch table isn't present
-    if _is_storage_device() and _is_acl_table_present() and _is_switch_table_present():
-        if os.path.isfile(BACKEND_ACL_TEMPLATE_FILE):
-            run_command(['sudo', SONIC_CFGGEN_PATH, '-d', '-t', '{},{}'.format(BACKEND_ACL_TEMPLATE_FILE, BACKEND_ACL_FILE)])
-        if os.path.isfile(BACKEND_ACL_FILE):
-            run_command(['acl-loader', 'update', 'full', BACKEND_ACL_FILE, '--table_name', 'DATAACL'])
-    else:
-        log_info("Skipping backend acl load - conditions not met")
+    is_storage_device = _is_storage_device()
+    if is_storage_device is None:
+        return False
+    if not is_storage_device:
+        log_info("Skipping backend acl load - device is not a storage device")
+        return True
+
+    is_acl_table_present = _is_acl_table_present()
+    if is_acl_table_present is None:
+        return False
+    if not is_acl_table_present:
+        log_info("Skipping backend acl load - DATAACL is not configured")
+        return True
+
+    if not _is_switch_table_present():
+        log_info("Unable to load backend acl - switch capability table is unavailable")
+        return False
+
+    if not os.path.isfile(BACKEND_ACL_TEMPLATE_FILE):
+        log_info("Unable to load backend acl - template file is missing")
+        return False
+
+    success, _ = run_command(
+        ['sudo', SONIC_CFGGEN_PATH, '-d', '-t',
+         '{},{}'.format(BACKEND_ACL_TEMPLATE_FILE, BACKEND_ACL_FILE)]
+    )
+    if not success:
+        return False
+
+    if not os.path.isfile(BACKEND_ACL_FILE):
+        log_info("Unable to load backend acl - generated ACL file is missing")
+        return False
+
+    success, _ = run_command(
+        ['acl-loader', 'update', 'full', BACKEND_ACL_FILE, '--table_name', 'DATAACL']
+    )
+    return success
 
 def main():
     device_type = _get_device_type()
+    if device_type is None:
+        return 1
+
     if device_type != "BackEndToRRouter":
         log_info("Skipping backend acl load on unsupported device type: {}".format(device_type))
-        return
+        return 0
 
-    load_backend_acl(device_type)
+    return 0 if load_backend_acl(device_type) else 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
