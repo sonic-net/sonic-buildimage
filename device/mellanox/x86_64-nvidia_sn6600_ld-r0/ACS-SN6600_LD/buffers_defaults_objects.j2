@@ -23,6 +23,14 @@
 {{- port_names.split(",") | reject("in", service_port_names.split(",")) | join(",") -}}
 {%- endmacro %}
 
+{%- macro generate_service_port_list(PORT_SERVICE) -%}
+{# Expose the service ports to qos_config.j2 so it keeps PFC and the lossless
+   queues off them; the single source of truth stays service_port_names. #}
+{%- for port in service_port_names.split(',') if port -%}
+    {%- if PORT_SERVICE.append(port) %}{% endif %}
+{%- endfor -%}
+{%- endmacro %}
+
 {%- macro generate_cable_length_config(port_names_all) %}
 {# Reuse the standard cable lookup without importing this SKU's defaults recursively. #}
 {%- set defs = namespace() %}
@@ -180,7 +188,11 @@
     "BUFFER_PORT_EGRESS_PROFILE_LIST": {
 {% for port in port_names_active.split(',') %}
         "{{ port }}": {
+{% if port in port_names_service.split(',') %}
+            "profile_list" : "egress_lossy_profile"
+{% else %}
             "profile_list" : "egress_lossless_profile,egress_lossy_profile"
+{% endif %}
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -188,7 +200,9 @@
 ,
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}": {
-{% if dynamic_mode is defined %}
+{% if port in port_names_service.split(',') %}
+            "profile_list" : "{{ 'egress_lossy_profile' if dynamic_mode is defined else 'egress_lossy_zero_profile' }}"
+{% elif dynamic_mode is defined %}
             "profile_list" : "egress_lossless_profile,egress_lossy_profile"
 {% else %}
             "profile_list" : "egress_lossless_zero_profile,egress_lossy_zero_profile"
@@ -201,10 +215,12 @@
 {%- endmacro %}
 
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
+{#- Service ports carry only lossy traffic, so their queue 3-4 gets the lossy
+    profile instead of the lossless one; all other queues are identical to data ports. #}
     "BUFFER_QUEUE": {
 {% for port in port_names_active.split(',') %}
         "{{ port }}|3-4": {
-            "profile" : "egress_lossless_profile"
+            "profile" : "{{ 'q_lossy_profile' if port in service_port_names.split(',') else 'egress_lossless_profile' }}"
         },
 {% endfor %}
 {% for port in port_names_active.split(',') %}
@@ -223,7 +239,7 @@
 {% if dynamic_mode is defined %}
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}|3-4": {
-            "profile" : "egress_lossless_profile"
+            "profile" : "{{ 'q_lossy_profile' if port in service_port_names.split(',') else 'egress_lossless_profile' }}"
         },
 {% endfor %}
 {% for port in port_names_inactive.split(',') %}
@@ -240,7 +256,7 @@
 {% else %}
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}|3-4": {
-            "profile" : "egress_lossless_zero_profile"
+            "profile" : "{{ 'egress_lossy_zero_profile' if port in service_port_names.split(',') else 'egress_lossless_zero_profile' }}"
         },
 {% endfor %}
 {% for port in port_names_inactive.split(',') %}

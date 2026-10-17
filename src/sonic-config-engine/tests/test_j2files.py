@@ -1588,12 +1588,22 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                                                 self.assertEqual(name.endswith('_zero_profile'), inactive)
                                                 if inactive:
                                                     self.assertEqual(config['BUFFER_PROFILE'][name]['size'], '0')
-                                    if table in ('BUFFER_QUEUE', 'BUFFER_PORT_EGRESS_PROFILE_LIST'):
+                                    if table == 'BUFFER_QUEUE':
                                         data_port = 'Ethernet8' if port not in active_service_ports else 'Ethernet0'
                                         data_entries = {key[len(data_port):]: value for key, value in config[table].items()
                                                         if key == data_port or key.startswith(data_port + '|')}
                                         service_entries = {key[len(port):]: value for key, value in config[table].items()
                                                            if key == port or key.startswith(port + '|')}
+                                        if '|3-4' in service_entries:
+                                            # On SKUs with a lossless queue 3-4, service ports carry only
+                                            # lossy traffic, so that queue takes the lossy profile instead;
+                                            # every other queue still matches a data port. SKUs whose queues
+                                            # are all lossy have no |3-4 range key and need no special-casing.
+                                            lossy_34 = ('egress_lossy_zero_profile' if inactive
+                                                        else 'q_lossy_profile')
+                                            self.assertEqual(service_entries['|3-4']['profile'], lossy_34)
+                                            service_entries.pop('|3-4', None)
+                                            data_entries.pop('|3-4', None)
                                         self.assertEqual(service_entries, data_entries)
                             self.assertEqual(config['BUFFER_PG']['Ethernet0|0']['profile'], 'ingress_lossy_profile')
                             self.assertEqual(config['BUFFER_PG']['Ethernet8|0']['profile'],

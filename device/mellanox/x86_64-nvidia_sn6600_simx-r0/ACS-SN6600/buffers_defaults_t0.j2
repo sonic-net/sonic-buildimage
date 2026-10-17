@@ -25,6 +25,7 @@
 
 {% import 'buffers_defaults_objects.j2' as defs with context %}
 {%- set generate_cable_length_config = defs.generate_cable_length_config %}
+{%- set generate_service_port_list = defs.generate_service_port_list %}
 
 {%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
 {{ defs.generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) }}

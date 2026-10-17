@@ -290,6 +290,8 @@
 {%- endmacro %}
 
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
+{#- All queues on this SKU are lossy (no lossless queue 3-4), so service ports receive the
+    same per-queue lossy profiles as data ports and need no filtering here. #}
     "BUFFER_QUEUE": {
 {% for port in port_names_active.split(',') %}
     {%- set port_type = 'uplink' if port in PORT_UPLINK else 'downlink' %}
