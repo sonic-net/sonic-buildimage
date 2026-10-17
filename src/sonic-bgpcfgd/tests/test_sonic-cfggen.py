@@ -62,6 +62,12 @@ def test_bgpd_main_conf_packet_chassis():
              "bgpd.main.conf.j2/packet_chassis.json",
              "bgpd.main.conf.j2/packet_chassis.conf")
 
+def test_bgpd_main_conf_pic():
+    run_test("PIC backup-path bgpd.main.conf.j2",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/pic.json",
+             "bgpd.main.conf.j2/pic.conf")
+
 def test_bgpd_lo_ipv6_conf_base():
     run_test("IPv6 Loopback bgpd.main.conf.j2",
              "bgpd/bgpd.main.conf.j2",

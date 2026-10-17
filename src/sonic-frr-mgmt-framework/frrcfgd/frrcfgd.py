@@ -1397,6 +1397,24 @@ def hdl_enum_conversion(daemon, cmd_str, op, st_idx, args, data):
     syslog.syslog(syslog.LOG_DEBUG, 'cmd_list {}'.format(cmd_list))
     return cmd_list
 
+def hdl_install_backup_path(daemon, cmd_str, op, st_idx, args, data):
+    """Handle install_backup_path enum: disabled / pic / pic-ecmp.
+
+    Translates the three-value enum into FRR address-family commands:
+      disabled  -> no install backup-path   (also used on deletion)
+      pic       -> install backup-path
+      pic-ecmp  -> install backup-path ecmp
+    """
+    if op == CachedDataWithOp.OP_DELETE:
+        return ['no install backup-path']
+    value = args[st_idx] if st_idx < len(args) else 'disabled'
+    if value == 'pic-ecmp':
+        return ['install backup-path ecmp']
+    elif value == 'pic':
+        return ['install backup-path']
+    else:
+        return ['no install backup-path']
+
 def hdl_confed_peers(daemon, cmd_str, op, st_idx, args, data):
     del_list = []
     add_list = []
@@ -1862,7 +1880,8 @@ class BGPConfigDaemon:
                          ('import-rts',                                  '{no:no-prefix}route-target import {}', hdl_import_list),
                          ('export-rts',                                  '{no:no-prefix}route-target export {}', hdl_export_list),
                          ('import_vrf',                                 '{no:no-prefix}import vrf {}'),
-                         ('import_vrf_route_map',                       '{no:no-prefix}import vrf route-map {}')
+                         ('import_vrf_route_map',                       '{no:no-prefix}import vrf route-map {}'),
+                         ('install_backup_path',                        'install backup-path', hdl_install_backup_path)
     ]
 
     cmn_key_map = [('asn&peer_type',                        '{no:no-prefix}neighbor {} remote-as {}'),
