@@ -47,6 +47,7 @@ export GRPC_GO_LOG_VERBOSITY_LEVEL=99
 export GRPC_GO_LOG_SEVERITY_LEVEL=info
 
 TELEMETRY_ARGS=" -logtostderr"
+NO_TLS=false
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
@@ -78,6 +79,7 @@ elif [ -n "$X509" ]; then
     fi
 else
     TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
+    NO_TLS=true
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -140,11 +142,14 @@ fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
-# Fail-closed default: if user_auth is unset in CONFIG_DB, force cert mode.
-# Without this, --client_auth is omitted and authentication ends up disabled
-# entirely.
+# Certificate authentication cannot run over noTLS, so keep the loopback TCP
+# fallback authenticated with password/JWT. TLS retains its certificate default.
 if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
-    USER_AUTH="cert"
+    if [[ "$NO_TLS" == "true" ]]; then
+        USER_AUTH="password,jwt"
+    else
+        USER_AUTH="cert"
+    fi
 fi
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
