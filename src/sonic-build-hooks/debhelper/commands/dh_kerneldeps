@@ -1,0 +1,135 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+dh_kerneldeps - determine kernel dependencies for kernel modules
+
+=cut
+
+use strict;
+use warnings;
+use Cwd;
+use File::Find;
+use Debian::Debhelper::Dh_Lib;
+use Dpkg::Substvars;
+use Dpkg::Deps;
+
+our $VERSION = DH_BUILTIN_VERSION;
+
+=head1 SYNOPSIS
+
+B<dh_kerneldeps> [S<I<debhelper options>>] [B<-X>I<item>]
+
+=head1 DESCRIPTION
+
+B<dh_kerneldeps> is a debhelper program that is responsible for calculating
+kernel dependencies for kernel modules that are compiled and packaged.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-X>I<item>, B<--exclude=>I<item>
+
+Exclude files that contain F<item> anywhere in their filename from being
+processed. This will make their kernel dependency be ignored.
+This may be useful in some situations, but use it with caution. This option
+may be used more than once to exclude more than one thing.
+
+=back
+
+=head1 EXAMPLES
+
+If you have one or more packages that are building and packaging a kernel
+module, then add B<dh_kerneldeps> to your rules file, before B<dh_substvars>
+is called. Additionally, on the packages that include a kernel module, add
+B<${kernel:Depends}> to the Depends list.
+
+=cut
+
+init(options => {});
+
+on_pkgs_in_parallel {
+	my $is_kernel_module = sub {
+		my ($file) = @_;
+		open(my $fd, '-|', 'readelf', '--wide', '-S', $file) or return 0;
+		my $ff = do { local $/;  <$fd> };
+		close $fd;
+		return $ff =~ m/\s+\.modinfo\s+/ ? 1 : 0;
+	};
+
+	my $get_kernel_module_vermagic = sub {
+		my ($file) = @_;
+		my $ff = qx_cmd('readelf', '-p', '.modinfo', $file);
+		my $vermagic = $ff =~ m/\bvermagic=([^ ]+) / ? $1 : "";
+		return $vermagic;
+	};
+
+	foreach my $package (@_) {
+		my $tmp=tmpdir($package);
+		my $ext=pkgext($package);
+		my %vermagic_strings=();
+
+		next if not -d $tmp;
+
+		my $find_kernel_modules = sub {
+			my $fn = $_;
+			return if -l $fn; # Ignore symlinks
+			# See if we were asked to exclude this file.
+			# Note that we have to test on the full filename, including directory.
+			if (excludefile($fn)) {
+				$File::Find::prune = 1 if -d _;
+				return;
+			}
+			if (-d _) {
+				# Prune directories that contain separated debug symbols.
+				if ($fn =~ m!^\Q$tmp\E/usr/lib/debug/(lib|lib64|usr|bin|sbin|opt|dev|emul|\.build-id)/!) {
+					$File::Find::prune = 1;
+				}
+				return;
+			}
+
+			return if not -f _;
+			return if not $is_kernel_module->($fn);
+			$vermagic_strings{$get_kernel_module_vermagic->($fn)} = ();
+		};
+		find({
+				wanted => $find_kernel_modules,
+				no_chdir => 1,
+		}, $tmp);
+
+		# Open substvars file
+
+		my $substvars = Dpkg::Substvars->new();
+		my $varlistfile = "debian/${ext}substvars";
+		my $varlistfilenew = "$varlistfile.new";
+		my $varnameprefix = 'kernel';
+		my @packages;
+
+		for (keys %vermagic_strings) {
+			my $output = qx_cmd("dpkg", "-S", "/boot/vmlinuz-${_}");
+			my $package_name = $output =~ m/^([^:]+):\s+.*$/ ? $1 : "";
+			push @packages, $package_name;
+		}
+
+		$substvars->load($varlistfile) if -e $varlistfile;
+		$substvars->filter(remove => sub { $_[0] =~ m/^\Q$varnameprefix\E:/ });
+        my $obj = deps_parse(join ', ', @packages);
+        error(g_('invalid dependency got generated: %s'), join(', ', @packages)) unless defined $obj;
+		$obj->sort();
+		$substvars->set_as_required("$varnameprefix:Depends", "$obj" );
+		$substvars->save($varlistfilenew);
+
+		# Replace old file by new one
+		rename $varlistfilenew, $varlistfile
+			or error("install new varlist file $varlistfile");
+	}
+};
+
+=head1 SEE ALSO
+
+L<debhelper(7)>
+
+This program is a part of sonic-build-hooks.
+
+=cut
