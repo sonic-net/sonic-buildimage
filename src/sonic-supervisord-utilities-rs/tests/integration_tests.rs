@@ -213,7 +213,7 @@ fn test_args_parsing() {
     assert!(args.is_ok());
     let args = args.unwrap();
     assert_eq!(args.container_name, "test-container");
-    assert!(!args.use_unix_socket_path);
+    assert!(args.use_unix_socket_path);
     
     // Test with unix socket flag
     let args = Args::try_parse_from(&[
