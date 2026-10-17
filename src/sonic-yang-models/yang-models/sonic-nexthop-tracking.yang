@@ -1,0 +1,73 @@
+module sonic-nexthop-tracking {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-nexthop-tracking";
+    prefix nht;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "NEXTHOP_TRACKING table: zebra nexthop tracking settings per VRF and
+         address family.";
+
+    revision 2026-09-04 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-nexthop-tracking {
+        container NEXTHOP_TRACKING {
+            description
+                "Nexthop tracking settings. Each entry applies to one VRF and
+                 one address family.";
+
+            list NEXTHOP_TRACKING_LIST {
+                description
+                    "Nexthop tracking settings for one VRF and address family.";
+
+                key "vrf_name afi";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description
+                        "VRF name: 'default' or a name from the VRF table.";
+                }
+
+                leaf afi {
+                    type enumeration {
+                        enum ipv4;
+                        enum ipv6;
+                    }
+                    description
+                        "Address family.";
+                }
+
+                leaf resolve_via_default {
+                    type boolean;
+                    description
+                        "Whether zebra may resolve a tracked nexthop through the
+                         default route (0.0.0.0/0 or ::/0) in this VRF and
+                         address family. true renders 'ip nht resolve-via-default'
+                         or 'ipv6 nht resolve-via-default'; false renders the 'no'
+                         form. There is no YANG default: when the leaf or the
+                         entry is absent, the platform default applies. See the
+                         NEXTHOP_TRACKING section of Configuration.md.";
+                }
+            } /* end list NEXTHOP_TRACKING_LIST */
+        } /* end container NEXTHOP_TRACKING */
+    } /* end container sonic-nexthop-tracking */
+}
