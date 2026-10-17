@@ -481,6 +481,78 @@ class Test_SonicYang(object):
 
         return
 
+    @pytest.fixture
+    def dhcp_match_config(self):
+        return {
+            "DHCP_SERVER_IPV4": {
+                "Vlan100": {
+                    "mode": "PORT",
+                    "lease_time": "900",
+                    "netmask": "255.255.255.0",
+                    "state": "enabled",
+                },
+            },
+            "DHCP_SERVER_IPV4_MATCH": {
+                "vendor": {"type": "option60", "value": " MAIA A "},
+            },
+            "DHCP_SERVER_IPV4_BINDING": {
+                "Vlan100|b1": {"matches": ["vendor"], "ips": ["192.0.2.20"]},
+            },
+        }
+
+    @pytest.mark.parametrize("table,field,error", [
+        ("DHCP_SERVER_IPV4_MATCH", "name", "Match condition name must not have"),
+        ("DHCP_SERVER_IPV4_BINDING", "binding", "DHCP binding name must not have"),
+    ])
+    @pytest.mark.parametrize("whitespace", [
+        pytest.param(" ", id="space"),
+        pytest.param("\t", id="tab"),
+        pytest.param("\u00a0", id="NBSP"),
+        pytest.param("\u2003", id="em-space"),
+    ])
+    @pytest.mark.parametrize("leading", [True, False], ids=["leading", "trailing"])
+    def test_dhcp_match_reject_key_whitespace(
+            self, sonic_yang_data, dhcp_match_config, table, field, error, whitespace, leading):
+        config = dhcp_match_config
+        old_key = next(iter(config[table]))
+        prefix, _, name = old_key.rpartition("|")
+        name = whitespace + name if leading else name + whitespace
+        key = prefix + "|" + name if prefix else name
+        config[table][key] = config[table].pop(old_key)
+        if field == "name":
+            config["DHCP_SERVER_IPV4_BINDING"]["Vlan100|b1"]["matches"] = [name]
+
+        syc = sonic_yang_data["syc"]
+        with pytest.raises(sy.SonicYangException, match=error):
+            syc.loadData(config)
+
+    def test_dhcp_match_reject_key_collision(self, sonic_yang_data, dhcp_match_config):
+        bindings = dhcp_match_config["DHCP_SERVER_IPV4_BINDING"]
+        bindings["Vlan100|b1 "] = dict(bindings["Vlan100|b1"])
+        with pytest.raises(sy.SonicYangException, match="DHCP binding name must not have"):
+            sonic_yang_data["syc"].loadData(dhcp_match_config)
+
+    @pytest.mark.parametrize("match_name,binding_name", [
+        ("v", "b"),
+        ("vendor a", "binding a"),
+        ("vendor  a", "binding  a"),
+        ("rack-1.vendor_a:x", "rack-1.binding_a:x,1"),
+    ])
+    def test_dhcp_match_configdb_roundtrip(
+            self, sonic_yang_data, dhcp_match_config, match_name, binding_name):
+        config = dhcp_match_config
+        matches = config["DHCP_SERVER_IPV4_MATCH"]
+        matches[match_name] = matches.pop("vendor")
+        bindings = config["DHCP_SERVER_IPV4_BINDING"]
+        bindings["Vlan100|" + binding_name] = bindings.pop("Vlan100|b1")
+        bindings["Vlan100|" + binding_name]["matches"] = [match_name]
+        syc = sonic_yang_data["syc"]
+
+        syc.loadData(config)
+        syc.validate_data_tree()
+        assert syc.getData() == config
+        assert not syc.tablesWithOutYang
+
     def test_table_with_no_yang(self, sonic_yang_data):
         # in this test, tables with no YANG models must be stored seperately
         # by this library.
