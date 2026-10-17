@@ -2521,6 +2521,9 @@
         "VXLAN_TUNNEL": {
             "vtep1": {
                 "src_ip": "1.2.3.4"
+            },
+            "vtep2": {
+                "src_ip": "2001:db8::1"
             }
         },
         "VXLAN_EVPN_NVO": {
@@ -2547,6 +2550,17 @@
                 "vxlan_tunnel": "vtep1",
                 "scope": "default",
                 "vni": "8000",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
+            },
+            "Vnet56": {
+                "vxlan_tunnel_list": [
+                    "vtep1",
+                    "vtep2"
+                ],
+                "scope": "default",
+                "vni": "8001",
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
