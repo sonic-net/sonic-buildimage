@@ -38,6 +38,7 @@
           </BGPPeer>
         </a:Peers>
         <a:RouteMaps/>
+        <a:RouterID>11.22.33.44</a:RouterID>
       </a:BGPRouterDeclaration>
       <a:BGPRouterDeclaration>
         <a:ASN>64542</a:ASN>

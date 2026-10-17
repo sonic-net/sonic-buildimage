@@ -343,6 +343,16 @@ class TestMultiNpuCfgGen(TestCase):
                 self.assertEqual(output['localhost']['sub_role'], 'BackEnd')
             self.assertEqual(output['localhost']['deployment_id'], "1")
 
+    def test_bgp_router_id_not_generated(self):
+        argument = ["-m", self.sample_graph, "-p", self.sample_port_config, "--var-json", "DEVICE_METADATA"]
+        output = json.loads(self.run_script(argument))
+        self.assertNotIn('bgp_router_id', output['localhost'])
+
+        argument = ["-m", self.sample_graph, "--var-json", "DEVICE_METADATA"]
+        for asic in range(NUM_ASIC):
+            output = json.loads(self.run_script_for_asic(argument, asic, self.port_config[asic]))
+            self.assertNotIn('bgp_router_id', output['localhost'])
+
     def test_global_asic_acl(self):
         argument = ["-m", self.sample_graph, "-p", self.sample_port_config, "--var-json", "ACL_TABLE"]
         output = json.loads(self.run_script(argument))
