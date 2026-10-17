@@ -56,4 +56,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
+# K8s will override this
+ENV CONTAINER_CHECKER_SYNC_ENABLED=false
+
+# K8s will override this
+ENV SERVICE_CHECKER_SYNC_ENABLED=false
+
 ENTRYPOINT ["/usr/local/bin/supervisord"]
