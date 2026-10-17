@@ -406,6 +406,19 @@ install_deb_package $debs_path/sonic-db-cli_*.deb
 install_deb_package $debs_path/sonic-rsyslog-plugin_*.deb
 {% endif %}
 
+# Install libcareplus, the userspace live-patching engine used by the
+# func_hotpatch patch type. libcare-ctl applies and queries live patches
+# on a running device.
+install_deb_package $debs_path/libcareplus_*.deb
+
+# Install the boot-time function-hotpatch reapply service. The service exits
+# cleanly when no patches have been persisted by sonic-installer.
+sudo cp $IMAGE_CONFIGS/hotpatch/hotpatches-auto-install $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/hotpatches-auto-install
+sudo cp $IMAGE_CONFIGS/hotpatch/hotpatches-auto-install.service $FILESYSTEM_ROOT/etc/systemd/system/
+sudo chmod 644 $FILESYSTEM_ROOT/etc/systemd/system/hotpatches-auto-install.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable hotpatches-auto-install.service
+
 # Install custom-built monit package and SONiC configuration files
 install_deb_package $debs_path/monit_*.deb
 sudo cp $IMAGE_CONFIGS/monit/monit.service $FILESYSTEM_ROOT/etc/systemd/system/

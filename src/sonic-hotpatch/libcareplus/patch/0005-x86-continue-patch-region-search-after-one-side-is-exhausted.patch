@@ -1,0 +1,52 @@
+From 95428c0f17c5fcfe5d39c20a62aff36010990a52 Mon Sep 17 00:00:00 2001
+From: "yuezhou.jk" <yuezhou.jk@alibaba-inc.com>
+Date: Sun, 13 Sep 2026 15:47:16 +0800
+Subject: [PATCH 5/5] x86: continue patch-region search after one side is
+ exhausted
+
+object_find_patch_region() searches address-space holes on both sides of the
+object, but the loop stopped as soon as either side became NULL. For shared
+libraries far from the main executable, the left search can exceed the 2 GiB
+jump range immediately while valid holes still exist on the right, causing a
+false "can't find suitable region" failure.
+
+Continue while either side has candidates. The existing per-side NULL checks
+and NULL-safe hole helpers already support independent exhaustion, so both
+search directions can now run to completion.
+
+The change is limited to x86, where it has been exercised. The equivalent
+expressions on other architectures are left unchanged until tested there.
+
+Signed-off-by: yuezhou.jk <yuezhou.jk@alibaba-inc.com>
+---
+ src/arch/x86/arch_process.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/src/arch/x86/arch_process.c b/src/arch/x86/arch_process.c
+index d9e9963..01b1651 100644
+--- a/src/arch/x86/arch_process.c
++++ b/src/arch/x86/arch_process.c
+@@ -70,7 +70,19 @@ unsigned long object_find_patch_region(struct object_file *obj,
+ 	/* TODO carefully check for the holes laying between obj_start and
+ 	 * obj_end, i.e. just after the executable segment of an executable
+ 	 */
+-	while (left_hole != NULL && right_hole != NULL) {
++	/*
++	 * NOTE: this used to be `&&`, which abandoned the whole search as soon as
++	 * EITHER side ran out of candidates. In a process whose object sits far from
++	 * the main executable (e.g. syncd: exe at 0x5646..., libs at 0x7fea...) the
++	 * left walk hits `obj_end - left_hole->end > max_distance` on its very first
++	 * step and is nulled, which ended the loop after the right walk had advanced
++	 * a single hole. Suitable holes further right were never examined, so the
++	 * patch failed with "can't find suitable region" even though the address
++	 * space had plenty of room within +/-2GiB. Both walks must be allowed to run
++	 * to exhaustion independently. next_hole()/prev_hole()/hole_size() are all
++	 * NULL-safe (hole_size(NULL) == 0), so no extra guards are needed.
++	 */
++	while (left_hole != NULL || right_hole != NULL) {
+ 		if (right_hole != NULL &&
+ 		    right_hole->start - obj_start > max_distance)
+ 			right_hole = NULL;
+-- 
+2.25.1
+
