@@ -1,0 +1,153 @@
+From f8d5f8027dcd5d4cc69e6c877bd1ea30bd6b4372 Mon Sep 17 00:00:00 2001
+From: Yash Pandit <ypandit@cisco.com>
+Date: Tue, 15 Sep 2026 16:18:06 -0700
+Subject: [PATCH] libteam: LACP elect single fallback member
+
+Elect a single DEFAULTED member (lowest LACP priority, then lowest port id)
+so fallback never displaces a live or recovering partner.
+
+Signed-off-by: Yash Pandit <ypandit@cisco.com>
+---
+ teamd/teamd_runner_lacp.c | 85 ++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 76 insertions(+), 9 deletions(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index a3be384..42ea2aa 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -190,6 +190,7 @@ struct wr_tdport_state
+ struct lacp {
+ 	struct teamd_context *ctx;
+ 	struct lacp_port *selected_agg_lead; /* leading port of selected aggregator */
++	struct lacp_port *fallback_elected; /* elected single fallback member, or NULL */
+ 	bool carrier_up;
+ 	time_t warm_start_mode_timer;
+ 	time_t next_retry_count_change_time;
+@@ -602,18 +603,47 @@ static bool lacp_port_loopback_free(struct lacp_port *lacp_port)
+ 	return true;
+ }
+ 
+-/*
+- * is_lacp_fallback_eligible - is lacp_port eligible to go into lacp fallback mode
+- *
+- * Return true if it is, false otherwise
+- */
++/* Elect the single fallback member: the DEFAULTED port with the lowest LACP
++ * priority, tie-broken by lowest port id. Returns NULL while any member is
++ * CURRENT or EXPIRED, so fallback never displaces a live or recovering
++ * partner. */
++static struct lacp_port *lacp_fallback_elected_port(struct lacp *lacp)
++{
++	struct teamd_port *tdport;
++	struct lacp_port *best = NULL;
++
++	if (!lacp->cfg.fallback)
++		return NULL;
++
++	teamd_for_each_tdport(tdport, lacp->ctx) {
++		struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
++
++		if (lacp_port->state == PORT_STATE_CURRENT ||
++		    lacp_port->state == PORT_STATE_EXPIRED)
++			return NULL;
++
++		if (lacp_port->state != PORT_STATE_DEFAULTED)
++			continue;
++
++		if (!best ||
++		    lacp_port->cfg.lacp_prio < best->cfg.lacp_prio ||
++		    (lacp_port->cfg.lacp_prio == best->cfg.lacp_prio &&
++		     ntohs(lacp_port->actor.port) < ntohs(best->actor.port)))
++			best = lacp_port;
++	}
++
++	teamd_log_dbg(lacp->ctx, "LACP fallback elected member: %s",
++		      best ? best->tdport->ifname : "none");
++
++	return best;
++}
++
++/* True only for the single elected fallback member. */
+ static bool is_lacp_fallback_eligible(struct lacp_port *lacp_port)
+ {
+-	teamd_log_dbg(lacp_port->ctx, "%s fallback eligible state \"%d \" cfg \"%d\".",
+-				lacp_port->tdport->ifname, lacp_port->state,
+-				lacp_port->lacp->cfg.fallback);
+ 	return lacp_port->state == PORT_STATE_DEFAULTED &&
+-		lacp_port->lacp->cfg.fallback;
++		lacp_port->lacp->cfg.fallback &&
++		lacp_port == lacp_port->lacp->fallback_elected;
+ }
+ 
+ static bool lacp_port_selectable_state(struct lacp_port *lacp_port)
+@@ -779,6 +809,12 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu);
+ 
+ #define LACP_WARM_START_CARRIER_TIMEOUT 3
+ 
++/* Whether fallback should keep the LAG up on its single elected member. */
++static bool lacp_is_fallback_active(struct lacp *lacp)
++{
++	return lacp->cfg.fallback && lacp->fallback_elected;
++}
++
+ static int lacp_update_carrier(struct lacp *lacp)
+ {
+ 	struct teamd_port *tdport;
+@@ -861,6 +897,14 @@ static int lacp_update_carrier(struct lacp *lacp)
+ 		return lacp_set_carrier(lacp, true);
+ 	}
+ 
++	/* Fallback brings the LAG up on the single elected member. */
++	if (ports_enabled > 0 && lacp_is_fallback_active(lacp)) {
++		if (lacp->cfg.min_ports > 1)
++			teamd_log_warn("LACP fallback active: LAG up with %d enabled port(s), overruling min_ports %d",
++				       ports_enabled, lacp->cfg.min_ports);
++		return lacp_set_carrier(lacp, true);
++	}
++
+ 	if (lacp->ctx->warm_start_mode) {
+ 		teamd_log_info("WR-mode. lacp_update_carrier(): Keep LAG interface up because of WR start mode");
+ 		return lacp_set_carrier(lacp, true);
+@@ -1338,6 +1382,7 @@ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 			       enum lacp_port_state new_state)
+ {
+ 	bool admin_state = team_get_ifinfo_admin_state(lacp_port->ctx->ifinfo);
++	struct lacp_port *old_elected;
+ 	int err;
+ 
+ 	if (new_state == lacp_port->state ||
+@@ -1402,10 +1447,32 @@ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 		       lacp_port_state_name[new_state]);
+ 	lacp_port->state = new_state;
+ 
++	/* Refresh the fallback election after this port's state change. */
++	old_elected = lacp_port->lacp->fallback_elected;
++	lacp_port->lacp->fallback_elected =
++		lacp_fallback_elected_port(lacp_port->lacp);
++
+ 	err = lacp_port_agg_update(lacp_port);
+ 	if (err)
+ 		return err;
+ 
++	/* Election flipped: re-evaluate the other ports to select the new member
++	 * and release the old one (their own state is unchanged). */
++	if (lacp_port->lacp->fallback_elected != old_elected) {
++		struct teamd_port *tdport;
++
++		teamd_for_each_tdport(tdport, lacp_port->ctx) {
++			struct lacp_port *other =
++				lacp_port_get(lacp_port->lacp, tdport);
++
++			if (other == lacp_port)
++				continue;
++			err = lacp_port_agg_update(other);
++			if (err)
++				return err;
++		}
++	}
++
+ 	lacp_port_actor_update(lacp_port);
+ 
+ 	return lacpdu_send(lacp_port);
+-- 
+2.34.1
