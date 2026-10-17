@@ -1,0 +1,40 @@
+From 8870375eb4f66d3bc9e78ed75e8da0c61b2f09c2 Mon Sep 17 00:00:00 2001
+From: Sumalatha G <sumalatha.g@xoriant.com>
+Date: Thu, 2 Apr 2026 17:28:26 +0530
+Subject: [PATCH] Fix lldp_syncd cache issue during config reload
+
+When 'config reload -f' is executed, the database tables are cleared,
+but lldp_syncd continues running in the lldp container. The daemon
+maintains an internal cache and only updates the database when the
+cache differs from new data. This causes LLDP_LOC_CHASSIS table to
+remain empty after reload if the chassis information hasn't changed.
+
+This fix adds a check to verify if the database table actually exists
+before relying solely on the cache comparison. If the table doesn't
+exist (indicating the DB was cleared), the daemon will repopulate it
+even if the cache hasn't changed.
+
+Fixes: sonic-net/sonic-buildimage#26297
+---
+ src/lldp_syncd/daemon.py | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/lldp_syncd/daemon.py b/src/lldp_syncd/daemon.py
+index e949ad1..9c104e8 100644
+--- a/src/lldp_syncd/daemon.py
++++ b/src/lldp_syncd/daemon.py
+@@ -380,7 +380,11 @@ class LldpSyncDaemon(SonicSyncDaemon):
+         # push local chassis data to APP DB
+         if 'local-chassis' in parsed_update:
+             chassis_update = parsed_update.pop('local-chassis')
+-            if chassis_update != self.chassis_cache:
++            # Check if table exists in DB - if not, the DB was cleared (e.g., during config reload)
++            db_table_exists = self.db_connector.exists(self.db_connector.APPL_DB,
++                                                       LldpSyncDaemon.LLDP_LOC_CHASSIS_TABLE)
++            # Update if cache differs OR if DB table doesn't exist (handles config reload -f case)
++            if chassis_update != self.chassis_cache or not db_table_exists:
+                 self.db_connector.delete(self.db_connector.APPL_DB,
+                                          LldpSyncDaemon.LLDP_LOC_CHASSIS_TABLE)
+                 for k, v in chassis_update.items():
+-- 
+2.43.0
