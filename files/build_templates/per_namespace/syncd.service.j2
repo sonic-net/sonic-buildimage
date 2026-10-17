@@ -25,6 +25,8 @@ After=sonic.target
 {% if sonic_asic_platform == 'mellanox' %}
 Requires=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
 After=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
+Wants=techsupport-trigger.socket
+After=techsupport-trigger.socket
 {% endif %}
 
 [Service]
