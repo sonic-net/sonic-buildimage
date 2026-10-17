@@ -6,7 +6,7 @@ systemctl enable platform-modules-z9100.service
 systemctl start platform-modules-z9100.service
 
 
-systemctl enable z9100-lpc-monitor.service
-systemctl start z9100-lpc-monitor.service
+#systemctl enable z9100-lpc-monitor.service
+#systemctl start z9100-lpc-monitor.service
 
 #DEBHELPER#
