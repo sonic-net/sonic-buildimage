@@ -666,7 +666,7 @@ static void ispvm_ui_reinit()
 
 int ispvme_main(int argc, char *argv[], int file_fd, name_info_t *info)
 {
-    unsigned short iCommandLineIndex  = 0;
+    int iCommandLineIndex             = 0;
     short siRetCode                   = 0;
     char szExtension[5] = { 0 };
     char szCommandLineArg[300] = { 0 };
