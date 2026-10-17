@@ -1,7 +1,16 @@
 {
     "__README__" : "This is default map of events that eventd uses. Developer can modify this file and send SIGINT to eventd to make it read and use the updated file. Alternatively developer can test the new event by adding it to a custom event profile and use 'event profile <filename>' command to apply that profile without having to send SIGINT to eventd. Developer need to commit default.json file with the new event after testing it out. Supported severities are: CRITICAL, MAJOR, MINOR, WARNING and INFORMATIONAL. Supported enable flag values are: true and false.",
     "events":[
-
+        { "name": "PSU_MISSING",     "severity": "CRITICAL", "enable": "true", "message": "Absent" },
+        { "name": "PSU_POWER_BAD",   "severity": "CRITICAL", "enable": "true", "message": "Power Not OK" },
+        { "name": "PSU_VOLTAGE_OOR", "severity": "MAJOR",    "enable": "true", "message": "Voltage Out of Range" },
+        { "name": "PSU_CURRENT_OOR", "severity": "MAJOR",    "enable": "true", "message": "Current Out of Range" },
+        { "name": "PSU_FAN_FAULT",   "severity": "MAJOR",    "enable": "true", "message": "Fan Fault" },
+        { "name": "PSU_TEMP_FAULT",  "severity": "MAJOR",    "enable": "true", "message": "Temperature Fault" },
+        { "name": "FAN_MISSING",     "severity": "MAJOR",    "enable": "true", "message": "Absent" },
+        { "name": "FAN_FAULT",       "severity": "MAJOR",    "enable": "true", "message": "Fault" },
+        { "name": "FAN_UNDER_SPEED", "severity": "MINOR",    "enable": "true", "message": "Under Speed" },
+        { "name": "FAN_OVER_SPEED",  "severity": "MINOR",    "enable": "true", "message": "Over Speed" }
     ]
 }
            
