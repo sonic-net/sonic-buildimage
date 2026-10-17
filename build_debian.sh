@@ -394,6 +394,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
+    nvme-cli                \
+    firmware-realtek        \
     tzdata-legacy           \
     nvme-cli
 
