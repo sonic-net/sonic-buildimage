@@ -27,6 +27,9 @@ CPO_FILE = "cpo.json"
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
+# BMC OS file name, located in the hardware SKU directory
+BMC_OS_FILE = 'bmc_os.json'
+
 BMC_OS_OPENBMC = 'openbmc'
 BMC_OS_SONIC = 'sonic'
 BMC_OS_DEFAULT = BMC_OS_SONIC
@@ -1295,22 +1298,20 @@ def get_bmc_address():
 
 def get_bmc_os():
     """
-    Return the configured BMC operating system for Switch-Host communication.
+    Return the BMC operating system used for Switch-Host communication.
 
-    Reads 'os' from CONFIG_DB DEVICE_METADATA|bmc. When unset or invalid,
-    returns BMC_OS_DEFAULT (sonic).
+    Reads 'os' from bmc_os.json in the hardware SKU directory. When the file
+    is missing, unreadable or holds an invalid value, returns BMC_OS_DEFAULT (sonic).
 
     Returns:
         BMC_OS_OPENBMC or BMC_OS_SONIC.
     """
     try:
-        config_db = ConfigDBConnector()
-        config_db.connect()
-        entry = config_db.get_entry('DEVICE_METADATA', 'bmc')
-        if entry:
-            bmc_os = entry.get('os')
-            if bmc_os in _VALID_BMC_OS_VALUES:
-                return bmc_os
+        bmc_os_file = os.path.join(get_path_to_hwsku_dir(), BMC_OS_FILE)
+        with open(bmc_os_file, "r") as f:
+            bmc_os = json.load(f).get('os')
+        if bmc_os in _VALID_BMC_OS_VALUES:
+            return bmc_os
     except Exception:
         pass
     return BMC_OS_DEFAULT
