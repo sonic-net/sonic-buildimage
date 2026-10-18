@@ -28,6 +28,8 @@ try:
     from sonic_platform_base.sonic_xcvr.mem_maps.broadcom.bailly import BaillyMemMap
     from sonic_platform_base.sonic_xcvr.codes.broadcom.bailly import BaillyCodes
     from sonic_platform_base.sonic_xcvr.xcvr_eeprom import XcvrEeprom
+    from sonic_py_common import device_info
+    from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
 
 except ImportError as error:
     raise ImportError(str(error) + "- required module not found") from error
@@ -251,4 +253,25 @@ class CPO(CpoOptoeBase):
     def is_els_tx_enabled(self):
         pass
 
+    def __get_path_to_port_config_file(self):
+        hwsku_path = device_info.get_path_to_platform_dir()
+        return "/".join([hwsku_path, "platform.json"])
 
+    def get_name(self):
+        """
+        Retrieves the name of the device
+            Returns:
+            string: The name of the device
+        """
+        sfputil_helper = SfpUtilHelper()
+        sfputil_helper.read_porttab_mappings(self.__get_path_to_port_config_file())
+        logical_list = sfputil_helper.logical
+        idx = int(self._port_id) - 1
+        name = logical_list[idx] if 0 <= idx < len(logical_list) else None
+        return name or "Unknown"
+
+    def is_replaceable(self):
+        return False
+
+    def get_reset_status(self):
+        return False

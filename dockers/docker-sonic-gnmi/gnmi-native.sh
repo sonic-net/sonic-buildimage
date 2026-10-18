@@ -117,7 +117,7 @@ esac
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [[ "$DPU_EPHEMERAL_TLS" == "true" || -z "$CLIENT_AUTH" || "$CLIENT_AUTH" == "false" ]]; then
+if [[ "$DPU_EPHEMERAL_TLS" == "true" || "$CLIENT_AUTH" == "false" ]]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
@@ -172,11 +172,13 @@ else
 fi
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
-# If user_auth is not set, default to certs
-if [ $USER_AUTH == "null" ]; then
+# Fail-closed default: if user_auth is unset (missing GNMI CONFIG_DB entry or
+# missing field), force cert mode. Without this, --client_auth is omitted and
+# authentication ends up disabled entirely.
+if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
     USER_AUTH="cert"
 fi
-if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ] && [  $USER_AUTH != "none" ]; then
+if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
     if [ $USER_AUTH == "cert" ]; then

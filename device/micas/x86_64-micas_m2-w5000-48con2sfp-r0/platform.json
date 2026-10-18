@@ -1,0 +1,83 @@
+{
+    "chassis": {
+        "name": "M2-W5000-48CON2SFP",
+        "components": [
+            {
+                "name": "CPU_CPLD"
+            },
+            {
+                "name": "CTRL_CPLD"
+            },
+            {
+                "name": "PORT_CPLD"
+            },
+            {
+                "name": "FPGA"
+            },
+            {
+                "name": "BIOS"
+            }
+        ],
+        "fans": [
+            {
+                "name": "Fan1",
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "Fan2",
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "Fan3",
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "Fan4",
+                "status_led": {
+                    "controllable": false
+                }
+            }
+        ],
+        "thermals": [
+            {
+                "name": "CPU_TEMP",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "INLET_TEMP",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "OUTLET_TEMP",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "COPPER0"
+            },
+            {
+                "name": "SFP1"
+            },
+            {
+                "name": "SFP2"
+            }
+       	]
+    },
+    "interfaces": {}
+}

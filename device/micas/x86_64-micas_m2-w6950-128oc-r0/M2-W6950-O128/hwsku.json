@@ -644,11 +644,6 @@
             "default_brkout_mode": "1x100G",
             "autoneg": "off",
             "fec": "rs"
-        },
-        "Ethernet1025": {
-            "default_brkout_mode": "1x1G",
-            "autoneg": "off",
-            "fec": "none"
         }
     }
 }

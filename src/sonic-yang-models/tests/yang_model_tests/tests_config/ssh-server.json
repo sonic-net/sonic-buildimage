@@ -162,5 +162,77 @@
                 }
             }
         }
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_IPV4": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "listen_addresses": [ "10.0.0.1" ]
+                }
+            }
+        }
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_IPV6": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "listen_addresses": [ "fe80::1" ]
+                }
+            }
+        }
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_IPV4_IPV6": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "listen_addresses": [ "10.0.0.1", "fe80::1" ]
+                }
+            }
+        }
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_MULTIPLE": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "listen_addresses": [ "10.0.0.1", "10.0.0.2", "fe80::1", "fe80::2" ]
+                }
+            }
+        }
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_ABSENT": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "ports": "22"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_LISTEN_ADDRESSES_MALFORMED_IPV4": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "listen_addresses": [ "10.0.0.999" ]
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_LISTEN_ADDRESSES_MALFORMED_IPV6": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "listen_addresses": [ "fe80::zzzz" ]
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_LISTEN_ADDRESSES_WITH_PORT": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "listen_addresses": [ "10.0.0.1:22" ]
+                }
+            }
+        }
     }
 }
