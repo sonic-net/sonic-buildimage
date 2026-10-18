@@ -202,7 +202,7 @@ gsettings-desktop-schemas==43.0-1
 gsfonts==2:20200910-7
 gstreamer1.0-libav==1.22.0-2
 gstreamer1.0-plugins-base==1.22.0-3+deb12u7
-gstreamer1.0-plugins-good==1.22.0-5+deb12u3
+gstreamer1.0-plugins-good==1.22.0-5+deb12u4
 gstreamer1.0-x==1.22.0-3+deb12u7
 gtk-update-icon-cache==3.24.38-2~deb12u3
 guile-3.0-libs==3.0.8-2
@@ -233,7 +233,7 @@ java-common==0.74
 java-wrappers==0.4
 javahelper==0.78
 javascript-common==11+nmu1
-jq==1.6-2.1+deb12u2
+jq==1.6-2.1+deb12u3
 junit4==4.13.2-3
 junit5==5.9.2-1
 kernel-wedge==2.106~deb12u1
@@ -837,7 +837,7 @@ libjetty9-java==9.4.57-1.1~deb12u1
 libjpeg-dev==1:2.1.5-2
 libjpeg62-turbo==1:2.1.5-2
 libjpeg62-turbo-dev==1:2.1.5-2
-libjq1==1.6-2.1+deb12u2
+libjq1==1.6-2.1+deb12u3
 libjs-bootstrap4==4.6.1+dfsg1-4+deb12u1
 libjs-d3==3.5.17-4
 libjs-jquery==3.6.1+dfsg+~3.5.14-1
@@ -922,9 +922,9 @@ libmagickcore-6.q16-6-extra==8:6.9.11.60+dfsg-1.6+deb12u13
 libmagickwand-6.q16-6==8:6.9.11.60+dfsg-1.6+deb12u13
 libmail-sendmail-perl==0.80-3
 libmailtools-perl==2.21-2
-libmariadb-dev==1:10.11.18-0+deb12u1
-libmariadb-dev-compat==1:10.11.18-0+deb12u1
-libmariadb3==1:10.11.18-0+deb12u1
+libmariadb-dev==1:10.11.19-0+deb12u1
+libmariadb-dev-compat==1:10.11.19-0+deb12u1
+libmariadb3==1:10.11.19-0+deb12u1
 libmarkdown2==2.2.7-2
 libmath-base85-perl==0.5+dfsg-2
 libmaven-archiver-java==3.6.0-1
@@ -1595,7 +1595,7 @@ man-db==2.11.2-2
 man2html-base==1.6g-14
 manpages==6.03-2
 manpages-dev==6.03-2
-mariadb-common==1:10.11.18-0+deb12u1
+mariadb-common==1:10.11.19-0+deb12u1
 maven==3.8.7-1
 maven-debian-helper==2.6.3
 maven-repo-helper==1.11
