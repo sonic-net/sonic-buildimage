@@ -774,6 +774,81 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         finally:
             shutil.rmtree(temp_dir)
 
+    def test_dhcp_relay_tolerates_slash_form_interface_keys(self):
+        # In the host namespace of a multi-ASIC chassis without a host-level
+        # port_config.ini, INTERFACE keys keep minigraph's front-panel alias
+        # names (Ethernet24/1). pfx_filter leaves them out of the rendered
+        # output, so they must not abort rendering; unsafe names still must.
+        wait_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'wait_for_intf.sh.j2'
+        )
+        supervisor_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'docker-dhcp-relay.supervisord.conf.j2'
+        )
+        temp_dir = tempfile.mkdtemp(prefix='dhcp-relay-slash-interface-')
+        config_path = os.path.join(temp_dir, 'config.json')
+
+        def write_config(interface_keys):
+            config = {
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'deployment_id': '0',
+                    },
+                },
+                'VLAN': {
+                    'Vlan100': {
+                        'dhcp_servers': ['192.0.2.10'],
+                    },
+                },
+                'VLAN_INTERFACE': {
+                    'Vlan100': {},
+                    'Vlan100|192.0.2.1/24': {},
+                },
+                'INTERFACE': {key: {} for key in interface_keys},
+            }
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+
+        try:
+            write_config([
+                'Ethernet0|198.51.100.0/31',
+                'Ethernet24/1',
+                'Ethernet24/1|198.51.100.10/31',
+            ])
+            for template in (wait_template, supervisor_template):
+                rendered = self.run_script([
+                    '-j', config_path, '-t', template
+                ])
+                self.assertIn('Ethernet0', rendered)
+                self.assertNotIn('Ethernet24/1', rendered)
+
+            unsafe_names = (
+                'Ethernet24/1;touch',
+                'Ethernet24/1\ncommand=/bin/sh -c true',
+                'Ethernet24/1%(ENV_HOME)s',
+                'Ethernet24//1',
+                '/Ethernet24',
+                'Ethernet24/',
+                'Ethernet24/..',
+            )
+            for unsafe_name in unsafe_names:
+                write_config(['{}|198.51.100.10/31'.format(unsafe_name)])
+                for template in (wait_template, supervisor_template):
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        subprocess.check_output(
+                            self.script_file + [
+                                '-j', config_path, '-t', template
+                            ],
+                            stderr=subprocess.STDOUT
+                        )
+                    self.assertIn(
+                        'Invalid interface name', error.exception.output.decode()
+                    )
+        finally:
+            shutil.rmtree(temp_dir)
+
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-router-advertiser', 'radvd.conf.j2')
