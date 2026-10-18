@@ -45,9 +45,9 @@ https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz.asc
 https://deb.debian.org/debian/pool/main/libt/libteam/libteam_1.31-1.debian.tar.xz==26fef506b62eb28e3356781a707c2440
 https://deb.debian.org/debian/pool/main/libt/libteam/libteam_1.31-1.dsc==f27b8eee722b8595ab45344e4bd3cbe7
 https://deb.debian.org/debian/pool/main/libt/libteam/libteam_1.31.orig.tar.xz==eec2e9c38e9a4c2cdb7e4954d110a118
-https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7-1.debian.tar.xz==ce468d153936c0b200d3c514b98247fc
-https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7-1.dsc==74b61898edb1a1fae67a540a8959f657
-https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7.orig.tar.gz==30c6153878878bc8f692127f4d090b36
+https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.8-1.debian.tar.xz==20eb9b74612961f3553c9239b430671e
+https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.8-1.dsc==c73045fb6eda3d15713b93afb1cf0d2f
+https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.8.orig.tar.gz==0f1284f05e8602423d9f12974c588b76
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1-7.debian.tar.xz==a6135296076789766d5037281fd6e277
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1-7.dsc==ce345ed4c63d1ec10849bd1d4f497b18
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1.orig.tar.gz==689148621a2eaa734497b12bed1c5202

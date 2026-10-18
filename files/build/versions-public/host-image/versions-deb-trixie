@@ -320,7 +320,7 @@ logrotate==3.22.0-1
 logsave==1.47.2-3+b12
 lsof==4.99.4+dfsg-2
 lucius-pkthandler==1.0-2
-makedumpfile==1:1.7.7-1
+makedumpfile==1:1.7.8-1
 media-types==13.0.0
 mft==4.36.0-1033
 mft-fwtrace-cfg==1.0.0
