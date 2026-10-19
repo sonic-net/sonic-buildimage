@@ -2350,6 +2350,8 @@ class BGPConfigDaemon:
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
+        # EVPN_ETHERNET_SEGMENT interfaces whose ES config FRR refused.
+        self.evpn_es_pending = set()
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
@@ -2371,6 +2373,19 @@ class BGPConfigDaemon:
                         table_key = ExtConfigDBConnector.get_table_key(table1, key1)
                         self.__update_cache_data(table_key, data1)
         self._replaying = False
+
+    def __queue_evpn_es(self, ifname):
+        entry = self.config_db.get_entry('EVPN_ETHERNET_SEGMENT', ifname)
+        if not entry:
+            return
+        upd_data = {k: CachedDataWithOp(v, CachedDataWithOp.OP_ADD) for k, v in entry.items()}
+        self.bgp_message.put((ifname, False, 'EVPN_ETHERNET_SEGMENT', upd_data))
+
+    def __retry_evpn_es(self, done_ifname):
+        """An ES was removed or changed on done_ifname, so an ESI it held may be free again."""
+        for ifname in sorted(self.evpn_es_pending - {done_ifname}):
+            self.evpn_es_pending.discard(ifname)
+            self.__queue_evpn_es(ifname)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -3136,6 +3151,8 @@ class BGPConfigDaemon:
                 changed = set(f for f, dval in data.items()
                               if isinstance(dval, CachedDataWithOp) and dval.op != CachedDataWithOp.OP_NONE)
                 identity_changed = del_table or bool(changed - {'df_pref'})
+                es_cache_key = ExtConfigDBConnector.get_table_key(table, ifname)
+                had_es = bool(self.table_data_cache.get(es_cache_key))
 
                 es_type = entry.get('type', '')
                 esi     = entry.get('esi', '')
@@ -3196,7 +3213,15 @@ class BGPConfigDaemon:
                     continue
                 if not self.__run_command(table, command):
                     syslog.syslog(syslog.LOG_ERR, 'failed running EVPN ethernet segment config command')
+                    if identity_changed and not del_table:
+                        # zebra refuses an ESI another interface holds. The clears ran, so drop the
+                        # cached row; the row is retried when another ES is removed or re-identified.
+                        self.evpn_es_pending.add(ifname)
+                        self.table_data_cache.pop(es_cache_key, None)
                     continue
+                self.evpn_es_pending.discard(ifname)
+                if identity_changed and had_es:
+                    self.__retry_evpn_es(ifname)
                 # Mark applied only when the ES was programmed; a skipped Type-3 stays pending.
                 if del_table or es_applied:
                     for _, dval in data.items():

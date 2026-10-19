@@ -510,6 +510,10 @@ def _es_cmd(ifname, *lines):
 _ES_CLEAR = ('no evpn mh es-sys-mac', 'no evpn mh es-df-pref', 'no evpn mh es-id')
 
 
+def _es_calls(run_cmd):
+    return [c.args[1] for c in run_cmd.call_args_list if c.args[0] == 'EVPN_ETHERNET_SEGMENT']
+
+
 def _es_db(config_db_cls, es_rows, pc_rows=None, metadata=None):
     """Point the daemon's CONFIG_DB reads at in-memory EVPN_ETHERNET_SEGMENT/PORTCHANNEL rows."""
     tables = {'EVPN_ETHERNET_SEGMENT': es_rows, 'PORTCHANNEL': pc_rows if pc_rows is not None else {}}
@@ -547,8 +551,7 @@ def test_evpn_ethernet_segment_replay_no_teardown(run_cmd):
         for p in patches:
             p.stop()
     assert daemon._replaying is False
-    es_cmds = [c.args[1] for c in run_cmd.call_args_list if c.args[0] == 'EVPN_ETHERNET_SEGMENT']
-    assert sorted(es_cmds) == sorted([
+    assert sorted(_es_calls(run_cmd)) == sorted([
         _es_cmd('PortChannel0002', 'evpn mh es-id 10', 'evpn mh es-sys-mac 00:11:22:33:44:55',
                 'evpn mh es-df-pref 12345'),
         _es_cmd('Ethernet10', 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA', 'no evpn mh es-df-pref'),
@@ -576,3 +579,137 @@ def test_evpn_ethernet_segment_replay_no_teardown(run_cmd):
                                        'evpn mh es-sys-mac 00:11:22:33:44:55',
                                        'evpn mh es-df-pref 12345'),
                                True, None)
+
+
+class _FakeZebraEsi:
+    """Stands in for zebra's ESI checks: an es-id another interface holds is refused."""
+    def __init__(self):
+        self.owner = {}   # es-id -> interface
+    def __call__(self, table, cmd, *args):
+        if table != 'EVPN_ETHERNET_SEGMENT':
+            return True
+        ifname = cmd[4].split()[1]
+        ok = True
+        for line in cmd[6::2]:
+            if line == 'no evpn mh es-id':
+                self.owner = {e: i for e, i in self.owner.items() if i != ifname}
+            elif line.startswith('evpn mh es-id '):
+                es_id = line.split()[-1]
+                if self.owner.get(es_id, ifname) != ifname:
+                    ok = False
+                    continue
+                self.owner = {e: i for e, i in self.owner.items() if i != ifname}
+                self.owner[es_id] = ifname
+        return ok
+
+
+_ESI_A = '00:01:02:03:04:05:06:07:08:AA'
+_ESI_B = '00:01:02:03:04:05:06:07:08:BB'
+
+
+def _type0(esi, **extra):
+    return dict({'type': 'TYPE_0_OPERATOR_CONFIGURED', 'esi': esi}, **extra)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_refused_esi_retried(run_cmd):
+    """An ESI moving between interfaces: B's add is refused while A still holds the ESI,
+    and is retried once A's ES is removed."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    zebra = run_cmd.side_effect = _FakeZebraEsi()
+    es_rows = {'Ethernet1': _type0(_ESI_A)}
+    patches = _es_db(ExtConfigDBConnector, es_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', _type0(_ESI_A))
+        assert zebra.owner == {_ESI_A: 'Ethernet1'}
+
+        # B's SET is handled before A's DEL: refused, nothing cached, kept pending.
+        es_rows['Ethernet2'] = _type0(_ESI_A)
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+        assert zebra.owner == {_ESI_A: 'Ethernet1'}
+        assert daemon.evpn_es_pending == {'Ethernet2'}
+        assert 'EVPN_ETHERNET_SEGMENT&&Ethernet2' not in daemon.table_data_cache
+
+        # A's DEL frees the ESI, and B is re-applied in the same update.
+        run_cmd.reset_mock()
+        del es_rows['Ethernet1']
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', None)
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [
+        _es_cmd('Ethernet1', *_ES_CLEAR),
+        _es_cmd('Ethernet2', *_ES_CLEAR, 'evpn mh es-id {}'.format(_ESI_A)),
+    ]
+    assert zebra.owner == {_ESI_A: 'Ethernet2'}
+    assert daemon.evpn_es_pending == set()
+    assert daemon.table_data_cache['EVPN_ETHERNET_SEGMENT&&Ethernet2'] == _type0(_ESI_A)
+    assert 'EVPN_ETHERNET_SEGMENT&&Ethernet1' not in daemon.table_data_cache
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_refused_change_then_revert(run_cmd):
+    """A refused identity change clears the interface's ES, so reverting the row re-creates it."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    zebra = run_cmd.side_effect = _FakeZebraEsi()
+    es_rows = {'Ethernet1': _type0(_ESI_B), 'Ethernet2': _type0(_ESI_A)}
+    patches = _es_db(ExtConfigDBConnector, es_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', _type0(_ESI_B))
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+        es_rows['Ethernet2'] = _type0(_ESI_B)
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_B))
+        assert zebra.owner == {_ESI_B: 'Ethernet1'}
+        assert daemon.evpn_es_pending == {'Ethernet2'}
+
+        run_cmd.reset_mock()
+        es_rows['Ethernet2'] = _type0(_ESI_A)
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [_es_cmd('Ethernet2', *_ES_CLEAR, 'evpn mh es-id {}'.format(_ESI_A))]
+    assert zebra.owner == {_ESI_B: 'Ethernet1', _ESI_A: 'Ethernet2'}
+    assert daemon.evpn_es_pending == set()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_refused_esi_stays_pending(run_cmd):
+    """A new ES or a df_pref-only change frees no ESI and does not retry a pending row."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    zebra = run_cmd.side_effect = _FakeZebraEsi()
+    es_rows = {'Ethernet1': _type0(_ESI_A), 'Ethernet2': _type0(_ESI_A),
+               'Ethernet3': _type0(_ESI_B, df_pref='100')}
+    patches = _es_db(ExtConfigDBConnector, es_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', _type0(_ESI_A))
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+        assert daemon.evpn_es_pending == {'Ethernet2'}
+        run_cmd.reset_mock()
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet3', _type0(_ESI_B, df_pref='100'))
+        es_rows['Ethernet3']['df_pref'] = '200'
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet3', _type0(_ESI_B, df_pref='200'))
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [
+        _es_cmd('Ethernet3', *_ES_CLEAR, 'evpn mh es-id {}'.format(_ESI_B), 'evpn mh es-df-pref 100'),
+        _es_cmd('Ethernet3', 'evpn mh es-df-pref 200'),
+    ]
+    assert daemon.evpn_es_pending == {'Ethernet2'}
+    assert zebra.owner == {_ESI_A: 'Ethernet1', _ESI_B: 'Ethernet3'}
