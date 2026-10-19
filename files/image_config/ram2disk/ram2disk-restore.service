@@ -10,7 +10,7 @@ RequiresMountsFor=/var/log
 # /var/log.disk is not mounted. Avoids failed units on non-tmpfs boots.
 # The mount is created in initramfs, so it is already present when systemd runs.
 ConditionPathIsMountPoint=/var/log.disk
-Before=systemd-journald.service rsyslog.service syslog.socket
+Before=rsyslog.service syslog.socket
 
 [Service]
 Type=oneshot
