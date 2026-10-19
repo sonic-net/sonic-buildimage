@@ -30,5 +30,8 @@ endif
 
 $(DOCKER_HFT)_CONTAINER_NAME = hft
 $(DOCKER_HFT)_RUN_OPT += -t --cap-add=NET_ADMIN
+# Let countersyncd.sh raise net.core.rmem_max, which is only writable from the
+# host network namespace, through a writable /proc/sys (same options as swss).
+$(DOCKER_HFT)_RUN_OPT += --security-opt apparmor=unconfined --security-opt systempaths=unconfined
 $(DOCKER_HFT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_HFT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
