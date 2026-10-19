@@ -557,6 +557,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
     """
     xlate ConfigDB json to Yang json
+    Scope traversal state to each table, including when translation fails.
     """
     def _xlateConfigDBtoYang(self, jIn, yangJ):
 
@@ -570,10 +571,12 @@ class SonicYangExtMixin(SonicYangPathMixin):
             yangJ[key] = dict() if yangJ.get(key) is None else yangJ[key]
             yangJ[key][subkey] = dict()
             self.sysLog(msg="xlateConfigDBtoYang {}:{}".format(key, subkey))
-            self.elementPath.append(table)
-            self._xlateContainer(cmap['container'], yangJ[key][subkey], \
-                                jIn[table], table)
-            self.elementPath = []
+            self.elementPath = [table]
+            try:
+                self._xlateContainer(
+                    cmap['container'], yangJ[key][subkey], jIn[table], table)
+            finally:
+                self.elementPath = []
 
         return
 

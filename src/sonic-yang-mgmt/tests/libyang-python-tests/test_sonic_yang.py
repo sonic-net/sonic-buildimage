@@ -500,6 +500,87 @@ class Test_SonicYang(object):
             },
         }
 
+    @pytest.fixture
+    def recovery_yang(self, sonic_yang_data):
+        syc = sy.SonicYang(sonic_yang_data["yang_dir"])
+        syc.loadYangModel()
+        return syc
+
+    @pytest.mark.parametrize("config", [
+        pytest.param({"PORT": {"Ethernet0|extra": {}}}, id="port-key"),
+        pytest.param({"PORT": {"Ethernet0": {"unknown-leaf": "bad"}}}, id="port-field"),
+        pytest.param(
+            {"DHCP_SERVER_IPV4_MATCH": {"vendor|extra": {"type": "option60", "value": "MAIA"}}},
+            id="match-key",
+        ),
+    ])
+    def test_translation_error_clears_element_path(self, recovery_yang, config):
+        with pytest.raises(sy.SonicYangException, match="All Keys are not parsed"):
+            recovery_yang.loadData(config)
+
+        assert recovery_yang.elementPath == []
+        assert recovery_yang.root is None
+
+    @pytest.mark.parametrize("table,error", [
+        ("DHCP_SERVER_IPV4_MATCH", "Match condition name must not have"),
+        ("DHCP_SERVER_IPV4_BINDING", "DHCP binding name must not have"),
+    ])
+    @pytest.mark.parametrize("leading", [True, False], ids=["leading", "trailing"])
+    def test_dhcp_key_rejected_after_translation_error(
+            self, recovery_yang, dhcp_match_config, table, error, leading):
+        with pytest.raises(sy.SonicYangException, match="All Keys are not parsed"):
+            recovery_yang.loadData({"PORT": {"Ethernet0|extra": {}}})
+
+        old_key = next(iter(dhcp_match_config[table]))
+        prefix, _, name = old_key.rpartition("|")
+        name = " " + name if leading else name + " "
+        key = prefix + "|" + name if prefix else name
+        config = {table: {key: dhcp_match_config[table][old_key]}}
+        if table == "DHCP_SERVER_IPV4_BINDING":
+            config.update({key: value for key, value in dhcp_match_config.items() if key != table})
+
+        with pytest.raises(sy.SonicYangException, match=error):
+            recovery_yang.loadData(config)
+
+        assert recovery_yang.elementPath == []
+        assert recovery_yang.root is None
+
+    @pytest.mark.parametrize("failed_table", ["PORT", "DHCP_SERVER_IPV4_MATCH"])
+    @pytest.mark.parametrize("first_table", ["PORT", "DHCP_SERVER_IPV4_MATCH", "DHCP_SERVER_IPV4_BINDING"])
+    def test_valid_config_after_translation_error(
+            self, recovery_yang, dhcp_match_config, failed_table, first_table):
+        invalid_key = "Ethernet0|extra" if failed_table == "PORT" else "vendor|extra"
+        with pytest.raises(sy.SonicYangException, match="All Keys are not parsed"):
+            recovery_yang.loadData({failed_table: {invalid_key: {}}})
+
+        port = {"lanes": "0", "speed": "1000"}
+        expected = dict(dhcp_match_config, PORT={"Ethernet0": port})
+        config = dict(dhcp_match_config, PORT={" Ethernet0 ": dict(port)})
+        first = config.pop(first_table)
+        config = {first_table: first, **config}
+
+        recovery_yang.loadData(config)
+        recovery_yang.validate_data_tree()
+        assert recovery_yang.getData() == expected
+        assert recovery_yang.elementPath == []
+
+    def test_load_after_reverse_translation_error(self, recovery_yang):
+        invalid_yang = {
+            "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+                "DHCP_SERVER_IPV4_MATCH": {
+                    "DHCP_SERVER_IPV4_MATCH_LIST": [{"type": "option60", "value": "MAIA"}],
+                },
+            },
+        }
+        with pytest.raises(Exception, match="key name not found in entry"):
+            recovery_yang.XlateYangToConfigDB(invalid_yang)
+
+        port = {"lanes": "0", "speed": "1000"}
+        recovery_yang.loadData({"PORT": {" Ethernet0 ": port}})
+        recovery_yang.validate_data_tree()
+        assert recovery_yang.getData() == {"PORT": {"Ethernet0": port}}
+        assert recovery_yang.elementPath == []
+
     @pytest.mark.parametrize("table,field,error", [
         ("DHCP_SERVER_IPV4_MATCH", "name", "Match condition name must not have"),
         ("DHCP_SERVER_IPV4_BINDING", "binding", "DHCP binding name must not have"),
