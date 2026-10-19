@@ -75,7 +75,8 @@ class TestCpoInitialization(unittest.TestCase):
         from sonic_py_common import device_info
         cls.modules_patch = patch.dict("sys.modules", modules)
         cls.modules_patch.start()
-        cls.device_patch = patch.multiple(device_info, get_cpo_data=cls.device_info.get_cpo_data)
+        cls.device_patch = patch.multiple(device_info, get_cpo_data=cls.device_info.get_cpo_data,
+                                                get_platform_json_data=cls.device_info.get_platform_json_data)
         cls.device_patch.start()
         cls.base_device_patch = patch("sonic_platform_base.chassis_base.device_info", device_info)
         cls.base_device_patch.start()
@@ -101,14 +102,16 @@ class TestCpoInitialization(unittest.TestCase):
         self.presence = self.directory / "presence"
         self.presence.write_bytes(bytes(4))
         self.device_info.get_cpo_data.return_value = None
+        self.device_info.get_platform_json_data.return_value = json.loads((ROOT /
+            "device/micas/x86_64-micas_m2-w6940-128x1-fr4-r0/platform.json").read_text())
         self.baseutil.get_config.return_value = {"sfps": {"port_num": 2, "port_index_start": 1}}
 
     def topology(self, variant="x86_64-micas_m2-w6940-128x1-fr4-r0"):
         path = ROOT / "device/micas" / variant / "cpo.json"
         data = json.loads(path.read_text(encoding="utf-8"))
-        for oe in data["oes"].values():
-            oe["oe_cmis_path"] = str(self.directory) + os.sep
-        for els in data["elss"].values():
+        for device in data["devices"].values():
+            device["i2c_path"] = str(self.directory)
+        for els in data["platform_data"]["devices"].values():
             els["els_presence"]["presence_file"] = str(self.presence)
             els["els_presence"]["presence_offset"] = "0x0"
         return data
@@ -118,7 +121,7 @@ class TestCpoInitialization(unittest.TestCase):
         return self.chassis.Chassis()
 
     def endpoints(self, base_page=4, bank=7):
-        oe = self.cpo.MicasOe(0, {"oe_cmis_path": str(self.directory)}, bank, base_page)
+        oe = self.cpo.MicasOe(0, {"i2c_path": str(self.directory)}, bank, base_page)
         els_config = {"base_page": base_page, "els_presence": {
             "presence_file": str(self.presence), "presence_offset": "0x0",
             "presence_len": "4", "presence_bit": "1", "presence_value": "0"}}
@@ -136,25 +139,25 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertEqual(chassis.get_all_sfps(), [])
         self.assertEqual(len(chassis.get_all_cpos()), 64)
         self.assertIs(type(chassis).get_cpo, ChassisBase.get_cpo)
-        self.assertIs(type(chassis).get_sfp, ChassisBase.get_sfp)
         chassis._validate_port_lists()
         self.assertFalse(hasattr(chassis, "_micas_cpo_list"))
         self.assertFalse(hasattr(self.cpo, "CPO"))
         self.assertIsNone(chassis.get_cpo(0))
         for name, config in data["interfaces"].items():
-            port = int(config["index"].split(",")[0])
+            port = int(self.device_info.get_platform_json_data.return_value["interfaces"][name]["index"].split(",")[0])
             cpo = chassis.get_cpo(port)
             self.assertIsInstance(cpo, CpoBase)
             self.assertIsInstance(cpo.oe, OeBase)
             self.assertIsInstance(cpo.elsfp, ElsfpBase)
             self.assertIs(chassis._cpo_list[port], cpo)
+            self.assertIs(chassis.get_sfp(port), cpo)
             self.assertFalse(hasattr(cpo, "port"))
             self.assertFalse(hasattr(cpo.oe, "port"))
             self.assertFalse(hasattr(cpo.elsfp, "port"))
             self.assertEqual(cpo.get_name(), name)
-            self.assertEqual(cpo.oe.bank, config["oe_bank_id"] % 8)
+            self.assertEqual(cpo.oe.bank, config["associated_devices"][0]["bank"])
             self.assertEqual(cpo.hardware_id.oe_id, OeId.BROADCOM_BAILLY)
-            self.assertEqual(cpo.oe.base_page, data["elss"]["els{}".format(config["els_id"])]["base_page"])
+            self.assertEqual(cpo.oe.base_page, data["platform_data"]["devices"][config["associated_devices"][1]["device_id"]]["base_page"])
 
     def test_hook_initializes_before_board_hal_without_double_construction(self):
         data = self.topology()
@@ -176,7 +179,7 @@ class TestCpoInitialization(unittest.TestCase):
     def test_zero_based_physical_indices(self):
         data = self.topology()
         config = data["interfaces"]["Ethernet0"]
-        config["index"] = "0"
+        self.device_info.get_platform_json_data.return_value["interfaces"]["Ethernet0"]["index"] = "0"
         data["interfaces"] = {"Ethernet0": config}
         chassis = self.make_chassis(data)
         self.assertEqual(chassis.get_num_cpos(), 1)
@@ -199,10 +202,10 @@ class TestCpoInitialization(unittest.TestCase):
     def test_mixed_sfp_and_cpo_lists_do_not_overlap(self):
         data = self.topology()
         data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"],
-                              "Ethernet8": {"index": "2"}}
+                              "Ethernet8": {"associated_devices": []}}
         chassis = self.make_chassis(data)
         chassis._validate_port_lists()
-        self.assertIsNone(chassis.get_sfp(1))
+        self.assertIs(chassis.get_sfp(1), chassis.get_cpo(1))
         self.assertIsNone(chassis._sfp_list[1])
         self.assertIsNone(chassis._cpo_list[2])
         self.assertEqual(chassis.get_num_sfps(), 1)
@@ -226,6 +229,22 @@ class TestCpoInitialization(unittest.TestCase):
             self.assertIs(chassis.get_sfp(1), existing)
             chassis._sfp_list[1] = None
             self.assertIsNone(chassis.get_sfp(1))
+
+    def test_pure_cpo_get_sfp_bridge_never_accesses_empty_sfp_storage(self):
+        chassis = self.make_chassis(self.topology())
+        cpo = chassis.get_cpo(1)
+        with patch.object(ChassisBase, "get_sfp", side_effect=AssertionError("empty SFP storage accessed")):
+            self.assertIs(chassis.get_sfp(1), cpo)
+            self.assertIsNone(chassis.get_sfp(0))
+        self.assertEqual(chassis._sfp_list, [])
+
+    def test_mixed_get_sfp_prefers_existing_sfp(self):
+        data = self.topology()
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"], "Ethernet8": {"associated_devices": []}}
+        chassis = self.make_chassis(data)
+        sfp = chassis._sfp_list[2]
+        with patch.object(chassis, "get_cpo", side_effect=AssertionError("existing SFP replaced")):
+            self.assertIs(chassis.get_sfp(2), sfp)
 
     def test_els_optoe_access_uses_shared_eeprom_offsets_directly(self):
         _, first = self.endpoints(0)
@@ -369,10 +388,38 @@ class TestCpoInitialization(unittest.TestCase):
         data = self.topology()
         first = copy.deepcopy(data["interfaces"]["Ethernet0"])
         second = copy.deepcopy(first)
-        second["oe_id"] = 1
+        second["associated_devices"][0]["device_id"] = "OE1"
+        self.device_info.get_platform_json_data.return_value["interfaces"]["Ethernet1"] = copy.deepcopy(
+            self.device_info.get_platform_json_data.return_value["interfaces"]["Ethernet0"])
         data["interfaces"] = {"Ethernet0": first, "Ethernet1": second}
         with self.assertRaises(ValueError):
             self.make_chassis(data)
+
+
+    def test_hld_reference_is_not_used_for_initialization(self):
+        data = self.topology()
+        data["legacy_bailly_reference"] = {"oes": {}, "elss": {}, "interfaces": {}}
+        chassis = self.make_chassis(data)
+        self.assertEqual(chassis.get_num_cpos(), 64)
+
+    def test_missing_hld_devices_is_rejected(self):
+        data = self.topology()
+        del data["devices"]
+        with self.assertRaisesRegex(ValueError, "non-empty devices"):
+            self.make_chassis(data)
+
+    def test_bank_is_not_silently_wrapped(self):
+        data = self.topology()
+        data["interfaces"]["Ethernet0"]["associated_devices"][0]["bank"] = 8
+        with self.assertRaisesRegex(ValueError, "Invalid bank"):
+            self.make_chassis(data)
+
+    def test_precise_hld_lasers_override_coarse_platform_group(self):
+        data = self.topology()
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"]}
+        data["devices"]["ELS0"]["laser_to_asic_lane_mapping"] = {"1": "1,2,3,4", "2": [5, 6, 7, 8]}
+        chassis = self.make_chassis(data)
+        self.assertEqual(chassis.get_cpo(1).get_port_laser_ids(), [0, 1])
 
 
 if __name__ == "__main__":

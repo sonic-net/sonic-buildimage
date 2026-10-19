@@ -287,7 +287,7 @@ LOG_ERROR_LEVEL = 3
 class MicasOe(OptoeOeBase):
     def __init__(self, oe_id, oe_config, bank=0, base_page=0):
         self.oe_id = int(oe_id)
-        cmis_path = oe_config.get("oe_cmis_path")
+        cmis_path = oe_config.get("i2c_path")
         self._eeprom_path = os.path.join(cmis_path, "eeprom") if cmis_path else ""
         self.base_page = int(base_page)
         hardware_info = CpoHardwareInfo(
