@@ -102,6 +102,30 @@
             {
                 "name": "Front-panel temp sensor",
                 "controllable": false
+            },
+            {
+                "name": "POS0V8_VDD",
+                "controllable": false
+            },
+            {
+                "name": "P0V75_AVDD_0",
+                "controllable": false
+            },
+            {
+                "name": "P0V75_AVDD_1",
+                "controllable": false
+            },
+            {
+                "name": "P0V75_AVDD_2",
+                "controllable": false
+            },
+            {
+                "name": "P3V3_OPTICS_A",
+                "controllable": false
+            },
+            {
+                "name": "P3V3_OPTICS_B",
+                "controllable": false
             }
         ],
         "sfps": [
