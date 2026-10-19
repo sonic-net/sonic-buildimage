@@ -12,17 +12,18 @@
 # Design:
 #   Disk layout Example:
 #     /var/log.disk/
-#     ├── current/                     live mirror of this boot's /var/log
+#     ├── current_session/                     live mirror of this boot's /var/log
 #     │   ├── syslog
 #     │   ├── syslog.1
 #     │   ├── syslog.2.gz ...
 #     │   └── frr/bgpd.log ...
+#     ├── legacy_20260619_065000/      (optional) stray files from a non-tmpfs boot
 #     ├── session_20260619_065000/     previous boot (immutable, compressed)
 #     ├── session_20260618_120000/     older boot (immutable, compressed)
 #     └── .boot_id
 #
 #   Cleanup:
-#     - Oldest session_* directories are rm -rf'd when Disk free space is low
+#     - Oldest legacy_*/session_* directories are rm -rf'd when Disk free space is low
 #
 # =============================================================================
 
@@ -30,7 +31,7 @@ MODE="${1:-sync}"    # sync | restore | pre-shutdown
 
 : "${SRC_RAM_DIR:=/var/log}"
 : "${DST_DISK_DIR:=/var/log.disk}"
-: "${CURRENT_MIRROR_DIR:=${DST_DISK_DIR}/current}"
+: "${CURRENT_MIRROR_DIR:=${DST_DISK_DIR}/current_session}"
 : "${BOOT_ID_FILE:=${DST_DISK_DIR}/.boot_id}"
 
 # Counter library that maintains per-file rotation counters in /dev/shm/logrotate.
@@ -69,7 +70,7 @@ save_boot_id() {
 # =============================================================================
 # archive_current_session
 #
-# Renames current/ to session_<timestamp>/
+# Renames current_session/ to session_<timestamp>/
 #
 # Uses .boot_id mtime as the session timestamp (represents when that boot
 # session started). Falls back to current time if unavailable.
@@ -94,9 +95,33 @@ archive_current_session() {
 }
 
 # =============================================================================
+# archive_legacy_files
+#
+# DST_DISK_DIR may hold logs written directly to it by an earlier boot where the
+# disk image was mounted on /var/log (non-tmpfs mode). ram2disk only manages
+# current_session/ and session_*/, so move any other top-level entries into a single
+# legacy_<timestamp>/ directory. No-op when nothing needs moving.
+# =============================================================================
+archive_legacy_files() {
+    local -a stray=()
+    local entry
+    while IFS= read -r -d '' entry; do
+        stray+=("$entry")
+    done < <(find "$DST_DISK_DIR" -mindepth 1 -maxdepth 1 \
+                 ! -name current_session ! -name 'session_*' ! -name 'legacy_*' \
+                 ! -name lost+found ! -name "$(basename "$BOOT_ID_FILE")" -print0)
+
+    [ "${#stray[@]}" -gt 0 ] || return 0
+
+    local legacy_dir="${DST_DISK_DIR}/legacy_$(date '+%Y%m%d_%H%M%S')"
+    mkdir -p "$legacy_dir" && mv -- "${stray[@]}" "$legacy_dir/"
+    log_info "Moved ${#stray[@]} legacy top-level entries → $(basename "$legacy_dir")"
+}
+
+# =============================================================================
 # ensure_current_dir
 #
-# Creates current/ with necessary subdirectories if it doesn't exist.
+# Creates current_session/ with necessary subdirectories if it doesn't exist.
 # =============================================================================
 ensure_current_dir() {
     if [ ! -d "$CURRENT_MIRROR_DIR" ]; then
@@ -108,7 +133,7 @@ ensure_current_dir() {
 # =============================================================================
 # replay_rotations
 #
-# Replays, on current/, every logrotate cycle that happened since the last run.
+# Replays, on current_session/, every logrotate cycle that happened since the last run.
 #
 # The set of files to replay and their counts come entirely from
 # /dev/shm/logrotate/rotation_counts (maintained by the logrotate-wrapper). We
@@ -125,7 +150,7 @@ replay_rotations() {
         [[ "$count" =~ ^[0-9]+$ ]] || continue
         [ "$count" -gt 0 ] || continue
 
-        # Only mirror files that live under ${SRC_RAM_DIR} (what current/ mirrors)
+        # Only mirror files that live under ${SRC_RAM_DIR} (what current_session/ mirrors)
 	# Consider adding a warning for files not under SRC_RAM_DIR to understand other files managed by logrotate
 	[[ "$path" == "${SRC_RAM_DIR}/"* ]] || continue
 	base="${path#"${SRC_RAM_DIR}/"}"
@@ -137,7 +162,7 @@ replay_rotations() {
 # =============================================================================
 # mirror_renames <base> <shift>
 #
-# Performs the same rename chain on disk's current/ that logrotate did on tmpfs.
+# Performs the same rename chain on disk's current_session/ that logrotate did on tmpfs.
 # =============================================================================
 mirror_renames() {
     local base="$1"
@@ -148,7 +173,7 @@ mirror_renames() {
 
     log_info "${base}: mirroring ${shift} rotation(s) on disk"
 
-    # Find highest archive number in current/
+    # Find highest archive number in current_session/
     local max_n=0
     for f in "${dst_base}".*.gz; do
         [ -f "$f" ] || continue
@@ -186,7 +211,7 @@ mirror_renames() {
 # Manages disk space based on actual filesystem usage of the DST_DISK_DIR mount. While
 # usage exceeds DISK_USED_MAX_PCT, it first removes the oldest session_*
 # directory, then falls back to removing individual archives from
-# current/ if needed.
+# current_session/ if needed.
 # =============================================================================
 cleanup_disk() {
     local use_pct
@@ -196,7 +221,7 @@ cleanup_disk() {
     while [ "$use_pct" -gt "$DISK_USED_MAX_PCT" ]; do
         # First: remove oldest session directory (entire previous boot)
         local oldest_session
-        oldest_session=$(find "$DST_DISK_DIR" -maxdepth 1 -type d -name 'session_*' \
+        oldest_session=$(find "$DST_DISK_DIR" -maxdepth 1 -type d \( -name 'legacy_*' -o -name 'session_*' \) \
                          | sort | head -1)
 
         if [ -n "$oldest_session" ]; then
@@ -206,7 +231,7 @@ cleanup_disk() {
             continue
         fi
 
-        # Fallback: remove oldest archive from current/
+        # Fallback: remove oldest archive from current_session/
         local oldest_archive
         oldest_archive=$(find "$CURRENT_MIRROR_DIR" -type f -name '*.gz' -printf '%T+ %p\n' \
                          | sort | awk 'NR==1 {print $2}')
@@ -229,16 +254,17 @@ do_sync() {
     # --- Step 1: Handle reboot if restore wasn't called ---
     if is_new_boot; then
         archive_current_session
+        archive_legacy_files
         ensure_current_dir
         save_boot_id
     fi
 
     ensure_current_dir
 
-    # --- Step 2: Replay logrotate rotations on current/ ---
+    # --- Step 2: Replay logrotate rotations on current_session/ ---
     replay_rotations
 
-    # --- Step 3: rsync into disk's current/ ---
+    # --- Step 3: rsync into disk's current_session/ ---
     rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"
 
     # --- Step 4: Disk space management ---
@@ -252,18 +278,20 @@ do_sync() {
 # then archive previous session
 #
 # Called early in boot before rsyslogd starts.
-# 1. Restores active log files from the previous boot's current/ to tmpfs
-# 2. Archives previous boot's current/ → session_<timestamp>/
-# 3. Creates fresh current/ for this boot
+# 1. Restores active log files from the previous boot's current_session/ to tmpfs
+# 2. Archives previous boot's current_session/ → session_<timestamp>/
+# 3. Creates fresh current_session/ for this boot
 #
-# Archives stay on disk only — tmpfs starts clean except for active files.
+# Archives stay on disk only — tmpfs starts clean except for active files,
+# which are moved (not copied) to tmpfs so each log lives in exactly one place.
 # =============================================================================
 do_restore() {
 	log_info "Boot-time restore active logs to /var/log (tmpfs)"
 
     if [ -d "$CURRENT_MIRROR_DIR" ]; then
-        log_info "Restoring active logs from current/"
-        rsync -a \
+        log_info "Restoring active logs from current_session/"
+
+        rsync -a --remove-source-files \
             --exclude='*.[0-9]' \
             --exclude='*.[0-9][0-9]' \
             --exclude='*.[0-9][0-9][0-9]' \
@@ -272,13 +300,14 @@ do_restore() {
             --exclude='*.[0-9][0-9][0-9].gz' \
             "${CURRENT_MIRROR_DIR}/" "${SRC_RAM_DIR}/"
     else
-        log_info "No previous current/ to restore from"
+        log_info "No previous current_session/ to restore from"
     fi
 
-    # Archive previous boot's data (mv current/ → session_<timestamp>/)
+    # Archive previous boot's data (mv current_session/ → session_<timestamp>/)
     archive_current_session
+    archive_legacy_files
 
-    # Create fresh current/ for this boot
+    # Create fresh current_session/ for this boot
     ensure_current_dir
     save_boot_id
 
@@ -289,7 +318,7 @@ do_restore() {
 # do_pre_shutdown — Final sync before shutdown/reboot
 #
 # Same as sync but skips cleanup
-# Ensures disk's current/ has the latest data before it gets archived on next boot.
+# Ensures disk's current_session/ has the latest data before it gets archived on next boot.
 # =============================================================================
 do_pre_shutdown() {
     log_info "Pre-reboot: final sync"
