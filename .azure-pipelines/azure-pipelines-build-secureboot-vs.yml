@@ -8,7 +8,7 @@ resources:
   - repository: buildimage
     type: github
     name: sonic-net/sonic-buildimage
-    endpoint: github.com_elybarneams
+    endpoint: sonic-net
     ref: master
 
 variables:
