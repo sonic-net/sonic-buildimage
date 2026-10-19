@@ -1,5 +1,14 @@
 {
     "VALID_OTN_ATTENUATOR": {
         "desc": "Load valid OTN_ATTENUATOR configuration"
+    },
+
+    "VALID_OTN_ATTENUATOR_SYSTEM_CONTROLLED": {
+        "desc": "Load valid OTN_ATTENUATOR configuration in SYSTEM_CONTROLLED mode"
+    },
+
+    "OTN_ATTENUATOR_INVALID_MODE": {
+        "desc": "Configure OTN_ATTENUATOR with an unknown attenuation-mode",
+        "eStrKey": "InvalidValue"
     }
 }

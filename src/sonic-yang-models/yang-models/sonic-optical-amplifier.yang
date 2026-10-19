@@ -158,6 +158,7 @@ module sonic-optical-amplifier {
         leaf min-gain {
           type decimal64 {
             fraction-digits 2;
+            range "0..max";
           }
           units "dB";
           description
@@ -170,6 +171,7 @@ module sonic-optical-amplifier {
         leaf max-gain {
           type decimal64 {
             fraction-digits 2;
+            range "0..max";
           }
           units "dB";
           description

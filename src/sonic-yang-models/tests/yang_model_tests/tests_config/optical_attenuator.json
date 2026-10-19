@@ -13,5 +13,34 @@
                 ]
             }
         }
+    },
+
+    "VALID_OTN_ATTENUATOR_SYSTEM_CONTROLLED": {
+        "sonic-optical-attenuator:sonic-optical-attenuator": {
+            "sonic-optical-attenuator:OTN_ATTENUATOR": {
+                "OTN_ATTENUATOR_LIST": [
+                    {
+                        "name": "VOA0-0",
+                        "attenuation-mode": "SYSTEM_CONTROLLED",
+                        "max-output-power": "10.0",
+                        "max-output-power-threshold": "3.0",
+                        "enabled": true
+                    }
+                ]
+            }
+        }
+    },
+
+    "OTN_ATTENUATOR_INVALID_MODE": {
+        "sonic-optical-attenuator:sonic-optical-attenuator": {
+            "sonic-optical-attenuator:OTN_ATTENUATOR": {
+                "OTN_ATTENUATOR_LIST": [
+                    {
+                        "name": "VOA0-0",
+                        "attenuation-mode": "UNKNOWN_MODE"
+                    }
+                ]
+            }
+        }
     }
 }

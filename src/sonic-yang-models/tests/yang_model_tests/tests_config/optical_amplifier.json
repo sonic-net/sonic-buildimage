@@ -22,6 +22,32 @@
         }
     },
 
+    "OTN_OA_NEGATIVE_MIN_GAIN": {
+        "sonic-optical-amplifier:sonic-optical-amplifier": {
+            "sonic-optical-amplifier:OTN_OA": {
+                "OTN_OA_LIST": [
+                    {
+                        "name": "OA0-0",
+                        "min-gain": "-1.0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "OTN_OA_NEGATIVE_MAX_GAIN": {
+        "sonic-optical-amplifier:sonic-optical-amplifier": {
+            "sonic-optical-amplifier:OTN_OA": {
+                "OTN_OA_LIST": [
+                    {
+                        "name": "OA0-0",
+                        "max-gain": "-1.0"
+                    }
+                ]
+            }
+        }
+    },
+
     "VALID_OTN_OSC": {
         "sonic-optical-amplifier:sonic-optical-amplifier": {
             "sonic-optical-amplifier:OTN_OSC": {

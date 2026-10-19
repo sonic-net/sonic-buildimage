@@ -3,6 +3,16 @@
         "desc": "Load valid OTN_OA configuration"
     },
 
+    "OTN_OA_NEGATIVE_MIN_GAIN": {
+        "desc": "Configure OTN_OA with a negative min-gain",
+        "eStrKey": "Range"
+    },
+
+    "OTN_OA_NEGATIVE_MAX_GAIN": {
+        "desc": "Configure OTN_OA with a negative max-gain",
+        "eStrKey": "Range"
+    },
+
     "VALID_OTN_OSC": {
         "desc": "Load valid OTN_OSC configuration"
     }

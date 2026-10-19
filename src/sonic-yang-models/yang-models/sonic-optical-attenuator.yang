@@ -14,7 +14,7 @@ module sonic-optical-attenuator {
     description
       "First revision, derived from openconfig yang model";
     reference
-      "openconfig-optical-attenuator.yang, version 2019-07-19";
+      "openconfig-optical-attenuator.yang, version 2024-07-10";
   }
 
   typedef optical-attenuator-mode {
@@ -28,6 +28,12 @@ module sonic-optical-attenuator {
         description
           "In constant attenuation mode, the attenuator will apply
            a constant attenuation";
+      }
+      enum SYSTEM_CONTROLLED {
+        description
+          "In system controlled mode, the system derives the target
+           output power of the attenuator, optionally bounded by
+           max-output-power";
       }
     }
     description
@@ -82,6 +88,26 @@ module sonic-optical-attenuator {
             "When true, attenuator is set to specified attenuation or varies to
              maintain constant output power.  When false, the attenuator is set
              max attenuation or blocked.";
+        }
+        leaf max-output-power {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dBm";
+          description
+            "The max power level allowed on the output of attenuator.
+             This leaf is optional when in SYSTEM_CONTROLLED mode.";
+        }
+        leaf max-output-power-threshold {
+          type decimal64 {
+            fraction-digits 2;
+          }
+          units "dB";
+          description
+            "A device alarm will be raised when the system derived target
+             output power is greater than or equal to max-output-power
+             plus max-output-power-threshold.  This leaf is only relevant
+             when in SYSTEM_CONTROLLED mode.";
         }
       }
     }
