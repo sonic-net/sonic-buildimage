@@ -617,6 +617,20 @@ function check_add_bgp_dependency()
         fi
     fi
 }
+
+function check_add_hft_dependency()
+{
+    # countersyncd in the hft container consumes the HFT sessions published by
+    # orchagent, so stop and start it together with swss, as it used to be
+    # when countersyncd ran inside the swss container.
+    if [[ $(is_feature_enabled hft) == "true" ]]; then
+        if [ "$DEV" ]; then
+            DEPENDENT="${DEPENDENT} hft@${DEV}"
+        else
+            DEPENDENT="${DEPENDENT} hft"
+        fi
+    fi
+}
 function check_ports_present()
 {
     PORT_CONFIG_INI=/usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV/port_config.ini
@@ -660,6 +674,7 @@ HWSKU=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' hwsku`
 check_peer_gbsyncd
 check_macsec
 check_add_bgp_dependency
+check_add_hft_dependency
 check_ports_present
 PORTS_PRESENT=$?
 
