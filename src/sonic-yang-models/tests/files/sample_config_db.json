@@ -111,7 +111,8 @@
                 "mtu": "9100",
                 "lacp_key": "auto",
                 "mode":"trunk",
-                "system_mac": "02:26:9b:73:c1:1a"
+                "system_mac": "02:26:9b:73:c1:1a",
+                "lag_type": "LACP"
             },
             "PortChannel0004": {
                 "admin_status": "up",
@@ -119,7 +120,8 @@
                 "tpid": "0x9200",
                 "mtu": "9100",
                 "lacp_key": "auto",
-                "mode":"routed"
+                "mode":"routed",
+                "lag_type": "LACP"
             },
             "PortChannel2": {
                 "admin_status": "up",
@@ -127,7 +129,8 @@
                 "tpid": "0x9200",
                 "mtu": "9100",
                 "lacp_key": "auto",
-                "mode":"trunk"
+                "mode":"trunk",
+                "lag_type": "LACP"
             },
             "PortChannel42": {
                 "admin_status": "up",
@@ -137,7 +140,8 @@
                 "fast_rate": "false",
                 "fallback" : "true",
                 "mode":"routed",
-                "system_mac": "aa:bb:cc:dd:ee:ff"
+                "system_mac": "aa:bb:cc:dd:ee:ff",
+                "lag_type": "LACP"
             }
         },
         "PORTCHANNEL_INTERFACE": {
