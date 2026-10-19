@@ -234,7 +234,7 @@ java-common==0.74
 java-wrappers==0.4
 javahelper==0.78
 javascript-common==11+nmu1
-jq==1.6-2.1+deb12u2
+jq==1.6-2.1+deb12u3
 junit4==4.13.2-3
 junit5==5.9.2-1
 kernel-wedge==2.106~deb12u1
@@ -839,7 +839,7 @@ libjetty9-java==9.4.57-1.1~deb12u1
 libjpeg-dev==1:2.1.5-2
 libjpeg62-turbo==1:2.1.5-2
 libjpeg62-turbo-dev==1:2.1.5-2
-libjq1==1.6-2.1+deb12u2
+libjq1==1.6-2.1+deb12u3
 libjs-bootstrap4==4.6.1+dfsg1-4+deb12u1
 libjs-d3==3.5.17-4
 libjs-jquery==3.6.1+dfsg+~3.5.14-1
@@ -1563,12 +1563,12 @@ libzvbi0==0.2.41-1+deb12u1
 libzzip-0-13==0.13.72+dfsg.1-1.1
 licensecheck==3.3.5-1
 lintian==2.116.3+deb12u1
-linux-compiler-gcc-12-x86==6.1.187-1
-linux-headers-6.1.0-53-amd64==6.1.187-1
-linux-headers-6.1.0-53-common==6.1.187-1
-linux-headers-amd64==6.1.187-1
-linux-kbuild-6.1==6.1.187-1
-linux-libc-dev==6.1.187-1
+linux-compiler-gcc-12-x86==6.1.190-1
+linux-headers-6.1.0-54-amd64==6.1.190-1
+linux-headers-6.1.0-54-common==6.1.190-1
+linux-headers-amd64==6.1.190-1
+linux-kbuild-6.1==6.1.190-1
+linux-libc-dev==6.1.190-1
 linuxdoc-tools==0.9.82-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12

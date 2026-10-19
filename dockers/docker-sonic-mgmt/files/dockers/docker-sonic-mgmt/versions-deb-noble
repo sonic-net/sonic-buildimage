@@ -106,8 +106,6 @@ libatk1.0-0t64==2.52.0-1build1
 libatm1t64==1:2.5.1-5.1build1
 libatomic1==14.2.0-4ubuntu2~24.04.1
 libatspi2.0-0t64==2.52.0-1build1
-libaudit-common==1:3.1.2-2.1ubuntu0.1
-libaudit1==1:3.1.2-2.1ubuntu0.1
 libavahi-client3==0.8-13ubuntu6.2
 libavahi-common-data==0.8-13ubuntu6.2
 libavahi-common3==0.8-13ubuntu6.2
@@ -277,7 +275,6 @@ libsodium23==1.0.18-1ubuntu0.24.04.1
 libsqlite3-0==3.45.1-1ubuntu2.8
 libssh-4==0.10.6-2ubuntu0.5
 libssl-dev==3.0.13-0ubuntu3.16
-libssl3t64==3.0.13-0ubuntu3.16
 libstdc++-13-dev==13.3.0-6ubuntu2~24.04.1
 libstemmer0d==2.2.0-4build1
 libsystemd-shared==255.4-1ubuntu8.18
