@@ -2064,6 +2064,11 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		TARGET_PATH="$(TARGET_PATH)" \
 			./build_image.sh $(LOG)
 
+		# Select the published VS image before SBOM/provenance hashes it.
+		if [ "$(BUILD_UEFI_VS)" = "y" ] && [ "$*" = "sonic-vs.img.gz" ]; then
+			mv "$(TARGET_PATH)/sonic-vs.img-uefi.img.gz" "$(TARGET_PATH)/sonic-vs.img.gz"
+		fi
+
 		printf '%s\n' $${installer_images} | \
 			awk -F'|' -v machine="$(dep_machine)" \
 				'$$3 == "" || $$3 == machine { image = $$4; sub(/:[^:]*$$/, "", image); print image }' \
