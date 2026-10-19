@@ -499,3 +499,80 @@ def test_evpn_mh_template():
     # Type-3 with no es_id and a derived es-id of 0 (Ethernet0) + no mac: nothing emitted.
     assert 'interface Ethernet0' not in out
 
+
+
+def _es_cmd(ifname, *lines):
+    cmd = ['vtysh', '-c', 'configure terminal', '-c', 'interface {}'.format(ifname)]
+    for line in lines:
+        cmd += ['-c', line]
+    return cmd
+
+_ES_CLEAR = ('no evpn mh es-sys-mac', 'no evpn mh es-df-pref', 'no evpn mh es-id')
+
+
+def _es_db(config_db_cls, es_rows, pc_rows=None, metadata=None):
+    """Point the daemon's CONFIG_DB reads at in-memory EVPN_ETHERNET_SEGMENT/PORTCHANNEL rows."""
+    tables = {'EVPN_ETHERNET_SEGMENT': es_rows, 'PORTCHANNEL': pc_rows if pc_rows is not None else {}}
+    def get_entry(table, key):
+        if table == 'DEVICE_METADATA':
+            return dict(metadata or {})
+        return dict(tables.get(table, {}).get(key, {}))
+    def get_table(table):
+        return {k: dict(v) for k, v in tables.get(table, {}).items()}
+    return [patch.object(config_db_cls, 'get_entry', MagicMock(side_effect=get_entry), create=True),
+            patch.object(config_db_cls, 'get_table', MagicMock(side_effect=get_table), create=True),
+            patch.object(config_db_cls, 'get_table_data', MagicMock(return_value={})),
+            patch.object(config_db_cls, 'serialize_key', MagicMock(side_effect=lambda k: k), create=True)]
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_replay_no_teardown(run_cmd):
+    """A CONFIG_DB replay re-adds each valid ES without the clears that would flap a live ES."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    es_rows = {
+        'PortChannel0002': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'},
+        'Ethernet10': {'type': 'TYPE_0_OPERATOR_CONFIGURED', 'esi': '00:01:02:03:04:05:06:07:08:AA'},
+        'Ethernet40': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '5'},  # no system MAC
+    }
+    pc_rows = {'PortChannel0002': {'system_mac': '00:11:22:33:44:55'}}
+    patches = _es_db(ExtConfigDBConnector, es_rows, pc_rows,
+                     {'docker_routing_config_mode': 'unified', 'use_template_render_for_restore': 'false'})
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+    finally:
+        for p in patches:
+            p.stop()
+    assert daemon._replaying is False
+    es_cmds = [c.args[1] for c in run_cmd.call_args_list if c.args[0] == 'EVPN_ETHERNET_SEGMENT']
+    assert sorted(es_cmds) == sorted([
+        _es_cmd('PortChannel0002', 'evpn mh es-id 10', 'evpn mh es-sys-mac 00:11:22:33:44:55',
+                'evpn mh es-df-pref 12345'),
+        _es_cmd('Ethernet10', 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA', 'no evpn mh es-df-pref'),
+        # Nothing to re-add: the replay still clears whatever FRR holds for the interface.
+        _es_cmd('Ethernet40', *_ES_CLEAR),
+    ])
+
+    # A live identity change after the replay still tears the old ES down first.
+    run_cmd.reset_mock()
+    hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+    new_row = {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '11', 'df_pref': '12345'}
+    es_rows['PortChannel0002'] = new_row
+    patches = _es_db(ExtConfigDBConnector, es_rows, pc_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon.table_data_cache['EVPN_ETHERNET_SEGMENT&&PortChannel0002'] = {
+            'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'}
+        hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0002', dict(new_row))
+    finally:
+        for p in patches:
+            p.stop()
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT',
+                               _es_cmd('PortChannel0002', *_ES_CLEAR, 'evpn mh es-id 11',
+                                       'evpn mh es-sys-mac 00:11:22:33:44:55',
+                                       'evpn mh es-df-pref 12345'),
+                               True, None)

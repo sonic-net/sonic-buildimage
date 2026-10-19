@@ -2354,7 +2354,9 @@ class BGPConfigDaemon:
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
-        if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
+        # True only while CONFIG_DB is replayed into FRR, which may already hold that config.
+        self._replaying = self.config_mode == "unified" and self.use_template_render_for_restore == 'false'
+        if self._replaying:
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
@@ -2368,6 +2370,7 @@ class BGPConfigDaemon:
                     for table1, key1, data1 in upd_data_list:
                         table_key = ExtConfigDBConnector.get_table_key(table1, key1)
                         self.__update_cache_data(table_key, data1)
+        self._replaying = False
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -3160,10 +3163,13 @@ class BGPConfigDaemon:
                 command = ['vtysh', '-c', 'configure terminal', '-c', intf_cmd]
                 emitted = False
                 es_applied = False
+                # A replay may find the ES already live; the adds replace it in place, the clears would flap it.
+                readd = self._replaying and es_valid
                 if identity_changed:
-                    command += ['-c', 'no evpn mh es-sys-mac',
-                                '-c', 'no evpn mh es-df-pref',
-                                '-c', 'no evpn mh es-id']
+                    if not readd:
+                        command += ['-c', 'no evpn mh es-sys-mac',
+                                    '-c', 'no evpn mh es-df-pref',
+                                    '-c', 'no evpn mh es-id']
                     emitted = True
                     if es_valid:
                         command += ['-c', 'evpn mh es-id {}'.format(es_id)]
@@ -3181,7 +3187,7 @@ class BGPConfigDaemon:
                 if es_valid and (identity_changed or 'df_pref' in changed):
                     if df_pref and str(df_pref) != '32767':
                         command += ['-c', 'evpn mh es-df-pref {}'.format(df_pref)]
-                    elif not identity_changed:
+                    elif not identity_changed or readd:
                         command += ['-c', 'no evpn mh es-df-pref']
                     emitted = True
                     es_applied = True
