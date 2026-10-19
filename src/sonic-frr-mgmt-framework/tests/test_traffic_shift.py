@@ -264,11 +264,11 @@ def ip_version(value):
         return None
 
 
-def render_startup_config(tables):
-    """Render bgpd.conf.db.j2 with stand-ins for sonic-cfggen's address filters."""
+def render_startup_config(tables, filters=None):
+    """Render bgpd.conf.db.j2, by default with stand-ins for sonic-cfggen's address filters."""
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(
         str(Path(__file__).parents[1] / 'templates' / 'bgpd')))
-    env.filters.update({
+    env.filters.update(filters or {
         'ipv4': lambda value: ip_version(value) == 4,
         'ipv6': lambda value: ip_version(value) == 6,
         'ip_network': lambda value: str(ipaddress.ip_network(value, strict=False).network_address),
@@ -318,6 +318,14 @@ def test_startup_template_matches_runtime(tsa, enabled):
         assert runtime[('neighbor', 'default', 'ipv4', 'Ethernet4')] == 'FRRCFGD_TSA_default_ipv4_OUT4'
         assert ('neighbor', 'default', 'ipv4', 'Ethernet0') not in runtime  # Inherits PG.
         assert sent(run).count('route-map FRRCFGD_TSA_default_ipv4_OUT4 permit 10') == 1
+
+
+def test_startup_template_without_tsa_needs_no_address_filters(tsa):
+    # test_config.py stubs only ipv4/ipv6; rendering must still work while TSA is off.
+    _, tables, _ = tsa
+    tables['BGP_DEVICE_GLOBAL'] = {'STATE': {'tsa_enabled': 'false'}}
+    lines = render_startup_config(tables, {'ipv4': lambda value: False, 'ipv6': lambda value: False})
+    assert not any(TrafficShift.PREFIX in line for line in lines)
 
 
 def test_device_global_handler_and_live_af_update(daemon_class):

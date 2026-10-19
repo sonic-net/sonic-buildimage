@@ -1,5 +1,5 @@
-{# TSA objects created by frrcfgd/traffic_shift.py; nbr_af.j2 binds the wrappers. #}
-{% if BGP_DEVICE_GLOBAL is defined and BGP_DEVICE_GLOBAL.get('STATE', {}).get('tsa_enabled') == 'true' %}
+{# TSA objects created by frrcfgd/traffic_shift.py; nbr_af.j2 binds the wrappers.
+   bgpd.conf.db.j2 includes this file only while TSA is enabled. #}
 {% for key in LOOPBACK_INTERFACE | default({}) if key is not string and key | length == 2 %}
 {% set protocol = 'ipv6' if ':' in key[1] else 'ip' %}
 {% set loopback_vrf = LOOPBACK_INTERFACE.get(key[0], {}).get('vrf_name', 'default') %}
@@ -25,4 +25,3 @@ route-map {{ name }} permit 10
 {% endif %}
 {% endfor %}
 {% endfor %}
-{% endif %}
