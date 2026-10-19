@@ -36,23 +36,12 @@
 #   HFT_COUNTERSYNCD_ARGS    extra raw countersyncd arguments, split on whitespace
 #   HFT_COUNTERSYNCD_BIN     countersyncd binary (default: /usr/bin/countersyncd)
 #   HFT_CONTAINER_ARGS_FILE  file where docker_init.sh saves the container arguments
-#   HFT_RMEM_MAX             minimum net.core.rmem_max in bytes (default: 134217728,
-#                            i.e. 128MB; 0 or empty leaves the kernel setting alone)
-#
-# net.core.rmem_max caps the socket receive buffer countersyncd can get with
-# --netlink-rcvbuf. It is a global setting that can only be changed from the
-# host network namespace, so it is raised to HFT_RMEM_MAX before countersyncd
-# starts, and never lowered.
 #
 # Everything is evaluated each time countersyncd starts, so a change of the
 # settings file takes effect after "supervisorctl restart countersyncd" in the
 # container or a restart of the hft service.
 
 DEFAULT_HFT_CONFIG_FILE=/etc/sonic/hft/hft.env
-DEFAULT_HFT_RMEM_MAX=134217728
-
-# Root of the sysctl tree, overridden by the unit tests
-HFT_SYSCTL_DIR=${HFT_SYSCTL_DIR:-/proc/sys}
 
 log()
 {
@@ -132,37 +121,6 @@ printable_args()
     echo "${out[*]}"
 }
 
-# Raise net.core.rmem_max to at least the given number of bytes. It is never
-# lowered, as other applications on the host may rely on a higher limit.
-raise_rmem_max()
-{
-    local target=$1
-    local file="${HFT_SYSCTL_DIR}/net/core/rmem_max"
-    local current
-
-    if [[ -z "${target}" || "${target}" == "0" ]]; then
-        return 0
-    fi
-    if [[ ! "${target}" =~ ^[1-9][0-9]*$ ]]; then
-        log "Ignoring HFT_RMEM_MAX=${target}: expected a number of bytes"
-        return 0
-    fi
-    if ! current=$(cat "${file}" 2>/dev/null) || [[ ! "${current}" =~ ^[0-9]+$ ]]; then
-        log "Cannot read ${file}, leaving net.core.rmem_max unchanged"
-        return 0
-    fi
-    if (( 10#${current} >= target )); then
-        return 0
-    fi
-    if { echo "${target}" > "${file}"; } 2>/dev/null; then
-        log "Raised net.core.rmem_max from ${current} to ${target}"
-    else
-        log "Cannot raise net.core.rmem_max from ${current} to ${target}" \
-            "(this needs the host network namespace and a writable /proc/sys);" \
-            "set it on the host if countersyncd needs a larger receive buffer"
-    fi
-}
-
 # The settings file must not override the environment of the container
 settings_file=${HFT_CONFIG_FILE:-${DEFAULT_HFT_CONFIG_FILE}}
 if [[ -r "${settings_file}" ]]; then
@@ -179,8 +137,6 @@ if [[ ! -x "${HFT_COUNTERSYNCD_BIN}" ]]; then
     log "${HFT_COUNTERSYNCD_BIN} is not executable"
     exit 1
 fi
-
-raise_rmem_max "${HFT_RMEM_MAX-${DEFAULT_HFT_RMEM_MAX}}"
 
 # Raw countersyncd arguments
 raw_args=()
