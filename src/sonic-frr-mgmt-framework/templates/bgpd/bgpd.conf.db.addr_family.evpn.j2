@@ -1,5 +1,9 @@
 {% if 'advertise-all-vni' in af_val and af_val['advertise-all-vni'] == 'true' %}
+{% if af_val.get('advertise-all-vni-l3vni-neigh') == 'true' %}
+  advertise-all-vni l3vni-neigh
+{% else %}
   advertise-all-vni
+{% endif %}
 {% endif %}
 {% if 'advertise-svi-ip' in af_val and af_val['advertise-svi-ip'] == 'true' %}
   advertise-svi-ip
