@@ -722,7 +722,7 @@ sudo cp $IMAGE_CONFIGS/otel/otel_config.yml $FILESYSTEM_ROOT/etc/sonic/
 
 {%- endif %}
 
-{%- if include_hft == "y" %}
+{%- if 'hft@.service' in installer_services.split(' ') %}
 
 # Copy the settings file of the hft container (read by countersyncd.sh)
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/hft
