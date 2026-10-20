@@ -193,10 +193,19 @@ static int user_add(const char* name, char* gid, char* sec_grp, char* gecos,
 
     } else if(pid == 0) {
 
-        if (many_to_one)
-          execl(cmd, cmd, "-g", gid, "-G", sec_grp, "-c", gecos, "-m", "-s", shell, name, NULL);
-        else
-          execl(cmd, cmd, "-U", "-G", sec_grp, "-c", unconfirmed_user, "-d", home, "-m", "-s", shell, name, NULL);
+        if (many_to_one) {
+            if (sec_grp && sec_grp[0] != '\0') {
+                execl(cmd, cmd, "-g", gid, "-G", sec_grp, "-c", gecos, "-m", "-s", shell, name, NULL);
+            } else {
+                execl(cmd, cmd, "-g", gid, "-c", gecos, "-m", "-s", shell, name, NULL);
+            }
+        } else {
+            if (sec_grp && sec_grp[0] != '\0') {
+                execl(cmd, cmd, "-U", "-G", sec_grp, "-c", unconfirmed_user, "-d", home, "-m", "-s", shell, name, NULL);
+            } else {
+                execl(cmd, cmd, "-U", "-c", unconfirmed_user, "-d", home, "-m", "-s", shell, name, NULL);
+            }
+        }
         syslog(LOG_ERR, "exec of %s failed with errno=%d", cmd, errno);
         return -1;
 
