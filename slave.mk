@@ -151,6 +151,8 @@ configure :
 	$(Q)if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then mkdir -p $(SOURCE_ARCHIVE_PATH); fi
 	$(Q)echo $(PLATFORM) > .platform
 	$(Q)echo $(PLATFORM_ARCH) > .arch
+	# VS Dockerfile.j2 templates need LIBNL3_VERSION_SONIC for their .deb names.
+	# Keep this build-derived value in the same context as the other Make values.
 	$(Q)if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then \
 		python3 -c "import json; print(json.dumps({ \
 			'DOCKER_USERNAME': '$(DOCKER_USERNAME)', \
