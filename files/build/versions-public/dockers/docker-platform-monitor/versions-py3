@@ -2,7 +2,7 @@ blkinfo==0.2.0
 bottle==0.13.2
 build==1.6.1
 certifi==2026.7.22
-charset-normalizer==3.5.1
+charset-normalizer==3.5.2
 enum34==1.1.10
 grpcio==1.71.0
 grpcio-tools==1.71.0
@@ -20,5 +20,5 @@ requests==2.34.2
 six==1.17.0
 smbus==1.1
 smbus2==0.6.1
-thrift==0.24.0
+thrift==0.25.0
 urllib3==2.8.0
