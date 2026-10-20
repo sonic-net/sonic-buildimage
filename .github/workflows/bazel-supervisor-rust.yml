@@ -1,0 +1,110 @@
+name: Bazel Rust supervisor
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/bazel-supervisor-rust.yml
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - src/sonic-supervisord-utilities-rs/**
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/bazel-supervisor-rust.yml
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - src/sonic-supervisord-utilities-rs/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bazel-supervisor-rust-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Rust listener (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: AMD64
+            runner: ubuntu-24.04
+            machine: x86_64
+            debian_arch: amd64
+          - arch: ARM64
+            runner: ubuntu-24.04-arm
+            machine: aarch64
+            debian_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install native verification tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends binutils build-essential ca-certificates gdb git python3
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.arch }}
+          cache-version: "8.5.1"
+
+      - name: Verify native architecture and clean dependency inputs
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
+          EXPECTED_DEBIAN_ARCH: ${{ matrix.debian_arch }}
+        run: |
+          test "$(uname -m)" = "$EXPECTED_MACHINE"
+          test "$(dpkg --print-architecture)" = "$EXPECTED_DEBIAN_ARCH"
+          . /etc/os-release
+          test "$ID" = debian
+          test "$VERSION_CODENAME" = trixie
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+
+      - name: Audit and test source runtime and debug packages
+        env:
+          MACHINE: ${{ matrix.machine }}
+        run: |
+          set -euo pipefail
+          flags=(--jobs=4
+            "--platforms=@sonic_build_infra//platforms:${MACHINE}_trixie"
+            "--host_platform=@sonic_build_infra//platforms:${MACHINE}_trixie")
+          targets=(//src/sonic-supervisord-utilities-rs:unit_tests
+            //src/sonic-supervisord-utilities-rs:integration_tests
+            //src/sonic-supervisord-utilities-rs:listener_tests
+            //src/sonic-supervisord-utilities-rs:package_test)
+          audit_flags=()
+          for flag in "${flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
+          python3 tools/bazel/ci/bazel_commands.py "${audit_flags[@]}" \
+            --output artifacts/supervisor-rust/action-audit.json "${targets[@]}"
+          bazel test "${flags[@]}" --test_output=errors "${targets[@]}"
+          bazel cquery "${flags[@]}" --noimplicit_deps \
+            'kind("rust_library rule", deps(//src/sonic-supervisord-utilities-rs:supervisor_library))' \
+            > artifacts/supervisor-rust/rust-libraries.txt
+          cp MODULE.bazel.lock artifacts/supervisor-rust/MODULE.bazel.lock
+          cp -aL bazel-testlogs/src/sonic-supervisord-utilities-rs artifacts/supervisor-rust/tests
+          git diff --exit-code
+
+      - name: Retain source and installed-package evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: supervisor-rust-${{ matrix.arch }}
+          path: artifacts/supervisor-rust/
+          if-no-files-found: error
+          retention-days: 14

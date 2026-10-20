@@ -6,10 +6,12 @@ module(
     ],
 )
 
+include("//src/sonic-supervisord-utilities-rs:deps.MODULE.bazel")
+
 bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "gawk", version = "5.3.2.bcr.3")
-bazel_dep(name = "pigz", version = "2.8")
+bazel_dep(name = "pigz", version = "2.8.bcr.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "0.2.20")
 # The patched release sorts above upstream 0.9.4 without a root override.
@@ -19,7 +21,7 @@ bazel_dep(name = "rules_multirun", version = "0.14.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
 bazel_dep(name = "rules_python", version = "1.8.0")
 bazel_dep(name = "rules_rs", version = "0.1.0")
-bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "tar.bzl", version = "0.10.5-sonic.1")
 bazel_dep(name = "toolchain_utils", version = "1.0.2")
 
@@ -40,11 +42,11 @@ bazel_dep(
 )
 bazel_dep(
     name = "sonic-sairedis",
-    version = "0.0.0-e9402b77ba43aee6323665921598ef67e66293f9",
+    version = "0.0.1-befd501a41549c9fedea9a116d081a6ad542cbe3",
     repo_name = "sonic_sairedis",
 )
 bazel_dep(name = "sonic-swss", version = "0.0.0", repo_name = "sonic_swss")
-bazel_dep(name = "sonic-swss-common", version = "0.0.1-6e0204634f2f78605abdd94ea2b013a46e0660ac", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-swss-common", version = "0.0.4-db8f451c76fdc1135cd40f585c218e7d589a7223", repo_name = "sonic_swss_common")
 bazel_dep(
     name = "sonic-yang-mgmt",
     version = "1.0.0-9ab452d22773c41783092ae3bd6c206d6c257c8d",
@@ -59,7 +61,7 @@ bazel_dep(
 # SWSS is not registered yet. Select its maintained-branch merge explicitly.
 git_override(
     module_name = "sonic-swss",
-    commit = "34de0503eb9d1cf54af3492d8307dcf7c3022a0e",
+    commit = "252a506ae5a94e36a4e330b736a3781a9f7bcf9b",
     remote = "https://github.com/securely1g/sonic-swss.git",
 )
 
@@ -82,7 +84,7 @@ single_version_override(
 
 single_version_override(
     module_name = "libnl3",
-    version = "3.7.0-sonic.2",
+    version = "3.7.0.sonic.3",
 )
 
 single_version_override(
@@ -129,8 +131,8 @@ use_repo(gcc, "gcc_toolchains")
 
 register_toolchains("@gcc_toolchains//:all")
 
-# Common owns its Rust library and public Serde targets. rules_rs reads the
-# tracked Cargo locks directly; no generated Cargo.Bazel.lock is required.
+# Common owns its Rust library; application crates use sonic-rust-deps.
+# rules_rs reads the shared tracked Cargo inputs directly.
 rules_rust = use_extension("@rules_rs//rs:rules_rust.bzl", "rules_rust")
 use_repo(rules_rust, "rules_rust")
 
@@ -151,21 +153,6 @@ bindgen = use_extension("@rules_rs//rs:rules_rust_bindgen.bzl", "rules_rust_bind
 use_repo(bindgen, "rules_rust_bindgen")
 
 register_toolchains("@rules_rust_bindgen//:all")
-
-crate = use_extension("@rules_rs//rs:extensions.bzl", "crate")
-
-# This consumer only configures the owners' Cargo graphs. rules_rs requires a
-# config tag for such consumers; an empty config preserves Cargo's defaults.
-crate.config(cargo_config_toml = "//tools/bazel:cargo-config.toml")
-
-override_repo(
-    crate,
-    **{
-        "swss_crates__github.com_securely1g_sonic-swss-common.git_6e020463": "sonic_swss_common",
-        "swss_crates__serde-1.0.228": "sonic_swss_common",
-        "swss_crates__serde_core-1.0.228": "sonic_swss_common",
-    }
-)
 
 toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
 use_repo(toolchains, "bsd_tar_toolchains")

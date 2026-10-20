@@ -1,0 +1,7 @@
+"""Use the shared third-party Rust graph and Common's source-owned Rust library."""
+
+bazel_dep(
+    name = "sonic-rust-deps",
+    version = "0.0.4-6d9c70f708d7420e9e2b2cdc906b80cee6b140f1",
+    repo_name = "sonic_rust_deps",
+)

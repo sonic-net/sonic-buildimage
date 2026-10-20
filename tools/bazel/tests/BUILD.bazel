@@ -12,6 +12,8 @@ load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
 load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 
+load(":runtime.bzl", "common_runtime_test")
+
 package(default_visibility = ["//visibility:public"])
 
 # Run the unchanged Rust tests with Common's declared native runtime. The owner
@@ -577,4 +579,11 @@ diff_test(
     size = "small",
     file1 = "declared_includes.txt",
     file2 = "//tools/bazel/dpkg:dpkg_includes.txt",
+)
+
+# Rust links Common's shared library; its indirect runtime imports need the
+# same pinned package closure used by Common's own native consumer tests.
+common_runtime_test(
+    name = "common_rust_runtime_test",
+    binary = "@sonic_swss//crates/countersyncd:common_rust_test",
 )

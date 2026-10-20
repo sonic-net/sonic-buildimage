@@ -1,0 +1,121 @@
+load("@rules_rs//rs:rust_binary.bzl", "rust_binary")
+load("@rules_rs//rs:rust_library.bzl", "rust_library")
+load("@rules_rs//rs:rust_test.bzl", "rust_test")
+load("@rules_python//python:defs.bzl", "py_test")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+load(":bazel/release.bzl", "release_binary")
+load("//tools/bazel/tests:runtime.bzl", "common_runtime_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["Cargo.lock", "Cargo.toml"])
+
+# Bazel uses one shared third-party graph and compiles Common through its
+# source owner's public target. Cargo inputs remain unchanged for Make.
+_COMMON = "@sonic_swss_common//crates/swss-common:swss_common"
+_DEPS = [_COMMON] + [
+    "@sonic_rust_deps//:" + name
+    for name in [
+        "clap",
+        "log",
+        "mio",
+        "nix",
+        "syslog-tracing",
+        "thiserror",
+        "tracing",
+        "tracing-log",
+        "tracing-subscriber",
+    ]
+]
+_TEST_DEPS = _DEPS + [
+    "@sonic_rust_deps//:" + name
+    for name in ["injectorpp", "scopeguard", "serde_json", "tempfile"]
+]
+
+rust_library(
+    name = "supervisor_library",
+    srcs = glob(["src/*.rs"]),
+    crate_name = "sonic_supervisord_utilities_rs",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    rustc_flags = ["-Cdebuginfo=2", "-Cstrip=none"],
+    version = "1.0.0",
+    deps = _DEPS,
+)
+
+rust_binary(
+    name = "supervisor-proc-exit-listener-rs",
+    srcs = ["src/bin/supervisor_proc_exit_listener.rs"],
+    crate_name = "supervisor_proc_exit_listener_rs",
+    crate_root = "src/bin/supervisor_proc_exit_listener.rs",
+    edition = "2021",
+    experimental_use_cc_common_link = 0,
+    rustc_flags = ["-Cdebuginfo=2", "-Cstrip=none", "-Cpanic=abort"],
+    deps = [":supervisor_library"],
+)
+
+rust_test(
+    name = "unit_tests_binary",
+    tags = ["manual"],
+    args = ["--test-threads=1"],
+    crate = ":supervisor_library",
+    experimental_use_cc_common_link = 1,
+    deps = _TEST_DEPS,
+)
+
+[
+    rust_test(
+        name = name + "_binary",
+        tags = ["manual"],
+        srcs = ["tests/" + source],
+        args = ["--test-threads=1"],
+        crate_root = "tests/" + source,
+        data = glob(["tests/dev/*", "tests/etc/supervisor/*", "tests/test_data/*"]),
+        edition = "2021",
+        experimental_use_cc_common_link = 1,
+        rustc_env = {"CARGO_MANIFEST_DIR": "src/sonic-supervisord-utilities-rs"},
+        deps = [":supervisor_library"] + _TEST_DEPS,
+    )
+    for name, source in {
+        "integration_tests": "integration_tests.rs",
+        "listener_tests": "test_listener.rs",
+    }.items()
+]
+
+release_binary(
+    name = "release_binary",
+    binary = ":supervisor-proc-exit-listener-rs",
+)
+
+sonic_deploy_tar(
+    name = "runtime",
+    binaries = {
+        "usr/bin/supervisor-proc-exit-listener-rs uid=0 gid=0 mode=0755 type=file": ":release_binary",
+    },
+)
+
+py_test(
+    name = "package_test",
+    srcs = ["bazel/package_test.py"],
+    main = "bazel/package_test.py",
+    args = [
+        "--runtime", "$(rootpath :runtime)",
+        "--debug", "$(rootpath :runtime.debug_symbols)",
+    ],
+    data = [
+        ":runtime",
+        ":runtime.debug_symbols",
+        ":release_binary",
+    ],
+    deps = ["//tools/bazel/ci:artifact_validation"],
+)
+
+# Keep CI's public test labels while supplying declared transitive libraries.
+[
+    common_runtime_test(
+        name = name,
+        binary = ":" + name + "_binary",
+        test_args = ["--test-threads=1"],
+    )
+    for name in ["unit_tests", "integration_tests", "listener_tests"]
+]
