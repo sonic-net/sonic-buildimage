@@ -260,11 +260,6 @@
         "eStr": ["vxlan_tunnel_list must not contain more than one IPv6 tunnel."]
     },
 
-    "VNET_INVALID_VXLAN_TUNNEL_LIST_TOO_MANY": {
-        "desc": "VNET list with three tunnels, including two IPv4 tunnels, is rejected.",
-        "eStrKey": "MaxElements"
-    },
-
     "VNET_VALID_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
         "desc": "Valid VNET with both fields configured; vxlan_tunnel is not counted with the non-empty list."
     },

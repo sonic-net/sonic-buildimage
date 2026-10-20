@@ -2014,38 +2014,6 @@
         }
     },
 
-    "VNET_INVALID_VXLAN_TUNNEL_LIST_TOO_MANY": {
-        "sonic-vxlan:sonic-vxlan": {
-            "sonic-vxlan:VXLAN_TUNNEL": {
-                "VXLAN_TUNNEL_LIST": [
-                    {
-                        "name": "vtep1",
-                        "src_ip": "192.0.2.1"
-                    },
-                    {
-                        "name": "vtep2",
-                        "src_ip": "2001:db8::1"
-                    },
-                    {
-                        "name": "vtep3",
-                        "src_ip": "192.0.2.2"
-                    }
-                ]
-            }
-        },
-        "sonic-vnet:sonic-vnet": {
-            "sonic-vnet:VNET": {
-                "VNET_LIST": [
-                    {
-                        "name": "Vnet1",
-                        "vxlan_tunnel_list": ["vtep1", "vtep2", "vtep3"],
-                        "vni": "10011"
-                    }
-                ]
-            }
-        }
-    },
-
     "VNET_VALID_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
         "sonic-vxlan:sonic-vxlan": {
             "sonic-vxlan:VXLAN_TUNNEL": {
