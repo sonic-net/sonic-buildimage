@@ -28,6 +28,11 @@ done
 
 [ -z "$varlog_size" ] && exit 0
 
+# If logs are being stored in memory, then don't bother
+# creating the log file just to have it deleted afterwards.
+# However, if enable_ram2disk=y, then the next line "$logs_inram && exit 0" might
+# get deleted during the build process to allow the creation of the varlog disk file.
+$logs_inram && exit 0
 
 # exit when the var_log.ext4 exists and the size matches
 if [ -e "${rootmnt}/host/disk-img/var-log.ext4" ]; then
