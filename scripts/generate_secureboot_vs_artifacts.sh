@@ -64,13 +64,6 @@ if [[ -z "$WORKDIR" || -z "$OUTPUT_VARS" ]]; then
     exit 2
 fi
 
-for tool in openssl cert-to-efi-sig-list sign-efi-sig-list virt-fw-vars; do
-    command -v "$tool" >/dev/null 2>&1 || {
-        echo "Missing required tool: $tool" >&2
-        exit 1
-    }
-done
-
 if [[ ! -f "$OVMF_VARS" ]]; then
     echo "OVMF variable-store template is missing: $OVMF_VARS" >&2
     exit 1
