@@ -11,6 +11,7 @@ include("//src/sonic-supervisord-utilities-rs:deps.MODULE.bazel")
 bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "gawk", version = "5.3.2.bcr.3")
+bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "pigz", version = "2.8.bcr.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "0.2.20")
@@ -172,6 +173,14 @@ apt_inputs(
 
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
 use_repo(apt, "trixie")
+
+# eventd owns its Lua runtime and the private Redis service used by its tests.
+apt.install(
+    dependency_set = "eventd_deps",
+    packages = ["liblua5.1-0-dev", "redis-server"],
+    suites = ["trixie", "trixie-updates", "trixie-security"],
+)
+use_repo(apt, "eventd_deps")
 
 # Commit suffixes do not sort by source date; keep the selected compiler revision.
 single_version_override(

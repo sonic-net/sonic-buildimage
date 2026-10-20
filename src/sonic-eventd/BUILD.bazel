@@ -1,0 +1,129 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+
+package(default_visibility = ["//visibility:public"])
+
+# Match Make's C++17, position-independent programs and per-file log names.
+COPTS = ["-Wall", "-std=c++17", "-fPIE", "-D__FILENAME__=__FILE_NAME__"]
+COMMON = ["@sonic_swss_common//:libswsscommon_shared"]
+
+cc_library(
+    name = "eventd_core",
+    srcs = ["src/eventd.cpp"],
+    hdrs = ["src/eventd.h"],
+    copts = COPTS,
+    deps = COMMON,
+)
+
+cc_library(
+    name = "eventdb_core",
+    srcs = ["src/eventconsume.cpp", "src/eventutils.cpp", "src/loghandler.cpp"],
+    hdrs = ["src/eventconsume.h", "src/eventutils.h", "src/loghandler.h"],
+    copts = COPTS,
+    deps = COMMON,
+)
+
+cc_library(
+    name = "rsyslog_plugin_core",
+    srcs = ["rsyslog_plugin/rsyslog_plugin.cpp", "rsyslog_plugin/syslog_parser.cpp", "rsyslog_plugin/timestamp_formatter.cpp"],
+    hdrs = ["rsyslog_plugin/rsyslog_plugin.h", "rsyslog_plugin/syslog_parser.h", "rsyslog_plugin/timestamp_formatter.h"],
+    copts = COPTS,
+    linkopts = ["-llua5.1"],
+    deps = COMMON + ["@eventd_deps//liblua5.1-0-dev:liblua5.1-0"],
+)
+
+cc_binary(
+    name = "eventd",
+    srcs = ["src/main.cpp"],
+    copts = COPTS,
+    linkopts = ["-pie"],
+    deps = [":eventd_core"],
+)
+cc_binary(
+    name = "eventdb",
+    srcs = ["src/eventdb.cpp"],
+    copts = COPTS,
+    linkopts = ["-pie"],
+    deps = [":eventdb_core"],
+)
+cc_binary(
+    name = "events_tool",
+    srcs = ["tools/events_tool.cpp"],
+    copts = COPTS,
+    linkopts = ["-pie"],
+    deps = COMMON,
+)
+cc_binary(
+    name = "rsyslog_plugin",
+    srcs = ["rsyslog_plugin/main.cpp"],
+    copts = COPTS,
+    linkopts = ["-pie"],
+    deps = [":rsyslog_plugin_core"],
+)
+
+# Match the two Debian install manifests without producing DEB packages.
+sonic_deploy_tar(
+    name = "eventd_runtime",
+    binaries = {
+        "usr/bin/eventd uid=0 gid=0 mode=0755 type=file": ":eventd",
+        "usr/bin/eventdb uid=0 gid=0 mode=0755 type=file": ":eventdb",
+        "usr/bin/events_tool uid=0 gid=0 mode=0755 type=file": ":events_tool",
+    },
+    srcs = ["tools/events_publish_tool.py", "etc/eventd.json", "var/evprofile/default.json"],
+    mtree = [
+        "usr/bin/events_publish_tool.py uid=0 gid=0 mode=0755 type=file content=$(location tools/events_publish_tool.py)",
+        "etc/eventd.json uid=0 gid=0 mode=0644 type=file content=$(location etc/eventd.json)",
+        "etc/evprofile/default.json uid=0 gid=0 mode=0644 type=file content=$(location var/evprofile/default.json)",
+    ],
+    force_debug_build = True,
+    visibility = ["//visibility:public"],
+)
+
+sonic_deploy_tar(
+    name = "rsyslog_plugin_runtime",
+    binaries = {"usr/bin/rsyslog_plugin uid=0 gid=0 mode=0755 type=file": ":rsyslog_plugin"},
+    srcs = ["tools/events_monit_test.py", "tools/monit_events"],
+    mtree = [
+        "usr/bin/events_monit_test.py uid=0 gid=0 mode=0755 type=file content=$(location tools/events_monit_test.py)",
+        "etc/monit/conf.d/monit_events uid=0 gid=0 mode=0644 type=file content=$(location tools/monit_events)",
+    ],
+    force_debug_build = True,
+    visibility = ["//visibility:public"],
+)
+
+# The original three C++ suites use these declared native dependencies. The
+# wrapper copies their fixtures before substituting private Redis endpoints.
+flatten(
+    name = "test_runtime",
+    testonly = True,
+    deduplicate = True,
+    tars = [
+        "@sonic_swss_common//tools/bazel/runtime:test_runtime",
+        "@eventd_deps//liblua5.1-0-dev",
+        "@eventd_deps//redis-server",
+    ],
+)
+
+cc_binary(name = "eventd_tests_bin", testonly = True, srcs = ["tests/eventd_ut.cpp", "tests/main.cpp"], copts = COPTS,
+          deps = [":eventd_core", "@googletest//:gtest"])
+cc_binary(name = "eventdb_tests_bin", testonly = True, srcs = ["tests/eventdb_ut.cpp"], copts = COPTS,
+          deps = [":eventd_core", ":eventdb_core", "@googletest//:gtest"])
+cc_binary(name = "rsyslog_plugin_tests_bin", testonly = True, srcs = ["rsyslog_plugin_tests/rsyslog_plugin_ut.cpp"], copts = COPTS,
+          deps = [":rsyslog_plugin_core", "@googletest//:gtest"])
+
+[
+    py_test(
+        name = name + "_test",
+        srcs = ["bazel/run_tests.py"],
+        main = "bazel/run_tests.py",
+        args = ["$(location :" + name + "_tests_bin)", "$(location :test_runtime)", "$(location tests/eventdb_database_config.json)"],
+        data = [":" + name + "_tests_bin", ":test_runtime"] + glob(["tests/**/*.json", "rsyslog_plugin_tests/*.json", "rsyslog_plugin_tests/*.txt"]),
+        deps = ["@rules_python//python/runfiles"],
+        timeout = "long",
+        tags = ["exclusive"],
+    )
+    for name in ["eventd", "eventdb", "rsyslog_plugin"]
+]

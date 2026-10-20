@@ -1,0 +1,70 @@
+name: Bazel event services
+
+on:
+  pull_request:
+    paths:
+      - src/sonic-eventd/**
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - .github/workflows/bazel-eventd.yml
+  push:
+    branches: [master]
+    paths:
+      - src/sonic-eventd/**
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - .github/workflows/bazel-eventd.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native event services (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl file git libtool patch pkg-config python3 tar unzip zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: eventd-${{ matrix.architecture }}
+          cache-version: "8.5.1"
+      - name: Audit, build and run all original suites with private Redis
+        env:
+          # Bazel records its client environment in retained build events.
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -B src/sonic-eventd/bazel/ci.py --architecture '${{ matrix.architecture }}' --artifacts artifacts/eventd
+          git -c safe.directory="$GITHUB_WORKSPACE" diff --exit-code
+      - name: Upload native packages and test evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eventd-${{ matrix.architecture }}
+          path: artifacts/eventd
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
