@@ -9,6 +9,11 @@ After=mctpd.service
 # this runs the current sonic_platform.mctp code (not a stale/absent module).
 Wants=sonic-platform-init.service
 After=sonic-platform-init.service
+# HW-MGMT installs the platform udev rules and replays device add events during
+# initialization.  Wait for it to finish so mctpirot0 is UP and has its local
+# MCTP address before asking mctpd to discover the remote endpoint.
+Requires=hw-management-bmc-init.service
+After=hw-management-bmc-init.service
 
 [Service]
 Type=oneshot
