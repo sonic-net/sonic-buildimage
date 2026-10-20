@@ -67,11 +67,15 @@ struct fpga_mdio_priv {
 	void __iomem *reg_base; // Base address for this MDIO instance
 	struct mutex lock; // Mutex for this MDIO instance
 	int last_read_value;
+	// Module pinned for the lifetime of this bus; released on bus deletion.
+	struct module *algo_owner;
 };
 
 struct mdio_fpga_ops {
 	int (*read)(struct mii_bus *bus, int phy_id, int regnum);
 	int (*write)(struct mii_bus *bus, int phy_id, int regnum, u16 val);
+	// Module providing read/write; pinned while any MDIO bus uses them.
+	struct module *owner;
 };
 
 extern struct mdio_fpga_ops *mdio_fpga_algo_ops;
