@@ -34,9 +34,17 @@ IS_SMART_SWITCH_DPU=false
 if [[ "$DEVICE_TYPE" == "SmartSwitchDPU" || "$SWITCH_TYPE" == "dpu" ]]; then
     IS_SMART_SWITCH_DPU=true
 fi
-if [[ "$IS_SMART_SWITCH_DPU" == "true" && -z "$CERTS" && -z "$X509" ]]; then
-    echo "SmartSwitch DPU requires configured server_crt and server_key" >&2
-    exit $INVALID_TLS_CONFIGURATION
+DPU_EPHEMERAL_TLS=false
+if [[ "$IS_SMART_SWITCH_DPU" == "true" ]]; then
+    DPU_TLS_CONFIG="$CERTS"
+    if [[ -z "$DPU_TLS_CONFIG" ]]; then
+        DPU_TLS_CONFIG="$X509"
+    fi
+    if [[ -z "$DPU_TLS_CONFIG" ]] ||
+       [[ -z "$(jq -r '.server_crt // empty' <<< "$DPU_TLS_CONFIG")" ]] ||
+       [[ -z "$(jq -r '.server_key // empty' <<< "$DPU_TLS_CONFIG")" ]]; then
+        DPU_EPHEMERAL_TLS=true
+    fi
 fi
 
 # Enable GRPC GO LOG
@@ -46,7 +54,9 @@ export GRPC_GO_LOG_SEVERITY_LEVEL=info
 TELEMETRY_ARGS=" -logtostderr"
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 
-if [ -n "$CERTS" ]; then
+if [[ "$DPU_EPHEMERAL_TLS" == "true" ]]; then
+    TELEMETRY_ARGS+=" --insecure"
+elif [ -n "$CERTS" ]; then
     SERVER_CRT=$(extract_field "$CERTS" '.server_crt // empty')
     SERVER_KEY=$(extract_field "$CERTS" '.server_key // empty')
     if [[ -z "$SERVER_CRT" || -z "$SERVER_KEY" ]]; then
@@ -108,7 +118,7 @@ esac
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [[ "$CLIENT_AUTH" == "false" ]]; then
+if [[ "$DPU_EPHEMERAL_TLS" == "true" || "$CLIENT_AUTH" == "false" ]]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 

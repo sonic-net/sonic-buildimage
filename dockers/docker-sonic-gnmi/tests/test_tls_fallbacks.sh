@@ -125,6 +125,12 @@ partial_x509="$(jq -cn '{
     x509: {server_key: "/legacy.key"},
     gnmi: {port: "50052", client_auth: "true"}
 }')"
+empty_certs="$(jq -c '.certs = {
+    server_crt: "", server_key: "", ca_crt: ""
+}' <<< "${valid_certs}")"
+empty_x509="$(jq -c '.x509 = {
+    server_crt: "", server_key: "", ca_crt: ""
+}' <<< "${valid_x509}")"
 no_tls_config="$(jq -cn '{certs: "", x509: "", gnmi: ""}')"
 
 for image in docker-sonic-gnmi docker-sonic-telemetry; do
@@ -149,6 +155,12 @@ for image in docker-sonic-gnmi docker-sonic-telemetry; do
     run_launcher "${image}" "${partial_x509}"
     assert_failed_closed
 
+    run_launcher "${image}" "${empty_certs}"
+    assert_failed_closed
+
+    run_launcher "${image}" "${empty_x509}"
+    assert_failed_closed
+
     run_launcher "${image}" "${no_tls_config}"
     assert_started
     assert_has_arg --noTLS
@@ -157,23 +169,43 @@ for image in docker-sonic-gnmi docker-sonic-telemetry; do
     assert_no_arg --insecure
 done
 
-run_launcher docker-sonic-gnmi "${no_tls_config}" SmartSwitchDPU
-[[ "${RUN_STATUS}" != 0 ]]
-[[ ! -e "${F050_INVOKED_FILE}" ]]
-grep -q 'SmartSwitch DPU requires configured server_crt and server_key' "${F050_STDERR_FILE}"
+for dpu_marker in type switch_type; do
+    device_type=SmartSwitchDPU
+    switch_type=
+    if [[ "${dpu_marker}" == switch_type ]]; then
+        device_type=
+        switch_type=dpu
+    fi
 
-run_launcher docker-sonic-gnmi "${valid_certs}" SmartSwitchDPU
-assert_started
-assert_no_arg --insecure
-assert_no_arg --allow_no_client_auth
+    for config in "${no_tls_config}" "${partial_certs}" "${partial_x509}" \
+        "${empty_certs}" "${empty_x509}"; do
+        run_launcher docker-sonic-gnmi "${config}" "${device_type}" "${switch_type}"
+        assert_started
+        assert_has_arg --insecure
+        assert_has_arg --allow_no_client_auth
+        assert_no_arg --noTLS
+        assert_no_arg --server_crt
+        assert_no_arg --server_key
+    done
 
-optional_client_auth="$(jq -c '.gnmi.client_auth = "false"' <<< "${valid_certs}")"
-run_launcher docker-sonic-gnmi "${optional_client_auth}" SmartSwitchDPU
-assert_started
-assert_has_arg --allow_no_client_auth
-assert_has_arg /server.crt
-assert_has_arg /server.key
-assert_no_arg --insecure
-assert_no_arg --noTLS
+    for config in "${valid_certs}" "${valid_x509}"; do
+        run_launcher docker-sonic-gnmi "${config}" "${device_type}" "${switch_type}"
+        assert_started
+        assert_has_arg --server_crt
+        assert_has_arg --server_key
+        assert_no_arg --insecure
+        assert_no_arg --noTLS
+        assert_no_arg --allow_no_client_auth
+
+        optional_client_auth="$(jq -c '.gnmi.client_auth = "false"' <<< "${config}")"
+        run_launcher docker-sonic-gnmi "${optional_client_auth}" "${device_type}" "${switch_type}"
+        assert_started
+        assert_has_arg --allow_no_client_auth
+        assert_has_arg --server_crt
+        assert_has_arg --server_key
+        assert_no_arg --insecure
+        assert_no_arg --noTLS
+    done
+done
 
 echo "native gNMI and legacy telemetry TLS fallback tests passed"
