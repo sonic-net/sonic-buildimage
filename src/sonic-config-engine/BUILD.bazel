@@ -161,3 +161,10 @@ filegroup(
         "sonic-cfggen",
     ],
 )
+
+# The existing supervisor suite imports these shared Redis fixtures by their
+# source-tree path. Expose only the files that suite needs.
+filegroup(
+    name = "supervisor_test_fixtures",
+    srcs = glob(["tests/mock_tables/**"], exclude = ["**/__pycache__/**", "**/*.pyc"]),
+)

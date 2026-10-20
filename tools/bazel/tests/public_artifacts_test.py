@@ -83,7 +83,8 @@ def receipt(kind, architecture="amd64"):
                     for number in range(artifacts.RECEIPT_TEST_COUNTS["archive"][1])}}
     if kind == "source":
         return {"status": "passed", "revision": REVISION, **unsafe,
-                "tests": {"//tests:source_" + str(number): "passed" for number in range(14)},
+                "tests": {"//tests:source_" + str(number): "passed"
+                          for number in range(artifacts.RECEIPT_TEST_COUNTS["source"][1])},
                 "validation": {"programs": [SENTINEL], "debug_pairs": [{"path": SENTINEL}],
                                "source_contract": {"dist/BUILD.bazel": DIGEST}}}
     if kind == "syncd":

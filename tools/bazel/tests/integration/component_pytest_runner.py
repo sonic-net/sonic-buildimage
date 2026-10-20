@@ -39,6 +39,7 @@ def main():
     parser.add_argument("--component-setup", type=Path, required=True)
     parser.add_argument("--models", type=Path)
     parser.add_argument("--cfggen", type=Path)
+    parser.add_argument("--sibling-setup", type=Path, action="append", default=[])
     args = parser.parse_args()
     # Preserve the runfiles path: resolving an individual source symlink would
     # copy undeclared files from the original checkout outside the sandbox.
@@ -67,6 +68,9 @@ def main():
         root = Path(temporary)
         component = root / "src" / source.name
         writable_copy(source, component)
+        for setup in args.sibling_setup:
+            sibling = setup.absolute().parent
+            writable_copy(sibling, root / "src" / sibling.name)
         for name in ("device", "dockers", "files"):
             fixture = workspace / name
             if fixture.exists():

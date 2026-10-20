@@ -134,6 +134,11 @@ and its test runner belong in `../sonic-py-common/requirements.in`. Config-engin
 includes that file with `-r` and adds its own packages in this directory's
 `requirements.in`.
 
+The Python supervisor utility owns its direct dependency in
+`../sonic-supervisord-utilities/requirements.in`, which this input also includes.
+It uses the same lock and pip hub, including the Trixie image's tracked
+Supervisor 4.3.0 version.
+
 Keep one checked-in `requirements_lock.txt` here for both components. It records
 their resolved package versions and hashes; `MODULE.bazel` loads it once as
 `@config_engine_pip`, which both targets use. Normal builds read this lock without

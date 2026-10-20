@@ -113,6 +113,57 @@ py_test(
 )
 
 py_test(
+    name = "supervisor_python_full_test",
+    srcs = ["integration/component_pytest_runner.py"],
+    args = [
+        "--component-setup=$(rootpath //src/sonic-supervisord-utilities:setup.py)",
+        "--sibling-setup=$(rootpath //src/sonic-config-engine:setup.py)",
+    ],
+    data = [
+        "//src/sonic-config-engine:setup.py",
+        "//src/sonic-config-engine:supervisor_test_fixtures",
+        "//src/sonic-supervisord-utilities:setup.py",
+        "//src/sonic-supervisord-utilities:test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("mock"),
+        requirement("mockredispy"),
+        requirement("pytest"),
+        requirement("redis"),
+        requirement("supervisor"),
+        requirement("swsssdk"),
+    ],
+)
+
+py_test(
+    name = "supervisor_python_wheel_test",
+    srcs = ["integration/supervisor_python_wheel_test.py"],
+    args = [
+        "$(rootpath //src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel)",
+        "$(rootpath //src/sonic-supervisord-utilities:setup.py)",
+        "$(rootpath //src/sonic-py-common:sonic_py_common_wheel)",
+    ],
+    data = [
+        "//src/sonic-py-common:sonic_py_common_wheel",
+        "//src/sonic-supervisord-utilities:setup.py",
+        "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
+        "//src/sonic-supervisord-utilities:test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/supervisor_python_wheel_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("supervisor"),
+    ],
+)
+
+py_test(
     name = "sonic_config_engine_full_test",
     size = "large",
     srcs = ["integration/component_pytest_runner.py"],

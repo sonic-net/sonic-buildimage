@@ -169,6 +169,8 @@ jobs:
             //tools/bazel/tests:sonic_python_wheels_test \
             //tools/bazel/tests:containercfgd_full_test \
             //tools/bazel/tests:containercfgd_wheel_test \
+            //tools/bazel/tests:supervisor_python_full_test \
+            //tools/bazel/tests:supervisor_python_wheel_test \
             //tools/bazel/tests:installed_wheel_fixture_test \
             //tools/bazel/tests:wheel_contract_test \
             //src/sonic-config-engine:sonic_cfggen_cli_test \
@@ -179,6 +181,7 @@ jobs:
             //src/sonic-py-common:sonic_py_common_wheel \
             //src/sonic-config-engine:sonic_config_engine_wheel \
             //src/sonic-containercfgd:sonic_containercfgd_wheel \
+            //src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel \
             //dockers/docker-orchagent/config:docker_init
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
@@ -192,6 +195,8 @@ jobs:
             //tools/bazel/tests:sonic_python_wheels_test \
             //tools/bazel/tests:containercfgd_full_test \
             //tools/bazel/tests:containercfgd_wheel_test \
+            //tools/bazel/tests:supervisor_python_full_test \
+            //tools/bazel/tests:supervisor_python_wheel_test \
             //tools/bazel/tests:installed_wheel_fixture_test \
             //tools/bazel/tests:wheel_contract_test \
             //src/sonic-config-engine:sonic_cfggen_cli_test \

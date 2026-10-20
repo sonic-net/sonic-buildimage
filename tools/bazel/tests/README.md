@@ -5,6 +5,8 @@ OCI publication and source-built Python dependency checks. Existing component
 behavior tests remain with `src/sonic-config-engine` and `src/sonic-py-common`.
 The containercfgd suite remains with `src/sonic-containercfgd` and uses the
 same central runner for its complete source suite.
+The Python supervisor suite remains with `src/sonic-supervisord-utilities`;
+its central target stages the sibling config-engine Redis fixtures it imports.
 
 Run the self-contained unit tests from the repository root:
 
@@ -57,6 +59,8 @@ bazel test \
   //tools/bazel/tests:sonic_python_wheels_test \
   //tools/bazel/tests:containercfgd_full_test \
   //tools/bazel/tests:containercfgd_wheel_test \
+  //tools/bazel/tests:supervisor_python_full_test \
+  //tools/bazel/tests:supervisor_python_wheel_test \
   //src/sonic-config-engine:sonic_cfggen_cli_test \
   //tools/bazel/tests:manifest_labels_test \
   //tools/bazel/tests:prepare_oci_base_test \
@@ -74,8 +78,8 @@ bazel test \
 needs. CI selects the same tests explicitly and retains raw logs and cache
 records in the job workspace. The [workflow](../../../.github/workflows/bazel-swss-oci.yml)
 supplies the supported native AMD64/ARM64 platform flags and execution dependencies.
-The Python checks run the complete config-engine, py-common and containercfgd
-test directories and install their source-built wheels. Public archive artifacts retain the wheels, hashes and
+The Python checks run the complete config-engine, py-common, containercfgd and
+Python supervisor test directories and install their source-built wheels. Public archive artifacts retain the wheels, hashes and
 extracted test counts/status. Collection still requires test logs/XML, collected
 test inventories and the installed-wheel receipt locally. Missing evidence or
 mismatched installed wheel hashes fail collection.
@@ -155,8 +159,8 @@ Installed-wheel tests depend on the test-only `:wheel_test_helpers` library:
 
 Each component keeps its own import, command and API probes. For example,
 containercfgd checks daemon dispatch with Redis/boot interactions replaced;
-config-engine checks its installed CLI and py-common checks generated gRPC
-exports. The complete original pytest suites remain separate targets.
+config-engine checks its installed CLI, py-common checks generated gRPC exports,
+and supervisor checks critical-process parsing and missing-container errors. The complete original pytest suites remain separate targets.
 
 To add a wheel check, declare its wheel and runtime dependencies in its Bazel
 `py_test`, depend on `:wheel_test_helpers`, and call `setup_contract` and

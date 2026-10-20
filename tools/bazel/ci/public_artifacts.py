@@ -49,6 +49,7 @@ FILES = {
         ("common-wheel", "artifacts/config-engine/sonic_py_common-1.0-py3-none-any.whl", "binary"),
         ("config-wheel", "artifacts/config-engine/sonic_config_engine-1.0-py3-none-any.whl", "binary"),
         ("containercfgd-wheel", "artifacts/config-engine/sonic_containercfgd-1.0-py3-none-any.whl", "binary"),
+        ("supervisor-wheel", "artifacts/config-engine/sonic_supervisord_utilities-1.0-py3-none-any.whl", "binary"),
         ("wheel-hashes", "artifacts/config-engine/wheels-sha256.txt", "hashes"),
     ],
     "source": [
@@ -71,13 +72,13 @@ FILES = {
 BEP = {
     "archive": [
         ("archive-tests", "artifacts/archive/test-events.jsonl", 5),
-        ("python-tests", "artifacts/config-engine/test-events.jsonl", 14),
+        ("python-tests", "artifacts/config-engine/test-events.jsonl", 16),
     ],
-    "source": [("source-tests", "artifacts/swss/test-events.jsonl", 14)],
+    "source": [("source-tests", "artifacts/swss/test-events.jsonl", 16)],
     "syncd": [],
     "vs": [],
 }
-RECEIPT_TEST_COUNTS = {"archive": ("python", 9), "source": ("source", 14), "syncd": ("syncd", 7)}
+RECEIPT_TEST_COUNTS = {"archive": ("python", 11), "source": ("source", 16), "syncd": ("syncd", 7)}
 SUMMARY = {
     "archive": "artifacts/archive/public-summary.json",
     "source": "artifacts/swss/public-summary.json",

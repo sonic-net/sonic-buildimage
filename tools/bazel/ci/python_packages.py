@@ -16,6 +16,7 @@ from tools.bazel.ci import artifact_validation, build
 
 
 WHEELS = {
+    "sonic_supervisord_utilities-1.0-py3-none-any.whl": "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
     "sonic_containercfgd-1.0-py3-none-any.whl": "//src/sonic-containercfgd:sonic_containercfgd_wheel",
     "sonic_py_common-1.0-py3-none-any.whl": "//src/sonic-py-common:sonic_py_common_wheel",
     "sonic_config_engine-1.0-py3-none-any.whl": "//src/sonic-config-engine:sonic_config_engine_wheel",
@@ -25,6 +26,8 @@ TESTS = [
     "//tools/bazel/tests:wheel_contract_test",
     "//tools/bazel/tests:containercfgd_full_test",
     "//tools/bazel/tests:containercfgd_wheel_test",
+    "//tools/bazel/tests:supervisor_python_full_test",
+    "//tools/bazel/tests:supervisor_python_wheel_test",
     "//tools/bazel/tests:sonic_py_common_test",
     "//tools/bazel/tests:sonic_py_common_full_test",
     "//tools/bazel/tests:sonic_config_engine_full_test",
@@ -37,6 +40,9 @@ WHEEL_CHECKS = [
     ]),
     ("containercfgd_wheel_test", "containercfgd-wheels.json", "installed_containercfgd", [
         "sonic_containercfgd-1.0-py3-none-any.whl",
+    ]),
+    ("supervisor_python_wheel_test", "supervisor-wheels.json", "installed_supervisor", [
+        "sonic_supervisord_utilities-1.0-py3-none-any.whl",
     ]),
 ]
 MACHINES = {"amd64": "x86_64", "arm64": "aarch64"}

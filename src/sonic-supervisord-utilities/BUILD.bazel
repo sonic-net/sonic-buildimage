@@ -1,0 +1,33 @@
+load("@rules_python//python:packaging.bzl", "py_wheel")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["requirements.in", "setup.py"])
+
+# Standard wheel installers replace #!python with their selected interpreter.
+# Keep the rest of the existing script unchanged.
+genrule(
+    name = "wheel_listener_script",
+    srcs = ["scripts/supervisor-proc-exit-listener"],
+    outs = ["wheel_scripts/supervisor-proc-exit-listener"],
+    cmd = "sed '1s|.*|#!python|' $(location scripts/supervisor-proc-exit-listener) > $@ && chmod 755 $@",
+)
+
+py_wheel(
+    name = "sonic_supervisord_utilities_wheel",
+    data_files = {":wheel_listener_script": "scripts/supervisor-proc-exit-listener"},
+    distribution = "sonic-supervisord-utilities",
+    license = "Apache 2.0",
+    python_tag = "py3",
+    requires = ["supervisor", "sonic-py-common"],
+    summary = "SONiC supervisord utilities",
+    version = "1.0",
+)
+
+filegroup(
+    name = "test_sources",
+    srcs = glob(
+        ["scripts/*", "tests/**"],
+        exclude = ["**/__pycache__/**", "**/*.pyc"],
+    ) + ["setup.py", "pytest.ini"],
+)

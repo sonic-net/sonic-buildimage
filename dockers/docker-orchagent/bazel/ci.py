@@ -39,6 +39,8 @@ TESTS = [
     "//tools/bazel/tests:sonic_python_wheels_test",
     "//tools/bazel/tests:containercfgd_full_test",
     "//tools/bazel/tests:containercfgd_wheel_test",
+    "//tools/bazel/tests:supervisor_python_full_test",
+    "//tools/bazel/tests:supervisor_python_wheel_test",
     "//src/sonic-config-engine:sonic_cfggen_cli_test",
     "//tools/bazel/tests:common_rust_runtime_test",
     "//tools/bazel/tests:test_dpkg_patterns_up_to_date",
