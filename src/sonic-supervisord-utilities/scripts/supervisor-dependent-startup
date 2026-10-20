@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import logging
+import signal
+import sys
+
+from supervisor.compat import xmlrpclib
+from supervisor.xmlrpc import Faults
+
+
+log = logging.getLogger("supervisor-dependent-startup")
+
+
+def handle_signal(signum, frame):
+    log.info("Dependency startup cancelled by signal %s", signum)
+    sys.exit(0)
+
+
+def main():
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
+    try:
+        # The upstream run() catches SystemExit and converts cancellation to 3.
+        from supervisord_dependent_startup import supervisord_dependent_startup
+
+        return supervisord_dependent_startup.main() or 0
+    except Exception as error:
+        if isinstance(error, xmlrpclib.Fault) and error.faultCode == Faults.SHUTDOWN_STATE:
+            # Supervisor can reject an RPC before delivering SIGTERM to us.
+            log.info("Dependency startup cancelled: supervisord is shutting down")
+            return 0
+        log.exception("Dependency startup failed")
+        return 3
+
+
+if __name__ == "__main__":
+    sys.exit(main())

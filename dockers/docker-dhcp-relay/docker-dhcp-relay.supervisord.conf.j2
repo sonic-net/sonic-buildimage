@@ -10,9 +10,10 @@ logfile_backups=2
 nodaemon=true
 
 [eventlistener:dependent-startup]
-command=python3 -m supervisord_dependent_startup
+command=/usr/local/bin/supervisor-dependent-startup
 autostart=true
 autorestart=unexpected
+startsecs=0
 startretries=0
 exitcodes=0,3
 events=PROCESS_STATE
