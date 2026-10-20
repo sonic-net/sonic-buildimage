@@ -1,0 +1,29 @@
+diff --git a/src/Linux/mod_vpp.c b/src/Linux/mod_vpp.c
+index 88fb8ec..4795484 100644
+--- a/src/Linux/mod_vpp.c
++++ b/src/Linux/mod_vpp.c
+@@ -413,10 +413,13 @@ extern "C" {
+ 	    | HSP_ETCTR_UNKN
+ 	    | HSP_ETCTR_OPER
+ 	    | HSP_ETCTR_ADMIN;
+-	  accumulateNioCounters(sp, adaptor, &port->ctrs, &port->et_ctrs, NULL);
++    bool sonic_owns_counters = sp->vpp.osIndex == YES && os_index_attr_included && in.os_index != 0;
++    if(!sonic_owns_counters) {
++      accumulateNioCounters(sp, adaptor, &port->ctrs, &port->et_ctrs, NULL);
++      nio->last_update = mdata->pollBus->now.tv_sec;
++    }
+ 	  nio->et_last.adminStatus = port->adminUp;
+ 	  nio->et_last.operStatus = port->operUp;
+-	  nio->last_update = mdata->pollBus->now.tv_sec;
+ 	  adaptor->ifDirection = port->ifDirection;
+ 	  // Request a poller for this adaptor if one is not already there.
+ 	  // This is done with an event because it is usually called from
+@@ -425,7 +428,7 @@ extern "C" {
+ 	  EVEvent *req_poller = EVGetEvent(mdata->pollBus, HSPEVENT_REQUEST_POLLER);
+ 	  EVEventTx(sp->rootModule, req_poller, &adaptor->ifIndex, sizeof(adaptor->ifIndex));
+ 	  // Which means we should have a poller now.
+-	  if(nio->poller) {
++    if(nio->poller && !sonic_owns_counters) {
+ 	    // Make sure it does not call back on it's own schedule.
+ 	    nio->poller->getCountersFn = NULL;
+ 	    if(newPort) {

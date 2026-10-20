@@ -1,6 +1,9 @@
 #!/bin/bash
 ## This script is to generate an ONIE installer image based on a file system overload
 
+image_password=$PASSWORD
+unset PASSWORD
+
 ## Enable debug output for script
 set -x -e
 
@@ -53,9 +56,15 @@ generate_kvm_image()
     fi
     sudo rm -f $KVM_IMAGE_DISK $KVM_IMAGE_DISK.gz
 
-    SONIC_USERNAME=$USERNAME PASSWD=$PASSWORD sudo -E ./scripts/build_kvm_image.sh $KVM_IMAGE_DISK $RECOVERY_ISO $OUTPUT_ONIE_IMAGE $KVM_IMAGE_DISK_SIZE ${BOOT_FIRMWARE}
+    set +x
+    if SONIC_USERNAME="$USERNAME" PASSWD="$image_password" sudo -E ./scripts/build_kvm_image.sh "$KVM_IMAGE_DISK" "$RECOVERY_ISO" "$OUTPUT_ONIE_IMAGE" "$KVM_IMAGE_DISK_SIZE" "${BOOT_FIRMWARE}"; then
+        build_status=0
+    else
+        build_status=$?
+    fi
+    set -x
 
-    if [ $? -ne 0 ]; then
+    if [ "$build_status" -ne 0 ]; then
         echo "Error : build kvm image failed"
         exit 1
     fi

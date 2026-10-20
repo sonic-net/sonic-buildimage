@@ -1,5 +1,5 @@
 #!/bin/bash
-{%- set bridged_containers = ["dhcp_server", "redfish"] %}
+{%- set bridged_containers = ["dhcp_server"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
@@ -62,9 +62,7 @@ get_pmon_device_cgroup_rules() {
 {%- endif %}
 
 {%- if docker_container_name in bridged_containers %}
-{#- redfish.service runs as the sonicadmin user, so its rule check needs sudo. #}
-{%- set ipt = "sudo iptables" if docker_container_name == "redfish" else "iptables" %}
-BRIDGE_SYSLOG_CHECK=({{ ipt }} -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment {{ docker_container_name }}_syslog -j ACCEPT)
+BRIDGE_SYSLOG_CHECK=(iptables -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment {{ docker_container_name }}_syslog -j ACCEPT)
 BRIDGE_SYSLOG_WAIT_SECS=10
 {%- endif %}
 
@@ -249,6 +247,8 @@ function postStartAction()
         echo "${DOCKERNAME} slot_id=${slot_id} supervisor_slot_id=${supervisor_slot_id}"
     fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
+    chassisdb_address_file="/etc/sonic/chassisdb_address"
+    [ -f $chassisdb_address_file ] && source $chassisdb_address_file
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         # Enable the forwarding on eth0 interface in namespace.
         SYSCTL_NET_CONFIG="/usr/lib/sysctl.d/90-sonic.conf"
@@ -572,14 +572,9 @@ start() {
         RUNTIME_VARS_JSON="$PLATFORM_FOLDER/runtime_vars.json"
     fi
 
-    # DEPRECATED: legacy marker file, not yet migrated to runtime_vars.json.
     if [ -d "$HWSKU_FOLDER" ]; then
-        ENABLE_PER_PORT_COUNTER_DISCOVERY="$HWSKU_FOLDER/enable_per_port_counter_discovery"
-        if [ -f "$ENABLE_PER_PORT_COUNTER_DISCOVERY" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery $(cat $ENABLE_PER_PORT_COUNTER_DISCOVERY)
-        else
-            $SONIC_DB_CLI CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
-        fi
+        # This default should be undefined, set by runtime_vars.json
+        $SONIC_DB_CLI CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
     fi
 
     if [ -n "$RUNTIME_VARS_JSON" ]; then
@@ -683,6 +678,8 @@ start() {
     chassis_db_address=""
     chassisdb_config="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $chassisdb_config ] && source $chassisdb_config
+    chassisdb_address_file="/etc/sonic/chassisdb_address"
+    [ -f $chassisdb_address_file ] && source $chassisdb_address_file
     DB_OPT=" -v /var/run/redis-chassis:/var/run/redis-chassis:ro "
     if [[ "$start_chassis_db" != "1" ]] && [[ -z "$chassis_db_address" ]]; then
         DB_OPT=""
@@ -696,12 +693,7 @@ start() {
     {%- endif %}
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
-{%- if docker_container_name == "redfish" %}
-        # redfish uses bridge networking with port mapping (-p 443:18080)
-        NET="bridge"
-{%- else %}
         NET="host"
-{%- endif %}
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
@@ -771,6 +763,23 @@ start() {
 
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
+    # Derive PREDEFINED_DEV_PCI_BUS from asic.conf (the single source of truth,
+    # same derivation as platform/mellanox/files/sx-kernel.sh) so the host sx
+    # driver and the syncd SDK use an identical module->PCI-bus map.
+    if [ "${NUM_ASIC:-1}" -gt 1 ]; then
+        PREDEFINED_DEV_PCI_BUS=""
+        for i in $(seq 0 $((NUM_ASIC-1))); do
+            dev_id_var="DEV_ID_ASIC_$i"
+            dev_id="${!dev_id_var}"
+            if [ -n "$dev_id" ]; then
+                if [ -n "$PREDEFINED_DEV_PCI_BUS" ]; then
+                    PREDEFINED_DEV_PCI_BUS="${PREDEFINED_DEV_PCI_BUS},$((i+1))@${dev_id}"
+                else
+                    PREDEFINED_DEV_PCI_BUS="$((i+1))@${dev_id}"
+                fi
+            fi
+        done
+    fi
     if [[ $DEV != "" ]]; then
         mkdir -p /dev/shm/asic$DEV
         mkdir -p /var/log/sdk_dbg/$DEV
@@ -791,6 +800,24 @@ start() {
     else
         SMARTSWITCH_MNT=""
     fi
+{%- endif %}
+{%- endif %}
+{%- if sonic_asic_platform == "broadcom" %}
+{%- if docker_container_name == "syncd" %}
+    # --privileged used to fully open the device cgroup; without it, only explicitly
+    # granted devices are accessible, so grant the host device nodes opennsl-modules.init
+    # creates via --device=. This covers all broadcom syncd images (standard XGS, legacy-th,
+    # and dnx). Which nodes exist depends on is_ltsw_chip (a runtime setting from
+    # platform_env.conf, not known at image-build time): most chip families pick their set at
+    # runtime, dnx creates linux_ngbde alongside the classic set unconditionally. Check each
+    # path individually so only the devices actually present on this host get mounted.
+    BRCM_DEV_MNT=""
+    for _brcm_dev in /dev/linux_ngbde /dev/linux_ngknet /dev/linux_ngknetcb \
+                     /dev/linux-kernel-bde /dev/linux-user-bde /dev/linux-bcm-knet /dev/linux-bcm-bde /dev/linux-knet-cb; do
+        if [ -e "$_brcm_dev" ]; then
+            BRCM_DEV_MNT="$BRCM_DEV_MNT --device=$_brcm_dev:$_brcm_dev:rwm"
+        fi
+    done
 {%- endif %}
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
@@ -825,6 +852,7 @@ start() {
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /sys/module/sx_netdev:/sys/module/sx_netdev:rw \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
+        $(if [ -n "$PREDEFINED_DEV_PCI_BUS" ]; then echo "-e PREDEFINED_DEV_PCI_BUS=$PREDEFINED_DEV_PCI_BUS"; fi) \
         $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
@@ -845,12 +873,16 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "syncd" %}
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
+        $(if [ -d /dev/infiniband ]; then echo "-v /dev/infiniband:/dev/infiniband"; fi) \
+        $(if [ -d /dev/vfio ]; then echo "-v /dev/vfio:/dev/vfio"; fi) \
+        $(if [ -e /dev/infiniband/rdma_cm ]; then echo "--device=/dev/infiniband/rdma_cm:/dev/infiniband/rdma_cm"; fi) \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
 {%- if docker_container_name == "syncd" %}
         --shm-size=${SYNCD_SHM_SIZE:-512m} \
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
+        $BRCM_DEV_MNT \
 {%- endif %}
 {%- endif %}
 {%- if docker_container_name == "pmon" %}

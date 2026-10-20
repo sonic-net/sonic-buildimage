@@ -14,5 +14,9 @@
         }],
         "sfps": []
     },
-    "interfaces": {}
+    "interfaces": {},
+    "watchdog": {
+        "boot_arm": true,
+        "shutdown_protect": true
+    }
 }
