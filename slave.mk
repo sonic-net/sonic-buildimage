@@ -517,6 +517,7 @@ $(info "INCLUDE_SNMP"                    : "$(INCLUDE_SNMP)")
 $(info "INCLUDE_LLDP"                    : "$(INCLUDE_LLDP)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
+$(info "ENABLE_RAM2DISK                  : "$(ENABLE_RAM2DISK)")
 $(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
 $(info "ENABLE_TRANSLIB_WRITE"           : "$(ENABLE_TRANSLIB_WRITE)")
 $(info "ENABLE_NATIVE_WRITE"             : "$(ENABLE_NATIVE_WRITE)")
@@ -1586,6 +1587,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		export image_type="$($(installer)_IMAGE_TYPE)"
 		export sonicadmin_user="$(USERNAME)"
 		export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
+		export enable_ram2disk="$(ENABLE_RAM2DISK)"
 		export RFS_SPLIT_FIRST_STAGE=y
 		export RFS_SPLIT_LAST_STAGE=n
 
@@ -1703,6 +1705,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 	export enable_organization_extensions="$(ENABLE_ORGANIZATION_EXTENSIONS)"
 	export enable_ztp="$(ENABLE_ZTP)"
+	export enable_ram2disk="$(ENABLE_RAM2DISK)"
 	export include_teamd="$(INCLUDE_TEAMD)"
 	export include_router_advertiser="$(INCLUDE_ROUTER_ADVERTISER)"
 	export sonic_su_dev_signing_key="$(SECURE_UPGRADE_DEV_SIGNING_KEY)"

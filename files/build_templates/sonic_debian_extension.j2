@@ -512,6 +512,7 @@ sudo cp $IMAGE_CONFIGS/logrotate/timerOverride.conf $FILESYSTEM_ROOT/etc/systemd
 echo "logrotate-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy ram2disk and install rsync as a dependency
+{% if enable_ram2disk == 'y' %}
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install rsync
 sudo cp $IMAGE_CONFIGS/ram2disk/ram2disk.sh $FILESYSTEM_ROOT/usr/local/bin/ram2disk.sh
 sudo cp $IMAGE_CONFIGS/ram2disk/logrotate-counter-functions.sh $FILESYSTEM_ROOT/usr/local/bin/logrotate-counter-functions.sh
@@ -525,6 +526,7 @@ sudo cp $IMAGE_CONFIGS/ram2disk/ram2disk.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_
 sudo cp $IMAGE_CONFIGS/ram2disk/ram2disk-restore.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ram2disk.timer
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ram2disk-restore.service
+{% endif %}
 
 # Copy systemd-journald configuration files
 sudo cp -f $IMAGE_CONFIGS/systemd/journald.conf $FILESYSTEM_ROOT/etc/systemd/
