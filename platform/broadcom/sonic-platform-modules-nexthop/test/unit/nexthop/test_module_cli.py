@@ -64,7 +64,7 @@ class TestReloadCommand:
         calls = []
         monkeypatch.setattr(
             "nexthop.module_cli.reload_module",
-            lambda name, watchdog_seconds: calls.append(name),
+            lambda name: calls.append(name),
         )
 
         runner = CliRunner()
@@ -73,48 +73,6 @@ class TestReloadCommand:
         assert result.exit_code == 0
         assert calls == ["nh_isl68137"]
         assert "Successfully reloaded" in result.output
-
-    def test_watchdog_seconds_passes_through(self, module_cli_module, monkeypatch):
-        calls = []
-        monkeypatch.setattr(
-            "nexthop.module_cli.reload_module",
-            lambda name, watchdog_seconds: calls.append((name, watchdog_seconds)),
-        )
-
-        runner = CliRunner()
-        result = runner.invoke(
-            module_cli_module.reload, ["nh_isl68137", "--watchdog-seconds", "3600"]
-        )
-
-        assert result.exit_code == 0
-        assert calls == [("nh_isl68137", 3600)]
-
-    def test_watchdog_seconds_defaults_to_the_lib_constant(
-        self, module_cli_module, monkeypatch
-    ):
-        from nexthop.module_reload_lib import RELOAD_WATCHDOG_SECONDS
-
-        calls = []
-        monkeypatch.setattr(
-            "nexthop.module_cli.reload_module",
-            lambda name, watchdog_seconds: calls.append(watchdog_seconds),
-        )
-
-        runner = CliRunner()
-        result = runner.invoke(module_cli_module.reload, ["nh_isl68137"])
-
-        assert result.exit_code == 0
-        assert calls == [RELOAD_WATCHDOG_SECONDS]
-
-    def test_watchdog_seconds_beyond_the_counter_is_rejected(self, module_cli_module):
-        # The counter is 24 bits of milliseconds; more than it can hold would arm
-        # with a silently different timeout.
-        runner = CliRunner()
-        result = runner.invoke(
-            module_cli_module.reload, ["nh_isl68137", "--watchdog-seconds", "20000"]
-        )
-
-        assert result.exit_code != 0
 
     def test_recreate_devices_flags_are_rejected(self, module_cli_module):
         # The removed --recreate-devices/--no-recreate-devices pair could force a
@@ -128,7 +86,7 @@ class TestReloadCommand:
     def test_failure_exits_nonzero(self, module_cli_module, monkeypatch):
         from nexthop.module_reload_lib import ModuleReloadError
 
-        def raise_error(name, watchdog_seconds):
+        def raise_error(name):
             raise ModuleReloadError("module not loaded")
 
         monkeypatch.setattr("nexthop.module_cli.reload_module", raise_error)
@@ -144,7 +102,7 @@ class TestReloadCommand:
         calls = []
         monkeypatch.setattr(
             "nexthop.module_cli.reload_module",
-            lambda name, watchdog_seconds: calls.append(name),
+            lambda name: calls.append(name),
         )
 
         runner = CliRunner()
@@ -159,7 +117,7 @@ class TestReloadCommand:
         calls = []
         monkeypatch.setattr(
             "nexthop.module_cli.reload_module",
-            lambda name, watchdog_seconds: calls.append(name),
+            lambda name: calls.append(name),
         )
 
         runner = CliRunner()
@@ -179,7 +137,7 @@ class TestReloadCommand:
         calls = []
         monkeypatch.setattr(
             "nexthop.module_cli.reload_module",
-            lambda name, watchdog_seconds: calls.append(name),
+            lambda name: calls.append(name),
         )
 
         runner = CliRunner()
@@ -194,7 +152,7 @@ class TestReloadAllCommand:
         calls = []
         monkeypatch.setattr(
             "nexthop.module_cli.reload_all_modules",
-            lambda watchdog_seconds: calls.append(True),
+            lambda: calls.append(True),
         )
 
         runner = CliRunner()
@@ -207,7 +165,7 @@ class TestReloadAllCommand:
     def test_failure_exits_nonzero(self, module_cli_module, monkeypatch):
         from nexthop.module_reload_lib import ModuleReloadError
 
-        def raise_error(watchdog_seconds):
+        def raise_error():
             raise ModuleReloadError("pddf_util.py clean failed: exit status 1")
 
         monkeypatch.setattr("nexthop.module_cli.reload_all_modules", raise_error)
@@ -222,8 +180,7 @@ class TestReloadAllCommand:
 
 class TestNoUnloadCommand:
     def test_unload_is_not_exposed(self, module_cli_module):
-        # A module left unloaded strands the platform with its PDDF devices gone
-        # and the watchdog unable to re-arm.
+        # A module left unloaded strands the platform with its PDDF devices gone.
         runner = CliRunner()
         result = runner.invoke(module_cli_module.cli, ["unload", "nh_isl68137"])
 

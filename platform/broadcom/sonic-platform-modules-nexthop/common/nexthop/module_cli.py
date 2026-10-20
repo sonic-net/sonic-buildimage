@@ -8,27 +8,13 @@ import click
 from tabulate import tabulate
 
 from nexthop.module_reload_lib import (
-    MAX_WATCHDOG_SECONDS,
     ModuleReloadError,
-    RELOAD_WATCHDOG_SECONDS,
     get_declared_modules,
     get_loaded_modules,
     is_pddf_module,
     reload_all_modules,
     reload_module,
 )
-
-
-def watchdog_seconds_option(command):
-    return click.option(
-        "--watchdog-seconds",
-        type=click.IntRange(1, MAX_WATCHDOG_SECONDS),
-        default=RELOAD_WATCHDOG_SECONDS,
-        show_default=True,
-        help="Seconds the FPGA watchdog stays armed while the reload runs; a "
-        "reload stuck longer than this resets the switch. Raise it when "
-        "root-causing a wedged teardown.",
-    )(command)
 
 
 def check_root_privileges():
@@ -86,8 +72,7 @@ def list_modules():
     "--any", "allow_any", is_flag=True, default=False,
     help="Allow reloading a module that isn't a declared PDDF/custom module for this platform.",
 )
-@watchdog_seconds_option
-def reload(module_name, allow_any, watchdog_seconds):
+def reload(module_name, allow_any):
     """Unload and reload MODULE_NAME (and any dependents), then re-modprobe them all.
 
     A PDDF-declared module goes through the full `pddf_util.py` teardown and
@@ -100,7 +85,7 @@ def reload(module_name, allow_any, watchdog_seconds):
     check_module_allowed(module_name, allow_any)
     click.secho(f"Reloading {module_name}:", fg="cyan")
     try:
-        reload_module(module_name, watchdog_seconds=watchdog_seconds)
+        reload_module(module_name)
     except ModuleReloadError as e:
         click.secho(f"Failed to reload {module_name}: {e}", fg="red")
         sys.exit(1)
@@ -108,15 +93,13 @@ def reload(module_name, allow_any, watchdog_seconds):
 
 
 @cli.command("reload-all")
-@watchdog_seconds_option
-def reload_all(watchdog_seconds):
+def reload_all():
     """Reload all PDDF/custom kernel modules and PDDF devices.
 
     Runs `pddf_util.py --force clean`, unloads whatever it leaves behind in
-    dependency order, then `pddf_util.py install`. The FPGA watchdog stays armed
-    with punching paused for the duration (see --watchdog-seconds), and kernel
-    messages are kept off the console while it runs, so an operator watching the
-    console sees nothing until it finishes; `dmesg` still has everything.
+    dependency order, then `pddf_util.py install`. Kernel messages are kept off
+    the console while it runs, so an operator watching the console sees nothing
+    until it finishes; `dmesg` still has everything.
 
     Unlike `reload MODULE_NAME`, this does not run `depmod -a`, so a newly added
     .ko file is not picked up.
@@ -124,7 +107,7 @@ def reload_all(watchdog_seconds):
     check_root_privileges()
     click.secho("Reloading all PDDF/custom kernel modules and devices:", fg="cyan")
     try:
-        reload_all_modules(watchdog_seconds=watchdog_seconds)
+        reload_all_modules()
     except ModuleReloadError as e:
         click.secho(f"Failed to reload all PDDF/custom kernel modules and devices: {e}", fg="red")
         sys.exit(1)

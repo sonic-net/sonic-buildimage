@@ -12,7 +12,6 @@ modules go through a full `pddf_util.py` teardown and reinstall.
 import os
 import re
 from contextlib import contextmanager
-from subprocess import CalledProcessError
 
 from nexthop.pddf_loader import PDDF_DEVICE_JSON_PATH, load_pddf_device_config
 from nexthop_utils.platform_utils import run_cmd, write_atomically
@@ -29,31 +28,6 @@ PRINTK_PATH = "/proc/sys/kernel/printk"
 # Console loglevel that keeps KERN_ERR (3) off the console while still recording
 # it in the kernel ring buffer, so `dmesg` after a reload loses nothing.
 QUIET_CONSOLE_LOGLEVEL = 1
-# How long the FPGA watchdog stays armed while a reload runs, with punching
-# paused for the same duration so nothing shortens the counter. Must exceed the
-# longest legitimate teardown (over 300s has been observed); a reload stuck past
-# it resets the switch, which is the guardrail for a wedged or killed reload.
-RELOAD_WATCHDOG_SECONDS = 900
-# Upper bound of the 24-bit millisecond counter, in whole seconds.
-MAX_WATCHDOG_SECONDS = 0xFFFFFF // 1000
-# Mirrors sonic_platform.watchdog._WATCHDOG_PAUSE_FILE_PATH, which cannot be
-# imported here (see below), and needed as a fallback when the teardown has
-# uninstalled the wheel that `watchdogutil disarm` would import.
-WATCHDOG_PAUSE_FILE_PATH = "/var/lock/pddf-locks/watchdog.pause"
-# The watchdog is driven through the standard `watchdogutil` CLI rather than by
-# importing sonic_platform, for two reasons. `sonic_platform/__init__.py`
-# star-imports the whole platform API (chassis, sfp, psu, thermal, ...), and those
-# modules import back into this package - fpga_lib, xcvr_presence_cache,
-# mgmt_port_link_state - so importing it here inverts the dependency direction for
-# a CLI that otherwise only needs modprobe. It also reads the very stack this
-# reload tears down, so each call wants a fresh process rather than objects held
-# across the teardown.
-WATCHDOGUTIL = "watchdogutil"
-# watchdogutil exits with this status when it cannot build the platform watchdog:
-# the platform declares no WATCHDOG (cf2 standalone), or the sonic_platform wheel
-# is not installed. Its arm/disarm/status subcommands exit 0 even on hardware
-# failure and report the result on stdout, hence the success markers below.
-WATCHDOGUTIL_LOAD_ERROR_STATUS = 2
 
 
 _logger = syslogger.SysLogger("nexthop.module_reload_lib")
@@ -186,115 +160,6 @@ def is_pddf_module(module_name):
     pddf_kos, custom_kos = get_declared_modules()
     declared = {_normalize(m) for m in (set(pddf_kos) | set(custom_kos))}
     return _normalize(module_name) in declared
-
-
-def _run_watchdogutil(subcommand, success_marker):
-    """Run `watchdogutil <subcommand>`. True if it took effect, False on failure,
-    None if no platform watchdog could be built.
-
-    Failure is reported rather than raised: platforms without a watchdog must
-    still reload, and a failed re-arm self-heals once `watchdog.timer` resumes.
-    """
-    try:
-        output = run_cmd(f"{WATCHDOGUTIL} {subcommand}")
-    except CalledProcessError as e:
-        if e.returncode == WATCHDOGUTIL_LOAD_ERROR_STATUS:
-            _logger.log_info(
-                f"no platform watchdog, skipping `watchdogutil {subcommand}`"
-            )
-            return None
-        _logger.log_warning(
-            f"`watchdogutil {subcommand}` did not take effect, continuing "
-            f"anyway: {e} (stderr: {e.stderr})"
-        )
-        return False
-    except Exception as e:
-        _logger.log_warning(
-            f"`watchdogutil {subcommand}` did not take effect, continuing anyway: {e}"
-        )
-        return False
-    if success_marker not in (output or ""):
-        _logger.log_warning(
-            f"`watchdogutil {subcommand}` did not take effect, continuing "
-            f"anyway: {output}"
-        )
-        return False
-    return True
-
-
-def _rearm_punch_watchdog():
-    """Start watchdog.service, which arms the watchdog for the punch interval.
-
-    A failure is logged, not raised: watchdog.timer retries within a minute.
-    """
-    try:
-        run_cmd("systemctl start watchdog.service")
-    except Exception as e:
-        _logger.log_warning(
-            f"could not re-arm the punch watchdog, watchdog.timer will retry "
-            f"within a minute: {e}"
-        )
-
-
-def _restore_watchdog():
-    """Return the watchdog to normal punching and read the armed state back.
-
-    `watchdogutil disarm` clears the reload counter and the punching pause in one
-    call, so `watchdog.timer` punches again even if the re-arm below fails, which
-    is what makes that failure self-healing. Starting watchdog.service replaces
-    the long reload counter with the normal punching cycle immediately instead of
-    leaving the switch unprotected until the next timer tick.
-    """
-    disarmed = _run_watchdogutil("disarm", "Watchdog disarmed successfully")
-    if disarmed is not True:
-        # `pddf_util.py clean` uninstalls the sonic_platform wheel and `install`
-        # puts it back, so a teardown that fails in between leaves watchdogutil
-        # with nothing to import. Deleting the file is all the unpause needs,
-        # and it needs neither the wheel nor the FPGA.
-        try:
-            os.unlink(WATCHDOG_PAUSE_FILE_PATH)
-        except FileNotFoundError:
-            pass
-        except OSError as e:
-            _logger.log_error(
-                f"could not clear {WATCHDOG_PAUSE_FILE_PATH}; watchdog.timer "
-                f"will not punch and the switch will reset: {e}"
-            )
-    if disarmed is None:
-        # No watchdog to re-arm, so nothing to verify and nothing lost.
-        return
-    _rearm_punch_watchdog()
-    if _run_watchdogutil("status", "Status: Armed") is False:
-        _logger.log_error(
-            "FPGA watchdog is not confirmed armed after reload; the switch may "
-            "be running without watchdog protection"
-        )
-
-
-@contextmanager
-def _reload_watchdog(watchdog_seconds):
-    """Arm the FPGA watchdog for the reload window; restore normal punching on exit.
-
-    The register lives behind the FPGA, so nothing can arm or punch once the
-    teardown unmaps it. `watchdogutil arm` goes through `Watchdog.arm()`, which
-    pauses `watchdog.timer` and leaves a counter long enough to outlast the
-    teardown - and a reload stuck past it resets the switch.
-    """
-    if (
-        _run_watchdogutil(
-            f"arm -s {watchdog_seconds}",
-            f"Watchdog armed for {watchdog_seconds} seconds",
-        )
-        is False
-    ):
-        _logger.log_error(
-            "FPGA watchdog could not be armed for the reload; watchdog.timer may "
-            "arm a shorter counter mid-teardown and reset the switch"
-        )
-    try:
-        yield
-    finally:
-        _restore_watchdog()
 
 
 def _i2c_clients_bound_to(modules):
@@ -520,7 +385,7 @@ def _restore_base_pddf_device_json():
         write_atomically(f.read(), PDDF_DEVICE_JSON_PATH)
 
 
-def reload_all_modules(watchdog_seconds=RELOAD_WATCHDOG_SECONDS):
+def reload_all_modules():
     """Reload every PDDF/custom kernel module and recreate PDDF devices.
 
     `pddf_util.py clean` deletes the device nodes and then unloads the declared
@@ -533,15 +398,11 @@ def reload_all_modules(watchdog_seconds=RELOAD_WATCHDOG_SECONDS):
     driver's module, so unloading with the devices live can fail with EBUSY.
     `pddf_util.py install` also silently skips loading drivers while any PDDF
     module is resident, so the teardown is verified complete before handing back.
-
-    The FPGA watchdog stays armed for `watchdog_seconds` with punching paused,
-    so a reload stuck past that resets the switch. Raise it when root-causing a
-    wedged teardown on a switch that should stay up.
     """
     pddf_kos, custom_kos = get_declared_modules()
     declared = pddf_kos + custom_kos
 
-    with _reload_watchdog(watchdog_seconds), _quieted_console():
+    with _quieted_console():
         _run_cmd_or_raise(f"{PDDF_UTIL_PATH} --force clean", "pddf_util.py clean failed")
 
         # `--force clean` reports success even when delete_pddf_devices() failed,
@@ -595,7 +456,7 @@ def reload_all_modules(watchdog_seconds=RELOAD_WATCHDOG_SECONDS):
             )
 
 
-def reload_module(module_name, watchdog_seconds=RELOAD_WATCHDOG_SECONDS):
+def reload_module(module_name):
     """Unload module_name (and dependents) and load them all back.
 
     Runs `depmod -a` between unload and reload so a swapped-in .ko file (or
@@ -618,7 +479,7 @@ def reload_module(module_name, watchdog_seconds=RELOAD_WATCHDOG_SECONDS):
     if is_pddf_module(name):
         # depmod first so a swapped-in .ko is picked up by the reload below.
         _run_cmd_or_raise("depmod -a", "depmod failed")
-        reload_all_modules(watchdog_seconds=watchdog_seconds)
+        reload_all_modules()
         return
 
     loaded_modules = get_loaded_modules()

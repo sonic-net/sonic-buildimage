@@ -18,37 +18,6 @@ def module_reload_lib_module():
     yield module_reload_lib
 
 
-# Set by the watchdog_actions fixture so tests that need the genuine helper —
-# rather than the capturing stub — can put it back.
-_REAL_RUN_WATCHDOGUTIL = None
-_REAL_REARM_PUNCH_WATCHDOG = None
-
-
-@pytest.fixture(autouse=True)
-def watchdog_actions(module_reload_lib_module, monkeypatch):
-    """Captures watchdogutil subcommands instead of letting them shell out.
-
-    Always reports success, so tests covering failure handling must restore the
-    real helper.
-    """
-    global _REAL_RUN_WATCHDOGUTIL, _REAL_REARM_PUNCH_WATCHDOG
-    _REAL_RUN_WATCHDOGUTIL = module_reload_lib_module._run_watchdogutil
-    _REAL_REARM_PUNCH_WATCHDOG = module_reload_lib_module._rearm_punch_watchdog
-
-    actions = []
-
-    def capture(subcommand, success_marker):
-        actions.append(subcommand)
-        return True
-
-    monkeypatch.setattr("nexthop.module_reload_lib._run_watchdogutil", capture)
-    monkeypatch.setattr(
-        "nexthop.module_reload_lib._rearm_punch_watchdog",
-        lambda: actions.append("rearm"),
-    )
-    return actions
-
-
 PROC_MODULES_SAMPLE = (
     "nh_pmbus_core 16384 2 nh_isl68137,nh_adm1266, Live 0x0000000000000000\n"
     "nh_isl68137 16384 0 - Live 0x0000000000000000\n"
@@ -390,7 +359,7 @@ class TestReloadModule:
         import inspect
 
         params = inspect.signature(module_reload_lib_module.reload_module).parameters
-        assert list(params) == ["module_name", "watchdog_seconds"]
+        assert list(params) == ["module_name"]
 
     def test_hyphenated_input_produces_normalized_modprobe_commands(
         self, module_reload_lib_module, monkeypatch
@@ -844,7 +813,7 @@ class TestBoundI2cClients:
         assert module_reload_lib_module._i2c_clients_bound_to(["anything"]) == {}
 
     def test_reload_all_stops_before_unloading_a_module_with_clients(
-        self, module_reload_lib_module, monkeypatch, watchdog_actions
+        self, module_reload_lib_module, monkeypatch
     ):
         # The panic this exists to prevent: unloading while clients still hold
         # callbacks into the module.
@@ -871,47 +840,9 @@ class TestBoundI2cClients:
         assert f"{module_reload_lib_module.PDDF_UTIL_PATH} install" not in commands
 
 
-class TestWatchdogHandling:
-    def test_reload_all_arms_for_the_reload_then_restores_punching(
-        self, module_reload_lib_module, monkeypatch, watchdog_actions
-    ):
-        # The watchdog cannot be re-armed while the modules backing it are unloaded.
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", lambda cmd: None)
-
-        module_reload_lib_module.reload_all_modules()
-
-        assert watchdog_actions == ["arm -s 900", "disarm", "rearm", "status"]
-
-    def test_reload_all_rearms_even_when_a_step_fails(
-        self, module_reload_lib_module, monkeypatch, watchdog_actions
-    ):
-        def fake_run_cmd(cmd):
-            if cmd.endswith("install"):
-                raise RuntimeError("device creation failed")
-
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", fake_run_cmd)
-
-        with pytest.raises(module_reload_lib_module.ModuleReloadError):
-            module_reload_lib_module.reload_all_modules()
-
-        assert watchdog_actions == ["arm -s 900", "disarm", "rearm", "status"]
-
-    def test_run_watchdogutil_reports_failure_without_raising(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        # Losing watchdog coverage beats refusing to reload, but callers must be told.
-        def raise_error(cmd):
-            raise RuntimeError("no such platform")
-
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", raise_error)
-
-        # The genuine helper, not the capturing stub installed by the fixture.
-        assert _REAL_RUN_WATCHDOGUTIL(
-            "arm -s 900", "Watchdog armed for 900 seconds"
-        ) is False
-
+class TestQuietedConsole:
     def test_reload_all_quiets_the_console_and_restores_it(
-        self, module_reload_lib_module, monkeypatch, watchdog_actions, tmp_path
+        self, module_reload_lib_module, monkeypatch, tmp_path
     ):
         # A teardown makes every PDDF FPGA access fail, and each resulting KERN_ERR
         # costs ~100ms on a 9600-baud console; enough of them pin the flushing CPU
@@ -936,7 +867,7 @@ class TestWatchdogHandling:
         assert printk.read_text() == "4"
 
     def test_console_is_restored_when_a_step_fails(
-        self, module_reload_lib_module, monkeypatch, watchdog_actions, tmp_path
+        self, module_reload_lib_module, monkeypatch, tmp_path
     ):
         printk = tmp_path / "printk"
         printk.write_text("4\t4\t1\t7\n")
@@ -954,7 +885,7 @@ class TestWatchdogHandling:
         assert printk.read_text() == "4"
 
     def test_reload_all_survives_an_unwritable_printk(
-        self, module_reload_lib_module, monkeypatch, watchdog_actions
+        self, module_reload_lib_module, monkeypatch
     ):
         # Losing console quieting is not a reason to refuse a reload.
         monkeypatch.setattr(
@@ -963,164 +894,3 @@ class TestWatchdogHandling:
         monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", lambda cmd: None)
 
         module_reload_lib_module.reload_all_modules()
-
-    def test_run_watchdogutil_reads_success_from_stdout(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        # watchdogutil arm/disarm exit 0 even when the hardware call failed;
-        # only stdout tells the two apart.
-        outputs = {"value": "Failed to arm Watchdog for 900 seconds"}
-        monkeypatch.setattr(
-            "nexthop.module_reload_lib.run_cmd", lambda cmd: outputs["value"]
-        )
-
-        assert _REAL_RUN_WATCHDOGUTIL(
-            "arm -s 900", "Watchdog armed for 900 seconds"
-        ) is False
-
-        outputs["value"] = "Watchdog armed for 900 seconds"
-        assert _REAL_RUN_WATCHDOGUTIL(
-            "arm -s 900", "Watchdog armed for 900 seconds"
-        ) is True
-
-    def test_run_watchdogutil_reports_a_platform_without_a_watchdog(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        # watchdogutil exits 2 when no platform watchdog could be built, so a
-        # cf2 standalone is not logged as lost watchdog protection.
-        from subprocess import CalledProcessError
-
-        def raise_load_error(cmd):
-            raise CalledProcessError(
-                module_reload_lib_module.WATCHDOGUTIL_LOAD_ERROR_STATUS, cmd
-            )
-
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", raise_load_error)
-
-        assert _REAL_RUN_WATCHDOGUTIL("disarm", "Watchdog disarmed successfully") is None
-
-    def test_watchdog_seconds_reaches_the_arm_command(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        commands = []
-        monkeypatch.setattr(
-            "nexthop.module_reload_lib._run_watchdogutil", _REAL_RUN_WATCHDOGUTIL
-        )
-        monkeypatch.setattr(
-            "nexthop.module_reload_lib._rearm_punch_watchdog",
-            _REAL_REARM_PUNCH_WATCHDOG,
-        )
-
-        def fake_run_cmd(cmd):
-            commands.append(cmd)
-            return ""
-
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", fake_run_cmd)
-
-        module_reload_lib_module.reload_all_modules(watchdog_seconds=3600)
-
-        assert any(cmd == "watchdogutil arm -s 3600" for cmd in commands)
-
-    def test_reload_watchdog_outlives_the_longest_observed_teardown(
-        self, module_reload_lib_module
-    ):
-        # The deadline is the backstop for a reload killed before it can unpause,
-        # so it has to exceed a legitimate teardown; over 300s has been observed.
-        assert module_reload_lib_module.RELOAD_WATCHDOG_SECONDS > 300
-
-
-class TestWatchdogFailureHandling:
-    """Exercises the real _run_watchdogutil, not the capturing fixture."""
-
-    @pytest.fixture(autouse=True)
-    def unmock_run_watchdogutil(self, module_reload_lib_module, monkeypatch):
-        monkeypatch.setattr(
-            "nexthop.module_reload_lib._run_watchdogutil", _REAL_RUN_WATCHDOGUTIL
-        )
-        monkeypatch.setattr(
-            "nexthop.module_reload_lib._rearm_punch_watchdog",
-            _REAL_REARM_PUNCH_WATCHDOG,
-        )
-
-    def _run_cmds(self, monkeypatch, module_reload_lib_module, failing):
-        """Records commands, failing any whose text matches `failing`."""
-        commands = []
-
-        def fake_run_cmd(cmd):
-            commands.append(cmd)
-            if failing and failing in cmd:
-                raise RuntimeError("watchdog register unreachable")
-            return ""
-
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", fake_run_cmd)
-        return commands
-
-    def test_failed_reload_arm_is_logged_and_reload_continues(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        commands = self._run_cmds(
-            monkeypatch, module_reload_lib_module, "watchdogutil arm -s 900"
-        )
-
-        module_reload_lib_module.reload_all_modules()
-
-        assert any(cmd.endswith("install") for cmd in commands)
-
-    def test_unarmed_watchdog_is_logged_not_fatal(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        commands = self._run_cmds(
-            monkeypatch, module_reload_lib_module, "watchdogutil status"
-        )
-        errors = []
-        monkeypatch.setattr(
-            module_reload_lib_module._logger, "log_error", lambda msg: errors.append(msg)
-        )
-
-        module_reload_lib_module.reload_all_modules()
-
-        assert any(cmd.endswith("install") for cmd in commands)
-        assert any("without watchdog protection" in e for e in errors)
-
-    def test_platform_without_a_watchdog_still_reloads(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        # watchdogutil exits 2 where no WATCHDOG is declared (cf2 standalone).
-        from subprocess import CalledProcessError
-
-        commands = []
-
-        def fake_run_cmd(cmd):
-            commands.append(cmd)
-            if cmd.startswith("watchdogutil"):
-                raise CalledProcessError(
-                    module_reload_lib_module.WATCHDOGUTIL_LOAD_ERROR_STATUS, cmd
-                )
-            return ""
-
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", fake_run_cmd)
-
-        module_reload_lib_module.reload_all_modules()
-
-        assert any(cmd.endswith("install") for cmd in commands)
-
-    def test_teardown_failure_is_not_masked_by_watchdog_verification(
-        self, module_reload_lib_module, monkeypatch
-    ):
-        commands = []
-
-        def fake_run_cmd(cmd):
-            commands.append(cmd)
-            if cmd.endswith("clean"):
-                raise RuntimeError("pddf_util.py: device removal failed")
-            if "watchdogutil status" in cmd:
-                raise RuntimeError("watchdog register unreachable")
-            return ""
-
-        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", fake_run_cmd)
-
-        with pytest.raises(module_reload_lib_module.ModuleReloadError, match="clean failed"):
-            module_reload_lib_module.reload_all_modules()
-
-        # Re-arm still attempted, and it did not replace the real error.
-        assert any("systemctl start watchdog" in cmd for cmd in commands)
