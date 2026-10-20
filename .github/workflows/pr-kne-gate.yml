@@ -1,0 +1,64 @@
+name: pr-kne-gate
+
+# A pull request brings up t0, t1, and t1-lag and runs ci/kne/tests.txt on each
+# lab. Needs a self-hosted runner labeled kne.
+#
+# Lab scripts live in sonic-mgmt (ci/kne). This checks that repo out at master.
+# ci/kne/image-source chooses the disk image: s3 pulls it from MinIO on the
+# runner host, build skips (placeholder). The labs still boot sonic-vs:community.
+# Set SONIC_MGMT_SONIC_PASSWORD in the runner environment. It is not stored here.
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: kne-gate-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  kne:
+    # A fork can change tests.txt, and the job has kubectl on the shared host,
+    # so only pull requests from this repository run. workflow_dispatch is local.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, kne]
+    timeout-minutes: 240
+    env:
+      KNE_RUN_ID: ${{ github.run_id }}
+      KNE_TOPOS: t0 t1 t1-lag
+    steps:
+      - name: Checkout this pull request
+        uses: actions/checkout@v4
+        with:
+          path: pr
+
+      - name: Get SONiC VS image
+        working-directory: pr
+        run: bash ci/kne/fetch-image.sh
+
+      - name: Checkout sonic-mgmt gate
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch master \
+            https://github.com/sonic-net/sonic-mgmt.git sonic-mgmt
+
+      - name: Bring up t0, t1, and t1-lag and run tests
+        working-directory: sonic-mgmt
+        env:
+          KNE_TESTS_FILE: ${{ github.workspace }}/pr/ci/kne/tests.txt
+        run: ci/kne/run_gate.sh
+
+      - name: Test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ github.run_id }}
+          path: sonic-mgmt/tests/logs/junit-*.xml
+          if-no-files-found: ignore
+
+      - name: Teardown
+        if: always()
+        working-directory: sonic-mgmt
+        run: ci/kne/teardown_run.sh
