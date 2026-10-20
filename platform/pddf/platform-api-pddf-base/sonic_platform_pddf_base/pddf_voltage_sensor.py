@@ -33,63 +33,28 @@ class PddfVoltageSensor(VoltageSensorBase):
         # In case of errors
         return (self.sensor_obj_name)
     
+    def get_value_all(self, attr_name):
+        output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, attr_name)
+        if not output:
+            return None
+
+        if output['status'].isalpha():
+            return None
+        else:
+            attr_value = float(output['status']) * self.sensor_obj.get('dev_attr', {}).get('scaling_factor', 1.0)
+            return float(round(attr_value))
 
     def get_value(self):
-        output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, "volt1_input")
-        if not output:
-            return None
-
-        if output['status'].isalpha():
-            attr_value = None
-        else:
-            attr_value = float(output['status'])
-        
-        return attr_value
+        return self.get_value_all("volt1_input")
 
     def get_low_threshold(self):
-        output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, "volt1_low_threshold")
-        if not output:
-            return None
-
-        if output['status'].isalpha():
-            attr_value = None
-        else:
-            attr_value = float(output['status'])
-
-        return attr_value
+        return self.get_value_all("volt1_low_threshold")
 
     def get_high_threshold(self):
-        output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, "volt1_high_threshold")
-        if not output:
-            return None
-
-        if output['status'].isalpha():
-            attr_value = None
-        else:
-            attr_value = float(output['status'])
-
-        return attr_value
+        return self.get_value_all("volt1_high_threshold")
     
     def get_high_critical_threshold(self):
-        output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, "volt1_crit_high_threshold")
-        if not output:
-            return None
-
-        if output['status'].isalpha():
-            attr_value = None
-        else:
-            attr_value = float(output['status'])
-
-        return attr_value
+        return self.get_value_all("volt1_crit_high_threshold")
     
     def get_low_critical_threshold(self):
-        output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, "volt1_crit_low_threshold")
-        if not output:
-            return None
-
-        if output['status'].isalpha():
-            attr_value = None
-        else:
-            attr_value = float(output['status'])
-
-        return attr_value
+        return self.get_value_all("volt1_crit_low_threshold")
