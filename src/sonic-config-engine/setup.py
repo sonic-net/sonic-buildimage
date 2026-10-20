@@ -51,7 +51,8 @@ py_modules = [
     'openconfig_acl',
     'portconfig',
     'smartswitch_config',
-    'asic_sensors_config'
+    'asic_sensors_config',
+    'gnmi_config'
 ]
 if os.path.isfile(os.path.join(os.path.dirname(__file__), 'minigraph_custom.py')):
     py_modules.append('minigraph_custom')

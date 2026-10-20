@@ -36,6 +36,13 @@
         "desc": "TABLE_WITH_CUSTOM_VRF failure - custom VRFs not supported",
         "eStrKey": "InvalidValue"
     },
+    "GNMI_TABLE_WITH_PASSWORD_JWT_USER_AUTH": {
+        "desc": "DEFAULT LOOPBACK PROFILE WITH EXPLICIT PASSWORD AND JWT AUTHENTICATION."
+    },
+    "GNMI_TABLE_WITH_INVALID_COMBINED_USER_AUTH": {
+        "desc": "UNSUPPORTED COMBINED AUTHENTICATION MODE.",
+        "eStrKey": "Pattern"
+    },
     "GNMI_TABLE_WITH_MGMT_VRF_CORRECT": {
         "desc": "TABLE WITH MGMT VRF ENABLED."
     },

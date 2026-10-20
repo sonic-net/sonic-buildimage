@@ -188,6 +188,26 @@
             }
         }
     },
+    "GNMI_TABLE_WITH_PASSWORD_JWT_USER_AUTH": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "gnmi": {
+                    "port": "8080",
+                    "user_auth": "password,jwt"
+                }
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_INVALID_COMBINED_USER_AUTH": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "gnmi": {
+                    "port": "8080",
+                    "user_auth": "none,password"
+                }
+            }
+        }
+    },
     "GNMI_TABLE_WITH_MGMT_VRF_CORRECT": {
         "sonic-mgmt_vrf:sonic-mgmt_vrf": {
             "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {

@@ -20,6 +20,9 @@ module sonic-gnmi {
 
     description "GNMI YANG Module for SONiC OS";
 
+    revision 2026-10-20 {
+        description "Allow explicit password and JWT authentication together";
+    }
     revision 2025-09-01 {
         description "Add VRF support for GNMI service";
     }
@@ -104,7 +107,7 @@ module sonic-gnmi {
 
                 leaf user_auth {
                     type string {
-                        pattern 'password|jwt|cert|none';
+                        pattern 'password|jwt|cert|none|password,jwt';
                     }
                     default "cert";
                     description "GNMI service user authorization type.";
