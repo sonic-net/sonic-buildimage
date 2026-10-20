@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brad House <bhouse@nexthop.ai>
+Date: Tue, 20 Oct 2026 15:43:22 +0000
+Subject: [PATCH] Load i2c_mux_pca954x before nvsw_sn2201 on SN2201
+
+nvsw_sn2201 creates the main pca9548 mux at 1-0070 from its i2c_mlxcpld
+completion callback and immediately calls i2c_get_adapter() for the mux
+channel buses. i2c_mux_pca954x is a module that is only loaded on demand
+by udev, so on SN2201 the platform driver usually wins the race, logs
+"Failed to get adapter for bus 2" and destroys the mux. Every board bus
+(i2c-2 .. i2c-13) is then missing, leaving hw-management without the
+system EEPROM, PSU, fan and CPLD devices.
+
+Add a softdep so modprobe loads i2c_mux_pca954x before nvsw_sn2201.
+
+Signed-off-by: Brad House <bhouse@nexthop.ai>
+---
+ usr/etc/modprobe.d/hw-management.conf | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/usr/etc/modprobe.d/hw-management.conf b/usr/etc/modprobe.d/hw-management.conf
+index 636be61e..e80cf357 100644
+--- a/usr/etc/modprobe.d/hw-management.conf
++++ b/usr/etc/modprobe.d/hw-management.conf
+@@ -21,3 +21,8 @@ blacklist amd_sfh
+ blacklist amd_pmf
+ install amd_sfh /bin/true
+ install amd_pmf /bin/true
++# nvsw_sn2201 instantiates the main pca9548 mux and immediately looks up its
++# channel buses; make sure the mux driver is loaded first so it binds
++# synchronously. Otherwise the platform driver races udev, fails with
++# "Failed to get adapter for bus 2" and tears the mux down.
++softdep nvsw_sn2201 pre: i2c_mux_pca954x
