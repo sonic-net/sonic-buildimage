@@ -142,14 +142,13 @@ fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
-# Certificate authentication cannot run over noTLS, so keep the loopback TCP
-# fallback authenticated with password/JWT. TLS retains its certificate default.
+# TLS retains certificate defaults; noTLS requires explicit auth.
 if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
     if [[ "$NO_TLS" == "true" ]]; then
-        USER_AUTH="password,jwt"
-    else
-        USER_AUTH="cert"
+        echo "Missing user_auth for noTLS TCP listener; configure user_auth explicitly" >&2
+        exit $INCORRECT_TELEMETRY_VALUE
     fi
+    USER_AUTH="cert"
 fi
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"

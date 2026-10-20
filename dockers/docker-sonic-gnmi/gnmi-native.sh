@@ -174,16 +174,13 @@ else
 fi
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
-# Certificate authentication cannot run over noTLS, so keep the loopback TCP
-# fallback authenticated with password/JWT. UDS-only and TLS modes retain their
-# certificate default; File.Stat/Get independently reject TCP requests when
-# application authentication is unavailable, including DPU ephemeral-TLS mode.
+# TLS and UDS-only retain certificate defaults; noTLS TCP requires explicit auth.
 if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
     if [[ "$NO_TLS" == "true" && "$PORT" -ne 0 ]]; then
-        USER_AUTH="password,jwt"
-    else
-        USER_AUTH="cert"
+        echo "Missing user_auth for noTLS TCP listener; configure user_auth explicitly" >&2
+        exit $INCORRECT_TELEMETRY_VALUE
     fi
+    USER_AUTH="cert"
 fi
 if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"

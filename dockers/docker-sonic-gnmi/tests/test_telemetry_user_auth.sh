@@ -64,15 +64,54 @@ run_launcher() {
         "${TEST_SCRIPT}" | tail -n 1
 }
 
-output="$(run_launcher "$(jq -cn '{
-    certs: "",
-    x509: "",
-    gnmi: {port: "8080", client_auth: "false"}
-}')")"
-assert_contains_once "missing noTLS user_auth uses application authentication" \
-    "${output}" "--client_auth password,jwt"
-assert_not_contains "missing noTLS user_auth does not request certificate lookup" \
-    "${output}" "--config_table_name GNMI_CLIENT_CERT"
+assert_no_tls_auth_rejected() {
+    local description="$1"
+    local output status
+
+    if output="$(run_launcher "$2" 2>&1)"; then
+        printf "FAIL: %s: launcher unexpectedly succeeded\n%s\n" \
+            "${description}" "${output}" >&2
+        exit 1
+    else
+        status=$?
+    fi
+    if [[ "${status}" != "2" ]]; then
+        printf "FAIL: %s: expected configuration exit code 2, got %s\n%s\n" \
+            "${description}" "${status}" "${output}" >&2
+        exit 1
+    fi
+    assert_contains_once "${description}" "${output}" \
+        "Missing user_auth for noTLS TCP listener"
+    assert_not_contains "${description}" "${output}" "telemetry args:"
+}
+
+assert_no_tls_auth_rejected "missing noTLS user_auth fails before telemetry starts" \
+    "$(jq -cn '{
+        certs: "",
+        x509: "",
+        gnmi: {port: "8080", client_auth: "false"}
+    }')"
+
+for user_auth in '""' null; do
+    assert_no_tls_auth_rejected "empty/null noTLS user_auth fails before telemetry starts" \
+        "$(jq -cn --argjson user_auth "${user_auth}" '{
+            certs: "",
+            x509: "",
+            gnmi: {port: "8080", client_auth: "false", user_auth: $user_auth}
+        }')"
+done
+
+for user_auth in password jwt password,jwt; do
+    output="$(run_launcher "$(jq -cn --arg user_auth "${user_auth}" '{
+        certs: "",
+        x509: "",
+        gnmi: {port: "8080", client_auth: "false", user_auth: $user_auth}
+    }')")"
+    assert_contains_once "explicit noTLS ${user_auth} authentication is forwarded" \
+        "${output}" "--client_auth ${user_auth}"
+    assert_not_contains "explicit noTLS ${user_auth} does not request certificate lookup" \
+        "${output}" "--config_table_name GNMI_CLIENT_CERT"
+done
 
 output="$(run_launcher "$(jq -cn '{
     certs: {

@@ -107,7 +107,7 @@ run_no_tls_launcher() {
             gnmi: {
                 port: "50052",
                 client_auth: "false",
-                user_auth: $user_auth
+                user_auth: (if $user_auth == "null" then null else $user_auth end)
             }
         }')"
     fi
@@ -127,14 +127,29 @@ run_dpu_launcher() {
 }
 
 run_uds_only_launcher() {
-    GNMI_TEST_CONFIG="$(jq -cn '{
-        certs: null,
-        x509: null,
-        gnmi: {port: "50052", client_auth: "false"}
-    }')"
-    export GNMI_TEST_CONFIG
-    GNMI_LISTENER_MODE="uds-only" GNMI_TEST_DEVICE_TYPE="" \
-        PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" | tail -n 1
+    GNMI_LISTENER_MODE="uds-only" run_no_tls_launcher "$@"
+}
+
+assert_no_tls_auth_rejected() {
+    local description="$1"
+    shift
+    local output status
+
+    if output="$(run_no_tls_launcher "$@" 2>&1)"; then
+        printf "FAIL: %s: launcher unexpectedly succeeded\n%s\n" \
+            "${description}" "${output}" >&2
+        exit 1
+    else
+        status=$?
+    fi
+    if [[ "${status}" != "2" ]]; then
+        printf "FAIL: %s: expected configuration exit code 2, got %s\n%s\n" \
+            "${description}" "${status}" "${output}" >&2
+        exit 1
+    fi
+    assert_contains_once "${description}" "${output}" \
+        "Missing user_auth for noTLS TCP listener"
+    assert_not_contains "${description}" "${output}" "telemetry args:"
 }
 
 output="$(run_launcher)"
@@ -165,15 +180,17 @@ assert_contains_once "explicit password is forwarded" \
 assert_not_contains "explicit password does not configure certificate lookup" \
     "${output}" "--config_table_name GNMI_CLIENT_CERT"
 
-output="$(run_no_tls_launcher)"
-assert_contains_once "missing noTLS user_auth uses application authentication" \
-    "${output}" "--client_auth password,jwt"
-assert_not_contains "missing noTLS user_auth does not request certificate lookup" \
-    "${output}" "--config_table_name GNMI_CLIENT_CERT"
+assert_no_tls_auth_rejected "missing noTLS user_auth fails before telemetry starts"
+assert_no_tls_auth_rejected "empty noTLS user_auth fails before telemetry starts" ''
+assert_no_tls_auth_rejected "null noTLS user_auth fails before telemetry starts" 'null'
 
-output="$(run_no_tls_launcher '')"
-assert_contains_once "empty noTLS user_auth uses application authentication" \
-    "${output}" "--client_auth password,jwt"
+for user_auth in password jwt password,jwt; do
+    output="$(run_no_tls_launcher "${user_auth}")"
+    assert_contains_once "explicit noTLS ${user_auth} authentication is forwarded" \
+        "${output}" "--client_auth ${user_auth}"
+    assert_not_contains "explicit noTLS ${user_auth} does not request certificate lookup" \
+        "${output}" "--config_table_name GNMI_CLIENT_CERT"
+done
 
 output="$(run_no_tls_launcher 'cert')"
 assert_contains_once "explicit noTLS certificate mode is forwarded for fail-closed startup" \
@@ -186,6 +203,14 @@ assert_contains_once "UDS-only retains its existing authentication default" \
     "${output}" "--client_auth cert"
 assert_not_contains "UDS-only does not enable password or JWT authentication by default" \
     "${output}" "--client_auth password,jwt"
+
+for user_auth in '' null; do
+    output="$(run_uds_only_launcher "${user_auth}")"
+    assert_contains_once "UDS-only empty/null user_auth disables the TCP listener" \
+        "${output}" "--port 0"
+    assert_contains_once "UDS-only empty/null user_auth retains certificate authentication" \
+        "${output}" "--client_auth cert"
+done
 
 output="$(run_dpu_launcher)"
 assert_contains_once "DPU without certificates uses ephemeral TLS" \
