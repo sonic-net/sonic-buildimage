@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check that public CI uploads contain reviewed outputs and status fields."""
 
+import ast
 import json
 import hashlib
 from pathlib import Path
@@ -79,10 +80,10 @@ def receipt(kind, architecture="amd64"):
                 "tests": {"//tests:python_" + str(number): {
                     "result": {"tests": 3, "failures": 0, "errors": 0, "skipped": 0},
                     "test.log": {"path": SENTINEL}}
-                    for number in range(5)}}
+                    for number in range(artifacts.RECEIPT_TEST_COUNTS["archive"][1])}}
     if kind == "source":
         return {"status": "passed", "revision": REVISION, **unsafe,
-                "tests": {"//tests:source_" + str(number): "passed" for number in range(12)},
+                "tests": {"//tests:source_" + str(number): "passed" for number in range(14)},
                 "validation": {"programs": [SENTINEL], "debug_pairs": [{"path": SENTINEL}],
                                "source_contract": {"dist/BUILD.bazel": DIGEST}}}
     if kind == "syncd":
@@ -141,6 +142,19 @@ class PublicArtifactsTest(unittest.TestCase):
     def prepare(self, kind, status="success", architecture="amd64"):
         return artifacts.prepare(kind, self.root, self.root, status, REVISION, architecture,
                                  head_sha="3" * 40, base_sha="4" * 40)
+
+    def test_receipt_counts_match_the_actual_producer_suites(self):
+        """Adding a package suite must not make successful CI unpublishable."""
+        for kind, filename in (
+            ("archive", "tools/bazel/ci/python_packages.py"),
+            ("source", "dockers/docker-orchagent/bazel/ci.py"),
+        ):
+            tree = ast.parse((ROOT / filename).read_text())
+            suites = next(ast.literal_eval(node.value) for node in tree.body
+                          if isinstance(node, ast.Assign) and any(
+                              isinstance(target, ast.Name) and target.id == "TESTS"
+                              for target in node.targets))
+            self.assertEqual(artifacts.RECEIPT_TEST_COUNTS[kind][1], len(suites), filename)
 
     def test_bep_summary_omits_environment_paths_and_raw_events(self):
         summary = artifacts.bep_summary(events(2).splitlines())

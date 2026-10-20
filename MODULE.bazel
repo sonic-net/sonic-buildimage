@@ -13,12 +13,13 @@ bazel_dep(name = "pigz", version = "2.8")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "0.2.20")
 # The patched release sorts above upstream 0.9.4 without a root override.
-bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.1")
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.7")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
 bazel_dep(name = "rules_multirun", version = "0.14.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
 bazel_dep(name = "rules_python", version = "1.8.0")
 bazel_dep(name = "rules_rs", version = "0.1.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "tar.bzl", version = "0.10.5-sonic.1")
 bazel_dep(name = "toolchain_utils", version = "1.0.2")
 
@@ -29,7 +30,7 @@ register_toolchains("//tools/bazel/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.15-8043a299756436464a8b58662921dfd50172a3ff",
+    version = "0.0.17-8baf1ad829c5095297d85148b042145b87d623a3",
     repo_name = "sonic_build_infra",
 )
 bazel_dep(
@@ -184,3 +185,9 @@ apt_inputs(
 
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
 use_repo(apt, "trixie")
+
+# Commit suffixes do not sort by source date; keep the selected compiler revision.
+single_version_override(
+    module_name = "sonic-build-infra",
+    version = "0.0.17-8baf1ad829c5095297d85148b042145b87d623a3",
+)

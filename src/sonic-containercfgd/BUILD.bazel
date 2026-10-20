@@ -1,0 +1,44 @@
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@rules_python//python:py_library.bzl", "py_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["setup.py"])
+
+py_library(
+    name = "containercfgd",
+    srcs = glob(["containercfgd/*.py"]),
+    imports = ["."],
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        "@sonic_swss_common//pyext:swsscommon",
+    ],
+)
+
+# setup.py installs both packages. Preserve that public wheel contract while
+# the separate test target executes the complete existing pytest suite.
+filegroup(
+    name = "wheel_payload",
+    srcs = glob(["containercfgd/*.py", "tests/*.py"]),
+)
+
+py_wheel(
+    name = "sonic_containercfgd_wheel",
+    distribution = "sonic-containercfgd",
+    entry_points = {"console_scripts": ["containercfgd = containercfgd.containercfgd:main"]},
+    license = "Apache 2.0",
+    python_tag = "py3",
+    requires = ["sonic_py_common"],
+    strip_path_prefixes = ["src/sonic-containercfgd/"],
+    summary = "SONiC container config daemon package",
+    version = "1.0",
+    deps = [":wheel_payload"],
+)
+
+filegroup(
+    name = "test_sources",
+    srcs = glob(
+        ["containercfgd/**", "tests/**"],
+        exclude = ["**/__pycache__/**", "**/*.pyc"],
+    ) + ["setup.py", "setup.cfg", "pytest.ini"],
+)

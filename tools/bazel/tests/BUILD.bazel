@@ -1,3 +1,4 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
@@ -12,6 +13,102 @@ load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 
 package(default_visibility = ["//visibility:public"])
+
+# Run the unchanged Rust tests with Common's declared native runtime. The owner
+# helper, runtime TAR and Rust binary are all inputs to the Bazel test action.
+sh_test(
+    name = "swss_common_rust_test",
+    srcs = ["@sonic_swss_common//tools/bazel/runtime:run_with_runtime.py"],
+    args = [
+        "$(rootpath @sonic_swss_common//tools/bazel/runtime:test_runtime)",
+        "-",
+    ] + select({
+        "@sonic_swss_common//tools/bazel:yang_modules_enabled": ["enabled"],
+        "//conditions:default": ["disabled"],
+    }) + ["$(rootpath @sonic_swss//crates/countersyncd:common_rust_test)"],
+    data = [
+        "@sonic_swss//crates/countersyncd:common_rust_test",
+        "@sonic_swss_common//tools/bazel/runtime:test_runtime",
+    ],
+)
+
+
+# Shared installed-wheel mechanics: reject owner checkout imports and retain
+# receipts for the exact artifacts exercised by component-specific probes.
+py_library(
+    name = "wheel_test_helpers",
+    testonly = True,
+    srcs = [
+        "integration/installed_wheel_fixture.py",
+        "integration/wheel_contract.py",
+    ],
+    deps = [
+        requirement("installer"),
+        requirement("packaging"),
+        requirement("setuptools"),
+    ],
+)
+
+py_test(
+    name = "installed_wheel_fixture_test",
+    srcs = ["integration/installed_wheel_fixture_test.py"],
+    legacy_create_init = False,
+    main = "integration/installed_wheel_fixture_test.py",
+    python_version = "3.13",
+    deps = [":wheel_test_helpers"],
+)
+
+py_test(
+    name = "wheel_contract_test",
+    srcs = ["integration/wheel_contract_test.py"],
+    legacy_create_init = False,
+    main = "integration/wheel_contract_test.py",
+    python_version = "3.13",
+    deps = [":wheel_test_helpers"],
+)
+
+py_test(
+    name = "containercfgd_full_test",
+    srcs = [
+        "integration/component_pytest_runner.py",
+        "integration/containercfgd_pytest_runner.py",
+    ],
+    args = ["--component-setup=$(rootpath //src/sonic-containercfgd:setup.py)"],
+    data = [
+        "//src/sonic-containercfgd:setup.py",
+        "//src/sonic-containercfgd:test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/containercfgd_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-containercfgd:containercfgd",
+        requirement("pytest"),
+    ],
+)
+
+py_test(
+    name = "containercfgd_wheel_test",
+    srcs = ["integration/containercfgd_wheel_test.py"],
+    args = [
+        "$(rootpath //src/sonic-containercfgd:sonic_containercfgd_wheel)",
+        "$(rootpath //src/sonic-containercfgd:setup.py)",
+        "$(rootpath //src/sonic-py-common:sonic_py_common_wheel)",
+    ],
+    data = [
+        "//src/sonic-containercfgd:setup.py",
+        "//src/sonic-containercfgd:sonic_containercfgd_wheel",
+        "//src/sonic-containercfgd:test_sources",
+        "//src/sonic-py-common:sonic_py_common_wheel",
+    ],
+    legacy_create_init = False,
+    main = "integration/containercfgd_wheel_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "//src/sonic-py-common:sonic_py_common",
+    ],
+)
 
 py_test(
     name = "sonic_config_engine_full_test",
@@ -94,12 +191,10 @@ py_test(
     main = "integration/sonic_python_wheels_test.py",
     python_version = "3.13",
     deps = [
+        ":wheel_test_helpers",
         "//src/sonic-config-engine:sonic_config_engine",
         "//src/sonic-py-common:sonic_py_common",
         requirement("grpcio-tools"),
-        requirement("installer"),
-        requirement("packaging"),
-        requirement("setuptools"),
     ],
 )
 

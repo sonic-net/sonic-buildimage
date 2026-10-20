@@ -3,6 +3,8 @@
 This directory holds tests for the Bazel helpers, Make container integration,
 OCI publication and source-built Python dependency checks. Existing component
 behavior tests remain with `src/sonic-config-engine` and `src/sonic-py-common`.
+The containercfgd suite remains with `src/sonic-containercfgd` and uses the
+same central runner for its complete source suite.
 
 Run the self-contained unit tests from the repository root:
 
@@ -53,6 +55,8 @@ bazel test \
   //tools/bazel/tests:sonic_py_common_full_test \
   //tools/bazel/tests:sonic_config_engine_full_test \
   //tools/bazel/tests:sonic_python_wheels_test \
+  //tools/bazel/tests:containercfgd_full_test \
+  //tools/bazel/tests:containercfgd_wheel_test \
   //src/sonic-config-engine:sonic_cfggen_cli_test \
   //tools/bazel/tests:manifest_labels_test \
   //tools/bazel/tests:prepare_oci_base_test \
@@ -70,8 +74,8 @@ bazel test \
 needs. CI selects the same tests explicitly and retains raw logs and cache
 records in the job workspace. The [workflow](../../../.github/workflows/bazel-swss-oci.yml)
 supplies the supported native AMD64/ARM64 platform flags and execution dependencies.
-The Python checks run both complete component test directories and install both
-source-built wheels. Public archive artifacts retain the wheels, hashes and
+The Python checks run the complete config-engine, py-common and containercfgd
+test directories and install their source-built wheels. Public archive artifacts retain the wheels, hashes and
 extracted test counts/status. Collection still requires test logs/XML, collected
 test inventories and the installed-wheel receipt locally. Missing evidence or
 mismatched installed wheel hashes fail collection.
@@ -137,3 +141,33 @@ container boot, live service health or forwarding behavior.
 and Make export checks. [oci_base_fixture.py](oci_base_fixture.py) supplies native
 OCI/Docker-save inputs for base preparation and consumer checks. These are fixture
 generators, not additional test suites.
+
+## Shared wheel checks
+
+Installed-wheel tests depend on the test-only `:wheel_test_helpers` library:
+
+- `integration/wheel_contract.py` compares the wheel and installed files with
+  the package's `setup.py`: metadata, dependency versions, extras, Python files,
+  data, licenses, scripts and command entry points.
+- `integration/installed_wheel_fixture.py` creates a private installation,
+  excludes checkout paths and records the exact tested wheel hashes. Its shared
+  regression tests also preserve failed/partial results.
+
+Each component keeps its own import, command and API probes. For example,
+containercfgd checks daemon dispatch with Redis/boot interactions replaced;
+config-engine checks its installed CLI and py-common checks generated gRPC
+exports. The complete original pytest suites remain separate targets.
+
+To add a wheel check, declare its wheel and runtime dependencies in its Bazel
+`py_test`, depend on `:wheel_test_helpers`, and call `setup_contract` and
+`assert_wheel_contract` inside `installed_wheels`. Add only the component's
+behavior probes and write its wheel receipt after success. Register the target
+and wheel filenames in `tools/bazel/ci/python_packages.py`'s `TESTS` and
+`WHEEL_CHECKS`, and select the target in both architecture jobs. CI requires
+successful logs/XML, complete source-suite inventories and matching hashes;
+every exported wheel must have exactly one installed-wheel check.
+
+The fixture can borrow declared third-party runfiles; it does not claim an
+independently installed dependency closure. `installed_wheel_fixture_test` and
+`wheel_contract_test` cover isolation, failure reporting and rejection of
+incorrect package contents once for all consumers.
