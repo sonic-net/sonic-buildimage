@@ -138,11 +138,26 @@ COPY --from=lldp start.sh /usr/bin/start-lldp.sh
 RUN chmod +x /usr/bin/start-lldp.sh
 COPY --from=teamd start.sh /usr/bin/start-teamd.sh
 RUN chmod +x /usr/bin/start-teamd.sh
+# sonic-utilities assumes one container per feature: it probes `docker ps` to
+# decide whether `show ip bgp` exists, and reaches daemons via
+# `docker exec <feature>`. Give it a shim that maps both onto this namespace.
+COPY ["docker-shim", "/usr/local/bin/docker"]
+RUN chmod +x /usr/local/bin/docker
 COPY ["files/configdb-load.sh", "/usr/bin/"]
 COPY ["files/buffers_config.j2", "files/qos_config.j2", "files/copp_cfg.j2", "/usr/share/sonic/templates/"]
 
 COPY ["files/sonic_version.yml", "/etc/sonic/"]
 COPY ["constants.yml", "/etc/sonic/"]
+# macsecmgrd forks /sbin/wpa_supplicant per port and points it at this file.
+COPY --from=macsec etc/wpa_supplicant.conf /etc/
+
+# Install docker-macsec's CLI plugins into whichever dist-packages the
+# sonic-utilities wheel landed in, rather than hardcoding a python version.
+COPY --from=macsec cli /tmp/macsec-cli
+RUN set -e; for m in config show clear; do \
+      d=$(python3 -c "import os,$m; print(os.path.join(os.path.dirname($m.__file__),'plugins'))"); \
+      if [ -d "/tmp/macsec-cli/$m/plugins" ]; then cp -f /tmp/macsec-cli/$m/plugins/*.py "$d"/; fi; \
+    done; rm -rf /tmp/macsec-cli
 COPY ["port_breakout_config_db.json", "/etc/sonic/"]
 COPY ["database_config.json", "/etc/default/sonic-db/"]
 COPY ["hostname.j2", "/usr/share/sonic/templates/"]
