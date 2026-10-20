@@ -1,5 +1,7 @@
+import os
 import shlex
 import subprocess
+import tempfile
 import time
 from typing import Callable, Literal, TypeVar
 
@@ -94,3 +96,24 @@ def run_cmd(cmd, check_exit=True):
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         raise CommandError(e.returncode, cmd, output=e.stdout, stderr=e.stderr) from e
+
+
+def write_atomically(text: str, output_filepath: str) -> None:
+    """Write `text` to `output_filepath` without a concurrent reader ever seeing
+    the file empty or half-written.
+    """
+    fd, tmp = tempfile.mkstemp(
+        prefix=f".{os.path.basename(output_filepath)}.",
+        dir=os.path.dirname(output_filepath) or ".",
+    )
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, output_filepath)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise

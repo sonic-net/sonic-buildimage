@@ -14,12 +14,13 @@ import re
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
-from nexthop.pddf_loader import load_pddf_device_config
-from nexthop_utils.platform_utils import run_cmd
+from nexthop.pddf_loader import PDDF_DEVICE_JSON_PATH, load_pddf_device_config
+from nexthop_utils.platform_utils import run_cmd, write_atomically
 from sonic_py_common import syslogger
 
 PROC_MODULES_PATH = "/proc/modules"
 PDDF_UTIL_PATH = "/usr/local/bin/pddf_util.py"
+PDDF_DEVICE_JSON_BASE = PDDF_DEVICE_JSON_PATH + ".base"
 MODULE_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 I2C_DRIVERS_PATH = "/sys/bus/i2c/drivers"
 MULTIFPGAPCI_DEVICES_PATH = "/sys/kernel/pddf/devices/multifpgapci"
@@ -493,6 +494,32 @@ def _quieted_console():
                 )
 
 
+def _restore_base_pddf_device_json():
+    """Re-seed pddf-device.json from its .base tree, the way boot does.
+
+    Boot seeds the canonical file from .base, and the PDDF post-device-create
+    hook then expands it in place so downstream readers see the child cards'
+    devices. `pddf_util.py install` creates whatever that file holds, so
+    installing over an already-expanded file creates those devices twice: once
+    directly, then again when the hook re-runs the expansion, which fails on
+    the second create and takes the whole install down with it.
+
+    The hook has to stay their sole creator regardless: the expansion is
+    derived from each card's EEPROM, so recreating them from the expanded file
+    would rebuild them from the previous boot's decode, which is wrong once a
+    card has been swapped.
+
+    Written atomically: pmon's platform daemons read the canonical file at
+    arbitrary times, and a truncated read would fail their json.load().
+
+    No-op on platforms that ship no .base tree.
+    """
+    if not os.path.isfile(PDDF_DEVICE_JSON_BASE):
+        return
+    with open(PDDF_DEVICE_JSON_BASE) as f:
+        write_atomically(f.read(), PDDF_DEVICE_JSON_PATH)
+
+
 def reload_all_modules(watchdog_seconds=RELOAD_WATCHDOG_SECONDS):
     """Reload every PDDF/custom kernel module and recreate PDDF devices.
 
@@ -550,6 +577,10 @@ def reload_all_modules(watchdog_seconds=RELOAD_WATCHDOG_SECONDS):
                 "Declared modules still loaded after teardown, `pddf_util.py install` "
                 f"would skip loading drivers: {', '.join(still_loaded)}"
             )
+
+        # Install recreates the devices from pddf-device.json, so it has to see
+        # the same base tree boot did rather than the expanded one left behind.
+        _restore_base_pddf_device_json()
 
         _run_cmd_or_raise(f"{PDDF_UTIL_PATH} install", "pddf_util.py install failed")
 

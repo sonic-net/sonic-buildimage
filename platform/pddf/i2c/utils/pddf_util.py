@@ -147,6 +147,8 @@ def log_os_system(cmd):
     logger.debug("      output: "+ output)
     if status:
         logger.error('Failed :'+cmd)
+        if output:
+            logger.error("output of failed command: %s", output)
     return  status, output
             
 def driver_check():

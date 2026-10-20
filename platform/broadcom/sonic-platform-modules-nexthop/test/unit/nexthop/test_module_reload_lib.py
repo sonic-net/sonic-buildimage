@@ -457,6 +457,50 @@ class TestReloadAllModules:
             f"{module_reload_lib_module.PDDF_UTIL_PATH} install",
         ]
 
+    def test_install_sees_the_base_device_json_not_the_expanded_one(
+        self, module_reload_lib_module, monkeypatch, tmp_path
+    ):
+        # The post-device-create hook expands pddf-device.json in place, so
+        # install would otherwise create the child cards' devices twice.
+        canonical = tmp_path / "pddf-device.json"
+        base = tmp_path / "pddf-device.json.base"
+        base.write_text('{"PLATFORM": {}}')
+        canonical.write_text('{"PLATFORM": {}, "CHILD_CARD_CLIENT": {}}')
+        monkeypatch.setattr(
+            module_reload_lib_module, "PDDF_DEVICE_JSON_PATH", str(canonical)
+        )
+        monkeypatch.setattr(
+            module_reload_lib_module, "PDDF_DEVICE_JSON_BASE", str(base)
+        )
+        seen = {}
+        monkeypatch.setattr(
+            "nexthop.module_reload_lib.run_cmd",
+            lambda cmd: seen.setdefault(cmd, canonical.read_text()),
+        )
+
+        module_reload_lib_module.reload_all_modules()
+
+        assert seen[f"{module_reload_lib_module.PDDF_UTIL_PATH} install"] == '{"PLATFORM": {}}'
+
+    def test_reload_leaves_device_json_alone_without_a_base(
+        self, module_reload_lib_module, monkeypatch, tmp_path
+    ):
+        canonical = tmp_path / "pddf-device.json"
+        canonical.write_text('{"PLATFORM": {}}')
+        monkeypatch.setattr(
+            module_reload_lib_module, "PDDF_DEVICE_JSON_PATH", str(canonical)
+        )
+        monkeypatch.setattr(
+            module_reload_lib_module,
+            "PDDF_DEVICE_JSON_BASE",
+            str(tmp_path / "absent.base"),
+        )
+        monkeypatch.setattr("nexthop.module_reload_lib.run_cmd", lambda cmd: None)
+
+        module_reload_lib_module.reload_all_modules()
+
+        assert canonical.read_text() == '{"PLATFORM": {}}'
+
     def test_deletes_devices_before_unloading_modules(self, module_reload_lib_module, monkeypatch):
         # A bound i2c client holds its module's refcount, so devices go first.
         proc_modules = {"value": PROC_MODULES_SAMPLE}
