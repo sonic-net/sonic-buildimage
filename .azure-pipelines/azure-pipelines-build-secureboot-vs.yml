@@ -57,7 +57,7 @@ stages:
           echo "##vso[task.prependpath]$secureboot_dir/venv/bin"
           export PATH="$secureboot_dir/venv/bin:$PATH"
 
-          scripts/generate_secureboot_vs_artifacts.sh \
+          python3 scripts/generate_secureboot_vs_artifacts.py \
             --workdir "$secureboot_dir" \
             --output-vars "$secureboot_dir/sonic-vs_vars.fd" \
             --build-id "$(Build.BuildId)"

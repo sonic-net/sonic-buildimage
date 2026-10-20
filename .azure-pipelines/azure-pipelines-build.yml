@@ -177,7 +177,7 @@ jobs:
               test -f "$(secure_boot_vars_file)"
               test -f target/sonic-vs.img-uefi_vars.fd
               secure_boot_dir="$(dirname "$(secure_boot_vars_file)")"
-              scripts/generate_secureboot_vs_artifacts.sh \
+              python3 scripts/generate_secureboot_vs_artifacts.py \
                 --workdir "$secure_boot_dir" \
                 --ovmf-vars target/sonic-vs.img-uefi_vars.fd \
                 --output-vars target/sonic-vs_vars.fd \
