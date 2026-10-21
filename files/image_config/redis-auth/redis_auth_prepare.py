@@ -48,6 +48,8 @@ def _runtime_directory(path):
         pass
     else:
         os.chown(path, 0, 0, follow_symlinks=False)
+        # Readers need directory search permission; credential files remain 0400.
+        # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
         os.chmod(path, 0o755, follow_symlinks=False)
     _check(os.lstat(path), 0o755, directory=True)
 
@@ -101,6 +103,8 @@ def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT):
             _write(os.path.join(temporary, "writer.secret"), password)
             _write(os.path.join(temporary, "writer.sha256"), digest)
             os.chown(temporary, 0, 0, follow_symlinks=False)
+            # Readers need directory search permission; credential files remain 0400.
+            # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
             os.chmod(temporary, 0o755, follow_symlinks=False)
             os.rename(temporary, target)
             temporary = None
