@@ -5,8 +5,8 @@
 set -e
 
 LOG_FILE="/var/log/nexthop-usb-network-udev-init.log"
-PLATFORM_SYMLINK="/usr/share/sonic/platform"
-RULES_SRC="${PLATFORM_SYMLINK}/70-usb-network.rules"
+# Platform is resolved from machine.conf, as sonic-platform-init.sh does.
+MACHINE_CONF="/host/machine.conf"
 RULES_DEST="/etc/udev/rules.d/70-usb-network.rules"
 
 log() {
@@ -14,6 +14,18 @@ log() {
 }
 
 log "Starting USB network udev rules initialization..."
+
+if [ ! -f "$MACHINE_CONF" ]; then
+    log "ERROR: $MACHINE_CONF not found"
+    exit 1
+fi
+. "$MACHINE_CONF"
+PLATFORM="$onie_platform"
+if [ -z "$PLATFORM" ]; then
+    log "ERROR: could not determine platform from $MACHINE_CONF"
+    exit 1
+fi
+RULES_SRC="/usr/share/sonic/device/${PLATFORM}/70-usb-network.rules"
 
 # Check if rules source exists
 if [ ! -f "$RULES_SRC" ]; then
