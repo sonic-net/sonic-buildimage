@@ -7,7 +7,7 @@ bitarray==2.8.1
 blessed==1.21.0
 blkinfo==0.2.0
 build==1.6.1
-certifi==2026.7.22
+certifi==2026.10.19
 cffi==1.17.1
 chardet==5.2.0
 charset-normalizer==3.5.2
