@@ -287,37 +287,45 @@ class StartupTest(unittest.TestCase):
                                        install_debug_image='n', mount_default_tmpfs='n')
             result = subprocess.run(['bash', '-n'], input=rendered, text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            if name == 'database':
-                self.assertIn('REDIS_AUTH_REQUIRED=1', rendered)
-                self.assertIn('redis-auth-delivery-missing', rendered)
-                self.assertIn('redis_auth_startup.py --check', rendered)
+            self.assertIn('REDIS_AUTH_REQUIRED=1', rendered)
+            self.assertIn('redis-auth-delivery-missing', rendered)
+            self.assertIn('sudo -n /usr/bin/redis_auth_startup.py --check', rendered)
+            self.assertIn('SONIC_DB_CLI=\"sudo -n $SONIC_DB_CLI\"', rendered)
+            self.assertIn('SONIC_CFGGEN=\"sudo -n $SONIC_CFGGEN\"', rendered)
+            self.assertIn('\"${REDIS_AUTH_MNT[@]}\"', rendered)
+            if name == 'swss':
+                self.assertLess(rendered.index('SONIC_DB_CLI=\"sudo -n $SONIC_DB_CLI\"'),
+                                rendered.index("$SONIC_DB_CLI CONFIG_DB HDEL 'DEVICE_METADATA|localhost'"))
+                self.assertLess(rendered.index('SONIC_CFGGEN=\"sudo -n $SONIC_CFGGEN\"'),
+                                rendered.index('$SONIC_CFGGEN -j \"$RUNTIME_VARS_JSON\" --write-to-db'))
 
-    def test_database_container_reuse_matches_current_boot_mode(self):
+    def test_container_reuse_matches_current_boot_mode(self):
         import jinja2
         environment = jinja2.Environment(undefined=jinja2.ChainableUndefined)
         template = environment.from_string((ROOT / 'files/build_templates/docker_image_ctl.j2').read_text())
-        rendered = template.render(docker_container_name='database', sonic_asic_platform='vs',
-                                   docker_image_run_opt='', docker_image_name='test',
-                                   install_debug_image='n', mount_default_tmpfs='n')
-        start = rendered.index('        if [ "$REDIS_AUTH_MODE" == "enforce" ] && ! jq -e')
-        end = rendered.index('        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then', start)
-        validation = rendered[start:end]
-        mount = {'Source': '/run/redis-auth', 'Destination': '/run/redis-auth', 'RW': False}
-        for mode, mounts, marker, expected in (
-                ('legacy', [], [], ''),
-                ('legacy', [mount], [], 'redis-auth-delivery-obsolete'),
-                ('legacy', [], ['REDIS_AUTH_REQUIRED=1'], 'redis-auth-delivery-obsolete'),
-                ('legacy', [mount], ['REDIS_AUTH_REQUIRED=1'], 'redis-auth-delivery-obsolete'),
-                ('enforce', [], [], 'redis-auth-delivery-missing'),
-                ('enforce', [mount], [], 'redis-auth-delivery-missing'),
-                ('enforce', [mount], ['REDIS_AUTH_REQUIRED=1'], '')):
-            inspected = json.dumps([{'Mounts': mounts, 'Config': {'Env': marker}}])
-            shell = ('REDIS_AUTH_MODE=$1; DOCKERCHECK=$2; DOCKERMOUNT=""\n'
-                     + validation + '\nprintf "%s" "$DOCKERMOUNT"\n')
-            result = subprocess.run(['bash', '-c', shell, '--', mode, inspected],
-                                    text=True, capture_output=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout, expected, (mode, mounts, marker))
+        for name in ('database', 'swss', 'pmon', 'bgp', 'snmp'):
+            rendered = template.render(docker_container_name=name, sonic_asic_platform='vs',
+                                       docker_image_run_opt='', docker_image_name='test',
+                                       install_debug_image='n', mount_default_tmpfs='n')
+            start = rendered.index('        if [ "$REDIS_AUTH_MODE" == "enforce" ] && ! jq -e')
+            end = rendered.index('        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then', start)
+            validation = rendered[start:end]
+            mount = {'Source': '/run/redis-auth', 'Destination': '/run/redis-auth', 'RW': False}
+            for mode, mounts, marker, expected in (
+                    ('legacy', [], [], ''),
+                    ('legacy', [mount], [], 'redis-auth-delivery-obsolete'),
+                    ('legacy', [], ['REDIS_AUTH_REQUIRED=1'], 'redis-auth-delivery-obsolete'),
+                    ('legacy', [mount], ['REDIS_AUTH_REQUIRED=1'], 'redis-auth-delivery-obsolete'),
+                    ('enforce', [], [], 'redis-auth-delivery-missing'),
+                    ('enforce', [mount], [], 'redis-auth-delivery-missing'),
+                    ('enforce', [mount], ['REDIS_AUTH_REQUIRED=1'], '')):
+                inspected = json.dumps([{'Mounts': mounts, 'Config': {'Env': marker}}])
+                shell = ('REDIS_AUTH_MODE=$1; DOCKERCHECK=$2; DOCKERMOUNT=""\n'
+                         + validation + '\nprintf "%s" "$DOCKERMOUNT"\n')
+                result = subprocess.run(['bash', '-c', shell, '--', mode, inspected],
+                                        text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, expected, (name, mode, mounts, marker))
 
     def test_real_redis_readers_and_writers_on_all_databases(self):
         self.select(redis='enforce', redis_bmp='enforce')

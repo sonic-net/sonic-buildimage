@@ -511,6 +511,28 @@ start() {
         source $PLATFORM_ENV_CONF
     fi
 
+    # Mount the boot-owned parent directory so restarts use current files.
+    REDIS_AUTH_MNT=()
+    if [ "$EUID" -eq 0 ]; then
+        REDIS_AUTH_MODE=$(/usr/bin/redis_auth_startup.py --check) || exit 1
+    else
+        REDIS_AUTH_MODE=$(sudo -n /usr/bin/redis_auth_startup.py --check) || exit 1
+    fi
+    if [ "$REDIS_AUTH_MODE" == "enforce" ]; then
+        {%- if docker_container_name == "database" %}
+        if [ -n "$DEV" ] || [ -n "$DATABASE_TYPE" ] || [ "${NUM_ASIC:-1}" -gt 1 ] || [ "${NUM_DPU:-0}" -gt 0 ]; then
+            echo "Redis protection requires the qualified single-host database container" >&2
+            exit 1
+        fi
+        {%- endif %}
+        REDIS_AUTH_MNT=(-v /run/redis-auth:/run/redis-auth:ro --env REDIS_AUTH_REQUIRED=1)
+        # Container units can run as the existing administrator account.
+        if [ "$EUID" -ne 0 ]; then
+            SONIC_DB_CLI="sudo -n $SONIC_DB_CLI"
+            SONIC_CFGGEN="sudo -n $SONIC_CFGGEN"
+        fi
+    fi
+
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
     # Set the SYNCD_SHM_SIZE if this variable not defined
@@ -592,22 +614,13 @@ start() {
     fi
     {%- endif %}
 
-    {%- if docker_container_name == "database" %}
-    REDIS_AUTH_MNT=()
-    REDIS_AUTH_MODE=$(/usr/bin/redis_auth_startup.py --check) || exit 1
-    if [ "$REDIS_AUTH_MODE" == "enforce" ]; then
-        if [ -n "$DEV" ] || [ -n "$DATABASE_TYPE" ] || [ "${NUM_ASIC:-1}" -gt 1 ] || [ "${NUM_DPU:-0}" -gt 0 ]; then
-            echo "Redis protection requires the qualified single-host database container" >&2
-            exit 1
-        fi
-        REDIS_AUTH_MNT=(-v /run/redis-auth:/run/redis-auth:ro --env REDIS_AUTH_REQUIRED=1)
-    fi
-    {%- endif %}
-
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
         {%- if docker_container_name == "database" %}
         DOCKERMOUNT=""
+        {%- else %}
+        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
+        {%- endif %}
         if [ "$REDIS_AUTH_MODE" == "enforce" ] && ! jq -e \
             '.[0] | any(.Mounts[]; .Source == "/run/redis-auth" and .Destination == "/run/redis-auth" and .RW == false) and any(.Config.Env[]; . == "REDIS_AUTH_REQUIRED=1")' \
             <<< "$DOCKERCHECK" >/dev/null; then
@@ -617,9 +630,6 @@ start() {
             <<< "$DOCKERCHECK" >/dev/null; then
             DOCKERMOUNT="redis-auth-delivery-obsolete"
         fi
-        {%- else %}
-        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-        {%- endif %}
         if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
             CONTAINER_EXISTS="yes"
             preStartAction
@@ -859,9 +869,7 @@ start() {
     done < <(get_pmon_device_cgroup_rules)
 {%- endif %}
     docker create {{docker_image_run_opt}} \
-{%- if docker_container_name == "database" %}
         "${REDIS_AUTH_MNT[@]}" \
-{%- endif %}
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
