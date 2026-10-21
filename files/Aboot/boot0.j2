@@ -480,6 +480,14 @@ read_system_eeprom() {
     read_eeprom /tmp/.system-prefdl
 }
 
+maybe_read_switch_eeprom() {
+    if [ -f /tmp/.switch-prefdl ]; then
+        read_switch_eeprom
+    else
+        read_system_eeprom
+    fi
+}
+
 get_eeprom_value() {
     local key="$1"
     sed -n "s#^$key: *##p" "$target_path/.system-prefdl" || :
@@ -769,6 +777,14 @@ write_platform_specific_cmdline() {
         else
             read_system_eeprom
         fi
+    fi
+
+    if in_array "$platform" "thrasher"; then
+        maybe_read_switch_eeprom
+    fi
+
+    if in_array "$sid" "Banff" "ThrasherBanff" "Thrasher" "ThrasherBBanff"; then
+        aboot_machine=arista_7060xe7_64ps
     fi
 
     if [ $varlog_size -eq 0 ]; then
