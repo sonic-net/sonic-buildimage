@@ -187,7 +187,7 @@
 {% endfor %}
     },
     "BUFFER_PORT_EGRESS_PROFILE_LIST": {
-{% for port in port_names_active.split(',') %}
+{% for port in port_names_active.split(',') if port %}
         "{{ port }}": {
 {% if port in port_names_service.split(',') %}
             "profile_list" : "egress_lossy_profile"
@@ -198,7 +198,7 @@
 
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
-,
+{% if port_names_active|length > 0 %},{% endif %}
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}": {
 {% if port in port_names_service.split(',') %}
@@ -219,24 +219,24 @@
 {#- Service ports carry only lossy traffic, so their queue 3-4 gets the lossy
     profile instead of the lossless one; all other queues are identical to data ports. #}
     "BUFFER_QUEUE": {
-{% for port in port_names_active.split(',') %}
+{% for port in port_names_active.split(',') if port %}
         "{{ port }}|3-4": {
             "profile" : "{{ 'q_lossy_profile' if port in service_port_names.split(',') else 'egress_lossless_profile' }}"
         },
 {% endfor %}
-{% for port in port_names_active.split(',') %}
+{% for port in port_names_active.split(',') if port %}
         "{{ port }}|0-2": {
             "profile" : "q_lossy_profile"
         },
 {% endfor %}
-{% for port in port_names_active.split(',') %}
+{% for port in port_names_active.split(',') if port %}
         "{{ port }}|5-6": {
             "profile" : "q_lossy_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
-,
+{% if port_names_active|length > 0 %},{% endif %}
 {% if dynamic_mode is defined %}
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}|3-4": {
@@ -281,7 +281,7 @@
 {%- set inactive_service_ports = port_names_inactive.split(',') | select('in', port_names_service.split(',')) | list %}
 {%- set port_names_inactive = data_ports(port_names_inactive) %}
     "BUFFER_PG": {
-{% for port in port_names_active.split(',') %}
+{% for port in port_names_active.split(',') if port %}
 {% if dynamic_mode is defined %}
         "{{ port }}|3-4": {
             "profile" : "NULL"
@@ -293,7 +293,7 @@
 
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
-,
+{% if port_names_active|length > 0 %},{% endif %}
 {% for port in port_names_inactive.split(',') %}
 {% if dynamic_mode is defined %}
         "{{ port }}|3-4": {
@@ -311,7 +311,7 @@
 {% endfor %}
 {% endif %}
 {% if port_names_service|length > 0 %}
-,
+{% if port_names_active|length > 0 or port_names_inactive|length > 0 %},{% endif %}
 {% for port in port_names_service.split(',') %}
         "{{ port }}|0": {
 {% if dynamic_mode is not defined and port in inactive_service_ports %}

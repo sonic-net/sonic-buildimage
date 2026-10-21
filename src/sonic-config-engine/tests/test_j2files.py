@@ -1545,15 +1545,17 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                              if sku == 'ACS-SN6600' else ['Ethernet512', 'Ethernet513'])
             for role in ('ToRRouter', 'LeafRouter'):
                 for dynamic in (False, True):
-                    for active_service_ports in ([], service_ports[:1], service_ports):
+                    for active_ports in ([], service_ports[:1], ['Ethernet0'],
+                                         ['Ethernet0'] + service_ports[:1], ['Ethernet0'] + service_ports):
+                        active_service_ports = [port for port in service_ports if port in active_ports]
                         with self.subTest(platform=platform, sku=sku, role=role,
-                                          dynamic=dynamic, active=active_service_ports):
+                                          dynamic=dynamic, active=active_ports):
                             context = {
                                 'PORT': {port: {} for port in ['Ethernet0', 'Ethernet8'] + service_ports},
                                 'DEVICE_METADATA': {'localhost': {'type': role}},
                                 'DEVICE_NEIGHBOR': {
                                     port: {'name': 'neighbor'}
-                                    for port in ['Ethernet0'] + active_service_ports
+                                    for port in active_ports
                                 },
                                 'DEVICE_NEIGHBOR_METADATA': {'neighbor': {'type': 'LeafRouter'}},
                             }
@@ -1561,6 +1563,9 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                                 'buffers_dynamic.json.j2' if dynamic else 'buffers.json.j2'
                             )
                             config = json.loads(template.render(**context), object_pairs_hook=unique_objects)
+                            for table in ('BUFFER_PG', 'BUFFER_QUEUE',
+                                          'BUFFER_PORT_INGRESS_PROFILE_LIST', 'BUFFER_PORT_EGRESS_PROFILE_LIST'):
+                                self.assertEqual({key.split('|')[0] for key in config[table]}, set(context['PORT']))
                             for port in service_ports:
                                 inactive = port not in active_service_ports and not dynamic
                                 expected_ingress = (
@@ -1575,6 +1580,10 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                                                  'ingress_lossy_pg_zero_profile' if inactive else 'sp_pg_lossy_profile')
                                 self.assertEqual([key for key in config['BUFFER_PG'] if key.startswith(port + '|')],
                                                  [port + '|0'])
+                                self.assertEqual(
+                                    config['BUFFER_PORT_EGRESS_PROFILE_LIST'][port]['profile_list'],
+                                    'egress_lossy_zero_profile' if inactive else 'egress_lossy_profile'
+                                )
                                 for table, field in [('BUFFER_PG', 'profile'), ('BUFFER_QUEUE', 'profile'),
                                                      ('BUFFER_PORT_INGRESS_PROFILE_LIST', 'profile_list'),
                                                      ('BUFFER_PORT_EGRESS_PROFILE_LIST', 'profile_list')]:
@@ -1588,7 +1597,8 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                                                 self.assertEqual(name.endswith('_zero_profile'), inactive)
                                                 if inactive:
                                                     self.assertEqual(config['BUFFER_PROFILE'][name]['size'], '0')
-                                    if table == 'BUFFER_QUEUE':
+                                    if table == 'BUFFER_QUEUE' and (
+                                            port not in active_ports or 'Ethernet0' in active_ports):
                                         data_port = 'Ethernet8' if port not in active_service_ports else 'Ethernet0'
                                         data_entries = {key[len(data_port):]: value for key, value in config[table].items()
                                                         if key == data_port or key.startswith(data_port + '|')}
@@ -1605,7 +1615,9 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                                             service_entries.pop('|3-4', None)
                                             data_entries.pop('|3-4', None)
                                         self.assertEqual(service_entries, data_entries)
-                            self.assertEqual(config['BUFFER_PG']['Ethernet0|0']['profile'], 'ingress_lossy_profile')
+                            self.assertEqual(config['BUFFER_PG']['Ethernet0|0']['profile'],
+                                             'ingress_lossy_profile' if dynamic or 'Ethernet0' in active_ports
+                                             else 'ingress_lossy_pg_zero_profile')
                             self.assertEqual(config['BUFFER_PG']['Ethernet8|0']['profile'],
                                              'ingress_lossy_profile' if dynamic else 'ingress_lossy_pg_zero_profile')
                             self.assertNotIn('|0', config['BUFFER_PG'])
