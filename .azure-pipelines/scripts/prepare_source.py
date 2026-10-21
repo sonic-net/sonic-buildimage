@@ -69,10 +69,12 @@ def render_dockerfiles(root: Path) -> int:
     errors = []
     for path in templates:
         relative = path.relative_to(root)
+        # Render Dockerfiles, not Flask HTML responses.
+        # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
         env = jinja2.Environment(
             loader=_DockerfileLoader(root, path.parent),
             undefined=_EmptyPackageVariables,
-        )  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+        )
         try:
             rendered = env.get_template(str(relative)).render(**context)  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
             (path.parent / "Dockerfile").write_text(rendered, encoding="utf-8")
