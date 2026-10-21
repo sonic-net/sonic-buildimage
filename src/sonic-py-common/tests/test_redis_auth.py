@@ -172,7 +172,7 @@ def test_real_redis_writer_reader_and_reconnect(monkeypatch, root_owned_auth_fil
         digest = hashlib.sha256(secret.read_bytes()).hexdigest()
         acl = runtime / 'users.acl'
         acl.write_text('user default on nopass ~* &* -@all +@read +@transaction '
-                       '+ping +select +acl|whoami +client|setinfo +subscribe\n'
+                       '+ping +select +acl|whoami +subscribe\n'
                        'user sonic-trusted-writer on #' + digest + ' ~* &* +@all\n')
         server = subprocess.Popen(['redis-server', '--port', '0', '--unixsocket', socket_path,
                                    '--unixsocketperm', '666', '--save', '', '--appendonly', 'no',
