@@ -164,6 +164,8 @@ jobs:
             --output artifacts/config-engine/action-audit.json \
             //tools/bazel/tests:apt_selection_test \
             //tools/bazel/tests:sonic_py_common_test \
+            //tools/bazel/tests:sonic_yang_mgmt_full_test \
+            //tools/bazel/tests:sonic_yang_mgmt_wheel_test \
             //tools/bazel/tests:sonic_py_common_full_test \
             //tools/bazel/tests:sonic_config_engine_full_test \
             //tools/bazel/tests:sonic_python_wheels_test \
@@ -178,6 +180,7 @@ jobs:
             //tools/bazel/tests:manifest_labels_action_test \
             //tools/bazel/tests:cfggen_template_test \
             //tools/bazel/tests:swss_render_test \
+            //src/sonic-yang-mgmt:sonic_yang_mgmt_wheel \
             //src/sonic-py-common:sonic_py_common_wheel \
             //src/sonic-config-engine:sonic_config_engine_wheel \
             //src/sonic-containercfgd:sonic_containercfgd_wheel \
@@ -190,6 +193,8 @@ jobs:
             --build_event_json_file="$PWD/artifacts/config-engine/test-events.jsonl" \
             //tools/bazel/tests:apt_selection_test \
             //tools/bazel/tests:sonic_py_common_test \
+            //tools/bazel/tests:sonic_yang_mgmt_full_test \
+            //tools/bazel/tests:sonic_yang_mgmt_wheel_test \
             //tools/bazel/tests:sonic_py_common_full_test \
             //tools/bazel/tests:sonic_config_engine_full_test \
             //tools/bazel/tests:sonic_python_wheels_test \

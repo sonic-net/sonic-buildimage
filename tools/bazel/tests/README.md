@@ -61,6 +61,8 @@ bazel test \
   //tools/bazel/tests:containercfgd_wheel_test \
   //tools/bazel/tests:supervisor_python_full_test \
   //tools/bazel/tests:supervisor_python_wheel_test \
+  //tools/bazel/tests:sonic_yang_mgmt_full_test \
+  //tools/bazel/tests:sonic_yang_mgmt_wheel_test \
   //src/sonic-config-engine:sonic_cfggen_cli_test \
   //tools/bazel/tests:manifest_labels_test \
   //tools/bazel/tests:prepare_oci_base_test \
@@ -78,12 +80,13 @@ bazel test \
 needs. CI selects the same tests explicitly and retains raw logs and cache
 records in the job workspace. The [workflow](../../../.github/workflows/bazel-swss-oci.yml)
 supplies the supported native AMD64/ARM64 platform flags and execution dependencies.
-The Python checks run the complete config-engine, py-common, containercfgd and
-Python supervisor test directories and install their source-built wheels. Public archive artifacts retain the wheels, hashes and
+The Python checks run the complete config-engine, py-common, containercfgd,
+Python supervisor and YANG-management test directories and install their
+source-built wheels. Public archive artifacts retain the wheels, hashes and
 extracted test counts/status. Collection still requires test logs/XML, collected
 test inventories and the installed-wheel receipt locally. Missing evidence or
 mismatched installed wheel hashes fail collection.
-The SWSS source job also selects these tests.
+The SWSS source job also selects the config-engine, py-common and containercfgd checks.
 The Make command prepares the SWSS JSON inputs consumed by `swss_render_test`.
 The same metadata preparation works on an ARM64 execution host; this helper
 coverage does not build a production ARM64 image. Label fixtures check JSON
@@ -135,6 +138,8 @@ container boot, live service health or forwarding behavior.
 | [`sonic_config_engine_full_test`](integration/component_pytest_runner.py) | Discover the complete config-engine `tests/` tree using declared sources, fixtures and its existing conftest setup. Run CLI subprocesses with the selected Python interpreter and preserve existing explicit skips. |
 | [`sonic_py_common_full_test`](integration/component_pytest_runner.py) | Discover the complete py-common `tests/` tree, including DB and generated gRPC behavior. Use writable copies for existing source-generating hooks; preserve the original assertions, mocks and explicit skips. |
 | [`sonic_python_wheels_test`](integration/sonic_python_wheels_test.py) | Install both generated wheels in a temporary scheme, check installed module and script paths, package metadata, generated gRPC exports and template bytes, then execute installed cfggen and DB command entry points with declared external dependencies. Retain the installation receipt in `wheels.json`. |
+| `sonic_yang_mgmt_full_test` | Run every existing YANG-management pytest case using declared production models and sample ConfigDB data. Retain collected test names and JUnit results. |
+| [`sonic_yang_mgmt_wheel_test`](integration/yang_mgmt_wheel_test.py) | Install the generated wheel outside the source checkout, validate its modules, metadata and command, and exercise production-model data validation and path translation. |
 | [`sonic_cfggen_cli_test`](../../../src/sonic-config-engine/README.bazel.md) | Run the real config-engine command with Common/YANG imports and check input merging, filters, includes, multiple output destinations, namespace input and failure exits. |
 | [sonic_py_common_native_test.py](integration/sonic_py_common_native_test.py) | Import every selected Python helper and exercise the real source-built Common extension. The shared [pytest runner](integration/pytest_runner.py) also runs 44 existing interface, BGP and EEPROM cases from the component tree, for 46 cases total; it disables legacy source-mutating conftest hooks and coverage defaults. |
 | [sonic_docker_archive_test.py](integration/sonic_docker_archive_test.py) | Check Docker archive metadata and payload for the selected AMD64/ARM64 fixture and require reproducible gzip exports despite source names or requested timestamps changing. |

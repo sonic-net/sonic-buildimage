@@ -14,7 +14,11 @@ bazel_dep(name = "gawk", version = "5.3.2.bcr.3")
 bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "pigz", version = "2.8.bcr.2")
 bazel_dep(name = "platforms", version = "1.1.0")
+
+# Use the already-published Python binding required by sonic-yang-mgmt.
+bazel_dep(name = "libyang-python", version = "3.1.0-sonic.1", repo_name = "libyang_python")
 bazel_dep(name = "rules_cc", version = "0.2.20")
+
 # The patched release sorts above upstream 0.9.4 without a root override.
 bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.7")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
@@ -166,6 +170,7 @@ include("//dockers/docker-orchagent/bazel:apt_inputs.MODULE.bazel")
 
 # Generate BUILD input labels from the same reviewed lock during repository setup.
 apt_inputs = use_repo_rule("@sonic_build_infra//apt:inputs_repository.bzl", "apt_inputs")
+
 apt_inputs(
     name = "orchagent_apt_inputs",
     lock = "//dockers/docker-orchagent/bazel:apt.lock.json",

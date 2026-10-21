@@ -1,0 +1,4 @@
+exports_files(
+    ["tests/files/sample_config_db.json"],
+    visibility = ["//tools/bazel/tests:__pkg__"],
+)

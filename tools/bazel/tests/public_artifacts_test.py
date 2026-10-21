@@ -244,6 +244,19 @@ class PublicArtifactsTest(unittest.TestCase):
         self.assertTrue(ready)
         self.assertEqual(summary["receipts"]["python"]["architecture"], "arm64")
 
+    def test_previous_python_receipt_cannot_cover_new_yang_checks(self):
+        """Neither the original nor shared-base receipts cover the YANG checks."""
+        seed(self.root, "archive")
+        for previous_count in (5, 9, 11):
+            with self.subTest(previous_count=previous_count):
+                value = receipt("python")
+                value["tests"] = dict(list(value["tests"].items())[:previous_count])
+                write_json(self.root, "artifacts/config-engine/receipt.json", value)
+                summary, paths, ready = self.prepare("archive")
+                self.assertFalse(ready)
+                self.assertEqual(paths, [])
+                self.assertIn({"input": "python-receipt", "reason": "incomplete-receipt"}, summary["blocked"])
+
     def test_failure_publishes_only_a_safe_partial_summary(self):
         seed(self.root, "archive")
         name = artifacts.BEP["archive"][0][1]

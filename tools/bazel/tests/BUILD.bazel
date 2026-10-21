@@ -164,6 +164,57 @@ py_test(
 )
 
 py_test(
+    name = "sonic_yang_mgmt_full_test",
+    size = "large",
+    srcs = ["integration/component_pytest_runner.py"],
+    args = [
+        "--component-setup=$(rootpath //src/sonic-yang-mgmt:setup.py)",
+        "--models=$(rootpath @sonic_yang_models//:yang_models)",
+        "--yang-config=$(rootpath //src/sonic-yang-models:tests/files/sample_config_db.json)",
+    ],
+    data = [
+        "//src/sonic-yang-mgmt:setup.py",
+        "//src/sonic-yang-mgmt:test_sources",
+        "//src/sonic-yang-models:tests/files/sample_config_db.json",
+        "@sonic_yang_models//:yang_models",
+    ],
+    legacy_create_init = False,
+    main = "integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-yang-mgmt:sonic_yang_mgmt",
+        requirement("pytest"),
+    ],
+)
+
+py_test(
+    name = "sonic_yang_mgmt_wheel_test",
+    srcs = ["integration/yang_mgmt_wheel_test.py"],
+    args = [
+        "$(rootpath //src/sonic-yang-mgmt:sonic_yang_mgmt_wheel)",
+        "$(rootpath //src/sonic-yang-mgmt:setup.py)",
+        "$(rootpath @sonic_yang_models//:yang_models)",
+    ],
+    data = [
+        "//src/sonic-yang-mgmt:setup.py",
+        "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+        "//src/sonic-yang-mgmt:test_sources",
+        "@sonic_yang_models//:yang_models",
+    ],
+    legacy_create_init = False,
+    main = "integration/yang_mgmt_wheel_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "@libyang_python//:libyang",
+        requirement("ijson"),
+        requirement("jsondiff"),
+        requirement("jsonpointer"),
+        requirement("tabulate"),
+    ],
+)
+
+py_test(
     name = "sonic_config_engine_full_test",
     size = "large",
     srcs = ["integration/component_pytest_runner.py"],

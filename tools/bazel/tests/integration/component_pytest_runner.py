@@ -38,6 +38,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--component-setup", type=Path, required=True)
     parser.add_argument("--models", type=Path)
+    parser.add_argument("--yang-config", type=Path)
     parser.add_argument("--cfggen", type=Path)
     parser.add_argument("--sibling-setup", type=Path, action="append", default=[])
     args = parser.parse_args()
@@ -58,6 +59,8 @@ def main():
     os.environ["SONIC_TEST_WRITABLE_FIXTURES"] = "1"
     if models:
         os.environ["SONIC_TEST_YANG_MODELS"] = str(models)
+    if args.yang_config:
+        os.environ["SONIC_TEST_YANG_CONFIG"] = str(args.yang_config.absolute())
     if cfggen:
         os.environ["SONIC_CFGGEN"] = str(cfggen)
     # Production discovery can inspect these values. Start fixtures from the
