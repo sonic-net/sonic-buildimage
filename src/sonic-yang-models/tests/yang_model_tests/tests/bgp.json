@@ -74,6 +74,16 @@
     "BGP_GLOBALS_EVPN_VNI_VALID": {
         "desc": "BGP EVPN per-VNI configuration with rd and route-targets"
     },
+    "BGP_GLOBALS_EVPN_VNI_ADVERTISE_SVI_IP_TRUE": {
+        "desc": "BGP EVPN per-VNI configuration with advertise-svi-ip set to true"
+    },
+    "BGP_GLOBALS_EVPN_VNI_ADVERTISE_SVI_IP_FALSE": {
+        "desc": "BGP EVPN per-VNI configuration with advertise-svi-ip set to false"
+    },
+    "BGP_GLOBALS_EVPN_VNI_ADVERTISE_SVI_IP_INVALID": {
+        "desc": "BGP EVPN per-VNI configuration with advertise-svi-ip set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"advertise-svi-ip\" element."
+    },
     "BGP_GLOBALS_EVPN_RT_VALID": {
         "desc": "BGP EVPN global route-target configuration"
     },

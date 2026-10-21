@@ -571,6 +571,72 @@
             }
         }
     },
+    "BGP_GLOBALS_EVPN_VNI_ADVERTISE_SVI_IP_TRUE": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name":"default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_VNI": {
+                "BGP_GLOBALS_EVPN_VNI_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "L2VPN_EVPN",
+                    "vni": 10100,
+                    "advertise-svi-ip": true
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_EVPN_VNI_ADVERTISE_SVI_IP_FALSE": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name":"default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_VNI": {
+                "BGP_GLOBALS_EVPN_VNI_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "L2VPN_EVPN",
+                    "vni": 10100,
+                    "advertise-svi-ip": false
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_EVPN_VNI_ADVERTISE_SVI_IP_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name":"default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_VNI": {
+                "BGP_GLOBALS_EVPN_VNI_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "L2VPN_EVPN",
+                    "vni": 10100,
+                    "advertise-svi-ip": "invalid value"
+                }
+                ]
+            }
+        }
+    },
     "BGP_GLOBALS_EVPN_RT_VALID": {
         "sonic-bgp-global:sonic-bgp-global": {
             "sonic-bgp-global:BGP_GLOBALS": {
