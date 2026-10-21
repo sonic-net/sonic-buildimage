@@ -116,7 +116,8 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 {% endif %}
 !
 {% if constants.bgp.graceful_restart.enabled is defined and constants.bgp.graceful_restart.enabled and
-      DEVICE_METADATA['localhost']['type'] in ['ToRRouter', 'LeafRouter', 'BackEndLeafRouter', 'MgmtToRRouter'] %}
+      DEVICE_METADATA['localhost']['type'] in ['ToRRouter', 'LeafRouter', 'BackEndLeafRouter',
+                                              'MgmtToRRouter', 'BmcMgmtToRRouter'] %}
   bgp graceful-restart restart-time {{ constants.bgp.graceful_restart.restart_time | default(240) }}
   bgp graceful-restart
   bgp graceful-restart preserve-fw-state

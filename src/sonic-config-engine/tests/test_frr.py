@@ -71,7 +71,8 @@ class TestCfgGen(TestCase):
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr.conf'))
 
     def test_bgpd_frr_graceful_restart(self):
-        for device_type in ('ToRRouter', 'LeafRouter', 'BackEndLeafRouter', 'MgmtToRRouter'):
+        for device_type in ('ToRRouter', 'LeafRouter', 'BackEndLeafRouter',
+                            'MgmtToRRouter', 'BmcMgmtToRRouter'):
             extra_data = {"DEVICE_METADATA": {"localhost": {"type": device_type}}}
             output = self.render_template('bgpd/bgpd.conf.j2', extra_data)
             self.assertIn(
@@ -82,7 +83,8 @@ class TestCfgGen(TestCase):
                 output, device_type)
 
     def test_bgpd_frr_graceful_restart_disabled(self):
-        for device_type in ('ToRRouter', 'LeafRouter', 'BackEndLeafRouter', 'MgmtToRRouter'):
+        for device_type in ('ToRRouter', 'LeafRouter', 'BackEndLeafRouter',
+                            'MgmtToRRouter', 'BmcMgmtToRRouter'):
             extra_data = {
                 "DEVICE_METADATA": {"localhost": {"type": device_type}},
                 "constants": {"bgp": {"graceful_restart": {"enabled": False}}}
@@ -92,7 +94,7 @@ class TestCfgGen(TestCase):
             self.assertNotIn('  bgp graceful-restart ', output, device_type)
 
     def test_bgpd_frr_graceful_restart_excluded_roles(self):
-        for device_type in ('SpineRouter', 'BmcMgmtToRRouter', 'UpperRegionalHub'):
+        for device_type in ('SpineRouter', 'UpperRegionalHub'):
             extra_data = {"DEVICE_METADATA": {"localhost": {"type": device_type}}}
             output = self.render_template('bgpd/bgpd.conf.j2', extra_data)
             self.assertNotIn('  bgp graceful-restart\n', output, device_type)
@@ -101,16 +103,17 @@ class TestCfgGen(TestCase):
                 self.assertIn('  bgp graceful-restart-disable\n', output)
 
     def test_bgpd_frr_graceful_restart_timers(self):
-        extra_data = {
-            "DEVICE_METADATA": {"localhost": {"type": "MgmtToRRouter"}},
-            "constants": {"bgp": {"graceful_restart": {
-                "restart_time": 300,
-                "select_defer_time": 60
-            }}}
-        }
-        output = self.render_template('bgpd/bgpd.conf.j2', extra_data)
-        self.assertIn('  bgp graceful-restart restart-time 300\n', output)
-        self.assertIn('  bgp graceful-restart select-defer-time 60\n', output)
+        for device_type in ('MgmtToRRouter', 'BmcMgmtToRRouter'):
+            extra_data = {
+                "DEVICE_METADATA": {"localhost": {"type": device_type}},
+                "constants": {"bgp": {"graceful_restart": {
+                    "restart_time": 300,
+                    "select_defer_time": 60
+                }}}
+            }
+            output = self.render_template('bgpd/bgpd.conf.j2', extra_data)
+            self.assertIn('  bgp graceful-restart restart-time 300\n', output, device_type)
+            self.assertIn('  bgp graceful-restart select-defer-time 60\n', output, device_type)
 
     def test_zebra_frr(self):
         self.assertTrue(*self.run_case('zebra/zebra.conf.j2', 'zebra_frr.conf'))
