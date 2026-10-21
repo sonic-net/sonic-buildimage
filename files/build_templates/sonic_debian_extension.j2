@@ -403,6 +403,14 @@ install_deb_package $debs_path/sonic-host-services-rs_*.deb
 # Install sonic-db-cli
 install_deb_package $debs_path/sonic-db-cli_*.deb
 
+# Install Redis password preparation; startup remains opt-in.
+sudo install -m 0755 $IMAGE_CONFIGS/redis-auth/redis_auth_prepare.py \
+    $FILESYSTEM_ROOT/usr/bin/redis_auth_prepare.py
+sudo install -m 0755 $IMAGE_CONFIGS/redis-auth/redis_auth_startup.py \
+    $FILESYSTEM_ROOT/usr/bin/redis_auth_startup.py
+sudo install -m 0644 $IMAGE_CONFIGS/redis-auth/redis-auth-prepare.service \
+    $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/redis-auth-prepare.service
+
 
 {% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
 # Install sonic-rsyslog-plugin

@@ -1,0 +1,9 @@
+[Unit]
+Description=Prepare the Redis writer password for this boot
+Before=database.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/redis_auth_startup.py
+RemainAfterExit=yes
+UMask=0077

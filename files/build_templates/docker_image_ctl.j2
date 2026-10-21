@@ -8,6 +8,16 @@
 
 
 {%- if docker_container_name == "database" %}
+redis_socket_mode() {
+    if [ -r /run/redis-auth/local.json ] && jq -e --arg socket "$1" \
+        '(if type == "array" then . else [.] end) | any(.unix_socket == $socket)' \
+        /run/redis-auth/local.json >/dev/null; then
+        echo 0666
+    else
+        echo 0760
+    fi
+}
+
 link_namespace() {
     # Makes namespace of a docker container available in
     # /var/run/netns so it can be managed with iproute2
@@ -404,7 +414,7 @@ function postStartAction()
 
         # Add redis UDS to the redis group and give read/write access to the group
         REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
-        chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
+        chgrp -f redis $REDIS_BMP_SOCK && chmod -f $(redis_socket_mode "$REDIS_BMP_SOCK") $REDIS_BMP_SOCK
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
         until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
@@ -416,7 +426,7 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
-    chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+    chgrp -f redis $REDIS_SOCK && chmod -f $(redis_socket_mode "$REDIS_SOCK") $REDIS_SOCK
     # Binding the midplane ip to the redisdb
     if [[ -n "$midplane_ip" ]]; then
         IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
@@ -582,10 +592,31 @@ start() {
     fi
     {%- endif %}
 
+    {%- if docker_container_name == "database" %}
+    REDIS_AUTH_MNT=()
+    REDIS_AUTH_MODE=$(/usr/bin/redis_auth_startup.py --check) || exit 1
+    if [ "$REDIS_AUTH_MODE" == "enforce" ]; then
+        if [ -n "$DEV" ] || [ -n "$DATABASE_TYPE" ] || [ "${NUM_ASIC:-1}" -gt 1 ] || [ "${NUM_DPU:-0}" -gt 0 ]; then
+            echo "Redis protection requires the qualified single-host database container" >&2
+            exit 1
+        fi
+        REDIS_AUTH_MNT=(-v /run/redis-auth:/run/redis-auth:ro --env REDIS_AUTH_REQUIRED=1)
+    fi
+    {%- endif %}
+
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
         {%- if docker_container_name == "database" %}
         DOCKERMOUNT=""
+        if [ "$REDIS_AUTH_MODE" == "enforce" ] && ! jq -e \
+            '.[0] | any(.Mounts[]; .Source == "/run/redis-auth" and .Destination == "/run/redis-auth" and .RW == false) and any(.Config.Env[]; . == "REDIS_AUTH_REQUIRED=1")' \
+            <<< "$DOCKERCHECK" >/dev/null; then
+            DOCKERMOUNT="redis-auth-delivery-missing"
+        elif [ "$REDIS_AUTH_MODE" == "legacy" ] && jq -e \
+            '.[0] | any(.Mounts[]?; .Destination == "/run/redis-auth") or any(.Config.Env[]?; . == "REDIS_AUTH_REQUIRED=1")' \
+            <<< "$DOCKERCHECK" >/dev/null; then
+            DOCKERMOUNT="redis-auth-delivery-obsolete"
+        fi
         {%- else %}
         DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
@@ -828,6 +859,9 @@ start() {
     done < <(get_pmon_device_cgroup_rules)
 {%- endif %}
     docker create {{docker_image_run_opt}} \
+{%- if docker_container_name == "database" %}
+        "${REDIS_AUTH_MNT[@]}" \
+{%- endif %}
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
