@@ -26,7 +26,8 @@ EMPTY_NAMESPACE = ''
 
 def db_connect(db_name, namespace=EMPTY_NAMESPACE):
     from swsscommon import swsscommon
-    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, True, namespace)
+    use_tcp = swsscommon.SonicDBConfig.getDbPort(db_name, namespace) != 0
+    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, use_tcp, namespace)
 
 
 def db_connect_remote(db_id, host, port=6379):
