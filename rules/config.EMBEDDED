@@ -136,3 +136,12 @@ INCLUDE_ROUTER_ADVERTISER = n
 ENABLE_ROUTER_ADVERTISER = n
 AUTORESTART_ROUTER_ADVERTISER = n
 DELAY_ROUTER_ADVERTISER = n
+
+# ---------------------------------------------------------------------------
+# Embedded optimizations (one entry per optimization that has landed)
+# ---------------------------------------------------------------------------
+
+# sonic-utilities warm fork-server daemon (sonic-cli-daemon): `show`/`config`
+# run inside an already-warm, pre-imported process instead of cold-starting
+# Python on every call (see OPTIMIZE_CLI in rules/config).
+OPTIMIZE_CLI = y
