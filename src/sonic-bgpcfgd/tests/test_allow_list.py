@@ -1006,9 +1006,28 @@ def test___set_handler_validate():
         "prefixes_v4": "20.20.30.0/24,40.50.0.0/16",
         "prefixes_v6": "fc01:20::/64,fc01:30::/64",
     }
+    assert mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID|5|1010:2020", data)
+    assert mgr._BGPAllowListMgr__set_handler_validate(
+        "DEPLOYMENT_ID|5|NEIGHBOR_TYPE|OpticalLonghaulTerminal|1010:2020", data
+    )
+    assert mgr._BGPAllowListMgr__parse_key(
+        "DEPLOYMENT_ID|5|COMMUNITY_NEIGHBOR_TYPE_VALUE"
+    ) == (5, "COMMUNITY_NEIGHBOR_TYPE_VALUE", "")
     assert not mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID|5|1010:2020", None)
     assert not mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID1|5|1010:2020", data)
     assert not mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID|z|1010:2020", data)
+    assert not mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID|4294967296", data)
+    assert not mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID|99999999999", data)
+    assert not mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID|5|NEIGHBOR_TYPE", data)
+    assert not mgr._BGPAllowListMgr__set_handler_validate(
+        "DEPLOYMENT_ID|5|NEIGHBOR_TYPE|leaf\nroute-map injected", data
+    )
+    assert not mgr._BGPAllowListMgr__set_handler_validate(
+        "DEPLOYMENT_ID|5|NEIGHBOR_TYPE|leaf|1010:2020\n", data
+    )
+    assert not mgr._BGPAllowListMgr__set_handler_validate(
+        "DEPLOYMENT_ID|5|NEIGHBOR_TYPE|leaf;exit", data
+    )
     assert not mgr._BGPAllowListMgr__set_handler_validate("DEPLOYMENT_ID|5|1010:2020", {
         "prefixes_v4": "20.20.30.0/24,40.50.0.0/16",
         "prefixes_v6": "20.20.30.0/24,40.50.0.0/16",
@@ -1017,6 +1036,33 @@ def test___set_handler_validate():
         "prefixes_v4": "fc01:20::/64,fc01:30::/64",
         "prefixes_v6": "fc01:20::/64,fc01:30::/64",
     })
+    for prefixes_v4 in (
+        "1.2.3.4/x",
+        "1.2.3.4",
+        "10.0.0.0/255.255.255.0",
+        "10.0.0.0/0.0.0.255",
+        "10.0.0.0/24 ge 33",
+        "10.0.0.0/24 le 20",
+        "10.0.0.0/24 le " + "9" * 5000,
+        "10.0.0.0/24\nroute-map injected",
+    ):
+        assert not mgr._BGPAllowListMgr__set_handler_validate(
+            "DEPLOYMENT_ID|5|1010:2020", {"prefixes_v4": prefixes_v4}
+        )
+    assert not mgr._BGPAllowListMgr__set_handler_validate(
+        "DEPLOYMENT_ID|5|1010:2020", {"prefixes_v6": "fe80::1%eth0/64"}
+    )
+
+
+def test_set_del_handlers_reject_unsafe_keys():
+    data = {"prefixes_v4": "20.20.30.0/24"}
+    for key in (
+        "DEPLOYMENT_ID|5|NEIGHBOR_TYPE",
+        "DEPLOYMENT_ID|5|NEIGHBOR_TYPE|leaf\nroute-map injected",
+    ):
+        set_del_test("SET", (key, data), [], [])
+        set_del_test("DEL", (key,), [], [])
+
 
 @patch.dict("sys.modules", swsscommon=swsscommon_module_mock)
 def test___find_peer_group():

@@ -13,15 +13,16 @@ DISABLED_PACKAGES_LOCAL = $(DOCKER_DHCP_RELAY) $(DOCKER_SFLOW) $(DOCKER_MGMT_FRA
                           $(DOCKER_EVENTD) $(DOCKER_DASH_HA) $(DOCKER_STP) \
                           $(DOCKER_RESTAPI)
 
-# Aspeed BMC does not ship eventd / snmp / radv / restapi as features. Disable
-# their INCLUDE_* flags so the rendered init_cfg.json FEATURE table does not
-# advertise them as enabled, which would otherwise cause "show feature status"
+# Aspeed BMC does not ship eventd / snmp / radv / restapi / teamd as features.
+# Disable their INCLUDE_* flags so the rendered init_cfg.json FEATURE table does
+# not advertise them as enabled, which would otherwise cause "show feature status"
 # and tools/tests that trust it to try to operate on systemd units that do not
 # exist on BMC.
 DISABLED_FEATURE_FLAGS = INCLUDE_SYSTEM_EVENTD \
                          INCLUDE_SNMP \
                          INCLUDE_ROUTER_ADVERTISER \
-                         INCLUDE_RESTAPI
+                         INCLUDE_RESTAPI \
+                         INCLUDE_TEAMD
 
 $(info [aspeed] Filtering out packages: $(DISABLED_PACKAGES_LOCAL))
 $(info [aspeed] Disabling feature flags: $(DISABLED_FEATURE_FLAGS))
