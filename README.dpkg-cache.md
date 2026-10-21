@@ -154,20 +154,3 @@ audit corrections from unrelated package changes when practical.
 **Add `@aaronber0614` as a reviewer on PRs fixing failures from this gate,
 including changes to the audit script or its waivers.** Include the finding,
 the reason for the fix, and the audit command and result in the PR description.
-
-## Static gate versus cache-equivalence validation
-
-The per-PR gate is defined in [`azure-pipelines.yml`](azure-pipelines.yml).
-The standalone [cache-key lint YAML](.azure-pipelines/cache-key-lint.yml) runs a
-whole-tree report and is not a replacement for the production PR gate.
-
-The separate [cache-equivalence YAML](.azure-pipelines/azure-pipelines-cache-equivalence.yml)
-defines a weekly fresh/fresh/cached build comparison. It uses two fresh builds
-to establish a per-run nondeterminism baseline, compares a cached build against
-that baseline, and publishes comparison and static-audit artifacts. This is
-expensive validation, not part of the PR critical path.
-
-The weekly YAML requires a registered Azure DevOps pipeline and authorized
-resources before its schedule can run. Its presence in the repository does not
-establish that it is deployed. Reports are published as pipeline artifacts;
-email delivery requires a separate notification subscription.
