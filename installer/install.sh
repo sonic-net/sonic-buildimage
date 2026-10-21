@@ -222,7 +222,7 @@ fi
 # front; the full image extraction below repopulates boot/ with the rest.
 if [ "$install_env" != "build" ]; then
     unzip -o $INSTALLER_PAYLOAD "boot/DB.auth" -d $demo_mnt/$image_dir > /dev/null 2>&1 || true
-    demo_enroll_secure_boot_keys "$demo_mnt" || exit 1
+    enroll_secure_boot_db "$demo_mnt" || exit 1
 fi
 
 # Decompress the file for the file system directly to the partition
