@@ -96,6 +96,38 @@ stages:
         ./scripts/audit_dep_completeness.sh --verbose --base "origin/${TARGET}"
       displayName: 'audit_dep_completeness.sh --base origin/<target> (fails on PR-introduced P0)'
 
+- stage: TrixiePythonWheels
+  displayName: 'Trixie Python wheel tests (PR gate)'
+  dependsOn: []
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  pool: sonicso1ES-amd64
+  jobs:
+  - job: python_wheel_tests
+    displayName: 'Build and test Python wheels on trixie'
+    timeoutInMinutes: 120
+    steps:
+    - checkout: self
+      clean: true
+      fetchDepth: 0
+      submodules: recursive
+    - bash: |
+        set -euo pipefail
+        mkdir -p target/python-wheels/trixie
+        make -f Makefile.work BLDENV=trixie configure \
+          PLATFORM=vs PLATFORM_ARCH=amd64 ENABLE_DOCKER_BASE_PULL=y \
+          ${{ variables.VERSION_CONTROL_OPTIONS }}
+        make -f Makefile.work BLDENV=trixie \
+          ENABLE_DOCKER_BASE_PULL=y SONIC_BUILD_JOBS=$(nproc) \
+          BUILD_SKIP_TEST=n SONIC_DPKG_CACHE_METHOD=none \
+          ${{ variables.VERSION_CONTROL_OPTIONS }} \
+          target/python-wheels/trixie/sonic_py_common-1.0-py3-none-any.whl \
+          target/python-wheels/trixie/sonic_host_services-1.0-py3-none-any.whl
+      displayName: 'Rebuild and test trixie Python wheels without package cache'
+    - publish: $(Build.SourcesDirectory)/target/python-wheels/trixie
+      artifact: trixie-python-wheels
+      condition: succeededOrFailed()
+      displayName: 'Publish trixie wheel build logs and artifacts'
+
 - stage: BuildVS
   pool: sonicso1ES-amd64
   dependsOn: []
