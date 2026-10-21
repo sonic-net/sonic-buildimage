@@ -1,5 +1,6 @@
 """Regression coverage for telemetry package cache flags."""
 
+import os
 from pathlib import Path
 import subprocess
 import tarfile
@@ -87,6 +88,7 @@ class TelemetryCacheFlagsTest(unittest.TestCase):
         )
 
     def run_make(self, target, translib_write):
+        env = os.environ.copy()
         command = [
             "make",
             "--no-print-directory",
@@ -116,11 +118,14 @@ class TelemetryCacheFlagsTest(unittest.TestCase):
         ]
         if translib_write is not None:
             command.append(f"ENABLE_TRANSLIB_WRITE={translib_write}")
+        else:
+            env.pop("ENABLE_TRANSLIB_WRITE", None)
 
         result = subprocess.run(
             command,
             cwd=ROOT,
             check=True,
+            env=env,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
