@@ -880,7 +880,7 @@ static void bmc_reboot(int cs)
         enable_ast26_watchdog(cs);
     } else {
         enable_ast25_watchdog(cs);
-    } 
+    }
     watchdog_status_debug();
     disable_upgrade();
     printf("Upgrade-Complete, BMC rebooting...\n");
