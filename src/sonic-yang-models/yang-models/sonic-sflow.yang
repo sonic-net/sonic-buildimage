@@ -47,6 +47,13 @@ module sonic-sflow{
         description "Add packet drop monitoring support";
     }
 
+    revision 2026-10-16 {
+        description
+            "Make the global container a presence container to distinguish
+             absent sFlow configuration from explicitly disabled configuration
+             when validating mutual exclusion with PORT_MIRROR_SAMPLE.";
+    }
+
     typedef sample_direction {
         type enumeration {
             enum rx {
@@ -152,6 +159,8 @@ module sonic-sflow{
             description "Global sFlow configuration.";
 
             container global {
+                presence "Global sFlow configuration is explicitly configured.";
+                // Do not create global from default leaf values when it is absent.
                 description "Global sFlow parameters including admin state, polling interval, and agent ID.";
 
                 leaf admin_state {

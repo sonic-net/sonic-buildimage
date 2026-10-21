@@ -137,5 +137,156 @@
     "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
         "desc": "Configuring SPAN entry with truncate_size (ERSPAN only).",
         "eStrKey": "When"
+    },
+    "PORT_MIRROR_SAMPLE_VALID_PORT_RX": {
+        "desc": "Accept a sampled binding: valid port rx."
+    },
+    "PORT_MIRROR_SAMPLE_VALID_PORTCHANNEL_RX": {
+        "desc": "Accept a sampled binding: valid portchannel rx."
+    },
+    "PORT_MIRROR_SAMPLE_VALID_PORTCHANNEL_TX": {
+        "desc": "Accept a sampled binding: valid portchannel tx."
+    },
+    "PORT_MIRROR_SAMPLE_VALID_SAMPLE_RATE_MIN": {
+        "desc": "Accept a sampled binding: valid sample rate min."
+    },
+    "PORT_MIRROR_SAMPLE_VALID_SAMPLE_RATE_MAX": {
+        "desc": "Accept a sampled binding: valid sample rate max."
+    },
+    "PORT_MIRROR_SAMPLE_SHARED_EXPORT_DISTINCT_POLICIES": {
+        "desc": "Accept bindings sharing an export with independent rates and optional truncation, including both truncation boundaries."
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_SAMPLE_RATE_ONE": {
+        "desc": "Reject a sampled binding with sample_rate=1.",
+        "eStr": [
+            "Sample rate must be in range 2..max"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_SAMPLE_RATE_OVERFLOW": {
+        "desc": "Reject a sampled binding with sample_rate=4294967296.",
+        "eStrKey": "Bounds"
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_TRUNCATE_SIZE_BELOW_MIN": {
+        "desc": "Reject a sampled binding with truncate_size=63.",
+        "eStr": [
+            "Truncate size must be 64..9216"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_TRUNCATE_SIZE_ABOVE_MAX": {
+        "desc": "Reject a sampled binding with truncate_size=9217.",
+        "eStr": [
+            "Truncate size must be 64..9216"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_DIRECTION_BOTH": {
+        "desc": "Reject a sampled binding with direction=both.",
+        "eStr": [
+            "Invalid enumeration"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_ADMIN_STATE": {
+        "desc": "Reject a sampled binding with admin_state=invalid.",
+        "eStr": [
+            "Invalid enumeration"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_PORT_REFERENCE": {
+        "desc": "Reject a sampled binding with port=Ethernet999.",
+        "eStr": [
+            "Invalid union"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_PORTCHANNEL_REFERENCE": {
+        "desc": "Reject a sampled binding with port=PortChannel999.",
+        "eStr": [
+            "Invalid union"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_MIRROR_SESSION_REFERENCE": {
+        "desc": "Reject a sampled binding with mirror_session=missing.",
+        "eStrKey": "LeafRef"
+    },
+    "PORT_MIRROR_SAMPLE_MISSING_SAMPLE_RATE": {
+        "desc": "Reject a sampled binding without mandatory sample_rate.",
+        "eStrKey": "Mandatory"
+    },
+    "PORT_MIRROR_SAMPLE_MISSING_MIRROR_SESSION": {
+        "desc": "Reject a sampled binding without mandatory mirror_session.",
+        "eStrKey": "Mandatory"
+    },
+    "PORT_MIRROR_SAMPLE_DUPLICATE_KEY": {
+        "desc": "Reject two bindings with the same port and direction.",
+        "eStr": [
+            "Duplicate"
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_SPAN_EXPORT_REJECTED": {
+        "desc": "Reject a sampled binding referencing a SPAN session.",
+        "eStr": [
+            "The referenced mirror session must be ERSPAN."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_EXPORT_WITH_SRC_PORT_REJECTED": {
+        "desc": "Reject a sampled binding whose export configures src_port.",
+        "eStr": [
+            "A sampled export session must not configure src_port."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_EMPTY_BINDING_OMITTED_CONFLICT": {
+        "desc": "Reject an explicitly configured empty sFlow global entry together with a PORT_MIRROR_SAMPLE entry whose admin_state is omitted.",
+        "eStr": [
+            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_UP_CONFLICT": {
+        "desc": "Reject coexistence when sFlow global admin_state is up and PORT_MIRROR_SAMPLE entry admin_state is up.",
+        "eStr": [
+            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_DOWN_CONFLICT": {
+        "desc": "Reject coexistence when sFlow global admin_state is up and PORT_MIRROR_SAMPLE entry admin_state is down.",
+        "eStr": [
+            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_UP_CONFLICT": {
+        "desc": "Reject coexistence when sFlow global admin_state is down and PORT_MIRROR_SAMPLE entry admin_state is up.",
+        "eStr": [
+            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_DOWN_CONFLICT": {
+        "desc": "Reject coexistence when sFlow global admin_state is down and PORT_MIRROR_SAMPLE entry admin_state is down.",
+        "eStr": [
+            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_WITHOUT_GLOBAL_ALLOWED": {
+        "desc": "Accept sampled bindings without explicit sFlow global: sflow without global allowed."
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_DIFFERENT_PORT_CONFLICT": {
+        "desc": "Reject global coexistence even when sampling uses different ports and the mirror binding is disabled.",
+        "eStr": [
+            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
+        ]
+    },
+    "PORT_MIRROR_SAMPLE_ABSENT_UNSAMPLED_WITH_SFLOW_ALLOWED": {
+        "desc": "Preserve existing session schema behavior with sFlow when no sampled binding exists: unsampled."
+    },
+    "PORT_MIRROR_SAMPLE_DEFAULT_ADMIN_STATE": {
+        "desc": "Verify a binding without admin_state defaults to down when sFlow global is absent.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-mirror-session:sonic-mirror-session/PORT_MIRROR_SAMPLE/PORT_MIRROR_SAMPLE_LIST[port='Ethernet0'][direction='tx']/port",
+            "key": "sonic-mirror-session:admin_state",
+            "value": "down"
+        }
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_SAMPLE_RATE_ONE_WITH_TRUNCATE": {
+        "desc": "Reject sample_rate=1 even when a valid truncate_size=128 is configured.",
+        "eStr": [
+            "Sample rate must be in range 2..max"
+        ]
     }
 }
