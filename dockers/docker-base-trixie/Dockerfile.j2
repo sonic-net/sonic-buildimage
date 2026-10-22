@@ -64,9 +64,6 @@ COPY ["pip.conf", "/etc/pip.conf"]
 # For templating
 RUN pip3 install jinjanator
 
-# Add support for supervisord to handle startup dependencies
-RUN pip3 install supervisord-dependent-startup==1.4.0
-
 RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
 
 # Uninstall unused dependencies
