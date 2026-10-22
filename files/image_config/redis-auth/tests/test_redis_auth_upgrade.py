@@ -25,6 +25,8 @@ def restore(config, prefix='', pending=True):
     command = shlex.split(unit['Service']['ExecStartPre'])
     assert command[:2] == ['/bin/sh', '-c'] and len(command) == 3
     script = command[2].replace('/etc/sonic', shlex.quote(str(config)))
+    script = script.replace('/usr/share/sonic/redis-auth/build-enabled',
+                            shlex.quote(str(config / 'build-enabled')))
     return subprocess.run(command[:2] + [prefix + script], capture_output=True, text=True)
 
 
@@ -85,6 +87,15 @@ def test_copy_failure_stops_restoration(tmp_path):
     backup.mkdir()
     (backup / 'redis-auth.json').write_text('{"redis":"enforce"}')
     assert restore(tmp_path, 'cp() { return 7; }\n').returncode == 7
+    assert not (tmp_path / 'redis-auth.json').exists()
+
+
+def test_build_disabled_skips_restoration_failure(tmp_path):
+    backup = tmp_path / 'old_config'
+    backup.mkdir()
+    (backup / 'redis-auth.json').write_text('{"redis":"enforce"}')
+    (tmp_path / 'build-enabled').write_text('n\n')
+    assert restore(tmp_path, 'cp() { return 7; }\n').returncode == 0
     assert not (tmp_path / 'redis-auth.json').exists()
 
 

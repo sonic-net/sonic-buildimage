@@ -454,6 +454,7 @@ export FRR_USER_UID
 export FRR_USER_GID
 export INCLUDE_FIPS
 export ENABLE_FIPS
+export ENABLE_REDIS_WRITE_PROTECTION
 export ENABLE_DIALOUT
 
 ###############################################################################
@@ -489,6 +490,7 @@ $(info "SECURE_UPGRADE_PROD_TOOL_ARGS"   : "$(SECURE_UPGRADE_PROD_TOOL_ARGS)")
 $(info "ONIE_IMAGE_PART_SIZE"            : "$(ONIE_IMAGE_PART_SIZE)")
 $(info "SHUTDOWN_BGP_ON_START"           : "$(SHUTDOWN_BGP_ON_START)")
 $(info "ENABLE_PFCWD_ON_START"           : "$(ENABLE_PFCWD_ON_START)")
+$(info "ENABLE_REDIS_WRITE_PROTECTION"  : "$(ENABLE_REDIS_WRITE_PROTECTION)")
 $(info "SONIC_BUFFER_MODEL"              : "$(SONIC_BUFFER_MODEL)")
 $(info "INSTALL_DEBUG_TOOLS"             : "$(INSTALL_DEBUG_TOOLS)")
 $(info "ROUTING_STACK"                   : "$(SONIC_ROUTING_STACK)")

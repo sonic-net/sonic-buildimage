@@ -403,11 +403,19 @@ install_deb_package $debs_path/sonic-host-services-rs_*.deb
 # Install sonic-db-cli
 install_deb_package $debs_path/sonic-db-cli_*.deb
 
-# Install Redis password preparation; startup remains opt-in.
+# Install Redis password preparation and the image's activation permission.
+case "$ENABLE_REDIS_WRITE_PROTECTION" in
+    y|n) ;;
+    *) echo "ENABLE_REDIS_WRITE_PROTECTION must be y or n" >&2; exit 1 ;;
+esac
 sudo install -m 0755 $IMAGE_CONFIGS/redis-auth/redis_auth_prepare.py \
     $FILESYSTEM_ROOT/usr/bin/redis_auth_prepare.py
 sudo install -m 0755 $IMAGE_CONFIGS/redis-auth/redis_auth_startup.py \
     $FILESYSTEM_ROOT/usr/bin/redis_auth_startup.py
+sudo install -d -m 0755 $FILESYSTEM_ROOT/usr/share/sonic/redis-auth
+printf '%s\n' "$ENABLE_REDIS_WRITE_PROTECTION" | \
+    sudo tee $FILESYSTEM_ROOT/usr/share/sonic/redis-auth/build-enabled > /dev/null
+sudo chmod 0644 $FILESYSTEM_ROOT/usr/share/sonic/redis-auth/build-enabled
 sudo install -m 0644 $IMAGE_CONFIGS/redis-auth/redis-auth-prepare.service \
     $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/redis-auth-prepare.service
 

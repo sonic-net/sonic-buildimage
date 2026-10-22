@@ -13,6 +13,7 @@ from redis_auth_prepare import CredentialStateError, prepare_credential
 
 INTENT = Path('/etc/sonic/redis-auth.json')
 RUNTIME = Path('/run/redis-auth')
+BUILD_SETTING = Path('/usr/share/sonic/redis-auth/build-enabled')
 SOCKETS = {'redis': '/var/run/redis/redis.sock',
            'redis_bmp': '/var/run/redis/redis_bmp.sock'}
 USERNAME = 'sonic-trusted-writer'
@@ -25,18 +26,33 @@ READ_RULES = ('reset on nopass ~* &* -@all +@read +@transaction '
               '+eval +evalsha +eval_ro +evalsha_ro +script|exists +script|load')
 
 
-def selected_processes(path=INTENT):
-    """Read root-controlled boot intent. An absent setting keeps legacy mode."""
-    try:
-        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC)
-    except FileNotFoundError:
-        return []
+def read_setting(path):
+    """Read a regular, root-controlled startup setting."""
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC)
     with os.fdopen(fd) as stream:
         info = os.fstat(stream.fileno())
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
                 or info.st_mode & 0o022):
             raise CredentialStateError('unsafe Redis activation setting')
-        intent = json.load(stream)
+        return stream.read()
+
+
+def build_enabled():
+    try:
+        value = read_setting(BUILD_SETTING).strip()
+    except FileNotFoundError:
+        return False
+    if value not in ('y', 'n'):
+        raise CredentialStateError('invalid Redis build setting')
+    return value == 'y'
+
+
+def selected_processes(path=INTENT):
+    """Read root-controlled boot intent. An absent setting keeps legacy mode."""
+    try:
+        intent = json.loads(read_setting(path))
+    except FileNotFoundError:
+        return []
     if (not isinstance(intent, dict) or set(intent) - SOCKETS.keys()
             or any(mode not in ('legacy', 'enforce') for mode in intent.values())):
         raise CredentialStateError('expected local Redis process names with legacy or enforce mode')
@@ -58,7 +74,7 @@ def atomic(path, content, mode=0o644):
 def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
     if os.geteuid() != 0:
         raise CredentialStateError('must run as root')
-    selected = selected_processes(intent_path)
+    selected = selected_processes(intent_path) if build_enabled() else []
     if not selected:
         # Changing activation requires a controlled host reboot, not a live flip.
         if (runtime / 'local.json').exists():
@@ -91,7 +107,7 @@ def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
 
 
 def runtime_required(*, intent_path=INTENT, runtime=RUNTIME):
-    selected = selected_processes(intent_path)
+    selected = selected_processes(intent_path) if build_enabled() else []
     if not selected:
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot')

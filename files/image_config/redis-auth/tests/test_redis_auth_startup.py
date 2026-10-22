@@ -71,6 +71,9 @@ class StartupTest(unittest.TestCase):
         self.root.chmod(0o755)
         self.runtime = self.root / 'run'
         self.intent = self.root / 'intent.json'
+        enabled = mock.patch.object(startup, 'build_enabled', return_value=True)
+        enabled.start()
+        self.addCleanup(enabled.stop)
 
     def select(self, **modes):
         self.intent.write_text(json.dumps(modes))
