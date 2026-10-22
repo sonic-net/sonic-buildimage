@@ -84,7 +84,7 @@ libunwind-dev==1.8.1-0.1
 libunwind8==1.8.1-0.1
 libwtmpdb0==0.73.0-3+deb13u1
 libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u3
-linux-libc-dev==6.12.111-1
+linux-libc-dev==6.12.113-1
 logrotate==3.22.0-1
 lucius-libsai==1.0-3
 lucius-pkthandler==1.0-2
