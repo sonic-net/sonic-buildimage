@@ -1,0 +1,171 @@
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+fdisk -l
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+onie-fw-update show-pending
+onie-fw-update add /tmp/00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update update
+onie-fw-update show-pending
+onie-fw-update remove old.bin
+onie-fw-update remove 00-x.rom
+onie-fw-update add /tmp/00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update update
+onie-fw-update show-pending
+onie-fw-update remove old.bin
+onie-fw-update remove 00-x.rom
+onie-fw-update show-pending
+onie-fw-update show-pending
+onie-fw-update add /tmp/00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update show-pending
+onie-fw-update show-pending
+onie-fw-update add /tmp/00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update update
+onie-fw-update show-pending
+onie-fw-update remove 00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update show-pending
+onie-fw-update add /tmp/00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update update
+onie-fw-update show-pending
+onie-fw-update remove 00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update show-pending
+onie-fw-update show-pending
+onie-fw-update add /tmp/00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update update --no-reboot
+onie-fw-update add /tmp/00-onie-updater-x86_64-mlnx_x86-r0
+onie-fw-update show-pending
+ssd -q
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -y -u -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -y -u -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q -i /tmp/c/fw/ssd.pkg
+ssd -q
+ssd -q
+ssd -q
+ssd -y -u -i /tmp/c/fw/ssd.pkg
+ssd -y -u -i /tmp/c/fw/ssd.pkg
+ssd -y -u -i /tmp/c/fw/ssd.pkg
+ssd -y -u -i /tmp/c/fw/ssd.pkg
+dmidecode --oem-string 1
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+dmidecode --oem-string 1
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/c/fw/cpld.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/mpfa-lqxiwl6v/burn.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/c/fw/cpld.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/c/fw/cpld.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/mpfa-sr6ediuy/burn.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/c/fw/cpld.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/mpfa-kw55y08i/burn.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/mpfa-kw55y08i/refresh.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/mpfa-9p3twatf/burn.vme
+asic_detect 
+mst start
+asic_detect -m
+cpldupdate --dev /dev/mst/mt53100_pci_cr0 --print-progress /tmp/c/fw/cpld.vme
+mst stop
+asic_detect 
+mst start
+asic_detect -m
+cpldupdate --dev /dev/mst/mt53100_pci_cr0 --print-progress /tmp/c/fw/cpld.vme
+mst stop
+asic_detect 
+mst start
+asic_detect 
+mst start
+asic_detect -m
+cpldupdate --dev /dev/mst/mt53100_pci_cr0 --print-progress /tmp/c/fw/cpld.vme
+mst stop
+asic_detect 
+mst start
+asic_detect -m
+mst stop
+asic_detect 
+mst start
+asic_detect -m
+mst stop
+asic_detect 
+mst start
+asic_detect -m
+mst stop
+asic_detect 
+mst start
+asic_detect -m
+cpldupdate --dev /dev/mst/mt53100_pci_cr0 --print-progress /tmp/c/fw/cpld.vme
+mst stop
+cpldupdate --gpio --print-progress /tmp/c/fw/cpld.vme
+cpldupdate --gpio --print-progress /tmp/c/fw/cpld.vme
+asic_detect 
+mst start
+asic_detect -m
+cpldupdate --dev /dev/mst/mt53100_pci_cr0 --print-progress /tmp/c/fw/cpld.vme
+mst stop
+fdisk -l
+mount -n -r -t ext4 /dev/sda1 /mnt/onie-fs
+onie-fw-update show-pending
+onie-fw-update show-pending
+onie-fw-update show-pending
+onie-fw-update show-pending

@@ -1,0 +1,53 @@
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+
+SPATH := $($(MLNX_PLATFORM_API_RS)_SRC_PATH)
+# The crate, the hw-mgmt crate it depends on, and the directory both are built
+# through.  Only the regular files of platform-api-rs-crates: its links point
+# at crates whose files are listed here, and a link to a directory is not
+# something to hash.
+MLNX_PLATFORM_API_RS_FILES := $(shell git ls-files -- $(SPATH) $(PLATFORM_PATH)/hw-mgmt-rs) \
+	$(shell git ls-files -s -- $(PLATFORM_PATH)/platform-api-rs-crates | awk '$$1 != "120000" {print $$4}')
+
+DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/mlnx-platform-api-rs.mk $(PLATFORM_PATH)/mlnx-platform-api-rs.dep
+DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES += $(MLNX_PLATFORM_API_RS_FILES)
+
+# The sonic-platform-common crates the tests compile against through those
+# links, and the stubs they are generated from: without them a platform-base
+# change would be served the cached receipt, tests not run.  Through DEP_FILES,
+# as rules/sonic-pmon-daemons-rs.dep takes the same directories, and under a
+# name of its own, as .dep files share make's namespace.
+MLNX_PLATFORM_API_RS_PC := $(SRC_PATH)/sonic-platform-common
+DEP_FILES += $(addprefix $(MLNX_PLATFORM_API_RS_PC)/,$(shell cd $(MLNX_PLATFORM_API_RS_PC) && git ls-files sonic_platform_api crates))
+
+$(MLNX_PLATFORM_API_RS)_CACHE_MODE := GIT_CONTENT_SHA
+$(MLNX_PLATFORM_API_RS)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)
+$(MLNX_PLATFORM_API_RS)_DEP_FILES := $(DEP_FILES)
+
+# The crate is compiled into the Rust pmon daemons, so a change to it, or to the
+# cargo config that puts it there, has to rebuild them -- otherwise the cache
+# serves daemons linked against the previous crate.  rules/sonic-pmon-daemons-rs.dep
+# names no vendor, so the vendor appends itself here; that file already takes
+# the sonic-platform-common crates.
+$(SONIC_THERMALCTLD_RS)_DEP_FILES += $(PLATFORM_PATH)/mlnx-platform-api-rs.mk $(PLATFORM_PATH)/mlnx-platform-api-rs.dep
+$(SONIC_THERMALCTLD_RS)_DEP_FILES += $(MLNX_PLATFORM_API_RS_FILES)
+# The cargo config reaches the daemons' build environment by a path made of
+# $(PLATFORM_PATH) (mlnx-platform-api-rs.mk), so that is part of their key.
+$(SONIC_THERMALCTLD_RS)_DEP_FLAGS += $(PLATFORM_PATH)
