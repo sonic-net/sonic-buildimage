@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@ --buildsystem=meson
+
+override_dh_auto_configure:
+	dh_auto_configure -- -Dotp-platform=ast2700
+
+override_dh_auto_build:
+	ninja -C obj-* otp
+
+override_dh_auto_install:
+	install -D -m 0755 obj-*/otp debian/aspeed-app/usr/bin/otp

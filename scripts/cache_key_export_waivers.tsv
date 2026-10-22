@@ -69,3 +69,4 @@ PYTHON_WHEELS_PATH	output directory for independently keyed wheel artifacts; cha
 installer_python_wheels	wheel list rendered by sonic_debian_extension.j2 and consumed only after the cached RFS first-stage exit in build_debian.sh; the final installer stage is always rebuilt
 scapy_wheel	patched wheel installed only after the cached RFS first-stage exit in build_debian.sh, including after rootfs restore; the final installer stage is always rebuilt
 DBGOPT	shell tracing option only (set -x); does not change rootfs content and is intentionally excluded from RFS_INLINE_ENV_FLAGS in Makefile.cache
+PLATFORM_PATH	filesystem path to the platform directory (e.g. platform/aspeed); set once per build by rules.mk and constant for a given CONFIGURED_PLATFORM, which is already in the cache key; the path itself is relocation-only and used identically by all platform recipes (mctp, pldm-fw-cli, aspeed-app, etc.)
