@@ -40,7 +40,7 @@ build-essential==12.9
 byacc==1:2.0.20221106-1
 bzip2==1.0.8-5+b1
 bzip2-doc==1.0.8-5
-ca-certificates==20250419~deb12u1
+ca-certificates==20250419~deb12u2
 ca-certificates-java==20230710~deb12u1
 cdbs==0.4.166
 check==0.15.2-2+b1
@@ -106,7 +106,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.9.1-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.9.2-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -1273,8 +1273,8 @@ libsqlite3-0==3.40.1-2+deb12u2
 libsqlite3-dev==3.40.1-2+deb12u2
 libsratom-0-0==0.6.14-1
 libsrt1.5-gnutls==1.5.1-1+deb12u1
-libssh-4==0.10.6-0+deb12u2
-libssh-gcrypt-4==0.10.6-0+deb12u2
+libssh-4==0.10.6-0+deb12u3
+libssh-gcrypt-4==0.10.6-0+deb12u3
 libssh2-1==1.10.0-3+deb12u1
 libssl-dev==3.0.22-1~deb12u1
 libssl3==3.0.22-1~deb12u1
@@ -1561,12 +1561,12 @@ libzvbi0==0.2.41-1+deb12u1
 libzzip-0-13==0.13.72+dfsg.1-1.1
 licensecheck==3.3.5-1
 lintian==2.116.3+deb12u1
-linux-compiler-gcc-12-x86==6.1.187-1
-linux-headers-6.1.0-53-amd64==6.1.187-1
-linux-headers-6.1.0-53-common==6.1.187-1
-linux-headers-amd64==6.1.187-1
-linux-kbuild-6.1==6.1.187-1
-linux-libc-dev==6.1.187-1
+linux-compiler-gcc-12-x86==6.1.190-1
+linux-headers-6.1.0-54-amd64==6.1.190-1
+linux-headers-6.1.0-54-common==6.1.190-1
+linux-headers-amd64==6.1.190-1
+linux-kbuild-6.1==6.1.190-1
+linux-libc-dev==6.1.190-1
 linuxdoc-tools==0.9.82-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
