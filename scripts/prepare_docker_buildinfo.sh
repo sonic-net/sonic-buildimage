@@ -39,7 +39,8 @@ if [ -z "$DISTRO" ]; then
     DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/os-release | grep VERSION_CODENAME | cut -d= -f2)
     if [ -z "$DISTRO" ]; then
         DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/apt/sources.list | grep deb.debian.org | awk '{print $3}')
-        [ -z "$DISTRO" ] && DISTRO=jessie
+        # Fall back to the build environment's own release
+        [ -z "$DISTRO" ] && DISTRO=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2)
     fi
 fi
 

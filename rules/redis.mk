@@ -1,7 +1,6 @@
 # redis package
 # TODO: docker-sonic-p4 depends on redis-tools in Jessie.
 #       Remove this file and src/redis after that resolved.
-ifneq ($(BLDENV),buster)
 
     REDIS_VERSION = 5.0.3-3~bpo9+2
 
@@ -24,5 +23,3 @@ ifneq ($(BLDENV),buster)
     # are archived into debug one image to facilitate debugging.
     #
     DBG_SRC_ARCHIVE += redis
-
-endif
