@@ -199,12 +199,54 @@ def build_model(sections, order, critical):
     return progs, prog_order, deps, types
 
 
+SIGNALS = {"HUP": 1, "INT": 2, "QUIT": 3, "KILL": 9, "USR1": 10, "USR2": 12, "TERM": 15}
+
+
+def stop_signal(name):
+    """supervisord stopsignal (TERM, KILL, INT, ...) -> signal number for s6's down-signal."""
+    n = str(name).strip().upper()
+    if n.startswith("SIG"):
+        n = n[3:]
+    if n.isdigit():
+        return int(n)
+    return SIGNALS.get(n, 15)
+
+
+def stop_wait_ms(secs):
+    """supervisord stopwaitsecs -> s6 timeout-kill milliseconds (default 10 s, like supervisord)."""
+    try:
+        return max(1, int(float(str(secs).strip()) * 1000))
+    except ValueError:
+        return 10000
+
+
+# supervisord program keys the converter maps to s6 (anything else is ignored; see IGNORED_KEYS).
+HANDLED_KEYS = {"command", "autostart", "autorestart", "exitcodes", "user", "environment",
+                "dependent_startup", "dependent_startup_wait_for", "stdout_syslog",
+                "stopsignal", "stopwaitsecs"}
+# Known-ignored keys, deliberately: s6 has no equivalent, or it is irrelevant to the program.
+#   priority          ordering comes from the dependent_startup edges
+#   startsecs/startretries  s6 restarts a longrun unconditionally (autorestart semantics only)
+#   stdout_logfile/stderr_logfile=NONE  output goes to syslog (stdout_syslog) or the console
+#   stderr_syslog     stderr is always folded into stdout when stdout_syslog is on
+#   stdout_capture_maxbytes  no capture mode
+IGNORED_KEYS = {"priority", "startsecs", "startretries", "stdout_logfile", "stderr_logfile",
+                "stderr_syslog", "stdout_capture_maxbytes"}
+
+
 def _execline_quote(arg):
     return '"' + arg.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def _command_line(argv, user, env_pairs=None):
+def _command_line(argv, user, env_pairs=None, syslog_tag=None):
     parts = ["with-contenv"]
+    if syslog_tag:
+        # supervisord's stdout_syslog/stderr_syslog=true: pipe the program's output
+        # (stderr folded into stdout) to syslog tagged with the program name.
+        # `pipeline -w` keeps the daemon as the parent process (s6 supervises the
+        # daemon pid) and runs logger as the reader child.
+        parts += ["pipeline", "-w", "{", "logger", "-t", _execline_quote(syslog_tag), "}",
+                  "fdmove", "-c", "2", "1"]
     if env_pairs:
         parts += ["s6-env"] + [_execline_quote("%s=%s" % (k, v)) for k, v in env_pairs]
     if user:
@@ -246,8 +288,14 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
         argv = shlex.split(progs[pname]["command"])
         user = progs[pname].get("user")
         env_pairs = parse_environment(progs[pname].get("environment", ""))
-        cmd = _command_line(argv, user, env_pairs)
+        syslog_tag = pname if _truthy(progs[pname].get("stdout_syslog", "false")) else None
+        cmd = _command_line(argv, user, env_pairs, syslog_tag)
         if t == "longrun":
+            # supervisord stopsignal/stopwaitsecs (defaults TERM / 10 s then SIGKILL)
+            _write(os.path.join(sd, "down-signal"),
+                   str(stop_signal(progs[pname].get("stopsignal", "TERM"))) + "\n")
+            _write(os.path.join(sd, "timeout-kill"),
+                   str(stop_wait_ms(progs[pname].get("stopwaitsecs", "10"))) + "\n")
             _write(os.path.join(sd, "run"),
                    "#!/command/execlineb -P\n" + cmd + "\n", 0o755)
             autorestart = progs[pname].get("autorestart", "false").strip().lower()
