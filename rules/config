@@ -555,3 +555,11 @@ SBOM_STRICT ?= y
 # just disabled at runtime. Default off; enable in a profile (e.g.
 # config.EMBEDDED) when the optimization is desired.
 OPTIMIZE_CLI ?= n
+
+# OPTIMIZE_SUPD_S6 - replace supervisord with s6-overlay as PID 1 / process
+# supervisor in derived docker containers (docker-base-trixie). The
+# supervisord2s6 shim converts each container's supervisord.conf into an
+# s6-rc service tree at startup; the supervisorctl shim keeps system-health
+# and monit working. Containers that do not run the entrypoint as PID 1
+# (e.g. --pid=host) fall back to the real supervisord. Default off.
+OPTIMIZE_SUPD_S6 ?= n
