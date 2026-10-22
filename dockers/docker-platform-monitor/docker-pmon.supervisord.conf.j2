@@ -340,16 +340,11 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
     the Rust path: a platform still on it is one the facade has not been
     exercised against.
 #}
-{% set use_rust = use_rust_thermalctld %}
-{% set base_command = (
-    "/usr/bin/thermalctld-rs"
-    if use_rust and API_VERSION == 3 and 'thermalctld' not in python2_daemons
-    else (
-        "python3 /usr/local/bin/thermalctld"
-        if API_VERSION == 3 and 'thermalctld' not in python2_daemons
-        else "python2 /usr/local/bin/thermalctld"
-    )
-) %}
+{% set py3 = API_VERSION == 3 and 'thermalctld' not in python2_daemons %}
+{% set use_rust = use_rust_thermalctld and py3 %}
+{% set base_command = "/usr/bin/thermalctld-rs"
+   if use_rust
+   else ("python3 " if py3 else "python2 ") + "/usr/local/bin/thermalctld" %}
 {% set options = "" -%}
 
 {% if thermalctld is defined %}
@@ -377,7 +372,8 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 {#
     Only the Rust binary takes this one: the Python thermalctld shares every
     option above but has no platform API to choose, and an unknown argument
-    would stop it starting.
+    would stop it starting.  Hence `use_rust` is the choice made above, not the
+    key: a Python 2 platform that sets the key still runs the Python daemon.
 #}
 {% if use_rust %}
 {%- set options = options ~ " --platform-api " ~ (platform_api_thermalctld | default("pyo3")) %}
