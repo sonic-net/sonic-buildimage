@@ -3,9 +3,10 @@
 syncd.service ExecStopPost hook for Nexthop platforms.
 
 When syncd stops, power-cycle the ASIC via /usr/local/bin/asic_init.sh to
-recover from any errors potentially.Skip the power-cycle if
-warm-reboot or fast-reboot orchestration is in progress — in that case
-the ASIC must be left intact for the upcoming kexec.
+recover from any errors potentially. Skip the power-cycle if a warm
+restart of syncd (system warm-reboot or a service-level syncd warm
+restart) or a fast-reboot is in progress: the ASIC must be left intact for
+the warm start that follows.
 
 Wired in via a per-platform syncd.service.d/*.conf override:
     [Service]
@@ -23,6 +24,7 @@ SONIC_DB_CLI = "sonic-db-cli"
 DB_CLI_TIMEOUT_S = 5
 
 WARM_RESTART_ENABLE_KEY = ("WARM_RESTART_ENABLE_TABLE|system", "enable")
+SYNCD_WARM_RESTART_ENABLE_KEY = ("WARM_RESTART_ENABLE_TABLE|syncd", "enable")
 FAST_RESTART_ENABLE_KEY = ("FAST_RESTART_ENABLE_TABLE|system", "enable")
 
 
@@ -43,7 +45,7 @@ def _state_db_hget(key, field):
 
 
 def is_warm_or_fast_reboot_in_progress():
-    for key, field in (WARM_RESTART_ENABLE_KEY, FAST_RESTART_ENABLE_KEY):
+    for key, field in (WARM_RESTART_ENABLE_KEY, SYNCD_WARM_RESTART_ENABLE_KEY, FAST_RESTART_ENABLE_KEY):
         if _state_db_hget(key, field) == "true":
             syslog.syslog(syslog.LOG_INFO, f"{key} {field}=true in STATE_DB")
             return True
@@ -59,10 +61,10 @@ def main():
     syslog.openlog("syncd_post_stop")
 
     if is_warm_or_fast_reboot_in_progress():
-        syslog.syslog(syslog.LOG_INFO, "syncd stop during warm/fast reboot: leaving ASIC up for kexec")
+        syslog.syslog(syslog.LOG_INFO, "syncd stop during warm restart or fast reboot: leaving ASIC up for the warm start")
         return 0
 
-    syslog.syslog(syslog.LOG_INFO, "syncd stop without warm/fast reboot: power-cycling ASIC to reinitialize")
+    syslog.syslog(syslog.LOG_INFO, "syncd stop without warm restart or fast reboot: power-cycling ASIC to reinitialize")
     os.execv(ASIC_INIT, [ASIC_INIT])
 
 
