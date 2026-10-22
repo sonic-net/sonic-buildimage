@@ -37,6 +37,10 @@ import shlex
 import shutil
 
 HALT_CMD = "/run/s6/basedir/bin/halt"
+# supervisorctl stop/restart (shim) drops a marker here first so the critical-process
+# finish script can tell a requested stop from a crash (supervisord reports requested
+# stops as STOPPED, which supervisor-proc-exit-listener ignores).
+EXPECTED_DIR = "/run/s6-expected"
 DEFAULT_BASE_CONF = "/etc/supervisor/supervisord.conf"
 DEFAULT_CONFD_GLOB = "/etc/supervisor/conf.d/*.conf"
 DEFAULT_CRITICAL = "/etc/supervisor/critical_processes"
@@ -304,6 +308,10 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
                 # (mirrors supervisor-proc-exit-listener)
                 _write(os.path.join(sd, "finish"),
                        "#!/command/with-contenv sh\n"
+                       "if [ -e " + EXPECTED_DIR + "/" + pname + " ]; then\n"
+                       "    rm -f " + EXPECTED_DIR + "/" + pname + "\n"
+                       "    exit 0\n"
+                       "fi\n"
                        'logger -t s6-super "critical process ' + pname +
                        ' exited (code=$1 signal=$2); halting container for restart"\n'
                        "exec " + HALT_CMD + "\n", 0o755)

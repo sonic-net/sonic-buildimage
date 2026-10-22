@@ -18,6 +18,7 @@ import sys
 import subprocess
 
 SCANDIR = "/run/service"
+EXPECTED_DIR = "/run/s6-expected"      # keep in sync with supervisord2s6.EXPECTED_DIR
 # s6-overlay puts its tools in /command; fall back to PATH.
 S6_SVSTAT = "/command/s6-svstat" if os.path.exists("/command/s6-svstat") else "s6-svstat"
 S6_SVC = "/command/s6-svc" if os.path.exists("/command/s6-svc") else "s6-svc"
@@ -127,11 +128,19 @@ def cmd_ctl(action, args):
     flag = {"start": "-u", "stop": "-d", "restart": "-r"}[action]
     rc = 0
     for name in args:
-        path = os.path.join(SCANDIR, _resolve(name))
+        svc = _resolve(name)
+        path = os.path.join(SCANDIR, svc)
         if not os.path.isdir(path):
             print("%s: ERROR (no such process)" % name)
             rc = 1
             continue
+        if action in ("stop", "restart"):
+            # a requested stop must not look like a crash to a critical process' finish script
+            try:
+                os.makedirs(EXPECTED_DIR, exist_ok=True)
+                open(os.path.join(EXPECTED_DIR, svc), "w").close()
+            except OSError:
+                pass
         try:
             subprocess.run([S6_SVC, flag, path], timeout=10)
             print("%s: %s" % (name, "started" if action == "start"
