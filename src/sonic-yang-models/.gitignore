@@ -66,3 +66,8 @@ yang-models/sonic-extension.yang
 yang-models/sonic-policer.yang
 yang-models/sonic-types.yang
 cvlyang-models/
+
+# Standalone Bazel outputs and generated validation evidence.
+/bazel-*
+/MODULE.bazel.lock
+/artifacts/

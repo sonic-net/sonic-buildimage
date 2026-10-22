@@ -129,7 +129,20 @@ pip.parse(
     python_version = "3.13",
     requirements_lock = "//dockers/docker-orchagent/config:requirements_lock.txt",
 )
-use_repo(pip, "config_engine_pip", "swss_config_pip")
+
+# The YANG model package is also a standalone module. Declare its execution
+# dependencies here so image-root consumers can load its targets and fixture.
+pip.parse(
+    hub_name = "image_yang_models_pip",
+    python_version = "3.13",
+    requirements_lock = "//src/sonic-yang-models:requirements_lock.txt",
+)
+use_repo(
+    pip,
+    "config_engine_pip",
+    "swss_config_pip",
+    sonic_yang_models_pip = "image_yang_models_pip",
+)
 
 gcc = use_extension("@sonic_build_infra//toolchains/gcc:extensions.bzl", "gcc")
 use_repo(gcc, "gcc_toolchains")

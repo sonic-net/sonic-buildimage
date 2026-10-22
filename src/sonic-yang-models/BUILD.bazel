@@ -1,4 +1,70 @@
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load(":prepared_yang_models.bzl", "prepared_yang_models")
+
+package(default_visibility = ["//visibility:private"])
+
+exports_files(["requirements_lock.txt"])
+
+# The image config-engine tests also consume this source fixture.
 exports_files(
     ["tests/files/sample_config_db.json"],
     visibility = ["//tools/bazel/tests:__pkg__"],
+)
+
+py_binary(
+    name = "prepare_yang_models",
+    srcs = ["prepare_yang_models.py"],
+    python_version = "3.13",
+    deps = [
+        "@sonic_yang_models_pip//jinja2",
+        "@sonic_yang_models_pip//pytest_runner",
+        "@sonic_yang_models_pip//setuptools",
+        "@sonic_yang_models_pip//wheel",
+    ],
+)
+
+prepared_yang_models(
+    name = "model_distribution",
+    readme = "README.rst",
+    setup = "setup.py",
+    sources = glob([
+        "yang-models/*.yang",
+        "yang-templates/*.yang.j2",
+    ]),
+)
+
+filegroup(
+    name = "yang_models",
+    srcs = [":model_distribution"],
+    output_group = "models",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "yang_models_wheel",
+    srcs = [":model_distribution"],
+    output_group = "wheel",
+    visibility = ["//visibility:public"],
+)
+
+wheel_layer(
+    name = "yang_models_pkg",
+    wheels = [":yang_models_wheel"],
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    visibility = ["//visibility:public"],
+)
+
+py_test(
+    name = "yang_models_package_test",
+    srcs = ["yang_models_package_test.py"],
+    args = [
+        "$(location :yang_models_pkg)",
+        "$(location :yang_models_wheel)",
+        "$(location :yang_models)",
+    ],
+    data = [":yang_models_pkg", ":yang_models_wheel", ":yang_models"],
+    python_version = "3.13",
+    visibility = ["//visibility:public"],
 )

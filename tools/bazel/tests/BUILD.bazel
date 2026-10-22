@@ -1,4 +1,3 @@
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
@@ -6,6 +5,7 @@ load("@config_engine_pip//:requirements.bzl", "requirement")
 load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
 load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES")
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
@@ -426,7 +426,6 @@ py_test(
     name = "select_apt_payloads_test",
     size = "small",
     srcs = ["integration/select_apt_payloads_test.py"],
-    main = "integration/select_apt_payloads_test.py",
     args = [
         "$(rootpath @orchagent_apt_inputs//:apt_inputs.bzl)",
         "$(rootpath //dockers/docker-orchagent:runtime_layer_policy)",
@@ -434,11 +433,12 @@ py_test(
         "$(rootpath //dockers/docker-orchagent/bazel:apt_inputs.MODULE.bazel)",
     ],
     data = [
-        "@orchagent_apt_inputs//:apt_inputs.bzl",
         "//dockers/docker-orchagent:runtime_layer_policy",
         "//dockers/docker-orchagent/bazel:apt.lock.json",
         "//dockers/docker-orchagent/bazel:apt_inputs.MODULE.bazel",
+        "@orchagent_apt_inputs//:apt_inputs.bzl",
     ],
+    main = "integration/select_apt_payloads_test.py",
     deps = [
         ":oci_base_fixture_lib",
         "//tools/bazel/oci:apt_selection",
