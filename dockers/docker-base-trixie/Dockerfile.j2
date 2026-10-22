@@ -52,7 +52,9 @@ RUN apt update &&            \
 # for sairedis zmq rpc channel
         libzmq5              \
         libwrap0            \
-        libatomic1
+        libatomic1{% if OPTIMIZE_SUPD_S6 == 'y' %}           \
+# for s6-overlay tarball extraction
+        xz-utils{% endif %}
 
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]
@@ -72,6 +74,47 @@ RUN pip3 install jinjanator
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
 RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
+{%- if OPTIMIZE_SUPD_S6 == 'y' %}
+
+# --- s6-overlay (OPTIMIZE_SUPD_S6=y): s6 replaces supervisord as the process
+# supervisor. The supervisord2s6 shim converts each container's already-rendered
+# supervisord.conf into an s6-rc service tree at startup; the supervisorctl shim
+# answers `status` from s6 so system-health and monit keep working.
+# The real supervisord/supervisorctl are kept as *.real (not overwritten).
+{% set s6_version = "3.2.0.2" %}
+{% set s6_noarch_sha256 = "6dbcde158a3e78b9bb141d7bcb5ccb421e563523babbe2c64470e76f4fd02dae" %}
+{% if CONFIGURED_ARCH == "armhf" %}
+{% set s6_arch = "armhf" %}
+{% set s6_arch_sha256 = "c8b8532fe4ec432898960e9ec9c903926454ce73588d4c94ad0e023f0b34fe39" %}
+{% elif CONFIGURED_ARCH == "arm64" %}
+{% set s6_arch = "aarch64" %}
+{% set s6_arch_sha256 = "8b22a2eaca4bf0b27a43d36e65c89d2701738f628d1abd0cea5569619f66f785" %}
+{% else %}
+{% set s6_arch = "x86_64" %}
+{% set s6_arch_sha256 = "59289456ab1761e277bd456a95e737c06b03ede99158beb24f12b165a904f478" %}
+{% endif %}
+{% set s6_base_url = "https://github.com/just-containers/s6-overlay/releases/download/v" + s6_version %}
+RUN curl -fsSL {{ s6_base_url }}/s6-overlay-noarch.tar.xz -o /tmp/s6-noarch.tar.xz && \
+    curl -fsSL {{ s6_base_url }}/s6-overlay-{{ s6_arch }}.tar.xz -o /tmp/s6-arch.tar.xz && \
+    echo "{{ s6_noarch_sha256 }}  /tmp/s6-noarch.tar.xz" | sha256sum -c - && \
+    echo "{{ s6_arch_sha256 }}  /tmp/s6-arch.tar.xz" | sha256sum -c - && \
+    tar -C / -Jxpf /tmp/s6-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-arch.tar.xz && \
+    rm -f /tmp/s6-noarch.tar.xz /tmp/s6-arch.tar.xz
+# Keep the real supervisor binaries as *.real, then install the shims in front.
+RUN for t in supervisord supervisorctl; do \
+        for d in /usr/local/bin /usr/bin; do \
+            if [ -e $d/$t ] && [ ! -L $d/$t ]; then mv $d/$t $d/$t.real; fi; \
+        done; \
+        test -e /usr/local/bin/$t.real -o -e /usr/bin/$t.real; \
+    done
+COPY ["s6/supervisord2s6.py", "/usr/local/bin/supervisord2s6"]
+COPY ["s6/supervisorctl", "/usr/local/bin/supervisorctl"]
+RUN chmod 0755 /usr/local/bin/supervisord2s6 /usr/local/bin/supervisorctl && \
+    ln -sf /usr/local/bin/supervisord2s6 /usr/local/bin/supervisord && \
+    ln -sf /usr/local/bin/supervisord2s6 /usr/bin/supervisord && \
+    ln -sf /usr/local/bin/supervisorctl  /usr/bin/supervisorctl
+{%- endif %}
 
 # Uninstall unused dependencies
 RUN apt autoremove -y --purge
