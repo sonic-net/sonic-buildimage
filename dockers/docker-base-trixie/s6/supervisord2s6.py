@@ -2,10 +2,11 @@
 """supervisord -> s6-overlay converter and drop-in replacement.
 
 Two modes:
-  * shim mode (default, installed as /usr/local/bin/supervisord): parse the
+  * shim mode (default, installed as /usr/local/bin/supervisord): when running as
+    PID 1, parse the
     already-rendered supervisord config chain + critical_processes, generate the
     s6-rc source tree under /etc/s6-overlay, then exec /init. This makes s6 the
-    only supervisor — there is intentionally no supervisord fallback.
+    only supervisor. When not PID 1 (e.g. --pid=host) exec supervisord.real.
   * offline mode (--emit-only): generate the tree from explicit --config /
     --critical into --out / --bundle-out, without exec'ing. Used to verify the
     converter against each container's captured config before building.
@@ -314,6 +315,18 @@ def convert(config=None, critical_path=DEFAULT_CRITICAL, outdir=S6_RC_D,
     return progs, prog_order, deps, types, critical
 
 
+REAL_SUPERVISORD = ("/usr/local/bin/supervisord.real", "/usr/bin/supervisord.real")
+
+
+def exec_real(argv):
+    """Replace this process with the real supervisord (kept as *.real)."""
+    for real in REAL_SUPERVISORD:
+        if os.path.exists(real):
+            os.execv(real, [real] + list(argv))
+    sys.stderr.write("supervisord2s6: supervisord.real not found\n")
+    return 127
+
+
 def main(argv):
     # offline emit mode for verification
     if "--emit-only" in argv:
@@ -341,6 +354,12 @@ def main(argv):
             star = "*" if p in critical and types[p] == "longrun" else " "
             print("  %-18s %-8s deps=%-24s crit=%s" % (p, types[p], d, star.strip() or "no"))
         return 0
+
+    # s6-overlay's /init only works as PID 1 (s6-linux-init falls back to
+    # telinit otherwise), e.g. never under `docker run --pid=host`. Anywhere
+    # else, behave exactly like the original supervisord.
+    if os.getpid() != 1:
+        return exec_real(argv)
 
     # shim mode: parse supervisord's -c if present, generate, exec /init
     cfg = None
