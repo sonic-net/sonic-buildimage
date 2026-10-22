@@ -1,0 +1,12 @@
+{
+    "chassis": {
+        "DCS-7050SX3-48YC8C": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {},
+                "PuffinPrimeSysCpld(addr=9-0023)": {},
+                "Scd(addr=0000:02:00.0)": {}
+            }
+        }
+    }
+}

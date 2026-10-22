@@ -574,6 +574,9 @@ write_platform_specific_cmdline() {
         aboot_machine=arista_7050sx3_48c8
         flash_size=7382
     fi
+    if [ "$sid" = "MarysvillePrime" ]; then
+        aboot_machine=arista_7050sx3_48yc8c
+    fi
     if [ "$sid" = "BlackhawkO" ]; then
         aboot_machine=arista_7060px4_32
         flash_size=28000
