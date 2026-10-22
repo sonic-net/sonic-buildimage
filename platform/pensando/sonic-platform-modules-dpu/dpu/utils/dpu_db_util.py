@@ -71,11 +71,16 @@ EVENT_SUBJECT_PATTERNS = {
     26: re.compile(r'^sysmgr service "([^"]+)" memory usage'),
 }
 BOOT_ID_PATH = '/proc/sys/kernel/random/boot_id'
+PROC_STAT_PATH = '/proc/stat'
+TIME_FORMAT = "%a %b %d %I:%M:%S %p UTC %Y"
 DATA_PLANE_FIELDS = ('dpu_data_plane_state', 'dpu_data_plane_time',
                      'dpu_data_plane_reason', 'dpu_data_plane_conditions')
-# Stands in for stored conditions that cannot be parsed. No recovery event maps
-# to it, so it holds the data plane down until the DPU reboots.
+# Stand in for latches whose cause is unknown: stored conditions that cannot be
+# parsed, and a latch recorded by a daemon version that did not store boot ids.
+# No recovery event maps to them, so they hold the data plane down until the
+# DPU reboots.
 UNPARSED_CONDITION = (0, 'unparsed')
+LEGACY_CONDITION = (0, 'legacy')
 NETWORK_EVENTS = [
     1001,   # "Port link is up"
     1002    # "Port link is down"
@@ -215,12 +220,48 @@ class EventHandler(logger.Logger):
                 log_info(f"Restored data plane conditions: "
                          f"{', '.join(self.active_conditions.values())}")
             return
+        if stored_boot_id is None:
+            legacy_reason = self._legacy_latch_from_this_boot()
+            if legacy_reason:
+                self.active_conditions = {LEGACY_CONDITION: legacy_reason}
+                self._write_dpu_data_plane_db()
+                log_info(f"Kept data plane latch recorded before boot ids were stored: {legacy_reason}")
+                return
         stale = self.db.hget(self.table, 'dpu_data_plane_reason')
         self.db.hdel(self.table, *DATA_PLANE_FIELDS)
         self.db.hset(self.table, 'dpu_data_plane_boot_id', self.boot_id)
         if stale:
             log_info(f"Cleared data plane state left over from a previous "
                      f"boot, was: {stale}")
+
+    def _read_boot_time(self):
+        try:
+            with open(PROC_STAT_PATH) as f:
+                for line in f:
+                    if line.startswith('btime '):
+                        return int(line.split()[1])
+        except Exception as e:
+            log_err(f'Failed to read boot time due to {e}')
+        return None
+
+    def _legacy_latch_from_this_boot(self):
+        # A down written by an older daemon carries no boot id. It still holds
+        # if it was written after this boot started, which means the daemon was
+        # upgraded in place without a reboot. When either time is unknown the
+        # latch is kept rather than risk reporting the data plane up.
+        state = self.db.hget(self.table, 'dpu_data_plane_state')
+        reason = self.db.hget(self.table, 'dpu_data_plane_reason')
+        if state != 'down' or reason is None or reason.startswith('DPU container'):
+            return None
+        boot_time = self._read_boot_time()
+        try:
+            written = datetime.strptime(self.db.hget(self.table, 'dpu_data_plane_time'),
+                                        TIME_FORMAT).timestamp()
+        except (TypeError, ValueError):
+            written = None
+        if boot_time is None or written is None or written >= boot_time:
+            return reason
+        return None
 
     def _load_conditions(self):
         stored = self.db.hget(self.table, 'dpu_data_plane_conditions')
@@ -257,7 +298,7 @@ class EventHandler(logger.Logger):
                               for (event_type, subject), reason in self.active_conditions.items()]
                 fvs_data_plane_data = {
                     'dpu_data_plane_state': 'down',
-                    'dpu_data_plane_time': datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y"),
+                    'dpu_data_plane_time': datetime.now().strftime(TIME_FORMAT),
                     'dpu_data_plane_reason': ', '.join(self.active_conditions.values()),
                     'dpu_data_plane_conditions': json.dumps(conditions)
                 }
