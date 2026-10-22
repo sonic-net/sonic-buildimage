@@ -5,6 +5,16 @@
     "skip_psud": true,
     "skip_xcvrd_cmis_mgr": true,
     "skip_pcied": true,
+    "use_rust_thermalctld": true,
+    "platform_api_thermalctld": "native",
+    "use_rust_psud": true,
+    "platform_api_psud": "native",
     "use_rust_syseepromd": true,
-    "use_rust_stormond": true
+    "platform_api_syseepromd": "native",
+    "use_rust_pcied": true,
+    "platform_api_pcied": "native",
+    "use_rust_stormond": true,
+    "platform_api_stormond": "native",
+    "use_rust_chassisd": true,
+    "platform_api_chassisd": "native"
 }

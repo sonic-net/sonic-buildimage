@@ -10,9 +10,15 @@
         "dom_temperature_poll_interval": 20
     },
     "use_rust_thermalctld": true,
+    "platform_api_thermalctld": "native",
     "use_rust_psud": true,
+    "platform_api_psud": "native",
     "use_rust_syseepromd": true,
+    "platform_api_syseepromd": "native",
     "use_rust_pcied": true,
+    "platform_api_pcied": "native",
     "use_rust_stormond": true,
-    "use_rust_chassisd": true
+    "platform_api_stormond": "native",
+    "use_rust_chassisd": true,
+    "platform_api_chassisd": "native"
 }

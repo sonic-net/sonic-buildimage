@@ -6,6 +6,7 @@ include $(PLATFORM_PATH)/mft.dep
 include $(PLATFORM_PATH)/mlnx-sai.dep
 include $(PLATFORM_PATH)/hw-management.dep
 include $(PLATFORM_PATH)/mlnx-platform-api.dep
+include $(PLATFORM_PATH)/mlnx-platform-api-rs.dep
 include $(PLATFORM_PATH)/docker-syncd-mlnx.dep
 include $(PLATFORM_PATH)/docker-syncd-mlnx-rpc.dep
 include $(PLATFORM_PATH)/docker-saiserver-mlnx.dep
