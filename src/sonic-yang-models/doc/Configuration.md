@@ -2938,14 +2938,16 @@ channel name as object key, and tagging mode as attributes.
 ### VNET
 
 VNET table has Vnet name as the object key, and vxlan_tunnel name, vxlan tunnel list, scope, vni, peer list, advertised prefix, src mac, and overlay dest mac as attributes.
-The vxlan_tunnel name is a tunnel name from the VXLAN table and vxlan_tunnel_list is a list of such tunnel names; at least one of the two must be configured. scope (optional) must
+The vxlan_tunnel name is a tunnel name from the VXLAN table and vxlan_tunnel_list is a comma-separated string of such tunnel names, like peer_list; at least one of the two must be configured. scope (optional) must
 "default", vni (mandatory) is the vxlan tunnel vni, peer_list (optional) is for Vnet
 peering, advertise_prefix (optional) is used to allow advertisement of this vnet's routes, overlay_dmac (optional) is the mac address which is used for VNET ping
 monitoring sessions for the vnet routes and is optional.
 
 The vxlan_tunnel_list supports at most two tunnels: one IPv4 tunnel and one IPv6
 tunnel, with the address family determined by each tunnel's src_ip in VXLAN_TUNNEL.
-It may be empty, contain a single IPv4 or IPv6 tunnel, or contain one of each.
+It may be an empty string (""), name a single IPv4 or IPv6 tunnel, or name one of each.
+Use a string such as "vtep1,vtep2", not a JSON array. Tunnel names must be
+distinct, must exist in VXLAN_TUNNEL, and must not include empty comma-separated entries.
 Two tunnels of the same address family are not supported by vnetorch and are
 rejected by the YANG model. If the list is empty or absent, vxlan_tunnel must be
 configured; a non-empty list takes precedence over vxlan_tunnel.
@@ -2978,7 +2980,7 @@ source, so Vnet2-1 uses a valid dual-stack tunnel list.
 		"vni": "10011"
 	},
     "Vnet2-1": {
-	    "vxlan_tunnel_list": ["vtep1", "vtep2"],
+	    "vxlan_tunnel_list": "vtep1,vtep2",
 		"scope": "default",
 		"vni": "10012"
 	}
