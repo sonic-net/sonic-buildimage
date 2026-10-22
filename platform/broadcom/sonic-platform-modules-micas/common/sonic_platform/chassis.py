@@ -19,9 +19,11 @@ try:
     import time
     import sys
     from sonic_platform_base.chassis_base import ChassisBase
-    from sonic_platform_base.sonic_xcvr.bailly_optoe_base import get_cpo_json_data
+    # from sonic_platform_base.sonic_xcvr.bailly_optoe_base import get_cpo_json_data
+    from sonic_py_common import device_info
     from sonic_platform.sfp import Sfp
-    from sonic_platform.cpo import CPO
+    # from sonic_platform.cpo import CPO  # Original Micas legacy import.
+    from sonic_platform.cpo import MicasCpo, MicasOe, MicasElsfp
     from sonic_platform.psu import Psu
     # from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
@@ -55,16 +57,26 @@ class Chassis(ChassisBase):
     voltage_status_dict = {}
 
     def __init__(self):
+        self.sfp_present_dict = {}
+        self._cpo_devices = {}
         ChassisBase.__init__(self)
         self._dcdc_list = []
         self.int_case = interface()
         # Initialize SFP list
-        if get_cpo_json_data():
-            self._ports_config = get_cpo_json_data().get("interfaces", None) 
-            self._oes_config = get_cpo_json_data().get("oes", None)                   # oe_config from cpo.json
-            self._cpo_eeprom_mode = get_cpo_json_data().get("cpo_eeprom_mode", "joint")
-            self._elss_config = get_cpo_json_data().get("elss", None)             # ELS from cpo.json
-            self._init_port_mappings()
+        # BEGIN LEGACY CPO initialization after board HAL - reference only; not executed
+        # if get_cpo_json_data():
+        #     self._ports_config = get_cpo_json_data().get("interfaces", None)
+        #     self._oes_config = get_cpo_json_data().get("oes", None)                   # oe_config from cpo.json
+        #     self._cpo_eeprom_mode = get_cpo_json_data().get("cpo_eeprom_mode", "joint")
+        #     self._elss_config = get_cpo_json_data().get("elss", None)             # ELS from cpo.json
+        #     self._init_port_mappings()
+        # END LEGACY CPO initialization after board HAL
+
+        cpo_data = device_info.get_cpo_data()
+        if cpo_data:
+            # Older ChassisBase versions do not call the construction hook.
+            if not getattr(self, "_cpo_initialized", False):
+                self.construct_cpo_devices(cpo_data)
         else:
             # sfp.py will read eeprom contents and retrive the eeprom data.
             # It will also provide support sfp controls like reset and setting
@@ -528,8 +540,17 @@ class Chassis(ChassisBase):
 
         # Check for OIR events and return ret_dict
         for i in range(self.port_start_index, self.port_start_index + self.port_num):
-            sfp = self._sfp_list[i]
-            if sfp.get_presence():
+            # BEGIN LEGACY presence read from SFP-only storage - reference only; not executed
+            # sfp = self._sfp_list[i]
+            # if sfp.get_presence():
+            # END LEGACY presence read from SFP-only storage
+
+            device = self.get_cpo(i)
+            if device is None and self._sfp_list:
+                device = self.get_sfp(i)
+            if device is None:
+                continue
+            if device.get_presence():
                 current_sfp_present_dict[i] = self.STATUS_INSERTED
 
             else:
@@ -608,25 +629,132 @@ class Chassis(ChassisBase):
         return ret_dict
 
     def is_cpo_device(self):
-        return self._oes_config is not None and len(self._oes_config) > 0
+        return bool(self._cpo_devices)
+
+    # BEGIN LEGACY _init_port_mappings with old CPO objects - reference only; not executed
+    # def _init_port_mappings(self):
+    #     self._sfp_list = []
+    #     # fix problem with first index is 1, we add a fake sfp node, xcvrd get start at 1,not 0
+    #     self.port_num = len(self._ports_config)
+    #     self.port_start_index = 1
+    #     self._sfp_list.append(Sfp(1))
+    #
+    #     for eth_name, eth_info in self._ports_config.items():
+    #         port_id = eth_info.get("index", 0).split(",")[0]
+    #         oe_id = eth_info.get("oe_id", None)
+    #         if oe_id != None: # cpo port
+    #             oe_bank_id= eth_info.get("oe_bank_id", None)
+    #             els_id = eth_info.get("els_id", None)
+    #             els_bank_id = eth_info.get("els_bank_id", None)
+    #             self._sfp_list.append(CPO(port_id, oe_id, oe_bank_id, els_id, els_bank_id))
+    #         else: # None cpo port
+    #             self._sfp_list.append(Sfp(port_id))
+    # END LEGACY _init_port_mappings with old CPO objects
 
     def _init_port_mappings(self):
-        self._sfp_list = []
-        # fix problem with first index is 1, we add a fake sfp node, xcvrd get start at 1,not 0 
-        self.port_num = len(self._ports_config)
-        self.port_start_index = 1
-        self._sfp_list.append(Sfp(1))
-   
-        for eth_name, eth_info in self._ports_config.items():
-            port_id = eth_info.get("index", 0).split(",")[0]
-            oe_id = eth_info.get("oe_id", None)
-            if oe_id != None: # cpo port
-                oe_bank_id= eth_info.get("oe_bank_id", None)
-                els_id = eth_info.get("els_id", None)
-                els_bank_id = eth_info.get("els_bank_id", None)
-                self._sfp_list.append(CPO(port_id, oe_id, oe_bank_id, els_id, els_bank_id))
-            else: # None cpo port
-                self._sfp_list.append(Sfp(port_id))
+        """Construct platform objects from HLD associations and physical port data."""
+        platform_interfaces = (device_info.get_platform_json_data() or {}).get("interfaces", {})
+        extensions = self._cpo_platform_data.get("devices", {})
+        extensions = {name.lower(): value for name, value in extensions.items()}
+        port_extensions = self._cpo_platform_data.get("interfaces", {})
+        ports = {}
+        for name, config in self._ports_config.items():
+            platform_port = platform_interfaces.get(name, {})
+            indices = platform_port.get("index")
+            if indices is None:
+                raise ValueError("No platform.json physical index for {}".format(name))
+            indices = tuple(dict.fromkeys(int(value.strip()) for value in str(indices).split(",")))
+            associations = {}
+            for association in config.get("associated_devices", []):
+                device_id = association["device_id"].lower()
+                device = self._cpo_devices.get(device_id)
+                if device is None:
+                    raise ValueError("Unknown CPO device {}".format(device_id))
+                kind = device.get("device_type")
+                if kind not in ("optical_engine", "external_laser_source"):
+                    continue
+                if kind in associations:
+                    raise ValueError("Duplicate {} for {}".format(kind, name))
+                bank = int(association.get("bank", 0))
+                maximum = int(device.get("max_banks", 1))
+                if bank < 0 or bank >= maximum:
+                    raise ValueError("Invalid bank for {}".format(device_id))
+                associations[kind] = (device_id, bank)
+            if associations and len(associations) != 2:
+                raise ValueError("CPO interface {} requires one OE and one ELS".format(name))
+            lasers = port_extensions.get(name, {}).get("laser_ids", [])
+            if associations:
+                els_name = associations["external_laser_source"][0]
+                laser_map = self._cpo_devices[els_name].get("laser_to_asic_lane_mapping", {})
+                if laser_map:
+                    port_lanes = {int(lane) for lane in str(platform_port["lanes"]).split(",")}
+                    lasers = []
+                    for laser, mapped_lanes in laser_map.items():
+                        if isinstance(mapped_lanes, str):
+                            mapped_lanes = [int(lane) for lane in mapped_lanes.split(",")]
+                        if port_lanes.intersection(mapped_lanes):
+                            lasers.append(int(laser) - 1)
+                    lasers.sort()
+            signature = (tuple(sorted(associations.items())), tuple(lasers))
+            for port_id in indices:
+                if port_id < 0:
+                    raise ValueError("Invalid physical port index: {}".format(port_id))
+                if port_id in ports:
+                    if ports[port_id][3] != signature:
+                        raise ValueError("Conflicting CPO mapping for physical port {}".format(port_id))
+                    continue
+                ports[port_id] = (name, associations, lasers, signature)
+
+        self.port_start_index = 0 if 0 in ports else 1
+        last_port = max(ports, default=self.port_start_index - 1)
+        self.port_num = last_port - self.port_start_index + 1
+        self._cpo_list = [None] * (last_port + 1)
+        self._port_lists_validated = False
+        for port_id, (name, associations, lasers, _) in ports.items():
+            if not associations:
+                if not self._sfp_list:
+                    self._sfp_list = [None] * (last_port + 1)
+                self._sfp_list[port_id] = Sfp(str(port_id))
+            else:
+                oe_name, oe_bank = associations["optical_engine"]
+                els_name, els_bank = associations["external_laser_source"]
+                oe_config = self._cpo_devices[oe_name]
+                els_config = dict(self._cpo_devices[els_name], **extensions.get(els_name, {}))
+                oe = MicasOe(int(oe_name[2:]), oe_config, bank=oe_bank,
+                             base_page=els_config.get("base_page", 0))
+                els_path = els_config.get("i2c_path", oe_config.get("i2c_path"))
+                if els_path != oe_config.get("i2c_path"):
+                    raise ValueError("Bailly ELS must share its OE EEPROM path")
+                elsfp = MicasElsfp(int(els_name[3:]), els_config, oe.get_eeprom_path())
+                elsfp.bank = els_bank
+                self._cpo_list[port_id] = MicasCpo(port_id, name, oe, elsfp, lasers)
+            self.sfp_present_dict[port_id] = self.STATUS_REMOVED
+
+    def get_sfp(self, index):
+        """Temporarily expose CPO objects to xcvrd's remaining SFP callers."""
+        if not self.is_cpo_device():
+            return super().get_sfp(index)
+        if self._sfp_list:
+            sfp = super().get_sfp(index)
+            if sfp is not None:
+                return sfp
+        # TODO: Remove this compatibility bridge once xcvrd uses get_cpo()
+        # for CPO ports throughout its state, DOM and firmware handling.
+        # CPO storage remains separate; both accessors return the same object.
+        return self.get_cpo(index)
+
+    def construct_cpo_devices(self, cpo_data):
+        """Create CPO objects from devices/associated_devices, ignoring legacy references."""
+        devices = cpo_data.get("devices")
+        interfaces = cpo_data.get("interfaces")
+        if not isinstance(devices, dict) or not devices or not isinstance(interfaces, dict) or not interfaces:
+            raise ValueError("CPO topology requires non-empty devices and interfaces")
+        self._cpo_devices = {name.lower(): config for name, config in devices.items()}
+        self._ports_config = interfaces
+        self._cpo_platform_data = cpo_data.get("platform_data", {})
+        self._cpo_eeprom_mode = self._cpo_platform_data.get("cpo_eeprom_mode", "joint")
+        self._init_port_mappings()
+        self._cpo_initialized = True
 
     def get_watchdog(self):
         if self._watchdog is None:
