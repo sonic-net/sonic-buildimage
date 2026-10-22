@@ -11,7 +11,7 @@ $(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(LIBSENSORS) $(LM_SENSORS) $(FANCONTROL) 
 # the sonic-platform-common wheel already installed below, which calls the
 # vendor's own sonic_platform -- so no vendor package is named here.
 #
-# All seven are installed and the Python wheels below stay installed beside
+# All six are installed and the Python wheels below stay installed beside
 # them: which one supervisord starts is read from pmon_daemon_control.json at
 # container start, so switching a daemon back is a config change and not a
 # rebuild.
