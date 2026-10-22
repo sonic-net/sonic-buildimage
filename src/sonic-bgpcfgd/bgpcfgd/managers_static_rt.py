@@ -107,7 +107,7 @@ class StaticRouteMgr(Manager):
             return False
 
         if self.config_db is None:
-            self.config_db = swsscommon.SonicV2Connector()
+            self.config_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
             self.config_db.connect(self.config_db.CONFIG_DB)
 
         #just pop local cache if the route exist in config_db

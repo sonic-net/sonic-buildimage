@@ -45,7 +45,7 @@ class BgpStateGet:
         self.new_peer_l = set()
         self.new_peer_state = {}
         self.cached_timestamp = 0
-        self.db = swsscommon.SonicV2Connector()
+        self.db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
         self.db.connect(self.db.STATE_DB, False)
         self.pipe = swsscommon.RedisPipeline(self.db.get_redis_client(self.db.STATE_DB))
         self.db.delete_all_by_pattern(self.db.STATE_DB, "NEIGH_STATE_TABLE|*" )

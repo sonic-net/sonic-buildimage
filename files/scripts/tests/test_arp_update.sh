@@ -36,7 +36,7 @@ timeout() {
 
 sonic-db-cli() {
     printf '%s\n' "$*" > "$DB_CALL_LOG"
-    printf '%s\n' "$3" > "$DB_KEY_LOG"
+    printf '%s\n' "$4" > "$DB_KEY_LOG"
 }
 
 ip() {
@@ -77,7 +77,7 @@ assert_eq "ndisc6 preserves the interface argument" \
 IP_ARGS=()
 flush_unsynced_neighbors "Vlan1000" "2001:db8::1 dev Vlan1000 FAILED"
 assert_eq "APPL_DB neighbor lookup" \
-    "APPL_DB hget NEIGH_TABLE:Vlan1000:2001:db8::1 neigh" "$(<"$DB_CALL_LOG")"
+    "-s APPL_DB hget NEIGH_TABLE:Vlan1000:2001:db8::1 neigh" "$(<"$DB_CALL_LOG")"
 assert_eq "flush address remains one argument" "2001:db8::1" "${IP_ARGS[2]}"
 
 IP_ARGS=()

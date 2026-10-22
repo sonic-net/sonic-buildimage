@@ -156,7 +156,7 @@ class MACsecPort(MACsecAppMeta, MACsecCfgMeta):
         buffer = self.get_header()
 
         # Add the profile information to the meta dict from config meta dict
-        self.meta["profile"] = self.cfgMeta["macsec"]
+        self.meta["profile"] = self.cfgMeta.get("macsec", "")
 
         buffer += tabulate(sorted(self.meta.items(), key=lambda x: x[0]))
         return buffer
@@ -216,7 +216,9 @@ def create_macsec_profile_obj(key: str) -> MACsecCfgMeta:
 
 def create_macsec_objs(interface_name: str) -> typing.List[MACsecAppMeta]:
     objs = []
-    objs.append(create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name))
+    port = create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name)
+    if port is not None:
+        objs.append(port)
     egress_scs = DB_CONNECTOR.keys(DB_CONNECTOR.APPL_DB, MACsecEgressSC.get_appl_table_name() + ":" + interface_name + ":*")
     for sc_name in natsorted(egress_scs):
         sc = create_macsec_obj(sc_name)

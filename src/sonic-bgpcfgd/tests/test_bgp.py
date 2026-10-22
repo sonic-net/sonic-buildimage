@@ -1020,6 +1020,7 @@ def modify_dynamic_peer_common(mock_db_conn, mock_table, mocked_log_info, peer, 
         res = m.set_handler(peer, data)
         assert res, "Expect True return value"
         if "update" in m.templates:
+            mock_db_conn.assert_called_with("STATE_DB", 0, False)
             mock_state_db_table.set.assert_called_once_with(peer, list(sorted(data.items())))
             mocked_log_info.assert_any_call(update_log)
             mocked_log_info.assert_called_with(final_log)
