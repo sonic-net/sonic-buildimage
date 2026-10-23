@@ -85,8 +85,12 @@ class BgpdClientMgr(threading.Thread):
             'PREFIX_SET': ['bgpd'],
             'COMMUNITY_SET': ['bgpd'],
             'EXTENDED_COMMUNITY_SET': ['bgpd'],
-            'ROUTE_MAP': ['zebra', 'bgpd', 'ospfd'],
-            'PREFIX': ['zebra', 'bgpd', 'ospfd', 'pimd'],
+            # zebra's route-maps and prefix-lists are mgmtd-owned: zebra's vty
+            # has no route-map or prefix-list commands, so a line sent to it is
+            # refused while bgpd's success hides that. mgmtd pushes them down
+            # to zebra as a backend client.
+            'ROUTE_MAP': ['mgmtd', 'bgpd', 'ospfd'],
+            'PREFIX': ['mgmtd', 'bgpd', 'ospfd', 'pimd'],
             'BGP_PEER_GROUP': ['bgpd'],
             'BGP_NEIGHBOR': ['bgpd'],
             'BGP_PEER_GROUP_AF': ['bgpd'],
@@ -1932,7 +1936,7 @@ class BGPConfigDaemon:
                          ('match_prefix_set|ipv6',          '{no:no-prefix}match ipv6 address prefix-list {}'),
                          ('match_neighbor',                 '[bgpd]{no:no-prefix}match peer {:peer-ip}'),
                          ('match_tag',                      '{no:no-prefix}match tag {}'),
-                         ('match_protocol',                 '[zebra]{no:no-prefix}match source-protocol {:src-proto}'),
+                         ('match_protocol',                 '[mgmtd]{no:no-prefix}match source-protocol {:src-proto}'),
                          ('match_next_hop_set|ipv4',        '{no:no-prefix}match ip next-hop prefix-list {}'),
                          ('match_next_hop_set|ipv6',        '{no:no-prefix}match ip next-hop prefix-list {}'), #match ipv6 next-hop prefix-list not suppported by frr
                          ('match_med',                      '{no:no-prefix}match metric {}'),
@@ -1946,7 +1950,7 @@ class BGPConfigDaemon:
                          ('set_origin',                     '[bgpd]{no:no-prefix}set origin {:tolower}'),
                          ('set_local_pref',                 '[bgpd]{no:no-prefix}set local-preference {}'),
                          ('set_next_hop',                   '{no:no-prefix}set ip next-hop {}'),
-                         ('set_src',                        '[zebra]{no:no-prefix}set src {}'),
+                         ('set_src',                        '[mgmtd]{no:no-prefix}set src {}'),
                          ('set_ipv6_next_hop_global',       '[bgpd]{no:no-prefix}set ipv6 next-hop global {}'),
                          ('set_ipv6_next_hop_prefer_global', '[bgpd]{no:no-prefix}set ipv6 next-hop prefer-global', ['true', 'false']),
                          (['set_metric_action', '+set_metric', '+set_med'], '{}set metric {} ', handle_rmap_set_metric),
@@ -3148,7 +3152,7 @@ class BGPConfigDaemon:
                         # use table daemons setting
                         daemons = None
                     else:
-                        daemons = ['bgpd', 'zebra']
+                        daemons = ['bgpd', 'mgmtd']
                     if pfx_action.op == CachedDataWithOp.OP_DELETE or pfx_action.op == CachedDataWithOp.OP_UPDATE:
                         del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
                                                                                          pfx_action.data, seq)
