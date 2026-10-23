@@ -825,15 +825,13 @@ static int ctc_i2c_plat_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int ctc_i2c_plat_remove(struct platform_device *pdev)
+static void ctc_i2c_plat_remove(struct platform_device *pdev)
 {
 	struct ctc_i2c_dev *dev = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&dev->adapter);
 
 	i2c_ctc_disable(dev);
-
-	return 0;
 }
 
 static const struct of_device_id ctc_i2c_of_match[] = {

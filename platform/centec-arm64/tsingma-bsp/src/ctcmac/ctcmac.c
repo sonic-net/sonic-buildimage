@@ -30,6 +30,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_mdio.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/udp.h>
@@ -315,7 +316,7 @@ static int ctcmac_of_init(struct platform_device *ofdev,
 
 	err = of_get_mac_address(np, mac_addr);
 	if (!err) {
-		memcpy(dev->dev_addr, mac_addr, ETH_ALEN);
+		eth_hw_addr_set(dev, mac_addr);
 	}
 
 	err = of_property_read_string(np, "int-type", &int_type);
@@ -3118,10 +3119,10 @@ static int ctcmac_set_mac_addr(struct net_device *dev, void *p)
 static void ctcmac_gdrvinfo(struct net_device *dev,
 			    struct ethtool_drvinfo *drvinfo)
 {
-	strlcpy(drvinfo->driver, "ctcmac", sizeof(drvinfo->driver));
-	strlcpy(drvinfo->version, "v1.0", sizeof(drvinfo->version));
-	strlcpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
-	strlcpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
+	strscpy(drvinfo->driver, "ctcmac", sizeof(drvinfo->driver));
+	strscpy(drvinfo->version, "v1.0", sizeof(drvinfo->version));
+	strscpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
+	strscpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
 }
 
 /* Return the length of the register structure */
@@ -3413,7 +3414,7 @@ static void ctcmac_set_msglevel(struct net_device *dev, uint32_t data)
 }
 
 static int ctcmac_get_ts_info(struct net_device *dev,
-			      struct ethtool_ts_info *info)
+			      struct kernel_ethtool_ts_info *info)
 {
 #if 0
 	struct gfar_private *priv = netdev_priv(dev);
@@ -3579,7 +3580,7 @@ register_fail:
 	return err;
 }
 
-static int ctcmac_remove(struct platform_device *ofdev)
+static void ctcmac_remove(struct platform_device *ofdev)
 {
 	struct ctcmac_private *priv = platform_get_drvdata(ofdev);
 
@@ -3594,8 +3595,6 @@ static int ctcmac_remove(struct platform_device *ofdev)
 	ctcmac_free_rx_queues(priv);
 	ctcmac_free_tx_queues(priv);
 	ctcmac_free_dev(priv);
-
-	return 0;
 }
 
 static const struct of_device_id ctcmac_match[] = {
