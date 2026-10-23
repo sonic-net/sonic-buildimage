@@ -1,0 +1,20 @@
+Source: ispvme
+Section: utils
+Priority: optional
+Maintainer: SONiC <sonic@microsoft.com>
+Build-Depends: debhelper-compat (= 13),
+               meson (>= 0.57.0),
+               ninja-build,
+Standards-Version: 4.6.0
+Rules-Requires-Root: no
+Homepage: https://github.com/NVIDIA/ispvme
+
+Package: ispvme
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Lattice CPLD firmware update over JTAG (NVIDIA ispvme)
+ ispvme programs Lattice CPLDs from VME files over the Linux JTAG
+ character device interface (OpenBMC Aspeed / OBMC_AST).
+ .
+ Sources originate from Lattice and are packaged from
+ https://github.com/NVIDIA/ispvme.
