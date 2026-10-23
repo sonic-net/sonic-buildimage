@@ -161,10 +161,11 @@ ENABLE_FRR_SNMP_AGENT ?= y
 SONIC_DPKG_CACHE_METHOD ?= none
 SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 
-# Build eligible dockers (those registered in SONIC_BAZEL_DOCKER_IMAGES and
-# SONIC_BAZEL_DBG_DOCKER_IMAGES) with Bazel instead of the legacy docker build.
+# Build eligible containers and kernel packages with Bazel. Container owners
+# register SONIC_BAZEL_DOCKER_IMAGES and SONIC_BAZEL_DBG_DOCKER_IMAGES; the
+# kernel rule enables native Trixie VS with its default unsigned configuration.
 # Owners register only configurations with Bazel support; all others use Make.
-# When disabled, every container uses the normal Make docker build.
+# When disabled, containers and kernel packages use their normal Make build.
 BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
 
 # Persist Bazel caches across slave containers for all Bazel builds, regardless

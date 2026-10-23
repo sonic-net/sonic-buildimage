@@ -1,0 +1,6 @@
+# Local builds and normal CI use the maintained SONiC registry.
+common --registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+common --registry=https://bcr.bazel.build
+common --lockfile_mode=update
+# Bazel-built bootstrap tools must run independently of the host libc version.
+build --host_features=fully_static_link

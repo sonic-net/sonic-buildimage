@@ -2477,6 +2477,21 @@ def main() -> int:
     # ---- Recipe-emit components (authoritative for SONiC-built things) ----
     recipe_components = list(fragments.all)
 
+    # Bind the installed source-built kernel DEB to its verified source and bytes.
+    if os.environ.get("BUILD_WITH_BAZEL_WHEN_AVAILABLE") == "y":
+        kernel_packages = os.environ["IMAGE_DISTRO_DEBS_PATH"]
+        import sbom_kernel_deb
+        try:
+            kernel_component = sbom_kernel_deb.component(
+                kernel_packages, os.getcwd(), f"fsroot-{target_machine}",
+            )
+            recipe_components = sbom_kernel_deb.replace_recipe_components(
+                recipe_components, kernel_component,
+            )
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            warn(f"Cannot describe the selected Debian kernel: {exc}")
+            return 1
+
     # ---- Observation components for host rootfs ----
     obs_host = observation_components_for_scope(
         target_path, "host-image", arch, "Debian",

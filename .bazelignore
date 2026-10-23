@@ -1,1 +1,3 @@
 platform
+src/sonic-linux-kernel
+tools/bazel/kernel

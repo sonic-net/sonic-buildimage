@@ -180,3 +180,25 @@ The fixture can borrow declared third-party runfiles; it does not claim an
 independently installed dependency closure. `installed_wheel_fixture_test` and
 `wheel_contract_test` cover isolation, failure reporting and rejection of
 incorrect package contents once for all consumers.
+
+## Kernel DEB checks
+
+`kernel_test.py` exercises registered-source and Debian-package verification,
+private producer workspaces, direct publication to the normal DEB directory,
+repeated Make requests, legacy fallback and cache input
+identity. `kernel_sbom_test.py` installs small fixture DEBs into an isolated dpkg
+database and checks installed records, bytes and source pedigree. Fixture DEBs
+use the caller's ownership so these tests run without privileged installation.
+
+```sh
+python3 -B tools/bazel/tests/kernel_test.py
+python3 -B tools/bazel/tests/kernel_artifacts_test.py
+python3 -B tools/bazel/tests/kernel_sbom_test.py
+```
+
+The native AMD64/ARM64 `Bazel kernel DEBs` matrix builds the exact registered
+kernel source and runs `kernel_install_smoke.sh` in a pinned Trixie worker.
+It installs real DEBs with dependencies/hooks, verifies dpkg status, exercises
+GDB, compiles/installs an external module, and checks initial initramfs creation,
+updates and boot links. The consumer and producer both verify fresh-output remote cache hits.
+Full installer assembly and guest boot/forwarding remain separate checks.

@@ -1,0 +1,155 @@
+name: Bazel kernel DEBs
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bazel-kernel-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kernel-bundle:
+    name: Kernel DEBs and Make handoff (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+            cache_sha256: 6a6b64666c2238ec6b49b7b29f5e41e4149de09417a0028897c9bffe40376876
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+            cache_sha256: 295e54fd58841211b00fb204cafc13affc6a13d8946a4520c0ecdce22626ef93
+    # Keep the integration check scoped to the requested kernel PR.
+    if: github.event_name != 'pull_request' || github.event.pull_request.number == 6
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Initialize the pinned kernel source
+        run: git submodule update --init -- src/sonic-linux-kernel
+      - name: Check the producer and artifact contracts
+        run: |
+          python3 -B tools/bazel/tests/kernel_test.py
+          python3 -B tools/bazel/tests/kernel_make_mapping_test.py
+          python3 -B tools/bazel/tests/kernel_sbom_test.py
+          python3 -B tools/bazel/tests/public_artifacts_test.py
+          python3 -B tools/bazel/tests/kernel_artifacts_test.py
+      - name: Allocate space on this disposable runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          python3 - <<'PY'
+          import os, shutil
+          if shutil.disk_usage(os.environ['RUNNER_TEMP']).free < 45 * 2**30:
+              raise SystemExit('Kernel source validation requires 45 GiB free scratch space')
+          PY
+      - name: Require unprivileged Linux sandboxing and start a local remote cache
+        run: |
+          test "$(id -u)" -ne 0
+          unshare --user --map-current-user --mount --pid --fork true
+          umask 077
+          mkdir -p "$RUNNER_TEMP/kernel-cache"
+          curl --fail --location --retry 3 \
+            "https://github.com/buchgr/bazel-remote/releases/download/v2.6.4/bazel-remote-2.6.4-linux-${{ matrix.arch }}" \
+            --output "$RUNNER_TEMP/kernel-cache/bazel-remote"
+          printf '%s  %s\n' '${{ matrix.cache_sha256 }}' "$RUNNER_TEMP/kernel-cache/bazel-remote" | sha256sum -c -
+          chmod 700 "$RUNNER_TEMP/kernel-cache/bazel-remote"
+          env -i RUNNER_TRACKING_ID="${RUNNER_TRACKING_ID:-}" \
+            "$RUNNER_TEMP/kernel-cache/bazel-remote" --dir="$RUNNER_TEMP/kernel-cache/objects" \
+            --max_size=8 --http_address=127.0.0.1:8080 --grpc_address=none \
+            > "$RUNNER_TEMP/kernel-cache/server.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/kernel-cache/server.pid"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/status > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8080/status > /dev/null
+      - name: Build and verify kernel DEBs in the normal package directory
+        run: |
+          umask 077
+          if python3 -B tools/bazel/kernel/prepare.py ensure --architecture "${{ matrix.arch }}" \
+            --state-dir "$RUNNER_TEMP/kernel-bundle-state" \
+            --remote-cache http://127.0.0.1:8080 --upload-local-results; then
+            test ! -e target/bazel-kernel-inputs
+            test ! -e "$RUNNER_TEMP/kernel-bundle-state/bundle"
+            echo 'Kernel DEBs verified in target/debs/trixie.'
+          else
+            status=$?
+            echo "Kernel DEB build failed with exit code $status."
+            exit "$status"
+          fi
+      - name: Verify a fresh output directory reuses the kernel action
+        run: |
+          umask 077
+          python3 -B tools/bazel/kernel/prepare.py build --architecture "${{ matrix.arch }}" \
+            --state-dir "$RUNNER_TEMP/kernel-cache-hit" --remote-cache http://127.0.0.1:8080
+          python3 -B src/sonic-linux-kernel/tools/bazel/verify_cache.py \
+            --architecture "${{ matrix.arch }}" \
+            --cold "$RUNNER_TEMP/kernel-bundle-state/build" --hit "$RUNNER_TEMP/kernel-cache-hit/build" \
+            --artifacts "$RUNNER_TEMP/kernel-cache-proof"
+          echo 'Unprivileged linux-sandbox build and fresh-output remote cache hit verified.'
+      - name: Reject an unsupported kernel configuration without replacing the DEBs
+        run: |
+          umask 077
+          sha256sum target/debs/trixie/*.deb > "$RUNNER_TEMP/kernel-before-rejection.sha256"
+          if python3 -B tools/bazel/kernel/prepare.py ensure --architecture "${{ matrix.arch }}" \
+            --kernel-config SECURE_UPGRADE_MODE=unsupported \
+            --state-dir "$RUNNER_TEMP/kernel-unsupported" \
+            --remote-cache http://127.0.0.1:8080 > "$RUNNER_TEMP/kernel-unsupported.log" 2>&1; then
+            echo 'An unsupported kernel setting was silently accepted.'
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/kernel-unsupported.log"
+          grep -F 'Unsupported kernel configuration' "$RUNNER_TEMP/kernel-unsupported.log"
+          if grep -Fq SONIC_KERNEL_COMPILATION_STARTED "$RUNNER_TEMP/kernel-unsupported.log"; then
+            echo 'Unsupported settings reached kernel compilation.'
+            exit 1
+          fi
+          sha256sum --check "$RUNNER_TEMP/kernel-before-rejection.sha256"
+      - name: Repeat automatic preparation without rebuilding
+        run: |
+          umask 077
+          python3 -B tools/bazel/kernel/prepare.py ensure --architecture "${{ matrix.arch }}" \
+            > "$RUNNER_TEMP/kernel-bundle-stage.log"
+          python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["reused"] is True' \
+            "$RUNNER_TEMP/kernel-bundle-stage.log"
+          python3 -B tools/bazel/kernel/prepare.py verify --architecture "${{ matrix.arch }}" \
+            --debs-directory target/debs/trixie
+      - name: Consume the normal DEB directory through Make without rebuilding or copying
+        run: |
+          python3 -B tools/bazel/ci/kernel_make_smoke.py --architecture "${{ matrix.arch }}"
+      # Installation exercises APT hooks in a disposable Debian system after the
+      # native unprivileged build/cache proof. This container never builds a kernel.
+      - name: Validate already-built DEB installation, modules and initramfs
+        run: |
+          umask 077
+          docker run --rm --platform "linux/${{ matrix.arch }}" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/sonic,readonly" \
+            --workdir /sonic \
+            debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c \
+            bash tools/bazel/ci/kernel_install_smoke.sh /sonic/target/debs/trixie
+          echo 'Installed kernel DEB, external module and initramfs checks passed.'
+      - name: Select verified DEBs and a public validation summary
+        id: artifacts
+        run: |
+          umask 077
+          python3 -B tools/bazel/ci/kernel_artifacts.py --architecture "${{ matrix.arch }}" \
+            --state-dir "$RUNNER_TEMP/kernel-cache-hit" \
+            --output "$RUNNER_TEMP/kernel-bundle-artifacts"
+      - name: Retain verified DEBs and the validation summary
+        if: success() && steps.artifacts.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kernel-source-packages-${{ matrix.arch }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ${{ runner.temp }}/kernel-bundle-artifacts

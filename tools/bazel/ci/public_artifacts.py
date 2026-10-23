@@ -356,8 +356,11 @@ def prepare(kind, workspace, upload_root, job_status, revision, architecture, he
                 if file_kind == "revision":
                     require(value.strip() == revision, "revision-mismatch")
             before = path.stat()
+            digest = hashlib.sha256()
             with path.open("rb") as stream:
-                file_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+            file_digest = digest.hexdigest()
             after = path.stat()
             require((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) ==
                     (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns), "changed-public-file")

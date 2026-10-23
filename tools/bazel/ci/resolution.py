@@ -107,9 +107,11 @@ def retain(workspace, directory, graph, graph_filename="module-graph.txt"):
     files = {}
     for name in ("MODULE.bazel.lock", graph_filename):
         path = directory / name
+        digest = hashlib.sha256()
         with path.open("rb") as stream:
-            digest = hashlib.file_digest(stream, "sha256").hexdigest()
-        files[name] = {"sha256": digest, "bytes": path.stat().st_size}
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+        files[name] = {"sha256": digest.hexdigest(), "bytes": path.stat().st_size}
     return {"lockfile_mode": "update", "tracked_files_unchanged": True,
             "observed_registry_urls": registry_urls,
             "generated_evidence": files}

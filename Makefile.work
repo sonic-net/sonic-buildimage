@@ -77,8 +77,8 @@
 #  *                 BLDENV/arch; reuse at own risk if stale vs. current slave Dockerfiles.
 #  *                 With DPKG cache write modes, a reused tag that differs from the computed
 #  *                 base tag is rejected.
-#  * BUILD_WITH_BAZEL_WHEN_AVAILABLE: Build targets registered in
-#  *                 SONIC_BAZEL_DOCKER_IMAGES with Bazel instead of the legacy
+#  * BUILD_WITH_BAZEL_WHEN_AVAILABLE: Build eligible kernel packages and targets
+#  *                 registered in SONIC_BAZEL_DOCKER_IMAGES with Bazel instead of the legacy
 #  *                 `docker build` flow.
 #  *                 When disabled they fall back to the normal Make docker build.
 #  *                 Default: n

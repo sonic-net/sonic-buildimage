@@ -126,13 +126,20 @@ check:
                 self.assertTrue((source / "container-cache-write").is_file())
                 self.assert_system_cache_settings(record)
 
-    def test_explicit_empty_cache_adds_no_mount_or_system_rc(self):
+    def test_explicit_empty_cache_adds_no_cache_mount_or_system_rc(self):
         """Disabling the cache must also avoid an RC that refers to an unmounted shared path."""
         for mode in ("n", "y"):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
                 result = self.cache_mount(Path(temporary), mode, "")
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(json.loads(result.stdout)["args"], ["builder-image"])
+                record = json.loads(result.stdout)
+                self.assertNotIn("/bazel_cache", record["mounts"])
+                self.assertNotIn("/etc/bazel.bazelrc", record["mounts"])
+                self.assertNotIn("system_rc", record)
+                self.assertFalse(any(arg.startswith("BAZELISK_HOME=") for arg in record["args"]))
+                self.assertEqual(record["args"], ["builder-image"])
+                self.assertEqual({path.name for path in Path(temporary).iterdir()},
+                                 {"docker.py", "docker-started"})
 
     def test_relative_cache_path_is_mounted_as_an_absolute_host_directory(self):
         """Docker must receive a bind source, not interpret a relative path as a volume name."""

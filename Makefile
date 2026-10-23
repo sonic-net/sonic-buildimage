@@ -139,3 +139,10 @@ sonic-swss-forward:
 
 target/docker-orchagent.gz target/docker-orchagent-dbg.gz \
 target/sonic-vs.bin target/sonic-vs.img.gz target/sonic-vs.raw: sonic-swss-forward
+
+# Existing kernel/module outputs still need the inner Make dependency checks.
+# Filter only requested goals, so this does not enumerate or build unrelated
+# outputs. Keep forwarding in both modes to detect a Bazel/Make builder change.
+$(filter target/debs/trixie/linux-%.deb target/debs/trixie/linux-%.deb-install \
+    target/debs/trixie/genl-packet-module_%.deb target/debs/trixie/genl-packet-module_%.deb-install \
+    target/files/trixie/ixgbe.ko target/%rfs.squashfs,$(MAKECMDGOALS)): sonic-swss-forward

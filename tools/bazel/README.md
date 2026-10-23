@@ -37,7 +37,10 @@ The shared `docker.mk` recipe owns the Bazel `build` and `cquery` calls.
 With `y`, each container's Make rule registers its Bazel runtime and debug
 archives only when the selected build configuration supports them. Registered
 archives use Bazel; all other containers keep their existing Make Docker build.
-With `n`, all containers use that existing Make path.
+With `n`, all containers use that existing Make path. The same switch also
+automatically selects the registered kernel DEB build for supported native
+AMD64/ARM64 Trixie VS unsigned default configurations; see the
+[kernel integration](kernel/README.md).
 
 Availability means that the container owner has supplied Bazel targets and
 enabled them for the selected architecture, platform and features. Make does
@@ -308,3 +311,11 @@ Use `bazel help --announce_rc` to inspect the effective rc selection. Keep one
 SONiC registry endpoint; do not add another endpoint in a home or user rc.
 Generated resolution receipts list registry lookup URLs from the lock; a reused
 lock can also contain historical lookups.
+
+## Kernel Debian packages in the Make VS flow
+
+The opt-in kernel runtime/debug/header DEB producer and installer handoff are documented
+in [kernel/README.md](kernel/README.md). The separate kernel workspace keeps
+the source/cache graph independent of the container graph and verifies the DEBs
+against the current buildimage inputs and kernel gitlink. Packages go directly
+to the normal `target/debs/trixie` directory.

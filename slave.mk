@@ -601,6 +601,12 @@ $(shell DBGOPT='$(DBGOPT)' scripts/prepare_slave_container_buildinfo.sh $(SLAVE_
 endif
 include Makefile.cache
 
+# Track Bazel kernel inputs for downstream Make consumers.
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+$(foreach pkg,$(SONIC_RFS_TARGETS) $(IXGBE_DRIVER) $(GENL_PACKET_MODULE), \
+        $(eval $(pkg)_DEP_FILES += $(SONIC_BAZEL_KERNEL_INPUTS) tools/bazel/kernel/prepare.py))
+endif
+
 
 ###############################################################################
 ## Generic rules section
@@ -1080,7 +1086,7 @@ SONIC_INSTALL_DEBS = $(addsuffix -install,$(addprefix $(DEBS_PATH)/, \
 			$(SONIC_DPKG_DEBS) \
 			$(SONIC_PYTHON_STDEB_DEBS) \
 			$(SONIC_DERIVED_DEBS) \
-			$(SONIC_EXTRA_DEBS)))
+			$(SONIC_EXTRA_DEBS) $(SONIC_BAZEL_KERNEL_DEBS)))
 $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) $(DEBS_PATH)/$$*
 	$(HEADER)
 	[ -f $(DEBS_PATH)/$* ] || { echo $(DEBS_PATH)/$* does not exist $(LOG) && false $(LOG) }
@@ -1599,13 +1605,19 @@ $(DOCKER_LOAD_TARGETS) : $(TARGET_PATH)/%.gz-load : .platform docker-start $$(TA
 ## Installers
 ###############################################################################
 
+# Revalidate retained source packages without making unchanged images stale.
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+$(addprefix $(TARGET_PATH)/,$(SONIC_RFS_TARGETS) $(SONIC_INSTALLERS)): | bazel-kernel-ensure
+endif
+
 $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : private export PASSWORD := $(PASSWORD)
 $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : private export BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD := $(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)
 $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
         .platform \
         build_debian.sh \
         $(SONIC_DEBIAN_EXTENSION_DEPENDS) \
-        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
+        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL) $(if $(filter y,$(INSTALL_DEBUG_TOOLS)),$(LINUX_KERNEL_DBG))) \
+        $(SONIC_BAZEL_KERNEL_INPUTS) \
         $$(addprefix $(TARGET_PATH)/,$$($$*_DEPENDENT_RFS)) \
         $(call dpkg_depend,$(TARGET_PATH)/%.dep)
 	$(HEADER)
@@ -1670,6 +1682,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         scripts/dbg_files.sh \
         scripts/build_sbom.sh \
         scripts/build_sbom.py \
+        scripts/sbom_kernel_deb.py \
         scripts/install_sbom_tool.sh \
         scripts/sbom_fragment.py \
         scripts/sbom_cve_refs.py \
@@ -2003,6 +2016,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		SBOM_INSTALLER_DOCKERS="$($*_DOCKERS)" \
 		SBOM_INSTALLER_DEBS="$($*_INSTALLS) $($*_LAZY_INSTALLS) $($*_LAZY_BUILD_INSTALLS)" \
 		SBOM_INSTALLER_WHEELS="$($*_PYTHON_WHEELS)" \
+		BUILD_WITH_BAZEL_WHEN_AVAILABLE="$(BUILD_WITH_BAZEL_WHEN_AVAILABLE)" \
 			./scripts/build_sbom.sh $(LOG)
 	)
 
@@ -2036,7 +2050,7 @@ SONIC_CLEAN_DEBS = $(addsuffix -clean,$(addprefix $(DEBS_PATH)/, \
 		   $(SONIC_MAKE_DEBS) \
 		   $(SONIC_DPKG_DEBS) \
 		   $(SONIC_DERIVED_DEBS) \
-		   $(SONIC_EXTRA_DEBS)))
+		   $(SONIC_EXTRA_DEBS) $(SONIC_BAZEL_KERNEL_DEBS)))
 
 SONIC_CLEAN_FILES = $(addsuffix -clean,$(addprefix $(FILES_PATH)/, \
 		   $(SONIC_ONLINE_FILES) \

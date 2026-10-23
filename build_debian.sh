@@ -157,8 +157,15 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install pigz
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install busybox linux-base
 echo '[INFO] Install SONiC linux kernel image'
 ## Note: duplicate apt-get command to ensure every line return zero
-sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb $FILESYSTEM_ROOT
-basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb | sed 's,^,./,')
+kernel_image_debs=()
+for kernel_image_deb in "$debs_path"/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb; do
+    # A retained debug DEB may belong to an earlier Bazel build after switching
+    # back to Make. Only the selected final debug-image step may install it.
+    case "$kernel_image_deb" in *-dbg_*|*-dbgsym_*) continue ;; esac
+    kernel_image_debs+=("$kernel_image_deb")
+done
+sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb "${kernel_image_debs[@]}" $FILESYSTEM_ROOT
+basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb "${kernel_image_debs[@]}" | sed 's,^,./,')
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y install $basename_deb_packages
 ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install acl
@@ -785,6 +792,13 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
     echo "Secure Boot support build stage: END."
 fi
 
+# Install the source-built debug package through its real dpkg lifecycle.
+if [[ $BUILD_WITH_BAZEL_WHEN_AVAILABLE == y && $DEBUG_IMG == y ]]; then
+    kernel_debug_deb=$(basename "$debs_path"/linux-image-"${kversion}"-dbg_*.deb)
+    sudo cp "$debs_path/$kernel_debug_deb" "$FILESYSTEM_ROOT"
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot "$FILESYSTEM_ROOT" apt -y install "./$kernel_debug_deb"
+    sudo rm -f "$FILESYSTEM_ROOT/$kernel_debug_deb"
+fi
 ## Update initramfs
 sudo chroot $FILESYSTEM_ROOT update-initramfs -u
 ## Convert initrd image to u-boot format

@@ -3,7 +3,7 @@
 	url = https://github.com/sonic-net/sonic-swss-common
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
-	url = https://github.com/sonic-net/sonic-linux-kernel
+	url = https://github.com/securely1g/sonic-linux-kernel
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
 	url = https://github.com/sonic-net/sonic-sairedis

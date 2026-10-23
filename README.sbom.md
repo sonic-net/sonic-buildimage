@@ -225,6 +225,12 @@ shown after this list.
   at the kernel image's `bom-ref` so consumers can reason about
   kernel-ABI risk.
 
+  When `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y` selects the supported Bazel kernel, its verified DEB keeps
+  its Debian-package identity and installed dpkg record. The adapter verifies
+  kernel/module/copyright bytes against the DEB and retains exact source
+  provenance, Debian ancestry, SONiC patch pedigree and kernel-ABI edges.
+  See the [kernel package handoff](tools/bazel/kernel/README.md).
+
 - **Vendor SDKs and HALs** (Broadcom SAI, Mellanox SDK, NVIDIA
   BlueField, Marvell Teralynx, Pensando, Arista PHY Credo). Recipe
   emits `type: library` with `supplier.name` derived from URL

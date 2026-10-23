@@ -27,7 +27,22 @@ export EXTERNAL_KERNEL_PATCH_LOC
 
 LINUX_HEADERS_COMMON = linux-headers-$(KERNEL_VERSION)$(KERNEL_ABISUFFIX)-common-$(KERNEL_FEATURESET)_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION)_all.deb
 $(LINUX_HEADERS_COMMON)_SRC_PATH = $(SRC_PATH)/sonic-linux-kernel
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+# One lazy prerequisite serves every transitive consumer, including direct
+# header/module requests. Bazel runs in the Linux sandbox as the slave user.
+.PHONY: bazel-kernel-ensure
+SONIC_BAZEL_KERNEL_CONFIG := CONFIGURED_ARCH CONFIGURED_PLATFORM BLDENV \
+        CROSS_BUILD_ENVIRON MULTIARCH_QEMU_ENVIRON KERNEL_VERSION KERNEL_ABISUFFIX \
+        KERNEL_SUBVERSION KERNEL_FEATURESET KVERSION ADDITIONAL_BUILD_PROFILES \
+        SECURE_UPGRADE_MODE SECURE_UPGRADE_KERNEL_CAFILE INCLUDE_EXTERNAL_PATCHES \
+        EXTERNAL_KERNEL_PATCH_URL EXTERNAL_KERNEL_PATCH_LOC
+bazel-kernel-ensure:
+	python3 -B tools/bazel/kernel/prepare.py ensure --debs-directory '$(subst ','"'"',$(DEBS_PATH))' \
+		$(foreach setting,$(SONIC_BAZEL_KERNEL_CONFIG),--kernel-config '$(setting)=$(subst ','"'"',$(if $(filter SECURE_UPGRADE_MODE,$(setting)),$(subst ",,$($(setting))),$($(setting))))') \
+		$(if $(strip $(SONIC_BAZEL_CACHE_SOURCE)),--cache-directory /bazel_cache)
+else
 SONIC_MAKE_DEBS += $(LINUX_HEADERS_COMMON)
+endif
 
 LINUX_KBUILD = linux-kbuild-$(KERNEL_VERSION)$(KERNEL_ABISUFFIX)_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(LINUX_HEADERS_COMMON),$(LINUX_KBUILD)))
@@ -43,3 +58,19 @@ LINUX_HEADERS = linux-headers-$(KVERSION)_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION)
 $(LINUX_HEADERS)_DEPENDS += $(LINUX_KBUILD) $(LINUX_KERNEL)
 $(LINUX_HEADERS)_RDEPENDS += $(LINUX_KBUILD) $(LINUX_KERNEL)
 $(eval $(call add_derived_package,$(LINUX_HEADERS_COMMON),$(LINUX_HEADERS)))
+
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+LINUX_KERNEL_DBG = linux-image-$(KVERSION)-dbg_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(LINUX_HEADERS_COMMON),$(LINUX_KERNEL_DBG)))
+SONIC_BAZEL_KERNEL_DEBS := $(LINUX_HEADERS_COMMON) $(LINUX_KBUILD) $(LINUX_KERNEL) $(LINUX_HEADERS) $(LINUX_KERNEL_DBG)
+# These outputs are produced together by ensure; the generic derived-DEB rule
+# must not touch their timestamps after a cache hit or unchanged rebuild.
+SONIC_DERIVED_DEBS := $(filter-out $(SONIC_BAZEL_KERNEL_DEBS),$(SONIC_DERIVED_DEBS))
+SONIC_BAZEL_KERNEL_INPUTS := $(addprefix $(DEBS_PATH)/,$(SONIC_BAZEL_KERNEL_DEBS) kernel-packages.json kernel-provenance.json)
+export BUILD_WITH_BAZEL_WHEN_AVAILABLE
+# A normal prerequisite reruns this lightweight check so Make re-stats outputs
+# that ensure replaced before deciding whether downstream consumers are stale.
+$(SONIC_BAZEL_KERNEL_INPUTS): bazel-kernel-ensure
+	@test -s "$@"
+SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/,$(SONIC_BAZEL_KERNEL_DEBS))
+endif
