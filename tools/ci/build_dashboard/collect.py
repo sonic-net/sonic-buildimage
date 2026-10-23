@@ -1,18 +1,29 @@
 #!/usr/bin/env python3
-"""Collect public build metadata without executing builds or reading their logs."""
+"""Collect public build metadata and bounded, allowlisted log timing summaries."""
 from __future__ import annotations
 
 import argparse
+import copy
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import importlib.util
 import json
 import os
 from pathlib import Path
 import re
+import selectors
 import subprocess
 import sys
 import tempfile
 import time
+
+# Load the reviewed sibling directly. PYTHONSAFEPATH deliberately excludes the
+# script directory, and falling back to a module from the working directory
+# could load unrelated code when this collector is launched elsewhere.
+_breakdown_spec = importlib.util.spec_from_file_location(
+    "build_dashboard_breakdown", Path(__file__).resolve().with_name("breakdown.py"))
+breakdown = importlib.util.module_from_spec(_breakdown_spec)
+_breakdown_spec.loader.exec_module(breakdown)
 
 WORKFLOWS = ("bazel-swss-oci.yml", "bazel-oci.yml", "bazel.yml")
 PHASES = ("setup", "build", "validation", "upload", "other")
@@ -24,10 +35,23 @@ IMAGE_JOBS = {
 }
 IMAGE_STEPS = {
     "Build the VS image with Bazel SWSS archives",
+    "Build the VS image and both OCI container variants",
     "Build the Bazel VS installer",
     "Build Bazel VS installer",
     "Build and verify sonic-vs.bin with Bazel",
 }
+MAX_LOG_JOBS = 20
+LOG_TIMEOUT_SECONDS = 45
+
+
+class LogReadError(RuntimeError):
+    """Optional log read failed; only this fixed reason can become public."""
+
+    def __init__(self, reason):
+        super().__init__(reason)
+        if reason not in breakdown.REASONS:
+            raise ValueError("Unknown log failure")
+        self.reason = reason
 
 
 class CollectionError(RuntimeError):
@@ -137,6 +161,55 @@ class GitHub:
     def __init__(self, executable="gh", retries=4):
         self.executable = executable
         self.retries = retries
+
+    def job_log(self, repo, job_id):
+        """Stream one public job log with strict memory and wall-time limits.
+
+        gh follows GitHub's log redirect. Neither the redirect URL, stderr, nor
+        raw stdout is written to disk or forwarded to the published document.
+        A transient failure is retried by the next dashboard refresh.
+        """
+        if not REPOSITORY_RE.fullmatch(repo) or not integer(job_id):
+            raise LogReadError("logs-temporarily-unavailable")
+        command = [self.executable, "api", "--allow-escape-sequences", "--method", "GET",
+                   f"repos/{repo}/actions/jobs/{job_id}/logs"]
+        try:
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except OSError as error:
+            raise LogReadError("logs-temporarily-unavailable") from error
+        output, errors = bytearray(), bytearray()
+        deadline = time.monotonic() + LOG_TIMEOUT_SECONDS
+        try:
+            with selectors.DefaultSelector() as selector:
+                selector.register(process.stdout, selectors.EVENT_READ, output)
+                selector.register(process.stderr, selectors.EVENT_READ, errors)
+                while selector.get_map():
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise LogReadError("logs-temporarily-unavailable")
+                    for key, _ in selector.select(min(remaining, 1)):
+                        chunk = os.read(key.fileobj.fileno(), 64 * 1024)
+                        if not chunk:
+                            selector.unregister(key.fileobj)
+                            continue
+                        key.data.extend(chunk)
+                        if len(output) > breakdown.MAX_LOG_BYTES:
+                            raise LogReadError("logs-too-large")
+                        if len(errors) > 64 * 1024:
+                            raise LogReadError("logs-temporarily-unavailable")
+            status = process.wait(timeout=max(0.001, deadline - time.monotonic()))
+            if status:
+                reason = "logs-expired" if re.search(rb"HTTP (?:404|410)\b", errors) else "logs-temporarily-unavailable"
+                raise LogReadError(reason)
+            return bytes(output)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise LogReadError("logs-temporarily-unavailable") from error
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            process.stdout.close()
+            process.stderr.close()
 
     def get(self, endpoint):
         for attempt in range(self.retries):
@@ -284,7 +357,7 @@ def load_history(path, repo):
         "pr": {"number", "title", "state", "draft", "url", "head_sha", "base_sha", "head_branch", "updated_at", "merged_at"},
         "run": {"run_id", "attempt", "workflow_name", "workflow_path", "source_sha", "branch", "event", "status", "conclusion", "pr_numbers", "pr_association", "pr_association_note", "started_at", "completed_at", "updated_at", "url", "jobs"},
         "job": {"job_id", "name", "kind", "architecture", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "image_build_seconds", "image_build_elapsed_seconds", "phases", "steps", "url"},
-        "step": {"number", "name", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "phase"},
+        "step": {"number", "name", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "phase", "breakdown"},
     }
     def check_fields(value, kind):
         if not isinstance(value, dict) or set(value) - allowed[kind]:
@@ -307,6 +380,8 @@ def load_history(path, repo):
                 raise CollectionError("Dashboard history contains invalid job details")
             for step in job["steps"]:
                 check_fields(step, "step")
+                if "breakdown" in step and not breakdown.valid(step["breakdown"]):
+                    raise CollectionError("Dashboard history contains invalid build breakdown details")
         key = (integer(run.get("run_id")), integer(run.get("attempt")))
         if None in key or key in keys or run.get("workflow_path") not in {f".github/workflows/{w}" for w in WORKFLOWS}:
             raise CollectionError("Dashboard history has invalid or duplicate run attempts")
@@ -314,7 +389,53 @@ def load_history(path, repo):
     return history
 
 
-def collect(api, repo, history, run_id=None, backfill=False, workers=4):
+def step_identity(step):
+    return tuple(step.get(field) for field in (
+        "number", "name", "status", "conclusion", "started_at", "completed_at"))
+
+
+def retain_breakdowns(jobs, old_jobs):
+    """Reuse only exact job/step identities within the same run attempt."""
+    old = {job["job_id"]: job for job in old_jobs}
+    for job in jobs:
+        previous = old.get(job["job_id"], {})
+        details = {step_identity(step): step["breakdown"] for step in previous.get("steps", [])
+                   if "breakdown" in step and breakdown.valid(step["breakdown"])}
+        for step in job["steps"]:
+            if step_identity(step) in details:
+                step["breakdown"] = copy.deepcopy(details[step_identity(step)])
+
+
+def enrich_breakdowns(api, repo, runs, limit):
+    """Enrich at most limit newest missing jobs, including cached run attempts."""
+    fetched = 0
+    for run in sorted(runs, key=lambda item: (item["run_id"], item["attempt"]), reverse=True):
+        for job in run["jobs"]:
+            if job["kind"] != "make-vs":
+                continue
+            pending = []
+            for step in job["steps"]:
+                if step["name"] not in IMAGE_STEPS:
+                    continue
+                if step["status"] != "completed" or step["conclusion"] != "success":
+                    step["breakdown"] = breakdown.unavailable("step-not-successful")
+                elif breakdown.retry_needed(step.get("breakdown")):
+                    step["breakdown"] = breakdown.unavailable("pending-collection")
+                    pending.append(step)
+            if not pending or job["status"] != "completed" or fetched >= limit:
+                continue
+            fetched += 1
+            try:
+                log = api.job_log(repo, job["job_id"])
+            except LogReadError as error:
+                for step in pending:
+                    step["breakdown"] = breakdown.unavailable(error.reason)
+                continue
+            for step in pending:
+                step["breakdown"] = breakdown.parse_log(log, step)
+
+
+def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs=MAX_LOG_JOBS):
     repository = api.get(f"repos/{repo}")
     if repository.get("private") is not False or repository.get("full_name", "").lower() != repo.lower():
         raise CollectionError("Dashboard collection requires the requested public repository")
@@ -322,7 +443,13 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4):
     associations = Associations(api, repo, repository.get("default_branch"), pulls)
     historical_prs = {pr["number"]: pr for pr in history["pull_requests"]}
     historical_prs.update({pr["number"]: normalize_pr(pr, repo) for pr in pulls})
-    retained = {(run["run_id"], run["attempt"]): run for run in history["runs"]}
+    retained = {(run["run_id"], run["attempt"]): copy.deepcopy(run) for run in history["runs"]}
+    # Recompute derived image totals from cached public steps as recognition
+    # evolves; keep precise measurements even when old logs have expired.
+    for old in retained.values():
+        jobs = [normalize_job(dict(job, id=job["job_id"]), repo, old["run_id"]) for job in old["jobs"]]
+        retain_breakdowns(jobs, old["jobs"])
+        old["jobs"] = jobs
     latest = []
     if run_id and not backfill:
         raw = api.get(f"repos/{repo}/actions/runs/{run_id}")
@@ -374,7 +501,10 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4):
     # Only read-only job requests are concurrent. All must succeed before output.
     with ThreadPoolExecutor(max_workers=workers) as pool:
         for run in pool.map(fetch, pending):
+            previous = retained.get((run["run_id"], run["attempt"]), {})
+            retain_breakdowns(run["jobs"], previous.get("jobs", []))
             retained[(run["run_id"], run["attempt"])] = run
+    enrich_breakdowns(api, repo, retained.values(), max(0, min(MAX_LOG_JOBS, log_jobs)))
     return {
         "schema_version": 1, "repository": repo,
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -409,6 +539,8 @@ def main():
     parser.add_argument("--run-id", type=int)
     parser.add_argument("--backfill", action="store_true", help="Re-read all available allowlisted run attempts, including completed history")
     parser.add_argument("--workers", type=int, default=4, choices=range(1, 9))
+    parser.add_argument("--log-jobs", type=int, default=MAX_LOG_JOBS, choices=range(MAX_LOG_JOBS + 1),
+                        help="Maximum newest missing Make VS job logs to summarize per refresh (default: 20; 0 skips reads)")
     args = parser.parse_args()
     if not REPOSITORY_RE.fullmatch(args.repo) or args.repo.split("/")[-1] in (".", ".."):
         parser.error("--repo must be an owner/repository name")
@@ -416,7 +548,7 @@ def main():
         parser.error("--run-id must be positive")
     try:
         history = load_history(args.history if args.history is not None else args.output, args.repo)
-        result = collect(GitHub(args.github_cli), args.repo, history, args.run_id, args.backfill, args.workers)
+        result = collect(GitHub(args.github_cli), args.repo, history, args.run_id, args.backfill, args.workers, args.log_jobs)
         write_atomic(args.output, result)
     except CollectionError as error:
         print(f"Collection failed; published history was not replaced: {error}", file=sys.stderr)

@@ -4,6 +4,38 @@
 const IMAGE_KINDS = new Set(["make-vs", "bazel-vs"]);
 const KIND_LABELS = {"make-vs": "Make VS", "bazel-vs": "Bazel VS installer", container: "Container", source: "Source", checks: "Checks", other: "Other"};
 const PHASES = ["setup", "build", "validation", "upload", "other"];
+// Keep this vocabulary in sync with breakdown.py. Never display labels or log text from a snapshot.
+const SECTION_LABELS = {
+  "vs-image": "VS image, dependencies and cleanup", "orchagent-release": "Orchagent release",
+  "orchagent-debug": "Orchagent debug", "syncd-release": "Syncd release", "syncd-debug": "Syncd debug",
+  "p4rt-runtime": "P4RT runtime package", "p4rt-debug": "P4RT debug package",
+};
+const TASK_LABELS = {
+  "final-image": "Final VS image recipe", rootfs: "Root filesystem squashfs", base: "Base container",
+  "config-engine": "Config-engine container", "orchagent-release": "Orchagent release container",
+  "orchagent-debug": "Orchagent debug container", "syncd-release": "Syncd release container",
+  "syncd-debug": "Syncd debug container", "p4rt-runtime": "P4RT runtime package", "p4rt-debug": "P4RT debug package",
+  "bmp-watchdog": "BMP watchdog container", "gnmi-watchdog": "gNMI watchdog container",
+  "sonic-otel": "OpenTelemetry container", "router-advertiser": "Router advertiser container",
+  "dash-engine": "DASH engine container", "sonic-mgmt-framework": "Management framework container",
+  database: "Database container", "gnmi-sidecar": "gNMI sidecar container", "sonic-gnmi": "gNMI container",
+  mux: "MUX container", "restapi-sidecar": "REST API sidecar container", sysmgr: "System manager container",
+  lldp: "LLDP container", "sonic-p4rt": "P4RT container", "gbsyncd-vs": "Gearbox syncd container",
+  "platform-monitor": "Platform monitor container", snmp: "SNMP container", "dhcp-relay": "DHCP relay container",
+  eventd: "Event daemon container", "sonic-bmp": "BMP container", "swss-layer": "SWSS layer container",
+  "dash-ha": "DASH HA container", "fpm-frr": "FRR container", nat: "NAT container", sflow: "sFlow container",
+  teamd: "Team daemon container", macsec: "MACsec container",
+};
+const BREAKDOWN_REASONS = {
+  "pending-collection": "Detailed timings have not been collected for this step yet.",
+  "step-not-successful": "A complete breakdown is available only for a successful build step.",
+  "logs-expired": "The job log is no longer available from GitHub.",
+  "logs-too-large": "The job log exceeds the timing collector's size limit.",
+  "logs-temporarily-unavailable": "The job log could not be collected. A later snapshot may include these timings.",
+  "unsupported-log-format": "This job log does not contain a supported timing breakdown.",
+  "incomplete-log": "The job log does not contain all boundaries needed for a complete breakdown.",
+  "invalid-timing": "The log timing boundaries could not be verified.",
+};
 const state = {data: null, selectedRun: null, selectedJob: null, loading: false};
 
 function seconds(value) { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null; }
@@ -42,6 +74,48 @@ function validateSnapshot(data) {
     if (!pr || !Number.isSafeInteger(pr.number) || typeof pr.title !== "string") throw new Error("The published pull request data is incomplete.");
   }
   return data;
+}
+function timingIdentity(id, labels) {
+  const match = typeof id === "string" && /^([a-z][a-z0-9-]*)-([1-9][0-9]{0,5})$/.exec(id);
+  if (!match || !Object.hasOwn(labels, match[1])) return null;
+  return {kind: match[1], label: labels[match[1]] + (Number(match[2]) > 1 ? ` · invocation ${Number(match[2])}` : "")};
+}
+function timingSpan(item, total) {
+  return item && seconds(item.offset_seconds) !== null && seconds(item.duration_seconds) !== null &&
+    item.offset_seconds <= Number.MAX_SAFE_INTEGER && item.duration_seconds <= Number.MAX_SAFE_INTEGER &&
+    item.offset_seconds + item.duration_seconds <= total + .01;
+}
+function normalizeBreakdown(value) {
+  // A missing optional field preserves historical snapshots. Malformed optional data never breaks the dashboard.
+  if (value === undefined) return null;
+  const unavailable = reason => ({status: "unavailable", reason});
+  const invalid = () => unavailable("The published breakdown is incomplete or unsupported.");
+  if (!value || value.version !== 1 || value.source !== "github-job-log") return invalid();
+  if (value.status === "unavailable") return unavailable(typeof value.reason === "string" && Object.hasOwn(BREAKDOWN_REASONS, value.reason) ? BREAKDOWN_REASONS[value.reason] : "Detailed timings are unavailable for this step.");
+  if (value.status !== "available" || seconds(value.duration_seconds) === null || value.duration_seconds <= 0 ||
+      value.duration_seconds > Number.MAX_SAFE_INTEGER || !Array.isArray(value.sections) || !value.sections.length || value.sections.length > 32) return invalid();
+  let end = 0, taskCount = 0;
+  const sections = [], sectionIds = new Set();
+  for (const section of value.sections) {
+    const identity = timingIdentity(section?.id, SECTION_LABELS);
+    if (!identity || sectionIds.has(section.id) || !timingSpan(section, value.duration_seconds) ||
+        Math.abs(section.offset_seconds - end) > .01 || !Array.isArray(section.tasks)) return invalid();
+    sectionIds.add(section.id);
+    end = section.offset_seconds + section.duration_seconds;
+    taskCount += section.tasks.length;
+    if (taskCount > 512) return invalid();
+    const tasks = [], taskIds = new Set();
+    for (const task of section.tasks) {
+      const taskIdentity = timingIdentity(task?.id, TASK_LABELS);
+      if (!taskIdentity || taskIds.has(task.id) || !timingSpan(task, section.duration_seconds) || !["finished", "cached"].includes(task.outcome)) return invalid();
+      taskIds.add(task.id);
+      tasks.push({...taskIdentity, offset_seconds: task.offset_seconds, duration_seconds: task.duration_seconds, outcome: task.outcome});
+    }
+    tasks.sort((a, b) => a.offset_seconds - b.offset_seconds);
+    sections.push({...identity, offset_seconds: section.offset_seconds, duration_seconds: section.duration_seconds, tasks});
+  }
+  if (Math.abs(end - value.duration_seconds) > .01) return invalid();
+  return {status: "available", duration_seconds: value.duration_seconds, sections};
 }
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -233,6 +307,59 @@ function renderRuns() {
   if (!rows.length) { const row = el("tr"), cell = el("td", "empty", "No workflow runs match these filters."); cell.colSpan = 5; row.append(cell); byId("runs-body").append(row); }
 }
 
+function renderBreakdown(breakdown) {
+  const box = el("div", "breakdown-body");
+  if (breakdown.status !== "available") {
+    box.append(el("p", "breakdown-note", `Breakdown unavailable. ${breakdown.reason} The recorded step duration is shown above.`));
+    return box;
+  }
+  box.append(el("p", "breakdown-note", `Measured from job log timestamps · ${duration(breakdown.duration_seconds)}. These sections run sequentially and include setup, dependencies and cleanup. Log timestamps may differ slightly from the rounded step duration.`));
+  const list = el("ol", "breakdown-sections");
+  for (const section of breakdown.sections) {
+    const item = el("li", "breakdown-section");
+    const row = el(section.tasks.length ? "summary" : "div", "timing-row");
+    const name = el("span", "timing-name", section.label);
+    name.append(el("span", "timing-hint", `Starts at +${duration(section.offset_seconds)}${section.tasks.length ? ` · ${section.tasks.length} measured ${section.tasks.length === 1 ? "task" : "tasks"}` : " · no measured task detail"}`));
+    row.append(name, el("span", "timing-duration", duration(section.duration_seconds)));
+    if (!section.tasks.length) item.append(row);
+    else {
+      const details = el("details", "section-breakdown");
+      details.append(row, el("p", "breakdown-note", "Task spans can overlap; do not add their durations. Only recognized task spans are shown; remaining section time is not assigned to tasks. Bars share the section's time scale."));
+      const tasks = el("ol", "breakdown-tasks");
+      for (const task of section.tasks) {
+        const taskItem = el("li", "breakdown-task"), taskRow = el("div", "timing-row");
+        const taskName = el("span", "timing-name", task.label);
+        taskName.append(el("span", "timing-hint", `Starts at +${duration(task.offset_seconds)} in section · log: ${task.outcome}`));
+        taskRow.append(taskName, el("span", "timing-duration", duration(task.duration_seconds)));
+        const track = el("div", "task-track"), span = el("span", "task-span");
+        track.setAttribute("aria-hidden", "true");
+        span.style.marginLeft = `${section.duration_seconds ? Math.min(100, task.offset_seconds / section.duration_seconds * 100) : 0}%`;
+        span.style.width = `${section.duration_seconds ? Math.min(100, task.duration_seconds / section.duration_seconds * 100) : 0}%`;
+        track.append(span);
+        taskItem.append(taskRow, track);
+        if (task.kind === "final-image") taskItem.append(el("p", "unmeasured-note", "Inner phase timings are unavailable: ONIE, BIOS, UEFI and compression are not timed separately in this log."));
+        tasks.append(taskItem);
+      }
+      details.append(tasks); item.append(details);
+    }
+    list.append(item);
+  }
+  box.append(list);
+  return box;
+}
+function renderStep(step) {
+  const item = el("li", "step-item"), breakdown = normalizeBreakdown(step.breakdown);
+  const row = el(breakdown ? "summary" : "div", "timing-row");
+  const name = el("span", "timing-name", step.name || "Unnamed step"), timing = el("span", "step-duration");
+  timing.append(badge(result(step)), document.createTextNode(duration(step.duration_seconds)));
+  if (breakdown) name.append(el("span", "timing-hint", breakdown.status === "available" ? `Measured breakdown · ${breakdown.sections.length} sections` : "Breakdown unavailable"));
+  row.append(name, timing);
+  if (breakdown) {
+    const details = el("details", "step-breakdown"); details.append(row, renderBreakdown(breakdown)); item.append(details);
+  } else item.append(row);
+  return item;
+}
+
 function renderDetails() {
   const box = byId("details"); box.replaceChildren();
   const run = state.data.runs.find(item => runKey(item) === state.selectedRun);
@@ -280,11 +407,7 @@ function renderDetails() {
   box.append(bar, legend, el("p", "stage-note", "Stage totals sum recorded step durations. They may not equal job elapsed time, and the build phase can include more work than the image build step. Queue time is excluded. Cache state and runner comparability are unknown."));
   const steps = el("details", "steps"); steps.append(el("summary", "", `Step timings · ${job.steps.length} steps`));
   const list = el("ol");
-  for (const step of job.steps) {
-    const item = el("li"); const name = el("span", "", step.name || "Unnamed step"); const timing = el("span");
-    timing.append(badge(result(step)), document.createTextNode(duration(step.duration_seconds)));
-    item.append(name, timing); list.append(item);
-  }
+  for (const step of job.steps) list.append(renderStep(step));
   steps.append(list); box.append(steps);
 }
 function renderFiltered() { renderTrend(); renderCoverage(); renderRuns(); renderDetails(); }
@@ -326,4 +449,4 @@ if (typeof document !== "undefined") {
   refresh();
   setInterval(() => { if (!document.hidden) refresh(); }, 300000);
 }
-if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured};
+if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured, normalizeBreakdown, renderStep};

@@ -1,8 +1,10 @@
 # Build dashboard data (schema 1)
 
 `collect.py` produces one JSON document, also used as its durable history. It
-reads public GitHub Actions metadata only: no logs, artifacts, machine names,
-workflow inputs, environment variables, credentials, or build execution.
+reads public GitHub Actions metadata and bounded timing markers from selected
+public job logs. Raw logs, artifacts, machine names, workflow inputs, environment
+variables and credentials are never retained in the public document. Collection
+does not execute a build or execute any content from a log.
 
 - `schema_version`: `1`.
 - `repository`: validated `owner/repository`.
@@ -39,6 +41,22 @@ workflow inputs, environment variables, credentials, or build execution.
   build's elapsed time. A failed job is never a successful benchmark.
 - Each step: `number`, `name`, `status`, `conclusion`, `started_at`,
   `completed_at`, `duration_seconds`, `phase`.
+  An optional `breakdown` provides nested Make build timings without changing
+  the existing step duration or successful-image measurement:
+  - `version`: `1`; `source`: `github-job-log`.
+  - `status`: `available` or `unavailable`; `reason`: a fixed reason or `null`.
+  - `duration_seconds`: observed log interval, or `null` when unavailable.
+  - `sections`: sequential outer Make invocations. Each contains a known `id`,
+    fixed `label`, `offset_seconds` relative to the observed build-step start,
+    `duration_seconds`, and `tasks`.
+  - Each task contains a known `id`, fixed `label`, `offset_seconds` relative to
+    its containing section, `duration_seconds`, and `outcome` (`finished` or
+    `cached`). Tasks can overlap and are not an additive partition of the
+    section. Unobserved work inside a recipe is not synthesized.
+  Timing values must be finite and nonnegative; child intervals must fit their
+  parent. Identifiers and labels come from the parser's allowlist, never
+  arbitrary log text. Unavailable detail is not a zero-duration build. The
+  optional field is compatible with older schema-1 snapshots.
 - `comparisons`: empty in this phase. API timing alone does not prove matched
   cache state, toolchain/configuration, hardware, or a historical tested base.
   Therefore no improvement or regression percentage is asserted.

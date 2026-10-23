@@ -2,8 +2,10 @@
 import copy
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -50,6 +52,15 @@ class FakeAPI:
         self.jobs = {}
         self.linked = []
         self.fail_jobs = False
+        self.logs = {}
+        self.log_calls = []
+
+    def job_log(self, repo, job_id):
+        self.log_calls.append((repo, job_id))
+        value = self.logs.get(job_id, collector.LogReadError("logs-expired"))
+        if isinstance(value, Exception):
+            raise value
+        return value
 
     def get(self, endpoint):
         self.calls.append(endpoint)
@@ -118,6 +129,11 @@ class TimingTests(unittest.TestCase):
         self.assertEqual(collector.normalize_job(value, REPO, 10)["image_build_seconds"], 600)
         value["name"] = "Something containing VS"
         self.assertEqual(collector.job_kind(value["name"]), "other")
+
+    def test_combined_make_image_step_counts(self):
+        value = job()
+        value["steps"][0]["name"] = "Build the VS image and both OCI container variants"
+        self.assertEqual(collector.normalize_job(value, REPO, 10)["image_build_seconds"], 600)
 
     def test_fields_and_urls_are_allowlisted(self):
         value = job()
@@ -260,6 +276,18 @@ class CollectionTests(unittest.TestCase):
 
 
 class IOTests(unittest.TestCase):
+    def test_cli_loads_reviewed_sibling_with_safe_path_outside_source_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # A same-name module in the caller's directory must not be loaded.
+            Path(directory, "breakdown.py").write_text("raise RuntimeError('untrusted caller module')\n")
+            result = subprocess.run(
+                [sys.executable, "-B", str(Path(collector.__file__).resolve()), "--help"],
+                cwd=directory, env=dict(os.environ, PYTHONSAFEPATH="1"),
+                text=True, capture_output=True, timeout=10, check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--log-jobs", result.stdout)
+
     def test_pagination_reads_beyond_first_page_for_lists_and_jobs(self):
         api = collector.GitHub()
         with mock.patch.object(api, "get", side_effect=[{"jobs": list(range(100))}, {"jobs": [100]}]) as get:

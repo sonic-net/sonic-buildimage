@@ -1,8 +1,9 @@
 # SONiC build-time dashboard
 
 The dashboard publishes existing GitHub Actions measurements at
-<https://securely1g.github.io/sonic-buildimage/>. It collects metadata only; it
-does not launch a build, generate a package, modify a runner, or clear a cache.
+<https://securely1g.github.io/sonic-buildimage/>. It collects Actions metadata
+and selected timing markers from public build logs. It does not launch a build,
+generate a package, modify a runner, or clear a cache.
 
 ## Measurements
 
@@ -27,6 +28,38 @@ the existing full-image/package execution opt-in.
 See [data-contract.md](data-contract.md) for the public JSON format. Only a
 bounded set of public metadata fields is retained. Raw logs, command lines,
 environment variables, machine names, and build artifacts are not published.
+
+## Expand an image build
+
+Open **Step timings**, then expand the Make VS image-build step marked
+**Measured breakdown**. Each section covers one sequential Make target, including its
+setup, prerequisite checks and cleanup. Expand a section to see measured tasks
+inside it. Those tasks may run concurrently: their durations must not be added
+to the section total. The task timeline shows that overlap.
+
+For example, [run 39909648210, job 120280929878, step 11](https://github.com/securely1g/sonic-buildimage/actions/runs/39909648210/job/120280929878#step:11:1)
+reports 44m 25s for the combined VS/OCI build. Its log divides that time into
+about 30m 13s for the VS image and dependencies, 4m 19s for Orchagent release,
+4m 25s for Orchagent debug, 4m 35s for Syncd debug, and 53s for the final P4RT
+debug target and cleanup. These values are examples, not dashboard constants:
+the collector derives each attempt's measurements from its own log.
+
+The final image recipe is one measured task. Its internal image assembly,
+installation, boot validation and compression times are not inferred. Likewise,
+a Make `cached` marker does not establish a Bazel cache-hit rate. Repeated target
+invocations remain separate observations. Log timestamps have finer precision
+than Actions step timestamps, so their totals can differ slightly.
+
+The collector reads at most 20 eligible missing job logs per refresh, newest
+first. Each download has a 32 MiB size limit and a 45-second deadline. It retains
+only known task identifiers, fixed labels, outcomes and numeric timings; raw
+logs, command lines and machine details never enter the published snapshot.
+Completed measurements are cached with their exact run, attempt, job and step
+identity. Expired or unsupported logs are shown as unavailable. Temporary read
+failures can be retried without discarding the ordinary step timings. Older
+snapshots without breakdowns remain supported and gain details incrementally.
+Use `--log-jobs 0` to collect only metadata on a particular invocation, or a
+value from 1 to 20 to limit its log reads.
 
 ## Automatic publication
 
