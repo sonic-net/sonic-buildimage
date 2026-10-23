@@ -1,0 +1,168 @@
+# SONIC_PROFILE=EMBEDDED
+#
+# SONiC Embedded: minimal-footprint image for resource-constrained deployments
+# (e.g. Marvell AC5x/AC5p embedded, lab nodes, compact edge switches).
+#
+# Design goals:
+#   - Smallest possible image size and runtime memory footprint
+#   - Fast boot time (fewer dockers to start)
+#   - Keep only what is needed for basic L2/L3 forwarding + lightweight mgmt
+#   - Exclude heavy telemetry, monitoring, and datacenter-specific stacks
+#
+# ---------------------------------------------------------------------------
+# Included features
+# ---------------------------------------------------------------------------
+
+# LLDP: essential for topology discovery and basic neighbor visibility.
+INCLUDE_LLDP = y
+ENABLE_LLDP = y
+AUTORESTART_LLDP = y
+DELAY_LLDP = n
+
+# TEAMD: LAG/LACP support for uplink redundancy.
+INCLUDE_TEAMD = y
+ENABLE_TEAMD = y
+AUTORESTART_TEAMD = y
+DELAY_TEAMD = n
+
+# MGMT_FRAMEWORK: CLI and REST config interface — kept for operability.
+INCLUDE_MGMT_FRAMEWORK = y
+ENABLE_MGMT_FRAMEWORK = y
+AUTORESTART_MGMT_FRAMEWORK = y
+DELAY_MGMT_FRAMEWORK = y
+
+# gNMI: lightweight streaming telemetry and config; low overhead.
+INCLUDE_SYSTEM_GNMI = y
+ENABLE_SYSTEM_GNMI = y
+AUTORESTART_SYSTEM_GNMI = y
+DELAY_SYSTEM_GNMI = y
+
+# EVENTD: in-process event notifications; minimal resource cost.
+INCLUDE_SYSTEM_EVENTD = y
+ENABLE_SYSTEM_EVENTD = y
+AUTORESTART_SYSTEM_EVENTD = y
+DELAY_SYSTEM_EVENTD = n
+
+# DHCP_RELAY: basic DHCP relay for host connectivity.
+INCLUDE_DHCP_RELAY = y
+ENABLE_DHCP_RELAY = y
+AUTORESTART_DHCP_RELAY = y
+DELAY_DHCP_RELAY = n
+
+# ---------------------------------------------------------------------------
+# Excluded features (to reduce size / memory / boot time)
+# ---------------------------------------------------------------------------
+
+# STP: not used in leaf-spine / lite deployments.
+INCLUDE_STP = n
+ENABLE_STP = n
+AUTORESTART_STP = n
+DELAY_STP = n
+
+# SNMP: superseded by gNMI; removed to save ~30 MB image space.
+INCLUDE_SNMP = n
+ENABLE_SNMP = n
+AUTORESTART_SNMP = n
+DELAY_SNMP = n
+
+# sFlow: sampling overhead not needed in lite deployments.
+INCLUDE_SFLOW = n
+ENABLE_SFLOW = n
+AUTORESTART_SFLOW = n
+DELAY_SFLOW = n
+
+# Telemetry (dial-out): heavy streaming stack; use gNMI instead.
+INCLUDE_SYSTEM_TELEMETRY = n
+ENABLE_SYSTEM_TELEMETRY = n
+AUTORESTART_SYSTEM_TELEMETRY = n
+DELAY_SYSTEM_TELEMETRY = n
+
+# OTEL (High-Frequency Telemetry): datacenter observability; excluded.
+INCLUDE_SYSTEM_OTEL = n
+ENABLE_SYSTEM_OTEL = n
+AUTORESTART_SYSTEM_OTEL = n
+DELAY_SYSTEM_OTEL = n
+
+# BMP (BGP Monitoring Protocol): specialized; excluded.
+INCLUDE_SYSTEM_BMP = n
+ENABLE_SYSTEM_BMP = n
+AUTORESTART_SYSTEM_BMP = n
+DELAY_SYSTEM_BMP = n
+
+# REST API: mgmt-framework covers REST needs; separate restapi excluded.
+INCLUDE_RESTAPI = n
+ENABLE_RESTAPI = n
+AUTORESTART_RESTAPI = n
+DELAY_RESTAPI = n
+
+# NAT: not needed in basic lite deployments.
+INCLUDE_NAT = n
+ENABLE_NAT = n
+AUTORESTART_NAT = n
+DELAY_NAT = n
+
+# DHCP_SERVER: rely on centralized DHCP; local server excluded.
+INCLUDE_DHCP_SERVER = n
+ENABLE_DHCP_SERVER = n
+AUTORESTART_DHCP_SERVER = n
+DELAY_DHCP_SERVER = n
+
+# MACsec: link-layer encryption overhead; excluded.
+INCLUDE_MACSEC = n
+ENABLE_MACSEC = n
+AUTORESTART_MACSEC = n
+DELAY_MACSEC = n
+
+# ICCPD (MC-LAG): datacenter dual-homing feature; excluded.
+INCLUDE_ICCPD = n
+ENABLE_ICCPD = n
+AUTORESTART_ICCPD = n
+DELAY_ICCPD = n
+
+# MUX (dual-ToR / Gemini): datacenter redundancy feature; excluded.
+INCLUDE_MUX = n
+ENABLE_MUX = n
+AUTORESTART_MUX = n
+DELAY_MUX = n
+
+# P4RT (P4Runtime): programmable dataplane; not needed in lite.
+INCLUDE_P4RT = n
+ENABLE_P4RT = n
+AUTORESTART_P4RT = n
+DELAY_P4RT = n
+
+# Router Advertiser: IPv6 RA not required in lite forwarding use case.
+INCLUDE_ROUTER_ADVERTISER = n
+ENABLE_ROUTER_ADVERTISER = n
+AUTORESTART_ROUTER_ADVERTISER = n
+DELAY_ROUTER_ADVERTISER = n
+
+# Embedded Optimizations
+OPTIMIZE_CLI = y
+OPTIMIZE_SUPD_S6 = y
+# Disabled pending investigation of a "Wrong Image Format for bootm command" /
+# "can't get kernel image!" boot failure seen with the install-time FIT
+# generation path (OPTIMIZE_FIT_DE_DUPLICATION=y). Falls back to the
+# known-working static multi-config sonic_fit.its built into the image.
+OPTIMIZE_FIT_DE_DUPLICATION = n
+
+# ---------------------------------------------------------------------------
+# Core docker — services to collapse into the single core container.
+#
+# List only services that are ENABLED (INCLUDE_*=y above).  mega-gen does NOT
+# filter by include flags at build time; listing a disabled service causes a
+# missing build-rule error.
+#
+# following shouldn't be part of the core docker: database, syncd, pmon
+#
+# Available tokens:
+#   Core:        swss
+#   Routing:     bgp
+#   Mgmt:        lldp  snmp  mgmt-framework  gnmi  restapi
+#   Telemetry:   telemetry  otel  sflow  bmp
+#   Events:      eventd
+#   L2:          teamd  stp  macsec
+#   L3/services: nat  dhcp-relay  dhcp-server  radv
+#   Datacenter:  iccpd  mux  p4rt
+# ---------------------------------------------------------------------------
+CORE_DOCKER_SERVICES = swss bgp lldp teamd mgmt-framework gnmi eventd dhcp_relay

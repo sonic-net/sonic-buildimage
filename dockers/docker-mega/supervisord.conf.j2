@@ -1,0 +1,912 @@
+[supervisord]
+logfile_maxbytes=1MB
+logfile_backups=2
+nodaemon=true
+
+[eventlistener:dependent-startup]
+command=python3 /usr/local/bin/depstartup_guard.py
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+buffer_size=1024
+
+[eventlistener:supervisor-proc-exit-listener]
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name mega
+events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING,PROCESS_COMMUNICATION_STDOUT
+autostart=true
+autorestart=unexpected
+buffer_size=1024
+
+[program:rsyslogd]
+command=/usr/sbin/rsyslogd -n -iNONE
+priority=1
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+startsecs=0
+
+[program:start]
+command=/bin/bash -c '/opt/sonic/core-services/teamd/start.sh || echo "mega: start.sh for teamd failed (rc=$?)" >&2; /opt/sonic/core-services/lldp/start.sh || echo "mega: start.sh for lldp failed (rc=$?)" >&2; /opt/sonic/core-services/gnmi/start.sh || echo "mega: start.sh for gnmi failed (rc=$?)" >&2; /opt/sonic/core-services/eventd/start.sh || echo "mega: start.sh for eventd failed (rc=$?)" >&2; /opt/sonic/core-services/mgmt-framework/start.sh || echo "mega: start.sh for mgmt-framework failed (rc=$?)" >&2; /opt/sonic/core-services/dhcp_relay/start.sh || echo "mega: start.sh for dhcp_relay failed (rc=$?)" >&2'
+priority=50
+autostart=true
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=sharpd:exited
+
+
+# --- swss: feature preamble ---
+
+
+
+
+{% set is_fabric_asic = 0 %}
+{% set orchagent_dependent_startup_wait_for = "portsyncd:running" %}
+{% if DEVICE_METADATA.localhost.switch_type %}
+{% if DEVICE_METADATA.localhost.switch_type == "fabric" %}
+{% set is_fabric_asic = 1 %}
+{% set orchagent_dependent_startup_wait_for = "rsyslogd:running" %}
+{%- endif %}
+{%- endif %}
+{% set asan_extra_options = ':print_suppressions=0' %}
+
+{% if is_fabric_asic == 0 %}
+[program:gearsyncd]
+command=/usr/bin/gearsyncd -p /usr/share/sonic/hwsku/gearbox_config.json
+priority=13
+autostart=false
+autorestart=false
+startsecs=0
+startretries=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/gearsyncd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:portsyncd]
+command=/usr/bin/portsyncd
+priority=13
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/portsyncd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+
+[program:orchagent]
+command=/usr/bin/orchagent.sh
+priority=14
+autostart=false
+autorestart=false
+stdout_capture_maxbytes=1MB
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for={{ orchagent_dependent_startup_wait_for }}
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/orchagent-asan.log{{ asan_extra_options }}"
+{% endif %}
+
+
+[program:swssconfig]
+command=/usr/bin/swssconfig.sh
+priority=15
+autostart=false
+autorestart=unexpected
+startretries=0
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=orchagent:running
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/swssconfig-asan.log{{ asan_extra_options }}"
+{% endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:restore_neighbors]
+command=/usr/bin/restore_neighbors.py
+priority=16
+autostart=false
+autorestart=false
+startsecs=0
+startretries=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:coppmgrd]
+command=/usr/bin/coppmgrd
+priority=16
+autostart=false
+autorestart=false
+startretries=0
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=orchagent:running
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/coppmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:neighsyncd]
+command=/usr/bin/neighsyncd
+priority=17
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/neighsyncd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:vlanmgrd]
+command=/usr/bin/vlanmgrd
+priority=18
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/vlanmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:intfmgrd]
+command=/usr/bin/intfmgrd
+priority=19
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/intfmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:portmgrd]
+command=/usr/bin/portmgrd
+priority=20
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/portmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+
+[program:fabricmgrd]
+command=/usr/bin/fabricmgrd
+priority=20
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/fabricmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:buffermgrd]
+command=/usr/bin/buffermgrd.sh
+priority=21
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/buffermgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:vrfmgrd]
+command=/usr/bin/vrfmgrd
+priority=23
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/vrfmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:nbrmgrd]
+command=/usr/bin/nbrmgrd
+priority=25
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/nbrmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:vxlanmgrd]
+command=/usr/bin/vxlanmgrd
+priority=26
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/vxlanmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+
+[program:tunnelmgrd]
+command=/usr/bin/tunnelmgrd
+priority=27
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/tunnelmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+
+[program:enable_counters]
+command=/usr/bin/enable_counters.py
+priority=22
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+
+{% if is_fabric_asic == 0 %}
+
+[program:fdbsyncd]
+command=/usr/bin/fdbsyncd
+priority=27
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/fdbsyncd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+
+[program:countersyncd]
+command=/usr/bin/countersyncd --enable-otel
+priority=28
+autostart=false
+autorestart=unexpected
+startsecs=10
+startretries=3
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+
+
+[program:mgmtd]
+command=/usr/lib/frr/mgmtd -A 127.0.0.1 -P 0
+priority=34
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=countersyncd:running
+
+
+[program:zebra]
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic -M snmp --asic-offload=notify_on_offload
+priority=34
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+
+
+[program:zsocket]
+command=/usr/bin/zsocket.sh
+priority=34
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+
+
+[program:staticd]
+command=/usr/lib/frr/staticd -A 127.0.0.1 -P 0
+priority=34
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zsocket:exited
+
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+
+[program:bfdd]
+command=/usr/lib/frr/bfdd -A 127.0.0.1 -P 0
+priority=34
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+
+
+[program:bgpd]
+{% if FEATURE is defined and
+      (FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
+      (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled") %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp -M bmp
+{% else %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp
+{% endif %}
+priority=35
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zsocket:exited
+
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+
+[program:ospfd]
+command=/usr/lib/frr/ospfd -A 127.0.0.1 -P 0 -M snmp
+priority=35
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+
+
+[program:pimd]
+command=/usr/lib/frr/pimd -A 127.0.0.1 -P 0
+priority=35
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+
+
+[program:fpmsyncd]
+command=fpmsyncd
+priority=36
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+
+[program:frrcfgd]
+command=/usr/local/bin/frrcfgd
+{% else %}
+
+[program:bgpcfgd]
+command=/usr/local/bin/bgpcfgd
+{% endif %}
+priority=36
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+
+{% if DEVICE_METADATA.localhost.switch_type is defined and DEVICE_METADATA.localhost.switch_type == "chassis-packet" %}
+
+[program:staticroutebfd]
+command=/usr/local/bin/staticroutebfd
+priority=36
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+{% else %}
+
+[program:bgpmon]
+command=/usr/local/bin/bgpmon
+priority=36
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+
+{% endif %}
+
+{% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.software_bfd is defined and SYSTEM_DEFAULTS.software_bfd.status is defined and SYSTEM_DEFAULTS.software_bfd.status == "enabled" %}
+
+[program:bfdmon]
+command=/usr/local/bin/bfdmon
+priority=36
+autostart=true
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+{% endif %}
+
+{% if DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified") %}
+
+[program:vtysh_b]
+command=/usr/bin/vtysh -b
+priority=36
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+
+{% if WARM_RESTART is defined and WARM_RESTART.bgp is defined and WARM_RESTART.bgp.bgp_eoiu is defined and WARM_RESTART.bgp.bgp_eoiu == "true" %}
+
+[program:bgp_eoiu_marker]
+command=/usr/bin/bgp_eoiu_marker.py
+priority=37
+autostart=false
+autorestart=false
+startsecs=0
+startretries=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+
+[program:pathd]
+command=/usr/lib/frr/pathd -A 127.0.0.1 -P 0
+priority=35
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+
+
+[program:sharpd]
+command=/usr/lib/frr/sharpd -A 127.0.0.1 -P 0
+priority=35
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+
+[program:teammgrd]
+command=/usr/bin/teammgrd
+priority=53
+autostart=false
+autorestart=false
+stopwaitsecs=60
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+[program:teamsyncd]
+command=/usr/bin/teamsyncd
+priority=54
+startsecs=5
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=teammgrd:running
+
+
+[program:tlm_teamd]
+command=/usr/bin/tlm_teamd
+priority=54
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+
+[program:lldpd]
+# https://github.com/vincentbernat/lldpd/commit/9856f2792c301116cc4a3fcfba91b9672ee5db1f
+# - `-d` means to stay in foreground, log to syslog
+# - `-dd` means to stay in foreground, log warnings to console
+# - `-ddd` means to stay in foreground, log warnings and info to console
+# - `-dddd` means to stay in foreground, log all to console
+{% if namespace_id is defined and namespace_id|length %}
+command=/usr/sbin/lldpd -d -I Ethernet[0-9]* -C Ethernet[0-9]*
+{% else %}
+command=/usr/sbin/lldpd -d -I Ethernet[0-9]*,eth0 -C eth0
+{% endif %}
+priority=73
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+[program:waitfor_lldp_ready]
+command=/usr/bin/waitfor_lldp_ready.sh
+priority=73
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=lldpd:running
+
+
+[program:lldp-syncd]
+command=/usr/bin/env python3 -m lldp_syncd
+priority=74
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=waitfor_lldp_ready:exited
+
+
+[program:lldpmgrd]
+command=/usr/bin/lldpmgrd
+priority=75
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=lldp-syncd:running
+
+
+[program:gnmi-native]
+command=/usr/bin/gnmi-native.sh
+priority=93
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+[program:dialout]
+command=/usr/bin/dialout.sh
+priority=94
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=gnmi-native:running
+
+
+[program:eventd]
+command=/usr/bin/eventd
+priority=113
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+[program:eventdb]
+command=/usr/bin/eventdb_wrapper.sh
+priority=113
+autostart=false
+autorestart=false
+startsecs=0
+startretries=0
+exitcodes=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+
+[program:rest-server]
+command=/usr/bin/rest-server.sh
+priority=133
+autostart=false
+autorestart=true
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+# --- dhcp_relay: feature preamble ---
+
+
+
+
+
+{# If our configuration has VLANs... #}
+{% if VLAN_INTERFACE %}
+{# Count how many VLANs require a DHCP relay agent... #}
+{% set ipv4_num_relays = { 'count': 0 } %}
+{% set ipv6_num_relays = { 'count': 0 } %}
+{% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% set _dummy = ipv4_num_relays.update({'count': ipv4_num_relays.count + 1}) %}
+{% endif %}
+{% for vlan_name in VLAN_INTERFACE %}
+{% if VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
+{% set _dummy = ipv4_num_relays.update({'count': ipv4_num_relays.count + 1}) %}
+{% endif %}
+{% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+{% set _dummy = ipv6_num_relays.update({'count': ipv6_num_relays.count + 1}) %}
+{% endif %}
+{% endfor %}
+{# If one or more of the VLANs require a DHCP relay agent... #}
+{% if ipv4_num_relays.count > 0 or ipv6_num_relays.count > 0 %}
+
+{# Create a program entry for each DHCP relay agent instance #}
+{% set relay_for_ipv4 = { 'flag': False } %}
+{% set relay_for_ipv6 = { 'flag': False } %}
+{# Decide the dhcpv4 relay agent based on the feature config #}
+{% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% else %}
+{% set added_vlan = []%}
+{% for (vlan_name, prefix) in VLAN_INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 and vlan_name not in added_vlan %}
+        {%- set _ = added_vlan.append(vlan_name) %}
+    {%- endif %}
+{% endfor %}
+
+{% endif %}
+{% endif %}
+{% else %}
+{% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% endif %}
+{% endif %}
+[program:dhcprelayd]
+command=/usr/local/bin/dhcprelayd
+priority=153
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+
+[group:swss]
+programs=orchagent,swssconfig,fabricmgrd,enable_counters,countersyncd
+
+[group:bgp]
+programs=mgmtd,zebra,zsocket,staticd,bgpd,fpmsyncd,sharpd
+
+[group:teamd]
+programs=teammgrd,teamsyncd,tlm_teamd
+
+[group:lldp]
+programs=lldpd,waitfor_lldp_ready,lldp-syncd,lldpmgrd
+
+[group:gnmi]
+programs=gnmi-native,dialout
+
+[group:eventd]
+programs=eventd,eventdb
+
+[group:mgmt-framework]
+programs=rest-server
+
+[group:dhcp_relay]
+programs=dhcprelayd
