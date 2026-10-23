@@ -18,6 +18,7 @@
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_platform.component import ComponentCPLD
     from sonic_platform.thermal import ThermalBMC
     from sonic_platform.switch_host_module import SwitchHostModule
     from sonic_platform.eeprom import EepromBMC
@@ -50,8 +51,13 @@ class Chassis(ChassisBase):
         self._module_list = [self._switch_host_module]
         self._liquid_cooling = None
         self._eeprom = EepromBMC()
+        # Share the chassis's EepromBMC rather than let each ComponentCPLD
+        # create its own, which would spawn extra ipmi-fru subprocess calls
+        # for the same FRU data whenever they are queried.
+        self._component_list = (
+            [ComponentBMC()] + ComponentCPLD.get_component_list(eeprom=self._eeprom)
+        )
         self._reboot_cause = RebootCause()
-        self._component_list = [ComponentBMC()]
         self._watchdog = Watchdog()
 
     def get_reboot_cause(self):
@@ -75,7 +81,7 @@ class Chassis(ChassisBase):
 
     def get_name(self):
         """
-        Retrieves the name of the device
+        Retrieves the name of the device.
 
         Returns a fixed platform identifier rather than the EEPROM product
         name so that ``fwutil`` sees a stable chassis name that matches the

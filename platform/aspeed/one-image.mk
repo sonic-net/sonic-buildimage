@@ -44,6 +44,9 @@ $(PLDM_FW)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(MCTP)
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(PLDM_FW)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(ASPEED_APP)
+# ispvme (Lattice CPLD JTAG update) is lazy-installed only on the NVIDIA AST2700 BMC.
+$(ISPVME)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ISPVME)
 
 # NVIDIA hw-management-bmc
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(MLNX_HW_MANAGEMENT_BMC)
