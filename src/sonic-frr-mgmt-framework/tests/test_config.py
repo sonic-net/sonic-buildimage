@@ -391,6 +391,19 @@ neighbor_shutdown_data = [
                   conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
 ]
 
+# Static route with two dev-only nexthops: the second 'config route add ... nexthop dev' appends
+# to the existing entry, so the nexthop IP list becomes ',' (two empty IPs)
+static_route_dev_ecmp_data = [
+    CmdMapTestInfo('STATIC_ROUTE', 'default|200.200.200.0/24',
+                  {'blackhole': 'false', 'nexthop': '', 'ifname': 'Ethernet48',
+                   'distance': '0', 'nexthop-vrf': 'default'},
+                  [conf_cmd, 'vrf default', '{}ip route 200.200.200.0/24   Ethernet48    nexthop-vrf default']),
+    CmdMapTestInfo('STATIC_ROUTE', 'default|200.200.200.0/24',
+                  {'blackhole': 'false,false', 'nexthop': ',', 'ifname': 'Ethernet48,Ethernet60',
+                   'distance': '0,0', 'nexthop-vrf': 'default,default'},
+                  [conf_cmd, 'vrf default', '{}ip route 200.200.200.0/24   Ethernet60    nexthop-vrf default'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd, skip_del=False):
@@ -437,6 +450,10 @@ def test_bgp_neighbor_shutdown():
     # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
     data_set_del_test(neighbor_shutdown_data, skip_del=True)
+
+def test_static_route_dev_ecmp():
+    # Both entries update the same key, so the per-entry delete pass of data_set_del_test doesn't apply
+    data_set_del_test(static_route_dev_ecmp_data, skip_del=True)
 
 
 @patch.dict('sys.modules', **mockmapping)
