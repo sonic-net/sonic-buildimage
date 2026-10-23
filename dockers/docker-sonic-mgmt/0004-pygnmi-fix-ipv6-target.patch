@@ -1,0 +1,37 @@
+Subject: [PATCH] pygnmi: bracket IPv6 gRPC targets without changing socket hosts
+
+PyPI pygnmi 0.8.15 constructs the gRPC target before its IPv6 handling.
+Adapt https://github.com/akarneliuk/pygnmi/pull/166 to retain the Unix socket
+path and accept both bare and already-bracketed IPv6 addresses. Keep the
+socket host unbracketed for automatic TLS certificate retrieval, and use the
+bracketed target path for the HTTP CONNECT authority when using a proxy.
+
+Related: https://github.com/akarneliuk/pygnmi/issues/179
+Revalidate/remove when upgrading the pinned dependency to a corrected release.
+---
+ pygnmi/client.py | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/pygnmi/client.py b/pygnmi/client.py
+--- a/pygnmi/client.py
++++ b/pygnmi/client.py
+@@ -101,7 +101,9 @@ class gNMIclient(object):
+             self.__target = target
+             self.__target_path = target[0]
+         elif re.match(".*:.*", target[0]):
+-            self.__target = (f"[{target[0]}]", target[1])
++            host = target[0].strip("[]")
++            self.__target = (host, target[1])
++            self.__target_path = f"[{host}]:{target[1]}"
+         else:
+             self.__target = target
+
+@@ -187,7 +189,7 @@ class gNMIclient(object):
+                         s = socket.socket()
+                         s.connect((grpc_proxy.hostname, grpc_proxy.port))
+                         # create tunnel to target
+-                        s.send(f"CONNECT {self.__target[0]}:{self.__target[1]} HTTP/1.0\r\n\r\n".encode())
++                        s.send(f"CONNECT {self.__target_path} HTTP/1.0\r\n\r\n".encode())
+                         buf = s.recv(8192)
+                         if buf[9:12] != b"200":
+                             raise gNMIException(f"Didn't get a 200 from the proxy, instead: {buf})")
