@@ -1,0 +1,2 @@
+# Create a stable symlink /dev/cpld_wdt for the CPLD watchdog
+SUBSYSTEM=="watchdog", ATTRS{identity}=="cpld_wdt", SYMLINK+="cpld_wdt"
