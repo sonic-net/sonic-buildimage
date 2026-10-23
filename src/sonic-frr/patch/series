@@ -41,3 +41,9 @@
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
 0119-bgpd-fix-aggregate-route-counter.patch
+0120-zebra-fix-kernel-route-deletion-for-IPv6-with-DAD.patch
+0121-zebra-release-route-node-after-connected-cleanup.patch
+0122-bgpd-fix-bgp-flag-conflict.patch
+0123-bgpd-Fix-flags-used-by-use-underlays-nexthop-weight-command.patch
+0124-bgpd-Fix-route-map-use-count-for-SRv6-Service-routes.patch
+0125-bgpd-Flush-temporary-attr-after-SRv6-unicast-route-map.patch
