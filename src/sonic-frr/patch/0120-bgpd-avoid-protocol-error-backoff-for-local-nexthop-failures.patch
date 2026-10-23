@@ -1,0 +1,317 @@
+Subject: [PATCH] bgpd: avoid protocol-error backoff for local nexthop failures
+
+TCP may connect before bgpd has received the local interface address or
+IPv6 link-local address from zebra. bgp_getsockname() validates that local
+nexthop state, not a received BGP packet. Sending an FSM-error NOTIFY for
+this local failure needlessly doubles the start timer, up to 120 seconds.
+
+Close through bgp_stop() and return failure without a NOTIFY in both the
+normal and DelayOpen paths. Preserve deletion results for accepted and
+dynamic peers. Keep the detailed EC_BGP_NH_UPD log from bgp_getsockname();
+do not report a socket errno for a local nexthop-validation failure.
+
+This is a recovery/backoff fix, not proof or repair of a stale-address
+cache, a missed zebra update, or TCP connections remaining in SYN-SENT.
+It preserves address validation, configured timers and protocol-error
+backoff; it does not introduce immediate retries.
+
+The regression exercises the real FSM with missing IPv4/IPv6 local
+addresses, missing IPv6 link-local state, six repeated failures followed
+by address readiness, Connect/Active, normal/DelayOpen, configured,
+accepted and dynamic peers. Check socket closure, zero NOTIFY packets,
+restart-timer preservation, successful OPEN processing after readiness,
+and retained backoff for a received protocol notification.
+
+Validation commands (FRR 10.7.1 plus the preceding SONiC patch series):
+  make -j4 bgpd/bgpd tests/bgpd/test_local_nexthop tests/bgpd/test_peer_attr
+  cd tests
+  PYTHONPATH=helpers/python python3 -m pytest -q \
+    bgpd/test_local_nexthop.py bgpd/test_peer_attr.py
+Result: 196 passed. Removing the production fix makes the same regression
+fail the unchanged-start-timer assertion.
+
+---
+diff --git a/bgpd/bgp_fsm.c b/bgpd/bgp_fsm.c
+index d305d98..102a874 100644
+--- a/bgpd/bgp_fsm.c
++++ b/bgpd/bgp_fsm.c
+@@ -2460,6 +2460,18 @@ static void bgp_connect_check(struct event *event)
+ 	}
+ }
+ 
++static enum bgp_fsm_state_progress
++bgp_connect_nexthop_error(struct peer_connection *connection)
++{
++	enum bgp_fsm_state_progress ret;
++
++	/* Local address readiness is not a peer protocol error. Close without
++	 * NOTIFY and its restart backoff, including accepted/dynamic peers.
++	 */
++	ret = bgp_stop(connection);
++	return ret == BGP_FSM_SUCCESS ? BGP_FSM_FAILURE : ret;
++}
++
+ /* TCP connection open.  Next we send open message to remote peer. And
+    add read thread for reading open message. */
+ static enum bgp_fsm_state_progress
+@@ -2473,15 +2485,8 @@ bgp_connect_success(struct peer_connection *connection)
+ 		return bgp_stop(connection);
+ 	}
+ 
+-	if (bgp_getsockname(connection) < 0) {
+-		flog_err_sys(EC_LIB_SOCKET,
+-			     "%s: bgp_getsockname(): failed for peer %s, fd %d",
+-			     __func__, peer->host, connection->fd);
+-		bgp_notify_send(connection, BGP_NOTIFY_FSM_ERR,
+-				bgp_fsm_error_subcode(connection->status));
+-		bgp_writes_on(connection);
+-		return BGP_FSM_FAILURE;
+-	}
++	if (bgp_getsockname(connection) < 0)
++		return bgp_connect_nexthop_error(connection);
+ 
+ 	/*
+ 	 * If we are doing nht for a peer that ls v6 LL based
+@@ -2524,15 +2529,8 @@ bgp_connect_success_w_delayopen(struct peer_connection *connection)
+ 		return bgp_stop(connection);
+ 	}
+ 
+-	if (bgp_getsockname(connection) < 0) {
+-		flog_err_sys(EC_LIB_SOCKET,
+-			     "%s: bgp_getsockname(): failed for peer %s, fd %d",
+-			     __func__, peer->host, connection->fd);
+-		bgp_notify_send(connection, BGP_NOTIFY_FSM_ERR,
+-				bgp_fsm_error_subcode(connection->status));
+-		bgp_writes_on(connection);
+-		return BGP_FSM_FAILURE;
+-	}
++	if (bgp_getsockname(connection) < 0)
++		return bgp_connect_nexthop_error(connection);
+ 
+ 	/*
+ 	 * If we are doing nht for a peer that ls v6 LL based
+diff --git a/tests/bgpd/subdir.am b/tests/bgpd/subdir.am
+index 20e9fbb..b575ff3 100644
+--- a/tests/bgpd/subdir.am
++++ b/tests/bgpd/subdir.am
+@@ -79,3 +79,12 @@ tests_bgpd_test_peer_attr_CPPFLAGS = $(TESTS_CPPFLAGS)
+ tests_bgpd_test_peer_attr_LDADD = $(BGP_TEST_LDADD)
+ tests_bgpd_test_peer_attr_SOURCES = tests/bgpd/test_peer_attr.c
+ EXTRA_DIST += tests/bgpd/test_peer_attr.py
++
++if BGPD
++check_PROGRAMS += tests/bgpd/test_local_nexthop
++endif
++tests_bgpd_test_local_nexthop_CFLAGS = $(TESTS_CFLAGS)
++tests_bgpd_test_local_nexthop_CPPFLAGS = $(TESTS_CPPFLAGS)
++tests_bgpd_test_local_nexthop_LDADD = $(BGP_TEST_LDADD)
++tests_bgpd_test_local_nexthop_SOURCES = tests/bgpd/test_local_nexthop.c
++EXTRA_DIST += tests/bgpd/test_local_nexthop.py
+diff --git a/tests/bgpd/test_local_nexthop.c b/tests/bgpd/test_local_nexthop.c
+new file mode 100644
+index 0000000..49962b7
+--- /dev/null
++++ b/tests/bgpd/test_local_nexthop.c
+@@ -0,0 +1,187 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++#include <zebra.h>
++
++#include "debug.h"
++#include "if.h"
++#include "memory.h"
++#include "northbound.h"
++#include "privs.h"
++#include "bgpd/bgpd.h"
++#include "bgpd/bgp_fsm.h"
++#include "bgpd/bgp_network.h"
++
++struct zebra_privs_t bgpd_privs = {0};
++struct event_loop *master;
++extern int zclient_num_connects;
++
++static struct peer *make_peer(struct bgp *bgp, bool ipv6, bool configured)
++{
++	struct peer *peer;
++	union sockunion local, remote;
++
++	assert(str2sockunion(ipv6 ? "2001:db8::1" : "192.0.2.1", &local) == 0);
++	assert(str2sockunion(ipv6 ? "2001:db8::2" : "192.0.2.2", &remote) == 0);
++	peer = peer_create(&remote, NULL, bgp, 65001, 65002, AS_SPECIFIED,
++			   NULL, configured, "65002",
++			   configured ? CONNECTION_OUTGOING : CONNECTION_INCOMING);
++	peer->connection->su_local = sockunion_dup(&local);
++	peer->connection->su_remote = sockunion_dup(&remote);
++	peer->afc[ipv6 ? AFI_IP6 : AFI_IP][SAFI_UNICAST] = 1;
++	return peer;
++}
++
++static int attach_socket(struct peer *peer, enum bgp_fsm_status state)
++{
++	int sockets[2];
++
++	assert(socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, sockets) == 0);
++	peer->connection->fd = sockets[0];
++	peer->connection->status = state;
++	return sockets[1];
++}
++
++static void test_missing_address(struct bgp *bgp, bool ipv6, bool delayopen,
++				 enum bgp_fsm_status state, bool configured,
++				 bool dynamic)
++{
++	struct peer *peer = make_peer(bgp, ipv6, configured);
++	enum bgp_fsm_events event = delayopen ? TCP_connection_open_w_delay
++					    : TCP_connection_open;
++	int other = attach_socket(peer, state);
++	char byte;
++	uint32_t start = peer->v_start;
++
++	if (delayopen)
++		SET_FLAG(peer->flags, PEER_FLAG_TIMER_DELAYOPEN);
++	if (dynamic)
++		SET_FLAG(peer->flags, PEER_FLAG_DYNAMIC_NEIGHBOR);
++	/* Keep accepted peers inspectable after the FSM deletes them. */
++	peer_lock(peer);
++	assert(bgp_getsockname(peer->connection) < 0);
++	assert(bgp_event_update(peer->connection, event) == FSM_PEER_STOPPED);
++	assert(peer->connection->fd == -1);
++	assert(!peer->connection->t_delayopen);
++	assert(peer->v_start == start);
++	assert(atomic_load_explicit(&peer->notify_out, memory_order_relaxed) == 0);
++	assert(recv(other, &byte, sizeof(byte), 0) == 0);
++	if (configured && !dynamic) {
++		assert(peer->connection->status == Idle);
++		assert(peer->connection->t_start);
++		peer_delete(peer);
++	} else {
++		assert(peer->connection->status == Deleted);
++	}
++	close(other);
++	peer_unlock(peer);
++}
++
++static void test_address_ready(struct bgp *bgp, bool ipv6, bool delayopen,
++			       enum bgp_fsm_status state)
++{
++	struct interface *ifp = if_get_by_name("test0", VRF_DEFAULT, NULL);
++	struct prefix address, linklocal;
++	struct connected *ifc;
++	struct peer *peer = make_peer(bgp, ipv6, true);
++	enum bgp_fsm_events event = delayopen ? TCP_connection_open_w_delay
++					    : TCP_connection_open;
++	int other = attach_socket(peer, state);
++
++	ifp->ifindex = 1;
++	if (delayopen) {
++		SET_FLAG(peer->flags, PEER_FLAG_TIMER_DELAYOPEN);
++		peer->delayopen = 10;
++	}
++	for (int retry = 0; retry < 6; retry++) {
++		assert(bgp_getsockname(peer->connection) < 0);
++		assert(bgp_event_update(peer->connection, event) == FSM_PEER_STOPPED);
++		assert(peer->connection->status == Idle);
++		assert(peer->connection->t_start);
++		assert(peer->v_start == BGP_INIT_START_TIMER);
++		close(other);
++		other = attach_socket(peer, state);
++	}
++	assert(str2prefix(ipv6 ? "2001:db8::1/64" : "192.0.2.1/24", &address));
++	connected_add_by_prefix(ifp, &address, NULL);
++	if (ipv6) {
++		/* A global address alone cannot supply the required link-local nexthop. */
++		assert(bgp_getsockname(peer->connection) < 0);
++		assert(bgp_event_update(peer->connection, event) == FSM_PEER_STOPPED);
++		assert(peer->connection->status == Idle);
++		assert(peer->v_start == BGP_INIT_START_TIMER);
++		close(other);
++		other = attach_socket(peer, state);
++		assert(str2prefix("fe80::1/64", &linklocal));
++		connected_add_by_prefix(ifp, &linklocal, NULL);
++	}
++	assert(bgp_getsockname(peer->connection) == 0);
++	assert(bgp_event_update(peer->connection, event) ==
++	       (delayopen ? FSM_PEER_NOOP : FSM_PEER_TRANSITIONED));
++	assert(peer->connection->status == (delayopen ? state : OpenSent));
++	assert(!!peer->connection->t_delayopen == delayopen);
++	assert(peer->v_start == BGP_INIT_START_TIMER);
++	assert(atomic_load_explicit(&peer->notify_out, memory_order_relaxed) == 0);
++	peer_delete(peer);
++	close(other);
++	ifc = connected_delete_by_prefix(ifp, &address);
++	connected_free(&ifc);
++	if (ipv6) {
++		ifc = connected_delete_by_prefix(ifp, &linklocal);
++		connected_free(&ifc);
++	}
++	if_delete(&ifp);
++}
++
++static void test_protocol_error(struct bgp *bgp)
++{
++	struct peer *peer = make_peer(bgp, false, true);
++	int other = attach_socket(peer, OpenConfirm);
++	uint32_t start = peer->v_start;
++
++	assert(bgp_event_update(peer->connection, Receive_NOTIFICATION_message) ==
++	       FSM_PEER_TRANSITIONED);
++	assert(peer->connection->status == Idle);
++	assert(peer->connection->fd == -1);
++	assert(peer->v_start == 2 * start);
++	peer_delete(peer);
++	close(other);
++}
++
++int main(void)
++{
++	struct bgp *bgp = NULL;
++	as_t asn = 65001;
++
++	cmd_init(1);
++	debug_init();
++	zlog_aux_init("local-nexthop: ", LOG_DEBUG);
++	zprivs_preinit(&bgpd_privs);
++	zprivs_init(&bgpd_privs);
++	master = event_master_create(NULL);
++	nb_init(master, NULL, 0, false, false);
++	bgp_master_init(master, BGP_SOCKET_SNDBUF_SIZE, list_new());
++	bgp_option_set(BGP_OPT_NO_LISTEN);
++	vrf_init(NULL, NULL, NULL, NULL);
++	frr_pthread_init();
++	bgp_init(0);
++	bgp_pthreads_run();
++	assert(bgp_get(&bgp, &asn, NULL, BGP_INSTANCE_TYPE_DEFAULT, NULL,
++		       ASNOTATION_PLAIN) >= 0);
++	zclient_num_connects = 1;
++
++	for (int ipv6 = 0; ipv6 < 2; ipv6++)
++		for (int delayopen = 0; delayopen < 2; delayopen++)
++			for (int active = 0; active < 2; active++) {
++				enum bgp_fsm_status state = active ? Active : Connect;
++
++				test_missing_address(bgp, ipv6, delayopen, state, true, false);
++				test_missing_address(bgp, ipv6, delayopen, state, false, false);
++				test_missing_address(bgp, ipv6, delayopen, state, true, true);
++				test_address_ready(bgp, ipv6, delayopen, state);
++			}
++
++	test_protocol_error(bgp);
++	bgp_delete(bgp);
++	bgp_pthreads_finish();
++	puts("Local nexthop recovery checks passed");
++	return 0;
++}
+diff --git a/tests/bgpd/test_local_nexthop.py b/tests/bgpd/test_local_nexthop.py
+new file mode 100644
+index 0000000..daa5f36
+--- /dev/null
++++ b/tests/bgpd/test_local_nexthop.py
+@@ -0,0 +1,9 @@
++# SPDX-License-Identifier: GPL-2.0-or-later
++import frrtest
++
++
++class TestLocalNexthop(frrtest.TestMultiOut):
++    program = "./test_local_nexthop"
++
++
++TestLocalNexthop.onesimple("Local nexthop recovery checks passed")
