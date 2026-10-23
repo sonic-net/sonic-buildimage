@@ -1848,13 +1848,13 @@
                 "VNET_LIST": [
                     {
                         "name": "Vnet1",
-                        "vxlan_tunnel_list": "vtep1,vtep2",
+                        "vxlan_tunnel_list": ["vtep1", "vtep2"],
                         "scope": "default",
                         "vni": "10011"
                     },
                     {
                         "name": "Vnet2",
-                        "vxlan_tunnel_list": "vtep2,vtep1",
+                        "vxlan_tunnel_list": ["vtep2", "vtep1"],
                         "scope": "default",
                         "vni": "10012"
                     }
@@ -1883,7 +1883,7 @@
                 "VNET_LIST": [
                     {
                         "name": "Vnet1",
-                        "vxlan_tunnel_list": "vtep1",
+                        "vxlan_tunnel_list": ["vtep1"],
                         "vni": "10011"
                     }
                 ]
@@ -1911,7 +1911,7 @@
                 "VNET_LIST": [
                     {
                         "name": "Vnet1",
-                        "vxlan_tunnel_list": "vtep1",
+                        "vxlan_tunnel_list": ["vtep1"],
                         "vni": "10011"
                     }
                 ]
@@ -1936,7 +1936,7 @@
                     {
                         "name": "Vnet1",
                         "vxlan_tunnel": "vtep1",
-                        "vxlan_tunnel_list": "",
+                        "vxlan_tunnel_list": [],
                         "vni": "10011"
                     }
                 ]
@@ -1950,7 +1950,7 @@
                 "VNET_LIST": [
                     {
                         "name": "Vnet1",
-                        "vxlan_tunnel_list": "",
+                        "vxlan_tunnel_list": [],
                         "vni": "10011"
                     }
                 ]
@@ -1978,7 +1978,7 @@
                 "VNET_LIST": [
                     {
                         "name": "Vnet1",
-                        "vxlan_tunnel_list": "vtep1,vtep2",
+                        "vxlan_tunnel_list": ["vtep1", "vtep2"],
                         "vni": "10011"
                     }
                 ]
@@ -2006,7 +2006,7 @@
                 "VNET_LIST": [
                     {
                         "name": "Vnet1",
-                        "vxlan_tunnel_list": "vtep1,vtep2",
+                        "vxlan_tunnel_list": ["vtep1", "vtep2"],
                         "vni": "10011"
                     }
                 ]
@@ -2036,7 +2036,7 @@
                     {
                         "name": "Vnet1",
                         "vxlan_tunnel": "vtep1",
-                        "vxlan_tunnel_list": "vtep2",
+                        "vxlan_tunnel_list": ["vtep2"],
                         "scope": "default",
                         "vni": "10011"
                     }
@@ -2087,7 +2087,7 @@
                 "VNET_LIST": [
                     {
                         "name": "Vnet1",
-                        "vxlan_tunnel_list": "vtep1,vtepxyz",
+                        "vxlan_tunnel_list": ["vtep1", "vtepxyz"],
                         "scope": "default",
                         "vni": "10011"
                     }

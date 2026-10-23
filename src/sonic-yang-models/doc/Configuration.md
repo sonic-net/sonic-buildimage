@@ -2946,8 +2946,12 @@ monitoring sessions for the vnet routes and is optional.
 The vxlan_tunnel_list supports at most two tunnels: one IPv4 tunnel and one IPv6
 tunnel, with the address family determined by each tunnel's src_ip in VXLAN_TUNNEL.
 It may be an empty string (""), name a single IPv4 or IPv6 tunnel, or name one of each.
-Use a string such as "vtep1,vtep2", not a JSON array. Tunnel names must be
-distinct, must exist in VXLAN_TUNNEL, and must not include empty comma-separated entries.
+In ConfigDB, use a string such as "vtep1,vtep2", not a JSON array. The YANG
+translation uses the shared string-to-leaf-list conversion mechanism: it trims
+surrounding whitespace and ignores empty components. Internally, the model uses
+a leaf-list of leafrefs so each tunnel's dependent VNETs can be queried. Tunnel
+names must be distinct and must exist in VXLAN_TUNNEL. Reverse translation
+converts the leaf-list back to a comma-separated string.
 Two tunnels of the same address family are not supported by vnetorch and are
 rejected by the YANG model. If the list is empty or absent, vxlan_tunnel must be
 configured; a non-empty list takes precedence over vxlan_tunnel.

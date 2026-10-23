@@ -174,6 +174,108 @@ class Test_SonicYang_UsesResolution(object):
         assert 'extra' in child_names
 
 
+class Test_VnetTunnelReferences(object):
+
+    @pytest.fixture
+    def vnet_yang(self):
+        yang_dir = os.path.abspath(os.path.join(
+            test_path, "../../../sonic-yang-models/yang-models"))
+        yang_s = sy.SonicYang(yang_dir)
+        yang_s.loadYangModel()
+        return yang_s
+
+    @pytest.fixture
+    def vnet_config(self):
+        return {
+            "VXLAN_TUNNEL": {
+                "vtep1": {"src_ip": "192.0.2.1"},
+                "vtep2": {"src_ip": "2001:db8::1"},
+            },
+            "VNET": {
+                "Vnet1": {"vxlan_tunnel_list": "vtep1,vtep2", "vni": "10011"},
+            },
+        }
+
+    @pytest.mark.parametrize("tunnel_list", [
+        "vtep1", "vtep2", "vtep1,vtep2", "vtep2,vtep1",
+    ])
+    def test_configdb_string_round_trip(self, vnet_yang, vnet_config, tunnel_list):
+        vnet_config["VNET"]["Vnet1"]["vxlan_tunnel_list"] = tunnel_list
+        vnet_yang.loadData(vnet_config)
+        vnet_yang.validate_data_tree()
+        entry = vnet_yang.xlateJson["sonic-vnet:sonic-vnet"]["sonic-vnet:VNET"]["VNET_LIST"][0]
+        assert entry["vxlan_tunnel_list"] == tunnel_list.split(",")
+        result = vnet_yang.getData()
+        assert result["VNET"]["Vnet1"]["vxlan_tunnel_list"] == tunnel_list
+
+    @pytest.mark.parametrize("tunnel_list,expected", [
+        (" vtep1 , vtep2 ", "vtep1,vtep2"),
+        (",vtep1", "vtep1"),
+        ("vtep1,", "vtep1"),
+        ("vtep1,,vtep2", "vtep1,vtep2"),
+    ])
+    def test_shared_string_normalization(self, vnet_yang, vnet_config, tunnel_list, expected):
+        vnet_config["VNET"]["Vnet1"]["vxlan_tunnel_list"] = tunnel_list
+        vnet_yang.loadData(vnet_config)
+        result = vnet_yang.getData()
+        assert result["VNET"]["Vnet1"]["vxlan_tunnel_list"] == expected
+
+    @pytest.mark.parametrize("tunnel_list,error", [
+        ("missing", "Invalid leafref"),
+        ("missing,vtep2", "Invalid leafref"),
+        ("vtep1,missing", "Invalid leafref"),
+        ("vtep1,vtep1", "Duplicat"),
+        ("vtep2,vtep2", "Duplicat"),
+    ])
+    def test_invalid_configdb_references(self, vnet_yang, vnet_config, tunnel_list, error):
+        vnet_config["VNET"]["Vnet1"]["vxlan_tunnel_list"] = tunnel_list
+        with pytest.raises(sy.SonicYangException, match=error):
+            vnet_yang.loadData(vnet_config)
+
+    @pytest.mark.parametrize("tunnel_list", [
+        "vtep1", "vtep2", "vtep1,vtep2", "vtep2,vtep1",
+    ])
+    def test_tunnel_dependencies(self, vnet_yang, vnet_config, tunnel_list):
+        vnet_config["VNET"]["Vnet1"]["vxlan_tunnel_list"] = tunnel_list
+        vnet_yang.loadData(vnet_config)
+        for tunnel in ("vtep1", "vtep2"):
+            tunnel_path = (
+                "/sonic-vxlan:sonic-vxlan/VXLAN_TUNNEL/"
+                "VXLAN_TUNNEL_LIST[name='{}']".format(tunnel))
+            reference_path = (
+                "/sonic-vnet:sonic-vnet/VNET/VNET_LIST[name='Vnet1']/"
+                "vxlan_tunnel_list[.='{}']".format(tunnel))
+            expected = {reference_path} if tunnel in tunnel_list.split(",") else set()
+            assert set(vnet_yang.find_data_dependencies(tunnel_path)) == expected
+            assert set(vnet_yang.find_data_dependencies(tunnel_path + "/name")) == expected
+
+        schema_dependencies = vnet_yang.find_schema_dependencies(
+            "/sonic-vxlan:sonic-vxlan/VXLAN_TUNNEL/VXLAN_TUNNEL_LIST/name")
+        assert (
+            "/sonic-vnet:sonic-vnet/VNET/VNET_LIST/vxlan_tunnel_list"
+            in schema_dependencies)
+
+    @pytest.mark.parametrize("tunnel_list", [None, ""], ids=["absent", "empty"])
+    @pytest.mark.parametrize("fallback", [False, True])
+    def test_empty_string_fallback(self, vnet_yang, vnet_config, tunnel_list, fallback):
+        vnet = vnet_config["VNET"]["Vnet1"]
+        if tunnel_list is None:
+            del vnet["vxlan_tunnel_list"]
+        else:
+            vnet["vxlan_tunnel_list"] = tunnel_list
+        if fallback:
+            vnet["vxlan_tunnel"] = "vtep1"
+            vnet_yang.loadData(vnet_config)
+            result = vnet_yang.getData()["VNET"]["Vnet1"]
+            assert result["vxlan_tunnel"] == "vtep1"
+            assert not result.get("vxlan_tunnel_list")
+        else:
+            with pytest.raises(
+                    sy.SonicYangException,
+                    match="At least one of vxlan_tunnel or vxlan_tunnel_list"):
+                vnet_yang.loadData(vnet_config)
+
+
 class Test_SonicYang(object):
     """Tests that query or manipulate an already-loaded data tree.
 

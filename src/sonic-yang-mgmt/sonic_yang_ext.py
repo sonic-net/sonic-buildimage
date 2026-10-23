@@ -31,6 +31,7 @@ Type_1_list_maps_model = [
 # Workaround for those fields who is defined as leaf-list in YANG model but have string value in config DB.
 # Dictinary structure key = (<table_name>, <field_name>), value = seperator
 LEAF_LIST_WITH_STRING_VALUE_DICT = {
+    ('VNET', 'vxlan_tunnel_list'): ',',
     ('MIRROR_SESSION', 'src_ip'): ',',
     ('NTP', 'src_intf'): ';',
     ('BGP_ALLOWED_PREFIXES', 'prefixes_v4'): ',',

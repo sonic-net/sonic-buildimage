@@ -230,7 +230,7 @@
     },
 
     "VNET_VALID_VXLAN_TUNNEL_LIST": {
-        "desc": "Valid VNET configurations using comma-separated IPv4 and IPv6 tunnel names in either order."
+        "desc": "Valid translated VNET configurations using IPv4 and IPv6 tunnel references in either order."
     },
 
     "VNET_VALID_VXLAN_TUNNEL_LIST_IPV4": {
@@ -271,6 +271,6 @@
 
     "VNET_INVALID_VXLAN_TUNNEL_LIST_VTEP": {
         "desc": "VNET configuration with vxlan_tunnel_list referencing a non-existent VXLAN tunnel.",
-        "eStr": ["vxlan_tunnel_list must reference existing VXLAN tunnels."]
+        "eStrKey": "LeafRef"
     }
 }
