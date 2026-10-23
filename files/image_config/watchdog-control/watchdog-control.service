@@ -1,9 +1,12 @@
 [Unit]
 Description=watchdog control service
-After=swss.service
+Wants=systemd-udev-settle.service
+After=swss.service systemd-udev-settle.service
+Before=watchdog.service
 
 [Service]
-Type=simple
+Type=oneshot
+RemainAfterExit=yes
 ExecStart=/usr/local/bin/watchdog-control.sh
 
 [Install]
