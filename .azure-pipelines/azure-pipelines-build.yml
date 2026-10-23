@@ -140,7 +140,15 @@ jobs:
           # ENABLE_SBOM=y emits CycloneDX SBOMs alongside each .bin /
           # .img / .swi / .tar and standalone SBOMs for docker-ptf /
           # docker-ptf-sai / docker-sonic-mgmt when those are built.
-          BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SBOM=y"
+          #
+          # armhf is excluded: the SBOM step shells out to syft (and
+          # grype for the vuln scan), and neither project publishes a
+          # 32-bit ARM binary, so scripts/install_sbom_tool.sh cannot
+          # resolve one and the build fails at SBOM emit time under
+          # SBOM_STRICT=y.
+          if [ "$(PLATFORM_ARCH)" != "armhf" ]; then
+            BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SBOM=y"
+          fi
           BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SOURCE_ARCHIVE=y"
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
@@ -152,6 +160,14 @@ jobs:
             if [ $(asan_image) == yes ]; then
               make $BUILD_OPTIONS ENABLE_ASAN=y target/docker-sonic-vs.gz
               mv target/docker-sonic-vs.gz target/docker-sonic-vs-asan.gz
+              # The normal image is built next in this same workspace. Its cache
+              # key selects non-ASAN libsairedis, but LOAD_FROM_CACHE skips
+              # extraction when all same-named outputs already exist. Remove the
+              # parent and derived ASAN outputs so the normal cache is restored,
+              # or libsairedis rebuilds them when that cache entry is absent.
+              rm -f target/debs/bookworm/libsairedis_*.deb \
+                    target/debs/bookworm/syncd-vs_*.deb \
+                    target/debs/bookworm/syncd-vs-dbgsym_*.deb
             fi
             if [ "$(K8S_MASTER_CHANGED)" == 'YES' ]; then
               make $BUILD_OPTIONS INCLUDE_KUBERNETES_MASTER=y target/sonic-vs.img.gz
@@ -176,6 +192,7 @@ jobs:
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
           elif [ $(GROUP_NAME) == alpinevs ]; then
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
+            make $BUILD_OPTIONS target/docker-sonic-alpinevs.gz
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
@@ -207,6 +224,11 @@ jobs:
             fi
             if [ $(GROUP_NAME) == nvidia-bluefield ]; then
               make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb
+            fi
+            if [ $(GROUP_NAME) == aspeed-arm64 ]; then
+              make $BUILD_OPTIONS target/sonic-$(GROUP_NAME)-tftp-install.tar
+              # Drop the intermediate bundle dir; its payload is already in the tar and the eMMC image
+              rm -rf target/aspeed-tftp
             fi
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi

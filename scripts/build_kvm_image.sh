@@ -1,10 +1,14 @@
-#!/bin/bash -ex
+#!/bin/bash -e
+
+login_password=$PASSWD
+unset PASSWD
+set -x
 
 #  Copyright (C) 2014 Curt Brune <curt@cumulusnetworks.com>
 #
 #  SPDX-License-Identifier:     GPL-2.0
 
-MEM=10240
+MEM=16384
 DISK=$1
 ONIE_RECOVERY_ISO=$2
 INSTALLER=$3
@@ -147,7 +151,10 @@ wait_kvm_ready
 
 echo "to kill kvm:  sudo kill $kvm_pid"
 
-./check_install.py -u $SONIC_USERNAME -P "$PASSWD" -p $KVM_PORT
+set +x
+SONIC_PASSWORD="$login_password" ./check_install.py -u "$SONIC_USERNAME" -p "$KVM_PORT"
+unset login_password
+set -x
 
 kill $kvm_pid
 

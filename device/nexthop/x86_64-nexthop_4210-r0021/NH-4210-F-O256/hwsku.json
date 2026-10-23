@@ -639,10 +639,6 @@
             "autoneg": "off",
             "default_brkout_mode": "2x400G",
             "fec": "rs"
-        },
-        "Ethernet1024": {
-            "default_brkout_mode": "1x100G",
-            "fec": "rs"
         }
     }
 }

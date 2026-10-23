@@ -6,8 +6,13 @@ use std::path::Path;
 use serde::Serialize;
 use redis::{Commands, Connection};
 
+#[cfg(test)]
+mod https_tests;
+
 const CONFIG_DB: i32 = 4;
 const REDIS_PORT: i32 = 6379;
+const WATCHDOG_PORT: i32 = 50100;
+const RESTAPI_HTTPS_PORT: i32 = 8081;
 const RESTAPI_CERTS: &str = "RESTAPI|certs";
 const DEFAULT_RESTAPI_CERT_DIR: &str = "/etc/sonic/credentials/";
 
@@ -38,46 +43,162 @@ fn redis_hget(conn: &mut Connection, hash: &str, field: &str) -> Option<String> 
     }
 }
 
-// Check if root cert, server cert, and server key exist
-fn check_certificates() -> bool {
+struct CertPaths {
+    ca_crt: String,
+    server_crt: String,
+    server_key: String,
+}
+
+// Reads certificate paths from Redis and returns them as a CertPaths struct.
+// If any of the paths are missing or if there's a Redis error, returns None.
+fn read_cert_paths_from_redis() -> Option<CertPaths> {
     // Connect to Redis
     let mut conn = match redis_connect() {
         Some(c) => c,
-        None => { eprintln!("Failed to connect to Redis. Assuming certificates do not exist."); return false; }
+        None => { eprintln!("Failed to connect to Redis. Assuming certificates do not exist."); return None; }
     };
     // Read the certificate and key paths from Redis
     let root_cert_path = match redis_hget(&mut conn, RESTAPI_CERTS, "ca_crt") {
         Some(path) => path,
-        None => { eprintln!("Root certificate path not found in Redis. Assuming the cert does not exist."); return false; }
+        None => { eprintln!("Root certificate path not found in Redis. Assuming the cert does not exist."); return None; }
     };
     let server_cert_path = match redis_hget(&mut conn, RESTAPI_CERTS, "server_crt") {
         Some(path) => path,
-        None => { eprintln!("Server certificate path not found in Redis. Assuming the cert does not exist."); return false; }
+        None => { eprintln!("Server certificate path not found in Redis. Assuming the cert does not exist."); return None; }
     };
     let server_key_path = match redis_hget(&mut conn, RESTAPI_CERTS, "server_key") {
         Some(path) => path,
-        None => { eprintln!("Server key path not found in Redis. Assuming the key does not exist."); return false; }
+        None => { eprintln!("Server key path not found in Redis. Assuming the key does not exist."); return None; }
     };
-    let cert_paths = [
-        root_cert_path.as_str(),
-        server_cert_path.as_str(),
-        server_key_path.as_str(),
+    Some(CertPaths { ca_crt: root_cert_path, server_crt: server_cert_path, server_key: server_key_path })
+}
+
+// Check if root cert, server cert, and server key exist
+fn check_certificates(cert_paths_opt: &Option<CertPaths>, use_https: bool) -> bool {
+    let cert_paths = match cert_paths_opt {
+        Some(paths) => paths,
+        None => return false,
+    };
+    let paths = [
+        cert_paths.ca_crt.as_str(),
+        cert_paths.server_crt.as_str(),
+        cert_paths.server_key.as_str(),
     ];
 
-    cert_paths.iter().all(|path|
+    paths.iter().all(|path|
         if path.starts_with(DEFAULT_RESTAPI_CERT_DIR) {
             Path::new(path).exists()
         } else {
-            println!("The path {path} is outside the default directory. Assuming it exists.");
-            true
+            if use_https {
+                // For HTTPS status check, we need to read certificates.
+                println!("The path {path} is outside the default directory.");
+                false
+            } else {
+                // For TCP connectivity check, we don't need to read certificates.
+                println!("The path {path} is outside the default directory. Assuming it exists.");
+                true
+            }
         }
     )
 }
 
-// Check restapi program status
-fn check_restapi_status() -> String {
-    let restapi_https_port = 8081;
-    let addr = format!("127.0.0.1:{}", restapi_https_port);
+fn build_client_identity(
+    cert_pem: &[u8],
+    key_pem: &[u8],
+) -> Result<reqwest::Identity, Box<dyn std::error::Error>> {
+    // Preserve RSA PKCS#1 and EC SEC1 support; native-tls requires PKCS#8.
+    let mut encrypted = false;
+    let key = openssl::pkey::PKey::private_key_from_pem_callback(key_pem, |_| {
+        encrypted = true;
+        Err(openssl::error::ErrorStack::get())
+    });
+    if encrypted {
+        return Err("encrypted private keys are not supported".into());
+    }
+    let key = key?;
+    let key_pkcs8 = key.private_key_to_pem_pkcs8()?;
+    Ok(reqwest::Identity::from_pkcs8_pem(cert_pem, &key_pkcs8)?)
+}
+
+fn parse_ca_certificates(
+    ca_pem: &[u8],
+) -> Result<Vec<reqwest::Certificate>, Box<dyn std::error::Error>> {
+    // With native-tls, from_pem() loads only the first certificate in a bundle.
+    let certs = reqwest::Certificate::from_pem_bundle(ca_pem)?;
+    if certs.is_empty() {
+        return Err("CA certificate file contains no certificates".into());
+    }
+    Ok(certs)
+}
+
+fn build_restapi_https_client(
+    ca_certs: Vec<reqwest::Certificate>,
+    identity: reqwest::Identity,
+) -> Result<reqwest::blocking::Client, reqwest::Error> {
+    let mut builder = reqwest::blocking::Client::builder()
+        .use_native_tls()
+        .timeout(Duration::from_secs(5))
+        .min_tls_version(reqwest::tls::Version::TLS_1_2)
+        .identity(identity)
+        // This line is added so that if the server cert does not contain "127.0.0.1"
+        // as a Subject Alternative Name, the client will still accept it.
+        .danger_accept_invalid_hostnames(true);
+    for ca_cert in ca_certs {
+        builder = builder.add_root_certificate(ca_cert);
+    }
+    builder.build()
+}
+
+// Checks restapi status by sending a GET request to the restapi HTTPS server.
+// Uses the root CA cert to authenticate the server, and sends the server cert and key as
+// client identity to the server.
+// Pre-condition: All cert paths start with DEFAULT_RESTAPI_CERT_DIR and point to existing files.
+fn check_restapi_status_https(cert_paths: CertPaths) -> String {
+    let url = format!("https://127.0.0.1:{}/v1/state/heartbeat", RESTAPI_HTTPS_PORT);
+
+    let ca_pem = match std::fs::read(&cert_paths.ca_crt) {
+        Ok(b) => b,
+        Err(e) => return format!("ERROR: failed to read CA cert {}: {}", cert_paths.ca_crt, e),
+    };
+    let ca_certs = match parse_ca_certificates(&ca_pem) {
+        Ok(c) => c,
+        Err(e) => return format!("ERROR: failed to parse CA cert: {}", e),
+    };
+
+    let client_cert_pem = match std::fs::read(&cert_paths.server_crt) {
+        Ok(b) => b,
+        Err(e) => return format!("ERROR: failed to read client cert {}: {}", cert_paths.server_crt, e),
+    };
+    let client_key_pem = match std::fs::read(&cert_paths.server_key) {
+        Ok(b) => b,
+        Err(e) => return format!("ERROR: failed to read client key {}: {}", cert_paths.server_key, e),
+    };
+    let identity = match build_client_identity(&client_cert_pem, &client_key_pem) {
+        Ok(i) => i,
+        Err(e) => return format!("ERROR: failed to build client identity: {}", e),
+    };
+
+    let client = match build_restapi_https_client(ca_certs, identity) {
+        Ok(c) => c,
+        Err(e) => return format!("ERROR: failed to build HTTPS client: {}", e),
+    };
+
+    match client.get(&url).send() {
+        Ok(resp) => {
+            let status = resp.status();
+            if status.as_u16() == 200 {
+                "OK".to_string()
+            } else {
+                format!("ERROR: unexpected HTTP status {}", status)
+            }
+        },
+        Err(e) => format!("ERROR: {}", e),
+    }
+}
+
+// Check TCP connectivity to restapi.
+fn check_restapi_status_tcp() -> String {
+    let addr = format!("127.0.0.1:{}", RESTAPI_HTTPS_PORT);
     let timeout = Duration::from_secs(5);
 
     match TcpStream::connect_timeout(&addr.parse().unwrap(), timeout) {
@@ -87,12 +208,19 @@ fn check_restapi_status() -> String {
 }
 
 fn main() {
-    let watchdog_port = 50100;
-    // Start a HTTP server listening on port 50100
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", watchdog_port))
-        .expect(&format!("Failed to bind to 127.0.0.1:{}", watchdog_port));
+    let use_https = match std::env::var("INCLUDE_RESTAPI_WATCHDOG_HTTPS") {
+        Ok(v) => {
+            let v = v.to_lowercase();
+            v == "1" || v == "y" || v == "yes"
+        }
+        Err(_) => false,
+    };
 
-    println!("Watchdog HTTP server running on http://127.0.0.1:{}", watchdog_port);
+    // Start a HTTP server listening on port 50100
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", WATCHDOG_PORT))
+        .expect(&format!("Failed to bind to 127.0.0.1:{}", WATCHDOG_PORT));
+
+    println!("Watchdog HTTP server running on http://127.0.0.1:{}", WATCHDOG_PORT);
 
     for stream_result in listener.incoming() {
         match stream_result {
@@ -111,12 +239,17 @@ fn main() {
                         continue;
                     }
 
-                    let certs_exist = check_certificates();
+                    let cert_paths = read_cert_paths_from_redis();
+                    let certs_exist = check_certificates(&cert_paths, use_https);
                     let restapi_result = if !certs_exist {
-                        println!("restapi is waiting for certificates.");
+                        println!("Skipping restapi connectivity check.");
                         "OK".to_string()
                     } else {
-                        check_restapi_status()
+                        if use_https {
+                            check_restapi_status_https(cert_paths.unwrap())
+                        } else {
+                            check_restapi_status_tcp()
+                        }
                     };
 
                     let status = HealthStatus {

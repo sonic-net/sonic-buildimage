@@ -2,9 +2,9 @@
 Unit tests for the BMC watchdog IPC layer.
 
 These exercise the hw-watchdog-mgrd daemon's IPC server (with the hardware
-device ioctls mocked) driven through the real sonic_platform Watchdog IPC
-client, validating arm/disarm/is_armed/get_remaining_time end to end as well as
-the JSON intent-file persistence and startup-adoption logic.
+device ioctls mocked) driven through the shared sonic_platform_base BMCWatchdog
+IPC client, validating arm/disarm/is_armed/get_remaining_time end to end as well
+as the JSON intent-file persistence and startup-adoption logic.
 """
 
 import importlib.util
@@ -20,8 +20,12 @@ import pytest
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 NEXTHOP_DIR = os.path.dirname(TEST_DIR)
 ASPEED_DIR = os.path.dirname(NEXTHOP_DIR)
+REPO_ROOT = os.path.dirname(os.path.dirname(ASPEED_DIR))
+# The watchdog client now lives in the sonic-platform-common submodule as the
+# shared BMCWatchdog implementation.
 CLIENT_PATH = os.path.join(
-    NEXTHOP_DIR, "common", "sonic_platform", "watchdog.py")
+    REPO_ROOT, "src", "sonic-platform-common", "sonic_platform_base",
+    "bmc_watchdog.py")
 DAEMON_PATH = os.path.join(
     ASPEED_DIR, "aspeed-platform-services", "scripts", "hw-watchdog-mgrd.py")
 
@@ -94,8 +98,7 @@ def ipc(tmp_path):
     thread = threading.Thread(target=serve, daemon=True)
     thread.start()
 
-    client = wdtc.Watchdog()
-    client.socket_path = sock_path
+    client = wdtc.BMCWatchdog(socket_path=sock_path)
 
     yield client, hw
 
@@ -153,11 +156,11 @@ def test_unknown_command(ipc):
 
 
 def test_client_handles_daemon_unavailable(tmp_path):
-    client = wdtc.Watchdog()
-    client.socket_path = str(tmp_path / "nonexistent.sock")
     # Point the sysfs fallback at a path that does not exist so the test is
     # hermetic regardless of any real watchdog device on the host.
-    wdtc.WATCHDOG_SYSFS_PATH = str(tmp_path / "no-sysfs") + "/"
+    client = wdtc.BMCWatchdog(
+        socket_path=str(tmp_path / "nonexistent.sock"),
+        sysfs_path=str(tmp_path / "no-sysfs") + "/")
     assert client.arm(60) == -1
     assert client.disarm() is False
     assert client.is_armed() is False
@@ -167,11 +170,11 @@ def test_client_handles_daemon_unavailable(tmp_path):
 def test_is_armed_falls_back_to_sysfs_when_daemon_down(tmp_path):
     # Simulates a daemon crash: the socket is gone but the hardware watchdog is
     # still armed (counting down).  is_armed() must report the true hw state.
-    client = wdtc.Watchdog()
-    client.socket_path = str(tmp_path / "nonexistent.sock")
     sysfs = tmp_path / "sysfs"
     sysfs.mkdir()
-    wdtc.WATCHDOG_SYSFS_PATH = str(sysfs) + "/"
+    client = wdtc.BMCWatchdog(
+        socket_path=str(tmp_path / "nonexistent.sock"),
+        sysfs_path=str(sysfs) + "/")
 
     (sysfs / "state").write_text("active\n")
     assert client.is_armed() is True
@@ -411,3 +414,127 @@ def test_cleanup_no_shutdown_protect_magic_closes(tmp_path, monkeypatch):
     writes, closed, _ = _cleanup_capture(daemon, monkeypatch)
     assert writes == [b"V"]
     assert closed == [999]
+
+
+def _stage_marker_capture(daemon, monkeypatch):
+    """Capture stage marker values written by cleanup()."""
+    markers = []
+    monkeypatch.setattr(daemon, "_write_stage_marker",
+                        lambda v: markers.append(v))
+    return markers
+
+
+def test_cleanup_system_stopping_writes_shutdown_marker(tmp_path, monkeypatch):
+    # During a system shutdown/reboot the daemon stamps the shutdown stage so a
+    # hang on the reboot path is attributed correctly on the next boot.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == [wdtd.STAGE_MARKER_DAEMON_SHUTDOWN]
+
+
+def test_cleanup_normal_stop_keeps_stage_marker(tmp_path, monkeypatch):
+    # A plain daemon stop/restart is not a shutdown: the resident marker (0x24
+    # armed) must be left alone so a WDT reset before the daemon comes back is
+    # not misattributed to the shutdown stage.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: False)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == []
+
+
+# ------------------------------------------------- boot-stage attribution
+STAGE_REG = 0x14c3704c
+
+
+def _devmem_capture(monkeypatch, fail_on=None):
+    """Capture busybox devmem invocations from _write_stage_marker.
+
+    `fail_on` is the 0-based index of the call that should raise, to exercise
+    the early-return path.
+    """
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        if fail_on is not None and len(calls) - 1 == fail_on:
+            raise wdtd.subprocess.CalledProcessError(1, argv)
+        return None
+
+    monkeypatch.setattr(wdtd.subprocess, "run", fake_run)
+    return calls
+
+
+def test_write_stage_marker_clears_then_sets(monkeypatch):
+    # WDT4C scratch is write-1-to-set, so the marker must be preceded by the
+    # magic clear and both go to the configured register as 32-bit writes.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_scratch_reg = STAGE_REG
+    calls = _devmem_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    addr = "0x%08x" % STAGE_REG
+    assert calls == [
+        ["busybox", "devmem", addr, "32",
+         "0x%08x" % wdtd.STAGE_SCRATCH_MAGIC_CLEAR],
+        ["busybox", "devmem", addr, "32",
+         "0x%02x" % wdtd.STAGE_MARKER_DAEMON_ARMED],
+    ]
+
+
+def test_write_stage_marker_noop_without_register(monkeypatch):
+    # Platforms without stage_scratch_reg in platform.json never touch devmem.
+    daemon = wdtd.WatchdogManager()
+    assert daemon.stage_scratch_reg is None
+    calls = _devmem_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == []
+
+
+def test_write_stage_marker_stops_after_failed_clear(monkeypatch):
+    # If the magic clear fails, the marker write is skipped (a set on top of a
+    # stale value would corrupt the marker) and the error is swallowed so
+    # attribution never affects petting.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_scratch_reg = STAGE_REG
+    calls = _devmem_capture(monkeypatch, fail_on=0)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert len(calls) == 1
+
+
+def test_load_platform_config_stage_scratch_reg_hex_string(monkeypatch):
+    # platform.json carries the register as a hex string (b27 style).
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_scratch_reg": "0x14c3704c"}})
+    daemon._load_platform_config()
+    assert daemon.stage_scratch_reg == STAGE_REG
+
+
+def test_load_platform_config_stage_scratch_reg_integer(monkeypatch):
+    # An integer value is accepted as-is.
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_scratch_reg": STAGE_REG}})
+    daemon._load_platform_config()
+    assert daemon.stage_scratch_reg == STAGE_REG
+
+
+def test_load_platform_config_stage_scratch_reg_absent(monkeypatch):
+    # Absent key -> attribution disabled, even if a stale value was set.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_scratch_reg = STAGE_REG
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": True}})
+    daemon._load_platform_config()
+    assert daemon.stage_scratch_reg is None

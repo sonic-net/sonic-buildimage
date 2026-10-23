@@ -124,12 +124,14 @@ jobs:
             for f in $DOCKERS; do
               echo $f
               echo "Labels = $LABELS"
-              ./push_docker.sh $f $(REGISTRY_SERVER_PUBLIC) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
+              ./push_docker.sh "$f" "$REGISTRY_SERVER_PUBLIC" "$PORT" "$REGISTRY_USERNAME" "$LABELS"
             done
           fi
           mkdir -p $(Build.ArtifactStagingDirectory)/target
           mv target/* $(Build.ArtifactStagingDirectory)/target/
         env:
+          REGISTRY_SERVER_PUBLIC: $(REGISTRY_SERVER_PUBLIC)
+          REGISTRY_USERNAME: $(REGISTRY_USERNAME)
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
         name: PublishAndSetPtfTag
         displayName: Publish to Docker Registry and Copy Artifacts

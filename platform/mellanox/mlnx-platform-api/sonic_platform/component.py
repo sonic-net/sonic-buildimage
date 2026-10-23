@@ -28,7 +28,6 @@ try:
     import io
     import re
     import sys
-    import glob
     import tempfile
     import subprocess
     import traceback
@@ -349,9 +348,77 @@ class ONIEUpdater(object):
 
         return firmware_info
 
+    def __get_pending_updates(self):
+        cmd = self.ONIE_FW_UPDATE_CMD_SHOW_PENDING
+
+        try:
+            output = subprocess.check_output(cmd,
+                                             stderr=subprocess.STDOUT,
+                                             universal_newlines=True).rstrip('\n')
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("Failed to get pending firmware updates: {}".format(str(e)))
+
+        if self.ONIE_NO_PENDING_UPDATES_ATTR in output:
+            return []
+
+        names = []
+        for line in output.splitlines():
+            # Data rows are "<name> | ... | <date>"; skip the "**"/footer lines
+            # (no '|'), the '===+===' separators, and the "Name" header.
+            if '|' not in line:
+                continue
+            name = line.split('|', 1)[0].strip()
+            if not name or name == 'Name':
+                continue
+            names.append(name)
+
+        return names
+
+    def __clear_pending_updates(self):
+        # ONIE runs every file in pending/ as an installer on the next update-mode
+        # boot, so a stale entry (e.g. a BIOS .cab sidecar) hangs the switch. Use
+        # 'remove' not 'purge': it clears pending but keeps the results history/backup.
+        # Any failure here (listing or removing) is raised so update_firmware aborts
+        # before staging/reboot: rebooting with a stale entry still in pending is
+        # exactly the hang this guards against.
+        pending = self.__get_pending_updates()
+
+        if not pending:
+            return
+
+        logger.log_notice(
+            "Found stale firmware update(s) in the ONIE pending directory: {}. "
+            "ONIE runs every pending file as an installer on the next update-mode "
+            "reboot, so these would break the update and can leave the switch stuck "
+            "in ONIE; removing them before staging the new image (firmware update "
+            "history and rollback backup are preserved).".format(", ".join(pending)),
+            also_print_to_console=True)
+
+        removed = []
+        failed = []
+        for name in pending:
+            self.ONIE_FW_UPDATE_CMD_REMOVE[2] = name
+            try:
+                subprocess.check_call(self.ONIE_FW_UPDATE_CMD_REMOVE, universal_newlines=True)
+                removed.append(name)
+            except subprocess.CalledProcessError as e:
+                failed.append(name)
+                logger.log_warning("Failed to clear pending firmware update '{}': {}".format(name, str(e)))
+
+        if removed:
+            logger.log_notice("Removed stale pending firmware update(s): {}".format(", ".join(removed)),
+                              also_print_to_console=True)
+
+        if failed:
+            raise RuntimeError("Failed to clear stale pending firmware update(s): {}".format(", ".join(failed)))
+
     def update_firmware(self, image_path, allow_reboot=True):
 
         try:
+            # Standalone (allow_reboot=True) update must start from a clean pending dir.
+            # The batched path (allow_reboot=False) accumulates staged updates, so skip it.
+            if allow_reboot:
+                self.__clear_pending_updates()
             self.__stage_update(image_path)
             self.__trigger_update(allow_reboot)
         except BaseException:
@@ -739,8 +806,6 @@ class ComponentCPLD(Component):
     COMPONENT_DESCRIPTION = 'CPLD - Complex Programmable Logic Device'
     COMPONENT_FIRMWARE_EXTENSION = ['.vme']
 
-    MST_DEVICE_PATH = '/dev/mst'
-    MST_DEVICE_PATTERN = 'mt[0-9]*_pci_cr0'
     FW_VERSION_FORMAT = 'CPLD{}_REV{}{}'
 
     CPLD_NUMBER_FILE = '/var/run/hw-management/config/cpld_num'
@@ -772,12 +837,37 @@ class ComponentCPLD(Component):
         self.description = self.COMPONENT_DESCRIPTION
         self.image_ext_name = self.COMPONENT_FIRMWARE_EXTENSION
 
-    def __get_mst_device(self):
-        output = None
+    @contextlib.contextmanager
+    def _mst_context(self):
         try:
-            output = subprocess.check_output(['/usr/bin/asic_detect/asic_detect.sh', '-p']).decode('utf-8').strip()
+            logger.log_notice("{}: mst start begin".format(self.name), also_print_to_console=True)
+            subprocess.check_call(['/usr/bin/mst', 'start'], universal_newlines=True)
+        except subprocess.CalledProcessError as e:
+            logger.log_error("Failed to manage {} mst: {}".format(self.name, str(e)))
+            raise
+
+        # Keep the body outside the mst-start try so a cpldupdate failure in the
+        # caller is not mislabeled as an mst management error.
+        try:
+            yield
+        finally:
+            try:
+                logger.log_notice("{}: mst stop begin".format(self.name), also_print_to_console=True)
+                subprocess.check_call(['/usr/bin/mst', 'stop'], universal_newlines=True)
+            except subprocess.CalledProcessError as e:
+                logger.log_error("Failed to stop {} mst: {}".format(self.name, str(e)))
+
+    def __get_mst_device(self):
+        # Ask asic_detect for the MST cr-space node (e.g. /dev/mst/mt52100_pci_cr0), not the
+        # raw PCI id. cpldupdate --dev over the mst node uses fast memory-mapped register
+        # access; a bare PCI id falls back to slow PCI config cycles and makes the CPLD burn
+        # ~10x slower. The node exists because _mst_context() runs `mst start` first.
+        try:
+            output = subprocess.check_output([self.ASIC_DETECT_SCRIPT, '-m']).decode('utf-8').strip()
         except subprocess.CalledProcessError as e:
             raise RuntimeError("Failed to get {} mst device: {}".format(self.name, str(e)))
+        if not output:
+            raise RuntimeError("Failed to get {} mst device: empty device node".format(self.name))
         return output
 
     @classmethod
@@ -807,16 +897,26 @@ class ComponentCPLD(Component):
 
         if self._is_spc1_asic():
             try:
-                mst_dev = self.__get_mst_device()
+                with self._mst_context():
+                    mst_dev = self.__get_mst_device()
+                    logger.log_notice("{}: mst device = {}".format(self.name, mst_dev), also_print_to_console=True)
+                    cmd = list(self.CPLD_FIRMWARE_UPDATE_COMMAND_SPC1)
+                    cmd[2] = mst_dev
+                    cmd[4] = image_path
+                    print("INFO: Installing {} firmware update: path={}".format(self.name, image_path))
+                    logger.log_notice("{}: cpldupdate begin: {}".format(self.name, ' '.join(cmd)), also_print_to_console=True)
+                    subprocess.check_call(cmd, universal_newlines=True)
+                    logger.log_notice("{}: cpldupdate done".format(self.name), also_print_to_console=True)
             except RuntimeError as e:
                 print("ERROR: {}".format(e))
                 return False
-            cmd = list(self.CPLD_FIRMWARE_UPDATE_COMMAND_SPC1)
-            cmd[2] = mst_dev
-            cmd[4] = image_path
-        else:
-            cmd = list(self.CPLD_FIRMWARE_UPDATE_COMMAND)
-            cmd[3] = image_path
+            except subprocess.CalledProcessError as e:
+                print("ERROR: Failed to update {} firmware: {}".format(self.name, str(e)))
+                return False
+            return True
+
+        cmd = list(self.CPLD_FIRMWARE_UPDATE_COMMAND)
+        cmd[3] = image_path
 
         try:
             print("INFO: Installing {} firmware update: path={}".format(self.name, image_path))
@@ -1080,20 +1180,6 @@ class ComponenetFPGADPU(ComponentCPLD):
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--cpld_chain', '2', '--gpio', '--print-progress', '']
 
     POST_REFRESH_REBOOT_CMD = ['/usr/local/bin/reboot']
-
-    @contextlib.contextmanager
-    def _mst_context(self):
-        try:
-            subprocess.check_call(['/usr/bin/mst', 'start'], universal_newlines=True)
-            yield
-        except subprocess.CalledProcessError as e:
-            logger.log_error("Failed to manage {} mst: {}".format(self.name, str(e)))
-            raise
-        finally:
-            try:
-                subprocess.check_call(['/usr/bin/mst', 'stop'], universal_newlines=True)
-            except subprocess.CalledProcessError as e:
-                logger.log_error("Failed to stop {} mst: {}".format(self.name, str(e)))
 
     def _install_firmware(self, image_path):
         self.CPLD_FIRMWARE_UPDATE_COMMAND[5] = image_path

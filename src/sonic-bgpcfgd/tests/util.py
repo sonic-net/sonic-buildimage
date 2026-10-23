@@ -9,24 +9,69 @@ from jinja2 import Template
 # the real constants without depending on a separate static copy.
 CONSTANTS_TEMPLATE_PATH = os.path.abspath(
     '../../files/build_templates/constants.yml.j2')
+# Optional organization overlay deep-merged on top of the base at image build
+# time (see files/build_templates/sonic_debian_extension.j2). Apply the same
+# merge here so the tests validate the constants that ship in the real image.
+CONSTANTS_OVERLAY_TEMPLATE_PATH = os.path.abspath(
+    '../../files/build_templates/constants.yml.overlay.j2')
 
 
-def render_constants(template_path=CONSTANTS_TEMPLATE_PATH):
+def _deep_merge(base, overlay):
+    """Deep-merge overlay onto base, matching scripts/deep_merge_yaml.py.
+
+    Mappings merge recursively; a null overlay value deletes the key; any other
+    value (scalar or list) replaces the base value.
+    """
+    if not isinstance(base, dict) or not isinstance(overlay, dict):
+        return overlay
+    result = dict(base)
+    for key, value in overlay.items():
+        if value is None:
+            result.pop(key, None)
+        elif isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def _render_template(template_path):
+    with open(template_path) as f:
+        return Template(f.read()).render(
+            ENABLE_FRR_SNMP_AGENT=os.environ.get('ENABLE_FRR_SNMP_AGENT', 'y'))
+
+
+def render_constants(template_path=CONSTANTS_TEMPLATE_PATH,
+                     overlay_path=CONSTANTS_OVERLAY_TEMPLATE_PATH):
     """Render constants.yml.j2 into a temp file and return its path.
 
     The template only references ENABLE_FRR_SNMP_AGENT (defaults to 'y', the
-    same default as rules/config); everything else is static YAML.
+    same default as rules/config); everything else is static YAML. When the
+    optional organization overlay is present it is deep-merged on top of the
+    base, mirroring the image build, so the tests see the shipped constants.
     """
-    with open(template_path) as f:
-        rendered = Template(f.read()).render(
-            ENABLE_FRR_SNMP_AGENT=os.environ.get('ENABLE_FRR_SNMP_AGENT', 'y'))
+    data = yaml.safe_load(_render_template(template_path))
+    if overlay_path and os.path.isfile(overlay_path):
+        overlay = yaml.safe_load(_render_template(overlay_path))
+        if overlay is not None:
+            data = _deep_merge(data, overlay)
     fd, path = tempfile.mkstemp(prefix='constants', suffix='.yml')
     with os.fdopen(fd, 'w') as f:
-        f.write(rendered)
+        yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
     return path
 
 
 CONSTANTS_PATH = render_constants()
+
+
+def resolve_expected_output(path):
+    variant = os.environ.get('SONIC_CFGGEN_OUTPUT_VARIANT')
+    if not variant:
+        return path
+
+    stem, extension = os.path.splitext(path)
+    variant_path = '{}_{}{}'.format(stem, variant, extension)
+    return variant_path if os.path.isfile(variant_path) else path
 
 
 def load_constants_dir_mappings():

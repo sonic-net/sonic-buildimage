@@ -5,6 +5,11 @@ DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
 
 $(DOCKER_BASE)_CACHE_MODE  := GIT_CONTENT_SHA 
-$(DOCKER_BASE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+# INSTALL_DEBUG_TOOLS gates $(DOCKER_BASE)_DBG_PACKAGES in rules/docker-base.mk, which is
+# rendered into the docker-base Dockerfile (installs gdb/vim/... via apt). Unlike
+# _DBG_IMAGE_PACKAGES / _DBG_DEPENDS, _DBG_PACKAGES is NOT folded into the cache key by
+# GET_MOD_DEP_SHA, so toggling INSTALL_DEBUG_TOOLS would otherwise reuse a stale image.
+# Fold the flag into the key so a change forces a rebuild.
+$(DOCKER_BASE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(INSTALL_DEBUG_TOOLS)
 $(DOCKER_BASE)_DEP_FILES   := $(DEP_FILES)
 

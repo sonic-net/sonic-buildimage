@@ -24,6 +24,12 @@
 /* Mock syslog buffer */
 char mock_syslog_message_buffer[1024];
 
+/* Mock tac_add_attrib_pair state */
+int mock_attrib_pair_count;
+char mock_attrib_pair_name[128];
+char mock_attrib_pair_separator;
+char mock_attrib_pair_value[128];
+
 /* define test scenarios for mock functions return different value by scenario. */
 int test_scenario;
 
@@ -101,6 +107,14 @@ int get_memory_allocate_count()
   return memory_allocate_count;
 }
 
+void reset_mock_attrib_pair()
+{
+	mock_attrib_pair_count = 0;
+	mock_attrib_pair_name[0] = '\0';
+	mock_attrib_pair_separator = '\0';
+	mock_attrib_pair_value[0] = '\0';
+}
+
 /* Mock xcalloc method */
 void *xcalloc(size_t count, size_t size)
 {
@@ -113,6 +127,16 @@ void *xcalloc(size_t count, size_t size)
 void tac_add_attrib(struct tac_attrib **attr, char *attrname, char *attrvalue)
 {
 	debug_printf("MOCK: tac_add_attrib add attribute: %s, value: %s\n", attrname, attrvalue);
+}
+
+/* Mock tac_add_attrib_pair method */
+void tac_add_attrib_pair(struct tac_attrib **attr, char *attrname, char separator, char *attrvalue)
+{
+	mock_attrib_pair_count++;
+	snprintf(mock_attrib_pair_name, sizeof(mock_attrib_pair_name), "%s", attrname);
+	mock_attrib_pair_separator = separator;
+	snprintf(mock_attrib_pair_value, sizeof(mock_attrib_pair_value), "%s", attrvalue);
+	debug_printf("MOCK: tac_add_attrib_pair add attribute: %s%c%s\n", attrname, separator, attrvalue);
 }
 
 /* Mock tac_free_attrib method */

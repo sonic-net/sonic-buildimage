@@ -298,6 +298,46 @@
             }
         }
     },
+    "FLEX_COUNTER_TABLE_WITH_VALID_ICMP_SESSION_POLL_INTERVAL_LOWER_BOUND": {
+        "sonic-flex_counter:sonic-flex_counter": {
+            "sonic-flex_counter:FLEX_COUNTER_TABLE": {
+                "ICMP_SESSION": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 1000
+                }
+            }
+        }
+    },
+    "FLEX_COUNTER_TABLE_WITH_VALID_ICMP_SESSION_POLL_INTERVAL_UPPER_BOUND": {
+        "sonic-flex_counter:sonic-flex_counter": {
+            "sonic-flex_counter:FLEX_COUNTER_TABLE": {
+                "ICMP_SESSION": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 30000
+                }
+            }
+        }
+    },
+    "FLEX_COUNTER_TABLE_WITH_INVALID_ICMP_SESSION_POLL_INTERVAL_LOWER_BOUND": {
+        "sonic-flex_counter:sonic-flex_counter": {
+            "sonic-flex_counter:FLEX_COUNTER_TABLE": {
+                "ICMP_SESSION": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 999
+                }
+            }
+        }
+    },
+    "FLEX_COUNTER_TABLE_WITH_INVALID_ICMP_SESSION_POLL_INTERVAL_UPPER_BOUND": {
+        "sonic-flex_counter:sonic-flex_counter": {
+            "sonic-flex_counter:FLEX_COUNTER_TABLE": {
+                "ICMP_SESSION": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 30001
+                }
+            }
+        }
+    },
     "FLOW_COUNTER_ROUTE_PATTERN_TABLE_WITH_VRF": {
         "sonic-vrf:sonic-vrf":{
             "sonic-vrf:VRF": {

@@ -6,7 +6,10 @@ The Linux watchdog framework allows only a single open of /dev/watchdog0 at a
 time.  This daemon is the sole owner of the device: it opens it, pets it
 periodically while armed, and exposes an IPC interface over a Unix domain socket
 so that the SONiC watchdogutil platform API (sonic_platform/watchdog.py) can
-arm, disarm and query the watchdog without contending for the device file.
+arm, disarm and query the watchdog without contending for the device file.  The
+socket lives in a dedicated directory (SOCKET_DIR) so that directory can be
+bind-mounted into the pmon container (see docker_image_ctl.j2), letting
+watchdogutil run inside pmon as well as on the host.
 
 Boot-time arming policy is driven by platform.json (the "watchdog" section).
 On a fresh boot the "boot_arm" flag decides whether the daemon arms the
@@ -51,8 +54,11 @@ WDIOS_ENABLECARD = 0x0002
 WATCHDOG_DEVICE = "/dev/watchdog0"
 WATCHDOG_SYSFS_PATH = "/sys/class/watchdog/watchdog0/"
 
-# IPC socket shared with the platform API (sonic_platform/watchdog.py).
-SOCKET_PATH = "/run/hw-watchdog-mgrd.sock"
+# IPC socket shared with the platform API.  A whole directory (not a single
+# file) is used so the pmon bind mount survives the daemon restart that unlinks
+# and recreates the socket inode.
+SOCKET_DIR = "/run/hw-watchdog-mgrd"
+SOCKET_PATH = os.path.join(SOCKET_DIR, "hw-watchdog-mgrd.sock")
 
 # Runtime arming intent.  JSON: {"armed": bool, "timeout": int}.  Written on
 # arm/disarm and read on startup.  Lives on tmpfs (/run) so it survives a daemon
@@ -80,6 +86,17 @@ MIN_TIMEOUT = 30
 MAX_TIMEOUT = 300
 KEEPALIVE_LOG_INTERVAL = 3600  # log heartbeat status hourly
 
+# Boot-stage attribution.  When platform.json's watchdog section defines
+# "stage_scratch_reg" (a scratch register that survives an SoC reset, e.g.
+# AST2700 WDT4C), the daemon records its current boot stage there so U-Boot can
+# attribute a WDT-caused reset to the daemon stage on the next boot.  These are
+# the SONiC daemon-stage marker values.
+STAGE_MARKER_DAEMON_ARMED = 0x24     # daemon armed, steady state
+STAGE_MARKER_DAEMON_SHUTDOWN = 0x25  # system shutdown/reboot in progress
+# WDT4C scratch is set-only (bits are write-1-to-set); the register is cleared
+# only by writing this magic value.  Write it before the marker to overwrite.
+STAGE_SCRATCH_MAGIC_CLEAR = 0xEA000000
+
 
 class WatchdogManager:
     """Owns the hardware watchdog and serves watchdog requests over IPC."""
@@ -104,6 +121,9 @@ class WatchdogManager:
         # missing/unreadable config) explicitly opts out.
         self.boot_arm = True
         self.shutdown_protect = True
+        # Boot-stage attribution: physical scratch register address, or
+        # None to disable (the default; set from platform.json at startup).
+        self.stage_scratch_reg = None
         # Set by the signal handler so the teardown runs in the main loop
         # (normal context) rather than the signal handler itself.  The wakeup
         # pipe lets a signal break the select() promptly.
@@ -131,12 +151,46 @@ class WatchdogManager:
             wd = data.get("watchdog", {}) or {}
             self.boot_arm = bool(wd.get("boot_arm", True))
             self.shutdown_protect = bool(wd.get("shutdown_protect", True))
+            # Optional boot-stage attribution.  Absent -> disabled, so other
+            # platforms are unaffected.  Accepts a hex string ("0x14c3704c")
+            # or an integer.
+            reg = wd.get("stage_scratch_reg")
+            self.stage_scratch_reg = int(str(reg), 0) if reg is not None else None
         except Exception as e:  # pragma: no cover - defensive
             self.log("failed to load platform watchdog policy: %s" % e,
                      syslog.LOG_ERR)
             return
-        self.log("Loaded watchdog policy: boot_arm=%s shutdown_protect=%s"
-                 % (self.boot_arm, self.shutdown_protect))
+        self.log("Loaded watchdog policy: boot_arm=%s shutdown_protect=%s "
+                 "stage_scratch_reg=%s"
+                 % (self.boot_arm, self.shutdown_protect,
+                    ("0x%08x" % self.stage_scratch_reg)
+                    if self.stage_scratch_reg is not None else "none"))
+
+    def _write_stage_marker(self, value):
+        """Record the current boot stage for WDT reset attribution.
+
+        Writes `value` to the scratch register named by platform.json's
+        watchdog.stage_scratch_reg (e.g. AST2700 WDT4C, which survives an SoC
+        reset); U-Boot reads it on the next boot to attribute a WDT-caused reset
+        to the stage that was running.  Best-effort: attribution must never
+        affect petting, so a missing config is a no-op and any write error is
+        logged and swallowed.
+        """
+        if self.stage_scratch_reg is None:
+            return
+        addr = "0x%08x" % self.stage_scratch_reg
+        # WDT4C scratch is set-only: bits are write-1-to-set and the register is
+        # cleared only by writing the magic value.  Clear, then set, so the
+        # register reads exactly `value`.
+        for word in ("0x%08x" % STAGE_SCRATCH_MAGIC_CLEAR, "0x%02x" % value):
+            try:
+                subprocess.run(["busybox", "devmem", addr, "32", word],
+                               check=True, capture_output=True, timeout=5)
+            except (OSError, subprocess.SubprocessError) as e:
+                self.log("stage-marker write to %s (%s) failed: %s"
+                         % (addr, word, e), syslog.LOG_WARNING)
+                return
+        self.log("Stage attribution: wrote marker 0x%02x to %s" % (value, addr))
 
     # ----------------------------------------------------------- device access
     def _open_device(self):
@@ -281,6 +335,11 @@ class WatchdogManager:
         return {"error": "unknown command: %s" % cmd}
 
     def _create_socket(self):
+        # Ensure the socket directory exists before binding.  It is normally
+        # created on first start, but a directory bind-mount into pmon may have
+        # (re)created it as an empty dir, and the daemon may restart after a
+        # crash; makedirs(exist_ok) covers both.
+        os.makedirs(os.path.dirname(SOCKET_PATH), exist_ok=True)
         try:
             os.unlink(SOCKET_PATH)
         except OSError:
@@ -334,10 +393,18 @@ class WatchdogManager:
 
     def cleanup(self):
         self.log("Hardware watchdog manager stopping")
+        system_stopping = self._system_is_stopping()
+        # Mark the shutdown stage ONLY when the system itself is going down, so
+        # a hang on the shutdown/reboot path is attributed to it on the next
+        # boot.  An ordinary daemon stop/restart (systemctl stop/restart for
+        # maintenance) leaves the previous marker (0x24 armed) in place: the
+        # write is not monotonic, and stamping 0x25 there would misattribute
+        # any WDT reset landing before the daemon comes back and re-arms.
+        if system_stopping:
+            self._write_stage_marker(STAGE_MARKER_DAEMON_SHUTDOWN)
         if self.fd is not None:
             try:
-                if (self.armed and self.shutdown_protect
-                        and self._system_is_stopping()):
+                if self.armed and self.shutdown_protect and system_stopping:
                     # System shutdown/reboot in progress: keep the watchdog
                     # armed so the SoC is reset if the reboot path hangs.  Pet
                     # once for a full timeout window, then close WITHOUT the
@@ -480,6 +547,9 @@ class WatchdogManager:
                             self.log("Hardware watchdog first keepalive sent "
                                      "(timeout %d s)" % self.timeout)
                             self.first_pet_pending = False
+                            # First successful pet means the daemon has reached
+                            # steady state; mark the stage.
+                            self._write_stage_marker(STAGE_MARKER_DAEMON_ARMED)
                         if keepalive_count % log_threshold == 0:
                             self.log("Hardware watchdog keepalive active (sent "
                                      "%d keepalives)" % keepalive_count)

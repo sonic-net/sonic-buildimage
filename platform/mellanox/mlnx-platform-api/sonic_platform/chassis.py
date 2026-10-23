@@ -148,6 +148,7 @@ class Chassis(ChassisBase):
         Chassis.chassis_instance = self
 
         self.module_host_mgmt_initializer = module_host_mgmt_initializer.ModuleHostMgmtInitializer()
+        utils.watch_shutdown_signals()
         self.poll_obj = None
         self.registered_fds = None
 
@@ -296,6 +297,7 @@ class Chassis(ChassisBase):
             if drawer_num == 0:
                 # For system with no fan, for example, liquid cooling system.
                 return
+            utils.ensure_sysfs_labels_ready()
             hot_swapable = DeviceDataManager.is_fan_hotswapable()
             fan_num = DeviceDataManager.get_fan_count()
             fan_num_per_drawer = fan_num // drawer_num
@@ -468,11 +470,17 @@ class Chassis(ChassisBase):
             return True
 
         if not DeviceDataManager.wait_sysfs_ready(self.get_num_sfps()):
-            logger.log_error('SFPs are not ready for usage')
+            if utils.get_shutdown_event().is_set():
+                logger.log_notice('SFP readiness wait aborted: daemon is shutting down')
+            else:
+                logger.log_error('SFPs are not ready for usage')
             return False
 
         if not self.wait_sfp_eeprom_ready():
-            logger.log_error('SFPs are not ready for usage due to eeprom not ready')
+            if utils.get_shutdown_event().is_set():
+                logger.log_notice('SFP EEPROM readiness wait aborted: daemon is shutting down')
+            else:
+                logger.log_error('SFPs are not ready for usage due to eeprom not ready')
             return False
 
         Path(sfp_ready_file).touch(exist_ok=True)
@@ -689,8 +697,14 @@ class Chassis(ChassisBase):
                 ready_asic_val = True
                 self._enable_polling_for_asic(asic_id)
             self.module_host_mgmt_initializer.set_asic_ready_value(asic_index, ready_asic_val)
+            # sdk_index is 0-based, but the change event dict is keyed by the 1-based
+            # physical port index (same convention as get_change_event_legacy() and
+            # SFP.fill_change_event(), which both emit sdk_index + 1). Without the
+            # conversion the whole map is shifted by one: the event for sdk_index 0 is
+            # emitted as port 0 and dropped by xcvrd, and the last module of the ASIC
+            # never receives an event at all.
             for i in sfp_indices:
-                changes[str(i)] = value
+                changes[str(i + 1)] = value
 
         return changes
 
@@ -1020,6 +1034,7 @@ class Chassis(ChassisBase):
 
     def initialize_thermals(self):
         if not self._thermal_list:
+            utils.ensure_sysfs_labels_ready()
             from .thermal import initialize_chassis_thermals
             # Initialize thermals
             self._thermal_list = initialize_chassis_thermals()
@@ -1348,6 +1363,8 @@ class Chassis(ChassisBase):
         return bool(utils.read_int_from_file(os.path.join(REBOOT_CAUSE_ROOT, filename), log_func=None))
 
     def initialize_reboot_cause(self):
+        sw_pwr_off_cause = self.REBOOT_CAUSE_POWER_DOWN_REQUEST_FROM_BMC \
+            if DeviceDataManager.is_platform_with_bmc() else self.REBOOT_CAUSE_POWER_LOSS
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
@@ -1357,6 +1374,7 @@ class Chassis(ChassisBase):
             'reset_comex_pwr_fail'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_main_51v'            :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_mgmt_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_sw_pwr_off'          :   sw_pwr_off_cause,
             'reset_asic_thermal'        :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
             'reset_cpu_thermal'         :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_comex_thermal'       :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,

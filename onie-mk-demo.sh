@@ -106,6 +106,12 @@ sed -i -e "s/%%DEMO_TYPE%%/$demo_type/g" \
 echo -n "."
 cp -r $onie_installer_payload $tmp_installdir || clean_up 1
 echo -n "."
+## A dockerfs of 4GiB or more is shipped next to the payload rather than inside it
+. ./onie-image.conf
+if ! unzip -l $onie_installer_payload $FILESYSTEM_DOCKERFS > /dev/null 2>&1; then
+    cp $FILESYSTEM_DOCKERFS $tmp_installdir || clean_up 1
+fi
+echo -n "."
 [ -r "$platform_conf" ] && {
     cp $platform_conf $tmp_installdir/platform.conf || clean_up 1
 }

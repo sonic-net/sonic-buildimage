@@ -91,10 +91,90 @@ def test_uN_add():
     print(loc_mgr.directory.data)
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
 
+def test_uA_add_del():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:FE01::/64", {
+        'action': 'uA',
+        'interface': 'Ethernet0',
+        'adj': '2001:db8::1'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:1:fe01::/64 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
+    # test the deletion
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:1:FE01::/64",),
+            expected_ret=True, expected_cmds=[
+            'segment-routing',
+            'srv6',
+            'static-sids',
+            'no sid fcbb:bbbb:1:fe01::/64 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+    print(loc_mgr.directory.data)
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:FE01::/48", {
+        'action': 'uA',
+        'interface': 'Ethernet0',
+        'adj': '2001:db8::1'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:fe01::/48 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:fe01::\\48")
+
+    # test the deletion
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:FE01::/48",),
+            expected_ret=True, expected_cmds=[
+            'segment-routing',
+            'srv6',
+            'static-sids',
+            'no sid fcbb:bbbb:fe01::/48 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+    print(loc_mgr.directory.data)
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:fe01::\\48")
+
+    # test missing interface
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:FE01::/64", {
+        'action': 'uA',
+        'adj': '2001:db8::1'
+    }), expected_ret=False, expected_cmds=[])
+
+    print(loc_mgr.directory.data)
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
+    # test missing adj (adj is optional)
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:FE01::/64", {
+        'action': 'uA',
+        'interface': 'Ethernet0'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:1:fe01::/64 locator loc1 behavior uA interface Ethernet0'
+    ])
+
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
 def test_uDT46_add_vrf1():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
 
+    # VRF must exist in directory for uDT46 with non-default decap_vrf
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
+    
     op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:F2::/64", {
         'action': 'uDT46',
         'decap_vrf': 'Vrf1'
@@ -131,6 +211,9 @@ def test_uN_del():
 def test_uDT46_del_vrf1():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    # VRF must exist in directory for uDT46 with non-default decap_vrf
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
 
     # add a uN action first to make the uDT46 action not the last function
     assert sid_mgr.set_handler("loc1|FCBB:BBBB:1::/48", {
@@ -224,3 +307,91 @@ def test_out_of_order_add_wait_for_all_deps():
     # verify that both of the sids are programmed because all dependencies are satisfied
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+def test_uDT46_add_vrf_not_exist():
+    """uDT46 SID with non-existent decap_vrf should defer (return False) until VRF exists"""
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+    # Vrf1 NOT in directory - should defer
+
+    key, data = "loc1|FCBB:BBBB:1:F2::/64", {'action': 'uDT46', 'decap_vrf': 'Vrf1'}
+    sid_mgr.handler(key, 'SET', data)
+
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
+    assert sid_mgr.set_queue == [(key, data)]
+
+    # Deleting a deferred SID must prevent it from being programmed later.
+    sid_mgr.handler(key, 'DEL', {})
+    assert sid_mgr.set_queue == []
+
+    # Add Vrf1 to directory - directory.put triggers on_deps_change for subscribed handlers
+    push_list_called = []
+    def capture_push_list(cmds):
+        push_list_called.append(cmds)
+    sid_mgr.cfg_mgr.push_list = capture_push_list
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
+
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
+    assert not push_list_called
+
+def test_uDT46_shared_vrf_dependency_cleanup():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    sid_data = {'action': 'uDT46', 'decap_vrf': 'Vrf1'}
+    first_key = "loc1|FCBB:BBBB:1:F1::/64"
+    second_key = "loc1|FCBB:BBBB:1:F2::/64"
+    sid_mgr.handler(first_key, 'SET', sid_data)
+    sid_mgr.handler(second_key, 'SET', sid_data)
+
+    vrf_dep = ("APPL_DB", "VRF_TABLE", "Vrf1")
+    assert len(sid_mgr.set_queue) == 2
+    assert sid_mgr.vrf_dep_sids[vrf_dep] == {
+        "loc1|fcbb:bbbb:1:f1::/64",
+        "loc1|fcbb:bbbb:1:f2::/64",
+    }
+
+    sid_mgr.handler(first_key, 'DEL', {})
+    assert sid_mgr.set_queue == [(second_key, sid_data)]
+    assert sid_mgr.vrf_dep_sids[vrf_dep] == {"loc1|fcbb:bbbb:1:f2::/64"}
+
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
+    assert vrf_dep not in sid_mgr.deps
+    assert "Vrf1" not in sid_mgr.directory.notify["APPL_DB__VRF_TABLE"]
+
+def test_uDT46_vrf_change_before_either_exists():
+    """A SID re-configured to a different decap_vrf before either VRF exists must not be
+    programmed against the stale, superseded VRF once it is created."""
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    key = "loc1|FCBB:BBBB:1:F2::/64"
+    norm_key = "loc1|fcbb:bbbb:1:f2::/64"
+
+    # Deferred waiting for Vrf1
+    sid_mgr.handler(key, 'SET', {'action': 'uDT46', 'decap_vrf': 'Vrf1'})
+    vrf1_dep = ("APPL_DB", "VRF_TABLE", "Vrf1")
+    assert sid_mgr.sid_vrf_deps[norm_key] == vrf1_dep
+    assert norm_key in sid_mgr.vrf_dep_sids[vrf1_dep]
+
+    # Same SID re-configured to Vrf2 before either VRF exists; must supersede the Vrf1 wait
+    sid_mgr.handler(key, 'SET', {'action': 'uDT46', 'decap_vrf': 'Vrf2'})
+    vrf2_dep = ("APPL_DB", "VRF_TABLE", "Vrf2")
+    assert sid_mgr.sid_vrf_deps[norm_key] == vrf2_dep
+    assert vrf1_dep not in sid_mgr.vrf_dep_sids
+    assert vrf1_dep not in sid_mgr.deps
+    assert len(sid_mgr.set_queue) == 1
+
+    # Creating Vrf1 must not program the superseded SID
+    push_list_called = []
+    sid_mgr.cfg_mgr.push_list = lambda cmds: push_list_called.append(cmds)
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, norm_key.replace("/", "\\"))
+    assert not push_list_called
+
+    # Creating Vrf2 must program the SID with the latest configured VRF
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf2", {})
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, norm_key.replace("/", "\\"))
+    _, sid_cmd = sid_mgr.directory.get(sid_mgr.db_name, sid_mgr.table_name, norm_key.replace("/", "\\"))
+    assert 'vrf Vrf2' in sid_cmd

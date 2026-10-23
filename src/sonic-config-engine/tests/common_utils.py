@@ -11,6 +11,22 @@ PYvX_DIR = "py3" if PY3x else "py2"
 PYTHON_INTERPRETTER = "python3" if PY3x else "python2"
 YANG_MODELS_DIR = "/usr/local/yang-models"
 
+
+def get_sample_output_file(test_dir, relative_path):
+    """Resolve custom, versioned, then legacy expected-output paths."""
+    custom = os.path.join(
+        test_dir, "sample_output", "custom", PYvX_DIR, relative_path
+    )
+    if os.path.isfile(custom):
+        return custom
+    versioned = os.path.join(
+        test_dir, "sample_output", PYvX_DIR, relative_path
+    )
+    if os.path.isfile(versioned):
+        return versioned
+    return os.path.join(test_dir, "sample_output", relative_path)
+
+
 def tuple_to_str(tuplestr):
     """ Convert Python tuple '('elem1', 'elem2')' representation into string on the for "elem1|elem2" """
     def to_str(tupleobj):

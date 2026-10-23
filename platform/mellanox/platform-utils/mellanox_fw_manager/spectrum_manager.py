@@ -38,6 +38,7 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
         '15b3:cf70': 'SPC3',
         '15b3:cf80': 'SPC4',
         '15b3:cf82': 'SPC5',
+        '15b3:cf84': 'SPC6',
     }
 
     _ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*[A-Za-z]|[\x08\r]')

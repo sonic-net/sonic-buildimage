@@ -36,6 +36,11 @@
 - name: "switchcard_fpga_bdf"
   lookup_command: "setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0'"
 
+# System identification
+
+- name: "platform"
+  lookup_command: "sonic-cfggen -H -v DEVICE_METADATA.localhost.platform"
+
 # Commands to retrieve sysfs path for specific device.
 
 - name: "hwmon_cpu_sysfs_path"

@@ -16,7 +16,7 @@ SPATH       := $($(__NEW_MODULE__)_SRC_PATH)
 # SONIC_COMMON_FILES_LIST => It includes common files like .platform, slave.mk, rules/functions etc
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/__NEW_RULES__.mk rules/__NEW_RULES__.dep   
 
-# SONIC_COMMON_BASE_FILES_LIST => It includes base docker files like Dockerfile, Dockerfile.user etc
+# SONIC_COMMON_BASE_FILES_LIST => It includes base docker files like Dockerfile, etc
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 
 # If a module source files are part of sonic-buildimage, add the source files to DEP_FILES variable

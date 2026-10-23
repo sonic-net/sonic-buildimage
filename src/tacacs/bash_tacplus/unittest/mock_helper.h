@@ -24,6 +24,12 @@
 /* Mock syslog buffer */
 extern char mock_syslog_message_buffer[1024];
 
+/* Mock tac_add_attrib_pair state */
+extern int mock_attrib_pair_count;
+extern char mock_attrib_pair_name[128];
+extern char mock_attrib_pair_separator;
+extern char mock_attrib_pair_value[128];
+
 #define TEST_SCEANRIO_CONNECTION_ALL_FAILED                 1
 #define TEST_SCEANRIO_CONNECTION_SEND_FAILED_RESULT         2
 #define TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_READ_FAILED   3
@@ -47,5 +53,7 @@ void set_memory_allocate_count(int count);
 /* Get memory allocate count for test*/
 int get_memory_allocate_count();
 
+/* Reset the captured tac_add_attrib_pair state. */
+void reset_mock_attrib_pair();
 
 #endif /* _MOCK_HELPER_H_ */

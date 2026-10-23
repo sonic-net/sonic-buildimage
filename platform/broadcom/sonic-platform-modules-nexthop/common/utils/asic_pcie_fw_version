@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import re
+import struct
+import subprocess
+import syslog
+import tempfile
+
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import Final, Iterator
+from nexthop.spi_lib import get_mtd_device_path
+
+
+
+TIMEOUT_SECONDS: Final[int] = 5
+
+# Version parsing mirrors the Broadcom pciephy utility in the SDKLT/HSDK
+# sources (XGS: bcma pcie cmd pciephy; DNX: diag pcie).
+FW_HDR_OFFSET: Final[int] = 0x2c00
+FW_HDR_LEN: Final[int] = 32
+FW_LOADER_VERSION_OFFSET: Final[int] = 4
+FW_LOADER_VERSION_LEN: Final[int] = 4
+FW_VERSION_OFFSET: Final[int] = 16
+FW_VERSION_LEN: Final[int] = 12
+FW_MAGIC_NUMBER_OFFSET: Final[int] = 0
+FW_MAGIC_NUMBER_LEN: Final[int] = 4
+FW_MAGIC_NUMBER: Final[int] = 0x50434549
+
+
+@dataclass(frozen=True)
+class CmdResult:
+    cmd: list[str]
+    rc: int
+    out: str
+
+
+def log_error(msg: str, asic_path=False) -> None:
+    syslog.syslog(
+        syslog.LOG_ERR,
+        f"Failed to read ASIC PCIe firmware version via {'ASIC' if asic_path else 'FPGA'}: {msg}",
+    )
+
+
+def _run(cmd: list[str]) -> CmdResult:
+    try:
+        proc = subprocess.run(
+            cmd,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=TIMEOUT_SECONDS,
+        )
+        return CmdResult(cmd=cmd, rc=proc.returncode, out=(proc.stdout or ""))
+    except subprocess.TimeoutExpired as exc:
+        out = (exc.stdout or "") + (exc.stderr or "")
+        return CmdResult(cmd=cmd, rc=124, out=out or "COMMAND_TIMEOUT")
+
+
+def _has_valid_firmware_not_found(output: str) -> bool:
+    return bool(re.search(r"Valid firmware not found", output, flags=re.IGNORECASE))
+
+
+def _has_not_supported(output: str) -> bool:
+    return bool(re.search(r"pciephy command\s+NOT supported", output, flags=re.IGNORECASE))
+
+
+def _has_dsh_unknown(output: str) -> bool:
+    return bool(re.search(r"Unknown command:\s*dsh", output, flags=re.IGNORECASE))
+
+
+def _parse_version(output: str) -> str | None:
+    
+    loader = re.search(r"PCIe\s+FW\s+loader\s+version:\s*([^\s]+)", output)
+    fw = re.search(r"PCIe\s+FW\s+version:\s*([^\s]+)", output)
+
+    if loader and fw:
+        loader_v = loader.group(1).strip()
+        fw_v = fw.group(1).strip()
+        # Format: <loader>_fw<fw_version>, e.g. 2.13_fw0000_04
+        return f"{loader_v}_fw{fw_v}"
+
+    if loader:
+        return loader.group(1).strip()
+
+    return None
+
+
+@contextmanager
+def _spi_device_context(spi_device_name: str) -> Iterator[None]:
+    """Context manager for SPI device creation/cleanup.
+
+    Args:
+        spi_device_name: Name of the SPI device subtree (e.g., "ASIC_BOOT_FLASH")
+    """
+    _run(["pddfparse.py", "--create-subtree", spi_device_name])
+    try:
+        yield
+    finally:
+        _run(["pddfparse.py", "--delete-subtree", spi_device_name])
+
+
+def _parse_fw_header(fw_data: bytes, pciephy_index: int | None) -> str | None:
+    """Parse firmware version from raw header bytes read off the SPI flash.
+
+    Args:
+        fw_data: Raw FW_HDR_LEN-byte header read from the boot flash.
+        pciephy_index: PCIe PHY index for DNX devices, None for XGS devices.
+
+    Returns:
+        Version string in one of two formats depending on device type:
+        - DNX (pciephy_index is not None): "major.minor.patch"
+        - XGS (pciephy_index is None): "major.minor_fwversion"
+        Returns None if the header is malformed.
+    """
+    if len(fw_data) != FW_HDR_LEN:
+        log_error(f"Expected {FW_HDR_LEN} header bytes, got {len(fw_data)}")
+        return None
+
+    try:
+        magic_number_raw = fw_data[FW_MAGIC_NUMBER_OFFSET:FW_MAGIC_NUMBER_OFFSET + FW_MAGIC_NUMBER_LEN]
+        magic_number = struct.unpack('<I', magic_number_raw)[0]
+        if magic_number != FW_MAGIC_NUMBER:
+            log_error(f"Invalid header magic number: 0x{magic_number:08x}, expected 0x{FW_MAGIC_NUMBER:08x}")
+            return None
+
+        loader_version_raw = fw_data[FW_LOADER_VERSION_OFFSET:FW_LOADER_VERSION_OFFSET + FW_LOADER_VERSION_LEN]
+        loader_version = struct.unpack('<I', loader_version_raw)[0]
+    except struct.error as e:
+        log_error(f"Failed to unpack header bytes to little-endian integer: {e}")
+        return None
+
+    if pciephy_index is not None:
+        # DNX format: use loader version only
+        major = loader_version >> 16
+        minor = (loader_version & 0xFFFF) >> 4
+        patch = loader_version & 0xF
+        return f"{major}.{minor}.{patch}"
+
+    # XGS format: combine loader version with firmware version string
+    maj_ver = (loader_version >> 16) & 0xFFFF
+    min_ver = loader_version & 0xFFFF
+    fw_ver_data = fw_data[FW_VERSION_OFFSET:FW_VERSION_OFFSET + FW_VERSION_LEN]
+    fw_ver = fw_ver_data.split(b'\0', 1)[0].decode('utf-8', errors='replace').strip()
+
+    if not fw_ver or not re.match(r'^[\w\.-]+$', fw_ver):
+        log_error(f"Invalid version string: {fw_ver!r}")
+        return None
+
+    return f"{maj_ver}.{min_ver}_fw{fw_ver}"
+
+
+def _read_fw_version_from_spi_flash(pciephy_index: int | None) -> str | None:
+    """Read firmware version from SPI flash device.
+
+    Args:
+        pciephy_index: PCIe PHY index for DNX devices, None for XGS devices
+
+    Returns:
+        Version string per `_parse_fw_header`, or None if unsuccessful.
+    """
+    if pciephy_index is not None:
+        spi_device_name = f"ASIC_BOOT_FLASH_D{pciephy_index}"
+    else:
+        spi_device_name = "ASIC_BOOT_FLASH"
+
+    with _spi_device_context(spi_device_name):
+        try:
+            mtd_device = get_mtd_device_path(spi_device_name)
+        except Exception as e:
+            log_error(f"{e}")
+            return None
+
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            result = _run([
+                "mtd_debug",
+                "read",
+                mtd_device,
+                hex(FW_HDR_OFFSET),
+                str(FW_HDR_LEN),
+                tmp_file.name,
+            ])
+
+            if result.rc != 0:
+                log_error(f"Failed to read from mtd device {mtd_device}: {result.out}")
+                return None
+
+            tmp_file.seek(0)
+            fw_data = tmp_file.read()
+
+    return _parse_fw_header(fw_data, pciephy_index)
+
+
+def _pciephy_cmds(index: int | None) -> list[list[str]]:
+    idx = "" if index is None else f"{index} "
+    return [
+        ["bcmcmd", f"pciephy {idx}fw info"],
+        ["bcmcmd", f'dsh -c "pciephy {idx}fwinfo"'],
+    ]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Print ASIC PCIe firmware version (single line).")
+    parser.add_argument(
+        "pciephy_index",
+        nargs="?",
+        type=int,
+        help="Optional pciephy index (e.g. 0 or 1 for dual-die platforms)",
+    )
+    parser.add_argument(
+        "--use-fpga",
+        action="store_true",
+        help="Read FW version via FPGA",
+    )
+    parser.add_argument(
+        "--use-asic",
+        action="store_true",
+        help="Read FW version via ASIC",
+    )
+    args = parser.parse_args()
+    
+    # Default to trying both methods (asic first) if no flags are set
+    try_asic = args.use_asic or not args.use_fpga
+    try_fpga = args.use_fpga or not args.use_asic
+    
+    if try_asic:
+        attempts: list[CmdResult] = []
+        for cmd in _pciephy_cmds(args.pciephy_index):
+            r = _run(cmd)
+            attempts.append(r)
+
+            if _has_valid_firmware_not_found(r.out):
+                print("NOT_PROGRAMMED")
+                return 0
+
+            if _has_dsh_unknown(r.out):
+                continue
+
+            if _has_not_supported(r.out):
+                continue
+
+            if r.rc != 0:
+                continue
+
+            v = _parse_version(r.out)
+            if v:
+                print(v)
+                return 0
+
+        # Fall back to UNKNOWN_* so show platform firmware status can still render a row.
+        # If any attempt timed out, surface that explicitly for easier debugging.
+        if not try_fpga:
+            if any(a.rc == 124 for a in attempts):
+                print("UNKNOWN_TIMEOUT")
+                return 0
+
+    if try_fpga:
+        asic_pcie_fw_version = _read_fw_version_from_spi_flash(args.pciephy_index)
+        if asic_pcie_fw_version:
+            print(asic_pcie_fw_version)
+            return 0
+    
+    print("UNKNOWN")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

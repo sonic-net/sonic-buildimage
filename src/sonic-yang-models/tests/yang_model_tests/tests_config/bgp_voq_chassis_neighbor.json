@@ -24,6 +24,26 @@
                         "nhopself": "0",
                         "rrclient": "0",
                         "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "PortChannel101",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel101",
+                        "admin_status": "up"
                     }
                 ]
             }
@@ -146,6 +166,31 @@
                         "nhopself": "0",
                         "rrclient": "0",
                         "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "sonic-chassis",
+                    "platform": "voq-chassis",
+                    "switch_type": "voq"
+                }
+            }
+        }
+    },
+    "BGP_VOQ_CHASSIS_NEG_MULTILINE_NAME": {
+        "sonic-bgp-voq-chassis-neighbor:sonic-bgp-voq-chassis-neighbor": {
+            "sonic-bgp-voq-chassis-neighbor:BGP_VOQ_CHASSIS_NEIGHBOR": {
+                "BGP_VOQ_CHASSIS_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65001",
+                        "local_addr": "10.0.0.2",
+                        "name": "sonic-chassis-lc3\nSECOND LINE"
                     }
                 ]
             }

@@ -33,5 +33,8 @@ $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 # For reboot-cause retrieval (show_client reads /host/reboot-cause/previous-reboot-cause.json)
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /host/reboot-cause:/host/reboot-cause:ro
+ifneq ($(strip $(GNMI_REDIS_POOL_SIZE)),)
+$(DOCKER_TELEMETRY)_RUN_OPT += -e GNMI_REDIS_POOL_SIZE=$(GNMI_REDIS_POOL_SIZE)
+endif
 
 $(DOCKER_TELEMETRY)_BASE_IMAGE_FILES += monit_telemetry:/etc/monit/conf.d
