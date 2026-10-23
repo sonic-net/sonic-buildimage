@@ -1,0 +1,17 @@
+! template: zebra/zebra.vrf.conf.j2
+!
+! VRF -> VNI mapping rendered from CONFIG_DB VRF table.
+! Mirrors what frrcfgd's VRF/VNI handler programs at runtime so that vrf->vni
+! mappings configured via `config vrf add_vrf_vni_map <vrf> <vni>` are
+! preserved across `config save` + reboot and `config reload`.
+!
+{% if VRF is defined and VRF|length > 0 %}
+{% for vrf_name, vrf_val in VRF.items() %}
+{% if vrf_name != 'default' and 'vni' in vrf_val and vrf_val['vni']|string != '0' %}
+vrf {{ vrf_name }}
+ vni {{ vrf_val['vni'] }}
+exit-vrf
+!
+{% endif %}
+{% endfor %}
+{% endif %}

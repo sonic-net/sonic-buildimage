@@ -9,6 +9,7 @@ mockmapping = {'swsscommon.swsscommon': swsscommon_module_mock}
 with patch.dict('sys.modules', **mockmapping):
     from frrcfgd.frrcfgd import CachedDataWithOp
     from frrcfgd.frrcfgd import BGPPeerGroup
+    from frrcfgd.frrcfgd import BGPConfigDaemon
     from frrcfgd.frrcfgd import BGPKeyMapInfo
     from frrcfgd.frrcfgd import BGPKeyMapList
     from frrcfgd.frrcfgd import get_command_cmn
@@ -26,6 +27,17 @@ def test_data_with_op():
     data = CachedDataWithOp(10, CachedDataWithOp.OP_ADD)
     assert(data.data == 10)
     assert(data.op == CachedDataWithOp.OP_ADD)
+
+@pytest.mark.parametrize('vni,active', [
+    (None, False),
+    ('', False),
+    ('0', False),
+    (0, False),
+    ('5200', True),
+    (5200, True),
+])
+def test_vni_active(vni, active):
+    assert BGPConfigDaemon._vni_active(vni) is active
 
 def test_peer_group():
     pg = BGPPeerGroup('Vrf_red')
@@ -234,8 +246,13 @@ def test_ip_nexthop():
         assert(nh.tag == 0)
         assert(nh.distance == 0)
         assert(nh.nh_vrf == '')
+        # Test with BFD
         arg_list = nh.get_arg_list()
-        assert(arg_list == ['false', '', 'Loopback0'] + [''] * 4)
+        assert(arg_list == ['false', '', 'Loopback0'] + [''] * 4 + ['false'])
+        # Test without BFD
+        arg_list_no_bfd = nh.get_arg_list(include_bfd=False)
+        assert(arg_list_no_bfd == ['false', '', 'Loopback0'] + [''] * 4)
+
         nh = IpNextHop(af, 'true', '1.1.1.1' if af == socket.AF_INET else '1::1',
                        1, 'Ethernet0', 100, 2, 'default')
         assert(nh.blackhole == 'true')
@@ -245,8 +262,13 @@ def test_ip_nexthop():
         assert(nh.tag == 100)
         assert(nh.distance == 2)
         assert(nh.nh_vrf == '')
+        # Test with BFD
         arg_list = nh.get_arg_list()
-        assert(arg_list == ['true', '', '', '1', '100', '2', ''])
+        assert(arg_list == ['true', '', '', '1', '100', '2', '', 'false'])
+        # Test without BFD
+        arg_list_no_bfd = nh.get_arg_list(include_bfd=False)
+        assert(arg_list_no_bfd == ['true', '', '', '1', '100', '2', ''])
+
     nh = IpNextHop(socket.AF_INET, 'false', '1.2.3.4', 5, 'Ethernet1', 2345, 3, 'Vrf_red')
     assert(nh.af == socket.AF_INET)
     assert(nh.blackhole == 'false')
@@ -257,7 +279,7 @@ def test_ip_nexthop():
     assert(nh.distance == 3)
     assert(nh.nh_vrf == 'Vrf_red')
     arg_list = nh.get_arg_list()
-    assert(arg_list == ['false', '1.2.3.4', 'Ethernet1', '5', '2345', '3', 'Vrf_red'])
+    assert(arg_list == ['false', '1.2.3.4', 'Ethernet1', '5', '2345', '3', 'Vrf_red', 'false'])
     nh = IpNextHop(socket.AF_INET6, 'false', '1001:1::2002', 6, 'Ethernet2', 9000, 4, 'Vrf_blue')
     assert(nh.af == socket.AF_INET6)
     assert(nh.blackhole == 'false')
@@ -268,7 +290,7 @@ def test_ip_nexthop():
     assert(nh.distance == 4)
     assert(nh.nh_vrf == 'Vrf_blue')
     arg_list = nh.get_arg_list()
-    assert(arg_list == ['false', '1001:1::2002', 'Ethernet2', '6', '9000', '4', 'Vrf_blue'])
+    assert(arg_list == ['false', '1001:1::2002', 'Ethernet2', '6', '9000', '4', 'Vrf_blue', 'false'])
 
 def test_nexthop_set():
     for af in [socket.AF_INET, socket.AF_INET6]:

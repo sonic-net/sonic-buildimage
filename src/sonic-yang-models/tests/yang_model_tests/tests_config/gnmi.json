@@ -252,5 +252,57 @@
                 }
             }
         }
+    },
+    "GNMI_TABLE_WITH_VALID_WRITE_GATES": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50052",
+                    "translib_write": "true",
+                    "native_write": "false"
+                }
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_INCORRECT_TRANSLIB_WRITE": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50052",
+                    "translib_write": "enabled"
+                }
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_INCORRECT_NATIVE_WRITE": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50052",
+                    "native_write": "enabled"
+                }
+            }
+        }
     }
 }
