@@ -3,6 +3,9 @@
         "VRF": {
                 "Vrf_blue": {
                     "vni" : "100"
+                },
+                "default": {
+                    "vni" : "200"
                 }
         },
         "SUBNET_DECAP": {
