@@ -21,6 +21,7 @@
 #    11/13/2017: Polly Hsu, Create
 #    05/08/2019: Roy Lee, changed for as5812-54x.
 #    05/29/2019: Brandon Chuang, changed for as5835-54x.
+#    12/05/2025: Richard_KUO Add the flag to control the tolerance
 # ------------------------------------------------------------------
 
 try:
@@ -30,6 +31,7 @@ try:
     import logging.config
     import time  # this is only being used as part of the example
     import signal
+    from sonic_platform import platform
     from as5835_54x.fanutil import FanUtil
     from as5835_54x.thermalutil import ThermalUtil
 except ImportError as e:
@@ -39,6 +41,8 @@ except ImportError as e:
 VERSION = '1.0'
 FUNCTION_NAME = 'accton_as5835_54x_monitor'
 DUTY_MAX = 100
+
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
 
 global log_file
 global log_level
@@ -51,6 +55,14 @@ class accton_as5835_54x_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+        self.fan_timer_start = time.time()
+
+        self.thermal = ThermalUtil()
+        self.fan = FanUtil()
+
+        self.platform_chassis = platform.Platform().get_chassis()
+        self.fan_list = self.platform_chassis.get_all_fans()
+
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -69,6 +81,20 @@ class accton_as5835_54x_monitor(object):
             logging.getLogger('').addHandler(console)
 
         logging.debug('SET. logfile:%s / loglevel:%d', log_file, log_level)
+        self.set_fans_tolerance_mode("on")
+
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
 
     def manage_fans(self):
         FAN_LEV1_UP_TEMP = 57700  # temperature
@@ -88,8 +114,11 @@ class accton_as5835_54x_monitor(object):
         FAN_LEV4_SPEED_PERC = 40
 
 
-        thermal = ThermalUtil()
-        fan = FanUtil()
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
+
+        thermal = self.thermal
+        fan = self.fan
 
         temp2 = thermal.get_thermal_val(2)
         if temp2 is None:
@@ -150,7 +179,9 @@ class accton_as5835_54x_monitor(object):
             logging.debug('INFO. RETURN. FAN speed not changed. %d / %d (new_perc / ori_perc)', self._new_perc, cur_perc)
             return True
 
+        self.set_fans_tolerance_mode("off")
         set_stat = fan.set_fan_duty_cycle(self._new_perc)
+        self.fan_timer_start = time.time()
         if set_stat is True:
             logging.debug('INFO: PASS. set_fan_duty_cycle (%d)', self._new_perc)
         else:
