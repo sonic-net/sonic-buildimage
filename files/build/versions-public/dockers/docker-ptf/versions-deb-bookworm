@@ -18,7 +18,7 @@ bridge-utils==1.7.1-1
 bsdextrautils==2.38.1-5+deb12u3
 build-essential==12.9
 bzip2==1.0.8-5+b1
-ca-certificates==20250419~deb12u1
+ca-certificates==20250419~deb12u2
 clang==1:14.0-55.7~deb12u1
 clang-14==1:14.0.6-12
 cmake==3.25.1-1
@@ -614,7 +614,7 @@ libyaml-0-2==0.2.5-1
 libyuv0==0.0~git20230123.b2528b0-1
 libz3-4==4.8.12-3.1
 libz3-dev==4.8.12-3.1
-linux-libc-dev==6.1.187-1
+linux-libc-dev==6.1.190-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-dev==1:14.0.6-12
