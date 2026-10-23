@@ -21,6 +21,9 @@ check system $HOST
     if memory usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
     if cpu usage (user) > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
     if cpu usage (system) > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+    # Log top CPU consumers when user or system CPU is sustained high
+    if cpu usage (user) > 90% for 10 times within 20 cycles then exec "/usr/local/bin/cpu_threshold_check_handler.py" repeat every 10 cycles
+    if cpu usage (system) > 90% for 10 times within 20 cycles then exec "/usr/local/bin/cpu_threshold_check_handler.py" repeat every 10 cycles
 
 check process rsyslog with pidfile /var/run/rsyslogd.pid
     start program = "/bin/systemctl start rsyslog.service"
@@ -61,9 +64,33 @@ check program vnetRouteCheck with path "/usr/local/bin/vnet_route_check.py"
     every 5 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
 
-# memory_check tool that verifies that memory usage does not cross the threshold or invokes techsupport.
+# memory_check tool that verifies memory usage at multiple thresholds:
+# Exit codes: 2=Configurable (logs + techsupport), 5=90% (logs only)
+# 60% and 80% are handled inside memory_threshold_check.py (handler + exit 0)
+# so they do not fail this program or system-health.
+# Configurable threshold (exit 2): Checked first, set via available_mem_threshold in CONFIG_DB
 check program memory_check with path "/usr/local/bin/memory_threshold_check.py"
-    if status == 2 for 10 times within 20 cycles then exec "/usr/local/bin/memory_threshold_check_handler.py"
+    if status == 2 for 10 times within 20 cycles then exec "/usr/local/bin/memory_threshold_check_handler.py 2" repeat every 10 cycles
+    if status == 5 for 10 times within 20 cycles then exec "/usr/local/bin/memory_threshold_check_handler.py 5" repeat every 10 cycles
+
+# Memory gradual increase detection using linear regression.
+# Detects sustained memory growth before it causes OOM by tracking trends over time.
+# monit rejects a check program block with no status test, and the checker
+# always exits 0, so this alerts only if the checker itself fails to run.
+# Short window: 2 hours (24 samples every 5 min) - catches fast growth
+check program memory_gradual_short with path "/usr/local/bin/memory_gradual_check.py --scale short"
+    every 5 cycles
+    if status != 0 then alert
+
+# Medium window: 24 hours (24 samples every 60 min) - catches medium-rate growth
+check program memory_gradual_medium with path "/usr/local/bin/memory_gradual_check.py --scale medium"
+    every 60 cycles
+    if status != 0 then alert
+
+# Long window: 7 days (21 samples every 8 hours) - catches slow growth
+check program memory_gradual_long with path "/usr/local/bin/memory_gradual_check.py --scale long"
+    every 480 cycles
+    if status != 0 then alert
 
 # arp_update_checker tool that verifies that arp_update script is not stuck on ping command every 10 minutes
 check program arp_update_checker with path "/usr/bin/arp_update_checker" every 10 cycles
