@@ -159,8 +159,11 @@ module sonic-sflow{
             description "Global sFlow configuration.";
 
             container global {
+{% if yang_model_type == "py" %}
+                // Prevent defaults from implying an absent global configuration.
                 presence "Global sFlow configuration is explicitly configured.";
-                // Do not create global from default leaf values when it is absent.
+{% endif %}
+                // CVL converts this singleton to a fixed-key list, where presence is invalid.
                 description "Global sFlow parameters including admin state, polling interval, and agent ID.";
 
                 leaf admin_state {
