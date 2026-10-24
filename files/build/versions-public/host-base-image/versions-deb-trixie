@@ -73,6 +73,6 @@ sed==4.9-2+deb13u1
 sqv==1.3.0-3+b2
 sysvinit-utils==3.14-4
 tar==1.35+dfsg-3.1
-tzdata==2026c-0+deb13u1
+tzdata==2026e-0+deb13u1
 util-linux==2.41.5-0+deb13u1
 zlib1g==1:1.3.dfsg+really1.3.1-1+b1
