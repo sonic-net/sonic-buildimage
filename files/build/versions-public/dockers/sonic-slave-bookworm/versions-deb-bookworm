@@ -126,7 +126,7 @@ equivs==2.3.1
 exim4-base==4.96-15+deb12u10
 exim4-config==4.96-15+deb12u10
 exim4-daemon-light==4.96-15+deb12u10
-expat==2.5.0-1+deb12u4
+expat==2.5.0-1+deb12u5
 fakeroot==1.31-1.2
 fig2dev==1:3.2.8b-3+deb12u2
 file==1:5.44-3
@@ -599,8 +599,8 @@ libevent-openssl-2.1-7==2.1.12-stable-8+deb12u1
 libevent-pthreads-2.1-7==2.1.12-stable-8+deb12u1
 libexception-class-perl==1.45-1
 libexecs0==1.3-2
-libexpat1==2.5.0-1+deb12u4
-libexpat1-dev==2.5.0-1+deb12u4
+libexpat1==2.5.0-1+deb12u5
+libexpat1-dev==2.5.0-1+deb12u5
 libexplain-dev==1.4.D001-12+b1
 libexplain51==1.4.D001-12+b1
 libexporter-tiny-perl==1.006000-1
