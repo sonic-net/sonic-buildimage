@@ -7,6 +7,7 @@
 
 try:
     from sonic_platform_base.fan_drawer_base import FanDrawerBase
+    from sonic_platform_pddf_base.pddf_logger import logger
     from sonic_platform.fan import Fan
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -28,7 +29,7 @@ class PddfFanDrawer(FanDrawerBase):
         self.platform = self.pddf_obj.get_platform()
 
         if tray_idx < 0 or tray_idx >= self.platform['num_fantrays']:
-            print("Invalid fantray index %d\n" % tray_idx)
+            logger.log_error("Invalid fantray index %d\n" % tray_idx)
             return
 
         self.fantray_index = tray_idx+1
