@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+
+import sys
+
+from supervisor.compat import xmlrpclib
+from supervisor.xmlrpc import Faults
+from supervisord_dependent_startup import supervisord_dependent_startup
+
+
+def run():
+    # Match upstream run(), except for an explicit Supervisor shutdown fault.
+    exit_code = 0
+    try:
+        supervisord_dependent_startup.main()
+    except xmlrpclib.Fault as fault:
+        if fault.faultCode != Faults.SHUTDOWN_STATE:
+            supervisord_dependent_startup.log.error("Error occured:", exc_info=sys.exc_info())
+            exit_code = 3
+    except:  # noqa: E722
+        supervisord_dependent_startup.log.error("Error occured:", exc_info=sys.exc_info())
+        exit_code = 3
+    sys.exit(exit_code)
+
+
+if __name__ == '__main__':
+    run()
