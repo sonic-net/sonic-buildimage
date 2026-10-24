@@ -212,6 +212,15 @@ SONIC_BUILD_MEMORY = 24g
 DEFAULT_BUILD_LOG_TIMESTAMP = simple
 ```
 
+**PR Python compatibility checks:**
+
+Pull requests run the required `TrixiePythonWheels` stage in
+[`azure-pipelines.yml`](azure-pipelines.yml). It rebuilds the `sonic-py-common`
+and `sonic-host-services` Python 3 wheels on native amd64 using the
+trixie/Python 3.13 build slave, with unit tests enabled and package-cache reads
+disabled. This check runs independently of the image builds; local
+`BUILD_SKIP_TEST=y` settings do not disable it.
+
 The supported ASIC vendors are:
 
 * PLATFORM=barefoot
