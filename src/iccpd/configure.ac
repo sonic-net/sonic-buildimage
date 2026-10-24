@@ -7,6 +7,8 @@ AC_LANG_C
 AC_PROG_CC
 AC_PROG_LIBTOOL
 AC_HEADER_STDC
+AC_CHECK_HEADERS([spawn.h], [], [AC_MSG_ERROR([spawn.h is required])])
+AC_CHECK_FUNCS([posix_spawnp], [], [AC_MSG_ERROR([posix_spawnp is required])])
 
 AC_ARG_ENABLE(debug,
 [  --enable-debug      Compile with debugging flags],
