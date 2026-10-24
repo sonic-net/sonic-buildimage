@@ -1,0 +1,65 @@
+# Static Analysis Preparation — GitHub Actions
+#
+# Publishes selected checkout/submodule trees and rendered Dockerfiles (see
+# stage exclusions below). No build or external-package fetching is performed.
+# For patched external sources, use the build-time ENABLE_SOURCE_ARCHIVE=y archive.
+
+name: Static Analysis Prep
+
+on:
+  push:
+    branches:
+      - master
+      - '202*'
+  pull_request:
+    branches:
+      - master
+      - '202*'
+
+jobs:
+  prepare-source:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y -q python3-jinja2
+
+      - name: Generate j2 context and render Dockerfiles
+        run: |
+          set -e
+          python3 .azure-pipelines/scripts/generate_j2_context.py
+          python3 .azure-pipelines/scripts/prepare_source.py --repo-root .
+
+      - name: Stage source tree
+        run: |
+          DEST=$RUNNER_TEMP/sonic-buildimage-source
+          mkdir -p "$DEST"
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='target/' \
+            --exclude='fsroot*' \
+            --exclude='dpkg/' \
+            --exclude='src/p4lang/' \
+            --exclude='src/sonic-linux-kernel/' \
+            --exclude='src/sonic-device-data/' \
+            --exclude='src/sonic-gnmi/testdata/' \
+            --exclude='src/snmpd/*/debian/' \
+            ./ "$DEST"/
+          printf '%s\n' 'Scope: selected checkout/submodule trees plus rendered Dockerfiles (see pipeline rsync exclusions).' \
+            'External package sources and applied patches require a separate build-time ENABLE_SOURCE_ARCHIVE=y archive.' \
+            > "$DEST/SOURCE_SCOPE.txt"
+          # Remove any remaining files with colons in name (not valid on NTFS/Windows)
+          find "$DEST" -name "*:*" -delete
+          echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
+          echo "ARTIFACT_PATH=$DEST" >> $GITHUB_ENV
+
+      - name: Upload source tree artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: sonic-buildimage-source
+          path: ${{ env.ARTIFACT_PATH }}
+          retention-days: 7
