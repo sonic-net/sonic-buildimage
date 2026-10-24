@@ -22,7 +22,7 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3.orig.tar.gz==f7cff5c6a848e34c474d35b72c017a7f
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-aarch64-deb.tgz==aac96049c94f7cd9c5796ddfecd27122
 http://www.mellanox.com/downloads/MFT/mft-4.36.0-1033-x86_64-deb.tgz==c6054cadaf7f5cd8c2dcbdc516992a30
-https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==9c783c19b4704b5efac4132d83c78c4b
+https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==86f119d4fb954fb4e3471752125b31c6
 https://api.github.com/repos/influxdata/influxdb/releases/latest==e0e61affefaf7dc31e85251582dc20e5
 https://api.github.com/repos/nanomsg/nanomsg/releases/latest==6e3be7094a1d2296f3b10893de16565b
 https://api.github.com/repos/sflow/sflowtool/releases/latest==7d10e07af0ea3e1a38415e5892be628e
