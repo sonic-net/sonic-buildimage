@@ -19,11 +19,12 @@
 import subprocess
 from contextlib import contextmanager
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from sonic_platform import component
-from sonic_platform.component import ComponentBMC, VERSION_NA
+from sonic_platform.component import ComponentBMC, ComponentCPLD, ISPVME, VERSION_NA
 from sonic_platform.mctp import MctpError
 
 
@@ -545,3 +546,439 @@ class TestDeviceBaseAPIs:
         with mock.patch.object(comp._eeprom, "get_serial_number", return_value="SN-ABCD") as m:
             assert comp.get_serial() == "SN-ABCD"
         m.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# ComponentCPLD — CPLD firmware update via ispvme over JTAG
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def cpld(tmp_path):
+    """Return a ComponentCPLD with a fake JTAG device and EepromBMC stub."""
+    # Create a fake jtag device file so path existence checks pass.
+    jtag = tmp_path / "jtag0"
+    jtag.touch()
+    with patch("sonic_platform.component.EepromBMC") as mock_eeprom_cls:
+        eeprom = mock_eeprom_cls.return_value
+        eeprom.get_part_number.return_value = "P3809-0001"
+        eeprom.get_serial_number.return_value = "SN123456"
+        comp = ComponentCPLD(jtag_device=str(jtag))
+    return comp
+
+
+class TestCPLDDeviceBaseAPIs:
+
+    def test_get_name(self, cpld):
+        assert cpld.get_name() == "CPLD1"
+
+    def test_get_name_uses_index(self, tmp_path):
+        comp = ComponentCPLD(3, jtag_device=str(tmp_path / "jtag0"), eeprom=MagicMock())
+        assert comp.get_name() == "CPLD3"
+
+    def test_get_description_matches_switch_host(self, cpld):
+        assert cpld.get_description() == "CPLD - Complex Programmable Logic Device"
+
+    def test_get_component_list_returns_cpld1_to_cpld4_sharing_eeprom(self):
+        eeprom = MagicMock(name="EepromBMC")
+        with patch("sonic_platform.component.EepromBMC") as mock_eeprom_cls:
+            comps = ComponentCPLD.get_component_list(eeprom=eeprom)
+        mock_eeprom_cls.assert_not_called()
+        assert [c.get_name() for c in comps] == ["CPLD1", "CPLD2", "CPLD3", "CPLD4"]
+        assert all(c._eeprom is eeprom for c in comps)
+
+    def test_get_presence_always_true(self, cpld):
+        assert cpld.get_presence() is True
+
+    def test_get_position_in_parent_returns_minus_one(self, cpld):
+        assert cpld.get_position_in_parent() == -1
+
+    def test_is_replaceable_false(self, cpld):
+        assert cpld.is_replaceable() is False
+
+    def test_get_status_true_when_hw_management_present(self, cpld, tmp_path):
+        hw_root = tmp_path / "hw-management"
+        hw_root.mkdir()
+        with patch("sonic_platform.component.HW_MANAGEMENT_ROOT", str(hw_root)):
+            assert cpld.get_status() is True
+
+    def test_get_status_false_when_hw_management_absent(self, cpld, tmp_path):
+        with patch("sonic_platform.component.HW_MANAGEMENT_ROOT",
+                   str(tmp_path / "nonexistent")):
+            assert cpld.get_status() is False
+
+    def test_get_model_delegates_to_eeprom(self, cpld):
+        assert cpld.get_model() == "P3809-0001"
+
+    def test_get_serial_delegates_to_eeprom(self, cpld):
+        assert cpld.get_serial() == "SN123456"
+
+    def test_uses_injected_eeprom_instead_of_constructing_one(self, tmp_path):
+        """An injected eeprom (e.g. the chassis's own) must be reused rather
+        than constructing a second EepromBMC, which would spawn a duplicate
+        ipmi-fru subprocess call for the same FRU data."""
+        jtag = tmp_path / "jtag0"
+        jtag.touch()
+        injected_eeprom = MagicMock(name="EepromBMC")
+        with patch("sonic_platform.component.EepromBMC") as mock_eeprom_cls:
+            comp = ComponentCPLD(jtag_device=str(jtag), eeprom=injected_eeprom)
+        mock_eeprom_cls.assert_not_called()
+        assert comp._eeprom is injected_eeprom
+
+
+class TestCPLDFirmwareVersion:
+
+    @staticmethod
+    def _write_attrs(tmp_path, idx, **attrs):
+        hw_root = tmp_path / "hw-management"
+        (hw_root / "system").mkdir(parents=True, exist_ok=True)
+        for name, value in attrs.items():
+            (hw_root / "system" / f"cpld{idx}_{name}").write_text(f"{value}\n")
+        return hw_root
+
+    def test_get_firmware_version_matches_switch_host_format(self, cpld, tmp_path):
+        hw_root = self._write_attrs(tmp_path, 1, pn="454", version="4", version_min="0")
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)):
+            assert cpld.get_firmware_version() == "CPLD000454_REV0400"
+
+    def test_get_firmware_version_reads_own_index(self, tmp_path):
+        hw_root = self._write_attrs(tmp_path, 1, pn="454", version="4", version_min="0")
+        self._write_attrs(tmp_path, 2, pn="439", version="2", version_min="6")
+        comp = ComponentCPLD(2, jtag_device=str(tmp_path / "jtag0"), eeprom=MagicMock())
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)):
+            assert comp.get_firmware_version() == "CPLD000439_REV0206"
+
+    def test_get_firmware_version_defaults_missing_pn_and_minor_to_zero(self, cpld, tmp_path):
+        hw_root = self._write_attrs(tmp_path, 1, version="12")
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)):
+            assert cpld.get_firmware_version() == "CPLD000000_REV1200"
+
+    def test_get_firmware_version_returns_na_when_major_missing(self, cpld, tmp_path):
+        hw_root = self._write_attrs(tmp_path, 1, pn="454", version_min="0")
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)):
+            assert cpld.get_firmware_version() == VERSION_NA
+
+    def test_get_available_firmware_version_returns_na(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00" * 64)
+        assert cpld.get_available_firmware_version(str(vme)) == VERSION_NA
+
+    def test_update_notification_mentions_full_system_power_cycle(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        note = cpld.get_firmware_update_notification(str(vme))
+        assert "full system power cycle" in note.lower()
+
+    def test_update_notification_states_chain_wide_programming(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        note = cpld.get_firmware_update_notification(str(vme))
+        assert "every cpld it targets" in note.lower()
+
+
+class TestCheckFileValidity:
+
+    def test_valid_vme_file(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        assert cpld._check_file_validity(str(vme)) is True
+
+    def test_missing_file_is_invalid(self, cpld, tmp_path):
+        assert cpld._check_file_validity(str(tmp_path / "missing.vme")) is False
+
+    def test_wrong_extension_is_invalid(self, cpld, tmp_path):
+        bad = tmp_path / "cpld.bin"
+        bad.write_bytes(b"\x00")
+        assert cpld._check_file_validity(str(bad)) is False
+
+    def test_no_extension_is_invalid(self, cpld, tmp_path):
+        bad = tmp_path / "cpld"
+        bad.write_bytes(b"\x00")
+        assert cpld._check_file_validity(str(bad)) is False
+
+    def test_empty_path_is_invalid(self, cpld):
+        assert cpld._check_file_validity("") is False
+
+    def test_directory_is_invalid(self, cpld, tmp_path):
+        bad = tmp_path / "cpld.vme"
+        bad.mkdir()
+        assert cpld._check_file_validity(str(bad)) is False
+
+
+class TestCPLDInstallFirmware:
+
+    def test_install_firmware_success(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00" * 32)
+        with patch.object(cpld, "_run_ispvme") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert cpld.install_firmware(str(vme)) is True
+        mock_run.assert_called_once_with(str(vme))
+
+    def test_install_firmware_success_logs_notice_with_component_name(self, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00" * 32)
+        comp = ComponentCPLD(2, jtag_device=str(vme), eeprom=MagicMock())
+        with patch.object(comp, "_run_ispvme"), \
+                patch("sonic_platform.component.logger") as mock_logger:
+            assert comp.install_firmware(str(vme)) is True
+        mock_logger.log_notice.assert_called_once_with("CPLD2 firmware install completed")
+
+    def test_install_firmware_missing_image_returns_false(self, cpld, tmp_path):
+        assert cpld.install_firmware(str(tmp_path / "missing.vme")) is False
+
+    def test_install_firmware_wrong_extension_returns_false(self, cpld, tmp_path):
+        bad = tmp_path / "cpld.bin"
+        bad.write_bytes(b"\x00")
+        with patch.object(cpld, "_run_ispvme") as mock_run:
+            assert cpld.install_firmware(str(bad)) is False
+        mock_run.assert_not_called()
+
+    def test_install_firmware_missing_jtag_device_returns_false(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        # Point to a JTAG device that doesn't exist.
+        cpld._jtag_device = str(tmp_path / "no_jtag")
+        assert cpld.install_firmware(str(vme)) is False
+
+    def test_install_firmware_ispvme_failure_returns_false(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        err = subprocess.CalledProcessError(1, ISPVME, stderr="| FAIL! |\n")
+        with patch.object(cpld, "_run_ispvme", side_effect=err):
+            assert cpld.install_firmware(str(vme)) is False
+
+    def test_install_firmware_timeout_returns_false(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        with patch.object(cpld, "_run_ispvme", side_effect=subprocess.TimeoutExpired(ISPVME, 300)):
+            assert cpld.install_firmware(str(vme)) is False
+
+
+class TestCPLDUpdateFirmware:
+
+    def test_update_firmware_success_returns_none(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00" * 32)
+        with patch.object(cpld, "_run_ispvme") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            result = cpld.update_firmware(str(vme))
+        assert result is None
+
+    def test_update_firmware_success_logs_notice_with_component_name(self, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00" * 32)
+        comp = ComponentCPLD(3, jtag_device=str(vme), eeprom=MagicMock())
+        with patch.object(comp, "_run_ispvme"), \
+                patch("sonic_platform.component.logger") as mock_logger:
+            assert comp.update_firmware(str(vme)) is None
+        mock_logger.log_notice.assert_called_once_with("CPLD3 firmware update completed")
+
+    def test_update_firmware_missing_image_returns_false(self, cpld, tmp_path):
+        assert cpld.update_firmware(str(tmp_path / "missing.vme")) is False
+
+    def test_update_firmware_wrong_extension_returns_false(self, cpld, tmp_path):
+        bad = tmp_path / "cpld.bin"
+        bad.write_bytes(b"\x00")
+        with patch.object(cpld, "_run_ispvme") as mock_run:
+            assert cpld.update_firmware(str(bad)) is False
+        mock_run.assert_not_called()
+
+    def test_update_firmware_ispvme_failure_raises_runtime_error(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        err = subprocess.CalledProcessError(1, ISPVME, stderr="| FAIL! |\n")
+        with patch.object(cpld, "_run_ispvme", side_effect=err):
+            with pytest.raises(RuntimeError, match="CPLD firmware update failed"):
+                cpld.update_firmware(str(vme))
+
+    def test_update_firmware_missing_jtag_device_returns_false(self, cpld, tmp_path):
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        cpld._jtag_device = str(tmp_path / "no_jtag")
+        assert cpld.update_firmware(str(vme)) is False
+
+
+class TestCPLDRunIspvme:
+
+    @pytest.fixture(autouse=True)
+    def burn_en_file(self, tmp_path):
+        """Provide a writable GP_JTAG_BMC_CPLD_BURN_EN_L sysfs file for these tests."""
+        hw_root = tmp_path / "hw-management"
+        (hw_root / "system").mkdir(parents=True)
+        burn_en = hw_root / "system" / "GP_JTAG_BMC_CPLD_BURN_EN_L"
+        burn_en.write_text("1\n")
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)):
+            yield burn_en
+
+    def test_run_ispvme_uses_jtag_device_and_vme_path(self, cpld, tmp_path):
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            cpld._run_ispvme(str(vme))
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == ISPVME
+        assert "-d" in cmd
+        assert cpld._jtag_device in cmd
+        assert str(vme) in cmd
+
+    def test_run_ispvme_passes_check_true(self, cpld, tmp_path):
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            cpld._run_ispvme(str(vme))
+        assert mock_run.call_args[1].get("check") is True
+
+    def test_run_ispvme_captures_stdout_merged_with_stderr(self, cpld, tmp_path):
+        """ispvme's diagnostics (including its pass/fail banner) go to
+        stdout, not stderr; both streams must be captured so a failure
+        carries ispvme's actual diagnostic text (see _format_error)."""
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            cpld._run_ispvme(str(vme))
+        assert mock_run.call_args[1].get("stdout") == subprocess.PIPE
+        assert mock_run.call_args[1].get("stderr") == subprocess.STDOUT
+
+    def test_run_ispvme_asserts_burn_enable_before_programming(self, cpld, tmp_path, burn_en_file):
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        seen = {}
+
+        def fake_run(*args, **kwargs):
+            seen["burn_en_during_run"] = burn_en_file.read_text().strip()
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", side_effect=fake_run):
+            cpld._run_ispvme(str(vme))
+        assert seen["burn_en_during_run"] == "0"
+
+    def test_run_ispvme_restores_burn_enable_on_success(self, cpld, tmp_path, burn_en_file):
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            cpld._run_ispvme(str(vme))
+        assert burn_en_file.read_text().strip() == "1"
+
+    def test_run_ispvme_restores_burn_enable_on_ispvme_failure(self, cpld, tmp_path, burn_en_file):
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        err = subprocess.CalledProcessError(1, ISPVME, stderr="| FAIL! |\n")
+        with patch("subprocess.run", side_effect=err):
+            with pytest.raises(subprocess.CalledProcessError):
+                cpld._run_ispvme(str(vme))
+        assert burn_en_file.read_text().strip() == "1"
+
+    def test_run_ispvme_restores_burn_enable_on_keyboard_interrupt(self, cpld, tmp_path, burn_en_file):
+        """Interrupting a burn (e.g. operator Ctrl+C) must still restore the
+        gate -- KeyboardInterrupt isn't a SubprocessError/OSError, so this
+        needs a bare `finally`, not a narrow `except`."""
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        with patch("subprocess.run", side_effect=KeyboardInterrupt):
+            with pytest.raises(KeyboardInterrupt):
+                cpld._run_ispvme(str(vme))
+        assert burn_en_file.read_text().strip() == "1"
+
+    def test_run_ispvme_raises_oserror_when_burn_enable_sysfs_missing(self, cpld, tmp_path):
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(tmp_path / "no-hw-mgmt")):
+            with patch("subprocess.run") as mock_run:
+                with pytest.raises(OSError):
+                    cpld._run_ispvme(str(vme))
+        mock_run.assert_not_called()
+
+    @staticmethod
+    def _flaky_open_failing_nth_call(n):
+        """Return an `open` wrapper that raises OSError on the nth call
+        (1-indexed) and otherwise behaves like the real `open`."""
+        real_open = open
+        call_count = {"n": 0}
+
+        def flaky_open(path, mode="r", *args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] == n:
+                raise OSError("simulated write failure")
+            return real_open(path, mode, *args, **kwargs)
+
+        return flaky_open
+
+    def test_run_ispvme_raises_when_deassert_fails_after_success(self, cpld, tmp_path, burn_en_file):
+        """ispvme succeeding must not be reported as success if the board is
+        left with JTAG burn-enable asserted afterward."""
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        with patch("subprocess.run") as mock_run, \
+             patch("builtins.open", side_effect=self._flaky_open_failing_nth_call(2)):
+            mock_run.return_value = MagicMock(returncode=0)
+            with pytest.raises(OSError, match="deassert"):
+                cpld._run_ispvme(str(vme))
+
+    def test_run_ispvme_preserves_original_error_when_deassert_also_fails(self, cpld, tmp_path, burn_en_file):
+        """If both ispvme and the deassert write fail, the ispvme error is
+        the more actionable diagnostic and must be what's raised."""
+        vme = tmp_path / "test.vme"
+        vme.write_bytes(b"\x00")
+        err = subprocess.CalledProcessError(1, ISPVME, stderr="| FAIL! |\n")
+        with patch("subprocess.run", side_effect=err), \
+             patch("builtins.open", side_effect=self._flaky_open_failing_nth_call(2)):
+            with pytest.raises(subprocess.CalledProcessError):
+                cpld._run_ispvme(str(vme))
+
+
+class TestCPLDFormatError:
+
+    def test_format_error_uses_stdout(self):
+        """ispvme writes its pass/fail banner and diagnostics via printf to
+        stdout, not stderr (see _run_ispvme); stdout is the primary source."""
+        exc = subprocess.CalledProcessError(1, ISPVME)
+        exc.stdout = "| FAIL! |\n"
+        exc.stderr = ""
+        result = ComponentCPLD._format_error(exc)
+        assert "FAIL" in result
+
+    def test_format_error_no_output(self):
+        exc = subprocess.CalledProcessError(1, ISPVME)
+        exc.stdout = ""
+        exc.stderr = ""
+        result = ComponentCPLD._format_error(exc)
+        assert result  # at minimum str(exc)
+
+    def test_format_error_falls_back_to_stderr(self):
+        """stderr is a defensive fallback when stdout is empty."""
+        exc = subprocess.CalledProcessError(1, ISPVME)
+        exc.stdout = ""
+        exc.stderr = "OBMC JTAG handle not found"
+        result = ComponentCPLD._format_error(exc)
+        assert "JTAG" in result
+
+    def test_format_error_prefers_stdout_over_stderr(self):
+        exc = subprocess.CalledProcessError(1, ISPVME)
+        exc.stdout = "| FAIL! |\n"
+        exc.stderr = "should not appear"
+        result = ComponentCPLD._format_error(exc)
+        assert "FAIL" in result
+        assert "should not appear" not in result
+
+    def test_format_error_handles_none_stderr(self):
+        """subprocess.TimeoutExpired leaves .stderr as None when no output was
+        captured before the timeout; _format_error must not crash on it."""
+        exc = subprocess.TimeoutExpired(ISPVME, 300)
+        assert exc.stderr is None
+        result = ComponentCPLD._format_error(exc)
+        assert "timed out" in result
+
+    def test_format_error_strips_embedded_nul_bytes(self):
+        """ispvme's stdout can embed raw VME file bytes (including NUL) via
+        its printf-based output; syslog.syslog() raises ValueError on an
+        embedded NUL, so _format_error must not let one through."""
+        exc = subprocess.CalledProcessError(1, ISPVME)
+        exc.stdout = "| FAIL! |\x00garbage\n"
+        exc.stderr = ""
+        result = ComponentCPLD._format_error(exc)
+        assert "\x00" not in result
+        assert "FAIL" in result
