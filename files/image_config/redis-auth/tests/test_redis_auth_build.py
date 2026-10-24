@@ -31,7 +31,7 @@ def boot(tmp_path, monkeypatch):
 def test_disabled_build_ignores_restored_activation_and_creates_no_runtime(boot, content):
     marker, intent, runtime = boot
     intent.write_text(content)
-    with mock.patch.object(startup, 'selected_processes', side_effect=AssertionError('must not read activation')):
+    with mock.patch.object(startup, 'selection', side_effect=AssertionError('must not read activation')):
         assert startup.prepare_selected(intent_path=intent, runtime=runtime) == []
         assert not startup.runtime_required(intent_path=intent, runtime=runtime)
     assert not runtime.exists()

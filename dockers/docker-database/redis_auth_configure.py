@@ -8,11 +8,9 @@ import stat
 import sys
 
 RUNTIME = Path('/run/redis-auth')
-SOCKETS = {'redis': '/var/run/redis/redis.sock',
-           'redis_bmp': '/var/run/redis/redis_bmp.sock'}
 
 
-def configure(database, additional, policy, *, environ=os.environ,
+def configure(database, additional, policy, inventory, *, environ=os.environ,
               chassis=Path('/usr/share/sonic/platform/chassisdb.conf').exists()):
     if (environ.get('NAMESPACE_ID') or environ.get('DATABASE_TYPE')
             or int(environ.get('NAMESPACE_COUNT') or '1') > 1
@@ -22,26 +20,39 @@ def configure(database, additional, policy, *, environ=os.environ,
         policy = [policy]
     if not isinstance(policy, list) or not policy:
         raise ValueError('missing selected Redis process policy')
+    if not isinstance(inventory, dict) or set(inventory) != set(database['INSTANCES']):
+        raise ValueError('prepared Redis inventory differs from final server configuration')
+    expected = {}
+    for name, record in inventory.items():
+        instance = database['INSTANCES'][name]
+        if (set(record) != {'hostname', 'port', 'unix_socket_path', 'protected'}
+                or type(record['protected']) is not bool
+                or any(instance[field] != record[field] for field in ('hostname', 'port', 'unix_socket_path'))):
+            raise ValueError('configured Redis endpoint differs from prepared inventory')
+        if record['protected']:
+            if record['unix_socket_path'] in expected:
+                raise ValueError('ambiguous selected Redis process')
+            expected[record['unix_socket_path']] = name
     selected = set()
     for entry in policy:
         if (set(entry) != {'username', 'unix_socket', 'tcp_host', 'tcp_port'}
                 or entry['username'] != 'sonic-trusted-writer'
                 or entry['tcp_host'] != '127.0.0.1' or entry['tcp_port'] != 0):
             raise ValueError('unsupported selected Redis process policy')
-        names = [name for name, socket in SOCKETS.items() if socket == entry['unix_socket']]
-        if len(names) != 1 or names[0] in selected:
+        name = expected.get(entry['unix_socket'])
+        if name is None or name in selected:
             raise ValueError('ambiguous selected Redis process')
-        name = names[0]
         instance = database['INSTANCES'][name]
         extras = additional['INSTANCES'].setdefault(name, {})
         if (instance['hostname'] != '127.0.0.1'
-                or instance['unix_socket_path'] != SOCKETS[name]
                 or instance.get('database_type') or extras.get('bmc_link_ip')
                 or not extras.get('is_protected_mode', False)):
             raise ValueError('selected Redis process has a nonlocal or unexpected endpoint')
         instance['port'] = 0
         extras.update({'port': 0, 'redis_auth_enforce': True})
         selected.add(name)
+    if selected != set(expected.values()):
+        raise ValueError('prepared policy omits a protected Redis process')
     return selected
 
 
@@ -55,7 +66,11 @@ def main():
         path = Path(sys.argv[1])
         database = json.loads(path.read_text())
         additional = json.loads(sys.argv[2])
-        configure(database, additional, json.loads(policy_path.read_text()))
+        inventory_path = RUNTIME / 'server/instances.json'
+        info = inventory_path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+            raise ValueError('missing or unsafe Redis server inventory')
+        configure(database, additional, json.loads(policy_path.read_text()), json.loads(inventory_path.read_text()))
         # This path is the entrypoint's unpublished temporary database map.
         path.write_text(json.dumps(database, indent=2) + '\n')
         print(json.dumps(additional))

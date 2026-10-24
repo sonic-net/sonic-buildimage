@@ -83,6 +83,11 @@ class StartupTest(unittest.TestCase):
         self.addCleanup(groups.stop)
 
     def select(self, **modes):
+        if set(modes).issubset({'redis', 'redis_bmp'}):
+            enforce = any(mode == 'enforce' for mode in modes.values())
+            modes = {'mode': 'enforce' if enforce else 'legacy',
+                     'tcp_exceptions': [name for name in ('redis', 'redis_bmp')
+                                        if enforce and modes.get(name) != 'enforce']}
         self.intent.write_text(json.dumps(modes))
         self.intent.chmod(0o644)
 
@@ -99,7 +104,7 @@ class StartupTest(unittest.TestCase):
         self.select(redis='enforce', redis_bmp='enforce')
         self.assertEqual(self.prepare(), ['redis', 'redis_bmp'])
         policy = json.loads((self.runtime / 'local.json').read_text())
-        self.assertEqual({entry['unix_socket'] for entry in policy}, set(startup.SOCKETS.values()))
+        self.assertEqual({entry['unix_socket'] for entry in policy}, {item['unix_socket_path'] for item in startup.configured_instances().values()})
         self.assertTrue(all(entry['tcp_port'] == 0 for entry in policy))
         secret = self.runtime / 'local-system/writer.secret'
         inode = secret.stat().st_ino
@@ -209,12 +214,10 @@ class StartupTest(unittest.TestCase):
                 self.assertEqual(stat.S_IMODE((self.runtime / 'server').stat().st_mode), mode)
 
     def database(self):
-        return {'INSTANCES': {name: {'hostname': '127.0.0.1', 'port': 6379 + number,
-                                    'unix_socket_path': path}
-                              for number, (name, path) in enumerate(startup.SOCKETS.items())}}
+        return {'INSTANCES': startup.configured_instances()}
 
     def additional(self):
-        return {'INSTANCES': {name: {'is_protected_mode': True} for name in startup.SOCKETS}}
+        return {'INSTANCES': {name: {'is_protected_mode': True} for name in startup.configured_instances()}}
 
     def configured(self, database=None, additional=None, policy=None, environ=None, chassis=False):
         if policy is None:
@@ -222,6 +225,7 @@ class StartupTest(unittest.TestCase):
             self.prepare()
             policy = json.loads((self.runtime / 'local.json').read_text())
         return configure.configure(database or self.database(), additional or self.additional(), policy,
+                                   json.loads((self.runtime / 'server/instances.json').read_text()),
                                    environ=environ or {}, chassis=chassis)
 
     def test_only_selected_process_metadata_changes(self):
@@ -264,6 +268,22 @@ class StartupTest(unittest.TestCase):
         entry['tcp_port'] = 6379
         with self.assertRaises(ValueError):
             self.configured(policy=entry)
+
+    def test_missing_selected_process_and_changed_exception_are_rejected(self):
+        self.select(mode='enforce')
+        self.prepare()
+        policy = json.loads((self.runtime / 'local.json').read_text())
+        with self.assertRaises(ValueError):
+            self.configured(policy=policy[:1])
+        self.select(mode='legacy')
+        # Use a separate boot directory for the deliberately mixed selection.
+        self.runtime = self.root / 'mixed-run'
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
+        self.prepare()
+        database = self.database()
+        database['INSTANCES']['redis_bmp']['port'] += 1
+        with self.assertRaises(ValueError):
+            self.configured(database=database, policy=json.loads((self.runtime / 'local.json').read_text()))
 
     def test_redis_uid_reads_acl_but_not_password(self):
         self.select(redis='enforce')
@@ -373,7 +393,7 @@ class StartupTest(unittest.TestCase):
             os.setgroups([])
             os.setgid(identity.pw_gid)
             os.setuid(identity.pw_uid)
-        for name in startup.SOCKETS:
+        for name in startup.configured_instances():
             path = socket_dir / (name + '.sock')
             process = subprocess.Popen([sys.executable, str(SERVER), '--groups',
                                         str(self.runtime / 'server/socket-groups.json'), str(path),

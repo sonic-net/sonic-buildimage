@@ -15,8 +15,8 @@ from redis_auth_prepare import CredentialStateError, prepare_credential
 INTENT = Path('/etc/sonic/redis-auth.json')
 RUNTIME = Path('/run/redis-auth')
 BUILD_SETTING = Path('/usr/share/sonic/redis-auth/build-enabled')
-SOCKETS = {'redis': '/var/run/redis/redis.sock',
-           'redis_bmp': '/var/run/redis/redis_bmp.sock'}
+CONFIG = Path('/etc/sonic')
+DATABASE_TEMPLATE = Path('/usr/share/sonic/redis-auth/database_config.json.j2')
 USERNAME = 'sonic-trusted-writer'
 READ_RULES = ('reset on nopass ~* &* -@all +@read +@transaction '
               '+ping +echo +select +quit +hello +client|setname '
@@ -48,16 +48,84 @@ def build_enabled():
     return value == 'y'
 
 
-def selected_processes(path=INTENT):
-    """Read root-controlled boot intent. An absent setting keeps legacy mode."""
+def read_intent(path=INTENT):
+    """Normalize compatible earlier settings without rewriting the saved file."""
     try:
         intent = json.loads(read_setting(path))
     except FileNotFoundError:
-        return []
-    if (not isinstance(intent, dict) or set(intent) - SOCKETS.keys()
-            or any(mode not in ('legacy', 'enforce') for mode in intent.values())):
-        raise CredentialStateError('expected local Redis process names with legacy or enforce mode')
-    return sorted(name for name, mode in intent.items() if mode == 'enforce')
+        intent = {}
+    if not isinstance(intent, dict):
+        raise CredentialStateError('expected a Redis activation object')
+    earlier = {'redis', 'redis_bmp'}
+    if earlier.intersection(intent):
+        if set(intent) - earlier or any(value not in ('legacy', 'enforce') for value in intent.values()):
+            raise CredentialStateError('invalid earlier Redis activation setting')
+        modes = {intent.get(name, 'legacy') for name in earlier}
+        if len(modes) != 1:
+            raise CredentialStateError('mixed earlier Redis modes require an explicit common setting')
+        intent = {'mode': modes.pop()}
+    exceptions = intent.get('tcp_exceptions', [])
+    if (set(intent) - {'mode', 'tcp_exceptions'} or intent.get('mode', 'legacy') not in ('legacy', 'enforce')
+            or not isinstance(exceptions, list) or any(not isinstance(name, str) or not name for name in exceptions)
+            or len(exceptions) != len(set(exceptions))):
+        raise CredentialStateError('expected mode legacy or enforce and distinct TCP exception names')
+    return {'mode': intent.get('mode', 'legacy'), 'tcp_exceptions': sorted(exceptions)}
+
+
+def configured_instances():
+    """Use the same saved override or standard host template as the database entrypoint."""
+    if (CONFIG / 'enable_multidb').exists():
+        raise CredentialStateError('the multi-database layout is not qualified for enforcement')
+    try:
+        database = json.loads(read_setting(CONFIG / 'database_config.json'))
+    except FileNotFoundError:
+        import jinja2
+        database = json.loads(jinja2.Template(read_setting(DATABASE_TEMPLATE)).render(
+            HOST_IP='127.0.0.1', REDIS_PORT=6379, BMP_DB_PORT=6400, DEV='', DATABASE_TYPE=''))
+    instances = dict(database['INSTANCES'])
+    # The entrypoint removes this reference before launching standalone servers.
+    instances.pop('redis_chassis', None)
+    if not instances:
+        raise CredentialStateError('no configured local Redis processes')
+    sockets = set()
+    for instance in instances.values():
+        path = instance['unix_socket_path']
+        if (instance['hostname'] != '127.0.0.1' or instance.get('database_type')
+                or instance.get('bmc_link_ip') or not isinstance(path, str)
+                or Path(path).parent != Path('/var/run/redis') or '..' in Path(path).parts
+                or path in sockets or type(instance['port']) is not int or not 0 <= instance['port'] <= 65535):
+            raise CredentialStateError('Redis inventory requires distinct qualified local endpoints')
+        sockets.add(path)
+    return {name: {key: instance[key] for key in ('hostname', 'port', 'unix_socket_path')}
+            for name, instance in sorted(instances.items())}
+
+
+def selection(path=INTENT):
+    intent = read_intent(path)
+    if intent['mode'] == 'legacy':
+        return [], {}
+    instances = configured_instances()
+    exceptions = set(intent['tcp_exceptions'])
+    if exceptions - instances.keys() or any(instances[name]['port'] == 0 for name in exceptions):
+        raise CredentialStateError('TCP exceptions must name configured TCP processes')
+    selected = sorted(instances.keys() - exceptions)
+    if not selected:
+        raise CredentialStateError('enforcement must select at least one local Redis process')
+    for name, instance in instances.items():
+        instance['protected'] = name in selected
+    return selected, instances
+
+
+def selected_processes(path=INTENT):
+    return selection(path)[0]
+
+
+def endpoint_policy(selected, instances):
+    policy = [{'username': USERNAME, 'unix_socket': instances[name]['unix_socket_path'],
+               'tcp_host': instances[name]['hostname'], 'tcp_port': 0} for name in selected]
+    if len((json.dumps(policy, indent=2) + '\n').encode()) > 4096:
+        raise CredentialStateError('generated endpoint policy exceeds the installed reader capacity')
+    return policy
 
 
 def atomic(path, content, mode=0o644):
@@ -83,19 +151,22 @@ def socket_groups():
 def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
     if os.geteuid() != 0:
         raise CredentialStateError('must run as root')
-    selected = selected_processes(intent_path) if build_enabled() else []
+    selected, instances = selection(intent_path) if build_enabled() else ([], {})
     if not selected:
         # Changing activation requires a controlled host reboot, not a live flip.
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot; reboot after changing intent')
         return []
-    prepare_credential(runtime_root=runtime)
-    policy = [{'username': USERNAME, 'unix_socket': SOCKETS[name],
-               'tcp_host': '127.0.0.1', 'tcp_port': 0} for name in selected]
+    policy = endpoint_policy(selected, instances)
     policy_bytes = (json.dumps(policy, indent=2) + '\n').encode()
     existing = runtime / 'local.json'
     if existing.exists() and existing.read_bytes() != policy_bytes:
         raise CredentialStateError('activation changed during this boot; reboot after changing intent')
+    inventory = runtime / 'server/instances.json'
+    inventory_bytes = (json.dumps(instances, indent=2) + '\n').encode()
+    if inventory.exists() and inventory.read_bytes() != inventory_bytes:
+        raise CredentialStateError('Redis inventory changed during this boot; reboot required')
+    prepare_credential(runtime_root=runtime)
     digest = (runtime / 'local-system/writer.sha256').read_text().strip()
     server = runtime / 'server'
     try:
@@ -112,27 +183,29 @@ def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
            + ' reset on #' + digest + ' ~* &* +@all\n')
     atomic(server / 'users.acl', acl.encode())
     atomic(server / 'socket-groups.json', (json.dumps(socket_groups()) + '\n').encode())
+    atomic(inventory, inventory_bytes)
     atomic(existing, policy_bytes)
     return selected
 
 
 def runtime_required(*, intent_path=INTENT, runtime=RUNTIME):
-    selected = selected_processes(intent_path) if build_enabled() else []
+    selected, instances = selection(intent_path) if build_enabled() else ([], {})
     if not selected:
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot')
         return False
     for relative in ('local.json', 'local-system/writer.secret', 'local-system/writer.sha256',
-                     'server/users.acl', 'server/socket-groups.json'):
+                     'server/users.acl', 'server/socket-groups.json', 'server/instances.json'):
         info = (runtime / relative).lstat()
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022):
             raise CredentialStateError('missing or unsafe selected runtime file')
     # The complete published pair must already exist. Checking cannot initialize it.
     prepare_credential(runtime_root=runtime)
-    expected = [{'username': USERNAME, 'unix_socket': SOCKETS[name],
-                 'tcp_host': '127.0.0.1', 'tcp_port': 0} for name in selected]
+    expected = endpoint_policy(selected, instances)
     if json.loads((runtime / 'local.json').read_text()) != expected:
         raise CredentialStateError('runtime policy differs from activation setting')
+    if json.loads(read_setting(runtime / 'server/instances.json')) != instances:
+        raise CredentialStateError('runtime inventory differs from configured local processes')
     digest = (runtime / 'local-system/writer.sha256').read_text().strip()
     expected_acl = ('user default ' + READ_RULES + '\nuser ' + USERNAME
                     + ' reset on #' + digest + ' ~* &* +@all\n')
