@@ -1189,6 +1189,17 @@ if [ -f {{service}} ]; then
     echo "{{service}}" | sudo tee -a $GENERATED_SERVICE_FILE
 fi
 {% endfor %}
+# Gate the package-manager-generated DHCP relay unit as well as static units.
+if [ -f "$FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/dhcp_relay.service" ]; then
+    sudo mkdir -p "$FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/dhcp_relay.service.d"
+    cat <<'EOF' | sudo tee "$FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/dhcp_relay.service.d/readiness.conf" > /dev/null
+[Service]
+ExecStartPost=/bin/bash -c 'while :; do id=$$(/usr/local/bin/container id dhcp_relay) || exit; [ -n "$$id" ] && break; sleep 1; done; exec /usr/bin/docker exec "$$id" /usr/bin/timeout 60s supervisor-wait-for-dependent-startup'
+ExecStopPost=/usr/local/bin/container stop dhcp_relay
+# Allow 360s owner fallback + 60s dependency startup + 30s command overhead.
+TimeoutStartSec=450s
+EOF
+fi
 if [ -f iccpd.service ]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable iccpd.service
 fi

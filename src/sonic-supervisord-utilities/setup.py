@@ -42,6 +42,7 @@ setup(
     ],
     scripts=[
         'scripts/supervisor-proc-exit-listener',
+        'scripts/supervisor-wait-for-dependent-startup',
     ],
     setup_requires=[
     ],
