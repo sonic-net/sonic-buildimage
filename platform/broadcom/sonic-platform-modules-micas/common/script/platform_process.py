@@ -175,6 +175,13 @@ def startSff_polling():
         rets = getPid("sff_polling.py")
         if len(rets) == 0:
             log_os_system(cmd)
+        
+def startMgmt_ledctrl():
+    if STARTMODULE.get('mgmt_ledctrl', 0) == 1:
+        cmd = "nohup mgmt_ledctrl.py start > /dev/null 2>&1 &"
+        rets = getPid("mgmt_ledctrl.py")
+        if len(rets) == 0:
+            log_os_system(cmd)
 
 
 def generate_air_flow():
@@ -307,6 +314,12 @@ def stopSff_polling():
             cmd = "kill " + ret
             log_os_system(cmd)
 
+def stopMgmt_ledctrl():
+    if STARTMODULE.get('mgmt_ledctrl', 0) == 1:
+        rets = getPid("mgmt_ledctrl.py")
+        for ret in rets:
+            cmd = "kill " + ret
+            log_os_system(cmd)    
 
 def stopGenerate_air_flow():
     if STARTMODULE.get('generate_airflow', 0) == 1:
@@ -342,6 +355,7 @@ def otherinit_pre():
 
 def unload_apps():
     stopSff_polling()
+    stopMgmt_ledctrl()
     stopPMON_sys()
     stopSignalmonitor()
     stopIntelligentmonitor()
@@ -396,6 +410,7 @@ def load_apps():
     startSignalmonitor()
     startPMON_sys()
     startSff_polling()
+    startMgmt_ledctrl()
     otherinit()
     if STARTMODULE.get("macledreset", 0) == 1:
         MacLedSet("reset")
