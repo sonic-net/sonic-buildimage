@@ -11,6 +11,7 @@ sonic_dependencies = [
 
 dependencies = [
     'supervisor',
+    'supervisord-dependent-startup==1.4.0',
 ]
 
 dependencies += sonic_dependencies
@@ -42,6 +43,7 @@ setup(
     ],
     scripts=[
         'scripts/supervisor-proc-exit-listener',
+        'scripts/supervisor-dependent-startup',
     ],
     setup_requires=[
     ],
