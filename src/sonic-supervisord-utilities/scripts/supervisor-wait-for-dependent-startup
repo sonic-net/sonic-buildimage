@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+
+"""Wait for dependency startup's result; systemd owns the activation timeout."""
+
+import errno
+import sys
+import time
+
+from supervisor import childutils
+from supervisor.compat import xmlrpclib
+
+
+def wait_for_exit(server_url='unix:///var/run/supervisor.sock'):
+    connected = False
+    while True:
+        try:
+            # A fresh proxy closes failed HTTP connections before the next poll.
+            with childutils.getRPCInterface({
+                    'SUPERVISOR_SERVER_URL': server_url,
+            }) as rpc:
+                info = rpc.supervisor.getProcessInfo('dependent-startup')
+        except OSError as error:
+            if connected or error.errno not in (errno.ENOENT, errno.ECONNREFUSED):
+                print('dependent-startup: {}'.format(error), file=sys.stderr)
+                return 1
+        except xmlrpclib.Fault as error:
+            print('dependent-startup: {}'.format(error), file=sys.stderr)
+            return 1
+        else:
+            connected = True
+            state = info['statename']
+            if state == 'EXITED':
+                status = info['exitstatus']
+                if type(status) is int and status == 0:
+                    return 0
+                print('dependent-startup: exit status {}'.format(status), file=sys.stderr)
+                return status if type(status) is int and 0 < status < 256 else 1
+            if state not in ('STOPPED', 'STARTING', 'RUNNING', 'BACKOFF') or (
+                    state == 'STOPPED' and info['start']):
+                print('dependent-startup: {} ({})'.format(state, info['spawnerr']), file=sys.stderr)
+                return 1
+        time.sleep(1)
+
+
+if __name__ == '__main__':
+    sys.exit(wait_for_exit())
