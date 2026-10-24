@@ -1,0 +1,185 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 29 Sep 2026 12:00:00 +0000
+Subject: [PATCH] zebra: let a dataplane module learn local MACs
+
+In SONiC's fpm mode the ASIC learns local MACs and dplane_fpm_sonic hands them
+to zebra over the FPM channel. zebra then writes their kernel bridge FDB
+entries itself, including the entry of a MAC only an Ethernet Segment peer
+has, which zebra holds local-inactive.
+
+The kernel reports each of those writes back. In mac-ext-learn mode zebra
+drops its own writes by NDA_PROTOCOL, but the kernel keeps no protocol for
+bridge FDB entries, so the report arrives as a local learn: the inactive MAC
+turns active, is advertised as learnt here, and stays after the peer
+withdraws it.
+
+Let a dataplane module tell zebra that it, not the kernel, learns and ages
+local MACs. While it does, zebra ignores kernel FDB notifications for local
+bridge ports, adds and deletes alike. VXLAN ports are not affected.
+
+Hold timer expiry needs the same distinction. In mac-ext-learn mode zebra
+flushes a MAC when its peer-active hold timer expires, whether or not the
+MAC is still active locally. The ASIC keeps its entry and the module has no
+reason to report it again, so an Ethernet Segment peer that stops seeing a
+host, or reboots, takes the host's MAC off this switch too. While a
+dataplane module learns local MACs, zebra flushes only a local-inactive
+MAC at expiry; an active one stays until the module reports it gone.
+
+Ignoring those notifications also drops the local MACs zebra reads from the
+kernel when an L2VNI is added or comes up, or when BGP enables EVPN. MACs
+the ASIC already has would stay unknown until the module reports them
+again, which it does only on a change. While a dataplane module learns
+local MACs, zebra now calls the new zebra_dplane_mac_read hook after each
+such read, for the module to supply them.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/zebra_evpn.c b/zebra/zebra_evpn.c
+index 945ec8541f..2209e94d5b 100644
+--- a/zebra/zebra_evpn.c
++++ b/zebra/zebra_evpn.c
+@@ -41,6 +41,7 @@
+ #include "zebra/zebra_dplane.h"
+ #include "zebra/zebra_router.h"
+ #include "zebra/zebra_trace.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, ZEVPN, "VNI hash");
+ DEFINE_MTYPE_STATIC(ZEBRA, ZEVPN_VTEP, "VNI remote VTEP");
+@@ -953,6 +954,10 @@ void zebra_evpn_read_mac_neigh(struct zebra_evpn *zevpn, struct interface *ifp)
+ 			zif->brslave_info.bridge_ifindex);
+ 
+ 	dplane_fdb_read_for_bridge(zns, ifp, zif->brslave_info.br_if, vni->access_vlan);
++	/* The local MACs this read reports are ignored while a dataplane
++	 * module learns them, so ask the module instead.
++	 */
++	zebra_neigh_dplane_mac_read(zevpn);
+ 	/* We need to specifically read and retrieve the entry for BUM handling
+ 	 * via multicast, if any.
+ 	 */
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 5f9f84f34e..07433ef8f0 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -26,6 +26,7 @@
+ #include "zebra/zebra_evpn_mh.h"
+ #include "zebra/zebra_evpn_mac.h"
+ #include "zebra/zebra_evpn_neigh.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, MAC, "EVPN MAC");
+ 
+@@ -1546,7 +1547,13 @@ static void zebra_evpn_mac_hold_exp_cb(struct event *t)
+ 			   zebra_evpn_zebra_mac_flag_dump(mac, mac_buf, sizeof(mac_buf)));
+ 	}
+ 
+-	if (zebra_mac_ext_learn_mode()) {
++	/* A dataplane module that learns local MACs also ages them, so only a
++	 * local-inactive MAC is flushed here; an active one stays until the
++	 * module reports it gone.
++	 */
++	if (zebra_mac_ext_learn_mode() &&
++	    (!zebra_neigh_dplane_mac_learning() ||
++	     CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE))) {
+ 		vlanid_t vid;
+ 		struct interface *ifp;
+ 		/* Upon expiry, MAC is deleted from DP. */
+diff --git a/zebra/zebra_neigh.c b/zebra/zebra_neigh.c
+index b0350e2c0d..3c37e3ee59 100644
+--- a/zebra/zebra_neigh.c
++++ b/zebra/zebra_neigh.c
+@@ -580,6 +580,26 @@ static void zebra_neigh_ipaddr_update(struct zebra_dplane_ctx *ctx)
+ 		zebra_vxlan_handle_kernel_neigh_del(ifp, link_if, &ip);
+ }
+ 
++static bool dplane_mac_learning;
++
++DEFINE_HOOK(zebra_dplane_mac_read, (struct zebra_evpn *zevpn), (zevpn));
++
++void zebra_neigh_set_dplane_mac_learning(bool enable)
++{
++	dplane_mac_learning = enable;
++}
++
++bool zebra_neigh_dplane_mac_learning(void)
++{
++	return dplane_mac_learning;
++}
++
++void zebra_neigh_dplane_mac_read(struct zebra_evpn *zevpn)
++{
++	if (dplane_mac_learning)
++		hook_call(zebra_dplane_mac_read, zevpn);
++}
++
+ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
+ {
+ 	ns_id_t ns_id;
+@@ -653,6 +673,14 @@ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
+ 	ndm_state = dplane_ctx_mac_get_ndm_state(ctx);
+ 	ndm_flags = dplane_ctx_mac_get_ndm_flags(ctx);
+ 
++	/* The dataplane module learns local MACs; this entry is zebra's own write. */
++	if (dplane_mac_learning && !IS_ZEBRA_IF_VXLAN(ifp)) {
++		if (IS_ZEBRA_DEBUG_KERNEL)
++			zlog_debug("        Ignoring %s MAC %pEA on %s, a dataplane module learns local MACs",
++				   dplane_op2str(op), &mac, ifp->name);
++		return;
++	}
++
+ 	/* If add or update, do accordingly if learnt on a "local" interface; if
+ 	 * the notification is over VxLAN, this has to be related to
+ 	 * multi-homing,
+diff --git a/zebra/zebra_neigh.h b/zebra/zebra_neigh.h
+index 30c9f4b644..086a1888fb 100644
+--- a/zebra/zebra_neigh.h
++++ b/zebra/zebra_neigh.h
+@@ -14,12 +14,15 @@
+ #include "lib/prefix.h"
+ #include "lib/ns.h"
+ #include "lib/if.h"
++#include "lib/hook.h"
+ 
+ struct zebra_pbr_rule;
+ struct zebra_dplane_ctx;
+ 
+ #define zneigh_info zrouter.neigh_info
+ 
++struct zebra_evpn;
++
+ struct zebra_neigh_ent {
+ 	ns_id_t ns_id;
+ 	ifindex_t ifindex;
+@@ -60,4 +63,12 @@ extern void zebra_neigh_deref(struct zebra_pbr_rule *rule);
+ extern void zebra_neigh_ref(ns_id_t ns_id, int ifindex, struct ipaddr *ip,
+ 			    struct zebra_pbr_rule *rule);
+ void zebra_neigh_dplane_update(struct zebra_dplane_ctx *ctx);
++/* A dataplane module, not the kernel, learns and ages local MACs. */
++extern void zebra_neigh_set_dplane_mac_learning(bool enable);
++extern bool zebra_neigh_dplane_mac_learning(void);
++/* Where zebra reads local MACs from the kernel, it asks that module for them
++ * instead. zevpn is the EVPN being read, or NULL for all of them.
++ */
++DECLARE_HOOK(zebra_dplane_mac_read, (struct zebra_evpn *zevpn), (zevpn));
++extern void zebra_neigh_dplane_mac_read(struct zebra_evpn *zevpn);
+ #endif /* _ZEBRA_NEIGH_H */
+diff --git a/zebra/zebra_vxlan.c b/zebra/zebra_vxlan.c
+index 42ed7e1ea8..26732fac2c 100644
+--- a/zebra/zebra_vxlan.c
++++ b/zebra/zebra_vxlan.c
+@@ -43,6 +43,7 @@
+ #include "zebra/zebra_dplane.h"
+ #include "zebra/zebra_router.h"
+ #include "zebra/zebra_trace.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, HOST_PREFIX, "host prefix");
+ DEFINE_MTYPE_STATIC(ZEBRA, ZL3VNI, "L3 VNI hash");
+@@ -6066,6 +6067,7 @@ void zebra_vxlan_advertise_all_vni(ZAPI_HANDLER_ARGS)
+ 
+ 		/* Read the MAC FDB */
+ 		ns_walk_func(macfdb_read_ns, NULL, NULL);
++		zebra_neigh_dplane_mac_read(NULL);
+ 
+ 		/* Read neighbors */
+ 		ns_walk_func(neigh_read_ns, NULL, NULL);
