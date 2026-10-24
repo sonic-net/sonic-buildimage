@@ -241,6 +241,8 @@ class BGPPeerMgrBase(Manager):
     def handler(self, key, op, data):
         # Permanently invalid SETs must not wait in the dependency queue.
         if op == swsscommon.SET_COMMAND and not self.validate_peer_name(key, data):
+            # Nor apply a SET still queued for the key later; a configured peer is left as it is
+            self._discard_pending_set(key)
             return
         if op != swsscommon.SET_COMMAND and self._has_invalid_dynamic_peer_key(key):
             log_err("BGP_PEER_RANGE key must not contain line breaks")

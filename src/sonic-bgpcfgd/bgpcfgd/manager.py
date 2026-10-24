@@ -54,6 +54,15 @@ class Manager(object):
         """ Return associated table name"""
         return self.table_name
 
+    def _queue_set(self, key, data):
+        """Queue a SET to retry when a dependency changes."""
+        self.set_queue.append((key, data))
+
+    def _discard_pending_set(self, key):
+        """Drop every SET still queued for key."""
+        self.set_queue = [(queued_key, queued_data) for queued_key, queued_data in self.set_queue
+                          if queued_key != key]
+
     def handler(self, key, op, data):
         """
         This method is executed on each add/remove event on the table.
@@ -61,23 +70,19 @@ class Manager(object):
         :param op: operation on the table entry. Could be either 'SET' or 'DEL'
         :param data: associated data of the event. Empty for 'DEL' operation.
         """
+        if op in (swsscommon.SET_COMMAND, swsscommon.DEL_COMMAND):
+            # A SET carries the whole row, so a SET or DEL for a key replaces any SET still queued for it
+            self._discard_pending_set(key)
         if op == swsscommon.SET_COMMAND:
-            if self._in_batch and self._deps_changed and any(queued_key == key for queued_key, _ in self.set_queue):
-                # An older SET for this key may have become applicable in this pass; keep arrival order
-                self.set_queue.append((key, data))
-                return
             if (not self.wait_for_all_deps) or self.directory.available_deps(self.deps):  # all required dependencies are set in the Directory?
                 res = self.set_handler(key, data)
                 if not res:  # set handler returned False, which means it is not ready to process is. Save it for later.
                     log_debug("'SET' handler returned NOT_READY for the Manager: %s" % self.__class__)
-                    self.set_queue.append((key, data))
+                    self._queue_set(key, data)
             else:
                 log_debug("Not all dependencies are met for the Manager: %s" % self.__class__)
-                self.set_queue.append((key, data))
+                self._queue_set(key, data)
         elif op == swsscommon.DEL_COMMAND:
-            # A deferred retry must not add back an entry deleted in the same pass
-            self.set_queue = [(queued_key, queued_data) for queued_key, queued_data in self.set_queue
-                              if queued_key != key]
             self.del_handler(key)
         else:
             log_err("Invalid operation '%s' for key '%s'" % (op, key))

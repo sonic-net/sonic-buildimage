@@ -6,7 +6,7 @@ class ConfigMgr(object):
         self.current_config_raw = None
         self.changes = ""
         self.peer_groups_to_restart = []
-        self.before_flush = []  # callables that push pending changes before a commit or a read of FRR
+        self.before_flush = []  # callables that push pending changes before a commit; the state the flushed peers render from must be visible, in the Directory or the DB, before a handler commits mid-pass
 
     def reset(self):
         """ Reset stored config """
@@ -16,13 +16,12 @@ class ConfigMgr(object):
         self.peer_groups_to_restart = []
 
     def run_before_flush(self):
-        """ Let deferred work push its changes before FRR is written or read """
+        """ Let deferred work push its changes before FRR is written """
         for callback in self.before_flush:
             callback()
 
     def update(self):
         """ Read current config from FRR """
-        self.run_before_flush()
         self.current_config = None
         self.current_config_raw = None
         out = self.frr.get_config()

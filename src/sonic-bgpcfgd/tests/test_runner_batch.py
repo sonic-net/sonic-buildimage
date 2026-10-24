@@ -1,4 +1,5 @@
 from collections import deque
+from itertools import permutations
 import os
 from unittest.mock import MagicMock
 
@@ -15,21 +16,36 @@ import bgpcfgd.runner as runner_module
 from swsscommon import swsscommon
 
 
+def swsscommon_bindings():
+    # Collection can bind the modules under test to different swsscommon mocks, so patch each one they use.
+    import bgpcfgd.manager
+    import bgpcfgd.managers_bbr
+    import bgpcfgd.managers_bgp
+    import bgpcfgd.managers_db
+    import bgpcfgd.managers_device_global
+    bindings = {id(swsscommon): swsscommon}
+    for module in (bgpcfgd.manager, bgpcfgd.managers_bbr, bgpcfgd.managers_bgp, bgpcfgd.managers_db,
+                   bgpcfgd.managers_device_global, runner_module):
+        bindings.setdefault(id(module.swsscommon), module.swsscommon)
+    return list(bindings.values())
+
+
 def make_peers(monkeypatch):
-    # Scheduling tests use the repository's validator mock independently of the installed binding version.
-    for name in ('isVrfNameValid', 'isInterfaceNameValid'):
-        monkeypatch.setattr(swsscommon, name, getattr(swsscommon_test.swsscommon, name), raising=False)
-    for name, value in {
-        'SET_COMMAND': 'SET',
-        'DEL_COMMAND': 'DEL',
-        'CFG_DEVICE_METADATA_TABLE_NAME': 'DEVICE_METADATA',
-        'CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME': 'DEVICE_NEIGHBOR_METADATA',
-        'CFG_PORT_TABLE_NAME': 'PORT',
-        'CFG_BGP_DEVICE_GLOBAL_TABLE_NAME': 'BGP_DEVICE_GLOBAL',
-        'CFG_LOOPBACK_INTERFACE_TABLE_NAME': 'LOOPBACK_INTERFACE',
-        'CFG_BGP_NEIGHBOR_TABLE_NAME': 'BGP_NEIGHBOR',
-    }.items():
-        monkeypatch.setattr(swsscommon, name, value)
+    for binding in swsscommon_bindings():
+        # Scheduling tests use the repository's validator mock independently of the installed binding version.
+        for name in ('isVrfNameValid', 'isInterfaceNameValid'):
+            monkeypatch.setattr(binding, name, getattr(swsscommon_test.swsscommon, name), raising=False)
+        for name, value in {
+            'SET_COMMAND': 'SET',
+            'DEL_COMMAND': 'DEL',
+            'CFG_DEVICE_METADATA_TABLE_NAME': 'DEVICE_METADATA',
+            'CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME': 'DEVICE_NEIGHBOR_METADATA',
+            'CFG_PORT_TABLE_NAME': 'PORT',
+            'CFG_BGP_DEVICE_GLOBAL_TABLE_NAME': 'BGP_DEVICE_GLOBAL',
+            'CFG_LOOPBACK_INTERFACE_TABLE_NAME': 'LOOPBACK_INTERFACE',
+            'CFG_BGP_NEIGHBOR_TABLE_NAME': 'BGP_NEIGHBOR',
+        }.items():
+            monkeypatch.setattr(binding, name, value)
     monkeypatch.setattr(BGPPeerMgrBase, 'load_peers', staticmethod(lambda: set()))
     monkeypatch.setattr('bgpcfgd.managers_bgp.log_debug', lambda msg: None)
     monkeypatch.setattr('bgpcfgd.managers_bgp.log_info', lambda msg: None)
@@ -90,10 +106,11 @@ def run_passes(monkeypatch, common, managers, passes):
                 subscribers[table].events.extend(messages)
             return 2, None
 
-    monkeypatch.setattr(swsscommon, 'DBConnector', Db)
-    monkeypatch.setattr(swsscommon, 'SubscriberStateTable', Subscriber)
-    monkeypatch.setattr(swsscommon, 'Select', Selector)
-    monkeypatch.setattr(swsscommon.SonicDBConfig, 'getDbId', lambda name: 4)
+    for binding in swsscommon_bindings():
+        monkeypatch.setattr(binding, 'DBConnector', Db)
+        monkeypatch.setattr(binding, 'SubscriberStateTable', Subscriber)
+        monkeypatch.setattr(binding, 'Select', Selector)
+        monkeypatch.setattr(binding.SonicDBConfig, 'getDbId', lambda name: 4)
     monkeypatch.setattr(runner_module, 'g_run', True)
     runner = runner_module.Runner(common['cfg_mgr'])
     for manager in managers:
@@ -330,5 +347,139 @@ def test_newer_set_in_the_unblocking_pass_is_applied_last(monkeypatch, interface
     assert ('default', '10.1.0.1') in peer.peers
     assert common['directory'].get('CONFIG_DB', 'BGP_NEIGHBOR', 'default|10.1.0.1')['admin_status'] == 'down'
     commands = '\n'.join(call.args[0] for call in common['cfg_mgr'].push.call_args_list)
-    assert commands.rindex('neighbor 10.1.0.1 shutdown') > commands.rindex('neighbor 10.1.0.1 remote-as')
+    admin_lines = [line.strip() for line in commands.splitlines() if line.strip() in (
+        'neighbor 10.1.0.1 shutdown', 'no neighbor 10.1.0.1 shutdown')]
+    assert admin_lines[-1] == 'neighbor 10.1.0.1 shutdown'
     assert not peer.set_queue
+
+
+@pytest.mark.parametrize('order', list(permutations(('new_local', 'replacement', 'old_local'))))
+def test_deferred_replacement_asn_is_used_for_creation(monkeypatch, order):
+    common, peer, interface = make_peers(monkeypatch)
+    vlan = InterfaceMgr(common, 'CONFIG_DB', 'VLAN_INTERFACE')
+    key = '198.51.100.253'
+    old = peer_data('192.0.2.10')
+    new = dict(peer_data('192.0.2.20'), asn='65300')
+    events = {
+        'new_local': ('VLAN_INTERFACE', [event('Vlan3999', {'NULL': 'NULL'}),
+                      event('Vlan3999|192.0.2.20/31', {'NULL': 'NULL'})]),
+        'replacement': ('BGP_NEIGHBOR', [event(key, new)]),
+        'old_local': ('INTERFACE', [event('Ethernet0', {'NULL': 'NULL'}),
+                      event('Ethernet0|192.0.2.10/31', {'NULL': 'NULL'})]),
+    }
+    run_passes(monkeypatch, common, [peer, interface, vlan], [
+        {'BGP_NEIGHBOR': [event(key, old)]},
+        dict(events[item] for item in order),
+    ])
+    commands = '\n'.join(call.args[0] for call in common['cfg_mgr'].push.call_args_list)
+    assert 'neighbor {} remote-as 65300'.format(key) in commands
+    assert 'neighbor {} remote-as 65200'.format(key) not in commands
+    assert common['directory'].get('CONFIG_DB', 'BGP_NEIGHBOR', 'default|' + key) == new
+    assert not peer.set_queue
+
+
+def test_replacement_waits_for_its_own_local_address(monkeypatch):
+    common, peer, interface = make_peers(monkeypatch)
+    key = '198.51.100.253'
+    new = dict(peer_data('192.0.2.20'), asn='65300')
+    states = run_passes(monkeypatch, common, [peer, interface], [
+        {'BGP_NEIGHBOR': [event(key, peer_data('192.0.2.10'))]},
+        {'BGP_NEIGHBOR': [event(key, new)],
+         'INTERFACE': [event('Ethernet0', {'NULL': 'NULL'}),
+                       event('Ethernet0|192.0.2.10/31', {'NULL': 'NULL'})]},
+        {'INTERFACE': [event('Ethernet0|192.0.2.20/31', {'NULL': 'NULL'})]},
+    ])
+    assert [state['BGP_NEIGHBOR'] for state in states] == [0, 0, 1]
+    commands = '\n'.join(call.args[0] for call in common['cfg_mgr'].push.call_args_list)
+    assert 'neighbor {} remote-as 65300'.format(key) in commands
+    assert 'neighbor {} remote-as 65200'.format(key) not in commands
+    assert not peer.set_queue
+
+
+@pytest.mark.parametrize('across_passes', [False, True])
+def test_delete_then_set_recreates_an_existing_peer(monkeypatch, across_passes):
+    common, peer, interface = make_peers(monkeypatch)
+    key = '198.51.100.253'
+    old = peer_data('192.0.2.1')
+    new = dict(old, asn='65300')
+    changes = [event(key, op='DEL'), event(key, new)]
+    passes = [{'BGP_NEIGHBOR': [event(key, old)]}]
+    passes += ([{'BGP_NEIGHBOR': [change]} for change in changes]
+               if across_passes else [{'BGP_NEIGHBOR': changes}])
+    run_passes(monkeypatch, common, [peer, interface], passes)
+    commands = '\n'.join(call.args[0] for call in common['cfg_mgr'].push.call_args_list)
+    assert commands.index('neighbor {} remote-as 65200'.format(key)) < commands.index('no neighbor ' + key)
+    assert commands.index('no neighbor ' + key) < commands.index('neighbor {} remote-as 65300'.format(key))
+    assert not peer.set_queue
+
+
+def test_mid_pass_commit_replays_the_replacement_before_tsa_reads(monkeypatch):
+    common, frr, device_global, interface = make_frr_backed(monkeypatch, 'ToRRouter')
+    peer = BGPPeerMgrBase(common, 'CONFIG_DB', 'BGP_NEIGHBOR', 'general', False)
+    key = '198.51.100.253'
+    new = dict(peer_data('192.0.2.20'), asn='65300')
+    seen = []
+    isolate = device_global.isolate_unisolate_device
+
+    def record(state):
+        seen.append(frr.config)
+        return isolate(state)
+
+    device_global.isolate_unisolate_device = record
+    run_passes(monkeypatch, common, [peer, interface, device_global], [
+        {'BGP_NEIGHBOR': [event(key, peer_data('192.0.2.10'))]},
+        {'BGP_NEIGHBOR': [event(key, new)],
+         'INTERFACE': [event('Ethernet0', {'NULL': 'NULL'}),
+                       event('Ethernet0|192.0.2.10/31', {'NULL': 'NULL'}),
+                       event('Ethernet0|192.0.2.20/31', {'NULL': 'NULL'})],
+         'BGP_DEVICE_GLOBAL': [event('STATE', {'tsa_enabled': 'true'})]},
+    ])
+    assert len(seen) == 1
+    assert 'neighbor {} remote-as 65300'.format(key) in seen[0]
+    assert 'neighbor {} remote-as 65200'.format(key) not in frr.config
+    assert not peer.set_queue
+
+
+@pytest.mark.parametrize('in_batch', [False, True])
+@pytest.mark.parametrize('bad_name', ['TOR\nSECOND', 'TOR\r\nSECOND', 42])
+def test_rejected_replacement_cancels_pending_peer(monkeypatch, in_batch, bad_name):
+    common, peer, interface = make_peers(monkeypatch)
+    key, other = '198.51.100.253', '198.51.100.254'
+    peer.handler(key, 'SET', peer_data('192.0.2.10'))
+    peer.handler(other, 'SET', peer_data('192.0.2.10'))
+    assert len(peer.set_queue) == 2
+    if in_batch:
+        peer.begin_batch()
+    peer.handler(key, 'SET', dict(peer_data('192.0.2.20'), asn='65300', name=bad_name))
+    interface.handler('Ethernet0', 'SET', {'NULL': 'NULL'})
+    interface.handler('Ethernet0|192.0.2.10/31', 'SET', {'NULL': 'NULL'})
+    peer.end_batch()
+    assert peer.peers == {('default', other)}
+    assert not peer.set_queue
+    commands = '\n'.join(call.args[0] for call in common['cfg_mgr'].push.call_args_list)
+    assert 'neighbor {} remote-as'.format(key) not in commands
+    peer.handler(key, 'SET', dict(peer_data('192.0.2.1'), asn='65300'))
+    assert ('default', key) in peer.peers
+    commands = '\n'.join(call.args[0] for call in common['cfg_mgr'].push.call_args_list)
+    assert 'neighbor {} remote-as 65300'.format(key) in commands
+
+
+@pytest.mark.parametrize('bbr_first', [True, False])
+def test_bbr_status_from_the_unblocking_pass_reaches_deferred_leaf_peers(monkeypatch, bbr_first):
+    from bgpcfgd.managers_bbr import BBRMgr
+    common, frr, device_global, interface = make_frr_backed(monkeypatch, 'LeafRouter')
+    monkeypatch.setattr('bgpcfgd.managers_bbr.BBRMgr.get_bbr_status_from_config_db', lambda self: None)
+    common['constants'].setdefault('bgp', {}).setdefault('bbr', {})['enabled'] = True
+    bbr = BBRMgr(common, 'CONFIG_DB', 'BGP_BBR')
+    peer = BGPPeerMgrBase(common, 'CONFIG_DB', 'BGP_NEIGHBOR', 'general', False)
+    unblocking = {'INTERFACE': [event('Ethernet0', {'NULL': 'NULL'}),
+                                event('Ethernet0|10.1.0.0/31', {'NULL': 'NULL'})],
+                  'BGP_BBR': [event('all', {'status': 'enabled'})]}
+    if bbr_first:
+        unblocking = dict(reversed(list(unblocking.items())))
+    run_passes(monkeypatch, common, [peer, interface, device_global, bbr], [
+        {'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))]},
+        unblocking,
+    ])
+    assert 'neighbor 10.1.0.1 peer-group PEER_V4' in frr.config
+    assert 'neighbor PEER_V4 allowas-in 1' in frr.config

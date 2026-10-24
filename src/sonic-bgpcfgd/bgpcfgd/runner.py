@@ -55,7 +55,7 @@ class Runner(object):
         self.managers.append(manager)
 
     def flush_batches(self):
-        """ Retry deferred dependencies before a commit or FRR read inside a drain """
+        """ Retry deferred dependencies before a commit inside a drain """
         for manager in self.managers:
             manager.flush_batch()
 
