@@ -399,6 +399,9 @@ DEFAULT_CONTAINER_REGISTRY ?= publicmirror.azurecr.io
 # INCLUDE_BOOTCHART - install systemd-bootchart
 INCLUDE_BOOTCHART = y
 
+# ENABLE_RAM2DISK - persist in-memory /var/log contents to disk
+ENABLE_RAM2DISK = y
+
 # ENABLE_BOOTCHART - whether to enable systemd-bootchart on boot
 ENABLE_BOOTCHART = n
 
