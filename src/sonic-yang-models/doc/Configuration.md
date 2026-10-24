@@ -251,6 +251,51 @@ and migration plan
 }
 ```
 
+***Mirror session label configuration example***
+
+The optional `label` field is a stable identifier for a SPAN or ERSPAN session.
+When it is set, SAI can reuse the same hardware mirror session across warm reboot.
+When it is omitted, the session is created without a label.
+
+Labeled ERSPAN session:
+```json
+{
+    "MIRROR_SESSION": {
+        "EVERFLOW_TUNNEL": {
+            "type": "ERSPAN",
+            "src_ip": "1.1.1.1",
+            "dst_ip": "2.2.2.2",
+            "dscp": "8",
+            "ttl": "64",
+            "gre_type": "0x88be",
+            "queue": "0",
+            "label": "EVERFLOW_TUNNEL"
+        }
+    }
+}
+```
+
+Labeled SPAN session:
+```json
+{
+    "MIRROR_SESSION": {
+        "LOCAL_MONITOR": {
+            "type": "SPAN",
+            "dst_port": "Ethernet8",
+            "src_port": "Ethernet0",
+            "direction": "BOTH",
+            "queue": "0",
+            "label": "LOCAL_MONITOR"
+        }
+    }
+}
+```
+
+**Note:**
+* the field applies to both SPAN and ERSPAN sessions
+* the length must be 1..31 characters so the value fits in the 32-byte SAI chardata field
+* the value must match `[a-zA-Z0-9_-]+`
+
 ***Below ACL table added as per the mail***
 ```
 {
