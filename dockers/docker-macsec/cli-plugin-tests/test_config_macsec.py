@@ -32,8 +32,8 @@ class TestConfigMACsec(object):
         assert profile_table["primary_cak"] == primary_cak
         assert profile_table["primary_ckn"] == primary_ckn
         assert profile_table["policy"] == "security"
-        assert "enable_replay_protect" not in profile_table
-        assert "replay_window" not in profile_table
+        assert profile_table["enable_replay_protect"] == "false"
+        assert profile_table["replay_window"] == "0"
         assert profile_table["send_sci"] == "true"
         assert "rekey_period" not in profile_table
 
@@ -41,6 +41,36 @@ class TestConfigMACsec(object):
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
         assert not profile_table
+
+    def test_profile_disable_replay_protect(self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        result = runner.invoke(macsec.macsec, [
+            "profile", "add", profile_name,
+            "--primary_cak=" + primary_cak,
+            "--primary_ckn=" + primary_ckn,
+            "--disable_replay_protect",
+        ], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(
+            result.exit_code, result.exception, result.exc_info)
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        assert profile_table["enable_replay_protect"] == "false"
+        assert profile_table["replay_window"] == "0"
+
+    def test_profile_enable_replay_protect_strict_window(self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        result = runner.invoke(macsec.macsec, [
+            "profile", "add", profile_name,
+            "--primary_cak=" + primary_cak,
+            "--primary_ckn=" + primary_ckn,
+            "--enable_replay_protect",
+        ], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(
+            result.exit_code, result.exception, result.exc_info)
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        assert profile_table["enable_replay_protect"] == "true"
+        assert profile_table["replay_window"] == "0"
 
     def test_macsec_valid_profile(self, mock_cfgdb):
         cfgdb = mock_cfgdb
