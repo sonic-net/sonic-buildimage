@@ -473,12 +473,9 @@ class PddfParse():
 
     def create_non_pddf_i2c_device(self, dev, ops):
         # Create i2c devices for which a PDDF specific driver is not needed
-        create_ret = []
-        ret = 0
         cmd = "echo %s 0x%x > /sys/bus/i2c/devices/i2c-%d/new_device" % (dev['i2c']['topo_info']['dev_type'],
                 int(dev['i2c']['topo_info']['dev_addr'], 0), int(dev['i2c']['topo_info']['parent_bus'], 0))
-        ret = self.runcmd(cmd)
-        return create_ret.append(ret)
+        return [self.runcmd(cmd)]
 
     def create_temp_sensor_device(self, dev, ops):
         return self.create_non_pddf_i2c_device(dev, ops)
