@@ -37,7 +37,7 @@ fi
 
 # ---check FEATURE table for switch ---
 while true; do
-  STATE=$(redis-cli -n 4 HGET "FEATURE|telemetry" state || true)
+  STATE=$(sonic-db-cli CONFIG_DB HGET "FEATURE|telemetry" state || true)
   if [[ "${STATE}" == "enabled" ]]; then
     echo "Telemetry is enabled. Starting service..."
     break
