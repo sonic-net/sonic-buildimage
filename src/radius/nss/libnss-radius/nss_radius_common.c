@@ -582,6 +582,11 @@ int radius_create_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl,
     if (conf->trace)
         dump_rnm(mpl, rnm, "create");
 
+    if (!radius_user_name_ok(user)) {
+        syslog(LOG_ERR, "%s: Unsafe username; not creating user", conf->prog);
+        return -1;
+    }
+
     if(strlen(user) > 32) {
         syslog(LOG_ERR, "%s: Username too long", conf->prog);
         return -1;
@@ -658,6 +663,18 @@ int radius_lookup_cache_cleanup( int status, int rafd) {
     return status;
 }
 
+int radius_user_name_ok( const char * nam) {
+    if (   (nam == NULL)
+        || (nam[0] == 0)
+        || (nam[0] == '-')
+        || (strcmp(nam, ".") == 0)
+        || (strcmp(nam, "..") == 0)
+        || (strchr(nam, '/') != NULL)) {
+        return 0;
+    }
+    return 1;
+}
+
 int radius_lookup_cache( char * prog, const char * nam, int * pmpl) {
     int rafd = -1;
     int i;
@@ -669,6 +686,11 @@ int radius_lookup_cache( char * prog, const char * nam, int * pmpl) {
     int mpl;
 
     *pmpl = RADIUS_MIN_MPL;
+
+    if (!radius_user_name_ok(nam)) {
+        syslog(LOG_ERR, "%s: Unsafe username; not using cache", prog);
+        return radius_lookup_cache_cleanup(STATUS_EINVAL, rafd);
+    }
 
     if ((written = snprintf(cache_filename, sizeof(cache_filename), "%s/%s/%s",
         RADIUS_ATTRIBUTE_CACHE_DIR, nam, RADIUS_ATTR_MPL)
@@ -848,4 +870,3 @@ int is_sshd_lookup(RADIUS_NSS_CONF_B * conf, const char * name) {
 
     return is_sshd_lookup_exit(0, fd, re);
 }
-
