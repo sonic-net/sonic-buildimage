@@ -14,7 +14,7 @@ libbinutils==2.40-2
 libctf-nobfd0==2.40-2
 libctf0==2.40-2
 libdbus-1-dev==1.14.10-1~deb12u1
-libexpat1-dev==2.5.0-1+deb12u4
+libexpat1-dev==2.5.0-1+deb12u5
 libgprofng0==2.40-2
 libgrpc-dev==1.39.0-1
 libibverbs-dev==2601.0.1-1
@@ -37,7 +37,7 @@ librxpcompiler-dev==22.05.1
 libsaimetadata==1.0.0
 libsairedis==1.0.0
 lsof==4.95.0-1
-mft==4.34.0-148
+mft==4.34.0-150
 mlnx-dpdk==22.11.0-2510.2.1
 mlnx-iproute2==2601.0.2-1
 mlnx-ofed-kernel-utils==26.01.OFED.26.01.0.2.9.1-1
