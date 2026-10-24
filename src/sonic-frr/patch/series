@@ -41,3 +41,13 @@
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
 0119-bgpd-fix-aggregate-route-counter.patch
+0120-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
+0121-bgpd-fold-EVPN-sync-info-from-every-ES-peer-path.patch
+0122-zebra-retire-a-sync-MAC-neighbours-when-the-MAC-goes.patch
+0123-zebra-do-not-let-a-kernel-echo-clear-a-neighbour-loc.patch
+0124-zebra-preserve-and-reconcile-inactive-MAC-neighbours.patch
+0125-zebra-revive-a-MAC-s-neighbours-when-the-MAC-becomes.patch
+0126-zebra-flush-a-local-inactive-MAC-once-nothing-pins-it.patch
+0127-zebra-make-the-EVPN-MH-local-inactive-decisions-unit.patch
+0128-zebra-remove-a-MAC-s-VXLAN-entry-when-it-moves-to-a.patch
+0129-zebra-keep-a-retired-neighbour-inactive-when-its-MAC.patch

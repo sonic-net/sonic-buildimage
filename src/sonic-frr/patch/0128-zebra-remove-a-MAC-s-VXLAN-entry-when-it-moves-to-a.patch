@@ -1,0 +1,212 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 29 Sep 2026 23:14:44 +0000
+Subject: [PATCH] zebra: remove a MAC's VXLAN entry when it moves to a local port
+
+A remote MAC has an entry on the VXLAN device that points at the remote
+VTEP, or at the nexthop group of the MAC's Ethernet Segment. So does a
+local MAC while its Ethernet Segment is down, with evpn mh redirect-off:
+zebra then reaches the MAC through the network port. Three paths move such
+a MAC to a local port and leave the VXLAN device's entry installed:
+
+- zebra_evpn_add_update_local_mac(), when a remote MAC is learnt locally,
+  as when a host moves here.
+- zebra_evpn_proc_sync_mac_update(), when a peer's route for a remote MAC
+  names an Ethernet Segment that is local here, as when the segment is
+  configured again while the MAC is remote through that route.
+- zebra_evpn_local_mac_oper_state_change(), when the Ethernet Segment comes
+  back up. It removes the entry only when the access port install fails.
+
+The entry outlives the MAC on the VXLAN device, and a dataplane module
+that mirrors remote MACs, such as an FPM consumer, is never told it is
+gone.
+
+Remove the entry on all three paths, from the VXLAN device alone. The
+usual removal of a remote MAC, NTF_MASTER | NTF_SELF, also removes the
+bridge entry, and fails when that entry no longer points at the VXLAN
+device, as once the MAC's local entry is written or the kernel bridge
+learnt the MAC from a frame: the kernel then skips the VXLAN device's
+entry, and the dataplane modules after the kernel never see the removal.
+The MAC's local entry replaces the bridge entry in any case. A new dplane
+MAC flag, DPLANE_MAC_VXLAN_ONLY, asks for that removal, and the netlink
+encoder leaves NTF_MASTER out for it.
+
+The two conversions remove the entry before the forwarding info that
+locates it is overwritten, and like the usual removal they skip a MAC
+whose segment nexthop group is inactive, which is not installed. The
+recovery path keeps the full removal when the access port install fails,
+since the bridge entry still points at the VXLAN device then.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 42fa0b1894..5612619305 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -4501,6 +4501,12 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+ 		}
+ 	}
+ 
++	/* The bridge entry now belongs to a local port, so the removal is
++	 * aimed at the VXLAN device alone.
++	 */
++	if (update_flags & DPLANE_MAC_VXLAN_ONLY)
++		flags &= ~NTF_MASTER;
++
+ 	nhg_id = dplane_ctx_mac_get_nhg_id(ctx);
+ 	vtep_ip = *(dplane_ctx_mac_get_vtep_ip(ctx));
+ 
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 17adb665c5..d81b56274a 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -5642,6 +5642,20 @@ enum zebra_dplane_result dplane_rem_mac_del(const struct interface *ifp,
+ 	return result;
+ }
+ 
++/*
++ * Enqueue vxlan/evpn mac delete from the VXLAN device alone, for a MAC that
++ * has moved to a local port: its local entry replaces the bridge entry.
++ */
++enum zebra_dplane_result dplane_rem_mac_del_vxlan(const struct interface *ifp,
++						  const struct interface *bridge_ifp,
++						  vlanid_t vid, const struct ethaddr *mac,
++						  vni_t vni, struct ipaddr *vtep_ip)
++{
++	return mac_update_common(DPLANE_OP_MAC_DELETE, ifp, bridge_ifp, vid, mac,
++				 vni, vtep_ip, false, 0,
++				 DPLANE_MAC_REMOTE | DPLANE_MAC_VXLAN_ONLY);
++}
++
+ /*
+  * API to configure link local with either MAC address or IP information
+  */
+diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
+index fc61b31043..b6131a76c6 100644
+--- a/zebra/zebra_dplane.h
++++ b/zebra/zebra_dplane.h
+@@ -259,6 +259,7 @@ enum dplane_op_e {
+ #define DPLANE_MAC_WAS_STATIC   (1 << 1)
+ #define DPLANE_MAC_SET_STATIC   (1 << 2)
+ #define DPLANE_MAC_SET_INACTIVE (1 << 3)
++#define DPLANE_MAC_VXLAN_ONLY   (1 << 4)
+ 
+ /* Neigh update flags - dplane_neigh_info.update_flags */
+ #define DPLANE_NEIGH_REMOTE       (1 << 0)
+@@ -1038,6 +1039,11 @@ enum zebra_dplane_result dplane_rem_mac_del(const struct interface *ifp,
+ 					    const struct ethaddr *mac, vni_t vni,
+ 					    struct ipaddr *vtep_ip);
+ 
++enum zebra_dplane_result dplane_rem_mac_del_vxlan(const struct interface *ifp,
++						  const struct interface *bridge_ifp,
++						  vlanid_t vid, const struct ethaddr *mac,
++						  vni_t vni, struct ipaddr *vtep_ip);
++
+ /* Helper api to init an empty or new context for a MAC update */
+ void dplane_mac_init(struct zebra_dplane_ctx *ctx, const struct interface *ifp,
+ 		     const struct interface *br_ifp, vlanid_t vid, const struct ethaddr *mac,
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 524ec91773..1c911148b7 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -236,10 +236,14 @@ int zebra_evpn_rem_mac_install(struct zebra_evpn *zevpn, struct zebra_mac *mac,
+ }
+ 
+ /*
+- * Uninstall remote MAC from the forwarding plane.
++ * Uninstall remote MAC from the forwarding plane. With vxlan_only, from the
++ * VXLAN device alone, for a MAC that has moved to a local port: its local
++ * entry replaces the bridge entry, which may already point at the port, as
++ * when the kernel bridge learnt the MAC.
+  */
+-int zebra_evpn_rem_mac_uninstall(struct zebra_evpn *zevpn,
+-				 struct zebra_mac *mac, bool force)
++int zebra_evpn_rem_mac_dp_del(struct zebra_evpn *zevpn,
++			      struct zebra_mac *mac, bool force,
++			      bool vxlan_only)
+ {
+ 	const struct zebra_if *zif, *br_zif;
+ 	struct zebra_vxlan_vni *vni;
+@@ -282,13 +286,24 @@ int zebra_evpn_rem_mac_uninstall(struct zebra_evpn *zevpn,
+ 	ifp = zevpn->vxlan_if;
+ 	vtep_ip = mac->fwd_info.r_vtep_ip;
+ 
+-	res = dplane_rem_mac_del(ifp, br_ifp, vid, &mac->macaddr, vni->vni, &vtep_ip);
++	if (vxlan_only)
++		res = dplane_rem_mac_del_vxlan(ifp, br_ifp, vid, &mac->macaddr,
++					       vni->vni, &vtep_ip);
++	else
++		res = dplane_rem_mac_del(ifp, br_ifp, vid, &mac->macaddr,
++					 vni->vni, &vtep_ip);
+ 	if (res != ZEBRA_DPLANE_REQUEST_FAILURE)
+ 		return 0;
+ 	else
+ 		return -1;
+ }
+ 
++int zebra_evpn_rem_mac_uninstall(struct zebra_evpn *zevpn,
++				 struct zebra_mac *mac, bool force)
++{
++	return zebra_evpn_rem_mac_dp_del(zevpn, mac, force, false);
++}
++
+ /*
+  * Decrement neighbor refcount of MAC; uninstall and free it if
+  * appropriate.
+@@ -1796,6 +1811,12 @@ struct zebra_mac *zebra_evpn_proc_sync_mac_update(struct zebra_evpn *zevpn,
+ 				zebra_evpn_mac_stop_hold_timer(mac);
+ 			}
+ 		}
++		/* A remote MAC has an entry on the VXLAN device, and what
++		 * locates it is cleared below, so remove it first.
++		 */
++		if (CHECK_FLAG(old_flags, ZEBRA_MAC_REMOTE))
++			zebra_evpn_rem_mac_dp_del(zevpn, mac, false /*force*/,
++						  true /*vxlan_only*/);
+ 		mac->rem_seq = 0;
+ 		zebra_evpn_mac_clear_fwd_info(mac);
+ 		mac->flags = new_flags;
+@@ -2294,6 +2315,12 @@ int zebra_evpn_add_update_local_mac(struct zebra_vrf *zvrf,
+ 				mac->loc_seq = MAX(mac->rem_seq + 1,
+ 						   mac->loc_seq);
+ 				vtep_ip = mac->fwd_info.r_vtep_ip;
++				/* Likewise, before the local forwarding info
++				 * replaces what locates the remote entry.
++				 */
++				zebra_evpn_rem_mac_dp_del(zevpn, mac,
++							  false /*force*/,
++							  true /*vxlan_only*/);
+ 				/* Trigger DAD for remote MAC */
+ 				do_dad = true;
+ 			}
+diff --git a/zebra/zebra_evpn_mac.h b/zebra/zebra_evpn_mac.h
+index ed9786ea98..fe4683e5c3 100644
+--- a/zebra/zebra_evpn_mac.h
++++ b/zebra/zebra_evpn_mac.h
+@@ -203,6 +203,8 @@ uint32_t num_valid_macs(struct zebra_evpn *zevi);
+ uint32_t num_dup_detected_macs(struct zebra_evpn *zevi);
+ int zebra_evpn_rem_mac_uninstall(struct zebra_evpn *zevi, struct zebra_mac *mac,
+ 				 bool force);
++int zebra_evpn_rem_mac_dp_del(struct zebra_evpn *zevi, struct zebra_mac *mac,
++			      bool force, bool vxlan_only);
+ int zebra_evpn_rem_mac_install(struct zebra_evpn *zevi, struct zebra_mac *mac,
+ 			       bool was_static);
+ void zebra_evpn_deref_ip2mac(struct zebra_evpn *zevi, struct zebra_mac *mac);
+diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
+index 237e9c75d6..2b54dc758e 100644
+--- a/zebra/zebra_evpn_mh.c
++++ b/zebra/zebra_evpn_mh.c
+@@ -3027,6 +3027,14 @@ static void zebra_evpn_local_mac_oper_state_change(struct zebra_evpn_es *es)
+ 				 */
+ 				zebra_evpn_rem_mac_uninstall(mac->zevpn, mac,
+ 							     true /*force*/);
++			else
++				/* the access port entry replaces the bridge
++				 * entry, so remove the network port's entry
++				 * from the VXLAN device alone
++				 */
++				zebra_evpn_rem_mac_dp_del(mac->zevpn, mac,
++							  true /*force*/,
++							  true /*vxlan_only*/);
+ 		} else {
+ 			/* switch the local macs to network port. if there
+ 			 * is no active NHG we don't bother deleting the MAC;
