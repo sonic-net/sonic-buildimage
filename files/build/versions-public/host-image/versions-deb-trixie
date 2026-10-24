@@ -448,7 +448,8 @@ tcptraceroute==1.5beta7+debian-4.2
 tpm-udev==0.6+nmu1
 tpm2-tools==5.7-1
 traceroute==1:2.1.6-1
-tzdata-legacy==2026c-0+deb13u1
+tzdata==2026e-0+deb13u1
+tzdata-legacy==2026e-0+deb13u1
 u-boot-tools==2025.01-3+deb13u1
 ucf==3.0052
 udev==257.13-1~deb13u1
