@@ -31,7 +31,7 @@ UTILS_DIR := utils
 PACKAGE_PRE_NAME := sonic-platform-nexthop
 
 %:
-	dh $@ --with python3 --buildsystem=pybuild
+	dh $@ --with python3 --with kernel_modules --buildsystem=pybuild
 
 override_dh_auto_build:
 	set -e
