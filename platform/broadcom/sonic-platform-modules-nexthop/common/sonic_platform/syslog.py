@@ -22,6 +22,7 @@ from sonic_py_common import syslogger
 # Syslog identifiers for different platform modules
 # These identifiers are used to categorize log messages by functional area
 SYSLOG_IDENTIFIER_THERMAL: str = "nh_thermal"  # Thermal management and fan control
+SYSLOG_IDENTIFIER_SFP: str = "nh_sfp"  # SFP / transceiver presence and EEPROM
 
 
 class NhLoggerMixin(syslogger.SysLogger):
