@@ -1,0 +1,59 @@
+module sonic-bmc-gnoi {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-bmc-gnoi";
+    prefix bmc-gnoi;
+
+    organization "SONiC";
+    contact "SONiC";
+    description "BMC gNOI client certificate paths.";
+
+    revision 2026-10-11 {
+        description "Initial revision.";
+    }
+
+    typedef certificate-path {
+        type string {
+            pattern '/\S+';
+        }
+        description "Absolute file path.";
+    }
+
+    container sonic-bmc-gnoi {
+        container BMC_GNOI {
+            description
+                "Client side of the gNOI calls the BMC makes to the switch host,
+                 held in the BMC's CONFIG_DB.";
+
+            container certs {
+                description
+                    "Optional client credential paths, read once per operation.
+                     The files must be visible inside the BMC's PMON container.
+                     An absent field uses the default named in its leaf
+                     description; a configured path is used as given, with no
+                     fallback. Deployment installs the files.";
+
+                leaf ca_crt {
+                    type certificate-path;
+                    description
+                        "CA certificate path; uses /etc/sonic/bmc-link/ca.crt
+                         when absent.";
+                }
+
+                leaf client_crt {
+                    type certificate-path;
+                    description
+                        "Client certificate path; uses /etc/sonic/bmc-link/client.crt
+                         when absent.";
+                }
+
+                leaf client_key {
+                    type certificate-path;
+                    description
+                        "Client private key path; uses /etc/sonic/bmc-link/client.key
+                         when absent.";
+                }
+            }
+        }
+    }
+}
