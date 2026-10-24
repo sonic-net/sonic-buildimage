@@ -27,6 +27,8 @@ class Runner(object):
         self.selector = swsscommon.Select()
         self.callbacks = defaultdict(lambda: defaultdict(list))  # db -> table -> handlers[]
         self.subscribers = set()
+        self.managers = []
+        self.cfg_manager.before_flush.append(self.flush_batches)
 
     def add_manager(self, manager):
         """
@@ -50,6 +52,12 @@ class Runner(object):
             self.subscribers.add(subscriber)
             self.selector.addSelectable(subscriber)
         self.callbacks[db][table_name].append(manager.handler)
+        self.managers.append(manager)
+
+    def flush_batches(self):
+        """ Retry deferred dependencies before a commit or FRR read inside a drain """
+        for manager in self.managers:
+            manager.flush_batch()
 
     def run(self):
         """ Main loop """
@@ -60,6 +68,8 @@ class Runner(object):
             elif state == self.selector.ERROR:
                 raise Exception("Received error from select")
 
+            for manager in self.managers:
+                manager.begin_batch()
             for subscriber in self.subscribers:
                 while True:
                     key, op, fvs = subscriber.pop()
@@ -68,6 +78,8 @@ class Runner(object):
                     log_debug("Received message : '%s'" % str((key, op, fvs)))
                     for callback in self.callbacks[subscriber.getDbConnector().getDbId()][subscriber.getTableName()]:
                         callback(key, op, dict(fvs))
+            for manager in self.managers:
+                manager.end_batch()
             rc = self.cfg_manager.commit()
             if not rc:
                 log_crit("Runner::commit was unsuccessful")
