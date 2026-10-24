@@ -1,0 +1,14 @@
+[Unit]
+Description=Global Initialize platform drivers late.
+Requires=platform_driver.service
+After=platform_driver.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/platform_driver_late.py start
+ExecStop=/usr/local/bin/platform_driver_late.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

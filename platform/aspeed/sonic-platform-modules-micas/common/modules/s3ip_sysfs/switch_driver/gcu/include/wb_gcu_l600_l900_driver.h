@@ -1,0 +1,18 @@
+#ifndef _WB_GCU_L600_L900_DRIVER_H_
+#define _WB_GCU_L600_L900_DRIVER_H_
+
+extern gcu_reg_attr_t enflame_L600_L900_gcu_attr_table[DFD_GCU_DEVICE_TYPE_MAX_E];
+extern dfd_sysfs_func_map_t l600_l900_gcu_func_table[DFD_GCU_DEVICE_TYPE_MAX_E];
+extern gcu_reg_attr_t enflame_L600_L900_gcu_temp_attr_table[DFD_GCU_TEMP_TYPE_MAX];
+extern dfd_sysfs_func_map_t l600_l900_gcu_temp_func_table[DFD_BMC_MANAGED_SENSOR_TYPE_MAX_E];
+extern gcu_reg_attr_t enflame_L600_L900_gcu_vol_attr_table[DFD_GCU_VOL_TYPE_MAX];
+extern dfd_sysfs_func_map_t l600_l900_gcu_vol_func_table[DFD_BMC_MANAGED_SENSOR_TYPE_MAX_E];
+extern gcu_reg_attr_t enflame_L600_L900_gcu_power_attr_table[DFD_GCU_POWER_TYPE_MAX];
+extern dfd_sysfs_func_map_t l600_l900_gcu_power_func_table[DFD_BMC_MANAGED_SENSOR_TYPE_MAX_E];
+extern health_check_rule_t enflame_l600_900_health_rules[L600_HEALTH_RULES_COUNT];
+
+extern gcu_map_t enflame_L600_maps[L600_MAPPING_COUNT];
+extern gcu_map_t enflame_L900_maps[L900_MAPPING_COUNT];
+
+#endif /*_WB_GCU_L600_L900_DRIVER_H_ */
+
