@@ -299,6 +299,44 @@ class TestJ2Files(TestCase):
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
+    def _test_ipinip_t1_render_template(self, extra_data, expected):
+        # Render from T1 CONFIG_DB data; ASIC_VENDOR comes in -a, as in docker-init.
+        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
+        t1_config_db = os.path.join(self.test_dir, 'data', 'ipinip', 't1_config_db.json')
+        argument = ['-j', t1_config_db, '-a', json.dumps(extra_data), '-t', ipinip_file]
+        self.run_script(argument, output_file=self.output_file)
+
+        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, expected)
+        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
+    def test_ipinip_cisco_t1(self):
+        # Cisco T1 (type LeafRouter, no subtype) - every decap tunnel uses ttl_mode uniform.
+        self._test_ipinip_t1_render_template({"ASIC_VENDOR": "cisco-8000"}, 'ipinip_cisco_t1.json')
+
+    def test_ipinip_cisco_t1_subnet_decap_enable(self):
+        # Cisco T1 with subnet decap - the subnet decap tunnels use ttl_mode uniform too.
+        extra_data = {"ASIC_VENDOR": "cisco-8000", "SUBNET_DECAP": {"AZURE": {"status": "enable"}}}
+        self._test_ipinip_t1_render_template(extra_data, 'ipinip_cisco_t1_subnet_decap_enable.json')
+
+    def test_ipinip_cisco_t1_smartswitch(self):
+        # Cisco SmartSwitch T1 - SmartSwitch is not excluded, so ttl_mode is uniform too.
+        extra_data = {"ASIC_VENDOR": "cisco-8000", "DEVICE_METADATA": {"localhost": {"subtype": "SmartSwitch"}}}
+        self._test_ipinip_t1_render_template(extra_data, 'ipinip_cisco_t1.json')
+
+    def test_ipinip_cisco_backend_leaf(self):
+        # Cisco BackEndLeafRouter - the type must be exactly LeafRouter, so ttl_mode stays pipe.
+        extra_data = {"ASIC_VENDOR": "cisco-8000", "DEVICE_METADATA": {"localhost": {"type": "BackEndLeafRouter"}}}
+        self._test_ipinip_t1_render_template(extra_data, 'ipinip_t1.json')
+
+    def test_ipinip_cisco_tor(self):
+        # Cisco ToRRouter - ttl_mode stays pipe.
+        extra_data = {"ASIC_VENDOR": "cisco-8000", "DEVICE_METADATA": {"localhost": {"type": "ToRRouter"}}}
+        self._test_ipinip_t1_render_template(extra_data, 'ipinip_t1.json')
+
+    def test_ipinip_broadcom_t1(self):
+        # Broadcom T1 - ttl_mode stays pipe; dscp_mode is pipe from is_broadcom_t1.
+        self._test_ipinip_t1_render_template({"ASIC_VENDOR": "broadcom"}, 'ipinip_t1.json')
+
     def test_l2switch_template(self):
         argument = ['-k', 'Mellanox-SN2700', '--preset', 'l2', '-p', self.t0_port_config]
         output = self.run_script(argument)
