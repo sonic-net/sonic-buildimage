@@ -109,7 +109,7 @@ generate_sonic_redis_aliases() {
     fi
 
     # Parse output and create aliases
-    while IFS=: read -r db_name db_id db_port; do
+    while IFS=: read -r db_name db_id db_port db_socket; do
         # Skip lines that contain errors printed by the python script
         if [[ "$db_name" == "ERROR" ]]; then
             echo "$db_name:$db_id:$db_port" >&2
@@ -119,7 +119,17 @@ generate_sonic_redis_aliases() {
         if [ -n "$db_name" ] && [ -n "$db_id" ] && [ -n "$db_port" ]; then
             local alias_name="redis-${SONIC_DBS[$db_name]}"
             if [ -n "$alias_name" ]; then
-                eval "alias $alias_name='redis-cli -n $db_id -p $db_port'"
+                local endpoint_flag="-p" endpoint="$db_port" alias_command
+                if [ "$db_port" = "0" ]; then
+                    if [ -z "$db_socket" ]; then
+                        echo "Error: Unix socket is not configured for $db_name" >&2
+                        continue
+                    fi
+                    endpoint_flag="-s"
+                    endpoint="$db_socket"
+                fi
+                printf -v alias_command 'redis-cli -n %q %q %q' "$db_id" "$endpoint_flag" "$endpoint"
+                alias "$alias_name=$alias_command"
             fi
         fi
     done <<< "$python_output"
