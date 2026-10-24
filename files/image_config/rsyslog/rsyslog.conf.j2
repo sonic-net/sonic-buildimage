@@ -50,6 +50,10 @@ input(type="imrelp" address="{{docker0_ip}}" port="2514")
 ###########################
 {% set hostname = ((DEVICE_METADATA | default({})).get('localhost', {})).get('hostname') | default('sonic', true) | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set os_version = os_version | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{#- preserve_fqdn keeps the configured hostname as is; otherwise only its first label is stamped -#}
+{% if gconf.get('preserve_fqdn') != 'true' -%}
+{% set hostname = hostname.split('.')[0] or hostname -%}
+{% endif -%}
 {% set format = gconf.get('format', 'standard') -%}
 {% set fw_name = gconf.get('welf_firewall_name', hostname) -%}
 #

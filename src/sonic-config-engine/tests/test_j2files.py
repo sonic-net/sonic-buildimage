@@ -2193,6 +2193,41 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertFalse(any(line.strip().startswith('action(type=') and 'omprog' in line
                              for line in output.splitlines()))
 
+    def _render_rsyslog_with_hostname(self, hostname, syslog_config=None):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db = {'DEVICE_METADATA': {'localhost': {'hostname': hostname}}}
+        if syslog_config is not None:
+            config_db['SYSLOG_CONFIG'] = {'GLOBAL': syslog_config}
+        with tempfile.NamedTemporaryFile(mode='w') as config_db_json:
+            json.dump(config_db, config_db_json)
+            config_db_json.flush()
+            argument = ['-j', config_db_json.name, '-t', conf_template, '-a', '{"udp_server_ip": "1.1.1.1"}']
+            output = self.run_script(argument)
+        sonic_template_lines = [
+            line for line in output.splitlines() if line.startswith('$template SONiC')
+        ]
+        self.assertEqual(len(sonic_template_lines), 3)
+        return output, sonic_template_lines
+
+    def test_rsyslog_conf_preserve_fqdn(self):
+        """preserve_fqdn keeps the dotted CONFIG_DB hostname in the SONiC templates and the WELF firewall name."""
+        output, lines = self._render_rsyslog_with_hostname('kvm-host.example.com', {'preserve_fqdn': 'true'})
+        self.assertTrue(all(' kvm-host.example.com ' in line for line in lines))
+        self.assertIn('fw=\\"kvm-host.example.com\\"', output)
+
+    def test_rsyslog_conf_preserve_fqdn_off_drops_domain(self):
+        """Without preserve_fqdn, a dotted CONFIG_DB hostname renders as its first label."""
+        for syslog_config in (None, {'preserve_fqdn': 'false'}):
+            output, lines = self._render_rsyslog_with_hostname('kvm-host.example.com', syslog_config)
+            self.assertTrue(all(' kvm-host ' in line for line in lines))
+            self.assertNotIn('kvm-host.example.com', output)
+
+    def test_rsyslog_conf_preserve_fqdn_off_keeps_dot_leading_hostname(self):
+        """A hostname with no first label is kept whole rather than blanked."""
+        output, lines = self._render_rsyslog_with_hostname('.kvm-host', {'preserve_fqdn': 'false'})
+        self.assertTrue(all(' .kvm-host ' in line for line in lines))
+
     def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
         """welf_firewall_name injection payload must be collapsed to a harmless single line.
 
