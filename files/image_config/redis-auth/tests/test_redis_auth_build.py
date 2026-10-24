@@ -105,7 +105,7 @@ def test_selected_boot_cannot_downgrade_when_build_setting_changes(boot, remove)
 
 def test_image_build_option_default_and_installation(tmp_path):
     root = Path(__file__).resolve().parents[4]
-    assert 'ENABLE_REDIS_WRITE_PROTECTION ?= n' in (root / 'rules/config').read_text()
+    assert 'ENABLE_REDIS_WRITE_PROTECTION ?= y' in (root / 'rules/config').read_text()
     assert 'ENABLE_REDIS_WRITE_PROTECTION=$(ENABLE_REDIS_WRITE_PROTECTION)' in (root / 'Makefile.work').read_text()
     assert 'export ENABLE_REDIS_WRITE_PROTECTION' in (root / 'slave.mk').read_text()
     template = (root / 'files/build_templates/sonic_debian_extension.j2').read_text()
