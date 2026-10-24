@@ -2,6 +2,7 @@
 """Prepare the explicitly selected local Redis processes before database startup."""
 
 import argparse
+import grp
 import json
 import os
 from pathlib import Path
@@ -71,6 +72,14 @@ def atomic(path, content, mode=0o644):
             os.unlink(temporary)
 
 
+def socket_groups():
+    # Use host IDs: the Redis container's redis group can have a different GID.
+    groups = sorted({grp.getgrnam(name).gr_gid for name in ('redis', 'users')})
+    if any(not 0 < gid < 2**32 - 1 for gid in groups):
+        raise CredentialStateError('invalid Redis socket reader group')
+    return groups
+
+
 def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
     if os.geteuid() != 0:
         raise CredentialStateError('must run as root')
@@ -102,6 +111,7 @@ def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
     acl = ('user default ' + READ_RULES + '\nuser ' + USERNAME
            + ' reset on #' + digest + ' ~* &* +@all\n')
     atomic(server / 'users.acl', acl.encode())
+    atomic(server / 'socket-groups.json', (json.dumps(socket_groups()) + '\n').encode())
     atomic(existing, policy_bytes)
     return selected
 
@@ -112,7 +122,8 @@ def runtime_required(*, intent_path=INTENT, runtime=RUNTIME):
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot')
         return False
-    for relative in ('local.json', 'local-system/writer.secret', 'local-system/writer.sha256', 'server/users.acl'):
+    for relative in ('local.json', 'local-system/writer.secret', 'local-system/writer.sha256',
+                     'server/users.acl', 'server/socket-groups.json'):
         info = (runtime / relative).lstat()
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022):
             raise CredentialStateError('missing or unsafe selected runtime file')
@@ -127,6 +138,8 @@ def runtime_required(*, intent_path=INTENT, runtime=RUNTIME):
                     + ' reset on #' + digest + ' ~* &* +@all\n')
     if (runtime / 'server/users.acl').read_text() != expected_acl:
         raise CredentialStateError('server policy differs from activation setting')
+    if json.loads((runtime / 'server/socket-groups.json').read_text()) != socket_groups():
+        raise CredentialStateError('socket reader groups differ from host groups')
     return True
 
 
@@ -139,7 +152,7 @@ def main():
             print('enforce' if runtime_required() else 'legacy')
             return 0
         selected = prepare_selected()
-    except (CredentialStateError, OSError, ValueError):
+    except (CredentialStateError, OSError, ValueError, KeyError):
         print('redis-auth-startup: invalid activation or runtime state', file=sys.stderr)
         return 1
     print('redis-auth-startup: ' + (','.join(selected) if selected else 'legacy'))

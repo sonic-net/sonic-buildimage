@@ -8,16 +8,6 @@
 
 
 {%- if docker_container_name == "database" %}
-redis_socket_mode() {
-    if [ -r /run/redis-auth/local.json ] && jq -e --arg socket "$1" \
-        '(if type == "array" then . else [.] end) | any(.unix_socket == $socket)' \
-        /run/redis-auth/local.json >/dev/null; then
-        echo 0666
-    else
-        echo 0760
-    fi
-}
-
 link_namespace() {
     # Makes namespace of a docker container available in
     # /var/run/netns so it can be managed with iproute2
@@ -414,7 +404,7 @@ function postStartAction()
 
         # Add redis UDS to the redis group and give read/write access to the group
         REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
-        chgrp -f redis $REDIS_BMP_SOCK && chmod -f $(redis_socket_mode "$REDIS_BMP_SOCK") $REDIS_BMP_SOCK
+        chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
         until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
@@ -426,7 +416,7 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
-    chgrp -f redis $REDIS_SOCK && chmod -f $(redis_socket_mode "$REDIS_SOCK") $REDIS_SOCK
+    chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
     # Binding the midplane ip to the redisdb
     if [[ -n "$midplane_ip" ]]; then
         IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
