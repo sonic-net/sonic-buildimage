@@ -405,7 +405,10 @@ class StartupTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'ERR|NOPERM'):
                 reader.command('EVAL', "return redis.call('SET', KEYS[1], 'bad')", 1, 'test:key')
             self.assertEqual(reader.command('GET', 'test:key'), b'before')
-            self.assertEqual(reader.command('CLIENT', 'SETINFO', 'LIB-NAME', 'ordinary-reader'), b'OK')
+            # Optional library metadata is unavailable on 7.0 and denied to readers on newer Redis.
+            with self.assertRaisesRegex(RuntimeError, 'ERR|NOPERM'):
+                reader.command('CLIENT', 'SETINFO', 'LIB-NAME', 'ordinary-reader')
+            self.assertEqual(reader.command('PING'), b'PONG')
             for command in (('CLIENT', 'KILL', 'TYPE', 'normal'), ('FLUSHDB',),
                             ('PUBLISH', 'test:channel', 'bad'),
                             ('CONFIG', 'SET', 'timeout', 0), ('ACL', 'SETUSER', 'test-invalid')):

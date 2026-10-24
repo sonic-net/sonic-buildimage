@@ -20,7 +20,7 @@ SOCKETS = {'redis': '/var/run/redis/redis.sock',
 USERNAME = 'sonic-trusted-writer'
 READ_RULES = ('reset on nopass ~* &* -@all +@read +@transaction '
               '+ping +echo +select +quit +hello +client|setname '
-              '+client|getname +client|id +client|info +client|setinfo '
+              '+client|getname +client|id +client|info '
               '+info +command +role +time +lastsave +config|get '
               '+acl|whoami +subscribe +psubscribe +ssubscribe '
               '+unsubscribe +punsubscribe +sunsubscribe +pubsub '
