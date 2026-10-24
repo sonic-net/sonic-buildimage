@@ -2871,6 +2871,12 @@ def parse_device_desc_xml(filename):
         'hwsku': hwsku,
         }}
 
+    if d_type:
+        if d_type in ('Linecard', 'Supervisor'):
+            results['DEVICE_METADATA']['localhost']['type'] = 'SpineRouter'
+        else:
+            results['DEVICE_METADATA']['localhost']['type'] = d_type
+
     results['LOOPBACK_INTERFACE'] = {'lo': {}, ('lo', lo_prefix): {}}
     if lo_prefix_v6:
         results['LOOPBACK_INTERFACE'] = {'lo_v6': {}, ('lo_v6', lo_prefix_v6): {}}
