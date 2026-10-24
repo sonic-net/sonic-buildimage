@@ -59,6 +59,20 @@
         "eStrKey" : "Range"
     },
 
+    "WRED_PROFILE_THRESHOLD_UPPER_BOUND": {
+        "desc": "Configure WRED profile thresholds at the upper bound."
+    },
+
+    "WRED_PROFILE_INVALID_MAX_THRESHOLD_RANGE": {
+        "desc": "Configure max threshold above the upper bound in WRED profile.",
+        "eStrKey" : "Range"
+    },
+
+    "WRED_PROFILE_INVALID_MIN_THRESHOLD_RANGE": {
+        "desc": "Configure min threshold above the upper bound in WRED profile.",
+        "eStrKey" : "Range"
+    },
+
     "WRED_PROFILE_INVALID_GREEN_THRESHOLD": {
         "desc": "Configure green maximum threshold less than min threshold in WRED profile.",
         "eStr": ["Green max threshold must be greater than or equal to min threshold"]
