@@ -39,6 +39,7 @@ class IpmiFru:
         "FRU Board Serial Number:": TlvInfoDecoder._TLV_CODE_SERIAL_NUMBER,
         "FRU Board Custom Info: MAC:": TlvInfoDecoder._TLV_CODE_MAC_BASE,
         "FRU Product Version:": TlvInfoDecoder._TLV_CODE_LABEL_REVISION,
+        "FRU Board Manufacturer:": TlvInfoDecoder._TLV_CODE_MANUF_NAME,
     }
 
     IPMI_FRU_BIN = "ipmi-fru"
@@ -162,6 +163,9 @@ class Eeprom(TlvInfoDecoder):
 
     def get_revision(self):
         return self._get_eeprom_value(self._TLV_CODE_LABEL_REVISION)
+
+    def get_manufacturer(self):
+        return self._get_eeprom_value(self._TLV_CODE_MANUF_NAME)
 
 
 class EepromBMC(Eeprom):
