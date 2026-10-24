@@ -6,6 +6,16 @@
 PLATFORM_DIR=/usr/share/sonic/platform
 HWSKU_DIR=/usr/share/sonic/hwsku
 
+CISCO_PLATFORM_CAPABILITIES=${CISCO_PLATFORM_CAPABILITIES-dshell}
+
+cisco_platform_capability_supported()
+{
+    case ",${CISCO_PLATFORM_CAPABILITIES}," in
+        *,"$1",*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 SYNCD_SOCKET_FILE=/var/run/sswsyncd/sswsyncd.socket
 
 # Remove stale files if they exist
@@ -14,12 +24,11 @@ rm -f ${SYNCD_SOCKET_FILE}
 
 supervisorctl start rsyslogd
 
-# Remove dshell_client.conf on platforms that do not support dshell_client
-if [ -f /etc/init.d/sxdkernel ]; then
-    rm -f /etc/supervisor/conf.d/dshell_client.conf
-    supervisorctl reread
-    supervisorctl update
-    echo "dshell_client and puntpkthandler disabled for SX driver"
+# Start the optional DShell client only when the platform advertises support.
+if cisco_platform_capability_supported dshell; then
+    supervisorctl start dshell_client
+else
+    echo "dshell_client disabled by platform capability"
 fi
 
 mkdir -p /etc/sai.d/
