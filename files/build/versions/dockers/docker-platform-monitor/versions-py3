@@ -2,7 +2,7 @@ attrs==22.2.0
 blkinfo==0.2.0
 bottle==0.12.23
 build==1.6.1
-certifi==2026.7.22
+certifi==2026.10.23
 charset-normalizer==3.5.2
 enum34==1.1.10
 grpcio==1.51.1

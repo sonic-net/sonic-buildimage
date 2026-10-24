@@ -24,7 +24,7 @@ libdebuginfod-common==0.188-2.1
 libdebuginfod1==0.188-2.1
 libdw1==0.188-2.1
 libedit2==3.1-20221030-2
-libexpat1-dev==2.5.0-1+deb12u4
+libexpat1-dev==2.5.0-1+deb12u5
 libfido2-1==1.12.0-2+b1
 libfreeipmi17==1.6.10-1+b1
 libgcc-12-dev==12.2.0-14+deb12u1
@@ -62,7 +62,7 @@ libtsan2==12.2.0-14+deb12u1
 libubsan1==12.2.0-14+deb12u1
 libunwind8==1.6.2-3
 libyang-cpp-dbgsym==1.0.73
-linux-libc-dev==6.1.187-1
+linux-libc-dev==6.1.190-1
 openssh-client==1:9.2p1-2+deb12u10
 openssl==3.0.22-1~deb12u1
 pci.ids==0.0~2023.04.11-1
