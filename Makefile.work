@@ -488,6 +488,13 @@ endif
 ifneq ($(SECURE_UPGRADE_KERNEL_CAFILE),)
     DOCKER_RUN += -v $(SECURE_UPGRADE_KERNEL_CAFILE):$(SECURE_UPGRADE_KERNEL_CAFILE):ro
 endif
+# Mount the Secure Boot db certificate (DB.auth) file into the slave container
+ifneq ($(SECURE_BOOT_DB_CERT),)
+    SECURE_BOOT_DB_CERT_ABSPATH := $(shell realpath -ms -- '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))')
+    DOCKER_RUN += -v '$(subst ','"'"',$(SECURE_BOOT_DB_CERT_ABSPATH):$(SECURE_BOOT_DB_CERT_ABSPATH):ro)'
+endif
+# Preserve the path through the nested shells by forwarding it in the container environment.
+DOCKER_RUN += -e 'SECURE_BOOT_DB_CERT=$(subst ','"'"',$(SECURE_BOOT_DB_CERT_ABSPATH))'
 # Mount the Signing prod tool in the slave container
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
