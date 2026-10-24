@@ -219,8 +219,8 @@ libevent-dev==2.1.12-stable-8+deb12u1
 libevent-extra-2.1-7==2.1.12-stable-8+deb12u1
 libevent-openssl-2.1-7==2.1.12-stable-8+deb12u1
 libevent-pthreads-2.1-7==2.1.12-stable-8+deb12u1
-libexpat1==2.5.0-1+deb12u4
-libexpat1-dev==2.5.0-1+deb12u4
+libexpat1==2.5.0-1+deb12u5
+libexpat1-dev==2.5.0-1+deb12u5
 libfabric1==1.17.0-3
 libfakeroot==1.31-1.2
 libfastjson4==1.2304.0-1
