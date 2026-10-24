@@ -1,3 +1,4 @@
 0001-Use-pipelines-when-dumping-52.patch
 0002-Fix-setup.py-for-test-and-bdist_wheel.patch
 0003-Handle-current-client-arguments-and-TTL-results.patch
+0004-Allow-explicit-connection-options.patch
