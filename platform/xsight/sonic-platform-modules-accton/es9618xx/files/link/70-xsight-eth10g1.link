@@ -1,0 +1,7 @@
+[Match]
+Type=ether
+Path=pci-0000:f4:00.1
+
+[Link]
+Name=eth10g1
+MACAddressPolicy=persistent
