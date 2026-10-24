@@ -16,6 +16,10 @@ case "$1" in
             pip3 install --force-reinstall --no-deps "${WHEELS[@]}"
         fi
 
+        # Enable and start the eth0 MAC fixup now that sonic_platform is available.
+        echo "Enabling eth0 MAC address service..."
+        systemctl enable --now eth0-mac-fixup.service 2>/dev/null || true
+
         # Merge the platform's FEATURE overrides into init_cfg.json.
         INIT_CFG="/etc/sonic/init_cfg.json"
         DEVICE_INIT_CFG="${DEVICE_DIR}/init_cfg.json"
