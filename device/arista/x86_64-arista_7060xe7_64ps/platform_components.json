@@ -1,0 +1,16 @@
+{
+    "chassis": {
+        "DCS-7060XE7-64PS-F": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:03:00.0)": {},
+                "Adm1266(addr=13-004f)": {},
+                "ThrasherSysCpld(addr=15-0023)": {},
+                "Ucd90320(addr=17-0011)": {},
+                "Scd(addr=0000:05:00.0)": {},
+                "Scd(addr=0000:06:00.0)": {},
+                "Tomahawk6(addr=0000:02:00.0)": {}
+            }
+        }
+    }
+}
