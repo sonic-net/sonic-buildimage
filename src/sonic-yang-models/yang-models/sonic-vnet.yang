@@ -27,6 +27,14 @@ module sonic-vnet {
     description
         "Virtual Network (VNET) configuration for overlay networking using VxLAN tunnels";
 
+    revision 2026-10-12 {
+        description
+            "Add vxlan_tunnel_list as a leaf-list of tunnel references to VNET_LIST,
+             stored as a comma-separated string in CONFIG_DB. vxlan_tunnel is no longer
+             mandatory on its own; at least one of vxlan_tunnel or vxlan_tunnel_list
+             must be configured. Limit the list to one IPv4 and one IPv6 tunnel.";
+    }
+
     revision 2023-04-25 {
         description
             "First revision.";
@@ -44,6 +52,22 @@ module sonic-vnet {
 
                 key "name";
 
+                must "boolean(vxlan_tunnel) or boolean(vxlan_tunnel_list)" {
+                    error-message "At least one of vxlan_tunnel or vxlan_tunnel_list must be configured.";
+                }
+
+                must "count(/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST" +
+                     "[svxlan:name = current()/vxlan_tunnel_list]" +
+                     "[not(contains(svxlan:src_ip, ':'))]) <= 1" {
+                    error-message "vxlan_tunnel_list must not contain more than one IPv4 tunnel.";
+                }
+
+                must "count(/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST" +
+                     "[svxlan:name = current()/vxlan_tunnel_list]" +
+                     "[contains(svxlan:src_ip, ':')]) <= 1" {
+                    error-message "vxlan_tunnel_list must not contain more than one IPv6 tunnel.";
+                }
+
                 leaf name {
                     description "Unique alphanumeric name identifying the virtual network";
                     type string {
@@ -52,11 +76,29 @@ module sonic-vnet {
                 }
 
                 leaf vxlan_tunnel {
-                    mandatory true;
-                    description "A valid and active vxlan tunnel to be used with this vnet for traffic encapsulation.";
+                    description "A valid and active vxlan tunnel to be used with this vnet for traffic encapsulation.
+                                 Required when vxlan_tunnel_list is empty or absent. A non-empty
+                                 vxlan_tunnel_list takes precedence over this leaf.";
                     type leafref {
                         path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
                     }
+                }
+
+                leaf-list vxlan_tunnel_list {
+                    description "References to valid and active vxlan tunnels to be used with this vnet
+                                 for traffic encapsulation. CONFIG_DB stores this field as a
+                                 comma-separated string, like peer_list; the YANG translation converts
+                                 it to a leaf-list of leafrefs to preserve tunnel dependencies.
+                                 As required by vnetorch, at most one IPv4 tunnel and one
+                                 IPv6 tunnel are allowed, determined by each tunnel's src_ip.
+                                 The list may be empty, contain one tunnel of either address family,
+                                 or contain one of each. An empty or absent list requires vxlan_tunnel.
+                                 A non-empty list takes precedence over vxlan_tunnel.";
+                    type leafref {
+                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
+                    max-elements 2;
+                    ordered-by user;
                 }
 
                 leaf vni {
