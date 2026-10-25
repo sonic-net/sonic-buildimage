@@ -319,6 +319,15 @@ class FragmentIndex:
                         if artifact_filename:
                             self.fragments[artifact_filename] = comp
                         self.all.append(comp)
+        # The artifacts first, then what their fragments say they ship
+        # or were built from. The dedupe keeps the first record of a
+        # purl, and a .deb built from the top of a sonic-net submodule
+        # shares its purl with the source component every other artifact
+        # from that submodule emits. Whichever os.walk reached first
+        # would otherwise win, and losing to one drops the .deb's own
+        # name, artifact filename and pedigree.
+        self.all.sort(key=lambda c: _property(c, "sonic:fragment_kind")
+                      != "recipe-emit")
 
     def for_filename(self, name: str) -> Optional[dict]:
         return self.fragments.get(name)
@@ -1653,28 +1662,26 @@ def build_dependency_graph(components: list, root_ref: str = "",
                     "value": joined,
                 })
 
-    # (3) per-binary language deps (recipe-emit-{rust,go,python}) ->
-    # their owning .deb. sbom_fragment.py attaches sonic:source_deb to
-    # every such component; we look up the .deb's bom-ref and reverse
-    # the attribution into a dependsOn edge.
+    # (3) per-binary language deps (recipe-emit-{rust,go,python}) and
+    # source repositories (recipe-emit-source) -> the artifact that
+    # ships or was built from them. sbom_fragment.py attaches
+    # sonic:source_deb to every such component; we look up the
+    # artifact's bom-ref and reverse the attribution into a dependsOn
+    # edge.
+    #
+    # Every value, and on whatever component holds it. The dedupe
+    # merges one crate shipped by two .debs, or one repository two
+    # wheels were built from, and carries each artifact across, so the
+    # winner may be the repository's own .deb rather than a fragment of
+    # the kind that wrote the property. Only recipe fragments write it.
     for c in components:
         crate_ref = c.get("bom-ref")
         if not crate_ref:
             continue
-        source_deb = None
-        is_lang_dep = False
-        for prop in c.get("properties", []) or []:
-            n = prop.get("name")
-            v = prop.get("value", "")
-            if n == "sonic:source_deb":
-                source_deb = v
-            elif n == "sonic:fragment_kind" and v.startswith("recipe-emit-") and v != "recipe-emit":
-                is_lang_dep = True
-        if not (is_lang_dep and source_deb):
-            continue
-        deb_ref = filename_to_ref.get(source_deb)
-        if deb_ref and deb_ref != crate_ref:
-            edges.setdefault(deb_ref, set()).add(crate_ref)
+        for source_deb in _multi_values(c, "sonic:source_deb"):
+            deb_ref = filename_to_ref.get(source_deb)
+            if deb_ref and deb_ref != crate_ref:
+                edges.setdefault(deb_ref, set()).add(crate_ref)
 
     # (6) code compiled into a program belongs to the program, not to the
     # filesystem the program sits in.
@@ -1899,6 +1906,7 @@ def merge_components(*sources: list) -> list:
                 _promote_scope(winner, c)
                 _promote_lockfiles(winner, c)
                 _promote_found_in(winner, c)
+                _promote_source_debs(winner, c)
                 _promote_provenance(winner, c)
                 for k in _promote_version(winner, c):
                     seen.setdefault(k, winner_idx)
@@ -2113,6 +2121,21 @@ def _promote_found_in(winner: dict, loser: dict) -> None:
         _add_multi(winner, "sonic:found_in", owner)
     for scope in _multi_values(loser, "sonic:layer_scope"):
         _add_multi(winner, "sonic:layer_scope", scope)
+
+
+def _promote_source_debs(winner: dict, loser: dict) -> None:
+    """Carry a deduped-out record's shipping artifacts onto the winner.
+
+    The same reason programs are promoted, by the recipe's route: each
+    .deb's fragment names the crates it ships, and each artifact built
+    from a submodule names that submodule's repository, so one
+    component arrives once per artifact under one purl.
+    sonic-platform-daemons builds a wheel from each of its daemons, and
+    keeping only the winner's would leave every other one built from
+    nothing.
+    """
+    for artifact in _multi_values(loser, "sonic:source_deb"):
+        _add_multi(winner, "sonic:source_deb", artifact)
 
 
 # ---------------------------------------------------------------------------
