@@ -134,7 +134,7 @@ module sonic-leak-control {
 
                 leaf max_minor_duration_sec {
                     type uint32;
-                    description "Maximum time in seconds a minor leak may persist before being escalated to critical. Set to 0 if the platform does not support this escalation.";
+                    description "Maximum time in seconds a minor leak may persist before the system leak status is escalated to MAJOR. Set to 0 if the platform does not support this escalation.";
                 }
             }
         } /* end of container LEAK_PROFILE */
