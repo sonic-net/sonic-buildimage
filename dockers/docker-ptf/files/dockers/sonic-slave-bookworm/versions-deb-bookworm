@@ -402,8 +402,8 @@ libboost1.83-tools-dev==1.83.0-4.2~bpo12+1
 libbpf-dev==1:1.1.2-0+deb12u1
 libbpf1==1:1.1.2-0+deb12u1
 libbrlapi0.8==6.5-7+deb12u1
-libbrotli-dev==1.0.9-2+b6
-libbrotli1==1.0.9-2+b6
+libbrotli-dev==1.0.9-2+deb12u1
+libbrotli1==1.0.9-2+deb12u1
 libbs2b0==3.1.0+dfsg-7
 libbsd-dev==0.11.7-2
 libbsd0==0.11.7-2
@@ -1729,7 +1729,7 @@ python3-babel==2.10.3-1
 python3-backcall==0.2.0-4
 python3-bcrypt==3.2.2-1
 python3-blinker==1.5-1
-python3-brotli==1.0.9-2+b6
+python3-brotli==1.0.9-2+deb12u1
 python3-bs4==4.11.2-2
 python3-build==0.9.0-1
 python3-certifi==2022.9.24-1
