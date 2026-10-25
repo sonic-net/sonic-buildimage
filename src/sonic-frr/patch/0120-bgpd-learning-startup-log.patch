@@ -1,0 +1,18 @@
+From: Prathyusha Potlapally <prathyusha@micasnetworks.com>
+Subject: [PATCH] bgpd: print a practice startup marker
+
+Print one notice when bgpd starts so the build, install and restart
+workflow can be exercised in a lab. This is a learning change only.
+
+diff --git a/bgpd/bgp_main.c b/bgpd/bgp_main.c
+--- a/bgpd/bgp_main.c
++++ b/bgpd/bgp_main.c
+@@ -566,6 +566,8 @@ int main(int argc, char **argv)
+ 	/* must be called after fork() */
+ 	bgp_gr_apply_running_config();
+ 	bgp_pthreads_run();
++	zlog_notice("BGP-LEARNING-TEST: custom bgpd build started (Prathyusha)");
++
+ 	frr_run(bm->master);
+ 
+ 	/* Not reached. */

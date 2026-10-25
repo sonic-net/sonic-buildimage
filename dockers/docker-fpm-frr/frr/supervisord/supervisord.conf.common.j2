@@ -90,9 +90,9 @@ dependent_startup_wait_for=zebra:running
 {% if FEATURE is defined and
       ((FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
        (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled")) %}
-command=/usr/lib/frr/bgpd -P 0{{ ' -M snmp' if _snmp else '' }} -M bmp
+command=/usr/lib/frr/bgpd -P 0{{ ' -M snmp' if _snmp else '' }} -M bmp --log file:/var/log/frr/bgp-learning.log --log-level info
 {% else %}
-command=/usr/lib/frr/bgpd -P 0{{ ' -M snmp' if _snmp else '' }}
+command=/usr/lib/frr/bgpd -P 0{{ ' -M snmp' if _snmp else '' }} --log file:/var/log/frr/bgp-learning.log --log-level info
 {% endif %}
 priority={{ _pbase + 1 }}
 stopsignal=KILL
