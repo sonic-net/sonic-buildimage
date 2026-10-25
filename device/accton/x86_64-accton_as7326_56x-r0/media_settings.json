@@ -1,0 +1,420 @@
+{
+    "PORT_MEDIA_SETTINGS": {
+        "1": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "2": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "3": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "4": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "5": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "6": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "7": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "8": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "9": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "10": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "11": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "12": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "13": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "14": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "15": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "16": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "17": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "18": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "19": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "20": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "21": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "22": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "23": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "24": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "25": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "26": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "27": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "28": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "29": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "30": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "31": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "32": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "33": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "34": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "35": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "36": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "37": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "38": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "39": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "40": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "41": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "42": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "43": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "44": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "45": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "46": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "47": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "48": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a"
+                }
+            }
+        }, 
+        "49": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }, 
+        "50": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }, 
+        "51": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }, 
+        "52": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }, 
+        "53": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }, 
+        "54": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }, 
+        "55": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }, 
+        "56": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a", 
+                    "lane1": "0x14410a", 
+                    "lane2": "0x14410a", 
+                    "lane3": "0x14410a"
+                }
+            }
+        }
+    }
+}
