@@ -1,0 +1,18 @@
+[Unit]
+Description=Accton AS7926-40XFB Platform Monitoring service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/accton_as7926_40xfb_util.py install
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+TimeoutSec=300
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
