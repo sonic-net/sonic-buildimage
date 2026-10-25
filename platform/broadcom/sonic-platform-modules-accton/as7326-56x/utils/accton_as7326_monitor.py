@@ -37,11 +37,10 @@ except ImportError as e:
 
 # Deafults
 VERSION = '1.0'
-FUNCTION_NAME = '/usr/local/bin/accton_as7326_monitor'
+FUNCTION_NAME = '/usr/local/bin/accton_as7326_56x_monitor'
 
 global log_file
 global log_level
-
 
 #Default FAN speed: 37.5%(0x05)
 #Ori is that detect: (U45_BCM56873 + Thermal sensor_LM75_CPU:0x4B) /2 
@@ -84,7 +83,9 @@ fan_policy_state=1
 fan_fail=0
 alarm_state = 0 #0->default or clear, 1-->alarm detect
 test_temp = 0
-test_temp_list = [0, 0, 0, 0, 0, 0]
+test_temp_list = [0, 0]
+temp_test_data=0
+test_temp_revert=0
 
 # Make a class we can use to capture stdout and sterr in the log
 class device_monitor(object):
@@ -113,11 +114,9 @@ class device_monitor(object):
             console.setFormatter(formatter)
             logging.getLogger('').addHandler(console)
 
-        sys_handler = handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        sys_handler = logging.handlers.SysLogHandler(address = '/dev/log')
         sys_handler.setLevel(logging.WARNING)       
         logging.getLogger('').addHandler(sys_handler)
-
-        #logging.debug('SET. logfile:%s / loglevel:%d', log_file, log_level)
           
     def get_state_from_fan_policy(self, temp, policy):
         state=0
@@ -135,9 +134,6 @@ class device_monitor(object):
         return state
     
     def manage_fans(self):
-        
-        thermal_pwm_list = {} #Ori sort is lm75_48, 49, 4a, 4b, cpu, bcm
-                              # After get pwm, do sort to get max pwm.
         LEVEL_FAN_DEF=1
         LEVEL_FAN_MID=2       
         LEVEL_FAN_MAX=3
@@ -155,6 +151,8 @@ class device_monitor(object):
         global fan_fail
         global test_temp
         global test_temp_list        
+        global temp_test_data
+        global test_temp_revert
         global alarm_state
         fan_policy ={
         0: [0,     39000,   LEVEL_FAN_DEF],  #F2B_policy, B2F_plicy, PWM, reg_val
@@ -176,54 +174,62 @@ class device_monitor(object):
         #logging.debug('fan_dir=%d, ori_pwm=%d', fan_dir, ori_pwm)
         logging.debug('test_temp=%d', test_temp)
         if test_temp==0: 
-            temp1 = thermal._get_thermal_val(1)
             temp2 = thermal._get_thermal_val(2)
-            temp3 = thermal._get_thermal_val(3)
             temp4 = thermal._get_thermal_val(4)
-            temp5 = thermal._get_thermal_val(5)
-            temp6=0
         else:
-            temp1 = test_temp_list[0]
-            temp2 = test_temp_list[1]
-            temp3 = test_temp_list[2]
-            temp4 = test_temp_list[3]
-            temp5 = test_temp_list[4]
-            temp6=0
-            fan_fail=0
+            temp2 = test_temp_list[0]
+            temp4 = test_temp_list[1]
+            #fan_fail=0 # When test no-fan DUT. Need to use this. 
+            if test_temp_revert==0:
+                temp_test_data=temp_test_data+2000
+            else:
+                temp_test_data=temp_test_data-2000
        
         if temp2==0:
             temp_get=50000  # if one detect sensor is fail or zero, assign temp=50000, let fan to 75% 
             logging.debug('lm75_49 detect fail, so set temp_get=50000, let fan to 75%')
-        elif temp2==0:        
+        elif temp4==0:        
             temp_get=50000  # if one detect sensor is fail or zero, assign temp=50000, let fan to 75% 
             logging.debug('lm75_4b detect fail, so set temp_get=50000, let fan to 75%')
         else:    
             temp_get= (temp2 + temp4)/2  # Use (sensor_LM75_49 + Thermal sensor_LM75_CPU_4B) /2 
+        
+        if test_temp==1:
+            temp_get=temp_get+temp_test_data
+            
         ori_state=fan_policy_state
         fan_policy_state=self.get_state_from_fan_policy(temp_get, fan_policy)    
-        logging.debug('lm75_48=%d, lm75_49=%d, lm75_4a=%d, lm_4b=%d, cpu=%d, bcm=%d', temp1,temp2,temp3,temp4,temp5,temp6)
-        logging.debug('ori_state=%d, fan_policy_state=%d', ori_state, fan_policy_state)
-        new_pwm = fan_policy_state_pwm_tlb[fan_policy_state][0]
+        logging.debug('temp2=lm75_49=%d,temp4=lm_4b=%d, temp_get=%d, ori_state=%d', temp2,temp4, temp_get, ori_state)
+        new_perc = fan_policy_state_pwm_tlb[fan_policy_state][0]
+       
         if fan_fail==0:
-            logging.debug('new_pwm=%d', new_pwm)
-        
-        if fan_fail==0:
-            if new_pwm!=ori_pwm:
-                fan.set_fan_duty_cycle(new_pwm)
-                logging.info('Set fan speed from %d to %d', ori_pwm, new_pwm)
+            logging.debug('new_perc=%d', new_perc)
+            if new_perc!=ori_perc:
+                fan.set_fan_duty_cycle(new_perc)
+                logging.info('Set fan speed from %d to %d', ori_perc, new_perc)
         
         for i in range (fan.FAN_NUM_1_IDX, fan.FAN_NUM_ON_MAIN_BROAD+1):
             if fan.get_fan_status(i)==0:
-                new_pwm=100
-                logging.debug('fan_%d fail, set pwm to 100',i)
-                if test_temp==0:
-                    fan_fail=1
-                    fan.set_fan_duty_cycle(new_pwm)
-                    break
+                new_perc=100
+                logging.debug('fan_%d fail, set new_perc to 100',i)
+                #if test_temp==0:# When test no-fan DUT. Need to use this. 
+                fan_fail=1
+                if ori_state < LEVEL_FAN_MAX:
+                    fan_policy_state=new_state=LEVEL_FAN_MAX
+                    logging.debug('fan_policy_state=%d',fan_policy_state)
+                    logging.warning('fan_policy_state is LEVEL_FAN_MAX')
+                fan.set_fan_duty_cycle(new_perc)
+                break
             else:
                 fan_fail=0        
        
-        new_state = fan_policy_state       
+        if fan_fail==0:
+            new_state = fan_policy_state
+        else:
+            if fan_policy_state > ori_state:
+                new_state = fan_policy_state       
+            else:
+                fan_policy_state=new_state=LEVEL_FAN_MAX
         
         if ori_state==LEVEL_FAN_DEF:            
            if new_state==LEVEL_TEMP_HIGH:
@@ -299,7 +305,7 @@ def main(argv):
                 return 0
             
             i=0
-            for x in range(2, 8):
+            for x in range(2, 4):
                test_temp_list[i]= int(sys.argv[x])*1000
                i=i+1
             test_temp = 1   
@@ -310,7 +316,7 @@ def main(argv):
     fan.set_fan_duty_cycle(38)
     print("set default fan speed to 37.5%")
     monitor = device_monitor(log_file, log_level)
-    # Loop forever, doing something useful hopefully:
+    
     while True:
         monitor.manage_fans()
         time.sleep(5)
