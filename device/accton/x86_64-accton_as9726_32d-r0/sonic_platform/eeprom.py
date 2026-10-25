@@ -33,7 +33,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         for line in lines:
             try:
                 match = re.search(
-                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+)', line)
+                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)(.+)', line)
                 if match is not None:
                     idx = match.group(1)
                     value = match.group(3).rstrip('\0')
@@ -95,8 +95,17 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
     def get_eeprom(self):
         return self._eeprom
 
+    def get_pn(self):
+        return self._eeprom.get('0x22', "Undefined.")
+
     def get_serial(self):
         return self._eeprom.get('0x23', "Undefined.")
 
     def get_mac(self):
         return self._eeprom.get('0x24', "Undefined.")
+
+    def get_revision(self):
+        return self._eeprom.get('0x27', "Undefined.")
+
+    def get_name(self):
+        return self._eeprom.get('0x21', "Undefined.")

@@ -8,7 +8,7 @@
 
 try:
     from sonic_platform_base.psu_base import PsuBase
-    #from sonic_platform.fan import Fan
+    from sonic_platform.thermal import Thermal
     from .helper import APIHelper
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -56,19 +56,14 @@ class Psu(PsuBase):
         self.i2c_addr = PSU_CPLD_I2C_MAPPING[self.index]["addr"]
         self.cpld_path = I2C_PATH.format(self.i2c_num, self.i2c_addr)
         self.__initialize_fan()
-        '''
-        for fan_index in range(0, PSU_NUM_FAN[self.index]):
-            #def __init__(self, fan_tray_index, fan_index=0, is_psu_fan=False, psu_index=0):
-            #fan = Fan(fan_index, 0, is_psu_fan=True, psu_index=self.index)
-            fan = Fan(fan_index, 0, True, self.index)
-            self._fan_list.append(fan)
-        '''
 
     def __initialize_fan(self):
         from sonic_platform.fan import Fan
         for fan_index in range(0, PSU_NUM_FAN[self.index]):
             fan = Fan(fan_index, 0, is_psu_fan=True, psu_index=self.index)
             self._fan_list.append(fan)
+
+        self._thermal_list.append(Thermal(is_psu=True, psu_index=self.index))
 
     def get_voltage(self):
         """
@@ -77,6 +72,9 @@ class Psu(PsuBase):
             A float number, the output voltage in volts,
             e.g. 12.1
         """
+        if self.get_status() is not True:
+            return 0
+
         vout_path = "{}{}".format(self.hwmon_path, 'psu_v_out')        
         vout_val=self._api_helper.read_txt_file(vout_path)
         if vout_val is not None:
@@ -90,6 +88,9 @@ class Psu(PsuBase):
         Returns:
             A float number, the electric current in amperes, e.g 15.4
         """
+        if self.get_status() is not True:
+            return 0
+
         iout_path = "{}{}".format(self.hwmon_path, 'psu_i_out')        
         val=self._api_helper.read_txt_file(iout_path)
         if val is not None:
@@ -103,6 +104,9 @@ class Psu(PsuBase):
         Returns:
             A float number, the power in watts, e.g. 302.6
         """
+        if self.get_status() is not True:
+            return 0
+
         pout_path = "{}{}".format(self.hwmon_path, 'psu_p_out')        
         val=self._api_helper.read_txt_file(pout_path)
         if val is not None:
@@ -137,8 +141,16 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings above
         """
+        status_ps=self.get_presence() #present
+        status=self.get_status()   #power good
 
-        return False  #Controlled by HW
+        if status is None or status_ps is False:
+            return  self.STATUS_LED_COLOR_OFF
+
+        return {
+            1: self.STATUS_LED_COLOR_GREEN,
+            0: self.STATUS_LED_COLOR_AMBER
+        }.get(status, self.STATUS_LED_COLOR_OFF)
 
     def get_temperature(self):
         """
@@ -161,7 +173,7 @@ class Psu(PsuBase):
             A float number, the high threshold temperature of PSU in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        return False #Not supported
+        return self._thermal_list[0].get_high_threshold()  #Not supported
 
     def get_voltage_high_threshold(self):
         """
@@ -224,3 +236,64 @@ class Psu(PsuBase):
             return int(val, 10) == 1
         else:
             return 0
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        model_path="{}{}".format(self.cpld_path, 'psu_model_name')
+        model=self._api_helper.read_txt_file(model_path)
+
+        if model is None:
+            return "N/A"
+        return model
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        serial_path="{}{}".format(self.cpld_path, 'psu_serial_number')
+        serial=self._api_helper.read_txt_file(serial_path)
+
+        if serial is None:
+            return "N/A"
+        return serial
+
+    def get_revision(self):
+        rev_path="{}{}".format(self.hwmon_path, 'psu_mfr_revision')
+        rev=self._api_helper.read_txt_file(rev_path)
+        if rev is None:
+            return "N/A"
+        return rev
+
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return self.index+1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
+
+    def get_maximum_supplied_power(self):
+        pout_path = "{}{}".format(self.hwmon_path, 'psu_mfr_pout_max')
+        pout_val=self._api_helper.read_txt_file(pout_path)
+        if pout_val is not None:
+            return float(pout_val)/ 1000
+        else:
+            return 0
+
+
