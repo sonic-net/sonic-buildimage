@@ -167,13 +167,19 @@ How each pattern is captured. Concrete CycloneDX shapes are visible in
 `target/.../*.cdx.json` after a build; one representative example is
 shown after this list.
 
-- **SONiC-native code** (sonic-net submodule). Primary PURL:
+- **SONiC-native code** (sonic-net submodule). Primary PURL of a
+  `.deb` built from the submodule's top directory:
   `pkg:github/sonic-net/<repo>@<commit>`. `externalReferences` records
   the submodule URL and pinned commit. No pedigree unless a sibling
   `src/<pkg>.patch/` exists. `sonic-linux-kernel` is the exception:
   it rebuilds Debian's `linux` source, so its `.deb`s take the
   `pkg:deb/sonic/<name>@<version>` identity instead. Being a submodule,
   it gets no Debian `.dsc` ancestor (see the kernel entry below).
+  A `.deb` built from a subdirectory of a submodule
+  (`src/dhcprelay/dhcp6relay`, `src/sonic-utilities/sonic-utilities-data`)
+  keeps `pkg:deb/sonic/<name>@<version>` too, so two packages built
+  from one repository stay two components; it records the submodule
+  URL and commit the same way.
 
 - **Patched upstream Debian sources** (`dget` + sidecar patches in
   `src/<pkg>/patch/`). Primary: `pkg:deb/sonic/<name>@<version>`.
@@ -186,14 +192,37 @@ shown after this list.
   `src/sonic-frr/frr` is FRRouting upstream). Primary:
   `pkg:deb/sonic/frr@<version>`. Ancestor:
   `pkg:github/FRRouting/frr@<git-describe>`. Patches + aggregate
-  patch-set SHA-1 in pedigree. Same handling for sonic-p4rt,
-  sonic-sysmgr (gnoi), wpasupplicant.
+  patch-set SHA-1 in pedigree. Same handling for sonic-sysmgr (gnoi).
+  sonic-p4rt (sonic-pins) and wpasupplicant (sonic-wpa-supplicant)
+  wrap a sonic-net submodule, which is not an upstream and gets no
+  ancestor; it is named by a source repository component (below).
 
 - **Direct upstream submodule with sidecar patches** (scapy, ptf,
   ptf-py3, supervisor, redis-dump-load). Primary derived from the
   artifact filename (PyPI for wheels, deb for debs). Ancestor:
   `pkg:github/<upstream-org>/<repo>@<git-describe>`. Patches from the
   sidecar directory.
+
+- **Source repositories.** Every artifact built from a submodule —
+  from its top directory, a subdirectory of it, or a wrapper directory
+  holding it — names the repository: where the artifact's own PURL is
+  not already `pkg:github/<owner>/<repo>@<commit>`, its fragment
+  carries a second component with that PURL, the submodule's
+  `vcs` URL in `externalReferences`, the pinned commit in
+  `sonic:submodule_commit`, `sonic:fragment_kind=recipe-emit-source`
+  and `sonic:source_deb=<artifact filename>`. The owner is `sonic-net`
+  for a sonic-net submodule and the URL's owner otherwise
+  (`pkg:github/secdev/scapy@…`, `pkg:github/FRRouting/frr@…`).
+  Every artifact built from one submodule names the same PURL, so the
+  aggregator keeps one component per repository and commit, merged
+  into the repository's own `.deb` where there is one, and each
+  artifact gets a `dependsOn` edge to it: `pkg:pypi/sonic-utilities@1.2
+  -> pkg:github/sonic-net/sonic-utilities@<commit>`, and one edge from
+  each sonic-platform-daemons wheel to
+  `pkg:github/sonic-net/sonic-platform-daemons@<commit>`. A package
+  installed from PyPI or the Debian archive is not built from a
+  submodule and names none. The submodule URL loses only a literal
+  `.git` suffix and trailing `/`.
 
 - **Upstream apt/dpkg packages** (everything apt-installed into the
   rootfs or a container, ~1000+ debs). Captured by observation:
@@ -265,7 +294,10 @@ shown after this list.
   Every emitted component carries `sonic:source_deb=<deb filename>`.
   `build_sbom.py:build_dependency_graph()` reverses
   `sonic:source_deb` into `dependsOn` edges from the `.deb`'s
-  `bom-ref` to each language-dep component so a consumer can walk
+  `bom-ref` to each language-dep component (and from any artifact to
+  its source repository component). The property is space-separated
+  and multi-valued after the merge: a crate two `.deb`s ship carries
+  both filenames and hangs off both. So a consumer can walk
   `swss_*.deb -> tokio@1.x` (Rust) or `sonic-gnmi_*.deb ->
   github.com/openconfig/gnmi@v0.10` (Go) directly without parsing
   properties.
@@ -745,6 +777,13 @@ jq --arg ref "pkg:github/sonic-net/sonic-swss@<commit-prefix>" \
    '.dependencies[] | select(.ref | startswith($ref)) | .dependsOn' \
    "$SBOM"
 
+# Which repository was sonic-utilities built from?
+#   The pkg:github component the wheel depends on.
+jq -r --arg ref "pkg:pypi/sonic-utilities@" \
+   '.dependencies[] | select(.ref | startswith($ref)) | .dependsOn[]
+    | select(startswith("pkg:github/"))' \
+   "$SBOM"
+
 # Which .deb ships tokio@1.x ?
 #   recipe-emit-rust components carry sonic:source_deb=<filename>;
 #   the same attribution is mirrored as a dependsOn edge from the
@@ -847,7 +886,7 @@ Files that exist for this design.
 | `scripts/install_sbom_tool.sh` | Auto-fetches syft, grype, cyclonedx-cli with SHA-256 verify into `target/sbom-tools/`. |
 | `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds and validates the CycloneDX `dependencies[]` graph (containment: image → the host filesystem and the containers it installs → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
 | `scripts/build_sbom.sh` | Thin shim that execs `build_sbom.py`. |
-| `scripts/sbom_fragment.py` | Per-recipe fragment generator. Knows the four ancestor patterns, the vendor-supplier URL table, and the per-`.deb` language-dep harvesters (Rust via `rust-audit-info`, Go via `go version -m`, Python via `*.dist-info/METADATA` walk). |
+| `scripts/sbom_fragment.py` | Per-recipe fragment generator. Knows the four ancestor patterns, the source repository each artifact was built from, the vendor-supplier URL table, and the per-`.deb` language-dep harvesters (Rust via `rust-audit-info`, Go via `go version -m`, Python via `*.dist-info/METADATA` walk). |
 | `scripts/sbom_resolve_licenses.py` | DEP-5 parser + licensecheck fallback + SPDX translation. |
 | `scripts/sbom_license_map.json` | ~100 Debian License header strings mapped to SPDX. |
 | `scripts/sbom_parse_lockfiles.py` | Parses `go.sum`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock` from harvested archives. Also parses `Cargo.lock` defensively for legacy archives — but Rust attribution comes from `sbom_fragment.py`'s `.dep-v0` introspection, not from this parser. |
@@ -855,6 +894,7 @@ Files that exist for this design.
 | `scripts/sbom_diff.py` | Reproducibility comparison between two SBOMs. |
 | `scripts/sbom_vuln_scan.py` | Standalone CVE scanner (invokes grype, applies VEX). |
 | `scripts/sbom_vuln_diff.py` | Standalone drift analysis between two vuln reports. |
+| `scripts/tests/test_sbom_fragment.py`, `scripts/tests/test_build_sbom.py` | Unit tests for the source repository each artifact names and the graph edges to it. `python3 -m unittest discover -s scripts/tests` |
 | `scripts/sbom_cve_refs.py` | Which patches the build applies, and the CVEs each claims to fix. Shared by `sbom_fragment.py` and `sbom_extract_vex_from_patches.py` so the SBOM and the VEX statements cannot disagree about either. |
 | `scripts/sbom_extract_vex_from_patches.py` | Auto-VEX from CVE markers in patch metadata. |
 | `vex/` | OpenVEX statements (curated at top level, auto in `vex/auto/`). |
