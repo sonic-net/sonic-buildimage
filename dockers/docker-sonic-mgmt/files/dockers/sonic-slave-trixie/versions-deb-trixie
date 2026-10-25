@@ -840,11 +840,11 @@ libharfbuzz-icu0==10.2.0-1+deb13u1
 libharfbuzz-subset0==10.2.0-1+deb13u1
 libharfbuzz0b==10.2.0-1+deb13u1
 libhdf5-310==1.14.5+repack-3
-libheif-plugin-aomenc==1.23.4-1~deb13u1
-libheif-plugin-dav1d==1.23.4-1~deb13u1
-libheif-plugin-libde265==1.23.4-1~deb13u1
-libheif-plugin-x265==1.23.4-1~deb13u1
-libheif1==1.23.4-1~deb13u1
+libheif-plugin-aomenc==1.23.6-2~deb13u1
+libheif-plugin-dav1d==1.23.6-2~deb13u1
+libheif-plugin-libde265==1.23.6-2~deb13u1
+libheif-plugin-x265==1.23.6-2~deb13u1
+libheif1==1.23.6-2~deb13u1
 libhiredis-dev==1.2.0-6+b3
 libhiredis1.1.0==1.2.0-6+b3
 libhsa-runtime64-1==6.1.2-3
