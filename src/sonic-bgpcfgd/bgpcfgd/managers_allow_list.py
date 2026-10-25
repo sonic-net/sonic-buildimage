@@ -44,6 +44,16 @@ class BGPAllowListMgr(Manager):
         self.enabled = self.__get_enabled()
         self.prefix_match_tag = self.__get_routemap_tag()
         self.__load_constant_lists()
+        if self.enabled:
+            # The general peer policy template renders deployment 0's default rule for both address
+            # families from the recorded action: record the rule FRR holds when both families hold
+            # the same one, so that a peer rendered before any row repeats it
+            names = self.__generate_names(0, BGPAllowListMgr.EMPTY_COMMUNITY, '')
+            self.cfg_mgr.update()
+            running = {self.__last_default_action(self.cfg_mgr.get_text(), route_map_name)
+                       for route_map_name in (names['rm_v4'], names['rm_v6'])}
+            if len(running) == 1 and None not in running:
+                self.__record_default_action(names, running.pop())
 
     def set_handler(self, key, data):
         """
@@ -225,6 +235,7 @@ class BGPAllowListMgr(Manager):
             log_debug("BGPAllowListMgr::__update_policy. The peers configuration scheduled for updates")
         else:
             log_debug("BGPAllowListMgr::__update_policy. Nothing to update")
+        self.__record_default_action(names, default_action)
         log_info("BGPAllowListMgr::Done")
 
     def __remove_policy(self, deployment_id, community_value, neighbor_type):
@@ -258,6 +269,7 @@ class BGPAllowListMgr(Manager):
             log_debug("BGPAllowListMgr::__remove_policy. 'Allow list' policy was scheduled for removal")
         else:
             log_debug("BGPAllowListMgr::__remove_policy. Nothing to remove")
+        self.__record_default_action(names, default_action)
         log_info('BGPAllowListMgr::Done')
 
     @staticmethod
@@ -491,13 +503,44 @@ class BGPAllowListMgr(Manager):
         info = route_map_name, default_action_community
         log_debug("BGPAllowListMgr::__update_default_route_map_entry. rm='%s' set_community='%s'" % info)
         current_default_action_value = self.__parse_default_action_route_map_entry(route_map_name)
-        if current_default_action_value != default_action_community:
+        pending_default_action_value = self.__pending_default_action(route_map_name)
+        # FRR keeps the last write of the rule: the policy writes it when the running rule differs
+        # from its action, as before, and also when a pending write of this pass sets another value
+        if current_default_action_value != default_action_community or (
+                pending_default_action_value is not None and pending_default_action_value != default_action_community):
             return [
                 'route-map %s permit 65535' % route_map_name,
                 ' set community %s additive' % default_action_community
             ]
         else:
             return []
+
+    @staticmethod
+    def __last_default_action(lines, route_map_name):
+        """
+        The community set by the last write of the route-map's default rule in a configuration text
+        :param lines: lines of the text (FRR's running configuration, or the changes pending for it)
+        :param route_map_name: name of the target route_map
+        :return: the community value, or None when the text holds no default rule of the route-map
+        """
+        header = 'route-map %s permit 65535' % route_map_name
+        match_community = re.compile(r'^set community (\S+) additive$')
+        community_value = None
+        for index, line in enumerate(lines[:-1]):
+            if line.strip() == header:
+                matched = match_community.match(lines[index + 1].strip())
+                if matched:
+                    community_value = matched.group(1)
+        return community_value
+
+    def __pending_default_action(self, route_map_name):
+        """
+        The community set by the last write of the route-map's default rule still pending for FRR:
+        a peer render or an earlier policy of this pass wrote it, and FRR will keep that write
+        :param route_map_name: name of the target route_map
+        :return: the community value, or None when no write of the rule is pending
+        """
+        return self.__last_default_action(self.cfg_mgr.changes.split('\n'), route_map_name)
 
     def __parse_default_action_route_map_entry(self, route_map_name):
         """
@@ -810,6 +853,18 @@ class BGPAllowListMgr(Manager):
         :return: prefix list ip family
         """
         return 'ip' if af == self.V4 else 'ipv6'
+
+    def __record_default_action(self, names, default_action_community):
+        """
+        Record, once the commands are scheduled, the default action the policy's route-maps are to
+        carry, so a peer render repeats it: general/policies.conf.j2 renders deployment 0's default
+        rule from allow_list_default_action
+        :param names: route-map names of the policy
+        :param default_action_community: community value of the default action
+        """
+        action = "deny" if default_action_community == "no-export" else "permit"
+        for route_map_name in (names['rm_v4'], names['rm_v6']):
+            self.directory.put("LOCAL", "allow_list_default_action", route_map_name, action)
 
     def __get_default_action_community(self, data=None):
         """

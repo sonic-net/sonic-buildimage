@@ -270,11 +270,52 @@ class AccumulatingFrr:
         return True
 
 
-def make_frr_backed(monkeypatch, switch_type):
+class RouteMapFrr(AccumulatingFrr):
+    """FRR stand-in that keeps one entry per route-map sequence, with the last clause of each kind,
+    drops an entry on its `no` line and records the peer groups each commit restarts; everything else
+    accumulates as written (a `no` line of a prefix list or a community list is kept, not applied)."""
+
+    def __init__(self):
+        super().__init__()
+        self.other = []
+        self.route_maps = {}  # (name, action, seq) -> {clause kind: line}
+        self.restarts = []  # the peer groups restarted at each commit
+        self.refuse_writes = 0  # the next writes to refuse, as vtysh -f refusing a batch
+
+    def restart_peer_groups(self, peer_groups):
+        self.restarts.append(sorted(peer_groups))
+        return True
+
+    def write(self, text):
+        if self.refuse_writes:
+            self.refuse_writes -= 1
+            return False
+        entry = None
+        for line in text.split('\n'):
+            words = line.split()
+            if not words:
+                continue
+            if words[0] == 'route-map' and len(words) == 4:
+                entry = self.route_maps.setdefault(tuple(words[1:]), {})
+            elif words[:2] == ['no', 'route-map'] and len(words) == 5:
+                self.route_maps.pop(tuple(words[2:]), None)
+                entry = None
+            elif entry is not None and line.startswith(' '):
+                entry[' '.join(words[:2])] = line
+            else:
+                entry = None
+                self.other.append(line)
+        self.config = '\n'.join(self.other + [
+            '\n'.join(['route-map %s %s %s' % key] + list(clauses.values()))
+            for key, clauses in self.route_maps.items()]) + '\n'
+        return True
+
+
+def make_frr_backed(monkeypatch, switch_type, frr=None):
     from bgpcfgd.config import ConfigMgr
     from bgpcfgd.managers_device_global import DeviceGlobalCfgMgr
     common, peer, interface = make_peers(monkeypatch)
-    frr = AccumulatingFrr()
+    frr = frr or AccumulatingFrr()
     common['cfg_mgr'] = ConfigMgr(frr)
     common['directory'].put('CONFIG_DB', 'DEVICE_METADATA', 'localhost',
                             {'bgp_asn': '65100', 'type': switch_type, 'deployment_id': '1'})
@@ -483,3 +524,235 @@ def test_bbr_status_from_the_unblocking_pass_reaches_deferred_leaf_peers(monkeyp
     ])
     assert 'neighbor 10.1.0.1 peer-group PEER_V4' in frr.config
     assert 'neighbor PEER_V4 allowas-in 1' in frr.config
+
+
+def last_allow_list_default(config, af):
+    """The community the last pushed default rule of deployment 0's allow-list route-map sets."""
+    header = 'route-map ALLOW_LIST_DEPLOYMENT_ID_0_%s permit 65535' % af
+    lines = config.split('\n')
+    last = None
+    for i, line in enumerate(lines):
+        if line.strip() == header:
+            for follow in lines[i + 1:i + 4]:
+                if follow.strip().startswith('set community '):
+                    last = follow.split()[2]
+                    break
+    return last
+
+
+@pytest.mark.parametrize('order', ['interfaces_first', 'allow_list_first', 'allow_list_in_an_earlier_pass',
+                                   'peer_first_same_pass', 'allow_list_first_same_pass'])
+def test_peer_render_repeats_the_allow_list_default_action(monkeypatch, order):
+    from bgpcfgd.managers_allow_list import BGPAllowListMgr
+    common, frr, device_global, interface = make_frr_backed(monkeypatch, 'ToRRouter')
+    common['constants']['bgp']['allow_list']['enabled'] = True
+    allow_list = BGPAllowListMgr(common, 'CONFIG_DB', 'BGP_ALLOWED_PREFIXES')
+    peer = BGPPeerMgrBase(common, 'CONFIG_DB', 'BGP_NEIGHBOR', 'general', False)
+    interfaces = [event('Ethernet0', {'NULL': 'NULL'}), event('Ethernet0|10.1.0.0/31', {'NULL': 'NULL'})]
+    deny = [event('DEPLOYMENT_ID|0', {'prefixes_v4': '10.0.0.0/24', 'default_action': 'deny'})]
+    if order == 'interfaces_first':
+        passes = [{'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))]},
+                  {'INTERFACE': interfaces, 'BGP_ALLOWED_PREFIXES': deny}]
+    elif order == 'allow_list_first':
+        passes = [{'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))]},
+                  {'BGP_ALLOWED_PREFIXES': deny, 'INTERFACE': interfaces}]
+    elif order == 'allow_list_in_an_earlier_pass':
+        passes = [{'INTERFACE': interfaces}, {'BGP_ALLOWED_PREFIXES': deny},
+                  {'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))]}]
+    elif order == 'peer_first_same_pass':
+        passes = [{'INTERFACE': interfaces},
+                  {'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))], 'BGP_ALLOWED_PREFIXES': deny}]
+    else:
+        passes = [{'INTERFACE': interfaces},
+                  {'BGP_ALLOWED_PREFIXES': deny, 'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))]}]
+    run_passes(monkeypatch, common, [peer, interface, device_global, allow_list], passes)
+    assert 'neighbor 10.1.0.1 peer-group PEER_V4' in frr.config
+    # The policy template renders deployment 0's default rule; a peer rendered after the allow-list
+    # manager applied 'deny' repeats 'deny' instead of the template's initial value
+    assert last_allow_list_default(frr.config, 'V4') == 'no-export'
+    assert last_allow_list_default(frr.config, 'V6') == 'no-export'
+
+
+@pytest.mark.parametrize('constants_default', ['deny', 'permit'])
+def test_peer_render_before_any_row_keeps_the_template_initial_value(monkeypatch, constants_default):
+    from bgpcfgd.managers_allow_list import BGPAllowListMgr
+    common, frr, device_global, interface = make_frr_backed(monkeypatch, 'ToRRouter')
+    common['constants']['bgp']['allow_list']['enabled'] = True
+    common['constants']['bgp']['allow_list']['default_action'] = constants_default
+    allow_list = BGPAllowListMgr(common, 'CONFIG_DB', 'BGP_ALLOWED_PREFIXES')
+    peer = BGPPeerMgrBase(common, 'CONFIG_DB', 'BGP_NEIGHBOR', 'general', False)
+    run_passes(monkeypatch, common, [peer, interface, device_global, allow_list], [{
+        'INTERFACE': [event('Ethernet0', {'NULL': 'NULL'}), event('Ethernet0|10.1.0.0/31', {'NULL': 'NULL'})],
+        'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))],
+    }])
+    # FRR held no rule and no row was applied: the render writes the template's initial value, the
+    # drop community, whatever the constants' default action, as it did before the record existed
+    drop = common['constants']['bgp']['allow_list']['drop_community']
+    assert last_allow_list_default(frr.config, 'V4') == drop
+    assert last_allow_list_default(frr.config, 'V6') == drop
+
+
+def allow_list_runner(monkeypatch, constants_default='permit', running=None, frr=None):
+    """Managers for the allow-list rule tests, on an FRR that may already hold deployment 0's rule."""
+    from bgpcfgd.managers_allow_list import BGPAllowListMgr
+    common, frr, device_global, interface = make_frr_backed(monkeypatch, 'ToRRouter', frr or RouteMapFrr())
+    common['constants']['bgp']['allow_list']['enabled'] = True
+    common['constants']['bgp']['allow_list']['default_action'] = constants_default
+    if running:
+        for af in ('V4', 'V6'):
+            frr.write('route-map ALLOW_LIST_DEPLOYMENT_ID_0_%s permit 65535\n set community %s additive\n'
+                      % (af, running))
+    allow_list = BGPAllowListMgr(common, 'CONFIG_DB', 'BGP_ALLOWED_PREFIXES')
+    peer = BGPPeerMgrBase(common, 'CONFIG_DB', 'BGP_NEIGHBOR', 'general', False)
+    managers = [peer, interface, device_global, allow_list]
+    return common, frr, managers
+
+
+INTERFACES = [event('Ethernet0', {'NULL': 'NULL'}), event('Ethernet0|10.1.0.0/31', {'NULL': 'NULL'})]
+DROP = '5060:12345'
+
+
+def row(key='DEPLOYMENT_ID|0', **fields):
+    return event(key, dict({'prefixes_v4': '10.0.0.0/24'}, **fields))
+
+
+def rule(frr, af='V4'):
+    return last_allow_list_default(frr.config, af)
+
+
+@pytest.mark.parametrize('running, constants_default, action, expected', [
+    ('no-export', 'permit', 'deny', 'no-export'),   # FRR kept the rule from an earlier bgpcfgd; the peer is new to FRR
+    (DROP, 'deny', 'permit', DROP),
+])
+def test_allow_list_rule_is_written_after_a_peer_rendered_in_the_same_pass(monkeypatch, running,
+                                                                            constants_default, action, expected):
+    common, frr, managers = allow_list_runner(monkeypatch, constants_default, running)
+    # a fresh process starts its record from the rule FRR holds: the peer renders it, then the row,
+    # whose value FRR already holds, is drained
+    run_passes(monkeypatch, common, managers, [
+        {'INTERFACE': INTERFACES, 'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))],
+         'BGP_ALLOWED_PREFIXES': [row(default_action=action)]},
+    ])
+    assert rule(frr) == expected and rule(frr, 'V6') == expected
+
+
+@pytest.mark.parametrize('change', ['permit', 'delete'])
+def test_allow_list_rule_follows_a_row_changed_after_a_peer_rendered_in_the_same_pass(monkeypatch, change):
+    common, frr, managers = allow_list_runner(monkeypatch)
+    second = [row(default_action='permit')] if change == 'permit' else [event('DEPLOYMENT_ID|0', op='DEL')]
+    run_passes(monkeypatch, common, managers, [
+        {'INTERFACE': INTERFACES, 'BGP_ALLOWED_PREFIXES': [row(default_action='deny')]},
+        {'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))], 'BGP_ALLOWED_PREFIXES': second},
+    ])
+    # the peer repeated deny from the record; the row drained after it sets the constants' permit
+    assert rule(frr) == DROP and rule(frr, 'V6') == DROP
+    assert common['directory'].get('LOCAL', 'allow_list_default_action', 'ALLOW_LIST_DEPLOYMENT_ID_0_V4') == 'permit'
+
+
+def test_two_policies_of_one_deployment_in_one_pass_end_with_the_last(monkeypatch):
+    common, frr, managers = allow_list_runner(monkeypatch, running=DROP)
+    run_passes(monkeypatch, common, managers, [{
+        'BGP_ALLOWED_PREFIXES': [row(default_action='deny'), row('DEPLOYMENT_ID|0|1010:2020')],
+    }])
+    # the second policy applies the constants' default although FRR already held it when it was drained
+    assert rule(frr) == DROP
+    assert common['directory'].get('LOCAL', 'allow_list_default_action', 'ALLOW_LIST_DEPLOYMENT_ID_0_V4') == 'permit'
+
+
+def test_delete_then_set_of_a_row_in_one_pass_leaves_the_default_rule_as_set(monkeypatch):
+    common, frr, managers = allow_list_runner(monkeypatch, running='no-export')
+    run_passes(monkeypatch, common, managers, [{
+        'BGP_ALLOWED_PREFIXES': [event('DEPLOYMENT_ID|0', op='DEL'), row(default_action='deny')],
+    }])
+    # the default rule follows the SET; the policy's other entries are compared with the running
+    # configuration alone, as before this series, and are not the subject of this test
+    assert rule(frr) == 'no-export'
+    assert common['directory'].get('LOCAL', 'allow_list_default_action', 'ALLOW_LIST_DEPLOYMENT_ID_0_V4') == 'deny'
+
+
+def test_unchanged_policy_after_a_peer_render_with_its_action_writes_nothing(monkeypatch):
+    common, frr, managers = allow_list_runner(monkeypatch)
+    run_passes(monkeypatch, common, managers, [
+        {'INTERFACE': INTERFACES, 'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))],
+         'BGP_ALLOWED_PREFIXES': [row(default_action='deny')]},
+        {'INTERFACE': [event('Ethernet4', {'NULL': 'NULL'}), event('Ethernet4|10.1.0.2/31', {'NULL': 'NULL'})],
+         'BGP_NEIGHBOR': [event('10.1.0.3', peer_data('10.1.0.2'))],
+         'BGP_ALLOWED_PREFIXES': [row(default_action='deny')]},
+    ])
+    assert rule(frr) == 'no-export'
+    # the second peer rendered the policy's own action before the unchanged row was drained: the row
+    # writes the rule again only when the pending value differs, so no peer group is restarted
+    assert frr.restarts == [[], []]
+
+
+@pytest.mark.parametrize('row_first', [True, False])
+def test_allow_list_rule_with_a_tsa_commit_between_the_peer_render_and_the_row(monkeypatch, row_first):
+    common, frr, managers = allow_list_runner(monkeypatch)
+    tables = {'INTERFACE': INTERFACES,
+              'BGP_ALLOWED_PREFIXES': [row(default_action='deny')],
+              'BGP_DEVICE_GLOBAL': [event('STATE', {'tsa_enabled': 'true'})]}
+    if not row_first:
+        tables = {k: tables[k] for k in ('INTERFACE', 'BGP_DEVICE_GLOBAL', 'BGP_ALLOWED_PREFIXES')}
+    run_passes(monkeypatch, common, managers, [
+        {'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))]},
+        tables,
+    ])
+    # the TSA commit flushes the deferred peer mid-pass; the rule ends with the row's action either way
+    assert 'neighbor 10.1.0.1 peer-group PEER_V4' in frr.config
+    assert rule(frr) == 'no-export' and rule(frr, 'V6') == 'no-export'
+
+
+@pytest.mark.parametrize('second_row', ['unchanged', 'changed'])
+def test_allow_list_rule_after_a_restart_of_bgpcfgd_alone(monkeypatch, second_row):
+    # life 1: a peer and a deny policy are committed, so FRR holds the peer groups and the rule
+    common, frr, managers = allow_list_runner(monkeypatch)
+    run_passes(monkeypatch, common, managers, [
+        {'INTERFACE': INTERFACES, 'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))],
+         'BGP_ALLOWED_PREFIXES': [row(default_action='deny')]},
+    ])
+    assert rule(frr) == 'no-export'
+    # life 2: fresh managers on the same FRR; a peer new to FRR is drained before the row
+    action = 'deny' if second_row == 'unchanged' else 'permit'
+    common, frr, managers = allow_list_runner(monkeypatch, frr=frr)
+    run_passes(monkeypatch, common, managers, [
+        {'INTERFACE': INTERFACES + [event('Ethernet4', {'NULL': 'NULL'}), event('Ethernet4|10.1.0.2/31', {'NULL': 'NULL'})],
+         'BGP_NEIGHBOR': [event('10.1.0.3', peer_data('10.1.0.2'))],
+         'BGP_ALLOWED_PREFIXES': [row(default_action=action)]},
+    ])
+    if second_row == 'unchanged':
+        # the record started from the rule FRR holds, so the render repeated it and nothing is written
+        assert rule(frr) == 'no-export'
+        assert frr.restarts[-1] == []
+    else:
+        # the rule FRR holds changes: the row writes it after the render and the peer groups re-evaluate
+        assert rule(frr) == DROP
+        assert frr.restarts[-1] == ['PEER_V4', 'PEER_V6']
+
+
+def test_a_policy_whose_write_frr_refused_is_restored_by_its_next_row(monkeypatch):
+    common, frr, managers = allow_list_runner(monkeypatch)
+    passes = [
+        {'INTERFACE': INTERFACES, 'BGP_NEIGHBOR': [event('10.1.0.1', peer_data('10.1.0.0'))],
+         'BGP_ALLOWED_PREFIXES': [row(default_action='deny')]},
+        {'BGP_ALLOWED_PREFIXES': [row(default_action='permit')]},
+        {'INTERFACE': [event('Ethernet4', {'NULL': 'NULL'}), event('Ethernet4|10.1.0.2/31', {'NULL': 'NULL'})],
+         'BGP_NEIGHBOR': [event('10.1.0.3', peer_data('10.1.0.2'))],
+         'BGP_ALLOWED_PREFIXES': [row(default_action='permit')]},
+    ]
+    committed = []
+    original_commit = common['cfg_mgr'].commit
+
+    def commit_refusing_the_second():
+        if len(committed) == 1:
+            frr.refuse_writes = 1
+        committed.append(True)
+        original_commit()  # returns False for the refused write; the Runner logs it and goes on
+        return True
+
+    common['cfg_mgr'].commit = commit_refusing_the_second
+    run_passes(monkeypatch, common, managers, passes)
+    # FRR refused the change to permit, so it kept deny while the record says permit; the new peer
+    # rendered permit before the row was drained, and the row still writes the rule and refreshes
+    # the peer groups, because the rule FRR holds differs from its action
+    assert rule(frr) == DROP and rule(frr, 'V6') == DROP
+    assert frr.restarts[-1] == ['PEER_V4', 'PEER_V6']
