@@ -164,6 +164,21 @@ def _find_gitmodules_for(abs_src: str) -> Optional[tuple]:
     return None
 
 
+def normalize_remote(url: str) -> str:
+    """A submodule URL without a trailing `/` or `.git`.
+
+    Only the literal suffix goes. `str.rstrip(".git")` strips any run
+    of the characters `.`, `g`, `i` and `t`, which spells sonic-gnmi
+    `sonic-gnm`, sonic-dash-api `sonic-dash-ap` and openconfig/gnoi
+    `gno`. Written without `str.removesuffix`, which the buster slave's
+    Python 3.7 does not have.
+    """
+    url = url.rstrip("/")
+    if url.endswith(".git"):
+        url = url[:-len(".git")]
+    return url.rstrip("/")
+
+
 def _lookup_submodule_url(gm: str, rel: str) -> Optional[str]:
     """Find the submodule.<x>.url whose path = rel inside the .gitmodules file."""
     url = run(["git", "config", "-f", gm, "--get",
@@ -200,7 +215,7 @@ def detect_submodule(src_path: str) -> Optional[dict]:
     commit = run(["git", "rev-parse", "HEAD"], cwd=abs_src)
     describe = run(["git", "describe", "--tags", "--always"], cwd=abs_src)
     return {
-        "url": url.rstrip(".git").rstrip("/"),
+        "url": normalize_remote(url),
         "commit": commit,
         "describe": describe,
     }
@@ -235,7 +250,7 @@ def detect_nested_submodules(src_path: str) -> list:
             u = re.search(r"^\s*url\s*=\s*(\S+)\s*$", block, re.M)
             if not u:
                 continue
-            url = u.group(1).rstrip(".git").rstrip("/")
+            url = normalize_remote(u.group(1))
             cur = os.path.dirname(gm)
             sub_abs = os.path.join(cur, path)
             commit = run(["git", "rev-parse", "HEAD"], cwd=sub_abs)
