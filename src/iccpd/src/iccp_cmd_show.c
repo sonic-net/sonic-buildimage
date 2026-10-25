@@ -36,6 +36,20 @@
 
 extern int local_if_l3_proto_enabled(const char* ifname);
 
+/* Grow a dump buffer.  Unlike a bare `buf = realloc(buf, size)', the old block
+ * is released when realloc() fails, so the caller can return without leaking
+ * it: the callers only ever free what they got through *buf, which they never
+ * set on the failure path. */
+static char *iccp_dump_buf_grow(char *buf, int size)
+{
+    char *new_buf = (char *)realloc(buf, size);
+
+    if (!new_buf)
+        free(buf);
+
+    return new_buf;
+}
+
 int iccp_mclag_config_dump(char * *buf,  int *num, int mclag_id)
 {
     struct mclagd_state state_info;
@@ -135,7 +149,7 @@ int iccp_mclag_config_dump(char * *buf,  int *num, int mclag_id)
         if ((mclag_num + 1) * sizeof(struct mclagd_state) > (state_buf_size - MCLAGD_REPLY_INFO_HDR))
         {
             state_buf_size += MCLAGDCTL_CMD_SIZE;
-            state_buf = (char*)realloc(state_buf, state_buf_size);
+            state_buf = iccp_dump_buf_grow(state_buf, state_buf_size);
             if (!state_buf)
                 return EXEC_TYPE_FAILED;
         }
@@ -200,7 +214,7 @@ int iccp_arp_dump(char * *buf, int *num, int mclag_id)
             if ((arp_num + 1) * sizeof(struct mclagd_arp_msg) > (arp_buf_size - MCLAGD_REPLY_INFO_HDR))
             {
                 arp_buf_size += MCLAGDCTL_CMD_SIZE;
-                arp_buf = (char*)realloc(arp_buf, arp_buf_size);
+                arp_buf = iccp_dump_buf_grow(arp_buf, arp_buf_size);
                 if (!arp_buf)
                     return EXEC_TYPE_FAILED;
             }
@@ -265,7 +279,7 @@ int iccp_ndisc_dump(char * *buf, int *num, int mclag_id)
             if ((ndisc_num + 1) * sizeof(struct mclagd_ndisc_msg) > (ndisc_buf_size - MCLAGD_REPLY_INFO_HDR))
             {
                 ndisc_buf_size += MCLAGDCTL_CMD_SIZE;
-                ndisc_buf = (char *)realloc(ndisc_buf, ndisc_buf_size);
+                ndisc_buf = iccp_dump_buf_grow(ndisc_buf, ndisc_buf_size);
                 if (!ndisc_buf)
                     return EXEC_TYPE_FAILED;
             }
@@ -332,7 +346,7 @@ int iccp_mac_dump(char * *buf, int *num, int mclag_id)
             if ((mac_num + 1) * sizeof(struct mclagd_mac_msg) > (mac_buf_size - MCLAGD_REPLY_INFO_HDR))
             {
                 mac_buf_size += MCLAGDCTL_CMD_SIZE;
-                mac_buf = (char*)realloc(mac_buf, mac_buf_size);
+                mac_buf = iccp_dump_buf_grow(mac_buf, mac_buf_size);
                 if (!mac_buf)
                     return EXEC_TYPE_FAILED;
             }
@@ -484,7 +498,7 @@ int iccp_local_if_dump(char * *buf,  int *num, int mclag_id)
             if ((lif_num + 1) * sizeof(struct mclagd_local_if) > (lif_buf_size - MCLAGD_REPLY_INFO_HDR))
             {
                 lif_buf_size += MCLAGDCTL_CMD_SIZE;
-                lif_buf = (char*)realloc(lif_buf, lif_buf_size);
+                lif_buf = iccp_dump_buf_grow(lif_buf, lif_buf_size);
                 if (!lif_buf)
                     return EXEC_TYPE_FAILED;
             }
@@ -593,7 +607,7 @@ int iccp_local_if_dump(char * *buf,  int *num, int mclag_id)
             if ((lif_num + 1) * sizeof(struct mclagd_local_if) > (lif_buf_size - MCLAGD_REPLY_INFO_HDR))
             {
                 lif_buf_size += MCLAGDCTL_CMD_SIZE;
-                lif_buf = (char*)realloc(lif_buf, lif_buf_size);
+                lif_buf = iccp_dump_buf_grow(lif_buf, lif_buf_size);
                 if (!lif_buf)
                     return EXEC_TYPE_FAILED;
             }
@@ -677,7 +691,7 @@ int iccp_peer_if_dump(char * *buf, int *num, int mclag_id)
             if ((pif_num + 1) * sizeof(struct mclagd_peer_if) > (pif_buf_size - MCLAGD_REPLY_INFO_HDR))
             {
                 pif_buf_size += MCLAGDCTL_CMD_SIZE;
-                pif_buf = (char*)realloc(pif_buf, pif_buf_size);
+                pif_buf = iccp_dump_buf_grow(pif_buf, pif_buf_size);
                 if (!pif_buf)
                     return EXEC_TYPE_FAILED;
             }
@@ -801,7 +815,7 @@ int iccp_unique_ip_if_dump(char **buf, int *num, int mclag_id)
         if ((lif_num + 1) * sizeof(struct mclagd_unique_ip_if) > (lif_buf_size - MCLAGD_REPLY_INFO_HDR))
         {
             lif_buf_size += MCLAGDCTL_CMD_SIZE;
-            lif_buf = (char*)realloc(lif_buf, lif_buf_size);
+            lif_buf = iccp_dump_buf_grow(lif_buf, lif_buf_size);
             if (!lif_buf)
                 return EXEC_TYPE_FAILED;
         }
