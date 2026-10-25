@@ -455,12 +455,12 @@ class StartupTest(unittest.TestCase):
             time.sleep(0.02)
         self.fail('selected socket never granted reader access')
 
-    def start_socket_server(self, path, *, enforce):
+    def start_socket_server(self, path, *, enforce, port=0):
         identity = pwd.getpwnam('redis')
         path.parent.mkdir(exist_ok=True)
         path.parent.chmod(0o755)
         os.chown(path.parent, identity.pw_uid, identity.pw_gid)
-        command = ['/usr/bin/redis-server', '--port', '0', '--unixsocket', str(path),
+        command = ['/usr/bin/redis-server', '--port', str(port), '--bind', '127.0.0.1', '--unixsocket', str(path),
                    '--unixsocketperm', '760', '--save', '', '--appendonly', 'no',
                    '--pidfile', str(path.with_suffix('.pid'))]
         if enforce:
@@ -515,6 +515,60 @@ class StartupTest(unittest.TestCase):
         # The existing host launcher chmod must preserve the named reader entry.
         selected.chmod(0o760)
         self.assertEqual(self.as_reader(selected, 'PING').returncode, 0)
+
+    def test_mixed_mode_tcp_compatibility_subscriptions_and_selected_restart(self):
+        with socket.socket() as reservation:
+            reservation.bind(('127.0.0.1', 0))
+            port = reservation.getsockname()[1]
+        database = self.database()
+        database['INSTANCES']['redis_bmp']['port'] = port
+        (startup.CONFIG / 'database_config.json').write_text(json.dumps(database))
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
+        self.prepare()
+        policy = json.loads((self.runtime / 'local.json').read_text())
+        self.configured(database, self.additional(), policy)
+        self.assertEqual(database['INSTANCES']['redis']['port'], 0)
+        self.assertEqual(database['INSTANCES']['redis_bmp']['port'], port)
+        selected, legacy = self.root / 'sockets/redis.sock', self.root / 'sockets/redis_bmp.sock'
+        process = self.start_socket_server(selected, enforce=True)
+        self.start_socket_server(legacy, enforce=False, port=port)
+        secret = self.runtime / 'local-system/writer.secret'
+        inode, password = secret.stat().st_ino, secret.read_bytes()
+
+        def subscription_check():
+            writer, subscriber = Redis(selected), Redis(selected)
+            try:
+                self.assertEqual(writer.command('AUTH', startup.USERNAME, password), b'OK')
+                self.assertEqual(writer.command('CONFIG', 'GET', 'port'), [b'port', b'0'])
+                self.assertEqual(writer.command('SET', 'test:key', 'before'), b'OK')
+                self.assertEqual(subscriber.command('SUBSCRIBE', 'test:channel'),
+                                 [b'subscribe', b'test:channel', 1])
+                self.assertEqual(writer.command('PUBLISH', 'test:channel', 'value'), 1)
+                self.assertEqual(subscriber.reply(), [b'message', b'test:channel', b'value'])
+            finally:
+                writer.close()
+                subscriber.close()
+            self.assertEqual(self.as_reader(selected, 'GET', 'test:key').stdout.strip(), 'before')
+            denied = self.as_reader(selected, 'SET', 'test:key', 'bad')
+            self.assertNotEqual(denied.returncode, 0)
+            self.assertIn('NOPERM', denied.stdout + denied.stderr)
+
+        def ordinary():
+            os.setgroups([])
+            os.setgid(65534)
+            os.setuid(65534)
+
+        legacy_write = subprocess.run(['redis-cli', '-h', '127.0.0.1', '-p', str(port),
+                                       '-e', 'SET', 'test:legacy', 'allowed'],
+                                      preexec_fn=ordinary, text=True, capture_output=True)
+        self.assertEqual((legacy_write.returncode, legacy_write.stdout.strip()), (0, 'OK'))
+        subscription_check()
+        process.terminate()
+        self.assertEqual(process.wait(timeout=5), 0)
+        self.start_socket_server(selected, enforce=True)
+        self.prepare()
+        self.assertEqual(secret.stat().st_ino, inode)
+        subscription_check()
 
     def test_reader_access_returns_after_redis_process_recreates_socket(self):
         self.select(redis='enforce')

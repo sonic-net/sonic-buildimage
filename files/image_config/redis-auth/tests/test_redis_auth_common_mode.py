@@ -119,3 +119,14 @@ def test_policy_capacity_is_checked_before_password_creation(boot):
     with pytest.raises(startup.CredentialStateError, match='reader capacity'):
         startup.prepare_selected(intent_path=intent, runtime=runtime)
     assert not runtime.exists()
+
+
+def test_remote_reference_cannot_become_a_local_server_policy(boot):
+    intent, runtime = boot
+    instances = startup.configured_instances()
+    instances['remote_redis'] = instances.pop('redis_bmp')
+    (startup.CONFIG / 'database_config.json').write_text(json.dumps({'INSTANCES': instances}))
+    intent.write_text('{"mode":"enforce"}')
+    with pytest.raises(startup.CredentialStateError):
+        startup.prepare_selected(intent_path=intent, runtime=runtime)
+    assert not runtime.exists()

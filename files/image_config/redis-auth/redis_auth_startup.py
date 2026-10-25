@@ -88,9 +88,9 @@ def configured_instances():
     if not instances:
         raise CredentialStateError('no configured local Redis processes')
     sockets = set()
-    for instance in instances.values():
+    for name, instance in instances.items():
         path = instance['unix_socket_path']
-        if (instance['hostname'] != '127.0.0.1' or instance.get('database_type')
+        if (name == 'remote_redis' or instance['hostname'] != '127.0.0.1' or instance.get('database_type')
                 or instance.get('bmc_link_ip') or not isinstance(path, str)
                 or Path(path).parent != Path('/var/run/redis') or '..' in Path(path).parts
                 or path in sockets or type(instance['port']) is not int or not 0 <= instance['port'] <= 65535):
@@ -225,10 +225,15 @@ def main():
             print('enforce' if runtime_required() else 'legacy')
             return 0
         selected = prepare_selected()
-    except (CredentialStateError, OSError, ValueError, KeyError):
+    except (CredentialStateError, OSError, ValueError, KeyError, TypeError):
         print('redis-auth-startup: invalid activation or runtime state', file=sys.stderr)
         return 1
-    print('redis-auth-startup: ' + (','.join(selected) if selected else 'legacy'))
+    message = 'legacy'
+    if selected:
+        inventory = json.loads(read_setting(RUNTIME / 'server/instances.json'))
+        exceptions = sorted(name for name, item in inventory.items() if not item['protected'])
+        message = 'protected=' + ','.join(selected) + ' unprotected_tcp=' + (','.join(exceptions) or 'none')
+    print('redis-auth-startup: ' + message)
     return 0
 
 
