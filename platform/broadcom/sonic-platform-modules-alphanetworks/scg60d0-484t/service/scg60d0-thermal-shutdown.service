@@ -1,0 +1,16 @@
+[Unit]
+Description=Alphanetworks SCG60D0-320F Platform Thermal Shutdown service
+Before=pmon.service
+After=pddf-platform-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/alphanetworks_scg60d0_thermal_shutdown.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,70 @@
+{
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP28": {"1":false, "0":true }
+           }
+        }
+    },
+
+    "PSU":
+    {
+        "psu_present":
+        {
+            "bmc":
+            {
+                "valmap": { "4":true, "0":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "bmc":
+            {
+                "valmap": { "2": true, "0":false }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "i2c":
+            {
+                "valmap": { "F2B":"INTAKE", "B2F":"EXHAUST" }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED":"18000"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"1":"EXHAUST", "0":"INTAKE"}
+            }
+        },
+
+        "present":
+        {
+            "bmc":
+            {
+                "valmap": {"1":false, "0":true}
+            }
+        },
+
+        "fan_master_led_color":
+        {
+            "colmap": {"green":"green", "red":"amber"}
+        },
+
+        "duty_cycle_to_pwm": "lambda dc: dc",
+
+        "pwm_to_duty_cycle": "lambda pwm: pwm"
+    }
+
+}
