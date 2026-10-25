@@ -922,7 +922,7 @@ cpld_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (status)
 		goto exit_free;
 
-	data->hwmon_dev = hwmon_device_register(&client->dev);
+	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "inv_cpld", NULL, NULL, NULL);
 	if (IS_ERR(data->hwmon_dev)) {
 		status = PTR_ERR(data->hwmon_dev);
 		goto exit_remove;
