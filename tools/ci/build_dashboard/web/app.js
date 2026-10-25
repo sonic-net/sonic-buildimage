@@ -36,6 +36,13 @@ const BREAKDOWN_REASONS = {
   "incomplete-log": "The job log does not contain all boundaries needed for a complete breakdown.",
   "invalid-timing": "The log timing boundaries could not be verified.",
 };
+const IMAGE_PHASE_LABELS = {assembly: "Assembly", "boot-checks": "Boot checks", compression: "Compression"};
+const IMAGE_CONTEXT_LABELS = {recipe: "Recipe", filesystem: "Filesystem and payload", installer: "ONIE installer", bios: "BIOS", uefi: "UEFI", "4-asic": "4 ASIC", "6-asic": "6 ASIC"};
+const IMAGE_PHASE_REASONS = {
+  "not-recorded": "Inner phases were not measured in this run. The recipe duration above does not provide separate assembly, boot checks or compression timings.",
+  "invalid-timing": "The inner phase measurements could not be verified. The outer recipe timing is still available above.",
+  "incomplete-timing": "The inner phase measurements are incomplete. The outer recipe timing is still available above.",
+};
 const state = {data: null, selectedRun: null, selectedJob: null, loading: false};
 
 function seconds(value) { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null; }
@@ -85,6 +92,36 @@ function timingSpan(item, total) {
     item.offset_seconds <= Number.MAX_SAFE_INTEGER && item.duration_seconds <= Number.MAX_SAFE_INTEGER &&
     item.offset_seconds + item.duration_seconds <= total + .01;
 }
+function normalizePhaseBreakdown(value, parentSeconds, outcome) {
+  const unavailable = reason => ({status: "unavailable", reason, message: IMAGE_PHASE_REASONS[reason]});
+  if (value === undefined) return unavailable("not-recorded");
+  if (!value || value.version !== 1 || value.source !== "build-phase-markers") return unavailable("invalid-timing");
+  if (value.status === "unavailable") return unavailable(typeof value.reason === "string" && Object.hasOwn(IMAGE_PHASE_REASONS, value.reason) ? value.reason : "invalid-timing");
+  if (value.status !== "available" || value.reason !== null || outcome !== "finished" ||
+      seconds(parentSeconds) === null || parentSeconds > Number.MAX_SAFE_INTEGER || seconds(value.duration_seconds) === null ||
+      value.duration_seconds > Number.MAX_SAFE_INTEGER || Math.abs(value.duration_seconds - parentSeconds) > 2 ||
+      !Array.isArray(value.segments) || value.segments.length > 64) return unavailable("invalid-timing");
+  if (!value.segments.length) return unavailable("incomplete-timing");
+  const segments = [], identities = new Set(), totals = {assembly: null, "boot-checks": null, compression: null};
+  let end = 0, sum = 0;
+  for (const segment of value.segments) {
+    if (!segment || typeof segment.phase !== "string" || !Object.hasOwn(IMAGE_PHASE_LABELS, segment.phase) ||
+        typeof segment.context !== "string" || !Object.hasOwn(IMAGE_CONTEXT_LABELS, segment.context) ||
+        seconds(segment.offset_seconds) === null || seconds(segment.duration_seconds) === null ||
+        segment.offset_seconds > Number.MAX_SAFE_INTEGER || segment.duration_seconds > Number.MAX_SAFE_INTEGER) return unavailable("invalid-timing");
+    const identity = JSON.stringify([segment.phase, segment.context, segment.offset_seconds, segment.duration_seconds]);
+    if (identities.has(identity)) return unavailable("invalid-timing");
+    identities.add(identity);
+    if (Math.abs(segment.offset_seconds - end) > .00001) return unavailable("incomplete-timing");
+    end = segment.offset_seconds + segment.duration_seconds;
+    if (end > value.duration_seconds + .00001) return unavailable("incomplete-timing");
+    sum += segment.duration_seconds;
+    totals[segment.phase] = (totals[segment.phase] ?? 0) + segment.duration_seconds;
+    segments.push({phase: segment.phase, context: segment.context, offset_seconds: segment.offset_seconds, duration_seconds: segment.duration_seconds});
+  }
+  if (Math.abs(end - value.duration_seconds) > .00001 || Math.abs(sum - value.duration_seconds) > .00001) return unavailable("incomplete-timing");
+  return {status: "available", duration_seconds: value.duration_seconds, totals, segments};
+}
 function normalizeBreakdown(value) {
   // A missing optional field preserves historical snapshots. Malformed optional data never breaks the dashboard.
   if (value === undefined) return null;
@@ -109,7 +146,9 @@ function normalizeBreakdown(value) {
       const taskIdentity = timingIdentity(task?.id, TASK_LABELS);
       if (!taskIdentity || taskIds.has(task.id) || !timingSpan(task, section.duration_seconds) || !["finished", "cached"].includes(task.outcome)) return invalid();
       taskIds.add(task.id);
-      tasks.push({...taskIdentity, offset_seconds: task.offset_seconds, duration_seconds: task.duration_seconds, outcome: task.outcome});
+      const normalized = {...taskIdentity, offset_seconds: task.offset_seconds, duration_seconds: task.duration_seconds, outcome: task.outcome};
+      if (taskIdentity.kind === "final-image") normalized.phase_breakdown = normalizePhaseBreakdown(task.phase_breakdown, task.duration_seconds, task.outcome);
+      tasks.push(normalized);
     }
     tasks.sort((a, b) => a.offset_seconds - b.offset_seconds);
     sections.push({...identity, offset_seconds: section.offset_seconds, duration_seconds: section.duration_seconds, tasks});
@@ -307,13 +346,38 @@ function renderRuns() {
   if (!rows.length) { const row = el("tr"), cell = el("td", "empty", "No workflow runs match these filters."); cell.colSpan = 5; row.append(cell); byId("runs-body").append(row); }
 }
 
+function renderPhaseBreakdown(phases) {
+  const body = el("div", "phase-body");
+  if (phases.status !== "available") {
+    body.append(el("p", "unmeasured-note", phases.message));
+    return body;
+  }
+  body.append(el("p", "breakdown-note", `Measured phase total: ${duration(phases.duration_seconds)}. These markers use the build process clock; the recipe duration above uses streamed log timestamps. Small differences are preserved, not rescaled.`));
+  const totals = el("dl", "phase-totals");
+  for (const [phase, label] of Object.entries(IMAGE_PHASE_LABELS)) {
+    const item = el("div", "phase-total");
+    item.append(el("dt", "", label), el("dd", "", phases.totals[phase] === null ? "No segment recorded" : duration(phases.totals[phase])));
+    totals.append(item);
+  }
+  body.append(totals, el("p", "breakdown-note", "Category totals combine repeated segments. The list below preserves their execution order, including each filesystem, payload or disk compression segment."));
+  const sequence = el("ol", "phase-segments");
+  for (const [index, segment] of phases.segments.entries()) {
+    const item = el("li", "phase-segment"), row = el("div", "timing-row");
+    const name = el("span", "timing-name", `${index + 1}. ${IMAGE_PHASE_LABELS[segment.phase]} · ${IMAGE_CONTEXT_LABELS[segment.context]}`);
+    name.append(el("span", "timing-hint", `Starts at +${duration(segment.offset_seconds)} on the phase clock`));
+    row.append(name, el("span", "timing-duration", duration(segment.duration_seconds)));
+    item.append(row); sequence.append(item);
+  }
+  body.append(sequence);
+  return body;
+}
 function renderBreakdown(breakdown) {
   const box = el("div", "breakdown-body");
   if (breakdown.status !== "available") {
     box.append(el("p", "breakdown-note", `Breakdown unavailable. ${breakdown.reason} The recorded step duration is shown above.`));
     return box;
   }
-  box.append(el("p", "breakdown-note", `Measured from job log timestamps · ${duration(breakdown.duration_seconds)}. These sections run sequentially and include setup, dependencies and cleanup. Log timestamps may differ slightly from the rounded step duration.`));
+  box.append(el("p", "breakdown-note", `Measured from job log timestamps · ${duration(breakdown.duration_seconds)}. These sections run sequentially in top-level Make request order; each includes its prerequisites, setup and cleanup. Log timestamps may differ slightly from the rounded step duration.`));
   const list = el("ol", "breakdown-sections");
   for (const section of breakdown.sections) {
     const item = el("li", "breakdown-section");
@@ -327,17 +391,21 @@ function renderBreakdown(breakdown) {
       details.append(row, el("p", "breakdown-note", "Task spans can overlap; do not add their durations. Only recognized task spans are shown; remaining section time is not assigned to tasks. Bars share the section's time scale."));
       const tasks = el("ol", "breakdown-tasks");
       for (const task of section.tasks) {
-        const taskItem = el("li", "breakdown-task"), taskRow = el("div", "timing-row");
+        const hasPhases = task.kind === "final-image";
+        const taskItem = el("li", "breakdown-task"), taskRow = el(hasPhases ? "summary" : "div", "timing-row");
         const taskName = el("span", "timing-name", task.label);
         taskName.append(el("span", "timing-hint", `Starts at +${duration(task.offset_seconds)} in section · log: ${task.outcome}`));
+        if (hasPhases) taskName.append(el("span", "timing-hint", task.phase_breakdown.status === "available" ? "Assembly, boot checks and compression" : task.phase_breakdown.reason === "not-recorded" ? "Inner phases not measured in this run" : "Inner phase breakdown unavailable"));
         taskRow.append(taskName, el("span", "timing-duration", duration(task.duration_seconds)));
         const track = el("div", "task-track"), span = el("span", "task-span");
         track.setAttribute("aria-hidden", "true");
         span.style.marginLeft = `${section.duration_seconds ? Math.min(100, task.offset_seconds / section.duration_seconds * 100) : 0}%`;
         span.style.width = `${section.duration_seconds ? Math.min(100, task.duration_seconds / section.duration_seconds * 100) : 0}%`;
         track.append(span);
-        taskItem.append(taskRow, track);
-        if (task.kind === "final-image") taskItem.append(el("p", "unmeasured-note", "Inner phase timings are unavailable: ONIE, BIOS, UEFI and compression are not timed separately in this log."));
+        if (hasPhases) {
+          const details = el("details", "phase-breakdown");
+          taskRow.append(track); details.append(taskRow, renderPhaseBreakdown(task.phase_breakdown)); taskItem.append(details);
+        } else taskItem.append(taskRow, track);
         tasks.append(taskItem);
       }
       details.append(tasks); item.append(details);
@@ -449,4 +517,4 @@ if (typeof document !== "undefined") {
   refresh();
   setInterval(() => { if (!document.hidden) refresh(); }, 300000);
 }
-if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured, normalizeBreakdown, renderStep};
+if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured, normalizeBreakdown, normalizePhaseBreakdown, renderStep};

@@ -5,11 +5,21 @@ on:
     paths:
       - '.github/workflows/build-dashboard.yml'
       - 'tools/ci/build_dashboard/**'
+      - 'slave.mk'
+      - 'build_debian.sh'
+      - 'build_image.sh'
+      - 'scripts/build_kvm_image.sh'
+      - 'scripts/image_timing.py'
   push:
     branches: [master]
     paths:
       - '.github/workflows/build-dashboard.yml'
       - 'tools/ci/build_dashboard/**'
+      - 'slave.mk'
+      - 'build_debian.sh'
+      - 'build_image.sh'
+      - 'scripts/build_kvm_image.sh'
+      - 'scripts/image_timing.py'
   workflow_run:
     workflows: ['Bazel SWSS OCI', 'Bazel OCI', 'Bazel']
     types: [completed]

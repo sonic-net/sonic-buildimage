@@ -1690,6 +1690,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         scripts/sbom_parse_lockfiles.py \
         scripts/sbom_extract_vex_from_patches.py \
         build_image.sh \
+        $$(if $$(filter sonic-vs.img.gz,$$*),scripts/image_timing.py scripts/build_kvm_image.sh) \
         $$(addsuffix -install,$$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_DEPENDS))) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_INSTALLS)) \
@@ -1750,6 +1751,13 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(LINUX_KBUILD)-install)
 
 	$(HEADER)
+	# The receipt is private; only the completed summary bypasses the target log.
+	unset SONIC_IMAGE_TIMING_FILE SONIC_IMAGE_TIMING_CONTEXT
+	if [ "$@" = "target/sonic-vs.img.gz" ]; then
+		SONIC_IMAGE_TIMING_FILE=$$(python3 ./scripts/image_timing.py begin 2>/dev/null) || SONIC_IMAGE_TIMING_FILE=
+		export SONIC_IMAGE_TIMING_FILE
+		trap 'python3 ./scripts/image_timing.py discard 2>/dev/null || true' EXIT
+	fi
 	# Pass initramfs and linux kernel explicitly. They are used for all platforms
 	export debs_path="$(IMAGE_DISTRO_DEBS_PATH)"
 	export files_path="$(FILES_PATH)"
@@ -2036,6 +2044,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 
 	chmod a+x $@
+	# Reached only on success, after cleanup; relay outside the target log.
+	if [ -n "$${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+		python3 ./scripts/image_timing.py end 2>/dev/null || true
+	fi
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS))

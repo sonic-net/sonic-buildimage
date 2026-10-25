@@ -821,6 +821,52 @@ summary.timing-row:hover {
   margin: 9px 0 0;
 }
 
+.phase-breakdown>summary>.task-track {
+  grid-column: 2/-1;
+  width: 100%;
+}
+
+.phase-body {
+  padding: 0 0 3px 14px;
+  border-left: 2px solid #b4d8d4;
+}
+
+.phase-totals {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.phase-total {
+  padding: 10px;
+  background: white;
+  border: 1px solid #dbe7e9;
+  border-radius: 5px;
+  min-width: 0;
+}
+
+.phase-total dt {
+  color: var(--muted);
+  font-size: .75rem;
+  overflow-wrap: anywhere;
+}
+
+.phase-total dd {
+  margin: 6px 0 0;
+  color: #28485b;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps .phase-segments {
+  margin: 0;
+}
+
+.phase-segment {
+  border-top: 1px solid #dbe7e9;
+}
+
 .source-warning {
   font-size: .8rem;
   color: #7a612a;
@@ -1027,6 +1073,22 @@ footer a {
   .breakdown-body {
     margin-left: 0;
     padding-left: 9px;
+  }
+  .phase-body {
+    padding-left: 8px;
+  }
+  .phase-totals {
+    grid-template-columns: 1fr;
+  }
+  .phase-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .phase-total dd {
+    margin: 0;
+    text-align: right;
   }
   .stage-legend {
     grid-template-columns: repeat(2,1fr);

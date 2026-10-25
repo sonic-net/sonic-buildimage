@@ -125,6 +125,9 @@ echo "to kill kvm:  sudo kill $kvm_pid"
 
 kill $kvm_pid
 
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch boot-checks "${SONIC_IMAGE_TIMING_CONTEXT:-}" 2>/dev/null || true
+fi
 echo "Booting up SONiC"
 
 /usr/bin/kvm -m $MEM \
@@ -157,4 +160,7 @@ set -x
 
 kill $kvm_pid
 
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch assembly "${SONIC_IMAGE_TIMING_CONTEXT:-}" 2>/dev/null || true
+fi
 exit 0

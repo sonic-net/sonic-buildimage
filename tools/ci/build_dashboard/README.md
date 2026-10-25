@@ -33,7 +33,10 @@ environment variables, machine names, and build artifacts are not published.
 
 Open **Step timings**, then expand the Make VS image-build step marked
 **Measured breakdown**. Each section covers one sequential Make target, including its
-setup, prerequisite checks and cleanup. Expand a section to see measured tasks
+setup, prerequisite checks and cleanup. Sections follow the actual top-level
+Make requests: the VS-image request includes its container dependencies before
+the final image recipe; later container rows are additional explicit requests.
+Expand a section to see measured tasks
 inside it. Those tasks may run concurrently: their durations must not be added
 to the section total. The task timeline shows that overlap.
 
@@ -44,11 +47,31 @@ about 30m 13s for the VS image and dependencies, 4m 19s for Orchagent release,
 debug target and cleanup. These values are examples, not dashboard constants:
 the collector derives each attempt's measurements from its own log.
 
-The final image recipe is one measured task. Its internal image assembly,
-installation, boot validation and compression times are not inferred. Likewise,
-a Make `cached` marker does not establish a Bazel cache-hit rate. Repeated target
-invocations remain separate observations. Log timestamps have finer precision
-than Actions step timestamps, so their totals can differ slightly.
+Expand **Final VS image recipe** to see three measured categories on builds
+that contain the phase instrumentation:
+
+- **Image assembly:** preparation, remaining filesystem work, ONIE installer
+  creation, KVM disk preparation and installation, and finalization.
+- **Boot checks:** booting the installed BIOS/UEFI image and running the existing
+  installation checks. Installing the image belongs to assembly.
+- **Compression:** final filesystem and payload compression, and compression of
+  the BIOS/UEFI disk images.
+
+The categories can repeat: for example, BIOS assembly, boot checks and
+compression precede the UEFI equivalents. Category totals sum measured spans;
+the sequential phase timeline preserves their actual order. These measurements
+use a producer-side monotonic clock. They do not rescale to fit the surrounding
+GitHub log timestamps or assign unmeasured time to a category. Receipts that
+disagree with the containing recipe by more than two seconds are unavailable;
+the outer recipe duration remains visible.
+
+The historical example above has only the boundaries of its 18m 00s final
+recipe. Its internal phase times were not recorded, so the dashboard shows that
+limitation instead of estimating a split. Adding the instrumentation cannot
+recover those missing measurements; a subsequent image build supplies them.
+Likewise, a Make `cached` marker does not establish a Bazel cache-hit rate.
+Repeated target invocations remain separate observations. Log timestamps have
+finer precision than Actions step timestamps, so their totals can differ slightly.
 
 The collector reads at most 20 eligible missing job logs per refresh, newest
 first. Each download has a 32 MiB size limit and a 45-second deadline. It retains

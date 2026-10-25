@@ -7,6 +7,10 @@ unset PASSWORD
 ## Enable debug output for script
 set -x -e
 
+if [[ "${TARGET_MACHINE:-}" != vs || "${IMAGE_TYPE:-}" != kvm ]]; then
+    unset SONIC_IMAGE_TIMING_FILE SONIC_IMAGE_TIMING_CONTEXT
+fi
+
 ## Read ONIE image related config file
 
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
@@ -48,6 +52,17 @@ generate_kvm_image()
          NUM_ASIC=1
     fi
 
+    case "$NUM_ASIC:$BOOT_FIRMWARE" in
+        4:*) SONIC_IMAGE_TIMING_CONTEXT=4-asic ;;
+        6:*) SONIC_IMAGE_TIMING_CONTEXT=6-asic ;;
+        1:UEFI) SONIC_IMAGE_TIMING_CONTEXT=uefi ;;
+        *) SONIC_IMAGE_TIMING_CONTEXT=bios ;;
+    esac
+    export SONIC_IMAGE_TIMING_CONTEXT
+    if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+        python3 ./scripts/image_timing.py switch assembly "$SONIC_IMAGE_TIMING_CONTEXT" 2>/dev/null || true
+    fi
+
     echo "Build $NUM_ASIC-asic ${BOOT_FIRMWARE} KVM image"
     if [[ "$BOOT_FIRMWARE" == "UEFI" ]]; then
         KVM_IMAGE_DISK=${KVM_IMAGE%.img.gz}-uefi.img
@@ -74,7 +89,13 @@ generate_kvm_image()
         exit 1
     }
 
+    if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+        python3 ./scripts/image_timing.py switch compression "$SONIC_IMAGE_TIMING_CONTEXT" 2>/dev/null || true
+    fi
     pigz $KVM_IMAGE_DISK
+    if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+        python3 ./scripts/image_timing.py switch assembly recipe 2>/dev/null || true
+    fi
 
     [ -r $KVM_IMAGE_DISK.gz ] || {
         echo "Error : pigz $KVM_IMAGE_DISK failed!"
@@ -187,6 +208,9 @@ elif [ "$IMAGE_TYPE" = "raw" ]; then
 
 elif [ "$IMAGE_TYPE" = "kvm" ]; then
 
+    if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+        python3 ./scripts/image_timing.py switch assembly installer 2>/dev/null || true
+    fi
     generate_device_list "./installer/platforms_asic"
 
     generate_onie_installer_image

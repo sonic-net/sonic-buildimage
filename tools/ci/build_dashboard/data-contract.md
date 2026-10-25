@@ -53,6 +53,30 @@ does not execute a build or execute any content from a log.
     its containing section, `duration_seconds`, and `outcome` (`finished` or
     `cached`). Tasks can overlap and are not an additive partition of the
     section. Unobserved work inside a recipe is not synthesized.
+  - A final-image task may additionally contain `phase_breakdown`:
+    - `version`: `1`; `source`: `build-phase-markers`.
+    - `status`: `available` or `unavailable`; `reason`: `null`, `not-recorded`,
+      `invalid-timing`, or `incomplete-timing`.
+    - `duration_seconds`: the measured producer interval, or `null` when
+      unavailable.
+    - `segments`: at most 64 sequential, contiguous intervals, each with
+      `phase` (`assembly`, `boot-checks`, or `compression`), `context` (`recipe`,
+      `filesystem`, `installer`, `bios`, `uefi`, `4-asic`, or `6-asic`),
+      `offset_seconds` relative to the producer interval, and `duration_seconds`.
+      Labels are derived from these fixed identifiers. Segments partition the
+      producer interval; category totals aggregate repeated segments without
+      changing their timeline order.
+    The producer interval uses a monotonic clock. The containing task uses
+    GitHub log timestamps, so their durations can differ slightly; validation
+    permits an absolute difference of at most two seconds from the containing
+    interval and the receipt's elapsed log interval. It never rescales
+    measurements to force equality. A shorter producer interval does
+    not assign the remaining time to a phase. Missing historical measurements
+    and cache reuse do not supply zero-duration phase measurements.
+    Phase receipts are accepted only inside the matching active final-image
+    recipe, before its successful finish marker. Invalid or incomplete receipts
+    make that inner detail unavailable while preserving valid outer timings.
+    Previously retained tasks without this optional field remain supported.
   Timing values must be finite and nonnegative; child intervals must fit their
   parent. Identifiers and labels come from the parser's allowlist, never
   arbitrary log text. Unavailable detail is not a zero-duration build. The

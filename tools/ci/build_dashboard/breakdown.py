@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timedelta
+import json
 import math
 import re
 
@@ -15,6 +16,17 @@ SOURCE = "github-job-log"
 MAX_LOG_BYTES = 32 * 1024 * 1024
 MAX_SECTIONS = 32
 MAX_TASKS = 512
+MAX_PHASE_SEGMENTS = 64
+MAX_PHASE_JSON_BYTES = 16 * 1024
+# Producer durations use a monotonic clock; parent spans use streamed GitHub log
+# timestamps. Allow at most two seconds of overhead/ingestion difference and
+# preserve both measured totals unchanged.
+PHASE_CLOCK_TOLERANCE_SECONDS = 2
+PHASE_PARTITION_TOLERANCE_SECONDS = 0.00001
+IMAGE_PHASES = {"assembly", "boot-checks", "compression"}
+IMAGE_CONTEXTS = {"recipe", "filesystem", "installer", "bios", "uefi", "4-asic", "6-asic"}
+PHASE_REASONS = {"not-recorded", "invalid-timing", "incomplete-timing"}
+FINAL_IMAGE_TARGET = "target/sonic-vs.img.gz"
 REASONS = {
     "pending-collection", "step-not-successful", "logs-expired", "logs-too-large",
     "logs-temporarily-unavailable", "unsupported-log-format", "incomplete-log", "invalid-timing",
@@ -88,6 +100,98 @@ STAMP = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z) (.*)$")
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 OUTER = re.compile(r"\+\+\+ --- Making (\S{1,256}) --- \+\+\+\s*\Z")
 TARGET = re.compile(r"\[ (building|finished|cached) \] \[ (\S{1,256}) \]\s*\Z")
+IMAGE_PHASE_MARKER = re.compile(r"\[ image phases \] \[ (\S{1,256}) \] (.*)\Z")
+
+
+def phase_unavailable(reason):
+    if reason not in PHASE_REASONS:
+        raise ValueError("Unknown image phase failure")
+    return {"version": 1, "status": "unavailable", "reason": reason, "source": "build-phase-markers",
+            "duration_seconds": None, "segments": []}
+
+
+def phase_payload_error(value):
+    """Validate a complete producer partition without accepting display text."""
+    if (not isinstance(value, dict) or set(value) != {"version", "duration_seconds", "segments"}
+            or type(value["version"]) is not int or value["version"] != 1
+            or not finite_seconds(value["duration_seconds"]) or not isinstance(value["segments"], list)
+            or len(value["segments"]) > MAX_PHASE_SEGMENTS):
+        return "invalid-timing"
+    if not value["segments"]:
+        return "incomplete-timing"
+    cursor, seen = 0, set()
+    for segment in value["segments"]:
+        if (not isinstance(segment, dict) or set(segment) != {"phase", "context", "offset_seconds", "duration_seconds"}
+                or not isinstance(segment["phase"], str) or segment["phase"] not in IMAGE_PHASES
+                or not isinstance(segment["context"], str) or segment["context"] not in IMAGE_CONTEXTS
+                or not finite_seconds(segment["offset_seconds"]) or not finite_seconds(segment["duration_seconds"])):
+            return "invalid-timing"
+        key = (segment["phase"], segment["context"], segment["offset_seconds"], segment["duration_seconds"])
+        if key in seen:
+            return "invalid-timing"
+        seen.add(key)
+        if abs(segment["offset_seconds"] - cursor) > PHASE_PARTITION_TOLERANCE_SECONDS:
+            return "incomplete-timing"
+        cursor = segment["offset_seconds"] + segment["duration_seconds"]
+    total = math.fsum(segment["duration_seconds"] for segment in value["segments"])
+    if (abs(cursor - value["duration_seconds"]) > PHASE_PARTITION_TOLERANCE_SECONDS
+            or abs(total - value["duration_seconds"]) > PHASE_PARTITION_TOLERANCE_SECONDS):
+        return "incomplete-timing"
+    return None
+
+
+def unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON field")
+        result[key] = value
+    return result
+
+
+def reject_json_constant(_):
+    raise ValueError("Non-finite JSON value")
+
+
+def read_phase_payload(text):
+    if len(text) > MAX_PHASE_JSON_BYTES or len(text.encode("utf-8")) > MAX_PHASE_JSON_BYTES:
+        return None, "invalid-timing"
+    try:
+        value = json.loads(text, object_pairs_hook=unique_json_object, parse_constant=reject_json_constant)
+    except (ValueError, RecursionError):
+        return None, "invalid-timing"
+    reason = phase_payload_error(value)
+    return (None, reason) if reason else (value, None)
+
+
+def complete_phase_breakdown(state, began, ended, outcome):
+    if outcome != "finished" or state is None or not state["seen"]:
+        return phase_unavailable("not-recorded")
+    if state["error"]:
+        return phase_unavailable(state["error"])
+    value, marker_time = state["value"], state["when"]
+    elapsed = (ended - began).total_seconds()
+    if (not began <= marker_time <= ended
+            or abs(elapsed - value["duration_seconds"]) > PHASE_CLOCK_TOLERANCE_SECONDS
+            or abs((marker_time - began).total_seconds() - value["duration_seconds"]) > PHASE_CLOCK_TOLERANCE_SECONDS):
+        return phase_unavailable("invalid-timing")
+    return {"version": 1, "status": "available", "reason": None, "source": "build-phase-markers",
+            "duration_seconds": value["duration_seconds"], "segments": value["segments"]}
+
+
+def valid_phase_breakdown(value, parent_duration, outcome):
+    if (not isinstance(value, dict)
+            or set(value) != {"version", "status", "reason", "source", "duration_seconds", "segments"}
+            or type(value["version"]) is not int or value["version"] != 1 or value["source"] != "build-phase-markers"):
+        return False
+    if value["status"] == "unavailable":
+        return (isinstance(value["reason"], str) and value["reason"] in PHASE_REASONS
+                and value["duration_seconds"] is None and value["segments"] == [])
+    if value["status"] != "available" or value["reason"] is not None or outcome != "finished":
+        return False
+    payload = {key: value[key] for key in ("version", "duration_seconds", "segments")}
+    return (phase_payload_error(payload) is None and finite_seconds(parent_duration)
+            and abs(value["duration_seconds"] - parent_duration) <= PHASE_CLOCK_TOLERANCE_SECONDS)
 
 
 def target_kind(target):
@@ -163,7 +267,26 @@ are observed recipe/cache intervals and are deliberately not summed.
     sections, active, counts = [], {}, Counter()
     current = None
     task_count = 0
+    active_phase = None
     for when, text in rows[first:last]:
+        # Phase marker failures affect only the optional inner measurement. A
+        # marker is associated with the exact currently building image target;
+        # stale markers outside that interval cannot be reused by later work.
+        if text.startswith("[ image phases ]"):
+            marker = IMAGE_PHASE_MARKER.fullmatch(text)
+            if active_phase is not None and FINAL_IMAGE_TARGET in active:
+                if marker and marker[1] == FINAL_IMAGE_TARGET:
+                    active_phase["seen"] += 1
+                    if active_phase["seen"] > 1 or when < previous or when > log_end:
+                        active_phase["error"] = "invalid-timing"
+                    else:
+                        value, error = read_phase_payload(marker[2])
+                        active_phase.update(value=value, error=error, when=when)
+                elif text.startswith(f"[ image phases ] [ {FINAL_IMAGE_TARGET} ]"):
+                    active_phase.update(seen=1, error="invalid-timing")
+            continue
+        if active_phase is not None and active_phase["when"] is not None and when < active_phase["when"]:
+            active_phase["error"] = "invalid-timing"
         if when < previous or when > log_end:
             return unavailable("invalid-timing")
         previous = when
@@ -201,6 +324,8 @@ are observed recipe/cache intervals and are deliberately not summed.
             if identity in active:
                 return unavailable("incomplete-log")
             active[identity] = when
+            if identity == FINAL_IMAGE_TARGET:
+                active_phase = {"seen": 0, "error": None, "value": None, "when": None}
         else:
             began = active.pop(identity, None)
             if began is None:
@@ -209,9 +334,13 @@ are observed recipe/cache intervals and are deliberately not summed.
             if task_count > MAX_TASKS:
                 return unavailable("unsupported-log-format")
             count = sum(task["id"].rsplit("-", 1)[0] == kind for task in current["tasks"]) + 1
-            current["tasks"].append({"id": f"{kind}-{count}", "label": TASK_LABELS[kind],
-                                     "offset_seconds": round((began - current["start"]).total_seconds(), 6),
-                                     "duration_seconds": round((when - began).total_seconds(), 6), "outcome": outcome})
+            task = {"id": f"{kind}-{count}", "label": TASK_LABELS[kind],
+                    "offset_seconds": round((began - current["start"]).total_seconds(), 6),
+                    "duration_seconds": round((when - began).total_seconds(), 6), "outcome": outcome}
+            if identity == FINAL_IMAGE_TARGET:
+                task["phase_breakdown"] = complete_phase_breakdown(active_phase, began, when, outcome)
+                active_phase = None
+            current["tasks"].append(task)
     if not current or active:
         return unavailable("incomplete-log")
     if not any(task["id"].startswith("final-image-") for section in sections for task in section["tasks"]):
@@ -265,13 +394,17 @@ def valid(value):
         if total_tasks > MAX_TASKS:
             return False
         for task in section["tasks"]:
-            if not isinstance(task, dict) or set(task) != {"id", "label", "offset_seconds", "duration_seconds", "outcome"}:
+            required = {"id", "label", "offset_seconds", "duration_seconds", "outcome"}
+            if not isinstance(task, dict) or set(task) - {"phase_breakdown"} != required:
                 return False
             kind = known_identity(task["id"], TASK_LABELS)
             if (not kind or task["id"] in task_ids or task["label"] != TASK_LABELS[kind]
                     or task["outcome"] not in ("finished", "cached") or not finite_seconds(task["offset_seconds"])
                     or not finite_seconds(task["duration_seconds"]) or task["offset_seconds"] < previous
                     or task["offset_seconds"] + task["duration_seconds"] > section["duration_seconds"] + 0.00001):
+                return False
+            if "phase_breakdown" in task and (kind != "final-image" or not valid_phase_breakdown(
+                    task["phase_breakdown"], task["duration_seconds"], task["outcome"])):
                 return False
             task_ids.add(task["id"])
             previous = task["offset_seconds"]

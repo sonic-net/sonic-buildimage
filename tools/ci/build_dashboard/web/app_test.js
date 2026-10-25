@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const {duration, measured, safeGithubUrl, validateSnapshot, normalizeBreakdown, renderStep} = require("./app.js");
+const {duration, measured, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep} = require("./app.js");
 
 test("unmeasured and invalid durations never look like fast builds", () => {
   for (const value of [null, undefined, "12", -1, NaN, Infinity]) assert.equal(duration(value), "—");
@@ -153,12 +153,12 @@ test("nested disclosures use safe labels and mark overlapping and unmeasured wor
   source.sections[0].tasks[0].label = "raw untrusted log";
   const row = renderStep(stepWith(source));
   const disclosures = descendants(row, node => node.tagName === "details");
-  assert.equal(disclosures.length, 3, "one step disclosure and two section disclosures");
+  assert.equal(disclosures.length, 4, "one step, two section, and one final-image disclosure");
   for (const disclosure of disclosures) assert.equal(disclosure.children[0].tagName, "summary", "native disclosure supports keyboard and expanded state");
   assert.match(row.textContent, /sections run sequentially/);
   assert.match(row.textContent, /Task spans can overlap; do not add their durations/);
-  assert.match(row.textContent, /Inner phase timings are unavailable/);
-  assert.match(row.textContent, /ONIE, BIOS, UEFI and compression/);
+  assert.match(row.textContent, /Inner phases were not measured in this run/);
+  assert.match(row.textContent, /does not provide separate assembly, boot checks or compression timings/);
   assert.doesNotMatch(row.textContent, /<img|raw untrusted log|cache.hit ratio/i);
   const spans = descendants(row, node => node.className === "task-span");
   assert.equal(spans[0].style.marginLeft, "0%");
@@ -177,4 +177,158 @@ test("a section without measured child tasks is a readable row, not an empty dis
   const row = renderStep(stepWith(source));
   assert.equal(descendants(row, node => node.tagName === "details").length, 1);
   assert.match(row.textContent, /no measured task detail/);
+}));
+
+function examplePhases() {
+  let offset = 0;
+  const segments = [
+    ["assembly", "recipe", 5], ["compression", "filesystem", 2],
+    ["assembly", "installer", 3], ["compression", "installer", 1],
+    ["boot-checks", "bios", 7], ["compression", "bios", 2],
+    ["boot-checks", "uefi", 7], ["compression", "uefi", 2], ["assembly", "recipe", 1],
+  ].map(([phase, context, duration_seconds]) => {
+    const segment = {phase, context, offset_seconds: offset, duration_seconds};
+    offset += duration_seconds;
+    return segment;
+  });
+  return {version: 1, status: "available", reason: null, source: "build-phase-markers", duration_seconds: offset, segments};
+}
+function breakdownWithPhases(phases, outcome = "finished") {
+  const outer = exampleBreakdown();
+  const final = outer.sections[0].tasks.find(task => task.id === "final-image-1");
+  final.phase_breakdown = phases;
+  final.outcome = outcome;
+  return outer;
+}
+
+test("phase totals combine disjoint occurrences without merging their execution order", () => {
+  const source = examplePhases(), before = structuredClone(source);
+  const parsed = normalizePhaseBreakdown(source, 30, "finished");
+  assert.equal(parsed.status, "available");
+  assert.deepEqual(parsed.totals, {assembly: 9, "boot-checks": 14, compression: 7});
+  assert.deepEqual(parsed.segments, source.segments);
+  assert.equal(parsed.segments.length, 9);
+  assert.deepEqual(source, before);
+  const outer = normalizeBreakdown(breakdownWithPhases(source));
+  assert.equal(outer.status, "available");
+  assert.equal(outer.duration_seconds, 100);
+  assert.equal(outer.sections[0].tasks.length, 3);
+  assert.equal(outer.sections[0].tasks[2].duration_seconds, 30);
+  assert.equal(outer.sections[0].tasks[2].phase_breakdown.duration_seconds, 30);
+});
+
+test("phase clocks tolerate up to two seconds without changing parent or segment measurements", () => {
+  for (const parent of [28, 30, 32]) {
+    const parsed = normalizePhaseBreakdown(examplePhases(), parent, "finished");
+    assert.equal(parsed.status, "available");
+    assert.equal(parsed.duration_seconds, 30);
+    assert.equal(parsed.segments[8].offset_seconds, 29);
+    assert.equal(parsed.segments[8].duration_seconds, 1);
+  }
+  for (const parent of [27.999, 32.001, null, "30", Infinity, NaN, Number.MAX_VALUE]) assert.equal(normalizePhaseBreakdown(examplePhases(), parent, "finished").status, "unavailable");
+  assert.equal(normalizePhaseBreakdown(examplePhases(), 300, "finished").reason, "invalid-timing", "an internally complete but too-short summary cannot represent the whole recipe");
+});
+
+test("missing phase categories are not manufactured zeroes, but measured zero is retained", () => {
+  const value = examplePhases();
+  value.duration_seconds = 0;
+  value.segments = [{phase: "assembly", context: "recipe", offset_seconds: 0, duration_seconds: 0}];
+  const parsed = normalizePhaseBreakdown(value, 0, "finished");
+  assert.equal(parsed.status, "available");
+  assert.deepEqual(parsed.totals, {assembly: 0, "boot-checks": null, compression: null});
+  value.segments.push({...value.segments[0]});
+  assert.equal(normalizePhaseBreakdown(value, 0, "finished").status, "unavailable", "identical duplicate zero-length records are rejected");
+});
+
+test("invalid or partial phase data cannot discard the measured outer recipe", () => {
+  const mutate = change => { const value = examplePhases(); change(value); return value; };
+  const malformed = [
+    null, {}, [], "raw log", {...examplePhases(), version: 2}, {...examplePhases(), source: "untrusted"},
+    {...examplePhases(), reason: "not-recorded"}, {...examplePhases(), segments: null}, {...examplePhases(), segments: []},
+    ...[null, "30", -1, Infinity, NaN, Number.MAX_VALUE].map(duration_seconds => ({...examplePhases(), duration_seconds})),
+    mutate(value => { value.segments[0] = null; }),
+    mutate(value => { value.segments[0].phase = "<img src=x>"; }),
+    mutate(value => { value.segments[0].context = {toString: null}; }),
+    mutate(value => { value.segments[0].phase = "__proto__"; }),
+    mutate(value => { value.segments[0].offset_seconds = 1; }),
+    mutate(value => { value.segments[1].offset_seconds = 4; }),
+    mutate(value => { value.segments[1].offset_seconds = 6; }),
+    mutate(value => { value.segments[1].offset_seconds = Infinity; }),
+    mutate(value => { value.segments[1].duration_seconds = NaN; }),
+    mutate(value => { value.segments[1].duration_seconds = -1; }),
+    mutate(value => { value.segments[1].duration_seconds = "2"; }),
+    mutate(value => { value.segments[8].duration_seconds = 2; }),
+    mutate(value => { value.segments.pop(); }),
+    mutate(value => { value.segments[1] = {...value.segments[0]}; }),
+    mutate(value => { value.duration_seconds = 65; value.segments = Array.from({length: 65}, (_, i) => ({phase: "assembly", context: "recipe", offset_seconds: i, duration_seconds: 1})); }),
+  ];
+  for (const value of malformed) {
+    const outer = normalizeBreakdown(breakdownWithPhases(value));
+    assert.equal(outer.status, "available");
+    const final = outer.sections[0].tasks[2];
+    assert.equal(final.duration_seconds, 30);
+    assert.equal(final.phase_breakdown.status, "unavailable");
+    assert.equal(final.phase_breakdown.totals, undefined);
+    assert.equal(final.phase_breakdown.segments, undefined);
+  }
+});
+
+test("phase segment bounds and totals are checked at microsecond precision", () => {
+  const accepted = examplePhases();
+  accepted.duration_seconds += .000001;
+  assert.equal(normalizePhaseBreakdown(accepted, 30, "finished").status, "available");
+  const gap = examplePhases(); gap.segments[1].offset_seconds += .00002;
+  assert.equal(normalizePhaseBreakdown(gap, 30, "finished").status, "unavailable");
+  const drift = examplePhases();
+  drift.segments = Array.from({length: 10}, (_, i) => ({phase: "assembly", context: "recipe", offset_seconds: i * .000009, duration_seconds: 0}));
+  drift.duration_seconds = .000081;
+  assert.equal(normalizePhaseBreakdown(drift, 0, "finished").status, "unavailable", "many tiny gaps cannot invent measured duration");
+  const contexts = ["recipe", "filesystem", "installer", "bios", "uefi", "4-asic", "6-asic"];
+  const maximum = {...examplePhases(), duration_seconds: 64, segments: Array.from({length: 64}, (_, i) => ({phase: "assembly", context: contexts[i % contexts.length], offset_seconds: i, duration_seconds: 1}))};
+  assert.equal(normalizePhaseBreakdown(maximum, 64, "finished").segments.length, 64);
+  maximum.segments.push({phase: "assembly", context: "recipe", offset_seconds: 64, duration_seconds: 0});
+  assert.equal(normalizePhaseBreakdown(maximum, 64, "finished").status, "unavailable");
+});
+
+test("historical and cached recipes explicitly keep unknown inner timings", () => withDocument(() => {
+  for (const outcome of ["finished", "cached"]) {
+    const source = breakdownWithPhases(undefined, outcome);
+    const row = renderStep(stepWith(source));
+    const phaseDetails = descendants(row, node => node.className === "phase-breakdown")[0];
+    assert.equal(phaseDetails.children[0].tagName, "summary");
+    assert.match(phaseDetails.textContent, /Inner phases were not measured in this run/);
+    assert.equal(descendants(phaseDetails, node => node.className === "phase-totals").length, 0);
+    assert.match(phaseDetails.textContent, /30s/);
+  }
+  const cached = normalizeBreakdown(breakdownWithPhases(examplePhases(), "cached"));
+  assert.equal(cached.status, "available");
+  assert.equal(cached.sections[0].tasks[2].phase_breakdown.status, "unavailable");
+}));
+
+test("phase rendering exposes all compression contexts and preserves native disclosures", () => withDocument(() => {
+  const source = examplePhases();
+  source.label = "<script>";
+  for (const segment of source.segments) segment.label = "raw untrusted label";
+  const row = renderStep(stepWith(breakdownWithPhases(source)));
+  const phaseDetails = descendants(row, node => node.className === "phase-breakdown")[0];
+  assert.equal(phaseDetails.children[0].tagName, "summary");
+  const totals = descendants(phaseDetails, node => node.className === "phase-total");
+  assert.deepEqual(totals.map(node => node.textContent), ["Assembly9s", "Boot checks14s", "Compression7s"]);
+  const segments = descendants(phaseDetails, node => node.className === "phase-segment");
+  assert.equal(segments.length, 9);
+  for (const label of ["Compression · Filesystem and payload", "Compression · ONIE installer", "Compression · BIOS", "Compression · UEFI"]) assert.ok(phaseDetails.textContent.includes(label));
+  assert.match(phaseDetails.textContent, /build process clock/);
+  assert.match(phaseDetails.textContent, /differences are preserved, not rescaled/);
+  assert.doesNotMatch(phaseDetails.textContent, /<script>|raw untrusted label|not measured/);
+  assert.equal(descendants(phaseDetails, node => node.className === "task-track").length, 1, "only the outer task span has a bar; repeated category segments are not merged into one bar");
+}));
+
+test("phase-unavailable messages come only from fixed reasons", () => withDocument(() => {
+  for (const reason of ["not-recorded", "incomplete-timing", "invalid-timing", "<img src=x>", {toString: null}]) {
+    const value = {version: 1, status: "unavailable", reason, source: "build-phase-markers", duration_seconds: null, segments: []};
+    const row = renderStep(stepWith(breakdownWithPhases(value)));
+    assert.doesNotMatch(row.textContent, /<img/);
+    assert.equal(descendants(row, node => node.className === "phase-total").length, 0);
+    assert.match(row.textContent, /30s/);
+  }
 }));

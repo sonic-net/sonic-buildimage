@@ -24,6 +24,13 @@
 ## Enable debug output for script
 set -x -e
 
+# Only the final VS recipe owns a receipt; the first rootfs stage is separate.
+if [[ "${RFS_SPLIT_LAST_STAGE:-}" != y || "${RFS_SPLIT_FIRST_STAGE:-}" == y || "${TARGET_MACHINE:-}" != vs || "${IMAGE_TYPE:-}" != kvm ]]; then
+    unset SONIC_IMAGE_TIMING_FILE
+elif [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
+fi
+
 ORGANIZATION_BUILD_HOOK=files/build_templates/build_debian.organization.sh
 
 run_organization_build_hook()
@@ -953,7 +960,13 @@ if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
       --remove-licenses
 fi
 
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch compression filesystem 2>/dev/null || true
+fi
 sudo mksquashfs $FILESYSTEM_ROOT $FILESYSTEM_SQUASHFS -comp zstd -b 1M -e boot -e var/lib/docker -e $PLATFORM_DIR
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
+fi
 
 ## Reduce /boot permission
 sudo chmod -R go-wx $FILESYSTEM_ROOT/boot
@@ -974,6 +987,9 @@ if [[ $MULTIARCH_QEMU_ENVIRON == y || $CROSS_BUILD_ENVIRON == y ]]; then
 fi
 
 ## Compress docker files
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch compression filesystem 2>/dev/null || true
+fi
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
     pushd $FILESYSTEM_ROOT && sudo tar -I pzstd -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
 else
@@ -991,4 +1007,7 @@ if [ $(stat -c %s $FILESYSTEM_DOCKERFS) -lt $((4 * 1024 * 1024 * 1024)) ]; then
     sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_DOCKERFS
 else
     echo "$FILESYSTEM_DOCKERFS is 4GiB or larger, shipping it outside $INSTALLER_PAYLOAD"
+fi
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch assembly recipe 2>/dev/null || true
 fi
