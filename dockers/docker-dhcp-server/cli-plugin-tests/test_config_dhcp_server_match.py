@@ -592,6 +592,86 @@ class TestConfigDHCPServerMatch:
         assert result.exit_code == 2
         assert "Circuit ID alias etp99 does not exist" in result.output
 
+    @pytest.mark.parametrize("operation", ["add", "update"])
+    def test_binding_validation_caches_alias_map(self, mock_db, operation):
+        for index in range(124):
+            mock_db.hmset("CONFIG_DB", "PORT|Ethernet{}".format(1000 + index), {
+                "alias": "extra-{}".format(index),
+            })
+        for key in mock_db.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|*"):
+            mock_db.delete("CONFIG_DB", key)
+        for index in range(1000):
+            mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|scale-vendor-{}".format(index), {
+                "type": "option60", "value": "SCALE-{}".format(index),
+            })
+            if operation == "update" or index:
+                mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|scale-{}".format(index), {
+                    "matches@": "port-etp2,scale-vendor-{}".format(index), "ips@": "100.1.1.30",
+                })
+        mock_db.keys.reset_mock()
+        mock_db.get.reset_mock()
+
+        result = invoke(
+            mock_db, BINDING_COMMAND.commands[operation],
+            ["Vlan100", "scale-0", "100.1.1.30", "--match", "port-etp2,scale-vendor-0"],
+        )
+
+        assert result.exit_code == 0, result.output
+        alias_reads = [call for call in mock_db.get.call_args_list
+                       if call.args[1].startswith("PORT|") and call.args[2] == "alias"]
+        assert len(alias_reads) == 128
+        for pattern in ["PORT|*", "PORTCHANNEL|*"]:
+            assert sum(call.args == ("CONFIG_DB", pattern) for call in mock_db.keys.call_args_list) == 1
+
+    @pytest.mark.parametrize("match_name,value", [("port-etp2", "etp2"), ("vendor-a", "MAIA-C")])
+    def test_match_update_shares_alias_map_across_vlans(self, mock_db, dhcp_vlan200, match_name, value):
+        mock_db.hmset("CONFIG_DB", "VLAN_MEMBER|Vlan200|Ethernet2", {})
+        mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan200|maia-a", {
+            "matches@": "port-etp2,vendor-a", "ips@": "100.1.2.20",
+        })
+
+        result = invoke(mock_db, MATCH_COMMAND.commands["update"], [match_name, "--value", value])
+
+        assert result.exit_code == 0, result.output
+        alias_reads = [call for call in mock_db.get.call_args_list
+                       if call.args[1].startswith("PORT|") and call.args[2] == "alias"]
+        assert len(alias_reads) == 4
+
+    def test_range_update_reuses_alias_map(self, mock_db):
+        result = invoke(mock_db, RANGE_COMMAND.commands["update"], ["range3", "100.1.1.50"])
+
+        assert result.exit_code == 0, result.output
+        alias_reads = [call for call in mock_db.get.call_args_list
+                       if call.args[1].startswith("PORT|") and call.args[2] == "alias"]
+        assert len(alias_reads) == 4
+
+    def test_vendor_only_binding_does_not_read_aliases(self, mock_db, dhcp_vlan200):
+        result = invoke(
+            mock_db, BINDING_COMMAND.commands["add"],
+            ["Vlan200", "vendor-only", "100.1.2.30", "--match", "vendor-a"],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert not any(call.args[1] in ["PORT|*", "PORTCHANNEL|*"] for call in mock_db.keys.call_args_list)
+
+    @pytest.mark.parametrize("port,alias,error", [
+        ("Ethernet2", "renamed", "Circuit ID alias etp2 does not exist"),
+        ("Ethernet6", "etp2", "Circuit ID alias etp2 is ambiguous"),
+    ])
+    def test_binding_validation_refreshes_alias_map_between_commands(self, mock_db, port, alias, error):
+        result = invoke(
+            mock_db, BINDING_COMMAND.commands["add"],
+            ["Vlan100", "maia-b", "100.1.1.30", "--match", "port-etp2,vendor-b"],
+        )
+        assert result.exit_code == 0, result.output
+        mock_db.hmset("CONFIG_DB", "PORT|" + port, {"alias": alias})
+
+        result = invoke(mock_db, BINDING_COMMAND.commands["update"], ["Vlan100", "maia-b", "100.1.1.31"])
+
+        assert result.exit_code == 2, result.output
+        assert error in result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-b", "ips@") == "100.1.1.30"
+
     def test_binding_add_ambiguous_circuit_alias(self, mock_db):
         mock_db.hmset("CONFIG_DB", "PORT|Ethernet6", {"alias": "etp2"})
 

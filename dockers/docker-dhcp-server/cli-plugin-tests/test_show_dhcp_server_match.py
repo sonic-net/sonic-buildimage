@@ -1,5 +1,6 @@
 import sys
 
+import pytest
 from click.testing import CliRunner
 
 import utilities_common.cli as clicommon
@@ -37,6 +38,55 @@ class TestShowDHCPServerMatch:
         assert "option60" in result.output
         assert "MAIA-A" in result.output
         assert "vendor-b" not in result.output
+
+    @pytest.mark.parametrize("name", ["vendor[1]", "vendor?", "vendor*", "*"])
+    def test_show_match_name_is_literal(self, mock_db, name):
+        mock_db.hmset(
+            "CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|" + name,
+            {"type": "option60", "value": "LITERAL-VALUE"},
+        )
+        mock_db.hmset(
+            "CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|vendor1",
+            {"type": "option60", "value": "PATTERN-NEIGHBOR"},
+        )
+
+        result = invoke(mock_db, IPV4_COMMAND.commands["match"], [name])
+
+        assert result.exit_code == 0, result.output
+        assert name in result.output
+        assert "LITERAL-VALUE" in result.output
+        assert "PATTERN-NEIGHBOR" not in result.output
+        assert "MAIA-A" not in result.output
+
+    def test_show_all_matches_includes_literal_glob_names(self, mock_db):
+        for name in ["*", "vendor[1]"]:
+            mock_db.hmset(
+                "CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|" + name,
+                {"type": "option60", "value": "VALUE-FOR-" + name},
+            )
+
+        result = invoke(mock_db, IPV4_COMMAND.commands["match"], [])
+
+        assert result.exit_code == 0, result.output
+        assert "VALUE-FOR-*" in result.output
+        assert "VALUE-FOR-vendor[1]" in result.output
+        assert "MAIA-A" in result.output
+
+    @pytest.mark.parametrize("name", ["vendor[1]", "missing"])
+    def test_show_missing_match_has_no_unrelated_rows(self, mock_db, name):
+        mock_db.hmset(
+            "CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|vendor1",
+            {"type": "option60", "value": "PATTERN-NEIGHBOR"},
+        )
+
+        result = invoke(mock_db, IPV4_COMMAND.commands["match"], [name])
+
+        assert result.exit_code == 0, result.output
+        assert "Match" in result.output
+        assert "Type" in result.output
+        assert "Value" in result.output
+        assert "PATTERN-NEIGHBOR" not in result.output
+        assert "MAIA-A" not in result.output
 
     def test_show_bindings_with_ips_and_ranges(self, mock_db):
         result = invoke(mock_db, IPV4_COMMAND.commands["binding"], [])

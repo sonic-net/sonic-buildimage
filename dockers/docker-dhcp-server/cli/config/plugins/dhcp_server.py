@@ -144,22 +144,26 @@ def get_match_entry(dbconn, match_name, match_overrides=None):
     return entry
 
 
-def resolve_port_alias(dbconn, alias):
+def resolve_port_alias(dbconn, alias, port_alias_map=None):
     """Resolve a circuit_id value to the single port that dhcp_relay would stamp.
 
     dhcp_relay uses the port alias, falls back to the port name when the port has
     no alias, and stamps PortChannels with their name, so all three are accepted
     here. This mirrors _parse_port_map_alias() in dhcp_cfggen.
+
+    A caller-provided map is populated lazily and reused for one validation operation.
     """
-    ports = []
-    for key in dbconn.keys("CONFIG_DB", "PORT|*"):
-        port = key.split("|", 1)[1]
-        if (dbconn.get("CONFIG_DB", key, "alias") or port) == alias:
-            ports.append(port)
-    for key in dbconn.keys("CONFIG_DB", "PORTCHANNEL|*"):
-        portchannel = key.split("|", 1)[1]
-        if portchannel == alias:
-            ports.append(portchannel)
+    if port_alias_map is None:
+        port_alias_map = {}
+    if not port_alias_map:
+        for key in dbconn.keys("CONFIG_DB", "PORT|*"):
+            port = key.split("|", 1)[1]
+            port_alias = dbconn.get("CONFIG_DB", key, "alias") or port
+            port_alias_map.setdefault(port_alias, []).append(port)
+        for key in dbconn.keys("CONFIG_DB", "PORTCHANNEL|*"):
+            portchannel = key.split("|", 1)[1]
+            port_alias_map.setdefault(portchannel, []).append(portchannel)
+    ports = port_alias_map.get(alias, [])
     if not ports:
         click.get_current_context().fail("Circuit ID alias {} does not exist".format(alias))
     if len(ports) > 1:
@@ -168,7 +172,7 @@ def resolve_port_alias(dbconn, alias):
 
 
 def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_overrides=None,
-                           range_overrides=None):
+                           range_overrides=None, port_alias_map=None):
     validate_key_name(binding_name, "Binding name", "|")
     if not dbconn.exists("CONFIG_DB", "DHCP_SERVER_IPV4|" + dhcp_interface):
         click.get_current_context().fail("Interface {} is not a valid dhcp interface".format(dhcp_interface))
@@ -188,7 +192,7 @@ def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_ov
             )
         conditions[match_type] = match["value"]
         if match_type == "circuit_id":
-            port = resolve_port_alias(dbconn, match["value"])
+            port = resolve_port_alias(dbconn, match["value"], port_alias_map)
             if not dbconn.exists("CONFIG_DB", "VLAN_MEMBER|{}|{}".format(dhcp_interface, port)):
                 click.get_current_context().fail(
                     "Circuit ID alias {} is not a member of vlan {}".format(match["value"], dhcp_interface)
@@ -213,18 +217,20 @@ def predicates_overlap(first, second):
 
 
 def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrides=None,
-                           range_overrides=None):
+                           range_overrides=None, port_alias_map=None):
     bindings = {}
     prefix = "DHCP_SERVER_IPV4_BINDING|{}|".format(dhcp_interface)
     for key in dbconn.keys("CONFIG_DB", prefix + "*"):
         bindings[key[len(prefix):]] = dbconn.get_all("CONFIG_DB", key)
     if candidate:
         bindings[candidate[0]] = candidate[1]
+    if port_alias_map is None:
+        port_alias_map = {}
     predicates = {}
     for binding_name in sorted(bindings):
         predicates[binding_name] = validate_binding_entry(
             dbconn, dhcp_interface, binding_name, bindings[binding_name], match_overrides,
-            range_overrides
+            range_overrides, port_alias_map
         )
 
     binding_names = sorted(predicates)
@@ -258,25 +264,30 @@ def validate_range_update(dbconn, range_name, updated_value):
         entry = dbconn.get_all("CONFIG_DB", key)
         if range_name in entry.get("ranges@", "").split(","):
             affected_vlans.add(key.split("|", 2)[1])
+    port_alias_map = {}
     for dhcp_interface in sorted(affected_vlans):
         validate_vlan_bindings(
             dbconn,
             dhcp_interface,
             range_overrides={range_name: updated_value},
+            port_alias_map=port_alias_map,
         )
 
 
-def validate_match_update(dbconn, match_name, updated_entry):
+def validate_match_update(dbconn, match_name, updated_entry, port_alias_map=None):
     affected_vlans = set()
     for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|*"):
         entry = dbconn.get_all("CONFIG_DB", key)
         if match_name in entry.get("matches@", "").split(","):
             affected_vlans.add(key.split("|", 2)[1])
+    if port_alias_map is None:
+        port_alias_map = {}
     for dhcp_interface in sorted(affected_vlans):
         validate_vlan_bindings(
             dbconn,
             dhcp_interface,
             match_overrides={match_name: updated_entry},
+            port_alias_map=port_alias_map,
         )
 
 
@@ -552,6 +563,8 @@ def dhcp_server_ipv4_match_update(db, match_name, match_type, value):
         ctx.fail("Match {} does not exist".format(match_name))
     if match_type and match_type not in SUPPORTED_MATCH_TYPE:
         ctx.fail("Only match types {} are supported".format(", ".join(SUPPORTED_MATCH_TYPE)))
+    if match_type is None and value is None:
+        ctx.fail("Nothing to update, provide at least one of --type or --value")
     if value is not None:
         validate_name(value, "Match value")
 
@@ -560,9 +573,10 @@ def dhcp_server_ipv4_match_update(db, match_name, match_type, value):
         updated_entry["type"] = match_type
     if value is not None:
         updated_entry["value"] = value
+    port_alias_map = {}
     if updated_entry.get("type") == "circuit_id":
-        resolve_port_alias(dbconn, updated_entry.get("value"))
-    validate_match_update(dbconn, match_name, updated_entry)
+        resolve_port_alias(dbconn, updated_entry.get("value"), port_alias_map)
+    validate_match_update(dbconn, match_name, updated_entry, port_alias_map)
     dbconn.hmset("CONFIG_DB", key, updated_entry)
 
 
