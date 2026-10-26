@@ -45,6 +45,7 @@ from sonic_py_common.bgp import validate_asn
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector, isInterfaceNameValid
 from asic_sensors_config import get_asic_sensors_config
+from gnmi_config import set_gnmi_defaults
 
 PY3x = sys.version_info >= (3, 0)
 
@@ -706,6 +707,9 @@ def main():
             configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
 
         configdb.connect(False)
+        if args.namespace is None and set_gnmi_defaults(data, configdb):
+            print("Provisioning GNMI loopback TCP defaults with explicit password/JWT authentication",
+                  file=sys.stderr)
         configdb.mod_config(FormatConverter.output_to_db(data))
 
     if args.print_data:
