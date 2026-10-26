@@ -338,6 +338,13 @@ void fpm_nhg_debug_resolved_route(struct fpm_nhg_tables *t, vrf_id_t vrf_id,
 uint32_t fpm_nhg_count(struct fpm_nhg_tables *t);
 
 /*
+ * Reverse lookup: zebra NHG id -> dplane object, NULL when unmapped. The
+ * caller must hold the same lock that serializes the tables.
+ */
+struct fpm_dplane_nhg *fpm_nhg_lookup_rib_id(struct fpm_nhg_tables *t,
+					     uint32_t rib_id);
+
+/*
  * NHGFIB-only extension message types and JSON payload attribute. Part of the
  * wire contract the encoders below and their tests assert against; the types
  * sit well beyond the kernel's RTM_ range.

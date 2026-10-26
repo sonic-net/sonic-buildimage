@@ -21,6 +21,8 @@
  *               (leaf, vrf, prefix) resolutions, the commit diff moves the
  *               counts, zero unindexes the membership, and rollback/retry
  *               move nothing
+ *   rib-id    - the reverse index counts routes, not route commits, and
+ *               re-points a reused zebra NHG id once its last route lets go
  */
 #include "config.h"
 
@@ -598,4 +600,71 @@ out:
 	chain_free(rc);
 	chain_free(rd);
 	chain_free(re);
+}
+
+/* -------------------------------------------------------------------------
+ * rib-id: the reverse index counts routes, not route commits
+ * ------------------------------------------------------------------------- */
+
+TEST_F(NhgTables, rib_id_accounting)
+{
+	struct fpm_nhg_staging newq = {};
+	struct fpm_nhg_del_queue delq = {};
+	struct nexthop *ra = leaf_nh4("192.168.1.1/32", 5);
+	struct nexthop *rb = leaf_nh4("192.168.1.1/32", 5);
+	struct nexthop *rd = leaf_nh4("192.168.1.2/32", 6);
+	struct fpm_dplane_nhg *topa, *topb;
+	struct fpm_nhg_route_key ka, kb, kc;
+
+	/* Two routes dedupe onto one object, each with its own zebra id. */
+	topa = fpm_nhg_build(&t, ra, &newq);
+	ASSERT_NE(topa, nullptr);
+	route_key(&ka, "172.16.1.0/24");
+	fpm_nhg_route_commit(&t, &ka, topa, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
+	ASSERT_EQ(topa, fpm_nhg_lookup_rib_id(&t, 1000));
+
+	topb = fpm_nhg_build(&t, rb, &newq);
+	ASSERT_EQ(topa, topb) << "identical chain must dedupe";
+	route_key(&kb, "172.16.2.0/24");
+	fpm_nhg_route_commit(&t, &kb, topb, 2000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
+	ASSERT_EQ(topa, fpm_nhg_lookup_rib_id(&t, 2000));
+
+	/* Same route, same object, same zebra id: this re-commit changes no
+	 * mapping and must not add a second reference for the route.
+	 */
+	topb = fpm_nhg_build(&t, rb, &newq);
+	ASSERT_EQ(topa, topb);
+	fpm_nhg_route_commit(&t, &ka, topb, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
+	EXPECT_EQ(topa, fpm_nhg_lookup_rib_id(&t, 1000));
+
+	fpm_nhg_route_forget(&t, &ka, &delq);
+	/* kb still holds topa, so the object stays alive and cannot purge a
+	 * leaked index entry on our behalf.
+	 */
+	EXPECT_EQ(nullptr, fpm_nhg_lookup_rib_id(&t, 1000))
+		<< "a no-op re-commit leaked a rib-id reference";
+
+	/* The released zebra id is reused for a different object: the index
+	 * must re-point instead of keeping the old owner.
+	 */
+	topb = fpm_nhg_build(&t, rd, &newq);
+	ASSERT_NE(topb, nullptr);
+	EXPECT_NE(topa, topb);
+	route_key(&kc, "172.16.3.0/24");
+	fpm_nhg_route_commit(&t, &kc, topb, 1000, &delq, &newq);
+	fpm_nhg_staging_free(&newq);
+	EXPECT_EQ(topb, fpm_nhg_lookup_rib_id(&t, 1000))
+		<< "a reused rib id must follow its new object";
+
+	fpm_nhg_route_forget(&t, &kc, &delq);
+	fpm_nhg_route_forget(&t, &kb, &delq);
+	EXPECT_EQ(t.obj_created, t.obj_deleted);
+
+	fpm_nhg_del_queue_free(&delq);
+	chain_free(ra);
+	chain_free(rb);
+	chain_free(rd);
 }

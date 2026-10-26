@@ -1743,28 +1743,36 @@ static void fpm_nhg_route_set(struct fpm_nhg_tables *t,
 			      struct fpm_nhg_staging *newq)
 {
 	struct fpm_nhg_route_entry ref = { .key = *k }, *e;
+	bool changed;
 
 	e = hash_get(t->route_map, &ref, fpm_nhg_route_entry_alloc);
+	changed = (e->obj != obj || e->rib_id != rib_id);
 	/*
 	 * Release whatever this route mapped before overwriting it, otherwise
 	 * a re-pointed or re-numbered route would leak its old association and
 	 * the object would keep advertising a stale zebra NHG id.
 	 */
-	if (e->obj && (e->obj != obj || e->rib_id != rib_id))
+	if (e->obj && changed)
 		fpm_nhg_release_rib_id(t, e->obj, e->rib_id);
 
 	if (e->obj == NULL)
 		FPM_NHG_DEBUG("bind route %pFX table %u -> dplane NHG %u (%s), rib nhg %u",
 			      &k->p, k->table_id, obj->dplane_id,
 			      fpm_nhg_level_str(obj->level), rib_id);
-	else if (e->obj != obj || e->rib_id != rib_id)
+	else if (changed)
 		FPM_NHG_DEBUG("rebind route %pFX table %u: dplane NHG %u (rib nhg %u) -> dplane NHG %u (rib nhg %u)",
 			      &k->p, k->table_id, e->obj->dplane_id, e->rib_id,
 			      obj->dplane_id, rib_id);
 
 	e->obj = obj; /* replaces any previous object: caller unrefs the old */
 	e->rib_id = rib_id;
-	fpm_nhg_record_rib_id(t, obj, rib_id);
+	/*
+	 * The reverse index counts routes, not commits: a re-commit that keeps
+	 * the same object and zebra NHG id must not count this route twice, or
+	 * the last route release would leave a stale entry behind.
+	 */
+	if (changed)
+		fpm_nhg_record_rib_id(t, obj, rib_id);
 	fpm_nhg_leaf_contrib_apply(t, e, newq);
 }
 
@@ -1938,8 +1946,8 @@ static void fpm_nhg_release_rib_id(struct fpm_nhg_tables *t,
 }
 
 /* Reverse lookup: zebra NHG id -> dplane object, NULL when unmapped. */
-static struct fpm_dplane_nhg *fpm_nhg_lookup_rib_id(struct fpm_nhg_tables *t,
-						    uint32_t rib_id)
+struct fpm_dplane_nhg *fpm_nhg_lookup_rib_id(struct fpm_nhg_tables *t,
+					     uint32_t rib_id)
 {
 	struct fpm_nhg_rib_entry ref = { .rib_id = rib_id }, *e;
 
