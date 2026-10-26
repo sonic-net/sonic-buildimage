@@ -327,6 +327,159 @@
             }
         }
     },
+    "SYSLOG_SERVER_PROTOCOL_TLS" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "protocol": "tls",
+                        "tls_permitted_peers": "syslog.example.com",
+                        "tls_profile_id": "siem-east",
+                        "port": "6514"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_PROTOCOL_TLS_MISSING_PROFILE" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "protocol": "tls",
+                        "tls_permitted_peers": "syslog.example.com"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_FALSE" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "transport_security": "false",
+                        "protocol": "udp",
+                        "port": "514"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_TRUE" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "transport_security": "true",
+                        "tls_permitted_peers": "syslog.example.com",
+                        "tls_profile_id": "siem-east",
+                        "protocol": "tls",
+                        "port": "6514"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_TRUE_MISSING_PROFILE" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "transport_security": "true",
+                        "tls_permitted_peers": "syslog.example.com"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TLS_PROFILE_GNXI" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "protocol": "tls",
+                        "tls_permitted_peers": "syslog.example.com",
+                        "tls_profile_id": "gnxi"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TLS_PROFILE_INVALID" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "protocol": "tls",
+                        "tls_permitted_peers": "syslog.example.com",
+                        "tls_profile_id": "bad/id"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TLS_MISSING_PEERS" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "protocol": "tls",
+                        "tls_profile_id": "siem-east"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TRANSPORT_SECURITY_TRUE_MISSING_PEERS" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "transport_security": "true",
+                        "tls_profile_id": "siem-east"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TLS_PEERS_LIST_WILDCARD" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "protocol": "tls",
+                        "tls_profile_id": "siem-east",
+                        "tls_permitted_peers": "syslog1.example.com,*.syslog.example.com"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSLOG_SERVER_TLS_PEERS_INVALID" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "10.0.0.5",
+                        "protocol": "tls",
+                        "tls_profile_id": "siem-east",
+                        "tls_permitted_peers": "bad peer,*"
+                    }
+                ]
+            }
+        }
+    },
     "SYSLOG_SERVER_SEVERITY" : {
         "sonic-syslog:sonic-syslog": {
             "sonic-syslog:SYSLOG_SERVER": {
