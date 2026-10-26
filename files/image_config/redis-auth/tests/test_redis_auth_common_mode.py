@@ -130,3 +130,34 @@ def test_remote_reference_cannot_become_a_local_server_policy(boot):
     with pytest.raises(startup.CredentialStateError):
         startup.prepare_selected(intent_path=intent, runtime=runtime)
     assert not runtime.exists()
+
+
+def test_saved_override_wins_before_and_after_launcher_restore(boot):
+    intent, runtime = boot
+    current = startup.configured_instances()
+    saved = copy.deepcopy(current)
+    saved['redis']['port'] = 6381
+    (startup.CONFIG / 'database_config.json').write_text(json.dumps({'INSTANCES': current}))
+    old = startup.CONFIG / 'old_config'
+    old.mkdir()
+    pending = old / 'database_config.json'
+    pending.write_text(json.dumps({'INSTANCES': saved}))
+    intent.write_text('{"mode":"enforce"}')
+    startup.prepare_selected(intent_path=intent, runtime=runtime)
+    inventory = json.loads((runtime / 'server/instances.json').read_text())
+    assert inventory['redis']['port'] == 6381
+    pending.replace(startup.CONFIG / 'database_config.json')
+    assert startup.runtime_required(intent_path=intent, runtime=runtime)
+
+
+def test_missing_published_credential_directory_requires_reboot(boot):
+    import shutil
+    intent, runtime = boot
+    intent.write_text('{"mode":"enforce"}')
+    startup.prepare_selected(intent_path=intent, runtime=runtime)
+    acl = (runtime / 'server/users.acl').read_bytes()
+    shutil.rmtree(runtime / 'local-system')
+    with pytest.raises(startup.CredentialStateError, match='reboot'):
+        startup.prepare_selected(intent_path=intent, runtime=runtime)
+    assert not (runtime / 'local-system').exists()
+    assert (runtime / 'server/users.acl').read_bytes() == acl

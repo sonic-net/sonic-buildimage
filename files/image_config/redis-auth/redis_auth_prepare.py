@@ -96,6 +96,10 @@ def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT):
                 raise CredentialStateError("runtime credential pair does not match")
             return False
 
+        if any(os.path.lexists(os.path.join(runtime_root, name))
+               for name in ("local.json", "server/users.acl", "server/instances.json")):
+            raise CredentialStateError("published boot credential is missing; reboot required")
+
         temporary = tempfile.mkdtemp(prefix=".local-system-", dir=runtime_root)
         try:
             password = secrets.token_urlsafe(32).encode("ascii")

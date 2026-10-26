@@ -77,7 +77,10 @@ def configured_instances():
     if (CONFIG / 'enable_multidb').exists():
         raise CredentialStateError('the multi-database layout is not qualified for enforcement')
     try:
-        database = json.loads(read_setting(CONFIG / 'database_config.json'))
+        override = CONFIG / 'old_config/database_config.json'
+        if not os.path.lexists(override):
+            override = CONFIG / 'database_config.json'
+        database = json.loads(read_setting(override))
     except FileNotFoundError:
         import jinja2
         database = json.loads(jinja2.Template(read_setting(DATABASE_TEMPLATE)).render(
