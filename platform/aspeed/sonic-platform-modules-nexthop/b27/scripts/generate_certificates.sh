@@ -3,28 +3,39 @@
 # Script to generate and install HTTPS certificates for SONiC BMC
 #
 # Modes:
-#   generate (default) — Generate certificates locally
-#   install            — Install generated certificates into the redfish container
+#   generate (default) - Generate certificates locally
+#   install            - Copy generated certificates to the BMC and, with
+#                        --push-config, point the redfish container at them
 #
 # Generates:
-#   CA-cert.pem, CA-key.pem          — CA certificate and key
-#   server-cert.pem, server-key.pem  — Server certificate and key
-#   server-combined.pem              — Combined cert+key (for /etc/ssl/certs/https/server.pem)
-#   client-cert.pem, client-key.pem  — Client certificate and key (stays on client)
-#   client-combined.pem              — Combined client cert+key
-#   bmcweb_tls_config.json           — bmcweb persistent data with TLSStrict
+#   CA-cert.pem, CA-key.pem          - CA certificate and key
+#   server-cert.pem, server-key.pem  - Server certificate and key
+#   client-cert.pem, client-key.pem  - Client certificate and key (stays on client)
 #
-# BMC container paths:
-#   /etc/ssl/certs/https/server.pem    — HTTPS server certificate (cert+key)
-#   /etc/ssl/certs/authority/<id>.pem  — CA certificates for client verification
-#   /bmcweb_persistent_data.json       — bmcweb auth configuration
+#   The OpenSSL request files it works with are removed afterwards; an
+#   existing CA-cert.pem/CA-key.pem pair in the working directory is reused,
+#   which is how server and client certificates are rotated under one CA.
+#
+# How the redfish container consumes them:
+#   The certificates are delivered to /etc/sonic/credentials/redfish on the
+#   BMC host, which the container mounts, and REDFISH|certs in CONFIG_DB names
+#   their paths.
+#   stage-credentials.sh stages them into what bmcweb reads and restarts it.
+#   bmcweb keeps its default auth configuration (mTLS on, TLSStrict off), so
+#   the service root stays reachable without a certificate.
+#
+#   REDFISH|certs   server_crt        /etc/sonic/credentials/redfish/server-cert.pem
+#   REDFISH|certs   server_key        /etc/sonic/credentials/redfish/server-key.pem
+#   REDFISH|certs   ca_crt            /etc/sonic/credentials/redfish/CA-cert.pem
+#   REDFISH|certs   client_crt_cname  client certificate CN (sonic-dbus-bridge
+#                                     reads it on every request)
 #
 # Usage:
 #   Generate:
-#     ./generate_https_certificate.sh -c <CN> -i <IP> [options]
+#     ./generate_certificates.sh -c <CN> -i <IP> [options]
 #
 #   Install:
-#     ./generate_https_certificate.sh --install --bmc-ip <IP> --bmc-pass <PASS> [options]
+#     ./generate_certificates.sh --install --bmc-ip <IP> --bmc-pass <PASS> [--push-config] [options]
 #
 # Required for generate:
 #   -i, --ip IP              Server IP address for SAN
@@ -37,6 +48,12 @@
 #
 # Optional for install:
 #       --bmc-pass PASS      BMC SSH password (default: YourPaSsWoRd)
+#       --push-config        Write REDFISH|certs to CONFIG_DB and restart the
+#                            redfish container so the certificates take effect
+#                            at once rather than on the watcher's next pass.
+#                            The config is not saved, so the entry is lost on a
+#                            reboot or config reload unless saved by hand.
+#                            Without it, the commands are printed instead.
 #
 # Optional:
 #   -d, --dir DIR            Working directory (default: current directory)
@@ -45,7 +62,8 @@
 #       --city CITY          City (default: Bengaluru)
 #       --org NAME           Organization name (default: Nexthop AI)
 #       --ou OU              Organizational unit (default: BMC)
-#       --client-cn CN       Client Common Name for mTLS (default: bmcweb)
+#       --client-cn CN       Client Common Name for mTLS (default: bmcweb; on
+#                            install, read from client-cert.pem when present)
 #       --bmc-user USER      BMC SSH user (default: admin)
 #       --container NAME     Docker container name (default: redfish)
 #   -h, --help               Show this help message
@@ -63,11 +81,14 @@ CITY="Bengaluru"
 ORG="Nexthop AI"
 OU="BMC"
 CLIENT_CN="bmcweb"
+CLIENT_CN_SET=false
 INSTALL=false
+PUSH_CONFIG=false
 BMC_IP=""
 BMC_USER="admin"
 BMC_PASS="YourPaSsWoRd"
 CONTAINER="redfish"
+REMOTE_DIR="/etc/sonic/credentials/redfish"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -106,10 +127,15 @@ while [[ $# -gt 0 ]]; do
             ;;
         --client-cn)
             CLIENT_CN="$2"
+            CLIENT_CN_SET=true
             shift 2
             ;;
         --install)
             INSTALL=true
+            shift
+            ;;
+        --push-config)
+            PUSH_CONFIG=true
             shift
             ;;
         --bmc-ip)
@@ -140,10 +166,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-TOTAL=8
+TOTAL=6
 
 # =========================================================================
-# INSTALL-ONLY MODE — skip generation, just install existing certs
+# INSTALL-ONLY MODE: skip generation, deliver existing certs to the BMC
 # =========================================================================
 
 if $INSTALL; then
@@ -152,17 +178,23 @@ if $INSTALL; then
     # Validate install requirements
     if [ -z "$BMC_IP" ]; then
         echo "ERROR: Missing required option: --bmc-ip"
-        echo "Usage: $0 --install --bmc-ip <IP> [--bmc-pass <PASS>] [--bmc-user <USER>] [--container <NAME>] [-d <DIR>]"
+        echo "Usage: $0 --install --bmc-ip <IP> [--bmc-pass <PASS>] [--bmc-user <USER>] [--push-config] [--container <NAME>] [-d <DIR>]"
         exit 1
     fi
 
-    for f in server-combined.pem CA-cert.pem bmcweb_tls_config.json; do
+    for f in server-cert.pem server-key.pem CA-cert.pem; do
         if [ ! -f "$f" ]; then
             echo "ERROR: $f not found in $WORK_DIR"
             echo "Run without --install first to generate certificates."
             exit 1
         fi
     done
+
+    # The trusted client CN is the one the client certificate was issued with.
+    if ! $CLIENT_CN_SET && [ -f client-cert.pem ]; then
+        cn="$(openssl x509 -in client-cert.pem -noout -subject -nameopt RFC2253 | sed -n 's/^subject=.*CN=\([^,]*\).*/\1/p')"
+        [ -n "$cn" ] && CLIENT_CN="$cn"
+    fi
 
     # Check if SSH key auth works, otherwise require sshpass
     if ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=5 "${BMC_USER}@${BMC_IP}" true 2>/dev/null; then
@@ -183,6 +215,11 @@ if $INSTALL; then
         exit 1
     fi
 
+    SERVER_CRT_PATH="${REMOTE_DIR}/server-cert.pem"
+    SERVER_KEY_PATH="${REMOTE_DIR}/server-key.pem"
+    CA_CRT_PATH="${REMOTE_DIR}/CA-cert.pem"
+    DB_SET="sudo sonic-db-cli CONFIG_DB HSET 'REDFISH|certs' server_crt '${SERVER_CRT_PATH}' server_key '${SERVER_KEY_PATH}' ca_crt '${CA_CRT_PATH}' client_crt_cname '${CLIENT_CN}'"
+
     echo "==========================================================="
     echo " INSTALLING CERTIFICATES"
     echo "==========================================================="
@@ -190,65 +227,81 @@ if $INSTALL; then
     echo "  Working dir: $WORK_DIR"
     echo "  BMC IP:      $BMC_IP"
     echo "  BMC User:    $BMC_USER"
+    echo "  Remote dir:  $REMOTE_DIR"
+    echo "  Client CN:   $CLIENT_CN"
     echo "  Container:   $CONTAINER"
     echo ""
 
-    # --- Step 1: Install server certificate ---
-    echo "--- Step 1: Installing HTTPS server certificate ---"
+    # --- Step 1: Deliver the certificates to the BMC host ---
+    echo "--- Step 1: Copying certificates to ${REMOTE_DIR} ---"
     echo ""
 
-    echo "  Copying server-combined.pem to BMC..."
-    $SCP server-combined.pem "${BMC_USER}@${BMC_IP}:/tmp/server-combined.pem"
-
-    echo "  Installing into container $CONTAINER:/etc/ssl/certs/https/server.pem..."
-    $SSH "${BMC_USER}@${BMC_IP}" "docker cp /tmp/server-combined.pem ${CONTAINER}:/etc/ssl/certs/https/server.pem"
-
-    echo "    Server certificate installed"
-    echo ""
-
-    # --- Step 2: Install CA cert to truststore ---
-    echo "--- Step 2: Installing CA certificate to truststore ---"
-    echo ""
-
-    echo "  Copying CA-cert.pem to BMC..."
-    $SCP CA-cert.pem "${BMC_USER}@${BMC_IP}:/tmp/CA-cert.pem"
-
-    echo "  Creating truststore directory and installing CA cert..."
+    $SCP server-cert.pem server-key.pem CA-cert.pem "${BMC_USER}@${BMC_IP}:/tmp/"
     $SSH "${BMC_USER}@${BMC_IP}" "
-        docker exec ${CONTAINER} mkdir -p /etc/ssl/certs/authority
-        docker cp /tmp/CA-cert.pem ${CONTAINER}:/etc/ssl/certs/authority/CA-cert.pem
-        docker exec ${CONTAINER} bash -c 'cd /etc/ssl/certs/authority && \
-            ln -sf CA-cert.pem \$(openssl x509 -hash -noout -in CA-cert.pem).0'
+        set -e
+        sudo mkdir -p '${REMOTE_DIR}'
+        sudo install -m 0644 /tmp/server-cert.pem '${SERVER_CRT_PATH}'
+        sudo install -m 0600 /tmp/server-key.pem '${SERVER_KEY_PATH}'
+        sudo install -m 0644 /tmp/CA-cert.pem '${CA_CRT_PATH}'
+        rm -f /tmp/server-cert.pem /tmp/server-key.pem /tmp/CA-cert.pem
     "
 
-    echo "    CA certificate installed to truststore"
+    echo "    Certificates installed"
     echo ""
 
-    # --- Step 3: Enable TLSStrict ---
-    echo "--- Step 3: Enabling TLSStrict on bmcweb ---"
+    if ! $PUSH_CONFIG; then
+        echo "--- Not applied: --push-config not given ---"
+        echo ""
+        echo "  To make the $CONTAINER container use them, run on the BMC:"
+        echo ""
+        echo "    $DB_SET"
+        echo "    sudo systemctl restart ${CONTAINER}"
+        echo ""
+        echo "=== Installation Complete (config not pushed) ==="
+        exit 0
+    fi
+
+    # --- Step 2: Point the redfish container at them ---
+    echo "--- Step 2: Writing REDFISH|certs to CONFIG_DB ---"
     echo ""
 
-    echo "  Stopping bmcweb..."
-    $SSH "${BMC_USER}@${BMC_IP}" "docker exec ${CONTAINER} supervisorctl stop bmcweb"
+    # Not saved: config save would persist every other unsaved change too.
+    $SSH "${BMC_USER}@${BMC_IP}" "${DB_SET} >/dev/null"
 
-    echo "  Copying TLS config to BMC..."
-    $SCP bmcweb_tls_config.json "${BMC_USER}@${BMC_IP}:/tmp/bmcweb_tls_config.json"
-
-    echo "  Installing bmcweb_persistent_data.json..."
-    $SSH "${BMC_USER}@${BMC_IP}" "
-        docker cp /tmp/bmcweb_tls_config.json ${CONTAINER}:/bmcweb_persistent_data.json
-    "
-
-    echo "    TLSStrict configuration installed"
+    echo "    REDFISH|certs set (not saved)"
     echo ""
 
-    # --- Restart bmcweb ---
-    echo "--- Restarting bmcweb ---"
+    # --- Step 3: Restart the container ---
+    # The watcher would stage the certificates on its next pass (up to a
+    # minute); the restart stages them now, through the same guard.
+    echo "--- Step 3: Restarting ${CONTAINER} ---"
     echo ""
 
-    $SSH "${BMC_USER}@${BMC_IP}" "docker exec ${CONTAINER} supervisorctl start bmcweb"
+    state="$($SSH "${BMC_USER}@${BMC_IP}" "sonic-db-cli CONFIG_DB HGET 'FEATURE|${CONTAINER}' state" 2>/dev/null || true)"
+    if [ "$state" != "enabled" ]; then
+        echo "    WARNING: feature ${CONTAINER} is '${state:-unknown}', not enabled; skipping the restart."
+        echo "    The certificates take effect when the feature is enabled."
+        echo ""
+        echo "=== Installation Complete (container not restarted) ==="
+        exit 0
+    fi
 
-    echo "    bmcweb restarted"
+    $SSH "${BMC_USER}@${BMC_IP}" "sudo systemctl restart ${CONTAINER}"
+
+    echo "  Waiting for bmcweb..."
+    up=false
+    for _ in $(seq 1 45); do
+        if $SSH "${BMC_USER}@${BMC_IP}" "docker exec ${CONTAINER} supervisorctl status bmcweb 2>/dev/null | grep -q RUNNING"; then
+            up=true
+            break
+        fi
+        sleep 2
+    done
+    if $up; then
+        echo "    bmcweb running"
+    else
+        echo "    WARNING: bmcweb not RUNNING after 90s; check: docker exec ${CONTAINER} supervisorctl status"
+    fi
     echo ""
 
     # --- Verify ---
@@ -259,12 +312,27 @@ if $INSTALL; then
     openssl s_client -connect "${BMC_IP}:443" -showcerts < /dev/null 2>/dev/null | \
         openssl x509 -text -noout | grep -E "Subject:|Issuer:|DNS:|IP:" || true
 
+    # TLSStrict stays off: the service root must answer without a certificate.
+    # Access is decided per request from the client CN, so a privileged path
+    # is what shows the client certificate being accepted.
+    echo ""
+    echo -n "  Service root without a client certificate (expect 200): "
+    curl -s -o /dev/null -w '%{http_code}\n' --noproxy "${BMC_IP}" \
+        --cacert CA-cert.pem "https://${BMC_IP}/redfish/v1/" || echo "request failed"
+
+    if [ -f client-cert.pem ] && [ -f client-key.pem ]; then
+        echo -n "  /redfish/v1/Managers with the client certificate (expect 200): "
+        curl -s -o /dev/null -w '%{http_code}\n' --noproxy "${BMC_IP}" \
+            --cert client-cert.pem --key client-key.pem --cacert CA-cert.pem \
+            "https://${BMC_IP}/redfish/v1/Managers" || echo "request failed"
+    fi
+
     echo ""
     echo "  Test mTLS with:"
     echo ""
     echo "    curl --noproxy ${BMC_IP} --cert $WORK_DIR/client-cert.pem --key $WORK_DIR/client-key.pem \\"
     echo "         --cacert $WORK_DIR/CA-cert.pem \\"
-    echo "         https://${BMC_IP}/redfish/v1/"
+    echo "         https://${BMC_IP}/redfish/v1/Managers"
     echo ""
 
     echo "=== Installation Complete! ==="
@@ -284,7 +352,7 @@ if [ -n "$MISSING" ]; then
     echo "Usage: $0 -i <IP> [options]"
     echo ""
     echo "Example:"
-    echo "  $0 -i <BMC_IP> -c <BMC_IP> --client-cn bmcweb"
+    echo "  $0 -i <BMC_IP> -c <BMC_HOSTNAME> --client-cn bmcweb"
     echo ""
     echo "Run with -h for full usage."
     exit 1
@@ -383,26 +451,18 @@ else
     echo "[3/$TOTAL] Using existing CA certificate"
 fi
 
-# Step 4: Generate server private key and CSR
+# Step 4: Generate server private key and CSR, sign with the CA
 echo "[4/$TOTAL] Generating server certificate..."
 
 openssl genrsa -out server-key.pem 2048
 
 openssl req -new -config openssl-server.cnf -key server-key.pem -out server.csr
 
-# Step 5: Sign server certificate with CA
 openssl x509 -req -extensions my_ext_section -extfile myext-server.cnf -days 730 \
     -in server.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial \
     -out server-cert.pem
 
 echo "    Server certificate created"
-
-# Step 5: Create combined PEM (cert + key for bmcweb)
-echo "[5/$TOTAL] Creating combined PEM file..."
-
-cat server-cert.pem server-key.pem > server-combined.pem
-
-echo "    Combined PEM: server-combined.pem"
 
 # Verify server certificates
 echo ""
@@ -419,14 +479,14 @@ echo "Server certificate details:"
 openssl x509 -in server-cert.pem -noout -subject -issuer -dates -ext subjectAltName
 
 # ---------------------------------------------------------------------------
-# mTLS — client certificate + CA truststore + TLSStrict config
+# mTLS: client certificate
 # ---------------------------------------------------------------------------
 echo ""
 echo "=== mTLS ==="
 echo ""
 
-# Step 6: OpenSSL config for client certificate
-echo "[6/$TOTAL] Creating client certificate OpenSSL configuration..."
+# Step 5: OpenSSL config for client certificate
+echo "[5/$TOTAL] Creating client certificate OpenSSL configuration..."
 
 cat > openssl-client.cnf << 'EOF'
 [ req ]
@@ -464,8 +524,8 @@ authorityKeyIdentifier = keyid
 subjectKeyIdentifier = hash
 EOF
 
-# Step 7: Generate client private key, CSR, and sign with CA
-echo "[7/$TOTAL] Generating client certificate..."
+# Step 6: Generate client private key, CSR, and sign with CA
+echo "[6/$TOTAL] Generating client certificate..."
 
 openssl genrsa -out client-key.pem 2048
 
@@ -474,8 +534,6 @@ openssl req -new -config openssl-client.cnf -key client-key.pem -out client.csr
 openssl x509 -req -extensions my_ext_section -extfile myext-client.cnf -days 730 \
     -in client.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial \
     -out client-cert.pem
-
-cat client-cert.pem client-key.pem > client-combined.pem
 
 echo "    Client certificate created"
 
@@ -487,46 +545,25 @@ echo ""
 echo "Client certificate details:"
 openssl x509 -in client-cert.pem -noout -subject -issuer -dates
 
-# Step 8: Create bmcweb TLSStrict config
-echo ""
-echo "[8/$TOTAL] Creating mTLS configuration files..."
-
-# bmcweb persistent data — enable mTLS with TLSStrict
-cat > bmcweb_tls_config.json << 'EOFJ'
-{
-  "auth_config": {
-    "BasicAuth": true,
-    "Cookie": true,
-    "SessionToken": true,
-    "XToken": true,
-    "TLS": true,
-    "TLSStrict": true,
-    "MTLSCommonNameParseMode": 2
-  },
-  "sessions": [],
-  "revision": 1
-}
-EOFJ
-
-echo "    TLSStrict config: bmcweb_tls_config.json"
+# Only the certificates and keys are kept; the request configs, CSRs and the
+# serial file are OpenSSL working files.
+rm -f openssl-server.cnf myext-server.cnf server.csr \
+      openssl-client.cnf myext-client.cnf client.csr CA-cert.srl
 
 echo ""
 echo "=== Certificate Generation Complete! ==="
 echo ""
 echo "Generated files:"
-echo "  CA-cert.pem              — CA certificate"
-echo "  CA-key.pem               — CA private key (keep secure)"
-echo "  server-cert.pem          — Server certificate"
-echo "  server-key.pem           — Server private key"
-echo "  server-combined.pem      — Server cert + key combined"
-echo "  client-cert.pem          — Client certificate (stays on client)"
-echo "  client-key.pem           — Client private key (stays on client)"
-echo "  client-combined.pem      — Client cert + key combined"
-echo "  bmcweb_tls_config.json   — bmcweb TLSStrict config"
+echo "  CA-cert.pem              - CA certificate"
+echo "  CA-key.pem               - CA private key (keep secure)"
+echo "  server-cert.pem          - Server certificate"
+echo "  server-key.pem           - Server private key"
+echo "  client-cert.pem          - Client certificate (stays on client)"
+echo "  client-key.pem           - Client private key (stays on client)"
 echo ""
 
 echo ""
 echo "To install certificates into the BMC, run:"
 echo ""
-echo "  $0 --install --bmc-ip <BMC_IP> [--bmc-pass <PASS>] [--bmc-user <USER>] [-d $WORK_DIR]"
+echo "  $0 --install --bmc-ip <BMC_IP> [--bmc-pass <PASS>] [--bmc-user <USER>] [-d $WORK_DIR] [--push-config]"
 echo ""
