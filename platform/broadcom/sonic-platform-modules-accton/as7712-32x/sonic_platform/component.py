@@ -8,6 +8,7 @@
 try:
     import subprocess
     from sonic_platform_base.component_base import ComponentBase
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -64,8 +65,8 @@ class Component(ComponentBase):
         # Retrieves the CPLD firmware version
         cpld_version = dict()
         for cpld_name in CPLD_ADDR_MAPPING:
-            cmd = "i2cget -f -y {0} {1} 0x1".format(CPLD_ADDR_MAPPING[cpld_name][0], CPLD_ADDR_MAPPING[cpld_name][1])
-            status, value = subprocess.getstatusoutput(cmd)
+            cmd = ['i2cget', '-f', '-y', CPLD_ADDR_MAPPING[cpld_name][0], CPLD_ADDR_MAPPING[cpld_name][1], '0x1']
+            status, value = getstatusoutput_noshell(cmd)
             if not status:
                 cpld_version_raw = value.rstrip()
                 cpld_version[cpld_name] = "{}".format(int(cpld_version_raw,16))
