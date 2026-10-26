@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import pwd
+import shlex
 import socket
 import stat
 import subprocess
@@ -312,7 +313,7 @@ class StartupTest(unittest.TestCase):
         legacy = next(line for line in commands if '--unixsocket /var/run/redis/redis_bmp.sock ' in line)
         self.assertIn('--port 0 ', selected)
         self.assertIn('exec /usr/local/bin/redis_auth_server.py /var/run/redis/redis.sock /usr/bin/redis-server', selected)
-        self.assertIn('--unixsocketperm 760 --aclfile /run/redis-auth/server/users.acl', selected)
+        self.assertIn('--unixsocketperm 766 --aclfile /run/redis-auth/server/users.acl', selected)
         self.assertIn('stopasgroup=true', rendered)
         self.assertIn('killasgroup=true', rendered)
         self.assertNotIn('redis_auth_server.py', legacy)
@@ -332,7 +333,7 @@ class StartupTest(unittest.TestCase):
             if name == 'database':
                 self.assertNotIn('redis_socket_mode', rendered)
                 for socket in ('REDIS_BMP_SOCK', 'REDIS_SOCK'):
-                    self.assertIn(f'chgrp -f redis ${socket} && chmod -f 0760 ${socket}', rendered)
+                    self.assertIn(f'set_redis_socket_permissions \"${socket}\"', rendered)
             self.assertIn('redis-auth-delivery-missing', rendered)
             self.assertIn('sudo -n /usr/bin/redis_auth_startup.py --check', rendered)
             self.assertIn('SONIC_DB_CLI=\"sudo -n $SONIC_DB_CLI\"', rendered)
@@ -436,7 +437,7 @@ class StartupTest(unittest.TestCase):
                 reader.command('EXEC')
             self.assertEqual(reader.command('GET', 'test:key'), b'before')
             self.wait_for_reader_acl(path, process)
-            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o760)
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o766)
             # Named writers retain existing administrative commands.
             self.assertEqual(writer.command('CONFIG', 'SET', 'timeout', 0), b'OK')
 
@@ -490,27 +491,100 @@ class StartupTest(unittest.TestCase):
         return subprocess.run(['redis-cli', '-s', str(path), '--raw', '-e', *command],
                               preexec_fn=demote, text=True, capture_output=True)
 
+    def apply_host_socket_permissions(self, path, *, selected=None, mode='enforce', malformed=False):
+        import jinja2
+        environment = jinja2.Environment(undefined=jinja2.ChainableUndefined)
+        rendered = environment.from_string(
+            (ROOT / 'files/build_templates/docker_image_ctl.j2').read_text()).render(
+                docker_container_name='database', sonic_asic_platform='vs')
+        start = rendered.index('set_redis_socket_permissions() {')
+        end = rendered.index('\n}', start) + 2
+        policy = self.root / 'host-socket-policy.json'
+        policy.write_text('invalid JSON' if malformed else json.dumps(
+            [{'unix_socket': str(selected)}] if selected is not None else []))
+        function = rendered[start:end].replace('/run/redis-auth/local.json', str(policy))
+        script = (function + '\nREDIS_AUTH_MODE=' + shlex.quote(mode) +
+                  '\nset_redis_socket_permissions ' + shlex.quote(str(path)))
+        result = subprocess.run(['bash', '-c', script], text=True, capture_output=True)
+        if not malformed or mode == 'legacy':
+            self.assertEqual(result.returncode, 0, result.stderr)
+        return result
+
+    def test_private_group_account_reads_without_writer_credentials(self):
+        self.select(mode='enforce')
+        self.prepare()
+        path = self.root / 'sockets/redis.sock'
+        self.start_socket_server(path, enforce=True)
+        writer = Redis(path)
+        self.addCleanup(writer.close)
+        secret = self.runtime / 'local-system/writer.secret'
+        writer.command('AUTH', startup.USERNAME, secret.read_text().strip())
+        for database in (0, 1, 4, 15):
+            writer.command('SELECT', database)
+            self.assertEqual(writer.command('SET', 'test:reader', 'kept'), b'OK')
+            result = self.as_reader(path, '-n', str(database), 'GET', 'test:reader', gid=1002)
+            self.assertEqual((result.returncode, result.stdout.strip()), (0, 'kept'))
+        for command in (('SET', 'test:reader', 'bad'), ('DEL', 'test:reader'), ('FLUSHDB',),
+                        ('CONFIG', 'SET', 'timeout', '10'),
+                        ('EVAL', "return redis.call('SET',KEYS[1],ARGV[1])", '1', 'test:reader', 'bad')):
+            denied = self.as_reader(path, *command, gid=1002)
+            self.assertNotEqual(denied.returncode, 0)
+            expected = 'ACL failure in script' if command[0] == 'EVAL' else 'NOPERM'
+            self.assertIn(expected, denied.stdout + denied.stderr)
+        self.assertEqual(self.as_reader(path, 'GET', 'test:reader', gid=1002).stdout.strip(), 'kept')
+
+        def ordinary():
+            os.setgroups([])
+            os.setgid(1002)
+            os.setuid(65534)
+
+        result = subprocess.run(['cat', str(secret)], preexec_fn=ordinary,
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, '')
+        self.assertEqual(stat.S_IMODE(secret.stat().st_mode), 0o400)
+
+    def test_host_socket_permissions_reject_unreadable_enforcement_policy(self):
+        self.select(mode='enforce')
+        self.prepare()
+        path = self.root / 'sockets/legacy.sock'
+        self.start_socket_server(path, enforce=False)
+        result = self.apply_host_socket_permissions(path, malformed=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o760)
+        self.assertNotEqual(self.as_reader(path, 'PING', gid=1002).returncode, 0)
+
+    def test_legacy_host_socket_permissions_ignore_enforcement_policy(self):
+        path = self.root / 'sockets/legacy.sock'
+        self.start_socket_server(path, enforce=False)
+        self.apply_host_socket_permissions(path, mode='legacy', malformed=True)
+        self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o760)
+        self.assertNotEqual(self.as_reader(path, 'PING', gid=1002).returncode, 0)
+
     def test_mixed_sockets_admit_existing_readers_without_opening_legacy(self):
         self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         selected, legacy = self.root / 'sockets/redis.sock', self.root / 'sockets/redis_bmp.sock'
         self.start_socket_server(selected, enforce=True)
         self.start_socket_server(legacy, enforce=False)
-        for gid in (27, 100, 1001, pwd.getpwnam('redis').pw_gid):
+        for gid in (27, 100, 1001, 1002, 65534, pwd.getpwnam('redis').pw_gid):
             result = self.as_reader(selected, 'PING', gid=gid)
             self.assertEqual((result.returncode, result.stdout.strip()), (0, 'PONG'))
-        for gid in (27, 100, 1001):
+        for gid in (27, 100, 1001, 1002, 65534):
             denied = self.as_reader(selected, 'SET', 'test:reader', 'bad', gid=gid)
             self.assertNotEqual(denied.returncode, 0)
             self.assertIn('NOPERM', denied.stdout + denied.stderr)
-        self.assertNotEqual(self.as_reader(selected, 'PING', gid=65534).returncode, 0)
         self.assertNotEqual(self.as_reader(legacy, 'PING').returncode, 0)
         parent_acl = subprocess.check_output(['getfacl', '-ncp', str(selected.parent)], text=True)
         self.assertNotIn('group:100:', parent_acl)
         self.assertNotIn('default:', parent_acl)
-        # The existing host launcher chmod must preserve the named reader entry.
-        selected.chmod(0o760)
-        self.assertEqual(self.as_reader(selected, 'PING').returncode, 0)
+        # The host launcher must preserve admission for private-group accounts.
+        self.apply_host_socket_permissions(selected, selected=selected)
+        self.apply_host_socket_permissions(legacy, selected=selected)
+        self.assertEqual(stat.S_IMODE(selected.stat().st_mode), 0o766)
+        self.assertEqual(stat.S_IMODE(legacy.stat().st_mode), 0o760)
+        self.assertEqual(self.as_reader(selected, 'PING', gid=1002).returncode, 0)
+        self.assertNotEqual(self.as_reader(legacy, 'PING', gid=1002).returncode, 0)
 
     def test_mixed_mode_tcp_compatibility_subscriptions_and_selected_restart(self):
         with socket.socket() as reservation:
@@ -581,7 +655,11 @@ class StartupTest(unittest.TestCase):
         self.assertEqual(self.as_reader(path, 'PING').returncode, 0)
         self.assertEqual(self.as_reader(path, 'PING', gid=1001).returncode, 0)
         self.assertEqual(self.as_reader(path, 'PING', gid=27).returncode, 0)
-        self.assertNotEqual(self.as_reader(path, 'PING', gid=65534).returncode, 0)
+        self.assertEqual(self.as_reader(path, 'PING', gid=65534).returncode, 0)
+        self.assertEqual(self.as_reader(path, 'PING', gid=1002).returncode, 0)
+        denied = self.as_reader(path, 'SET', 'test:reader', 'bad', gid=1002)
+        self.assertNotEqual(denied.returncode, 0)
+        self.assertIn('NOPERM', denied.stdout + denied.stderr)
 
     def test_socket_acl_failure_stops_the_redis_child(self):
         self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
