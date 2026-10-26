@@ -1,4 +1,59 @@
-# Shared container manifest labels and OCI tools
+# Shared OCI container tools
+
+## Package contracts and shared tests
+
+`package_contract.py` checks declared package contents and provenance. Container
+owners supply expectations; the implementation has no table of container names,
+package names, module versions or public targets. SWSS and Syncd use this same
+module and select the same package/image regression tests in their `:ci_tests`.
+The owner declarations stay beside each container's original Dockerfile and
+startup inputs: `dockers/docker-orchagent/` for SWSS and
+[`platform/vs/docker-syncd-vs/`](../../../platform/vs/docker-syncd-vs/bazel/README.md)
+for Syncd VS. Shared implementations remain in this directory.
+
+Each owner BUILD generates `:package_policy` with `write_file` and `json.encode`.
+It reuses the existing APT policy's identity and features, then adds the checks
+that APT selection does not describe. The generated JSON is a declared action
+and test input, not another checked-in copy of those values.
+
+| Policy field | Purpose |
+| --- | --- |
+| `debug_tools` | Expected debug package selection. Runtime cannot contain this debug selection. |
+| `retained_requirements` | Requirements for imported runtime packages which debug must inherit. For example, when FIPS is enabled, Syncd requires `openssh-client` with `+fips` in its version and the declared `usr/bin/ssh` ELF. |
+| `install_inventory` | How to read source-owned install declarations and compare the resulting files, modes and data bytes. SWSS reads its existing C++/Lua declarations and Debian install file; the policy does not copy the program list. |
+| `libraries`, `required_debug_paths`, `config_paths` | Required library payloads and SONAME links, matching symbols, and installed configuration metadata. |
+| `native` | Required native package/SONAME coverage, explicitly accepted existing symbol gaps, and source/imported symbol requirements. |
+| `image_validation` | Expected startup/configuration, archive tags, and explicitly permitted installed-state changes. |
+
+Syncd consumes the public source TAR targets listed in its `BUILD.bazel`.
+Each producer owns its installed paths, permissions, ownership and service
+links. The generated `source_contract` reads producer metadata and selected
+module declarations, checks their target bindings and measured TAR hashes, and
+supplies package identity and dependency receipts. There is no image-side
+source-path catalog or permission repair. SWSS's source install lists likewise
+remain in the SWSS repository.
+
+Compiler, Automake and OpenMPI alternatives are small shared TAR targets in
+`sonic-build-infra`, following the existing Vim alternative layer. Canonical
+APT locks and generated installed-package status remain build inputs/outputs;
+the old installation-state snapshot is unnecessary. Installed-runtime smoke
+policies are maintained by the separate validation work in
+[buildimage PR #20](https://github.com/securely1g/sonic-buildimage/pull/20).
+
+`package_contract.py` validates source provenance and receipts;
+`package_receipts.py` checks original imported DEB identities after upstream
+BSD tar extraction. Reusable payload, ELF and image checks are in
+`package_payloads.py`, `native_packages.py` and `image_validation.py`.
+
+The common tests cover both owner policies and unrelated package/architecture
+fixtures. `swss_package_contract_test` additionally supplies real source-built
+archives to the same validator. These checks do not establish guest boot or
+forwarding behavior.
+
+The real archive test keeps the workspace's default configuration and records
+the SHA256 of each validated input. CI compares those hashes with the exported
+artifacts and the public upload list, preventing a different configuration or
+changed archive from being published under a successful package-test result.
 
 ## Select APT additions for a container
 
@@ -49,6 +104,18 @@ inherits that package unchanged; the policy has no replacement option. The
 container handoff validator rejects missing or ordinary runtime OpenSSH and a
 separate OpenSSH package in debug. FIPS applies to both variants. The shared
 selector rejects conflicting inherited package controls for every container.
+
+An image can also supply source-built libraries alongside Make imports. Its
+declared preparation action combines the original Make manifest with a separate
+`source_packages` inventory. Each source record includes reviewed dependency
+controls, its owner module/version/commit/target, and the actual input TAR hash;
+the document records the original Make manifest and source receipt hashes.
+Selection checks dependencies across both inventories and rejects duplicate
+ownership. Receipts keep `skipped_source` separate from `skipped_make`, and
+debug must match runtime's source receipt. Syncd uses this for the Common,
+sairedis and metadata targets already consumed by Orchagent. The image's source
+adapter and final-image checks validate the payload and symbol hashes; APT
+selection does not claim that these TARs were installed as Debian packages.
 
 The shared tool preserves the existing receipt formats: source-built containers
 receive `group`, `skipped_retained`, `image` and `policy_sha256`; Make consumers
@@ -163,9 +230,17 @@ registered outputs can also be requested as direct Make targets.
 Add the resulting `$(TARGET_PATH)/docker-example-base.oci` to the consuming
 container's `_BAZEL_DEPENDS` as in the [bridge example](../README.md#example-another-runtime-and-debug-archive).
 
-SWSS uses this interface to publish `target/docker-config-engine-trixie.oci`
-from `target/docker-config-engine-trixie.gz`, with image platform `linux/amd64`.
-It remains the only production opt-in, supporting native AMD64 Trixie VS builds.
+Non-FIPS SWSS builds use this interface to publish `target/docker-config-engine-trixie.oci`
+from the Make-built `target/docker-config-engine-trixie.gz`, with image platform
+`linux/amd64`. FIPS SWSS builds and source-built syncd VS consume
+`//dockers/docker-config-engine-trixie:docker-config-engine-trixie` directly.
+Make passes `--//dockers/docker-orchagent:source_config_engine=true` to both
+SWSS archive variants when `INCLUDE_FIPS=y`, and prepares the base and
+config-engine manifests instead of extracting the Docker archive. Direct Bazel
+reproductions of that configuration must use the same flag and manifests.
+Each owner keeps its own configuration guards. The syncd VS
+[owner guide](../../../platform/vs/docker-syncd-vs/bazel/README.md) records its
+image validation requirements and remaining runtime checks.
 The pinned Docker 28.5.2 saves both
 Docker metadata and an OCI layout in the same archive. Make extracts the existing
 OCI files without changing the index, config or layer bytes. Both outputs
@@ -239,3 +314,13 @@ On native ARM64 Trixie, also select
 `--platforms=@sonic_build_infra//platforms:aarch64_trixie` and
 `--host_platform=@sonic_build_infra//platforms:aarch64_trixie`. This test validates
 compression and archive structure; it does not build a production ARM64 image.
+
+## Inspect image layers
+
+`oci_inventory.py` applies layer metadata and OCI whiteouts to a filesystem
+inventory and checks that added package layers preserve inherited directory
+symlinks and links to ELF files. Link resolution uses the image inventory, never
+the build host filesystem. Shared payload and image validators use
+`normalize_layer.py` for reviewed merged-usr paths. Owners declare their input
+layers and package expectations in BUILD; the shared selector and inventory
+helpers apply them without image-specific package names or feature settings.

@@ -18,14 +18,26 @@ _policy = rule(
     attrs = {"document": attr.string(mandatory = True)},
 )
 
-def apt_layer(name, packages, lock, dependency_set, base, policy, variant,
-              retained_manifest = None, base_package_metadata = None, **kwargs):
+def apt_layer(
+        name,
+        packages,
+        lock,
+        dependency_set,
+        base,
+        policy,
+        variant,
+        retained_manifest = None,
+        base_package_metadata = None,
+        source_receipt = None,
+        **kwargs):
     """Generate a declared policy input and select/flatten checked APT payloads.
 
     The generated <name>_policy target can also be used by container policy
     tests. Runtime/debug layers share the same policy; dynamic package controls
-    and retained package identities come from the declared Make manifest.
+    and package identities come from a declared source receipt or Make manifest.
     """
+    if retained_manifest != None and source_receipt != None:
+        fail("APT selection accepts an imported manifest or a source receipt, not both")
     _policy(
         name = name + "_policy",
         document = json.encode(policy),
@@ -41,7 +53,7 @@ def apt_layer(name, packages, lock, dependency_set, base, policy, variant,
         selector = "//tools/bazel/oci:select_apt_payloads",
         architecture = policy["architecture"],
         variant = variant,
-        retained_manifest = retained_manifest,
+        retained_manifest = source_receipt if source_receipt != None else retained_manifest,
         base_package_metadata = base_package_metadata,
         **kwargs
     )

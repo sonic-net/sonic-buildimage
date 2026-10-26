@@ -3,6 +3,108 @@ load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 package(default_visibility = ["//visibility:public"])
 
 py_library(
+    name = "source_base_validation",
+    srcs = ["source_base_validation.py"],
+    deps = [
+        ":oci_inventory",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+# Container owners pass policy and source-package declarations as inputs. These
+# helpers never discover a container directory or select expectations by name.
+py_library(
+    name = "package_contract_lib",
+    srcs = ["package_contract.py"],
+    deps = [
+        ":normalize_layer_lib",
+        ":oci_inventory",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "package_contract",
+    srcs = ["package_contract.py"],
+    main = "package_contract.py",
+    deps = [":package_contract_lib"],
+)
+
+py_library(
+    name = "container_validation",
+    srcs = [
+        "image_validation.py",
+        "native_packages.py",
+        "package_payloads.py",
+    ],
+    deps = [
+        ":normalize_layer_lib",
+        ":oci_inventory",
+        ":oci_layout",
+        ":package_contract_lib",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_library(
+    name = "package_receipts_lib",
+    srcs = ["package_receipts.py"],
+    deps = ["//tools/bazel/ci:artifact_validation"],
+)
+
+py_binary(
+    name = "package_receipts",
+    srcs = ["package_receipts.py"],
+    main = "package_receipts.py",
+    deps = [":package_receipts_lib"],
+)
+
+py_library(
+    name = "package_state_lib",
+    srcs = ["package_state.py"],
+    deps = [
+        ":oci_inventory",
+        ":oci_layout",
+        ":package_contract_lib",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "package_state",
+    srcs = ["package_state.py"],
+    main = "package_state.py",
+    deps = [":package_state_lib"],
+)
+
+# SONiC image helpers share this repository's authoritative OCI layout reader.
+# ELF matching is separate from the lightweight inventory used by APT selection.
+py_library(
+    name = "elf_metadata",
+    srcs = ["elf.py"],
+    deps = ["//tools/bazel/ci:artifact_validation"],
+)
+
+py_library(
+    name = "imported_symbols_lib",
+    srcs = ["imported_symbols.py"],
+    deps = [
+        ":elf_metadata",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "imported_symbols",
+    srcs = ["imported_symbols.py"],
+    main = "imported_symbols.py",
+    deps = [":imported_symbols_lib"],
+)
+
+py_library(
     name = "normalize_layer_lib",
     srcs = ["normalize_layer.py"],
     deps = [
@@ -24,6 +126,7 @@ py_library(
     deps = [
         ":oci_inventory",
         ":oci_layout",
+        ":package_contract_lib",
         "//tools/bazel/ci:artifact_validation",
         "@sonic_build_infra//apt:lib",
     ],
@@ -72,4 +175,19 @@ py_binary(
     name = "prepare_oci_base",
     srcs = ["prepare_oci_base.py"],
     deps = [":oci_layout"],
+)
+
+py_library(
+    name = "source_contract_lib",
+    srcs = ["source_contract.py"],
+    deps = [
+        ":package_contract_lib",
+        "@sonic_build_infra//oci:metadata_lib",
+    ],
+)
+
+py_binary(
+    name = "source_contract",
+    srcs = ["source_contract.py"],
+    deps = [":source_contract_lib"],
 )

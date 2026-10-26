@@ -26,8 +26,8 @@ def path_name(value):
     return str(path)
 
 
-def command(arguments, **kwargs):
-    result = subprocess.run(arguments, capture_output=True, text=True, timeout=300, **kwargs)
+def command(arguments, timeout=300, **kwargs):
+    result = subprocess.run(arguments, capture_output=True, text=True, timeout=timeout, **kwargs)
     require(result.returncode == 0, "command failed: " + repr(arguments[:8]) + "\n" + result.stdout + result.stderr)
     return result.stdout
 
@@ -79,54 +79,77 @@ def payload(path, require_root=True):
                 continue
             if member.isfile():
                 with archive.extractfile(member) as stream:
-                    data = stream.read()
-                item.update(sha256=hashlib.sha256(data).hexdigest(), size=len(data))
-                if data.startswith(b"\x7fELF"):
-                    require(data[:6] == b"\x7fELF\x02\x01", "expected little-endian ELF64: " + name)
-                    item["elf_machine"] = struct.unpack_from("<H", data, 18)[0]
+                    contents = file_metadata(stream, name)
+                # Preserve this public inventory schema for existing consumers.
+                contents.pop("elf_type", None)
+                item.update(contents)
             result[name] = item
     return result
 
 
-def elf_debug(extracted, expected, prebuilt):
+def elf_info(path, *, readelf="readelf", dynamic=False, timeout=300):
+    """Read build ID and debug sections, optionally including runtime dependencies."""
+    notes = command([readelf, "-n", str(path)], timeout=timeout)
+    sections = command([readelf, "-SW", str(path)], timeout=timeout)
+    identifier = re.search(r"Build ID: ([0-9a-f]+)", notes)
+    result = {"build_id": identifier[1] if identifier else None,
+              "has_dwarf": ".debug_info" in sections or ".zdebug_info" in sections,
+              "has_debuglink": ".gnu_debuglink" in sections}
+    if dynamic:
+        entries = command([readelf, "-d", str(path)], timeout=timeout)
+        soname = re.search(r"\(SONAME\).*\[([^]]+)\]", entries)
+        result.update(soname=soname[1] if soname else None,
+                      needed=re.findall(r"\(NEEDED\).*\[([^]]+)\]", entries))
+    return result
+
+
+def verify_debuglink(binary, symbols, name, *, expected_name=None, objcopy="objcopy", timeout=300):
+    """Require the runtime debug link to name and checksum the selected symbols."""
+    with tempfile.TemporaryDirectory(prefix="sonic-debuglink-") as temporary:
+        link = Path(temporary) / "debuglink"
+        # objcopy otherwise rewrites its input even when only dumping a section.
+        command([objcopy, "--dump-section", ".gnu_debuglink=" + str(link), str(binary),
+                 str(Path(temporary) / "elf-copy")], timeout=timeout)
+        raw = link.read_bytes()
+    end = raw.index(0)
+    require(raw[:end].decode() == (expected_name or symbols.name), "debuglink filename differs: " + name)
+    checksum = 0
+    with symbols.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            checksum = zlib.crc32(chunk, checksum)
+    offset = (end + 4) & ~3
+    require(len(raw) >= offset + 4 and struct.unpack_from("<I", raw, offset)[0] == checksum,
+            "debuglink CRC differs: " + name)
+
+
+def elf_debug(extracted, expected, prebuilt, *, readelf="readelf", objcopy="objcopy"):
     pairs, gaps = [], []
     for name, item in expected.items():
         if "elf_machine" not in item or name.startswith("usr/lib/debug/"):
             continue
         binary = extracted / name
-        notes = command(["readelf", "-n", str(binary)])
-        match = re.search(r"Build ID: ([0-9a-f]+)", notes)
-        require(match is not None, "missing runtime ELF build ID: " + name)
-        identifier = match[1]
+        info = elf_info(binary, readelf=readelf)
+        identifier = info["build_id"]
+        require(identifier is not None, "missing runtime ELF build ID: " + name)
         debug_name = "usr/lib/debug/.build-id/" + identifier[:2] + "/" + identifier[2:] + ".debug"
-        sections = command(["readelf", "-SW", str(binary)])
-        require(".debug_info" not in sections, "unstripped runtime ELF: " + name)
+        require(not info["has_dwarf"], "unstripped runtime ELF: " + name)
         if name in prebuilt:
             require(debug_name not in expected, "prebuilt debug-gap declaration is stale: " + name)
             gaps.append({"path": name, "build_id": identifier, "reason": "producer supplies no matching debug artifact"})
             continue
         require(debug_name in expected, "missing embedded debug file: " + name)
         symbols = extracted / debug_name
-        require("Build ID: " + identifier in command(["readelf", "-n", str(symbols)]), "debug build ID differs: " + name)
-        require(".debug_info" in command(["readelf", "-SW", str(symbols)]), "debug file lacks DWARF: " + name)
-        # With no output argument objcopy rewrites its input, even for a section
-        # dump. Read-only installed libraries must stay byte-for-byte untouched.
-        with tempfile.TemporaryDirectory(prefix="sonic-debuglink-") as temporary:
-            link = Path(temporary) / "debuglink"
-            command(["objcopy", "--dump-section", ".gnu_debuglink=" + str(link),
-                     str(binary), str(Path(temporary) / "elf-copy")])
-            raw = link.read_bytes()
-        end = raw.index(0)
-        require(raw[:end].decode() == symbols.name, "debuglink filename differs: " + name)
-        offset = (end + 4) & ~3
-        require(len(raw) >= offset + 4 and struct.unpack_from("<I", raw, offset)[0] == zlib.crc32(symbols.read_bytes()),
-                "debuglink CRC differs: " + name)
+        symbol_info = elf_info(symbols, readelf=readelf)
+        require(symbol_info["build_id"] == identifier, "debug build ID differs: " + name)
+        require(symbol_info["has_dwarf"], "debug file lacks DWARF: " + name)
+        verify_debuglink(binary, symbols, name, objcopy=objcopy)
         pairs.append({"path": name, "build_id": identifier, "debug_path": debug_name})
     require(set(prebuilt) == {item["path"] for item in gaps}, "unmatched prebuilt gap declaration")
     return pairs, gaps
 
 
-def debug_archives(runtime_archive, symbols_archive, *, expected_machine, prebuilt=()):
+def debug_archives(runtime_archive, symbols_archive, *, expected_machine, prebuilt=(),
+                   readelf="readelf", objcopy="objcopy"):
     """Validate split-symbol archives; callers retain their package inventory policy."""
     runtime = payload(runtime_archive)
     symbols = payload(symbols_archive)
@@ -147,5 +170,5 @@ def debug_archives(runtime_archive, symbols_archive, *, expected_machine, prebui
         for path in (runtime_archive, symbols_archive):
             with tarfile.open(path) as archive:
                 archive.extractall(extracted, filter="data")
-        pairs, gaps = elf_debug(extracted, combined, set(prebuilt))
+        pairs, gaps = elf_debug(extracted, combined, set(prebuilt), readelf=readelf, objcopy=objcopy)
     return {"elf_count": len(elfs), "debug_pairs": pairs, "prebuilt_debug_gaps": gaps}

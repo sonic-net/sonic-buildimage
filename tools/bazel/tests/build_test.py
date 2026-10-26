@@ -1,4 +1,4 @@
-"""Exercise shared build/query/export with unrelated target declarations."""
+"""Exercise shared archive and declared-filegroup export with unrelated targets."""
 
 import contextlib
 import hashlib
@@ -29,11 +29,6 @@ class BuildEvidenceTest(unittest.TestCase):
         self.receipt = {'commands': []}
         self.targets = {'telemetry.tar': '@telemetry//dist:runtime',
                         'routing.tar': '@routing//:package'}
-        self.output_base = self.root / 'output base'
-        self.roots = {'@telemetry//dist:runtime': 'external/telemetry+',
-                      '@routing//:package': 'external/routing+'}
-        for root in self.roots.values():
-            (self.output_base / root).mkdir(parents=True)
         self.mode = self.workspace / 'mode'
         self.mode.write_text('')
         self.bazel = self.root / 'bazel executable'
@@ -42,12 +37,7 @@ import json, pathlib, sys
 args = sys.argv[1:]
 mode = pathlib.Path('mode').read_text()
 labels = {self.targets!r}
-roots = {self.roots!r}
-if args[0] == 'info':
-    if args[1:] != ['output_base']:
-        raise SystemExit('unexpected configured info query')
-    print({str(self.output_base)!r})
-elif args[0] == 'build':
+if args[0] == 'build':
     if mode == 'build_failure':
         raise SystemExit('fixture build failed')
     output = pathlib.Path('bazel-bin/archive outputs')
@@ -60,14 +50,10 @@ elif args[0] == 'cquery':
     if mode == 'query_failure':
         print('bogus-but-existing-output.tar')
         raise SystemExit('fixture query failed')
-    if '--output=starlark' in args:
-        print(roots.get(label, ''))
-        if mode == 'multiple_roots': print('external/extra+')
-    else:
-        name = next(name for name, target in labels.items() if target == label)
-        if mode != 'no_outputs':
-            print('bazel-bin/archive outputs/' + ('absent.tar' if mode == 'missing_file' else name))
-        if mode == 'multiple_outputs': print('bazel-bin/second.tar')
+    name = next(name for name, target in labels.items() if target == label)
+    if mode != 'no_outputs':
+        print('bazel-bin/archive outputs/' + ('absent.tar' if mode == 'missing_file' else name))
+    if mode == 'multiple_outputs': print('bazel-bin/second.tar')
 else:
     raise SystemExit('unexpected operation: ' + args[0])
 ''')
@@ -136,25 +122,140 @@ else:
         self.assertEqual(sorted(path.name for path in self.directory.glob('telemetry.tar.*')),
                          ['telemetry.tar.query.log'])
 
-    def test_source_lookup_handles_two_external_repositories_and_main_workspace(self):
-        """Resolve external and local source roots using an unconfigured output-base query."""
-        for target in (*self.roots, '//local:target'):
-            with self.subTest(target=target), contextlib.redirect_stdout(io.StringIO()):
-                result = build.source_directory(self.workspace, self.directory, self.receipt, target,
-                                                bazel=str(self.bazel), options=self.options,
-                                                name='lookup-' + str(len(self.receipt['commands'])))
-                self.assertEqual(result, self.output_base / self.roots[target]
-                                 if target in self.roots else self.workspace)
-        info_commands = [command['argv'][1:] for command in self.receipt['commands']
-                         if command['argv'][1] == 'info']
-        self.assertEqual(info_commands, [['info', 'output_base']] * 3)
 
-    def test_source_lookup_rejects_ambiguous_query_results(self):
-        """Reject multiple repository roots instead of silently choosing one."""
-        self.mode.write_text('multiple_roots')
-        with contextlib.redirect_stdout(io.StringIO()), self.assertRaisesRegex(ValueError, 'one source repository'):
-            build.source_directory(self.workspace, self.directory, self.receipt, next(iter(self.roots)),
-                                   bazel=str(self.bazel), options=self.options)
+
+class DeclaredArtifactTest(unittest.TestCase):
+    """Export files selected by an owner BUILD without a second Python inventory."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.workspace = self.root / "checkout"
+        self.workspace.mkdir()
+        self.directory = self.root / "evidence"
+        self.directory.mkdir()
+        self.receipt = {"commands": []}
+        self.target = "//containers/example:ci_artifacts"
+        self.options = ["--jobs=2"]
+        self.mode = self.workspace / "mode"
+        self.mode.write_text("pass")
+        self.bazel = self.root / "bazel"
+        self.bazel.write_text("#!" + sys.executable + "\n" + r"""
+from pathlib import Path
+import sys
+mode = Path('mode').read_text()
+if sys.argv[1] == 'build':
+    if mode == 'build-failure': raise SystemExit('build failed')
+    names = ['first/telemetry.tar', 'second/routing.tar', 'third/telemetry.tar']
+    if mode.startswith('collision:'): names.append('collision/' + mode.split(':', 1)[1])
+    for name in names:
+        output = Path('bazel-bin/archive outputs') / name
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_bytes(b'' if mode == 'empty-file' else ('payload ' + name).encode())
+elif sys.argv[1] == 'cquery':
+    print('query diagnostic', file=sys.stderr)
+    if mode == 'query-failure': raise SystemExit('query failed')
+    if mode != 'empty-group':
+        print('bazel-bin/archive outputs/first/telemetry.tar')
+        second = 'collision/' + mode.split(':', 1)[1] if mode.startswith('collision:') else {
+            'duplicate-basename': 'third/telemetry.tar',
+            'missing-file': 'second/absent.tar',
+        }.get(mode, 'second/routing.tar')
+        print('bazel-bin/archive outputs/' + second)
+else:
+    raise SystemExit('unexpected command')
+""")
+        self.bazel.chmod(0o755)
+
+    def collect(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return build.collect_artifacts(self.workspace, self.directory, self.receipt, self.target,
+                                           bazel=str(self.bazel), options=self.options)
+
+    def test_collects_declared_files_by_basename_with_hash_receipts(self):
+        """Collect all filegroup outputs from Bazel, retaining target identity and exact bytes."""
+        paths = self.collect()
+        self.assertEqual(set(paths), {"telemetry.tar", "routing.tar"})
+        for name, original in (("telemetry.tar", "first/telemetry.tar"), ("routing.tar", "second/routing.tar")):
+            content = ("payload " + original).encode()
+            self.assertEqual(paths[name].read_bytes(), content)
+            self.assertEqual(self.receipt["artifacts"][name], {
+                "target": self.target, "output": "bazel-bin/archive outputs/" + original,
+                "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()})
+            self.assertEqual(paths[name].stat().st_mode & 0o777, 0o644)
+        commands = [command["argv"] for command in self.receipt["commands"]]
+        self.assertEqual([command[1] for command in commands], ["build", "cquery"])
+        for command in commands:
+            self.assertIn(self.target, command)
+            self.assertIn("--jobs=2", command)
+
+    def test_empty_group_is_a_valid_contract_only_job(self):
+        """Tests may establish contracts without publishing a production image or archive."""
+        self.mode.write_text("empty-group")
+        self.assertEqual(self.collect(), {})
+        self.assertEqual(self.receipt.get("artifacts", {}), {})
+
+    def test_duplicate_names_fail_before_any_output_is_replaced(self):
+        """Different outputs with the same basename cannot overwrite one another at publication."""
+        self.mode.write_text("duplicate-basename")
+        previous = self.directory / "telemetry.tar"
+        previous.write_bytes(b"previous publication")
+        with self.assertRaises(ValueError): self.collect()
+        self.assertEqual(previous.read_bytes(), b"previous publication")
+        self.assertEqual(self.receipt.get("artifacts", {}), {})
+
+    def test_reserved_future_evidence_names_fail_before_any_export(self):
+        """Artifacts cannot impersonate receipts, reports or dependency evidence written later."""
+        for name in ("report.json", "receipt.json", "MODULE.bazel.lock", "module-graph.json"):
+            with self.subTest(name=name):
+                self.mode.write_text("collision:" + name)
+                self.receipt = {"commands": []}
+                with self.assertRaisesRegex(ValueError, "collides with build evidence"):
+                    self.collect()
+                self.assertFalse((self.directory / name).exists())
+                self.assertFalse((self.directory / "telemetry.tar").exists())
+                self.assertEqual(self.receipt.get("artifacts", {}), {})
+
+    def test_existing_evidence_name_cannot_be_overwritten_by_an_artifact(self):
+        """Preserve an earlier log and reject the whole filegroup before exporting any file."""
+        self.mode.write_text("collision:checked.log")
+        evidence = self.directory / "checked.log"
+        evidence.write_text("recorded diagnostic\n")
+        original_mtime = evidence.stat().st_mtime_ns
+        with self.assertRaisesRegex(ValueError, "collides with build evidence"):
+            self.collect()
+        self.assertEqual(evidence.read_text(), "recorded diagnostic\n")
+        self.assertEqual(evidence.stat().st_mtime_ns, original_mtime)
+        self.assertFalse((self.directory / "telemetry.tar").exists())
+        self.assertEqual(self.receipt.get("artifacts", {}), {})
+
+    def test_invalid_declared_output_preserves_previous_publication(self):
+        """Validate every declared output before publishing files from an incomplete build."""
+        for mode in ("missing-file", "empty-file", "query-failure"):
+            with self.subTest(mode=mode):
+                self.mode.write_text(mode)
+                self.receipt = {"commands": []}
+                previous = self.directory / "telemetry.tar"
+                previous.write_bytes(b"previous publication")
+                with self.assertRaises((ValueError, subprocess.CalledProcessError)): self.collect()
+                self.assertEqual(previous.read_bytes(), b"previous publication")
+                self.assertEqual(self.receipt.get("artifacts", {}), {})
+
+    def test_build_failure_stops_output_discovery(self):
+        """A failed artifact build must retain failure evidence and must not query stale outputs."""
+        self.mode.write_text("build-failure")
+        with self.assertRaises(subprocess.CalledProcessError): self.collect()
+        self.assertEqual(len(self.receipt["commands"]), 1)
+        self.assertNotEqual(self.receipt["commands"][0]["returncode"], 0)
+        self.assertEqual(self.receipt.get("artifacts", {}), {})
+
+    def test_failed_copy_does_not_publish_an_incomplete_artifact(self):
+        """An interrupted first publication must leave no artifact or temporary partial copy."""
+        with mock.patch('tools.bazel.build_helpers.shutil.copyfile', side_effect=OSError('disk full')):
+            with self.assertRaisesRegex(OSError, 'disk full'): self.collect()
+        self.assertFalse(list(self.directory.glob("telemetry.tar*")))
+        self.assertEqual(self.receipt.get("artifacts", {}), {})
 
 
 if __name__ == '__main__':

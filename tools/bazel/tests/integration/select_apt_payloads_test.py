@@ -16,7 +16,11 @@ from unittest import mock
 GENERATED_INPUTS = Path(sys.argv.pop(1))
 POLICY = Path(sys.argv.pop(1))
 LOCK = Path(sys.argv.pop(1))
-MODULE_INPUTS = Path(sys.argv.pop(1))
+IMPORTED_PACKAGES = {
+    ("orchagent_debian", "arping"): (Path(sys.argv.pop(1)), Path(sys.argv.pop(1))),
+    ("orchagent_debug_debian", "gdbserver"): (Path(sys.argv.pop(1)), Path(sys.argv.pop(1))),
+}
+from sonic_apt.dependencies import package_from_control
 from tools.bazel.tests.oci_base_fixture import digest, oci_files, layer_tar, write_layout
 from tools.bazel.oci import apt_selection as subject
 from tools.bazel.oci.oci_inventory import assert_overlay_paths
@@ -149,18 +153,51 @@ class SelectAptPayloadsTest(unittest.TestCase):
         self.mapping.write_text(json.dumps(value))
         return subject.select(self.base, self.lock, self.policy, self.mapping, variant="runtime")
 
-    def test_public_input_declarations_match_the_reviewed_lock(self):
-        from sonic_apt.inputs import declarations
+    def test_public_input_mapping_covers_the_reviewed_lock_closures(self):
         self.assertEqual(json.loads(POLICY.read_bytes()), {
             "schema": 1, "image": "docker-orchagent", "architecture": "amd64",
             "distribution": "trixie", "retained_source": "none",
             "features": {},
         })
-        module, bzl = declarations(json.loads(LOCK.read_bytes()))
-        self.assertEqual(MODULE_INPUTS.read_text(), module)
-        expected = ast.literal_eval(bzl.split("APT_INPUTS =", 1)[1])
+        lock = json.loads(LOCK.read_bytes())
+        expected = {}
+        for group, dependency_set in lock["dependency_sets"].items():
+            expected[group] = {}
+            for architecture, roots in dependency_set["sets"].items():
+                candidates = {}
+                pending = [key + "=" + version for key, version in roots.items()]
+                while pending:
+                    key = pending.pop()
+                    if key in candidates:
+                        continue
+                    package = lock["packages"][key]
+                    candidates[key] = "@" + group + "//" + package["name"]
+                    pending.extend(package["depends_on"])
+                expected[group][architecture] = candidates
         actual = ast.literal_eval(GENERATED_INPUTS.read_text().split("APT_INPUTS =", 1)[1])
         self.assertEqual(actual, expected)
+
+    def test_imported_runtime_and_debug_packages_match_locked_bytes_and_identity(self):
+        """Inspect the public import_lock outputs without executing package binaries."""
+        lock = json.loads(LOCK.read_bytes())
+        mapping = ast.literal_eval(GENERATED_INPUTS.read_text().split("APT_INPUTS =", 1)[1])
+        for (group, name), (deb, control) in IMPORTED_PACKAGES.items():
+            with self.subTest(group=group, package=name):
+                keys = [key for key in mapping[group]["amd64"]
+                        if lock["packages"][key]["name"] == name]
+                self.assertEqual(len(keys), 1)
+                package = lock["packages"][keys[0]]
+                self.assertEqual(deb.stat().st_size, package["size"])
+                self.assertEqual(hashlib.sha256(deb.read_bytes()).hexdigest(), package["sha256"])
+                self.assertEqual(control.stat().st_size, package["control_size"])
+                self.assertEqual(hashlib.sha256(control.read_bytes()).hexdigest(), package["control_sha256"])
+                with tarfile.open(control, "r:*") as archive:
+                    members = [member for member in archive.getmembers()
+                               if member.name.removeprefix("./") == "control" and member.isfile()]
+                    self.assertEqual(len(members), 1)
+                    identity = package_from_control(archive.extractfile(members[0]).read(), origin=str(control))
+                self.assertEqual((identity.name, identity.version, identity.architecture),
+                                 (package["name"], package["version"], package["architecture"]))
 
     def test_base_packages_are_retained(self):
         paths, receipt = self.select()

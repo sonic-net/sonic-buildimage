@@ -1,7 +1,10 @@
 # Buildimage Bazel support
 
-Shared support belongs beside the tools it serves; container-specific entrypoints
-and expectations remain with the container integration.
+Shared support belongs beside the tools it serves; container-specific targets
+and expectations remain beside the container's original Dockerfile and startup
+inputs. SWSS is owned by `dockers/docker-orchagent/`; Syncd VS is owned by
+`platform/vs/docker-syncd-vs/`, including its `BUILD.bazel`, `bazel/` and
+`config/` declarations. Syncd does not need a second directory under `dockers/`.
 
 Tracked scripts, templates and Make metadata are exported by `BUILD.bazel` files
 in `files/scripts`, `files/build_templates` and `rules`. The root `BUILD.bazel`
@@ -18,6 +21,7 @@ declares the Make-generated manifests, config-engine OCI files and Scapy wheel.
 | [tests/](tests/README.md) | Unit tests and fixture-based integration checks for the Bazel helpers and container build integration |
 | [ci/](ci/README.md) | Dependency evidence, command logs, archive/ELF inspection and cache verification |
 | [SWSS container](../../dockers/docker-orchagent/bazel/README.md) | SWSS archive selection, Make integration and expected SWSS package contents |
+| [syncd VS container](../../platform/vs/docker-syncd-vs/bazel/README.md) | Complete syncd VS runtime/debug OCI packaging and the declared Make package inputs |
 
 The [VS runner and Make cache tests](../ci/README.md) belong to buildimage CI and
 do not depend on SWSS helper modules. Shared Python libraries use repository
@@ -47,7 +51,8 @@ enabled them for the selected architecture, platform and features. Make does
 not probe for a Bazel executable or retry a failed Bazel build with Make.
 Invalid metadata for a selected target and Bazel build errors remain failures.
 
-Keep the container's Make declarations in its existing `rules/docker-*.mk` file.
+Keep the container's Make declarations in their existing location, such as
+`rules/docker-orchagent.mk` or `platform/vs/docker-syncd-vs.mk`.
 Select Bazel only under that owner's feature and build-environment guards. The
 shared bridge in `tools/bazel/docker.mk` consumes these declarations:
 
@@ -118,9 +123,12 @@ that archive from a matching Make cache; a failed extraction preserves the prior
 archive and leaves the newer stamp in place for a retry.
 Archives selected for Bazel cannot appear in `SONIC_PACKAGES_LOCAL`: the shared
 archive macro supplies `:latest`, while that Make mode expects versioned tags.
-SWSS remains the only production container registered for Bazel. Its supported
-configuration is native AMD64 Trixie VS without ASAN. Other SWSS configurations
+SWSS supports native AMD64 Trixie VS without ASAN. Other SWSS configurations
 keep the Make build even with `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y`.
+The syncd VS owner also registers an opt-in for native AMD64 Trixie VS with
+DASH SAI and FIPS enabled, without ASAN, RPC, or a combined `docker-sonic-vs`
+target. Its [owner guide](../../platform/vs/docker-syncd-vs/bazel/README.md) records
+the current image validation requirements and remaining runtime checks.
 The config-engine and py-common wheel targets are separate, directly invoked
 Bazel targets; this switch selects container builders.
 

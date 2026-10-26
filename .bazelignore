@@ -1,3 +1,35 @@
-platform
+# Keep unrelated platform trees outside recursive Bazel discovery.
+# VS Syncd exports its original Make files from platform/vs/docker-syncd-vs.
+platform/alpinevs
+platform/aspeed
+platform/barefoot
+platform/broadcom
+platform/centec
+platform/centec-arm64
+platform/checkout
+platform/cisco
+platform/clounix
+platform/components
+platform/generic
+platform/marvell-prestera
+platform/marvell-teralynx
+platform/mellanox
+platform/micas-vs
+platform/nephos
+platform/nexthop-common
+platform/nokia-vs
+platform/nvidia-bluefield
+platform/p4
+platform/pddf
+platform/pensando
+platform/s3ip-sysfs
+platform/template
+platform/vpp
+platform/vs/docker-dash-engine
+platform/vs/docker-gbsyncd-vs
+platform/vs/docker-sonic-vs
+platform/vs/sonic-platform-modules-vs
+platform/vs/sonic-version
+platform/vs/tests
 src/sonic-linux-kernel
 tools/bazel/kernel

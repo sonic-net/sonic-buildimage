@@ -1,5 +1,7 @@
 """Check command evidence and artifact-path separation."""
 
+import contextlib
+import io
 from pathlib import Path
 import subprocess
 import sys
@@ -36,6 +38,35 @@ class CommandEvidenceTest(unittest.TestCase):
                            directory, receipt, "build", cwd=directory)
             self.assertIn("build failed", (directory / "build.log").read_text())
             self.assertEqual(receipt["commands"][0]["returncode"], 1)
+
+    def test_private_query_output_stays_out_of_logs_even_on_failure(self):
+        """Keep large action JSON private while preserving diagnostics and exit status."""
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            output = directory / "actions.json"
+            output.touch(mode=0o600)
+            for returncode in (0, 7):
+                with self.subTest(returncode=returncode):
+                    receipt = {"commands": []}
+                    console = io.StringIO()
+                    command = [sys.executable, "-c",
+                               "import sys; print('private-action-data'); "
+                               "print('query diagnostic', file=sys.stderr); "
+                               "sys.exit(" + str(returncode) + ")"]
+                    with contextlib.redirect_stdout(console):
+                        if returncode:
+                            with self.assertRaises(subprocess.CalledProcessError):
+                                command_log.execute(command, directory, receipt, "query",
+                                                    cwd=directory, output_path=output)
+                        else:
+                            self.assertEqual(command_log.execute(
+                                command, directory, receipt, "query", cwd=directory,
+                                output_path=output), "")
+                    self.assertEqual(output.read_text(), "private-action-data\n")
+                    self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+                    self.assertEqual((directory / "query.log").read_text(), "query diagnostic\n")
+                    self.assertEqual(console.getvalue(), "query diagnostic\n")
+                    self.assertEqual(receipt["commands"][0]["returncode"], returncode)
 
 
 if __name__ == "__main__":

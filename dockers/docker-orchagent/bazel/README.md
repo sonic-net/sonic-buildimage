@@ -5,8 +5,9 @@ With `y`, containers that register Bazel targets for the selected build
 configuration use Bazel. Other containers keep their existing Make build.
 With `n`, all containers use Make.
 
-For SWSS on native AMD64
-Debian Trixie with `PLATFORM=vs` and ASAN disabled, the switch makes Bazel compile
+SWSS and [syncd-vs](../../../platform/vs/docker-syncd-vs/bazel/README.md) register their supported
+configurations independently. For SWSS, on native AMD64 Debian Trixie with
+`PLATFORM=vs` and ASAN disabled, the switch makes Bazel compile
 SWSS and assemble its runtime and debug OCI images. Other SWSS configurations
 continue to use Make, even with the switch set to `y`.
 Make continues to generate the container manifests and build
@@ -51,22 +52,23 @@ The reviewed runtime roots remain in `orchagent_debian`; four unused Kerberos
 administration packages remain omitted. Debug roots are `gdb`, `gdbserver` and
 `strace` in `orchagent_debug_debian`, using the same dated Debian repositories.
 
-`apt.lock.json` remains the canonical reviewed package record, including exact
-source identities and data/control hashes. The shared export script generates
-`apt_inputs.MODULE.bazel` from that lock. This MODULE fragment uses ordinary
-`apt.install` with exact versions for all candidates.
+`apt.lock.json` is the canonical reviewed package record, including exact
+source identities and data/control hashes. Normal builds call
+`apt.import_lock(lock = "//dockers/docker-orchagent/bazel:apt.lock.json")`
+to import its runtime and debug dependency sets directly. No expanded MODULE
+fragment is checked in or regenerated beside the lock.
 
 Bazel generates the matching BUILD input labels automatically. The `apt_inputs`
 repository rule reads the same lock and writes `apt_inputs.bzl` in the generated
 `@orchagent_apt_inputs` repository. The image loads `APT_INPUTS` from there to
 reference each candidate's public `:data` and `:control` targets. This step reads
-local metadata; Distroless still resolves and imports the packages. Bazel tracks
+local metadata; Distroless imports the exact locked packages. Bazel tracks
 the lock as an input, regenerating the mapping when it changes. No manual
 preparation or checked-in copy of `apt_inputs.bzl` is required.
 
 These declarations describe all candidates, not a manually maintained list of
-missing packages. The owner test checks both the committed MODULE fragment and
-the generated mapping against the reviewed lock. The suite lives in
+missing packages. The owner test checks the imported runtime/debug package
+metadata and generated mapping against the reviewed lock. The suite lives in
 `tools/bazel/tests/integration/select_apt_payloads_test.py` and runs with
 `bazel test //tools/bazel/tests:select_apt_payloads_test`.
 
@@ -74,9 +76,9 @@ The shared `//tools/bazel/oci:apt_layer.bzl` macro passes these inputs to the
 existing name-based selector.
 After checking hashes and file overlaps, the selector copies the selected
 archives intact into a declared directory. Standard Distroless `flatten` merges
-that directory into a layer. It needs no new lock importer, package provider or
-selected-manifest patch. Distroless `0.9.4.sonic.1` retains the existing Protobuf
-header fix and sorts above plain 0.9.4 without a root override.
+that directory into a layer. The shared Distroless lock importer preserves the
+reviewed package URLs, hashes and dependency edges without resolving the
+package list again.
 
 The shared `//tools/bazel/oci:apt_selection` library validates the declared
 policy, inspects OCI base and candidate files, calls `sonic_apt.selection`, and
@@ -105,17 +107,17 @@ the existing owner rules.
 
 Dependency checking was introduced by infrastructure PR #27 and registry PR #45.
 [Infrastructure #29](https://github.com/securely1g/sonic-build-infra/pull/29)
-and [registry #51](https://github.com/securely1g/sonic-bazel-registry/pull/51) supply
-the declarative `apt_layer` policy input API and registration; it provides
-the generated policy argument used here. This draft consumer temporarily selects
-that source with an exact `git_override`; registry URLs remain on `main`.
-Remove the source override after its registered version lands.
+and [registry #51](https://github.com/securely1g/sonic-bazel-registry/pull/51) introduced
+the declarative `apt_layer` policy input API. The root `MODULE.bazel` now selects
+published shared infrastructure through registry `main`; the policy argument
+remains a generated build input.
 
 Native AMD64/ARM64 archive checks and AMD64 source-layer checks are configured
-for PR updates. Manual `Bazel SWSS OCI` dispatch defaults to `skip_vs=true`. A
-full VS/P4RT build requires a manual dispatch with `skip_vs=false` and appropriate
-package-build authorization. Every selected Bazel scope is audited for DEB
-production before execution.
+for PR updates. Full VS/P4RT builds also run automatically for PR branches in
+this repository after the source checks pass. External-fork PRs keep hosted
+checks only. Manual `Bazel OCI` dispatch defaults to `skip_vs=true`; select
+`skip_vs=false` to include the full image job. A push to `master` keeps its
+hosted checks without an automatic full VS build.
 
 Generated Bazel files carry an `AUTO-GENERATED. DO NOT EDIT MANUALLY.` header
 that names their generator. The package lock and generated JSON inputs/receipts
@@ -130,19 +132,12 @@ To update packages in a separate clean checkout:
    package identities, versions, dependencies and hashes in `apt.lock.json`.
 2. Keep reviewed extracted-content hashes only for unchanged source packages;
    validate and record data/control hashes for changed package inputs.
-3. Generate ordinary declarations from that canonical lock:
+3. Commit the reviewed lock with any changed package roots. Bazel imports its
+   packages and generates the BUILD mapping automatically; no MODULE export is
+   required. Run the owner tests and rebuild both images, checking the automatic
+   selection receipts and installed consumers.
 
-   ```sh
-   python3 PATH_TO_INFRA/apt/export_inputs.py \
-     --lock dockers/docker-orchagent/bazel/apt.lock.json \
-     --module dockers/docker-orchagent/bazel/apt_inputs.MODULE.bazel
-   ```
-
-4. Commit the lock and MODULE export together. Bazel generates the BUILD mapping
-   automatically. Run the owner tests and rebuild
-   both images; check the automatic selection receipts and installed consumers.
-
-The selector does not evaluate dependency-version requirements or run package
+The selector checks dependency-version requirements without running package
 installation scripts. It does not update the inherited dpkg database or
 regenerate loader/Python caches. Full image support remains AMD64; native ARM64
 helper tests do not establish a complete ARM64 image.
@@ -360,10 +355,11 @@ separate VS image and SWSS archive upload keeps its existing files.
 
 The `Make VS with Bazel SWSS (AMD64)` job builds the complete OCI
 archives and final VS image after the source-layer check succeeds. It runs
-automatically for pull requests and pushes to `master`, and on manual workflow
-dispatch. It requires a disposable runner with the labels `self-hosted`, `linux`,
-`x64` and `sonic-vs-source-pr-NUMBER` for a pull request, or
-`sonic-vs-source-master` for push/manual runs. The host needs Docker, KVM, `j2`
+automatically for same-repository pull requests, and on manual workflow dispatch
+with `skip_vs=false`. It uses the shared pool with labels `self-hosted`, `linux`,
+`x64` and `sonic-vs-source-master`. The pool label does not select the checkout:
+PR jobs still build their event's merge revision and consume artifacts from
+that same workflow run. The host needs Docker, KVM, `j2`
 and at least 100 GiB free for the workspace plus room for Docker storage.
 The [runner setup and recovery guide](../../../tools/ci/runner/README.md) provides checked
 provisioning, host preflight and one-job rearming, including PR #9 examples.
@@ -381,20 +377,36 @@ the existing Make path. Listing SWSS in `SONIC_PACKAGES_LOCAL` is rejected when
 its Bazel path is selected.
 
 To reproduce the source-layer check in native AMD64 Trixie, install the execution
-tools listed in `.github/workflows/bazel-swss-oci.yml`, make the pinned Bazel
+tools listed in `.github/workflows/bazel-oci.yml`, make the pinned Bazel
 version available, and run from a clean checkout:
 
 ```sh
 for tests in tools/bazel/tests tools/ci/tests tools/ci/runner; do
   python3 -B -m unittest discover -s "$tests" -p '*_test.py' || exit 1
 done
-python3 -B dockers/docker-orchagent/bazel/ci.py --bazel bazel --artifacts artifacts/swss
+make -f tools/bazel/prepare_manifests.mk \
+  MANIFEST_METADATA=rules/docker-orchagent.mk \
+  BUILD_WITH_BAZEL_WHEN_AVAILABLE=y BLDENV=trixie CONFIGURED_PLATFORM=vs CONFIGURED_ARCH=amd64 \
+  ENABLE_ASAN=n DBG_IMAGE_MARK=dbg DOCKERS_PATH=dockers
+python3 -B tools/bazel/ci/container.py \
+  --container //dockers/docker-orchagent --source-file rules/docker-orchagent.mk --bazel bazel --artifacts artifacts/swss
 ```
 
 ## Change the build
 
-This directory keeps SWSS's CI target selection (`ci.py`) and package expectations
-(`package_contract.py`); their tests live under `tools/bazel/tests`.
+The container's `BUILD.bazel` declares `ci_tests` and `ci_artifacts`. The shared
+`tools/bazel/ci/container.py` runner discovers those targets, audits and runs the
+suite, and exports the declared files. The shared
+`tools/bazel/oci/package_contract.py` implements source install checks from the
+owner's generated `:package_policy`; the actual package-validation test declares its runtime,
+configuration and symbol archives, original owner install files and binutils
+executables. It writes the validation summary as a Bazel test output. There is
+no Python CI profile or callback, and the test does not inspect an ambient
+external checkout. Make still prepares manifests from its existing declarations.
+Test implementations live under `tools/bazel/tests`; manifest conversion and
+OCI inventory and package/image regression tests are shared with Syncd.
+The policy describes how to read the source install files, required Protobuf
+paths, symbol coverage and config modes; it does not copy the source program list.
 SWSS owns its opt-in guards, archive
 labels and Make prerequisites. It registers both runtime and debug archives in
 `SONIC_BAZEL_SWITCHABLE_IMAGES` even when the selector is off; the shared Make

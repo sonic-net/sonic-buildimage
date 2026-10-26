@@ -1,4 +1,5 @@
 load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@config_engine_pip//:requirements.bzl", "requirement")
@@ -7,11 +8,10 @@ load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
-load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES")
+load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
 load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
-
 load(":runtime.bzl", "common_runtime_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -34,6 +34,217 @@ sh_test(
     ],
 )
 
+_OCI_OWNER_POLICIES = [
+    "//dockers/docker-orchagent:package_policy",
+    "//platform/vs/docker-syncd-vs:package_policy",
+]
+
+_OCI_POLICY_ARGS = [
+    "--swss-policy=$(rootpath //dockers/docker-orchagent:package_policy)",
+    "--syncd-policy=$(rootpath //platform/vs/docker-syncd-vs:package_policy)",
+]
+
+# Compare the actual source-built layers with SWSS's own install declarations,
+# and require matching debug symbols for all 30 programs, DASH and Protobuf.
+# These inputs produce TARs and source files; no Debian package is generated.
+py_test(
+    name = "swss_package_contract_test",
+    size = "large",
+    srcs = ["integration/oci_source_layers_test.py"],
+    args = [
+        "--policy=$(rootpath //dockers/docker-orchagent:package_policy)",
+        "--runtime=$(rootpath //dockers/docker-orchagent:ci_swss)",
+        "--library=protobuf.tar=$(rootpath //dockers/docker-orchagent:ci_protobuf)",
+        "--dependencies=$(rootpath //dockers/docker-orchagent:ci_rdeps)",
+        "--config=$(rootpath //dockers/docker-orchagent:ci_config)",
+        "--debug-symbols=$(rootpath //dockers/docker-orchagent:ci_debug_symbols)",
+        "--source-file=dist/BUILD.bazel=$(rootpath @swss_install_contract//:dist-BUILD.bazel.txt)",
+        "--source-file=debian/swss.install=$(rootpath @swss_install_contract//:swss.install.txt)",
+        "--source-anchor=$(rootpath @sonic_swss//fpmsyncd:bgp_eoiu_marker.py)",
+        "--source-anchor-relative=fpmsyncd/bgp_eoiu_marker.py",
+        "--readelf=$(rootpath @sonic_build_infra//toolchains/binutils:readelf)",
+        "--objcopy=$(rootpath @sonic_build_infra//toolchains/binutils:objcopy)",
+        "--source-data",
+        "$(rootpaths @sonic_swss//cfgmgr:lua_files)",
+        "$(rootpaths @sonic_swss//orchagent:lua_files)",
+        "$(rootpath @sonic_swss//fpmsyncd:bgp_eoiu_marker.py)",
+        "$(rootpath @sonic_swss//neighsyncd:restore_neighbors.py)",
+        "$(rootpath @sonic_swss//swssconfig:sample/netbouncer.json)",
+    ],
+    data = [
+        "//dockers/docker-orchagent:ci_config",
+        "//dockers/docker-orchagent:ci_debug_symbols",
+        "//dockers/docker-orchagent:ci_protobuf",
+        "//dockers/docker-orchagent:ci_rdeps",
+        "//dockers/docker-orchagent:ci_swss",
+        "//dockers/docker-orchagent:package_policy",
+        "@sonic_build_infra//toolchains/binutils:objcopy",
+        "@sonic_build_infra//toolchains/binutils:readelf",
+        "@sonic_swss//cfgmgr:lua_files",
+        "@sonic_swss//fpmsyncd:bgp_eoiu_marker.py",
+        "@sonic_swss//neighsyncd:restore_neighbors.py",
+        "@sonic_swss//orchagent:lua_files",
+        "@sonic_swss//swssconfig:sample/netbouncer.json",
+        "@swss_install_contract//:dist-BUILD.bazel.txt",
+        "@swss_install_contract//:swss.install.txt",
+    ],
+    main = "integration/oci_source_layers_test.py",
+    # Keep archive inputs in the same default configuration as ci_artifacts.
+    # A Python-version transition here also transitions every data dependency.
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/oci:package_contract_lib",
+    ],
+)
+
+# Exercise upstream package extraction with existing checked-in DEBs. These
+# native genrules deliberately show the same tools the Syncd owner BUILD uses;
+# no package-generating rule or shared import facade participates in the test.
+_OCI_DEB_FIXTURES = {
+    "gz": "fixtures/oci-debs/example-gz_1.0-1_all.deb",
+    "xz": "fixtures/oci-debs/example-xz_1.0-1_all.deb",
+    "foreign": "fixtures/oci-debs/example-foreign_1.0-1_arm64.deb",
+}
+
+[
+    genrule(
+        name = "oci_extract_fixture_" + kind,
+        testonly = True,
+        srcs = [source],
+        outs = ["oci_deb_fixture/" + kind + "/" + filename for filename in [
+            "members.txt",
+            "debian-binary",
+            "control.archive",
+            "data.archive",
+        ]],
+        cmd = """set -euo pipefail
+export LC_ALL=C.UTF-8
+"$(BSDTAR_BIN)" -tf "$(execpath {source})" > "$(RULEDIR)/oci_deb_fixture/{kind}/members.txt"
+mapfile -t members < "$(RULEDIR)/oci_deb_fixture/{kind}/members.txt"
+[[ "$${{#members[@]}}" == 3 && "$${{members[0]}}" == debian-binary ]]
+case "$${{members[1]}}" in control.tar|control.tar.gz|control.tar.xz|control.tar.bz2) ;; *) exit 1 ;; esac
+case "$${{members[2]}}" in data.tar|data.tar.gz|data.tar.xz|data.tar.bz2) ;; *) exit 1 ;; esac
+"$(BSDTAR_BIN)" -xOf "$(execpath {source})" debian-binary > "$(RULEDIR)/oci_deb_fixture/{kind}/debian-binary"
+"$(BSDTAR_BIN)" -xOf "$(execpath {source})" "$${{members[1]}}" > "$(RULEDIR)/oci_deb_fixture/{kind}/control.archive"
+"$(BSDTAR_BIN)" -xOf "$(execpath {source})" "$${{members[2]}}" > "$(RULEDIR)/oci_deb_fixture/{kind}/data.archive"
+""".format(
+            kind = kind,
+            source = source,
+        ),
+        toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+        tools = ["@bsd_tar_toolchains//:resolved_toolchain"],
+    )
+    for kind, source in _OCI_DEB_FIXTURES.items()
+]
+
+_OCI_FIXTURE_INPUTS = [
+    "oci_deb_fixture/" + kind + "/" + filename
+    for kind in [
+        "gz",
+        "xz",
+        "foreign",
+    ]
+    for filename in [
+        "members.txt",
+        "debian-binary",
+        "control.archive",
+        "data.archive",
+    ]
+]
+
+[
+    genrule(
+        name = "oci_deb_fixture_" + suffix,
+        testonly = True,
+        srcs = _OCI_FIXTURE_INPUTS + _OCI_DEB_FIXTURES.values(),
+        outs = [
+            "oci_deb_fixture/" + suffix + "/payload.tar",
+            "oci_deb_fixture/" + suffix + "/manifest.json",
+        ],
+        cmd = "set -euo pipefail\nexport LC_ALL=C.UTF-8\n" +
+              "\"$(BSDTAR_BIN)\" --format=pax -cf '$(RULEDIR)/oci_deb_fixture/" + suffix + "/payload.tar' " +
+              "'@$(execpath oci_deb_fixture/gz/data.archive)' '@$(execpath oci_deb_fixture/xz/data.archive)'\n" +
+              "\"$(execpath //tools/bazel/oci:package_receipts)\"" +
+              " --architecture=amd64" +
+              " --payload='$(RULEDIR)/oci_deb_fixture/" + suffix + "/payload.tar'" +
+              " --out='$(RULEDIR)/oci_deb_fixture/" + suffix + "/manifest.json'" +
+              " ".join([" --package='" + json.encode({
+                  "source_label": "//tools/bazel/tests:" + _OCI_DEB_FIXTURES[kind],
+                  "source": "$(execpath " + _OCI_DEB_FIXTURES[kind] + ")",
+                  "members": "$(execpath oci_deb_fixture/" + kind + "/members.txt)",
+                  "version": "$(execpath oci_deb_fixture/" + kind + "/debian-binary)",
+                  "control": "$(execpath oci_deb_fixture/" + kind + "/control.archive)",
+                  "data": "$(execpath oci_deb_fixture/" + kind + "/data.archive)",
+              }) + "'" for kind in [
+                  "gz",
+                  "xz",
+              ]]),
+        toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+        tools = [
+            "//tools/bazel/oci:package_receipts",
+            "@bsd_tar_toolchains//:resolved_toolchain",
+        ],
+    )
+    for suffix in [
+        "first",
+        "repeat",
+    ]
+]
+
+# Exercise an inherited payload through Bazel's declared symlink and runfiles.
+copy_file(
+    name = "oci_deb_fixture_inherited_payload",
+    testonly = True,
+    src = "oci_deb_fixture/first/payload.tar",
+    out = "oci_deb_fixture/debug/payload.tar",
+    allow_symlink = True,
+)
+
+oci_image(
+    name = "oci_direct_deb_fixture_image",
+    testonly = True,
+    architecture = "amd64",
+    os = "linux",
+    tars = ["oci_deb_fixture/first/payload.tar"],
+)
+
+py_test(
+    name = "oci_package_receipts_test",
+    srcs = ["integration/oci_package_receipts_test.py"],
+    args = [
+        "--payload=$(rootpath oci_deb_fixture/first/payload.tar)",
+        "--manifest=$(rootpath oci_deb_fixture/first/manifest.json)",
+        "--repeat-payload=$(rootpath oci_deb_fixture/repeat/payload.tar)",
+        "--repeat-manifest=$(rootpath oci_deb_fixture/repeat/manifest.json)",
+        "--inherited-payload=$(rootpath :oci_deb_fixture_inherited_payload)",
+        "--image=$(rootpath :oci_direct_deb_fixture_image)",
+    ] + ["--package='" + json.encode({
+        "source_label": "//tools/bazel/tests:" + source,
+        "source": "$(rootpath " + source + ")",
+        "members": "$(rootpath oci_deb_fixture/" + kind + "/members.txt)",
+        "version": "$(rootpath oci_deb_fixture/" + kind + "/debian-binary)",
+        "control": "$(rootpath oci_deb_fixture/" + kind + "/control.archive)",
+        "data": "$(rootpath oci_deb_fixture/" + kind + "/data.archive)",
+    }) + "'" for kind, source in _OCI_DEB_FIXTURES.items()] + _OCI_POLICY_ARGS,
+    data = _OCI_FIXTURE_INPUTS + _OCI_DEB_FIXTURES.values() + [
+        "oci_deb_fixture/first/manifest.json",
+        "oci_deb_fixture/first/payload.tar",
+        "oci_deb_fixture/repeat/manifest.json",
+        "oci_deb_fixture/repeat/payload.tar",
+        ":oci_deb_fixture_inherited_payload",
+        ":oci_direct_deb_fixture_image",
+    ] + _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_receipts_test.py",
+    python_version = "3.11",
+    deps = [
+        ":oci_contract_fixture",
+        "//tools/bazel/oci:package_receipts_lib",
+    ],
+)
 
 # Shared installed-wheel mechanics: reject owner checkout imports and retain
 # receipts for the exact artifacts exercised by component-specific probes.
@@ -351,6 +562,11 @@ py_test(
         "--debug-manifest=$(rootpath :manifest_fixture-dbg.json)",
         "--runtime-labels=$(rootpath :runtime_manifest_fixture)",
         "--debug-labels=$(rootpath :debug_manifest_fixture)",
+        "--package-name=telemetry",
+        "--package-version=2.3.0",
+        "--service-name=telemetry",
+        "--asic-service=false",
+        "--host-service=true",
     ],
     data = [
         "manifest_fixture.json",
@@ -360,6 +576,47 @@ py_test(
         "//tools/bazel/oci:manifest_labels",
     ],
     main = "integration/manifest_labels_action_test.py",
+)
+
+# Check each owner's real outputs with the same implementation. The unrelated
+# fixture above additionally preserves custom fields, quotes and newlines.
+py_test(
+    name = "swss_manifest_labels_test",
+    size = "small",
+    srcs = ["integration/manifest_labels_action_test.py"],
+    args = [
+        "--tool=$(rootpath //tools/bazel/oci:manifest_labels)",
+        "--runtime-manifest=$(rootpath //dockers/docker-orchagent/config:manifest.json)",
+        "--debug-manifest=$(rootpath //dockers/docker-orchagent/config:manifest-dbg.json)",
+        "--runtime-labels=$(rootpath //dockers/docker-orchagent/config:labels)",
+        "--debug-labels=$(rootpath //dockers/docker-orchagent/config:debug_labels)",
+        "--package-name=swss",
+        "--package-version=1.0.0",
+        "--service-name=swss",
+        "--asic-service=true",
+        "--host-service=false",
+        "--manifest-version=1.0.0",
+    ],
+    data = [
+        "//dockers/docker-orchagent/config:debug_labels",
+        "//dockers/docker-orchagent/config:labels",
+        "//dockers/docker-orchagent/config:manifest.json",
+        "//dockers/docker-orchagent/config:manifest-dbg.json",
+        "//tools/bazel/oci:manifest_labels",
+    ],
+    main = "integration/manifest_labels_action_test.py",
+)
+
+# Layer checks are shared by APT selection and both containers' CI suites.
+py_test(
+    name = "oci_inventory_test",
+    size = "small",
+    srcs = ["integration/oci_inventory_test.py"],
+    main = "integration/oci_inventory_test.py",
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:oci_inventory",
+    ],
 )
 
 sonic_cfggen_template(
@@ -407,10 +664,22 @@ py_test(
         "prepare_oci_base_test.py",
         "//tools/bazel/oci:prepare_oci_base.py",
     ],
-    deps = ["//tools/bazel/oci:oci_layout"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:oci_layout",
+    ],
 )
 
 # Shared OCI selection and CLI coverage has no container-owned inputs.
+py_test(
+    name = "source_base_validation_test",
+    srcs = ["source_base_validation_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
 py_test(
     name = "apt_selection_test",
     size = "small",
@@ -422,8 +691,8 @@ py_test(
     ],
 )
 
-# This suite needs the generated package mapping and inspects tar/OCI fixtures.
-# It does not produce Debian packages or require a complete Orchagent image.
+# Check the generated mapping and small imported DEBs alongside tar/OCI fixtures.
+# Explicit amd64 labels allow archive inspection on native ARM64 test hosts too.
 py_test(
     name = "select_apt_payloads_test",
     size = "small",
@@ -432,13 +701,19 @@ py_test(
         "$(rootpath @orchagent_apt_inputs//:apt_inputs.bzl)",
         "$(rootpath //dockers/docker-orchagent:runtime_layer_policy)",
         "$(rootpath //dockers/docker-orchagent/bazel:apt.lock.json)",
-        "$(rootpath //dockers/docker-orchagent/bazel:apt_inputs.MODULE.bazel)",
+        "$(rootpath @orchagent_debian//arping/amd64:deb)",
+        "$(rootpath @orchagent_debian//arping/amd64:control)",
+        "$(rootpath @orchagent_debug_debian//gdbserver/amd64:deb)",
+        "$(rootpath @orchagent_debug_debian//gdbserver/amd64:control)",
     ],
     data = [
         "//dockers/docker-orchagent:runtime_layer_policy",
         "//dockers/docker-orchagent/bazel:apt.lock.json",
-        "//dockers/docker-orchagent/bazel:apt_inputs.MODULE.bazel",
         "@orchagent_apt_inputs//:apt_inputs.bzl",
+        "@orchagent_debian//arping/amd64:control",
+        "@orchagent_debian//arping/amd64:deb",
+        "@orchagent_debug_debian//gdbserver/amd64:control",
+        "@orchagent_debug_debian//gdbserver/amd64:deb",
     ],
     main = "integration/select_apt_payloads_test.py",
     deps = [
@@ -685,9 +960,235 @@ diff_test(
     file2 = "//tools/bazel/dpkg:dpkg_includes.txt",
 )
 
+# Exercise the real source-TAR filter twice, as an OCI image's runtime layers do.
+py_binary(
+    name = "oci_license_fixture",
+    srcs = ["integration/oci_license_filter_test.py"],
+    main = "integration/oci_license_filter_test.py",
+)
+
+run_binary(
+    name = "oci_license_fixture_tar",
+    tool = ":oci_license_fixture",
+    args = ["--write", "$(location oci-license-fixture.tar)"],
+    outs = ["oci-license-fixture.tar"],
+)
+
+dpkg_filter(
+    name = "oci_license_filtered",
+    src = ":oci_license_fixture_tar",
+)
+
+sonic_layer(
+    name = "oci_license_refiltered",
+    tars = [":oci_license_filtered"],
+)
+
+py_test(
+    name = "oci_license_filter_test",
+    srcs = ["integration/oci_license_filter_test.py"],
+    main = "integration/oci_license_filter_test.py",
+    args = [
+        "$(rootpath :oci_license_filtered)",
+        "$(rootpath :oci_license_refiltered)",
+    ],
+    data = [":oci_license_filtered", ":oci_license_refiltered"],
+)
+
 # Rust links Common's shared library; its indirect runtime imports need the
 # same pinned package closure used by Common's own native consumer tests.
 common_runtime_test(
     name = "common_rust_runtime_test",
     binary = "@sonic_swss//crates/countersyncd:common_rust_test",
+)
+
+# Shared OCI regression fixtures exercise the same algorithms for both owners.
+# Actual owner declarations are inputs, alongside deliberately unrelated fixtures.
+py_library(
+    name = "oci_contract_fixture",
+    testonly = True,
+    srcs = ["oci_contract_fixture.py"],
+    deps = ["//tools/bazel/oci:package_contract_lib"],
+)
+
+_OCI_TEST_DEPS = [
+    ":oci_contract_fixture",
+    "//tools/bazel/oci:package_contract_lib",
+    "//tools/bazel/oci:package_state_lib",
+    "//tools/bazel/oci:container_validation",
+    "//tools/bazel/tests:oci_base_fixture_lib",
+    "@sonic_build_infra//apt:lib",
+    "//tools/bazel/oci:normalize_layer_lib",
+]
+
+# These receipt and image tests use TAR/OCI fixtures and create no Debian packages.
+py_test(
+    name = "oci_package_payloads_test",
+    srcs = [
+        "integration/oci_package_payloads_test.py",
+    ],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_payloads_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+py_test(
+    name = "oci_image_test",
+    srcs = [
+        "integration/oci_image_test.py",
+    ],
+    args = _OCI_POLICY_ARGS,
+    data = [
+        "//dockers/docker-base-trixie:dpkg_01_drop",
+        "//platform/vs/docker-syncd-vs:critical_processes",
+        "//platform/vs/docker-syncd-vs:start.sh",
+        "//platform/vs/docker-syncd-vs:supervisord.conf",
+        "//platform/vs/docker-syncd-vs/config:openssh-client.conf",
+    ] + _OCI_OWNER_POLICIES,
+    main = "integration/oci_image_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+py_test(
+    name = "oci_apt_overlay_test",
+    srcs = [
+        "integration/oci_apt_overlay_test.py",
+    ],
+    args = ["--policy=$(rootpath //platform/vs/docker-syncd-vs:runtime_layer_policy)"] + _OCI_POLICY_ARGS,
+    data = [
+        "//platform/vs/docker-syncd-vs:runtime_layer_policy",
+    ] + _OCI_OWNER_POLICIES,
+    main = "integration/oci_apt_overlay_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS + ["//tools/bazel/oci:apt_selection"],
+)
+
+py_test(
+    name = "oci_package_state_layer_test",
+    srcs = [
+        "integration/oci_package_state_layer_test.py",
+    ],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_state_layer_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+py_test(
+    name = "syncd_manifest_labels_test",
+    size = "small",
+    srcs = ["integration/manifest_labels_action_test.py"],
+    args = [
+        "--tool=$(rootpath //tools/bazel/oci:manifest_labels)",
+        "--runtime-manifest=$(rootpath //:target/bazel-manifests/docker-syncd-vs/manifest.json)",
+        "--debug-manifest=$(rootpath //:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json)",
+        "--runtime-labels=$(rootpath //platform/vs/docker-syncd-vs/config:labels)",
+        "--debug-labels=$(rootpath //platform/vs/docker-syncd-vs/config:debug_labels)",
+        "--package-name=syncd",
+        "--package-version=1.0.0",
+        "--service-name=syncd",
+        "--asic-service=true",
+        "--host-service=false",
+        "--manifest-version=1.0.0",
+    ],
+    data = [
+        "//:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json",
+        "//:target/bazel-manifests/docker-syncd-vs/manifest.json",
+        "//platform/vs/docker-syncd-vs/config:debug_labels",
+        "//platform/vs/docker-syncd-vs/config:labels",
+        "//tools/bazel/oci:manifest_labels",
+    ],
+    main = "integration/manifest_labels_action_test.py",
+)
+
+py_test(
+    name = "oci_package_contract_test",
+    srcs = ["integration/oci_package_contract_test.py"],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_contract_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+# This fixture compiles a small ELF using the native CI toolchain and checks
+# actual readelf/objcopy correspondence. It creates no Debian package.
+py_test(
+    name = "oci_native_packages_test",
+    srcs = ["integration/oci_native_packages_test.py"],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_native_packages_test.py",
+    python_version = "3.11",
+    tags = ["local"],
+    deps = _OCI_TEST_DEPS,
+)
+
+# Production validation is explicit: hosted fixture suites must not request
+# Make-produced packages or the complete Syncd images.
+_SYNCD_OWNER = "//platform/vs/docker-syncd-vs"
+
+_SYNCD_P4_IMAGE_INPUTS = {
+    "runtime_path": _SYNCD_OWNER + ":docker-syncd-vs",
+    "debug_path": _SYNCD_OWNER + ":docker-syncd-vs-dbg",
+    "runtime_manifest_path": "//:target/bazel-manifests/docker-syncd-vs/manifest.json",
+    "debug_manifest_path": "//:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json",
+    "source_contract_path": _SYNCD_OWNER + ":source_contract",
+    "apt_lock_path": _SYNCD_OWNER + "/bazel:apt.lock.json",
+    "dpkg_filter_path": "//dockers/docker-base-trixie:dpkg_01_drop",
+    "base_path": _SYNCD_OWNER + ":config_engine_base_layout",
+    "apt_layer": _SYNCD_OWNER + ":apt_deps",
+    "debug_tools_layer": _SYNCD_OWNER + ":debug_tools",
+    "runtime_links_layer": _SYNCD_OWNER + ":installation_links",
+    "runtime_apt_selection": _SYNCD_OWNER + ":runtime_apt_selection",
+    "debug_apt_selection": _SYNCD_OWNER + ":debug_apt_selection",
+    "runtime_archive": _SYNCD_OWNER + ":docker-syncd-vs.gz",
+    "debug_archive": _SYNCD_OWNER + ":docker-syncd-vs-dbg.gz",
+    "source_runtime_tar": _SYNCD_OWNER + ":source_runtime_payloads",
+    "source_debug_tar": _SYNCD_OWNER + ":source_debug_payloads",
+    "source_receipt": _SYNCD_OWNER + ":source_package_receipt",
+    "base_symbols": "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.debug_symbols",
+    "base_metadata": "//dockers/docker-base-trixie:runtime_package_metadata",
+    "config_metadata": "//dockers/docker-config-engine-trixie:runtime_package_metadata",
+    "workspace_module": "@image_source_modules//:sonic-buildimage.MODULE.bazel",
+    "policy": _SYNCD_OWNER + ":package_policy",
+    "make_runtime_archive": "//:target/docker-syncd-vs.gz",
+    "make_debug_archive": "//:target/docker-syncd-vs-dbg.gz",
+    "readelf": "@sonic_build_infra//toolchains/binutils:readelf",
+    "objcopy": "@sonic_build_infra//toolchains/binutils:objcopy",
+}
+
+py_test(
+    name = "syncd_p4_images_test",
+    size = "large",
+    srcs = ["integration/syncd_p4_images_test.py"],
+    args = ["--" + name.replace("_", "-") + "=$(rootpath " + label + ")" for name, label in _SYNCD_P4_IMAGE_INPUTS.items()],
+    data = _SYNCD_P4_IMAGE_INPUTS.values() + [
+        _SYNCD_OWNER + ":start.sh",
+        _SYNCD_OWNER + ":supervisord.conf",
+        _SYNCD_OWNER + ":critical_processes",
+        _SYNCD_OWNER + "/config:openssh-client.conf",
+    ],
+    main = "integration/syncd_p4_images_test.py",
+    tags = ["manual"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+py_test(
+    name = "source_contract_test",
+    srcs = ["integration/source_contract_test.py"],
+    main = "integration/source_contract_test.py",
+    deps = ["//tools/bazel/oci:source_contract_lib"],
 )

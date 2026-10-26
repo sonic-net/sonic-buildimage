@@ -7,6 +7,10 @@ The containercfgd suite remains with `src/sonic-containercfgd` and uses the
 same central runner for its complete source suite.
 The Python supervisor suite remains with `src/sonic-supervisord-utilities`;
 its central target stages the sibling config-engine Redis fixtures it imports.
+The tests stay here when a container's Bazel declarations live beside its
+original Dockerfile: SWSS uses `dockers/docker-orchagent/`, while Syncd VS uses
+[`platform/vs/docker-syncd-vs/`](../../../platform/vs/docker-syncd-vs/bazel/README.md).
+Tests consume each owner's declared files and policies through Bazel labels.
 
 Run the self-contained unit tests from the repository root:
 
@@ -18,13 +22,15 @@ The suite uses Python 3, Make, Bash, Git, `j2` from `j2cli`, `jq`, a C compiler,
 `readelf` and `objcopy`. The Make tests use a controlled Bazel executable and small local
 archives. The AMD64 P4RT split-debug checks also require GNU `dwp` and GDB;
 Trixie supplies `dwp` through `binutils-gold`. Fixture generators also live here so CI's real Bazel cache and Make
-export checks use the same inputs.
+export checks use the same inputs. `oci_base_fixture.py` also supplies the OCI
+metadata and ordered tar-file builders used by the shared OCI image tests.
 
 Two unrelated container families exercise independent runtime/debug builder
 switches with caching off and with the real Make package-cache loader. A corrupt
 cache must preserve the previous archive and allow a successful retry. Shared
 CI tests collect unrelated Bazel targets and inspect native ELF/debug pairs;
-SWSS-specific tests retain its selection and package-contract expectations.
+SWSS-specific Make/template tests retain its selection and service behavior;
+package expectations are data consumed by the shared OCI contract tests.
 Manifest tests run Make's existing generator with unrelated containers, computed
 and conditional metadata, service discovery and manifest overlays. They check
 runtime/debug isolation, stable timestamps and publication failures before Bazel.
@@ -78,7 +84,7 @@ bazel test \
 
 `BUILD.bazel` declares the production helpers and generated files each check
 needs. CI selects the same tests explicitly and retains raw logs and cache
-records in the job workspace. The [workflow](../../../.github/workflows/bazel-swss-oci.yml)
+records in the job workspace. The [workflow](../../../.github/workflows/bazel-oci.yml)
 supplies the supported native AMD64/ARM64 platform flags and execution dependencies.
 The Python checks run the complete config-engine, py-common, containercfgd,
 Python supervisor and YANG-management test directories and install their
@@ -105,9 +111,10 @@ replacements; they do not build or boot a VS image.
 | --- | --- |
 | [artifact_validation_test.py](artifact_validation_test.py) | Check archive paths, ownership, modes, content hashes and links, then validate real ELF architecture and matching split-debug files. Reject unsafe extraction and undeclared symbol gaps. |
 | [build_helpers_test.py](build_helpers_test.py) | Protect an existing published archive when copying fails, preserve timestamps for identical bytes, and keep shared caching optional. |
-| [build_test.py](build_test.py) | Exercise the shared CI build/query/export helper with unrelated target declarations. Check artifact receipts, source lookup and failure diagnostics without replacing a valid publication on failure. |
+| [build_test.py](build_test.py) | Exercise the shared CI build/query/export helper with unrelated target declarations. Check declared filegroup exports, unique output names, empty groups, receipts and failure diagnostics without replacing a valid publication on failure. |
 | [cache_mount_test.py](cache_mount_test.py) | Check the shared host cache default, explicit overrides and empty-value opt-out, quoted paths, and writable Docker mounts. The mounted system rc supplies repository and disk caches without sharing Bazel output directories. Invalid cache paths must fail before Docker starts. |
 | [command_log_test.py](command_log_test.py) | Keep stderr diagnostics separate from stdout artifact paths while retaining command output and exit status as evidence. |
+| [container_ci_test.py](container_ci_test.py) | Discover each container’s ci_tests suite and ci_artifacts filegroup through a controlled Bazel process. Block package-producing actions before execution, retain canonical test identities and validation outputs, and reject empty suites, missing evidence or changed declared sources. |
 | [docker_switch_test.py](docker_switch_test.py) | Switch unrelated runtime/debug container families independently between Make and Bazel, including real Make cache restores. A corrupt cache must preserve the prior archive and permit a retry. |
 | [docker_test.py](docker_test.py) | Exercise the shared Make-to-Bazel bridge: deferred prerequisites, target registration, runtime/debug exports, options and failure handling for unrelated containers. |
 | [make_forwarding_test.py](make_forwarding_test.py) | Run the real outer Makefile with a controlled inner build. Existing SWSS archives and VS images must reach the builder on repeated requests and Make/Bazel switches; preserve output timestamps, failure status, distribution phases, the default goal and unrelated targets. |
@@ -116,12 +123,12 @@ replacements; they do not build or boot a VS image.
 | [oci_base_layout_test.py](oci_base_layout_test.py) | Validate an OCI base's platform, index, descriptors and blob contents before consumption. Reject ambiguous, missing, corrupted or unsafe entries. |
 | [oci_base_make_test.py](oci_base_make_test.py) | Ensure Make prepares and revalidates each declared OCI base before its consumers, including parallel runtime/debug requests and changed archives with misleading timestamps. |
 | [p4rt_debug_test.py](p4rt_debug_test.py) | Require a populated AMD64 DWP that independently supplies matching function types and source lines in GDB. Reject empty, unrelated or malformed symbols and loose-DWO fallback. Fixtures compile ELF files without generating packages. |
+| [p4rt_tar_test.py](p4rt_tar_test.py) | Check standalone TAR validation and preserve the debug verifier's paired DEB interface. Verify legacy P4RT Docker builds keep DEB dependencies with the global Bazel selector enabled, and the full VS workflow requests both DEB inputs. |
 | [prepare_oci_base_test.py](prepare_oci_base_test.py) | Publish native OCI entries from Docker-save fixtures without changing source archives. Protect stable timestamps, prior readers, corruption recovery and concurrent publication. |
+| [public_artifacts_test.py](public_artifacts_test.py) | Publish only reviewed files and sanitized status. Require exact agreement between declared container tests and successful Bazel test identities, retain required package validation, and reject missing outputs or sensitive content. |
 | [python_packages_test.py](python_packages_test.py) | Retain direct or zipped Python test receipts and reject missing XML/inventories, wheel hashes that differ from the installation test, or results from another architecture. |
 | [resolution_test.py](resolution_test.py) | Require complete module-graph evidence and recognize only the explicitly supported extension diagnostics. Unknown, incomplete or mismatched failures remain fatal. |
-| [swss_ci_test.py](swss_ci_test.py) | Keep SWSS source selection in its CI caller and require the resolved source to provide its install declarations. |
 | [swss_make_integration_test.py](swss_make_integration_test.py) | Check the SWSS opt-in, supported configurations, installer archive contract and Make base/manifest prerequisites. A debug-only request must prepare both manifests before Bazel; other Make phases retain their expected selection. |
-| [swss_package_contract_test.py](swss_package_contract_test.py) | Match the SWSS payload to source-declared programs and Lua aliases. Detect missing or extra programs and aliases containing the wrong implementation. |
 | [verify_agent_cache_test.py](verify_agent_cache_test.py) | Validate cache evidence: shared disk hits must be distinguished from local action reuse, and changed source must invalidate the cached action. Also check safe probe cleanup. |
 
 The integration suites consume declared Make inputs and files generated by Bazel.
@@ -131,6 +138,14 @@ container boot, live service health or forwarding behavior.
 
 | Integration check | Purpose |
 | --- | --- |
+| [oci_package_contract_test.py](integration/oci_package_contract_test.py) | Validate declared source archives, module/target identities, receipts and install inventories for both owner policies and unrelated package sets; reject missing programs, changed data/modes and false provenance. |
+| [oci_package_payloads_test.py](integration/oci_package_payloads_test.py) | Verify imported payload hashes, safe paths, package ownership and runtime/debug consistency using explicit policies, including enabled and disabled retained-package requirements. |
+| [oci_package_receipts_test.py](integration/oci_package_receipts_test.py) | Check direct upstream extraction against existing sample DEBs, preserving original identities and ordered TAR metadata; reject foreign or duplicate packages and verify reproducibility. |
+| [oci_package_state_layer_test.py](integration/oci_package_state_layer_test.py) | Check declared alternatives, links and provider files against package controls; reject changed inputs and unsafe links without executing maintainer scripts. |
+| [oci_apt_overlay_test.py](integration/oci_apt_overlay_test.py) | Exercise package selection over retained runtime/source metadata, dependency controls and overlay preservation using the real owner policy inputs. |
+| [oci_native_packages_test.py](integration/oci_native_packages_test.py) | Match compiled ELF files to SONAME links, build IDs, DWARF, debuglinks and declared symbol gaps; verify explicit source/imported provenance. |
+| [oci_image_test.py](integration/oci_image_test.py) | Require exact runtime ancestry, preserved payloads, declared startup/configuration and matching Docker archive metadata; enforce declared exceptions to otherwise unchanged overlays. |
+| [oci_source_layers_test.py](integration/oci_source_layers_test.py) | Apply the shared contract validator to SWSS's actual Bazel-built archives, source install files and binutils tools; require complete program and symbol coverage. |
 | [apt_selection_test.py](integration/apt_selection_test.py) | Exercise shared OCI inspection, package retention and CLI staging with unrelated AMD64/ARM64 fixtures. Reject incomplete policies and undeclared Make handoffs, and prevent selection or staging failures from publishing success evidence. |
 | [cfggen_template_test.py](integration/cfggen_template_test.py) | Check literal JSON values, declared template includes and build namespace isolation in generated output. A failing cfggen invocation must not publish an output file. |
 | [oci_base_consumer_test.py](integration/oci_base_consumer_test.py) | Follow timestamp-varied Make OCI bases through layered Bazel images and Docker exports, checking content, configuration, whiteouts and reproducibility. The fixture uses AMD64 metadata even on an ARM64 host. |
@@ -202,3 +217,16 @@ It installs real DEBs with dependencies/hooks, verifies dpkg status, exercises
 GDB, compiles/installs an external module, and checks initial initramfs creation,
 updates and boot links. The consumer and producer both verify fresh-output remote cache hits.
 Full installer assembly and guest boot/forwarding remain separate checks.
+
+
+Container CI membership is declared by `//dockers/docker-orchagent:ci_tests`
+and `//platform/vs/docker-syncd-vs:ci_tests`. Both reuse `oci_inventory_test` for
+whiteouts, overlay links and inherited ELF preservation, and instantiate
+`manifest_labels_action_test.py` against their actual Make manifests and Bazel
+labels. Both suites select the same seven package/image regression targets. Their
+implementations consume policy inputs and neutral fixtures, with explicit
+owner-specific expectations preserved as data. Source TARs and imported DEBs
+remain different input adapters; sharing tests does not turn one into the other.
+`swss_package_contract_test` now validates actual source archives inside Bazel,
+using declared source install metadata/data and binutils; its JSON report is a
+test output consumed by the shared CI collector.

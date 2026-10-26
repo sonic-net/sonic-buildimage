@@ -44,9 +44,24 @@ class ActionAuditTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "DEB or packaging wrapper"):
             self.audit("package.deb", ["packager"])
 
+    def test_accepts_declared_make_tool_for_source_generation(self):
+        # A source generator receives a declared tool path as data. It is not
+        # an action invoking an unreviewed Make packaging target directly.
+        result = self.audit("generated_sources", [
+            "bazel-out/bin/external/component/bazel/prepare", "prepare",
+            "--make", "bazel-out/bin/external/infra/tools/build_tools/make",
+            "--output", "bazel-out/bin/generated_sources",
+        ])
+        self.assertEqual(result["packaging_wrappers"], [])
+
     def test_rejects_wrapped_packaging_with_hidden_output(self):
         for command in (["dpkg-deb", "--build", "tree", "output"],
-                        ["sh", "-c", "make package"], ["dpkg-buildpackage", "-b"]):
+                        ["sh", "-c", "make package"], ["dpkg-buildpackage", "-b"],
+                        ["/declared/tools/make", "package"],
+                        ["/usr/bin/env", "LC_ALL=C", "/declared/tools/make", "package"],
+                        ["bash", "-ec", "/declared/tools/dpkg-buildpackage -b"],
+                        ["package-helper", "--builder", "/usr/bin/dpkg-buildpackage"],
+                        ["timeout", "30", "gmake", "package"]):
             with self.subTest(command=command):
                 with self.assertRaisesRegex(ValueError, "DEB or packaging wrapper"):
                     self.audit("output", command)

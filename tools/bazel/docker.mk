@@ -3,6 +3,7 @@ include tools/bazel/manifests.mk
 # Owners register archive names in SONIC_BAZEL_DOCKER_IMAGES or
 # SONIC_BAZEL_DBG_DOCKER_IMAGES and declare each archive's explicit Bazel target,
 # complete Make prerequisite paths, and source path for its SBOM fragment.
+# An optional <archive>_BAZEL_ARGS selects that image's source-build features.
 $(foreach IMAGE,$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES),\
     $(if $(strip $($(IMAGE)_BAZEL_TARGET)),,$(error $(IMAGE)_BAZEL_TARGET is required for a Bazel container))\
     $(if $(strip $($(IMAGE)_PATH)),,$(error $(IMAGE)_PATH is required for a Bazel container SBOM)))
@@ -57,7 +58,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCK
 		esac
 		bazel_option_lines="$$(python3 tools/bazel/build_helpers.py options \
 			--cache-directory="$${BAZEL_CONTAINER_CACHE_DIR-$${BAZEL_SWSS_CACHE_DIR:-}}" \
-			--arguments="$${BAZEL_CONTAINER_ARGS-$${BAZEL_SWSS_ARGS:-}}")"
+			--arguments="$${BAZEL_CONTAINER_ARGS-$${BAZEL_SWSS_ARGS:-}} $($(@F)_BAZEL_ARGS)")"
 		bazel_options=()
 		if [ -n "$$bazel_option_lines" ]; then mapfile -t bazel_options <<< "$$bazel_option_lines"; fi
 		bazel_options+=("--platforms=@sonic_build_infra//platforms:$$bazel_platform"

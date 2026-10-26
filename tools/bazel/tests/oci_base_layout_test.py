@@ -30,7 +30,10 @@ class LayoutTest(unittest.TestCase):
     def test_valid_layout_is_not_modified(self):
         """Accept a complete Linux AMD64 base without rewriting any layout files."""
         files = self.prepare()
-        validate_layout(self.layout, "linux/amd64")
+        image = validate_layout(self.layout, "linux/amd64")
+        self.assertEqual(image.descriptor, json.loads(files["index.json"])["manifests"][0])
+        self.assertEqual(image.config, json.loads(image_fixture()[0]))
+        self.assertEqual([path.read_bytes() for path in image.layers], image_fixture()[1])
         self.assertEqual(files, {str(path.relative_to(self.layout)): path.read_bytes()
                                  for path in self.layout.rglob("*") if path.is_file()})
 

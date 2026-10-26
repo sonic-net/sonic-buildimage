@@ -15,12 +15,20 @@ bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "pigz", version = "2.8.bcr.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 
+# P4 producers retain their upstream Make/configure builds and export TARs.
+bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.2", repo_name = "p4lang_pi")
+bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.2", repo_name = "p4lang_bmv2")
+bazel_dep(name = "p4c", version = "1.2.4.2.sonic.2")
+bazel_dep(name = "sonic-dash", version = "0.0.2-5c9305403585a7ae54f86918219acb8ed39f740a", repo_name = "sonic_dash")
+
 # Use the source-owned Python binding metadata required by sonic-yang-mgmt.
 bazel_dep(name = "libyang-python", version = "3.1.0.sonic.6", repo_name = "libyang_python")
 bazel_dep(name = "rules_cc", version = "0.2.20")
 
 # The patched release sorts above upstream 0.9.4 without a root override.
 bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.13")
+# Preserve system and quote headers in the P4/DASH Make builds.
+bazel_dep(name = "rules_foreign_cc", version = "0.16.0.sonic.1")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
 bazel_dep(name = "rules_multirun", version = "0.14.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
@@ -37,7 +45,7 @@ register_toolchains("//tools/bazel/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.23-5b224d7190d04f1b7b68429eedfc03b7b1565ed0",
+    version = "0.0.25-17a1e555291c64be1a6ff008f33352bffc4f8e5c",
     repo_name = "sonic_build_infra",
 )
 bazel_dep(
@@ -47,11 +55,11 @@ bazel_dep(
 )
 bazel_dep(
     name = "sonic-sairedis",
-    version = "0.0.2-54233eede3bb2eb319f6041bc8329586483012d0",
+    version = "0.0.3-5e765149371aeca207254641873791db76a95f5f",
     repo_name = "sonic_sairedis",
 )
 bazel_dep(name = "sonic-swss", version = "0.0.0", repo_name = "sonic_swss")
-bazel_dep(name = "sonic-swss-common", version = "0.0.6-be3495e6958310cb3dd02d6a290a6564efd9aa95", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-swss-common", version = "0.0.7-f7fda40c02b3a8b4bbbff3d17fca3dff83f4cbad", repo_name = "sonic_swss_common")
 bazel_dep(
     name = "sonic-yang-mgmt",
     version = "1.0.0-9ab452d22773c41783092ae3bd6c206d6c257c8d",
@@ -149,6 +157,13 @@ use_repo(gcc, "gcc_toolchains")
 
 register_toolchains("@gcc_toolchains//:all")
 
+register_toolchains(
+    "@sonic_build_infra//tools/build_tools:make_toolchain",
+    "@sonic_build_infra//tools/build_tools:m4_toolchain",
+    "@sonic_build_infra//tools/build_tools:pkgconfig_toolchain",
+    "@sonic_build_infra//tools/build_tools:autoconf_toolchain",
+)
+
 # Common owns its Rust library; application crates use sonic-rust-deps.
 # rules_rs reads the shared tracked Cargo inputs directly.
 rules_rust = use_extension("@rules_rs//rs:rules_rust.bzl", "rules_rust")
@@ -177,9 +192,10 @@ use_repo(toolchains, "bsd_tar_toolchains")
 
 register_toolchains("@bsd_tar_toolchains//:all")
 
-# Ordinary Distroless declarations exported from the reviewed image lock.
-# Infrastructure supplies the pinned Debian snapshot sources.
-include("//dockers/docker-orchagent/bazel:apt_inputs.MODULE.bazel")
+# Import exact package sources and dependency sets from the reviewed lock.
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.import_lock(lock = "//dockers/docker-orchagent/bazel:apt.lock.json")
+use_repo(apt, "orchagent_debian", "orchagent_debug_debian", "trixie")
 
 # Generate BUILD input labels from the same reviewed lock during repository setup.
 apt_inputs = use_repo_rule("@sonic_build_infra//apt:inputs_repository.bzl", "apt_inputs")
@@ -188,9 +204,6 @@ apt_inputs(
     name = "orchagent_apt_inputs",
     lock = "//dockers/docker-orchagent/bazel:apt.lock.json",
 )
-
-apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
-use_repo(apt, "trixie")
 
 # eventd owns its Lua runtime and the private Redis service used by its tests.
 apt.install(
@@ -240,13 +253,13 @@ single_version_override(
     version = "0.0.4-6d9c70f708d7420e9e2b2cdc906b80cee6b140f1",
 )
 
-bazel_dep(name = "sonic-fips", version = "0.0.3-0565bc0426dde6a1e7c495de17707c9557f843a9", repo_name = "sonic_fips")
+bazel_dep(name = "sonic-fips", version = "0.0.3-d1a2c8f692d4197295269ed445022c3890b0f1a6", repo_name = "sonic_fips")
 
 # Select the shared producer-file checks while older consumers retain
 # their previous infrastructure declarations.
 single_version_override(
     module_name = "sonic-build-infra",
-    version = "0.0.23-5b224d7190d04f1b7b68429eedfc03b7b1565ed0",
+    version = "0.0.25-17a1e555291c64be1a6ff008f33352bffc4f8e5c",
 )
 
 # Bind image receipts to the modules that Bazel actually selected.
@@ -268,15 +281,53 @@ source_modules(
 
 single_version_override(
     module_name = "sonic-swss-common",
-    version = "0.0.6-be3495e6958310cb3dd02d6a290a6564efd9aa95",
+    version = "0.0.7-f7fda40c02b3a8b4bbbff3d17fca3dff83f4cbad",
 )
 
 single_version_override(
     module_name = "sonic-sairedis",
-    version = "0.0.2-54233eede3bb2eb319f6041bc8329586483012d0",
+    version = "0.0.3-5e765149371aeca207254641873791db76a95f5f",
 )
 
 single_version_override(
     module_name = "sonic-fips",
-    version = "0.0.3-0565bc0426dde6a1e7c495de17707c9557f843a9",
+    version = "0.0.3-d1a2c8f692d4197295269ed445022c3890b0f1a6",
+)
+
+# Syncd uses the same pinned Debian snapshot as its source-built base.
+apt.import_lock(lock = "//platform/vs/docker-syncd-vs/bazel:apt.lock.json")
+use_repo(apt, "syncd_vs_debian", "syncd_vs_debug_debian")
+
+apt_inputs(
+    name = "syncd_apt_inputs",
+    lock = "//platform/vs/docker-syncd-vs/bazel:apt.lock.json",
+)
+
+# Bind the shared library payload receipts to the modules actually resolved by
+# Bazel, even when the owners do not export MODULE.bazel as a public target.
+
+source_modules(
+    name = "syncd_source_modules",
+    modules = {
+        "@sonic_swss_common//:MODULE.bazel": "sonic-swss-common",
+        "@sonic_sairedis//:MODULE.bazel": "sonic-sairedis",
+        "@sonic_fips//:MODULE.bazel": "sonic-fips",
+        "@libnl3//:MODULE.bazel": "libnl3",
+        "@p4lang_pi//:MODULE.bazel": "p4lang-pi",
+        "@p4lang_bmv2//:MODULE.bazel": "p4lang-bmv2",
+        "@p4c//:MODULE.bazel": "p4c",
+        "@sonic_dash//:MODULE.bazel": "sonic-dash",
+    },
+)
+
+# The source owner keeps its install declarations in BUILD/Debian metadata.
+# Expose those exact resolved files to the sandboxed package-contract test.
+source_files = use_repo_rule("@sonic_build_infra//oci:source_modules.bzl", "source_files")
+
+source_files(
+    name = "swss_install_contract",
+    files = {
+        "@sonic_swss//dist:BUILD.bazel": "dist-BUILD.bazel.txt",
+        "@sonic_swss//:debian/swss.install": "swss.install.txt",
+    },
 )

@@ -1,0 +1,499 @@
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@syncd_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+load("//tools/bazel/oci:source_contract.bzl", "source_contract")
+
+package(default_visibility = ["//visibility:public"])
+
+# Export the original Make inputs directly to the OCI image and its tests.
+# Keeping the declarations beside the files avoids a second path via symlinks.
+exports_files(
+    [
+        "Dockerfile.j2",
+        "critical_processes",
+        "start.sh",
+        "supervisord.conf",
+    ],
+    visibility = [
+        "//platform/vs/docker-syncd-vs:__subpackages__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)
+
+# Supported configuration: native AMD64 Trixie VS, DASH/FIPS, no ASAN/RPC.
+# The Make selector and source configuration enforce the feature boundary.
+_COMPATIBLE_WITH = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+] + select({
+    ":supported_source_configuration": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
+# FIPS comes from source targets; debug inherits their checked runtime records.
+_APT_POLICY = {
+    "schema": 1,
+    "image": "docker-syncd-vs",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "source",
+    "features": {},
+}
+
+_DEBUG_APT_PACKAGES = [
+    "gdb",
+    "gdbserver",
+    "sshpass",
+    "strace",
+    "vim",
+]
+
+# Image expectations stay here; package paths, permissions and dependency
+# controls come from the source owners.
+_PACKAGE_POLICY = dict(
+    _APT_POLICY,
+    debug_tools = _DEBUG_APT_PACKAGES,
+    image_validation = {
+        "entrypoint": ["/usr/local/bin/supervisord"],
+        "command": None,
+        "environment": {"DEBIAN_FRONTEND": "noninteractive"},
+        "startup_files": {
+            "usr/lib/tmpfiles.d/openssh-client.conf": {
+                "source": "platform/vs/docker-syncd-vs/config/openssh-client.conf",
+                "mode": 0o644,
+            },
+            "usr/bin/start.sh": {
+                "source": "platform/vs/docker-syncd-vs/start.sh",
+                "mode": 0o755,
+            },
+            "etc/supervisor/conf.d/supervisord.conf": {
+                "source": "platform/vs/docker-syncd-vs/supervisord.conf",
+                "mode": 0o644,
+            },
+            "etc/supervisor/critical_processes": {
+                "source": "platform/vs/docker-syncd-vs/critical_processes",
+                "mode": 0o644,
+            },
+        },
+        "required_elf_paths": ["usr/bin/syncd"],
+        "debug_alternatives": [{
+            "paths": ["etc/alternatives/" + name for name in [
+                "editor",
+                "ex",
+                "rview",
+                "vi",
+                "view",
+            ]],
+            "before": "/usr/bin/vim.tiny",
+            "after": "/usr/bin/vim.basic",
+        }],
+        "runtime_tag": "docker-syncd-vs:latest",
+        "debug_tag": "docker-syncd-vs-dbg:latest",
+        "package_state": False,
+    },
+    native = {
+        "debug_forwarding": {
+            "usr/bin/pi_CLI_dummy": {
+                "provider": "usr/lib/x86_64-linux-gnu/libpicli.so.0",
+                "symbol": "main",
+                "source": "main.c",
+            },
+        },
+        "required_packages": [
+            "syncd-vs",
+            "libsairedis",
+            "libsaimetadata",
+            "libsaivs",
+            "libswsscommon",
+            "openssh-client",
+            "p4lang-pi",
+            "p4lang-bmv2",
+            "p4lang-p4c",
+            "libsai",
+        ],
+        "required_sonames": {
+            "libsairedis": "libsairedis.so.0",
+            "libsaimetadata": "libsaimetadata.so.0",
+            "libsaivs": "libsaivs.so.0",
+            "libswsscommon": "libswsscommon.so.0",
+        },
+        "gap_packages": [],
+        "local_dependency_pattern": "lib(?:sai|swsscommon|MdioIpcClient|pi)",
+        "require_source": True,
+        "require_imported_symbols": False,
+    },
+    retained_requirements = [],
+)
+
+write_file(
+    name = "package_policy",
+    out = "package_policy.json",
+    content = [json.encode(_PACKAGE_POLICY)],
+)
+
+# Reuse the source-built config-engine graph, including its installed package state.
+alias(
+    name = "config_engine_base_layout",
+    actual = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+)
+
+config_setting(
+    name = "supported_source_configuration",
+    flag_values = {
+        "@sonic_swss_common//tools/bazel:yang_modules": "true",
+        "@sonic_sairedis//:sai_backend": "vs",
+        "@sonic_sairedis//:asic_platform": "generic",
+        "@sonic_sairedis//:enable_debug": "false",
+        "@sonic_sairedis//:enable_coverage": "false",
+        "@sonic_sairedis//:enable_asan": "false",
+        "@sonic_sairedis//:enable_vpp": "false",
+        "@sonic_sairedis//:enable_rpcserver": "false",
+        "@sonic_sairedis//:enable_dashsai": "true",
+    },
+)
+
+# These public owner targets provide all project runtime payloads. Their
+# matching symbols follow the same dependency and cache graph.
+_SOURCE_PACKAGES = {
+    "p4lang-pi": "@p4lang_pi//:runtime",
+    "p4lang-bmv2": "@p4lang_bmv2//:runtime",
+    "p4lang-p4c": "@p4c//:p4c_pkg",
+    "libsai": "@sonic_dash//:runtime",
+    "libswsscommon": "@sonic_swss_common//dist:libswsscommon_pkg",
+    "libsairedis": "@sonic_sairedis//lib:libsairedis_pkg",
+    "libsaimetadata": "@sonic_sairedis//meta:libsaimetadata_pkg",
+    "libsaivs": "@sonic_sairedis//vslib:libsaivs_pkg",
+    "syncd-vs": "@sonic_sairedis//syncd:syncd_pkg",
+    "openssh-client": "@sonic_fips//openssh:openssh_client_pkg",
+    "libnl-3-dev": "@libnl3//:libnl-3-dev_files",
+    "libnl-route-3-dev": "@libnl3//:libnl-route-3-dev_files",
+}
+
+# Generate provenance and dependency records directly from owner metadata.
+source_contract(
+    name = "source_contract",
+    architecture = "amd64",
+    distribution = "trixie",
+    image = "docker-syncd-vs",
+    owner_metadata = [
+        "@sonic_swss_common//:runtime_packages.json",
+        "@sonic_sairedis//:runtime_packages.json",
+        "@sonic_fips//:runtime_packages.json",
+        "@libnl3//:runtime_packages.json",
+        "@p4lang_pi//:runtime_packages.json",
+        "@p4lang_bmv2//:runtime_packages.json",
+        "@p4c//:runtime_packages.json",
+        "@sonic_dash//:runtime_packages.json",
+    ],
+    source_modules = {
+        "sonic-swss-common": "@syncd_source_modules//:sonic-swss-common.MODULE.bazel",
+        "sonic-sairedis": "@syncd_source_modules//:sonic-sairedis.MODULE.bazel",
+        "sonic-fips": "@syncd_source_modules//:sonic-fips.MODULE.bazel",
+        "libnl3": "@syncd_source_modules//:libnl3.MODULE.bazel",
+        "p4lang-pi": "@syncd_source_modules//:p4lang-pi.MODULE.bazel",
+        "p4lang-bmv2": "@syncd_source_modules//:p4lang-bmv2.MODULE.bazel",
+        "p4c": "@syncd_source_modules//:p4c.MODULE.bazel",
+        "sonic-dash": "@syncd_source_modules//:sonic-dash.MODULE.bazel",
+    },
+    sources = _SOURCE_PACKAGES,
+)
+
+run_binary(
+    name = "checked_source_runtime",
+    srcs = [
+        "//platform/vs/docker-syncd-vs:config_engine_base_layout",
+        "//platform/vs/docker-syncd-vs:source_contract",
+        "@syncd_source_modules//:libnl3.MODULE.bazel",
+        "@syncd_source_modules//:p4c.MODULE.bazel",
+        "@syncd_source_modules//:p4lang-bmv2.MODULE.bazel",
+        "@syncd_source_modules//:p4lang-pi.MODULE.bazel",
+        "@syncd_source_modules//:sonic-dash.MODULE.bazel",
+        "@syncd_source_modules//:sonic-fips.MODULE.bazel",
+        "@syncd_source_modules//:sonic-sairedis.MODULE.bazel",
+        "@syncd_source_modules//:sonic-swss-common.MODULE.bazel",
+    ] + _SOURCE_PACKAGES.values(),
+    outs = [
+        "source_packages.receipt.json",
+        "source_runtime.tar",
+    ],
+    args = [
+               "--contract=$(execpath //platform/vs/docker-syncd-vs:source_contract)",
+               "--base=$(execpath //platform/vs/docker-syncd-vs:config_engine_base_layout)",
+               "--module=sonic-swss-common=$(execpath @syncd_source_modules//:sonic-swss-common.MODULE.bazel)",
+               "--module=sonic-sairedis=$(execpath @syncd_source_modules//:sonic-sairedis.MODULE.bazel)",
+               "--module=sonic-fips=$(execpath @syncd_source_modules//:sonic-fips.MODULE.bazel)",
+               "--module=libnl3=$(execpath @syncd_source_modules//:libnl3.MODULE.bazel)",
+               "--module=p4lang-pi=$(execpath @syncd_source_modules//:p4lang-pi.MODULE.bazel)",
+               "--module=p4lang-bmv2=$(execpath @syncd_source_modules//:p4lang-bmv2.MODULE.bazel)",
+               "--module=p4c=$(execpath @syncd_source_modules//:p4c.MODULE.bazel)",
+               "--module=sonic-dash=$(execpath @syncd_source_modules//:sonic-dash.MODULE.bazel)",
+               "--out-tar=$(execpath source_runtime.tar)",
+               "--receipt=$(execpath source_packages.receipt.json)",
+           ] + ["--package=" + name + "=$(execpath " + target + ")" for name, target in _SOURCE_PACKAGES.items()] +
+           ["--package-target=" + name + "=" + target for name, target in _SOURCE_PACKAGES.items()],
+    mnemonic = "ValidateSyncdSourceRuntime",
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ] + select({
+        ":supported_source_configuration": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    tool = "//tools/bazel/oci:package_contract",
+)
+
+[
+    filegroup(
+        name = name,
+        srcs = [output],
+    )
+    for name, output in {
+        "source_runtime_payloads": "source_runtime.tar",
+        "source_package_receipt": "source_packages.receipt.json",
+    }.items()
+]
+
+# Keep the public symbol label while collecting once from the shared owner graph.
+alias(
+    name = "source_debug_payloads",
+    actual = "//platform/vs/docker-syncd-vs:rdeps_debug_symbols",
+)
+
+# Source receipts bind owner TARs to the same APT dependency check.
+apt_layer(
+    name = "runtime_layer",
+    base = ":config_engine_base_layout",
+    dependency_set = "syncd_vs_debian",
+    lock = "//platform/vs/docker-syncd-vs/bazel:apt.lock.json",
+    packages = APT_INPUTS["syncd_vs_debian"]["amd64"],
+    policy = _APT_POLICY,
+    source_receipt = ":source_package_receipt",
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":runtime_layer"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "apt_deps",
+    tars = [":runtime_layer"],
+)
+
+# Consume producer TARs directly, retaining their installed modes and owners.
+# The same graph supplies companion debug symbols.
+sonic_layer(
+    name = "rdeps",
+    tars = _SOURCE_PACKAGES.values(),
+)
+
+debug_symbols_layer(
+    name = "rdeps_debug_symbols",
+    image = ":rdeps",
+)
+
+sonic_layer(
+    name = "runtime_packages",
+    tars = [
+        ":rdeps",
+    ],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = ":config_engine_base_layout",
+    controls = [label + ":control" for label in APT_INPUTS["syncd_vs_debian"]["amd64"].values()],
+    source_receipt = ":source_package_receipt",
+    source_spec = "//platform/vs/docker-syncd-vs:source_contract",
+    sources = _SOURCE_PACKAGES,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/syncd-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+# APT payloads omit their post-install alternatives. Reuse the shared links.
+sonic_layer(
+    name = "installation_links",
+    tars = [
+        "@sonic_build_infra//deps/automake:alternatives_pkg",
+        "@sonic_build_infra//deps/compiler:alternatives_pkg",
+        "@sonic_build_infra//deps/openmpi:alternatives_pkg",
+    ],
+)
+
+# Runtime image and Make-compatible archive; keep the layer order explicit.
+oci_image(
+    name = "docker-syncd-vs",
+    base = ":config_engine_base_layout",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = "//platform/vs/docker-syncd-vs/config:labels",
+    target_compatible_with = _COMPATIBLE_WITH,
+    tars = [
+        ":apt_deps",
+        ":runtime_packages",
+        ":installed_package_state",
+        ":installation_links",
+        "//platform/vs/docker-syncd-vs/config:groups",
+        "//platform/vs/docker-syncd-vs/config:files",
+    ],
+)
+
+sonic_docker_archive(
+    name = "docker-syncd-vs.gz",
+    image = ":docker-syncd-vs",
+)
+
+# The base's source graph supplies its exact companion symbols. The installed
+# image validator checks every source ELF against the declared base receipts.
+sonic_layer(
+    name = "debug_packages",
+    tars = [
+        ":rdeps_debug_symbols",
+        "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.debug_symbols",
+    ],
+)
+
+apt_layer(
+    name = "debug_layer",
+    base = ":docker-syncd-vs",
+    base_package_metadata = ":runtime_package_metadata",
+    dependency_set = "syncd_vs_debug_debian",
+    lock = "//platform/vs/docker-syncd-vs/bazel:apt.lock.json",
+    packages = APT_INPUTS["syncd_vs_debug_debian"]["amd64"],
+    policy = _APT_POLICY,
+    source_receipt = ":source_package_receipt",
+    variant = "debug",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debug_layer"],
+    output_group = "selection",
+)
+
+# Debug adds tools and native symbols while retaining the runtime FIPS packages
+# and ELF files. Reuse the existing Vim alternatives implementation.
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debug_layer",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+    ],
+)
+
+# Record exactly the packages added by this locked debug selection. The runtime
+# base already contains the source-package identities.
+write_file(
+    name = "debug_source_packages",
+    out = "debug-source-packages.json",
+    content = [json.encode({
+        "_generated": {
+            "notice": "AUTO-GENERATED. DO NOT EDIT MANUALLY.",
+            "generator": "platform/vs/docker-syncd-vs/BUILD.bazel",
+        },
+        "schema": 1,
+        "packages": {},
+    })],
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-syncd-vs",
+    controls = [label + ":control" for label in APT_INPUTS["syncd_vs_debug_debian"]["amd64"].values()],
+    source_spec = ":debug_source_packages",
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_installed_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/syncd-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+# Debug extends the exact runtime layers with matching symbols for every source ELF.
+oci_image(
+    name = "docker-syncd-vs-dbg",
+    base = ":docker-syncd-vs",
+    labels = "//platform/vs/docker-syncd-vs/config:debug_labels",
+    target_compatible_with = _COMPATIBLE_WITH,
+    tars = [
+        ":debug_tools",
+        ":debug_packages",
+        ":debug_installed_package_state",
+    ],
+)
+
+sonic_docker_archive(
+    name = "docker-syncd-vs-dbg.gz",
+    image = ":docker-syncd-vs-dbg",
+)
+
+# These contract tests need no production Make package inputs. The full VS job
+# separately validates all source payloads and complete OCI images.
+test_suite(
+    name = "ci_tests",
+    tests = [
+        "//tools/bazel/tests:apt_selection_test",
+        "//tools/bazel/tests:oci_apt_overlay_test",
+        "//tools/bazel/tests:oci_image_test",
+        "//tools/bazel/tests:oci_inventory_test",
+        "//tools/bazel/tests:oci_native_packages_test",
+        "//tools/bazel/tests:oci_package_contract_test",
+        "//tools/bazel/tests:oci_package_payloads_test",
+        "//tools/bazel/tests:oci_package_receipts_test",
+        "//tools/bazel/tests:oci_package_state_layer_test",
+        "//tools/bazel/tests:source_base_validation_test",
+        "//tools/bazel/tests:source_contract_test",
+        "//tools/bazel/tests:syncd_manifest_labels_test",
+    ],
+)
+
+# Build the real installed-package state from producer TARs before the full VS
+# job. This catches assembly failures that fixture tests and graph analysis miss.
+filegroup(
+    name = "ci_artifacts",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+)

@@ -1,11 +1,13 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@orchagent_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
 load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
 load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
 load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
-load("@orchagent_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
-
 
 package(default_visibility = ["//visibility:public"])
 
@@ -35,10 +37,110 @@ _APT_POLICY = {
     "features": {},
 }
 
-# Make publishes the config-engine image as OCI files before invoking Bazel.
-# Its Python/config-engine utilities and libnl/libyang runtime are retained.
-oci_base_layout(
+# Expectations for the common OCI validators. Program and Lua inventories stay
+# in the source owner's BUILD/install files; this describes how to read them.
+_PACKAGE_POLICY = dict(
+    _APT_POLICY,
+    config_paths = {"usr/bin/docker-init.sh": {
+        "kind": "file",
+        "mode": 0o755,
+    }},
+    debug_tools = [
+        "gdb",
+        "gdbserver",
+        "sshpass",
+        "strace",
+        "vim",
+    ],
+    image_validation = {
+        "entrypoint": ["/usr/bin/docker-init.sh"],
+        "command": None,
+        "environment": {"DEBIAN_FRONTEND": "noninteractive"},
+        "startup_files": {},
+        "required_elf_paths": ["usr/bin/orchagent"],
+        "debug_alternatives": [],
+        "runtime_tag": "docker-orchagent:latest",
+        "debug_tag": "docker-orchagent-dbg:latest",
+        "package_state": False,
+    },
+    install_inventory = {
+        "architecture": _APT_POLICY["architecture"],
+        "declaration_file": "dist/BUILD.bazel",
+        "groups": [
+            {
+                "variable": "CPP_BINARIES",
+                "destination": "usr/bin",
+                "kind": "elf",
+                "mode": 0o755,
+            },
+            {
+                "variable": "LUA_FILES",
+                "aliases_variable": "LUA_INSTALL_ALIASES",
+                "destination": "usr/share/swss",
+                "kind": "file",
+                "mode": 0o644,
+            },
+        ],
+        "install_file": "debian/swss.install",
+        "generated_programs": ["target/release/countersyncd"],
+        "executable_directories": ["usr/bin"],
+        "expected_program_count": 30,
+    },
+    libraries = {
+        "protobuf.tar": {
+            "architecture": _APT_POLICY["architecture"],
+            "runtime_path": "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12",
+            "soname_links": {"usr/lib/x86_64-linux-gnu/libprotobuf.so.32": "libprotobuf.so.32.0.12"},
+            "exclusive_pattern": "*/libprotobuf.so*",
+        },
+    },
+    native = {
+        "required_packages": [],
+        "required_sonames": {},
+        "gap_packages": [],
+        "local_dependency_pattern": "lib(?:sai|swsscommon|MdioIpcClient|pi)",
+        "imported_symbol_packages": [],
+        "required_imported_symbol_paths": [],
+        "require_source": False,
+        "require_imported_symbols": False,
+    },
+    required_debug_paths = [
+        "usr/lib/libdashapi.so",
+        "usr/lib/python3/dist-packages/dash_api/_utils.so",
+        "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12",
+    ],
+    retained_requirements = [],
+)
+
+write_file(
+    name = "package_policy",
+    out = "package_policy.json",
+    content = [json.encode(_PACKAGE_POLICY)],
+)
+
+# FIPS builds already select the source-built config-engine image. Consume its
+# native OCI graph directly; its Docker export is only an installer artifact.
+bool_flag(
+    name = "source_config_engine",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "source_config_engine_enabled",
+    flag_values = {":source_config_engine": "true"},
+)
+
+alias(
     name = "config_engine_base_layout",
+    actual = select({
+        ":source_config_engine_enabled": "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+        "//conditions:default": ":make_config_engine_base_layout",
+    }),
+)
+
+# Other builds retain the native OCI layout prepared from the Make archive.
+oci_base_layout(
+    name = "make_config_engine_base_layout",
     srcs = [
         "//:config_engine_oci_files",
         "//:target/docker-config-engine-trixie.oci/oci-layout",
@@ -53,9 +155,9 @@ oci_base_layout(
 apt_layer(
     name = "runtime_layer",
     base = ":config_engine_base_layout",
-    packages = APT_INPUTS["orchagent_debian"]["amd64"],
     dependency_set = "orchagent_debian",
     lock = "//dockers/docker-orchagent/bazel:apt.lock.json",
+    packages = APT_INPUTS["orchagent_debian"]["amd64"],
     policy = _APT_POLICY,
     variant = "runtime",
 )
@@ -123,9 +225,9 @@ apt_layer(
     name = "debug_layer",
     base = ":docker-orchagent",
     base_package_metadata = ":runtime_apt_selection",
-    packages = APT_INPUTS["orchagent_debug_debian"]["amd64"],
     dependency_set = "orchagent_debug_debian",
     lock = "//dockers/docker-orchagent/bazel:apt.lock.json",
+    packages = APT_INPUTS["orchagent_debug_debian"]["amd64"],
     policy = _APT_POLICY,
     variant = "debug",
 )
@@ -156,4 +258,69 @@ sonic_docker_archive(
     name = "docker-orchagent-dbg.gz",
     image = ":docker-orchagent-dbg",
     visibility = ["//visibility:public"],
+)
+
+# CI owns an explicit selection of source and image-contract tests. The package
+# check consumes the actual runtime/debug archives as declared Bazel inputs.
+test_suite(
+    name = "ci_tests",
+    tests = [
+        "//src/sonic-config-engine:sonic_cfggen_cli_test",
+        "//tools/bazel/tests:apt_selection_test",
+        "//tools/bazel/tests:common_rust_runtime_test",
+        "//tools/bazel/tests:containercfgd_full_test",
+        "//tools/bazel/tests:containercfgd_wheel_test",
+        "//tools/bazel/tests:manifest_labels_action_test",
+        "//tools/bazel/tests:manifest_labels_test",
+        "//tools/bazel/tests:oci_apt_overlay_test",
+        "//tools/bazel/tests:oci_image_test",
+        "//tools/bazel/tests:oci_inventory_test",
+        "//tools/bazel/tests:oci_native_packages_test",
+        "//tools/bazel/tests:oci_package_contract_test",
+        "//tools/bazel/tests:oci_package_payloads_test",
+        "//tools/bazel/tests:oci_package_receipts_test",
+        "//tools/bazel/tests:oci_package_state_layer_test",
+        "//tools/bazel/tests:select_apt_payloads_test",
+        "//tools/bazel/tests:sonic_config_engine_full_test",
+        "//tools/bazel/tests:sonic_py_common_full_test",
+        "//tools/bazel/tests:sonic_py_common_test",
+        "//tools/bazel/tests:sonic_python_wheels_test",
+        "//tools/bazel/tests:sonic_yang_mgmt_full_test",
+        "//tools/bazel/tests:sonic_yang_mgmt_wheel_test",
+        "//tools/bazel/tests:supervisor_python_full_test",
+        "//tools/bazel/tests:supervisor_python_wheel_test",
+        "//tools/bazel/tests:swss_common_rust_test",
+        "//tools/bazel/tests:swss_manifest_labels_test",
+        "//tools/bazel/tests:swss_package_contract_test",
+        "//tools/bazel/tests:swss_render_test",
+        "//tools/bazel/tests:test_dpkg_patterns_up_to_date",
+    ],
+)
+
+# Keep published artifact names stable while allowing the shared CI runner to
+# discover this owner's outputs through an ordinary filegroup.
+[
+    copy_file(
+        name = "ci_" + name.replace("-", "_"),
+        src = source,
+        out = "ci/" + name + ".tar",
+    )
+    for name, source in {
+        "swss": "@sonic_swss//dist:swss_pkg",
+        "protobuf": "@sonic_dash_api//:protobuf_runtime_pkg",
+        "rdeps": ":rdeps",
+        "config": "//dockers/docker-orchagent/config:files",
+        "debug-symbols": ":rdeps_debug_symbols",
+    }.items()
+]
+
+filegroup(
+    name = "ci_artifacts",
+    srcs = [
+        ":ci_config",
+        ":ci_debug_symbols",
+        ":ci_protobuf",
+        ":ci_rdeps",
+        ":ci_swss",
+    ],
 )

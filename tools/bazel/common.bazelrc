@@ -12,6 +12,11 @@ build --@rules_rust//rust/settings:experimental_use_allocator_libraries_with_man
 build:release --compilation_mode=opt
 test --test_output=errors
 
+# The Syncd image explicitly selects its source-built DASH SDK and daemon.
+build:syncd-dash --@sonic_sairedis//:enable_dashsai=true
+build:syncd-dash --@sonic_sairedis//:dash_sai=@sonic_dash//:sdk
+build:syncd-dash --@sonic_sairedis//:dash_runtime_metadata=@sonic_dash//:runtime_packages.json
+
 try-import %workspace%/.bazelrc.user
 
 # Restore complete declared kernel/metadata tool trees from the action cache.

@@ -1,0 +1,6 @@
+package(default_visibility = [
+    "//platform/vs/docker-syncd-vs:__subpackages__",
+    "//tools/bazel/tests:__pkg__",
+])
+
+exports_files(["apt.lock.json"])

@@ -1,4 +1,4 @@
-"""`sonic_layer`: assemble an image layer the way the Make build would.
+"""Assemble OCI layers with Make's file exclusions while retaining legal notices.
 
 TODO(bazel-ready): move this to sonic-build-infra/tar once dpkg_01_drop can be inlined there.
 It lives here for now because the file is in //dockers/docker-base-trixie.
@@ -16,6 +16,28 @@ _EXCLUDES = "//tools/bazel/dpkg:dpkg_excludes.txt"
 PATH_INCLUDES = [
     "./usr/share/doc/*/copyright",
     "usr/share/doc/*/copyright",
+]
+
+# Source TARs retain upstream license names rather than Debian's "copyright".
+# Keep these notices in Bazel OCI layers without changing Make's dpkg policy.
+# Both spellings are needed because bsdtar matches the original member name.
+_OCI_NOTICE_INCLUDES = [
+    prefix + name
+    for prefix in ["./usr/share/doc/*/", "usr/share/doc/*/"]
+    for name in [
+        "LICENSE*",
+        "LICENCE*",
+        "*-LICENSE*",
+        "*-LICENCE*",
+        "COPYING*",
+        "NOTICE*",
+        "license*",
+        "licence*",
+        "*-license*",
+        "*-licence*",
+        "copying*",
+        "notice*",
+    ]
 ]
 
 _TAR_ARGS = ["--format", "gnutar"]
@@ -85,7 +107,7 @@ def _dpkg_filter_impl(ctx):
     ]
 
 dpkg_filter = rule(
-    doc = """Drop from a layer the paths the base image's dpkg config excludes.
+    doc = """Apply the base image's dpkg exclusions, preserving OCI license notices.
 
 dpkg applies path-include after path-exclude and lets the last match win.
 In bsdtar, however, --exclude always wins over --include, regardless of the order.
@@ -121,7 +143,7 @@ So we need to build the excluded first, then the included, and then merge them.
         ),
         "includes": attr.string_list(
             doc = "bsdtar include patterns, carving back out of the excludes.",
-            default = PATH_INCLUDES,
+            default = PATH_INCLUDES + _OCI_NOTICE_INCLUDES,
         ),
     },
     toolchains = [tar_lib.toolchain_type],
@@ -130,8 +152,8 @@ So we need to build the excluded first, then the included, and then merge them.
 def sonic_layer(name, tars, deduplicate = True, **kwargs):
     """Flatten `tars` into one layer, minus whatever dpkg would have filtered out (e.g. man pages).
 
-    Use this anywhere an image layer is built out of .deb archives,
-    so that the layer holds exactly what the Make image would hold.
+    Use this for source or Debian payload TARs. Apply Make's documentation and
+    locale exclusions while also keeping upstream source license/notice names.
 
     Args:
         name: the filtered layer.

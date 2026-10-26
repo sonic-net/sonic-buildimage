@@ -1,0 +1,162 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+load("//tools/bazel/oci:imported_debug_symbols_layer.bzl", "imported_debug_symbols_layer")
+load("//tools/bazel/oci:normalize_layer.bzl", "normalize_layer")
+load(":normalization_fixture.bzl", "normalization_fixture")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//visibility:public"],
+)
+
+py_test(
+    name = "imported_symbols_test",
+    size = "small",
+    srcs = ["imported_symbols_test.py"],
+    deps = [
+        "//tools/bazel/oci:elf_metadata",
+        "//tools/bazel/oci:imported_symbols_lib",
+        "//tools/bazel/tests:oci_base_fixture_lib",
+    ],
+)
+
+# Compile with the configured native C toolchain and split this exact ELF.
+# The fixture produces only a binary, runtime TAR and matching debug TAR.
+cc_binary(
+    name = "hello",
+    srcs = ["hello.c"],
+    linkopts = ["-Wl,--build-id"],
+)
+
+sonic_deploy_tar(
+    name = "native_payload",
+    binaries = {
+        "usr/bin/hello uid=0 gid=0 mode=0755 type=file": ":hello",
+    },
+    force_debug_build = True,
+    mtree = [
+        "usr type=dir uid=0 gid=0 mode=0755 time=0",
+        "usr/bin type=dir uid=0 gid=0 mode=0755 time=0",
+    ],
+)
+
+_ARCHITECTURE = select({
+    "@platforms//cpu:aarch64": "arm64",
+    "//conditions:default": "amd64",
+})
+
+_PLATFORM = select({
+    "@platforms//cpu:aarch64": "linux/arm64",
+    "//conditions:default": "linux/amd64",
+})
+
+oci_image(
+    name = "native_runtime",
+    architecture = _ARCHITECTURE,
+    os = "linux",
+    tars = [":native_payload"],
+)
+
+imported_debug_symbols_layer(
+    name = "native_matched_symbols",
+    expected_platform = _PLATFORM,
+    required_paths = ["usr/bin/hello"],
+    runtime = ":native_runtime",
+    tars = [":native_payload.debug_symbols"],
+)
+
+filegroup(
+    name = "native_matched_receipt",
+    srcs = [":native_matched_symbols"],
+    output_group = "receipt",
+)
+
+py_test(
+    name = "native_symbols_test",
+    size = "small",
+    srcs = ["native_symbols_test.py"],
+    args = [
+        "$(rootpath :native_runtime)",
+        "$(rootpath :native_payload.debug_symbols)",
+        "$(rootpath :native_matched_symbols)",
+        "$(rootpath :native_matched_receipt)",
+    ] + select({
+        "@platforms//cpu:aarch64": ["arm64"],
+        "//conditions:default": ["amd64"],
+    }),
+    data = [
+        ":native_matched_receipt",
+        ":native_matched_symbols",
+        ":native_payload.debug_symbols",
+        ":native_runtime",
+    ],
+    deps = ["//tools/bazel/oci:imported_symbols_lib"],
+)
+
+py_test(
+    name = "normalize_layer_test",
+    size = "small",
+    srcs = [
+        "imported_symbols_test.py",
+        "normalize_layer_test.py",
+    ],
+    main = "normalize_layer_test.py",
+    deps = [
+        "//tools/bazel/oci:elf_metadata",
+        "//tools/bazel/oci:imported_symbols_lib",
+        "//tools/bazel/oci:normalize_layer_lib",
+        "//tools/bazel/tests:oci_base_fixture_lib",
+    ],
+)
+
+py_binary(
+    name = "normalization_fixture_tool",
+    srcs = [
+        "imported_symbols_test.py",
+        "normalize_layer_test.py",
+    ],
+    main = "normalize_layer_test.py",
+    deps = [
+        "//tools/bazel/oci:elf_metadata",
+        "//tools/bazel/oci:imported_symbols_lib",
+        "//tools/bazel/oci:normalize_layer_lib",
+        "//tools/bazel/tests:oci_base_fixture_lib",
+    ],
+)
+
+normalization_fixture(name = "normalization_base")
+
+filegroup(
+    name = "normalization_payload",
+    srcs = [":normalization_base"],
+    output_group = "payload",
+)
+
+normalize_layer(
+    name = "normalized_fixture",
+    base = ":normalization_base",
+    expected_platform = "linux/amd64",
+    src = ":normalization_payload",
+)
+
+filegroup(
+    name = "normalization_receipt",
+    srcs = [":normalized_fixture"],
+    output_group = "normalization",
+)
+
+py_test(
+    name = "normalize_layer_rule_test",
+    size = "small",
+    srcs = ["normalize_layer_rule_test.py"],
+    args = [
+        "$(rootpath :normalized_fixture)",
+        "$(rootpath :normalization_receipt)",
+    ],
+    data = [
+        ":normalization_receipt",
+        ":normalized_fixture",
+    ],
+)

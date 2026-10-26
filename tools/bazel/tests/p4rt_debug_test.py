@@ -2,11 +2,13 @@
 """Exercise real GDB split-DWARF lookup; these fixtures do not build DEBs."""
 
 from pathlib import Path
+import json
 import platform
 import shutil
 import struct
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -107,6 +109,30 @@ class P4rtDebugTest(unittest.TestCase):
             stream.write(struct.pack("<H", 183))
         with self.assertRaisesRegex(ValueError, "AMD64 ELF"):
             verify_pair(self.binary, self.symbols, self.source)
+
+    def test_tar_cli_checks_payload_inventory_and_isolated_gdb(self):
+        """Exercise TAR loading through the public CLI with real matching symbols."""
+        from tools.bazel.ci.verify_p4rt_debug import RUNTIME_FILES, DEBUG_FILES
+
+        self.loose.unlink()
+        runtime, debug = self.root / "runtime.tar.bz2", self.root / "debug.tar.bz2"
+        for archive_path, names, source in ((runtime, RUNTIME_FILES, self.binary),
+                                            (debug, DEBUG_FILES, self.symbols)):
+            with tarfile.open(archive_path, "w:bz2") as archive:
+                for name in sorted(names):
+                    member = archive.gettarinfo(source, arcname="./" + name)
+                    member.mode, member.uid, member.gid = 0o755, 0, 0
+                    with source.open("rb") as stream:
+                        archive.addfile(member, stream)
+        output = self.root / "receipt.json"
+        self.tool(sys.executable, str(Path(__file__).resolve().parents[1] / "ci/verify_p4rt_debug.py"),
+                  "--runtime-tar", str(runtime), "--debug-tar", str(debug),
+                  "--source-root", str(self.root), "--output", str(output))
+        receipt = json.loads(output.read_text())
+        self.assertEqual(receipt["status"], "passed")
+        self.assertEqual(receipt["payloads"]["runtime"], sorted(RUNTIME_FILES))
+        self.assertFalse(receipt["without_dwp"]["found"])
+        self.assertTrue(receipt["with_dwp"]["found"])
 
 
 if __name__ == "__main__":

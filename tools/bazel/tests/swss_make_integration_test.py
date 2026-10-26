@@ -50,6 +50,8 @@ selected:
 	@echo manifests=$(SONIC_BAZEL_MANIFESTS)
 	@echo runtime_label=$($(DOCKER_ORCHAGENT)_BAZEL_TARGET)
 	@echo debug_label=$($(DOCKER_ORCHAGENT_DBG)_BAZEL_TARGET)
+	@echo runtime_args=$($(DOCKER_ORCHAGENT)_BAZEL_ARGS)
+	@echo debug_args=$($(DOCKER_ORCHAGENT_DBG)_BAZEL_ARGS)
 	@echo runtime_inputs=$($(DOCKER_ORCHAGENT)_BAZEL_DEPENDS)
 	@echo debug_inputs=$($(DOCKER_ORCHAGENT_DBG)_BAZEL_DEPENDS)
 	@echo debug_path=$($(DOCKER_ORCHAGENT_DBG)_PATH)
@@ -120,6 +122,25 @@ selected:
                 self.assertEqual(values["bazel"], "")
                 self.assertEqual(values["oci_bases"], "")
                 self.assertEqual(values["switchable"], "")
+
+    def test_fips_consumes_source_base_without_extracting_its_docker_archive(self):
+        values = self.values(self.select(BUILD_WITH_BAZEL_WHEN_AVAILABLE="y", INCLUDE_FIPS="y"))
+        self.assertEqual(values["oci_bases"], "")
+        self.assertEqual(values["oci_archive"], "")
+        self.assertEqual(values["runtime_args"], "--//dockers/docker-orchagent:source_config_engine=true")
+        self.assertEqual(values["debug_args"], values["runtime_args"])
+        self.assertEqual(values["runtime_inputs"].split(), [
+            "target/bazel-manifests/docker-base-trixie/manifest.json",
+            "target/bazel-manifests/docker-config-engine-trixie/manifest.json",
+            "target/python-wheels/trixie/scapy.whl",
+            "target/bazel-manifests/docker-orchagent/manifest.json",
+        ])
+        self.assertEqual(values["debug_inputs"].split(), values["runtime_inputs"].split() +
+                         ["target/bazel-manifests/docker-orchagent-dbg/manifest.json"])
+        legacy = self.values(self.select(BUILD_WITH_BAZEL_WHEN_AVAILABLE="y", INCLUDE_FIPS="n"))
+        self.assertEqual(legacy["runtime_args"], "")
+        self.assertEqual(legacy["debug_args"], "")
+        self.assertEqual(legacy["oci_bases"], "docker-config-engine-trixie.oci")
 
     def test_unavailable_bazel_configurations_preserve_make_inputs(self):
         """The global opt-in keeps the original Make build when SWSS has no supported target."""
@@ -209,6 +230,28 @@ SCAPY = scapy.whl
 include rules/docker-orchagent.mk
 include tools/bazel/docker.mk
 """
+
+    def test_source_base_prepares_both_variants_without_a_make_base_archive(self):
+        self.makefile = self.makefile.replace("include rules/docker-orchagent.mk",
+                                              "INCLUDE_FIPS = y\ninclude rules/docker-orchagent.mk")
+        self.base.unlink()
+        source_manifests = ["target/bazel-manifests/" + name + "/manifest.json"
+                            for name in ("docker-base-trixie", "docker-config-engine-trixie")]
+        for name in source_manifests:
+            path = self.root / name
+            path.parent.mkdir(parents=True)
+            path.write_text("{}\n")
+        for name in self.archives:
+            self.prerequisites[name] = source_manifests + self.prerequisites[name][1:]
+        result = self.run_make(*self.archives, parallel=True)
+        self.assert_success(result)
+        calls = self.recorded_calls()
+        self.assertEqual(len(calls), 4)
+        self.assertTrue(all(call['prerequisites_ready'] for call in calls))
+        self.assertTrue(all("--//dockers/docker-orchagent:source_config_engine=true" in call['arguments']
+                            for call in calls))
+        self.assertNotIn("prepare_oci_base.py --archive", result.stdout)
+        self.assertFalse((self.target / "docker-config-engine-trixie.oci").exists())
 
     def test_make_prerequisite_failures_stop_before_bazel(self):
         """Keep the previous SWSS archive when its Make-provided base or wheel is missing, or the

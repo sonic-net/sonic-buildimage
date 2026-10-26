@@ -1,4 +1,4 @@
-"""Build declared archive targets and locate their source repositories."""
+"""Build and export declared wheel archives and container CI artifact groups."""
 
 from functools import partial
 from pathlib import Path
@@ -39,19 +39,36 @@ def collect_archives(workspace, directory, receipt, targets, *, bazel="bazel", o
     return paths
 
 
-def source_directory(workspace, directory, receipt, target, *, bazel="bazel", options=(), name="source"):
-    """Resolve an arbitrary target's repository, without a configured info query."""
+def collect_artifacts(workspace, directory, receipt, target, *, bazel="bazel", options=()):
+    """Build an owner filegroup and export its declared files under unique basenames."""
     execute = partial(command_log.execute, cwd=workspace)
-    # output_base needs no configured target; info execution_root can misresolve
-    # root-module repository aliases in --platforms with Bazel 8.5.1.
-    bases = execute([bazel, "info", "output_base"], directory, receipt,
-                    name + ".output-base").splitlines()
-    roots = execute([bazel, "cquery", *options, "--output=starlark",
-                     "--starlark:expr=target.label.workspace_root", target],
-                    directory, receipt, name + ".root").splitlines()
-    if len(bases) != 1 or not bases[0] or len(roots) != 1:
-        raise ValueError("Expected one source repository for " + target)
-    source = (Path(bases[0]) / artifact_validation.path_name(roots[0])) if roots[0] else workspace
-    if not source.is_dir():
-        raise ValueError("Resolved source repository is missing for " + target + ": " + str(source))
-    return source
+    execute([bazel, "build", *options,
+             "--build_event_json_file=" + str(directory / "build-events.jsonl"), target],
+            directory, receipt, "build")
+    files = execute([bazel, "cquery", *options, "--output=files", target],
+                    directory, receipt, "artifacts.query").splitlines()
+    names = [Path(name).name for name in files]
+    if len(names) != len(set(names)):
+        raise ValueError("CI artifacts must have unique output filenames")
+    sources = [workspace / name for name in files]
+    for source in sources:
+        if not source.is_file() or not source.stat().st_size:
+            raise ValueError("Expected a nonempty CI artifact file: " + str(source))
+    # Some evidence is written after artifact collection. Reserve those names
+    # as well as files/logs already produced by the runner.
+    reserved = {"receipt.json", "report.json", "MODULE.bazel.lock", "module-graph.json",
+                "module-graph.stderr", "module-graph-inspection.json", "test-events.jsonl",
+                "build-events.jsonl", "execution-gate-audit.json"}
+    for name in names:
+        if name in reserved or (directory / name).exists():
+            raise ValueError("CI artifact filename collides with build evidence: " + name)
+    paths = {}
+    receipt["artifacts"] = {}
+    for name, source, output in zip(names, sources, files):
+        destination = directory / name
+        export_archive(source, destination)
+        paths[name] = destination
+        receipt["artifacts"][name] = {"target": target, "output": output,
+                                      "bytes": destination.stat().st_size,
+                                      "sha256": artifact_validation.sha(destination)}
+    return paths

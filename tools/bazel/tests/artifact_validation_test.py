@@ -49,6 +49,8 @@ class PayloadTest(unittest.TestCase):
         hardlink.linkname = "./usr/lib/libexample.so.1"
         self.write_archive([(directory, b""), (binary, content), (symlink, b""), (hardlink, b"")])
         result = validation.payload(self.archive)
+        self.assertEqual(validation.elf_header(content, "usr/lib/libexample.so.1"),
+                         {"elf_type": 0, "elf_machine": 183})
         self.assertEqual(result["usr/lib/libexample.so.1"], {
             "kind": "file", "mode": 0o755, "uid": 0, "gid": 0,
             "size": len(content), "sha256": hashlib.sha256(content).hexdigest(), "elf_machine": 183,

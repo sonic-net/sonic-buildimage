@@ -216,6 +216,23 @@ registered: $(SONIC_TARGET_LIST)
                 self.assertFalse(self.markers.exists())
         self.makefile = original
 
+    def test_image_source_options_apply_to_build_and_query_without_leaking(self):
+        """A DASH image selects its feature flags without changing another image."""
+        selected = self.archives[0]
+        self.makefile += f"{selected}_BAZEL_ARGS = --define=image=dashboard\n"
+        self.assert_success(self.run_make(*self.archives, parallel=True, environment={
+            "BAZEL_CONTAINER_ARGS": "--jobs=2 --define=image=default",
+        }))
+        calls = self.recorded_calls()
+        self.assertEqual(len(calls), 2 * len(self.archives))
+        for call in calls:
+            args = call["arguments"]
+            self.assertIn("--jobs=2", args)
+            if args[-1] == self.labels[selected]:
+                self.assertLess(args.index("--define=image=default"),
+                                args.index("--define=image=dashboard"))
+            else:
+                self.assertNotIn("--define=image=dashboard", args)
     def test_both_lists_register_buildable_targets_and_keep_owner_sbom_paths(self):
         """Keep runtime and debug archives buildable together, with owner-specific SBOM
         attribution and normal logging.

@@ -1,8 +1,8 @@
 # Expose Make-generated inputs to Bazel.
 #
-# Make prepares the config-engine OCI base, Scapy wheel and service manifests
-# under target/ before Bazel assembles the SWSS image. This file declares those
-# existing files as Bazel inputs; it does not generate them or invoke Make.
+# Make prepares the config-engine OCI base, Scapy wheel, Debian package inputs and
+# service manifests under target/ before Bazel assembles the images. This file
+# declares existing files as Bazel inputs; it does not generate them or invoke Make.
 #
 # target/ has no BUILD.bazel of its own, so its files belong to this root Bazel
 # package. Keep this input boundary here for now. Source exports, configuration
@@ -33,3 +33,10 @@ filegroup(
     ),
     visibility = ["//visibility:public"],
 )
+
+# Compare the Make-published archives with the exact OCI outputs in the manual
+# full-image check, after Make has completed both image targets.
+exports_files([
+    "target/docker-syncd-vs.gz",
+    "target/docker-syncd-vs-dbg.gz",
+])

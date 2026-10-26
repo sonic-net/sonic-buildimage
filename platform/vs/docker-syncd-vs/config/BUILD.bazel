@@ -1,0 +1,65 @@
+"""Syncd startup files and Make-owned image labels."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = [
+    "//platform/vs/docker-syncd-vs:__subpackages__",
+    "//tools/bazel/tests:__pkg__",
+])
+
+manifest_labels(
+    name = "labels",
+    manifest = "//:target/bazel-manifests/docker-syncd-vs/manifest.json",
+)
+
+manifest_labels(
+    name = "debug_labels",
+    manifest = "//:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json",
+)
+
+# OpenSSH's ssh-agent uses the added _ssh group. Inherit all base accounts.
+account_layer(
+    name = "groups",
+    architecture = "amd64",
+    base = "//platform/vs/docker-syncd-vs:config_engine_base_layout",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)
+
+tar(
+    name = "files",
+    srcs = [
+        "openssh-client.conf",
+        "//platform/vs/docker-syncd-vs:critical_processes",
+        "//platform/vs/docker-syncd-vs:start.sh",
+        "//platform/vs/docker-syncd-vs:supervisord.conf",
+    ],
+    mtree = [
+        "./ uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./etc uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./etc/supervisor uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./etc/supervisor/conf.d uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/bin uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/lib uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/lib/tmpfiles.d uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/lib/tmpfiles.d/openssh-client.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location openssh-client.conf)",
+        "./usr/bin/start.sh uid=0 gid=0 mode=0755 time=0 type=file content=$(location //platform/vs/docker-syncd-vs:start.sh)",
+        "./etc/supervisor/conf.d/supervisord.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location //platform/vs/docker-syncd-vs:supervisord.conf)",
+        "./etc/supervisor/critical_processes uid=0 gid=0 mode=0644 time=0 type=file content=$(location //platform/vs/docker-syncd-vs:critical_processes)",
+    ],
+)
+
+exports_files(
+    [
+        # Reviewed Debian tmpfiles exclusion, copied unchanged from the Make
+        # openssh-client_10.0p1-7+fips package and native reference above.
+        "openssh-client.conf",
+    ],
+    visibility = ["//visibility:public"],
+)

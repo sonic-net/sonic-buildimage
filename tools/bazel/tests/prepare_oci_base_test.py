@@ -6,7 +6,6 @@ concurrent publication, using local files and helper processes only."""
 
 import concurrent.futures
 import gzip
-import hashlib
 import io
 import json
 import os
@@ -19,37 +18,21 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel.oci import prepare_oci_base
+from tools.bazel.tests.oci_base_fixture import digest, layer_tar, oci_files
 
 
 def native_archive(path, content=b"base contents", platform="linux/amd64", extra=()):
     """Minimal dual-format Docker-save archive with byte-addressed OCI entries."""
-    files = {}
-
-    def blob(data, media_type):
-        digest = hashlib.sha256(data).hexdigest()
-        files["blobs/sha256/" + digest] = data
-        return {"mediaType": media_type, "size": len(data), "digest": "sha256:" + digest}
-
-    layer = io.BytesIO()
-    with tarfile.open(fileobj=layer, mode="w") as archive:
-        member = tarfile.TarInfo("etc/base")
-        member.size = len(content)
-        archive.addfile(member, io.BytesIO(content))
-    layer_desc = blob(layer.getvalue(), "application/vnd.oci.image.layer.v1.tar")
+    layer = layer_tar({"etc/base": content})
     operating_system, arch = platform.split("/")
     config = {"os": operating_system, "architecture": arch,
-              "rootfs": {"type": "layers", "diff_ids": [layer_desc["digest"]]},
+              "rootfs": {"type": "layers", "diff_ids": [digest(layer)]},
               "config": {"Env": ["BASE=preserved"], "Cmd": ["/bin/base"]}}
-    config_desc = blob(json.dumps(config).encode(), "application/vnd.oci.image.config.v1+json")
-    manifest = {"schemaVersion": 2, "mediaType": "application/vnd.oci.image.manifest.v1+json",
-                "config": config_desc, "layers": [layer_desc]}
-    manifest_desc = blob(json.dumps(manifest).encode(), manifest["mediaType"])
-    manifest_desc["annotations"] = {"org.opencontainers.image.ref.name": "latest"}
-    files["index.json"] = json.dumps({"schemaVersion": 2, "manifests": [manifest_desc]}).encode()
-    files["oci-layout"] = b'{"imageLayoutVersion":"1.0.0"}'
+    config_bytes = json.dumps(config).encode()
+    files = oci_files(config_bytes, [layer])
     files["manifest.json"] = json.dumps([{
-        "Config": "blobs/" + config_desc["digest"].replace(":", "/"),
-        "Layers": ["blobs/" + layer_desc["digest"].replace(":", "/")],
+        "Config": "blobs/" + digest(config_bytes).replace(":", "/"),
+        "Layers": ["blobs/" + digest(layer).replace(":", "/")],
         "RepoTags": ["docker-config-engine-trixie:latest"],
     }]).encode()
     with tarfile.open(path, "w:gz") as archive:

@@ -1,3 +1,3 @@
 package(default_visibility = ["//dockers/docker-orchagent:__pkg__"])
 
-exports_files(["apt.lock.json", "apt_inputs.MODULE.bazel"])
+exports_files(["apt.lock.json"])

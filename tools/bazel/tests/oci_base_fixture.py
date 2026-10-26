@@ -25,21 +25,26 @@ def digest(data):
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
-def add_bytes(archive, name, data, mtime=0):
+def add_bytes(archive, name, data, mtime=0, mode=0o644):
     entry = tarfile.TarInfo(name)
     entry.size = len(data)
-    entry.mode = 0o644
+    entry.mode = mode
     entry.mtime = mtime
     archive.addfile(entry, io.BytesIO(data))
 
 
-def layer_tar(files):
-    """Encode ordered fixture files with fixed metadata so layer bytes are repeatable."""
+def tar_entries(entries):
+    """Encode ordered regular files with explicit modes and repeatable metadata."""
     data = io.BytesIO()
     with tarfile.open(fileobj=data, mode="w", format=tarfile.USTAR_FORMAT) as archive:
-        for name, payload in files.items():
-            add_bytes(archive, name, payload)
+        for name, payload, mode in entries:
+            add_bytes(archive, name, payload, mode=mode)
     return data.getvalue()
+
+
+def layer_tar(files):
+    """Encode fixture files with the default regular-file mode."""
+    return tar_entries((name, payload, 0o644) for name, payload in files.items())
 
 
 def image_fixture(architecture="amd64", os_name="linux"):

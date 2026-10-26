@@ -1,0 +1,52 @@
+name: Installed-image validator
+
+on:
+  pull_request:
+    paths:
+      - tools/bazel/ci/validate_runtime.py
+      - tools/bazel/oci/runtime_smoke.py
+      - tools/bazel/oci/tests/runtime_smoke_test.py
+      - tools/bazel/oci/RUNTIME_VALIDATION.md
+      - .github/workflows/runtime-image-validation.yml
+  push:
+    branches: [master]
+    paths:
+      - tools/bazel/ci/validate_runtime.py
+      - tools/bazel/oci/runtime_smoke.py
+      - tools/bazel/oci/tests/runtime_smoke_test.py
+      - tools/bazel/oci/RUNTIME_VALIDATION.md
+      - .github/workflows/runtime-image-validation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-tests:
+    name: Native validator tests (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            machine: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            machine: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install tools for the small native test library
+        run: |
+          test "$(uname -m)" = "${{ matrix.machine }}"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc binutils gdb
+      - name: Check loading, matching debug symbols and container guards
+        run: |
+          for tool in cc objcopy readelf gdb; do command -v "$tool"; done
+          env -u PYTHONSAFEPATH /usr/bin/python3 -B -m unittest tools.bazel.oci.tests.runtime_smoke_test -v
+          /usr/bin/python3 -B tools/bazel/ci/validate_runtime.py --help

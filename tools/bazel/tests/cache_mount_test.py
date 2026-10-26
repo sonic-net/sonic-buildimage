@@ -6,7 +6,9 @@ import os
 from pathlib import Path
 import pwd
 import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 
 
@@ -14,6 +16,115 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class CacheMountTest(unittest.TestCase):
+    def workflow_step(self, name):
+        """Run the workflow's actual shell, without a second implementation of its policy."""
+        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
+        marker = f"      - name: {name}\n"
+        self.assertEqual(workflow.count(marker), 1)
+        step = workflow.split(marker, 1)[1].split("\n      - name:", 1)[0]
+        return textwrap.dedent(step.split("        run: |\n", 1)[1])
+
+    @unittest.skipUnless(os.geteuid() == 0, "requires root to exercise actual root/non-root cache ownership")
+    def test_ci_cache_namespace_preserves_legacy_entries_and_reuses_writer_cache(self):
+        """Execute CI prep with both users: old root-owned CAS entries stay untouched,
+        each UID can publish/replace cache files, and the next distdir step uses its export.
+        """
+        nobody = pwd.getpwnam("nobody")
+        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
+        self.assertLess(workflow.index("- name: Prepare persistent agent caches"),
+                        workflow.index("- name: Prepare the shared Bazel source-download directory"))
+        writer = """from pathlib import Path
+import sys
+directory = Path(sys.argv[1])
+directory.mkdir(parents=True, exist_ok=True)
+partial = directory / 'file.partial'
+partial.write_text(sys.argv[2])
+partial.replace(directory / 'file')
+"""
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            directory.chmod(0o755)
+            cache = directory / "persistent cache"
+            package_cache = directory / "packages"
+            workspace = directory / "workspace"
+            for path in (cache, package_cache, workspace):
+                path.mkdir()
+                os.chown(path, nobody.pw_uid, nobody.pw_gid)
+            cache_owner_mode = (cache.stat().st_uid, cache.stat().st_mode)
+            legacy = cache / "repository_cache/content_addressable/sha256/old-digest"
+            legacy.mkdir(parents=True)
+            sentinel = legacy / "file"
+            sentinel.write_bytes(b"existing root-owned digest")
+            legacy.chmod(0o755)
+            sentinel.chmod(0o644)
+            before = (legacy.stat().st_uid, legacy.stat().st_mode,
+                      sentinel.stat().st_uid, sentinel.stat().st_mode,
+                      sentinel.stat().st_mtime_ns, sentinel.read_bytes())
+
+            def execute(command, uid, environment=None):
+                return subprocess.run(
+                    command, cwd=workspace, env=environment, text=True, capture_output=True,
+                    check=False, user=uid, group=nobody.pw_gid if uid else 0, extra_groups=[],
+                )
+
+            denied = execute([sys.executable, "-c", writer, str(legacy), "must not replace"], nobody.pw_uid)
+            self.assertNotEqual(denied.returncode, 0)
+            self.assertIn("PermissionError", denied.stderr)
+
+            # Record the following workflow step's actual arguments and write to its output.
+            # Source integrity checking itself is covered by source_archive_test.py.
+            recorder = workspace / "tools/bazel/gzip/source_archive.py"
+            recorder.parent.mkdir(parents=True)
+            recorder.write_text("""import argparse, json
+from pathlib import Path
+parser = argparse.ArgumentParser()
+parser.add_argument('--archives-dir', required=True)
+parser.add_argument('--output', required=True, type=Path)
+args = parser.parse_args()
+assert Path(args.archives_dir).is_dir()
+args.output.mkdir(parents=True, exist_ok=True)
+(args.output / 'verified-source').write_text('source archive')
+print(json.dumps({'output': str(args.output)}))
+""")
+            (workspace / "artifacts/vs/repository-inputs").mkdir(parents=True)
+            (workspace / "artifacts/vs/source-download-receipt.json").touch()
+            for path in workspace.rglob("*"):
+                os.chown(path, nobody.pw_uid, nobody.pw_gid)
+            selected = {}
+            for uid in (0, nobody.pw_uid):
+                for attempt in (1, 2):
+                    environment = dict(os.environ, SONIC_BAZEL_CACHE_SOURCE=str(cache),
+                                       SONIC_DPKG_CACHE_SOURCE=str(package_cache),
+                                       SONIC_DPKG_CACHE_METHOD="rwcache",
+                                       GITHUB_ENV=str(workspace / f"env-{uid}-{attempt}"))
+                    prepared = execute(["bash", "-e", "-c", self.workflow_step(
+                        "Prepare persistent agent caches")], uid, environment)
+                    self.assertEqual(prepared.returncode, 0, prepared.stderr)
+                    exported = dict(line.split("=", 1) for line in Path(environment["GITHUB_ENV"]).read_text().splitlines())
+                    effective = Path(exported["SONIC_BAZEL_CACHE_SOURCE"])
+                    self.assertEqual(effective.parent, cache)
+                    self.assertNotEqual(effective, cache)
+                    self.assertEqual(effective.stat().st_uid, uid)
+                    self.assertEqual(selected.setdefault(uid, effective), effective)
+                    target = effective / "repository_cache/content_addressable/sha256/new-digest"
+                    published = execute([sys.executable, "-c", writer, str(target), str(attempt)], uid)
+                    self.assertEqual(published.returncode, 0, published.stderr)
+                    self.assertEqual((target / "file").read_text(), str(attempt))
+                    self.assertFalse((target / "file.partial").exists())
+                    environment.update(exported)  # GitHub applies GITHUB_ENV to subsequent steps.
+                    consumed = execute(["bash", "-e", "-c", self.workflow_step(
+                        "Prepare the shared Bazel source-download directory")], uid, environment)
+                    self.assertEqual(consumed.returncode, 0, consumed.stderr)
+                    receipt = json.loads((workspace / "artifacts/vs/source-download-receipt.json").read_text())
+                    self.assertEqual(receipt["output"], str(effective / "distdir"))
+                    self.assertTrue((effective / "distdir/verified-source").is_file())
+            self.assertNotEqual(selected[0], selected[nobody.pw_uid])
+            self.assertFalse((cache / "distdir").exists())
+            self.assertEqual(cache_owner_mode, (cache.stat().st_uid, cache.stat().st_mode))
+            self.assertEqual(before, (legacy.stat().st_uid, legacy.stat().st_mode,
+                                     sentinel.stat().st_uid, sentinel.stat().st_mode,
+                                     sentinel.stat().st_mtime_ns, sentinel.read_bytes()))
+
     def make(self, makefile, mode="n", source=None, package_cache=None, run_as=None, cwd=ROOT):
         config = (ROOT / "rules/config").read_text().splitlines()
         defaults = "\n".join(line for line in config if line.startswith(
