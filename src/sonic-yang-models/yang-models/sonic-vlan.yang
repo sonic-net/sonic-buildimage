@@ -139,6 +139,11 @@ module sonic-vlan {
 					}
 				}
 
+				leaf send_redirects {
+					description "Enable/disable ICMP redirects for the vlan interface";
+					type boolean;
+				}
+
 				leaf ipv6_use_link_local_only {
 					description "Enable/Disable IPv6 link local address on vlan interface";
 					type stypes:mode-status;
@@ -161,6 +166,22 @@ module sonic-vlan {
 				leaf mac_addr {
 					description "Assign administrator-provided MAC address to Interface";
 					type yang:mac-address;
+				}
+
+				leaf nd_suppress_ra {
+					description "When set to true, router advertisement neighbor discovery messages are not transmitted on this interface";
+					type boolean;
+					default true;
+				}
+
+				leaf nd_managed_config_flag {
+					description "When set to true, the managed address configuration (M) flag is set in the advertised router advertisement";
+					type boolean;
+				}
+
+				leaf nd_other_config_flag {
+					description "When set to true, the other configuration (O) flag is set in the advertised router advertisement";
+					type boolean;
 				}
 
 				leaf loopback_action {
@@ -339,6 +360,35 @@ module sonic-vlan {
 			/* end of list VLAN_MEMBER_LIST */
 		}
 		/* end of container VLAN_MEMBER */
+
+		container VLAN_INTERFACE_ND_PREFIX {
+
+			description "Container for a list of prefixes that are included in the router advertisement message";
+
+			list VLAN_INTERFACE_ND_PREFIX_LIST {
+
+				key "name prefix";
+
+				description "List of prefixes that are to be included in the IPv6 router-advertisement messages for the interface";
+
+				leaf name {
+					type leafref {
+						path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+					}
+				}
+
+				leaf prefix {
+					type inet:ipv6-prefix;
+					description "IPv6 prefix to be advertised within the router advertisement message";
+				}
+
+				leaf disable_autoconfiguration {
+					mandatory true;
+					description "When set to true, the prefix is marked as not to be used for stateless address configuration";
+					type boolean;
+				}
+			} /* end of list VLAN_INTERFACE_ND_PREFIX_LIST */
+		} /* end of container VLAN_INTERFACE_ND_PREFIX */
 	}
 	/* end of container sonic-vlan */
 }
