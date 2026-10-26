@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import platform
@@ -687,6 +688,24 @@ def _build(workspace, state, remote_cache, upload, *, architecture=None, kernel_
     return receipt
 
 
+def remove_build_tree(path):
+    """Remove disposable Bazel output, including read-only toolchain directories."""
+    pending = [Path(path)]
+    while pending:
+        directory = pending.pop()
+        mode = directory.lstat().st_mode
+        require(stat.S_ISDIR(mode), "unexpected kernel build output directory")
+        # Unlinking needs write access to the parent directory, not the file.
+        # Never chmod files (which may be hardlinked into a shared cache) or
+        # follow symlinks into retained packages, caches or other workspaces.
+        if mode & stat.S_IRWXU != stat.S_IRWXU:
+            directory.chmod(stat.S_IMODE(mode) | stat.S_IRWXU, follow_symlinks=False)
+        with os.scandir(directory) as entries:
+            pending.extend(Path(entry.path) for entry in entries
+                           if entry.is_dir(follow_symlinks=False))
+    shutil.rmtree(path)
+
+
 def ensure(workspace, *, architecture=None, kernel_config=None, state=None, cache_directory=None,
            remote_cache=None, upload=False, ca_bundle=None,
            java_trust_store=None, distdir=None, debs_directory=None, builder=None):
@@ -750,7 +769,7 @@ def ensure(workspace, *, architecture=None, kernel_config=None, state=None, cach
             for path in (state / "build/output", state / "repository-cache"):
                 if path.exists():
                     require(path.is_dir() and not path.is_symlink(), "unexpected kernel build output directory")
-                    shutil.rmtree(path)
+                    remove_build_tree(path)
         return {"schema": 1, "reused": False, "debs_directory": str(destination), "result": result,
                 "plan": receipt["plan"]}
 

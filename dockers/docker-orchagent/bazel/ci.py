@@ -31,6 +31,8 @@ OPTIONS = [
     "--lockfile_mode=update", "--noshow_progress", "--color=no", "--curses=no",
 ]
 TESTS = [
+    "//tools/bazel/tests:sonic_yang_mgmt_full_test",
+    "//tools/bazel/tests:sonic_yang_mgmt_wheel_test",
     "//tools/bazel/tests:apt_selection_test",
     "//tools/bazel/tests:select_apt_payloads_test",
     "//tools/bazel/tests:sonic_py_common_test",
@@ -43,6 +45,7 @@ TESTS = [
     "//tools/bazel/tests:supervisor_python_wheel_test",
     "//src/sonic-config-engine:sonic_cfggen_cli_test",
     "//tools/bazel/tests:common_rust_runtime_test",
+    "//tools/bazel/tests:swss_common_rust_test",
     "//tools/bazel/tests:test_dpkg_patterns_up_to_date",
     "//tools/bazel/tests:manifest_labels_test",
     "//tools/bazel/tests:manifest_labels_action_test",

@@ -13,7 +13,7 @@ from tools.bazel.tests.integration.wheel_contract import assert_wheel_contract, 
 
 
 parser = argparse.ArgumentParser()
-for option in ("common-wheel", "config-wheel", "common-setup", "config-setup"):
+for option in ("common-wheel", "config-wheel", "yang-wheel", "common-setup", "config-setup"):
     parser.add_argument("--" + option, type=Path, required=True)
 INPUTS, TEST_ARGS = parser.parse_known_args()
 RECEIPT = {}
@@ -32,8 +32,11 @@ class InstalledWheelsTest(unittest.TestCase):
             contract = setup_contract(setup)
             cls.packages.append((wheel, setup, contract))
         own_roots = [Path(__file__).absolute().parents[4], Path(__file__).resolve().parents[4]]
+        # Config-engine imports YANG from its installed wheel, with owner source
+        # trees excluded by the shared fixture. Retain that dependency's hash too.
+        cls.receipt_wheels = [INPUTS.yang_wheel.absolute(), *[wheel for wheel, _, _ in cls.packages]]
         installed = cls.enterClassContext(installed_wheels(
-            [wheel for wheel, _, _ in cls.packages], exclude_source_roots=own_roots))
+            cls.receipt_wheels, exclude_source_roots=own_roots))
         cls.installed = installed
         cls.root, cls.environment = installed.root, installed.environment
         cls.python, cls.site, cls.scripts = installed.python, installed.site, installed.scripts
@@ -41,7 +44,6 @@ class InstalledWheelsTest(unittest.TestCase):
         for key in ("CFGGEN_UNIT_TESTING", "CFGGEN_UNIT_TESTING_TOPOLOGY"):
             cls.env.pop(key, None)
         cls.env["PATH"] = str(cls.scripts) + os.pathsep + cls.env.get("PATH", "")
-        cls.receipt_wheels = [wheel for wheel, _, _ in cls.packages]
         cls.receipt_metadata = {wheel: {"distribution": contract["name"], "version": contract["version"]}
                                 for wheel, _, contract in cls.packages}
 
@@ -60,10 +62,12 @@ class InstalledWheelsTest(unittest.TestCase):
         probe = """import hashlib,importlib,importlib.metadata,json,pathlib,sys
 site=pathlib.Path(sys.argv[1]).resolve()
 result={}
-for distribution in ("sonic-py-common", "sonic-config-engine"):
+for distribution in ("sonic-py-common", "sonic-config-engine", "sonic-yang-mgmt"):
     metadata=importlib.metadata.distribution(distribution)
     assert metadata.version=="1.0", (distribution,metadata.version)
     assert pathlib.Path(metadata.locate_file("")).resolve()==site, distribution
+import sonic_yang
+assert pathlib.Path(sonic_yang.__file__).resolve().is_relative_to(site)
 for name in json.loads(sys.argv[2]):
     module=importlib.import_module(name)
     path=pathlib.Path(module.__file__).resolve()

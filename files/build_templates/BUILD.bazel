@@ -1,4 +1,5 @@
 exports_files([
+    "swss_vars.j2",
     "arp_update_vars.j2",
     "manifest.json.j2",
     "per_namespace/swss.service.j2",

@@ -2,6 +2,7 @@ load("@rules_rs//rs:rust_binary.bzl", "rust_binary")
 load("@rules_rs//rs:rust_library.bzl", "rust_library")
 load("@rules_rs//rs:rust_test.bzl", "rust_test")
 load("@rules_python//python:defs.bzl", "py_test")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
 load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
 load(":bazel/release.bzl", "release_binary")
 load("//tools/bazel/tests:runtime.bzl", "common_runtime_test")
@@ -119,3 +120,15 @@ py_test(
     )
     for name in ["unit_tests", "integration_tests", "listener_tests"]
 ]
+
+# Package facts come from the existing Debian recipe and these built binaries.
+runtime_packages(
+    name = "bazel/runtime_packages.json",
+    changelog = "debian/changelog",
+    control = "debian/control",
+    dependencies = ["@sonic_swss_common//:runtime_packages.json"],
+    packages = {"sonic-supervisord-utilities-rs": ":runtime"},
+    required_paths = {"sonic-supervisord-utilities-rs": [
+        "usr/bin/supervisor-proc-exit-listener-rs",
+    ]},
+)

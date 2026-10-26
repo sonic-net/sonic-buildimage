@@ -298,14 +298,13 @@ bazel test //tools/bazel/tests:select_apt_payloads_test
 The shared APT baseline was published by
 [registry #45](https://github.com/securely1g/sonic-bazel-registry/pull/45) from
 [build-infra #27](https://github.com/securely1g/sonic-build-infra/pull/27).
-Declarative policy inputs use
-[build-infra #29](https://github.com/securely1g/sonic-build-infra/pull/29), proposed
-in [registry #51](https://github.com/securely1g/sonic-bazel-registry/pull/51).
-The Draft consumer pins source `29af37b179d9160cd2a6db0a295492db64017945`
-with a temporary `git_override`, while registry URLs remain on `main`.
-After source and registration land, remove that override and select the landed
-registered version. Commit suffixes do not sort by source history; verify
-resolution against transitive version requests when removing the override.
+Declarative policy inputs originated in
+[build-infra #29](https://github.com/securely1g/sonic-build-infra/pull/29).
+The image root now selects published `sonic-build-infra`
+`0.0.23-5b224d7190d04f1b7b68429eedfc03b7b1565ed0` from the maintained registry.
+Its `single_version_override` keeps transitive consumers on that same registered
+version; no temporary infrastructure source override is needed. Commit suffixes
+do not sort by source history, so verify resolution when updating this pin.
 
 Use `bazel help --announce_rc` to inspect the effective rc selection. Keep one
 SONiC registry endpoint; do not add another endpoint in a home or user rc.

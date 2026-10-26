@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import shlex
 import subprocess
 import sys
@@ -40,6 +41,9 @@ def main():
     parser.add_argument("--bazel", default="bazel")
     parser.add_argument("--bazel-arg", action="append", default=[])
     args = parser.parse_args()
+    architecture = {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine())
+    if architecture is None:
+        parser.error("Make archive checks require a native AMD64 or ARM64 runner")
     directory = args.artifacts.resolve()
     directory.mkdir(parents=True, exist_ok=True)
     if any(character.isspace() or character in "$#" for character in str(directory)):
@@ -54,6 +58,7 @@ def main():
         ".ONESHELL:",
         ".SECONDEXPANSION:",
         f"TARGET_PATH = {directory}",
+        f"CONFIGURED_ARCH = {architecture}",
         "SONIC_BAZEL_DOCKER_IMAGES = docker-fixture.gz docker-overlay.gz",
         "SONIC_BAZEL_DBG_DOCKER_IMAGES = docker-fixture-dbg.gz",
         "SONIC_BAZEL_OCI_BASES = " + " ".join(BASES),

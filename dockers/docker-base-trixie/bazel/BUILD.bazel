@@ -1,0 +1,4 @@
+exports_files([
+    "apt.lock.json",
+    "source_paths.json",
+])

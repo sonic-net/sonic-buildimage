@@ -1,0 +1,230 @@
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@config_engine_pip//:requirements.bzl", "whl_requirement")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:normalize_layer.bzl", "normalize_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+# The same native package families as Make's config-engine base, built through
+# their public owner targets. DebugSymbolsInfo is preserved by sonic_layer.
+_SOURCE_TARS = {
+    "libswsscommon": "@sonic_swss_common//dist:libswsscommon_pkg",
+    "sonic-db-cli": "@sonic_swss_common//dist:sonic-db-cli_pkg",
+    "python3-swsscommon": "@sonic_swss_common//pyext:swsscommon_pkg",
+    "libyang3": "@libyang//:libyang_pkg",
+    "python3-libyang": "@libyang_python//:libyang_pkg",
+    "libnl-3-200": "@libnl3//:libnl-3-runtime_files",
+    "libnl-cli-3-200": "@libnl3//:libnl-cli-3-runtime_files",
+    "libnl-genl-3-200": "@libnl3//:libnl-genl-3-runtime_files",
+    "libnl-nf-3-200": "@libnl3//:libnl-nf-3-runtime_files",
+    "libnl-route-3-200": "@libnl3//:libnl-route-3-runtime_files",
+    "sonic-eventd": "//src/sonic-eventd:eventd_runtime",
+    "sonic-supervisord-utilities-rs": "//src/sonic-supervisord-utilities-rs:runtime",
+}
+
+sonic_layer(
+    name = "source_runtime_original_paths",
+    tars = _SOURCE_TARS.values(),
+)
+
+# Common's package installs its default database configuration under /var/run.
+# Preserve Debian's /var/run -> /run link and store files at its real destination.
+normalize_layer(
+    name = "source_runtime",
+    src = ":source_runtime_original_paths",
+    base = "//dockers/docker-base-trixie:docker-base-trixie",
+    directory_aliases = {"var/run": "/run"},
+    expected_platform = select({
+        "@platforms//cpu:x86_64": "linux/amd64",
+        "@platforms//cpu:arm64": "linux/arm64",
+    }),
+    modes = {"run/redis/sonic-db/database_config.json": "0644"},
+    root_owned = True,
+    tars = _SOURCE_TARS.values(),
+)
+
+filegroup(
+    name = "runtime_path_normalization",
+    srcs = [":source_runtime"],
+    output_group = "normalization",
+)
+
+debug_symbols_layer(
+    name = "source_debug_symbols",
+    image = ":source_runtime",
+)
+
+# Keep the owner wheels and their runtime dependencies. Test-only wheels and
+# enum34 are intentionally absent, matching the Make Dockerfile's removal.
+# CFFI and Redis come from Debian; the base already supplies the pinned YAML wheel.
+wheel_layer(
+    name = "python_runtime",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [
+        "//src/sonic-config-engine:sonic_config_engine_wheel",
+        "//src/sonic-py-common:sonic_py_common_wheel",
+        "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+        "//src/sonic-containercfgd:sonic_containercfgd_wheel",
+        "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
+    ] + [whl_requirement(name) for name in [
+        "bitarray",
+        "grpcio",
+        "ijson",
+        "jsondiff",
+        "jsonpointer",
+        "lxml",
+        "natsort",
+        "netaddr",
+        "protobuf",
+        "pyang",
+        "pyangbind",
+        "redis-dump-load",
+        "regex",
+        "six",
+        "tabulate",
+    ]],
+)
+
+sonic_layer(
+    name = "python_and_models",
+    tars = [
+        ":python_runtime",
+        "@sonic_yang_models//:yang_models_pkg",
+    ],
+)
+
+alias(
+    name = "config_files",
+    actual = "//dockers/docker-config-engine-trixie/config:files",
+)
+
+[
+    apt_layer(
+        name = "debian_runtime_" + arch,
+        base = "//dockers/docker-base-trixie:docker-base-trixie",
+        dependency_set = "config_engine_debian",
+        lock = "//dockers/docker-base-trixie/bazel:apt.lock.json",
+        packages = APT_INPUTS["config_engine_debian"][arch],
+        policy = {
+            "schema": 1,
+            "image": "docker-config-engine-trixie",
+            "architecture": arch,
+            "distribution": "trixie",
+            "retained_source": "none",
+            "features": {},
+        },
+        variant = "runtime",
+    )
+    for arch in [
+        "amd64",
+        "arm64",
+    ]
+]
+
+alias(
+    name = "debian_runtime",
+    actual = select({
+        "@platforms//cpu:x86_64": ":debian_runtime_amd64",
+        "@platforms//cpu:arm64": ":debian_runtime_arm64",
+    }),
+)
+
+filegroup(
+    name = "debian_runtime_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":debian_runtime_selection",
+    architecture = select({
+        "@platforms//cpu:x86_64": "amd64",
+        "@platforms//cpu:arm64": "arm64",
+    }),
+    base = "//dockers/docker-base-trixie:docker-base-trixie",
+    controls = select({
+        "@platforms//cpu:" + cpu: [label + ":control" for label in APT_INPUTS["config_engine_debian"][arch].values()]
+        for cpu, arch in [
+            ("x86_64", "amd64"),
+            ("arm64", "arm64"),
+        ]
+    }),
+    normalization_receipt = ":runtime_path_normalization",
+    owner_metadata = [
+        "@sonic_swss_common//:runtime_packages.json",
+        "@libyang//:runtime_packages.json",
+        "@libyang_python//:runtime_packages.json",
+        "@libnl3//:runtime_packages.json",
+        "//src/sonic-eventd:bazel/runtime_packages.json",
+        "//src/sonic-supervisord-utilities-rs:bazel/runtime_packages.json",
+    ],
+    source_modules = {
+        "sonic-swss-common": "@image_source_modules//:sonic-swss-common.MODULE.bazel",
+        "libyang": "@image_source_modules//:libyang.MODULE.bazel",
+        "libyang-python": "@image_source_modules//:libyang-python.MODULE.bazel",
+        "libnl3": "@image_source_modules//:libnl3.MODULE.bazel",
+        "sonic-buildimage": "@image_source_modules//:sonic-buildimage.MODULE.bazel",
+    },
+    source_spec = "//dockers/docker-config-engine-trixie/bazel:source_paths.json",
+    sources = _SOURCE_TARS,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/config-engine-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+alias(
+    name = "labels",
+    actual = "//dockers/docker-config-engine-trixie/config:labels",
+)
+
+oci_image(
+    name = "docker-config-engine-trixie",
+    base = "//dockers/docker-base-trixie:docker-base-trixie",
+    labels = "//dockers/docker-config-engine-trixie/config:labels",
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        ":python_and_models",
+        "//dockers/docker-config-engine-trixie/config:files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-config-engine-trixie.debug_symbols",
+    image = ":docker-config-engine-trixie",
+)
+
+sonic_docker_archive(
+    name = "docker-config-engine-trixie.gz",
+    image = ":docker-config-engine-trixie",
+)

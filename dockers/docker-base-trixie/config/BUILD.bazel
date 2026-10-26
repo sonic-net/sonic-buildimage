@@ -1,0 +1,171 @@
+"""Base image configuration, accounts, certificates and Make-owned labels."""
+
+load("@rules_distroless//distroless:defs.bzl", "cacerts")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-base-trixie:__pkg__"])
+
+cacerts(
+    name = "certificates",
+    package = "@base_debian//ca-certificates:data",
+)
+
+[
+    sonic_cfggen_template(
+        name = "apt_sources_" + arch,
+        out = "sources.list." + arch,
+        additional_data = {
+            "DISTRIBUTION": "trixie",
+            "ARCHITECTURE": arch,
+            "MIRROR_URLS": "https://deb.debian.org/debian/",
+            "MIRROR_SECURITY_URLS": "https://deb.debian.org/debian-security/",
+        },
+        template = "//files/apt:sources.list.j2",
+    )
+    for arch in [
+        "amd64",
+        "arm64",
+    ]
+]
+
+_CONFIG_FILES = {
+    "//dockers/docker-base-trixie:dpkg_01_drop": "etc/dpkg/dpkg.cfg.d/01_drop",
+    "//dockers/docker-base-trixie:pip.conf": "etc/pip.conf",
+    "//dockers/docker-base-trixie:root/.vimrc": "root/.vimrc",
+    "//dockers/docker-base-trixie:etc/rsyslog.conf": "etc/rsyslog.conf",
+    "//dockers/docker-base-trixie:etc/rsyslog.d/supervisor.conf": "etc/rsyslog.d/supervisor.conf",
+    "//dockers/docker-base-trixie:etc/supervisor/supervisord.conf": "etc/supervisor/supervisord.conf",
+}
+
+_APT_CONFIGS = [
+    "81norecommends",
+    "apt-clean",
+    "apt-gzip-indexes",
+    "apt-no-languages",
+    "apt-timeout-n-retries",
+    "no-check-valid-until",
+]
+
+# The Dockerfile uses a hard link, not an empty mtree file or a symlink.
+# Extract the pinned payload with upstream BSD tar and let the same tool record
+# the two names of the inode. No Debian package is built or installed here.
+genrule(
+    name = "vim_command",
+    srcs = ["@base_debian//vim-tiny:data"],
+    outs = ["vim-command.tar"],
+    cmd = "set -euo pipefail\nexport LC_ALL=C.UTF-8 TZ=UTC\n" +
+          'mkdir -p "$(@D)/vim-command/usr/bin"\n' +
+          '"$(BSDTAR_BIN)" -xOf "$(execpath @base_debian//vim-tiny:data)" ./usr/bin/vim.tiny > "$(@D)/vim-command/usr/bin/vim.tiny"\n' +
+          'chmod 0755 "$(@D)/vim-command/usr/bin/vim.tiny"\n' +
+          'ln "$(@D)/vim-command/usr/bin/vim.tiny" "$(@D)/vim-command/usr/bin/vim"\n' +
+          'touch -t 197001010000 "$(@D)/vim-command/usr/bin/vim.tiny"\n' +
+          '"$(BSDTAR_BIN)" --format=gnutar --uid 0 --gid 0 --uname root --gname root -cf "$@" -C "$(@D)/vim-command" usr/bin/vim.tiny usr/bin/vim',
+    toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+    tools = ["@bsd_tar_toolchains//:resolved_toolchain"],
+)
+
+[
+    tar(
+        name = "files_" + arch,
+        srcs = list(_CONFIG_FILES) + [":apt_sources_" + arch] + ["//files/apt:apt.conf.d/" + name for name in _APT_CONFIGS],
+        mtree = [
+            "./" + path + " uid=0 gid=0 mode=0755 time=0 type=dir"
+            for path in [
+                "etc",
+                "etc/alternatives",
+                "etc/apt",
+                "etc/apt/apt.conf.d",
+                "etc/dpkg",
+                "etc/dpkg/dpkg.cfg.d",
+                "etc/rsyslog.d",
+                "etc/supervisor",
+                "etc/supervisor/conf.d",
+                "root",
+                "var",
+                "var/log",
+                "var/log/supervisor",
+                "var/spool",
+                "var/spool/rsyslog",
+            ]
+        ] + [
+            "./" + dest + " uid=0 gid=0 mode=0644 time=0 type=file content=$(location " + src + ")"
+            for src, dest in _CONFIG_FILES.items()
+        ] + [
+            "./etc/apt/apt.conf.d/" + name + " uid=0 gid=0 mode=0644 time=0 type=file content=$(location //files/apt:apt.conf.d/" + name + ")"
+            for name in _APT_CONFIGS
+        ] + [
+            "./etc/apt/sources.list uid=0 gid=0 mode=0644 time=0 type=file content=$(location :apt_sources_" + arch + ")",
+        ] + [
+            # vim-tiny's reviewed postinst selects these commands at priority15.
+            # Manual-page alternatives are omitted by the base dpkg file policy.
+            "./usr/bin/" + name + " uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/" + name
+            for name in [
+                "editor",
+                "ex",
+                "rview",
+                "vi",
+                "view",
+            ]
+        ] + [
+            "./etc/alternatives/" + name + " uid=0 gid=0 mode=0777 time=0 type=link link=/usr/bin/vim.tiny"
+            for name in [
+                "editor",
+                "ex",
+                "rview",
+                "vi",
+                "view",
+            ]
+        ],
+    )
+    for arch in [
+        "amd64",
+        "arm64",
+    ]
+]
+
+alias(
+    name = "files",
+    actual = select({
+        "@platforms//cpu:x86_64": ":files_amd64",
+        "@platforms//cpu:arm64": ":files_arm64",
+    }),
+)
+
+# Redis is the only account added by this image. Preserve Debian's accounts
+# from the actual base instead of copying its complete passwd/group files.
+account_layer(
+    name = "accounts",
+    architecture = select({
+        "@platforms//cpu:x86_64": "amd64",
+        "@platforms//cpu:arm64": "arm64",
+    }),
+    base = "//dockers/docker-base-trixie:debian_base",
+    groups = [{
+        "name": "redis",
+        "password": "x",
+        "gid": 101,
+    }],
+    users = [{
+        "username": "redis",
+        "password": "x",
+        "uid": 100,
+        "gid": 101,
+        "home": "/var/lib/redis",
+        "shell": "/usr/sbin/nologin",
+    }],
+)
+
+# Keep the old public label for existing callers. The image adds accounts once.
+alias(
+    name = "groups",
+    actual = ":accounts",
+)
+
+manifest_labels(
+    name = "labels",
+    out = "manifest.labels",
+    manifest = "//:target/bazel-manifests/docker-base-trixie/manifest.json",
+)

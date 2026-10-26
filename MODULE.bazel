@@ -15,12 +15,12 @@ bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "pigz", version = "2.8.bcr.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 
-# Use the already-published Python binding required by sonic-yang-mgmt.
-bazel_dep(name = "libyang-python", version = "3.1.0-sonic.1", repo_name = "libyang_python")
+# Use the source-owned Python binding metadata required by sonic-yang-mgmt.
+bazel_dep(name = "libyang-python", version = "3.1.0.sonic.6", repo_name = "libyang_python")
 bazel_dep(name = "rules_cc", version = "0.2.20")
 
 # The patched release sorts above upstream 0.9.4 without a root override.
-bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.7")
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.13")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
 bazel_dep(name = "rules_multirun", version = "0.14.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
@@ -37,7 +37,7 @@ register_toolchains("//tools/bazel/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.17-8baf1ad829c5095297d85148b042145b87d623a3",
+    version = "0.0.23-5b224d7190d04f1b7b68429eedfc03b7b1565ed0",
     repo_name = "sonic_build_infra",
 )
 bazel_dep(
@@ -47,11 +47,11 @@ bazel_dep(
 )
 bazel_dep(
     name = "sonic-sairedis",
-    version = "0.0.1-befd501a41549c9fedea9a116d081a6ad542cbe3",
+    version = "0.0.2-54233eede3bb2eb319f6041bc8329586483012d0",
     repo_name = "sonic_sairedis",
 )
 bazel_dep(name = "sonic-swss", version = "0.0.0", repo_name = "sonic_swss")
-bazel_dep(name = "sonic-swss-common", version = "0.0.4-db8f451c76fdc1135cd40f585c218e7d589a7223", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-swss-common", version = "0.0.6-be3495e6958310cb3dd02d6a290a6564efd9aa95", repo_name = "sonic_swss_common")
 bazel_dep(
     name = "sonic-yang-mgmt",
     version = "1.0.0-9ab452d22773c41783092ae3bd6c206d6c257c8d",
@@ -59,7 +59,7 @@ bazel_dep(
 )
 bazel_dep(
     name = "sonic-yang-models",
-    version = "1.0.0-9ab452d22773c41783092ae3bd6c206d6c257c8d",
+    version = "1.0.1-b0a9362a7a1b4b5e1b7188c019d256f7c8aaff9f",
     repo_name = "sonic_yang_models",
 )
 
@@ -89,7 +89,7 @@ single_version_override(
 
 single_version_override(
     module_name = "libnl3",
-    version = "3.7.0.sonic.3",
+    version = "3.7.0.sonic.6",
 )
 
 single_version_override(
@@ -195,13 +195,88 @@ use_repo(apt, "trixie")
 # eventd owns its Lua runtime and the private Redis service used by its tests.
 apt.install(
     dependency_set = "eventd_deps",
-    packages = ["liblua5.1-0-dev", "redis-server"],
-    suites = ["trixie", "trixie-updates", "trixie-security"],
+    packages = [
+        "liblua5.1-0-dev",
+        "redis-server",
+    ],
+    suites = [
+        "trixie",
+        "trixie-updates",
+        "trixie-security",
+    ],
 )
 use_repo(apt, "eventd_deps")
 
-# Commit suffixes do not sort by source date; keep the selected compiler revision.
+# The source-built base starts with an immutable upstream Debian filesystem.
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "debian_trixie",
+    digest = "sha256:fac46bff2e02f51425b6e33b0e1169f55dfb053d83511ca28aa50c09fd5ed7a4",
+    image = "docker.io/library/debian",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+    ],
+)
+use_repo(oci, "debian_trixie", "debian_trixie_linux_amd64", "debian_trixie_linux_arm64_v8")
+
+# Import the reviewed package closure directly. No expanded package list is
+# checked in beside the lock.
+apt.import_lock(lock = "//dockers/docker-base-trixie/bazel:apt.lock.json")
+use_repo(apt, "base_debian", "base_debug_debian", "config_engine_debian")
+
+apt_inputs(
+    name = "base_apt_inputs",
+    lock = "//dockers/docker-base-trixie/bazel:apt.lock.json",
+)
+
+bazel_dep(name = "socat", version = "1.8.0.2.sonic.3")
+bazel_dep(name = "iproute2", version = "6.15.0.sonic.3")
+bazel_dep(name = "libnl3", version = "3.7.0.sonic.6")
+bazel_dep(name = "libyang", version = "3.12.2.sonic.5")
+
+single_version_override(
+    module_name = "sonic-rust-deps",
+    version = "0.0.4-6d9c70f708d7420e9e2b2cdc906b80cee6b140f1",
+)
+
+bazel_dep(name = "sonic-fips", version = "0.0.3-0565bc0426dde6a1e7c495de17707c9557f843a9", repo_name = "sonic_fips")
+
+# Select the shared producer-file checks while older consumers retain
+# their previous infrastructure declarations.
 single_version_override(
     module_name = "sonic-build-infra",
-    version = "0.0.17-8baf1ad829c5095297d85148b042145b87d623a3",
+    version = "0.0.23-5b224d7190d04f1b7b68429eedfc03b7b1565ed0",
+)
+
+# Bind image receipts to the modules that Bazel actually selected.
+source_modules = use_repo_rule("@sonic_build_infra//oci:source_modules.bzl", "source_modules")
+
+source_modules(
+    name = "image_source_modules",
+    modules = {
+        "@socat//:MODULE.bazel": "socat",
+        "@iproute2//:MODULE.bazel": "iproute2",
+        "@sonic_fips//:MODULE.bazel": "sonic-fips",
+        "@sonic_swss_common//:MODULE.bazel": "sonic-swss-common",
+        "@libyang//:MODULE.bazel": "libyang",
+        "@libyang_python//:MODULE.bazel": "libyang-python",
+        "@libnl3//:MODULE.bazel": "libnl3",
+        "//:MODULE.bazel": "sonic-buildimage",
+    },
+)
+
+single_version_override(
+    module_name = "sonic-swss-common",
+    version = "0.0.6-be3495e6958310cb3dd02d6a290a6564efd9aa95",
+)
+
+single_version_override(
+    module_name = "sonic-sairedis",
+    version = "0.0.2-54233eede3bb2eb319f6041bc8329586483012d0",
+)
+
+single_version_override(
+    module_name = "sonic-fips",
+    version = "0.0.3-0565bc0426dde6a1e7c495de17707c9557f843a9",
 )

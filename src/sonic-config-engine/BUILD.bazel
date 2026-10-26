@@ -35,8 +35,8 @@ py_library(
     imports = ["."],
     deps = [
         "//src/sonic-py-common:sonic_py_common",
+        "//src/sonic-yang-mgmt:sonic_yang_mgmt",
         "@sonic_swss_common//pyext:swsscommon",
-        "@sonic_yang_mgmt",
         requirement("bitarray"),
         requirement("jinja2"),
         requirement("lxml"),

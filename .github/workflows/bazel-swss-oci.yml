@@ -437,6 +437,19 @@ jobs:
             "$SONIC_BAZEL_CACHE_SOURCE" "$SONIC_DPKG_CACHE_SOURCE"
           test -w "$SONIC_BAZEL_CACHE_SOURCE"
           test -w "$SONIC_DPKG_CACHE_SOURCE"
+          # A writable cache root does not prove old digest directories are writable.
+          # Check directories only: cached content files may intentionally be read-only.
+          for cache in repository_cache disk_cache kernel-linux-sandbox/repository_cache kernel-linux-sandbox/disk_cache; do
+            cache_path="$SONIC_BAZEL_CACHE_SOURCE/$cache"
+            if test -d "$cache_path"; then
+              blocked=$(find "$cache_path" -type d ! -writable -print -quit)
+              if test -n "$blocked"; then
+                stat -c 'Unwritable Bazel cache directory: %n (uid=%u gid=%g mode=%a)' "$blocked" >&2
+                echo 'Repair this cache directory for the runner user before rebuilding; preserve cached content.' >&2
+                exit 1
+              fi
+            fi
+          done
           printf 'Bazel cache: %s\nMake package cache: %s (%s)\n' \
             "$SONIC_BAZEL_CACHE_SOURCE" "$SONIC_DPKG_CACHE_SOURCE" "$SONIC_DPKG_CACHE_METHOD"
 

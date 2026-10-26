@@ -72,22 +72,34 @@ RUN post_run_cleanup '${IMAGENAME}'
 
 # Add the auto-generate code if it is not added in the target Dockerfile
 if [ ! -f $DOCKERFILE_TARGET ] || ! grep -q "Auto-Generated for buildinfo" $DOCKERFILE_TARGET; then
-    # Insert the docker build script before the RUN command
-    LINE_NUMBER=$(grep -Fn -m 1 'RUN' $DOCKERFILE | cut -d: -f1)
     COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM \$BASE$' $DOCKERFILE | cut -d: -f1)
     if [ -z "$COPY_BASE_LINE_NUMBER" ]; then
         COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM scratch$' $DOCKERFILE | cut -d: -f1)
     fi
     TEMP_FILE=$(mktemp)
-    if [ -n "$COPY_BASE_LINE_NUMBER" ]; then
-        awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER -v postscript="${DOCKERFILE_POST_SCRIPT}" -v copybaselinenumber=$COPY_BASE_LINE_NUMBER 'NR==copybaselinenumber{print postscript} NR==linenumber{print prescript}1' $DOCKERFILE > $TEMP_FILE
-    else
-        awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER 'NR==linenumber{print prescript}1' $DOCKERFILE > $TEMP_FILE
-
-        # Append the docker build script at the end of the docker file
-        echo -e "\nRUN post_run_buildinfo ${IMAGENAME} " >> $TEMP_FILE
-        echo -e "\nRUN post_run_cleanup ${IMAGENAME} " >> $TEMP_FILE
-    fi
+    # Each build stage starts from its own image. In particular, the watchdog
+    # Rust builder does not pass its hooks to the independent runtime stage.
+    # Initialize before each stage's first RUN, except the final flattening
+    # stage, which copies the already finalized filesystem from the base stage.
+    awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v postscript="${DOCKERFILE_POST_SCRIPT}" \
+        -v copybaselinenumber="$COPY_BASE_LINE_NUMBER" '
+        NR == copybaselinenumber {
+            if (!initialized) print prescript
+            print postscript
+        }
+        /^FROM[[:space:]]/ { initialized = 0 }
+        /^RUN[[:space:]]/ && !initialized && (!copybaselinenumber || NR < copybaselinenumber) {
+            print prescript
+            initialized = 1
+        }
+        { print }
+        END {
+            if (!copybaselinenumber) {
+                if (!initialized) print prescript
+                print postscript
+            }
+        }
+    ' "$DOCKERFILE" > "$TEMP_FILE"
 
     cat $TEMP_FILE > $DOCKERFILE_TARGET
     rm -f $TEMP_FILE

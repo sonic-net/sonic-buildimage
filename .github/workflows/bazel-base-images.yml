@@ -1,0 +1,136 @@
+name: Bazel source base images
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bazel-base-images-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Build and inspect source base (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution and verification tools
+        run: |
+          apt-get update
+          # SymCrypt's scoped LLVM linker needs libxml2 on the execution host.
+          apt-get install -y --no-install-recommends binutils build-essential ca-certificates gdb git j2cli jq libarchive-tools libxml2 python3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: base-images-${{ matrix.architecture }}
+          cache-version: "8.5.1"
+      - name: Check clean dependency inputs
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test ! -e MODULE.bazel.lock
+      - name: Build and inspect runtime images and matching symbols
+        env:
+          # Bazel records its client environment in retained build events.
+          BAZELISK_GITHUB_TOKEN: ""
+        run: |
+          python3 -B tools/bazel/ci/base_images.py \
+            --architecture '${{ matrix.architecture }}' --artifacts artifacts/base-images
+          git diff --exit-code
+      - name: Retain images, symbols and build evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: source-base-${{ matrix.architecture }}
+          path: |
+            artifacts/base-images/*.gz
+            artifacts/base-images/*.debug.tar
+            artifacts/base-images/*.json
+            artifacts/base-images/*.jsonl
+            artifacts/base-images/*.log
+            artifacts/base-images/MODULE.bazel.lock
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+  runtime:
+    name: Run the installed base image (${{ matrix.architecture }})
+    needs: native
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: source-base-${{ matrix.architecture }}
+          path: artifacts/base-images
+      - name: Load only this run's verified image
+        env:
+          EXPECTED_ARCH: ${{ matrix.architecture }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          directory = Path('artifacts/base-images')
+          receipt = json.loads((directory / 'receipt.json').read_text())
+          assert receipt['status'] == 'passed' and receipt['architecture'] == os.environ['EXPECTED_ARCH']
+          assert receipt['revision'] == subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          name = 'docker-config-engine-trixie.gz'
+          assert hashlib.sha256((directory / name).read_bytes()).hexdigest() == receipt['artifacts'][name]['sha256']
+          subprocess.run(['docker', 'load', '--input', str(directory / name)], check=True)
+          actual = json.loads(subprocess.check_output(['docker', 'image', 'inspect', 'docker-config-engine-trixie:latest']))[0]
+          report = json.loads((directory / 'docker-config-engine-trixie.validation.json').read_text())
+          assert actual['Architecture'] == os.environ['EXPECTED_ARCH'] and actual['Os'] == 'linux'
+          assert actual['RootFS']['Layers'] == report['rootfs']['diff_ids']
+          meaningful = lambda values: {key: value for key, value in values.items() if value not in (None, '', [], {}, False)}
+          assert meaningful(actual['Config']) == meaningful(report['config'])
+          PY
+      - name: Exercise installed source programs and Python packages
+        run: |
+          set -o pipefail
+          docker run --rm --network=none --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --pids-limit=128 --memory=4g --cpus=2 \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=128m \
+            --mount "type=bind,src=$PWD/tools/bazel/oci/base_runtime_smoke.py,dst=/probe/smoke.py,readonly" \
+            --mount "type=bind,src=$PWD/artifacts/base-images/docker-config-engine-trixie.validation.json,dst=/probe/validation.json,readonly" \
+            --entrypoint /usr/bin/python3 docker-config-engine-trixie:latest \
+            -B /probe/smoke.py /probe/validation.json | tee artifacts/base-images/runtime-smoke.json
+      - name: Retain installed-image validation
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: source-base-runtime-${{ matrix.architecture }}
+          path: artifacts/base-images/runtime-smoke.json
+          if-no-files-found: warn
+          retention-days: 14

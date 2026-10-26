@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -629,6 +630,15 @@ class KernelBundleTest(unittest.TestCase):
         self.bundle.rename(saved)
         calls = []
         cache = self.root / "shared-cache"
+        cache.mkdir()
+        cached_file = cache / "python"
+        cached_file.write_bytes(b"shared immutable toolchain file")
+        cached_file.chmod(0o444)
+        external = self.root / "shared-python-lib"
+        external.mkdir()
+        (external / "keep.py").write_text("external toolchain data\n")
+        external.chmod(0o555)
+        self.addCleanup(external.chmod, 0o755)
         records = {"consumer/MODULE.bazel.lock": "complete lock", "build/module-graph.json": "complete graph",
                    "build/invocation.json": "invocation", "kernel-receipt.json": "receipt", "plan.json": "plan"}
         def builder(workspace, state, remote, upload, **options):
@@ -639,8 +649,15 @@ class KernelBundleTest(unittest.TestCase):
                 path = state / relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(data)
-            (state / "build/output").mkdir()
-            (state / "build/output/heavy").write_text("disposable build output")
+            toolchain = state / "build/output/external/rules_python++python+python_3_11_x86_64-unknown-linux-gnu"
+            toolchain.mkdir(parents=True)
+            (toolchain / "lib").symlink_to(external, target_is_directory=True)
+            (toolchain / "python").hardlink_to(cached_file)
+            nested = toolchain / "include/python3.11"
+            nested.mkdir(parents=True)
+            (nested / "Python.h").write_text("disposable toolchain header\n")
+            for directory in (nested, nested.parent, toolchain):
+                directory.chmod(0o555)
             return {"plan": {"disk_cache": str(cache / "kernel-linux-sandbox/disk_cache")}}
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
             results = list(pool.map(lambda _: kernel.ensure(self.root, cache_directory=cache,
@@ -654,6 +671,10 @@ class KernelBundleTest(unittest.TestCase):
         self.assertFalse((retained / "bundle").exists())
         for relative, data in records.items():
             self.assertEqual((retained / relative).read_text(), data)
+        self.assertEqual(cached_file.read_bytes(), b"shared immutable toolchain file")
+        self.assertEqual(stat.S_IMODE(cached_file.stat().st_mode), 0o444)
+        self.assertEqual((external / "keep.py").read_text(), "external toolchain data\n")
+        self.assertEqual(stat.S_IMODE(external.stat().st_mode), 0o555)
         prepared = kernel.plan(self.root, self.root / "plan-state", None, False, cache_directory=cache)
         argv = prepared["argv"]
         self.assertEqual(argv[argv.index("--disk-cache") + 1], str(cache / "kernel-linux-sandbox/disk_cache"))
@@ -745,6 +766,21 @@ class KernelConfigurationTest(unittest.TestCase):
         registry = patch.dict(os.environ, {"SONIC_REVIEW_REGISTRY": kernel.DEFAULT_REGISTRY})
         registry.start()
         self.addCleanup(registry.stop)
+
+    def test_cleanup_rejects_a_symlink_root_without_touching_its_target(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            retained = root / "retained"
+            retained.mkdir()
+            (retained / "package.deb").write_bytes(b"verified package")
+            output = root / "output"
+            output.symlink_to(retained, target_is_directory=True)
+            before = retained.stat().st_mode
+            with self.assertRaisesRegex(ValueError, "unexpected kernel build output directory"):
+                kernel.remove_build_tree(output)
+            self.assertTrue(output.is_symlink())
+            self.assertEqual((retained / "package.deb").read_bytes(), b"verified package")
+            self.assertEqual(retained.stat().st_mode, before)
 
     def test_registry_requires_exactly_one_maintained_endpoint(self):
         with tempfile.TemporaryDirectory() as directory:

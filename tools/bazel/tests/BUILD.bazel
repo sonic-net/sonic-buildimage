@@ -280,6 +280,7 @@ py_test(
     args = [
         "--common-wheel=$(rootpath //src/sonic-py-common:sonic_py_common_wheel)",
         "--config-wheel=$(rootpath //src/sonic-config-engine:sonic_config_engine_wheel)",
+        "--yang-wheel=$(rootpath //src/sonic-yang-mgmt:sonic_yang_mgmt_wheel)",
         "--common-setup=$(rootpath //src/sonic-py-common:setup.py)",
         "--config-setup=$(rootpath //src/sonic-config-engine:setup.py)",
     ],
@@ -290,6 +291,7 @@ py_test(
         "//src/sonic-py-common:setup.py",
         "//src/sonic-py-common:sonic_py_common_wheel",
         "//src/sonic-py-common:wheel_sources",
+        "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
     ],
     legacy_create_init = False,
     main = "integration/sonic_python_wheels_test.py",

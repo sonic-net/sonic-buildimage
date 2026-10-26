@@ -51,6 +51,10 @@ WHEEL_CHECKS = [
         "sonic_supervisord_utilities-1.0-py3-none-any.whl",
     ]),
 ]
+# A wheel keeps its owning check even when another installed-wheel test needs it.
+WHEEL_DEPENDENCIES = {
+    "sonic_python_wheels_test": ["sonic_yang_mgmt-1.0-py3-none-any.whl"],
+}
 MACHINES = {"amd64": "x86_64", "arm64": "aarch64"}
 
 
@@ -140,8 +144,9 @@ def collect(workspace, directory, revision, architecture, *, bazel="bazel", opti
             if "python" in receipt and receipt["python"] != installed["python"]:
                 raise ValueError("Installed-wheel checks used different Python versions")
             installed_hashes = {wheel["filename"]: wheel["sha256"] for wheel in installed["wheels"]}
+            inputs = [*expected, *WHEEL_DEPENDENCIES.get(target, [])]
             if (len(installed_hashes) != len(installed["wheels"])
-                    or installed_hashes != {name: hashes[name] for name in expected}):
+                    or installed_hashes != {name: hashes[name] for name in inputs}):
                 raise ValueError("Retained wheels differ from the installed-wheel test inputs: " + target)
             (directory / filename).write_bytes(wheel_receipt)
             receipt[receipt_key] = file_evidence(directory / filename, directory)

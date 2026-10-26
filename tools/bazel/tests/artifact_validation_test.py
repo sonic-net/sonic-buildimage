@@ -3,6 +3,7 @@
 
 import hashlib
 import io
+import os
 from pathlib import Path
 import re
 import shutil
@@ -81,6 +82,27 @@ class PayloadTest(unittest.TestCase):
             validation.payload(self.archive)
         item = validation.payload(self.archive, require_root=False)["usr/file"]
         self.assertEqual((item["uid"], item["gid"]), (1000, 2000))
+
+    def test_accepts_identical_directories_from_flattened_archives(self):
+        entries = []
+        for name in ("./usr/lib/debug/.build-id", "usr/lib/debug/.build-id"):
+            member = tarfile.TarInfo(name)
+            member.type, member.mode = tarfile.DIRTYPE, 0o755
+            entries.append((member, b""))
+        self.write_archive(entries)
+        self.assertEqual(validation.payload(self.archive), {
+            "usr/lib/debug/.build-id": {"kind": "directory", "mode": 0o755, "uid": 0, "gid": 0},
+        })
+
+    def test_rejects_conflicting_directory_metadata_or_kind(self):
+        for attribute, value in (("mode", 0o700), ("uid", 12), ("gid", 34), ("type", tarfile.REGTYPE)):
+            with self.subTest(attribute=attribute):
+                first, second = tarfile.TarInfo("usr/lib"), tarfile.TarInfo("./usr/lib")
+                first.type = second.type = tarfile.DIRTYPE
+                setattr(second, attribute, value)
+                self.write_archive([(first, b""), (second, b"")])
+                with self.assertRaisesRegex(ValueError, "duplicate package member"):
+                    validation.payload(self.archive, require_root=False)
 
     def test_rejects_special_files(self):
         """Reject device nodes instead of treating them as ordinary package files."""
@@ -198,6 +220,19 @@ class ElfDebugTest(unittest.TestCase):
         self.assertEqual(pairs, [{"path": self.name, "build_id": self.identifier,
                                   "debug_path": self.debug_name}])
         self.assertEqual(gaps, [])
+
+    def test_read_only_runtime_is_never_rewritten_during_symbol_validation(self):
+        """Inspect a packaged read-only library without requiring a writable ELF."""
+        self.binary.chmod(0o555)
+        os.utime(self.binary, (1700000000, 1700000000))
+        before = self.binary.stat()
+        contents = self.binary.read_bytes()
+        pairs, gaps = validation.elf_debug(self.root, self.expected, set())
+        self.assertEqual(len(pairs), 1)
+        self.assertFalse(gaps)
+        self.assertEqual(self.binary.read_bytes(), contents)
+        after = self.binary.stat()
+        self.assertEqual((after.st_mode, after.st_mtime_ns), (before.st_mode, before.st_mtime_ns))
 
     def test_rejects_unstripped_runtime(self):
         """Fail when the runtime executable still contains its debug information."""

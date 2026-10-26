@@ -28,3 +28,19 @@ endif
 
 SONIC_DOCKER_IMAGES += $(DOCKER_BASE_TRIXIE)
 SONIC_TRIXIE_DOCKERS += $(DOCKER_BASE_TRIXIE)
+
+# Source-backed OCI assembly uses the same shared Make selector and archive
+# bridge as the service images. Keep legacy package metadata above for callers
+# that still combine it into their own Dockerfiles.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_MANIFESTS += docker-base-trixie
+docker-base-trixie_MANIFEST_IMAGE = $(DOCKER_BASE_TRIXIE)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_BASE_TRIXIE)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_BASE_TRIXIE)
+$(DOCKER_BASE_TRIXIE)_BAZEL_TARGET = //dockers/docker-base-trixie:docker-base-trixie.gz
+$(DOCKER_BASE_TRIXIE)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json
+endif
+endif
+endif

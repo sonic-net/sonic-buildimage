@@ -1,0 +1,34 @@
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//visibility:public"])
+
+tar(
+    name = "files",
+    srcs = [
+        "//files/build_templates:swss_vars.j2",
+        "//src/sonic-ctrmgrd/ctrmgr:container_startup.py",
+        "//src/sonic-ctrmgrd/ctrmgr:readiness_probe.sh",
+    ],
+    mtree = [
+        "./" + path + " uid=0 gid=0 mode=0755 time=0 type=dir"
+        for path in [
+            "usr",
+            "usr/bin",
+            "usr/share",
+            "usr/share/sonic",
+            "usr/share/sonic/scripts",
+            "usr/share/sonic/templates",
+        ]
+    ] + [
+        "./usr/share/sonic/templates/swss_vars.j2 uid=0 gid=0 mode=0644 time=0 type=file content=$(location //files/build_templates:swss_vars.j2)",
+        "./usr/share/sonic/scripts/container_startup.py uid=0 gid=0 mode=0755 time=0 type=file content=$(location //src/sonic-ctrmgrd/ctrmgr:container_startup.py)",
+        "./usr/bin/readiness_probe.sh uid=0 gid=0 mode=0755 time=0 type=file content=$(location //src/sonic-ctrmgrd/ctrmgr:readiness_probe.sh)",
+    ],
+)
+
+manifest_labels(
+    name = "labels",
+    out = "manifest.labels",
+    manifest = "//:target/bazel-manifests/docker-config-engine-trixie/manifest.json",
+)

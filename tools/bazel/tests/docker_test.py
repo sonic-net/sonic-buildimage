@@ -92,6 +92,7 @@ else:
 .ONESHELL:
 .SECONDEXPANSION:
 TARGET_PATH = target
+CONFIGURED_ARCH = amd64
 .PHONY: .platform
 """ + f"PROJECT_ROOT = {self.root}\n" + log_setting + "\n" + r"""
 sbom_emit_fragment = printf 'sbom %s %s %s\n' '$(1)' '$(2)' '$(3)' >> publication-markers
@@ -181,6 +182,39 @@ registered: $(SONIC_TARGET_LIST)
         self.assertFalse((self.target / "docker-config-engine-trixie.oci").exists())
         self.assertFalse((self.target / "python-wheels").exists())
         self.assertFalse((self.target / ".swss-build-method").exists())
+
+    def test_configured_native_architecture_reaches_build_and_query(self):
+        """An ARM64 Make build must not inherit the root RC's AMD64 platforms."""
+        original = self.makefile
+        for architecture, platform in (("amd64", "x86_64_trixie"), ("arm64", "aarch64_trixie")):
+            with self.subTest(architecture=architecture):
+                self.makefile = original + "\nCONFIGURED_ARCH = " + architecture + "\n"
+                self.calls.unlink(missing_ok=True)
+                self.assert_success(self.run_make(environment={
+                    "BAZEL_CONTAINER_ARGS": "--platforms=//wrong:target --host_platform=//wrong:host",
+                }))
+                calls = self.recorded_calls()
+                self.assertEqual([call["arguments"][0] for call in calls], ["build", "cquery"])
+                for call in calls:
+                    for flag in ("--platforms=", "--host_platform="):
+                        selected = [arg for arg in call["arguments"] if arg.startswith(flag)]
+                        self.assertEqual(selected[-1], flag + "@sonic_build_infra//platforms:" + platform)
+        self.makefile = original
+
+    def test_unsupported_native_architecture_fails_without_publishing_an_image(self):
+        """An unsupported architecture must never silently produce an AMD64 image."""
+        original = self.makefile
+        for architecture in ("armhf", "riscv64", ""):
+            with self.subTest(architecture=architecture):
+                self.makefile = original + "\nCONFIGURED_ARCH = " + architecture + "\n"
+                result = self.run_make()
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("Unsupported native Bazel container architecture:",
+                              (self.target / (self.archives[0] + ".log")).read_text())
+                self.assertEqual(self.recorded_calls(), [])
+                self.assertEqual((self.target / self.archives[0]).read_bytes(), b"previous image")
+                self.assertFalse(self.markers.exists())
+        self.makefile = original
 
     def test_both_lists_register_buildable_targets_and_keep_owner_sbom_paths(self):
         """Keep runtime and debug archives buildable together, with owner-specific SBOM

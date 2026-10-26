@@ -2,6 +2,7 @@ load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
 load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
 
 package(default_visibility = ["//visibility:public"])
@@ -127,3 +128,17 @@ cc_binary(name = "rsyslog_plugin_tests_bin", testonly = True, srcs = ["rsyslog_p
     )
     for name in ["eventd", "eventdb", "rsyslog_plugin"]
 ]
+
+# Package facts come from the existing Debian recipe and these built binaries.
+runtime_packages(
+    name = "bazel/runtime_packages.json",
+    changelog = "debian/changelog",
+    control = "debian/control",
+    dependencies = ["@sonic_swss_common//:runtime_packages.json"],
+    packages = {"sonic-eventd": ":eventd_runtime"},
+    required_paths = {"sonic-eventd": [
+        "usr/bin/eventd",
+        "usr/bin/eventdb",
+        "usr/bin/events_tool",
+    ]},
+)

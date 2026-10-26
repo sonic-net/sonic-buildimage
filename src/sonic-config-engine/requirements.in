@@ -2,6 +2,7 @@
 -r ../sonic-py-common/requirements.in
 -r ../sonic-supervisord-utilities/requirements.in
 -r ../sonic-yang-mgmt/requirements.in
+-r ../../dockers/docker-base-trixie/requirements.in
 
 # Match the config-engine image's tracked Python versions where specified.
 bitarray==2.8.1

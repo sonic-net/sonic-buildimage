@@ -1,3 +1,16 @@
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@config_engine_pip//:requirements.bzl", "whl_requirement")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
 # Package marker so //tools/bazel/dpkg can read the same dpkg configuration the
 # Make build installs into this image's /etc/dpkg/dpkg.cfg.d.
 #
@@ -6,5 +19,200 @@
 
 exports_files([
     "dpkg_01_drop",
+    "pip.conf",
+    "root/.vimrc",
     "etc/rsyslog.conf",
+    "etc/rsyslog.d/supervisor.conf",
+    "etc/supervisor/supervisord.conf",
 ])
+
+_ARCH = select({
+    "@platforms//cpu:x86_64": "amd64",
+    "@platforms//cpu:arm64": "arm64",
+})
+
+oci_image(
+    name = "debian_base",
+    base = "@debian_trixie",
+)
+
+# Keep the image-specific roots in the checked lock. The shared rule checks
+# package identities, dependencies and collisions against the actual base.
+# Each architecture has its own generated policy and reviewed package labels.
+[
+    apt_layer(
+        name = "debian_runtime_" + arch,
+        base = ":debian_base",
+        dependency_set = "base_debian",
+        lock = "//dockers/docker-base-trixie/bazel:apt.lock.json",
+        packages = APT_INPUTS["base_debian"][arch],
+        policy = {
+            "schema": 1,
+            "image": "docker-base-trixie",
+            "architecture": arch,
+            "distribution": "trixie",
+            "retained_source": "none",
+            "features": {},
+        },
+        variant = "runtime",
+    )
+    for arch in [
+        "amd64",
+        "arm64",
+    ]
+]
+
+alias(
+    name = "debian_runtime",
+    actual = select({
+        "@platforms//cpu:x86_64": ":debian_runtime_amd64",
+        "@platforms//cpu:arm64": ":debian_runtime_arm64",
+    }),
+)
+
+filegroup(
+    name = "debian_runtime_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+# Debian archives share directory entries. Deduplicate those entries before
+# Docker loads this OCI layer, then apply the image's dpkg file policy.
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+# Install the wheels through PyPA installer so metadata and console scripts
+# follow their wheel declarations, including a direct Python shebang.
+wheel_layer(
+    name = "python_runtime",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [whl_requirement(name) for name in [
+        "attrs",
+        "jinja2",
+        "jinjanator",
+        "jinjanator-plugins",
+        "markupsafe",
+        "pluggy",
+        "python-dotenv",
+        "pyyaml",
+        "supervisor",
+        "supervisord-dependent-startup",
+        "toposort",
+        "typing-extensions",
+    ]],
+)
+
+# Source-owned runtime and development payloads that Make installs in this base.
+_SOURCE_TARS = {
+    "socat": "@socat//:socat_pkg",
+    "iproute2": "@iproute2//:iproute2_pkg",
+    "libssl3t64": "@sonic_fips//openssl:libssl3t64_pkg",
+    "libssl-dev": "@sonic_fips//openssl:libssl_dev_pkg",
+    "openssl": "@sonic_fips//openssl:openssl_pkg",
+    "libk5crypto3": "@sonic_fips//krb5:libk5crypto3_pkg",
+    "libkrb5support0": "@sonic_fips//krb5:libkrb5support0_pkg",
+    "libkrb5-3": "@sonic_fips//krb5:libkrb5_3_pkg",
+    "libgssapi-krb5-2": "@sonic_fips//krb5:libgssapi_krb5_2_pkg",
+    "symcrypt-openssl": "@sonic_fips//symcrypt:runtime",
+}
+
+sonic_layer(
+    name = "source_runtime",
+    tars = _SOURCE_TARS.values(),
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":debian_runtime_selection",
+    architecture = _ARCH,
+    base = ":debian_base",
+    controls = select({
+        "@platforms//cpu:" + cpu: [label + ":control" for label in APT_INPUTS["base_debian"][arch].values()]
+        for cpu, arch in [
+            ("x86_64", "amd64"),
+            ("arm64", "arm64"),
+        ]
+    }),
+    owner_metadata = [
+        "@socat//:runtime_packages.json",
+        "@iproute2//:runtime_packages.json",
+        "@sonic_fips//:runtime_packages.json",
+    ],
+    source_modules = {
+        "socat": "@image_source_modules//:socat.MODULE.bazel",
+        "iproute2": "@image_source_modules//:iproute2.MODULE.bazel",
+        "sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel",
+    },
+    source_spec = "//dockers/docker-base-trixie/bazel:source_paths.json",
+    sources = _SOURCE_TARS,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/base-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-base-trixie",
+    base = ":debian_base",
+    cmd = [],
+    entrypoint = [],
+    labels = "//dockers/docker-base-trixie/config:labels",
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        ":python_runtime",
+        "//dockers/docker-base-trixie/config:certificates",
+        "//dockers/docker-base-trixie/config:vim_command",
+        "//dockers/docker-base-trixie/config:files",
+        "//dockers/docker-base-trixie/config:accounts",
+        ":installed_package_state",
+    ],
+    workdir = "/",
+)
+
+debug_symbols_layer(
+    name = "docker-base-trixie.debug_symbols",
+    image = ":docker-base-trixie",
+)
+
+sonic_docker_archive(
+    name = "docker-base-trixie.gz",
+    image = ":docker-base-trixie",
+)
+
+# Keep existing labels usable by child images and developer commands.
+[
+    alias(
+        name = name,
+        actual = "//dockers/docker-base-trixie/config:" + target,
+    )
+    for name, target in {
+        "accounts": "accounts",
+        "groups": "groups",
+        "certificates": "certificates",
+        "vim_command": "vim_command",
+        "config_files": "files",
+        "config_files_amd64": "files_amd64",
+        "config_files_arm64": "files_arm64",
+        "apt_sources_amd64": "apt_sources_amd64",
+        "apt_sources_arm64": "apt_sources_arm64",
+        "labels": "labels",
+    }.items()
+]

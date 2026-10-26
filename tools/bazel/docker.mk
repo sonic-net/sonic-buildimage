@@ -48,11 +48,20 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCK
 		$$($$*.gz_BAZEL_DEPENDS)
 	$(HEADER)
 	{
+		# These image builds are native. Keep both target and execution tools on
+		# Make's configured architecture instead of the root RC's AMD64 default.
+		case "$(CONFIGURED_ARCH)" in
+			amd64) bazel_platform=x86_64_trixie ;;
+			arm64) bazel_platform=aarch64_trixie ;;
+			*) printf 'Unsupported native Bazel container architecture: %s (supported: amd64, arm64)\n' "$(CONFIGURED_ARCH)" >&2; exit 1 ;;
+		esac
 		bazel_option_lines="$$(python3 tools/bazel/build_helpers.py options \
 			--cache-directory="$${BAZEL_CONTAINER_CACHE_DIR-$${BAZEL_SWSS_CACHE_DIR:-}}" \
 			--arguments="$${BAZEL_CONTAINER_ARGS-$${BAZEL_SWSS_ARGS:-}}")"
 		bazel_options=()
 		if [ -n "$$bazel_option_lines" ]; then mapfile -t bazel_options <<< "$$bazel_option_lines"; fi
+		bazel_options+=("--platforms=@sonic_build_infra//platforms:$$bazel_platform"
+			"--host_platform=@sonic_build_infra//platforms:$$bazel_platform")
 		"$${BAZEL:-bazel}" build "$${bazel_options[@]}" "$($(@F)_BAZEL_TARGET)"
 		bazel_output="$$("$${BAZEL:-bazel}" cquery "$${bazel_options[@]}" --output=files "$($(@F)_BAZEL_TARGET)")"
 		python3 tools/bazel/build_helpers.py export --query-output="$$bazel_output" --output="$@"

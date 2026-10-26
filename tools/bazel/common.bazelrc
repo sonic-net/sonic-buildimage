@@ -1,6 +1,7 @@
 common --lockfile_mode=update
 
-# This opt-in container path supports native AMD64 Debian Trixie.
+# Default direct invocations to AMD64; the Make container bridge selects the
+# configured native architecture, and ARM64 callers can pass both platform flags.
 common --platforms=@sonic_build_infra//platforms:x86_64_trixie
 # Build-time cfggen has native Common/YANG dependencies too. Select the declared
 # Trixie toolchain for execution tools instead of the ambient host compiler.
@@ -12,3 +13,7 @@ build:release --compilation_mode=opt
 test --test_output=errors
 
 try-import %workspace%/.bazelrc.user
+
+# Restore complete declared kernel/metadata tool trees from the action cache.
+# A dependency's .bazelrc is not inherited by this image build root.
+build --remote_download_regex=(^|.*/)tools/build_tools/kernel_runtime_(amd64|arm64)(/.*)?$

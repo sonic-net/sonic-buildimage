@@ -1,0 +1,4 @@
+exports_files([
+    "container_startup.py",
+    "readiness_probe.sh",
+])

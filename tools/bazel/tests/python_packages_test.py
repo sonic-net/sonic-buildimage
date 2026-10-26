@@ -28,6 +28,12 @@ class PythonPackageEvidenceTest(unittest.TestCase):
             }
             for target, _, _, expected in python_packages.WHEEL_CHECKS
         }
+        # The config-engine installation test also installs its YANG dependency.
+        # Model the producer's actual receipt independently of collector inputs.
+        dependency = "sonic_yang_mgmt-1.0-py3-none-any.whl"
+        self.wheel_receipts["sonic_python_wheels_test"]["wheels"].append({
+            "filename": dependency, "sha256": hashlib.sha256(dependency.encode()).hexdigest(),
+        })
 
     def fixture(self, *, zipped=False):
         for target in python_packages.TESTS:
@@ -259,6 +265,14 @@ class PythonPackageEvidenceTest(unittest.TestCase):
             with self.subTest(target=target), mock.patch.dict(receipt, wheels=receipt["wheels"][1:]):
                 self.fixture()
                 self.assert_collection_fails("Retained wheels differ")
+
+    def test_missing_dependency_wheel_in_receipt_fails(self):
+        """An owning YANG check cannot replace its hash in config-engine's inputs."""
+        receipt = self.wheel_receipts["sonic_python_wheels_test"]
+        receipt["wheels"] = [wheel for wheel in receipt["wheels"]
+                             if wheel["filename"] != "sonic_yang_mgmt-1.0-py3-none-any.whl"]
+        self.fixture()
+        self.assert_collection_fails("Retained wheels differ")
 
     def test_unexpected_wheel_in_receipt_fails(self):
         """A receipt cannot substitute an undeclared wheel for its expected input."""

@@ -68,10 +68,15 @@ def payload(path, require_root=True):
     with tarfile.open(path) as archive:
         for member in archive:
             name = path_name(member.name)
-            require(name not in result, "duplicate package member: " + name)
             item = metadata(member)
             require(item["kind"] != "other", "unsupported package member: " + name)
             require(not require_root or (member.uid, member.gid) == (0, 0), "non-root package owner: " + name)
+            if name in result:
+                # Flattened component archives can repeat their shared parent
+                # directories. Files and conflicting install metadata may not.
+                require(item["kind"] == "directory" and result[name] == item,
+                        "duplicate package member: " + name)
+                continue
             if member.isfile():
                 with archive.extractfile(member) as stream:
                     data = stream.read()
@@ -104,9 +109,13 @@ def elf_debug(extracted, expected, prebuilt):
         symbols = extracted / debug_name
         require("Build ID: " + identifier in command(["readelf", "-n", str(symbols)]), "debug build ID differs: " + name)
         require(".debug_info" in command(["readelf", "-SW", str(symbols)]), "debug file lacks DWARF: " + name)
-        link = extracted / "debuglink"
-        command(["objcopy", "--dump-section", ".gnu_debuglink=" + str(link), str(binary)])
-        raw = link.read_bytes()
+        # With no output argument objcopy rewrites its input, even for a section
+        # dump. Read-only installed libraries must stay byte-for-byte untouched.
+        with tempfile.TemporaryDirectory(prefix="sonic-debuglink-") as temporary:
+            link = Path(temporary) / "debuglink"
+            command(["objcopy", "--dump-section", ".gnu_debuglink=" + str(link),
+                     str(binary), str(Path(temporary) / "elf-copy")])
+            raw = link.read_bytes()
         end = raw.index(0)
         require(raw[:end].decode() == symbols.name, "debuglink filename differs: " + name)
         offset = (end + 4) & ~3
