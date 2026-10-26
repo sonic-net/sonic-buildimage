@@ -39,6 +39,13 @@
     "GNMI_TABLE_WITH_MGMT_VRF_CORRECT": {
         "desc": "TABLE WITH MGMT VRF ENABLED."
     },
+    "GNMI_TABLE_WITH_PASSWORD_JWT_USER_AUTH": {
+        "desc": "DEFAULT LOOPBACK PROFILE WITH EXPLICIT PASSWORD AND JWT AUTHENTICATION."
+    },
+    "GNMI_TABLE_WITH_INVALID_COMBINED_USER_AUTH": {
+        "desc": "UNSUPPORTED COMBINED AUTHENTICATION MODE.",
+        "eStrKey": "Pattern"
+    },
     "GNMI_TABLE_WITH_MGMT_VRF_INCORRECT": {
         "desc": "TABLE WITH MGMT VRF DISABLED - should fail validation.",
         "eStrKey": "Must"

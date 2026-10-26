@@ -117,4 +117,34 @@ assert_contains_once "explicit password is forwarded" \
 assert_not_contains "explicit password does not configure certificate lookup" \
     "${output}" "--config_table_name GNMI_CLIENT_CERT"
 
+GNMI_TEST_CONFIG="$("${PYTHON:-python3}" - "${SCRIPT_DIR}/../../src/sonic-config-engine" <<'PY'
+import json
+import sys
+from unittest.mock import MagicMock
+
+sys.path.insert(0, sys.argv[1])
+from gnmi_config import set_gnmi_defaults
+
+data = {
+    "FEATURE": {"gnmi": {"state": "enabled"}},
+    "TELEMETRY": {"gnmi": {"port": "50051", "client_auth": "true"}},
+}
+configdb = MagicMock()
+configdb.get_table.return_value = {}
+configdb.get_entry.return_value = {}
+assert set_gnmi_defaults(data, configdb)
+print(json.dumps({"gnmi": data["GNMI"]["gnmi"], "certs": None, "x509": None}))
+PY
+)"
+export GNMI_TEST_CONFIG
+output="$(PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" | tail -n 1)"
+assert_contains_once "provisioned default profile starts on the original port" \
+    "${output}" "--port 8080"
+assert_contains_once "provisioned default profile remains loopback-only" \
+    "${output}" "--noTLS --bind_address 127.0.0.1"
+assert_contains_once "provisioned default profile supplies explicit application authentication" \
+    "${output}" "--client_auth password,jwt"
+assert_not_contains "provisioned default profile does not select unusable certificate authentication" \
+    "${output}" "--config_table_name GNMI_CLIENT_CERT"
+
 echo "gnmi-native user_auth launcher tests passed"

@@ -421,6 +421,10 @@ do_db_migration()
         # Migrate the DB to the latest schema version if needed
         /usr/local/bin/db_migrator.py -o migrate
     fi
+    if ! /usr/bin/python3 -m gnmi_config; then
+        echo "Failed to provision GNMI configuration during database migration" >&2
+        exit 1
+    fi
     set_config_db_initialized "1"
 
     # Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
