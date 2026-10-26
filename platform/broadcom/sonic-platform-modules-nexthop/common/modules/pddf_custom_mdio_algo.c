@@ -205,6 +205,7 @@ EXPORT_SYMBOL(fpga_mdio_write);
 static struct mdio_fpga_ops fpga_algo_ops_instance = {
 	.read = fpga_mdio_read,
 	.write = fpga_mdio_write,
+	.owner = THIS_MODULE,
 };
 
 static int __init pddf_custom_mdio_algo_init(void)
