@@ -618,9 +618,11 @@ jobs:
   vs:
     name: Make VS with Bazel SWSS (AMD64)
     needs: [source, syncd-contracts]
-    # Build full VS images after source and production test-graph checks.
+    # Build full VS images for master pushes and same-repository pull requests
+    # after source and production test-graph checks.
     # Manual runs retain their skip option; external-fork PRs use hosted checks.
     if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'workflow_dispatch' && !inputs.skip_vs)
