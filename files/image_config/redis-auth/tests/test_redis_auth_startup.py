@@ -78,7 +78,7 @@ class StartupTest(unittest.TestCase):
         enabled = mock.patch.object(startup, 'build_enabled', return_value=True)
         enabled.start()
         self.addCleanup(enabled.stop)
-        groups = mock.patch.object(startup, 'socket_groups', return_value=[100, 1001])
+        groups = mock.patch.object(startup, 'socket_groups', return_value=[27, 100, 1001])
         groups.start()
         self.addCleanup(groups.stop)
 
@@ -113,7 +113,7 @@ class StartupTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(secret.stat().st_mode), 0o400)
         self.assertEqual(stat.S_IMODE((self.runtime / 'local.json').stat().st_mode), 0o644)
         self.assertEqual(stat.S_IMODE((self.runtime / 'server/users.acl').stat().st_mode), 0o644)
-        self.assertEqual(json.loads((self.runtime / 'server/socket-groups.json').read_text()), [100, 1001])
+        self.assertEqual(json.loads((self.runtime / 'server/socket-groups.json').read_text()), [27, 100, 1001])
 
     def test_systemd_umask_prepares_both_processes(self):
         self.select(redis='enforce', redis_bmp='enforce')
@@ -501,12 +501,13 @@ class StartupTest(unittest.TestCase):
         selected, legacy = self.root / 'sockets/redis.sock', self.root / 'sockets/redis_bmp.sock'
         self.start_socket_server(selected, enforce=True)
         self.start_socket_server(legacy, enforce=False)
-        for gid in (100, 1001, pwd.getpwnam('redis').pw_gid):
+        for gid in (27, 100, 1001, pwd.getpwnam('redis').pw_gid):
             result = self.as_reader(selected, 'PING', gid=gid)
             self.assertEqual((result.returncode, result.stdout.strip()), (0, 'PONG'))
-        denied = self.as_reader(selected, 'SET', 'test:reader', 'bad')
-        self.assertNotEqual(denied.returncode, 0)
-        self.assertIn('NOPERM', denied.stdout + denied.stderr)
+        for gid in (27, 100, 1001):
+            denied = self.as_reader(selected, 'SET', 'test:reader', 'bad', gid=gid)
+            self.assertNotEqual(denied.returncode, 0)
+            self.assertIn('NOPERM', denied.stdout + denied.stderr)
         self.assertNotEqual(self.as_reader(selected, 'PING', gid=65534).returncode, 0)
         self.assertNotEqual(self.as_reader(legacy, 'PING').returncode, 0)
         parent_acl = subprocess.check_output(['getfacl', '-ncp', str(selected.parent)], text=True)
@@ -584,6 +585,7 @@ class StartupTest(unittest.TestCase):
         self.start_socket_server(path, enforce=True)
         self.assertEqual(self.as_reader(path, 'PING').returncode, 0)
         self.assertEqual(self.as_reader(path, 'PING', gid=1001).returncode, 0)
+        self.assertEqual(self.as_reader(path, 'PING', gid=27).returncode, 0)
         self.assertNotEqual(self.as_reader(path, 'PING', gid=65534).returncode, 0)
 
     def test_socket_acl_failure_stops_the_redis_child(self):
@@ -617,7 +619,7 @@ class StartupTest(unittest.TestCase):
 
     def test_socket_reader_group_policy_must_be_safe(self):
         policy = self.root / 'socket-groups.json'
-        for value in ([], [True], [0], [-1], [2**32 - 1], ['100'], {'gid': 100}, [100, 101, 102]):
+        for value in ([], [True], [0], [-1], [2**32 - 1], ['100'], {'gid': 100}, [100, 101, 102, 103]):
             policy.write_text(json.dumps(value))
             with self.assertRaises(RuntimeError):
                 server.reader_acl(policy)

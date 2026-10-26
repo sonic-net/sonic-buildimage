@@ -25,7 +25,7 @@ def reader_acl(path=GROUPS):
                 or info.st_mode & 0o022):
             raise RuntimeError('unsafe socket reader group policy')
         groups = json.load(stream)
-    if (not isinstance(groups, list) or not groups or len(groups) > 2
+    if (not isinstance(groups, list) or not groups or len(groups) > 3
             or any(type(gid) is not int or not 0 < gid < 2**32 - 1 for gid in groups)):
         raise RuntimeError('invalid socket reader group policy')
     entries = ['user::rwx', 'group::rw-']
@@ -81,7 +81,7 @@ def run(path, command, *, timeout=15, groups_path=GROUPS):
             identity = child_socket(path, process)
             if identity is not None:
                 # Replace inherited named entries too: only the owning group and
-                # the host's Redis and users groups should receive socket access.
+                # the host's Redis, users and sudo groups receive socket access.
                 subprocess.run(['/usr/bin/setfacl', '--set', acl, str(path)],
                                check=True, timeout=5)
                 info = path.lstat()

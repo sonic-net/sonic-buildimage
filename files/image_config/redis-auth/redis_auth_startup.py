@@ -145,7 +145,7 @@ def atomic(path, content, mode=0o644):
 
 def socket_groups():
     # Use host IDs: the Redis container's redis group can have a different GID.
-    groups = sorted({grp.getgrnam(name).gr_gid for name in ('redis', 'users')})
+    groups = sorted({grp.getgrnam(name).gr_gid for name in ('redis', 'users', 'sudo')})
     if any(not 0 < gid < 2**32 - 1 for gid in groups):
         raise CredentialStateError('invalid Redis socket reader group')
     return groups
