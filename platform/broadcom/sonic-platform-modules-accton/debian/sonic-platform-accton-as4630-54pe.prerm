@@ -1,0 +1,7 @@
+# Disable pddf-platform-init, monitor, monitor-fan, monitor-psu
+
+systemctl stop pddf-platform-init.service
+systemctl disable pddf-platform-init.service
+systemctl stop as4630-54pe-pddf-platform-monitor.service
+systemctl disable as4630-54pe-pddf-platform-monitor.service
+
