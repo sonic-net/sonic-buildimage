@@ -11,8 +11,8 @@ These tests require Bash, Bats 1.10.0 and jq. The `LauncherTests` stage in
 the Bats package used by `docker-sonic-mgmt`. Local execution needs no Docker,
 root access or sudo once these dependencies are installed.
 
-- `test_gnmi_native_user_auth.bats` checks secure defaults and explicit
-  authentication modes.
+- `test_gnmi_native_user_auth.bats` checks secure defaults, explicit
+  authentication modes and management/default VRF fallback behavior.
 - `test_dialout_transport.bats` checks both images' TLS defaults, trust
   environment, argument isolation and client exit status.
 - `test_tls_fallbacks.bats` checks both launchers' configured/legacy
