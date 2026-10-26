@@ -1536,7 +1536,7 @@
             "index": "65",
             "lanes": "257",
             "breakout_modes": {
-                "1x10G": [
+                "1x10G[1G]": [
                     "Ethernet65"
                 ]
             }
@@ -1545,7 +1545,7 @@
             "index": "66",
             "lanes": "259",
             "breakout_modes": {
-                "1x10G": [
+                "1x10G[1G]": [
                     "Ethernet66"
                 ]
             }
