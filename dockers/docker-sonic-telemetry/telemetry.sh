@@ -23,6 +23,7 @@ fi
 
 EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
+INVALID_TLS_CONFIGURATION=3
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
@@ -51,26 +52,26 @@ export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
 if [ -n "$CERTS" ]; then
-    SERVER_CRT=$(extract_field "$CERTS" '.server_crt')
-    SERVER_KEY=$(extract_field "$CERTS" '.server_key')
-    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
-        TELEMETRY_ARGS+=" --insecure"
-    else
-        TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
+    SERVER_CRT=$(echo "$CERTS" | jq -r '.server_crt // empty')
+    SERVER_KEY=$(echo "$CERTS" | jq -r '.server_key // empty')
+    if [[ -z "$SERVER_CRT" || -z "$SERVER_KEY" ]]; then
+        echo "TLS configuration requires both server_crt and server_key" >&2
+        exit $INVALID_TLS_CONFIGURATION
     fi
+    TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
 
     CA_CRT=$(extract_field "$CERTS" '.ca_crt')
     if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 elif [ -n "$X509" ]; then
-    SERVER_CRT=$(extract_field "$X509" '.server_crt')
-    SERVER_KEY=$(extract_field "$X509" '.server_key')
-    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
-        TELEMETRY_ARGS+=" --insecure"
-    else
-        TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
+    SERVER_CRT=$(echo "$X509" | jq -r '.server_crt // empty')
+    SERVER_KEY=$(echo "$X509" | jq -r '.server_key // empty')
+    if [[ -z "$SERVER_CRT" || -z "$SERVER_KEY" ]]; then
+        echo "TLS configuration requires both server_crt and server_key" >&2
+        exit $INVALID_TLS_CONFIGURATION
     fi
+    TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
 
     CA_CRT=$(extract_field "$X509" '.ca_crt')
     if [ ! -z $CA_CRT ]; then
@@ -140,6 +141,12 @@ fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
+# Fail-closed default: if user_auth is unset in CONFIG_DB, force cert mode.
+# Without this, --client_auth is omitted and authentication ends up disabled
+# entirely.
+if [ -z "$USER_AUTH" ] || [ "$USER_AUTH" == "null" ]; then
+    USER_AUTH="cert"
+fi
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 

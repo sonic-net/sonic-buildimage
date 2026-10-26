@@ -65,7 +65,7 @@ publishes the sibling files alongside it.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `ENABLE_SBOM` | `n` | Master switch. When `n`, no SBOM hooks fire and no extra tools are installed. |
+| `ENABLE_SBOM` | `n` | Master switch. When `n`, no SBOM hooks fire and no extra tools are installed. Not supported on `armhf` — see [Host architecture support](#host-architecture-support). |
 | `SBOM_FORMAT` | `both` | `cyclonedx`, `spdx`, or `both`. SPDX is a downstream conversion via `cyclonedx-cli` (auto-fetched), so emitting both is essentially free — but the conversion carries **no dependency relationships** and no `formulation`, so the containment graph exists only in the CycloneDX document. |
 | `SBOM_SCAN_TOOL` | `syft` | Binary scanner for transitive deps: `syft` or `trivy`. |
 | `SBOM_INCLUDE_LICENSES` | `y` | Whether to harvest copyrights and resolve SPDX licenses. |
@@ -170,7 +170,10 @@ shown after this list.
 - **SONiC-native code** (sonic-net submodule). Primary PURL:
   `pkg:github/sonic-net/<repo>@<commit>`. `externalReferences` records
   the submodule URL and pinned commit. No pedigree unless a sibling
-  `src/<pkg>.patch/` exists.
+  `src/<pkg>.patch/` exists. `sonic-linux-kernel` is the exception:
+  it rebuilds Debian's `linux` source, so its `.deb`s take the
+  `pkg:deb/sonic/<name>@<version>` identity instead. Being a submodule,
+  it gets no Debian `.dsc` ancestor (see the kernel entry below).
 
 - **Patched upstream Debian sources** (`dget` + sidecar patches in
   `src/<pkg>/patch/`). Primary: `pkg:deb/sonic/<name>@<version>`.
@@ -211,7 +214,12 @@ shown after this list.
   recorded from `files/build/versions/default/versions-docker`.
 
 - **Kernel and out-of-tree modules.** Linux kernel built from Debian
-  source + ~200 SONiC patches enumerated in pedigree. Each kernel
+  source + ~200 SONiC patches enumerated in pedigree. Each `.deb` the
+  kernel build produces — `linux-image`, `linux-kbuild` and both
+  `linux-headers` — is its own `pkg:deb/sonic/<name>@<version>`
+  component carrying that pedigree, so `linux-image` merges with the
+  package observed installed and the CVEs its patches `resolves` land
+  on the component scanners match kernel advisories against. Each kernel
   module (`opennsl-modules`, `sx-kernel`, `ionic-modules`, every
   `sonic-platform-modules-*`) has a `dependencies[]` edge pointing
   at the kernel image's `bom-ref` so consumers can reason about
@@ -388,6 +396,18 @@ artifact — no manual pin editing required.
 
 For standalone vuln scanning outside a build, the same script
 auto-fetches into `~/.cache/sonic-sbom/`.
+
+### Host architecture support
+
+`syft` and `grype` publish Linux binaries for `amd64`, `arm64`,
+`ppc64le`, `riscv64` and `s390x` — but not for 32-bit ARM. An `armhf`
+build runs the toolchain inside an armhf slave container, so
+`install_sbom_tool.sh` has nothing to fetch there and exits non-zero,
+which fails the build at SBOM emit time under the default
+`SBOM_STRICT=y`. SONiC's Azure pipelines therefore leave `ENABLE_SBOM`
+unset for armhf jobs (`marvell-prestera-armhf`). Building armhf with
+`ENABLE_SBOM=y SBOM_STRICT=n` still works and yields a partial,
+recipe-only SBOM with no host-rootfs or container-scan coverage.
 
 The aggregator additionally caches per-file scanner output under
 `target/sbom-tools/syft-cache/<tool>-<version>-<sha256>.json`, keyed by
@@ -620,7 +640,7 @@ parsing string properties. The bom-ref of a SONiC-built `.deb`
 matches its source identity — `pkg:github/sonic-net/<repo>@<commit>`
 for components built from a sonic-net submodule,
 `pkg:deb/sonic/<name>@<version>?arch=<arch>` for patched-upstream
-Debian sources.
+Debian sources, the kernel included.
 
 The graph is rooted at the image component, so a walk can start from
 the top rather than from a package you already knew to look for.

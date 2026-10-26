@@ -312,8 +312,8 @@ class TestConfigMACsec(object):
         assert profile_table["fallback_cak"] == fallback_cak
         assert profile_table["fallback_ckn"] == fallback_ckn
         assert result.output == (
-            "Desired MACsec profile updated; runtime key rotation may be "
-            "deferred per port until safe.\n"
+            "Desired MACsec profile updated; runtime CAK/CKN rotation is "
+            "best-effort per port and may retry after WPA command failure.\n"
         )
         assert replacement_cak not in result.output
         cfgdb.set_entry.assert_called_once_with(
@@ -361,6 +361,42 @@ class TestConfigMACsec(object):
         assert profile_table["primary_ckn"] == primary_ckn
         assert "fallback_cak" not in profile_table
         assert "fallback_ckn" not in profile_table
+        cfgdb.set_entry.assert_not_called()
+
+    def test_update_rejects_legacy_invalid_salt_with_explicit_recovery(
+            self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "add", profile_name,
+                "--primary_cak=" + primary_cak,
+                "--primary_ckn=" + primary_ckn,
+                "--fallback_cak=" + fallback_cak,
+                "--fallback_ckn=" + fallback_ckn,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        profile_table["primary_cak"] = "53" + primary_cak[2:]
+        cfgdb.set_entry.reset_mock()
+
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "update", profile_name,
+                "--old_ckn=" + fallback_ckn,
+                "--new_ckn=" + replacement_ckn,
+                "--new_cak=" + replacement_cak,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code != 0
+        assert "configured primary_cak" in result.output
+        assert "replace the profile before rotation" in result.output
+        assert cfgdb.get_entry("MACSEC_PROFILE", profile_name) == profile_table
         cfgdb.set_entry.assert_not_called()
 
     def test_update_unattached_primary_only_profile_is_rejected(

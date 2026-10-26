@@ -1,11 +1,12 @@
 import typing
 from natsort import natsorted
 import datetime
-import pickle
+import hashlib
+import json
 import os
 import copy
-import json
 import re
+import tempfile
 import click
 from tabulate import tabulate
 
@@ -15,16 +16,14 @@ from utilities_common.cli import UserCache
 from sonic_py_common import device_info
 
 CACHE_MANAGER = UserCache(app_name="macsec")
-CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}")
+CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}.json")
 
 DB_CONNECTOR = None
 COUNTER_TABLE = None
 
 MKA_SESSION_TABLE = "MACSEC_MKA_SESSION_TABLE"
 MKA_PARTICIPANT_TABLE = "MACSEC_MKA_PARTICIPANT_TABLE"
-MKA_STALE_THRESHOLD_SECONDS = 60
-MKA_SESSION_FIELDS = (
-    "profile",
+MKA_OBSERVED_SESSION_FIELDS = (
     "kay_status",
     "authenticated",
     "secured",
@@ -37,8 +36,10 @@ MKA_SESSION_FIELDS = (
     "keys_distributed",
     "keys_received",
     "mka_hello_time_ms",
-    "query_status",
-    "last_updated",
+)
+MKA_SESSION_FIELDS = (
+    "profile",
+    *MKA_OBSERVED_SESSION_FIELDS,
     "config_status",
     "config_error",
 )
@@ -59,80 +60,6 @@ def _allowlisted_fields(entry, allowlist):
     return {field: entry[field] for field in allowlist if field in entry}
 
 
-def _parse_utc_timestamp(timestamp):
-    if not timestamp:
-        return None
-    try:
-        value = timestamp
-        if value.endswith("Z"):
-            value = value[:-1] + "+00:00"
-        parsed = datetime.datetime.fromisoformat(value)
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=datetime.timezone.utc)
-        return parsed.astimezone(datetime.timezone.utc)
-    except (AttributeError, TypeError, ValueError):
-        return None
-
-
-def _freshness(last_updated, query_status, now=None):
-    parsed = _parse_utc_timestamp(last_updated)
-    if parsed is None:
-        return "never", "never"
-
-    if now is None:
-        now = datetime.datetime.now(datetime.timezone.utc)
-    age = max(0, (now - parsed).total_seconds())
-    flags = []
-    if age > MKA_STALE_THRESHOLD_SECONDS:
-        flags.append("stale")
-    if query_status == "error":
-        flags.append("retained")
-    elif query_status != "ok":
-        flags.append("query-unknown")
-
-    suffix = " ({})".format(", ".join(flags)) if flags else ""
-    compact = "{}s{}".format(int(age), suffix)
-    detail_suffix = "; {}".format(", ".join(flags)) if flags else ""
-    detail = "{} ({}s ago{})".format(last_updated, int(age), detail_suffix)
-    return compact, detail
-
-
-def _age_seconds(last_updated, now=None):
-    parsed = _parse_utc_timestamp(last_updated)
-    if parsed is None:
-        return None
-    if now is None:
-        now = datetime.datetime.now(datetime.timezone.utc)
-    return max(0, (now - parsed).total_seconds())
-
-
-def _age_label(age):
-    return "never" if age is None else "{}s".format(int(age))
-
-
-def _compact_status(session, age):
-    flags = []
-    query_status = session.get("query_status")
-    config_status = session.get("config_status")
-
-    if query_status == "error":
-        flags.append("query-error")
-    elif query_status != "ok":
-        flags.append("query-unknown")
-
-    if age is None:
-        flags.append("age-unknown")
-    elif age > MKA_STALE_THRESHOLD_SECONDS:
-        flags.append("stale")
-
-    if config_status == "degraded":
-        flags.append("config-degraded")
-    elif config_status != "in-sync":
-        flags.append("config-unknown")
-
-    return ",".join(flags) if flags else "ok"
-
-
 def _safe_enum(value, values):
     return value if value in values else "-"
 
@@ -149,22 +76,36 @@ def _safe_uint(value):
         return "-"
 
 
+def _matches_known_secret(value, secrets):
+    return (
+        isinstance(value, str) and
+        any(
+            value.lower() == secret.lower() or
+            (len(secret) in (66, 130) and value.lower() == secret[2:].lower())
+            for secret in secrets
+        )
+    )
+
+
+def _safe_uint_not_secret(value, secrets):
+    if _matches_known_secret(value, secrets):
+        return "-"
+    sanitized = _safe_uint(value)
+    return sanitized if len(sanitized) <= 20 else "-"
+
+
 def _safe_hex(value, lengths, secrets=()):
     if not isinstance(value, str) or len(value) not in lengths:
         return "-"
-    if any(
-        value.lower() == secret.lower() or
-        (len(secret) in (66, 130) and value.lower() == secret[2:].lower())
-        for secret in secrets
-    ):
+    if _matches_known_secret(value, secrets):
         return "-"
     if re.fullmatch(r"[0-9a-fA-F]+", value) is None:
         return "-"
     return value.lower()
 
 
-def _format_milliseconds(value):
-    sanitized = _safe_uint(value)
+def _format_milliseconds(value, secrets=()):
+    sanitized = _safe_uint_not_secret(value, secrets)
     return "{} ms".format(sanitized) if sanitized != "-" else "-"
 
 
@@ -199,7 +140,7 @@ def _controlled_port_mode(session):
     return "inconsistent"
 
 
-def _role_live_peers(participants, expected_is_primary):
+def _role_live_peers(participants, expected_is_primary, secrets=()):
     if any(
         participant.get("is_primary") not in ("true", "false")
         for participant in participants
@@ -211,7 +152,9 @@ def _role_live_peers(participants, expected_is_primary):
     ]
     if len(role_participants) != 1:
         return "-"
-    return _safe_uint(role_participants[0].get("live_peers"))
+    return _safe_uint_not_secret(
+        role_participants[0].get("live_peers"), secrets
+    )
 
 
 def _redact_known_secrets(value, secrets):
@@ -295,9 +238,10 @@ class MACsecSA(MACsecAppMeta, MACsecCounters):
         meta = sorted(self.meta.items(), key=lambda x: x[0])
         counters = copy.deepcopy(self.counters)
         if cache:
+            cached_counters = cache.get("counters", {})
             for k, v in counters.items():
-                if k in cache.counters and k.startswith("SAI_MACSEC_SA_STAT"):
-                    counters[k] = int(counters[k]) - int(cache.counters[k])
+                if k in cached_counters and k.startswith("SAI_MACSEC_SA_STAT"):
+                    counters[k] = int(counters[k]) - int(cached_counters[k])
         counters = sorted(counters.items(), key=lambda x: x[0])
         buffer += tabulate(meta + counters)
         buffer = "\n".join(["\t\t" + line for line in buffer.splitlines()])
@@ -388,7 +332,7 @@ class MACsecPort(MACsecAppMeta, MACsecCfgMeta):
         buffer = self.get_header()
 
         # Add the profile information to the meta dict from config meta dict
-        self.meta["profile"] = self.cfgMeta["macsec"]
+        self.meta["profile"] = self.cfgMeta.get("macsec", "")
 
         buffer += tabulate(sorted(self.meta.items(), key=lambda x: x[0]))
         return buffer
@@ -448,7 +392,9 @@ def create_macsec_profile_obj(key: str) -> MACsecCfgMeta:
 
 def create_macsec_objs(interface_name: str) -> typing.List[MACsecAppMeta]:
     objs = []
-    objs.append(create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name))
+    port = create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name)
+    if port is not None:
+        objs.append(port)
     egress_scs = DB_CONNECTOR.keys(DB_CONNECTOR.APPL_DB, MACsecEgressSC.get_appl_table_name() + ":" + interface_name + ":*")
     for sc_name in natsorted(egress_scs):
         sc = create_macsec_obj(sc_name)
@@ -482,17 +428,85 @@ def create_macsec_profiles_objs(profile_name: str) -> typing.List[MACsecCfgMeta]
     return objs
 
 
-def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
+def cache_find(cache: dict, target: MACsecAppMeta) -> dict:
     if not cache or not cache["objs"]:
         return None
     for obj in cache["objs"]:
-        if type(obj) == type(target) and obj.key == target.key:
+        if obj["type"] == type(target).__name__ and obj["key"] == target.key:
             # MACsec SA may be refreshed by a cycle that use the same key
             # So, use the SA as the identifier
-            if isinstance(obj, MACsecSA) and obj.sak != target.sak:
+            if isinstance(target, MACsecSA) and obj["sak_hash"] != _sak_hash(target.sak):
                 continue
             return obj
     return None
+
+
+def _sak_hash(sak: str) -> str:
+    return hashlib.sha256(sak.encode("utf-8")).hexdigest()
+
+
+def _cache_entry(obj: MACsecAppMeta) -> dict:
+    entry = {
+        "type": type(obj).__name__,
+        "key": obj.key,
+    }
+    if isinstance(obj, MACsecSA):
+        entry["sak_hash"] = _sak_hash(obj.sak)
+        entry["counters"] = obj.counters
+    return entry
+
+
+def _save_cache(path: str, cache: dict) -> None:
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=os.path.dirname(path),
+                prefix=".macsecstats-", delete=False) as cache_file:
+            temp_path = cache_file.name
+            json.dump(cache, cache_file)
+            cache_file.flush()
+            os.fsync(cache_file.fileno())
+        os.replace(temp_path, path)
+        temp_path = None
+    finally:
+        if temp_path is not None and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def _load_cache(path: str) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as cache_file:
+            cache = json.load(cache_file)
+    except (OSError, UnicodeError, ValueError):
+        return {}
+
+    if (not isinstance(cache, dict) or type(cache.get("version")) is not int or
+            cache["version"] != 1):
+        return {}
+    if not isinstance(cache.get("time"), str) or not isinstance(cache.get("objs"), list):
+        return {}
+
+    sa_types = {"MACsecIngressSA", "MACsecEgressSA"}
+    for obj in cache["objs"]:
+        if (not isinstance(obj, dict) or not isinstance(obj.get("type"), str) or
+                not isinstance(obj.get("key"), str)):
+            return {}
+        if obj["type"] in sa_types:
+            sak_hash = obj.get("sak_hash")
+            counters = obj.get("counters")
+            if (not isinstance(sak_hash, str) or len(sak_hash) != 64 or
+                    any(char not in "0123456789abcdef" for char in sak_hash) or
+                    not isinstance(counters, dict)):
+                return {}
+            for name, value in counters.items():
+                if (not isinstance(name, str) or isinstance(value, bool) or
+                        not isinstance(value, (str, int))):
+                    return {}
+                try:
+                    int(value)
+                except ValueError:
+                    return {}
+    return cache
 
 
 @click.command()
@@ -579,8 +593,9 @@ class MacsecContext(object):
                     objs += create_macsec_profiles_objs(profile_name)
 
         cache = {}
-        if os.path.isfile(CACHE_FILE.format(self.multi_asic.current_namespace)):
-            cache = pickle.load(open(CACHE_FILE.format(self.multi_asic.current_namespace), "rb"))
+        cache_path = CACHE_FILE.format(self.multi_asic.current_namespace)
+        if not dump_file and os.path.isfile(cache_path):
+            cache = _load_cache(cache_path)
 
         if not dump_file:
             if cache and cache["time"] and objs:
@@ -590,12 +605,11 @@ class MacsecContext(object):
                 print(obj.dump_str(cache_obj))
         else:
             dump_obj = {
-                "time": datetime.datetime.now(),
-                "objs": objs
+                "version": 1,
+                "time": str(datetime.datetime.now()),
+                "objs": [_cache_entry(obj) for obj in objs]
             }
-            with open(CACHE_FILE.format(self.multi_asic.current_namespace), 'wb') as dump_file:
-                pickle.dump(dump_obj, dump_file)
-                dump_file.flush()
+            _save_cache(cache_path, dump_obj)
 
     @multi_asic_util.run_on_multi_asic
     def collect_mka(self, interface_name):
@@ -611,6 +625,10 @@ class MacsecContext(object):
                 continue
 
             raw_session = self.db.get_all(self.db.STATE_DB, session_key)
+            if not raw_session or not all(
+                field in raw_session for field in MKA_OBSERVED_SESSION_FIELDS
+            ):
+                continue
             session = _allowlisted_fields(raw_session, MKA_SESSION_FIELDS)
             participant_prefix = separator.join(
                 (MKA_PARTICIPANT_TABLE, current_interface)
@@ -619,16 +637,22 @@ class MacsecContext(object):
                 self.db.STATE_DB, participant_prefix + "*"
             ) or []
             participants = []
+            complete_snapshot = True
             for participant_key in natsorted(participant_keys):
                 ckn = participant_key[len(participant_prefix):]
                 raw_participant = self.db.get_all(
                     self.db.STATE_DB, participant_key
                 )
+                if not raw_participant:
+                    complete_snapshot = False
+                    break
                 participant = _allowlisted_fields(
                     raw_participant, MKA_PARTICIPANT_FIELDS
                 )
                 participant["ckn"] = ckn
                 participants.append(participant)
+            if not complete_snapshot:
+                continue
 
             port = self.config_db.get_entry("PORT", current_interface)
             profile_name = port.get("macsec") or session.get("profile")
@@ -661,10 +685,6 @@ class MacsecContext(object):
             key=lambda record: (record["interface"], record["namespace"] or ""),
         )
         if not records:
-            if interface_name is None:
-                click.echo("No MACsec MKA session state found")
-            else:
-                click.echo("MACsec MKA session state for {} is missing".format(interface_name))
             return
 
         if interface_name is None:
@@ -691,23 +711,25 @@ class MacsecContext(object):
                 "false": "fallback",
             }.get(principal.get("is_primary"), "-")
             primary_live_peers = _role_live_peers(
-                record["participants"], "true"
+                record["participants"], "true", record["secrets"]
             )
             fallback_live_peers = _role_live_peers(
-                record["participants"], "false"
+                record["participants"], "false", record["secrets"]
             )
-            age = _age_seconds(session.get("last_updated"))
+            live_peers = "{}/{}".format(
+                primary_live_peers, fallback_live_peers
+            )
             row = [
                 record["interface"],
                 _safe_enum(session.get("kay_status"), ("active", "not-active")),
                 _safe_bool(session.get("secured")),
                 principal_ckn,
                 role,
-                primary_live_peers,
-                fallback_live_peers,
+                live_peers,
                 _safe_bool(session.get("is_key_server")),
-                _compact_status(session, age),
-                _age_label(age),
+                _safe_uint_not_secret(
+                    session.get("keys_distributed"), record["secrets"]
+                ),
             ]
             if show_namespace:
                 row.insert(0, record["namespace"] or "-")
@@ -719,11 +741,9 @@ class MacsecContext(object):
             "Secured",
             "Principal CKN",
             "Role",
-            "Primary live peers",
-            "Fallback live peers",
+            "prim./fall. live peers",
             "Local-KS",
-            "Status",
-            "Age",
+            "Keys distributed",
         ]
         if show_namespace:
             headers.insert(0, "Namespace")
@@ -740,9 +760,6 @@ class MacsecContext(object):
                 click.echo("Namespace:            {}".format(record["namespace"]))
 
             session = record["session"]
-            _, freshness = _freshness(
-                session.get("last_updated"), session.get("query_status")
-            )
             fields = [
                 ("Interface", record["interface"]),
                 ("Profile", _redact_known_secrets(
@@ -759,25 +776,25 @@ class MacsecContext(object):
                 ("Key server SCI", _safe_sci(
                     session.get("key_server_sci"), record["secrets"]
                 )),
-                ("Actor priority", _safe_uint(session.get("actor_priority"))),
-                ("Key server priority", _safe_uint(
-                    session.get("key_server_priority")
+                ("Actor priority", _safe_uint_not_secret(
+                    session.get("actor_priority"), record["secrets"]
+                )),
+                ("Key server priority", _safe_uint_not_secret(
+                    session.get("key_server_priority"), record["secrets"]
                 )),
                 ("Local key server", _safe_bool(session.get("is_key_server"))),
-                ("Keys distributed", _safe_uint(
-                    session.get("keys_distributed")
+                ("Keys distributed", _safe_uint_not_secret(
+                    session.get("keys_distributed"), record["secrets"]
                 )),
-                ("Keys received", _safe_uint(session.get("keys_received"))),
+                ("Keys received", _safe_uint_not_secret(
+                    session.get("keys_received"), record["secrets"]
+                )),
                 ("MKA hello time", _format_milliseconds(
-                    session.get("mka_hello_time_ms")
-                )),
-                ("Query status", _safe_enum(
-                    session.get("query_status"), ("ok", "error")
+                    session.get("mka_hello_time_ms"), record["secrets"]
                 )),
                 ("Config status", _safe_enum(
                     session.get("config_status"), ("in-sync", "degraded")
                 )),
-                ("Last updated", freshness),
             ]
             for label, value in fields:
                 click.echo("{:<22} {}".format(label + ":", value))
@@ -801,18 +818,22 @@ class MacsecContext(object):
                     role,
                     _safe_bool(participant.get("is_principal")),
                     _safe_bool(participant.get("active")),
-                    _safe_uint(participant.get("live_peers")),
-                    _safe_uint(participant.get("potential_peers")),
+                    _safe_uint_not_secret(
+                        participant.get("live_peers"), record["secrets"]
+                    ),
+                    _safe_uint_not_secret(
+                        participant.get("potential_peers"), record["secrets"]
+                    ),
                     _safe_bool(participant.get("is_key_server")),
                     _safe_bool(participant.get("is_elected")),
                     _safe_hex(
                         participant.get("mi"), (24,), record["secrets"]
                     ),
-                    _safe_uint(participant.get("mn")),
+                    _safe_uint_not_secret(participant.get("mn"), record["secrets"]),
                 ])
 
-            click.echo("")
             if participant_rows:
+                click.echo("")
                 click.echo(tabulate(
                     participant_rows,
                     headers=[
@@ -828,9 +849,6 @@ class MacsecContext(object):
                         "MN",
                     ],
                 ))
-            else:
-                click.echo("No MACsec MKA participant state found")
-
     @multi_asic_util.run_on_multi_asic
     def show_post_status(self):
         """Show POST (Pre-Operational Self-Test) status"""

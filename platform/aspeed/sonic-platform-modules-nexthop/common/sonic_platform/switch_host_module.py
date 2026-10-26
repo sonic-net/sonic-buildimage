@@ -26,11 +26,14 @@ class SwitchHostModule(ModuleBase):
     switch host CPU, including power management and status reporting.
     """
 
-    # Hardware register constants
-    CPE_CTRL_REG = "0x14C0B208"      # CPU reset control register
-    RESET_VALUE_MASK = 0x3           # Reset control occupies bits [1:0]
-    RESET_VALUE_ASSERT = 0x2         # Bits [1:0] = 2 => drive low (into reset)
-    RESET_VALUE_DEASSERT = 0x3       # Bits [1:0] = 3 => drive high (out of reset)
+    # Switch CPU power-enable line, addressed by its device-tree gpio-line-names
+    # entry and driven through the libgpiod v2 tools.
+    CPE_CTRL_LINE = "cpe_ctrl"
+    GPIO_CONSUMER = "switch-host"
+
+    POWER_OFF_PULSE_COUNT = 2        # Falling edges required to power the CPU off
+    POWER_OFF_PULSE_GAP_MS = 5       # Delay between consecutive level changes
+    POWER_CYCLE_OFF_SEC = 5          # Time the CPU stays off during a power cycle
 
     def __init__(self, module_index=0):
         """
@@ -42,62 +45,79 @@ class SwitchHostModule(ModuleBase):
         super(SwitchHostModule, self).__init__()
         self.module_index = module_index
 
-    def _write_reset_register(self, value):
+    def _gpioset(self, initial_value, toggle_periods_ms=()):
         """
-        Set the reset control bits of the switch CPU reset register using devmem.
+        Drive the power-enable line with gpioset.
 
-        Read-modify-write: only bits [1:0] are updated, every other bit in the
-        register is preserved.
+        The line is set to initial_value, then toggled after each period in
+        toggle_periods_ms. gpioset exits once the sequence is done and the
+        pad keeps driving the final level.
 
         Args:
-            value: Reset control value (int); only bits [1:0] are used
+            initial_value: 0 or 1, level driven first
+            toggle_periods_ms: delays (ms) before each subsequent toggle
+
+        Returns:
+            bool: True if gpioset succeeded, False otherwise
+        """
+        # A trailing 0 period tells gpioset to exit instead of repeating.
+        periods = [f"{p}ms" for p in toggle_periods_ms] + ["0"]
+        cmd = ["gpioset", "--consumer", self.GPIO_CONSUMER,
+               "--toggle", ",".join(periods),
+               f"{self.CPE_CTRL_LINE}={initial_value}"]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            if result.returncode != 0:
+                sys.stderr.write(f"gpioset failed: {result.stderr.strip()}\n")
+                return False
+            return True
+        except Exception as e:
+            sys.stderr.write(f"Failed to run gpioset: {e}\n")
+            return False
+
+    def _read_power_enable(self):
+        """
+        Read the level currently driven on the power-enable line.
+
+        Returns:
+            int: 1 (high) or 0 (low), -1 on error
+        """
+        # --as-is keeps the line configured as an output; a plain gpioget would
+        # reconfigure it as an input and stop driving the CPU.
+        cmd = ["gpioget", "--as-is", "--numeric", self.CPE_CTRL_LINE]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                return int(result.stdout.strip())
+            sys.stderr.write(f"gpioget failed: {result.stderr.strip()}\n")
+        except Exception as e:
+            sys.stderr.write(f"Failed to read power-enable line: {e}\n")
+        return -1
+
+    def _power_on(self):
+        """
+        Drive the power-enable line high.
 
         Returns:
             bool: True if operation succeeded, False otherwise
         """
-        current = self._read_reset_register()
-        if current == -1:
-            sys.stderr.write("Failed to read reset register before write\n")
-            return False
+        return self._gpioset(1)
 
-        new_value = (current & ~self.RESET_VALUE_MASK) | (value & self.RESET_VALUE_MASK)
-        try:
-            cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32", f"0x{new_value:08X}"]
-            result = subprocess.run(cmd, capture_output=True, timeout=5)
-            if result.returncode != 0:
-                sys.stderr.write(f"devmem write failed: {result.stderr}\n")
-                return False
+    def _power_off(self):
+        """
+        Drive POWER_OFF_PULSE_COUNT falling edges on the power-enable line,
+        POWER_OFF_PULSE_GAP_MS apart. The line is left low on return.
+
+        Returns:
+            bool: True if the full pulse train was driven, False otherwise
+        """
+        # Start high and toggle 2n-1 times: high, low, high, low, ...
+        toggles = 2 * self.POWER_OFF_PULSE_COUNT - 1
+        if self._gpioset(1, [self.POWER_OFF_PULSE_GAP_MS] * toggles):
             return True
-        except Exception as e:
-            sys.stderr.write(f"Failed to write reset register: {e}\n")
-            return False
-
-    def _read_reset_register(self):
-        """
-        Read current value from switch CPU reset register.
-
-        Returns:
-            int: Full 32-bit register value, -1 on error
-        """
-        try:
-            cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32"]
-            result = subprocess.run(cmd, capture_output=True, timeout=5, text=True)
-            if result.returncode == 0:
-                # Parse hex value (e.g., "0x00000001")
-                return int(result.stdout.strip(), 16)
-        except Exception as e:
-            sys.stderr.write(f"Failed to read reset register: {e}\n")
-        return -1
-
-    def _is_cpu_released_from_reset(self):
-        """
-        Check if CPU is released from reset.
-
-        Returns:
-            bool: True if CPU is out of reset, False otherwise
-        """
-        value = self._read_reset_register()
-        return bool(value & 0x1)  # 1 = out of reset
+        sys.stderr.write("Power-off pulse train failed; setting line back to high\n")
+        self._power_on()
+        return False
 
     ##############################################
     # Core Power Management APIs
@@ -108,47 +128,42 @@ class SwitchHostModule(ModuleBase):
         Power ON (up=True) or Power OFF (up=False) the switch host CPU.
 
         Args:
-            up: True to power on (release from reset), False to power off (put into reset)
+            up: True to power on, False to power off
 
         Returns:
             bool: True if operation succeeded, False otherwise
         """
         if up:
-            # Power ON: Drive high (release from reset)
-            sys.stderr.write("SwitchHost: Powering ON (releasing from reset)...\n")
-            return self._write_reset_register(self.RESET_VALUE_DEASSERT)
+            sys.stderr.write("SwitchHost: Powering ON...\n")
+            return self._power_on()
         else:
-            # Power OFF: Drive low (assert reset)
-            sys.stderr.write("SwitchHost: Powering OFF (asserting reset)...\n")
-            return self._write_reset_register(self.RESET_VALUE_ASSERT)
+            sys.stderr.write("SwitchHost: Powering OFF...\n")
+            return self._power_off()
 
     def do_power_cycle(self):
         """
         Power cycle the switch host CPU.
 
         Sequence:
-          1. Assert reset (drive low)
-          2. Wait 6 seconds (>=5)
-          3. Deassert reset (drive high)
+          1. Power off
+          2. Wait POWER_CYCLE_OFF_SEC seconds
+          3. Power on
 
         Returns:
             bool: True if operation succeeded, False otherwise
         """
         sys.stderr.write("SwitchHost: Starting power cycle...\n")
 
-        # Step 1: Assert reset (power off)
-        if not self._write_reset_register(self.RESET_VALUE_ASSERT):
-            sys.stderr.write("SwitchHost: Failed to assert reset\n")
+        if not self._power_off():
+            sys.stderr.write("SwitchHost: Failed to power off\n")
             return False
 
-        # 5 seconds is the minimum wait time
-        sys.stderr.write("SwitchHost: Reset asserted, waiting 6 seconds...\n")
+        sys.stderr.write(f"SwitchHost: Powered off, waiting {self.POWER_CYCLE_OFF_SEC} seconds...\n")
 
-        time.sleep(6)
+        time.sleep(self.POWER_CYCLE_OFF_SEC)
 
-        # Step 3: Deassert reset (power on)
-        if not self._write_reset_register(self.RESET_VALUE_DEASSERT):
-            sys.stderr.write("SwitchHost: Failed to deassert reset\n")
+        if not self._power_on():
+            sys.stderr.write("SwitchHost: Failed to power on\n")
             return False
 
         sys.stderr.write("SwitchHost: Power cycle complete\n")
@@ -170,26 +185,23 @@ class SwitchHostModule(ModuleBase):
         """
         Get operational status of the switch host CPU.
 
-        Based on hardware register read:
-          - Register value bit 0 = 1 (out of reset) => MODULE_STATUS_ONLINE
-          - Register value bit 0 = 0 (in reset) => MODULE_STATUS_OFFLINE
-          - Read error => MODULE_STATUS_FAULT
+        Based on the power-enable line level:
+          - high => MODULE_STATUS_ONLINE
+          - low => MODULE_STATUS_OFFLINE
+          - read error => MODULE_STATUS_FAULT
+
+        This reflects the level the BMC last drove, not a measurement of CPU power.
 
         Returns:
             str: One of MODULE_STATUS_ONLINE, MODULE_STATUS_OFFLINE, MODULE_STATUS_FAULT
         """
-        reg_value = self._read_reset_register()
+        level = self._read_power_enable()
 
-        if reg_value == -1:
-            # Read error
+        if level == -1:
             return self.MODULE_STATUS_FAULT
-
-        if self._is_cpu_released_from_reset():
-            # Bit 0 = 1: CPU is out of reset
+        if level:
             return self.MODULE_STATUS_ONLINE
-        else:
-            # Bit 0 = 0: CPU is in reset
-            return self.MODULE_STATUS_OFFLINE
+        return self.MODULE_STATUS_OFFLINE
 
     ##############################################
     # Required ModuleBase Implementations

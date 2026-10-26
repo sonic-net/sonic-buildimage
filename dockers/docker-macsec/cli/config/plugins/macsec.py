@@ -7,6 +7,8 @@ from utilities_common.constants import DEFAULT_NAMESPACE
 from utilities_common.db import Db
 
 SUPPORTED_CKN_LENGTHS = (32, 64)
+DEFAULT_CIPHER_SUITE = "GCM-AES-128"
+TYPE7_SALT_COUNT = 53
 
 
 #
@@ -121,10 +123,14 @@ def validate_cak(ctx, option_name, cak, cipher_suite):
         )
     if not is_hexstring(cak):
         ctx.fail("Expect {} to be a valid hex string".format(option_name))
-    if not cak[:2].isdigit() or int(cak[:2]) >= 53:
+
+
+def validate_type7_salt_index(ctx, option_name, cak, configured=False):
+    if not cak[:2].isdigit() or int(cak[:2]) >= TYPE7_SALT_COUNT:
+        suffix = "; replace the profile before rotation" if configured else ""
         ctx.fail(
-            "Expect {} to use an encoded-key salt index between 00 and 52".format(
-                option_name
+            "Expect {} to use an encoded-key salt index between 00 and {}{}".format(
+                option_name, TYPE7_SALT_COUNT - 1, suffix
             )
         )
 
@@ -132,6 +138,7 @@ def validate_cak(ctx, option_name, cak, cipher_suite):
 def validate_fallback_pair(ctx, fallback_cak, fallback_ckn):
     if (fallback_cak is None) != (fallback_ckn is None):
         ctx.fail("fallback_cak and fallback_ckn must be supplied together")
+    return fallback_cak is not None
 
 
 def normalize_ckn(ckn):
@@ -152,7 +159,7 @@ def profile_is_attached(config_db, profile):
 @macsec_profile.command('add')
 @click.argument('profile', metavar='<profile_name>', required=True)
 @click.option('--priority', metavar='<priority>', required=False, default=255, show_default=True, type=click.IntRange(0, 255), help="For Key server election. In 0-255 range with 0 being the highest priority.")
-@click.option('--cipher_suite', metavar='<cipher_suite>', required=False, default="GCM-AES-128", show_default=True, type=click.Choice(["GCM-AES-128", "GCM-AES-256", "GCM-AES-XPN-128", "GCM-AES-XPN-256"]), help="The cipher suite for MACsec.")
+@click.option('--cipher_suite', metavar='<cipher_suite>', required=False, default=DEFAULT_CIPHER_SUITE, show_default=True, type=click.Choice(["GCM-AES-128", "GCM-AES-256", "GCM-AES-XPN-128", "GCM-AES-XPN-256"]), help="The cipher suite for MACsec.")
 @click.option('--primary_cak', metavar='<primary_cak>', required=True, type=str, help="Primary Connectivity Association Key.")
 @click.option('--primary_ckn', metavar='<primary_ckn>', required=True, type=str, help="Primary CAK Name.")
 @click.option('--fallback_cak', metavar='<fallback_cak>', required=False, type=str, help="Fallback Connectivity Association Key.")
@@ -182,13 +189,15 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn,
     profile_table["cipher_suite"] = cipher_suite
 
     validate_cak(ctx, "primary_cak", primary_cak, cipher_suite)
+    validate_type7_salt_index(ctx, "primary_cak", primary_cak)
     validate_ckn(ctx, "primary_ckn", primary_ckn)
-    validate_fallback_pair(ctx, fallback_cak, fallback_ckn)
+    has_fallback = validate_fallback_pair(ctx, fallback_cak, fallback_ckn)
     profile_table["primary_cak"] = primary_cak
     profile_table["primary_ckn"] = primary_ckn
 
-    if fallback_cak is not None:
+    if has_fallback:
         validate_cak(ctx, "fallback_cak", fallback_cak, cipher_suite)
+        validate_type7_salt_index(ctx, "fallback_cak", fallback_cak)
         validate_ckn(ctx, "fallback_ckn", fallback_ckn)
         if normalize_ckn(primary_ckn) == normalize_ckn(fallback_ckn):
             ctx.fail("primary_ckn and fallback_ckn must differ")
@@ -226,7 +235,7 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn,
 @click.option('--new_ckn', metavar='<new_ckn>', required=True, type=str, help="Replacement CKN.")
 @click.option('--new_cak', metavar='<new_cak>', required=True, type=str, help="Replacement encoded CAK.")
 def update_profile(profile, old_ckn, new_ckn, new_cak):
-    """Replace one configured CA selected by its current CKN."""
+    """Rotate the CAK/CKN pair selected by its current CKN."""
     ctx = click.get_current_context()
     config_db = ctx.obj
     profile_entry = config_db.get_entry("MACSEC_PROFILE", profile)
@@ -237,19 +246,24 @@ def update_profile(profile, old_ckn, new_ckn, new_cak):
     primary_ckn = profile_entry.get("primary_ckn")
     fallback_cak = profile_entry.get("fallback_cak")
     fallback_ckn = profile_entry.get("fallback_ckn")
-    cipher_suite = profile_entry.get("cipher_suite", "GCM-AES-128")
+    cipher_suite = profile_entry.get("cipher_suite", DEFAULT_CIPHER_SUITE)
 
     if not primary_cak or not primary_ckn:
         ctx.fail("{} has an invalid primary CA configuration".format(profile))
     validate_cak(ctx, "configured primary_cak", primary_cak, cipher_suite)
+    validate_type7_salt_index(
+        ctx, "configured primary_cak", primary_cak, configured=True
+    )
     validate_ckn(ctx, "configured primary_ckn", primary_ckn)
-    validate_fallback_pair(ctx, fallback_cak, fallback_ckn)
-    if fallback_cak is None:
+    if not validate_fallback_pair(ctx, fallback_cak, fallback_ckn):
         ctx.fail(
             "profile {} has no fallback CA; create a new profile to replace "
             "a primary-only configuration".format(profile)
         )
     validate_cak(ctx, "configured fallback_cak", fallback_cak, cipher_suite)
+    validate_type7_salt_index(
+        ctx, "configured fallback_cak", fallback_cak, configured=True
+    )
     validate_ckn(ctx, "configured fallback_ckn", fallback_ckn)
     if normalize_ckn(primary_ckn) == normalize_ckn(fallback_ckn):
         ctx.fail("{} has duplicate primary and fallback CKNs".format(profile))
@@ -257,6 +271,7 @@ def update_profile(profile, old_ckn, new_ckn, new_cak):
     validate_ckn(ctx, "old_ckn", old_ckn)
     validate_ckn(ctx, "new_ckn", new_ckn)
     validate_cak(ctx, "new_cak", new_cak, cipher_suite)
+    validate_type7_salt_index(ctx, "new_cak", new_cak)
 
     normalized_old = normalize_ckn(old_ckn)
     normalized_primary = normalize_ckn(primary_ckn)
@@ -284,8 +299,8 @@ def update_profile(profile, old_ckn, new_ckn, new_cak):
     config_db.set_entry("MACSEC_PROFILE", profile, replacement)
     if attached:
         click.echo(
-            "Desired MACsec profile updated; runtime key rotation may be "
-            "deferred per port until safe."
+            "Desired MACsec profile updated; runtime CAK/CKN rotation is "
+            "best-effort per port and may retry after WPA command failure."
         )
 
 

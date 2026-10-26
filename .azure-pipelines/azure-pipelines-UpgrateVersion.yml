@@ -113,7 +113,8 @@ stages:
     - script: |
         mkdir -p target
         default_platform=broadcom
-        artifacts=$(find $(Pipeline.Workspace) -maxdepth 1 -type d -name 'sonic-buildimage.*' | grep -v "sonic-buildimage.${default_platform}")
+        all_artifacts=$(find $(Pipeline.Workspace) -maxdepth 1 -type d -name 'sonic-buildimage.*')
+        artifacts=$(echo "$all_artifacts" | grep -v "sonic-buildimage.${default_platform}")
         echo "artifacts$artifacts"
         cp -r $(Pipeline.Workspace)/sonic-buildimage.${default_platform}/target/versions target/
         make freeze FREEZE_VERSION_OPTIONS=-r
@@ -127,6 +128,24 @@ stages:
           [[ "$artifact" == *arm64* || "$artifact" == *armhf* || "$artifact" == *nvidia-bluefield* ]] && OPTIONS="-d"
           make freeze FREEZE_VERSION_OPTIONS="$OPTIONS"
         done
+        if [[ "$(Build.Reason)" != "Schedule" ]]
+        then
+          echo "Skipping stale Docker version module cleanup for a non-scheduled build."
+        else
+          CHECK_VERSION_OPTIONS=()
+          for artifact in $all_artifacts
+          do
+            CHECK_VERSION_OPTIONS+=("--target_path" "$artifact/target")
+          done
+          if ! scripts/versions_manager.py check \
+            --source_version_path files/build/versions-public \
+            --remove_uncovered \
+            "${CHECK_VERSION_OPTIONS[@]}"
+          then
+            echo "Failed to clean up stale Docker version modules."
+            exit 1
+          fi
+        fi
         git diff files/build/versions-public
       displayName: 'Freeze Versions'
     - script: |
@@ -179,4 +198,3 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/files/build/versions
       artifact: 'sonic-buildimage.versions'
       displayName: 'Archive SONiC versions'
-

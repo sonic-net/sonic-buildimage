@@ -1967,7 +1967,7 @@ def update_forced_mgmt_route(mgmt_intf, mgmt_routes):
 #
 ###############################################################################
 def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hwsku_config_file=None, fabric_port_config_file=None ):
-    """ Parse minigraph xml file.
+    """ Parse minigraph XML without entity substitution or network access.
 
     Keyword arguments:
     filename -- minigraph file name
@@ -1978,7 +1978,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     fabric_port_config_file -- fabric port config file name
      """
 
-    root = ET.parse(filename).getroot()
+    parser = ET.XMLParser(resolve_entities=False, no_network=True)
+    root = ET.parse(filename, parser=parser).getroot()
 
     u_neighbors = None
     u_devices = None
@@ -2906,7 +2907,8 @@ def parse_hostname(filename):
     hostName = None
     if not os.path.isfile(filename):
         return None
-    root = ET.parse(filename).getroot()
+    parser = ET.XMLParser(resolve_entities=False, no_network=True)
+    root = ET.parse(filename, parser=parser).getroot()
     hostname_qn = QName(ns, "Hostname")
     for child in root:
         if child.tag == str(hostname_qn):
@@ -2918,7 +2920,8 @@ def parse_hostname(filename):
 def parse_asic_sub_role(filename, asic_name):
     if not os.path.isfile(filename):
         return None
-    root = ET.parse(filename).getroot()
+    parser = ET.XMLParser(resolve_entities=False, no_network=True)
+    root = ET.parse(filename, parser=parser).getroot()
     for child in root:
         if child.tag == str(QName(ns, "MetadataDeclaration")):
             sub_role, _, _, _, _, _= parse_asic_meta(child, asic_name)
@@ -2926,7 +2929,8 @@ def parse_asic_sub_role(filename, asic_name):
 
 def parse_asic_switch_type(filename, asic_name, hostname):
     if os.path.isfile(filename):
-        root = ET.parse(filename).getroot()
+        parser = ET.XMLParser(resolve_entities=False, no_network=True)
+        root = ET.parse(filename, parser=parser).getroot()
         switch_type, _ = get_chassis_type_and_hostname(root, hostname)
         if switch_type:
             return switch_type
