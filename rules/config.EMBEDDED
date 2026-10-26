@@ -145,3 +145,9 @@ DELAY_ROUTER_ADVERTISER = n
 # run inside an already-warm, pre-imported process instead of cold-starting
 # Python on every call (see OPTIMIZE_CLI in rules/config).
 OPTIMIZE_CLI = y
+
+# Replace supervisord with s6-overlay as PID 1 / process supervisor in derived
+# docker containers (docker-base-trixie). Containers that do not run the
+# entrypoint as PID 1 (--pid=host, e.g. gnmi) fall back to the real supervisord
+# (see OPTIMIZE_SUPD_S6 in rules/config).
+OPTIMIZE_SUPD_S6 = y
