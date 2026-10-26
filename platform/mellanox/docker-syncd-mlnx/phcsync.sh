@@ -24,8 +24,17 @@
 #
 
 PHC_CTL="/usr/sbin/phc_ctl"
+PTP_DEVICE_DIR="/dev"
+PTP_STATE_DIR="/run/phcsync"
 SLEEP_INTERVAL=60
 WARM_BOOT_SLEEP_INTERVAL=30
+
+is_owned_ptp_device() {
+    local dev="$1" identity
+    [[ -c "$dev" && ! -L "$dev" ]] || return 1
+    identity=$(cat "$PTP_STATE_DIR/${dev##*/}" 2>/dev/null) || return 1
+    [[ -n "$identity" && "$identity" == "$(stat -c '%d:%i:%t:%T' "$dev" 2>/dev/null)" ]]
+}
 
 is_warm_reboot_in_progress() {
     if ! command -v sonic-db-cli >/dev/null 2>&1; then
@@ -55,17 +64,38 @@ while :; do
         continue
     fi
     
+    # The driver can unregister/recreate PHCs while this container is retained.
+    # Discover clocks through sysfs instead of Docker --device mappings, which
+    # prevent container startup if a previously mapped host node is absent.
+    if ! mkdir -p -m 0700 "$PTP_STATE_DIR"; then
+        echo "Error: Failed to create $PTP_STATE_DIR" >&2
+        sleep $SLEEP_INTERVAL
+        continue
+    fi
+
+    # Only remove nodes created by this helper, not preexisting or replaced nodes.
+    for record in "$PTP_STATE_DIR"/ptp[0-9]*; do
+        [[ -f "$record" ]] || continue
+        dev="$PTP_DEVICE_DIR/${record##*/}"
+        if ! is_owned_ptp_device "$dev"; then
+            rm -f -- "$record"
+        elif [[ "$(cat "/sys/class/ptp/${dev##*/}/clock_name" 2>/dev/null)" != "sx_ptp" ]]; then
+            rm -f -- "$dev" && rm -f -- "$record"
+        fi
+    done
+
     # Refresh the list of PTP devices on each iteration
-    PTP_DEVICES=$(ls /dev/ptp[0-9]* 2>/dev/null)
+    PTP_DEVICES=$(ls -d /sys/class/ptp/ptp[0-9]* 2>/dev/null)
     
     if [ -z "$PTP_DEVICES" ]; then
         sleep $SLEEP_INTERVAL
         continue
     fi
     
-    for dev in $PTP_DEVICES; do
-        # Extract device number from /dev/ptpXX
-        dev_num=${dev##*/ptp}
+    for clock in $PTP_DEVICES; do
+        # Extract device number from the sysfs PTP path
+        dev_num=${clock##*/ptp}
+        dev="$PTP_DEVICE_DIR/ptp${dev_num}"
 
         clock_name_file="/sys/class/ptp/ptp${dev_num}/clock_name"
         if [[ ! -f "$clock_name_file" ]]; then
@@ -80,7 +110,27 @@ while :; do
             continue
         fi
         
-        if [[ "$clock_name" != "mlx5_ptp" ]]; then
+        if [[ "$clock_name" == "sx_ptp" ]]; then
+            device_number=$(cat "$clock/dev" 2>/dev/null) || continue
+            [[ "$device_number" =~ ^([0-9]+):([0-9]+)$ ]] || continue
+            major=${BASH_REMATCH[1]}
+            minor=${BASH_REMATCH[2]}
+            expected_device=$(printf '%x:%x' "$major" "$minor")
+
+            if [[ -L "$dev" || ( -e "$dev" && ! -c "$dev" ) ]]; then
+                echo "Error: Refusing to replace non-device $dev" >&2
+                continue
+            fi
+            if [[ "$(stat -c '%t:%T' "$dev" 2>/dev/null)" != "$expected_device" ]]; then
+                if [[ -e "$dev" ]] && ! is_owned_ptp_device "$dev"; then
+                    echo "Error: Refusing to replace unowned device $dev" >&2
+                    continue
+                fi
+                rm -f -- "$dev" || continue
+                mknod -m 0600 "$dev" c "$major" "$minor" || continue
+                stat -c '%d:%i:%t:%T' "$dev" > "$PTP_STATE_DIR/${dev##*/}" || continue
+            fi
+
             # set CLOCK_REALTIME
             # Keep successful syncs silent to avoid rsyslogd ratelimit memory issue due to PID churn.
             "$PHC_CTL" -q -Q "$dev" set >/dev/null
