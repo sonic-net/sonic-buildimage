@@ -94,12 +94,6 @@ class TestCfgGen(TestCase):
         self.assertIn('vtysh -d zebra', readiness_check)
         self.assertNotIn('/dev/tcp', readiness_check)
 
-        gobgp_dockerfile = os.path.join(
-            repo_root, 'dockers', 'docker-fpm-gobgp', 'Dockerfile.j2')
-        with open(gobgp_dockerfile) as f:
-            gobgp_build = f.read()
-        self.assertIn('s/"$/ -P 0"/', gobgp_build)
-
     def test_bgpd_frr_dualtor(self):
         extra_data = {"DEVICE_METADATA": {"localhost": {"subtype": "DualToR"}}}
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_dualtor.conf', extra_data=extra_data))

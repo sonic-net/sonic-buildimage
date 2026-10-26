@@ -9,7 +9,7 @@ include $(PLATFORM_PATH)/platform-modules-centec-e530.mk
 include $(PLATFORM_PATH)/platform-modules-fs.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
-             $(DOCKER_FPM)
+             $(DOCKER_FPM_FRR)
 #             $(DOCKER_SYNCD_CENTEC_RPC)
 
 # Inject centec sai into syncd
