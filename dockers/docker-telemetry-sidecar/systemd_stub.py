@@ -68,6 +68,17 @@ GNMI_CLIENT_CERTS: List[Dict[str, Union[str, List[str]]]] = _parse_client_certs(
 logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
 logger.log_notice(f"GNMI_CLIENT_CERTS={GNMI_CLIENT_CERTS}")
 
+# Gate host-side syncing of the two health checkers: container_checker (for
+# monit) and the system-health service_checker.py.  Every sidecar ships the same
+# per-branch checkers, so each sync is gated by its own env flag and the rollout
+# enables them on exactly one sidecar (gnmi).  This keeps the sidecar sync code
+# identical while ensuring a single syncer, so the sidecars never race on the
+# same host files.  Both default off.
+CONTAINER_CHECKER_SYNC_ENABLED = get_bool_env_var("CONTAINER_CHECKER_SYNC_ENABLED", default=False)
+SERVICE_CHECKER_SYNC_ENABLED = get_bool_env_var("SERVICE_CHECKER_SYNC_ENABLED", default=False)
+logger.log_notice(f"CONTAINER_CHECKER_SYNC_ENABLED={CONTAINER_CHECKER_SYNC_ENABLED}")
+logger.log_notice(f"SERVICE_CHECKER_SYNC_ENABLED={SERVICE_CHECKER_SYNC_ENABLED}")
+
 _TELEMETRY_SRC = (
     "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"
     if IS_V1_ENABLED
@@ -162,9 +173,6 @@ POST_COPY_ACTIONS = {
     "/bin/container_checker": [
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "monit"],
-    ],
-    "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py": [
-        ["sudo", "systemctl", "restart", "system-health"],
     ],
     "/usr/share/sonic/scripts/docker-telemetry-sidecar/k8s_pod_control.sh": [
         ["sudo", "systemctl", "daemon-reload"],
@@ -360,21 +368,36 @@ def _cleanup_stale_service_unit() -> None:
 
 def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
-    branch_name = _get_branch_name()
-
-    if branch_name not in ("202411", "202412", "202505"):
-        logger.log_error(f"Unsupported branch '{branch_name}'; aborting sync to trigger rollback")
-        return False
-
-    # For supported branches, use the branch-specific container_checker and service_checker
-    container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
-    service_checker_src = f"/usr/share/sonic/systemd_scripts/service_checker.py_{branch_name}"
-
-    items: List[SyncItem] = SYNC_ITEMS + [
-        SyncItem(container_checker_src, "/bin/container_checker"),
-        SyncItem(service_checker_src, HOST_SERVICE_CHECKER),
-    ]
-    return sync_items(items, POST_COPY_ACTIONS)
+    items: List[SyncItem] = list(SYNC_ITEMS)
+    # ── Health-checker sync (identical across the gnmi/acms/restapi sidecars) ──
+    # The k8s-disabled gnmi container is whitelisted out of both checkers so it
+    # stops raising false "container down" alerts.  Every sidecar ships the same
+    # per-branch checkers; each sync is gated by its own flag so exactly one
+    # sidecar (gnmi) syncs them at runtime and they never race on the host files.
+    post_copy_actions = dict(POST_COPY_ACTIONS)
+    if CONTAINER_CHECKER_SYNC_ENABLED or SERVICE_CHECKER_SYNC_ENABLED:
+        # Detect the host OS branch only when a checker actually needs syncing, so
+        # the default-off path skips version detection (and its nsenter fallback).
+        branch_name = _get_branch_name()
+        if branch_name not in ("202411", "202412", "202505"):
+            logger.log_error(f"Unsupported branch '{branch_name}'; aborting sync to trigger rollback")
+            return False
+        if CONTAINER_CHECKER_SYNC_ENABLED:
+            container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
+            items.append(SyncItem(container_checker_src, "/bin/container_checker"))
+        if SERVICE_CHECKER_SYNC_ENABLED:
+            service_checker_src = f"/usr/share/sonic/systemd_scripts/service_checker.py_{branch_name}"
+            items.append(SyncItem(service_checker_src, HOST_SERVICE_CHECKER, mode=0o644))
+            # healthd imports service_checker once at startup and caches it, so a
+            # freshly synced file only takes effect after a restart.  try-restart
+            # reloads a running daemon but is a no-op when system-health is inactive
+            # (an intentionally-stopped daemon is never started; it picks up the new
+            # file whenever it next starts).  Skipped under --no-post-actions.
+            if POST_COPY_ACTIONS:
+                post_copy_actions[HOST_SERVICE_CHECKER] = [
+                    ["sudo", "systemctl", "try-restart", "system-health"],
+                ]
+    return sync_items(items, post_copy_actions)
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
