@@ -284,7 +284,7 @@ LOG_ERROR_LEVEL = 3
 #         return False
 # END LEGACY CPO
 
-class MicasOe(OptoeOeBase):
+class Oe(OptoeOeBase):
     def __init__(self, oe_id, oe_config, bank=0, base_page=0):
         self.oe_id = int(oe_id)
         cmis_path = oe_config.get("i2c_path")
@@ -325,7 +325,7 @@ class MicasOe(OptoeOeBase):
             return False
 
 
-class MicasElsfp(OptoeElsfpBase):
+class Elsfp(OptoeElsfpBase):
     """Bailly ELS endpoint using community Optoe EEPROM access."""
 
     def __init__(self, els_id, els_config, eeprom_path):

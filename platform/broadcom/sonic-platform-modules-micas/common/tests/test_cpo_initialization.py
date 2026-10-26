@@ -121,11 +121,11 @@ class TestCpoInitialization(unittest.TestCase):
         return self.chassis.Chassis()
 
     def endpoints(self, base_page=4, bank=7):
-        oe = self.cpo.MicasOe(0, {"i2c_path": str(self.directory)}, bank, base_page)
+        oe = self.cpo.Oe(0, {"i2c_path": str(self.directory)}, bank, base_page)
         els_config = {"base_page": base_page, "els_presence": {
             "presence_file": str(self.presence), "presence_offset": "0x0",
             "presence_len": "4", "presence_bit": "1", "presence_value": "0"}}
-        els = self.cpo.MicasElsfp(1, els_config, oe.get_eeprom_path())
+        els = self.cpo.Elsfp(1, els_config, oe.get_eeprom_path())
         return oe, els
 
     def test_full_topology_uses_only_community_cpo_list(self):
@@ -311,11 +311,11 @@ class TestCpoInitialization(unittest.TestCase):
             els.reset()
 
     def test_missing_eeprom_retains_failure_returns(self):
-        oe = self.cpo.MicasOe(0, {})
+        oe = self.cpo.Oe(0, {})
         self.assertIsNone(oe.read_eeprom(0, 1))
         self.assertFalse(oe.write_eeprom(0, 1, b"A"))
         self.assertFalse(oe.check_and_set_eeprom_bank_size())
-        els = self.cpo.MicasElsfp(0, {}, "")
+        els = self.cpo.Elsfp(0, {}, "")
         start = (0xB0 + els.base_page + 1) * 128
         self.assertIsNone(els.read_eeprom(start, 1))
         self.assertFalse(els.write_eeprom(start, 1, b"A"))

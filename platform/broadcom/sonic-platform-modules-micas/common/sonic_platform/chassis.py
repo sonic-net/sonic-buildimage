@@ -23,7 +23,7 @@ try:
     from sonic_py_common import device_info
     from sonic_platform.sfp import Sfp
     # from sonic_platform.cpo import CPO  # Original Micas legacy import.
-    from sonic_platform.cpo import MicasCpo, MicasOe, MicasElsfp
+    from sonic_platform.cpo import MicasCpo, Oe, Elsfp
     from sonic_platform.psu import Psu
     # from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
@@ -720,12 +720,12 @@ class Chassis(ChassisBase):
                 els_name, els_bank = associations["external_laser_source"]
                 oe_config = self._cpo_devices[oe_name]
                 els_config = dict(self._cpo_devices[els_name], **extensions.get(els_name, {}))
-                oe = MicasOe(int(oe_name[2:]), oe_config, bank=oe_bank,
+                oe = Oe(int(oe_name[2:]), oe_config, bank=oe_bank,
                              base_page=els_config.get("base_page", 0))
                 els_path = els_config.get("i2c_path", oe_config.get("i2c_path"))
                 if els_path != oe_config.get("i2c_path"):
                     raise ValueError("Bailly ELS must share its OE EEPROM path")
-                elsfp = MicasElsfp(int(els_name[3:]), els_config, oe.get_eeprom_path())
+                elsfp = Elsfp(int(els_name[3:]), els_config, oe.get_eeprom_path())
                 elsfp.bank = els_bank
                 self._cpo_list[port_id] = MicasCpo(port_id, name, oe, elsfp, lasers)
             self.sfp_present_dict[port_id] = self.STATUS_REMOVED

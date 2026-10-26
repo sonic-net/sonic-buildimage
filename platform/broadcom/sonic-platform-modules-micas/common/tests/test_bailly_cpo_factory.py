@@ -50,13 +50,13 @@ class CommonMemoryElsfp(MemoryAccess, ElsfpBase):
         return super().read_eeprom(offset, size)
 
 
-class BaillyMemoryOe(MemoryAccess, micas.MicasOe):
+class BaillyMemoryOe(MemoryAccess, micas.Oe):
     def __init__(self, bank=0, base_page=0):
         self.data = bytearray(1024 * 1024)
         super().__init__(0, {}, bank=bank, base_page=base_page)
 
 
-class BaillyMemoryElsfp(MemoryAccess, micas.MicasElsfp):
+class BaillyMemoryElsfp(MemoryAccess, micas.Elsfp):
     def __init__(self, base_page=0):
         self.data = bytearray(32768)
         self.reads = []
