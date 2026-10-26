@@ -29,5 +29,4 @@ $(DOCKER_SONIC_REDFISH)_RUN_OPT += -v /host/machine.conf:/host/machine.conf:ro
 $(DOCKER_SONIC_REDFISH)_RUN_OPT += -v /var/lib/bmcweb:/var/lib/bmcweb:rw
 $(DOCKER_SONIC_REDFISH)_RUN_OPT += -v /var/run/redis:/var/run/redis:rw
 $(DOCKER_SONIC_REDFISH)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
-$(DOCKER_SONIC_REDFISH)_RUN_OPT += -p 0.0.0.0:443:18080
 

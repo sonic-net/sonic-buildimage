@@ -1,8 +1,9 @@
 [Unit]
 Description=Port Led Service
-Requires=swss.service pddf-platform-init.service
+Requires=pddf-platform-init.service
 After=swss.service pddf-platform-init.service
-BindsTo=swss.service
+# PartOf follows swss stop/restart without pulling swss in, so port-ledd starts never consume swss's StartLimitBurst budget
+PartOf=swss.service
 
 [Service]
 ExecStart=/usr/local/bin/port_ledd.py

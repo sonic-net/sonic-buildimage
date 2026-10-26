@@ -18,7 +18,7 @@ else
     udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 fi
 
-bridged_syslog_features="dhcp_server redfish"
+bridged_syslog_features="dhcp_server"
 for feature in $bridged_syslog_features; do
     if [ -n "$(sonic-db-cli CONFIG_DB keys "FEATURE|$feature")" ]; then
         docker0_ip=$(ip -o -4 addr list docker0 | awk '{print $4}' | cut -d/ -f1)
@@ -84,9 +84,9 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
         exit 1
     fi
 else
-    if [[ ($NUM_ASIC -gt 1) ]]; then
-        # multi-asic, docker0 IP interface may not be present when rsyslog.service was started.
-        # restart the rsyslog for TCP port socket binding.
+    if [[ ($NUM_ASIC -gt 1) || -n "$docker0_ip" ]]; then
+        # docker0 may not be present when rsyslog.service starts. Restart
+        # whenever the generated configuration binds a docker0 socket.
         systemctl restart rsyslog
     else
         # Config unchanged — just signal rsyslog to re-open log files

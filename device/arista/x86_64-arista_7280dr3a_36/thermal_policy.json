@@ -44,6 +44,20 @@
             ]
         },
         {
+            "name": "any fan missing",
+            "conditions": [
+                {
+                    "type": "fan.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+         },
+         {
             "name": "any fan fault",
             "conditions": [
                 {
@@ -61,7 +75,13 @@
             "name": "normal operations",
             "conditions": [
                 {
-                    "type": "normal"
+                    "type": "thermal.all.normal"
+                },
+                {
+                    "type": "fan.all.presence"
+                },
+                {
+                    "type": "fan.all.normal"
                 }
             ],
             "actions": [
