@@ -101,7 +101,6 @@
 /src/socat/                             @sonic-net/sonic-management
 
 # redis
-/src/redis/                             @sonic-net/sonic-management
 /src/hiredis/                           @sonic-net/sonic-management
 
 # yang
