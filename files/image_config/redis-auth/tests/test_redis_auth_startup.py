@@ -82,13 +82,8 @@ class StartupTest(unittest.TestCase):
         groups.start()
         self.addCleanup(groups.stop)
 
-    def select(self, **modes):
-        if set(modes).issubset({'redis', 'redis_bmp'}):
-            enforce = any(mode == 'enforce' for mode in modes.values())
-            modes = {'mode': 'enforce' if enforce else 'legacy',
-                     'tcp_exceptions': [name for name in ('redis', 'redis_bmp')
-                                        if enforce and modes.get(name) != 'enforce']}
-        self.intent.write_text(json.dumps(modes))
+    def select(self, **intent):
+        self.intent.write_text(json.dumps(intent))
         self.intent.chmod(0o644)
 
     def prepare(self):
@@ -96,12 +91,12 @@ class StartupTest(unittest.TestCase):
 
     def test_absent_or_legacy_is_inactive(self):
         self.assertEqual(self.prepare(), [])
-        self.select(redis='legacy', redis_bmp='legacy')
+        self.select(mode='legacy')
         self.assertEqual(self.prepare(), [])
         self.assertFalse(self.runtime.exists())
 
     def test_explicit_primary_and_bmp_share_one_boot_pair(self):
-        self.select(redis='enforce', redis_bmp='enforce')
+        self.select(mode='enforce')
         self.assertEqual(self.prepare(), ['redis', 'redis_bmp'])
         policy = json.loads((self.runtime / 'local.json').read_text())
         self.assertEqual({entry['unix_socket'] for entry in policy}, {item['unix_socket_path'] for item in startup.configured_instances().values()})
@@ -116,7 +111,7 @@ class StartupTest(unittest.TestCase):
         self.assertEqual(json.loads((self.runtime / 'server/socket-groups.json').read_text()), [27, 100, 1001])
 
     def test_systemd_umask_prepares_both_processes(self):
-        self.select(redis='enforce', redis_bmp='enforce')
+        self.select(mode='enforce')
         previous = os.umask(0o077)
         try:
             self.assertEqual(self.prepare(), ['redis', 'redis_bmp'])
@@ -132,8 +127,8 @@ class StartupTest(unittest.TestCase):
             self.assertEqual(stat.S_IMODE((self.runtime / 'local-system' / name).stat().st_mode), 0o400)
         self.assertEqual((self.runtime / 'local-system/writer.secret').stat().st_ino, inode)
 
-    def test_unknown_process_or_mode_rejected(self):
-        for content in ({'remote_redis': 'enforce'}, {'redis': 'oops'}, ['redis']):
+    def test_unknown_setting_or_mode_rejected(self):
+        for content in ({'unknown': 'enforce'}, {'mode': 'oops'}, ['redis']):
             self.intent.write_text(json.dumps(content))
             self.intent.chmod(0o644)
             with self.assertRaises(startup.CredentialStateError):
@@ -141,36 +136,36 @@ class StartupTest(unittest.TestCase):
         self.assertFalse(self.runtime.exists())
 
     def test_world_writable_intent_rejected(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.intent.chmod(0o666)
         with self.assertRaises(startup.CredentialStateError):
             self.prepare()
 
     def test_symlink_intent_rejected(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         link = self.root / 'link'
         link.symlink_to(self.intent)
         with self.assertRaises(OSError):
             startup.prepare_selected(intent_path=link, runtime=self.runtime)
 
     def test_same_boot_selection_cannot_change(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
-        self.select(redis='enforce', redis_bmp='enforce')
+        self.select(mode='enforce')
         with self.assertRaises(startup.CredentialStateError):
             self.prepare()
-        self.select(redis='legacy')
+        self.select(mode='legacy')
         with self.assertRaises(startup.CredentialStateError):
             self.prepare()
 
     def test_startup_check_fails_without_prepared_runtime(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         with self.assertRaises(OSError):
             startup.runtime_required(intent_path=self.intent, runtime=self.runtime)
         self.assertFalse(self.runtime.exists())
 
     def test_startup_check_rejects_missing_policy_or_acl(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         self.assertTrue(startup.runtime_required(intent_path=self.intent, runtime=self.runtime))
         (self.runtime / 'local.json').unlink()
@@ -179,14 +174,14 @@ class StartupTest(unittest.TestCase):
         self.assertFalse((self.runtime / 'local.json').exists())
 
     def test_startup_check_rejects_changed_acl(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         (self.runtime / 'server/users.acl').write_text('user default on nopass +@all')
         with self.assertRaises(startup.CredentialStateError):
             startup.runtime_required(intent_path=self.intent, runtime=self.runtime)
 
     def test_startup_check_rejects_missing_or_changed_socket_groups(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         groups = self.runtime / 'server/socket-groups.json'
         groups.write_text('[100, 1234]')
@@ -197,14 +192,14 @@ class StartupTest(unittest.TestCase):
             startup.runtime_required(intent_path=self.intent, runtime=self.runtime)
 
     def test_partial_credential_is_not_replaced(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         (self.runtime / 'local-system/writer.secret').unlink()
         with self.assertRaises(startup.CredentialStateError):
             self.prepare()
 
     def test_unsafe_server_directory_rejected(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         for mode in (0o700, 0o750, 0o777):
             with self.subTest(mode=oct(mode)):
@@ -221,7 +216,7 @@ class StartupTest(unittest.TestCase):
 
     def configured(self, database=None, additional=None, policy=None, environ=None, chassis=False):
         if policy is None:
-            self.select(redis='enforce', redis_bmp='enforce')
+            self.select(mode='enforce')
             self.prepare()
             policy = json.loads((self.runtime / 'local.json').read_text())
         return configure.configure(database or self.database(), additional or self.additional(), policy,
@@ -229,7 +224,7 @@ class StartupTest(unittest.TestCase):
                                    environ=environ or {}, chassis=chassis)
 
     def test_only_selected_process_metadata_changes(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         database, additional = self.database(), self.additional()
         bmp = copy.deepcopy(database['INSTANCES']['redis_bmp'])
@@ -260,7 +255,7 @@ class StartupTest(unittest.TestCase):
             self.configured(additional=additional)
 
     def test_ambiguous_or_tcp_policy_rejected(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         entry = json.loads((self.runtime / 'local.json').read_text())[0]
         with self.assertRaises(ValueError):
@@ -286,7 +281,7 @@ class StartupTest(unittest.TestCase):
             self.configured(database=database, policy=json.loads((self.runtime / 'local.json').read_text()))
 
     def test_redis_uid_reads_acl_but_not_password(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         identity = pwd.getpwnam('redis')
         secret = self.runtime / 'local-system/writer.secret'
@@ -305,7 +300,7 @@ class StartupTest(unittest.TestCase):
         import jinja2
         template = jinja2.Template((ROOT / 'dockers/docker-database/supervisord.conf.j2').read_text())
         database, additional = self.database(), self.additional()
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         self.configured(database, additional, json.loads((self.runtime / 'local.json').read_text()))
         for name, extra in additional['INSTANCES'].items():
@@ -379,7 +374,7 @@ class StartupTest(unittest.TestCase):
                 self.assertEqual(result.stdout, expected, (name, mode, mounts, marker))
 
     def test_real_redis_readers_and_writers_on_all_databases(self):
-        self.select(redis='enforce', redis_bmp='enforce')
+        self.select(mode='enforce')
         previous = os.umask(0o077)
         try:
             self.prepare()
@@ -496,7 +491,7 @@ class StartupTest(unittest.TestCase):
                               preexec_fn=demote, text=True, capture_output=True)
 
     def test_mixed_sockets_admit_existing_readers_without_opening_legacy(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         selected, legacy = self.root / 'sockets/redis.sock', self.root / 'sockets/redis_bmp.sock'
         self.start_socket_server(selected, enforce=True)
@@ -572,7 +567,7 @@ class StartupTest(unittest.TestCase):
         subscription_check()
 
     def test_reader_access_returns_after_redis_process_recreates_socket(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         path = self.root / 'sockets/redis.sock'
         process = self.start_socket_server(path, enforce=True)
@@ -589,7 +584,7 @@ class StartupTest(unittest.TestCase):
         self.assertNotEqual(self.as_reader(path, 'PING', gid=65534).returncode, 0)
 
     def test_socket_acl_failure_stops_the_redis_child(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         path = self.root / 'failed.sock'
         pidfile = self.root / 'failed.pid'
@@ -611,7 +606,7 @@ class StartupTest(unittest.TestCase):
             os.kill(child, 0)
 
     def test_socket_helper_preserves_early_redis_failure_status(self):
-        self.select(redis='enforce')
+        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
         self.prepare()
         self.assertEqual(server.run(self.root / 'absent.sock',
                                     [sys.executable, '-c', 'import sys; sys.exit(23)'],

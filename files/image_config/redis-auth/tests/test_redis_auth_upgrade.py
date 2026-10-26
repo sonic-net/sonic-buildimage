@@ -37,7 +37,7 @@ def test_restore_preserves_explicit_mode_and_permissions(tmp_path, mode, selecte
     backup = config / 'old_config'
     backup.mkdir(parents=True)
     original = backup / 'redis-auth.json'
-    content = json.dumps({'redis': mode, 'redis_bmp': mode}) + '\n'
+    content = json.dumps({'mode': mode}) + '\n'
     original.write_text(content)
     original.chmod(0o600)
     assert restore(config).returncode == 0
@@ -52,10 +52,10 @@ def test_restore_preserves_explicit_mode_and_permissions(tmp_path, mode, selecte
 def test_absent_backup_does_not_change_existing_selection(tmp_path):
     (tmp_path / 'old_config').mkdir()
     target = tmp_path / 'redis-auth.json'
-    target.write_text('{"redis":"legacy"}')
+    target.write_text('{"mode":"legacy"}')
     before = target.stat()
     assert restore(tmp_path).returncode == 0
-    assert target.read_text() == '{"redis":"legacy"}'
+    assert target.read_text() == '{"mode":"legacy"}'
     assert target.stat().st_ino == before.st_ino
 
 
@@ -63,7 +63,7 @@ def test_unsafe_mode_stays_rejected_after_copy(tmp_path):
     backup = tmp_path / 'old_config'
     backup.mkdir()
     original = backup / 'redis-auth.json'
-    original.write_text('{"redis":"enforce"}')
+    original.write_text('{"mode":"enforce"}')
     original.chmod(0o666)
     assert restore(tmp_path).returncode == 0
     with pytest.raises(CredentialStateError, match='unsafe'):
@@ -74,7 +74,7 @@ def test_symlink_stays_rejected_after_copy(tmp_path):
     backup = tmp_path / 'old_config'
     backup.mkdir()
     source = tmp_path / 'target.json'
-    source.write_text('{"redis":"enforce"}')
+    source.write_text('{"mode":"enforce"}')
     (backup / 'redis-auth.json').symlink_to(source)
     assert restore(tmp_path).returncode == 0
     assert (tmp_path / 'redis-auth.json').is_symlink()
@@ -85,7 +85,7 @@ def test_symlink_stays_rejected_after_copy(tmp_path):
 def test_copy_failure_stops_restoration(tmp_path):
     backup = tmp_path / 'old_config'
     backup.mkdir()
-    (backup / 'redis-auth.json').write_text('{"redis":"enforce"}')
+    (backup / 'redis-auth.json').write_text('{"mode":"enforce"}')
     assert restore(tmp_path, 'cp() { return 7; }\n').returncode == 7
     assert not (tmp_path / 'redis-auth.json').exists()
 
@@ -93,7 +93,7 @@ def test_copy_failure_stops_restoration(tmp_path):
 def test_build_disabled_skips_restoration_failure(tmp_path):
     backup = tmp_path / 'old_config'
     backup.mkdir()
-    (backup / 'redis-auth.json').write_text('{"redis":"enforce"}')
+    (backup / 'redis-auth.json').write_text('{"mode":"enforce"}')
     (tmp_path / 'build-enabled').write_text('n\n')
     assert restore(tmp_path, 'cp() { return 7; }\n').returncode == 0
     assert not (tmp_path / 'redis-auth.json').exists()
@@ -119,7 +119,7 @@ def test_failed_backup_move_stops_before_preparation(tmp_path):
     host = tmp_path / 'host'
     backup = host / 'old_config'
     backup.mkdir(parents=True)
-    (backup / 'redis-auth.json').write_text('{"redis":"enforce"}')
+    (backup / 'redis-auth.json').write_text('{"mode":"enforce"}')
     script = RC_LOCAL.read_text()
     start = script.index('    if [ -d /host/old_config ]; then')
     end = script.index('    elif [ -f /host/minigraph.xml ]; then', start)
@@ -140,9 +140,9 @@ def test_first_boot_marks_migration_before_preparation_restores_policy(tmp_path)
     host = tmp_path / 'host'
     original = host / 'old_config/redis-auth.json'
     original.parent.mkdir(parents=True)
-    original.write_text('{"redis":"enforce","redis_bmp":"enforce"}')
+    original.write_text('{"mode":"enforce"}')
     original.chmod(0o600)
-    (config / 'redis-auth.json').write_text('{"redis":"legacy"}')
+    (config / 'redis-auth.json').write_text('{"mode":"legacy"}')
     source = RC_LOCAL.read_text()
     start = source.index('    if [ -d /host/old_config ]; then')
     end = source.index('    elif [ -f /host/minigraph.xml ]; then', start)
@@ -151,7 +151,7 @@ def test_first_boot_marks_migration_before_preparation_restores_policy(tmp_path)
     script = script.replace('/host', shlex.quote(str(host)))
     result = subprocess.run(['bash', '-ec', script], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert (config / 'redis-auth.json').read_text() == '{"redis":"legacy"}'
+    assert (config / 'redis-auth.json').read_text() == '{"mode":"legacy"}'
     assert restore(config, pending=False).returncode == 0
     assert startup.selected_processes(config / 'redis-auth.json') == ['redis', 'redis_bmp']
     assert (config / 'pending_config_migration').exists()
@@ -161,7 +161,7 @@ def test_first_boot_marks_migration_before_preparation_restores_policy(tmp_path)
 def test_untrusted_owner_stays_rejected_after_copy(tmp_path):
     original = tmp_path / 'old_config/redis-auth.json'
     original.parent.mkdir()
-    original.write_text('{"redis":"enforce"}')
+    original.write_text('{"mode":"enforce"}')
     original.chmod(0o600)
     os.chown(original, 65534, 65534)
     assert restore(tmp_path).returncode == 0
@@ -175,7 +175,7 @@ def test_failed_copy_retries_moved_backup_without_rerunning_first_boot(tmp_path)
     host = tmp_path / 'host'
     original = host / 'old_config/redis-auth.json'
     original.parent.mkdir(parents=True)
-    original.write_text('{"redis":"enforce","redis_bmp":"enforce"}')
+    original.write_text('{"mode":"enforce"}')
     original.chmod(0o600)
     source = RC_LOCAL.read_text()
     start = source.index('    if [ -d /host/old_config ]; then')
@@ -199,19 +199,19 @@ def test_failed_copy_retries_moved_backup_without_rerunning_first_boot(tmp_path)
 def test_completed_migration_does_not_restore_old_selection(tmp_path):
     backup = tmp_path / 'old_config/redis-auth.json'
     backup.parent.mkdir()
-    backup.write_text('{"redis":"enforce"}')
+    backup.write_text('{"mode":"enforce"}')
     target = tmp_path / 'redis-auth.json'
-    target.write_text('{"redis":"legacy"}')
+    target.write_text('{"mode":"legacy"}')
     before = target.stat()
     assert restore(tmp_path, pending=False).returncode == 0
-    assert target.read_text() == '{"redis":"legacy"}'
+    assert target.read_text() == '{"mode":"legacy"}'
     assert target.stat().st_ino == before.st_ino
 
 
 def test_real_directory_copy_failure_preserves_backup_and_allows_retry(tmp_path):
     original = tmp_path / 'old_config/redis-auth.json'
     original.parent.mkdir()
-    content = '{"redis":"enforce","redis_bmp":"enforce"}'
+    content = '{"mode":"enforce"}'
     original.write_text(content)
     original.chmod(0o600)
     target = tmp_path / 'redis-auth.json'

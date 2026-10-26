@@ -1,4 +1,4 @@
-"""Common activation, earlier-format compatibility and generated process inventory."""
+"""Common activation and generated process inventory."""
 import copy
 import json
 import os
@@ -19,10 +19,8 @@ def boot(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('setting,mode', [({}, 'legacy'), ({'mode': 'legacy'}, 'legacy'),
-    ({'mode': 'enforce'}, 'enforce'), ({'redis': 'legacy'}, 'legacy'),
-    ({'redis_bmp': 'legacy'}, 'legacy'), ({'redis': 'legacy', 'redis_bmp': 'legacy'}, 'legacy'),
-    ({'redis': 'enforce', 'redis_bmp': 'enforce'}, 'enforce')])
-def test_normalization_preserves_stored_file(boot, setting, mode):
+    ({'mode': 'enforce'}, 'enforce')])
+def test_common_activation_preserves_stored_file(boot, setting, mode):
     intent, _ = boot
     content = json.dumps(setting)
     intent.write_text(content)
@@ -31,11 +29,9 @@ def test_normalization_preserves_stored_file(boot, setting, mode):
 
 
 @pytest.mark.parametrize('setting', [
-    {'redis': 'enforce'}, {'redis_bmp': 'enforce'}, {'redis': 'enforce', 'redis_bmp': 'legacy'},
-    {'redis': 'enforce', 'mode': 'enforce'}, {'redis_bmp': 'legacy', 'tcp_exceptions': []},
     {'mode': 'auto'}, {'mode': True}, {'unknown': 'legacy'}, {'tcp_exceptions': 'redis_bmp'},
     {'tcp_exceptions': [None]}, {'tcp_exceptions': ['redis_bmp', 'redis_bmp']}, []])
-def test_invalid_or_ambiguous_activation_is_rejected(boot, setting):
+def test_invalid_activation_is_rejected(boot, setting):
     intent, runtime = boot
     intent.write_text(json.dumps(setting))
     with pytest.raises(startup.CredentialStateError):

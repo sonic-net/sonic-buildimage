@@ -49,21 +49,13 @@ def build_enabled():
 
 
 def read_intent(path=INTENT):
-    """Normalize compatible earlier settings without rewriting the saved file."""
+    """Read the common activation mode and optional TCP exceptions."""
     try:
         intent = json.loads(read_setting(path))
     except FileNotFoundError:
         intent = {}
     if not isinstance(intent, dict):
         raise CredentialStateError('expected a Redis activation object')
-    earlier = {'redis', 'redis_bmp'}
-    if earlier.intersection(intent):
-        if set(intent) - earlier or any(value not in ('legacy', 'enforce') for value in intent.values()):
-            raise CredentialStateError('invalid earlier Redis activation setting')
-        modes = {intent.get(name, 'legacy') for name in earlier}
-        if len(modes) != 1:
-            raise CredentialStateError('mixed earlier Redis modes require an explicit common setting')
-        intent = {'mode': modes.pop()}
     exceptions = intent.get('tcp_exceptions', [])
     if (set(intent) - {'mode', 'tcp_exceptions'} or intent.get('mode', 'legacy') not in ('legacy', 'enforce')
             or not isinstance(exceptions, list) or any(not isinstance(name, str) or not name for name in exceptions)

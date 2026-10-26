@@ -21,13 +21,13 @@ def boot(tmp_path, monkeypatch):
     marker.write_text('n\n')
     marker.chmod(0o644)
     intent = tmp_path / 'redis-auth.json'
-    intent.write_text(json.dumps({'redis': 'enforce', 'redis_bmp': 'enforce'}))
+    intent.write_text(json.dumps({'mode': 'enforce'}))
     intent.chmod(0o600)
     monkeypatch.setattr(startup, 'BUILD_SETTING', marker)
     return marker, intent, tmp_path / 'runtime'
 
 
-@pytest.mark.parametrize('content', ['{"redis":"enforce","redis_bmp":"enforce"}', '{'])
+@pytest.mark.parametrize('content', ['{"mode":"enforce"}', '{'])
 def test_disabled_build_ignores_restored_activation_and_creates_no_runtime(boot, content):
     marker, intent, runtime = boot
     intent.write_text(content)
