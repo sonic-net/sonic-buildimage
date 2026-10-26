@@ -82,11 +82,11 @@ class TestBaillyCpoFactory(unittest.TestCase):
         other = BaillyMemoryOe(bank=0, base_page=4).get_api().xcvr_eeprom.mem_map.get_field(consts.TX_DISABLE_FIELD)
         self.assertNotEqual(field.get_offset(), other.get_offset())
 
-    def test_bailly_els_does_not_probe_oe_lower_memory(self):
+    def test_bailly_els_preserves_identification_and_rlm_pages(self):
         els = BaillyMemoryElsfp(base_page=4)
         api = els.get_api()
         self.assertIsInstance(api, BaillyElsfpApi)
-        self.assertEqual(els.reads, [])
+        self.assertEqual(els.reads, [(129, 16), (148, 16)])
         self.assertEqual(api.xcvr_eeprom.mem_map.base_page, 4)
         self.assertEqual([page.page for page in api.xcvr_eeprom.mem_map.pages], [0xB4, 0xB5, 0xB6])
         with self.assertRaises(KeyError):
