@@ -1,0 +1,13 @@
+{
+    "chassis": {
+        "AS9817-64O-O-AC-F": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
