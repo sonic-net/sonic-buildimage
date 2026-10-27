@@ -14,7 +14,7 @@ from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.ci import build, command_log, public_artifacts, resolution
+from tools.bazel.ci import build, cache_reuse, command_log, public_artifacts, resolution
 from tools.bazel.ci.artifact_validation import require, sha
 from tools.bazel.ci.bazel_commands import inspect_actions
 from tools.bazel.gzip.source_archive import check_versions
@@ -27,6 +27,7 @@ SOURCE_FILES = (
     ".bazelversion", ".bazelrc", ".bazelignore", "MODULE.bazel",
     "tools/bazel/ci/container.py", "tools/bazel/ci/build.py",
     "tools/bazel/ci/command_log.py", "tools/bazel/ci/bazel_commands.py",
+    "tools/bazel/ci/cache_reuse.py",
     "tools/bazel/ci/artifact_validation.py", "tools/bazel/ci/resolution.py",
     "tools/bazel/gzip/source_archive.py", "tools/bazel/ci/public_artifacts.py",
     "tools/bazel/prepare_manifests.mk", "rules/functions", ".github/workflows/bazel-oci.yml",
@@ -132,7 +133,7 @@ def collect_test_outputs(events, artifacts, targets, labels=None):
     return collected, validations
 
 
-def run(container, *, workspace, artifacts, bazel, options, source_files=()):
+def run(container, *, workspace, artifacts, bazel, options, source_files=(), reuse_build=False):
     """Run the owner's Bazel CI targets and retain their outputs and failure evidence."""
     require(container.startswith("//") and ":" not in container and
             all(part not in ("", ".", "..") for part in container[2:].split("/")),
@@ -158,8 +159,19 @@ def run(container, *, workspace, artifacts, bazel, options, source_files=()):
         require(version == "bazel " + (workspace / ".bazelversion").read_text().strip(),
                 "Bazel version does not match .bazelversion: " + version)
         receipt["bazel_version"] = version
-        require(not (workspace / "MODULE.bazel.lock").exists(),
-                "CI must start without a preexisting MODULE.bazel.lock")
+        lock = workspace / "MODULE.bazel.lock"
+        if reuse_build:
+            require(lock.is_file() and not lock.is_symlink() and lock.stat().st_size > 0,
+                    "post-build validation requires the build's generated MODULE.bazel.lock")
+            require(not execute(["git", "ls-files", "--", "MODULE.bazel.lock"],
+                                artifacts, receipt, "tracked-lock").strip(),
+                    "MODULE.bazel.lock must be generated, not tracked")
+            execute(["git", "check-ignore", "--quiet", "MODULE.bazel.lock"],
+                    artifacts, receipt, "ignored-lock")
+            receipt["initial_module_lock_sha256"] = sha(lock)
+        else:
+            require(not lock.exists(), "CI must start without a preexisting MODULE.bazel.lock")
+        receipt["dependency_state"] = "existing-build" if reuse_build else "cold"
         tests = query_tests(suite, bazel, artifacts, receipt, execute)
         targets = [*tests, artifact_target]
         sources = declared_sources(targets, bazel, workspace, artifacts, receipt, execute, source_files)
@@ -178,6 +190,26 @@ def run(container, *, workspace, artifacts, bazel, options, source_files=()):
         require(not audit["deb_outputs"] and not audit["packaging_wrappers"],
                 "container CI contains a DEB or packaging wrapper action")
 
+        exported = None
+        if reuse_build:
+            # Materialize production outputs before tests can populate their
+            # cache. Keep the complete spawn commands and environments private.
+            execution_log = artifacts / "artifact-execution.raw.json"
+            execution_log.touch(mode=0o600, exist_ok=False)
+            try:
+                exported = build.collect_artifacts(
+                    workspace, artifacts, receipt, artifact_target, bazel=bazel,
+                    options=options, execution_log=execution_log)
+                receipt["cache_reuse"] = cache_reuse.collect(
+                    execution_log, artifacts / "build-events.jsonl", artifact_target)
+            finally:
+                execution_log.unlink(missing_ok=True)
+            evidence = receipt["cache_reuse"]
+            print(json.dumps({"cache_reuse": {
+                **{key: value for key, value in evidence.items() if key != "actions"},
+                "uncached_actions": [action for action in evidence["actions"] if not action["cache_hit"]]}},
+                sort_keys=True), flush=True)
+
         labels = configured_test_labels(tests, bazel, options, artifacts, receipt, execute)
         events = artifacts / "test-events.jsonl"
         events.touch(mode=0o600, exist_ok=False)
@@ -189,7 +221,8 @@ def run(container, *, workspace, artifacts, bazel, options, source_files=()):
         require(len(validations) <= 1, "CI suite produced ambiguous package validation summaries")
         if validations:
             receipt["validation"] = next(iter(validations.values()))
-        exported = build.collect_artifacts(workspace, artifacts, receipt, artifact_target, bazel=bazel, options=options)
+        if exported is None:
+            exported = build.collect_artifacts(workspace, artifacts, receipt, artifact_target, bazel=bazel, options=options)
         if validations:
             validation = receipt["validation"]
             require(isinstance(validation, dict), "package validation must be an object")
@@ -197,7 +230,8 @@ def run(container, *, workspace, artifacts, bazel, options, source_files=()):
             published = {name: receipt["artifacts"][name]["sha256"] for name in exported}
             require(validated and validated == published,
                     "published artifacts differ from validated archive names or bytes")
-        receipt["resolution"] = resolution.collect(workspace, artifacts, bazel=[bazel])
+        receipt["resolution"] = resolution.collect(
+            workspace, artifacts, bazel=[bazel], source_files=sources if reuse_build else None)
         check_versions(artifacts / "module-graph.json")
         require({name: sha(workspace / name) for name in sources} == before,
                 "container CI changed a checked source or package lock")
@@ -206,6 +240,8 @@ def run(container, *, workspace, artifacts, bazel, options, source_files=()):
                   "module_lock_sha256": sha(workspace / "MODULE.bazel.lock"),
                   "execution_gate_audit": "execution-gate-audit.json", "scope": scope,
                   "ci_tests": suite, "ci_artifacts": artifact_target}
+        if reuse_build:
+            report["cache_reuse"] = receipt["cache_reuse"]
         (artifacts / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         receipt["status"] = "passed"
     except Exception as error:
@@ -224,10 +260,13 @@ def main(argv=None):
     parser.add_argument("--source-file", action="append", default=[],
                         help="Additional workspace-relative preparation input to retain in source evidence")
     parser.add_argument("--artifacts", required=True, type=Path)
+    parser.add_argument("--reuse-build", action="store_true",
+                        help="Validate in the Make build workspace, keeping its generated lock and cached outputs")
     args = parser.parse_args(argv)
     try:
         run(args.container, workspace=ROOT, artifacts=args.artifacts.resolve(), bazel=args.bazel,
-            options=[*OPTIONS, *args.bazel_arg], source_files=args.source_file)
+            options=[*OPTIONS, *args.bazel_arg], source_files=args.source_file,
+            reuse_build=args.reuse_build)
     except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as error:
         parser.exit(1, "container CI failed: " + str(error) + "\n")
 

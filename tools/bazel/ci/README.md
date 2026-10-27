@@ -6,32 +6,58 @@ package expectations remain in the owner declarations and tests.
 
 [`.github/workflows/bazel-oci.yml`](../../../.github/workflows/bazel-oci.yml) is
 the shared entrypoint for Bazel OCI container CI. It runs common AMD64/ARM64
-archive checks, SWSS source checks, Syncd contract checks and the existing full
-VS integration job. Add checks for future OCI containers as jobs in this
-workflow, keeping their target lists and package contracts with each container.
+archive checks, lightweight hosted regressions and the full VS integration
+job. SWSS and Syncd source-package checks run after Make in that VS job, using
+its checkout, Trixie builder, platform/feature flags and persistent Bazel action
+cache. The private builder output bases remain separate; cached outputs can
+be restored without recompiling the same source packages. Add checks for future
+OCI containers in this workflow, keeping their target lists and package contracts with each container.
+Keep checks that compile image inputs in the full build job so they can reuse
+its action outputs.
 The owning BUILD files sit beside the original container inputs:
 [`dockers/docker-orchagent/BUILD.bazel`](../../../dockers/docker-orchagent/BUILD.bazel)
 and [`platform/vs/docker-syncd-vs/BUILD.bazel`](../../../platform/vs/docker-syncd-vs/BUILD.bazel).
 The shared runner accepts either package path; it does not require owners to
 live under `dockers/`.
 Manual runs default to `skip_vs=true`; same-repository PRs retain the full VS
-job after the SWSS source checks pass.
+job after hosted regressions and dependency resolution pass. Fork PRs and
+manual `skip_vs=true` runs omit source-package/full-image validation; hosted
+success alone does not establish those results.
 
 - `container.py` runs an owner's `:ci_tests` test suite and builds its
   `:ci_artifacts` filegroup. Tests and exported files are declared in the
   container's `BUILD.bazel`; no Python CI configuration or callback is loaded.
-  For example, after the workflow's existing Make manifest preparation:
+  For example, for separate cold runs after preparing the matching Make
+  manifests (use separate clean workspaces for these examples):
 
   ```sh
   python3 -B tools/bazel/ci/container.py \
     --container //dockers/docker-orchagent --source-file rules/docker-orchagent.mk --bazel bazel --artifacts artifacts/swss
   python3 -B tools/bazel/ci/container.py \
-    --container //platform/vs/docker-syncd-vs --source-file platform/vs/docker-syncd-vs.mk --bazel bazel --artifacts artifacts/syncd-vs/bazel
+    --container //platform/vs/docker-syncd-vs --source-file platform/vs/docker-syncd-vs.mk \
+    --bazel-arg=--config=syncd-dash --bazel bazel --artifacts artifacts/syncd-vs/bazel
   ```
 
   Start from native AMD64 Trixie without `MODULE.bazel.lock` and use an empty
-  artifact directory. The runner expands nested test suites, audits their actual
-  targets and the artifact group before execution, runs uncached tests, collects
+  artifact directory. To validate after Make, pass `--reuse-build`: it requires
+  the existing nonempty, ignored and untracked generated lock, records its
+  initial hash, and retains the tested lock/graph afterward. It never deletes
+  the lock, clears outputs or disables package/source checks. Use Make's exact
+  feature flags (currently `--//dockers/docker-orchagent:source_config_engine=true`
+  for FIPS SWSS, `--config=syncd-dash` for Syncd), both native platform flags,
+  and the same cache/download options. In this mode, the Git cleanliness check
+  covers the declared Bazel inputs and their containing submodules, allowing
+  unrelated legacy Make submodules to create their normal build patches.
+  Changes to validated inputs or their submodule commits still fail.
+  In reuse mode the artifact group is built before any tests, using Bazel's
+  execution log to record cache hits and executed actions by target and mnemonic.
+  The raw log is private and deleted after extracting those counts; no command,
+  environment or file-path fields are published. This distinguishes reuse of
+  Make's production outputs from later test-only compilation. Cache misses are
+  reported for inspection rather than hidden or treated as a test failure.
+  Reuse Make's generated manifests rather
+  than rerendering them with different defaults. The runner expands nested test
+  suites, audits their actual targets and the artifact group before execution, runs uncached tests, collects
   configured logs/XML and package-check summaries, and exports the group's files
   under their declared basenames. Duplicate output filenames fail; an empty
   artifact group is valid for contract-only CI. Dependency resolution and source
@@ -62,15 +88,17 @@ job after the SWSS source checks pass.
   output path. Owner package checks run as Bazel tests with declared source inputs.
   A package test records every validated archive's basename and SHA256 in
   `validation.artifact_sha256`. The runner and public upload collector require
-  the exported names and bytes to match. The real source-layer test uses the
-  default configuration so its inputs match the artifact filegroup.
+  the exported names and bytes to match. The source-layer test and artifact filegroup use identical build options
+  so their inputs and exported bytes match.
 - `command_log.py` captures command output and timings while keeping diagnostic
   messages separate from queried artifact paths. Callers supply the working
   directory and evidence directory. The shared runner sends raw action-graph
   stdout to a temporary private file, retains only stderr in the log and removes
   the raw graph after its execution audit, including on failure.
 - `public_artifacts.py` prepares explicit public upload lists for the archive,
-  SWSS source, VS and syncd contract jobs. Container jobs compare the expanded
+  SWSS source, VS and Syncd contract evidence. The three source/image artifact
+  selections now run in the VS job; the successful VS summary also requires
+  matching successful SWSS and Syncd summaries. Container jobs compare the expanded
   suite identities with successful build-event results instead of maintaining
   a second fixed test count. Successful jobs retain their expected
   build outputs and validated dependency JSON, plus summaries containing only

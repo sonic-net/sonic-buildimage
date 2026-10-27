@@ -1,7 +1,7 @@
-# One-job OCI and VS build runner
+# One-job VS build runner
 
 These scripts provision a dedicated Linux x86_64 host and arm one GitHub Actions
-runner for one OCI source-check or full VS image job. The default repository is
+runner for one full VS image job. The default repository is
 `securely1g/sonic-buildimage`; use `--master` for the current shared VS pool,
 and pass `--repo owner/name` to select another repository. Same-repository PR
 builds and enabled manual builds use its existing `sonic-vs-source-master`
@@ -9,23 +9,21 @@ label. The workflow's event selects the source revision; the pool name does not
 force PR builds onto master. GitHub assigns an eligible queued job when the
 single runner becomes available.
 
-The SWSS and Syncd source jobs also use this pool for same-repository PRs,
-master pushes and manual runs. Fork PRs retain hosted runners. These checks
-build the real P4C, PI, BMv2 and FIPS TARs required by generated package metadata;
-the hosted Syncd runner ran out of disk while copying P4C's debug binaries.
-Dedicated source jobs use the existing 100 GiB workspace admission floor on
-each filesystem holding outputs or caches. This is an admission threshold, not
-a measured maximum build size.
-They retain the pinned Debian Trixie job container.
+GitHub-hosted `ubuntu-24.04` runs lightweight OCI regressions, checks clean
+Bazel dependency resolution, and retains verified source downloads plus the
+Redis test helper. It does not compile SWSS or Syncd packages.
 
-Both source jobs share `/data/sonic-runner/cache/sonic-buildimage/oci`, mounted
-at `/bazel_cache`. This cache belongs to their root-run job containers and is
-separate from the Make builder's `bazel` cache, preserving its ownership.
-They reuse `tools/bazel/slave.bazelrc` for repository and action-cache settings
-and retain Bazelisk downloads there. GitHub cache upload/download is disabled
-for these dedicated jobs. After Bazel setup and public evidence upload both succeed, the job
-shuts down Bazel and removes only its private output base; the shared cache,
-checkout and retained evidence remain.
+The full VS job builds the images on P330, then runs both owners' source-package
+validation in the same checkout through the Trixie Make builder. The validation
+uses the same platform/feature options and persistent Bazel action cache as
+Make. Each disposable builder still has its own output base; cached action
+outputs are restored rather than recompiling the source packages. Test-only
+inputs and uncached tests may execute. SWSS TARs and Syncd package evidence
+retain their existing artifact names and validation requirements.
+
+Fork PRs and manual runs with `skip_vs=true` run only hosted checks, including
+the separate native AMD64/ARM64 archive jobs. They do not publish successful
+SWSS/Syncd source-package or full-image validation evidence.
 
 `--pr NUMBER` remains available for older or separately configured workflows
 that request `sonic-vs-source-pr-NUMBER`. A runner gets only its selected custom

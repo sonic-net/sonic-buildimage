@@ -2,7 +2,9 @@
 
 import json
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -108,6 +110,116 @@ class GraphInspectionTest(unittest.TestCase):
         graph = json.loads(GRAPH)
         graph["dependencies"].append({"key": "rules_apple@3.5.1", "unexpanded": True})
         self.assertEqual(resolution.inspect_graph(json.dumps(graph), ERRORS, 2)["module_count"], 3)
+
+
+class SourceScopeTest(unittest.TestCase):
+    """Exercise post-Make provenance checks against real Git submodule state."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        directory = Path(self.temporary.name)
+        self.root = directory / "workspace"
+        component = directory / "component"
+        for repository in (self.root, component):
+            repository.mkdir()
+            self.git(repository, "init", "--quiet")
+            self.git(repository, "config", "user.name", "SONiC test")
+            self.git(repository, "config", "user.email", "securely1g@gmail.com")
+        (component / "source.cc").write_text("original producer source\n")
+        self.git(component, "add", "source.cc")
+        self.git(component, "commit", "--quiet", "-m", "Seed producer fixture")
+        (self.root / "BUILD.bazel").write_text("# Declared container build input\n")
+        (self.root / ".gitignore").write_text("MODULE.bazel.lock\n")
+        self.git(self.root, "-c", "protocol.file.allow=always", "submodule", "add", "--quiet",
+                 str(component), "deps/component")
+        self.component = self.root / "deps/component"
+        self.git(self.component, "config", "user.name", "SONiC test")
+        self.git(self.component, "config", "user.email", "securely1g@gmail.com")
+        self.git(self.root, "add", ".")
+        self.git(self.root, "commit", "--quiet", "-m", "Pin producer fixture")
+        self.lock = self.root / "MODULE.bazel.lock"
+        self.lock.write_text(json.dumps({"registryFileHashes": {}}) + "\n")
+        self.output = directory / "evidence"
+        self.output.mkdir()
+
+    @staticmethod
+    def git(repository, *args):
+        return subprocess.run(["git", "-C", str(repository), *args], check=True,
+                              capture_output=True, text=True).stdout
+
+    def change_component(self, *, commit=False):
+        (self.component / "source.cc").write_text("patched by the legacy Make producer\n")
+        if commit:
+            self.git(self.component, "commit", "--quiet", "-am", "Apply producer fixture patch")
+
+    def test_default_rejects_unrelated_submodule_dirt_and_commit(self):
+        """Cold source jobs retain their strict whole-checkout cleanliness check."""
+        for commit in (False, True):
+            with self.subTest(commit=commit):
+                self.change_component(commit=commit)
+                with self.assertRaises(subprocess.CalledProcessError):
+                    resolution.retain(self.root, self.output, GRAPH)
+                self.assertFalse((self.output / "MODULE.bazel.lock").exists())
+
+    def test_scoped_inputs_allow_unrelated_make_submodule_changes(self):
+        """An FRR-style patched commit must not invalidate unchanged OCI inputs."""
+        for commit in (False, True):
+            with self.subTest(commit=commit):
+                self.change_component(commit=commit)
+                result = resolution.retain(self.root, self.output, GRAPH,
+                                           source_files=["BUILD.bazel"])
+                self.assertEqual(result["checked_source_files"], ["BUILD.bazel"])
+                self.assertTrue(result["tracked_files_unchanged"])
+                self.assertEqual((self.output / "MODULE.bazel.lock").read_bytes(), self.lock.read_bytes())
+
+    def test_scoped_inputs_reject_changes_to_checked_root_file(self):
+        """Post-Make mode still rejects altered build declarations against HEAD."""
+        (self.root / "BUILD.bazel").write_text("# Changed source target\n")
+        with self.assertRaises(subprocess.CalledProcessError):
+            resolution.retain(self.root, self.output, GRAPH, source_files=["BUILD.bazel"])
+        self.assertFalse((self.output / "MODULE.bazel.lock").exists())
+
+    def test_scoped_submodule_input_checks_its_gitlink(self):
+        """A file inside a producer submodule also pins that producer's HEAD."""
+        result = resolution.retain(self.root, self.output, GRAPH,
+                                   source_files=["deps/component/source.cc"])
+        self.assertEqual(result["checked_source_files"],
+                         ["deps/component", "deps/component/source.cc"])
+        self.change_component(commit=True)
+        # A checkout's local ignore policy must not hide a changed producer pin.
+        self.git(self.root, "config", "submodule.deps/component.ignore", "all")
+        with self.assertRaises(subprocess.CalledProcessError):
+            resolution.retain(self.root, self.output, GRAPH,
+                              source_files=["deps/component/source.cc"])
+
+    def test_invalid_or_escaping_scope_is_rejected(self):
+        """An empty, unsafe or Git-magic scope cannot bypass source validation."""
+        (self.root / "escape").symlink_to(Path(self.temporary.name) / "component", target_is_directory=True)
+        for files in ([], (), "BUILD.bazel", [""], ["."], ["../component/source.cc"],
+                      ["/etc/passwd"], ["deps/../BUILD.bazel"], ["BUILD.bazel\n"],
+                      [":(exclude)BUILD.bazel"], ["*.bazel"], ["escape/source.cc"]):
+            with self.subTest(files=files), self.assertRaises(ValueError):
+                resolution.retain(self.root, self.output, GRAPH, source_files=files)
+
+    def test_scoped_inputs_still_reject_a_tracked_lock(self):
+        """Source scope never relaxes the generated module-lock contract."""
+        self.git(self.root, "add", "--force", "MODULE.bazel.lock")
+        with self.assertRaisesRegex(ValueError, "generated, not tracked"):
+            resolution.retain(self.root, self.output, GRAPH, source_files=["BUILD.bazel"])
+
+    def test_collect_forwards_scope_without_changing_generated_lock(self):
+        """The graph collector uses the same scoped guard and preserves the tested lock."""
+        self.change_component(commit=True)
+        before = self.lock.read_bytes()
+        graph_command = Path(self.temporary.name) / "graph.py"
+        graph_command.write_text("print(" + repr(GRAPH) + ")\n")
+        result = resolution.collect(self.root, self.output,
+                                    bazel=(sys.executable, str(graph_command)),
+                                    source_files=["BUILD.bazel"])
+        self.assertEqual(result["checked_source_files"], ["BUILD.bazel"])
+        self.assertEqual(self.lock.read_bytes(), before)
+        self.assertTrue(result["inspection"]["module_graph_complete"])
 
 
 if __name__ == "__main__":

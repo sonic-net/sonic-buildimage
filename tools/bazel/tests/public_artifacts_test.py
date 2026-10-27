@@ -49,6 +49,19 @@ def cache():
                for phase in ("cold", "warm", "changed")}}
 
 
+def cache_reuse(kind):
+    return {
+        "artifact_target": artifacts.SOURCE_ARTIFACT_TARGETS[kind], "phase": "before_tests",
+        "action_count": 4, "cache_hit_count": 3, "executed_count": 1,
+        "actions": [
+            {"target": None, "mnemonic": "Tar", "runner": "processwrapper-sandbox",
+             "cache_hit": False, "count": 1},
+            {"target": "@@sonic-swss+//orchagent:orchagent", "mnemonic": "CppCompile",
+             "runner": "disk cache hit", "cache_hit": True, "count": 3},
+        ],
+    }
+
+
 def events(count=2, *, targets=None):
     values = [{"id": {"started": {}}, "started": {"command": "test", "buildToolVersion": "8.5.1",
                "host": SENTINEL, "user": SENTINEL, "optionsDescription": SENTINEL,
@@ -128,6 +141,15 @@ def seed(root, kind, architecture="amd64"):
         write_json(root, "artifacts/syncd-vs/bazel/execution-gate-audit.json",
                    {"action_count": 12, "output_count": 24, "deb_outputs": [], "packaging_wrappers": [], "raw": SENTINEL})
     if kind == "vs":
+        for source_kind in ("source", "syncd"):
+            seed(root, source_kind, architecture)
+            name = "artifacts/swss/receipt.json" if source_kind == "source" else "artifacts/syncd-vs/bazel/report.json"
+            source_receipt = json.loads((root / name).read_text())
+            source_receipt["cache_reuse"] = cache_reuse(source_kind)
+            write_json(root, name, source_receipt)
+            _, _, ready = artifacts.prepare(source_kind, root, root, "success", REVISION, architecture,
+                                            head_sha="3" * 40, base_sha="4" * 40)
+            assert ready, source_kind
         for name in ("sonic-vs.img.gz", "docker-orchagent.gz", "docker-orchagent-dbg.gz",
                      "docker-syncd-vs.gz", "docker-syncd-vs-dbg.gz"):
             write(root, "target/" + name, b"validated image output\n")
@@ -241,7 +263,8 @@ class PublicArtifactsTest(unittest.TestCase):
                 root = self.root / kind
                 root.mkdir()
                 seed(root, kind)
-                summary, paths, ready = artifacts.prepare(kind, root, self.root, "success", REVISION, "amd64")
+                summary, paths, ready = artifacts.prepare(kind, root, self.root, "success", REVISION, "amd64",
+                                                         head_sha="3" * 40, base_sha="4" * 40)
                 self.assertTrue(ready)
                 self.assertTrue(summary["complete"])
                 self.assertEqual(len(paths), len(artifacts.FILES[kind]) + 1)
@@ -253,6 +276,11 @@ class PublicArtifactsTest(unittest.TestCase):
     def test_vs_success_reports_both_container_variants_and_the_installer(self):
         """A passing VS publication must account for runtime/debug archives from both OCI owners."""
         seed(self.root, "vs")
+        for kind in ("source", "syncd"):
+            path = self.root / artifacts.SUMMARY[kind]
+            value = json.loads(path.read_text())
+            value["private_diagnostics"] = SENTINEL
+            write_json(self.root, artifacts.SUMMARY[kind], value)
         summary, paths, ready = self.prepare("vs")
         self.assertTrue(ready)
         self.assertTrue(summary["complete"])
@@ -263,8 +291,155 @@ class PublicArtifactsTest(unittest.TestCase):
                 "docker-syncd-vs.gz", "docker-syncd-vs-dbg.gz",
             )
         })
+        self.assertEqual(summary["receipts"]["source_validation"],
+                         {kind: {"test_count": 2, "cache_reuse": {
+                             key: value for key, value in cache_reuse(kind).items() if key != "actions"
+                         }} for kind in ("source", "syncd")})
         self.assertEqual(paths, [artifacts.SUMMARY["vs"]])
         self.assertNotIn(SENTINEL, json.dumps(summary))
+
+    def test_vs_requires_both_completed_source_summaries(self):
+        """An installer and P4RT pass cannot replace the moved SWSS or Syncd checks."""
+        for kind in ("source", "syncd"):
+            for mode in ("missing", "null", "incomplete", "failed", "blocked", "missing-output"):
+                with self.subTest(kind=kind, mode=mode):
+                    seed(self.root, "vs")
+                    path = self.root / artifacts.SUMMARY[kind]
+                    value = json.loads(path.read_text())
+                    if mode == "missing":
+                        path.unlink()
+                    else:
+                        if mode == "null": value = None
+                        elif mode == "incomplete": value["complete"] = False
+                        elif mode == "failed": value["job_status"] = "failure"
+                        elif mode == "blocked": value["blocked"] = [{"input": "tests", "reason": "failed"}]
+                        else: value["missing"] = ["module-lock"]
+                        write_json(self.root, artifacts.SUMMARY[kind], value)
+                    summary, paths, ready = self.prepare("vs")
+                    self.assertFalse(ready)
+                    self.assertFalse(summary["complete"])
+                    self.assertEqual(paths, [])
+                    self.assertIn({"input": kind + "-public-summary", "reason": "invalid-source-validation"},
+                                  summary["blocked"])
+
+    def test_vs_rejects_source_summaries_from_a_different_build(self):
+        """A passing result from another revision, PR merge or architecture is stale evidence."""
+        replacements = {"kind": "archive", "revision": "5" * 40, "head_sha": "6" * 40,
+                        "base_sha": "7" * 40, "architecture": "arm64"}
+        for kind in ("source", "syncd"):
+            for field, replacement in replacements.items():
+                with self.subTest(kind=kind, field=field):
+                    seed(self.root, "vs")
+                    path = self.root / artifacts.SUMMARY[kind]
+                    value = json.loads(path.read_text())
+                    value[field] = replacement
+                    write_json(self.root, artifacts.SUMMARY[kind], value)
+                    summary, paths, ready = self.prepare("vs")
+                    self.assertFalse(ready)
+                    self.assertFalse(summary["complete"])
+                    self.assertEqual(paths, [])
+
+    def test_vs_rejects_failed_or_absent_tests_even_with_complete_source_status(self):
+        """Do not trust a complete flag when the embedded test results contradict it."""
+        for kind in ("source", "syncd"):
+            for mode in ("no-tests", "failed-test", "unfinished-build", "truncated"):
+                with self.subTest(kind=kind, mode=mode):
+                    seed(self.root, "vs")
+                    path = self.root / artifacts.SUMMARY[kind]
+                    value = json.loads(path.read_text())
+                    build = value["builds"][kind + "-tests"]
+                    if mode == "no-tests": build["tests"] = {}
+                    elif mode == "failed-test": next(iter(build["tests"].values()))["status"] = "FAILED"
+                    elif mode == "unfinished-build": build["finished"] = None
+                    else: build["truncated"] = True
+                    write_json(self.root, artifacts.SUMMARY[kind], value)
+                    summary, paths, ready = self.prepare("vs")
+                    self.assertFalse(ready)
+                    self.assertFalse(summary["complete"])
+                    self.assertEqual(paths, [])
+
+    def test_failed_vs_still_publishes_partial_status_without_source_summaries(self):
+        """Early build failures must remain visible even when source checks never ran."""
+        for status in ("failure", "cancelled"):
+            with self.subTest(status=status):
+                summary, paths, ready = self.prepare("vs", status)
+                self.assertTrue(ready)
+                self.assertFalse(summary["complete"])
+                self.assertEqual(paths, [artifacts.SUMMARY["vs"]])
+                self.assertNotIn("source_validation", summary["receipts"])
+
+    def test_source_publication_keeps_optional_cache_action_counts(self):
+        """Cold jobs remain supported; post-build receipts retain misses as evidence."""
+        for kind in ("source", "syncd"):
+            with self.subTest(kind=kind):
+                seed(self.root, kind)
+                summary, _, ready = self.prepare(kind)
+                self.assertTrue(ready)
+                self.assertNotIn("cache_reuse", summary["receipts"][kind])
+                name = "artifacts/swss/receipt.json" if kind == "source" else "artifacts/syncd-vs/bazel/report.json"
+                value = json.loads((self.root / name).read_text())
+                value["cache_reuse"] = cache_reuse(kind)
+                write_json(self.root, name, value)
+                summary, _, ready = self.prepare(kind)
+                self.assertTrue(ready)
+                self.assertEqual(summary["receipts"][kind]["cache_reuse"], cache_reuse(kind))
+                self.assertNotIn(SENTINEL, json.dumps(summary))
+
+    def test_cache_action_counts_reject_raw_fields_and_inconsistent_evidence(self):
+        """Only complete aggregate action counts can cross the public artifact boundary."""
+        for mode in ("raw-command", "raw-action", "wrong-phase", "missing-actions", "no-actions",
+                     "wrong-total", "wrong-hits", "wrong-executed", "boolean-count", "zero-count",
+                     "nonboolean-hit", "unsafe-target", "unsafe-runner", "unsafe-mnemonic",
+                     "duplicate", "unsorted", "false-cache-hit", "miss-with-cache-runner"):
+            with self.subTest(mode=mode):
+                value = cache_reuse("source")
+                if mode == "raw-command": value["argv"] = [SENTINEL]
+                elif mode == "raw-action": value["actions"][0]["commandArgs"] = [SENTINEL]
+                elif mode == "wrong-phase": value["phase"] = "after_tests"
+                elif mode == "missing-actions": del value["actions"]
+                elif mode == "no-actions": value.update(action_count=0, cache_hit_count=0, executed_count=0, actions=[])
+                elif mode == "wrong-total": value["action_count"] += 1
+                elif mode == "wrong-hits": value["cache_hit_count"] += 1
+                elif mode == "wrong-executed": value["executed_count"] += 1
+                elif mode == "boolean-count": value["actions"][0]["count"] = True
+                elif mode == "zero-count": value["actions"][0]["count"] = 0
+                elif mode == "nonboolean-hit": value["actions"][0]["cache_hit"] = 1
+                elif mode == "unsafe-target": value["actions"][0]["target"] = "/home/runner/" + SENTINEL
+                elif mode == "unsafe-runner": value["actions"][0]["runner"] = "/home/runner/" + SENTINEL
+                elif mode == "unsafe-mnemonic": value["actions"][0]["mnemonic"] = "compile\n" + SENTINEL
+                elif mode == "duplicate": value["actions"].append(value["actions"][0].copy())
+                elif mode == "unsorted": value["actions"].reverse()
+                elif mode == "false-cache-hit":
+                    value["actions"][0]["cache_hit"] = True
+                    value.update(cache_hit_count=4, executed_count=0)
+                else:
+                    value["actions"][1]["cache_hit"] = False
+                    value.update(cache_hit_count=0, executed_count=4)
+                for kind in ("source", "syncd"):
+                    source_receipt = receipt(kind)
+                    source_receipt["cache_reuse"] = value
+                    with self.assertRaises(artifacts.PublicArtifactError):
+                        artifacts.receipt_summary(source_receipt, kind)
+
+    def test_vs_requires_cache_evidence_for_each_owners_production_artifacts(self):
+        """Passing tests alone cannot prove reuse of Make's production packages."""
+        for kind in ("source", "syncd"):
+            for mode in ("missing", "wrong-target", "after-tests", "inconsistent-count"):
+                with self.subTest(kind=kind, mode=mode):
+                    seed(self.root, "vs")
+                    path = self.root / artifacts.SUMMARY[kind]
+                    value = json.loads(path.read_text())
+                    if mode == "missing": del value["receipts"][kind]["cache_reuse"]
+                    elif mode == "wrong-target": value["receipts"][kind]["cache_reuse"]["artifact_target"] = "//tools/bazel/tests:ci_artifacts"
+                    elif mode == "after-tests": value["receipts"][kind]["cache_reuse"]["phase"] = "after_tests"
+                    else: value["receipts"][kind]["cache_reuse"]["action_count"] += 1
+                    write_json(self.root, artifacts.SUMMARY[kind], value)
+                    summary, paths, ready = self.prepare("vs")
+                    self.assertFalse(ready)
+                    self.assertFalse(summary["complete"])
+                    self.assertEqual(paths, [])
+                    self.assertIn({"input": kind + "-public-summary", "reason": "invalid-source-validation"},
+                                  summary["blocked"])
 
     def test_vs_missing_syncd_debug_archive_blocks_successful_publication(self):
         """A successful installer/P4RT result cannot hide an unbuilt Syncd debug image."""

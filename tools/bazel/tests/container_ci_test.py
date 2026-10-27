@@ -76,6 +76,32 @@ elif command == "build":
     output.parent.mkdir(exist_ok=True)
     output.write_bytes(b"different configuration" if mode == "validation-changed-archive" else b"archive fixture")
     if mode == "validation-extra-archive": (root / "bazel-bin/unvalidated.tar").write_bytes(b"not validated")
+    event_path = next(arg.split("=", 1)[1] for arg in sys.argv if arg.startswith("--build_event_json_file="))
+    events = [
+        {"id": {"started": {}}, "started": {"command": "build", "buildToolVersion": "8.5.1"}},
+        {"id": {"targetCompleted": {"label": sys.argv[-1]}}, "completed": {"success": True}},
+        {"id": {"buildFinished": {}}, "finished": {"overallSuccess": True, "exitCode": {"code": 0}}},
+        {"id": {"buildMetrics": {}}, "lastMessage": True},
+    ]
+    if mode == "cache-incomplete-build": events.pop()
+    Path(event_path).write_text("".join(json.dumps(event) + "\n" for event in events))
+    logs = [arg.split("=", 1)[1] for arg in sys.argv if arg.startswith("--execution_log_json_file=")]
+    if logs:
+        log = Path(logs[0])
+        assert log.stat().st_mode & 0o777 == 0o600
+        record = {"targetLabel": "@@sonic_swss+//orchagent:orchagent", "mnemonic": "CppCompile",
+                  "runner": "disk cache hit", "cacheHit": True,
+                  "commandArgs": ["private-action-data"],
+                  "environmentVariables": [{"name": "PRIVATE", "value": "private-action-data"}]}
+        records = [record, record]
+        if mode == "cache-executed":
+            records.append({**record, "targetLabel": "//dockers/example:ci_copy", "mnemonic": "CopyFile",
+                            "runner": "processwrapper-sandbox", "cacheHit": False})
+        log.write_text("\n".join(json.dumps(record, indent=2) for record in records) + "\n")
+        if mode == "cache-missing": log.unlink()
+        elif mode == "cache-empty": log.write_text("")
+        elif mode == "cache-malformed": log.write_text('{"mnemonic":')
+        elif mode == "cache-failed-build": sys.exit(11)
 elif command == "test":
     if mode == "test-failure": sys.exit(9)
     events = []
@@ -118,14 +144,19 @@ else:
     def execute(self, command, directory, receipt, name, **kwargs):
         self.executed.append(list(command))
         if command[0] == "git":
+            mode = (self.root / "mode").read_text()
+            if command[1] == "check-ignore" and mode == "unignored-lock":
+                raise subprocess.CalledProcessError(1, command)
             receipt["commands"].append({"argv": command, "returncode": 0,
                                         "elapsed_seconds": 0, "log": name + ".log"})
-            result = "a" * 40 + "\n"
+            result = "a" * 40 + "\n" if command[1] == "rev-parse" else ""
+            if command[1] == "ls-files" and mode == "tracked-lock":
+                result = "MODULE.bazel.lock\n"
             (directory / (name + ".log")).write_text(result)
             return result
         return self.original_execute(command, directory, receipt, name, **kwargs)
 
-    def run_ci(self, mode="pass", *, error=None, resolution_error=None, machine="x86_64", source_files=()):
+    def run_ci(self, mode="pass", *, error=None, resolution_error=None, machine="x86_64", source_files=(), reuse_build=False):
         (self.root / "mode").write_text(mode)
         console = io.StringIO()
         self.original_execute = command_log.execute
@@ -137,14 +168,18 @@ else:
              contextlib.redirect_stdout(console), contextlib.redirect_stderr(console):
             if error is None:
                 container.run(self.owner, workspace=self.root, artifacts=self.artifacts,
-                              bazel=str(self.bazel), options=["--jobs=2"], source_files=source_files)
+                              bazel=str(self.bazel), options=["--jobs=2"], source_files=source_files,
+                              reuse_build=reuse_build)
             else:
                 with self.assertRaises(error):
                     container.run(self.owner, workspace=self.root, artifacts=self.artifacts,
-                                  bazel=str(self.bazel), options=["--jobs=2"], source_files=source_files)
+                                  bazel=str(self.bazel), options=["--jobs=2"], source_files=source_files,
+                                  reuse_build=reuse_build)
         self.assertFalse((self.artifacts / "actions.raw.json").exists())
         self.assertFalse((self.artifacts / "tests.raw.json").exists())
+        self.assertFalse((self.artifacts / "artifact-execution.raw.json").exists())
         self.assertNotIn("private-action-data", console.getvalue())
+        self.console = console.getvalue()
         for path in self.artifacts.rglob("*"):
             if path.is_file(): self.assertNotIn("private-action-data", path.read_text())
         return json.loads((self.artifacts / "receipt.json").read_text())
@@ -177,6 +212,8 @@ else:
         operations = [command[0] for command in commands]
         self.assertLess(operations.index("aquery"), operations.index("test"))
         self.assertLess(operations.index("aquery"), operations.index("build"))
+        self.assertLess(operations.index("test"), operations.index("build"))
+        self.assertNotIn("cache_reuse", receipt)
         self.assertFalse(any(command[0] == "make" for command in self.executed))
         report = json.loads((self.artifacts / "report.json").read_text())
         self.assertEqual(report["targets"], self.tests)
@@ -326,6 +363,97 @@ else:
         self.assert_failed_without_report(self.run_ci(error=ValueError))
         self.assert_no_actions_executed()
 
+    def test_post_build_validation_preserves_existing_outputs_and_records_lock(self):
+        """A completed Make build can be validated without cleaning its lock or outputs."""
+        lock = self.root / "MODULE.bazel.lock"
+        lock.write_text('{"existing": true}\n')
+        initial_hash = container.sha(lock)
+        output = self.root / "bazel-bin/already-built"
+        output.parent.mkdir()
+        output.write_bytes(b"compiled by Make")
+        receipt = self.run_ci(reuse_build=True)
+        self.assertEqual(receipt["status"], "passed")
+        self.assertEqual(receipt["dependency_state"], "existing-build")
+        self.assertEqual(receipt["initial_module_lock_sha256"], initial_hash)
+        self.assertEqual(output.read_bytes(), b"compiled by Make")
+        self.assertIn(["git", "ls-files", "--", "MODULE.bazel.lock"], self.executed)
+        self.assertIn(["git", "check-ignore", "--quiet", "MODULE.bazel.lock"], self.executed)
+        operations = [command[0] for command in self.bazel_commands()]
+        self.assertLess(operations.index("aquery"), operations.index("build"))
+        self.assertLess(operations.index("build"), operations.index("test"))
+        self.assertEqual(operations.count("build"), 1)
+        for command in self.bazel_commands():
+            logs = [arg for arg in command if arg.startswith("--execution_log_json_file=")]
+            self.assertEqual(len(logs), int(command[0] == "build"))
+        evidence = receipt["cache_reuse"]
+        self.assertEqual(evidence["phase"], "before_tests")
+        self.assertEqual(evidence["artifact_target"], self.owner + ":ci_artifacts")
+        self.assertEqual((evidence["action_count"], evidence["cache_hit_count"], evidence["executed_count"]), (2, 2, 0))
+        self.assertEqual(evidence, json.loads((self.artifacts / "report.json").read_text())["cache_reuse"])
+
+    def test_post_build_cache_misses_are_reported_without_failing_validation(self):
+        """A legitimate CI copy action is recorded distinctly from cached compilation."""
+        (self.root / "MODULE.bazel.lock").write_text("{}\n")
+        receipt = self.run_ci("cache-executed", reuse_build=True)
+        evidence = receipt["cache_reuse"]
+        self.assertEqual((evidence["action_count"], evidence["cache_hit_count"], evidence["executed_count"]), (3, 2, 1))
+        self.assertEqual(receipt["status"], "passed")
+        self.assertIn('"uncached_actions": [{"cache_hit": false', self.console)
+        self.assertIn('"mnemonic": "CopyFile"', self.console)
+
+    def test_post_build_invalid_cache_evidence_blocks_tests_and_removes_raw_log(self):
+        """Absent, partial or failed build evidence cannot establish cache reuse."""
+        (self.root / "MODULE.bazel.lock").write_text("{}\n")
+        for mode in ("cache-missing", "cache-empty", "cache-malformed", "cache-incomplete-build", "cache-failed-build"):
+            with self.subTest(mode=mode):
+                self.artifacts = self.root / mode
+                (self.root / "commands.jsonl").unlink(missing_ok=True)
+                error = subprocess.CalledProcessError if mode == "cache-failed-build" else ValueError
+                receipt = self.run_ci(mode, reuse_build=True, error=error)
+                self.assert_failed_without_report(receipt)
+                self.assertNotIn("cache_reuse", receipt)
+                self.assertNotIn("test", [command[0] for command in self.bazel_commands()])
+
+    def test_post_build_test_failure_preserves_safe_cache_audit(self):
+        """Test failure retains production cache evidence, but never a success report."""
+        (self.root / "MODULE.bazel.lock").write_text("{}\n")
+        receipt = self.run_ci("test-failure", reuse_build=True, error=subprocess.CalledProcessError)
+        self.assert_failed_without_report(receipt)
+        self.assertEqual(receipt["cache_reuse"]["cache_hit_count"], 2)
+
+    def test_post_build_precollected_bytes_still_match_tested_artifacts(self):
+        """Moving collection earlier must retain the exact runtime/debug hash binding."""
+        (self.root / "MODULE.bazel.lock").write_text("{}\n")
+        receipt = self.run_ci("validation-changed-archive", reuse_build=True, error=ValueError)
+        self.assert_failed_without_report(receipt)
+        self.assertIn("published artifacts differ", receipt["error"])
+
+    def test_post_build_validation_requires_a_nonempty_generated_lock(self):
+        """A missing, empty or symlinked lock cannot masquerade as an existing build."""
+        lock = self.root / "MODULE.bazel.lock"
+        for mode in ("missing", "empty", "symlink"):
+            with self.subTest(mode=mode):
+                self.artifacts = self.root / mode
+                lock.unlink(missing_ok=True)
+                if mode == "empty":
+                    lock.touch()
+                elif mode == "symlink":
+                    target = self.root / "other-lock"
+                    target.write_text("{}\n")
+                    lock.symlink_to(target)
+                self.assert_failed_without_report(self.run_ci(reuse_build=True, error=ValueError))
+                self.assert_no_actions_executed()
+
+    def test_post_build_validation_rejects_tracked_or_unignored_locks(self):
+        """Reuse must preserve the generated-lock policy instead of trusting any file."""
+        (self.root / "MODULE.bazel.lock").write_text("{}\n")
+        for mode, error in (("tracked-lock", ValueError),
+                            ("unignored-lock", subprocess.CalledProcessError)):
+            with self.subTest(mode=mode):
+                self.artifacts = self.root / mode
+                self.assert_failed_without_report(self.run_ci(mode, reuse_build=True, error=error))
+                self.assert_no_actions_executed()
+
     def test_unsupported_machine_blocks_all_commands(self):
         """These native AMD64 jobs must reject execution on another architecture."""
         self.assert_failed_without_report(self.run_ci(machine="aarch64", error=ValueError))
@@ -347,11 +475,12 @@ else:
         with mock.patch.object(container, "run") as run:
             container.main(["--container", self.owner, "--bazel", "selected-bazel",
                             "--bazel-arg=--jobs=2", "--artifacts", str(self.artifacts),
-                            "--source-file", "preparation.mk", "--source-file", "another.mk"])
+                            "--source-file", "preparation.mk", "--source-file", "another.mk", "--reuse-build"])
         self.assertEqual(run.call_args.args, (self.owner,))
         self.assertEqual(run.call_args.kwargs["bazel"], "selected-bazel")
         self.assertEqual(run.call_args.kwargs["options"], [*container.OPTIONS, "--jobs=2"])
         self.assertEqual(run.call_args.kwargs["source_files"], ["preparation.mk", "another.mk"])
+        self.assertTrue(run.call_args.kwargs["reuse_build"])
 
 
 class SourceArchiveBindingTest(unittest.TestCase):

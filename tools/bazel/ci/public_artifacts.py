@@ -88,6 +88,10 @@ SUMMARY = {
     "syncd": "artifacts/syncd-vs/public-summary.json",
     "vs": "artifacts/vs/public-summary.json",
 }
+SOURCE_ARTIFACT_TARGETS = {
+    "source": "//dockers/docker-orchagent:ci_artifacts",
+    "syncd": "//platform/vs/docker-syncd-vs:ci_artifacts",
+}
 
 
 class PublicArtifactError(ValueError):
@@ -265,6 +269,40 @@ def artifact_hashes(value):
     return hashes
 
 
+def cache_reuse_summary(value):
+    """Publish only aggregate action identities and verified cache-hit counts."""
+    require(isinstance(value, dict) and set(value) == {
+        "artifact_target", "phase", "action_count", "cache_hit_count", "executed_count", "actions",
+    }, "invalid-cache-reuse")
+    require(value["phase"] == "before_tests", "invalid-cache-reuse-phase")
+    counts = {name: integer(value[name]) for name in ("action_count", "cache_hit_count", "executed_count")}
+    require(counts["action_count"] > 0 and isinstance(value["actions"], list) and value["actions"],
+            "empty-cache-reuse")
+    actions, keys = [], []
+    for item in value["actions"]:
+        require(isinstance(item, dict) and set(item) == {"target", "mnemonic", "runner", "cache_hit", "count"},
+                "invalid-cache-reuse-action")
+        target = None if item["target"] is None else label(item["target"])
+        mnemonic, runner = item["mnemonic"], item["runner"]
+        require(isinstance(mnemonic, str) and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", mnemonic),
+                "invalid-cache-reuse-mnemonic")
+        require(isinstance(runner, str) and re.fullmatch(r"[A-Za-z0-9_. -]{1,80}", runner),
+                "invalid-cache-reuse-runner")
+        require(isinstance(item["cache_hit"], bool) and integer(item["count"]) > 0,
+                "invalid-cache-reuse-count")
+        require(item["cache_hit"] == (runner in {"disk cache hit", "remote cache hit"}),
+                "contradictory-cache-reuse-runner")
+        actions.append({"target": target, "mnemonic": mnemonic, "runner": runner,
+                        "cache_hit": item["cache_hit"], "count": item["count"]})
+        keys.append((target or "", mnemonic, runner, item["cache_hit"]))
+    require(keys == sorted(set(keys)), "duplicate-or-unsorted-cache-reuse-actions")
+    hits = sum(item["count"] for item in actions if item["cache_hit"])
+    executed = sum(item["count"] for item in actions if not item["cache_hit"])
+    require(counts == {"action_count": hits + executed, "cache_hit_count": hits, "executed_count": executed},
+            "inconsistent-cache-reuse-counts")
+    return {"artifact_target": label(value["artifact_target"]), "phase": "before_tests", **counts, "actions": actions}
+
+
 def receipt_summary(value, kind):
     require(isinstance(value, dict), "invalid-receipt")
     if kind == "python":
@@ -292,18 +330,24 @@ def receipt_summary(value, kind):
         require(isinstance(validation.get("programs", []), list) and isinstance(validation.get("debug_pairs", []), list), "invalid-validation-lists")
         require(isinstance(validation.get("source_contract", {}), dict), "invalid-source-contract")
         contract = {relative_name(name): digest(item) for name, item in validation.get("source_contract", {}).items()}
-        return {"status": value["status"], "revision": revision, "tests": tests,
-                "program_count": len(validation.get("programs", [])),
-                "debug_pair_count": len(validation.get("debug_pairs", [])), "source_contract": contract,
-                "artifact_sha256": artifact_hashes(validation.get("artifact_sha256", {}))}
+        result = {"status": value["status"], "revision": revision, "tests": tests,
+                  "program_count": len(validation.get("programs", [])),
+                  "debug_pair_count": len(validation.get("debug_pairs", [])), "source_contract": contract,
+                  "artifact_sha256": artifact_hashes(validation.get("artifact_sha256", {}))}
+        if "cache_reuse" in value:
+            result["cache_reuse"] = cache_reuse_summary(value["cache_reuse"])
+        return result
     if kind == "syncd":
         require(isinstance(value.get("targets", []), list) and isinstance(value.get("source_hashes", {}), dict), "invalid-syncd-receipt")
         targets = [label(item) for item in value.get("targets", [])]
         hashes = {relative_name(name): digest(item) for name, item in value.get("source_hashes", {}).items()}
         require(value.get("status") in {"running", "passed", "failed"}, "invalid-receipt-status")
         require(len(set(targets)) == len(targets), "duplicate-test-target")
-        return {"status": value["status"], "targets": targets, "source_hashes": hashes,
-                "module_lock_sha256": digest(value.get("module_lock_sha256"))}
+        result = {"status": value["status"], "targets": targets, "source_hashes": hashes,
+                  "module_lock_sha256": digest(value.get("module_lock_sha256"))}
+        if "cache_reuse" in value:
+            result["cache_reuse"] = cache_reuse_summary(value["cache_reuse"])
+        return result
     if kind == "p4rt":
         require(value.get("status") == "passed", "invalid-p4rt-status")
         require(isinstance(value.get("with_dwp", {}), dict) and isinstance(value.get("packages", {}), dict), "invalid-p4rt-receipt")
@@ -315,6 +359,30 @@ def receipt_summary(value, kind):
                 "source_found": found, "source_line_number": integer(value.get("with_dwp", {}).get("line")),
                 "packages": {name: digest(value.get("packages", {}).get(name)) for name in ("runtime_sha256", "debug_sha256")}}
     raise PublicArtifactError("unknown-receipt-kind")
+
+
+def source_validation_summary(value, kind, identity):
+    """Bind completed source checks to this image build without republishing them."""
+    require(isinstance(value, dict) and value.get("schema") == 1, "invalid-source-summary")
+    require(value.get("kind") == kind and value.get("job_status") == "success" and
+            value.get("complete") is True and value.get("missing") == [] and
+            value.get("blocked") == [], "incomplete-source-summary")
+    require(all(key in value and value[key] == expected for key, expected in identity.items()),
+            "source-summary-identity-mismatch")
+    build = value.get("builds", {}).get(kind + "-tests", {})
+    require(isinstance(build, dict) and build.get("command") == "test" and
+            build.get("finished") == {"success": True, "exit_code": 0} and
+            build.get("truncated") is False, "incomplete-source-tests")
+    tests = build.get("tests")
+    require(isinstance(tests, dict) and bool(tests), "missing-source-tests")
+    for name, result in tests.items():
+        label(name)
+        require(isinstance(result, dict) and result.get("status") in {"PASSED", "FLAKY"},
+                "failed-source-test")
+    reuse = cache_reuse_summary(value.get("receipts", {}).get(kind, {}).get("cache_reuse"))
+    require(reuse["artifact_target"] == SOURCE_ARTIFACT_TARGETS[kind], "wrong-cache-reuse-target")
+    return {"test_count": len(tests),
+            "cache_reuse": {key: item for key, item in reuse.items() if key != "actions"}}
 
 
 def prepare(kind, workspace, upload_root, job_status, revision, architecture, head_sha=None, base_sha=None):
@@ -430,6 +498,17 @@ def prepare(kind, workspace, upload_root, job_status, revision, architecture, he
             except (ValueError, TypeError):
                 blocked.append({"input": "execution-audit", "reason": "invalid-execution-audit"})
     if kind == "vs" and job_status == "success":
+        identity = {"revision": revision, "architecture": architecture,
+                    "head_sha": head_sha or None, "base_sha": base_sha or None}
+        receipts["source_validation"] = {}
+        for source_kind in ("source", "syncd"):
+            logical = source_kind + "-public-summary"
+            value = read_json(logical, SUMMARY[source_kind])
+            try:
+                receipts["source_validation"][source_kind] = source_validation_summary(
+                    value, source_kind, identity)
+            except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+                blocked.append({"input": logical, "reason": "invalid-source-validation"})
         outputs = {}
         for name in ("sonic-vs.img.gz", "docker-orchagent.gz", "docker-orchagent-dbg.gz",
                      "docker-syncd-vs.gz", "docker-syncd-vs-dbg.gz"):

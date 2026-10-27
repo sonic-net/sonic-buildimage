@@ -39,10 +39,11 @@ def collect_archives(workspace, directory, receipt, targets, *, bazel="bazel", o
     return paths
 
 
-def collect_artifacts(workspace, directory, receipt, target, *, bazel="bazel", options=()):
+def collect_artifacts(workspace, directory, receipt, target, *, bazel="bazel", options=(), execution_log=None):
     """Build an owner filegroup and export its declared files under unique basenames."""
     execute = partial(command_log.execute, cwd=workspace)
-    execute([bazel, "build", *options,
+    log_options = ["--execution_log_json_file=" + str(execution_log)] if execution_log is not None else []
+    execute([bazel, "build", *options, *log_options,
              "--build_event_json_file=" + str(directory / "build-events.jsonl"), target],
             directory, receipt, "build")
     files = execute([bazel, "cquery", *options, "--output=files", target],
