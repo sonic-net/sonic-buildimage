@@ -1,0 +1,606 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brad House <bhouse@nexthop.ai>
+Date: Tue, 27 Oct 2026 20:44:23 +0000
+Subject: [PATCH] tests: check remote EVPN neighbours in kernel MAC external
+ learn mode
+
+New topotest bgp_evpn_ext_learn_rem_neigh: two VTEPs in MAC external
+learn mode share an L2-VNI and a host that sits behind one of them. The
+other VTEP must install the host's IPv4 and IPv6 neighbours in the
+kernel as remote (NOARP, extern_learn), keep them remote when it routes
+to the host, follow the host when it moves from one VTEP to the other
+and back, follow the IPv4 address when a host with another MAC takes it
+over, and remove them when the MAC/IP routes are withdrawn.
+
+Signed-off-by: Brad House <bhouse@nexthop.ai>
+---
+ .../bgp_evpn_ext_learn_rem_neigh/__init__.py  |   0
+ .../bgp_evpn_ext_learn_rem_neigh/r1/frr.conf  |  23 +
+ .../bgp_evpn_ext_learn_rem_neigh/r2/frr.conf  |  23 +
+ .../bgp_evpn_ext_learn_rem_neigh/setup.sh     |  38 ++
+ .../test_bgp_evpn_ext_learn_rem_neigh.py      | 467 ++++++++++++++++++
+ 5 files changed, 551 insertions(+)
+ create mode 100644 tests/topotests/bgp_evpn_ext_learn_rem_neigh/__init__.py
+ create mode 100644 tests/topotests/bgp_evpn_ext_learn_rem_neigh/r1/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_ext_learn_rem_neigh/r2/frr.conf
+ create mode 100755 tests/topotests/bgp_evpn_ext_learn_rem_neigh/setup.sh
+ create mode 100644 tests/topotests/bgp_evpn_ext_learn_rem_neigh/test_bgp_evpn_ext_learn_rem_neigh.py
+
+diff --git a/tests/topotests/bgp_evpn_ext_learn_rem_neigh/__init__.py b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/__init__.py
+new file mode 100644
+index 0000000000..e69de29bb2
+diff --git a/tests/topotests/bgp_evpn_ext_learn_rem_neigh/r1/frr.conf b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/r1/frr.conf
+new file mode 100644
+index 0000000000..9f2f9adf03
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/r1/frr.conf
+@@ -0,0 +1,23 @@
++debug zebra vxlan
++debug zebra kernel
++debug zebra evpn mh mac
++debug zebra evpn mh neigh
++debug bgp zebra
++debug bgp updates
++!
++interface r1-eth0
++ ip address 192.168.1.1/24
++!
++ip route 10.0.0.2/32 192.168.1.2
++!
++router bgp 65000
++ bgp router-id 10.0.0.1
++ no bgp default ipv4-unicast
++ neighbor 192.168.1.2 remote-as internal
++ neighbor 192.168.1.2 timers 3 10
++ !
++ address-family l2vpn evpn
++  neighbor 192.168.1.2 activate
++  advertise-all-vni
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_evpn_ext_learn_rem_neigh/r2/frr.conf b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/r2/frr.conf
+new file mode 100644
+index 0000000000..3e1d3f4871
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/r2/frr.conf
+@@ -0,0 +1,23 @@
++debug zebra vxlan
++debug zebra kernel
++debug zebra evpn mh mac
++debug zebra evpn mh neigh
++debug bgp zebra
++debug bgp updates
++!
++interface r2-eth0
++ ip address 192.168.1.2/24
++!
++ip route 10.0.0.1/32 192.168.1.1
++!
++router bgp 65000
++ bgp router-id 10.0.0.2
++ no bgp default ipv4-unicast
++ neighbor 192.168.1.1 remote-as internal
++ neighbor 192.168.1.1 timers 3 10
++ !
++ address-family l2vpn evpn
++  neighbor 192.168.1.1 activate
++  advertise-all-vni
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_evpn_ext_learn_rem_neigh/setup.sh b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/setup.sh
+new file mode 100755
+index 0000000000..39d44ea334
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/setup.sh
+@@ -0,0 +1,38 @@
++#!/bin/bash
++# SPDX-License-Identifier: ISC
++#
++# setup.sh <vtep-ip> <octet> <access-port>: L2-VNI 100 on VLAN 100 of the
++# VLAN-aware bridge br0, with VxLAN device vxlan100, the host-facing access
++# port and SVI vlan100 (192.168.100.<octet>/24, fd00:100::<octet>/64). MAC
++# learning is off on the bridge ports: in MAC external learn mode the test
++# adds the extern_learn FDB entries that hardware learning would.
++
++set -e
++
++vtep=$1
++octet=$2
++acc=$3
++
++ip addr add "$vtep/32" dev lo
++
++ip link add br0 address "02:00:00:00:00:0$octet" type bridge stp_state 0 vlan_filtering 1
++ip link set br0 up
++bridge vlan add dev br0 vid 100 self
++
++ip link add vxlan100 type vxlan id 100 local "$vtep" dstport 4789 nolearning
++ip link set vxlan100 master br0
++bridge vlan del dev vxlan100 vid 1
++bridge vlan add dev vxlan100 vid 100 pvid untagged
++bridge link set dev vxlan100 learning off
++ip link set vxlan100 up
++
++ip link set "$acc" master br0
++bridge vlan del dev "$acc" vid 1
++bridge vlan add dev "$acc" vid 100 pvid untagged
++bridge link set dev "$acc" learning off
++ip link set "$acc" up
++
++ip link add link br0 name vlan100 address "02:00:00:01:00:0$octet" type vlan id 100
++ip addr add "192.168.100.$octet/24" dev vlan100
++ip -6 addr add "fd00:100::$octet/64" dev vlan100 nodad
++ip link set vlan100 up
+diff --git a/tests/topotests/bgp_evpn_ext_learn_rem_neigh/test_bgp_evpn_ext_learn_rem_neigh.py b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/test_bgp_evpn_ext_learn_rem_neigh.py
+new file mode 100644
+index 0000000000..b563d2695c
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_ext_learn_rem_neigh/test_bgp_evpn_ext_learn_rem_neigh.py
+@@ -0,0 +1,467 @@
++#!/usr/bin/env python
++# SPDX-License-Identifier: ISC
++
++#
++# Copyright (C) 2026 Nexthop Systems
++#
++
++"""
++Remote EVPN neighbours in MAC external learn mode (zebra --kernel-mac-ext-learn).
++
++r1 and r2 are VTEPs for L2-VNI 100, both in MAC external learn mode. A host
++with one MAC and an IPv4 and an IPv6 address sits behind r2 (h2) or behind r1
++(h1); only one of the two holds the addresses at a time. Bridge ports do not
++learn: the test adds the extern_learn FDB entries hardware learning would.
++
++The VTEP that has the host as remote must have its neighbours in the kernel
++as zebra installs them in the default mode (NOARP, extern_learn), and must
++keep them remote:
++- after the MAC/IP routes arrive;
++- when it routes to the host (no ARP or ND, the entry stays remote);
++- after the host moves from r2 to r1 (r1 learns it locally, r2 installs it);
++- after the host moves back to r2;
++- and the neighbours leave the kernel when the routes are withdrawn.
++"""
++
++import os
++import sys
++import json
++import time
++import functools
++import pytest
++
++CWD = os.path.dirname(os.path.realpath(__file__))
++sys.path.append(os.path.join(CWD, "../"))
++
++# pylint: disable=C0413
++from lib import topotest
++from lib.topogen import Topogen, TopoRouter, get_topogen
++
++pytestmark = [pytest.mark.bgpd, pytest.mark.evpn]
++
++VNI = 100
++SVI = "vlan100"
++VID = 100
++VTEP = {"r1": "10.0.0.1", "r2": "10.0.0.2"}
++HOST_MAC = "00:00:5e:00:53:60"
++# The MAC of a second host that takes over the IPv4 address.
++NEW_MAC = "00:00:5e:00:53:61"
++HOST_IPS = ("192.168.100.60", "fd00:100::60")
++HOST_PLEN = {"192.168.100.60": 24, "fd00:100::60": 64}
++# The router port each host is attached to.
++ACC = {"h1": "r1-eth1", "h2": "r2-eth1"}
++
++
++def build_topo(tgen):
++    for name in ("r1", "r2", "h1", "h2"):
++        tgen.add_router(name)
++
++    # r1-eth0 <-> r2-eth0: underlay
++    switch = tgen.add_switch("s1")
++    switch.add_link(tgen.gears["r1"])
++    switch.add_link(tgen.gears["r2"])
++    # r1-eth1 <-> h1-eth0
++    switch = tgen.add_switch("s2")
++    switch.add_link(tgen.gears["r1"])
++    switch.add_link(tgen.gears["h1"])
++    # r2-eth1 <-> h2-eth0
++    switch = tgen.add_switch("s3")
++    switch.add_link(tgen.gears["r2"])
++    switch.add_link(tgen.gears["h2"])
++
++
++def setup_module(mod):
++    tgen = Topogen(build_topo, mod.__name__)
++    tgen.start_topology()
++
++    for rname, octet in (("r1", 1), ("r2", 2)):
++        router = tgen.gears[rname]
++        router.cmd_raises(
++            f"/bin/bash {CWD}/setup.sh {VTEP[rname]} {octet} {rname}-eth1"
++        )
++        router.load_frr_config(
++            os.path.join(CWD, f"{rname}/frr.conf"),
++            [
++                (TopoRouter.RD_ZEBRA, " --kernel-mac-ext-learn"),
++                (TopoRouter.RD_BGP, None),
++            ],
++        )
++
++    for hname in ("h1", "h2"):
++        host = tgen.gears[hname]
++        host.cmd_raises(f"ip link set dev {hname}-eth0 address {HOST_MAC}")
++        host.cmd_raises(f"ip link set dev {hname}-eth0 up")
++
++    tgen.start_router()
++
++
++def teardown_module(mod):
++    tgen = get_topogen()
++    tgen.stop_topology()
++
++
++def _ping_cmd(ip):
++    return f"ping -6 -c 1 -W 1 {ip}" if ":" in ip else f"ping -c 1 -W 1 {ip}"
++
++
++def _wait_json(router, cmd, expected, what, count=60):
++    test_func = functools.partial(topotest.router_json_cmp, router, cmd, expected)
++    _, result = topotest.run_and_expect(test_func, None, count=count, wait=1)
++    assert result is None, f"{router.name}: {what}: {result}"
++
++
++def _kernel_neigh(router, ip):
++    """The kernel neighbour entry for ip on the SVI, or None."""
++    output = router.cmd(f"ip -j neigh show nud all dev {SVI} to {ip}")
++    try:
++        entries = json.loads(output) if output.strip() else []
++    except ValueError:
++        return f"bad ip -j output: {output!r}"
++    for entry in entries:
++        if entry.get("dst") == ip:
++            return entry
++    return None
++
++
++def _is_remote_entry(entry, mac=HOST_MAC):
++    """Installed as zebra installs a remote neighbour: NOARP, extern_learn,
++    protocol zebra."""
++    return (
++        isinstance(entry, dict)
++        and entry.get("lladdr") == mac
++        and "extern_learn" in entry
++        and entry.get("protocol") == "zebra"
++        and "NOARP" in entry.get("state", [])
++    )
++
++
++def _is_local_entry(entry, mac=HOST_MAC):
++    """Learnt by the kernel itself (ARP or ND), not installed by zebra."""
++    return (
++        isinstance(entry, dict)
++        and entry.get("lladdr") == mac
++        and "extern_learn" not in entry
++        and "NOARP" not in entry.get("state", [])
++    )
++
++
++def _wait_kernel_neigh(router, check, what, count=30, ips=HOST_IPS):
++    """Wait until check(entry) holds for every IP in ips on router."""
++
++    def run():
++        bad = {}
++        for ip in ips:
++            entry = _kernel_neigh(router, ip)
++            if not check(entry):
++                bad[ip] = entry
++        return bad or None
++
++    _, result = topotest.run_and_expect(run, None, count=count, wait=1)
++    assert result is None, f"{router.name}: {what}: {result}\n{_state(router)}"
++
++
++def _wait_zebra_neigh(router, ntype, what, vtep=None, mac=HOST_MAC, ips=HOST_IPS):
++    """Wait until zebra has every IP in ips as ntype ("local" or "remote")."""
++    for ip in ips:
++        expected = {"type": ntype, "mac": mac}
++        if vtep:
++            expected["remoteVtep"] = vtep
++        _wait_json(
++            router,
++            f"show evpn arp-cache vni {VNI} ip {ip} json",
++            expected,
++            f"{what}: {ip}",
++        )
++
++
++def _ping_host(router, what, ips=HOST_IPS):
++    for ip in ips:
++        _, result = topotest.run_and_expect(
++            lambda: (
++                None
++                if router.run(_ping_cmd(ip)).find(" 0% packet loss") >= 0
++                else "no reply"
++            ),
++            None,
++            count=10,
++            wait=1,
++        )
++        assert (
++            result is None
++        ), f"{router.name}: {what}: {ip} does not answer\n{_state(router)}"
++
++
++def _state(router):
++    """Kernel and zebra state on router, for failure messages."""
++    return "\n".join(
++        [
++            router.cmd(f"ip neigh show nud all dev {SVI}"),
++            router.cmd("bridge fdb show | grep -v permanent"),
++            router.vtysh_cmd(f"show evpn mac vni {VNI}"),
++            router.vtysh_cmd(f"show evpn arp-cache vni {VNI}"),
++        ]
++    )
++
++
++def _host_attach(tgen, hname):
++    """The host comes up behind hname's router: addresses on the host, the
++    extern_learn FDB entry hardware learning would add on the router."""
++    host = tgen.gears[hname]
++    for ip in HOST_IPS:
++        host.cmd_raises(
++            f"ip addr add {ip}/{HOST_PLEN[ip]} dev {hname}-eth0"
++            + (" nodad" if ":" in ip else "")
++        )
++    router = tgen.gears["r1" if hname == "h1" else "r2"]
++    router.cmd_raises(
++        f"bridge fdb replace {HOST_MAC} dev {ACC[hname]} vlan {VID} master extern_learn"
++    )
++
++
++def _host_detach(tgen, hname):
++    host = tgen.gears[hname]
++    for ip in HOST_IPS:
++        host.cmd_raises(f"ip addr del {ip}/{HOST_PLEN[ip]} dev {hname}-eth0")
++
++
++def _learn_local(router, what):
++    """The router ARPs/NDs for the host, so zebra has it as a local neighbour."""
++    _ping_host(router, what)
++    _wait_kernel_neigh(router, _is_local_entry, f"{what}: not learnt locally")
++    _wait_zebra_neigh(router, "local", f"{what}: not local in zebra")
++
++
++def _route_and_check_remote(router, what, vtep):
++    """The router routes to the remote host through the installed neighbours;
++    the kernel learns nothing and zebra keeps them remote."""
++    _ping_host(router, what)
++    # Let any neighbour the kernel learnt from the replies reach zebra.
++    time.sleep(2)
++    _wait_zebra_neigh(router, "remote", f"after {router.name} routed to it", vtep)
++    _wait_kernel_neigh(router, _is_remote_entry, f"after {router.name} routed to it")
++
++
++def _check_ext_learn(router):
++    cmdline = router.cmd("tr '\\0' ' ' < /proc/$(cat /var/run/frr/zebra.pid)/cmdline")
++    assert (
++        "--kernel-mac-ext-learn" in cmdline
++    ), f"{router.name}: zebra runs as {cmdline}"
++
++
++def test_evpn_converge():
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    for rname, peer in (("r1", "r2"), ("r2", "r1")):
++        router = tgen.gears[rname]
++        _check_ext_learn(router)
++        _wait_json(
++            router,
++            f"show evpn vni {VNI} json",
++            {"numRemoteVteps": 1, "remoteVteps": [{"ip": VTEP[peer]}]},
++            f"VNI {VNI} has no remote VTEP {VTEP[peer]}",
++        )
++
++
++def test_remote_neigh_installed():
++    """r2 learns the host locally; r1 installs its neighbours as remote."""
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++    r2 = tgen.gears["r2"]
++
++    _host_attach(tgen, "h2")
++    _learn_local(r2, "host behind r2")
++    _wait_zebra_neigh(r1, "remote", "host behind r2", vtep=VTEP["r2"])
++    _wait_kernel_neigh(r1, _is_remote_entry, "remote neighbour not installed")
++
++
++def test_routing_to_remote_host_keeps_it_remote():
++    """
++    r1 routes to the remote host through the installed neighbour: no ARP or ND,
++    so the kernel learns nothing and zebra keeps the neighbour remote.
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++
++    _wait_kernel_neigh(r1, _is_remote_entry, "remote neighbour not installed")
++    _route_and_check_remote(r1, "host behind r2", VTEP["r2"])
++
++
++def test_remote_to_local_move():
++    """
++    The host moves from r2 to r1. r1's MAC is newer, so r2 withdraws its
++    MAC/IP routes and r1 removes the remote neighbours; r1 then learns the
++    host locally and r2 installs it as remote, replacing its own entries.
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++    r2 = tgen.gears["r2"]
++
++    _wait_kernel_neigh(r1, _is_remote_entry, "remote neighbour not installed")
++
++    _host_detach(tgen, "h2")
++    _host_attach(tgen, "h1")
++    _wait_json(
++        r1,
++        f"show evpn mac vni {VNI} mac {HOST_MAC} json",
++        {HOST_MAC: {"type": "local"}},
++        "MAC did not move to r1",
++    )
++    _wait_kernel_neigh(
++        r1,
++        lambda entry: entry is None or _is_local_entry(entry),
++        "remote neighbour left after the host moved to r1",
++    )
++
++    _learn_local(r1, "host behind r1")
++    _wait_zebra_neigh(r2, "remote", "host behind r1", vtep=VTEP["r1"])
++    _wait_kernel_neigh(r2, _is_remote_entry, "remote neighbour not installed on r2")
++    _route_and_check_remote(r2, "host behind r1", VTEP["r1"])
++
++
++def test_local_to_remote_move():
++    """
++    The host moves back from r1 to r2. r1's local neighbours become remote
++    and the kernel entries r1 learnt are replaced by the remote ones.
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++    r2 = tgen.gears["r2"]
++
++    _wait_kernel_neigh(r1, _is_local_entry, "host is not local on r1")
++
++    _host_detach(tgen, "h1")
++    _host_attach(tgen, "h2")
++    _wait_json(
++        r2,
++        f"show evpn mac vni {VNI} mac {HOST_MAC} json",
++        {HOST_MAC: {"type": "local"}},
++        "MAC did not move to r2",
++    )
++    _wait_kernel_neigh(
++        r2,
++        lambda entry: entry is None or _is_local_entry(entry),
++        "remote neighbour left after the host moved to r2",
++    )
++
++    _learn_local(r2, "host behind r2")
++    _wait_zebra_neigh(r1, "remote", "host back behind r2", vtep=VTEP["r2"])
++    _wait_kernel_neigh(r1, _is_remote_entry, "remote neighbour not installed on r1")
++    _route_and_check_remote(r1, "host back behind r2", VTEP["r2"])
++
++
++def test_remote_neigh_removed_on_withdraw():
++    """The host leaves r2; r1 removes the remote neighbours from the kernel."""
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++    r2 = tgen.gears["r2"]
++
++    _wait_kernel_neigh(r1, _is_remote_entry, "remote neighbour not installed")
++
++    _host_detach(tgen, "h2")
++    for ip in HOST_IPS:
++        r2.cmd_raises(f"ip neigh del {ip} dev {SVI}")
++    r2.cmd_raises(f"bridge fdb del {HOST_MAC} dev {ACC['h2']} vlan {VID} master")
++
++    for ip in HOST_IPS:
++        _wait_json(
++            r1,
++            f"show evpn arp-cache vni {VNI} json",
++            {ip: None},
++            f"{ip} still in zebra after the withdrawal",
++        )
++    _wait_kernel_neigh(
++        r1, lambda entry: entry is None, "remote neighbour left after the withdrawal"
++    )
++
++
++def test_ip_takeover_by_new_mac():
++    """
++    A host with another MAC takes over the IPv4 address behind r1 while r1
++    has the address as a remote neighbour of the old MAC. r1's NOARP entry
++    ignores the new host's ARP. r2's neighbour moves to the new MAC, so r2
++    withdraws the old MAC/IP route and r1 removes the entry; r1 then learns
++    the new binding locally and r2 installs it as remote.
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++    r2 = tgen.gears["r2"]
++    h1 = tgen.gears["h1"]
++    ip = HOST_IPS[0]
++
++    _host_attach(tgen, "h2")
++    _learn_local(r2, "host behind r2")
++    _wait_kernel_neigh(r1, _is_remote_entry, "remote neighbour not installed")
++
++    _host_detach(tgen, "h2")
++    h1.cmd_raises(f"ip link set dev h1-eth0 address {NEW_MAC}")
++    h1.cmd_raises(f"ip addr add {ip}/{HOST_PLEN[ip]} dev h1-eth0")
++    r1.cmd_raises(
++        f"bridge fdb replace {NEW_MAC} dev {ACC['h1']} vlan {VID} master extern_learn"
++    )
++    # r2's kernel updates its neighbour for the IP to the new MAC, as it does
++    # when the new host's flooded ARP reaches it.
++    r2.cmd_raises(f"ip neigh replace {ip} lladdr {NEW_MAC} dev {SVI} nud stale")
++
++    _wait_kernel_neigh(
++        r1,
++        lambda entry: entry is None or _is_local_entry(entry, NEW_MAC),
++        "old remote neighbour left after the IP moved to a new MAC",
++        ips=(ip,),
++    )
++    _ping_host(r1, "new host behind r1", ips=(ip,))
++    _wait_kernel_neigh(
++        r1,
++        lambda entry: _is_local_entry(entry, NEW_MAC),
++        "new host not learnt locally",
++        ips=(ip,),
++    )
++    _wait_zebra_neigh(r1, "local", "new host behind r1", mac=NEW_MAC, ips=(ip,))
++    _wait_zebra_neigh(
++        r2, "remote", "new host behind r1", vtep=VTEP["r1"], mac=NEW_MAC, ips=(ip,)
++    )
++    _wait_kernel_neigh(
++        r2,
++        lambda entry: _is_remote_entry(entry, NEW_MAC),
++        "new binding not installed on r2",
++        ips=(ip,),
++    )
++
++
++def test_memory_leak():
++    tgen = get_topogen()
++    if not tgen.is_memleak_enabled():
++        pytest.skip("Memory leak test/report is disabled")
++
++    tgen.report_memory_leaks()
++
++
++if __name__ == "__main__":
++    args = ["-s"] + sys.argv[1:]
++    sys.exit(pytest.main(args))
