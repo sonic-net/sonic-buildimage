@@ -1,0 +1,625 @@
+From 7d713e3885f5fd26241139d917864b6ea7fe231b Mon Sep 17 00:00:00 2001
+From: Brian Carr <brcarr@nvidia.com>
+Date: Tue, 2 Jun 2026 23:13:16 +0300
+Subject: [PATCH 5/6] pldm-fw: handle ApplyComplete activation method
+ modifications Implement DSP0267 ApplyComplete handling for
+ SuccessModActivation (0x01) and the ComponentActivationMethodsModification
+ field. The UA previously treated any non-zero ApplyResult as failure, so FDs
+ that report a post-apply activation change aborted the update incorrectly. -
+ Parse and log ComponentActivationMethodsModification from ApplyComplete. -
+ Return per-component activation updates from the update path. - In
+ pldm-fw-cli, reconcile modified methods with GetFirmwareParameters,   choose
+ SelfContainedActivationRequest from effective methods, and   tell the
+ operator what external activation steps remain.
+
+Signed-off-by: Brian Carr <brcarr@nvidia.com>
+---
+
+index bdb55dc..0c1d20a 100644
+--- a/pldm-fw-cli/src/bin/pldm-fw.rs
++++ b/pldm-fw-cli/src/bin/pldm-fw.rs
+@@ -9,6 +9,7 @@ use anyhow::{bail, Context};
+ use argh::FromArgs;
+ use enumset::{EnumSet, EnumSetType};
+ use mctp_linux::{MctpAddr, MctpLinuxListener};
++use pldm_fw::{ActivationMethod, ActivationMethods};
+ use std::io::Write;
+ 
+ fn comma_separated<T: EnumSetType + std::fmt::Debug>(e: EnumSet<T>) -> String {
+@@ -281,6 +282,81 @@ fn bps_str(bps: f32) -> String {
+     }
+ }
+ 
++/// Human-readable description of an activation method for end-user output.
++fn activation_method_action(m: ActivationMethod) -> &'static str {
++    match m {
++        ActivationMethod::Automatic =>
++            "Activation will occur automatically; no user action required.",
++        ActivationMethod::SelfContained =>
++            "Activation occurs upon ActivateFirmware (self-contained).",
++        ActivationMethod::MediumSpecificReset =>
++            "Medium-specific reset required (for example, a PCIe reset) \
++             to complete activation.",
++        ActivationMethod::SystemReboot =>
++            "System reboot required to complete activation.",
++        ActivationMethod::DCPowerCycle =>
++            "DC power cycle required to complete activation.",
++        ActivationMethod::ACPowerCycle =>
++            "AC power cycle required to complete activation \
++             (fully remove power, including any auxiliary supply).",
++        ActivationMethod::PendingImage =>
++            "Send ActivatePendingComponentImage to activate the \
++             pending component image.",
++        ActivationMethod::PendingComponentImageSet =>
++            "Send ActivatePendingComponentImageSet to activate the \
++             pending component image set.",
++    }
++}
++
++/// Owned snapshot of activation methods from GetFirmwareParameters.
++///
++/// `FirmwareParameters` borrows from the MCTP endpoint; snapshot before
++/// subsequent `&mut ep` calls during the update sequence.
++type FdComponentActivationSnapshot = Vec<(u16, u16, u8, ActivationMethods)>;
++
++fn snapshot_fd_activation_methods(
++    fwp: &pldm_fw::FirmwareParameters,
++) -> FdComponentActivationSnapshot {
++    fwp.components
++        .as_ref()
++        .iter()
++        .map(|c| {
++            (
++                u16::from(&c.classification),
++                c.identifier,
++                c.classificationindex,
++                c.activation_methods,
++            )
++        })
++        .collect()
++}
++
++fn effective_activation_methods<'a>(
++    fd_snapshot: &FdComponentActivationSnapshot,
++    classification_index: u8,
++    pkg: &'a pldm_fw::pkg::Package,
++    results: &[pldm_fw::ua::ComponentActivationUpdate],
++) -> Vec<(&'a pldm_fw::pkg::PackageComponent, Option<ActivationMethods>)> {
++    results
++        .iter()
++        .map(|r| {
++            let pc = &pkg.components[r.package_component_index];
++            let methods = r.modified_methods.or_else(|| {
++                let pc_class = u16::from(&pc.classification);
++                fd_snapshot
++                    .iter()
++                    .find(|(class, id, idx, _)| {
++                        *class == pc_class
++                            && *id == pc.identifier
++                            && *idx == classification_index
++                    })
++                    .map(|(_, _, _, methods)| *methods)
++            });
++            (pc, methods)
++        })
++        .collect()
++}
++
+ fn progress(p: &pldm_fw::UpdateTransferProgress) {
+     if p.complete {
+         println!(
+@@ -330,6 +406,7 @@ fn main() -> anyhow::Result<()> {
+             )?;
+             let dev = pldm_fw::ua::query_device_identifiers(ep)?;
+             let fwp = pldm_fw::ua::query_firmware_parameters(ep)?;
++            let fd_activation_snapshot = snapshot_fd_activation_methods(&fwp);
+             let mut update = pldm_fw::ua::Update::new(
+                 &dev,
+                 &fwp,
+@@ -338,6 +415,7 @@ fn main() -> anyhow::Result<()> {
+                 u.force_device,
+                 u.force_components,
+             )?;
++            drop(fwp);
+ 
+             println!("Proposed update:");
+             print_device(&dev);
+@@ -350,13 +428,81 @@ fn main() -> anyhow::Result<()> {
+ 
+             let _ = pldm_fw::ua::request_update(ep, &update)?;
+             pldm_fw::ua::pass_component_table(ep, &update)?;
+-            pldm_fw::ua::update_components_progress(
++            let component_results = pldm_fw::ua::update_components_progress(
+                 ep,
+                 &mut listener,
+                 &mut update,
+                 progress,
+             )?;
+-            pldm_fw::ua::activate_firmware(ep, u.self_contained_activation)?;
++
++            let per_component = effective_activation_methods(
++                &fd_activation_snapshot,
++                update.index,
++                &update.package,
++                &component_results,
++            );
++
++            let union: ActivationMethods = per_component
++                .iter()
++                .filter_map(|(_, m)| *m)
++                .fold(EnumSet::empty(), |acc, m| acc | m);
++
++            let all_support_self_contained = !per_component.is_empty()
++                && per_component.iter().all(|(_, m)| {
++                    m.is_some_and(|s| s.contains(ActivationMethod::SelfContained))
++                });
++
++            let self_contained_request =
++                u.self_contained_activation && all_support_self_contained;
++
++            if u.self_contained_activation && !all_support_self_contained {
++                println!(
++                    "Note: --self-contained-activation was requested, but \
++                     one or more updated components do not support \
++                     self-contained activation after apply; sending \
++                     ActivateFirmware with SelfContainedActivationRequest=0."
++                );
++                for (pc, methods) in &per_component {
++                    let supported = methods.is_some_and(|m| {
++                        m.contains(ActivationMethod::SelfContained)
++                    });
++                    if !supported {
++                        println!(
++                            "  component id 0x{:04x} ({}): activation methods {}",
++                            pc.identifier,
++                            pc.version,
++                            methods
++                                .map(comma_separated)
++                                .unwrap_or_else(|| "unknown".into()),
++                        );
++                    }
++                }
++            }
++
++            pldm_fw::ua::activate_firmware(ep, self_contained_request)?;
++
++            println!("\nFirmware update complete.");
++            if self_contained_request {
++                println!(
++                    "ActivateFirmware sent with SelfContainedActivationRequest=1; \
++                     components supporting self-contained activation are now active."
++                );
++            }
++
++            let deferred: ActivationMethods = if self_contained_request {
++                union - ActivationMethod::SelfContained
++            } else {
++                union
++            };
++
++            if !deferred.is_empty() {
++                println!(
++                    "\nAdditional action required to fully activate the new firmware:"
++                );
++                for m in deferred.iter() {
++                    println!("  - {:?}: {}", m, activation_method_action(m));
++                }
++            }
+         }
+         Command::Cancel(c) => {
+             let mut ep = c.addr.create_endpoint()?;
+diff --git a/pldm-fw/src/ua.rs b/pldm-fw/src/ua.rs
+index db211a4..4757c28 100644
+--- a/pldm-fw/src/ua.rs
++++ b/pldm-fw/src/ua.rs
+@@ -8,7 +8,7 @@
+ //! PLDM Firmware Update Agent
+ //!
+ //! Update Agent requires `std` feature.
+-use log::{debug, error};
++use log::{debug, error, info};
+ 
+ use thiserror::Error;
+ 
+@@ -24,9 +24,9 @@ use pldm::PldmError;
+ 
+ use crate::pkg;
+ use crate::{
+-    DeviceIdentifiers, FirmwareParameters, FwCode, GetStatusResponse,
+-    PldmFDState, RequestUpdateResponse, UpdateComponentResponse,
+-    UpdateTransferProgress, PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
++    ActivationMethods, ApplyResult, DeviceIdentifiers, FirmwareParameters,
++    FwCode, GetStatusResponse, PldmFDState, RequestUpdateResponse,
++    UpdateComponentResponse, UpdateTransferProgress, VerifyResult, PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
+ };
+ 
+ pub type Result<T> = core::result::Result<T, PldmUpdateError>;
+@@ -218,7 +218,7 @@ pub fn update_component(
+     package: &pkg::Package,
+     component: &pkg::PackageComponent,
+     index: u8,
+-) -> Result<()> {
++) -> Result<Option<ActivationMethods>> {
+     update_component_progress(comm, listener, package, component, index, |_| ())
+ }
+ 
+@@ -301,7 +301,7 @@ pub fn update_component_progress<F>(
+     component: &pkg::PackageComponent,
+     index: u8,
+     mut progress: F,
+-) -> Result<()>
++) -> Result<Option<ActivationMethods>>
+ where
+     F: FnMut(&UpdateTransferProgress),
+ {
+@@ -494,9 +494,17 @@ where
+         0x17 => {
+             let res = fw_req.data[0];
+             if res != 0 {
+-                return Err(PldmUpdateError::new_update(
+-                    "firmware verify failure".into(),
+-                ));
++                let detail = VerifyResult::from(res);
++                let mut fw_resp = fw_req.response();
++                fw_resp.cc = 0;
++                pldm::pldm_tx_resp(&mut req_ep, &fw_resp)?;
++                error!(
++                    "VerifyComplete failed: result=0x{:02x} ({:?})",
++                    res, detail
++                );
++                return Err(PldmUpdateError::new_update(format!(
++                    "firmware verify failure (verify result 0x{res:02x}: {detail:?})"
++                )));
+             }
+         }
+         _ => {
+@@ -512,21 +520,94 @@ where
+
+     /* Apply */
+     let (fw_req, mut req_ep) = pldm::pldm_rx_req(listener)?;
+-    match fw_req.cmd {
++    let activation_modification = match fw_req.cmd {
+         0x18 => {
+-            let res = fw_req.data[0];
+-            if res != 0 {
+-                return Err(PldmUpdateError::new_update(
+-                    "firmware apply failure".into(),
++            if fw_req.data.is_empty() {
++                let mut fw_resp = fw_req.response();
++                fw_resp.cc = pldm::CCode::ERROR_INVALID_LENGTH as u8;
++                pldm::pldm_tx_resp(&mut req_ep, &fw_resp)?;
++                return Err(PldmUpdateError::new_proto(
++                    "ApplyComplete missing ApplyResult byte".into(),
+                 ));
+             }
++            let res = fw_req.data[0];
++            let detail = ApplyResult::from(res);
++
++            debug!(
++                "ApplyComplete raw payload ({} bytes): {:02x?}",
++                fw_req.data.len(),
++                fw_req.data.as_ref()
++            );
++
++            match detail {
++                ApplyResult::Success => {
++                    info!(
++                        "ApplyComplete: result=0x{res:02x} ({detail:?}) \
++                         activation methods unchanged"
++                    );
++                    None
++                }
++                ApplyResult::SuccessModActivation => {
++                    // DSP0267 Table 37: the 2-byte
++                    // ComponentActivationMethodsModification field is only
++                    // meaningful for SuccessModActivation. Parse it here (not
++                    // eagerly for every ApplyComplete) and mask reserved bits
++                    // like DeviceCapabilities::from_u32 — ActivationMethod
++                    // only defines discriminants 0-7.
++                    if fw_req.data.len() >= 3 {
++                        let raw = u16::from_le_bytes([fw_req.data[1], fw_req.data[2]]);
++                        let masked = raw & ActivationMethods::all().as_u16();
++                        if masked != raw {
++                            debug!(
++                                "ApplyComplete: ComponentActivationMethodsModification \
++                                 0x{raw:04x} contains reserved bits; using 0x{masked:04x}"
++                            );
++                        }
++                        let methods = ActivationMethods::from_u16(masked);
++                        info!(
++                            "ApplyComplete: result=0x{res:02x} ({detail:?}) \
++                             ComponentActivationMethodsModification=\
++                             0x{raw:04x} ({methods:?})"
++                        );
++                        Some(methods)
++                    } else {
++                        error!(
++                            "ApplyComplete: result=0x{res:02x} ({detail:?}) \
++                             but ComponentActivationMethodsModification \
++                             field is missing from response (data len = {})",
++                            fw_req.data.len()
++                        );
++                        let mut fw_resp = fw_req.response();
++                        fw_resp.cc = pldm::CCode::ERROR_INVALID_LENGTH as u8;
++                        pldm::pldm_tx_resp(&mut req_ep, &fw_resp)?;
++                        return Err(PldmUpdateError::new_proto(format!(
++                            "ApplyComplete SuccessModActivation missing \
++                             ComponentActivationMethodsModification field \
++                             (data len = {})",
++                            fw_req.data.len()
++                        )));
++                    }
++                }
++                _ => {
++                    let mut fw_resp = fw_req.response();
++                    fw_resp.cc = 0;
++                    pldm::pldm_tx_resp(&mut req_ep, &fw_resp)?;
++                    error!(
++                        "ApplyComplete failed: result=0x{:02x} ({:?})",
++                        res, detail
++                    );
++                    return Err(PldmUpdateError::new_update(format!(
++                        "firmware apply failure (apply result 0x{res:02x}: {detail:?})"
++                    )));
++                }
++            }
+         }
+         _ => {
+             return Err(PldmUpdateError::new_update(
+                 "unexpected command in apply state".into(),
+             ));
+         }
+-    }
++    };
+ 
+     let mut fw_resp = fw_req.response();
+     fw_resp.cc = 0;
+@@ -534,14 +615,26 @@ where
+ 
+     check_fd_state(comm, PldmFDState::ReadyXfer)?;
+ 
+-    Ok(())
++    Ok(activation_modification)
++}
++
++/// A per-component record of any FD-reported activation method modification.
++///
++/// `package_component_index` is the index into `Update::package.components`
++/// that was just updated. `modified_methods` is `Some(_)` only when the FD
++/// returned `ApplyResult::SuccessModActivation` (DSP0267 §12.9, Table 37),
++/// and contains the parsed `ComponentActivationMethodsModification` bitmap.
++#[derive(Debug, Clone, Copy)]
++pub struct ComponentActivationUpdate {
++    pub package_component_index: usize,
++    pub modified_methods: Option<ActivationMethods>,
+ }
+ 
+ pub fn update_components(
+     comm: &mut impl mctp::ReqChannel,
+     listener: &mut impl mctp::Listener,
+     update: &mut Update,
+-) -> Result<()> {
++) -> Result<Vec<ComponentActivationUpdate>> {
+     update_components_progress(comm, listener, update, |_| ())
+ }
+ 
+@@ -550,15 +652,16 @@ pub fn update_components_progress<F>(
+     listener: &mut impl mctp::Listener,
+     update: &mut Update,
+     mut progress: F,
+-) -> Result<()>
++) -> Result<Vec<ComponentActivationUpdate>>
+ where
+     F: FnMut(&UpdateTransferProgress),
+ {
+     let components = update.components.clone();
++    let mut results = Vec::with_capacity(components.len());
+ 
+     for idx in components {
+         let component = update.package.components.get(idx).unwrap();
+-        update_component_progress(
++        let modified_methods = update_component_progress(
+             comm,
+             listener,
+             &update.package,
+@@ -566,9 +669,13 @@ where
+             update.index,
+             &mut progress,
+         )?;
++        results.push(ComponentActivationUpdate {
++            package_component_index: idx,
++            modified_methods,
++        });
+     }
+ 
+-    Ok(())
++    Ok(results)
+ }
+ 
+ pub fn activate_firmware(
+@@ -628,9 +735,9 @@ mod tests {
+         update_component, PldmUpdateError, Update,
+     };
+     use crate::{
+-        DeviceCapabilities, Descriptor, DescriptorString, DeviceIdentifiers,
+-        FirmwareParameters, FwCode, GetStatusResponse, PldmFDState,
+-        PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
++        ActivationMethod, ActivationMethods, DeviceCapabilities, Descriptor,
++        DescriptorString, DeviceIdentifiers, FirmwareParameters, FwCode,
++        GetStatusResponse, PldmFDState, PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
+     };
+     use mctp::{
+         Eid, Listener, MsgIC, MsgType, ReqChannel, RespChannel,
+@@ -1111,6 +1218,169 @@ mod tests {
+         assert!(matches!(err, PldmUpdateError::Update(_)));
+     }
+ 
++    #[test]
++    fn update_component_parses_success_mod_activation() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        // ApplyResult::SuccessModActivation (0x01) with modification bitmap
++        // 0x000a (SelfContained + SystemReboot).
++        let methods_raw: u16 = 0x000a;
++        let apply_payload = [
++            0x01,
++            (methods_raw & 0xff) as u8,
++            (methods_raw >> 8) as u8,
++        ];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &apply_payload),
++        ]);
++
++        let methods = update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        let expected = ActivationMethods::from_u16(methods_raw);
++        assert_eq!(methods, Some(expected));
++        assert!(methods.unwrap().contains(ActivationMethod::SelfContained));
++        assert!(methods.unwrap().contains(ActivationMethod::SystemReboot));
++    }
++
++    #[test]
++    fn update_component_rejects_success_mod_activation_missing_field() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            // SuccessModActivation without the 2-byte modification field.
++            fd_req_frame(0x18, &[0x01]),
++        ]);
++
++        let err = update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap_err();
++
++        assert!(matches!(
++            err,
++            PldmUpdateError::Protocol(msg)
++                if msg.contains("ApplyComplete SuccessModActivation missing")
++                    && msg.contains("ComponentActivationMethodsModification field")
++                    && msg.contains("data len = 1")
++        ));
++        let sent = listener.sent();
++        let reply = sent.last().expect("ApplyComplete response");
++        assert_eq!(reply[2], 0x18);
++        assert_eq!(reply[3], pldm::CCode::ERROR_INVALID_LENGTH as u8);
++    }
++
++    #[test]
++    fn update_component_rejects_apply_complete_missing_apply_result() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &[]),
++        ]);
++
++        let err = update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap_err();
++
++        assert!(matches!(
++            err,
++            PldmUpdateError::Protocol(msg)
++                if msg.contains("ApplyComplete missing ApplyResult byte")
++        ));
++        let sent = listener.sent();
++        let reply = sent.last().expect("ApplyComplete response");
++        assert_eq!(reply[2], 0x18);
++        assert_eq!(reply[3], pldm::CCode::ERROR_INVALID_LENGTH as u8);
++    }
++
++    #[test]
++    fn update_component_ignores_reserved_bits_on_apply_success() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            // ApplyResult::Success with a non-zero modification field (non-conformant FD).
++            fd_req_frame(0x18, &[0x00, 0x00, 0x01]),
++        ]);
++
++        let methods = update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        assert_eq!(methods, None);
++    }
++
++    #[test]
++    fn update_component_truncates_reserved_activation_method_bits() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        // SuccessModActivation with bit 8 set (invalid for ActivationMethod).
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &[0x01, 0x00, 0x01]),
++        ]);
++
++        let methods = update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        assert_eq!(methods, Some(ActivationMethods::empty()));
++    }
++
+     // --- ActivateFirmware ------------------------------------------------
+ 
+     #[test]
+
+--
+2.49.0

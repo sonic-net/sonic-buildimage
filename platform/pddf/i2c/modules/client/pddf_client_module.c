@@ -29,6 +29,7 @@
 #include <linux/dmi.h>
 #include <linux/kobject.h>
 #include <linux/hashtable.h>
+#include <linux/notifier.h>
 #include "pddf_client_defs.h"
 
 
@@ -199,6 +200,10 @@ EXPORT_SYMBOL(store_pddf_data);
 
 
 DEFINE_HASHTABLE(htable, 8);
+/* Guards htable and the lifetime of its entries: add/get/delete run from the
+ * data modules' sysfs handlers, the bus notifier from whoever removes an
+ * adapter. All process context. */
+static DEFINE_MUTEX(htable_lock);
 
 int get_hash(char *name)
 {
@@ -216,55 +221,117 @@ void init_device_table(void)
     hash_init(htable);
 }
 
-void add_device_table(char *name, void *ptr)
+void add_device_table_owned(char *name, void *ptr, void (*free_pdata)(void *pdata), struct module *owner)
 {
     PDEVICE *hdev=kmalloc(sizeof(PDEVICE), GFP_KERNEL );
     if(!hdev)return;
     strcpy(hdev->name, name);
     hdev->data = ptr;
+    hdev->free_pdata = free_pdata;
+    /* A live client refers to its owner in two ways: the free callback
+     * lives there, and for psu/fan the attribute list holds pointers into
+     * the driver the owner pins. Keep the owner loaded until the client is
+     * gone; delete the devices before unloading the module. */
+    hdev->owner = (owner && try_module_get(owner)) ? owner : NULL;
     pddf_dbg(CLIENT, KERN_ERR "%s: Adding ptr 0x%p to the hash table\n", __FUNCTION__, ptr);
+    mutex_lock(&htable_lock);
     hash_add(htable, &hdev->node, get_hash(hdev->name));
+    mutex_unlock(&htable_lock);
+}
+EXPORT_SYMBOL(add_device_table_owned);
+
+void add_device_table(char *name, void *ptr)
+{
+    add_device_table_owned(name, ptr, NULL, NULL);
 }
 EXPORT_SYMBOL(add_device_table);
 
 void* get_device_table(char *name)
 {
     PDEVICE *dev=NULL;
+    void *data=NULL;
     int i=0;
-    
+
+    mutex_lock(&htable_lock);
     hash_for_each(htable, i, dev, node) {
         if(strcmp(dev->name, name)==0) {
-            return (void *)dev->data;
+            data = dev->data;
+            break;
         }
     }
-
-    return NULL;
+    mutex_unlock(&htable_lock);
+    return data;
 }
 EXPORT_SYMBOL(get_device_table);
 
 void delete_device_table(char *name)
 {
     PDEVICE *dev=NULL;
+    struct hlist_node *tmp;
     int i=0;
-    
-    hash_for_each(htable, i, dev, node) {
+
+    mutex_lock(&htable_lock);
+    hash_for_each_safe(htable, i, tmp, dev, node) {
         if(strcmp(dev->name, name)==0) {
             pddf_dbg(CLIENT, KERN_ERR "found entry to delete: %s  0x%p\n", dev->name, dev->data);
             hash_del(&(dev->node));
+            if (dev->owner)
+                module_put(dev->owner);
+            kfree(dev);
         }
     }
+    mutex_unlock(&htable_lock);
     return;
 }
 EXPORT_SYMBOL(delete_device_table);
+
+/* The data modules own the platform data of the i2c clients they create,
+ * but a client can also be torn down without them: the i2c core
+ * unregisters every child when a parent adapter (a mux, an FPGA bus) goes
+ * away. Catch that here so the platform data is freed, and the table entry
+ * dropped, no matter who removed the client. The modules' own delete paths
+ * end up here too, through i2c_unregister_device(). */
+static int pddf_i2c_bus_notify(struct notifier_block *nb, unsigned long action, void *data)
+{
+    struct device *dev = data;
+    PDEVICE *pdev=NULL;
+    struct hlist_node *tmp;
+    int i=0;
+
+    if (action != BUS_NOTIFY_REMOVED_DEVICE || dev->type != &i2c_client_type)
+        return NOTIFY_DONE;
+
+    mutex_lock(&htable_lock);
+    hash_for_each_safe(htable, i, tmp, pdev, node) {
+        if (pdev->data != (void *)to_i2c_client(dev))
+            continue;
+        pddf_dbg(CLIENT, KERN_ERR "%s: client %s removed, releasing its platform data\n", __FUNCTION__, pdev->name);
+        if (pdev->free_pdata)
+            pdev->free_pdata(dev->platform_data);
+        dev->platform_data = NULL;
+        hash_del(&(pdev->node));
+        if (pdev->owner)
+            module_put(pdev->owner);
+        kfree(pdev);
+    }
+    mutex_unlock(&htable_lock);
+    return NOTIFY_OK;
+}
+
+static struct notifier_block pddf_i2c_bus_nb = {
+    .notifier_call = pddf_i2c_bus_notify,
+};
 
 void traverse_device_table(void )
 {
     PDEVICE *dev=NULL;
     int i=0;
+    mutex_lock(&htable_lock);
     hash_for_each(htable, i, dev, node) {
         pddf_dbg(CLIENT, KERN_ERR "Entry[%d]: %s : 0x%p\n", i, dev->name, dev->data);
     }
     showall = i;
+    mutex_unlock(&htable_lock);
 }
 EXPORT_SYMBOL(traverse_device_table);
 
@@ -295,6 +362,12 @@ int __init pddf_data_init(void)
     }
 
     init_device_table();
+    ret = bus_register_notifier(&i2c_bus_type, &pddf_i2c_bus_nb);
+    if (ret)
+    {
+        kobject_put(device_kobj);
+        return ret;
+    }
 
     ret = sysfs_create_group(device_kobj, &pddf_allclients_data_group);
     if (ret)
@@ -314,6 +387,7 @@ void __exit pddf_data_exit(void)
 
     pddf_dbg(CLIENT, "PDDF_DATA MODULE.. exit\n");
     sysfs_remove_group(device_kobj, &pddf_allclients_data_group);
+    bus_unregister_notifier(&i2c_bus_type, &pddf_i2c_bus_nb);
 
     kobject_put(device_kobj);
     kobject_put(pddf_kobj);

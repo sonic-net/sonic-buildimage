@@ -36,8 +36,7 @@ from typing import Iterator, List, Optional
 
 from mellanox_bfb_installer import bfb_file
 from mellanox_bfb_installer import device_selection
-from mellanox_bfb_installer import install_executor
-from mellanox_bfb_installer import bfb_install_core
+from mellanox_bfb_installer import doca_install_core
 from mellanox_bfb_installer import platform_dpu
 from mellanox_bfb_installer import tmfifo_bridge
 
@@ -140,7 +139,7 @@ USAGE_ARGUMENTS = """Arguments:
 -d|--dpu\t\tInstall on specified DPUs, mention all if installation is required on all connected DPUs
 -s|--skip-extract\tSkip extracting the bfb image
 -v|--verbose\t\tVerbose installation result output
--c|--config\t\tConfig file
+-c|--config\t\tSingle config file applied to all selected DPUs
 --debug-shell\t\tOn DPU-side installer command failure, drop into an interactive recovery shell
 -h|--help\t\tHelp"""
 
@@ -160,18 +159,19 @@ def _dpu_name_to_id(dpu_name: str) -> int:
 
 
 def _generate_additional_config_lines(
-    target: device_selection.TargetInfo,
+    targets: List[device_selection.TargetInfo],
     debug_shell: bool = False,
     collect_dump_on_failure: bool = False,
     dump_upload_base_url: Optional[str] = None,
 ) -> str:
-    """Generate additional config lines for a specific target DPU."""
+    """Generate shared and per-RShim lines for the DOCA Installer configuration."""
     lines = []
     # Used by DPU to roughly set the clock after installation to a recent value from the NPU.
     lines.append(f"NPU_TIME={int(time.time())}\n")
-    # Used by the in-DPU installer to compute the per-DPU tmfifo0 recovery address
-    # (192.168.100.{1+DPU_ID}/24); see platform/nvidia-bluefield/installer/install.sh.j2.
-    lines.append(f"DPU_ID={_dpu_name_to_id(target.dpu)}\n")
+    # DOCA Installer strips each RSHIM<N>_ prefix when it generates the corresponding
+    # per-device bf.cfg. DPU_ID gives every DPU a unique tmfifo address and dump path.
+    for target in targets:
+        lines.append(f"{target.rshim.upper()}_DPU_ID={_dpu_name_to_id(target.dpu)}\n")
     if debug_shell:
         # When set, the DPU-side installer drops into an interactive recovery bash on
         # chroot command failure; see ex_chroot in install.sh.j2.
@@ -190,46 +190,20 @@ def _generate_additional_config_lines(
     return "".join(lines)
 
 
-def _add_additional_config_lines(
-    targets: List[device_selection.TargetInfo],
-    tempdir: str,
-    debug_shell: bool = False,
-    collect_dump_on_failure: bool = False,
-    dump_upload_base_url: Optional[str] = None,
-) -> None:
-    """Update the targets to use temporary copies of the config files with additional content.
-
-    For each target, create a temp copy of its config file with the original contents plus
-    DPU-specific additional lines (from _generate_additional_config_lines), and update the
-    target to use the new path. If the config file is None, create an empty temp copy and
-    append the additional lines. Targets that share a config_path each get a distinct temp
-    file since the additional lines vary per-DPU.
-    """
-    for idx, target in enumerate(targets):
-        config_path = target.config_path
-        base = os.path.basename(config_path) if config_path else "empty-config"
-        fd, new_path = tempfile.mkstemp(suffix="", prefix=f"{base}.", dir=tempdir)
-        with os.fdopen(fd, "w") as f:
-            if config_path:
-                with open(config_path, "r") as orig:
-                    f.write(orig.read())
-            f.write("\n")
-            f.write(
-                _generate_additional_config_lines(
-                    target,
-                    debug_shell=debug_shell,
-                    collect_dump_on_failure=collect_dump_on_failure,
-                    dump_upload_base_url=dump_upload_base_url,
-                )
-            )
-            f.write("\n")
-        targets[idx] = device_selection.TargetInfo(
-            dpu=target.dpu,
-            rshim=target.rshim,
-            dpu_pci_bus_id=target.dpu_pci_bus_id,
-            rshim_pci_bus_id=target.rshim_pci_bus_id,
-            config_path=new_path,
-        )
+def _build_shared_config(
+    config_path: Optional[str], additional_lines: str, work_dir: str
+) -> str:
+    """Create the shared DOCA configuration with wrapper-generated values appended."""
+    base = os.path.basename(config_path) if config_path else "empty-config"
+    fd, generated_path = tempfile.mkstemp(suffix=".cfg", prefix=f"{base}.", dir=work_dir)
+    with os.fdopen(fd, "w") as generated_config:
+        if config_path:
+            with open(config_path, "r") as user_config:
+                generated_config.write(user_config.read())
+        generated_config.write("\n")
+        generated_config.write(additional_lines)
+        generated_config.write("\n")
+    return generated_path
 
 
 @contextmanager
@@ -314,63 +288,56 @@ def _install_on_dpus(
     rshims: Optional[str],
     dpus: Optional[str],
     verbose: bool,
-    configs: Optional[str],
-    temp_work_dir: str,
+    config: Optional[str],
     debug_shell: bool = False,
     collect_dump_on_failure: bool = False,
     dump_output_dir: str = DUMP_OUTPUT_DIR_DEFAULT,
 ) -> None:
-    """Install BFB image on DPUs connected to the host, including all preparatory steps, reset, etc.
-
-    bfb_path is the prepared BFB path; work_dir is used for per-device result files.
+    """Install a BFB image on the selected DPUs using DOCA Installer.
 
     When ``collect_dump_on_failure`` is True, an ephemeral host bridge
     (``bridge-tmfifo`` @ ``192.168.100.254/24``) and HTTP dump receiver are
-    started before the parallel install kicks off and torn down on the way
+    started before DOCA Installer runs and torn down on the way
     out, success or failure. The DPU-side installer (install.sh.j2) uses the
     matching ``COLLECT_DUMP_ON_FAILURE`` / ``DUMP_UPLOAD_BASE_URL`` values in
     its bf.cfg to POST mstdump-bearing tarballs back to that receiver if its
     chroot install steps fail.
+
+    bfb_path is the prepared BFB path; work_dir stores the generated shared DOCA configuration.
     """
-    # Turn the user-provided parameters into a concrete list of dpus/devices/configs.
-    # Then do the parallel installations.
+    if config is not None and not os.path.isfile(config):
+        logger.error(
+            "Config must be one shared file; comma-separated per-DPU configs are unsupported: %s",
+            config,
+        )
+        print_usage()
+        sys.exit(1)
 
     targets = device_selection.get_targets(
         dpus=dpus,
         rshims=rshims,
-        configs=configs,
         script_name=SCRIPT_NAME,
         print_usage_callback=print_usage,
     )
 
     dump_upload_base_url: Optional[str] = None
     if collect_dump_on_failure:
-        dump_upload_base_url = (
-            f"http://{DUMP_RECEIVER_BIND_IP}:{DUMP_RECEIVER_PORT}"
-        )
+        dump_upload_base_url = f"http://{DUMP_RECEIVER_BIND_IP}:{DUMP_RECEIVER_PORT}"
 
-    _add_additional_config_lines(
+    additional_config_lines = _generate_additional_config_lines(
         targets,
-        temp_work_dir,
         debug_shell=debug_shell,
         collect_dump_on_failure=collect_dump_on_failure,
         dump_upload_base_url=dump_upload_base_url,
     )
+    shared_config_path = _build_shared_config(config, additional_config_lines, work_dir)
 
-    def _install_one_dpu(idx: int, child_pids: install_executor.PidCollection) -> int:
-        target = targets[idx]
-        rshim_name = target.rshim
-        return bfb_install_core.full_install_bfb_on_device(
-            rshim_name=rshim_name,
-            rshim_id=rshim_name[5:] if rshim_name.startswith("rshim") else rshim_name,
-            dpu_name=target.dpu,
-            rshim_pci_bus_id=target.rshim_pci_bus_id,
-            dpu_pci_bus_id=target.dpu_pci_bus_id,
-            config_path=target.config_path,
+    def _run_doca_install() -> int:
+        return doca_install_core.install_bfb_on_targets(
+            targets=targets,
             bfb_path=bfb_path,
-            work_dir=work_dir,
+            config_path=shared_config_path,
             verbose=verbose,
-            child_pids=child_pids,
         )
 
     # Stand up the tmfifo bridge + dump receiver only when feature is on and
@@ -387,22 +354,17 @@ def _install_on_dpus(
                 DUMP_BRIDGE_NAME,
                 e,
             )
-            failed = install_executor.run_parallel(len(targets), _install_one_dpu)
-            if failed:
-                sys.exit(1)
-            return
+            failures = _run_doca_install()
+        else:
+            try:
+                with _dump_receiver_subprocess(dump_output_dir, verbose=verbose):
+                    failures = _run_doca_install()
+            finally:
+                bridge.teardown()
+    else:
+        failures = _run_doca_install()
 
-        try:
-            with _dump_receiver_subprocess(dump_output_dir, verbose=verbose):
-                failed = install_executor.run_parallel(len(targets), _install_one_dpu)
-        finally:
-            bridge.teardown()
-        if failed:
-            sys.exit(1)
-        return
-
-    failed = install_executor.run_parallel(len(targets), _install_one_dpu)
-    if failed:
+    if failures:
         sys.exit(1)
 
 
@@ -443,8 +405,7 @@ def _main(
                 rshims=rshim,
                 dpus=dpu,
                 verbose=verbose,
-                configs=config,
-                temp_work_dir=temp_work_dir.name,
+                config=config,
                 debug_shell=debug_shell,
                 collect_dump_on_failure=collect_dump_on_failure,
                 dump_output_dir=dump_output_dir,
@@ -482,7 +443,13 @@ def _main(
 @click.option(
     "-v", "--verbose", is_flag=True, default=False, help="Verbose installation result output"
 )
-@click.option("-c", "--config", type=str, default=None, help="Config file")
+@click.option(
+    "-c",
+    "--config",
+    type=str,
+    default=None,
+    help="Single config file applied to all selected DPUs",
+)
 @click.option(
     "--debug-shell",
     is_flag=True,

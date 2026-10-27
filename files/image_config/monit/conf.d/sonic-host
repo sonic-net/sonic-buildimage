@@ -7,9 +7,15 @@
 
 check filesystem root-overlay with path /
     if space usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+    if inode usage > 85% for 10 times within 20 cycles then alert repeat every 1 cycles
 
 check filesystem var-log with path /var/log
     if space usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+    if inode usage > 85% for 10 times within 20 cycles then alert repeat every 1 cycles
+
+# host-inodes: alert when /host inode usage stays over threshold
+check filesystem host-inodes with path /host
+    if inode usage > 85% for 10 times within 20 cycles then alert repeat every 1 cycles
 
 check system $HOST
     if memory usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles

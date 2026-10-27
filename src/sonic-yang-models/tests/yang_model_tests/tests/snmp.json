@@ -29,6 +29,22 @@
         "desc": "Load SNMP community string with un supported type.",
         "eStrKey": "InvalidValue"
     },
+    "SNMP_COMMUNITY_LF_NEG_TEST": {
+        "desc": "Load SNMP community string containing LF.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
+    "SNMP_COMMUNITY_CR_NEG_TEST": {
+        "desc": "Load SNMP community string containing CR.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
+    "SNMP_COMMUNITY_CRLF_NEG_TEST": {
+        "desc": "Load SNMP community string containing CRLF.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
+    "SNMP_COMMUNITY_TAB_NEG_TEST": {
+        "desc": "Load SNMP community string containing tab.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
     "SNMP_RO_USER_NAME_TEST": {
         "desc": "Load valid RO SNMP user"
     },
@@ -45,6 +61,22 @@
     },
     "SNMP_USER_NAME_INVALID_NEG_TEST_2": {
         "desc": "Load SNMP user with invalid value",
+        "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
+    },
+    "SNMP_USER_NAME_LF_NEG_TEST": {
+        "desc": "Load SNMP user name containing LF",
+        "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
+    },
+    "SNMP_USER_NAME_CR_NEG_TEST": {
+        "desc": "Load SNMP user name containing CR",
+        "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
+    },
+    "SNMP_USER_NAME_CRLF_NEG_TEST": {
+        "desc": "Load SNMP user name containing CRLF",
+        "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
+    },
+    "SNMP_USER_NAME_TAB_NEG_TEST": {
+        "desc": "Load SNMP user name containing tab",
         "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
     },
     "SNMP_USER_NO_USER_TYPE_NEG_TEST": {
@@ -88,6 +120,22 @@
         "desc": "Load SNMP user with user type AuthNoPriv with invalid auth password",
         "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
     },
+    "SNMP_USER_AUTH_PASSWORD_LF_NEG_TEST": {
+        "desc": "Load SNMP authentication password containing LF",
+        "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_AUTH_PASSWORD_CR_NEG_TEST": {
+        "desc": "Load SNMP authentication password containing CR",
+        "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_AUTH_PASSWORD_CRLF_NEG_TEST": {
+        "desc": "Load SNMP authentication password containing CRLF",
+        "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_AUTH_PASSWORD_TAB_NEG_TEST": {
+        "desc": "Load SNMP authentication password containing tab",
+        "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
     "SNMP_USER_PRIV_TEST": {
         "desc": "Load SNMP user with user type Priv with AES encryption type"
     },
@@ -108,6 +156,22 @@
     },
     "SNMP_USER_PRIV_INVALID_ENCRYPT_PASS_NEG_TEST": {
         "desc": "Load SNMP user with user type Priv with invalid encryption password",
+        "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_LF_NEG_TEST": {
+        "desc": "Load SNMP encryption password containing LF",
+        "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_CR_NEG_TEST": {
+        "desc": "Load SNMP encryption password containing CR",
+        "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_CRLF_NEG_TEST": {
+        "desc": "Load SNMP encryption password containing CRLF",
+        "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_TAB_NEG_TEST": {
+        "desc": "Load SNMP encryption password containing tab",
         "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
     },
     "SNMP_USER_PRIV_SHORT_ENCRYPT_PASS_NEG_TEST": {
@@ -153,4 +217,3 @@
         "eStr": ["ip"]
     }
 }
-

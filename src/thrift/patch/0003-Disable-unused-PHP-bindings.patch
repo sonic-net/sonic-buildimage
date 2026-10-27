@@ -1,0 +1,71 @@
+Disable unused PHP Thrift bindings and Debian package
+
+SONiC only consumes C++, Python, and compiler outputs. Disable PHP
+build/install/test paths and drop their build dependencies and binary
+package.
+
+---
+--- a/debian/control
++++ b/debian/control
+@@ -13,7 +13,6 @@
+  python-all-dev (>= 2.6.6-3~), python-twisted, python-six,
+  python3-six,
+  golang-go, golang-github-golang-mock-dev,
+- pkg-php-tools (>= 1.14~), php-dev, phpunit,
+  perl (>= 5.22), libbit-vector-perl, libclass-accessor-perl,
+ # openjdk-11-jdk, javahelper, maven-debian-helper (>= 1.5), ant (>= 1.7), ant-optional,
+ # libhttpclient-java, libslf4j-java, libservlet3.1-java (>= 8),
+@@ -27,7 +26,6 @@
+ # erlang-dev, erlang-eunit,
+ # liblua5.2-dev,
+ # google-mock
+-Build-Depends-Indep: composer
+ Standards-Version: 4.3.0
+ Homepage: https://thrift.apache.org/
+ XS-Ruby-Versions: ruby2.2
+@@ -152,21 +150,6 @@
+ # .
+ # This package contains Javadoc HTML documentation for libthrift-java .
+ #
+-Package: php-thrift
+-Architecture: any
+-Section: php
+-Depends: ${phpcomposer:Debian-require}, ${misc:Depends}
+-Provides: ${php:Provides}
+-Conflicts: php7.0-thrift, php7.2-thrift
+-Replaces: php7.0-thrift, php7.2-thrift
+-Description: PHP language support for Thrift
+- Thrift is a software framework for the development of reliable and
+- performant communication and data serialization. It combines a software
+- stack with code generation to build services that operate seamlessly
+- across a number of different development languages.
+- .
+- This package provides the PHP5 language support for Thrift.
+-
+ Package: libthrift-perl
+ Section: perl
+ Architecture: all
+--- a/debian/rules
++++ b/debian/rules
+@@ -51,7 +51,7 @@
+ 
+ override_dh_auto_configure:
+ 	dh_auto_configure -- --enable-plugin \
+-		--with-cpp --with-c_glib --with-php --with-php_extension \
++		--with-cpp --with-c_glib --without-php --without-php_extension \
+ 		--with-perl --with-python --with-py3 --without-java \
+ 		--without-nodejs --without-erlang --without-lua \
+ 		--with-go --with-ruby \
+@@ -88,7 +88,7 @@
+ 	dh_strip
+ 
+ %:
+-	dh $@ --with python2,ruby,phpcomposer --install-layout=deb --parallel
++	dh $@ --with python2,ruby --install-layout=deb --parallel
+ #	dh $@ --with python2,javahelper,golang,ruby --install-layout=deb \
+ 		--buildsystem=golang --parallel
+ #	dh $@ --with python2,javahelper --install-layout=deb --parallel
+--- a/debian/php-thrift.install
++++ /dev/null
+@@ -1 +0,0 @@
+-usr/lib/php/

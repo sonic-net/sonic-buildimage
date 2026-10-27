@@ -22,7 +22,7 @@ MODULE_DIRS += nh-4220-r0
 MODULE_DIRS += nh-5010
 
 SERVICE_DIR := service
-SYSTEM_DIR := etc/systemd/system
+SYSTEM_DIR := etc/systemd
 UTILS_DIR := utils
 
 # Uncomment this to turn on verbose mode.
@@ -107,6 +107,11 @@ override_dh_auto_install:
 			cp $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d/* \
 				debian/$${pkg_name}/etc/modprobe.d/; \
 		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/etc/modules-load.d ]; then \
+			dh_installdirs -p$${pkg_name} etc/modules-load.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/etc/modules-load.d/* \
+				debian/$${pkg_name}/etc/modules-load.d/; \
+		fi; \
 	done)
 	python3 setup.py install \
 		--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
@@ -127,6 +132,9 @@ override_dh_install:
 					device_name="x86_64-nexthop_$${fixed_platform_string_model}$${revision}"; \
 					dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
 						usr/share/sonic/device/$${device_name}/pddf/; \
+					dh_install -p$${pkg_name} \
+						../../../target/python-wheels/$$BLDENV/nexthop_utils-1.0-py3-none-any.whl \
+						usr/share/sonic/device/$${device_name}/; \
 				fi; \
 				if [ -f common/utils/nh_powercycle ]; then \
 					dh_install -p$${pkg_name} common/utils/nh_powercycle \

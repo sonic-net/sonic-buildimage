@@ -921,8 +921,16 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ### Console
 
-CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The item default_escape_char and escape_char are optional. It can be
-set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
+CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The items `default_escape_char` and `escape_char` are optional. They can be
+set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config.
+
+CONSOLE_PORT logging attributes (all optional):
+-   logging_enabled - Enable or disable console I/O logging for the line, allowed values: yes/no, default value: no
+-   log_file - Absolute path to the console log file (e.g. `/var/log/console-1.log`)
+-   logrotate_size - Maximum log file size before rotation, allowed pattern: numeric value with optional suffix `k`, `K`, `M`, or `G` (e.g. `10M`, `100K`)
+-   logrotate_count - Number of rotated log files to retain, allowed values: 1-100
+
+When logging is enabled via CLI and `log_file`, `logrotate_size`, or `logrotate_count` are not configured, runtime defaults are applied: log file `/var/log/console-<line>.log`, logrotate size `10M`, and logrotate count `10`.
 
 ```
 {
@@ -930,7 +938,11 @@ set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
     "1": {
         "baud_rate": "115200",
         "flow_control": "0",
-        "remote_device": "host-1"
+        "remote_device": "host-1",
+        "logging_enabled": "yes",
+        "log_file": "/var/log/console-1.log",
+        "logrotate_size": "10M",
+        "logrotate_count": "10"
     },
     "2": {
         "baud_rate": "9600",
@@ -1233,7 +1245,7 @@ BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_tab
 ```
 
 ### DHCP_SERVER_IPV4
-IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT** tables.
+IPV4 DHCP Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT**, **DHCP_SERVER_IPV4_MATCH**, **DHCP_SERVER_IPV4_BINDING** tables.
 ```
 {
     "DHCP_SERVER_IPV4": {
@@ -1257,8 +1269,10 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
     },
     "DHCP_SERVER_IPV4_RANGE": {
         "range1": {
-            "ip_start": "100.1.1.3",
-            "ip_end": "100.1.1.5"
+            "range": [
+                "100.1.1.3",
+                "100.1.1.5"
+            ]
         }
     },
     "DHCP_SERVER_IPV4_PORT": {
@@ -1268,6 +1282,104 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
             ]
         },
         "Vlan100|PortChannel2": {
+            "ranges": [
+                "range1"
+            ]
+        }
+    }
+}
+```
+
+**DHCP_SERVER_IPV4_MATCH** defines named, exact-match conditions on a single field of an
+incoming DHCPv4 packet. A condition is referenced by name from **DHCP_SERVER_IPV4_BINDING**;
+defining one on its own has no effect.
+
+**Note:** This change adds the schema for **DHCP_SERVER_IPV4_MATCH** and
+**DHCP_SERVER_IPV4_BINDING** only. The `mode` leaf of **DHCP_SERVER_IPV4** does not accept
+`MATCH` yet, and the DHCP server runtime does not read these two tables yet, so entries
+configured here are validated against the schema but do not affect address assignment. The
+address-selection and Kea-generation behavior described in the rest of this section takes
+effect once `MATCH` mode and the corresponding `dhcpservd` support are added in a follow-up
+change.
+
+| Field | Description |
+| ----- | ----------- |
+| name  | Key. User-defined name of the condition. Must not start or end with whitespace or control characters. Must not contain `\|` or `,`: these are the Config DB key separator and leaf-list separator respectively, so a name containing either cannot be referenced from **DHCP_SERVER_IPV4_BINDING**. |
+| type  | Packet field to match: `circuit_id` or `option60`. |
+| value | The exact value to match. |
+
+For `type` `option60` the value is compared against the Vendor Class Identifier (RFC 2132
+option 60) sent by the client.
+
+ For `type` `circuit_id`, the configured value identifies the ingress interface used for
+ Option 82 sub-option 1 (RFC 3046). `dhcp_relay` stamps the on-wire value with the
+ hostname and ingress interface, and the runtime expands the configured port alias,
+ aliasless port name, or PortChannel name before comparing it. A value naming no
+ existing interface is rejected because it could never match a packet.
+ The value must resolve to exactly one interface across the switch. A value shared
+ by multiple port aliases, or colliding with an aliasless port name or a PortChannel
+ name, is rejected as ambiguous. This does not impose global uniqueness on port
+ aliases: duplicate aliases remain permitted when no `circuit_id` condition uses
+ the ambiguous value. This check does not apply to `option60` values.
+
+**DHCP_SERVER_IPV4_BINDING** associates one or more match conditions with the addresses to
+hand out when they all match.
+
+| Field   | Description |
+| ------- | ----------- |
+| name    | Key, first part. DHCP interface, referencing **DHCP_SERVER_IPV4**. |
+| binding | Key, second part. User-defined name of the binding. Must not start or end with whitespace or control characters, or contain `\|` (the Config DB key separator). |
+| matches | One or more **DHCP_SERVER_IPV4_MATCH** names, combined with logical AND. At most one condition per `type`. |
+| ips     | Assigned IPv4 addresses. Mutually exclusive with `ranges`. |
+| ranges  | Named **DHCP_SERVER_IPV4_RANGE** entries. Mutually exclusive with `ips`. |
+
+Each match condition tests a single-valued field of the packet, so a binding may
+reference at most one `circuit_id` condition and at most one `option60` condition.
+Two conditions of the same `type` could never both be true, so a binding referencing
+them is rejected rather than accepted as one that can never select its pool.
+
+Exactly one of `ips` or `ranges` must be configured on a binding.
+
+A client can match more than one binding. In the example below a client on `etp1`
+sending Vendor Class Identifier `MAIA-BMC` matches both `bmc_on_etp1` and
+`any_on_etp1`. The binding with more match conditions wins, so such a client is
+assigned `100.1.1.21` and only clients on `etp1` that do not send `MAIA-BMC` draw
+from `range1`. This does not depend on the order in which the bindings are
+configured: the generated Kea client classes are made mutually exclusive, so a
+client is a member of the more specific class only.
+
+Two bindings that can match the same packet and have the **same** number of match
+conditions - for example one matching only `port_etp1` and another matching only
+`vendor_bmc` - have no more-specific winner. That is rejected when the DHCP
+configuration is generated, so the bindings must be corrected; the previously
+generated configuration keeps being served in the meantime.
+
+```
+{
+    "DHCP_SERVER_IPV4_MATCH": {
+        "port_etp1": {
+            "type": "circuit_id",
+            "value": "etp1"
+        },
+        "vendor_bmc": {
+            "type": "option60",
+            "value": "MAIA-BMC"
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING": {
+        "Vlan100|bmc_on_etp1": {
+            "matches": [
+                "port_etp1",
+                "vendor_bmc"
+            ],
+            "ips": [
+                "100.1.1.21"
+            ]
+        },
+        "Vlan100|any_on_etp1": {
+            "matches": [
+                "port_etp1"
+            ],
             "ranges": [
                 "range1"
             ]
@@ -2301,7 +2413,8 @@ name as object key and member list as attribute.
         "members": [
             "Ethernet54"
         ],
-        "mtu": "9100"
+        "mtu": "9100",
+        "lag_type": "LACP"
     },
     "PortChannel0004": {
         "admin_status": "up",
@@ -2312,7 +2425,8 @@ name as object key and member list as attribute.
         "mtu": "9100",
         "fallback": "false",
         "fast_rate": "true",
-        "system_mac": "aa:bb:cc:dd:ee:ff"
+        "system_mac": "aa:bb:cc:dd:ee:ff",
+        "lag_type": "LACP"
     }
   }
 }

@@ -89,6 +89,16 @@ static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da
 }
 
 /*PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*)&pddf_attr, (void*)NULL);*/
+static void xcvr_free_pdata(void *pdata)
+{
+    XCVR_PDATA *d = pdata;
+    if (d)
+    {
+        kfree(d->xcvr_attrs);
+        kfree(d);
+    }
+}
+
 static ssize_t do_device_operation(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
 {
     int i = 0;
@@ -137,7 +147,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             if (!IS_ERR(client_ptr)) {
                 i2c_put_adapter(adapter);
                 pddf_dbg(XCVR, KERN_ERR "Created a %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
-                add_device_table(cdata->i2c_name, (void*)client_ptr);
+                add_device_table_owned(cdata->i2c_name, (void*)client_ptr, xcvr_free_pdata, THIS_MODULE);
             }
             else
             {
