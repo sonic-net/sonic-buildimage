@@ -111,7 +111,7 @@ libavahi-common-data==0.8-13ubuntu6.2
 libavahi-common3==0.8-13ubuntu6.2
 libbinutils==2.42-4ubuntu2.10
 libbpf1==1:1.3.0-2build2
-libbrotli1==1.1.0-2build2
+libbrotli1==1.1.0-2ubuntu0.1
 libbsd0==0.12.1-1build1.1
 libc-dev-bin==2.39-0ubuntu8.9
 libc-devtools==2.39-0ubuntu8.9
