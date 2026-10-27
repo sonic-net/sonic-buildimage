@@ -22,6 +22,15 @@ class TestConfigMACsec(object):
         macsec.register(cli)
         cli.add_command.assert_called_once_with(macsec.macsec)
 
+    def test_update_cak_command_name(self):
+        profile_commands = macsec.macsec.commands["profile"].commands
+        assert "update_cak" in profile_commands
+        assert "update" not in profile_commands
+        runner = CliRunner()
+        result = runner.invoke(macsec.macsec, ["profile", "--help"])
+        assert result.exit_code == 0
+        assert "update_cak" in result.output
+
     def test_default_profile(self, mock_cfgdb):
         cfgdb = mock_cfgdb
         runner = CliRunner()
@@ -237,7 +246,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + fallback_ckn,
                 "--new_ckn=" + replacement_ckn,
                 "--new_cak=" + replacement_cak,
@@ -274,7 +283,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + primary_ckn,
                 "--new_ckn=" + primary_ckn.upper(),
                 "--new_cak=" + replacement_cak,
@@ -289,7 +298,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + primary_ckn,
                 "--new_ckn=" + fallback_ckn.upper(),
                 "--new_cak=" + replacement_cak,
@@ -304,7 +313,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + replacement_ckn,
                 "--new_ckn=" + primary_ckn,
                 "--new_cak=" + replacement_cak,
@@ -346,7 +355,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + primary_ckn,
                 "--new_ckn=" + replacement_ckn,
                 "--new_cak=" + replacement_cak,
@@ -391,7 +400,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + primary_ckn,
                 "--new_ckn=" + replacement_ckn,
                 "--new_cak=" + replacement_cak,
@@ -434,7 +443,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + fallback_ckn,
                 "--new_ckn=" + replacement_ckn,
                 "--new_cak=" + replacement_cak,
@@ -466,7 +475,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + primary_ckn,
                 "--new_ckn=" + replacement_ckn,
                 "--new_cak=" + replacement_cak,
@@ -511,7 +520,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + primary_ckn,
                 "--new_ckn=" + replacement_ckn,
                 "--new_cak=not-a-secret",
@@ -547,7 +556,7 @@ class TestConfigMACsec(object):
             result = runner.invoke(
                 macsec.macsec,
                 [
-                    "profile", "update", profile_name,
+                    "profile", "update_cak", profile_name,
                     "--old_ckn=" + fallback_ckn,
                     "--new_cak=" + cak,
                     "--new_ckn=" + ckn,
@@ -586,7 +595,7 @@ class TestConfigMACsec(object):
         result = runner.invoke(
             macsec.macsec,
             [
-                "profile", "update", profile_name,
+                "profile", "update_cak", profile_name,
                 "--old_ckn=" + primary_ckn,
                 "--new_ckn=" + replacement_ckn,
                 "--new_cak=" + replacement_cak,

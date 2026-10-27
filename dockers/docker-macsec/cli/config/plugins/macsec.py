@@ -219,9 +219,9 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn,
 
 
 #
-# 'update' command ('config macsec profile update ...')
+# 'update_cak' command ('config macsec profile update_cak ...')
 #
-@macsec_profile.command('update')
+@macsec_profile.command('update_cak')
 @click.argument('profile', metavar='<profile_name>', required=True)
 @click.option('--old_ckn', metavar='<old_ckn>', required=True, type=str, help="Configured CKN to replace.")
 @click.option('--new_ckn', metavar='<new_ckn>', required=True, type=str, help="Replacement CKN.")
