@@ -23,7 +23,12 @@ Inputs (env vars from slave.mk):
     SBOM_INSTALLER_DOCKERS     space-separated list of docker .gz filenames
                                that actually ship in this installer.
     SBOM_INSTALLER_DEBS        space-separated list of .deb filenames
-                               installed into the host rootfs.
+                               the installer installs or carries. Each
+                               must have a recipe fragment.
+    SBOM_INSTALLER_DEBS_PATH   the directory holding those .debs. When
+                               set, only the fragment beside each .deb
+                               there counts, and it must not be older
+                               than the .deb.
     SBOM_INSTALLER_WHEELS      space-separated list of .whl filenames
                                installed into the host rootfs.
 
@@ -31,7 +36,9 @@ Algorithm:
 
     1. Walk per-artifact recipe-emit fragments (<artifact>.cdx.json
        next to each .deb / .whl / .gz). These are authoritative for
-       SONiC-built artifacts.
+       SONiC-built artifacts. A .deb in SBOM_INSTALLER_DEBS with no
+       fragment is an error, or under SBOM_STRICT=n a fallback
+       component named pkg:deb/sonic/<name>@<version>?arch=<arch>.
     2. For each in-scope scope (host rootfs + each in-scope container),
        read the post-versions/ manifest written by sonic-build-hooks.
        Add observation components for any (name, version) not already
@@ -47,9 +54,10 @@ Algorithm:
 Failure mode: when ENABLE_SBOM=y the user has opted into SBOM emission
 and a quietly-incomplete SBOM is worse than a build failure. The
 aggregator validates that core inputs exist (host rootfs, declared
-installer dockers, scanner binary) and exits non-zero if any are
-missing. Set SBOM_STRICT=n to downgrade these to warnings for
-debugging or one-off partial emits. Soft optional features
+installer dockers, scanner binary, a recipe fragment for each declared
+installer .deb) and exits non-zero if any are missing. Set
+SBOM_STRICT=n to downgrade these to warnings for debugging or one-off
+partial emits. Soft optional features
 (SPDX conversion, provenance emit, license resolution) continue to
 warn-and-continue.
 """
@@ -67,6 +75,7 @@ from typing import Any, Optional
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import sbom_purl  # noqa: E402  (needs the path set above)
+import sbom_fragment  # noqa: E402  (needs the path set above)
 
 
 def warn(msg: str) -> None:
@@ -97,7 +106,7 @@ class SbomInputMissing(Exception):
     The build_sbom recipe in slave.mk treats this as fatal — the user
     opted into SBOM generation via ENABLE_SBOM=y and we can't honor
     that opt-in if a core data source (host rootfs, installer docker,
-    scanner binary) is absent.
+    scanner binary, the recipe fragment of an installer .deb) is absent.
     """
 
 
@@ -265,6 +274,7 @@ class FragmentIndex:
         self.target_path = target_path
         self.fragments: dict = {}   # filename → fragment-component
         self.all: list = []
+        self.paths: set = set()     # absolute paths of the fragments read
         self._load()
 
     def _load(self):
@@ -297,6 +307,7 @@ class FragmentIndex:
                     }
                     if meta_props.get("sonic:fragment_kind") != "recipe-emit":
                         continue
+                    self.paths.add(os.path.abspath(os.path.join(root, fn)))
                     for comp in doc.get("components", []):
                         # Index by the artifact filename so we can match
                         # against the installer's in-scope lists.
@@ -311,6 +322,98 @@ class FragmentIndex:
 
     def for_filename(self, name: str) -> Optional[dict]:
         return self.fragments.get(name)
+
+
+def fallback_component(deb: str) -> Optional[dict]:
+    """A component for a built .deb whose recipe fragment is missing.
+
+    Named the way sbom_fragment.py names a .deb with no submodule,
+    `pkg:deb/sonic/<name>@<version>?arch=<arch>`, so it merges with the
+    scanner's record of the same package and wins, as the fragment would
+    have. Without it that package keeps syft's identity, which drops the
+    `sonic` namespace that says SONiC built it. A deb built from a sonic-net
+    submodule is named this way too, since only its recipe knows the
+    submodule. None for a filename that does not parse as a .deb.
+    """
+    meta = sbom_fragment.parse_artifact_name(deb)
+    if meta["kind"] != "deb":
+        return None
+    purl = sbom_fragment.build_purl(meta, None)
+    return {
+        "bom-ref": purl,
+        "type": "library",
+        "name": meta["name"],
+        "version": meta["version"],
+        "purl": purl,
+        "properties": [
+            {"name": "sonic:fragment_kind", "value": "recipe-fallback"},
+            {"name": "sonic:artifact_filename", "value": meta["filename"]},
+            {"name": "sonic:arch", "value": meta["arch"]},
+        ],
+    }
+
+
+def _fragment_problem(deb: str, debs_path: str,
+                      fragments: FragmentIndex) -> Optional[str]:
+    """Why a declared .deb lacks a usable fragment, or None when it has one.
+
+    With debs_path, only the fragment beside the .deb there counts, and it
+    must not be older than the .deb: one from another distro's directory, or
+    one a rebuilt .deb left behind, describes a different file. Without
+    debs_path, a fragment of that filename anywhere in target/ counts.
+    """
+    if not debs_path:
+        return None if fragments.for_filename(deb) else "no fragment"
+    deb_path = os.path.join(debs_path, deb)
+    frag_path = f"{deb_path}.cdx.json"
+    if os.path.abspath(frag_path) not in fragments.paths:
+        return f"no fragment at {frag_path}"
+    try:
+        if os.path.getmtime(frag_path) < os.path.getmtime(deb_path):
+            return f"{frag_path} is older than the .deb"
+    except OSError:
+        pass
+    return None
+
+
+def check_fragments(installer_debs: list, fragments: FragmentIndex,
+                    debs_path: str = "") -> list:
+    """Every .deb the installer declares must have a recipe fragment.
+
+    Without one, the package still reaches the SBOM through the scanner,
+    under an identity that drops the `sonic` namespace, and nothing else
+    says so. Raises SbomInputMissing naming each package in strict mode. In
+    lenient mode, warns and returns a fallback component for each, to be
+    merged ahead of every other source.
+    """
+    problems = {}
+    for deb in installer_debs:
+        if deb.endswith(".deb") and deb not in problems:
+            problem = _fragment_problem(deb, debs_path, fragments)
+            if problem:
+                problems[deb] = problem
+    if not problems:
+        return []
+
+    listed = "\n  - ".join(f"{deb}: {problems[deb]}"
+                           for deb in sorted(problems))
+    msg = (f"no usable recipe fragment for {len(problems)} .deb(s) the "
+           f"installer declares:\n  - {listed}")
+    clean = f"{debs_path or 'target/debs/<distro>'}/<deb>-clean"
+    remedy = ("The rule that writes a fragment did not run, or failed, for "
+              f"each. Remove each .deb with `make {clean}`, which also "
+              "removes its main and companion debs, and build again.")
+    if strict_mode():
+        error(msg)
+        error(remedy)
+        error("Set SBOM_STRICT=n to name them pkg:deb/sonic/<name> instead "
+              "(not recommended).")
+        raise SbomInputMissing(msg)
+    warn(msg)
+    warn(remedy)
+    warn("SBOM_STRICT=n; naming each pkg:deb/sonic/<name>@<version> "
+         "without its recipe provenance.")
+    return [c for c in map(fallback_component, sorted(problems)) if c]
 
 
 # ---------------------------------------------------------------------------
@@ -2475,7 +2578,16 @@ def main() -> int:
     info(f"Loaded {len(fragments.all)} recipe-emit fragments from {target_path}/")
 
     # ---- Recipe-emit components (authoritative for SONiC-built things) ----
-    recipe_components = list(fragments.all)
+    # A declared .deb with no fragment gets a fallback here, ahead of the
+    # merge, so it outranks the scanner the way its fragment would have.
+    try:
+        recipe_fallbacks = check_fragments(
+            split_env_list("SBOM_INSTALLER_DEBS"), fragments,
+            os.environ.get("SBOM_INSTALLER_DEBS_PATH", ""),
+        )
+    except SbomInputMissing:
+        return 1
+    recipe_components = list(fragments.all) + recipe_fallbacks
 
     # ---- Observation components for host rootfs ----
     obs_host = observation_components_for_scope(

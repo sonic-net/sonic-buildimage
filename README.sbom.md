@@ -69,7 +69,7 @@ publishes the sibling files alongside it.
 | `SBOM_FORMAT` | `both` | `cyclonedx`, `spdx`, or `both`. SPDX is a downstream conversion via `cyclonedx-cli` (auto-fetched), so emitting both is essentially free — but the conversion carries **no dependency relationships** and no `formulation`, so the containment graph exists only in the CycloneDX document. |
 | `SBOM_SCAN_TOOL` | `syft` | Binary scanner for transitive deps: `syft` or `trivy`. |
 | `SBOM_INCLUDE_LICENSES` | `y` | Whether to harvest copyrights and resolve SPDX licenses. |
-| `SBOM_STRICT` | `y` | When `y`, the build fails if a critical SBOM input is missing — host rootfs (`fsroot-<machine>/`), any `.gz` in `SBOM_INSTALLER_DOCKERS`, or the scanner binary — and also if the finished document fails schema validation or its dependency graph does not resolve. Set to `n` for debugging or one-off partial emits. Soft optional features (SPDX conversion, provenance, license resolution) always warn-and-continue regardless. |
+| `SBOM_STRICT` | `y` | When `y`, the build fails if a critical SBOM input is missing — host rootfs (`fsroot-<machine>/`), any `.gz` in `SBOM_INSTALLER_DOCKERS`, the scanner binary, or a usable recipe fragment for any `.deb` the installer ships — and also if the finished document fails schema validation or its dependency graph does not resolve. A recipe whose fragment cannot be built or written fails at that recipe. The missing-fragment error names each package. Set to `n` for debugging or one-off partial emits; a `.deb` with no fragment then gets a warning and a fallback component (see [Missing recipe fragments](#missing-recipe-fragments)). Soft optional features (SPDX conversion, provenance, license resolution) always warn-and-continue regardless. |
 
 These variables are surfaced in the `Build Configuration` dump that
 SONiC prints at the start of every build, so you can confirm the state.
@@ -160,6 +160,55 @@ SBOMs automatically because the build invokes different recipes.
 `SONIC_VERSION_CONTROL_COMPONENTS` overrides (where pins float to
 mirror-latest) are reflected too — observation records what was
 actually installed.
+
+### Missing recipe fragments
+
+Each `.deb` the installer ships must have a recipe fragment: its
+`_INSTALLS`, `_LAZY_INSTALLS` and `_LAZY_BUILD_INSTALLS`, and the debs
+every installer installs or carries (`SONIC_INSTALLER_IMAGE_DEBS` in
+`slave.mk`: the kernel, `bash`, `openssh-server`, the FIPS packages and
+the rest). The fragment counts only when it sits beside the `.deb` in
+`target/debs/<image distro>/` and is not older than the `.deb`. A `.deb`
+installed only into a container is not checked.
+
+A derived or extra `.deb` gets its fragment from its own rule. Its
+prerequisites are `.platform`, the main `.deb` and, for a derived deb,
+its `_DEPENDS`, all older than anything the main recipe writes. After
+writing the companion `.deb`s, the main recipe dates each one second
+before the main `.deb`, so the companion's rule runs whenever the build
+wants it. Without that, a companion written after the main `.deb` is up
+to date when make first looks at it after the main recipe, and its
+fragment is never written. A companion `.deb` that exists without its
+fragment, such as one in a workspace from an older build, forces its
+rule to run.
+
+When `sbom_fragment.py` fails under `SBOM_STRICT=y`, the recipe dates
+its artifact to the epoch before failing, so a retry runs the recipe
+again instead of finding the artifact up to date.
+
+Under `SBOM_STRICT=y` a missing or stale fragment fails the build and
+names the package. To recover, remove the `.deb` with
+`make target/debs/<distro>/<deb>-clean`, which also removes its main
+and companion debs, and build again.
+
+Under `SBOM_STRICT=n` the aggregator warns and adds a fallback component
+ahead of the merge, named the way `sbom_fragment.py` names a `.deb`
+with no submodule:
+
+```
+pkg:deb/sonic/<name>@<version>?arch=<arch>
+```
+
+It merges with the scanner's record and wins, so qualifiers such as
+`upstream=` carry over as they do for a fragment. It carries
+`sonic:fragment_kind=recipe-fallback` and no recipe provenance: no
+submodule, patches, pedigree or declared dependencies. A `.deb` built
+from a sonic-net submodule, which its fragment names
+`pkg:github/sonic-net/<repo>@<commit>`, is named `pkg:deb/sonic/...` by
+the fallback, since only the recipe knows the submodule. Every other
+`.deb` fragment, including a downloaded (`ONLINE_DEB`) or copied
+(`COPY_DEB`) vendor binary, is in the `sonic` namespace, as the fallback
+is.
 
 ## Component categories
 
@@ -842,7 +891,7 @@ Files that exist for this design.
 |---|---|
 | `rules/config` | Defines the four SBOM configuration variables. |
 | `Makefile.work` | Threads SBOM variables into the slave-container environment. |
-| `slave.mk` | Defines the `sbom_emit_fragment` helper, calls it from each `SONIC_*` artifact recipe, invokes `build_sbom.sh` between rootfs assembly and `.bin` wrap, and exposes the recipe context (installer docker/deb/wheel lists) to the aggregator. |
+| `slave.mk` | Defines the `sbom_emit_fragment` helper, calls it from each `SONIC_*` artifact recipe (a main `.deb`'s recipe dates its derived and extra `.deb`s before it, through `main_deb_newer_than_companions`, so each of their rules runs and writes its own fragment), invokes `build_sbom.sh` between rootfs assembly and `.bin` wrap, and exposes the recipe context (installer docker/deb/wheel lists) to the aggregator. |
 | `build_image.sh` | Emits the `.cdx.json` sibling after the `.bin` is wrapped. |
 | `scripts/install_sbom_tool.sh` | Auto-fetches syft, grype, cyclonedx-cli with SHA-256 verify into `target/sbom-tools/`. |
 | `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds and validates the CycloneDX `dependencies[]` graph (containment: image → the host filesystem and the containers it installs → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
@@ -857,6 +906,7 @@ Files that exist for this design.
 | `scripts/sbom_vuln_diff.py` | Standalone drift analysis between two vuln reports. |
 | `scripts/sbom_cve_refs.py` | Which patches the build applies, and the CVEs each claims to fix. Shared by `sbom_fragment.py` and `sbom_extract_vex_from_patches.py` so the SBOM and the VEX statements cannot disagree about either. |
 | `scripts/sbom_extract_vex_from_patches.py` | Auto-VEX from CVE markers in patch metadata. |
+| `scripts/test_sbom_recipe_fragments.py` | Tests for missing recipe fragments: the `slave.mk` companion rules run through make, the recipe text of each main-deb rule, `sbom_fragment.py`'s exit status, the strict-mode error and the fallback component through `build_sbom.py`'s `main()`. Run with `python3 scripts/test_sbom_recipe_fragments.py`. |
 | `vex/` | OpenVEX statements (curated at top level, auto in `vex/auto/`). |
 | `vex/README.md` | VEX schema and triage workflow. |
 | `src/sonic-build-hooks/scripts/collect_version_files` | Extended to harvest `copyrights.tar.gz` and `lockfiles.tar.gz` per scope when `ENABLE_SBOM=y`. |

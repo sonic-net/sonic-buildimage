@@ -8,7 +8,8 @@ from environment variables:
     ARTIFACT      Required. Path to the just-built .deb / .whl / .gz.
     RECIPE_TYPE   Required. One of:
                   DPKG_DEB, MAKE_DEB, DERIVED_DEB, EXTRA_DEB,
-                  ONLINE_DEB, PYTHON_STDEB, PYTHON_WHEEL, DOCKER_IMAGE.
+                  ONLINE_DEB, COPY_DEB, PYTHON_STDEB, PYTHON_WHEEL,
+                  DOCKER_IMAGE.
     SRC_PATH      Optional. Value of $($*_SRC_PATH). Used for submodule
                   + patch detection.
     URL           Optional. Value of $($*_URL) for ONLINE_DEB recipes.
@@ -43,8 +44,13 @@ performed later by the aggregator (build_sbom.py) against
 copyrights.tar.gz tarballs harvested by the build hook; it is not
 done here.
 
-The script is fail-soft: any unexpected condition logs to stderr and
-exits 0. Build failure must not be caused by SBOM emit issues.
+Exit status: 1 when ARTIFACT or RECIPE_TYPE is unset, or the fragment
+could not be built or written; 0 otherwise, including when ENABLE_SBOM
+is not y. A missing artifact is
+not a failure: a declared derived .deb a build does not produce has
+nothing to describe, and build_sbom.py separately requires a fragment
+for every .deb the installer ships. slave.mk appends `|| true` unless
+SBOM_STRICT=y, so only a strict build stops at the recipe that failed.
 """
 
 import hashlib
@@ -1200,7 +1206,7 @@ def main() -> int:
     recipe_type = os.environ.get("RECIPE_TYPE", "")
     if not artifact or not recipe_type:
         warn("ARTIFACT and RECIPE_TYPE env vars are required")
-        return 0  # Fail-soft
+        return 1
 
     if not os.path.exists(artifact):
         warn(f"artifact does not exist: {artifact}")
@@ -1210,15 +1216,24 @@ def main() -> int:
         fragment = build_fragment(artifact, recipe_type)
     except Exception as e:
         warn(f"fragment construction failed for {artifact}: {e}")
-        return 0
+        return 1
 
+    # Written beside and renamed into place, so a failed write leaves no
+    # truncated fragment for build_sbom.py to read as a complete one.
     out_path = f"{artifact}.cdx.json"
+    tmp_path = f"{out_path}.tmp"
     try:
-        with open(out_path, "w") as f:
+        with open(tmp_path, "w") as f:
             json.dump(fragment, f, indent=2, sort_keys=True)
+        os.replace(tmp_path, out_path)
         info(f"wrote {out_path}")
     except Exception as e:
         warn(f"could not write {out_path}: {e}")
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        return 1
 
     return 0
 
