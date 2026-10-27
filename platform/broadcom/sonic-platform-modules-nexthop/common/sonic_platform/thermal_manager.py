@@ -3,21 +3,11 @@
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
+# Importing the base registers the shared policy types the thermal_policy.json file names.
+from sonic_platform_base.sonic_thermal_control.pid_thermal_manager_base import PidThermalManagerBase
 
-class ThermalManager(ThermalManagerBase):
-    @classmethod
-    def initialize(cls):
-        """
-        Initialize thermal manager, including register thermal condition types and thermal action types
-        and any other vendor specific initialization.
-        """
-        return True
+from .syslog import SYSLOG_IDENTIFIER_THERMAL
 
-    @classmethod
-    def deinitialize(cls):
-        """
-        Destroy thermal manager, including any vendor specific cleanup.
-        :return:
-        """
-        return True
+
+class ThermalManager(PidThermalManagerBase):
+    SYSLOG_IDENTIFIER = SYSLOG_IDENTIFIER_THERMAL

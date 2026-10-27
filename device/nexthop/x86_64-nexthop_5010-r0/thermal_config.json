@@ -1,0 +1,17 @@
+{
+    "fan_limits": {
+        "min": 30
+    },
+    "pid_domains": {
+        "asic": {
+            "KP": 5,
+            "KI": 0.1,
+            "KD": 2
+        },
+        "main": {
+            "KP": 5,
+            "KI": 0.05,
+            "KD": 2.5
+        }
+    }
+}

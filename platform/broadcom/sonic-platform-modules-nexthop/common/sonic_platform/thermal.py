@@ -3,7 +3,6 @@
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-import abc
 import re
 import threading
 import time
@@ -96,10 +95,15 @@ class PortIndexMapper:
             return self._port_index_to_interface.get(port_index)
 
 
-class PidThermalMixin(abc.ABC):
+class PidThermalMixin:
+    """
+    Mixin class for thermal objects that support PID control.
+
+    Overrides ThermalBase's default PID hooks, so it must come before ThermalBase in a
+    thermal class's bases.
+    """
     DEFAULT_PID_SETPOINT_MARGIN = 10.0
 
-    """Mixin class for thermal objects that support PID control"""
     def __init__(self, pddf_device_data, margin_override=None, setpoint_override=None, pid_domain=None):
 
         # Setpoint margin
@@ -115,22 +119,15 @@ class PidThermalMixin(abc.ABC):
         else:
             self._pid_setpoint_override = setpoint_override
 
-        # PID domain
+        # PID domain. The PDDF JSON spells "not PID-controlled" as the string "None".
         if pid_domain is None:
-            self._pid_domain = pddf_device_data.get('nexthop_thermal_pid_domain')
-        else:
-            self._pid_domain = pid_domain
-
-    def is_controlled_by_pid(self):
-        return self._pid_domain is not None
+            pid_domain = pddf_device_data.get('nexthop_thermal_pid_domain')
+        if isinstance(pid_domain, str) and pid_domain.lower() == 'none':
+            pid_domain = None
+        self._pid_domain = pid_domain
 
     def get_pid_domain(self):
         return self._pid_domain
-
-    @abc.abstractmethod
-    def get_high_critical_threshold(self):
-        """Expected to be implemented by derived classes."""
-        raise NotImplementedError
 
     def get_pid_setpoint(self):
         if self._pid_setpoint_override is not None:
@@ -164,7 +161,7 @@ class MinMaxTempMixin:
         return self._max_temperature
 
 
-class Thermal(PddfThermal, MinMaxTempMixin, PidThermalMixin):
+class Thermal(PidThermalMixin, PddfThermal, MinMaxTempMixin):
     """PDDF Platform-Specific Thermal class"""
 
     def __init__(
@@ -208,7 +205,7 @@ class Thermal(PddfThermal, MinMaxTempMixin, PidThermalMixin):
         return MinMaxTempMixin.get_maximum_recorded(self)
 
 
-class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
+class NexthopFpgaAsicThermal(PidThermalMixin, ThermalBase, MinMaxTempMixin):
     """ASIC temperature sensor read from the FPGA register"""
 
     def __init__(
@@ -323,7 +320,7 @@ class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         return MinMaxTempMixin.get_maximum_recorded(self)
 
 
-class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
+class SfpThermal(PidThermalMixin, ThermalBase, MinMaxTempMixin):
     """SFP thermal interface class"""
     THRESHOLDS_CACHE_INTERVAL_SEC = 5
     TEMP_CACHE_INTERVAL_SEC = 1
