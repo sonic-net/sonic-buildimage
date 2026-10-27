@@ -69,3 +69,5 @@ PYTHON_WHEELS_PATH	output directory for independently keyed wheel artifacts; cha
 installer_python_wheels	wheel list rendered by sonic_debian_extension.j2 and consumed only after the cached RFS first-stage exit in build_debian.sh; the final installer stage is always rebuilt
 scapy_wheel	patched wheel installed only after the cached RFS first-stage exit in build_debian.sh, including after rootfs restore; the final installer stage is always rebuilt
 DBGOPT	shell tracing option only (set -x); does not change rootfs content and is intentionally excluded from RFS_INLINE_ENV_FLAGS in Makefile.cache
+IMAGE_DISTRO_DEBS_PATH	output directory path $(TARGET_PATH)/debs/$(IMAGE_DISTRO) (slave.mk:80) that debs are written to and read from; relocation only, the content signal is IMAGE_DISTRO/BLDENV and each deb's own key
+SONIC_IMAGE_VERSION	read by build_debian.sh only in "Version file part 2" (build_debian.sh:688), after the RFS first stage has written the cached rfs.squashfs and exited (build_debian.sh:655-657), so it never reaches a cached artifact; volatile build stamp, same class as sonic_version
