@@ -78,6 +78,9 @@ def server(mock_db, state_events):
                     lease["ip-address"] == entry["ip"] and lease["hw-address"] == key.split("|")[-1]
                     for lease in leases):
                 mock_db.delete("STATE_DB", key)
+        # Acknowledge the request as dhcpservd does after a completed refresh.
+        request_id = mock_db.get("STATE_DB", clear_dhcp_server.LEASE_SYNC_KEY, "request_id")
+        mock_db.set("STATE_DB", clear_dhcp_server.LEASE_SYNC_KEY, "completed_id", request_id)
         return ""
 
     db = clicommon.Db()
@@ -276,132 +279,116 @@ def test_state_sync_timeout_is_not_reported_as_success(server):
 def state_wait(state_events):
     clock = [0]
     subscriber, selector = state_events
+    sync = {}
+    db = mock.Mock()
+    db.set.side_effect = lambda _, key, field, value: sync.__setitem__((key, field), value)
+    db.get.side_effect = lambda _, key, field: sync.get((key, field))
 
     def timeout(milliseconds):
         clock[0] += milliseconds / 1000
         return clear_dhcp_server.swsscommon.Select.TIMEOUT, None
 
     selector.select.side_effect = timeout
-    subscriber.pops.return_value = (["Vlan100|" + MAC_A], ["DEL"], [[]])
     with mock.patch.object(clear_dhcp_server.time, "monotonic", side_effect=lambda: clock[0]), \
          mock.patch.object(clear_dhcp_server.time, "sleep", side_effect=AssertionError("Unexpected polling")), \
          mock.patch.object(clear_dhcp_server, "_container_command") as notify, \
-         mock.patch.object(clear_dhcp_server, "_state_leases", return_value=["pending"]) as leases:
-        yield clock, subscriber, selector, notify, leases
+         mock.patch.object(clear_dhcp_server, "_state_leases", return_value=[]) as leases:
+        yield clock, subscriber, selector, notify, leases, db, sync
 
 
-def test_state_sync_does_not_starve_pending_signal(state_wait):
-    """Block for the event instead of interrupting the daemon or polling Redis."""
-    clock, subscriber, selector, notify, leases = state_wait
+def acknowledge(sync, request_id=None):
+    key = clear_dhcp_server.LEASE_SYNC_KEY
+    sync[(key, "completed_id")] = request_id or sync[(key, "request_id")]
+
+
+def test_state_sync_waits_for_acknowledgement_event(state_wait):
+    """Block for the daemon's acknowledgement instead of polling Redis."""
+    clock, subscriber, selector, notify, leases, db, sync = state_wait
+    notify.side_effect = lambda *args: (clear_dhcp_server.LEASE_SYNC_KEY, "request_id") in sync or pytest.fail(
+        "Refresh requested before the request ID was published")
 
     def update(milliseconds):
         assert milliseconds == 8000
         clock[0] = 5
-        leases.return_value = []
+        acknowledge(sync)
         return clear_dhcp_server.swsscommon.Select.OBJECT, subscriber
 
     selector.select.side_effect = update
-    clear_dhcp_server._sync_state_db(None, "Vlan100", None, subscriber, selector)
+    clear_dhcp_server._sync_state_db(db, "Vlan100", None, subscriber, selector)
 
     notify.assert_called_once()
-    assert leases.call_count == 2
+    leases.assert_called_once_with(db, "Vlan100", None)
     assert clock[0] == 5
 
 
 def test_state_sync_retries_a_missed_notification(state_wait):
     """Retry a coalesced or ignored signal without flooding the daemon."""
-    clock, subscriber, selector, notify, leases = state_wait
-
-    def refresh(*args):
-        if notify.call_count == 2:
-            leases.return_value = []
-
-    notify.side_effect = refresh
-    clear_dhcp_server._sync_state_db(None, "Vlan100", None, subscriber, selector)
+    clock, subscriber, selector, notify, _, db, sync = state_wait
+    notify.side_effect = lambda *args: acknowledge(sync) if notify.call_count == 2 else None
+    clear_dhcp_server._sync_state_db(db, "Vlan100", None, subscriber, selector)
 
     selector.select.assert_called_once_with(8000)
     assert notify.call_count == 2
     assert clock[0] == 8
 
 
-def test_state_sync_ignores_other_interfaces(state_wait):
-    clock, subscriber, selector, notify, leases = state_wait
-    subscriber.pops.return_value = (["Vlan1000|" + MAC_A], ["DEL"], [[]])
-
-    def events(milliseconds):
-        if selector.select.call_count == 1:
-            clock[0] = 1
-            return clear_dhcp_server.swsscommon.Select.OBJECT, subscriber
-        clock[0] += milliseconds / 1000
-        return clear_dhcp_server.swsscommon.Select.TIMEOUT, None
-
-    selector.select.side_effect = events
-    notify.side_effect = lambda *args: setattr(leases, "return_value", []) if notify.call_count == 2 else None
-    clear_dhcp_server._sync_state_db(None, "Vlan100", None, subscriber, selector)
-
-    assert leases.call_count == 2
-    assert clock[0] == 8
-
-
-def test_state_sync_initial_snapshot_is_not_completion(state_wait):
-    clock, subscriber, selector, notify, leases = state_wait
-    subscriber.pops.side_effect = [
-        (["Vlan100|" + MAC_A], ["SET"], [[("ip", "100.1.1.3")]]),
-        (["Vlan100|" + MAC_A], ["DEL"], [[]]),
-    ]
+def test_state_sync_empty_cache_needs_current_acknowledgement(state_wait):
+    """An empty cache or an older refresh's acknowledgement is not completion."""
+    clock, subscriber, selector, notify, leases, db, sync = state_wait
+    acknowledge(sync, "older-request")
 
     def events(milliseconds):
         clock[0] += 1
         if selector.select.call_count == 2:
-            leases.return_value = []
+            acknowledge(sync)
         return clear_dhcp_server.swsscommon.Select.OBJECT, subscriber
 
     selector.select.side_effect = events
-    clear_dhcp_server._sync_state_db(None, "Vlan100", "100.1.1.3", subscriber, selector)
+    clear_dhcp_server._sync_state_db(db, "Vlan100", "100.1.1.3", subscriber, selector)
 
     assert selector.select.call_count == 2
-    assert leases.call_count == 3
+    leases.assert_called_once()
     notify.assert_called_once()
 
 
-def test_state_sync_all_waits_for_every_selected_lease(state_wait):
-    clock, subscriber, selector, _, leases = state_wait
-    leases.side_effect = [["first", "second"], ["second"], []]
+def test_state_sync_reports_leases_remaining_after_acknowledgement(state_wait):
+    _, subscriber, selector, notify, leases, db, sync = state_wait
+    leases.return_value = ["DHCP_SERVER_IPV4_LEASE|Vlan100|" + MAC_B]
+    notify.side_effect = lambda *args: acknowledge(sync)
 
-    def events(milliseconds):
-        clock[0] += 1
-        return clear_dhcp_server.swsscommon.Select.OBJECT, subscriber
-
-    selector.select.side_effect = events
-    clear_dhcp_server._sync_state_db(None, "Vlan100", None, subscriber, selector)
-
-    assert selector.select.call_count == 2
-    assert leases.call_count == 3
+    with pytest.raises(click.ClickException, match="Matching leases still exist in State DB"):
+        clear_dhcp_server._sync_state_db(db, "Vlan100", "100.1.1.3", subscriber, selector)
+    selector.select.assert_not_called()
 
 
 @pytest.mark.parametrize("updated", [False, True])
-def test_state_sync_checks_state_at_deadline_without_events(state_wait, updated):
-    clock, subscriber, selector, notify, leases = state_wait
-    leases.side_effect = lambda *args: [] if updated and clock[0] >= 20 else ["pending"]
+def test_state_sync_checks_acknowledgement_at_deadline(state_wait, updated):
+    clock, subscriber, selector, notify, _, db, sync = state_wait
 
+    def timeout(milliseconds):
+        clock[0] += milliseconds / 1000
+        if updated and clock[0] >= 20:
+            acknowledge(sync)
+        return clear_dhcp_server.swsscommon.Select.TIMEOUT, None
+
+    selector.select.side_effect = timeout
     if updated:
-        clear_dhcp_server._sync_state_db(None, "Vlan100", None, subscriber, selector)
+        clear_dhcp_server._sync_state_db(db, "Vlan100", None, subscriber, selector)
     else:
         with pytest.raises(click.ClickException, match="synchronization timed out"):
-            clear_dhcp_server._sync_state_db(None, "Vlan100", None, subscriber, selector)
+            clear_dhcp_server._sync_state_db(db, "Vlan100", None, subscriber, selector)
 
     assert selector.select.call_args_list == [mock.call(8000), mock.call(8000), mock.call(4000)]
     assert notify.call_count == 3
-    assert leases.call_count == 4
 
 
 def test_state_sync_select_error_is_explicit(state_wait):
-    _, subscriber, selector, _, _ = state_wait
+    _, subscriber, selector, _, _, db, _ = state_wait
     selector.select.side_effect = None
     selector.select.return_value = clear_dhcp_server.swsscommon.Select.ERROR, None
 
     with pytest.raises(click.ClickException, match="select\\(\\) failed"):
-        clear_dhcp_server._sync_state_db(None, "Vlan100", None, subscriber, selector)
+        clear_dhcp_server._sync_state_db(db, "Vlan100", None, subscriber, selector)
 
 
 @pytest.mark.parametrize("fail", [False, True])
@@ -417,7 +404,7 @@ def test_lease_state_subscription_cleanup(fail):
         else:
             with clear_dhcp_server._lease_state_events() as events:
                 assert events == (subscriber, selector)
-        table.assert_called_once_with(connector.return_value, "DHCP_SERVER_IPV4_LEASE")
+        table.assert_called_once_with(connector.return_value, "DHCP_SERVER_IPV4_LEASE_SYNC")
         selector.addSelectable.assert_called_once_with(subscriber)
         selector.removeSelectable.assert_called_once_with(subscriber)
 

@@ -5,6 +5,7 @@ import math
 import os
 import subprocess
 import time
+import uuid
 from contextlib import contextmanager
 
 import click
@@ -15,6 +16,8 @@ from swsscommon import swsscommon
 KEA_CONTROL_SOCKET = "/run/kea/kea4-ctrl-socket"
 LEASE_CLEAR_LOCK = "/run/lock/sonic-dhcp-server-lease-clear.lock"
 STATE_DB_TIMEOUT = 20
+LEASE_SYNC_TABLE = "DHCP_SERVER_IPV4_LEASE_SYNC"
+LEASE_SYNC_KEY = LEASE_SYNC_TABLE + "|GLOBAL"
 KEA_SOCKET_CLIENT = """
 import json
 import socket
@@ -141,7 +144,7 @@ def _state_leases(dbconn, dhcp_interface, ip_address):
 def _lease_state_events():
     try:
         state_db = swsscommon.DBConnector("STATE_DB", 1000)
-        subscriber = swsscommon.SubscriberStateTable(state_db, "DHCP_SERVER_IPV4_LEASE")
+        subscriber = swsscommon.SubscriberStateTable(state_db, LEASE_SYNC_TABLE)
         selector = swsscommon.Select()
         selector.addSelectable(subscriber)
         try:
@@ -153,10 +156,13 @@ def _lease_state_events():
 
 
 def _sync_state_db(dbconn, dhcp_interface, ip_address, subscriber, selector):
-    """Wait for lease-table events, refresh retries, or the synchronization deadline."""
+    """Wait until dhcpservd completes a lease refresh requested after the Kea change."""
+    # dhcpservd acknowledges this ID only after a refresh that read it before the
+    # lease file, so stale in-flight refreshes cannot satisfy the wait.
+    request_id = uuid.uuid4().hex
+    dbconn.set("STATE_DB", LEASE_SYNC_KEY, "request_id", request_id)
     deadline = time.monotonic() + STATE_DB_TIMEOUT
     next_signal = 0
-    check_state = True
     # The daemon is the sole State DB writer. Ask it to reread Kea's persisted
     # deletion records rather than deleting Redis keys that it could resurrect.
     while True:
@@ -168,24 +174,21 @@ def _sync_state_db(dbconn, dhcp_interface, ip_address, subscriber, selector):
             # Python can run the handler, which can also throttle for two seconds.
             # Faster retries can keep postponing the pending handler indefinitely.
             next_signal = time.monotonic() + 8
-            check_state = True
-        if check_state and not _state_leases(dbconn, dhcp_interface, ip_address):
+        if dbconn.get("STATE_DB", LEASE_SYNC_KEY, "completed_id") == request_id:
+            if _state_leases(dbconn, dhcp_interface, ip_address):
+                raise click.ClickException(
+                    "Matching leases still exist in State DB; check for clients reacquiring addresses")
             return
         now = time.monotonic()
         if now >= deadline:
-            if not check_state and not _state_leases(dbconn, dhcp_interface, ip_address):
-                return
             raise click.ClickException(
                 "Kea leases were cleared, but State DB synchronization timed out; "
                 "check dhcpservd before retrying")
         timeout_ms = max(1, math.ceil((min(next_signal, deadline) - now) * 1000))
         state, _ = selector.select(timeout_ms)
         if state == swsscommon.Select.OBJECT:
-            events = swsscommon.transpose_pops(subscriber.pops())
-            check_state = any(key.startswith(dhcp_interface + "|") for key, _, _ in events)
-        elif state == swsscommon.Select.TIMEOUT:
-            check_state = False
-        else:
+            subscriber.pops()
+        elif state != swsscommon.Select.TIMEOUT:
             raise click.ClickException("Cannot monitor DHCP lease state: select() failed")
 
 

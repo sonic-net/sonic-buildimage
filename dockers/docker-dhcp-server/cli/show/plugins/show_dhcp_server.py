@@ -164,8 +164,8 @@ def match(db, match_name):
     for key in sorted(keys):
         entry = dbconn.get_all("CONFIG_DB", key)
         name = key.split("|", 1)[1]
-        table.append([name, entry.get("type", ""), entry.get("value", "")])
-    click.echo(tabulate(table, headers=headers, tablefmt="grid"))
+        table.append([name, entry.get("type", ""), repr(entry.get("value", ""))])
+    click.echo(tabulate(table, headers=headers, tablefmt="grid", disable_numparse=True))
 
 
 @ipv4.command()
@@ -186,7 +186,7 @@ def binding(db, dhcp_interface):
             entry.get("ips@", "").replace(",", "\n"),
             entry.get("ranges@", "").replace(",", "\n"),
         ])
-    click.echo(tabulate(table, headers=headers, tablefmt="grid"))
+    click.echo(tabulate(table, headers=headers, tablefmt="grid", disable_numparse=True))
 
 
 def register(cli):

@@ -7,6 +7,7 @@ from datetime import datetime
 from dhcp_utilities.common.utils import is_smart_switch
 
 DHCP_SERVER_IPV4_LEASE = "DHCP_SERVER_IPV4_LEASE"
+DHCP_SERVER_IPV4_LEASE_SYNC = "DHCP_SERVER_IPV4_LEASE_SYNC|GLOBAL"
 KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
 DEFAULE_LEASE_UPDATE_INTERVAL = 2  # unit: sec
 
@@ -81,31 +82,38 @@ class LeaseHanlder(object):
                 return
         if not self.lock.acquire(False):
             return
-        new_lease = self._read()
-        # Store old lease key
-        old_lease_table = self.db_connector.get_state_db_table(DHCP_SERVER_IPV4_LEASE)
-        old_lease_key = set(old_lease_table.keys())
+        try:
+            # Read the clear request before the lease file, so acknowledging it proves
+            # that this refresh observed every Kea change made before the request.
+            request_id = self.db_connector.state_db.hget(DHCP_SERVER_IPV4_LEASE_SYNC, "request_id")
+            new_lease = self._read()
+            # Store old lease key
+            old_lease_table = self.db_connector.get_state_db_table(DHCP_SERVER_IPV4_LEASE)
+            old_lease_key = set(old_lease_table.keys())
 
-        # 1.1 If start time equal to end time or lease expired, means lease has been released
-        #     1.1.1 If current lease table has this old lease, delete it
-        #     1.1.2 Else skip
-        # 1.2 Else, means lease valid, save it.
-        for key, value in new_lease.items():
-            unix_time = datetime.now().timestamp()
-            if value["lease_start"] == value["lease_end"] or unix_time >= int(value["lease_end"]):
-                if key in old_lease_key:
+            # 1.1 If start time equal to end time or lease expired, means lease has been released
+            #     1.1.1 If current lease table has this old lease, delete it
+            #     1.1.2 Else skip
+            # 1.2 Else, means lease valid, save it.
+            for key, value in new_lease.items():
+                unix_time = datetime.now().timestamp()
+                if value["lease_start"] == value["lease_end"] or unix_time >= int(value["lease_end"]):
+                    if key in old_lease_key:
+                        self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
+                    continue
+                new_key = "{}|{}".format(DHCP_SERVER_IPV4_LEASE, key)
+                for k, v in new_lease[key].items():
+                    self.db_connector.state_db.hset(new_key, k, v)
+            # Delete old lease not in new lease set
+            for key in old_lease_key:
+                if key not in new_lease.keys():
+                    # Delete entry
                     self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
-                continue
-            new_key = "{}|{}".format(DHCP_SERVER_IPV4_LEASE, key)
-            for k, v in new_lease[key].items():
-                self.db_connector.state_db.hset(new_key, k, v)
-        # Delete old lease not in new lease set
-        for key in old_lease_key:
-            if key not in new_lease.keys():
-                # Delete entry
-                self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
-        self.last_update_time = datetime.now()
-        self.lock.release()
+            self.last_update_time = datetime.now()
+            if request_id:
+                self.db_connector.state_db.hset(DHCP_SERVER_IPV4_LEASE_SYNC, "completed_id", request_id)
+        finally:
+            self.lock.release()
 
 
 class KeaDhcp4LeaseHandler(LeaseHanlder):
