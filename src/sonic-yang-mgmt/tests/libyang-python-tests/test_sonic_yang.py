@@ -210,15 +210,42 @@ class Test_VnetTunnelReferences(object):
 
     @pytest.mark.parametrize("tunnel_list,expected", [
         (" vtep1 , vtep2 ", "vtep1,vtep2"),
-        (",vtep1", "vtep1"),
-        ("vtep1,", "vtep1"),
-        ("vtep1,,vtep2", "vtep1,vtep2"),
+        ("\tvtep2 , vtep1\t", "vtep2,vtep1"),
     ])
-    def test_shared_string_normalization(self, vnet_yang, vnet_config, tunnel_list, expected):
+    def test_string_whitespace_normalization(self, vnet_yang, vnet_config, tunnel_list, expected):
         vnet_config["VNET"]["Vnet1"]["vxlan_tunnel_list"] = tunnel_list
         vnet_yang.loadData(vnet_config)
         result = vnet_yang.getData()
         assert result["VNET"]["Vnet1"]["vxlan_tunnel_list"] == expected
+
+    @pytest.mark.parametrize("tunnel_list", [
+        [], [""], ["vtep1"], ["vtep1", "vtep2"], None, 1, True, {"name": "vtep1"},
+    ])
+    @pytest.mark.parametrize("fallback", [False, True])
+    def test_reject_non_string_configdb_values(self, vnet_yang, vnet_config, tunnel_list, fallback):
+        vnet = vnet_config["VNET"]["Vnet1"]
+        vnet["vxlan_tunnel_list"] = tunnel_list
+        if fallback:
+            vnet["vxlan_tunnel"] = "vtep1"
+        with pytest.raises(
+                sy.SonicYangException,
+                match="VNET/Vnet1/vxlan_tunnel_list must be a comma-separated string"):
+            vnet_yang.loadData(vnet_config)
+
+    @pytest.mark.parametrize("tunnel_list", [
+        ",", ",vtep1", "vtep1,", "vtep1,,vtep2",
+        "vtep1, ,vtep2", "vtep1, ", " ,vtep1", " ", "\t",
+    ])
+    @pytest.mark.parametrize("fallback", [False, True])
+    def test_reject_empty_configdb_components(self, vnet_yang, vnet_config, tunnel_list, fallback):
+        vnet = vnet_config["VNET"]["Vnet1"]
+        vnet["vxlan_tunnel_list"] = tunnel_list
+        if fallback:
+            vnet["vxlan_tunnel"] = "vtep1"
+        with pytest.raises(
+                sy.SonicYangException,
+                match="VNET/Vnet1/vxlan_tunnel_list must not contain empty tunnel names"):
+            vnet_yang.loadData(vnet_config)
 
     @pytest.mark.parametrize("tunnel_list,error", [
         ("missing", "Invalid leafref"),

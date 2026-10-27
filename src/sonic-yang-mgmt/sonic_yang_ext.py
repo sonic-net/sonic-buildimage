@@ -243,6 +243,13 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         # if it is a leaf-list do it for each element
         if is_leaf_list:
+            if (self.elementPath[0], self.elementPath[-1]) == ('VNET', 'vxlan_tunnel_list'):
+                if not isinstance(value, str):
+                    raise ValueError(
+                        "{} must be a comma-separated string".format('/'.join(self.elementPath)))
+                if value != "" and any(not name.strip() for name in value.split(',')):
+                    raise ValueError(
+                        "{} must not contain empty tunnel names".format('/'.join(self.elementPath)))
             vValue = list()
             if isinstance(value, str) and (self.elementPath[0], self.elementPath[-1]) in LEAF_LIST_WITH_STRING_VALUE_DICT:
                 # For field defined as leaf-list but has string value in CONFIG DB, need do special handling here. For exampe:
