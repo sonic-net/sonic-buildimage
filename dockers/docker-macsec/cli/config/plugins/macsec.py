@@ -153,7 +153,8 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn, polic
     profile_table["policy"] = policy
 
     profile_table["enable_replay_protect"] = enable_replay_protect
-    profile_table["replay_window"] = replay_window if enable_replay_protect else 0
+    if enable_replay_protect:
+        profile_table["replay_window"] = replay_window
 
     profile_table["send_sci"] = send_sci
 

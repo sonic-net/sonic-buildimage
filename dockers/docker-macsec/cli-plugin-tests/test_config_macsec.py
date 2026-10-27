@@ -33,7 +33,7 @@ class TestConfigMACsec(object):
         assert profile_table["primary_ckn"] == primary_ckn
         assert profile_table["policy"] == "security"
         assert profile_table["enable_replay_protect"] == "false"
-        assert profile_table["replay_window"] == "0"
+        assert "replay_window" not in profile_table
         assert profile_table["send_sci"] == "true"
         assert "rekey_period" not in profile_table
 
@@ -55,9 +55,10 @@ class TestConfigMACsec(object):
             result.exit_code, result.exception, result.exc_info)
         profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
         assert profile_table["enable_replay_protect"] == "false"
-        assert profile_table["replay_window"] == "0"
+        assert "replay_window" not in profile_table
 
     def test_profile_enable_replay_protect_strict_window(self, mock_cfgdb):
+        # replay_window 0 with replay protect enabled is strict replay (no out-of-order PN slack).
         cfgdb = mock_cfgdb
         runner = CliRunner()
         result = runner.invoke(macsec.macsec, [
