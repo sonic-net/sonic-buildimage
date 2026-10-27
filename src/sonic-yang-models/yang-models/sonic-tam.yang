@@ -1,0 +1,315 @@
+module sonic-tam {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-tam";
+    prefix tam;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-mgmt_vrf {
+        prefix mvrf;
+    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    description "Telemetry and Monitoring (TAM) configuration";
+
+    revision 2025-09-24 {
+        description "Initial Revision";
+    }
+
+    container sonic-tam {
+        container TAM {
+            description "Defines TAM device configuration";
+
+            list TAM_LIST {
+                description "Singleton table -- only one entry with key 'device'
+                             is meaningful.";
+
+                key "device";
+
+                leaf device {
+                    description "Fixed key 'device' (the table is a singleton).";
+                    type string {
+                        pattern "device";
+                    }
+                }
+
+                leaf device_id {
+                    description "Uniquely identifies this device in exported
+                                 telemetry records. 28-bit value.
+                                 Defaults to the last 16 bits of the
+                                 switch MAC address when not configured.";
+                    type uint32 {
+                        range "1..268435455";
+                    }
+                }
+
+                leaf enterprise_id {
+                    description "Uniquely identifies the enterprise in exported
+                                 telemetry records. 28-bit value.
+                                 Defaults to the last 16 bits of the
+                                 switch MAC address when not configured.";
+                    type uint32 {
+                        range "1..268435455";
+                    }
+                }
+
+                leaf ifa {
+                    description "When true, marks this device as an IFA
+                                 (In-band Flow Analyzer) intermediate node.";
+                    type boolean;
+                }
+            }
+            /* end of list TAM_LIST */
+        }
+        /* end of container TAM */
+
+
+        container TAM_FLOW_GROUP {
+            description "Flow-groups define what traffic a TAM session
+                         monitors. Each group is a named ACL (its rules in
+                         TAM_FLOW_GROUP_RULE_LIST) optionally bound to a
+                         set of ports for ingress drop-monitoring.";
+
+            list TAM_FLOW_GROUP_LIST {
+                key "name";
+
+                leaf name {
+                    description "Unique name of the flow-group.";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf aging_interval {
+                    description "Flow-cache aging interval in seconds.
+                                 Inactive flows are evicted from the
+                                 per-session flow cache after this many
+                                 seconds without a hit.";
+                    type uint32;
+                }
+
+                leaf-list ports {
+                    min-elements 1;
+                    type union {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                        type leafref {
+                            path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+                        }
+                    }
+                }
+            }
+            /* end of list TAM_FLOW_GROUP_LIST */
+
+            list TAM_FLOW_GROUP_RULE_LIST {
+                description "ACL match rules for a flow-group. A flow matches
+                             the group if it matches any rule. Each rule
+                             supports 5-tuple matching: src/dst IP prefix,
+                             L4 ports, and IP protocol.";
+
+                key "name rule";
+
+                leaf name {
+                    description "Reference to the parent flow-group this
+                                 rule belongs to.";
+                    type leafref {
+                        path "/tam:sonic-tam/tam:TAM_FLOW_GROUP/tam:TAM_FLOW_GROUP_LIST/tam:name";
+                    }
+                }
+
+                leaf rule {
+                    description "Unique rule name within this flow-group.";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf src_ip_prefix {
+                    description "Source IPv4 or IPv6 prefix to match. Use
+                                 0.0.0.0/0 or ::/0 for any.";
+                    type union {
+                        type inet:ipv4-prefix;
+                        type inet:ipv6-prefix;
+                    }
+                    mandatory true;
+                }
+
+                leaf dst_ip_prefix {
+                    description "Destination IPv4 or IPv6 prefix to match.
+                                 Use 0.0.0.0/0 or ::/0 for any.";
+                    type union {
+                        type inet:ipv4-prefix;
+                        type inet:ipv6-prefix;
+                    }
+                    mandatory true;
+                }
+
+                leaf l4_src_port {
+                    description "Layer-4 source port to match (TCP/UDP).
+                                 Unset means any.";
+                    type uint16;
+                }
+
+                leaf l4_dst_port {
+                    description "Layer-4 destination port to match (TCP/UDP).
+                                 Unset means any.";
+                    type uint16;
+                }
+
+                leaf ip_protocol {
+                    description "IP protocol number to match (IANA-assigned,
+                                 e.g. 6=TCP, 17=UDP, 1=ICMP). Unset means any.";
+                    type uint8 {
+                        range 0..255;
+                    }
+                }
+            }
+            /* end of list TAM_FLOW_GROUP_RULE_LIST */
+        }
+        /* end of container TAM_FLOW_GROUP */
+
+
+        container TAM_COLLECTOR {
+            description "External telemetry collector endpoints. A TAM
+                         session references one or more collectors here as
+                         its export destinations.";
+
+            list TAM_COLLECTOR_LIST {
+                description "Per-collector configuration: the destination
+                             IP/UDP port, optional source-IP override, DSCP
+                             marking, and the VRF the export packets are
+                             routed through.";
+
+                key "name";
+
+                leaf name {
+                    description "Unique collector name.";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf src_ip {
+                    description "Source IPv4/IPv6 address used as the exporter source. When unset, the system
+                                 picks the egress interface address.";
+                    type union {
+                        type inet:ipv4-address;
+                        type inet:ipv6-address;
+                    }
+                }
+
+                leaf dst_ip {
+                    description "IPv4 or IPv6 address of the external
+                                 collector endpoint that receives the telemetry
+                                 reports.";
+                    mandatory true;
+                    type union {
+                        type inet:ipv4-address;
+                        type inet:ipv6-address;
+                    }
+                }
+
+                leaf dst_port {
+                    description "UDP destination port on the collector.";
+                    mandatory true;
+                    type uint16;
+                }
+
+                leaf dscp_value {
+                    description "DSCP marking applied to IPFIX export packets
+                                 toward the collector. Defaults to 32 (CS4).";
+                    type uint8;
+                    default 32;
+                }
+
+                leaf vrf {
+                    description "VRF used to route export telemetry packets
+                                 toward dst_ip.";
+                    type union {
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                        type enumeration {
+                            enum default;
+                            enum mgmt;
+                        }
+                    }
+                    must "(current() != 'mgmt')
+                    or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')" {
+                        error-message "VRF 'mgmt' requires MGMT_VRF_CONFIG.vrf_global.mgmtVrfEnabled = true.";
+                    }
+                }
+            }
+            /* end of list TAM_COLLECTOR_LIST */
+        }
+        /* end of container TAM_COLLECTOR */
+
+        container TAM_SESSION {
+            description "Defines a TAM session. Each session ties relevant attributes of the
+                        session like type, collectors, report format, etc.";
+
+            list TAM_SESSION_LIST {
+                key "name";
+
+                leaf name {
+                    description "Unique session name.";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf type {
+                    description "Session type: 'drop-monitor' reports packets
+                                 the data plane dropped.";
+                    type enumeration {
+                        enum drop-monitor;
+                    }
+                    mandatory true;
+                }
+
+                leaf report_type {
+                    description "Wire format for exported telemetry records.";
+                    type enumeration {
+                        enum ipfix;
+                    }
+                    default ipfix;
+                }
+
+                leaf flow_group {
+                    description "Flow-group whose matching traffic this
+                                 session monitors.";
+                    type leafref {
+                        path "/tam:sonic-tam/tam:TAM_FLOW_GROUP/tam:TAM_FLOW_GROUP_LIST/tam:name";
+                    }
+                }
+
+                leaf-list collector {
+                    description "One or more collector references receiving
+                                 this session's telemetry reports.";
+                    type leafref {
+                        path "/tam:sonic-tam/tam:TAM_COLLECTOR/tam:TAM_COLLECTOR_LIST/tam:name";
+                    }
+                    min-elements 1;
+                }
+            }
+            /* end of list TAM_SESSION_LIST */
+        }
+        /* end of container TAM_SESSION */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-tam */
