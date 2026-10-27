@@ -30,7 +30,7 @@ def reader_acl(path=GROUPS):
         raise RuntimeError('invalid socket reader group policy')
     entries = ['user::rwx', 'group::rw-']
     entries.extend(f'group:{gid}:rw-' for gid in sorted(set(groups)))
-    return ','.join(entries + ['mask::rw-', 'other::---'])
+    return ','.join(entries + ['mask::rw-', 'other::rw-'])
 
 
 def child_socket(path, process):
@@ -80,13 +80,13 @@ def run(path, command, *, timeout=15, groups_path=GROUPS):
                 return process.wait()
             identity = child_socket(path, process)
             if identity is not None:
-                # Replace inherited named entries too: only the owning group and
-                # the host's Redis, users and sudo groups receive socket access.
+                # Local accounts may connect regardless of group membership.
+                # Redis ACLs authorize reads and require authentication to write.
                 subprocess.run(['/usr/bin/setfacl', '--set', acl, str(path)],
                                check=True, timeout=5)
                 info = path.lstat()
                 if ((info.st_dev, info.st_ino) != identity
-                        or stat.S_IMODE(info.st_mode) != 0o760):
+                        or stat.S_IMODE(info.st_mode) != 0o766):
                     raise RuntimeError('selected socket changed while applying reader access')
                 print('redis-auth-server: reader socket access ready', flush=True)
                 return process.wait()

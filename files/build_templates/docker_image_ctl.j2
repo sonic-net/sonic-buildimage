@@ -8,6 +8,19 @@
 
 
 {%- if docker_container_name == "database" %}
+set_redis_socket_permissions() {
+    local socket="$1" mode=0760 selected
+    if [ "${REDIS_AUTH_MODE:-legacy}" == "enforce" ]; then
+        selected=$(jq -r --arg socket "$socket" \
+            'any(.[]; .unix_socket == $socket)' /run/redis-auth/local.json) || exit 1
+        if [ "$selected" == "true" ]; then
+            # Redis ACLs preserve reads and authenticate writes on this socket.
+            mode=0766
+        fi
+    fi
+    chgrp -f redis "$socket" && chmod -f "$mode" "$socket"
+}
+
 link_namespace() {
     # Makes namespace of a docker container available in
     # /var/run/netns so it can be managed with iproute2
@@ -402,9 +415,9 @@ function postStartAction()
            fi
         fi
 
-        # Add redis UDS to the redis group and give read/write access to the group
+        # Preserve local reader admission on explicitly protected sockets.
         REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
-        chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
+        set_redis_socket_permissions "$REDIS_BMP_SOCK"
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
         until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
@@ -416,7 +429,7 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
-    chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+    set_redis_socket_permissions "$REDIS_SOCK"
     # Binding the midplane ip to the redisdb
     if [[ -n "$midplane_ip" ]]; then
         IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
