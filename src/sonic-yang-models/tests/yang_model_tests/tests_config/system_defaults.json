@@ -12,6 +12,10 @@
                         "status": "enabled"
                     },
                     {
+                        "name": "ip_decap_ttl_uniform",
+                        "status": "enabled"
+                    },
+                    {
                         "name": "mux_tunnel_egress_acl",
                         "status": "enabled"
                     }
@@ -29,6 +33,10 @@
                     },
                     {
                         "name": "ip_decap",
+                        "status": "invalid_status"
+                    },
+                    {
+                        "name": "ip_decap_ttl_uniform",
                         "status": "invalid_status"
                     },
                     {

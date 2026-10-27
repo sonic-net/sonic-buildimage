@@ -1,0 +1,26 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "switch-t1",
+            "type": "LeafRouter"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0": {},
+        "Loopback0|10.1.0.32/32": {},
+        "Loopback0|FC00:1::32/128": {}
+    },
+    "PORTCHANNEL_INTERFACE": {
+        "PortChannel101": {},
+        "PortChannel101|10.0.0.0/31": {},
+        "PortChannel101|FC00::1/126": {},
+        "PortChannel102": {},
+        "PortChannel102|10.0.0.4/31": {},
+        "PortChannel102|FC00::9/126": {}
+    },
+    "INTERFACE": {
+        "Ethernet64": {},
+        "Ethernet64|10.0.0.32/31": {},
+        "Ethernet64|FC00::41/126": {}
+    }
+}
