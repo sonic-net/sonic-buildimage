@@ -26,6 +26,7 @@ extern char mock_syslog_message_buffer[1024];
 
 /* Mock TraceId TACACS+ attribute state */
 extern char mock_tac_trace_id_attr_value[256];
+extern char mock_tac_trace_id_attr_separator;
 extern int mock_tac_trace_id_attr_count;
 
 /* Mock tac_add_attrib_pair state */

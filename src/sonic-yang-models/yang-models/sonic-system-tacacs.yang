@@ -7,6 +7,10 @@ module sonic-system-tacacs {
         prefix inet;
     }
 
+    import sonic-types {
+        prefix stypes;
+    }
+
     import sonic-port {
         prefix port;
     }
@@ -187,7 +191,7 @@ module sonic-system-tacacs {
                 }
 
                 leaf traceid_authorization {
-                    type boolean;
+                    type stypes:boolean_type;
                     default false;
                     description "Enable adding validated SSH_CLIENT_TRACEID values as the TACACS+ traceid command authorization attribute.";
                 }

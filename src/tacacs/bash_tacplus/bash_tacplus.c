@@ -20,11 +20,11 @@
 /* Remote IP address size */
 #define REMOTE_ADDRESS_SIZE     64
 
-/* TACACS+ attributes are encoded as key=value strings with a 255 byte limit. */
+/* TACACS+ attributes use '=' or '*' as a separator and have a 255-byte limit. */
 #define TACACS_ATTR_MAX_SIZE    255
 #define TRACE_ID_ENV_VARIABLE   "SSH_CLIENT_TRACEID"
 #define TRACE_ID_ATTR_NAME      "traceid"
-#define TRACE_ID_ATTR_PREFIX_SIZE   (sizeof(TRACE_ID_ATTR_NAME "=") - 1)
+#define TRACE_ID_ATTR_PREFIX_SIZE   (sizeof(TRACE_ID_ATTR_NAME "*") - 1)
 #define TRACE_ID_VALUE_SIZE         (TACACS_ATTR_MAX_SIZE - TRACE_ID_ATTR_PREFIX_SIZE + 1)
 
 /* Return value for is_local_user method */
@@ -195,7 +195,7 @@ int send_authorization_message(
     tac_add_attrib(&attr, "service", "shell");
 
     if ((tacacs_ctrl & TRACE_ID_AUTHORIZATION_FLAG) && get_trace_id(trace_id, sizeof(trace_id))) {
-        tac_add_attrib(&attr, TRACE_ID_ATTR_NAME, trace_id);
+        tac_add_attrib_pair(&attr, TRACE_ID_ATTR_NAME, '*', trace_id);
     }
 
     tac_add_attrib(&attr, "cmd", (char*)cmd);

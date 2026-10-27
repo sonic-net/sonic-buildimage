@@ -23,8 +23,56 @@
                         "timeout": 5,
                         "passkey": "dellsonic",
                         "src_intf": "Ethernet0",
-                        "traceid_authorization": true
+                        "traceid_authorization": "True"
                 }
+            }
+        }
+    },
+
+    "TACPLUS_TRACEID_FALSE_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                    "traceid_authorization": "False"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_TRACEID_LOWERCASE_TRUE_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                    "traceid_authorization": "true"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_TRACEID_LOWERCASE_FALSE_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                    "traceid_authorization": "false"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_TRACEID_INVALID_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                    "traceid_authorization": "enabled"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_TRACEID_DEFAULT_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {}
             }
         }
     },

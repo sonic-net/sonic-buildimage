@@ -28,6 +28,7 @@ char mock_syslog_message_buffer[1024];
 
 /* Mock TraceId TACACS+ attribute state */
 char mock_tac_trace_id_attr_value[256];
+char mock_tac_trace_id_attr_separator;
 int mock_tac_trace_id_attr_count;
 
 /* Mock tac_add_attrib_pair state */
@@ -117,6 +118,7 @@ int get_memory_allocate_count()
 void reset_mock_tac_attrs()
 {
 	memset(mock_tac_trace_id_attr_value, 0, sizeof(mock_tac_trace_id_attr_value));
+	mock_tac_trace_id_attr_separator = '\0';
 	mock_tac_trace_id_attr_count = 0;
 }
 
@@ -140,18 +142,18 @@ void *xcalloc(size_t count, size_t size)
 /* Mock tac_free_attrib method */
 void tac_add_attrib(struct tac_attrib **attr, char *attrname, char *attrvalue)
 {
-	if (strcmp(attrname, TRACE_ID_ATTR_NAME) == 0)
-	{
-		mock_tac_trace_id_attr_count++;
-		snprintf(mock_tac_trace_id_attr_value, sizeof(mock_tac_trace_id_attr_value), "%s", attrvalue);
-	}
-
 	debug_printf("MOCK: tac_add_attrib add attribute: %s, value: %s\n", attrname, attrvalue);
 }
 
 /* Mock tac_add_attrib_pair method */
 void tac_add_attrib_pair(struct tac_attrib **attr, char *attrname, char separator, char *attrvalue)
 {
+	if (strcmp(attrname, TRACE_ID_ATTR_NAME) == 0)
+	{
+		mock_tac_trace_id_attr_count++;
+		mock_tac_trace_id_attr_separator = separator;
+		snprintf(mock_tac_trace_id_attr_value, sizeof(mock_tac_trace_id_attr_value), "%s", attrvalue);
+	}
 	mock_attrib_pair_count++;
 	snprintf(mock_attrib_pair_name, sizeof(mock_attrib_pair_name), "%s", attrname);
 	mock_attrib_pair_separator = separator;
