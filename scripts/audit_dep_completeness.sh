@@ -586,11 +586,16 @@ waiver_reason() {
     awk -F'\t' -v v="$1" '!/^[[:space:]]*#/ && $1==v {print $2; exit}' "$EXPORT_WAIVERS"
 }
 
-# Populate DIFF_VARS_CACHE with the set of build-env variables the diff touches:
-# any variable whose `export`/assignment/use lines were added or removed between
-# DIFF_BASE and the working tree in slave.mk / Makefile / Makefile.work /
-# rules/*.mk / Makefile.cache / platform/*.mk. This producer set mirrors the
-# make-orchestration layer scanned by cache_key_scan.py (slave.mk, Makefile,
+# Populate DIFF_VARS_CACHE with the set of build-env variables the diff touches
+# between DIFF_BASE and the working tree in slave.mk / Makefile / Makefile.work /
+# rules/*.mk / Makefile.cache / platform/*.mk: any variable named by an `export`
+# line the diff adds or removes, and any variable the diff dereferences more
+# often than before in some file. A dereference that is only moved or rewritten
+# within a file (one `-` line and one `+` line each carrying `$(VAR)`, as when a
+# recipe line is edited or references are folded into a list) is not a new
+# consumer and does not count, so a PR is not blocked on a standing finding for
+# a variable it did not add, export or newly consume. This producer set mirrors
+# the make-orchestration layer scanned by cache_key_scan.py (slave.mk, Makefile,
 # Makefile.work, and every tracked *.mk). Used by --base (PR) mode to scope
 # Check 10 to what the PR actually changes.
 compute_diff_vars() {
@@ -603,14 +608,20 @@ compute_diff_vars() {
     fi
     DIFF_VARS_CACHE=$(git -C "$REPO_ROOT" diff --unified=0 "$range" -- \
             slave.mk Makefile Makefile.work 'rules/*.mk' Makefile.cache 'platform/*.mk' 2>/dev/null \
-        | grep -E '^[-+]' | grep -vE '^[-+]{3} ' \
-        | python3 -c '
+        | python3 -c "$DIFF_VARS_PY" \
+        | sort -u)
+    log_verbose "diff-mode variables touched since $DIFF_BASE: $(echo "$DIFF_VARS_CACHE" | tr '\n' ' ')"
+}
+
+# Reads a `git diff --unified=0` on stdin and prints the variables it touches
+# (see compute_diff_vars).
+DIFF_VARS_PY='
 import sys, re
 # Mirror cache_key_scan.py:exported_vars so multi-var `export A B C`, shell
 # `export A=1 B=2`, and no-space operator forms (`export A+=v`) all register as
 # touched, while dynamic `export $(fn ...)` is skipped (its tokens are not
-# literal names) and quoted/`$(...)` values do not leak bare words. Also capture
-# $(VAR)/${VAR} dereferences the diff adds/removes.
+# literal names) and quoted/`$(...)` values do not leak bare words. Also count
+# the $(VAR)/${VAR} dereferences each file gains or loses.
 OP = r"(?:::=|:=|\?=|\+=|!=|=)"
 MOP = r"(?:::=|:=|\?=|\+=|!=)"   # make-only ops: value is rest of line => single var
 DQ = chr(34); SQ = chr(39)  # " and " built via chr() so no literal quote appears
@@ -620,10 +631,24 @@ HEAD = re.compile(r"^[A-Za-z_]\w*[ \t]*" + OP)
 SINGLE = re.compile(r"^([A-Za-z_]\w*)(?:[ \t]*" + MOP + r"|[ \t]+=)")
 STEP = re.compile(r"[ \t]*([A-Za-z_]\w*)=" + VAL)
 out = set()
-for line in sys.stdin:
-    line = line[1:] if line[:1] in "+-" else line
+refs = {}   # (file, var) -> dereferences added minus dereferences removed
+path, in_hunk = None, False
+for raw in sys.stdin:
+    # Track the file and skip each file header (its ---/+++ lines included)
+    # up to the first hunk, so a removed line that starts with "--" is still
+    # read as content.
+    if raw.startswith("diff --git "):
+        path, in_hunk = raw.rstrip("\n").rsplit(" b/", 1)[-1], False
+        continue
+    if raw.startswith("@@"):
+        in_hunk = True
+        continue
+    if not in_hunk or raw[:1] not in "+-":
+        continue
+    sign = 1 if raw[0] == "+" else -1
+    line = raw[1:]
     for m in re.finditer(r"\$[({]\s*([A-Za-z_]\w*)", line):
-        out.add(m.group(1))
+        refs[(path, m.group(1))] = refs.get((path, m.group(1)), 0) + sign
     me = re.match(r"\s*export\s+(.+)", line)
     if not me:
         continue
@@ -646,12 +671,10 @@ for line in sys.stdin:
         for t in tail.split():
             if re.fullmatch(r"[A-Za-z_]\w*", t):
                 out.add(t)
+out.update(v for (_, v), n in refs.items() if n > 0)
 for v in sorted(out):
     print(v)
-' \
-        | sort -u)
-    log_verbose "diff-mode variables touched since $DIFF_BASE: $(echo "$DIFF_VARS_CACHE" | tr '\n' ' ')"
-}
+'
 
 # True (0) if $1 is one of the variables the diff touched (see compute_diff_vars).
 diff_touches_var() {
@@ -2609,8 +2632,15 @@ check_recipe_invoked_scripts() {
     # rules/functions and Makefile.cache are in SONIC_COMMON_FILES_LIST, so edits to
     # these scripts change every affected output without moving any cache key.
     local script scripts_used
-    # Pure control-flow helpers with no effect on artifact content.
-    local denylist=" scripts/wait_for_docker.sh "
+    # Pure control-flow helpers with no effect on artifact content, and the SBOM
+    # tooling. The SBOM scripts write only SBOM metadata beside an artifact or
+    # run in the installer recipe, which is not cached; SAVE_INTO_CACHE archives
+    # the target, its _DERIVED_DEBS/_EXTRA_DEBS and its log, so no SBOM output is
+    # ever part of a cached payload and editing them cannot serve a stale one.
+    local denylist=" scripts/wait_for_docker.sh \
+scripts/build_sbom.sh scripts/build_sbom.py scripts/install_sbom_tool.sh \
+scripts/sbom_fragment.py scripts/sbom_cve_refs.py scripts/sbom_purl.py \
+scripts/sbom_parse_lockfiles.py scripts/sbom_extract_vex_from_patches.py "
     scripts_used=$(grep -hoE '(scripts|src/sonic-build-hooks)/[A-Za-z0-9_./-]+\.(sh|py)' \
         "$REPO_ROOT/slave.mk" 2>/dev/null | sort -u)
     while IFS= read -r script; do
