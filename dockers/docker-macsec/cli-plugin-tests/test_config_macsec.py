@@ -168,6 +168,54 @@ class TestConfigMACsec(object):
             assert "primary_cak" in result.output
             assert "salt index between 00 and 52" in result.output
 
+    def test_validate_key_pair_returns_boolean_and_reason(self, capsys):
+        assert macsec.validate_key_pair(
+            primary_cak, primary_ckn, "GCM-AES-128"
+        ) is True
+        assert macsec.validate_key_pair(
+            "00" + "ab" * 64, "ab" * 32, "GCM-AES-XPN-256"
+        ) is True
+        assert capsys.readouterr().err == ""
+
+        for cak, ckn, reason in (
+            (None, primary_ckn, "CAK must be a hex string"),
+            (primary_cak[:-1], primary_ckn, "CAK must be 66 hex characters"),
+            ("0x" + primary_cak[2:], primary_ckn, "CAK must contain only hex"),
+            ("53" + primary_cak[2:], primary_ckn, "Type-7 salt index"),
+            ("ff" + primary_cak[2:], primary_ckn, "Type-7 salt index"),
+            (primary_cak, None, "CKN must be 32 or 64 hex characters"),
+            (primary_cak, primary_ckn[:-1], "CKN must be 32 or 64 hex"),
+            (primary_cak, "0x" + primary_ckn[2:], "CKN must contain only hex"),
+        ):
+            assert macsec.validate_key_pair(cak, ckn, "GCM-AES-128") is False
+            diagnostic = capsys.readouterr().err
+            assert reason in diagnostic
+            assert (cak or "not-a-secret") not in diagnostic
+            assert (ckn or "not-a-secret") not in diagnostic
+
+    def test_fallback_pair_validation_identifies_invalid_field(self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        for cak, ckn, reason in (
+            ("53" + fallback_cak[2:], fallback_ckn, "Type-7 salt index"),
+            (fallback_cak, "0x" + fallback_ckn[2:], "CKN must contain only hex"),
+        ):
+            result = runner.invoke(
+                macsec.macsec,
+                [
+                    "profile", "add", profile_name,
+                    "--primary_cak=" + primary_cak,
+                    "--primary_ckn=" + primary_ckn,
+                    "--fallback_cak=" + cak,
+                    "--fallback_ckn=" + ckn,
+                ],
+                obj=cfgdb,
+            )
+            assert result.exit_code != 0
+            assert "Invalid fallback_cak/fallback_ckn pair" in result.output
+            assert reason in result.output
+            cfgdb.set_entry.assert_not_called()
+
     def test_update_unattached_profile_by_old_ckn(self, mock_cfgdb):
         cfgdb = mock_cfgdb
         runner = CliRunner()
@@ -474,6 +522,81 @@ class TestConfigMACsec(object):
         assert "new_cak" in result.output
         assert "not-a-secret" not in result.output
         cfgdb.set_entry.assert_not_called()
+
+    def test_update_validates_new_pair_without_writing(self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "add", profile_name,
+                "--primary_cak=" + primary_cak,
+                "--primary_ckn=" + primary_ckn,
+                "--fallback_cak=" + fallback_cak,
+                "--fallback_ckn=" + fallback_ckn,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0
+
+        cfgdb.set_entry.reset_mock()
+        for cak, ckn, reason in (
+            ("53" + replacement_cak[2:], replacement_ckn, "Type-7 salt index"),
+            (replacement_cak, "0x" + replacement_ckn[2:], "CKN must contain only hex"),
+        ):
+            result = runner.invoke(
+                macsec.macsec,
+                [
+                    "profile", "update", profile_name,
+                    "--old_ckn=" + fallback_ckn,
+                    "--new_cak=" + cak,
+                    "--new_ckn=" + ckn,
+                ],
+                obj=cfgdb,
+            )
+            assert result.exit_code != 0
+            assert "Invalid new_cak/new_ckn pair" in result.output
+            assert reason in result.output
+            cfgdb.set_entry.assert_not_called()
+        assert (
+            cfgdb.get_entry("MACSEC_PROFILE", profile_name)["fallback_cak"]
+            == fallback_cak
+        )
+
+    def test_update_rejects_incomplete_configured_fallback_pair(
+            self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "add", profile_name,
+                "--primary_cak=" + primary_cak,
+                "--primary_ckn=" + primary_ckn,
+                "--fallback_cak=" + fallback_cak,
+                "--fallback_ckn=" + fallback_ckn,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        del profile_table["fallback_ckn"]
+        cfgdb.set_entry.reset_mock()
+
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "update", profile_name,
+                "--old_ckn=" + primary_ckn,
+                "--new_ckn=" + replacement_ckn,
+                "--new_cak=" + replacement_cak,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code != 0
+        assert "fallback_cak and fallback_ckn must be supplied together" in result.output
+        cfgdb.set_entry.assert_not_called()
+        assert profile_table["primary_cak"] == primary_cak
 
 
     def test_macsec_invalid_profile(self, mock_cfgdb):

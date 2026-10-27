@@ -104,41 +104,32 @@ def macsec_profile():
     pass
 
 
-def is_hexstring(hexstring: str):
-    return isinstance(hexstring, str) and re.fullmatch(r"[0-9a-fA-F]+", hexstring) is not None
-
-
-def validate_ckn(ctx, option_name, ckn):
-    if len(ckn) not in SUPPORTED_CKN_LENGTHS or not is_hexstring(ckn):
-        ctx.fail("Expect {} to be a valid 32- or 64-character hex string".format(option_name))
-
-
-def validate_cak(ctx, option_name, cak, cipher_suite):
+def validate_key_pair(cak, ckn, cipher_suite):
+    if not isinstance(cak, str):
+        click.echo("CAK must be a hex string", err=True)
+        return False
     expected_length = 66 if "128" in cipher_suite else 130
     if len(cak) != expected_length:
-        ctx.fail(
-            "Expect the length of {} is {}, but got {}".format(
-                option_name, expected_length, len(cak)
-            )
-        )
-    if not is_hexstring(cak):
-        ctx.fail("Expect {} to be a valid hex string".format(option_name))
-
-
-def validate_type7_salt_index(ctx, option_name, cak, configured=False):
+        click.echo("CAK must be {} hex characters".format(expected_length), err=True)
+        return False
+    if re.fullmatch(r"[0-9a-fA-F]+", cak) is None:
+        click.echo("CAK must contain only hex characters", err=True)
+        return False
     if not cak[:2].isdigit() or int(cak[:2]) >= TYPE7_SALT_COUNT:
-        suffix = "; replace the profile before rotation" if configured else ""
-        ctx.fail(
-            "Expect {} to use an encoded-key salt index between 00 and {}{}".format(
-                option_name, TYPE7_SALT_COUNT - 1, suffix
-            )
+        click.echo(
+            "CAK must use a Type-7 salt index between 00 and {}".format(
+                TYPE7_SALT_COUNT - 1
+            ),
+            err=True,
         )
-
-
-def validate_fallback_pair(ctx, fallback_cak, fallback_ckn):
-    if (fallback_cak is None) != (fallback_ckn is None):
-        ctx.fail("fallback_cak and fallback_ckn must be supplied together")
-    return fallback_cak is not None
+        return False
+    if not isinstance(ckn, str) or len(ckn) not in SUPPORTED_CKN_LENGTHS:
+        click.echo("CKN must be 32 or 64 hex characters", err=True)
+        return False
+    if re.fullmatch(r"[0-9a-fA-F]+", ckn) is None:
+        click.echo("CKN must contain only hex characters", err=True)
+        return False
+    return True
 
 
 def normalize_ckn(ckn):
@@ -188,17 +179,18 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn,
 
     profile_table["cipher_suite"] = cipher_suite
 
-    validate_cak(ctx, "primary_cak", primary_cak, cipher_suite)
-    validate_type7_salt_index(ctx, "primary_cak", primary_cak)
-    validate_ckn(ctx, "primary_ckn", primary_ckn)
-    has_fallback = validate_fallback_pair(ctx, fallback_cak, fallback_ckn)
+    if not validate_key_pair(primary_cak, primary_ckn, cipher_suite):
+        ctx.fail("Invalid primary_cak/primary_ckn pair")
+    if (fallback_cak is None) != (fallback_ckn is None):
+        ctx.fail("fallback_cak and fallback_ckn must be supplied together")
+    has_fallback = fallback_cak is not None
+    if has_fallback and not validate_key_pair(
+            fallback_cak, fallback_ckn, cipher_suite):
+        ctx.fail("Invalid fallback_cak/fallback_ckn pair")
     profile_table["primary_cak"] = primary_cak
     profile_table["primary_ckn"] = primary_ckn
 
     if has_fallback:
-        validate_cak(ctx, "fallback_cak", fallback_cak, cipher_suite)
-        validate_type7_salt_index(ctx, "fallback_cak", fallback_cak)
-        validate_ckn(ctx, "fallback_ckn", fallback_ckn)
         if normalize_ckn(primary_ckn) == normalize_ckn(fallback_ckn):
             ctx.fail("primary_ckn and fallback_ckn must differ")
         profile_table["fallback_cak"] = fallback_cak
@@ -250,28 +242,31 @@ def update_profile(profile, old_ckn, new_ckn, new_cak):
 
     if not primary_cak or not primary_ckn:
         ctx.fail("{} has an invalid primary CA configuration".format(profile))
-    validate_cak(ctx, "configured primary_cak", primary_cak, cipher_suite)
-    validate_type7_salt_index(
-        ctx, "configured primary_cak", primary_cak, configured=True
-    )
-    validate_ckn(ctx, "configured primary_ckn", primary_ckn)
-    if not validate_fallback_pair(ctx, fallback_cak, fallback_ckn):
+    if not validate_key_pair(primary_cak, primary_ckn, cipher_suite):
+        ctx.fail(
+            "Invalid configured primary_cak/primary_ckn pair; replace the "
+            "profile before rotation"
+        )
+    if fallback_cak is None and fallback_ckn is None:
         ctx.fail(
             "profile {} has no fallback CA; create a new profile to replace "
             "a primary-only configuration".format(profile)
         )
-    validate_cak(ctx, "configured fallback_cak", fallback_cak, cipher_suite)
-    validate_type7_salt_index(
-        ctx, "configured fallback_cak", fallback_cak, configured=True
-    )
-    validate_ckn(ctx, "configured fallback_ckn", fallback_ckn)
+    if (fallback_cak is None) != (fallback_ckn is None):
+        ctx.fail("fallback_cak and fallback_ckn must be supplied together")
+    if not validate_key_pair(fallback_cak, fallback_ckn, cipher_suite):
+        ctx.fail(
+            "Invalid configured fallback_cak/fallback_ckn pair; replace the "
+            "profile before rotation"
+        )
     if normalize_ckn(primary_ckn) == normalize_ckn(fallback_ckn):
         ctx.fail("{} has duplicate primary and fallback CKNs".format(profile))
 
-    validate_ckn(ctx, "old_ckn", old_ckn)
-    validate_ckn(ctx, "new_ckn", new_ckn)
-    validate_cak(ctx, "new_cak", new_cak, cipher_suite)
-    validate_type7_salt_index(ctx, "new_cak", new_cak)
+    if (len(old_ckn) not in SUPPORTED_CKN_LENGTHS or
+            re.fullmatch(r"[0-9a-fA-F]+", old_ckn) is None):
+        ctx.fail("Expect old_ckn to be a valid 32- or 64-character hex string")
+    if not validate_key_pair(new_cak, new_ckn, cipher_suite):
+        ctx.fail("Invalid new_cak/new_ckn pair")
 
     normalized_old = normalize_ckn(old_ckn)
     normalized_primary = normalize_ckn(primary_ckn)
