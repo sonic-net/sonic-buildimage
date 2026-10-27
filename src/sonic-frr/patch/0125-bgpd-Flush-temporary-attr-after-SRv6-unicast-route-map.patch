@@ -1,0 +1,40 @@
+From daf5f4aba00e1f5242473ba33580418e3f36d8a8 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Wed, 7 Oct 2026 22:33:15 +0300
+Subject: [PATCH] bgpd: Flush temporary attr after SRv6 unicast route-map
+
+attr_tmp was only discarded, so anything the route-map's set
+clauses allocated (aspath, communities, etc...) leaked
+on every evaluation.
+
+Fixes: 1aaf1227805094147ce4b17838f48dba738eef72 ("bgpd: Flush/discard dup'ed attr->extra for deny path in srv6")
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ bgpd/bgp_srv6.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index 4172cb529a2d..e2d076683b60 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -342,6 +342,7 @@ void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest
+ 			prep_for_rmap_apply(&info, &extra, dest, bpi, bgp->peer_self, NULL,
+ 					    &attr_tmp);
+ 			ret = route_map_apply(rmap, p, &info);
++			bgp_attr_flush(&attr_tmp);
+ 
+ 			if (ret == RMAP_DENYMATCH) {
+ 				if (dest->srv6_unicast)
+@@ -350,11 +351,8 @@ void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest
+ 				if (BGP_DEBUG(update, UPDATE_OUT))
+ 					zlog_debug("srv6 unicast prefix %pBD denied", dest);
+ 
+-				bgp_attr_extra_discard(&attr_tmp);
+ 				return;
+ 			}
+-
+-			bgp_attr_extra_discard(&attr_tmp);
+ 		} else {
+ 			zlog_warn("route-map %s was no found, ignored",
+ 				  bgp->srv6_unicast[afi].rmap_name);
