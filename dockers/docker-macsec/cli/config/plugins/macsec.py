@@ -226,7 +226,7 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn,
 @click.option('--old_ckn', metavar='<old_ckn>', required=True, type=str, help="Configured CKN to replace.")
 @click.option('--new_ckn', metavar='<new_ckn>', required=True, type=str, help="Replacement CKN.")
 @click.option('--new_cak', metavar='<new_cak>', required=True, type=str, help="Replacement encoded CAK.")
-def update_profile(profile, old_ckn, new_ckn, new_cak):
+def update_cak(profile, old_ckn, new_ckn, new_cak):
     """Rotate the CAK/CKN pair selected by its current CKN."""
     ctx = click.get_current_context()
     config_db = ctx.obj

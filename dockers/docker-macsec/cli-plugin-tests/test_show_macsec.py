@@ -75,7 +75,8 @@ def state_db_for_interface(interface_name):
 
 
 def state_db_for_snapshots(session_interfaces, participant_interfaces,
-                           empty_participant_interfaces=(), session_overrides=None):
+                           empty_participant_interfaces=(), session_overrides=None,
+                           participant_overrides=None):
     db = MagicMock()
     db.STATE_DB = "STATE_DB"
     db.get_db_separator.return_value = "|"
@@ -108,6 +109,8 @@ def state_db_for_snapshots(session_interfaces, participant_interfaces,
             if session_overrides and key in session_overrides:
                 return session_overrides[key]
             return mka_record()["session"]
+        if participant_overrides and key in participant_overrides:
+            return participant_overrides[key]
         if key in empty_participant_keys:
             return {}
         if key in participant_keys.values():
@@ -318,15 +321,18 @@ class TestShowMACsec(object):
         decoded_current_cak = secret_cak[2:]
         stale_decoded_cak = "ab" * 32
         stale_raw_256_cak = "cd" * 64
+        contextual_caks = ("ba" * 32, "dc" * 32, "12" * 32)
         safe_ckn = "ef" * 32
         error = (
             "encoded={} decoded={} previous_cak={} snapshot={} "
+            "current_cak={} replacement_cak={} configured_cak={} "
             "ckn={} interface=Ethernet0"
         ).format(
             secret_cak,
             decoded_current_cak,
             stale_decoded_cak,
             stale_raw_256_cak,
+            *contextual_caks,
             safe_ckn,
         )
 
@@ -340,6 +346,11 @@ class TestShowMACsec(object):
         assert stale_raw_256_cak not in redacted
         assert "previous_cak=[redacted]" in redacted
         assert "snapshot=[redacted]" in redacted
+        for label, cak in zip(
+                ("current_cak", "replacement_cak", "configured_cak"),
+                contextual_caks):
+            assert cak not in redacted
+            assert "{}=[redacted]".format(label) in redacted
         assert "ckn={}".format(safe_ckn) in redacted
         assert "interface=Ethernet0" in redacted
 
@@ -757,6 +768,38 @@ class TestShowMACsec(object):
         assert "Ethernet4" in output
         assert "Ethernet0" not in output
         assert "Ethernet8" not in output
+
+    def test_mka_collection_skips_partial_participant_and_keeps_valid_port(
+            self, capsys):
+        context = show_macsec.MacsecContext.__new__(show_macsec.MacsecContext)
+        context.config_db = MagicMock()
+        context.config_db.get_entry.return_value = {}
+        context.multi_asic = MagicMock()
+        context.multi_asic.current_namespace = ""
+        participant_key = "MACSEC_MKA_PARTICIPANT_TABLE|Ethernet8|{}".format(
+            primary_ckn
+        )
+
+        for missing_field in show_macsec.MKA_PARTICIPANT_FIELDS:
+            partial = dict(mka_record()["participants"][0])
+            del partial[missing_field]
+            context.mka_records = []
+            context.db = state_db_for_snapshots(
+                ["Ethernet0", "Ethernet4", "Ethernet8"],
+                ["Ethernet0", "Ethernet8"],
+                participant_overrides={participant_key: partial},
+            )
+
+            show_macsec.MacsecContext.collect_mka.__wrapped__(context, None)
+
+            assert [record["interface"] for record in context.mka_records] == [
+                "Ethernet0", "Ethernet4"
+            ], missing_field
+            context.show_mka(None)
+            output = capsys.readouterr().out
+            assert "Ethernet0" in output
+            assert "Ethernet4" in output
+            assert "Ethernet8" not in output
 
     @patch('show_macsec.SonicV2Connector')
     def test_post_status_success(self, mock_connector):

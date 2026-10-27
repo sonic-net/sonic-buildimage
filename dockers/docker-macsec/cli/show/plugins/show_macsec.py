@@ -177,7 +177,8 @@ def _redact_known_secrets(value, secrets):
         result,
     )
     result = re.sub(
-        r"(?i)(\b(?:(?:(?:primary|fallback|new|old|previous|stale|decoded|raw)[_ -]?)?cak|"
+        r"(?i)(\b(?:(?:(?:primary|fallback|new|old|previous|stale|decoded|raw|"
+        r"current|replacement|configured)[_ -]?)?cak|"
         r"(?:decoded|raw|secret)[_ -]?key|key[_ -]?material)\b"
         r"\s*(?:[:=]|\bis\b)?\s*)"
         r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])",
@@ -643,7 +644,9 @@ class MacsecContext(object):
                 raw_participant = self.db.get_all(
                     self.db.STATE_DB, participant_key
                 )
-                if not raw_participant:
+                if not raw_participant or not all(
+                    field in raw_participant for field in MKA_PARTICIPANT_FIELDS
+                ):
                     complete_snapshot = False
                     break
                 participant = _allowlisted_fields(
