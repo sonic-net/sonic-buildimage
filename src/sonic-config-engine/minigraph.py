@@ -86,6 +86,7 @@ CHASSIS_CARD_VOQ = 'VoQ'
 CHASSIS_CARD_PACKET = 'chassis-packet'
 CHASSIS_CARD_FABRIC = 'Fabric'
 voq_internal_intfs =  ['cpu', 'recirc', 'inband']
+hwskus_mtu1500 = ['M2-W5000-48CON2SFP']
 
 def get_asic_switch_id(slot_index, asic_name):
     asic_id = 0
@@ -2460,6 +2461,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     # set default port MTU as 9100 and default TPID 0x8100
     for port in ports.values():
         port['mtu'] = '9100'
+        if hwsku in hwskus_mtu1500:
+            port['mtu'] = '1500'
         port['tpid'] = '0x8100'
 
     # asymmetric PFC is disabled by default
