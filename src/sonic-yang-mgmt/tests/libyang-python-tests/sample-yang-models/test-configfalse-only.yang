@@ -1,0 +1,35 @@
+module test-configfalse-only {
+    namespace "http://github.com/Azure/test-configfalse-only";
+    prefix tco;
+
+    revision 2026-10-22 {
+        description "Test YANG model all child containers are config false";
+    }
+
+    container test-configfalse-only {
+        container TEST_CONFIGFALSE_ONLY_STATE1 {
+			config false;
+            list TEST_CONFIGFALSE_ONLY_STATE1_LIST {
+                key "name";
+                leaf name {
+                    type string;
+                }
+                leaf value {
+                    type string;
+                }
+            }
+        }
+        container TEST_CONFIGFALSE_ONLY_STATE2 {
+            config false;
+            list TEST_CONFIGFALSE_ONLY_STATE2_LIST {
+                key "name";
+                leaf name {
+                    type string;
+                }
+                leaf value {
+                    type string;
+                }
+            }
+        }
+    }
+}

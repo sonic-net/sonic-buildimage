@@ -173,6 +173,84 @@ class Test_SonicYang_UsesResolution(object):
         # Native leaf inside the nested grouping
         assert 'extra' in child_names
 
+class Test_SonicYang_ConfigFalse(object):
+    """Tests for config-false classification.
+
+    Verifies that modules are correctly classified into configFalseModules or confDbYangMap for different scenarios.
+    """
+
+    CF_MIXED = 'test-config-mixed'
+    CF_CONFIGFALSE = 'test-configfalse-only'
+    CF_NORMAL = 'test-normal-config'
+    CF_OVERLAP = 'test-overlap-configfalse'
+
+    @pytest.fixture(autouse=True, scope='class')
+    def yang_s(self):
+        data = _load_test_data()
+        yang_dir = str(data['yang_dir'])
+        yang_s = sy.SonicYang(yang_dir)
+        yang_s.loadYangModel()
+        return yang_s
+
+    def test_config_mixed(self, yang_s):
+        """some children config-true, some config-false -> module not in configFalseModules, only config-true table in confDbYangMap."""
+        assert self.CF_MIXED not in yang_s.configFalseModules
+        assert 'TEST_CONFIG_MIXED_CFG' in yang_s.confDbYangMap
+        assert yang_s.confDbYangMap['TEST_CONFIG_MIXED_CFG']['module'] == self.CF_MIXED
+        assert 'TEST_CONFIG_MIXED_INFO' not in yang_s.confDbYangMap
+
+    def test_configfalse_only(self, yang_s):
+        """all children config-false -> module in configFalseModules, not in confDbYangMap."""
+        assert self.CF_CONFIGFALSE in yang_s.configFalseModules
+        assert 'TEST_CONFIGFALSE_ONLY_STATE1' not in yang_s.confDbYangMap
+        assert 'TEST_CONFIGFALSE_ONLY_STATE2' not in yang_s.confDbYangMap
+
+    def test_normal_config(self, yang_s):
+        """top container is default config, all children config-true -> module not in configFalseModules, all tables in confDbYangMap."""
+        assert self.CF_NORMAL not in yang_s.configFalseModules
+        assert 'TEST_NORMAL_CONFIG' in yang_s.confDbYangMap
+        assert yang_s.confDbYangMap['TEST_NORMAL_CONFIG']['module'] == self.CF_NORMAL
+
+    def test_overlap_config(self, yang_s):
+        """top container with config false -> module in configFalseModules, not in confDbYangMap."""
+        assert self.CF_OVERLAP in yang_s.configFalseModules
+        assert 'TEST_OVERLAP_CONFIGFALSE' not in yang_s.confDbYangMap
+
+    def test_validate_config_false_mechanism(self, yang_s):
+        """
+        Validates the non-config module filter formula
+        (NON_CONFIG_MODULES | configFalseModules) & yangFiles
+        with overlap scenarios using test YANG models.
+        """
+        yangFilesSet = set(yang_s.yangFiles)
+        BASE_NON_CONFIG_MODULES = {
+            'test-port', 'test-acl', 'test-vlan', 'test-interface', 'test-head',
+            'test-portchannel', 'test-grouping', 'test-yang-structure',
+        }
+
+        # ConfigModules: test-normal-config, test-configfalse-only.yang
+        configData = {
+            "TEST_CONFIG_MIXED_CFG": {
+                "item1": {
+                    "name": "item1",
+                    "value": "val1",
+                },
+            },
+            "TEST_NORMAL_CONFIG": {
+                "item1": {
+                    "name": "item1",
+                    "value": "val1",
+                },
+            },
+        }
+
+        # testNonConfigModules includes test-overlap-configfalse.yang (also in configFalseModules)
+        testNonConfigModules = BASE_NON_CONFIG_MODULES | {self.CF_OVERLAP}
+        yang_s.loadData(dict(configData))
+
+        testNonConfigModules = (testNonConfigModules | yang_s.configFalseModules) & yangFilesSet
+        assert len(yang_s.xlateJson) == len(yang_s.yangFiles) - len(testNonConfigModules)
+        yang_s.validate_data_tree()
 
 class Test_SonicYang(object):
     """Tests that query or manipulate an already-loaded data tree.
@@ -424,13 +502,18 @@ class Test_SonicYang(object):
         '''
         test_file = sonic_yang_data['test_file']
         syc = sonic_yang_data['syc']
-        # Currently only 3 YANG files are not directly related to config, along with event YANG models
-        # which are: sonic-extension.yang, sonic-types.yang, sonic-bgp-common.yang, sonic-event.yang
-        # and sonic-alarm.yang. Hard coding it right now.
-        # event YANG models do not map directly to config_db and are included to NON_CONFIG_YANG_FILES at run time
-        # If any more such helper yang files are added, we need to update here.
-        EVENT_YANG_FILES = sum(1 for yang_model in syc.yangFiles if 'sonic-events' in yang_model)
-        NON_CONFIG_YANG_FILES = 6 + EVENT_YANG_FILES
+        # YANG modules that do not map directly to Config DB tables.
+        # Helper/type modules:
+        #   sonic-extension, sonic-types, sonic-bgp-common, sonic-event, sonic-alarm, sonic-platform-node
+        # Event YANG modules (collected dynamically):
+        #   sonic-events-*  (e.g. sonic-events-bgp, sonic-events-host, ...)
+        # If any more such helper yang modules are added, update this set.
+        NON_CONFIG_MODULES = {
+            'sonic-extension', 'sonic-types', 'sonic-bgp-common',
+            'sonic-event', 'sonic-alarm', 'sonic-platform-node'
+        }
+        EVENT_MODULES = { m for m in syc.yangFiles if 'sonic-events' in m }
+        NON_CONFIG_MODULES |= EVENT_MODULES
         # read config
         jIn = self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON')
         jIn = json.loads(jIn)
@@ -441,7 +524,9 @@ class Test_SonicYang(object):
         # loaded in Data tree.
         assert len(syc.jIn) == numTables
         print("{}:{}".format(len(syc.xlateJson), len(syc.yangFiles)))
-        assert len(syc.xlateJson) == len(syc.yangFiles) - len(syc.configFalseModules) - NON_CONFIG_YANG_FILES
+        # Union of non-config modules and config-false modules
+        nonConfigModules = (NON_CONFIG_MODULES | syc.configFalseModules) & set(syc.yangFiles)
+        assert len(syc.xlateJson) == len(syc.yangFiles) - len(nonConfigModules)
         # Validate data tree
         validTree = False
         try:

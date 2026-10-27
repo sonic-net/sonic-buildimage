@@ -1,0 +1,22 @@
+module test-normal-config {
+    namespace "http://github.com/Azure/test-normal-config";
+    prefix tnc;
+
+    revision 2026-10-22 {
+        description "Test YANG model is default normal config which belongs to config-true";
+    }
+
+    container test-normal-config {
+        container TEST_NORMAL_CONFIG {
+            list TEST_NORMAL_CONFIG_LIST {
+                key "name";
+                leaf name {
+                    type string;
+                }
+                leaf value {
+                    type string;
+                }
+            }
+        }
+    }
+}

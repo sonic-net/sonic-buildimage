@@ -135,12 +135,16 @@ class SonicYangExtMixin(SonicYangPathMixin):
             if top.name() != m.name():
                 raise SonicYangException("topLevelContainer mismatch {}:{}".format(
                     top.name(), m.name()))
-            isEventAlarmYANG = ('sonic-event' in m.name() or 'sonic-alarm' in m.name());
-            if top.config_false() and not isEventAlarmYANG:
+
+            child_containers = list(top.children(types=(ly.SNode.CONTAINER,)))
+            if not child_containers:
+                continue
+            if top.config_false():
                 self.configFalseModules.add(m.name())
                 continue
+
             hasConfigTable = False
-            for table in top.children(types=(ly.SNode.CONTAINER,)):
+            for table in child_containers:
                 if table.config_false():
                     continue
                 hasConfigTable = True
@@ -150,7 +154,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
                     'container': table,
                 }
 
-            if not hasConfigTable and not isEventAlarmYANG  :
+            if not hasConfigTable:
                 self.configFalseModules.add(m.name())
 
     """
