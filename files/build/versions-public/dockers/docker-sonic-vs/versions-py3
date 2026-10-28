@@ -1,13 +1,13 @@
 bcrypt==5.0.0
 blessed==1.52.0
-certifi==2026.10.19
+certifi==2026.10.23
 cffi==2.1.1
 charset-normalizer==3.5.2
 click==8.1.8
 click-log==0.4.0
 colorful==0.5.8
 cryptography==50.0.2
-dbus-python==1.5.0
+dbus-python==1.5.1
 docker==7.2.0
 docker-image-py==0.2.0
 enlighten==1.14.1
@@ -35,7 +35,7 @@ pygments==2.21.0
 pygobject==3.42.2
 pynacl==1.6.2
 pyproject-metadata==0.12.1
-pyroute2==0.9.6
+pyroute2==0.9.7
 python_arptable==0.0.2
 requests==2.34.2
 scapy==2.5.0

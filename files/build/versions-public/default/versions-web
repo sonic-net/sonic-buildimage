@@ -25,11 +25,11 @@ http://github.com/intel/intel-ipsec-mb/archive/v2.0.2.tar.gz==dd0d0586058565afe4
 http://github.com/linux-rdma/rdma-core/releases/download/v64.0/rdma-core-64.0.tar.gz==2e9093ea10150ecf4bbb8543a4fa5898
 http://www.mellanox.com/downloads/MFT/mft-4.36.0-1038-x86_64-deb.tgz==02b32f537f63860a7f335cd0e4186551
 http://www.mellanox.com/downloads/MFT/mft-4.36.0-147-aarch64-deb.tgz==29a17968baf6f861e9ce92145b944e61
-https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==d48ceeb67334d9c578c6c0c09be52064
+https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==41e54c45ae464b578b3afefbe3ec606a
 https://api.github.com/repos/influxdata/influxdb/releases/latest==e0e61affefaf7dc31e85251582dc20e5
 https://api.github.com/repos/nanomsg/nanomsg/releases/latest==6e3be7094a1d2296f3b10893de16565b
-https://api.github.com/repos/osrg/gobgp/releases/latest==3e1742e2a1d54933e9793692578bfba9
-https://api.github.com/repos/sflow/sflowtool/releases/latest==837fcaedf65a54e0e08efdaa845b774d
+https://api.github.com/repos/osrg/gobgp/releases/latest==a39822cc5409533d6486d45646fb11ea
+https://api.github.com/repos/sflow/sflowtool/releases/latest==7d10e07af0ea3e1a38415e5892be628e
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.debian.tar.xz==5a87fe5e2077763dd62ad40716804954
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.dsc==c9d75e69a27738c24a25fff61285998b
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37.orig.tar.xz==6075acd95528d14013fcde1ae279efdf

@@ -25,6 +25,9 @@ export NOKIA_IXR7220H6_128_PLATFORM_MODULE_VERSION
 NOKIA_IXR7250_PLATFORM_MODULE = sonic-platform-nokia-chassis_$(NOKIA_IXR7250_PLATFORM_MODULE_VERSION)_amd64.deb
 $(NOKIA_IXR7250_PLATFORM_MODULE)_SRC_PATH = $(PLATFORM_PATH)/sonic-platform-modules-nokia
 $(NOKIA_IXR7250_PLATFORM_MODULE)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON) $(NOKIA_NDK_DEBIAN)
+# debian/rules dpkg-extracts ethtool from target/debs into the chassis package.
+# Declare the sibling so the cache key invalidates when ethtool changes (Check 29).
+$(NOKIA_IXR7250_PLATFORM_MODULE)_RDEPENDS += ethtool
 $(NOKIA_IXR7250_PLATFORM_MODULE)_PLATFORM = x86_64-nokia_ixr7250e_sup-r0
 $(NOKIA_IXR7250_PLATFORM_MODULE)_PLATFORM += x86_64-nokia_ixr7250e_36x400g-r0
 SONIC_DPKG_DEBS += $(NOKIA_IXR7250_PLATFORM_MODULE)

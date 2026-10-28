@@ -481,6 +481,159 @@ class Test_SonicYang(object):
 
         return
 
+    @pytest.fixture
+    def dhcp_match_config(self):
+        return {
+            "DHCP_SERVER_IPV4": {
+                "Vlan100": {
+                    "mode": "PORT",
+                    "lease_time": "900",
+                    "netmask": "255.255.255.0",
+                    "state": "enabled",
+                },
+            },
+            "DHCP_SERVER_IPV4_MATCH": {
+                "vendor": {"type": "option60", "value": " MAIA A "},
+            },
+            "DHCP_SERVER_IPV4_BINDING": {
+                "Vlan100|b1": {"matches": ["vendor"], "ips": ["192.0.2.20"]},
+            },
+        }
+
+    @pytest.fixture
+    def recovery_yang(self, sonic_yang_data):
+        syc = sy.SonicYang(sonic_yang_data["yang_dir"])
+        syc.loadYangModel()
+        return syc
+
+    @pytest.mark.parametrize("config", [
+        pytest.param({"PORT": {"Ethernet0|extra": {}}}, id="port-key"),
+        pytest.param({"PORT": {"Ethernet0": {"unknown-leaf": "bad"}}}, id="port-field"),
+        pytest.param(
+            {"DHCP_SERVER_IPV4_MATCH": {"vendor|extra": {"type": "option60", "value": "MAIA"}}},
+            id="match-key",
+        ),
+    ])
+    def test_translation_error_clears_element_path(self, recovery_yang, config):
+        with pytest.raises(sy.SonicYangException, match="All Keys are not parsed"):
+            recovery_yang.loadData(config)
+
+        assert recovery_yang.elementPath == []
+        assert recovery_yang.root is None
+
+    @pytest.mark.parametrize("table,error", [
+        ("DHCP_SERVER_IPV4_MATCH", "Match condition name must not have"),
+        ("DHCP_SERVER_IPV4_BINDING", "DHCP binding name must not have"),
+    ])
+    @pytest.mark.parametrize("leading", [True, False], ids=["leading", "trailing"])
+    def test_dhcp_key_rejected_after_translation_error(
+            self, recovery_yang, dhcp_match_config, table, error, leading):
+        with pytest.raises(sy.SonicYangException, match="All Keys are not parsed"):
+            recovery_yang.loadData({"PORT": {"Ethernet0|extra": {}}})
+
+        old_key = next(iter(dhcp_match_config[table]))
+        prefix, _, name = old_key.rpartition("|")
+        name = " " + name if leading else name + " "
+        key = prefix + "|" + name if prefix else name
+        config = {table: {key: dhcp_match_config[table][old_key]}}
+        if table == "DHCP_SERVER_IPV4_BINDING":
+            config.update({key: value for key, value in dhcp_match_config.items() if key != table})
+
+        with pytest.raises(sy.SonicYangException, match=error):
+            recovery_yang.loadData(config)
+
+        assert recovery_yang.elementPath == []
+        assert recovery_yang.root is None
+
+    @pytest.mark.parametrize("failed_table", ["PORT", "DHCP_SERVER_IPV4_MATCH"])
+    @pytest.mark.parametrize("first_table", ["PORT", "DHCP_SERVER_IPV4_MATCH", "DHCP_SERVER_IPV4_BINDING"])
+    def test_valid_config_after_translation_error(
+            self, recovery_yang, dhcp_match_config, failed_table, first_table):
+        invalid_key = "Ethernet0|extra" if failed_table == "PORT" else "vendor|extra"
+        with pytest.raises(sy.SonicYangException, match="All Keys are not parsed"):
+            recovery_yang.loadData({failed_table: {invalid_key: {}}})
+
+        port = {"lanes": "0", "speed": "1000"}
+        expected = dict(dhcp_match_config, PORT={"Ethernet0": port})
+        config = dict(dhcp_match_config, PORT={" Ethernet0 ": dict(port)})
+        first = config.pop(first_table)
+        config = {first_table: first, **config}
+
+        recovery_yang.loadData(config)
+        recovery_yang.validate_data_tree()
+        assert recovery_yang.getData() == expected
+        assert recovery_yang.elementPath == []
+
+    def test_load_after_reverse_translation_error(self, recovery_yang):
+        invalid_yang = {
+            "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+                "DHCP_SERVER_IPV4_MATCH": {
+                    "DHCP_SERVER_IPV4_MATCH_LIST": [{"type": "option60", "value": "MAIA"}],
+                },
+            },
+        }
+        with pytest.raises(Exception, match="key name not found in entry"):
+            recovery_yang.XlateYangToConfigDB(invalid_yang)
+
+        port = {"lanes": "0", "speed": "1000"}
+        recovery_yang.loadData({"PORT": {" Ethernet0 ": port}})
+        recovery_yang.validate_data_tree()
+        assert recovery_yang.getData() == {"PORT": {"Ethernet0": port}}
+        assert recovery_yang.elementPath == []
+
+    @pytest.mark.parametrize("table,field,error", [
+        ("DHCP_SERVER_IPV4_MATCH", "name", "Match condition name must not have"),
+        ("DHCP_SERVER_IPV4_BINDING", "binding", "DHCP binding name must not have"),
+    ])
+    @pytest.mark.parametrize("whitespace", [
+        pytest.param(" ", id="space"),
+        pytest.param("\t", id="tab"),
+        pytest.param("\u00a0", id="NBSP"),
+        pytest.param("\u2003", id="em-space"),
+    ])
+    @pytest.mark.parametrize("leading", [True, False], ids=["leading", "trailing"])
+    def test_dhcp_match_reject_key_whitespace(
+            self, sonic_yang_data, dhcp_match_config, table, field, error, whitespace, leading):
+        config = dhcp_match_config
+        old_key = next(iter(config[table]))
+        prefix, _, name = old_key.rpartition("|")
+        name = whitespace + name if leading else name + whitespace
+        key = prefix + "|" + name if prefix else name
+        config[table][key] = config[table].pop(old_key)
+        if field == "name":
+            config["DHCP_SERVER_IPV4_BINDING"]["Vlan100|b1"]["matches"] = [name]
+
+        syc = sonic_yang_data["syc"]
+        with pytest.raises(sy.SonicYangException, match=error):
+            syc.loadData(config)
+
+    def test_dhcp_match_reject_key_collision(self, sonic_yang_data, dhcp_match_config):
+        bindings = dhcp_match_config["DHCP_SERVER_IPV4_BINDING"]
+        bindings["Vlan100|b1 "] = dict(bindings["Vlan100|b1"])
+        with pytest.raises(sy.SonicYangException, match="DHCP binding name must not have"):
+            sonic_yang_data["syc"].loadData(dhcp_match_config)
+
+    @pytest.mark.parametrize("match_name,binding_name", [
+        ("v", "b"),
+        ("vendor a", "binding a"),
+        ("vendor  a", "binding  a"),
+        ("rack-1.vendor_a:x", "rack-1.binding_a:x,1"),
+    ])
+    def test_dhcp_match_configdb_roundtrip(
+            self, sonic_yang_data, dhcp_match_config, match_name, binding_name):
+        config = dhcp_match_config
+        matches = config["DHCP_SERVER_IPV4_MATCH"]
+        matches[match_name] = matches.pop("vendor")
+        bindings = config["DHCP_SERVER_IPV4_BINDING"]
+        bindings["Vlan100|" + binding_name] = bindings.pop("Vlan100|b1")
+        bindings["Vlan100|" + binding_name]["matches"] = [match_name]
+        syc = sonic_yang_data["syc"]
+
+        syc.loadData(config)
+        syc.validate_data_tree()
+        assert syc.getData() == config
+        assert not syc.tablesWithOutYang
+
     def test_table_with_no_yang(self, sonic_yang_data):
         # in this test, tables with no YANG models must be stored seperately
         # by this library.
