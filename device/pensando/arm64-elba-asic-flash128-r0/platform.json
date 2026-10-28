@@ -8,5 +8,9 @@
             }
         }
     },
+    "min_swap_mem_size_in_mb": 3072,
+    "min_total_mem_threshold_in_mb": 8192,
+    "min_free_disk_in_gb_for_dpu_image": 5,
+    "min_free_disk_in_gb_for_dpu_reboot": 2,
     "DPU":{}
 }

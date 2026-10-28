@@ -40,6 +40,17 @@ case "$1" in
         # (ordered before sonic.target)
         echo "Enabling cpe_ctrl cold-boot init service..."
         systemctl enable cpe-ctrl-init.service 2>/dev/null || true
+
+        # Enable watchdog boot-stage markers and storm-guard clear.
+        # This postinst runs from rc-local, which multi-user.target waits on.
+        # watchdog-stage-late and storm-guard-clear are After=multi-user.target,
+        # so a synchronous start here deadlocks boot; queue them with --no-block.
+        echo "Enabling watchdog services..."
+        systemctl enable --now watchdog-stage-early.service 2>/dev/null || true
+        systemctl enable watchdog-stage-late.service 2>/dev/null || true
+        systemctl start --no-block watchdog-stage-late.service 2>/dev/null || true
+        systemctl enable storm-guard-clear.service 2>/dev/null || true
+        systemctl start --no-block storm-guard-clear.service 2>/dev/null || true
         ;;
 esac
 

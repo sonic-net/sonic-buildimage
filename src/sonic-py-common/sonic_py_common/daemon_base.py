@@ -24,9 +24,9 @@ EMPTY_NAMESPACE = ''
 # Helper functions =============================================================
 #
 
-def db_connect(db_name, namespace=EMPTY_NAMESPACE):
+def db_connect(db_name, namespace=EMPTY_NAMESPACE, use_tcp=True):
     from swsscommon import swsscommon
-    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, True, namespace)
+    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, use_tcp, namespace)
 
 
 def db_connect_remote(db_id, host, port=6379):
