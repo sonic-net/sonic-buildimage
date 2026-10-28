@@ -21,7 +21,7 @@ class Component:
     The component consists of mutiple packages
 
     ctype -- Component Type, such as deb, py2, etc
-    dist  -- Distribution, such as stretch, buster, etc
+    dist  -- Distribution, such as bookworm, trixie, etc
     arch  -- Architectrue, such as amd64, arm64, etc
 
     '''
@@ -182,7 +182,7 @@ class VersionModule:
     '''
     The version module represents a build target, such as docker image, host image, consists of multiple components.
 
-    name   -- The name of the image, such as sonic-slave-buster, docker-lldp, etc
+    name   -- The name of the image, such as sonic-slave-bookworm, docker-lldp, etc
     '''
     def __init__(self, verbose=None, name=None, components=None):
         self.name = name
@@ -193,7 +193,7 @@ class VersionModule:
     # Overwrite the docker/host image/base image versions
     def overwrite(self, module, for_all_dist=False, for_all_arch=False):
         # Overwrite from generic one to detail one
-        # For examples: versions-deb overwrtten by versions-deb-buster, and versions-deb-buster overwritten by versions-deb-buster-amd64
+        # For examples: versions-deb overwrtten by versions-deb-bookworm, and versions-deb-bookworm overwritten by versions-deb-bookworm-amd64
         components = sorted(module.components, key = lambda x : x.get_order_keys())
         for merge_component in components:
             merged = False
@@ -881,8 +881,8 @@ class VersionManagerCommands:
         parser = argparse.ArgumentParser(description = 'Generate the version files')
         parser.add_argument('-t', '--target_path', required=True, help='target path to generate the version lock files')
         group = parser.add_mutually_exclusive_group(required=True)
-        group.add_argument('-n', '--module_name', help="module name, such as docker-lldp, sonic-slave-buster, etc")
-        group.add_argument('-m', '--module_path', help="module apth, such as files/docker/versions/dockers/docker-lldp, files/docker/versions/dockers/sonic-slave-buster, etc")
+        group.add_argument('-n', '--module_name', help="module name, such as docker-lldp, sonic-slave-bookworm, etc")
+        group.add_argument('-m', '--module_path', help="module apth, such as files/docker/versions/dockers/docker-lldp, files/docker/versions/dockers/sonic-slave-bookworm, etc")
         parser.add_argument('-s', '--source_path', default='.', help='source path')
         parser.add_argument('-d', '--distribution', required=True, help="distribution")
         parser.add_argument('-a', '--architecture', required=True, help="architecture")
@@ -909,6 +909,6 @@ if __name__ == "__main__":
 
 """
 Dry run examples:
-   scripts/versions_manager.py freeze -v 'dryrun|cmod=docker-config-engine-stretch|cfile=versions-py2|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
+   scripts/versions_manager.py freeze -v 'dryrun|cmod=docker-config-engine-bookworm|cfile=versions-py3|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
    scripts/versions_manager.py freeze -v 'dryrun|cmod=default|cfile=versions-docker|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
 """

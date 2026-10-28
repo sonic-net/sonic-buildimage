@@ -54,6 +54,7 @@ onie_recovery_kvm_4asic_image	consumed only by build_image.sh; installer-stage r
 onie_recovery_kvm_6asic_image	consumed only by build_image.sh; installer-stage recovery ISO, not a cached target
 kversion	shell alias exporting $(KVERSION) verbatim (slave.mk:1437); the content signal is KVERSION, which is tracked in SONIC_COMMON_FLAGS_LIST
 sonic_asic_platform	derived from $(CONFIGURED_PLATFORM)/$(CONFIGURED_ARCH) (slave.mk:1440), both already in the cache key; alias carries no independent signal
+PLATFORM_PATH	equals platform/$(CONFIGURED_PLATFORM) (slave.mk:55); CONFIGURED_PLATFORM is in SONIC_COMMON_FLAGS_LIST, so the path carries no independent signal (exported only by platform/nvidia-bluefield/recipes/bluefield-soc.mk to locate in-tree sources, whose content is hashed via *_SRC_PATH)
 enable_organization_extensions	shell alias exporting $(ENABLE_ORGANIZATION_EXTENSIONS) verbatim (slave.mk:1551); the content signal is that make var, tracked in SONIC_COMMON_FLAGS_LIST
 sonic_su_prod_signing_tool	basename of $(SECURE_UPGRADE_PROD_SIGNING_TOOL) (slave.mk:1559); the content signal is that make var, tracked in SONIC_COMMON_FLAGS_LIST
 RFS_SPLIT_FIRST_STAGE	literal y/n recipe constant (slave.mk:1441/1704) selecting the RFS split stage; value can only change if slave.mk changes, which is itself hashed
