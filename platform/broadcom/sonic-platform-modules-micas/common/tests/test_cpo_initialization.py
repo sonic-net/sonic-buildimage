@@ -293,6 +293,27 @@ class TestCpoInitialization(unittest.TestCase):
         api.get_transceiver_info.return_value = {"manufacturer": "test"}
         oe._api = api
         cpo = self.cpo.MicasCpo(8, "Ethernet56", oe, els)
+        with patch.object(els, "get_api", side_effect=AssertionError("ELS control used")):
+            self.assertFalse(cpo.get_lpmode())
+            self.assertTrue(cpo.set_lpmode(True))
+            self.assertTrue(cpo.reset())
+            self.assertEqual(cpo.get_tx_disable(), [False] * 8)
+            self.assertTrue(cpo.tx_disable(True))
+            self.assertEqual(cpo.get_transceiver_info(), {"manufacturer": "test"})
+        api.set_lpmode.assert_called_once_with(True)
+        api.reset.assert_called_once_with()
+        api.tx_disable.assert_called_once_with(True)
+        self.assertEqual(cpo.bank, 7)
+        self.assertEqual((self.directory / "max_bank_size").read_text(), "8")
+        with patch.object(els, "get_api", side_effect=AssertionError("ELS control used")):
+            self.assertTrue(oe.set_lpmode(False))
+            self.assertTrue(oe.reset())
+            api.set_lpmode.return_value = False
+            api.reset.return_value = False
+            self.assertFalse(oe.set_lpmode(True))
+            self.assertFalse(oe.reset())
+        self.assertEqual([call.args for call in api.set_lpmode.call_args_list], [(True,), (False,), (True,)])
+        self.assertEqual(api.reset.call_count, 3)
         with self.assertRaises(NotImplementedError):
             els.reset()
 
@@ -427,6 +448,27 @@ class TestCpoInitialization(unittest.TestCase):
         data["devices"]["ELS0"]["laser_to_asic_lane_mapping"] = {"1": "1,2,3,4", "2": [5, 6, 7, 8]}
         chassis = self.make_chassis(data)
         self.assertEqual(chassis.get_cpo(1).get_port_laser_ids(), [0, 1])
+
+
+    def test_endpoint_low_power_queries_use_their_own_apis(self):
+        oe, els = self.endpoints()
+        oe_api = MagicMock(spec=BaillyOeApi)
+        els_api = MagicMock(spec=BaillyElsfpApi)
+        oe._api, els._api = oe_api, els_api
+        for value in (False, True):
+            oe_api.get_lpmode.return_value = value
+            self.assertIs(oe.get_lpmode(), value)
+        oe_api.get_lpmode.return_value = None
+        with self.assertRaises(OSError):
+            oe.get_lpmode()
+        els_api.xcvr_eeprom = MagicMock()
+        els_api.xcvr_eeprom.mem_map.codes.POWER_MODE = {0: "High Power Mode", 1: "Low Power Mode"}
+        for value, expected in (("High Power Mode", False), ("Low Power Mode", True)):
+            els_api.get_rlm_status.return_value = {"els_module_low_power_state": value}
+            self.assertIs(els.get_lpmode(), expected)
+        els_api.get_rlm_status.return_value = None
+        with self.assertRaises(OSError):
+            els.get_lpmode()
 
 
 if __name__ == "__main__":

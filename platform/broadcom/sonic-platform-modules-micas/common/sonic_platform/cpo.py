@@ -298,6 +298,18 @@ class Oe(OptoeOeBase):
     def get_eeprom_path(self) -> str:
         return self._eeprom_path
 
+    def get_lpmode(self) -> bool:
+        lpmode = self.get_api().get_lpmode()
+        if not isinstance(lpmode, bool):
+            raise OSError("OE low-power status is unavailable")
+        return lpmode
+
+    def set_lpmode(self, lpmode):
+        return self.get_api().set_lpmode(lpmode)
+
+    def reset(self):
+        return self.get_api().reset()
+
     def get_name(self):
         return "OE{}".format(self.oe_id)
 
@@ -340,6 +352,19 @@ class Elsfp(OptoeElsfpBase):
 
     def get_eeprom_path(self) -> str:
         return self._eeprom_path
+
+    def get_lpmode(self) -> bool:
+        api = self.get_api()
+        status = api.get_rlm_status()
+        if not isinstance(status, dict):
+            raise OSError("ELS low-power status is unavailable")
+        power_mode = status.get("els_module_low_power_state")
+        power_codes = api.xcvr_eeprom.mem_map.codes.POWER_MODE
+        if power_mode == power_codes[1]:
+            return True
+        if power_mode == power_codes[0]:
+            return False
+        raise OSError("ELS low-power status is unavailable: {!r}".format(power_mode))
 
     def get_name(self):
         return "ELS{}".format(self.els_id)
