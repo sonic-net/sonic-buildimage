@@ -1,5 +1,6 @@
 import ipaddress
 import json
+import syslog
 from unittest.mock import patch
 
 import pytest
@@ -42,6 +43,61 @@ class DictConnector:
 
     def get_config_db_table(self, table_name):
         return self.tables.get(table_name, {})
+
+
+@pytest.mark.parametrize("mode", ["PORT", "MATCH"])
+@pytest.mark.parametrize("scenario", ["multiple-prefixes", "single-prefix", "wide-prefix", "different-vlans"])
+def test_generated_prefix_restriction_is_match_only(mode, scenario):
+    first_ip, second_ip = "192.168.10.100", "192.168.20.100"
+    addresses = {"Vlan1000|192.168.10.1/24": {}, "Vlan1000|192.168.20.1/24": {}}
+    second_vlan = "Vlan1000"
+    if scenario == "single-prefix":
+        second_ip = "192.168.10.101"
+    elif scenario == "wide-prefix":
+        first_ip, second_ip = "172.17.0.1", "172.17.26.1"
+        addresses = {"Vlan1000|172.17.31.254/19": {}}
+    elif scenario == "different-vlans":
+        second_vlan = "Vlan2000"
+        addresses = {"Vlan1000|192.168.10.1/24": {}, "Vlan2000|192.168.20.1/24": {}}
+    tables = {
+        "DEVICE_METADATA": {"localhost": {"hostname": "sonic-host"}},
+        "PORT": {"Ethernet0": {"alias": "etp1"}, "Ethernet4": {"alias": "etp2"}},
+        "VLAN_INTERFACE": addresses,
+        "VLAN_MEMBER": {"Vlan1000|Ethernet0": {}, second_vlan + "|Ethernet4": {}},
+        "DHCP_SERVER_IPV4": {
+            vlan: {"mode": mode, "state": "enabled", "lease_time": "900"}
+            for vlan in ("Vlan1000", second_vlan)
+        },
+        "DHCP_SERVER_IPV4_PORT": {
+            "Vlan1000|Ethernet0": {"ips": [first_ip]},
+            second_vlan + "|Ethernet4": {"ips": [second_ip]}
+        },
+        "DHCP_SERVER_IPV4_MATCH": {
+            "a": {"type": "option60", "value": "Vendor-A"},
+            "b": {"type": "option60", "value": "Vendor-B"}
+        },
+        "DHCP_SERVER_IPV4_BINDING": {
+            "Vlan1000|a": {"matches": ["a"], "ips": [first_ip]},
+            second_vlan + "|b": {"matches": ["b"], "ips": [second_ip]}
+        }
+    }
+    generator = DhcpServCfgGenerator(
+        DictConnector(tables), "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
+        kea_conf_template_path="../../dockers/docker-dhcp-server/kea-dhcp4.conf.j2"
+    )
+    if scenario == "multiple-prefixes" and mode == "MATCH":
+        with pytest.raises(ValueError, match="DHCP MATCH pools on Vlan1000 cannot span multiple IPv4 prefixes"):
+            generator.generate()
+    else:
+        config = json.loads(generator.generate()[0])
+        subnets = config["Dhcp4"]["subnet4"]
+        assert len(subnets) == (2 if scenario in ("different-vlans", "multiple-prefixes") else 1)
+        if scenario == "multiple-prefixes":
+            # Preserve the existing PORT output, including its duplicate-ID limitation.
+            assert [subnet["id"] for subnet in subnets] == [1000, 1000]
+        else:
+            assert len({subnet["id"] for subnet in subnets}) == len(subnets)
+        assert sum(len(subnet["pools"]) for subnet in subnets) == 2
 
 
 def create_generator(mock_swsscommon_dbconnector_init, mock_get_render_template):
@@ -177,25 +233,12 @@ def test_match_compilation_is_deterministic(mock_swsscommon_dbconnector_init, mo
 
 
 @pytest.mark.parametrize("bindings,error", [
-    ({}, "requires at least one binding"),
-    ({
-        "Vlan1000|missing": {
-            "matches": ["missing-match"],
-            "ips": ["192.168.0.20"]
-        }
-    }, "does not exist"),
     ({
         "Vlan1000|duplicate-type": {
             "matches": ["vendor-a", "vendor-b"],
             "ips": ["192.168.0.20"]
         }
-    }, "multiple matches of type option60"),
-    ({
-        "Vlan1000|outside": {
-            "matches": ["vendor-a"],
-            "ips": ["192.168.1.20"]
-        }
-    }, "is not in an IPv4 subnet")
+    }, "multiple matches of type option60")
 ])
 def test_invalid_match_bindings_are_rejected(mock_swsscommon_dbconnector_init, mock_get_render_template,
                                              bindings, error):
@@ -243,17 +286,68 @@ def test_partial_pool_overlap_is_rejected(mock_swsscommon_dbconnector_init, mock
         parse_bindings(generator, bindings, ranges=ranges)
 
 
-def test_circuit_id_must_be_vlan_member(mock_swsscommon_dbconnector_init, mock_get_render_template):
+@pytest.mark.parametrize("binding,members,warning", [
+    ({"matches": ["missing-match"], "ips": ["192.168.0.20"]}, VLAN_MEMBERS,
+     "Binding Vlan1000|stale: match missing-match does not exist, skip"),
+    ({"matches": ["port-etp7"], "ips": ["192.168.0.20"]}, {"Vlan1000|Ethernet28"},
+     "Binding Vlan1000|stale: circuit ID value etp7 is not a member of Vlan1000, skip"),
+    ({"matches": ["vendor-a"], "ips": ["192.168.1.20"]}, VLAN_MEMBERS,
+     "Binding Vlan1000|stale has no usable pool, skip"),
+    ({"matches": ["vendor-a"], "ranges": ["missing-range"]}, VLAN_MEMBERS,
+     "Binding Vlan1000|stale has no usable pool, skip")
+])
+def test_binding_with_missing_dependency_is_skipped(mock_swsscommon_dbconnector_init, mock_get_render_template,
+                                                    binding, members, warning):
     generator = create_generator(mock_swsscommon_dbconnector_init, mock_get_render_template)
     bindings = {
-        "Vlan1000|port-only": {
-            "matches": ["port-etp7"],
-            "ips": ["192.168.0.20"]
-        }
+        "Vlan1000|stale": binding,
+        "Vlan1000|healthy": {"matches": ["vendor-b"], "ips": ["192.168.0.40"]}
     }
 
-    with pytest.raises(ValueError, match="is not a member"):
-        parse_bindings(generator, bindings, members={"Vlan1000|Ethernet28"})
+    with patch("syslog.syslog") as mock_syslog:
+        pools, _, used_ranges, used_matches = parse_bindings(generator, bindings, members=members)
+
+    assert [pool["range"] for pool in pools["Vlan1000"]["192.168.0.1/24"]] == ["192.168.0.40 - 192.168.0.40"]
+    mock_syslog.assert_any_call(syslog.LOG_WARNING, warning)
+    # Restoring the missing match or range must trigger regeneration
+    assert set(binding["matches"]) <= used_matches
+    assert set(binding.get("ranges", [])) <= used_ranges
+
+
+def test_missing_range_drops_only_that_pool(mock_swsscommon_dbconnector_init, mock_get_render_template):
+    generator = create_generator(mock_swsscommon_dbconnector_init, mock_get_render_template)
+    bindings = {
+        "Vlan1000|vendor-a": {"matches": ["vendor-a"], "ranges": ["fallback-range", "missing-range"]}
+    }
+
+    with patch("syslog.syslog") as mock_syslog:
+        pools, _, _, _ = parse_bindings(generator, bindings)
+
+    assert [pool["range"] for pool in pools["Vlan1000"]["192.168.0.1/24"]] == ["192.168.0.30 - 192.168.0.30"]
+    mock_syslog.assert_any_call(
+        syslog.LOG_WARNING, "Range missing-range referenced by Vlan1000|vendor-a is not in range table, skip")
+
+
+def test_deleted_portchannel_still_vlan_member_is_served(mock_swsscommon_dbconnector_init, mock_get_render_template):
+    generator = create_generator(mock_swsscommon_dbconnector_init, mock_get_render_template)
+    matches = {"pc5": {"type": "circuit_id", "value": "PortChannel5"}}
+    bindings = {"Vlan1000|pc5": {"matches": ["pc5"], "ips": ["192.168.0.50"]}}
+
+    pools, classes, _, _ = parse_bindings(generator, bindings, matches=matches, members={"Vlan1000|PortChannel5"})
+
+    assert [pool["range"] for pool in pools["Vlan1000"]["192.168.0.1/24"]] == ["192.168.0.50 - 192.168.0.50"]
+    assert "sonic-host:PortChannel5".encode("utf-8").hex() in classes[0]["condition"]
+
+
+def test_match_interface_without_ipv4_is_skipped(mock_swsscommon_dbconnector_init, mock_get_render_template):
+    generator = create_generator(mock_swsscommon_dbconnector_init, mock_get_render_template)
+    bindings = {"Vlan1000|vendor-a": {"matches": ["vendor-a"], "ips": ["192.168.0.20"]}}
+
+    with patch("syslog.syslog") as mock_syslog:
+        pools, _, _, _ = parse_bindings(generator, bindings, interfaces={})
+
+    assert pools == {}
+    mock_syslog.assert_any_call(syslog.LOG_WARNING, "Interface Vlan1000 doesn't have IPv4 address")
 
 
 def test_match_value_byte_limit_is_enforced(mock_swsscommon_dbconnector_init, mock_get_render_template):
@@ -433,3 +527,69 @@ def test_generate_match_config_and_snapshots():
     assert enabled_port_interfaces == set()
     assert enabled_match_interfaces == {"Vlan1000"}
     assert used_matches == {"port-etp7", "vendor-a"}
+
+
+@pytest.mark.parametrize("mode,warning", [
+    ("PORT", "Cannot get DHCP port config for Vlan2000"),
+    ("MATCH", "Cannot get DHCP MATCH binding config for Vlan2000")
+])
+def test_enabled_interface_without_pool_config_is_skipped(mode, warning):
+    tables = {
+        "DEVICE_METADATA": {"localhost": {"hostname": "sonic-host"}},
+        "VLAN_INTERFACE": {
+            "Vlan1000": {},
+            "Vlan1000|192.168.0.1/24": {},
+            "Vlan2000": {},
+            "Vlan2000|192.168.1.1/24": {}
+        },
+        "VLAN_MEMBER": {"Vlan1000|Ethernet24": {}},
+        "PORT": {"Ethernet24": {"alias": "etp7"}},
+        "DHCP_SERVER_IPV4": {
+            "Vlan1000": {"lease_time": "900", "mode": "MATCH", "state": "enabled"},
+            "Vlan2000": {"lease_time": "900", "mode": mode, "state": "enabled"}
+        },
+        "DHCP_SERVER_IPV4_MATCH": MATCHES,
+        "DHCP_SERVER_IPV4_BINDING": {
+            "Vlan1000|vendor-a": {"matches": ["vendor-a"], "ips": ["192.168.0.20"]}
+        }
+    }
+    generator = DhcpServCfgGenerator(
+        DictConnector(tables),
+        "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
+        kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2"
+    )
+
+    with patch("syslog.syslog") as mock_syslog:
+        config, _, enabled_interfaces, _, checkers, enabled_port_interfaces, enabled_match_interfaces, _ = \
+            generator.generate()
+
+    assert [subnet["subnet"] for subnet in json.loads(config)["Dhcp4"]["subnet4"]] == ["192.168.0.0/24"]
+    assert enabled_interfaces == {"Vlan1000", "Vlan2000"}
+    assert "Vlan2000" in (enabled_port_interfaces if mode == "PORT" else enabled_match_interfaces)
+    assert set(PORT_MODE_CHECKER if mode == "PORT" else MATCH_MODE_CHECKER) <= checkers
+    mock_syslog.assert_any_call(syslog.LOG_WARNING, warning)
+
+
+def test_portchannel_added_after_start_is_resolved():
+    tables = {
+        "DEVICE_METADATA": {"localhost": {"hostname": "sonic-host"}},
+        "VLAN_INTERFACE": {"Vlan1000": {}, "Vlan1000|192.168.0.1/24": {}},
+        "VLAN_MEMBER": {},
+        "PORT": {},
+        "PORTCHANNEL": {},
+        "DHCP_SERVER_IPV4": {"Vlan1000": {"lease_time": "900", "mode": "MATCH", "state": "enabled"}},
+        "DHCP_SERVER_IPV4_MATCH": {"pc5": {"type": "circuit_id", "value": "PortChannel5"}},
+        "DHCP_SERVER_IPV4_BINDING": {}
+    }
+    generator = DhcpServCfgGenerator(
+        DictConnector(tables),
+        "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
+        kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2"
+    )
+    tables["PORTCHANNEL"]["PortChannel5"] = {}
+    tables["VLAN_MEMBER"]["Vlan1000|PortChannel5"] = {}
+    tables["DHCP_SERVER_IPV4_BINDING"]["Vlan1000|pc5"] = {"matches": ["pc5"], "ips": ["192.168.0.50"]}
+
+    _, _, _, _, _, _, _, used_matches = generator.generate()
+
+    assert used_matches == {"pc5"}
