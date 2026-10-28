@@ -588,6 +588,53 @@ class TestShowMACsec(object):
         assert show_macsec._safe_uint_not_secret("34" * 33, []) == "-"
 
     @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_rejects_unknown_leading_zero_numeric_keys(
+            self, collect_mka):
+        record = mka_record()
+        unknown_key = "0" * 62 + "12"
+        record["secrets"] = []
+        for field in (
+            "actor_priority", "key_server_priority", "keys_distributed",
+            "keys_received", "mka_hello_time_ms",
+        ):
+            record["session"][field] = unknown_key
+        for field in ("live_peers", "potential_peers", "mn"):
+            record["participants"][0][field] = unknown_key
+        collect_mka.side_effect = populate_mka_records([record])
+        runner = CliRunner()
+
+        compact = runner.invoke(show_macsec.macsec, ["--mka"])
+        assert compact.exit_code == 0, compact.output
+        compact_row = next(
+            line.split() for line in compact.output.splitlines()
+            if line.startswith("Ethernet0")
+        )
+        assert compact_row[5] == "-/1"
+        assert compact_row[-1] == "-"
+
+        detail = runner.invoke(show_macsec.macsec, ["--mka", "Ethernet0"])
+        assert detail.exit_code == 0, detail.output
+        for label in (
+            "Actor priority", "Key server priority", "Keys distributed",
+            "Keys received", "MKA hello time",
+        ):
+            assert next(
+                line.split(":", 1)[1].strip()
+                for line in detail.output.splitlines()
+                if line.startswith("{}:".format(label))
+            ) == "-"
+        participant = next(
+            line.split() for line in detail.output.splitlines()
+            if line.startswith(primary_ckn)
+        )
+        assert participant[4:6] == ["-", "-"]
+        assert participant[-1] == "-"
+        assert unknown_key not in detail.output
+        assert show_macsec._safe_uint_not_secret("0" * 19 + "12", []) == "-"
+        assert show_macsec._safe_uint_not_secret("00012", []) == "12"
+        assert show_macsec._safe_uint_not_secret("12" * 33, ["12" * 33]) == "-"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
     def test_show_mka_detail_preserves_zero_key_server_sci(self, collect_mka):
         record = mka_record()
         record["session"]["key_server_sci"] = "0000000000000000"

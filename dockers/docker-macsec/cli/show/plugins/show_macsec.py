@@ -88,6 +88,8 @@ def _matches_known_secret(value, secrets):
 
 
 def _safe_uint_not_secret(value, secrets):
+    if isinstance(value, str) and len(value) > 20:
+        return "-"
     if _matches_known_secret(value, secrets):
         return "-"
     sanitized = _safe_uint(value)
