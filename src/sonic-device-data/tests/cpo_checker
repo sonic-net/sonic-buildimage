@@ -1,0 +1,653 @@
+#!/usr/bin/env python3
+"""
+Validate cpo.json files and ensure they are consistent with their
+associated platform.json counterpart.
+
+cpo.json (see SONiC/doc/platform/port_mapping_for_cpo.md) describes the
+co-packaged optics devices of a platform (optical engines, external laser
+sources, ...) and which of those devices drive each platform.json interface.
+
+Checks performed:
+
+  JSON syntax      valid UTF-8, strictly valid JSON (no trailing commas),
+                   no duplicate object keys.
+  Schema           required sections and fields present, with the right
+                   types and enumeration values.
+  Semantics        every referenced device is defined, banks are in range,
+                   interface names are well-formed, lane sets are
+                   well-formed and do not overlap.
+  Cross-file       every cpo.json interface exists in platform.json, and the
+                   lanes platform.json assigns to an interface are consistent
+                   with the lanes of the devices cpo.json associates with it.
+
+Usage:
+    cpo_checker -d DEVICE_DIR                       # build-time: check every cpo.json below DEVICE_DIR
+    cpo_checker [-p PLATFORM_JSON] CPO_JSON ...     # authoring: check specific files
+
+platform.json is expected next to each cpo.json unless -p is given. As with
+platform_asic_checker, the caller (the Makefile) supplies the device directory.
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+
+from typing import Dict, List, Optional, Set
+
+# Keys of the top-level cpo.json sections
+DEVICES_KEY = "devices"
+INTERFACES_KEY = "interfaces"
+
+# Per-device keys
+DEVICE_TYPE_KEY = "device_type"
+MAX_BANKS_KEY = "max_banks"
+ASIC_LANES_KEY = "asic_lanes"
+LASERS_KEY = "lasers"
+LASER_MAPPING_KEY = "laser_to_asic_lane_mapping"
+
+# Per-interface keys
+ASSOCIATED_DEVICES_KEY = "associated_devices"
+DEVICE_ID_KEY = "device_id"
+BANK_KEY = "bank"
+
+# platform.json keys
+PLATFORM_LANES_KEY = "lanes"
+
+DEVICE_TYPE_OE = "optical_engine"
+DEVICE_TYPE_ELSFP = "external_laser_source"
+VALID_DEVICE_TYPES = (DEVICE_TYPE_OE, DEVICE_TYPE_ELSFP)
+
+PORT_REG = re.compile(r"^Ethernet(\d+)$")
+
+CPO_JSON = "cpo.json"
+PLATFORM_JSON = "platform.json"
+
+
+class Report:
+    """Collects errors and warnings for one cpo.json file."""
+
+    def __init__(self):
+        self.errors: List[str] = []
+        self.warnings: List[str] = []
+
+    def error(self, msg: str) -> None:
+        self.errors.append(msg)
+
+    def warning(self, msg: str) -> None:
+        self.warnings.append(msg)
+
+    @property
+    def ok(self) -> bool:
+        return not self.errors
+
+    def dump(self) -> None:
+        for msg in self.errors:
+            print("Error: " + msg)
+        for msg in self.warnings:
+            print("Warning: " + msg)
+
+
+# ---------------------------------------------------------------------------
+# JSON syntax
+# ---------------------------------------------------------------------------
+
+class DuplicateKeyError(ValueError):
+    pass
+
+
+def _reject_duplicate_keys(pairs):
+    """object_pairs_hook that refuses JSON objects with repeated keys.
+
+    json.loads silently keeps the last value for a repeated key, which would
+    hide a duplicated device id or interface name.
+    """
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise DuplicateKeyError("duplicate key '{}' in JSON object".format(key))
+        obj[key] = value
+    return obj
+
+
+def load_json(path: str, report: Report) -> Optional[dict]:
+    """Load a JSON file, reporting encoding, syntax and duplicate-key problems."""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except IOError as e:
+        report.error("Cannot open file {}: {}".format(path, e))
+        return None
+
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as e:
+        report.error("File {} is not valid UTF-8: {}".format(path, e))
+        return None
+
+    try:
+        return json.loads(text, object_pairs_hook=_reject_duplicate_keys)
+    except DuplicateKeyError as e:
+        report.error("In {}: {}".format(path, e))
+    except ValueError as e:
+        # Covers trailing commas, comments and every other syntax error.
+        report.error("In {}: invalid JSON: {}".format(path, e))
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def is_int(value) -> bool:
+    # bool is a subclass of int; never accept it where an integer is expected.
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def parse_lanes(value, where: str, report: Report) -> Optional[List[int]]:
+    """Parse a comma-separated lane string such as "41,42,43".
+
+    Returns the lanes as a list of ints, or None if the value is malformed
+    (an error is reported in that case).
+    """
+    if not isinstance(value, str):
+        report.error("{}: lanes must be a comma-separated string, got {}".format(
+            where, type(value).__name__))
+        return None
+
+    tokens = [tok.strip() for tok in value.split(",")]
+    # Tolerate a single trailing comma, as the runtime parser does.
+    if len(tokens) > 1 and tokens[-1] == "":
+        tokens.pop()
+
+    lanes = []
+    for tok in tokens:
+        if not tok.isdigit():
+            report.error("{}: invalid lane '{}' in '{}'".format(where, tok, value))
+            return None
+        lanes.append(int(tok))
+
+    if not lanes:
+        report.error("{}: lane list is empty".format(where))
+        return None
+
+    duplicates = sorted({lane for lane in lanes if lanes.count(lane) > 1})
+    if duplicates:
+        report.error("{}: lanes {} listed more than once".format(where, fmt_lanes(duplicates)))
+        return None
+
+    return lanes
+
+
+def fmt_lanes(lanes) -> str:
+    return ",".join(str(lane) for lane in sorted(lanes))
+
+
+def interface_sort_key(name: str):
+    match = PORT_REG.match(name)
+    return (0, int(match.group(1))) if match else (1, name)
+
+
+# ---------------------------------------------------------------------------
+# Schema + semantic validation of cpo.json on its own
+# ---------------------------------------------------------------------------
+
+class CpoData:
+    """The validated, parsed content of a cpo.json file."""
+
+    def __init__(self):
+        # device id -> device dict (schema-valid devices only)
+        self.devices: Dict[str, dict] = {}
+        # device id -> set of ASIC lanes the device drives
+        self.device_lanes: Dict[str, Set[int]] = {}
+        # interface name -> list of (device id, bank) (schema-valid entries only)
+        self.interfaces: Dict[str, List] = {}
+        # every interface name present in the interfaces section, valid or not
+        self.declared_interfaces: Set[str] = set()
+
+
+def check_device(device_id: str, device, report: Report) -> Optional[Set[int]]:
+    """Validate one entry of the devices section.
+
+    Returns the set of lanes the device drives if the entry is valid enough
+    to take part in the lane checks, otherwise None.
+    """
+    where = "device '{}'".format(device_id)
+
+    if not device_id:
+        report.error("devices section contains an empty device id")
+        return None
+
+    if not isinstance(device, dict):
+        report.error("{}: must be a JSON object".format(where))
+        return None
+
+    valid = True
+
+    device_type = device.get(DEVICE_TYPE_KEY)
+    if device_type is None:
+        report.error("{}: missing required field '{}'".format(where, DEVICE_TYPE_KEY))
+        return None
+    if not isinstance(device_type, str):
+        report.error("{}: '{}' must be a string".format(where, DEVICE_TYPE_KEY))
+        return None
+    if device_type not in VALID_DEVICE_TYPES:
+        report.error("{}: unknown {} '{}', expected one of {}".format(
+            where, DEVICE_TYPE_KEY, device_type, ", ".join(VALID_DEVICE_TYPES)))
+        return None
+
+    max_banks = device.get(MAX_BANKS_KEY)
+    if max_banks is None:
+        report.error("{}: missing required field '{}'".format(where, MAX_BANKS_KEY))
+        valid = False
+    elif not is_int(max_banks) or max_banks < 1:
+        report.error("{}: '{}' must be a positive integer, got {!r}".format(
+            where, MAX_BANKS_KEY, max_banks))
+        valid = False
+
+    lanes: Optional[Set[int]] = None
+
+    if device_type == DEVICE_TYPE_OE:
+        if ASIC_LANES_KEY not in device:
+            report.error("{}: missing required field '{}'".format(where, ASIC_LANES_KEY))
+            valid = False
+        else:
+            parsed = parse_lanes(device[ASIC_LANES_KEY],
+                                 "{} field '{}'".format(where, ASIC_LANES_KEY), report)
+            if parsed is None:
+                valid = False
+            else:
+                lanes = set(parsed)
+
+    elif device_type == DEVICE_TYPE_ELSFP:
+        lasers = device.get(LASERS_KEY)
+        if lasers is None:
+            report.error("{}: missing required field '{}'".format(where, LASERS_KEY))
+            valid = False
+            lasers = None
+        elif not is_int(lasers) or lasers < 1:
+            report.error("{}: '{}' must be a positive integer, got {!r}".format(
+                where, LASERS_KEY, lasers))
+            valid = False
+            lasers = None
+
+        mapping = device.get(LASER_MAPPING_KEY)
+        if mapping is None:
+            report.error("{}: missing required field '{}'".format(where, LASER_MAPPING_KEY))
+            valid = False
+        elif not isinstance(mapping, dict):
+            report.error("{}: '{}' must be a JSON object".format(where, LASER_MAPPING_KEY))
+            valid = False
+        else:
+            lanes = set()
+            lane_owner: Dict[int, str] = {}
+            seen_lasers: Set[int] = set()
+            for laser, laser_lanes in mapping.items():
+                laser_where = "{} laser '{}'".format(where, laser)
+                if not laser.isdigit():
+                    report.error("{}: laser index must be a non-negative integer".format(laser_where))
+                    valid = False
+                    continue
+                laser_idx = int(laser)
+                if laser_idx in seen_lasers:
+                    # e.g. "1" and "01"
+                    report.error("{}: laser index {} listed more than once".format(where, laser_idx))
+                    valid = False
+                seen_lasers.add(laser_idx)
+                if lasers is not None and laser_idx >= lasers:
+                    report.error("{}: laser index out of range, device has {} lasers (0..{})".format(
+                        laser_where, lasers, lasers - 1))
+                    valid = False
+
+                parsed = parse_lanes(laser_lanes, laser_where, report)
+                if parsed is None:
+                    valid = False
+                    continue
+                for lane in parsed:
+                    if lane in lane_owner:
+                        report.error("{}: lane {} is driven by both laser '{}' and laser '{}'".format(
+                            where, lane, lane_owner[lane], laser))
+                        valid = False
+                    lane_owner[lane] = laser
+                lanes.update(parsed)
+
+            if not mapping:
+                report.error("{}: '{}' is empty".format(where, LASER_MAPPING_KEY))
+                valid = False
+            elif lasers is not None and len(seen_lasers) < lasers:
+                unmapped = sorted(set(range(lasers)) - seen_lasers)
+                report.warning("{}: lasers {} have no entry in '{}'".format(
+                    where, fmt_lanes(unmapped), LASER_MAPPING_KEY))
+
+    return lanes if valid else None
+
+
+def check_interface(ifname: str, intf, report: Report) -> Optional[List]:
+    """Validate one entry of the interfaces section.
+
+    Returns the list of (device id, bank) associations if the entry is
+    well-formed, otherwise None.
+    """
+    where = "interface '{}'".format(ifname)
+
+    if not PORT_REG.match(ifname):
+        report.error("{}: interface name must match {}".format(where, PORT_REG.pattern))
+        return None
+
+    if not isinstance(intf, dict):
+        report.error("{}: must be a JSON object".format(where))
+        return None
+
+    assoc = intf.get(ASSOCIATED_DEVICES_KEY)
+    if assoc is None:
+        report.error("{}: missing required field '{}'".format(where, ASSOCIATED_DEVICES_KEY))
+        return None
+    if not isinstance(assoc, list):
+        report.error("{}: '{}' must be a list".format(where, ASSOCIATED_DEVICES_KEY))
+        return None
+    if not assoc:
+        report.error("{}: '{}' is empty".format(where, ASSOCIATED_DEVICES_KEY))
+        return None
+
+    valid = True
+    associations = []
+    seen_ids: Set[str] = set()
+    for idx, entry in enumerate(assoc):
+        entry_where = "{} {}[{}]".format(where, ASSOCIATED_DEVICES_KEY, idx)
+        if not isinstance(entry, dict):
+            report.error("{}: must be a JSON object".format(entry_where))
+            valid = False
+            continue
+
+        device_id = entry.get(DEVICE_ID_KEY)
+        if device_id is None:
+            report.error("{}: missing required field '{}'".format(entry_where, DEVICE_ID_KEY))
+            valid = False
+        elif not isinstance(device_id, str) or not device_id:
+            report.error("{}: '{}' must be a non-empty string".format(entry_where, DEVICE_ID_KEY))
+            valid = False
+        elif device_id in seen_ids:
+            report.error("{}: device '{}' is associated more than once".format(where, device_id))
+            valid = False
+        else:
+            seen_ids.add(device_id)
+
+        bank = entry.get(BANK_KEY)
+        if bank is None:
+            report.error("{}: missing required field '{}'".format(entry_where, BANK_KEY))
+            valid = False
+        elif not is_int(bank) or bank < 0:
+            report.error("{}: '{}' must be a non-negative integer, got {!r}".format(
+                entry_where, BANK_KEY, bank))
+            valid = False
+
+        if valid:
+            associations.append((device_id, bank))
+
+    return associations if valid else None
+
+
+def check_cpo(cpo_json, report: Report) -> Optional[CpoData]:
+    """Schema and semantic checks that need cpo.json only."""
+    if not isinstance(cpo_json, dict):
+        report.error("top level of cpo.json must be a JSON object")
+        return None
+
+    for key in (DEVICES_KEY, INTERFACES_KEY):
+        if key not in cpo_json:
+            report.error("missing required top-level section '{}'".format(key))
+        elif not isinstance(cpo_json[key], dict):
+            report.error("top-level section '{}' must be a JSON object".format(key))
+    if not report.ok:
+        return None
+
+    data = CpoData()
+
+    # --- devices ---
+    devices = cpo_json[DEVICES_KEY]
+    if not devices:
+        report.error("'{}' section is empty".format(DEVICES_KEY))
+
+    for device_id, device in devices.items():
+        lanes = check_device(device_id, device, report)
+        if lanes is not None:
+            data.devices[device_id] = device
+            data.device_lanes[device_id] = lanes
+
+    # Two devices of the same type must not drive the same ASIC lane.
+    lane_owner: Dict[str, Dict[int, str]] = {}
+    for device_id in sorted(data.devices):
+        device_type = data.devices[device_id][DEVICE_TYPE_KEY]
+        owners = lane_owner.setdefault(device_type, {})
+        for lane in sorted(data.device_lanes[device_id]):
+            if lane in owners:
+                report.error("lane {} is driven by both {} '{}' and '{}'".format(
+                    lane, device_type, owners[lane], device_id))
+            else:
+                owners[lane] = device_id
+
+    # --- interfaces ---
+    interfaces = cpo_json[INTERFACES_KEY]
+    if not interfaces:
+        report.error("'{}' section is empty".format(INTERFACES_KEY))
+
+    data.declared_interfaces = set(interfaces)
+    referenced: Set[str] = set()
+    for ifname, intf in interfaces.items():
+        associations = check_interface(ifname, intf, report)
+        if associations is None:
+            continue
+
+        for device_id, bank in associations:
+            referenced.add(device_id)
+            if device_id not in devices:
+                report.error("interface '{}': references undefined device '{}'".format(
+                    ifname, device_id))
+                continue
+            device = data.devices.get(device_id)
+            if device is None:
+                # Device exists but failed its own checks; already reported.
+                continue
+            max_banks = device[MAX_BANKS_KEY]
+            if bank >= max_banks:
+                report.error("interface '{}': bank {} of device '{}' is out of range, "
+                             "device has {} bank(s) (0..{})".format(
+                                 ifname, bank, device_id, max_banks, max_banks - 1))
+
+        data.interfaces[ifname] = associations
+
+    for device_id in sorted(set(devices) - referenced):
+        report.warning("device '{}' is not associated with any interface".format(device_id))
+
+    return data
+
+
+# ---------------------------------------------------------------------------
+# Cross-file validation against platform.json
+# ---------------------------------------------------------------------------
+
+def load_platform_lanes(platform_json, report: Report) -> Optional[Dict[str, Set[int]]]:
+    """Extract {interface name: lane set} from platform.json."""
+    if not isinstance(platform_json, dict) or not isinstance(platform_json.get(INTERFACES_KEY), dict):
+        report.error("platform.json: missing '{}' section".format(INTERFACES_KEY))
+        return None
+
+    platform_lanes: Dict[str, Set[int]] = {}
+    for ifname, intf in platform_json[INTERFACES_KEY].items():
+        if not isinstance(intf, dict) or PLATFORM_LANES_KEY not in intf:
+            report.error("platform.json: interface '{}' has no '{}' field".format(
+                ifname, PLATFORM_LANES_KEY))
+            continue
+        lanes = parse_lanes(intf[PLATFORM_LANES_KEY],
+                            "platform.json interface '{}'".format(ifname), report)
+        if lanes is not None:
+            platform_lanes[ifname] = set(lanes)
+
+    return platform_lanes
+
+
+def cross_check_file(data: CpoData, platform_lanes: Dict[str, Set[int]], report: Report) -> None:
+    """Checks that relate cpo.json to platform.json."""
+
+    # lane -> platform.json interface owning it
+    lane_to_intf: Dict[int, str] = {}
+    overlaps: Dict[tuple, Set[int]] = {}
+    for ifname in sorted(platform_lanes, key=interface_sort_key):
+        for lane in sorted(platform_lanes[ifname]):
+            if lane in lane_to_intf:
+                overlaps.setdefault((lane_to_intf[lane], ifname), set()).add(lane)
+            else:
+                lane_to_intf[lane] = ifname
+    for (first, second), lanes in sorted(overlaps.items()):
+        report.error("platform.json: lanes {} are assigned to both '{}' and '{}'".format(
+            fmt_lanes(lanes), first, second))
+
+    # Every cpo.json interface must exist in platform.json.
+    missing = [ifname for ifname in data.interfaces if ifname not in platform_lanes]
+    for ifname in sorted(missing, key=interface_sort_key):
+        report.error("interface '{}' is not defined in platform.json".format(ifname))
+
+    # platform.json interfaces without CPO devices are legitimate (e.g. a
+    # pluggable management port) but worth pointing out.
+    non_cpo = [ifname for ifname in platform_lanes if ifname not in data.declared_interfaces]
+    if non_cpo:
+        report.warning("platform.json interfaces with no cpo.json entry: {}".format(
+            ", ".join(sorted(non_cpo, key=interface_sort_key))))
+
+    # Forward check: the lanes platform.json gives an interface must be
+    # driven by the devices cpo.json associates with it.
+    for ifname in sorted(data.interfaces, key=interface_sort_key):
+        if ifname not in platform_lanes:
+            continue
+        intf_lanes = platform_lanes[ifname]
+        covered_by_type: Dict[str, Set[int]] = {}
+
+        for device_id, _bank in data.interfaces[ifname]:
+            if device_id not in data.devices:
+                continue
+            device_type = data.devices[device_id][DEVICE_TYPE_KEY]
+            dev_lanes = data.device_lanes[device_id]
+            overlap = intf_lanes & dev_lanes
+            if not overlap:
+                report.error("interface '{}': associated device '{}' drives none of its lanes "
+                             "({})".format(ifname, device_id, fmt_lanes(intf_lanes)))
+            covered_by_type.setdefault(device_type, set()).update(overlap)
+
+        for device_type, covered in sorted(covered_by_type.items()):
+            uncovered = intf_lanes - covered
+            if uncovered:
+                report.error("interface '{}': lanes {} are not driven by any associated {}".format(
+                    ifname, fmt_lanes(uncovered), device_type))
+
+    # Reverse check: every lane a device drives must belong to an interface
+    # that is associated with that device.
+    for device_id in sorted(data.devices):
+        unowned: Set[int] = set()
+        no_entry: Dict[str, Set[int]] = {}
+        not_associated: Dict[str, Set[int]] = {}
+        for lane in data.device_lanes[device_id]:
+            owner = lane_to_intf.get(lane)
+            if owner is None:
+                unowned.add(lane)
+            elif owner not in data.declared_interfaces:
+                no_entry.setdefault(owner, set()).add(lane)
+            elif owner not in data.interfaces:
+                # The interface entry failed its own checks; already reported.
+                continue
+            elif device_id not in {dev for dev, _bank in data.interfaces[owner]}:
+                not_associated.setdefault(owner, set()).add(lane)
+
+        if unowned:
+            report.warning("device '{}': lanes {} are not assigned to any platform.json "
+                           "interface".format(device_id, fmt_lanes(unowned)))
+        for owner in sorted(no_entry, key=interface_sort_key):
+            report.error("device '{}': drives lanes {} of interface '{}', which has no "
+                         "cpo.json entry".format(device_id, fmt_lanes(no_entry[owner]), owner))
+        for owner in sorted(not_associated, key=interface_sort_key):
+            report.error("device '{}': drives lanes {} of interface '{}', but '{}' is not "
+                         "associated with it".format(
+                             device_id, fmt_lanes(not_associated[owner]), owner, owner))
+
+
+# ---------------------------------------------------------------------------
+# Driver
+# ---------------------------------------------------------------------------
+
+def find_platform_json(cpo_path: str) -> Optional[str]:
+    """Locate the platform.json that lives in the same directory as a cpo.json."""
+    candidate = os.path.join(os.path.dirname(os.path.abspath(cpo_path)), PLATFORM_JSON)
+    return candidate if os.path.isfile(candidate) else None
+
+
+def check_file(cpo_path: str, platform_path: Optional[str]) -> bool:
+    report = Report()
+
+    cpo_json = load_json(cpo_path, report)
+    data = check_cpo(cpo_json, report) if cpo_json is not None else None
+
+    if platform_path is None:
+        platform_path = find_platform_json(cpo_path)
+    if platform_path is None:
+        report.error("cannot locate {} for {}; pass it with --platform-json".format(
+            PLATFORM_JSON, cpo_path))
+    elif data is not None:
+        platform_json = load_json(platform_path, report)
+        if platform_json is not None:
+            platform_lanes = load_platform_lanes(platform_json, report)
+            if platform_lanes is not None:
+                cross_check_file(data, platform_lanes, report)
+
+    report.dump()
+    return report.ok
+
+
+def find_cpo_files(device_dir: str) -> List[str]:
+    """All cpo.json files below device_dir."""
+    found = []
+    for dirpath, _dirnames, filenames in os.walk(device_dir, followlinks=True):
+        if CPO_JSON in filenames:
+            found.append(os.path.join(dirpath, CPO_JSON))
+    return sorted(found)
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        description="Validate cpo.json files and their consistency with platform.json.")
+    parser.add_argument("-d", "--device-dir", metavar="DEVICE_DIR",
+                        help="check every {} found below this directory".format(CPO_JSON))
+    parser.add_argument("-p", "--platform-json", metavar="PLATFORM_JSON",
+                        help="platform.json to validate against (default: the one next to "
+                             "each cpo.json)")
+    parser.add_argument("cpo_json", nargs="*", metavar="CPO_JSON",
+                        help="specific {} file(s) to check".format(CPO_JSON))
+    args = parser.parse_args(argv)
+
+    if bool(args.cpo_json) == bool(args.device_dir):
+        parser.error("give either -d DEVICE_DIR or one or more CPO_JSON files")
+
+    if args.cpo_json:
+        files = args.cpo_json
+    else:
+        if not os.path.isdir(args.device_dir):
+            parser.error("device directory {} does not exist".format(args.device_dir))
+        files = find_cpo_files(args.device_dir)
+        if not files:
+            print("No {} files found under {}".format(CPO_JSON, args.device_dir))
+            return
+
+    all_good = True
+    for f in files:
+        good = check_file(f, args.platform_json)
+        if good:
+            print("File " + f + " passed validity check")
+        else:
+            print("File " + f + " failed validity check")
+        all_good = all_good and good
+
+    if not all_good:
+        sys.exit(-1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
