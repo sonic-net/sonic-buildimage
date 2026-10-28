@@ -19,6 +19,7 @@ from sonic_platform.dpm_base import (
     DpmBase,
     DpmPowerUpEntry,
     RebootCause,
+    pick_power_fault_cause,
     timestamp_as_string,
 )
 from sonic_py_common import syslogger
@@ -382,23 +383,42 @@ class Adm1266BlackBoxRecord(DpmRecord):
     def _get_power_fault_cause_from_signal(
         self, dpm_signal_to_fault_cause: list[dict[str, Any]]
     ) -> RebootCause | None:
-        """Returns the power fault cause from the given signal pattern to fault cause mappings."""
-        for entry in dpm_signal_to_fault_cause:
-            pdio_mask = int(entry["pdio_mask"], 0)
-            pdio_value = int(entry["pdio_value"], 0)
-            gpio_mask = int(entry["gpio_mask"], 0)
-            gpio_value = int(entry["gpio_value"], 0)
-            if (self.pdio_in.val & pdio_mask) == pdio_value and \
-               (self.gpio_in.val & gpio_mask) == gpio_value:
-                return RebootCause(
-                    type=RebootCause.Type.HARDWARE,
-                    source=self.dpm_name,
-                    timestamp=self.timestamp,
-                    cause=entry["hw_cause"],
-                    description=entry["hw_desc"],
-                    chassis_reboot_cause_category=entry["reboot_cause"],
-                )
-        return None
+        """Returns the power fault cause from the given signal pattern to fault cause mappings.
+
+        An entry may also constrain the rail undervoltage flags via the optional
+        vh_uv_mask key and its required vh_uv_value, for events the PDIO/GPIO
+        signals cannot distinguish. Omitting both matches any rail state. A rail undervoltage is a
+        symptom of a power down, so an entry with vh_uv_mask yields a fallback cause
+        that any non-fallback match outranks, wherever the entries sit in the list.
+        """
+        return pick_power_fault_cause(
+            self._get_power_fault_cause_from_entry(entry) for entry in dpm_signal_to_fault_cause
+        )
+
+    def _get_power_fault_cause_from_entry(self, entry: dict[str, Any]) -> RebootCause | None:
+        """Returns the cause for one signal-pattern mapping, or None if the record does not match it."""
+        pdio_mask = int(entry["pdio_mask"], 0)
+        pdio_value = int(entry["pdio_value"], 0)
+        gpio_mask = int(entry["gpio_mask"], 0)
+        gpio_value = int(entry["gpio_value"], 0)
+        if (self.pdio_in.val & pdio_mask) != pdio_value or (self.gpio_in.val & gpio_mask) != gpio_value:
+            return None
+
+        vh_uv_mask = entry.get("vh_uv_mask")
+        if vh_uv_mask is not None:
+            vh_uv_value = int(entry["vh_uv_value"], 0)
+            if (self.vh_under_voltage.val & int(vh_uv_mask, 0)) != vh_uv_value:
+                return None
+
+        return RebootCause(
+            type=RebootCause.Type.HARDWARE,
+            source=self.dpm_name,
+            timestamp=self.timestamp,
+            cause=entry["hw_cause"],
+            description=entry["hw_desc"],
+            chassis_reboot_cause_category=entry["reboot_cause"],
+            is_fallback=vh_uv_mask is not None,
+        )
 
     def set_metadata_and_process_power_fault_cause(self, platform_spec: dict[str, Any]):
         """Sets metadata from the given platform spec.
@@ -614,12 +634,17 @@ class Adm1266(DpmBase, type=DpmType.ADM1266, max_powerup_counter=65535):
         powerups = []
         for _, group in grouped_by_powerup:
             group_list = list(group)
-            last_record = group_list[-1]  # record with the highest UID determines the cause
+            last_record = group_list[-1]  # highest UID determines the cause, unless only a fallback
+            power_fault_cause = last_record.get_power_fault_cause()
+            if power_fault_cause and power_fault_cause.is_fallback:
+                power_fault_cause = pick_power_fault_cause(
+                    record.get_power_fault_cause() for record in reversed(group_list)
+                )
 
             powerups.append(
                 DpmPowerUpEntry(
                     powerup_counter=last_record.powerup_counter,
-                    power_fault_cause=last_record.get_power_fault_cause(),
+                    power_fault_cause=power_fault_cause,
                     dpm_records=cast(list[DpmRecord], group_list),
                 )
             )
