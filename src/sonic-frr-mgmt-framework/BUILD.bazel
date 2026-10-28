@@ -1,0 +1,70 @@
+load("@config_engine_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@rules_python//python:py_library.bzl", "py_library")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["setup.py"])
+
+py_library(
+    name = "frrcfgd",
+    srcs = glob(["frrcfgd/*.py"]),
+    imports = ["."],
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        "@sonic_swss_common//pyext:swsscommon",
+        requirement("netaddr"),
+    ],
+)
+
+filegroup(
+    name = "wheel_payload",
+    srcs = glob(["frrcfgd/*.py", "tests/*.py"]),
+)
+
+py_wheel(
+    name = "sonic_frr_mgmt_framework_wheel",
+    data_files = {
+        template: "data/sonic/frrcfgd/" + template.rsplit("/", 1)[-1]
+        for template in glob(["templates/*/*.j2"])
+    },
+    distribution = "sonic-frr-mgmt-framework",
+    entry_points = {"console_scripts": ["frrcfgd = frrcfgd.frrcfgd:main"]},
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    python_tag = "py3",
+    requires = ["jinja2>=2.10", "netaddr==0.8.0", "pyyaml>=6.0.1"],
+    strip_path_prefixes = ["src/sonic-frr-mgmt-framework/"],
+    summary = "Utility to dynamically configuration FRR based on config DB data update event",
+    version = "1.0",
+    deps = [":wheel_payload"],
+)
+
+# data_files install at /usr/local/sonic/frrcfgd, matching Docker startup.
+wheel_layer(
+    name = "runtime",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [":sonic_frr_mgmt_framework_wheel"],
+)
+
+filegroup(
+    name = "test_sources",
+    srcs = glob(
+        ["frrcfgd/**", "tests/**", "templates/**"],
+        exclude = ["**/__pycache__/**", "**/*.pyc"],
+    ) + ["setup.py", "setup.cfg", "pytest.ini"],
+)
+
+py_test(
+    name = "upstream_tests",
+    size = "large",
+    srcs = ["//tools/bazel/tests:integration/component_pytest_runner.py"],
+    args = ["--component-setup=$(rootpath :setup.py)"],
+    data = [":setup.py", ":test_sources"],
+    legacy_create_init = False,
+    main = "//tools/bazel/tests:integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [":frrcfgd", requirement("pytest")],
+)
