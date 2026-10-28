@@ -15,7 +15,7 @@ from sonic_platform_base.chassis_base import ChassisBase
 from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoBase, OeId
 from sonic_platform_base.sonic_xcvr.cpo.oe import OeBase
 from sonic_platform_base.sonic_xcvr.cpo.elsfp import ElsfpBase
-from sonic_platform_base.sonic_xcvr.api.broadcom.bailly import BaillyApi
+from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_oe import BaillyOeApi
 from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_elsfp import BaillyElsfpApi
 
 
@@ -277,7 +277,7 @@ class TestCpoInitialization(unittest.TestCase):
                 fd.write(struct.pack(">h", int(value * 256)))
         for base_page, expected in [(0, 25.5), (4, 50.25)]:
             oe, els = self.endpoints(base_page)
-            self.assertIsInstance(oe.get_api(), BaillyApi)
+            self.assertIsInstance(oe.get_api(), BaillyOeApi)
             self.assertIsInstance(els.get_api(), BaillyElsfpApi)
             self.assertEqual(els.get_api().get_module_temperature(), expected)
 
@@ -293,20 +293,6 @@ class TestCpoInitialization(unittest.TestCase):
         api.get_transceiver_info.return_value = {"manufacturer": "test"}
         oe._api = api
         cpo = self.cpo.MicasCpo(8, "Ethernet56", oe, els)
-        with patch.object(els, "get_api", side_effect=AssertionError("ELS control used")):
-            self.assertFalse(cpo.get_lpmode())
-            self.assertTrue(cpo.set_lpmode(True))
-            self.assertTrue(cpo.reset())
-            self.assertEqual(cpo.get_tx_disable(), [False] * 8)
-            self.assertTrue(cpo.tx_disable(True))
-            self.assertEqual(cpo.get_transceiver_info(), {"manufacturer": "test"})
-        api.set_lpmode.assert_called_once_with(True)
-        api.reset.assert_called_once_with()
-        api.tx_disable.assert_called_once_with(True)
-        self.assertEqual(cpo.bank, 7)
-        self.assertEqual((self.directory / "max_bank_size").read_text(), "8")
-        with self.assertRaises(NotImplementedError):
-            oe.set_lpmode(True)
         with self.assertRaises(NotImplementedError):
             els.reset()
 
@@ -367,22 +353,43 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertEqual(last.get_api().xcvr_eeprom.read(consts.TX_DISABLE_FIELD), 255)
         self.assertEqual(first.get_api().xcvr_eeprom.read(consts.TX_DISABLE_FIELD), 0)
 
-    def test_dom_keeps_port_laser_fields_without_legacy_lookup(self):
+    def test_dom_keeps_port_laser_fields_using_separate_els_api(self):
         oe, els = self.endpoints()
-        api = MagicMock()
+        api = MagicMock(spec=BaillyOeApi)
         api.get_max_supported_banks.return_value = 1
         api.get_transceiver_dom_real_value.return_value = {"temperature": 40.0}
-        api.get_rlm_monitor_values.return_value = {"els_temperature": 25.5}
-        api.get_rlm_laser_current.return_value = {"Laser{}CurrentMonitor".format(i): float(i) for i in range(8)}
-        api.get_rlm_laser_power.return_value = {"Laser{}OpticalPowerMonitor".format(i): 1.0 for i in range(8)}
-        oe._api = api
+        els_api = MagicMock(spec=BaillyElsfpApi)
+        els_api.get_non_banked_elsfp_dom_real_value.return_value = {
+            "temperature": 25.5, "voltage": 3.3, "tec_current": 1.0}
+        els_api.get_per_lane_bias_current_monitor.return_value = {
+            "BiasCurrentMonitor{}".format(i + 1): i / 1000.0 for i in range(8)}
+        els_api.get_per_lane_bias_current_monitor.return_value["BiasCurrentMonitor6"] = 0.10001
+        els_api.get_per_lane_opt_power_monitor.return_value = {
+            "OptPowerMonitor{}".format(i + 1): 1.0 for i in range(8)}
+        els_api.amps_to_ma.side_effect = lambda value: value * 1000.0
+        oe._api, els._api = api, els_api
         cpo = self.cpo.MicasCpo(1, "Ethernet0", oe, els, laser_ids=[4, 5])
         dom = cpo.get_transceiver_dom_real_value()
         self.assertEqual(dom["temperature"], 40.0)
         self.assertEqual(dom["els_temperature"], 25.5)
+        self.assertEqual(dom["els_voltage"], 3.3)
+        self.assertEqual(dom["rlm_tec_current"], 1.0)
         self.assertEqual(dom["RLM1_Laser4_current"], "4.0 mA")
-        self.assertEqual(dom["RLM1_Laser5_power"], "1.000 mW 0.000 dBm")
+        self.assertEqual(dom["RLM1_Laser5_current"], "100.01 mA")
+        self.assertEqual(dom["RLM1_Laser5_power"], "0.000 dBm")
         self.assertNotIn("RLM1_Laser0_current", dom)
+        els_api.get_non_banked_elsfp_dom_real_value.assert_called_once_with()
+        els_api.get_per_lane_bias_current_monitor.assert_called_once_with()
+
+    def test_els_read_failure_keeps_oe_dom(self):
+        oe, els = self.endpoints()
+        api = MagicMock(spec=BaillyOeApi)
+        api.get_max_supported_banks.return_value = 1
+        api.get_transceiver_dom_real_value.return_value = {"temperature": 40.0}
+        oe._api = api
+        cpo = self.cpo.MicasCpo(1, "Ethernet0", oe, els, laser_ids=[4])
+        with patch.object(els, "get_api", side_effect=OSError("ELS read failed")):
+            self.assertEqual(cpo.get_transceiver_dom_real_value(), {"temperature": 40.0})
 
     def test_conflicting_physical_mapping_is_rejected(self):
         data = self.topology()

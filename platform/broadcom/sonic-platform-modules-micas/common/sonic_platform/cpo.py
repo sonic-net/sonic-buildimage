@@ -19,7 +19,6 @@
 
 try:
     import logging
-    import math
     import os
     from logging.handlers import RotatingFileHandler
     # BEGIN LEGACY imports for former port adapters - reference only; not executed
@@ -36,6 +35,8 @@ try:
     from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoBase, CpoHardwareInfo, OeId
     from sonic_platform_base.sonic_xcvr.cpo.cpo_optoe_base import OptoeOeBase, OptoeElsfpBase
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from sonic_platform_base.sonic_xcvr.fields import elsfp_consts
+    from sonic_platform_base.sonic_xcvr.api.xcvr_api import XcvrApi
 except ImportError as error:
     raise ImportError(str(error) + "- required module not found") from error
 
@@ -370,7 +371,7 @@ class Elsfp(OptoeElsfpBase):
 class MicasCpo(CpoBase, SfpOptoeBase):
     """Community CPO object with the transceiver methods used by xcvrd.
 
-    Both the CPO and SFP helper methods use the OE endpoint's Bailly API.
+    CPO/SFP transceiver methods use the OE API; RLM monitors use the ELS API.
     No legacy CPO object or dynamic attribute forwarding is needed.
     Virtual-module controls retain joint-mode OE-controller behavior.
     """
@@ -475,71 +476,39 @@ class MicasCpo(CpoBase, SfpOptoeBase):
         info = SfpOptoeBase.get_transceiver_dom_real_value(self)
         if info is None:
             info = {}
-        
-        api = self.get_xcvr_api()
-        if api is None:
-            return info
-
-        rlm_monitors = api.get_rlm_monitor_values()
-        if rlm_monitors:
-            info.update({
-                key: value for key, value in rlm_monitors.items()
-                if value is not None
-            })
 
         try:
-            els_laser_ids = self.get_port_laser_ids()
-            if els_laser_ids is None:
+            api = self.elsfp.get_api()
+            monitors = api.get_non_banked_elsfp_dom_real_value()
+            if monitors is not None:
+                for source, target in (("temperature", "els_temperature"),
+                                       ("voltage", "els_voltage"), ("tec_current", "rlm_tec_current")):
+                    if monitors.get(source) is not None:
+                        info[target] = monitors[source]
+
+            laser_ids = self.get_port_laser_ids()
+            if not laser_ids:
+                return info
+            currents = api.get_per_lane_bias_current_monitor()
+            powers = api.get_per_lane_opt_power_monitor()
+            if currents is None or powers is None:
+                self._cpolog(LOG_ERROR_LEVEL, "ELS laser monitor read failed: {}".format(self._port_id))
                 return info
 
-            # add laser current info
-            laser_current = api.get_rlm_laser_current()
-            if not laser_current:
-                self._cpolog(LOG_ERROR_LEVEL, f"get_rlm_laser_current error: {self._port_id}: {els_laser_ids}")
-                return info
-
-            laser_power = api.get_rlm_laser_power()
-            if not laser_power:
-                self._cpolog(LOG_ERROR_LEVEL, f"get_rlm_laser_power error: {self._port_id}: {els_laser_ids}")
-                return info
-
-            for idx in els_laser_ids:
-                if idx < 0 or idx >= len(laser_current) or idx >= len(laser_power):
-                    self._cpolog(LOG_ERROR_LEVEL, f"rlm_laser_ids idx error: {self._port_id}: {els_laser_ids}")
+            for laser in laser_ids:
+                current_key = "{}{}".format(elsfp_consts.BIAS_CURRENT_MONITOR_FIELD, laser + 1)
+                power_key = "{}{}".format(elsfp_consts.OPT_POWER_MONITOR_FIELD, laser + 1)
+                current = currents.get(current_key)
+                power_mw = powers.get(power_key)
+                if current is None or power_mw is None:
+                    self._cpolog(LOG_ERROR_LEVEL, "ELS laser {} monitor unavailable: {}".format(laser, self._port_id))
                     continue
+                current_ma = round(api.amps_to_ma(current), 3)
+                power_dbm = XcvrApi.mw_to_dbm(power_mw)
+                info["RLM{}_Laser{}_current".format(self._els_id, laser)] = "{} mA".format(current_ma)
+                info["RLM{}_Laser{}_power".format(self._els_id, laser)] = "%.03f dBm" % power_dbm
+        except Exception as exc:
+            self._cpolog(LOG_ERROR_LEVEL, "get ELS laser monitors failed: {}: {}".format(self._port_id, exc))
 
-                current_key = f"Laser{idx}CurrentMonitor"
-                if current_key not in laser_current:
-                    self._cpolog(LOG_ERROR_LEVEL, f"current key not found: {current_key}")
-                    continue
-                current_val = laser_current[current_key]
-                if isinstance(current_val, dict):
-                    current_val = current_val.get(current_key)
-                if current_val is None:
-                    self._cpolog(LOG_ERROR_LEVEL, f"current value not found: {current_key}")
-                    continue
-                current_str = f"{current_val} mA"
-
-                power_key = f"Laser{idx}OpticalPowerMonitor"
-                if power_key not in laser_power:
-                    self._cpolog(LOG_ERROR_LEVEL, f"power key not found: {power_key}")
-                    continue
-                PmW = laser_power[power_key]
-                if isinstance(PmW, dict):
-                    PmW = PmW.get(power_key)
-                if PmW is None:
-                    self._cpolog(LOG_ERROR_LEVEL, f"power value not found: {power_key}")
-                    continue
-                if PmW > 0:
-                    Pdb = 10 * math.log(PmW, 10)
-                else:
-                    Pdb = -40
-                power_str = '%.03f mW %.03f dBm' % (PmW, Pdb)
-
-                info.update({f"RLM{self._els_id}_Laser{idx}_current" : current_str})
-                info.update({f"RLM{self._els_id}_Laser{idx}_power" : power_str})
-        except Exception as e:
-            self._cpolog(LOG_ERROR_LEVEL, f"get_rlm_laser_monitor error: {self._port_id}: {e}")
-
-        self._cpolog(LOG_DEBUG_LEVEL, f"dom real info: {info}")
+        self._cpolog(LOG_DEBUG_LEVEL, "dom real info: {}".format(info))
         return info

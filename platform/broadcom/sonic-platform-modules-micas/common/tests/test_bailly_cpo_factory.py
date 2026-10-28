@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import unittest
 
-from sonic_platform_base.sonic_xcvr.api.broadcom.bailly import BaillyApi
+from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_oe import BaillyOeApi
 from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_elsfp import BaillyElsfpApi
 from sonic_platform_base.sonic_xcvr.api.broadcom.davisson_oe import DavissonTh6OeApi
 from sonic_platform_base.sonic_xcvr.api.broadcom.davisson_elsfp import DavissonTh6ElsfpApi
@@ -75,14 +75,14 @@ class TestBaillyCpoFactory(unittest.TestCase):
     def test_bailly_oe_bank_and_els_page(self):
         oe = BaillyMemoryOe(bank=7, base_page=4)
         api = oe.get_api()
-        self.assertIsInstance(api, BaillyApi)
+        self.assertIsInstance(api, BaillyOeApi)
         self.assertEqual(api.xcvr_eeprom.mem_map.bank, 7)
-        self.assertIn(0xB4, [page.page for page in api.xcvr_eeprom.mem_map.pages])
+        self.assertNotIn(0xB4, [page.page for page in api.xcvr_eeprom.mem_map.pages])
         field = api.xcvr_eeprom.mem_map.get_field(consts.TX_DISABLE_FIELD)
         other = BaillyMemoryOe(bank=0, base_page=4).get_api().xcvr_eeprom.mem_map.get_field(consts.TX_DISABLE_FIELD)
         self.assertNotEqual(field.get_offset(), other.get_offset())
 
-    def test_bailly_els_preserves_identification_and_rlm_pages(self):
+    def test_bailly_els_preserves_common_identification(self):
         els = BaillyMemoryElsfp(base_page=4)
         api = els.get_api()
         self.assertIsInstance(api, BaillyElsfpApi)
@@ -116,7 +116,7 @@ class TestBaillyCpoFactory(unittest.TestCase):
 
     def test_common_default_factories_select_bailly(self):
         info = CpoHardwareInfo(OeId.BROADCOM_BAILLY, None)
-        self.assertIsInstance(CommonMemoryOe(info, bank=7, base_page=4).get_api(), BaillyApi)
+        self.assertIsInstance(CommonMemoryOe(info, bank=7, base_page=4).get_api(), BaillyOeApi)
         self.assertIsInstance(CommonMemoryElsfp(info, base_page=4).get_api(), BaillyElsfpApi)
 
 
