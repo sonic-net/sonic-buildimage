@@ -71,8 +71,7 @@ class TestCfgGen(TestCase):
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr.conf'))
 
     def test_bgpd_frr_graceful_restart(self):
-        for device_type in ('ToRRouter', 'LeafRouter', 'BackEndLeafRouter',
-                            'MgmtToRRouter', 'BmcMgmtToRRouter'):
+        for device_type in ('ToRRouter', 'MgmtToRRouter', 'BmcMgmtToRRouter'):
             extra_data = {"DEVICE_METADATA": {"localhost": {"type": device_type}}}
             output = self.render_template('bgpd/bgpd.conf.j2', extra_data)
             self.assertIn(
@@ -83,8 +82,7 @@ class TestCfgGen(TestCase):
                 output, device_type)
 
     def test_bgpd_frr_graceful_restart_disabled(self):
-        for device_type in ('ToRRouter', 'LeafRouter', 'BackEndLeafRouter',
-                            'MgmtToRRouter', 'BmcMgmtToRRouter'):
+        for device_type in ('ToRRouter', 'MgmtToRRouter', 'BmcMgmtToRRouter'):
             extra_data = {
                 "DEVICE_METADATA": {"localhost": {"type": device_type}},
                 "constants": {"bgp": {"graceful_restart": {"enabled": False}}}
@@ -94,7 +92,7 @@ class TestCfgGen(TestCase):
             self.assertNotIn('  bgp graceful-restart ', output, device_type)
 
     def test_bgpd_frr_graceful_restart_excluded_roles(self):
-        for device_type in ('SpineRouter', 'UpperRegionalHub'):
+        for device_type in ('LeafRouter', 'BackEndLeafRouter', 'SpineRouter', 'UpperRegionalHub'):
             extra_data = {"DEVICE_METADATA": {"localhost": {"type": device_type}}}
             output = self.render_template('bgpd/bgpd.conf.j2', extra_data)
             self.assertNotIn('  bgp graceful-restart\n', output, device_type)
