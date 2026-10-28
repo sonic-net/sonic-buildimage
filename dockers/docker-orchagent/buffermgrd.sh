@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUFFER_CALCULATION_MODE=$(redis-cli -n 4 hget "DEVICE_METADATA|localhost" buffer_model)
+BUFFER_CALCULATION_MODE=$(sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" buffer_model)
 
 if [ "$BUFFER_CALCULATION_MODE" == "dynamic" ]; then
     BUFFERMGRD_ARGS="-a /etc/sonic/asic_table.json"

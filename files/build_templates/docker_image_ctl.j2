@@ -763,6 +763,23 @@ start() {
 
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
+    # Derive PREDEFINED_DEV_PCI_BUS from asic.conf (the single source of truth,
+    # same derivation as platform/mellanox/files/sx-kernel.sh) so the host sx
+    # driver and the syncd SDK use an identical module->PCI-bus map.
+    if [ "${NUM_ASIC:-1}" -gt 1 ]; then
+        PREDEFINED_DEV_PCI_BUS=""
+        for i in $(seq 0 $((NUM_ASIC-1))); do
+            dev_id_var="DEV_ID_ASIC_$i"
+            dev_id="${!dev_id_var}"
+            if [ -n "$dev_id" ]; then
+                if [ -n "$PREDEFINED_DEV_PCI_BUS" ]; then
+                    PREDEFINED_DEV_PCI_BUS="${PREDEFINED_DEV_PCI_BUS},$((i+1))@${dev_id}"
+                else
+                    PREDEFINED_DEV_PCI_BUS="$((i+1))@${dev_id}"
+                fi
+            fi
+        done
+    fi
     if [[ $DEV != "" ]]; then
         mkdir -p /dev/shm/asic$DEV
         mkdir -p /var/log/sdk_dbg/$DEV
@@ -783,6 +800,24 @@ start() {
     else
         SMARTSWITCH_MNT=""
     fi
+{%- endif %}
+{%- endif %}
+{%- if sonic_asic_platform == "broadcom" %}
+{%- if docker_container_name == "syncd" %}
+    # --privileged used to fully open the device cgroup; without it, only explicitly
+    # granted devices are accessible, so grant the host device nodes opennsl-modules.init
+    # creates via --device=. This covers all broadcom syncd images (standard XGS, legacy-th,
+    # and dnx). Which nodes exist depends on is_ltsw_chip (a runtime setting from
+    # platform_env.conf, not known at image-build time): most chip families pick their set at
+    # runtime, dnx creates linux_ngbde alongside the classic set unconditionally. Check each
+    # path individually so only the devices actually present on this host get mounted.
+    BRCM_DEV_MNT=""
+    for _brcm_dev in /dev/linux_ngbde /dev/linux_ngknet /dev/linux_ngknetcb \
+                     /dev/linux-kernel-bde /dev/linux-user-bde /dev/linux-bcm-knet /dev/linux-bcm-bde /dev/linux-knet-cb; do
+        if [ -e "$_brcm_dev" ]; then
+            BRCM_DEV_MNT="$BRCM_DEV_MNT --device=$_brcm_dev:$_brcm_dev:rwm"
+        fi
+    done
 {%- endif %}
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
@@ -817,6 +852,7 @@ start() {
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /sys/module/sx_netdev:/sys/module/sx_netdev:rw \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
+        $(if [ -n "$PREDEFINED_DEV_PCI_BUS" ]; then echo "-e PREDEFINED_DEV_PCI_BUS=$PREDEFINED_DEV_PCI_BUS"; fi) \
         $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
@@ -846,6 +882,7 @@ start() {
 {%- if docker_container_name == "syncd" %}
         --shm-size=${SYNCD_SHM_SIZE:-512m} \
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
+        $BRCM_DEV_MNT \
 {%- endif %}
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
@@ -886,6 +923,8 @@ start() {
         $(if [ -f /usr/bin/hw-management-bmc-powerctrl.sh ]; then echo "-v /usr/bin/hw-management-bmc-powerctrl.sh:/usr/bin/hw-management-bmc-powerctrl.sh:ro"; fi) \
         {#- sysfs (/sys) is already mounted into pmon unconditionally (see rules/docker-platform-monitor.mk), so only the IPC socket dir needs mounting. #}
         -v /run/hw-watchdog-mgrd:/run/hw-watchdog-mgrd:rw \
+        {#- Host tmpfs shared with pmon for non-persistent BMC runtime state, e.g. the leak test injection markers written by the platform API (sonic_platform/liquid_cooling.py). Docker creates the host directory if it does not exist yet. #}
+        -v /run/bmc:/run/bmc:rw \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform != "mellanox" %}
@@ -951,6 +990,12 @@ stop() {
         /usr/local/bin/container stop -t {{ stop_time }} $DOCKERNAME
     {%- elif docker_container_name == "teamd" %}
         # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
+        /usr/local/bin/container stop -t 60 $DOCKERNAME
+    {%- elif docker_container_name == "macsec" %}
+        # Longer timeout of 60 sec for macsecmgrd to disable MKA on every
+        # port and reap each per-port wpa_supplicant before SIGKILL. A
+        # short timeout leaves stale MACsec SAs in ASIC_DB whose SAK no
+        # longer matches APPL_DB.
         /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
         /usr/local/bin/container stop -t 60 $DOCKERNAME

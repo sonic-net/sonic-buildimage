@@ -111,7 +111,7 @@ libclang1-19==1:19.1.7-3+b1
 libcrypt-dev==1:4.4.38-1
 libctf-nobfd0==2.44-3
 libctf0==2.44-3
-libcurl3t64-gnutls==8.14.1-2+deb13u5
+libcurl3t64-gnutls==8.14.1-2+deb13u7
 libdbus-1-dev==1.16.2-2
 libdebuginfod-common==0.192-4
 libdebuginfod1t64==0.192-4
@@ -128,7 +128,7 @@ libevent-dev==2.1.13-stable-1~deb13u1
 libevent-extra-2.1-7t64==2.1.13-stable-1~deb13u1
 libevent-openssl-2.1-7t64==2.1.13-stable-1~deb13u1
 libevent-pthreads-2.1-7t64==2.1.13-stable-1~deb13u1
-libexpat1-dev==2.8.3-1~deb13u1
+libexpat1-dev==2.9.0-1~deb13u1
 libfabric1==2.1.0-1.1
 libfido2-1==1.15.0-1+b1
 libfl-dev==2.6.4-8.2+b4
@@ -249,7 +249,7 @@ libyang3-dbgsym==3.12.2-1
 libz3-4==4.13.3-1
 libze1==1.20.6-1
 libzstd-dev==1.5.7+dfsg-1
-linux-libc-dev==6.12.111-1
+linux-libc-dev==6.12.113-1
 llvm==1:19.0-63
 llvm-19==1:19.1.7-3+b1
 llvm-19-linker-tools==1:19.1.7-3+b1

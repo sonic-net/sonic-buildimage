@@ -221,6 +221,8 @@ define generate_manifest
     $(eval export after=$($(1).gz_SERVICE_AFTER))
     $(eval export before=$($(1).gz_SERVICE_BEFORE))
     $(eval export dependent_of=$($(1).gz_SERVICE_DEPENDENT_OF))
+    $(eval export post_start_action=$($(1).gz_SERVICE_POST_START_ACTION))
+    $(eval export pre_shutdown_action=$($(1).gz_SERVICE_PRE_SHUTDOWN_ACTION))
     $(eval export warm_shutdown_after=$($*.gz_WARM_SHUTDOWN_AFTER))
     $(eval export warm_shutdown_before=$($*.gz_WARM_SHUTDOWN_BEFORE))
     $(eval export fast_shutdown_after=$($*.gz_FAST_SHUTDOWN_AFTER))

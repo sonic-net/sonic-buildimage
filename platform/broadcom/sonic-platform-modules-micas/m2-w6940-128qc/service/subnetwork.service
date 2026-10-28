@@ -5,8 +5,8 @@ DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/subnetwork.py start
-ExecStop=/usr/local/bin/subnetwork.py stop
+ExecStart=/usr/local/bin/subnetwork_128qc.py start
+ExecStop=/usr/local/bin/subnetwork_128qc.py stop
 RemainAfterExit=yes
 
 [Install]
