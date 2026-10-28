@@ -586,18 +586,15 @@ waiver_reason() {
     awk -F'\t' -v v="$1" '!/^[[:space:]]*#/ && $1==v {print $2; exit}' "$EXPORT_WAIVERS"
 }
 
-# Populate DIFF_VARS_CACHE with the set of build-env variables the diff touches
-# between DIFF_BASE and the working tree in slave.mk / Makefile / Makefile.work /
-# rules/*.mk / Makefile.cache / platform/*.mk: any variable named by an `export`
-# line the diff adds or removes, and any variable the diff dereferences more
-# often than before in some file. A dereference that is only moved or rewritten
-# within a file (one `-` line and one `+` line each carrying `$(VAR)`, as when a
-# recipe line is edited or references are folded into a list) is not a new
-# consumer and does not count, so a PR is not blocked on a standing finding for
-# a variable it did not add, export or newly consume. This producer set mirrors
-# the make-orchestration layer scanned by cache_key_scan.py (slave.mk, Makefile,
+# Populate DIFF_VARS_CACHE with the set of build-env variables the diff touches:
+# any variable whose `export`/assignment/use lines were added or removed between
+# DIFF_BASE and the working tree in slave.mk / Makefile / Makefile.work /
+# rules/*.mk / Makefile.cache / platform/*.mk. This producer set mirrors the
+# make-orchestration layer scanned by cache_key_scan.py (slave.mk, Makefile,
 # Makefile.work, and every tracked *.mk). Used by --base (PR) mode to scope
-# Check 10 to what the PR actually changes.
+# Check 10 to what the PR actually changes. A changed line that only keeps an
+# existing $(VAR) still touches VAR: the diff alone cannot tell a rewrite from a
+# reference moved into a cached recipe, or from one dropped from a cache key.
 compute_diff_vars() {
     $DIFF_MODE || return 0
     local range="$DIFF_BASE"
@@ -620,8 +617,8 @@ import sys, re
 # Mirror cache_key_scan.py:exported_vars so multi-var `export A B C`, shell
 # `export A=1 B=2`, and no-space operator forms (`export A+=v`) all register as
 # touched, while dynamic `export $(fn ...)` is skipped (its tokens are not
-# literal names) and quoted/`$(...)` values do not leak bare words. Also count
-# the $(VAR)/${VAR} dereferences each file gains or loses.
+# literal names) and quoted/`$(...)` values do not leak bare words. Also capture
+# $(VAR)/${VAR} dereferences the diff adds/removes.
 OP = r"(?:::=|:=|\?=|\+=|!=|=)"
 MOP = r"(?:::=|:=|\?=|\+=|!=)"   # make-only ops: value is rest of line => single var
 DQ = chr(34); SQ = chr(39)  # " and " built via chr() so no literal quote appears
@@ -631,24 +628,21 @@ HEAD = re.compile(r"^[A-Za-z_]\w*[ \t]*" + OP)
 SINGLE = re.compile(r"^([A-Za-z_]\w*)(?:[ \t]*" + MOP + r"|[ \t]+=)")
 STEP = re.compile(r"[ \t]*([A-Za-z_]\w*)=" + VAL)
 out = set()
-refs = {}   # (file, var) -> dereferences added minus dereferences removed
-path, in_hunk = None, False
+in_hunk = False
 for raw in sys.stdin:
-    # Track the file and skip each file header (its ---/+++ lines included)
-    # up to the first hunk, so a removed line that starts with "--" is still
-    # read as content.
+    # Skip each file header (its ---/+++ lines included) up to the first hunk,
+    # so a changed line whose content starts with "--" or "++" is still read.
     if raw.startswith("diff --git "):
-        path, in_hunk = raw.rstrip("\n").rsplit(" b/", 1)[-1], False
+        in_hunk = False
         continue
     if raw.startswith("@@"):
         in_hunk = True
         continue
     if not in_hunk or raw[:1] not in "+-":
         continue
-    sign = 1 if raw[0] == "+" else -1
     line = raw[1:]
     for m in re.finditer(r"\$[({]\s*([A-Za-z_]\w*)", line):
-        refs[(path, m.group(1))] = refs.get((path, m.group(1)), 0) + sign
+        out.add(m.group(1))
     me = re.match(r"\s*export\s+(.+)", line)
     if not me:
         continue
@@ -671,7 +665,6 @@ for raw in sys.stdin:
         for t in tail.split():
             if re.fullmatch(r"[A-Za-z_]\w*", t):
                 out.add(t)
-out.update(v for (_, v), n in refs.items() if n > 0)
 for v in sorted(out):
     print(v)
 '

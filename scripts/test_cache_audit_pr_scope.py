@@ -41,18 +41,23 @@ class DiffVarsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return set(result.stdout.split())
 
-    def test_rewritten_line_keeping_a_reference_does_not_touch_it(self):
+    def test_rewritten_line_keeping_a_reference_touches_it(self):
         self.assertEqual(self.touched(diff(("slave.mk",
             ['run = V="$(SONIC_IMAGE_VERSION)" ./a.py'],
             ['run = V="$(SONIC_IMAGE_VERSION)" ./a.py --strict'],
-        ))), set())
+        ))), {"SONIC_IMAGE_VERSION"})
 
-    def test_references_folded_into_a_list_do_not_touch_it(self):
+    def test_reference_dropped_from_a_cache_key_touches_it(self):
+        self.assertEqual(self.touched(diff(("Makefile.cache",
+            ["SONIC_COMMON_FLAGS_LIST := $(CONFIGURED_ARCH) $(FOO)"],
+            ["SONIC_COMMON_FLAGS_LIST := $(CONFIGURED_ARCH)"],
+        ))), {"CONFIGURED_ARCH", "FOO"})
+
+    def test_reference_moved_within_a_file_touches_it(self):
         self.assertEqual(self.touched(diff(("slave.mk",
-            ["        $(addprefix $(DEBS)/,$(A)) \\",
-             "        $(addprefix $(DEBS)/,$(B)) \\"],
-            ["        $(addprefix $(DEBS)/,$(LIST)) \\"],
-        ))), {"LIST"})
+            ["\tINSTALLER_ONLY=$(FOO) ./build_image.sh"],
+            ["\tFOO=$(FOO) dpkg-buildpackage -b"],
+        ))), {"FOO"})
 
     def test_new_reference_touches_it(self):
         self.assertEqual(self.touched(diff(("slave.mk",
