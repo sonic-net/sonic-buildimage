@@ -2,6 +2,7 @@ name: Protect certain files to avoid further changes
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     branches:
       - 'master'
       - '202[2-9][0-9][0-9]'
@@ -42,6 +43,9 @@ jobs:
           fi
           base_sha=$(git rev-parse --verify "${parents[0]}^{commit}")
           printf 'base=%s\nhead=%s\n' "$base_sha" "$head_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Install minigraph detector dependencies
+        run: python3 -m pip install -r scripts/requirements-minigraph-freeze.txt
 
       - name: Test minigraph detector
         run: python3 -m unittest discover -s tests -p test_minigraph_freeze.py

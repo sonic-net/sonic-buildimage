@@ -161,20 +161,52 @@ that its second parent is the expected PR head. This avoids comparing a
 newer test merge against an older event base or unrelated upstream changes.
 Missing or mismatched revisions fail the comparison.
 
+The workflow subscribes to `opened`, `synchronize`, `reopened`, and `edited`.
+An edit that changes the target branch therefore reevaluates the policy.
+The minigraph job still runs only for `master`; release branches retain
+the separate existing protected-file policy.
+
 The detector recognizes named Python parser imports/aliases (including
 relative imports), literal
 `importlib.import_module` imports and simple bindings of their results,
-common command and file APIs, simple imported aliases of `subprocess`/`os`
-command APIs, simple literal bindings and argument-list concatenation,
-visible shell commands, and common YAML command blocks and inline scalars.
-Quoted shell punctuation and literal diagnostics are not executable commands.
-It also checks literal minigraph XML access and new shipped `minigraph.xml`
+literal file APIs, simple literal bindings and argument-list concatenation.
+Command extraction preserves the input's execution context:
+
+| Input | Recognized command context |
+| --- | --- |
+| Python | Known `subprocess`/`os` command APIs and imported aliases use POSIX argument and shell semantics, including literal `shell` and `executable` options. Argument-list elements are data, not shell source. Conventional `shell`, `exec_command`, `check_output_pipe`, `command`, `run_command`, and `getstatusoutput_noshell` helpers use their shell/direct-command conventions. |
+| Shell | Bash syntax trees identify executable positions, substitutions, quotes, continuations and here-documents. Common options of `sudo`, `env`, `command`, `exec`, `timeout`, `nice` and `nohup` are recognized. `bash`/`sh`/`dash` command strings support combined and separate options before `-c`; following positional arguments are not commands. |
+| YAML | YAML decoding preserves quoted scalars, folding, blank lines, indentation and chomping indicators. Command fields in root fragments and job/stage/step/task structures are analyzed, including namespaced Ansible `shell`/`command`, `cmd`/`argv` arguments, and Azure Bash/CmdLine task scripts. Display names, environment values and other metadata are not shell programs. |
+| Jinja templates | Literal shell/YAML command regions in `.j2` files are analyzed with comments/control directives removed and expressions marked unknown. This does not render the template or determine which branches execute. |
+
+Quoted shell punctuation, multiline literal diagnostics, and literal
+here-document text are not executable commands. Executable substitutions
+within expandable text are still checked. For example, on POSIX,
+`subprocess.run("sonic-cfggen -m")` names one executable; it does not invoke
+a shell. Use an argument list or explicit `shell=True` in examples intended
+to demonstrate an actual minigraph command.
+
+It also checks literal minigraph XML access, including shell file-existence
+and readability tests, and new shipped `minigraph.xml`
 files, including symlinks, outside paths containing a `tests` component.
+Literal XML operands remain a conservative signal, not proof of a runtime
+file open.
 
 Mixed-purpose files are not frozen wholesale. Markdown/RST documentation and
 Python comments/docstrings are ignored. Unused Python fixture/assertion
 strings are not executed commands, but actual new imports/calls in tests are
 not exempt. XML fixture exclusion is not a blanket exemption for test code.
+
+### Running the checker locally
+
+Use Python 3.10 or later. These pinned packages are checker-only dependencies;
+they are not installed into SONiC images by this change.
+
+```sh
+python3 -m pip install -r scripts/requirements-minigraph-freeze.txt
+python3 -m unittest discover -s tests -p test_minigraph_freeze.py
+python3 scripts/check_minigraph_freeze.py --base BASE_REVISION --head HEAD_REVISION
+```
 
 ### Limits of a passing check
 
@@ -182,16 +214,21 @@ This is a static guard, not a full call graph or proof of unchanged behavior.
 Changes behind an existing reference, or moves within a file that keep
 reference counts unchanged, may pass. Dynamic commands, complex data flow,
 alternate parser implementations, binary artifacts, and submodule contents
-are not fully covered. Shell heuristics can also flag ambiguous text.
-Imported API alias recognition is conservative when names are rebound or
-shadowed.
+are not fully covered. Arbitrary custom wrapper contracts, other YAML task
+schemas, advanced shell expansions, and template evaluation are outside
+the supported command model. Imported API aliases and shell bindings are
+conservative and do not provide scope/control-flow analysis. Other text
+formats are best-effort shell inputs, not fully parsed languages: a
+minigraph-related Makefile or other mixed-format file may fail analysis.
 
-Unsupported Python syntax, unparseable relevant shell commands, unsupported
-quoted YAML escapes, decoding errors, or unavailable Git objects fail
-analysis rather than return a clean result. Double-quoted YAML command
-scalars use JSON-compatible escapes; single-quoted scalars support YAML's
-doubled single quotes. Investigate analysis failures separately from policy
-violations.
+Unsupported Python syntax, unparseable shell/YAML input, unsupported
+minigraph-related wrapper options, unresolved execution options on literal
+minigraph subprocess calls, decoding errors, or unavailable Git objects fail
+analysis rather than return a clean result. Non-scalar YAML `cmd` arguments
+and recursive/excessively expanded command structures also fail analysis.
+Standard YAML escapes are
+decoded as YAML, not as JSON. Investigate analysis failures separately from
+policy violations; do not silently skip a file or disable the guard.
 
 Utilities CLI/migration and `sonic-mgmt` generation/setup/facts need companion
 checks in their own repositories. This master-only check does not enforce
@@ -204,7 +241,8 @@ must:
 
 1. Designate exception approvers and a controlled process tied to the exact
    reviewed revision, not all future pushes to the PR.
-2. Protect workflow definitions, the detector, and policy/exception controls
+2. Protect workflow definitions, the detector and its dependency manifest,
+   and policy/exception controls
    using a trusted required workflow or appropriate required review rules.
    A checker executed from the PR checkout is not independently tamper-proof.
 3. Require **`minigraph-freeze` from GitHub Actions on `master` only**.

@@ -1,3 +1,4 @@
+import fnmatch
 import importlib.util
 import io
 import os
@@ -10,6 +11,8 @@ import textwrap
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
+
+import yaml
 
 
 MODULE_PATH = Path(__file__).parents[1] / "scripts" / "check_minigraph_freeze.py"
@@ -101,7 +104,8 @@ class DependencyTest(unittest.TestCase):
             "import subprocess\nsubprocess.run(['sonic-cfggen', '-H', '-m'])",
             "subprocess.run(args=['sonic-cfggen', '-m'])",
             "cmd = 'config load_minigraph -y'\nhost.shell(cmd)",
-            "subprocess.run(f'sonic-cfggen -n {namespace} --minigraph=/tmp/graph.xml')",
+            "subprocess.run(f'sonic-cfggen -n {namespace} "
+            "--minigraph=/tmp/graph.xml', shell=True)",
             "GRAPH = '/etc/sonic/minigraph.xml'\nET.parse(GRAPH)",
             "Path('/etc/sonic/minigraph.xml').read_text()",
         ]
@@ -150,7 +154,6 @@ assert "config load_minigraph" not in commands
         self.assertFalse(guard.shell_dependencies(
             '# config load_minigraph\n'
             'echo "Do not use sonic-cfggen -m or minigraph.xml"\n'
-            '{# minigraph.xml #}\n'
         ))
 
     def test_shell_and_yaml_entry_points(self):
@@ -160,8 +163,6 @@ assert "config load_minigraph" not in commands
             'HWSKU=`sonic-cfggen -m -v hwsku`',
             'echo "$(sonic-cfggen -m --print-data)"',
             'echo `sonic-cfggen -m --print-data`',
-            "shell: 'config load_minigraph -y'",
-            "shell: >\n  sonic-cfggen\n  -H\n  -m\n",
             'bash -c "sonic-cfggen -m"',
             """bash -c 'echo "$(sonic-cfggen -m)"'""",
             "sed -n '/HwSku/p' /etc/sonic/minigraph.xml",
@@ -210,7 +211,7 @@ assert "config load_minigraph" not in commands
             "prefix = ['config']\ncmd = prefix + ['load_minigraph', '-y']\n"
             "subprocess.run(cmd)",
             "subprocess.run(['sonic-' + 'cfggen'] + ['-H'] + ['-m'])",
-            "subprocess.run('sonic-cfggen' + ' -m')",
+            "subprocess.run('sonic-cfggen' + ' -m', shell=True)",
         ]
         for source in cases:
             with self.subTest(source=source):
@@ -258,7 +259,9 @@ assert "config load_minigraph" not in commands
             "run: |\n  echo '$(sonic-cfggen -m)'\n",
         ]:
             with self.subTest(source=source):
-                self.assertFalse(guard.shell_dependencies(source))
+                self.assertFalse(guard.dependencies(
+                    "example.yml", source.encode(), "100644"
+                ))
         for source in [
             'run: echo "$(sonic-cfggen -m)"',
             "run: 'sonic-cfggen -m' # invoke the parser",
@@ -266,16 +269,331 @@ assert "config load_minigraph" not in commands
             "command: config load_minigraph -y",
             "- ansible.builtin.shell: sonic-cfggen -m",
             "run: >\n  sonic-cfggen\n  -m\n",
+            r'run: "sonic-cfggen\x20-m"',
+        ]:
+            with self.subTest(source=source):
+                self.assertTrue(guard.dependencies(
+                    "example.yml", source.encode(), "100644"
+                ))
+        for source in [
+            "run: 'sonic-cfggen -m", 'run: "sonic-cfggen -m',
+            r'run: "sonic-cfggen\q-m"',
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.dependencies(
+                        "example.yml", source.encode(), "100644"
+                    )
+
+    def test_python_execution_modes_preserve_posix_semantics(self):
+        cases = [
+            ("['sonic-cfggen', '-m']", "", True),
+            ("'sonic-cfggen -m'", "", False),
+            ("'sonic-cfggen -m'", ", shell=False", False),
+            ("'sonic-cfggen -m'", ", shell=True", True),
+            ("['sonic-cfggen -m']", ", shell=True", True),
+            ("['sonic-cfggen', '-m']", ", shell=True", False),
+            ("['sonic-cfggen', '-m']", ", executable='/bin/echo'", False),
+            ("['sonic-cfggen', '-m']", ", executable=None", True),
+            ("'sonic-cfggen -m'", ", shell=True, executable='/bin/echo'", False),
+        ]
+        for args, options, expected in cases:
+            for name in ("subprocess.run", "subprocess.Popen", "execute"):
+                source = (
+                    "import subprocess\n"
+                    "from subprocess import check_call as execute\n"
+                    "{}({}{})".format(name, args, options)
+                )
+                with self.subTest(source=source):
+                    self.assertEqual(expected, bool(
+                        guard.python_dependencies(source)
+                    ))
+        for name in ("os.system", "os.popen", "subprocess.getoutput",
+                     "subprocess.getstatusoutput", "host.shell"):
+            self.assertTrue(guard.python_dependencies(
+                "{}('sonic-cfggen -m')".format(name)
+            ))
+        for name in ("subprocess.getoutput", "subprocess.getstatusoutput"):
+            self.assertTrue(guard.python_dependencies(
+                "{}(['sonic-cfggen -m'])".format(name)
+            ))
+            self.assertFalse(guard.python_dependencies(
+                "{}(['sonic-cfggen', '-m'])".format(name)
+            ))
+        self.assertFalse(guard.python_dependencies(
+            "host.command(\"echo '$(sonic-cfggen -m)'\")"
+        ))
+        self.assertTrue(guard.python_dependencies(
+            "module.run_command('sonic-cfggen -m')"
+        ))
+        self.assertTrue(guard.python_dependencies(
+            "USE_SHELL = True\n"
+            "subprocess.run('sonic-cfggen -m', shell=USE_SHELL)"
+        ))
+        self.assertTrue(guard.python_dependencies(
+            """module.run_command('echo "$(sonic-cfggen -m)"', """
+            "use_unsafe_shell=True)"
+        ))
+        self.assertTrue(guard.python_dependencies(
+            "module.run_command(['sonic-cfggen', '-m'], use_unsafe_shell=True)"
+        ))
+        self.assertFalse(guard.python_dependencies(
+            "module.run_command(['echo', '$(sonic-cfggen -m)'], use_unsafe_shell=True)"
+        ))
+        with self.assertRaises(guard.AnalysisError):
+            guard.python_dependencies(
+                "subprocess.run('sonic-cfggen -m', shell=mode)"
+            )
+        with self.assertRaises(guard.AnalysisError):
+            guard.python_dependencies(
+                "subprocess.run('sonic-cfggen -m', shell=True, executable=program)"
+            )
+        with self.assertRaises(guard.AnalysisError):
+            guard.python_dependencies(
+                "subprocess.run('sonic-cfggen -m', **options)"
+            )
+
+    def test_python_argv_data_does_not_become_shell_source(self):
+        for args in [
+            ["printf", "%s\n", "sonic-cfggen -m"],
+            ["echo", "example\nsonic-cfggen -m"],
+            ["grep", "-e", "sonic-cfggen", "-m", "1", "script.sh"],
+            ["grep", "-m", "1", "-e", "sonic-cfggen", "script.sh"],
+            ["bash", "-c", "echo done", "name", "sonic-cfggen", "-m"],
+        ]:
+            with self.subTest(args=args):
+                self.assertFalse(guard.python_dependencies(
+                    "subprocess.run({!r})".format(args)
+                ))
+        self.assertFalse(guard.python_dependencies(
+            "from tools import run\nrun('sonic-cfggen -m')"
+        ))
+
+    def test_non_string_argv_does_not_crash_command_analysis(self):
+        for args in [
+            ["bash", False],
+            ["env", ["x"]],
+            ["sudo", {"option": "value"}],
+            ["nice", True],
+        ]:
+            with self.subTest(args=args):
+                self.assertFalse(guard.python_dependencies(
+                    "subprocess.run({!r})".format(args)
+                ))
+
+    def test_executable_positions_and_transparent_wrappers(self):
+        for prefix in [
+            "", "sudo ", "sudo -u root ", "sudo -nu root ",
+            "env MODE=test ", "env -u UNUSED ",
+            "command ", "exec ", "exec -a display ",
+            "timeout 10 ", "timeout -k 2 10 ",
+            "nice -n 10 ", "nohup ", "sudo env MODE=test ",
+        ]:
+            for command, expected in [
+                ("sonic-cfggen -m", True),
+                ("grep -e sonic-cfggen -m 1 script.sh", False),
+                ("printf '%s\\n' 'sonic-cfggen -m'", False),
+            ]:
+                with self.subTest(prefix=prefix, command=command):
+                    self.assertEqual(expected, bool(
+                        guard.shell_dependencies(prefix + command)
+                    ))
+        self.assertFalse(guard.shell_dependencies(
+            "command -v sonic-cfggen"
+        ))
+        for source in ("env --help", "nice --version", "sudo --version"):
+            self.assertFalse(guard.shell_dependencies(source))
+
+    def test_shell_options_identify_only_the_command_payload(self):
+        for shell in ("bash", "sh", "dash"):
+            for flags in ("-c", "-lc", "-ec", "-e -c", "-o errexit -c"):
+                for command, expected in [
+                    ("sonic-cfggen -m", True),
+                    ("echo done", False),
+                ]:
+                    source = "{} {} {!r} name sonic-cfggen -m".format(
+                        shell, flags, command
+                    )
+                    with self.subTest(source=source):
+                        self.assertEqual(expected, bool(
+                            guard.shell_dependencies(source)
+                        ))
+                        self.assertEqual(expected, bool(
+                            guard.python_dependencies(
+                                "subprocess.run({!r})".format(
+                                    [shell] + flags.split() + [
+                                        command, "name", "sonic-cfggen", "-m"
+                                    ]
+                                )
+                            )
+                        ))
+        self.assertTrue(guard.shell_dependencies(
+            "bash --noprofile --norc -c 'sonic-cfggen -m'"
+        ))
+        self.assertFalse(guard.shell_dependencies(
+            "bash -nc 'sonic-cfggen -m'"
+        ))
+
+    def test_multiline_shell_data_and_executable_substitutions(self):
+        for source in [
+            "echo 'example:\nsonic-cfggen -m\n'",
+            'printf "%s" "example:\nsonic-cfggen -m\n"',
+            "cat <<'EOF'\nsonic-cfggen -m\n$(sonic-cfggen -m)\nEOF\n",
+            "cat <<EOF\nsonic-cfggen -m\nEOF\n",
+            "CMD=sonic-cfggen\n'$CMD' -m",
+            "CMD='sonic-cfggen -m'\n\"$CMD\"",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.shell_dependencies(source))
+        for source in [
+            'echo "example:\n$(sonic-cfggen -m)\n"',
+            "cat <<EOF\n$(sonic-cfggen -m)\nEOF\n",
+            "CMD='sonic-cfggen -m'\n$CMD",
+            "CMD=sonic-cfggen\n\"$CMD\" -m",
+        ]:
+            with self.subTest(source=source):
+                self.assertTrue(guard.shell_dependencies(source))
+
+    def test_mixed_quoted_and_expanded_shell_fields(self):
+        for source, expected in [
+            ("PREFIX='sonic-cfggen '\nSUFFIX=-m\n\"$PREFIX\"$SUFFIX", False),
+            ("FLAGS=-m\n\"sonic-cfggen \"$FLAGS", False),
+            ("PREFIX='sonic-cfggen '\nSUFFIX=' -m'\n\"$PREFIX\"$SUFFIX", False),
+            ("PREFIX='sonic-cfggen '\nSUFFIX=-m\n$PREFIX\"$SUFFIX\"", True),
+            ("PREFIX=sonic-\nSUFFIX=cfggen\n\"$PREFIX\"$SUFFIX -m", True),
+            ("EMPTY=''\n$EMPTY sonic-cfggen -m", True),
+            ("EMPTY=''\n\"$EMPTY\" sonic-cfggen -m", False),
+            ("PREFIX='env '\nCMD=sonic-cfggen\n$PREFIX\"$CMD\" -m", True),
+            ("PREFIX='env '\nCMD=sonic-cfggen\n\"$PREFIX\"$CMD -m", False),
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(expected, bool(guard.shell_dependencies(source)))
+
+    def test_xml_operands_are_not_lost_when_command_positions_are_restricted(self):
+        for source in [
+            "$READER /etc/sonic/minigraph.xml",
+            "bash /etc/sonic/minigraph.xml",
+            'bash -c \'cat "$1"\' name /etc/sonic/minigraph.xml',
+            "cat < /etc/sonic/minigraph.xml",
+            "cat /tmp/$DIRECTORY/minigraph.xml",
         ]:
             with self.subTest(source=source):
                 self.assertTrue(guard.shell_dependencies(source))
         for source in [
-            "run: 'sonic-cfggen -m", 'run: "sonic-cfggen -m',
-            r'run: "sonic-cfggen\x20-m"',
+            "bash -c 'echo minigraph.xml'",
+            "bash -nc 'echo minigraph.xml'",
+            "sudo echo minigraph.xml",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.shell_dependencies(source))
+
+    def test_shell_file_checks_and_function_bindings_preserve_dependencies(self):
+        for source in [
+            "GRAPH=/etc/sonic/minigraph.xml\n"
+            "initialize() { if [ -r \"$GRAPH\" ]; then echo ready; fi; }",
+            "[[ -e /etc/sonic/minigraph.xml ]]",
+            "[[ /etc/sonic/minigraph.xml -nt other ]]",
+            "migrate() { files='minigraph.xml other.json'; copy_files $files; }",
+            "migrate() { local GRAPH=minigraph.xml; cat \"$GRAPH\"; }",
+            "load() { local CMD='sonic-cfggen -m'; $CMD; }",
+        ]:
+            with self.subTest(source=source):
+                self.assertTrue(guard.shell_dependencies(source))
+        for source in [
+            "unused() { local CMD='sonic-cfggen -m'; }\n$CMD",
+            "unused() { local GRAPH=minigraph.xml; }\ncat \"$GRAPH\"",
+            "unused() { files='minigraph.xml other.json'; }",
+            "[[ -n minigraph.xml ]]",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.shell_dependencies(source))
+        before = "GRAPH=minigraph.xml\n[ -r \"$GRAPH\" ]\n"
+        self.assertTrue(
+            guard.shell_dependencies(before + '[ -e "$GRAPH" ]\n')
+            - guard.shell_dependencies(before)
+        )
+
+    def test_continuations_preserve_tokens_and_literal_context(self):
+        for source in [
+            "sonic-\\\ncfggen -m",
+            "sonic-cfggen -\\\nm",
+            "sonic-cfggen \\\n  -m",
+            "CMD=sonic-\\\ncfggen\n$CMD -m",
+        ]:
+            with self.subTest(source=source):
+                self.assertTrue(guard.shell_dependencies(source))
+        for source in [
+            "'sonic-\\\ncfggen' -m",
+            "echo 'example:\\\nsonic-cfggen -m'",
+            "# comment \\\n# sonic-cfggen -m",
+            "cat <<'EOF'\nsonic-\\\ncfggen -m\nEOF\n",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.shell_dependencies(source))
+
+    def test_yaml_command_structure_and_scalar_semantics(self):
+        for key in ("run", "shell", "ansible.builtin.shell",
+                    "command", "ansible.builtin.command"):
+            for header in (">", ">-", ">+", ">2", ">2-", "> # comment"):
+                source = "{}: {}\n  sonic-cfggen\n  -m\n".format(key, header)
+                with self.subTest(source=source):
+                    self.assertTrue(guard.dependencies(
+                        "example.yml", source.encode(), "100644"
+                    ))
+        cases = [
+            ("run: >\n  echo done\n\n  sonic-cfggen -m\n", True),
+            ("run: |\n  sonic-cfggen\n  -m\n", False),
+            ("name: sonic-cfggen -m inspection\nrun: echo done\n", False),
+            ("steps:\n  - name: sonic-cfggen -m inspection\n"
+             "    run: echo done\n", False),
+            ("env:\n  run: sonic-cfggen -m\nsteps:\n  - run: echo done\n", False),
+            ("vars:\n  command: sonic-cfggen -m\n", False),
+            ("jobs:\n  test:\n    steps:\n      - run: sonic-cfggen -m\n", True),
+            ("- hosts: all\n  tasks:\n    - ansible.builtin.shell: "
+             "sonic-cfggen -m\n", True),
+            ("command: echo '$(sonic-cfggen -m)'\n", False),
+            ("shell: echo '$(sonic-cfggen -m)'\n", False),
+            ('command: echo "$(sonic-cfggen -m)"\n', False),
+            ('shell: echo "$(sonic-cfggen -m)"\n', True),
+            ("- ansible.builtin.command:\n    argv:\n"
+             "      - sonic-cfggen\n      - -m\n", True),
+            ("- ansible.builtin.shell:\n  args:\n"
+             "    cmd: sonic-cfggen -m\n", True),
+            ("steps:\n  - task: Bash@3\n    inputs:\n"
+             "      script: sonic-cfggen -m\n", True),
+            ("steps:\n  - task: Download@1\n    inputs:\n"
+             "      script: sonic-cfggen -m\n", False),
+        ]
+        for source, expected in cases:
+            with self.subTest(source=source):
+                self.assertEqual(expected, bool(guard.dependencies(
+                    "example.yml", source.encode(), "100644"
+                )))
+        for source in [
+            "&cycle {steps: [*cycle]}",
+            "run: &cycle {cmd: *cycle}",
+            "run: {cmd: {cmd: 'echo done'}}",
+            "run: {cmd: ['sonic-cfggen', '-m']}",
         ]:
             with self.subTest(source=source):
                 with self.assertRaises(guard.AnalysisError):
-                    guard.shell_dependencies(source)
+                    guard.dependencies("example.yml", source.encode(), "100644")
+
+    def test_template_commands_and_comments_remain_distinct(self):
+        for path, source, expected in [
+            ("example.sh.j2", "{# sonic-cfggen -m #}\necho done", False),
+            ("example.sh.j2", "{% if enabled %}\nsonic-cfggen -m "
+             "{{ graph }}\n{% endif %}\n", True),
+            ("example.yml.j2", "steps:\n{% if enabled %}\n"
+             "  - run: sonic-cfggen -m {{ graph }}\n{% endif %}\n", True),
+        ]:
+            with self.subTest(path=path, source=source):
+                self.assertEqual(expected, bool(guard.dependencies(
+                    path, source.encode(), "100644"
+                )))
+        self.assertFalse(guard.dependencies(
+            "Makefile", b"all: $(TARGET)\n\t@echo sonic-buildimage\n", "100644"
+        ))
 
     def test_added_use_of_existing_shell_path_variable(self):
         before = 'MINGRAPH_FILE="/etc/sonic/minigraph.xml"\ncat "$MINGRAPH_FILE"\n'
@@ -324,6 +642,36 @@ class GitFixtureTest(unittest.TestCase):
 
 
 class GitComparisonTest(GitFixtureTest):
+    def test_context_regressions_through_the_full_checker(self):
+        cases = [
+            ("script.py", "subprocess.run(['sonic-cfggen -m'], shell=True)", 1),
+            ("script.py", "subprocess.run(['sonic-cfggen','-m'], shell=True)", 0),
+            ("script.py", "subprocess.run(['printf','%s\\n','sonic-cfggen -m'])", 0),
+            ("script.sh", "grep -e sonic-cfggen -m 1 README.md", 0),
+            ("script.sh", "bash -lc 'sonic-cfggen -m'", 1),
+            ("script.sh", "sonic-\\\ncfggen -m", 1),
+            ("script.sh", "echo 'example:\nsonic-cfggen -m\n'", 0),
+            ("script.sh", "cat <<'EOF'\nsonic-cfggen -m\nEOF\n", 0),
+            ("script.sh", "PREFIX='sonic-cfggen '\nSUFFIX=-m\n"
+             "\"$PREFIX\"$SUFFIX", 0),
+            ("script.py", "subprocess.run(['bash', False])", 0),
+            ("script.yml", "run: {cmd: {cmd: 'echo done'}}", 2),
+            ("workflow.yml", "run: >\n  echo done\n\n  sonic-cfggen -m\n", 1),
+            ("workflow.yml", "ansible.builtin.shell: > # comment\n"
+             "  sonic-cfggen\n  -m\n", 1),
+            ("workflow.yml", "name: sonic-cfggen -m inspection\nrun: echo done", 0),
+            ("workflow.yml", 'run: "sonic-cfggen\\q-m"', 2),
+        ]
+        for path, source, expected in cases:
+            with self.subTest(path=path, source=source):
+                base = self.tree({})
+                head = self.tree({path: source})
+                with mock.patch.object(guard.Path, "cwd", return_value=self.repo), \
+                        redirect_stdout(io.StringIO()):
+                    self.assertEqual(expected, guard.main([
+                        "--base", base, "--head", head
+                    ]))
+
     def test_frozen_parser_and_adapters_cannot_be_changed_or_renamed(self):
         for path in sorted(guard.FROZEN_FILES):
             with self.subTest(path=path):
@@ -434,6 +782,32 @@ class WorkflowComparisonTest(GitFixtureTest):
             MODULE_PATH.parents[1] / ".github/workflows/protect-file.yml"
         )
         self.workflow = workflow.read_text()
+
+    def test_event_selection_including_branch_retargeting(self):
+        workflow = yaml.load(self.workflow, Loader=yaml.BaseLoader)
+        trigger = workflow["on"]["pull_request"]
+        activities = trigger.get("types", ["opened", "synchronize", "reopened"])
+        self.assertEqual(
+            "github.base_ref == 'master'",
+            workflow["jobs"]["minigraph-freeze"]["if"],
+        )
+        for action, branch, expected in [
+            ("opened", "master", (True, True)),
+            ("synchronize", "master", (True, True)),
+            ("reopened", "master", (True, True)),
+            ("edited", "master", (True, True)),
+            ("opened", "202605", (False, True)),
+            ("edited", "202605", (False, True)),
+            ("edited", "feature/example", (False, False)),
+        ]:
+            selected = action in activities and any(
+                fnmatch.fnmatchcase(branch, pattern)
+                for pattern in trigger["branches"]
+            )
+            with self.subTest(action=action, branch=branch):
+                self.assertEqual(
+                    expected, (selected and branch == "master", selected)
+                )
 
     def step_script(self, job, name):
         job_body = re.search(
