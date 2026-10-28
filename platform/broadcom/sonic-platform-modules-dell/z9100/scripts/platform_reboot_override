@@ -1,9 +1,20 @@
 #!/usr/bin/python3
 import os
+import subprocess
 import struct
 
 PORT_RES = '/dev/port'
 
+
+def log_software_reboot():
+    # Run plugin script which will track the cli triggered reboot
+    res = subprocess.check_output(['/usr/share/sonic/device/x86_64-dell_z9100_c2538-r0/reboot_plugin'])
+    return
+
+def ssd_hdparm_upgrade():
+    if os.path.exists('/tmp/SSD/SYS_S.bin'):
+        res = subprocess.check_output(['/usr/share/sonic/device/x86_64-dell_z9100_c2538-r0/ssd-fw-upgrade', 'hdparm-upgrade'])
+    return
 
 def portio_reg_write(resource, offset, val):
     fd = os.open(resource, os.O_RDWR)
@@ -20,4 +31,6 @@ def portio_reg_write(resource, offset, val):
     os.close(fd)
 
 if __name__ == "__main__":
+    log_software_reboot()
+    ssd_hdparm_upgrade()
     portio_reg_write(PORT_RES, 0xcf9, 0xe)
