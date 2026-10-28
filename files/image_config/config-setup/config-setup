@@ -30,7 +30,11 @@ CONFIG_DB_JSON=/etc/sonic/config_db.json
 CONFIG_DB_PATH=/etc/sonic/
 CONFIG_DB_PREFIX=config_db
 CONFIG_DB_SUFFIX=.json
+CONFIG_CLI=/usr/local/bin/config
+DB_MIGRATOR=/usr/local/bin/db_migrator.py
 MINGRAPH_FILE=/etc/sonic/minigraph.xml
+GOLDEN_CONFIG_DB_JSON=/etc/sonic/golden_config_db.json
+GOLDEN_CONFIG_NATIVE_ENABLED_FILE=/etc/sonic/golden_config_native_enabled
 TMP_ZTP_CONFIG_DB_JSON=/tmp/ztp_config_db.json
 FACTORY_DEFAULT_HOOKS=/etc/config-setup/factory-default-hooks.d
 CONFIG_PRE_MIGRATION_HOOKS=/etc/config-setup/config-migration-pre-hooks.d
@@ -40,6 +44,8 @@ CONFIG_SETUP_PRE_MIGRATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_pre_migration
 CONFIG_SETUP_POST_MIGRATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_post_migration
 CONFIG_SETUP_INITIALIZATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_initialization
 CONFIG_SETUP_CONF=/etc/config-setup/config-setup.conf
+PENDING_CONFIG_INITIALIZATION=/etc/sonic/pending_config_initialization
+PENDING_CONFIG_MIGRATION=/etc/sonic/pending_config_migration
 
 TACACS_JSON_BACKUP=tacacs.json
 
@@ -124,24 +130,56 @@ run_hookdir() {
 reload_minigraph()
 {
     echo "Reloading minigraph..."
-    if [ -f /etc/sonic/golden_config_db.json ]; then
-        config load_minigraph -y -n --override_config --golden_config_path '/etc/sonic/golden_config_db.json'
+    if [ -f ${GOLDEN_CONFIG_DB_JSON} ]; then
+        config load_minigraph -y -n --override_config --golden_config_path ${GOLDEN_CONFIG_DB_JSON} || return $?
     else
-        config load_minigraph -y -n
+        config load_minigraph -y -n || return $?
     fi
     config save -y
+}
+
+golden_config_native_enabled()
+{
+    [ -f ${GOLDEN_CONFIG_NATIVE_ENABLED_FILE} ]
+}
+
+validate_golden_config_native()
+{
+    if [ ! -r ${GOLDEN_CONFIG_DB_JSON} ]; then
+        echo "Golden-native configuration is enabled but ${GOLDEN_CONFIG_DB_JSON} is not readable."
+        return 1
+    fi
+
+    "${CONFIG_CLI}" load_golden_config --check-only ${GOLDEN_CONFIG_DB_JSON}
+}
+
+migrate_golden_config_native()
+{
+    if [ ! -r ${GOLDEN_CONFIG_DB_JSON} ]; then
+        echo "Golden-native configuration is enabled but ${GOLDEN_CONFIG_DB_JSON} is not readable."
+        return 1
+    fi
+
+    "${CONFIG_CLI}" load_golden_config -y --migrate-only ${GOLDEN_CONFIG_DB_JSON}
+}
+
+reload_golden_config_native()
+{
+    echo "Reloading complete golden config without minigraph..."
+    "${CONFIG_CLI}" load_golden_config -y -n ${GOLDEN_CONFIG_DB_JSON} || return $?
+    "${CONFIG_CLI}" save -y
 }
 
 # Apply tacacs config
 apply_tacacs()
 {
     if [ -r /etc/sonic/old_config/${TACACS_JSON_BACKUP} ]; then
-        sonic-cfggen -j /etc/sonic/old_config/${TACACS_JSON_BACKUP} --write-to-db
+        sonic-cfggen -j /etc/sonic/old_config/${TACACS_JSON_BACKUP} --write-to-db || return $?
         echo "Applied tacacs json to restore tacacs credentials"
-        config save -y
+        config save -y || return $?
 
         # Change tacacs config file name, so tacacs config will not be revert when device reboot.
-        mv /etc/sonic/old_config/${TACACS_JSON_BACKUP} /etc/sonic/old_config/${TACACS_JSON_BACKUP}_backup
+        mv /etc/sonic/old_config/${TACACS_JSON_BACKUP} /etc/sonic/old_config/${TACACS_JSON_BACKUP}_backup || return $?
     else
         echo "Missing tacacs json to restore tacacs credentials"
     fi
@@ -163,7 +201,7 @@ copy_config_files_and_directories()
     for file_dir in $@; do
         if [ -f /etc/sonic/old_config/${file_dir} ] || [ -d /etc/sonic/old_config/${file_dir} ]; then
             echo "Copying SONiC configuration ${file_dir} ..."
-            cp -ar /etc/sonic/old_config/${file_dir} /etc/sonic/
+            cp -ar /etc/sonic/old_config/${file_dir} /etc/sonic/ || return $?
         else
             echo "Missing SONiC configuration ${file_dir} ..."
         fi
@@ -220,14 +258,14 @@ set_config_db_initialized()
     local value="$1"
     local asic_num=0
 
-    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
+    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value" || return $?
 
     if [[ ${NUM_ASIC:-1} -le 1 ]]; then
         return 0
     fi
 
     while [[ $asic_num -lt $NUM_ASIC ]]; do
-        sonic-db-cli -n "asic$asic_num" CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
+        sonic-db-cli -n "asic$asic_num" CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value" || return $?
         ((asic_num = asic_num + 1))
     done
 }
@@ -301,33 +339,41 @@ generate_config()
 #    is created
 do_config_initialization()
 {
+    if golden_config_native_enabled; then
+        echo "No config_db.json found and golden-native configuration is enabled, using complete gold..."
+        reload_golden_config_native || return $?
+        rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
+        set_config_db_initialized "1"
+        return $?
+    fi
+
     # If minigraph.xml is available, prefer it over ZTP/factory default.
     # This avoids ZTP triggering a config reload that removes management IP
     # when the device has a valid minigraph but no config_db.json
     # (e.g., during upgrade path tests).
     if [ -r ${MINGRAPH_FILE} ]; then
         echo "No config_db.json found but minigraph.xml is available, using minigraph..."
-        reload_minigraph
-        rm -f /etc/sonic/pending_config_initialization
-        sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        reload_minigraph || return $?
+        rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
+        set_config_db_initialized "1" || return $?
         return 0
     fi
 
     if ! ztp_is_enabled ; then
         echo "No configuration detected, generating factory default configuration..."
-        generate_config factory ${CONFIG_DB_JSON}
-        reload_configdb ${CONFIG_DB_JSON}
+        generate_config factory ${CONFIG_DB_JSON} || return $?
+        reload_configdb ${CONFIG_DB_JSON} || return $?
     fi
 
     if  ztp_is_enabled ; then
         echo "No configuration detected, initiating zero touch provisioning..."
-        generate_config ztp ${TMP_ZTP_CONFIG_DB_JSON}
-        reload_configdb ${TMP_ZTP_CONFIG_DB_JSON}
-        rm -f ${TMP_ZTP_CONFIG_DB_JSON}
+        generate_config ztp ${TMP_ZTP_CONFIG_DB_JSON} || return $?
+        reload_configdb ${TMP_ZTP_CONFIG_DB_JSON} || return $?
+        rm -f ${TMP_ZTP_CONFIG_DB_JSON} || return $?
     fi
 
-    rm -f /etc/sonic/pending_config_initialization
-    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+    rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
+    set_config_db_initialized "1"
 }
 
 # Restore config-setup post migration hooks from a backup copy
@@ -417,11 +463,19 @@ check_all_config_db_present()
 # Perform DB schema migration after loading backup config/minigraph from previous image
 do_db_migration()
 {
-    if [[ -x /usr/local/bin/db_migrator.py ]]; then
+    local skip_schema_migration=${1:-false}
+    local -a db_migrator_args
+
+    if [[ "${skip_schema_migration}" != "true" && -x ${DB_MIGRATOR} ]]; then
+        db_migrator_args=(-o migrate)
+        if golden_config_native_enabled; then
+            db_migrator_args+=(--config-source golden --config-source-file "${GOLDEN_CONFIG_DB_JSON}")
+        fi
+
         # Migrate the DB to the latest schema version if needed
-        /usr/local/bin/db_migrator.py -o migrate
+        "${DB_MIGRATOR}" "${db_migrator_args[@]}" || return $?
     fi
-    set_config_db_initialized "1"
+    set_config_db_initialized "1" || return $?
 
     # Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
     if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
@@ -445,48 +499,63 @@ do_db_migration()
 do_config_migration()
 {
     # Identify list of files to migrate
-    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json"
+    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json golden_config_native_enabled"
 
     # Migrate all configuration files from old to new
-    copy_config_files_and_directories $copy_list
-    
+    copy_config_files_and_directories $copy_list || return $?
+
+    if golden_config_native_enabled && [[ ${NUM_ASIC:-1} -gt 1 ]]; then
+        echo "Golden-native configuration is not yet supported for multi-ASIC migration."
+        return 1
+    fi
+
     # Migrate all config_db from old to new
-    copy_config_files_and_directories $(get_config_db_file_list)
+    copy_config_files_and_directories $(get_config_db_file_list) || return $?
 
     # Migrate post-migration hooks
-    copy_post_migration_hooks
+    copy_post_migration_hooks || return $?
 
     # Execute custom hooks if present
-    run_hookdir ${CONFIG_POST_MIGRATION_HOOKS} ${CONFIG_SETUP_POST_MIGRATION_FLAG}
+    run_hookdir ${CONFIG_POST_MIGRATION_HOOKS} ${CONFIG_SETUP_POST_MIGRATION_FLAG} || return $?
 
     if [ x"${WARM_BOOT}" == x"true" ]; then
         echo "Warm reboot detected..."
-        load_cold_booted_namespaces
-        do_db_migration
-        rm -f /etc/sonic/pending_config_migration
-        exit 0
+        if golden_config_native_enabled; then
+            load_cold_booted_namespaces || return $?
+            migrate_golden_config_native || return $?
+            do_db_migration true || return $?
+        else
+            load_cold_booted_namespaces || return $?
+            do_db_migration || return $?
+        fi
+    elif golden_config_native_enabled; then
+        echo "Golden-native configuration is enabled, using complete gold from old system..."
+        reload_golden_config_native || return $?
+        do_db_migration true || return $?
     elif check_all_config_db_present; then
         echo "Use config_db.json from old system..."
-        reload_configdb
-        do_db_migration
+        reload_configdb || return $?
+        do_db_migration || return $?
     elif [ -r ${MINGRAPH_FILE} ]; then
         echo "Use minigraph.xml from old system..."
-        reload_minigraph
-        do_db_migration
+        reload_minigraph || return $?
+        do_db_migration || return $?
     else
-        echo "Didn't found neither config_db.json nor minigraph.xml ..."
+        echo "No persistent configuration found to migrate; continuing with initialization."
     fi
 
-    rm -f /etc/sonic/pending_config_migration
+    rm -f ${PENDING_CONFIG_MIGRATION} || return $?
 }
 
 # Take a backup of current SONiC configuration
 do_config_backup()
 {
     echo "Taking backup of current configuration"
-    rm -rf /host/old_config
-    cp -ar /etc/sonic /host/old_config
-    [ -d ${CONFIG_POST_MIGRATION_HOOKS} ] && cp -arL ${CONFIG_POST_MIGRATION_HOOKS} /host/old_config
+    rm -rf /host/old_config || return $?
+    cp -ar /etc/sonic /host/old_config || return $?
+    if [ -d ${CONFIG_POST_MIGRATION_HOOKS} ]; then
+        cp -arL ${CONFIG_POST_MIGRATION_HOOKS} /host/old_config || return $?
+    fi
 
     # Execute custom hooks if present
     run_hookdir ${CONFIG_PRE_MIGRATION_HOOKS} ${CONFIG_SETUP_PRE_MIGRATION_FLAG}
@@ -500,9 +569,12 @@ do_config_backup()
 #    start ZTP
 boot_config()
 {
-    check_system_warm_boot
-    if [ -e /etc/sonic/pending_config_migration ] || [ -e  ${CONFIG_SETUP_POST_MIGRATION_FLAG} ]; then
-        do_config_migration
+    local config_migrated=false
+
+    check_system_warm_boot || return $?
+    if [ -e ${PENDING_CONFIG_MIGRATION} ] || [ -e  ${CONFIG_SETUP_POST_MIGRATION_FLAG} ]; then
+        do_config_migration || return $?
+        config_migrated=true
     fi
 
     # During warm boot the existing configuration must be preserved.
@@ -512,8 +584,10 @@ boot_config()
         echo "Warm boot detected, skipping config initialization and ZTP."
         # Mark config as initialized so subsequent boots don't re-trigger
         # initialization unnecessarily (warm-reboot to new image scenario).
-        set_config_db_initialized "1"
-        rm -f /etc/sonic/pending_config_initialization
+        if [ x"${config_migrated}" != x"true" ]; then
+            set_config_db_initialized "1" || return $?
+        fi
+        rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
         return 0
     fi
 
@@ -522,84 +596,95 @@ boot_config()
     # file system to trigger. pending_config_initialization will remain set
     # for multi-npu platforms if we reach this case.
     if [[ ($NUM_ASIC -gt 1) ]]; then
+        if golden_config_native_enabled; then
+            echo "Golden-native configuration is not yet supported for multi-ASIC initialization."
+            return 1
+        fi
         return 0
     fi	
 
-    if [ -e /etc/sonic/pending_config_initialization ] || [ -e  ${CONFIG_SETUP_INITIALIZATION_FLAG} ]; then
-        do_config_initialization
+    if [ -e ${PENDING_CONFIG_INITIALIZATION} ] || [ -e  ${CONFIG_SETUP_INITIALIZATION_FLAG} ]; then
+        do_config_initialization || return $?
     fi
 
     # If no startup configuration is found, create a configuration to be used.
     # do_config_initialization() will prefer minigraph.xml if available,
     # falling back to ZTP or factory default only when no minigraph exists.
     if [ ! -e ${CONFIG_DB_JSON} ]; then
-        do_config_initialization
+        do_config_initialization || return $?
         # force ZTP to restart (only relevant when ZTP was actually used,
         # i.e., when minigraph.xml was not available)
-        if [ ! -e ${MINGRAPH_FILE} ] && ztp_is_enabled ; then
+        if ! golden_config_native_enabled && [ ! -e ${MINGRAPH_FILE} ] && ztp_is_enabled ; then
             ztp_status=$(ztp status -c)
             if [ "$ztp_status" = "5:SUCCESS" ] || \
           [ "$ztp_status" = "6:FAILED" ]; then
                 # Clear completed ztp information, before starting a new one
-                ztp erase -y
+                ztp erase -y || return $?
             else
-                touch /tmp/pending_ztp_restart
+                touch /tmp/pending_ztp_restart || return $?
             fi
         fi
     fi
+
+    return 0
 }
 
-# read SONiC immutable variables
-[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+main()
+{
+    # read SONiC immutable variables
+    [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
-# read config-setup.conf
-[ -f $CONFIG_SETUP_CONF ] && . $CONFIG_SETUP_CONF
+    # read config-setup.conf
+    [ -f $CONFIG_SETUP_CONF ] && . $CONFIG_SETUP_CONF
+
+    PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+    # Parse the device specific asic conf file, if it exists
+    ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+    if [[ -f "$ASIC_CONF" ]]; then
+        source $ASIC_CONF
+    fi
+
+    PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+    if [[ -f "$PLATFORM_ENV_CONF_FILE" ]]; then
+        source $PLATFORM_ENV_CONF_FILE
+    fi
+
+    CMD=$1
+    if [ "$CMD" = "" ] || [ "$CMD" = "help" ] || \
+       [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
+        usage
+        return 1
+    fi
+
+    case "$CMD" in
+        boot)
+            boot_config
+            ;;
+        factory)
+            FACTORY_TYPE=$2
+            if [ "$FACTORY_TYPE" = "help" ] || [ "$FACTORY_TYPE" = "-h" ] || \
+               [ "$FACTORY_TYPE" = "--help" ]; then
+                usage_factory
+                return 1
+            fi
+            generate_config factory ${CONFIG_DB_JSON} ${FACTORY_TYPE}
+            ;;
+        backup)
+            do_config_backup
+            ;;
+        apply_tacacs)
+            apply_tacacs
+            ;;
+        *)
+            usage
+            return 1
+            ;;
+    esac
+}
 
 ### Execution starts here ###
-PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
-# Parse the device specific asic conf file, if it exists
-ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
-if [[ -f "$ASIC_CONF" ]]; then
-    source $ASIC_CONF
-fi
 
-PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
-if [[ -f "$PLATFORM_ENV_CONF_FILE" ]]; then
-    source $PLATFORM_ENV_CONF_FILE
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+    exit $?
 fi
-
-CMD=$1
-# Default command is boot
-if [ "$CMD" = "" ] || [ "$CMD" = "help" ] || \
-   [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
-    usage
-    exit 1
-fi
-
-# Process switch bootup event
-if [ "$CMD" = "boot" ]; then
-    boot_config
-fi
-
-# Process factory default configuration creation request
-if [ "$CMD" = "factory" ]; then
-    FACTORY_TYPE=$2
-    if [ "$FACTORY_TYPE" = "help" ] || [ "$FACTORY_TYPE" = "-h" ] || \
-       [ "$FACTORY_TYPE" = "--help" ]; then
-        usage_factory
-        exit 1
-    fi
-    generate_config factory ${CONFIG_DB_JSON} ${FACTORY_TYPE}
-fi
-
-# Take a backup of current configuration
-if [ "$CMD" = "backup" ]; then
-    do_config_backup
-fi
-
-# Apply tacacs from old configuration
-if [ "$CMD" = "apply_tacacs" ]; then
-    apply_tacacs
-fi
-
-exit 0
