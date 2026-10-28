@@ -65,3 +65,7 @@ KERNEL_SRC	filesystem path to the kernel build tree, default /lib/modules/$(KVER
 RFS_SQUASHFS_NAME	equals $* (the RFS target stem <installer>__<machine>__rfs.squashfs); it IS the cached artifact's own squashfs filename, so it cannot cause a stale cross-key reuse (Check 21)
 TARGET_MACHINE	equals $($*_MACHINE), a deterministic function of the RFS target stem $* which already encodes the machine in the artifact filename identity; not an independent content input (Check 21)
 TARGET_PATH	output directory path (target/) where build_debian.sh writes results; relocation only, does not alter rootfs content (Check 21)
+PYTHON_WHEELS_PATH	output directory for independently keyed wheel artifacts; changes their location, not wheel content
+installer_python_wheels	wheel list rendered by sonic_debian_extension.j2 and consumed only after the cached RFS first-stage exit in build_debian.sh; the final installer stage is always rebuilt
+scapy_wheel	patched wheel installed only after the cached RFS first-stage exit in build_debian.sh, including after rootfs restore; the final installer stage is always rebuilt
+DBGOPT	shell tracing option only (set -x); does not change rootfs content and is intentionally excluded from RFS_INLINE_ENV_FLAGS in Makefile.cache

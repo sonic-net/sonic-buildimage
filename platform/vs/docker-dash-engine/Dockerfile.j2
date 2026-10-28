@@ -12,15 +12,19 @@ RUN sed -i 's|http://.*.ubuntu.com|http://azure.archive.ubuntu.com|g' /etc/apt/s
 
 RUN apt-get update
 
-RUN apt-get install -f -y net-tools supervisor rsyslog  python3-pip
+RUN apt-get install -f -y net-tools rsyslog
+RUN apt-get install -y --only-upgrade curl libcurl4t64 libcurl3t64-gnutls
 RUN /usr/local/sbin/pip3 install --break-system-packages --no-cache-dir \
+    setuptools \
+    supervisor \
     supervisord-dependent-startup \
     googleapis-common-protos \
     protobuf \
     thrift \
     && pip3 check \
+    && pip3 uninstall -y pip \
     && rm -rf /root/.cache/uv
-RUN apt-get purge -y python3-pip && rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
 
 COPY ["start.sh", "/usr/bin/"]
 
@@ -38,6 +42,8 @@ COPY --from=p4-bindings /p4-bindings/ /
 RUN python3 -c "from p4.v1 import p4runtime_pb2; from p4.config.v1 import p4info_pb2"
 
 FROM scratch
+
+ENV PATH=/root/p4-python-venv/bin:$PATH
 
 # RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 COPY --from=runtime / /

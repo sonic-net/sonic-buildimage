@@ -923,6 +923,8 @@ start() {
         $(if [ -f /usr/bin/hw-management-bmc-powerctrl.sh ]; then echo "-v /usr/bin/hw-management-bmc-powerctrl.sh:/usr/bin/hw-management-bmc-powerctrl.sh:ro"; fi) \
         {#- sysfs (/sys) is already mounted into pmon unconditionally (see rules/docker-platform-monitor.mk), so only the IPC socket dir needs mounting. #}
         -v /run/hw-watchdog-mgrd:/run/hw-watchdog-mgrd:rw \
+        {#- Host tmpfs shared with pmon for non-persistent BMC runtime state, e.g. the leak test injection markers written by the platform API (sonic_platform/liquid_cooling.py). Docker creates the host directory if it does not exist yet. #}
+        -v /run/bmc:/run/bmc:rw \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform != "mellanox" %}
@@ -988,6 +990,12 @@ stop() {
         /usr/local/bin/container stop -t {{ stop_time }} $DOCKERNAME
     {%- elif docker_container_name == "teamd" %}
         # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
+        /usr/local/bin/container stop -t 60 $DOCKERNAME
+    {%- elif docker_container_name == "macsec" %}
+        # Longer timeout of 60 sec for macsecmgrd to disable MKA on every
+        # port and reap each per-port wpa_supplicant before SIGKILL. A
+        # short timeout leaves stale MACsec SAs in ASIC_DB whose SAK no
+        # longer matches APPL_DB.
         /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
         /usr/local/bin/container stop -t 60 $DOCKERNAME

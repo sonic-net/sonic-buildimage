@@ -8,7 +8,7 @@ set -x
 #
 #  SPDX-License-Identifier:     GPL-2.0
 
-MEM=10240
+MEM=16384
 DISK=$1
 ONIE_RECOVERY_ISO=$2
 INSTALLER=$3

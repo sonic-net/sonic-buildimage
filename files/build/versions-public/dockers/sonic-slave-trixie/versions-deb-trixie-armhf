@@ -27,3 +27,4 @@ node-xtend==4.0.2-3
 nodejs==20.19.2+dfsg-1+deb13u3
 nodejs-doc==20.19.2+dfsg-1+deb13u3
 python3-zopfli==0.2.3.post1-1
+tzdata==2026e-0+deb13u1

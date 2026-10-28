@@ -2249,8 +2249,7 @@ check_unhashed_patch_content() {
 # The rootfs (RFS) recipe in slave.mk invokes ./build_debian.sh with a prefix of
 # INLINE, per-command environment assignments (VAR=$(VAR) ./build_debian.sh) rather
 # than `export`ed variables. build_debian.sh reads those values and bakes them into
-# the rootfs the recipe SAVE_CACHEs, yet the RFS target key folds only
-# SONIC_COMMON_FLAGS_LIST. Check 10 scans EXPORTED variables only, so these inline
+# the rootfs the recipe SAVE_CACHEs. Check 10 scans EXPORTED variables only, so these inline
 # values are a structural blind spot. Data-driven: parse the inline env prefix of
 # every SAVE_CACHE-backed ./build_debian.sh recipe, keep only vars the consumed
 # script actually references, and default-deny those that are not in the key, not
@@ -2302,11 +2301,26 @@ check_inline_recipe_env_vars() {
         return
     fi
 
+    # Follow the existing RFS-specific key wiring, including secret fingerprints.
+    # Do not clear these inputs if the RFS target stops folding the helper list.
+    local rfs_dep_flags rfs_inline_flags=""
+    rfs_dep_flags=$(sed -n '/^\$(foreach pkg, \$(SONIC_RFS_TARGETS),/,/[^\\]$/p' "$MAKEFILE_CACHE" \
+        | grep '_DEP_FLAGS')
+    if grep -qF '$(RFS_INLINE_ENV_FLAGS)' <<< "$rfs_dep_flags"; then
+        rfs_inline_flags=$(sed -n '/^RFS_INLINE_ENV_FLAGS[[:space:]]*:=/,/[^\\]$/p' "$MAKEFILE_CACHE" \
+            | grep -oP '\$\(\w+\)' | tr -d '$()' | sort -u)
+    fi
+    if grep -qF '$($($(pkg)_INSTALLER)_IMAGE_TYPE)' <<< "$rfs_dep_flags"; then
+        rfs_inline_flags+=$'\nIMAGE_TYPE'
+    fi
+
     local v reason
     for v in $(printf '%s\n' "${!CAND[@]}" | sort); do
-        # Covered: folded into the RFS target's key (its DEP_FLAGS := SONIC_COMMON_FLAGS_LIST).
         if echo "$COMMON_FLAGS_LIST_CACHE" | grep -qx "$v"; then
             log_verbose "  $v — in SONIC_COMMON_FLAGS_LIST (OK)"; continue
+        fi
+        if echo "$rfs_inline_flags" | grep -qx "$v"; then
+            log_verbose "  $v — in RFS target DEP_FLAGS (OK)"; continue
         fi
         # Exported elsewhere -> Check 10 already models it; don't double-report.
         if flag_is_exported "$v"; then
@@ -2328,8 +2342,8 @@ check_inline_recipe_env_vars() {
             continue
         fi
         add_finding "P1" "$v" \
-            "Passed INLINE (non-export, '$v=\$($v)') to the cache-backed ./build_debian.sh rootfs recipe (SONIC_RFS_TARGETS) and read by build_debian.sh, but the RFS cache key folds only SONIC_COMMON_FLAGS_LIST — so the value is in neither the key nor any _DEP_FLAGS. Because it is not exported, Check 10 cannot see it: changing the value bakes new content into the rootfs while the same stale cached squashfs is restored" \
-            "Add \$($v) to the RFS target DEP_FLAGS (SONIC_COMMON_FLAGS_LIST in Makefile.cache) so the value is folded into the rootfs cache key; if it provably cannot affect rootfs content, record it (with a reason) in scripts/cache_key_export_waivers.tsv" \
+            "Passed INLINE (non-export, '$v=\$($v)') to the cache-backed ./build_debian.sh rootfs recipe (SONIC_RFS_TARGETS) and read by build_debian.sh, but absent from the common and RFS-specific key inputs. Because it is not exported, Check 10 cannot see it: changing the value bakes new content into the rootfs while the same stale cached squashfs is restored" \
+            "Add the value (or a fingerprint for secrets) to the RFS target DEP_FLAGS in Makefile.cache; if it provably cannot affect rootfs content, record it (with a reason) in scripts/cache_key_export_waivers.tsv" \
             "slave.mk build_debian.sh"
         ((found++))
         $VERBOSE && echo -e "  ${RED}P1${NC} \$$v (inline, consumed by build_debian.sh, unkeyed)"

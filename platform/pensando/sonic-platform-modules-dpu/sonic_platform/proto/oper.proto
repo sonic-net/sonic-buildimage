@@ -429,6 +429,34 @@ enum EventType {
                                                       (Severity)    = WARN,
                                                       (Description) = "DSE configuration is erased, potentially due to other critical events"];
 
+  DSE_RESET_REASON                            = 22   [(Category)    = SYSTEM,
+                                                      (Severity)    = INFO,
+                                                      (Description) = "DSE was reset due to various reset reasons"];
+
+  DSE_MGMT_CHANNEL_HEARTBEAT_MISS             = 23   [(Category)    = SYSTEM,
+                                                      (Severity)    = WARN,
+                                                      (Description) = "DSE managment channel heartbeat miss"];
+
+  DSE_SYSTEM_MEMORY_USAGE_HIGH                = 24   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "DSE system memory usage high"];
+
+  DSE_SYSTEM_MEMORY_USAGE_NORMAL              = 25   [(Category)    = SYSTEM,
+                                                      (Severity)    = INFO,
+                                                      (Description) = "DSE system memory usage normal"];
+
+  DSE_SERVICE_MEMORY_USAGE_HIGH               = 26   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "DSE service memory usage high"];
+
+  DSE_SERVICE_MEMORY_USAGE_NORMAL             = 27   [(Category)    = SYSTEM,
+                                                      (Severity)    = INFO,
+                                                      (Description) = "DSE service memory usage normal"];
+
+  DSE_FILESYSTEM_FAILURE                      = 28   [(Category)    = SYSTEM,
+                                                      (Severity)    = CRITICAL,
+                                                      (Description) = "Flash partition is in unexpected mode"];
+
   // ----------------------------- Network events -------------------------- //
   LINK_UP                              = 1001 [(Category)    = NETWORK,
                                                (Severity)    = INFO,
@@ -508,9 +536,36 @@ enum EventType {
                                                (Description) = "Error interrupt has been triggered"];
 
   // ----------------------------- NAT events ---------------------------- //
-  NAT_PORT_USAGE_THRESHOLD_EXCEEDED    = 5001 [(Category)    = RESOURCE,
-                                               (Severity)    = WARN,
-                                               (Description) = "Request to allocate more NAT portblocks"];
+  NAT_PORT_USAGE_THRESHOLD_EXCEEDED     = 5001 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "Request to allocate more NAT portblocks"];
+  NAT_POOL_TCP_SESSION_ABOVE_THRESHOLD  = 5002 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "NAT pool usage for TCP sessions exceeded threshold, TCP sessions will be dropped once the all NAT addresses and ports are used up"];
+  NAT_POOL_TCP_SESSION_BELOW_THRESHOLD  = 5003 [(Category)    = RESOURCE,
+                                                (Severity)    = INFO,
+                                                (Description) = "NAT pool usage for TCP sessions dropped below threshold"];
+  NAT_POOL_TCP_SESSION_LIMIT_REACHED    = 5004 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "NAT pool usage for TCP sessions reached 100%, any new TCP sessions will be dropped due to NAT pool resource exhaustion"];
+  NAT_POOL_UDP_SESSION_ABOVE_THRESHOLD  = 5005 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "NAT pool usage for UDP sessions exceeded threshold, UDP sessions will be dropped once the all NAT addresses and ports are used up"];
+  NAT_POOL_UDP_SESSION_BELOW_THRESHOLD  = 5006 [(Category)    = RESOURCE,
+                                                (Severity)    = INFO,
+                                                (Description) = "NAT pool usage for UDP sessions dropped below threshold"];
+  NAT_POOL_UDP_SESSION_LIMIT_REACHED    = 5007 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "NAT pool usage for UDP sessions reached 100%, any UDP new sessions will be dropped due to NAT pool resource exhaustion"];
+  NAT_POOL_ICMP_SESSION_ABOVE_THRESHOLD = 5008 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "NAT pool usage for ICMP sessions exceeded threshold, UDP sessions will be dropped once the all NAT addresses and ports are used up"];
+  NAT_POOL_ICMP_SESSION_BELOW_THRESHOLD = 5009 [(Category)    = RESOURCE,
+                                                (Severity)    = INFO,
+                                                (Description) = "NAT pool usage for ICMP sessions dropped below threshold"];
+  NAT_POOL_ICMP_SESSION_LIMIT_REACHED   = 5010 [(Category)    = RESOURCE,
+                                                (Severity)    = WARN,
+                                                (Description) = "NAT pool usage for ICMP sessions reached 100%, any UDP new sessions will be dropped due to NAT pool resource exhaustion"];
 
   // ----------------------------- HA events ----------------------------- //
   HA_SOCKET_INIT_FAILED                = 6001 [(Category)    = HA,
@@ -642,6 +697,18 @@ enum EventType {
   VNIC_OTHER_SESSION_WITHIN_THRESHOLD   = 7020 [(Category)    = WORKLOAD,
                                                 (Severity)    = INFO,
                                                 (Description) = "vnic's non-TCP/UDP/ICMP session count dropped below the configured threshold"];
+
+  LONG_LIVED_FLOW_DETECTED              = 7021 [(Category)    = WORKLOAD,
+                                                (Severity)    = INFO,
+                                                (Description) = "Long lived flow detected in session table"];
+
+  VNIC_OVERLAY_FLOW_SYNC_FAILURE        = 7022 [(Category)    = WORKLOAD,
+                                                (Severity)    = CRITICAL,
+                                                (Description) = "vnic's flow-sync failure detected for overlay traffic"];
+
+  VNIC_PINGMESH_FLOW_SYNC_FAILURE       = 7023 [(Category)    = WORKLOAD,
+                                                (Severity)    = CRITICAL,
+                                                (Description) = "vnic's flow-sync failure detected for pingmesh traffic"];
 }
 
 message EventFilter {
