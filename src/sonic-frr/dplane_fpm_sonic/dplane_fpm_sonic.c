@@ -731,8 +731,8 @@ DEFUN(fpm_show_counters_json, fpm_show_counters_json_cmd,
 /* Forward declarations for nhg-fib helpers defined at the end of this file. */
 static void fpm_nhg_pending_dels_flush_locked(struct fpm_nl_ctx *fnc,
 					      const char *caller);
-static void fpm_nhg_fib_forget_route(struct fpm_nl_ctx *fnc,
-				     struct zebra_dplane_ctx *ctx);
+static void fpm_nhg_fib_forget_route_locked(struct fpm_nl_ctx *fnc,
+					    struct zebra_dplane_ctx *ctx);
 static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
 					struct zebra_dplane_ctx *ctx,
 					enum dplane_op_e op, uint8_t *nl_buf,
@@ -2876,6 +2876,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	uint64_t obytes, obytes_peak;
 	enum dplane_op_e op = dplane_ctx_get_op(ctx);
 	struct nexthop *nexthop;
+	bool localsid_transition = false;
 
 	/*
 	 * If we were configured to not use next hop groups, then quit as soon
@@ -2931,11 +2932,13 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 			return fpm_nl_enqueue_route_nhg_fib(fnc, ctx, op, nl_buf,
 							    sizeof(nl_buf));
 		/*
-		 * A prefix can transition into a local SID route: release the
-		 * nhg-fib state it owned before handing it to the legacy
-		 * encoders below.
+		 * A prefix can transition into a local SID route, which the
+		 * legacy encoders below handle. Its nhg-fib state is released
+		 * only once the message replacing it has been queued, so a
+		 * failed encode or a full buffer leaves the binding in place
+		 * for the retry.
 		 */
-		fpm_nhg_fib_forget_route(fnc, ctx);
+		localsid_transition = true;
 	}
 
 	switch (op) {
@@ -3222,6 +3225,16 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 	/* Write current data. */
 	stream_write(fnc->obuf, nl_buf, (size_t)nl_buf_len);
+
+	/*
+	 * The legacy message replacing the nhg-fib route is now queued: only
+	 * now release the route's nhg-fib state, so a failed encode or a full
+	 * buffer above leaves the binding intact for the retry. The DELNHGFIB
+	 * ids this queues ride out with a later batch, strictly after this
+	 * frame.
+	 */
+	if (localsid_transition)
+		fpm_nhg_fib_forget_route_locked(fnc, ctx);
 
 	/* Account number of bytes waiting to be written. */
 	atomic_fetch_add_explicit(&fnc->counters.obuf_bytes,
@@ -4479,28 +4492,29 @@ static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
  * reference it holds would never be released — the top object (and everything
  * below it) would leak until the next reconnect flush.
  *
- * State only: no message is emitted here. Emitting the DELs at this point
- * would put them BEFORE the legacy route message this context is about to
- * encode, i.e. before the very message that drops the last reference — an
- * ordering the peer must never see. Handing them to fnc->pending_dels instead
- * makes them ride out with the next nhg-fib batch or with the end-of-drain
- * flush, strictly after this context's route message. The lag is harmless:
- * the peer keeps an unreferenced NHG for a moment longer, and the id cannot
- * be reused ahead of its DEL because every NEW is emitted behind the pending
- * DELs (see fpm_nhg_batch_add_pending_dels()).
+ * State only: no message is emitted here. Emitting the DELs here would put
+ * them BEFORE the legacy route message this call follows, i.e. before the
+ * very message that drops the last reference — an ordering the peer must
+ * never see. Handing them to fnc->pending_dels instead makes them ride out
+ * with the next nhg-fib batch or with the end-of-drain flush, strictly after
+ * this context's route message. The lag is harmless: the peer keeps an
+ * unreferenced NHG for a moment longer, and the id cannot be reused ahead of
+ * its DEL because every NEW is emitted behind the pending DELs (see
+ * fpm_nhg_batch_add_pending_dels()).
  *
- * obuf_mutex is still held: it is what serializes the tables and
- * fnc->pending_dels against the other thread.
+ * The caller must hold obuf_mutex: it is what serializes the tables and
+ * fnc->pending_dels against the other thread. fpm_nl_enqueue() calls this
+ * only after the replacing legacy message has been appended to fnc->obuf, so
+ * an encode failure or a full buffer leaves the nhg-fib binding intact for
+ * the retry.
  */
-static void fpm_nhg_fib_forget_route(struct fpm_nl_ctx *fnc,
-				     struct zebra_dplane_ctx *ctx)
+static void fpm_nhg_fib_forget_route_locked(struct fpm_nl_ctx *fnc,
+					    struct zebra_dplane_ctx *ctx)
 {
 	struct fpm_nhg_route_key key;
 
 	fpm_nhg_route_key_init(&key, dplane_ctx_get_table(ctx),
 			       dplane_ctx_get_dest(ctx), dplane_ctx_get_src(ctx));
-
-	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
 
 	fpm_nhg_route_forget(&fnc->nhg_tables, &key, &fnc->pending_dels);
 }
