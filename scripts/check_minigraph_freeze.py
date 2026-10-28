@@ -4,7 +4,7 @@
 import argparse
 import ast
 from collections import Counter
-from io import StringIO
+import json
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -61,18 +61,23 @@ def qualified_name(node, imports=None):
     return ""
 
 
-def static_text(node, bindings, seen=()):
-    """Resolve literal fragments without evaluating contributor code."""
+def static_value(node, bindings, seen=()):
+    """Resolve literal fragments while preserving argument sequence types."""
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
     if isinstance(node, ast.Name) and node.id not in seen:
         values = bindings.get(node.id, [])
         if len(values) == 1:
-            return static_text(values[0], bindings, (*seen, node.id))
+            return static_value(values[0], bindings, (*seen, node.id))
     if isinstance(node, (ast.List, ast.Tuple)):
-        return shlex.join(static_text(item, bindings, seen) for item in node.elts)
+        values = [static_text(item, bindings, seen) for item in node.elts]
+        return tuple(values) if isinstance(node, ast.Tuple) else values
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-        return static_text(node.left, bindings, seen) + static_text(node.right, bindings, seen)
+        left = static_value(node.left, bindings, seen)
+        right = static_value(node.right, bindings, seen)
+        if type(left) is type(right):
+            return left + right
+        return ""
     if isinstance(node, ast.JoinedStr):
         return "".join(
             static_text(value, bindings, seen)
@@ -85,6 +90,11 @@ def static_text(node, bindings, seen=()):
         if qualified_name(node.func).rsplit(".", 1)[-1] in {"Path", "PurePath"}:
             return "/".join(static_text(arg, bindings, seen) for arg in node.args)
     return ""
+
+
+def static_text(node, bindings, seen=()):
+    value = static_value(node, bindings, seen)
+    return shlex.join(value) if isinstance(value, (list, tuple)) else value
 
 
 def shell_substitutions(line):
@@ -116,6 +126,52 @@ def shell_substitutions(line):
             text.append(char)
             index += 1
     return "".join(text), commands
+
+
+def shell_segments(line):
+    """Split operators before tokenization removes shell quotes and escapes."""
+    quote = None
+    start = 0
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if char == "\\" and quote != "'":
+            index += 2
+            continue
+        if char in "'\"" and (quote is None or quote == char):
+            quote = char if quote is None else None
+        elif quote is None:
+            if char == "#" and (
+                index == 0 or line[index - 1].isspace()
+                or line[index - 1] in ";&|()<>"
+            ):
+                yield line[start:index]
+                return
+            if char in ";&|()<>":
+                yield line[start:index]
+                start = index + 1
+        index += 1
+    yield line[start:]
+
+
+def yaml_command(value):
+    """Remove an enclosing YAML scalar quote, not quotes within the shell."""
+    if value.startswith("'"):
+        match = re.fullmatch(r"'((?:[^']|'')*)'\s*(?:#.*)?", value)
+        if match:
+            return match[1].replace("''", "'")
+        raise AnalysisError("Cannot decode a single-quoted YAML command")
+    if value.startswith('"'):
+        try:
+            command, end = json.JSONDecoder().raw_decode(value)
+        except ValueError as error:
+            raise AnalysisError(
+                "Cannot decode a double-quoted YAML command: {}".format(error)
+            ) from error
+        if value[end:].strip() and not value[end:].lstrip().startswith("#"):
+            raise AnalysisError("Unexpected text after a quoted YAML command")
+        return command
+    return value
 
 
 def shell_dependencies(source):
@@ -163,32 +219,32 @@ def shell_dependencies(source):
         if not re.search(r"minigraph|sonic-cfggen", line):
             continue
 
+        inline = re.match(
+            r"^\s*(?:-\s*)?(?:[\w.]+\.)?(?:shell|command|run):\s*(.*)$",
+            line,
+        )
+        if inline:
+            references.update(shell_dependencies(yaml_command(inline[1])))
+            continue
+
         # Double-quoted diagnostics can execute substitutions; literal text cannot.
         line, substitutions = shell_substitutions(line)
         for command in substitutions:
             references.update(shell_dependencies(command))
-        lexer = shlex.shlex(StringIO(line), posix=True, punctuation_chars=";&|()<>")
-        lexer.whitespace_split = True
         try:
-            tokens = list(lexer)
+            segments = [
+                shlex.split(segment) for segment in shell_segments(line)
+            ]
         except ValueError as error:
             raise AnalysisError("Cannot tokenize a minigraph-related command: {}".format(error)) from error
-        segments = [[]]
-        for token in tokens:
-            if token and all(char in ";&|()<>" for char in token):
-                segments.append([])
-            else:
-                segments[-1].append(token)
         for words in segments:
             if not words or words[0] in {"echo", "printf", "logger"}:
                 continue
             if words[0] == "-":
                 words = words[1:]
-            if words and words[0].rsplit(".", 1)[-1] in {
-                "shell:", "command:", "run:",
-            }:
-                references.update(shell_dependencies(" ".join(words[1:])))
-                continue
+            for word in words:
+                for path in XML_PATH.findall(word):
+                    references[("XML path", path)] += 1
             for position, word in enumerate(words):
                 executable = word.rsplit("=", 1)[-1].rsplit("/", 1)[-1]
                 if executable == "sonic-cfggen" and any(
@@ -204,9 +260,12 @@ def shell_dependencies(source):
                 ):
                     references[("legacy helper", executable)] += 1
                 if executable in {"bash", "sh", "dash"} and words[position + 1:position + 2] == ["-c"]:
-                    references.update(shell_dependencies(" ".join(words[position + 2:])))
-                for path in XML_PATH.findall(word):
-                    references[("XML path", path)] += 1
+                    if len(words) > position + 2:
+                        references.update(
+                            shell_dependencies(words[position + 2])
+                        )
+                    # The remaining words are positional arguments, not code.
+                    break
     return references
 
 
@@ -239,7 +298,7 @@ def python_dependencies(source):
                     if node.module else name.name
                 )
                 imports[name.asname or name.name] = "." * node.level + target
-                if node.module and any(
+                if any(
                     part in PARSER_MODULES for part in target.split(".")
                 ):
                     aliases[name.asname or name.name] = target
@@ -319,17 +378,16 @@ def python_dependencies(source):
 
 def dependencies(path, content, mode):
     name = PurePosixPath(path)
+    references = Counter()
+    if name.name == "minigraph.xml" and "tests" not in name.parts:
+        references[("shipped XML artifact", path)] += 1
     if mode == "120000":
         target = content.decode("utf-8")
         if PurePosixPath(target).name in {module + ".py" for module in PARSER_MODULES}:
-            return Counter({("parser symlink", target): 1})
-        return Counter()
-    if name.suffix in {".md", ".rst"}:
-        return Counter()
-    if name.suffix == ".xml":
-        if name.name == "minigraph.xml" and "tests" not in name.parts:
-            return Counter({("shipped XML artifact", path): 1})
-        return Counter()
+            references[("parser symlink", target)] += 1
+        return references
+    if name.suffix in {".md", ".rst", ".xml"}:
+        return references
     if b"\0" in content:
         if name.suffix == ".py":
             raise AnalysisError("Python source contains a NUL byte")

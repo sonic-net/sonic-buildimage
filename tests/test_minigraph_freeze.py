@@ -1,8 +1,12 @@
 import importlib.util
 import io
+import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
@@ -50,6 +54,32 @@ class DependencyTest(unittest.TestCase):
         ]:
             with self.subTest(source=source):
                 self.assertFalse(guard.python_dependencies(source))
+
+    def test_relative_parser_imports_and_aliases(self):
+        for module in sorted(guard.PARSER_MODULES):
+            with self.subTest(module=module):
+                source = (
+                    "from . import {} as parser\n"
+                    "parser.parse_xml(path)\n".format(module)
+                )
+                self.assertTrue(guard.python_dependencies(source))
+                self.assertEqual(
+                    guard.python_dependencies(source),
+                    guard.python_dependencies(source.replace(
+                        "as parser", "as graph"
+                    ).replace("parser.parse_xml", "graph.parse_xml")),
+                )
+                self.assertTrue(
+                    guard.python_dependencies(
+                        source + "parser.parse_xml(other)\n"
+                    ) - guard.python_dependencies(source)
+                )
+                self.assertTrue(guard.python_dependencies(
+                    "from .. import {}".format(module)
+                ))
+        self.assertFalse(guard.python_dependencies(
+            "from . import json\njson.loads(data)"
+        ))
 
     def test_added_reference_to_importlib_parser(self):
         before = (
@@ -158,6 +188,11 @@ assert "config load_minigraph" not in commands
         cases = [
             "subprocess.run(['echo', '$(sonic-cfggen -m)'])",
             "cmd = ['echo', '$(sonic-cfggen -m)']\nsubprocess.run(cmd)",
+            "subprocess.run(['echo', ';', 'sonic-cfggen', '-m'])",
+            "subprocess.run(['printf', '%s', '&&', 'config', "
+            "'load_minigraph'])",
+            "subprocess.run(['bash', '-c', 'echo done', 'name', ';', "
+            "'sonic-cfggen', '-m'])",
         ]
         for source in cases:
             with self.subTest(source=source):
@@ -165,6 +200,82 @@ assert "config load_minigraph" not in commands
         self.assertTrue(guard.python_dependencies(
             """subprocess.run(['bash', '-c', 'echo "$(sonic-cfggen -m)"'])"""
         ))
+
+    def test_literal_command_concatenation_preserves_argument_boundaries(self):
+        cases = [
+            "subprocess.run(['sonic-cfggen'] + ['-m'])",
+            "subprocess.run(('sonic-cfggen',) + ('-m',))",
+            "prefix = ['sonic-cfggen']\nflags = ['-m']\n"
+            "subprocess.run(prefix + flags)",
+            "prefix = ['config']\ncmd = prefix + ['load_minigraph', '-y']\n"
+            "subprocess.run(cmd)",
+            "subprocess.run(['sonic-' + 'cfggen'] + ['-H'] + ['-m'])",
+            "subprocess.run('sonic-cfggen' + ' -m')",
+        ]
+        for source in cases:
+            with self.subTest(source=source):
+                self.assertTrue(guard.python_dependencies(source))
+        for source in [
+            "subprocess.run(['echo'] + [';', 'sonic-cfggen', '-m'])",
+            "subprocess.run(['echo'] + ['$(sonic-cfggen -m)'])",
+            "subprocess.run(['sonic-cfggen-'] + ['m'])",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.python_dependencies(source))
+
+    def test_quoted_shell_operators_are_not_command_separators(self):
+        for source in [
+            "echo ';' sonic-cfggen -m",
+            'printf "%s" "&&" config load_minigraph',
+            r"echo \; sonic-cfggen -m",
+            "logger '|' sonic-cfggen -m",
+            "echo done # ; sonic-cfggen -m",
+            """bash -c 'echo ";" sonic-cfggen -m'""",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.shell_dependencies(source))
+        for source in [
+            "echo done; sonic-cfggen -m",
+            "echo ';' && sonic-cfggen -m",
+            "true | sonic-cfggen -m",
+            '(sonic-cfggen -m)',
+            'echo ";" "$(sonic-cfggen -m)"',
+            "bash -c 'sonic-cfggen -m' ignored",
+            "bash -c 'echo done' ignored; sonic-cfggen -m",
+            """bash -c 'cat "$1"' ignored /etc/sonic/minigraph.xml""",
+        ]:
+            with self.subTest(source=source):
+                self.assertTrue(guard.shell_dependencies(source))
+
+    def test_inline_yaml_preserves_shell_and_scalar_quoting(self):
+        for source in [
+            "run: echo '$(sonic-cfggen -m)'",
+            "- ansible.builtin.shell: echo ';' sonic-cfggen -m",
+            """run: "echo '$(sonic-cfggen -m)'" """,
+            "run: 'echo ''$(sonic-cfggen -m)'''",
+            r'run: "echo \"\\$(sonic-cfggen -m)\""',
+            "run: echo done # $(sonic-cfggen -m)",
+            "run: |\n  echo '$(sonic-cfggen -m)'\n",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.shell_dependencies(source))
+        for source in [
+            'run: echo "$(sonic-cfggen -m)"',
+            "run: 'sonic-cfggen -m' # invoke the parser",
+            r'run: "echo \"$(sonic-cfggen -m)\""',
+            "command: config load_minigraph -y",
+            "- ansible.builtin.shell: sonic-cfggen -m",
+            "run: >\n  sonic-cfggen\n  -m\n",
+        ]:
+            with self.subTest(source=source):
+                self.assertTrue(guard.shell_dependencies(source))
+        for source in [
+            "run: 'sonic-cfggen -m", 'run: "sonic-cfggen -m',
+            r'run: "sonic-cfggen\x20-m"',
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.shell_dependencies(source)
 
     def test_added_use_of_existing_shell_path_variable(self):
         before = 'MINGRAPH_FILE="/etc/sonic/minigraph.xml"\ncat "$MINGRAPH_FILE"\n'
@@ -182,7 +293,7 @@ assert "config load_minigraph" not in commands
             guard.shell_dependencies('sonic-cfggen -m "unfinished')
 
 
-class GitComparisonTest(unittest.TestCase):
+class GitFixtureTest(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="minigraph-freeze-")
         self.addCleanup(self.directory.cleanup)
@@ -199,13 +310,20 @@ class GitComparisonTest(unittest.TestCase):
     def tree(self, files):
         self.run_git("read-tree", "--empty")
         for path, content in files.items():
+            mode = "100644"
+            if isinstance(content, tuple):
+                mode, content = content
             object_id = self.run_git("hash-object", "-w", "--stdin", data=content.encode())
-            self.run_git("update-index", "--add", "--cacheinfo", "100644", object_id, path)
+            self.run_git(
+                "update-index", "--add", "--cacheinfo", mode, object_id, path
+            )
         return self.run_git("write-tree")
 
     def compare(self, before, after):
         return guard.check_changes(self.repo, self.tree(before), self.tree(after))
 
+
+class GitComparisonTest(GitFixtureTest):
     def test_frozen_parser_and_adapters_cannot_be_changed_or_renamed(self):
         for path in sorted(guard.FROZEN_FILES):
             with self.subTest(path=path):
@@ -255,6 +373,21 @@ class GitComparisonTest(unittest.TestCase):
             "docs/retirement.md": "Do not add config load_minigraph.",
         }))
 
+    def test_shipped_xml_symlinks_are_compared(self):
+        path = "device/vendor/minigraph.xml"
+        link = ("120000", "../shared/base.xml")
+        self.assertTrue(self.compare({}, {path: link}))
+        self.assertFalse(self.compare(
+            {path: link}, {path: link, "notes.md": "unchanged dependency"}
+        ))
+        self.assertFalse(self.compare({path: link}, {}))
+        fixture = {"tests/fixtures/minigraph.xml": link}
+        self.assertFalse(self.compare({}, fixture))
+        self.assertTrue(self.compare(fixture, {path: link}))
+        self.assertTrue(self.compare({}, {
+            "scripts/parser.py": ("120000", "../minigraph.py"),
+        }))
+
     def test_invalid_revision_fails_closed(self):
         tree = self.tree({})
         with self.assertRaises(guard.AnalysisError):
@@ -286,6 +419,151 @@ class GitComparisonTest(unittest.TestCase):
             self.assertEqual(2, guard.main(["--base", "missing", "--head", "missing"]))
         self.assertIn("analysis failure", output.getvalue())
         self.assertNotIn("No frozen parser edits", output.getvalue())
+
+
+class WorkflowComparisonTest(GitFixtureTest):
+    def setUp(self):
+        super().setUp()
+        self.bash = shutil.which("bash")
+        if os.name == "nt":
+            git_path = Path(shutil.which("git"))
+            self.bash = str(git_path.parents[1] / "bin" / "bash.exe")
+        if not self.bash or not Path(self.bash).is_file():
+            self.skipTest("Bash is required to exercise the workflow")
+        workflow = (
+            MODULE_PATH.parents[1] / ".github/workflows/protect-file.yml"
+        )
+        self.workflow = workflow.read_text()
+
+    def step_script(self, job, name):
+        job_body = re.search(
+            r"(?ms)^  " + re.escape(job) + r":\n(.*?)(?=^  \S|\Z)",
+            self.workflow,
+        )[1]
+        step = re.search(
+            r"(?ms)^      - name: " + re.escape(name)
+            + r"\n(.*?)(?=^      - |\Z)", job_body,
+        )
+        self.assertIsNotNone(step, "Missing workflow step: " + name)
+        script = re.search(r"(?ms)^        run: \|\n(.*)", step[1])
+        self.assertIsNotNone(script, "Expected an inline Bash script")
+        return textwrap.dedent(script[1])
+
+    def commit(self, files, *parents):
+        arguments = [
+            "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com",
+            "commit-tree", self.tree(files),
+        ]
+        for parent in parents:
+            arguments.extend(["-p", parent])
+        return self.run_git(*arguments, data=b"Workflow test fixture\n")
+
+    def shallow_merge(self, changes=None, depth=2):
+        files = {
+            "src/sonic-config-engine/minigraph.py": "original parser",
+            "files/build_templates/init_cfg.json.j2": "{}",
+        }
+        old_base = self.commit(files)
+        changes = changes or {"scripts/example.sh": "echo done"}
+        head = self.commit(dict(files, **changes), old_base)
+        files.update({
+            "src/sonic-config-engine/minigraph.py": "upstream parser change",
+            "files/build_templates/init_cfg.json.j2": '{"upstream": true}',
+        })
+        base = self.commit(files, old_base)
+        merge = self.commit(dict(files, **changes), base, head)
+        self.run_git("update-ref", "refs/heads/candidate", merge)
+        checkout = self.repo / "checkout"
+        self.run_git(
+            "clone", "--quiet", "--no-local", "--depth", str(depth),
+            "--branch", "candidate", self.repo.as_uri(), str(checkout),
+        )
+        self.repo = checkout
+        return old_base, base, head, merge
+
+    def run_step(self, job, name, **env):
+        return subprocess.run(
+            [self.bash, "--noprofile", "--norc", "-c",
+             self.step_script(job, name)],
+            cwd=self.repo, env=dict(os.environ, **env),
+            capture_output=True, text=True, check=False,
+        )
+
+    def resolve(self, job, head, merge):
+        output = self.repo / "comparison-output.txt"
+        output.write_text("")
+        result = self.run_step(
+            job, "Resolve pull request comparison",
+            PR_HEAD_SHA=head, MERGE_SHA=merge, GITHUB_OUTPUT=output.name,
+        )
+        values = dict(line.split("=", 1) for line in
+                      output.read_text().splitlines())
+        return result, values
+
+    def test_advanced_base_and_shallow_checkout_use_matching_snapshots(self):
+        old_base, base, head, merge = self.shallow_merge()
+        with self.assertRaises(guard.AnalysisError):
+            guard.git(self.repo, "cat-file", "-e", old_base)
+        for job in ("minigraph-freeze", "check-file"):
+            with self.subTest(job=job):
+                result, values = self.resolve(job, head, merge)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual({"base": base, "head": merge}, values)
+                self.assertFalse(guard.check_changes(
+                    self.repo, values["base"], values["head"]
+                ))
+        for branch in ("master", "202605"):
+            result = self.run_step(
+                "check-file", "Check protected files",
+                BASE_SHA=base, HEAD_SHA=merge, BASE_BRANCH=branch,
+                GUIDE_URL=guard.GUIDE_URL,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_parser_changes_are_still_blocked(self):
+        _, base, head, merge = self.shallow_merge({
+            "src/sonic-config-engine/minigraph.py": "PR parser change",
+        })
+        for job in ("minigraph-freeze", "check-file"):
+            result, values = self.resolve(job, head, merge)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(guard.check_changes(
+                self.repo, values["base"], values["head"]
+            ))
+        for branch, expected in (("master", 0), ("202605", 1)):
+            result = self.run_step(
+                "check-file", "Check protected files",
+                BASE_SHA=base, HEAD_SHA=merge, BASE_BRANCH=branch,
+                GUIDE_URL=guard.GUIDE_URL,
+            )
+            self.assertEqual(expected, result.returncode, result.stderr)
+
+    def test_mismatched_or_missing_revisions_fail_closed(self):
+        _, base, head, merge = self.shallow_merge()
+        for job in ("minigraph-freeze", "check-file"):
+            for expected_head, expected_merge in (
+                (base, merge), (head, base), ("", merge),
+                (head, ""), (head, "missing"),
+            ):
+                with self.subTest(job=job, head=expected_head,
+                                  merge=expected_merge):
+                    result, values = self.resolve(
+                        job, expected_head, expected_merge
+                    )
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertFalse(values)
+            self.run_git("checkout", "--quiet", "--detach", head)
+            result, values = self.resolve(job, head, head)
+            self.assertNotEqual(0, result.returncode)
+            self.assertFalse(values)
+            self.run_git("checkout", "--quiet", "--detach", merge)
+
+    def test_missing_merge_parents_fail_closed(self):
+        _, _, head, merge = self.shallow_merge(depth=1)
+        for job in ("minigraph-freeze", "check-file"):
+            result, values = self.resolve(job, head, merge)
+            self.assertNotEqual(0, result.returncode)
+            self.assertFalse(values)
 
 
 if __name__ == "__main__":

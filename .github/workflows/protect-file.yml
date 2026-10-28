@@ -17,16 +17,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 2
           persist-credentials: false
+
+      - name: Resolve pull request comparison
+        id: comparison
+        env:
+          MERGE_SHA: ${{ github.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${PR_HEAD_SHA:?Missing pull request head SHA}"
+          head_sha=$(git rev-parse --verify "${MERGE_SHA:?Missing pull request merge SHA}^{commit}")
+          if [[ "$(git rev-parse HEAD)" != "$head_sha" ]]; then
+              echo "::error::Checkout is not the expected pull request merge commit."
+              exit 2
+          fi
+          read -r -a parents <<< "$(git show -s --format=%P "$head_sha")"
+          if [[ "${#parents[@]}" -ne 2 || "${parents[1]}" != "$PR_HEAD_SHA" ]]; then
+              echo "::error::Expected a two-parent test merge containing this pull request head."
+              exit 2
+          fi
+          base_sha=$(git rev-parse --verify "${parents[0]}^{commit}")
+          printf 'base=%s\nhead=%s\n' "$base_sha" "$head_sha" >> "$GITHUB_OUTPUT"
 
       - name: Test minigraph detector
         run: python3 -m unittest discover -s tests -p test_minigraph_freeze.py
 
       - name: Check minigraph retirement policy
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ steps.comparison.outputs.base }}
+          HEAD_SHA: ${{ steps.comparison.outputs.head }}
           MINIGRAPH_GUIDE_URL: ${{ github.server_url }}/${{ github.event.pull_request.head.repo.full_name }}/blob/${{ github.event.pull_request.head.sha }}/.github/workflows/README.md#minigraph-retirement-gate
         run: python3 scripts/check_minigraph_freeze.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
@@ -36,13 +59,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 2
           persist-credentials: false
 
+      - name: Resolve pull request comparison
+        id: comparison
+        env:
+          MERGE_SHA: ${{ github.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${PR_HEAD_SHA:?Missing pull request head SHA}"
+          head_sha=$(git rev-parse --verify "${MERGE_SHA:?Missing pull request merge SHA}^{commit}")
+          if [[ "$(git rev-parse HEAD)" != "$head_sha" ]]; then
+              echo "::error::Checkout is not the expected pull request merge commit."
+              exit 2
+          fi
+          read -r -a parents <<< "$(git show -s --format=%P "$head_sha")"
+          if [[ "${#parents[@]}" -ne 2 || "${parents[1]}" != "$PR_HEAD_SHA" ]]; then
+              echo "::error::Expected a two-parent test merge containing this pull request head."
+              exit 2
+          fi
+          base_sha=$(git rev-parse --verify "${parents[0]}^{commit}")
+          printf 'base=%s\nhead=%s\n' "$base_sha" "$head_sha" >> "$GITHUB_OUTPUT"
+
       - name: Check protected files
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ steps.comparison.outputs.base }}
+          HEAD_SHA: ${{ steps.comparison.outputs.head }}
           BASE_BRANCH: ${{ github.base_ref }}
           GUIDE_URL: ${{ github.server_url }}/${{ github.event.pull_request.head.repo.full_name }}/blob/${{ github.event.pull_request.head.sha }}/.github/workflows/README.md#protected-configuration-files
         shell: bash
@@ -54,7 +100,7 @@ jobs:
           if [[ "${BASE_BRANCH:?Missing pull request base branch}" != "master" ]]; then
               protected_files+=('src/sonic-config-engine/minigraph.py')
           fi
-          # Compare the event's base with its test merge, not a moving branch ref.
+          # Compare the verified merge with its own base, not an older event base.
           changed_files=$(git diff --no-renames --name-only \
               "${BASE_SHA:?Missing pull request base SHA}" \
               "${HEAD_SHA:?Missing pull request merge SHA}" \

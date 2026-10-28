@@ -155,13 +155,21 @@ private operational data in public discussions.
 ### Detector behavior
 
 For other changed files, `scripts/check_minigraph_freeze.py` compares counts
-per file and reference between the event's base and test-merge snapshots.
-It recognizes named Python parser imports/aliases, literal
+per file and reference between the checked-out test merge and its first
+parent. Both guard jobs pin checkout to the event's merge SHA and verify
+that its second parent is the expected PR head. This avoids comparing a
+newer test merge against an older event base or unrelated upstream changes.
+Missing or mismatched revisions fail the comparison.
+
+The detector recognizes named Python parser imports/aliases (including
+relative imports), literal
 `importlib.import_module` imports and simple bindings of their results,
 common command and file APIs, simple imported aliases of `subprocess`/`os`
-command APIs, simple literal bindings, visible shell commands, and common YAML
-command blocks. It also checks literal minigraph XML access and new shipped
-`minigraph.xml` files outside paths containing a `tests` component.
+command APIs, simple literal bindings and argument-list concatenation,
+visible shell commands, and common YAML command blocks and inline scalars.
+Quoted shell punctuation and literal diagnostics are not executable commands.
+It also checks literal minigraph XML access and new shipped `minigraph.xml`
+files, including symlinks, outside paths containing a `tests` component.
 
 Mixed-purpose files are not frozen wholesale. Markdown/RST documentation and
 Python comments/docstrings are ignored. Unused Python fixture/assertion
@@ -178,9 +186,12 @@ are not fully covered. Shell heuristics can also flag ambiguous text.
 Imported API alias recognition is conservative when names are rebound or
 shadowed.
 
-Unsupported Python syntax, unparseable relevant shell commands, decoding
-errors, or unavailable Git objects fail analysis rather than return a clean
-result. Investigate these separately from policy violations.
+Unsupported Python syntax, unparseable relevant shell commands, unsupported
+quoted YAML escapes, decoding errors, or unavailable Git objects fail
+analysis rather than return a clean result. Double-quoted YAML command
+scalars use JSON-compatible escapes; single-quoted scalars support YAML's
+doubled single quotes. Investigate analysis failures separately from policy
+violations.
 
 Utilities CLI/migration and `sonic-mgmt` generation/setup/facts need companion
 checks in their own repositories. This master-only check does not enforce
