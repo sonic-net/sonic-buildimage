@@ -15,6 +15,97 @@ BINDING_COMMAND = IPV4_COMMAND.commands["binding"]
 RANGE_COMMAND = IPV4_COMMAND.commands["range"]
 
 
+@pytest.fixture
+def prefix_db(mock_db):
+    for table in ("DHCP_SERVER_IPV4_BINDING", "DHCP_SERVER_IPV4_PORT"):
+        for key in mock_db.keys("CONFIG_DB", table + "|Vlan100|*"):
+            mock_db.delete("CONFIG_DB", key)
+    mock_db.hmset("CONFIG_DB", "VLAN_INTERFACE|Vlan100|100.1.2.1/24", {})
+    return mock_db
+
+
+@pytest.mark.parametrize("mode", ["PORT", "MATCH"])
+@pytest.mark.parametrize("operation", [
+    "add", "add-range", "same-entry", "binding-update", "range-update", "enable", "mode-update"
+])
+def test_multiple_served_prefixes_rejected_only_for_match(prefix_db, mode, operation):
+    db = prefix_db
+    table = "DHCP_SERVER_IPV4_BINDING" if mode == "MATCH" else "DHCP_SERVER_IPV4_PORT"
+    first = "first" if mode == "MATCH" else "Ethernet2"
+    second = "second" if mode == "MATCH" else "Ethernet4"
+    first_entry = {"ips@": "100.1.1.30"}
+    second_entry = {"ips@": "100.1.2.30"}
+    if mode == "MATCH":
+        first_entry["matches@"] = "vendor-a"
+        second_entry["matches@"] = "vendor-b"
+    db.hmset("CONFIG_DB", "{}|Vlan100|{}".format(table, first), first_entry)
+    db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", mode)
+    if operation in ("add", "add-range"):
+        command = BINDING_COMMAND.commands["add"] if mode == "MATCH" else IPV4_COMMAND.commands["bind"]
+        args = ["Vlan100", second]
+        args += ["--range=range5"] if operation == "add-range" else ["100.1.2.30"]
+        if mode == "MATCH":
+            args += ["--match=vendor-b"]
+    elif operation == "same-entry":
+        command = BINDING_COMMAND.commands["update"] if mode == "MATCH" else IPV4_COMMAND.commands["bind"]
+        args = ["Vlan100", first, "100.1.1.30,100.1.2.30"]
+    elif operation == "binding-update":
+        second_entry["ips@"] = "100.1.1.40"
+        db.hmset("CONFIG_DB", "{}|Vlan100|{}".format(table, second), second_entry)
+        command = BINDING_COMMAND.commands["update"] if mode == "MATCH" else IPV4_COMMAND.commands["bind"]
+        args = ["Vlan100", second, "100.1.2.30"]
+    elif operation == "range-update":
+        second_entry.pop("ips@")
+        second_entry["ranges@"] = "range3"
+        db.hmset("CONFIG_DB", "{}|Vlan100|{}".format(table, second), second_entry)
+        command = RANGE_COMMAND.commands["update"]
+        args = ["range3", "100.1.2.30"]
+    else:
+        db.hmset("CONFIG_DB", "{}|Vlan100|{}".format(table, second), second_entry)
+        if operation == "enable":
+            db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state", "disabled")
+            command, args = IPV4_COMMAND.commands["enable"], ["Vlan100"]
+        else:
+            db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "PORT" if mode == "MATCH" else "MATCH")
+            command, args = IPV4_COMMAND.commands["update"], ["Vlan100", "--mode=" + mode]
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+
+    result = invoke(db, command, args)
+
+    if mode == "MATCH":
+        assert result.exit_code == 2, result.output
+        assert "DHCP pools on Vlan100 cannot span multiple IPv4 prefixes" in result.output
+        assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+    else:
+        assert result.exit_code == 0, result.output
+        assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} != before
+
+
+@pytest.mark.parametrize("mode", ["PORT", "MATCH"])
+@pytest.mark.parametrize("wide_prefix", [False, True])
+def test_single_served_prefix_allowed(prefix_db, mode, wide_prefix):
+    db = prefix_db
+    first_ip, second_ip = "100.1.1.30", "100.1.1.40"
+    if wide_prefix:
+        db.delete("CONFIG_DB", "VLAN_INTERFACE|Vlan100|100.1.1.1/24")
+        db.hmset("CONFIG_DB", "VLAN_INTERFACE|Vlan100|172.17.31.254/19", {})
+        first_ip, second_ip = "172.17.0.1", "172.17.26.1"
+    db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", mode)
+    if mode == "MATCH":
+        db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|first",
+                 {"matches@": "vendor-a", "ips@": first_ip})
+        command = BINDING_COMMAND.commands["add"]
+        args = ["Vlan100", "second", "--match=vendor-b", second_ip]
+    else:
+        db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet2", {"ips@": first_ip})
+        command = IPV4_COMMAND.commands["bind"]
+        args = ["Vlan100", "Ethernet4", second_ip]
+
+    result = invoke(db, command, args)
+
+    assert result.exit_code == 0, result.output
+
+
 def invoke(mock_db, command, args):
     db = clicommon.Db()
     db.db = mock_db
@@ -62,9 +153,8 @@ class TestConfigDHCPServerMatch:
 
         result = invoke(mock_db, IPV4_COMMAND.commands["update"], ["Vlan100", "--mode=MATCH"])
 
-        assert result.exit_code == 2
-        assert "requires at least one binding" in result.output
-        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode") == "PORT"
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode") == "MATCH"
 
     def test_enable_match_interface_with_valid_bindings(self, mock_db):
         mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
@@ -80,9 +170,8 @@ class TestConfigDHCPServerMatch:
 
         result = invoke(mock_db, IPV4_COMMAND.commands["enable"], ["Vlan300"])
 
-        assert result.exit_code == 2
-        assert "requires at least one binding" in result.output
-        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "state") == "disabled"
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "state") == "enabled"
 
     def test_delete_interface_referenced_by_match_binding(self, mock_db):
         for key in list(mock_db.keys("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|*")):
@@ -338,8 +427,7 @@ class TestConfigDHCPServerMatch:
     def test_range_update_breaking_binding_rejected(self, mock_db):
         """range3 is bound by Vlan100/fallback; moving it off-subnet must be refused.
 
-        dhcp_cfggen aborts the whole Kea config when a pool falls outside the VLAN,
-        so this would take DHCP down for every interface, not just this one.
+        dhcp_cfggen would silently drop the binding's pool.
         """
         result = invoke(
             mock_db,
@@ -945,3 +1033,80 @@ class TestConfigDHCPServerMatch:
 
         assert result.exit_code == 2
         assert dict(mock_db.get_all("CONFIG_DB", key)) == before
+
+    @pytest.mark.parametrize("ip_list, exit_code", [
+        ("100.1.1.20", 0),
+        ("100.1.1.21", 0),
+        ("100.1.1.20,100.1.1.21", 2),
+    ])
+    def test_binding_add_pool_overlap(self, mock_db, ip_list, exit_code):
+        """maia-a owns 100.1.1.20; Kea can share an identical pool but not compile a partial overlap."""
+        result = invoke(
+            mock_db,
+            BINDING_COMMAND.commands["add"],
+            ["Vlan100", "maia-b", "--match", "port-etp2,vendor-b", ip_list],
+        )
+
+        assert result.exit_code == exit_code, result.output
+        if exit_code:
+            assert "Bindings maia-a and maia-b have partially overlapping pools on Vlan100" in result.output
+        assert mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-b") == (exit_code == 0)
+
+    def test_range_update_causing_partial_pool_overlap_rejected(self, mock_db):
+        result = invoke(mock_db, RANGE_COMMAND.commands["update"], ["range3", "100.1.1.10", "100.1.1.20"])
+
+        assert result.exit_code == 2
+        assert "Bindings fallback and maia-a have partially overlapping pools on Vlan100" in result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3", "range@") == "100.1.1.10"
+
+    def test_enable_match_interface_with_partial_pool_overlap_rejected(self, mock_db):
+        mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-b",
+                      {"matches@": "port-etp2,vendor-b", "ips@": "100.1.1.20,100.1.1.21"})
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state", "disabled")
+
+        result = invoke(mock_db, IPV4_COMMAND.commands["enable"], ["Vlan100"])
+
+        assert result.exit_code == 2
+        assert "partially overlapping pools" in result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state") == "disabled"
+
+    @pytest.mark.parametrize("state", ["enabled", "disabled"])
+    def test_binding_del_final_binding(self, mock_db, state):
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state", state)
+        mock_db.delete("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|fallback")
+
+        result = invoke(mock_db, BINDING_COMMAND.commands["del"], ["Vlan100", "maia-a"])
+
+        assert result.exit_code == 0, result.output
+        assert not mock_db.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|*")
+
+    @pytest.mark.parametrize("command,args", [
+        (BINDING_COMMAND.commands["add"], ["Vlan100", "vendor-b", "--match=vendor-b", "100.1.1.40"]),
+        (BINDING_COMMAND.commands["update"], ["Vlan100", "maia-a", "--match=vendor-a"]),
+        (IPV4_COMMAND.commands["enable"], ["Vlan100"]),
+        (IPV4_COMMAND.commands["update"], ["Vlan100", "--mode=MATCH"]),
+        (MATCH_COMMAND.commands["update"], ["vendor-a", "--value=MAIA-C"]),
+        (RANGE_COMMAND.commands["update"], ["range3", "100.1.1.50"]),
+        (BINDING_COMMAND.commands["del"], ["Vlan100", "fallback"]),
+    ])
+    def test_stale_binding_does_not_block_other_changes(self, mock_db, command, args):
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state", "disabled")
+        # fallback goes stale when its port leaves the VLAN, as dhcp_cfggen then skips it
+        mock_db.delete("CONFIG_DB", "VLAN_MEMBER|Vlan100|Ethernet2")
+        mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-a",
+                      {"matches@": "vendor-a", "ips@": "100.1.1.20"})
+
+        result = invoke(mock_db, command, args)
+
+        assert result.exit_code == 0, result.output
+
+    def test_stale_binding_cannot_be_rewritten_invalid(self, mock_db):
+        mock_db.delete("CONFIG_DB", "VLAN_MEMBER|Vlan100|Ethernet2")
+
+        result = invoke(mock_db, BINDING_COMMAND.commands["update"], ["Vlan100", "fallback", "--range=range3"])
+
+        assert result.exit_code == 2
+        assert "is not a member of vlan Vlan100" in result.output

@@ -72,6 +72,8 @@ class DhcpServCfgGenerator(object):
             set of match conditions used by enabled MATCH bindings
         """
         # Generate from running config_db
+        # PORT and PORTCHANNEL are not monitored, so refresh circuit ID names on every generation
+        self._parse_port_map_alias()
         # Get host name
         device_metadata = self.db_connector.get_config_db_table("DEVICE_METADATA")
         hostname = self._parse_hostname(device_metadata)
@@ -311,7 +313,9 @@ class DhcpServCfgGenerator(object):
             elif dhcp_config["mode"] == "MATCH":
                 subscribe_table |= set(MATCH_MODE_CHECKER)
                 if dhcp_interface_name not in match_pools:
-                    raise ValueError("Cannot get DHCP MATCH binding config for {}".format(dhcp_interface_name))
+                    syslog.syslog(syslog.LOG_WARNING, "Cannot get DHCP MATCH binding config for {}"
+                                  .format(dhcp_interface_name))
+                    continue
                 curr_options = {}
                 dhcp_server_id_option = {}
                 if "customized_options" in dhcp_config:
@@ -331,6 +335,10 @@ class DhcpServCfgGenerator(object):
                             dhcp_server_id_option = current_option
                         else:
                             curr_options[option] = current_option
+                if len(match_pools[dhcp_interface_name]) > 1:
+                    raise ValueError(
+                        "DHCP MATCH pools on {} cannot span multiple IPv4 prefixes".format(dhcp_interface_name)
+                    )
                 for dhcp_interface_ip, pools in match_pools[dhcp_interface_name].items():
                     current_server_id_option = dhcp_server_id_option
                     if not current_server_id_option:
@@ -607,12 +615,10 @@ class DhcpServCfgGenerator(object):
         resolved_value = value
         if match_type == "circuit_id":
             ports = sorted(port for port, alias in self.port_alias_map.items() if alias == value)
-            if not ports:
-                raise ValueError("Circuit ID value {} does not match any port alias, "
-                                 "aliasless port name or PortChannel name".format(value))
             if len(ports) > 1:
                 raise ValueError("Circuit ID value {} is ambiguous".format(value))
-            port_name = ports[0]
+            # Like _parse_port, fall back to the value itself when no port or PortChannel carries it
+            port_name = ports[0] if ports else value
             resolved_value = "{}:{}".format(hostname, value)
 
         encoded_value = resolved_value.encode("utf-8")
@@ -634,16 +640,14 @@ class DhcpServCfgGenerator(object):
         return condition
 
     def _find_match_subnet(self, dhcp_interface_name, dhcp_interfaces, start, end):
-        if dhcp_interface_name not in dhcp_interfaces:
-            raise ValueError("Interface {} has no IPv4 subnet".format(dhcp_interface_name))
         matching_subnets = [
-            interface for interface in dhcp_interfaces[dhcp_interface_name]
+            interface for interface in dhcp_interfaces.get(dhcp_interface_name, [])
             if start in interface["network"] and end in interface["network"]
         ]
         if not matching_subnets:
-            raise ValueError(
-                "Pool {}-{} is not in an IPv4 subnet of {}".format(start, end, dhcp_interface_name)
-            )
+            syslog.syslog(syslog.LOG_WARNING, "Pool {}-{} of {} is not in an IPv4 subnet, skip".format(
+                start, end, dhcp_interface_name))
+            return None
         if len(matching_subnets) > 1:
             raise ValueError(
                 "Pool {}-{} matches multiple IPv4 subnets of {}".format(start, end, dhcp_interface_name)
@@ -682,19 +686,21 @@ class DhcpServCfgGenerator(object):
                 subnet = self._find_match_subnet(
                     dhcp_interface_name, dhcp_interfaces, address, address
                 )
-                intervals_by_subnet.setdefault(subnet, []).append([address, address])
+                if subnet is not None:
+                    intervals_by_subnet.setdefault(subnet, []).append([address, address])
         else:
             for range_name in values:
                 used_ranges.add(range_name)
                 if range_name not in ranges:
-                    raise ValueError("Range {} referenced by {}|{} does not exist".format(
-                        range_name, dhcp_interface_name, binding_name
-                    ))
+                    syslog.syslog(syslog.LOG_WARNING, "Range {} referenced by {}|{} is not in range table, skip"
+                                  .format(range_name, dhcp_interface_name, binding_name))
+                    continue
                 start, end = ranges[range_name]
                 subnet = self._find_match_subnet(
                     dhcp_interface_name, dhcp_interfaces, start, end
                 )
-                intervals_by_subnet.setdefault(subnet, []).append([start, end])
+                if subnet is not None:
+                    intervals_by_subnet.setdefault(subnet, []).append([start, end])
 
         for subnet, intervals in intervals_by_subnet.items():
             intervals_by_subnet[subnet] = self._merge_match_intervals(intervals)
@@ -737,7 +743,10 @@ class DhcpServCfgGenerator(object):
         for dhcp_interface_name in sorted(enabled_match_interfaces):
             interface_bindings = bindings_by_interface[dhcp_interface_name]
             if not interface_bindings:
-                raise ValueError("MATCH mode requires at least one binding on {}".format(dhcp_interface_name))
+                continue
+            if dhcp_interface_name not in dhcp_interfaces:
+                syslog.syslog(syslog.LOG_WARNING, f"Interface {dhcp_interface_name} doesn't have IPv4 address")
+                continue
 
             normalized_bindings = []
             for binding_name, binding_config in sorted(interface_bindings):
@@ -751,8 +760,16 @@ class DhcpServCfgGenerator(object):
                         dhcp_interface_name, binding_name
                     ))
 
+                binding_key = "{}|{}".format(dhcp_interface_name, binding_name)
+                # Track references before skipping so restoring them triggers regeneration, as PORT mode does
+                used_matches.update(match_names)
+                used_ranges.update(self._normalize_list(binding_config.get("ranges")))
                 conditions = {}
+                skip_reason = None
                 for match_name in match_names:
+                    if match_name not in match_ipv4:
+                        skip_reason = "match {} does not exist".format(match_name)
+                        break
                     condition = self._parse_match_condition(
                         match_name, match_ipv4, hostname, condition_cache
                     )
@@ -764,29 +781,32 @@ class DhcpServCfgGenerator(object):
                         )
                     if condition["type"] == "circuit_id" and \
                        "{}|{}".format(dhcp_interface_name, condition["port"]) not in vlan_members:
-                        raise ValueError(
-                            "Circuit ID value {} is not a member of {}".format(
-                                condition["value"], dhcp_interface_name
-                            )
+                        skip_reason = "circuit ID value {} is not a member of {}".format(
+                            condition["value"], dhcp_interface_name
                         )
+                        break
                     conditions[condition["type"]] = condition
-                    used_matches.add(match_name)
+                if skip_reason:
+                    syslog.syslog(syslog.LOG_WARNING, "Binding {}: {}, skip".format(binding_key, skip_reason))
+                    continue
 
-                intervals_by_subnet, binding_used_ranges = self._parse_binding_pools(
+                intervals_by_subnet, _ = self._parse_binding_pools(
                     dhcp_interface_name,
                     binding_name,
                     binding_config,
                     dhcp_interfaces,
                     ranges
                 )
-                used_ranges |= binding_used_ranges
+                if not intervals_by_subnet:
+                    syslog.syslog(syslog.LOG_WARNING, "Binding {} has no usable pool, skip".format(binding_key))
+                    continue
                 raw_predicate = " and ".join(
                     "({})".format(conditions[match_type]["atom"])
                     for match_type in SUPPORTED_MATCH_TYPES if match_type in conditions
                 )
                 normalized_bindings.append({
                     "name": binding_name,
-                    "key": "{}|{}".format(dhcp_interface_name, binding_name),
+                    "key": binding_key,
                     "conditions": conditions,
                     "specificity": len(conditions),
                     "raw_predicate": raw_predicate,
