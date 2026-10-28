@@ -51,11 +51,13 @@ def git(repo, *args):
     return result.stdout
 
 
-def qualified_name(node):
+def qualified_name(node, imports=None):
     if isinstance(node, ast.Name):
+        if imports is not None:
+            return imports.get(node.id, node.id)
         return node.id
     if isinstance(node, ast.Attribute):
-        return "{}.{}".format(qualified_name(node.value), node.attr)
+        return "{}.{}".format(qualified_name(node.value, imports), node.attr)
     return ""
 
 
@@ -217,17 +219,29 @@ def python_dependencies(source):
         ) from error
     references = Counter()
     aliases = {}
+    imports = {}
     bindings = {}
+    shadowed = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for name in node.names:
+                root = name.name.split(".", 1)[0]
+                imports[name.asname or root] = (
+                    name.name if name.asname else root
+                )
                 if any(part in PARSER_MODULES for part in name.name.split(".")):
                     aliases[name.asname or name.name] = name.name
                     references[("parser import", name.name)] += 1
-        elif isinstance(node, ast.ImportFrom) and node.module:
+        elif isinstance(node, ast.ImportFrom):
             for name in node.names:
-                target = "{}.{}".format(node.module, name.name)
-                if any(part in PARSER_MODULES for part in target.split(".")):
+                target = (
+                    "{}.{}".format(node.module, name.name)
+                    if node.module else name.name
+                )
+                imports[name.asname or name.name] = "." * node.level + target
+                if node.module and any(
+                    part in PARSER_MODULES for part in target.split(".")
+                ):
                     aliases[name.asname or name.name] = target
                     references[("parser import", target)] += 1
         elif isinstance(node, ast.Assign):
@@ -236,6 +250,37 @@ def python_dependencies(source):
                     bindings.setdefault(target.id, []).append(node.value)
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             bindings.setdefault(node.target.id, []).append(node.value)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            shadowed.add(node.id)
+        elif isinstance(node, ast.arg):
+            shadowed.add(node.arg)
+        elif isinstance(
+            node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        ):
+            shadowed.add(node.name)
+
+    # Do not resolve API aliases whose names have other bindings in the file.
+    for name in imports.keys() & shadowed:
+        imports[name] = ""
+
+    def literal_parser_import(node):
+        if not isinstance(node, ast.Call) or (
+            qualified_name(node.func, imports) != "importlib.import_module"
+        ):
+            return None
+        arguments = list(node.args) + [
+            keyword.value for keyword in node.keywords if keyword.arg == "name"
+        ]
+        module = static_text(arguments[0], bindings) if arguments else ""
+        if any(part in PARSER_MODULES for part in module.split(".")):
+            return module
+        return None
+
+    for name, values in bindings.items():
+        if len(values) == 1:
+            module = literal_parser_import(values[0])
+            if module:
+                aliases[name] = module
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.Name, ast.Attribute)) and isinstance(node.ctx, ast.Load):
@@ -246,7 +291,15 @@ def python_dependencies(source):
                     break
         if not isinstance(node, ast.Call):
             continue
+        module = literal_parser_import(node)
+        if module:
+            references[("parser import", module)] += 1
         call = qualified_name(node.func).rsplit(".", 1)[-1]
+        owner, _, imported_call = qualified_name(
+            node.func, imports
+        ).rpartition(".")
+        if owner in {"os", "subprocess"} and imported_call in COMMAND_CALLS:
+            call = imported_call
         arguments = list(node.args) + [
             keyword.value for keyword in node.keywords if keyword.arg in {"args", "command", "cmd"}
         ]
@@ -351,7 +404,10 @@ def main(argv=None):
         print("Guide: " + guide_url)
         return 2
     if not violations:
-        print("No frozen parser edits or new statically detectable minigraph dependencies.")
+        print(
+            "No frozen parser edits or new recognized minigraph references "
+            "detected."
+        )
         return 0
     for path, reason in violations:
         annotation(reason, path)

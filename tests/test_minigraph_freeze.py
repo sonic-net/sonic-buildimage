@@ -26,6 +26,46 @@ class DependencyTest(unittest.TestCase):
             "from package import minigraph as graph\ngraph.parse_xml(path)"
         ))
 
+    def test_python_literal_importlib_imports(self):
+        cases = [
+            "import importlib\nparser = importlib.import_module('minigraph')",
+            "import importlib as loader\n"
+            "loader.import_module(name='minigraph_ext')",
+            "from importlib import import_module as load\n"
+            "load('package.minigraph_custom')",
+            "from importlib import import_module\n"
+            "MODULE = 'minigraph'\nimport_module(MODULE)",
+        ]
+        for source in cases:
+            with self.subTest(source=source):
+                self.assertTrue(guard.python_dependencies(source))
+        for source in [
+            "import importlib\nimportlib.import_module('json')",
+            "from tools import import_module as load\nload('minigraph')",
+            "import tools as importlib\nimportlib.import_module('minigraph')",
+            "from . import importlib\nimportlib.import_module('minigraph')",
+            "import importlib as loader\nloader = tools\n"
+            "loader.import_module('minigraph')",
+            'example = "importlib.import_module(\'minigraph\')"',
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.python_dependencies(source))
+
+    def test_added_reference_to_importlib_parser(self):
+        before = (
+            "from importlib import import_module as load\n"
+            "parser = load('minigraph')\nparser.parse_xml(path)\n"
+        )
+        after = before + "parser.parse_xml(other_path)\n"
+        self.assertTrue(
+            guard.python_dependencies(after)
+            - guard.python_dependencies(before)
+        )
+        self.assertEqual(
+            guard.python_dependencies(before),
+            guard.python_dependencies(before.replace("parser", "graph")),
+        )
+
     def test_python_command_and_xml_consumers(self):
         cases = [
             "import subprocess\nsubprocess.run(['sonic-cfggen', '-H', '-m'])",
@@ -38,6 +78,35 @@ class DependencyTest(unittest.TestCase):
         for source in cases:
             with self.subTest(source=source):
                 self.assertTrue(guard.python_dependencies(source))
+
+    def test_python_command_import_aliases(self):
+        cases = [
+            "from subprocess import run as execute\n"
+            "execute(['config', 'load_minigraph', '-y'])",
+            "from subprocess import check_output as capture\n"
+            "capture(args=['sonic-cfggen', '-m'])",
+            "import subprocess as process\n"
+            "process.run(['sonic-cfggen', '-m'])",
+            "from os import system as execute\n"
+            "execute('config load_minigraph -y')",
+        ]
+        for source in cases:
+            with self.subTest(source=source):
+                self.assertTrue(guard.python_dependencies(source))
+        for source in [
+            "from tools import run as execute\n"
+            "execute('config load_minigraph -y')",
+            "from subprocess import run as execute\n"
+            "host.execute('config load_minigraph -y')",
+            "from subprocess import run as execute\n"
+            "execute(['echo', '$(sonic-cfggen -m)'])",
+            "from subprocess import run as execute\nexecute = print\n"
+            "execute('config load_minigraph -y')",
+            "from subprocess import run as execute\n"
+            "def log(execute):\n    execute('config load_minigraph -y')",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.python_dependencies(source))
 
     def test_comments_docstrings_fixture_strings_and_negative_assertions(self):
         source = '''
@@ -162,6 +231,22 @@ class GitComparisonTest(unittest.TestCase):
         self.assertTrue(self.compare({}, {path: source}))
         self.assertTrue(self.compare({path: source}, {path: source * 2}))
         self.assertTrue(self.compare({path: source}, {"files/new.sh": source}))
+
+    def test_literal_imports_and_command_aliases_are_compared(self):
+        path = "scripts/example.py"
+        cases = [
+            "import importlib\n"
+            "parser = importlib.import_module('minigraph')\n",
+            "from subprocess import run as execute\n"
+            "execute(['sonic-cfggen', '-m'])\n",
+        ]
+        for source in cases:
+            with self.subTest(source=source):
+                self.assertTrue(self.compare({}, {path: source}))
+                self.assertFalse(self.compare(
+                    {path: source}, {path: source + "# unchanged usage\n"}
+                ))
+                self.assertFalse(self.compare({path: source}, {}))
 
     def test_new_shipped_xml_but_not_fixture_or_documentation_fails(self):
         self.assertTrue(self.compare({}, {"device/vendor/minigraph.xml": "<Graph/>"}))

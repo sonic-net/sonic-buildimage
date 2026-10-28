@@ -156,9 +156,11 @@ private operational data in public discussions.
 
 For other changed files, `scripts/check_minigraph_freeze.py` compares counts
 per file and reference between the event's base and test-merge snapshots.
-It recognizes named Python parser imports/aliases, common command and file
-APIs, simple literal bindings, visible shell commands, and common YAML command
-blocks. It also checks literal minigraph XML access and new shipped
+It recognizes named Python parser imports/aliases, literal
+`importlib.import_module` imports and simple bindings of their results,
+common command and file APIs, simple imported aliases of `subprocess`/`os`
+command APIs, simple literal bindings, visible shell commands, and common YAML
+command blocks. It also checks literal minigraph XML access and new shipped
 `minigraph.xml` files outside paths containing a `tests` component.
 
 Mixed-purpose files are not frozen wholesale. Markdown/RST documentation and
@@ -173,6 +175,8 @@ Changes behind an existing reference, or moves within a file that keep
 reference counts unchanged, may pass. Dynamic commands, complex data flow,
 alternate parser implementations, binary artifacts, and submodule contents
 are not fully covered. Shell heuristics can also flag ambiguous text.
+Imported API alias recognition is conservative when names are rebound or
+shadowed.
 
 Unsupported Python syntax, unparseable relevant shell commands, decoding
 errors, or unavailable Git objects fail analysis rather than return a clean
