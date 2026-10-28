@@ -218,7 +218,7 @@ def config_pddf_utils():
                 shutil.copy(SONIC_PLATFORM_PDDF_WHL_PKG, SONIC_PLATFORM_BSP_WHL_PKG)
                 log_os_system('sync')
                 # uninstall the existing bsp whl pkg
-                status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null")
+                status, output = log_os_system("pip3 uninstall sonic-platform -y > /dev/null 2>&1")
                 if status:
                     logger.error("Unable to uninstall BSP sonic-platform whl package")
                     return status
@@ -289,7 +289,7 @@ def cleanup_pddf_utils():
             if os.path.exists(SONIC_PLATFORM_BSP_WHL_PKG_BK):
                 # platform is 2.0 compliant and original bsp 2.0 whl package exist
                 log_os_system('mv '+SONIC_PLATFORM_BSP_WHL_PKG_BK+' '+SONIC_PLATFORM_BSP_WHL_PKG)
-                status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null")
+                status, output = log_os_system("pip3 uninstall sonic-platform -y > /dev/null 2>&1")
                 if status:
                     logger.error("Unable to uninstall PDDF sonic-platform whl package")
                     return status
@@ -305,7 +305,7 @@ def cleanup_pddf_utils():
                 # remove and uninstall the PDDF whl package
                 if os.path.exists(SONIC_PLATFORM_BSP_WHL_PKG):
                     os.remove(SONIC_PLATFORM_BSP_WHL_PKG)
-                status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null")
+                status, output = log_os_system("pip3 uninstall sonic-platform -y > /dev/null 2>&1")
                 if status:
                     logger.error("Unable to uninstall PDDF sonic-platform whl package")
                     return status
@@ -392,6 +392,19 @@ def driver_install():
     logger.info("PDDF driver_install: completed successfully")
     return 0
     
+def unload_module(mod):
+    """Unload `mod` after the modules that still hold it.
+
+    modprobe -r refuses a module that other modules use. Some of those are not in the
+    platform's module lists (they are loaded as dependencies), so clean would otherwise
+    never remove them, and install skips loading drivers while any PDDF module is resident.
+    """
+    holders = "/sys/module/{}/holders".format(mod.replace("-", "_"))
+    if os.path.isdir(holders):
+        for holder in os.listdir(holders):
+            unload_module(holder)
+    return log_os_system("modprobe -rq " + mod)
+
 def driver_uninstall():
     global FORCE
 
@@ -399,12 +412,14 @@ def driver_uninstall():
     if status:
         logger.error("cleanup_pddf_utils failed (rc=%d)", status)
 
-    for mod in std_kos + custom_kos:
+    # Unload in the reverse of the load order: a module loaded later can depend on one loaded
+    # earlier, and modprobe -r refuses a module that still has users.
+    for mod in reversed(std_kos + custom_kos):
         # do not remove i2c-i801 modules
         if "i2c-i801" in mod:
             continue
 
-        status, output = log_os_system("modprobe -rq " + mod)
+        status, output = unload_module(mod)
         if status:
             logger.error("module unload failed (rc=%d)", status)
             if FORCE == 0:        
