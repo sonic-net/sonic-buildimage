@@ -1,0 +1,21 @@
+{
+    "chassis": {
+        "AS9736-64D-O-AC-F": {
+            "component": {
+                "SYSTEM CPLD": { },
+                "FCM CPLD": { },
+                "PSU CPLD": { },
+                "SCM CPLD": { },
+                "UDB CPLD1": { },
+                "UDB CPLD2": { },
+                "LDB CPLD1": { },
+                "LDB CPLD2": { },
+                "UDB FPGA": { },
+                "LDB FPGA": { },
+                "SMB FPGA": { },
+                "BIOS": { },
+                "SSD": { }
+            }
+        }
+    }
+}
