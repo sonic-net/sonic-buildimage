@@ -7,7 +7,10 @@ generate a package, modify a runner, or clear a cache.
 
 ## Measurements
 
-- List every PR, including PRs without a successful full-image measurement.
+- In **Pull requests**, list only PRs whose latest associated image result is
+  successful or failed. Summarize success, failure, cancellation and skipping
+  across all collected PRs, counting each PR once. Pending and unmeasured PRs
+  are noted separately. These counts do not follow the chart filters.
 - Keep every collected run attempt and job outcome. Skipped or incomplete work
   is not a zero-second build; failed builds are not faster successful builds.
 - Show the explicit image-build step separately from job setup, checks, uploads,
@@ -17,6 +20,22 @@ generate a package, modify a runner, or clear a cache.
   `sonic-vs.img.gz` and the SWSS debug container archive together.
 - Record the run's source commit separately from the current PR head. Historical
   evidence does not establish that the latest PR revision passed.
+
+The PR result comes from recognized image jobs (`make-vs` or `bazel-vs`), not
+the surrounding workflow conclusion. A successful workflow whose image job was
+skipped contributes only to **Skipped**. The latest associated run containing
+an image job supplies the result; a later run without an image job does not
+replace that evidence. Same-time reruns prefer the higher attempt. A newer
+skipped or cancelled image result removes an older successful result from the
+PR table. All attempts remain available in run history.
+
+If a run has multiple image jobs, any failure (including a timeout or startup
+failure) makes the PR failed. Otherwise, pending work takes precedence, followed
+by an unknown result, cancellation, success, and skipping. Success requires at
+least one successful image job and all other image jobs successful or skipped;
+**Skipped** requires every image job to be skipped. Missing or unknown image
+evidence is **Unmeasured**, never an inferred success or skip. Historical results
+retain their source revision and current-head annotation.
 
 The initial collector covers `bazel-swss-oci.yml`, `bazel-oci.yml`, and
 `bazel.yml`. It can report observed durations from earlier builds, but their

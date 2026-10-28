@@ -416,6 +416,47 @@ select {
   font-size: .8rem;
 }
 
+.coverage-summary {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0 25px 15px;
+}
+
+.coverage-stat {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 11px;
+}
+
+.coverage-stat dt {
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.coverage-stat dd {
+  margin: 5px 0 0;
+  font-size: 1.35rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.coverage-stat.success dd {
+  color: var(--green);
+}
+
+.coverage-stat.failure dd {
+  color: var(--red);
+}
+
+.coverage-other {
+  margin: 0;
+  padding: 0 25px 15px;
+  color: var(--muted);
+  font-size: .8rem;
+}
+
 .table-scroll {
   overflow: auto;
 }
@@ -1062,6 +1103,13 @@ footer a {
   }
   .count-pill {
     font-size: .8rem;
+  }
+  .coverage-summary {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    padding: 0 17px 12px;
+  }
+  .coverage-other {
+    padding: 0 17px 12px;
   }
   #details {
     padding: 0 17px 20px;

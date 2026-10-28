@@ -82,10 +82,12 @@
             <div>
               <p class="eyebrow">PULL REQUESTS</p>
               <h2 id="coverage-title">PR coverage</h2>
-              <p>Latest associated image result, with its source revision.</p>
+              <p>All collected PRs · latest associated image result. Filters above do not apply.</p>
             </div>
             <span id="coverage-count" class="count-pill"></span>
           </div>
+          <dl id="coverage-summary" class="coverage-summary" aria-label="Pull request image outcomes"></dl>
+          <p id="coverage-other" class="coverage-other" hidden></p>
           <div class="table-scroll">
             <table class="coverage-table">
               <thead>
@@ -98,7 +100,7 @@
               <tbody id="coverage-body"></tbody>
             </table>
           </div>
-          <p class="panel-footnote">“Unmeasured” means the retained CI history has no image job for that PR. Branch association is a best-effort match. Select a PR to inspect the evidence.</p>
+          <p class="panel-footnote">Only PRs with a successful or failed image result are listed. Branch association is a best-effort match. Select a PR to inspect its jobs and source revision.</p>
         </section>
         <section class="panel detail-panel" aria-labelledby="detail-title">
           <div class="panel-heading">

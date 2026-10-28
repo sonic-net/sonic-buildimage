@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const {duration, measured, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep} = require("./app.js");
+const {duration, measured, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep} = require("./app.js");
 
 test("unmeasured and invalid durations never look like fast builds", () => {
   for (const value of [null, undefined, "12", -1, NaN, Infinity]) assert.equal(duration(value), "—");
@@ -18,6 +18,110 @@ test("only successful recognized image jobs enter the performance chart", () => 
   for (const conclusion of ["failure", "skipped", "cancelled", null]) assert.equal(measured({...job, conclusion}), false);
   for (const kind of ["container", "source", "checks", "other"]) assert.equal(measured({...job, kind}), false);
   assert.equal(measured({...job, image_build_seconds: null}), false);
+});
+
+function imageOutcome(conclusion, extra = {}) {
+  return {kind: "make-vs", status: "completed", conclusion, ...extra};
+}
+
+test("PR outcomes come from image jobs, including failed images without timings", () => {
+  for (const outcome of ["success", "failure", "cancelled", "skipped"]) {
+    assert.equal(imageResult([imageOutcome(outcome, {image_build_seconds: null})]), outcome);
+  }
+  for (const conclusion of ["timed_out", "startup_failure"]) {
+    assert.equal(imageResult([imageOutcome(conclusion, {kind: "bazel-vs"})]), "failure");
+  }
+  assert.equal(imageResult([]), "unmeasured");
+  assert.equal(imageResult([imageOutcome("success", {kind: "source"})]), "unmeasured");
+  assert.equal(imageResult([imageOutcome("failure", {kind: "checks"}), imageOutcome("skipped")]), "skipped");
+});
+
+test("pending and unknown image outcomes never become skipped or successful", () => {
+  for (const status of ["queued", "in_progress", "requested", "waiting", "pending"]) {
+    assert.equal(imageResult([imageOutcome(null, {status})]), "pending");
+  }
+  for (const conclusion of [null, undefined, "neutral", "action_required", "stale", "unknown"]) {
+    assert.equal(imageResult([imageOutcome(conclusion)]), "unmeasured");
+  }
+});
+
+test("multiple image paths produce one conservative PR outcome", () => {
+  const cases = [
+    [["success", "skipped"], "success"],
+    [["skipped", "skipped"], "skipped"],
+    [["success", "cancelled"], "cancelled"],
+    [["success", "neutral"], "unmeasured"],
+    [["cancelled", "action_required"], "unmeasured"],
+    [["success", "failure"], "failure"],
+    [["cancelled", "timed_out"], "failure"],
+  ];
+  for (const [outcomes, expected] of cases) {
+    const jobs = outcomes.map((outcome, index) => imageOutcome(outcome, {kind: index ? "bazel-vs" : "make-vs"}));
+    assert.equal(imageResult(jobs), expected);
+    assert.equal(imageResult([...jobs].reverse()), expected);
+  }
+  const pending = imageOutcome(null, {kind: "bazel-vs", status: "in_progress"});
+  assert.equal(imageResult([imageOutcome("success"), pending]), "pending");
+  assert.equal(imageResult([imageOutcome("neutral"), pending]), "pending");
+  assert.equal(imageResult([imageOutcome("failure"), pending]), "failure");
+});
+
+function coverageRun(run_id, pr_numbers, conclusion, extra = {}) {
+  return {run_id, attempt: 1, started_at: `2026-10-27T10:${String(run_id).padStart(2, "0")}:00Z`,
+    pr_numbers, jobs: [imageOutcome(conclusion)], ...extra};
+}
+
+test("latest skipped or cancelled image attempts supersede historical success", () => {
+  const snapshot = {pull_requests: [{number: 1}, {number: 2}], runs: [
+    coverageRun(1, [1, 2], "success"), coverageRun(2, [1], "skipped"), coverageRun(3, [2], "cancelled"),
+  ]};
+  const before = structuredClone(snapshot), coverage = prCoverage(snapshot);
+  assert.deepEqual(coverage.map(entry => [entry.pr.number, entry.classification, entry.latestImageRun.run_id]),
+    [[2, "cancelled", 3], [1, "skipped", 2]]);
+  assert.deepEqual(snapshot, before, "coverage must preserve collected history and ordering");
+  assert.deepEqual(summarizePrCoverage(coverage), {total: 2, success: 0, failure: 0, cancelled: 1, skipped: 1, pending: 0, unmeasured: 0});
+});
+
+test("a newer non-image workflow does not replace the associated image result", () => {
+  const imageRun = coverageRun(1, [1], "failure", {source_sha: "historical-revision"});
+  const snapshot = {pull_requests: [{number: 1, head_sha: "current-revision"}, {number: 2}], runs: [
+    imageRun, coverageRun(2, [1, 2], "success", {conclusion: "success", jobs: [imageOutcome("success", {kind: "checks"})]}),
+  ]};
+  const coverage = prCoverage(snapshot);
+  assert.equal(coverage[0].classification, "unmeasured");
+  assert.equal(coverage[0].latestImageRun, null);
+  assert.deepEqual(coverage[0].jobs, []);
+  assert.equal(coverage[1].classification, "failure");
+  assert.equal(coverage[1].latestImageRun, imageRun, "retain source revision and run link for the historical badge");
+});
+
+test("same-time retries select the higher attempt regardless of snapshot ordering", () => {
+  const earlier = coverageRun(1, [1], "failure"), retry = {...earlier, attempt: 2, jobs: [imageOutcome("success")]};
+  for (const runs of [[earlier, retry], [retry, earlier]]) {
+    const coverage = prCoverage({pull_requests: [{number: 1}], runs});
+    assert.equal(coverage[0].latestImageRun, retry);
+    assert.equal(coverage[0].classification, "success");
+    assert.equal(summarizePrCoverage(coverage).total, 1);
+  }
+});
+
+test("PR summary counts every PR once without treating workflow conclusions as image outcomes", () => {
+  const snapshot = {pull_requests: Array.from({length: 6}, (_, index) => ({number: index + 1})), runs: [
+    coverageRun(1, [1], "success"), coverageRun(2, [1], "success"),
+    coverageRun(3, [2], "failure"), coverageRun(4, [3], "cancelled"),
+    coverageRun(5, [4], "skipped", {conclusion: "success"}),
+    coverageRun(6, [5], null, {jobs: [imageOutcome(null, {status: "queued"})]}),
+    coverageRun(7, [6], "success", {conclusion: "success", jobs: []}),
+  ]};
+  const coverage = prCoverage(snapshot), summary = summarizePrCoverage(coverage);
+  assert.deepEqual(summary, {total: 6, success: 1, failure: 1, cancelled: 1, skipped: 1, pending: 1, unmeasured: 1});
+  assert.equal(Object.entries(summary).filter(([key]) => key !== "total").reduce((sum, [, count]) => sum + count, 0), 6);
+  assert.deepEqual(coverage.filter(entry => ["success", "failure"].includes(entry.classification)).map(entry => entry.pr.number), [2, 1]);
+});
+
+test("empty PR coverage retains explicit zero counts", () => {
+  assert.deepEqual(prCoverage({pull_requests: [], runs: []}), []);
+  assert.deepEqual(summarizePrCoverage([]), {total: 0, success: 0, failure: 0, cancelled: 0, skipped: 0, pending: 0, unmeasured: 0});
 });
 
 test("metadata links stay on the configured GitHub repository", () => {

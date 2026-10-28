@@ -63,6 +63,30 @@ function resultLabel(value) { return String(value || "unknown").replaceAll("_", 
 function runKey(run) { return `${run.run_id}:${run.attempt}`; }
 function imageJob(job) { return IMAGE_KINDS.has(job.kind); }
 function measured(job) { return imageJob(job) && job.conclusion === "success" && seconds(job.image_build_seconds) !== null; }
+function imageResult(jobs) {
+  const outcomes = jobs.filter(imageJob).map(result);
+  if (!outcomes.length) return "unmeasured";
+  if (outcomes.some(value => ["failure", "timed_out", "startup_failure"].includes(value))) return "failure";
+  if (outcomes.some(value => ["in_progress", "queued", "requested", "waiting", "pending"].includes(value))) return "pending";
+  // An unknown or incomplete job result must not turn into a successful or skipped PR.
+  if (outcomes.some(value => !["success", "cancelled", "skipped"].includes(value))) return "unmeasured";
+  if (outcomes.includes("cancelled")) return "cancelled";
+  if (outcomes.includes("success")) return "success";
+  return "skipped";
+}
+function prCoverage(snapshot) {
+  const imageRuns = snapshot.runs.filter(run => run.jobs.some(imageJob)).sort((a, b) => runTime(b) - runTime(a) || b.attempt - a.attempt || b.run_id - a.run_id);
+  return [...snapshot.pull_requests].sort((a, b) => b.number - a.number).map(pr => {
+    const latestImageRun = imageRuns.find(run => prNumbers(run).includes(pr.number)) || null;
+    const jobs = latestImageRun ? latestImageRun.jobs.filter(imageJob) : [];
+    return {pr, classification: imageResult(jobs), latestImageRun, jobs};
+  });
+}
+function summarizePrCoverage(coverage) {
+  const counts = {total: coverage.length, success: 0, failure: 0, cancelled: 0, skipped: 0, pending: 0, unmeasured: 0};
+  for (const row of coverage) counts[row.classification]++;
+  return counts;
+}
 function kindLabel(job) { return KIND_LABELS[job.kind] || "Other"; }
 function architecture(job) { return job.architecture ? String(job.architecture).toUpperCase() : "Unknown architecture"; }
 function runTime(run) { return timestamp(run.started_at) || timestamp(run.completed_at) || 0; }
@@ -283,13 +307,20 @@ function renderTrend() {
 }
 
 function renderCoverage() {
+  const coverage = prCoverage(state.data);
+  const counts = summarizePrCoverage(coverage);
+  byId("coverage-summary").replaceChildren(...[["success", "Success"], ["failure", "Failed"], ["cancelled", "Cancelled"], ["skipped", "Skipped"]].map(([outcome, label]) => {
+    const item = el("div", `coverage-stat ${outcome}`);
+    item.append(el("dt", "", label), el("dd", "", counts[outcome]));
+    return item;
+  }));
+  const note = byId("coverage-other");
+  note.textContent = `${counts.pending} pending · ${counts.unmeasured} unmeasured (no image jobs or result unavailable).`;
+  note.hidden = counts.pending + counts.unmeasured === 0;
   const rows = [];
   const selected = state.data.runs.find(run => runKey(run) === state.selectedRun);
-  for (const pr of [...state.data.pull_requests].sort((a, b) => b.number - a.number)) {
-    const associated = state.data.runs.filter(run => prNumbers(run).includes(pr.number)).sort((a, b) => runTime(b) - runTime(a));
-    const latestImageRun = associated.find(run => run.jobs.some(imageJob));
-    const latest = latestImageRun || associated[0];
-    const jobs = latestImageRun ? latestImageRun.jobs.filter(imageJob) : [];
+  for (const {pr, classification, latestImageRun, jobs} of coverage) {
+    if (classification !== "success" && classification !== "failure") continue;
     const row = el("tr", selected && prNumbers(selected).includes(pr.number) ? "selected" : "");
     const title = el("td");
     const button = el("button", "table-button");
@@ -297,35 +328,30 @@ function renderCoverage() {
     button.append(el("span", "pr-number", `#${pr.number}`), document.createTextNode(pr.title));
     button.addEventListener("click", () => {
       byId("pr-filter").value = String(pr.number);
-      if (latest) { state.selectedRun = runKey(latest); state.selectedJob = jobs[0]?.job_id || null; }
-      else { state.selectedRun = null; state.selectedJob = null; }
+      state.selectedRun = runKey(latestImageRun);
+      state.selectedJob = jobs[0]?.job_id || null;
       renderFiltered();
     });
     title.append(button, el("span", "subtext", pr.merged_at ? "Merged" : pr.draft ? "Draft" : resultLabel(pr.state)));
     const status = el("td"), timings = el("td", "nowrap");
-    if (!jobs.length) { status.append(badge("unmeasured", "Unmeasured")); timings.textContent = "—"; }
-    else {
-      const stack = el("div", "status-stack");
-      for (const job of jobs) {
-        const item = el("div");
-        item.append(badge(result(job)), el("span", "subtext", `${kindLabel(job)} · ${architecture(job)}`));
-        stack.append(item);
-        const time = el("div", "", measured(job) ? duration(job.image_build_seconds) : "—");
-        time.append(el("span", "subtext", measured(job) ? "successful step" : job.conclusion === "success" ? "no step timing" : "not a successful build"));
-        timings.append(time);
-      }
-      status.append(stack);
+    const stack = el("div", "status-stack");
+    for (const job of jobs) {
+      const item = el("div");
+      item.append(badge(result(job)), el("span", "subtext", `${kindLabel(job)} · ${architecture(job)}`));
+      stack.append(item);
+      const time = el("div", "", measured(job) ? duration(job.image_build_seconds) : "—");
+      time.append(el("span", "subtext", measured(job) ? "successful step" : job.conclusion === "success" ? "no step timing" : "not a successful build"));
+      timings.append(time);
     }
-    if (latestImageRun) {
-      const current = !!pr.head_sha && latestImageRun.source_sha === pr.head_sha;
-      title.append(el("span", "subtext sha", String(latestImageRun.source_sha || "unknown").slice(0, 10)), badge(current ? "current" : "historical", current ? "Current PR head" : "Different revision"));
-      title.append(el("span", "subtext", dateTime(latestImageRun.started_at)));
-    }
+    status.append(stack);
+    const current = !!pr.head_sha && latestImageRun.source_sha === pr.head_sha;
+    title.append(el("span", "subtext sha", String(latestImageRun.source_sha || "unknown").slice(0, 10)), badge(current ? "current" : "historical", current ? "Current PR head" : "Different revision"));
+    title.append(el("span", "subtext", dateTime(latestImageRun.started_at)));
     row.append(title, status, timings); rows.push(row);
   }
   byId("coverage-body").replaceChildren(...rows);
-  byId("coverage-count").textContent = `${rows.length} PRs`;
-  if (!rows.length) { const row = el("tr"), cell = el("td", "empty", "No pull requests have been collected yet."); cell.colSpan = 3; row.append(cell); byId("coverage-body").append(row); }
+  byId("coverage-count").textContent = `${rows.length} of ${counts.total} PRs`;
+  if (!rows.length) { const row = el("tr"), cell = el("td", "empty", counts.total ? "No pull requests have a successful or failed image result in the retained history." : "No pull requests have been collected yet."); cell.colSpan = 3; row.append(cell); byId("coverage-body").append(row); }
 }
 function renderRuns() {
   const all = state.data.runs.filter(run => matchesRun(run) && (byId("path-filter").value === "all" && byId("arch-filter").value === "all" || run.jobs.some(matchesJob))).sort((a, b) => runTime(b) - runTime(a));
@@ -517,4 +543,4 @@ if (typeof document !== "undefined") {
   refresh();
   setInterval(() => { if (!document.hidden) refresh(); }, 300000);
 }
-if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured, normalizeBreakdown, normalizePhaseBreakdown, renderStep};
+if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured, imageResult, prCoverage, summarizePrCoverage, normalizeBreakdown, normalizePhaseBreakdown, renderStep};
