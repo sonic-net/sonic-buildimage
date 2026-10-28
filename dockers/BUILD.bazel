@@ -13,5 +13,8 @@ filegroup(
         "//dockers/docker-orchagent:ports.json.j2",
         "//dockers/docker-orchagent:switch.json.j2",
     ],
-    visibility = ["//tools/bazel/tests:__pkg__"],
+    visibility = [
+        "//src/sonic-bgpcfgd:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
 )

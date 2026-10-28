@@ -69,6 +69,12 @@ def main():
         os.environ.pop(name, None)
     with tempfile.TemporaryDirectory(prefix="sonic-component-tests-") as temporary:
         root = Path(temporary)
+        if cfggen:
+            # Existing component tests invoke the installed command by name.
+            commands = root / "bin"
+            commands.mkdir()
+            (commands / "sonic-cfggen").symlink_to(cfggen)
+            os.environ["PATH"] = str(commands) + os.pathsep + os.environ.get("PATH", "")
         component = root / "src" / source.name
         writable_copy(source, component)
         for setup in args.sibling_setup:

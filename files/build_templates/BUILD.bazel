@@ -1,4 +1,5 @@
 exports_files([
+    "constants.yml.j2",
     "swss_vars.j2",
     "arp_update_vars.j2",
     "manifest.json.j2",

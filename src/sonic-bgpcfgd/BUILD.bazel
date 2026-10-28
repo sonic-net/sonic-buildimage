@@ -1,0 +1,104 @@
+load("@config_engine_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@rules_python//python:py_library.bzl", "py_library")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["setup.py"])
+
+py_library(
+    name = "bgpcfgd",
+    srcs = glob([
+        "bfdmon/*.py",
+        "bgpcfgd/*.py",
+        "bgpmon/*.py",
+        "staticroutebfd/*.py",
+    ]),
+    imports = ["."],
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        "@sonic_swss_common//pyext:swsscommon",
+        requirement("jinja2"),
+        requirement("netaddr"),
+        requirement("pyyaml"),
+    ],
+)
+
+# setup.py's find_packages also includes its tests package in the wheel.
+filegroup(
+    name = "wheel_payload",
+    srcs = glob([
+        "bfdmon/*.py",
+        "bgpcfgd/*.py",
+        "bgpmon/*.py",
+        "staticroutebfd/*.py",
+        "tests/*.py",
+    ]),
+)
+
+py_wheel(
+    name = "sonic_bgpcfgd_wheel",
+    author = "Pavel Shirshov",
+    author_email = "pavelsh@microsoft.com",
+    distribution = "sonic-bgpcfgd",
+    entry_points = {"console_scripts": [
+        "bgpcfgd = bgpcfgd.main:main",
+        "staticroutebfd = staticroutebfd.main:main",
+        "bgpmon = bgpmon.bgpmon:main",
+        "bfdmon = bfdmon.bfdmon:main",
+    ]},
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    python_tag = "py3",
+    requires = ["jinja2>=2.10", "netaddr==0.8.0", "pyyaml>=6.0.1"],
+    strip_path_prefixes = ["src/sonic-bgpcfgd/"],
+    summary = "Utility to dynamically generate BGP configuration for FRR",
+    version = "1.0",
+    deps = [":wheel_payload"],
+)
+
+# Runtime requirements are supplied by the config-engine base image.
+wheel_layer(
+    name = "runtime",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [":sonic_bgpcfgd_wheel"],
+)
+
+filegroup(
+    name = "test_sources",
+    srcs = glob(
+        ["bfdmon/**", "bgpcfgd/**", "bgpmon/**", "staticroutebfd/**", "tests/**"],
+        exclude = ["**/__pycache__/**", "**/*.pyc"],
+    ) + ["setup.py", "setup.cfg", "pytest.ini"],
+)
+
+# Execute the complete original suite with its declared template fixtures and
+# the actual cfggen command used by the existing subprocess tests.
+py_test(
+    name = "upstream_tests",
+    size = "large",
+    srcs = ["//tools/bazel/tests:integration/component_pytest_runner.py"],
+    args = [
+        "--component-setup=$(rootpath :setup.py)",
+        "--sibling-setup=$(rootpath //src/sonic-config-engine:setup.py)",
+        "--cfggen=$(rootpath //src/sonic-config-engine:sonic_cfggen)",
+    ],
+    data = [
+        ":setup.py",
+        ":test_sources",
+        "//dockers:config_engine_test_data",
+        "//files/build_templates:constants.yml.j2",
+        "//src/sonic-config-engine:setup.py",
+        "//src/sonic-config-engine:sonic_cfggen",
+    ],
+    legacy_create_init = False,
+    main = "//tools/bazel/tests:integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        ":bgpcfgd",
+        "//src/sonic-config-engine:sonic_config_engine",
+        requirement("pytest"),
+    ],
+)
