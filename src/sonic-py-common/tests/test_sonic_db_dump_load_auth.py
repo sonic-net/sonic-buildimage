@@ -35,19 +35,29 @@ def protected_redis(monkeypatch, root_owned_auth_files):
             'tcp_host': '127.0.0.1', 'tcp_port': 0}))
         acl = root / 'users.acl'
         acl.write_text('user default on nopass ~* &* -@all +@read +@transaction '
-                       '+select +ping +info +client|setinfo\n'
+                       '+select +ping +info\n'
                        'user sonic-trusted-writer on #' + hashlib.sha256(password.encode()).hexdigest()
                        + ' ~* &* +@all\n')
-        server = subprocess.Popen(['redis-server', '--port', '0', '--unixsocket', socket,
-                                   '--unixsocketperm', '666', '--save', '', '--appendonly', 'no',
-                                   '--aclfile', str(acl)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        log = root / 'redis.log'
+        with log.open('w') as output:
+            server = subprocess.Popen(['redis-server', '--port', '0', '--unixsocket', socket,
+                                       '--unixsocketperm', '666', '--save', '', '--appendonly', 'no',
+                                       '--aclfile', str(acl)], stdout=output, stderr=subprocess.STDOUT)
         try:
-            for _ in range(200):
-                if Path(socket).exists():
-                    break
-                if server.poll() is not None:
-                    pytest.fail('test Redis stopped before startup')
-                time.sleep(0.01)
+            probe = redis.Redis(unix_socket_path=socket, socket_connect_timeout=0.1, socket_timeout=0.1)
+            try:
+                for _ in range(200):
+                    if server.poll() is not None:
+                        pytest.fail('test Redis stopped before startup:\n' + log.read_text())
+                    try:
+                        probe.ping()
+                        break
+                    except redis.exceptions.ConnectionError:
+                        time.sleep(0.01)
+                else:
+                    pytest.fail('test Redis did not become ready:\n' + log.read_text())
+            finally:
+                probe.close()
             monkeypatch.setattr(redis_auth, 'AUTH_DIRECTORY', str(root))
             with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=socket), \
                     patch('swsscommon.swsscommon.SonicDBConfig.getDbPort', return_value=0), \
