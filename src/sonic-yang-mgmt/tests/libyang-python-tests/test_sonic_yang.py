@@ -481,6 +481,20 @@ class Test_SonicYang(object):
 
         return
 
+    @pytest.mark.parametrize("sflow_config,expected", [
+        pytest.param({"global": {}}, {"global": {}}, id="explicit-empty-global"),
+        pytest.param({}, {}, id="absent-global"),
+        pytest.param({"global": {"admin_state": "down"}},
+                     {"global": {"admin_state": "down"}}, id="explicit-disabled-global"),
+    ])
+    def test_sflow_global_presence_round_trip(self, sonic_yang_data, sflow_config, expected):
+        # Empty presence containers carry configuration even when default leaves
+        # are omitted during serialization. An absent global must stay absent.
+        syc = sonic_yang_data['syc']
+        syc.loadData({"SFLOW": sflow_config})
+        result = syc.getData()
+        assert result.get("SFLOW", {}) == expected
+
     def test_table_with_no_yang(self, sonic_yang_data):
         # in this test, tables with no YANG models must be stored seperately
         # by this library.

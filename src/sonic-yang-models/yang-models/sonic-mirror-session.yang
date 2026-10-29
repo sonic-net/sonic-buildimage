@@ -45,9 +45,9 @@ module sonic-mirror-session {
 
     revision 2026-10-16 {
         description
-            "Add sampled source bindings with per-binding sample_rate and
-             truncate_size independent of mirror-session export configuration,
-             and system-wide sFlow configuration exclusion.";
+            "Move sample_rate and truncate_size from MIRROR_SESSION to
+             PORT_MIRROR_SAMPLE source bindings, and add system-wide sFlow
+             configuration exclusion.";
     }
 
     typedef session_type {
@@ -207,34 +207,6 @@ module sonic-mirror-session {
                     }
                     description
                         "Policer to be applied for the mirrored traffic.";
-                }
-
-                leaf sample_rate {
-                    when "current()/../type = 'ERSPAN'";
-                    type uint32 {
-                        range "2..max" {
-                            error-message "Sample rate must be in range 2..max";
-                            error-app-tag sample-rate-invalid;
-                        }
-                    }
-                    description
-                        "Sampling rate for mirrored packets. When not configured,
-                         full mirroring is used (no sampling). N means mirror 1 out
-                         of every N packets.";
-                }
-
-                leaf truncate_size {
-                    when "current()/../type = 'ERSPAN'";
-                    type uint32 {
-                        range "64..9216" {
-                            error-message "Truncate size must be 64..9216";
-                            error-app-tag truncate-size-invalid;
-                        }
-                    }
-                    description
-                        "Truncation size in bytes for mirrored packets.
-                         When not configured, no truncation is applied. When set,
-                         only the first N bytes of each mirrored packet are sent.";
                 }
             }
         }
