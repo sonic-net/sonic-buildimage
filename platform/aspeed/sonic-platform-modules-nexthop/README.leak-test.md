@@ -79,9 +79,9 @@ through `Chassis().get_liquid_cooling()`, the same wiring thermalctld uses.
 ```
 leak_injection_sim.py list
 leak_injection_sim.py status [--json]
-leak_injection_sim.py inject leakage1 [--severity MINOR|CRITICAL]   # default MINOR
+leak_injection_sim.py inject coldplate_leak [--severity MINOR|CRITICAL]   # default MINOR
 leak_injection_sim.py inject all --severity CRITICAL
-leak_injection_sim.py clear leakage1
+leak_injection_sim.py clear coldplate_leak
 leak_injection_sim.py clear all
 ```
 
@@ -132,7 +132,7 @@ lc = Chassis().get_liquid_cooling()
 leak_test = lc.get_leak_sensor_test()
 
 # Inject (severity is keyword-only and defaults to MINOR)
-leak_test.set_test_leak("leakage1", True, severity=LeakSeverity.CRITICAL)
+leak_test.set_test_leak("coldplate_leak", True, severity=LeakSeverity.CRITICAL)
 
 # Observe
 for s in lc.get_leak_sensor_status():
@@ -144,7 +144,7 @@ leak_test.clear_test_leaks()
 
 Expected result:
 
-- `get_leak_sensor_status()` returns `leakage1` while the injection is active.
+- `get_leak_sensor_status()` returns `coldplate_leak` while the injection is active.
 - `get_leak_severity()` returns the injected severity (`None` once cleared).
 - `is_test_leak()` returns `True`, so no mitigation action is taken.
 - `is_leak_sensor_ok()` stays `True` — the injection does not fault the sensor.
@@ -154,6 +154,6 @@ The injection can also be inspected or cleared directly on the BMC host:
 
 ```
 ls /run/bmc/leak_sim/
-cat /run/bmc/leak_sim/leakage1.test_leak   # prints the injected severity
+cat /run/bmc/leak_sim/coldplate_leak.test_leak   # prints the injected severity
 rm -f /run/bmc/leak_sim/*.test_leak
 ```
