@@ -185,11 +185,37 @@ jobs:
               rm target/sonic-vs.img
             fi
           elif [ $(GROUP_NAME) == vpp ]; then
+            # Validation-only: build both candidates, not monthly VPP debs.
+            set -o pipefail
+            git submodule status platform/vpp src/sonic-sairedis
+            git -C platform/vpp apply ../../.azure-pipelines/packet-trim-vpp-source-build.patch
+            git apply .azure-pipelines/packet-trim-sairedis-source-build.patch
+            git -C platform/vpp diff --exit-code -- vppbld/plugins vppbld/patches vppbld/vpp_version
+            git -C platform/vpp diff -- rules/vpp.dep vppbld/Makefile
+            git diff -- rules/sairedis.dep
             if [ $(dbg_image) == yes ]; then
               make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vpp.img.gz
               mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
             fi
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
+            for source in sonic_ext_vnet_buf.h trim_admission_node.c trim_node.c; do
+              cmp "platform/vpp/vppbld/plugins/src/sonic_ext/$source" \
+                  "platform/vpp/vppbld/repo/src/plugins/sonic_ext/$source"
+            done
+            plugin=usr/lib/x86_64-linux-gnu/vpp_plugins/sonic_ext_plugin.so
+            debs=(target/debs/trixie/vpp-plugin-core_*_amd64.deb)
+            test "${#debs[@]}" -eq 1
+            expected=$(dpkg-deb --fsys-tarfile "${debs[0]}" | tar -xOf - "./$plugin" | sha256sum | cut -d ' ' -f 1)
+            image_ref=$(gzip -dc target/docker-syncd-vpp.gz | tar -xOf - manifest.json | jq -er '.[0].RepoTags[0]')
+            docker load -i target/docker-syncd-vpp.gz
+            provenance_dir=$(mktemp -d)
+            provenance_container=
+            trap 'if [ -n "$provenance_container" ]; then docker rm "$provenance_container"; fi; rm -f "$provenance_dir/sonic_ext_plugin.so"; rmdir "$provenance_dir"' EXIT
+            provenance_container=$(docker create --entrypoint /bin/true "$image_ref")
+            docker cp "$provenance_container:/$plugin" "$provenance_dir/sonic_ext_plugin.so"
+            actual=$(sha256sum "$provenance_dir/sonic_ext_plugin.so" | cut -d ' ' -f 1)
+            test "$actual" = "$expected"
+            echo "Paired candidate sonic_ext_plugin.so SHA256: $actual"
           elif [ $(GROUP_NAME) == alpinevs ]; then
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
             make $BUILD_OPTIONS target/docker-sonic-alpinevs.gz
@@ -243,4 +269,3 @@ jobs:
           BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
           ManifestDirPath: 'target/'
           BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-

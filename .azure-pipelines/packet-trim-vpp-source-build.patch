@@ -1,0 +1,16 @@
+diff --git a/vppbld/Makefile b/vppbld/Makefile
+--- a/vppbld/Makefile
++++ b/vppbld/Makefile
+@@ -17,3 +17,3 @@
+ VPP_URL = https://gerrit.fd.io/r/vpp
+-VPP_DEB_URL = https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp
++VPP_DEB_URL = file:///__packet_trim_validation_no_cached_packages__
+ USER = $(shell id -un)
+diff --git a/rules/vpp.dep b/rules/vpp.dep
+--- a/rules/vpp.dep
++++ b/rules/vpp.dep
+@@ -6,3 +6,4 @@
+ $(VPPINFRA)_CACHE_MODE  := GIT_CONTENT_SHA
++$(VPPINFRA)_CACHE_OVERRIDE := none
+ $(VPPINFRA)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+ $(VPPINFRA)_DEP_FILES   := $(DEP_FILES)
