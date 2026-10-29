@@ -34,3 +34,9 @@ class MockConnector(object):
         self.data[key] = {}
         for field,value in fieldsvalues.items():
             self.data[key][field] = value
+
+    def delete_all_by_pattern(self, db_id, pattern):
+        match = pattern.replace('*', '')
+        keys_to_delete = [k for k in list(self.data.keys()) if k.startswith(match)]
+        for k in keys_to_delete:
+            del self.data[k]
