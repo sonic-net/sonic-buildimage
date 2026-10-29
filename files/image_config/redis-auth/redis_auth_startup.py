@@ -110,16 +110,34 @@ def selection(path=INTENT):
     return selected, instances
 
 
-def selected_processes(path=INTENT):
-    return selection(path)[0]
-
-
-def endpoint_policy(selected, instances):
+def policy_files(selected, instances):
     policy = [{'username': USERNAME, 'unix_socket': instances[name]['unix_socket_path'],
                'tcp_host': instances[name]['hostname'], 'tcp_port': 0} for name in selected]
-    if len((json.dumps(policy, indent=2) + '\n').encode()) > 4096:
+    files = {name: (json.dumps(value, indent=2) + '\n').encode() for name, value in
+             (('server/instances.json', instances), ('local.json', policy))}
+    if len(files['local.json']) > 4096:
         raise CredentialStateError('generated endpoint policy exceeds the installed reader capacity')
-    return policy
+    return files
+
+
+def server_directory(runtime, *, create=False):
+    path = runtime / 'server'
+    if create:
+        try:
+            path.mkdir(mode=0o755)
+        except FileExistsError:
+            pass
+        else:
+            path.chmod(0o755)
+    info = path.lstat()
+    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0
+            or stat.S_IMODE(info.st_mode) != 0o755):
+        raise CredentialStateError('unsafe Redis server runtime directory')
+
+
+def server_acl(digest):
+    return ('user default ' + READ_RULES + '\nuser ' + USERNAME
+            + ' reset on #' + digest + ' ~* &* +@all\n').encode()
 
 
 def atomic(path, content, mode=0o644):
@@ -143,33 +161,15 @@ def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot; reboot after changing intent')
         return []
-    policy = endpoint_policy(selected, instances)
-    policy_bytes = (json.dumps(policy, indent=2) + '\n').encode()
-    existing = runtime / 'local.json'
-    if existing.exists() and existing.read_bytes() != policy_bytes:
-        raise CredentialStateError('activation changed during this boot; reboot after changing intent')
-    inventory = runtime / 'server/instances.json'
-    inventory_bytes = (json.dumps(instances, indent=2) + '\n').encode()
-    if inventory.exists() and inventory.read_bytes() != inventory_bytes:
-        raise CredentialStateError('Redis inventory changed during this boot; reboot required')
-    prepare_credential(runtime_root=runtime)
-    digest = (runtime / 'local-system/writer.sha256').read_text().strip()
-    server = runtime / 'server'
-    try:
-        server.mkdir(mode=0o755)
-    except FileExistsError:
-        pass
-    else:
-        server.chmod(0o755)
-    info = server.lstat()
-    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0
-            or stat.S_IMODE(info.st_mode) != 0o755):
-        raise CredentialStateError('unsafe Redis server runtime directory')
-    acl = ('user default ' + READ_RULES + '\nuser ' + USERNAME
-           + ' reset on #' + digest + ' ~* &* +@all\n')
-    atomic(server / 'users.acl', acl.encode())
-    atomic(inventory, inventory_bytes)
-    atomic(existing, policy_bytes)
+    files = policy_files(selected, instances)
+    for relative, content in files.items():
+        path = runtime / relative
+        if path.exists() and read_setting(path).encode() != content:
+            raise CredentialStateError('activation changed during this boot; inventory or policy differs; reboot required')
+    digest = prepare_credential(runtime_root=runtime)
+    server_directory(runtime, create=True)
+    for relative, content in {'server/users.acl': server_acl(digest), **files}.items():
+        atomic(runtime / relative, content)
     return selected
 
 
@@ -179,22 +179,14 @@ def runtime_required(*, intent_path=INTENT, runtime=RUNTIME):
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot')
         return False
-    for relative in ('local.json', 'local-system/writer.secret', 'local-system/writer.sha256',
-                     'server/users.acl', 'server/instances.json'):
-        info = (runtime / relative).lstat()
-        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022):
-            raise CredentialStateError('missing or unsafe selected runtime file')
-    # The complete published pair must already exist. Checking cannot initialize it.
-    prepare_credential(runtime_root=runtime)
-    expected = endpoint_policy(selected, instances)
-    if json.loads((runtime / 'local.json').read_text()) != expected:
-        raise CredentialStateError('runtime policy differs from activation setting')
-    if json.loads(read_setting(runtime / 'server/instances.json')) != instances:
-        raise CredentialStateError('runtime inventory differs from configured local processes')
-    digest = (runtime / 'local-system/writer.sha256').read_text().strip()
-    expected_acl = ('user default ' + READ_RULES + '\nuser ' + USERNAME
-                    + ' reset on #' + digest + ' ~* &* +@all\n')
-    if (runtime / 'server/users.acl').read_text() != expected_acl:
+    server_directory(runtime)
+    files = policy_files(selected, instances)
+    # Check public files before credentials; this path must never initialize state.
+    for relative, content in files.items():
+        if json.loads(read_setting(runtime / relative)) != json.loads(content):
+            raise CredentialStateError('runtime inventory or policy differs from activation setting')
+    digest = prepare_credential(runtime_root=runtime, create=False)
+    if read_setting(runtime / 'server/users.acl').encode() != server_acl(digest):
         raise CredentialStateError('server policy differs from activation setting')
     return True
 

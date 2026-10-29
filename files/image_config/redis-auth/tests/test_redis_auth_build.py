@@ -14,17 +14,15 @@ import redis_auth_startup as startup
 
 
 @pytest.fixture
-def boot(tmp_path, monkeypatch):
-    if os.geteuid() != 0:
-        pytest.skip('requires root in an isolated container')
-    marker = tmp_path / 'build-enabled'
+def boot(root_directory, monkeypatch):
+    marker = root_directory / 'build-enabled'
     marker.write_text('n\n')
     marker.chmod(0o644)
-    intent = tmp_path / 'redis-auth.json'
+    intent = root_directory / 'redis-auth.json'
     intent.write_text(json.dumps({'mode': 'enforce'}))
     intent.chmod(0o600)
     monkeypatch.setattr(startup, 'BUILD_SETTING', marker)
-    return marker, intent, tmp_path / 'runtime'
+    return marker, intent, root_directory / 'runtime'
 
 
 @pytest.mark.parametrize('content', ['{"mode":"enforce"}', '{'])

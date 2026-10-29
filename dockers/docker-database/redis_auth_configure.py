@@ -16,13 +16,11 @@ def configure(database, additional, policy, inventory, *, environ=os.environ,
             or int(environ.get('NAMESPACE_COUNT') or '1') > 1
             or int(environ.get('NUM_DPU') or '0') > 0 or chassis):
         raise ValueError('selected Redis protection supports local single-host processes only')
-    if isinstance(policy, dict):
-        policy = [policy]
     if not isinstance(policy, list) or not policy:
         raise ValueError('missing selected Redis process policy')
     if not isinstance(inventory, dict) or set(inventory) != set(database['INSTANCES']):
         raise ValueError('prepared Redis inventory differs from final server configuration')
-    expected = {}
+    expected, selected = {}, set()
     for name, record in inventory.items():
         instance = database['INSTANCES'][name]
         if (set(record) != {'hostname', 'port', 'unix_socket_path', 'protected'}
@@ -30,18 +28,14 @@ def configure(database, additional, policy, inventory, *, environ=os.environ,
                 or any(instance[field] != record[field] for field in ('hostname', 'port', 'unix_socket_path'))):
             raise ValueError('configured Redis endpoint differs from prepared inventory')
         if record['protected']:
-            if record['unix_socket_path'] in expected:
-                raise ValueError('ambiguous selected Redis process')
-            expected[record['unix_socket_path']] = name
-    selected = set()
-    for entry in policy:
-        if (set(entry) != {'username', 'unix_socket', 'tcp_host', 'tcp_port'}
-                or entry['username'] != 'sonic-trusted-writer'
-                or entry['tcp_host'] != '127.0.0.1' or entry['tcp_port'] != 0):
-            raise ValueError('unsupported selected Redis process policy')
-        name = expected.get(entry['unix_socket'])
-        if name is None or name in selected:
-            raise ValueError('ambiguous selected Redis process')
+            selected.add(name)
+            expected[record['unix_socket_path']] = {
+                'username': 'sonic-trusted-writer', 'unix_socket': record['unix_socket_path'],
+                'tcp_host': '127.0.0.1', 'tcp_port': 0}
+    if (len(expected) != len(selected) or len(policy) != len(expected)
+            or {entry['unix_socket']: entry for entry in policy} != expected):
+        raise ValueError('selected Redis policy is incomplete, duplicated or differs from inventory')
+    for name in selected:
         instance = database['INSTANCES'][name]
         extras = additional['INSTANCES'].setdefault(name, {})
         if (instance['hostname'] != '127.0.0.1'
@@ -50,9 +44,6 @@ def configure(database, additional, policy, inventory, *, environ=os.environ,
             raise ValueError('selected Redis process has a nonlocal or unexpected endpoint')
         instance['port'] = 0
         extras.update({'port': 0, 'redis_auth_enforce': True})
-        selected.add(name)
-    if selected != set(expected.values()):
-        raise ValueError('prepared policy omits a protected Redis process')
     return selected
 
 

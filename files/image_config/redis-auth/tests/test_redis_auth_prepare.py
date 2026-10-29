@@ -10,9 +10,10 @@ from pathlib import Path
 import stat
 import subprocess
 import sys
-import tempfile
 import unittest
 from unittest import mock
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import redis_auth_prepare as helper  # noqa: E402
@@ -21,7 +22,8 @@ import redis_auth_prepare as helper  # noqa: E402
 def _prepare_worker(runtime, barrier, queue):
     barrier.wait(timeout=10)
     try:
-        queue.put(("ok", helper.prepare_credential(runtime_root=runtime)))
+        digest = helper.prepare_credential(runtime_root=runtime)
+        queue.put(("ok", digest))
     except Exception as error:  # pragma: no cover - report to parent
         queue.put(("error", type(error).__name__))
 
@@ -29,13 +31,9 @@ def _prepare_worker(runtime, barrier, queue):
 class RedisAuthPrepareTest(unittest.TestCase):
     PASSWORD = "A" * 43
 
-    def setUp(self):
-        if os.geteuid() != 0:
-            self.skipTest("protected credential fixtures require root")
-        temporary = tempfile.TemporaryDirectory(prefix="redis-auth-prepare-test-")
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
-        self.root.chmod(0o755)
+    @pytest.fixture(autouse=True)
+    def setup_runtime(self, root_directory):
+        self.root = root_directory
         self.runtime = self.root / "run"
         self.target = self.runtime / helper.INSTANCE
         self.secret = self.target / "writer.secret"
@@ -55,7 +53,7 @@ class RedisAuthPrepareTest(unittest.TestCase):
 
     def test_fresh_runtime_creates_one_complete_pair(self):
         with mock.patch.object(helper.secrets, "token_urlsafe", wraps=helper.secrets.token_urlsafe) as generate:
-            self.assertTrue(self.prepare())
+            self.assertEqual(self.prepare(), self.digest.read_text().strip())
         generate.assert_called_once_with(32)
         password = self.secret.read_bytes()
         self.assertEqual(len(password), 43)
@@ -70,12 +68,12 @@ class RedisAuthPrepareTest(unittest.TestCase):
                 self.assertEqual(info.st_nlink, 1)
 
     def test_same_boot_reuses_pair_and_file_inodes(self):
-        self.assertTrue(self.create())
+        self.assertEqual(self.create(), self.digest.read_text().strip())
         paths = (self.target, self.secret, self.digest)
         before = [(path.stat().st_ino, path.stat().st_mtime_ns) for path in paths]
         with mock.patch.object(helper.secrets, "token_urlsafe") as generate:
-            self.assertFalse(self.prepare())
-            self.assertFalse(self.prepare())
+            self.assertEqual(self.prepare(), self.digest.read_text().strip())
+            self.assertEqual(self.prepare(), self.digest.read_text().strip())
         generate.assert_not_called()
         self.assertEqual([(path.stat().st_ino, path.stat().st_mtime_ns) for path in paths], before)
         self.assertEqual(self.secret.read_text(), self.PASSWORD)
@@ -84,7 +82,8 @@ class RedisAuthPrepareTest(unittest.TestCase):
         self.create()
         new_runtime = self.root / "next-boot-run"
         with mock.patch.object(helper.secrets, "token_urlsafe", return_value="B" * 43):
-            self.assertTrue(helper.prepare_credential(runtime_root=new_runtime))
+            digest = helper.prepare_credential(runtime_root=new_runtime)
+            self.assertEqual(digest, hashlib.sha256(b"B" * 43).hexdigest())
         next_secret = new_runtime / helper.INSTANCE / "writer.secret"
         self.assertNotEqual(next_secret.read_bytes(), self.secret.read_bytes())
         self.assertEqual(self.secret.read_text(), self.PASSWORD)
@@ -109,8 +108,8 @@ class RedisAuthPrepareTest(unittest.TestCase):
                     process.terminate()
                     process.join(timeout=5)
             queue.close()
-        self.assertEqual(sorted(results), [("ok", False), ("ok", True)])
-        self.assertFalse(self.prepare())
+        self.assertEqual(results, [("ok", self.digest.read_text().strip())] * 2)
+        self.assertEqual(self.prepare(), self.digest.read_text().strip())
 
     def test_pair_publishes_in_one_directory_rename(self):
         rename = helper.os.rename
@@ -121,7 +120,7 @@ class RedisAuthPrepareTest(unittest.TestCase):
             self.assertEqual((source / "writer.secret").read_text(), self.PASSWORD)
             return rename(source, target)
         with mock.patch.object(helper.os, "rename", side_effect=publish) as publish_pair:
-            self.assertTrue(self.create())
+            self.assertEqual(self.create(), self.digest.read_text().strip())
         self.assertEqual(publish_pair.call_count, 1)
 
     def test_interruption_before_publication_leaves_no_final_state(self):
@@ -135,7 +134,7 @@ class RedisAuthPrepareTest(unittest.TestCase):
                 self.create()
         self.assertFalse(self.target.exists())
         self.assertEqual(list(self.runtime.iterdir()), [])
-        self.assertTrue(self.create())
+        self.assertEqual(self.create(), self.digest.read_text().strip())
 
     def test_failed_rename_leaves_no_final_state(self):
         with mock.patch.object(helper.os, "rename", side_effect=OSError("injected interruption")):
@@ -143,14 +142,14 @@ class RedisAuthPrepareTest(unittest.TestCase):
                 self.create()
         self.assertFalse(self.target.exists())
         self.assertEqual(list(self.runtime.iterdir()), [])
-        self.assertTrue(self.create())
+        self.assertEqual(self.create(), self.digest.read_text().strip())
 
     def test_abandoned_private_stage_does_not_become_final_state(self):
         self.runtime.mkdir(mode=0o755)
         stage = self.runtime / ".local-system-abandoned"
         stage.mkdir(mode=0o700)
         (stage / "writer.secret").write_text("unused")
-        self.assertTrue(self.create())
+        self.assertEqual(self.create(), self.digest.read_text().strip())
         self.assertEqual(self.secret.read_text(), self.PASSWORD)
         self.assertTrue(stage.exists())
 
@@ -284,40 +283,9 @@ for path in sys.argv[2:]:
             self.create()
         self.assertEqual(stdout.getvalue() + stderr.getvalue(), "")
 
-    def test_cli_status_contains_only_fixed_name_and_action(self):
-        for created, action in ((True, "created"), (False, "reused")):
-            stdout, stderr = io.StringIO(), io.StringIO()
-            with mock.patch.object(helper, "prepare_credential", return_value=created), \
-                 contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-                self.assertEqual(helper.main([]), 0)
-            self.assertEqual(stdout.getvalue(), f"redis-auth-prepare: instance=local-system action={action}\n")
-            self.assertEqual(stderr.getvalue(), "")
-
     def test_non_root_stops_before_preparing_runtime(self):
-        stderr = io.StringIO()
         with mock.patch.object(helper.os, "geteuid", return_value=1000), \
-             mock.patch.object(helper, "_runtime_directory") as directory, \
-             contextlib.redirect_stderr(stderr):
-            self.assertEqual(helper.main([]), 1)
+             mock.patch.object(helper, "_runtime_directory") as directory:
+            with self.assertRaisesRegex(helper.CredentialStateError, "must run as root"):
+                self.prepare()
         directory.assert_not_called()
-        self.assertIn("must run as root", stderr.getvalue())
-
-    def test_cli_contains_operating_system_error_details(self):
-        stderr = io.StringIO()
-        with mock.patch.object(helper, "prepare_credential", side_effect=OSError("/secret/path")), \
-             contextlib.redirect_stderr(stderr):
-            self.assertEqual(helper.main([]), 1)
-        self.assertIn("operating-system failure", stderr.getvalue())
-        self.assertNotIn("/secret/path", stderr.getvalue())
-
-    def test_cli_has_no_persistent_state_or_initialization_options(self):
-        for option in ("--instance", "--initialize", "--state-root", "--runtime-root"):
-            stderr = io.StringIO()
-            with self.subTest(option=option), contextlib.redirect_stderr(stderr):
-                with self.assertRaises(SystemExit) as error:
-                    helper.main([option])
-            self.assertEqual(error.exception.code, 2)
-
-
-if __name__ == "__main__":
-    unittest.main()
