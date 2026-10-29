@@ -563,27 +563,31 @@ _REPO_HOST_TYPES = {
 }
 
 
-def source_purl(submodule: dict) -> Optional[str]:
-    """`pkg:github/<owner>/<repo>@<commit>` for the repository a
-    submodule pins (`pkg:gitlab` or `pkg:bitbucket` for a repository
-    there), or None when its URL names none of those hosts.
+def _repo_purl(url: str, ref: str) -> Optional[str]:
+    """`pkg:<host type>/<owner>/<repo>@<ref>` for a repository URL, or
+    None when it names none of the hosts in _REPO_HOST_TYPES.
 
     A sonic-net repository is always `sonic-net`, which is also what
     the repositories under `Azure/` moved to.
     """
-    url = submodule.get("url") or ""
-    sha = (submodule.get("commit") or "")[:12]
-    if not sha:
-        return None
     m = re.search(r"^(?:\w+://)?(?:[^@/]+@)?([^/:]+)[:/]([^/]+)/([^/]+)$",
                   normalize_remote(url))
-    if not m or m.group(1).lower() not in _REPO_HOST_TYPES:
+    if not ref or not m or m.group(1).lower() not in _REPO_HOST_TYPES:
         return None
     owner = "sonic-net" if is_sonic_net_url(url) else m.group(2)
     return sbom_purl.build(
-        _REPO_HOST_TYPES[m.group(1).lower()], _submodule_repo(submodule),
-        sha, namespace=owner,
+        _REPO_HOST_TYPES[m.group(1).lower()], _submodule_repo({"url": url}),
+        ref, namespace=owner,
     )
+
+
+def source_purl(submodule: dict) -> Optional[str]:
+    """`pkg:github/<owner>/<repo>@<commit>` for the repository a
+    submodule pins (`pkg:gitlab` or `pkg:bitbucket` for a repository
+    there), or None when its URL names none of those hosts.
+    """
+    return _repo_purl(submodule.get("url") or "",
+                      (submodule.get("commit") or "")[:12])
 
 
 def source_component(submodule: dict, artifact_filename: str) -> Optional[dict]:
@@ -670,19 +674,11 @@ def build_purl(meta: dict, submodule: Optional[dict]) -> str:
 # ----------------------------------------------------------------------------
 
 
-def _github_purl_for_url(url: str, ref: Optional[str]) -> str:
-    """Derive a pkg:github/<org>/<repo>@<ref> PURL from a GitHub URL."""
-    m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$", url)
-    if m:
-        return f"pkg:github/{m.group(1)}/{m.group(2)}@{ref or 'unknown'}"
-    # Generic fallback for non-GitHub URLs.
-    return f"pkg:generic/{url}@{ref or 'unknown'}"
-
-
 def ancestor_from_submodule(sm: dict) -> dict:
     """Build a pedigree.ancestor entry from a non-sonic-net submodule."""
     ref = sm.get("describe") or (sm.get("commit") or "")[:12]
-    purl = _github_purl_for_url(sm["url"], ref)
+    purl = (_repo_purl(sm["url"], ref)
+            or f"pkg:generic/{sm['url']}@{ref or 'unknown'}")
     return {
         "type": "library",
         "name": sm["url"].rsplit("/", 1)[-1],
