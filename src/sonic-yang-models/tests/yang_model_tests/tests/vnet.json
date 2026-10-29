@@ -230,24 +230,7 @@
     },
 
     "VNET_VALID_VXLAN_TUNNEL_LIST": {
-        "desc": "Valid translated VNET configurations using IPv4 and IPv6 tunnel references in either order."
-    },
-
-    "VNET_VALID_VXLAN_TUNNEL_LIST_IPV4": {
-        "desc": "Valid VNET list with one IPv4 tunnel, ignoring an unreferenced IPv4 tunnel."
-    },
-
-    "VNET_VALID_VXLAN_TUNNEL_LIST_IPV6": {
-        "desc": "Valid VNET list with one IPv6 tunnel, ignoring an unreferenced IPv6 tunnel."
-    },
-
-    "VNET_VALID_EMPTY_VXLAN_TUNNEL_LIST": {
-        "desc": "Valid VNET with an empty vxlan_tunnel_list and a vxlan_tunnel fallback."
-    },
-
-    "VNET_INVALID_EMPTY_VXLAN_TUNNEL_LIST": {
-        "desc": "VNET with an empty vxlan_tunnel_list and no vxlan_tunnel fallback.",
-        "eStr": ["At least one of vxlan_tunnel or vxlan_tunnel_list must be configured."]
+        "desc": "Valid comma-separated IPv4 and IPv6 tunnel names in either order, with or without vxlan_tunnel."
     },
 
     "VNET_INVALID_VXLAN_TUNNEL_LIST_IPV4": {
@@ -260,17 +243,18 @@
         "eStr": ["vxlan_tunnel_list must not contain more than one IPv6 tunnel."]
     },
 
-    "VNET_VALID_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
-        "desc": "Valid VNET with both fields configured; vxlan_tunnel is not counted with the non-empty list."
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_DUPLICATE": {
+        "desc": "VNET tunnel string with a repeated tunnel name is rejected.",
+        "eStr": ["vxlan_tunnel_list must not contain duplicate tunnels."]
     },
 
-    "VNET_MISSING_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
-        "desc": "VNET configuration with neither vxlan_tunnel nor vxlan_tunnel_list configured.",
-        "eStr": ["At least one of vxlan_tunnel or vxlan_tunnel_list must be configured."]
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_TOO_MANY": {
+        "desc": "VNET tunnel string with three names is rejected, even when only two distinct tunnels exist.",
+        "eStr": ["vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names."]
     },
 
     "VNET_INVALID_VXLAN_TUNNEL_LIST_VTEP": {
         "desc": "VNET configuration with vxlan_tunnel_list referencing a non-existent VXLAN tunnel.",
-        "eStrKey": "LeafRef"
+        "eStr": ["vxlan_tunnel_list must reference existing VXLAN tunnels."]
     }
 }

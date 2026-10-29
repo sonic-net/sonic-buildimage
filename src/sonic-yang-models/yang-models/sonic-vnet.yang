@@ -29,8 +29,7 @@ module sonic-vnet {
 
     revision 2026-10-12 {
         description
-            "Add vxlan_tunnel_list as a leaf-list of tunnel references to VNET_LIST,
-             stored as a comma-separated string in CONFIG_DB. vxlan_tunnel is no longer
+            "Add vxlan_tunnel_list as a comma-separated string to VNET_LIST. vxlan_tunnel is no longer
              mandatory on its own; at least one of vxlan_tunnel or vxlan_tunnel_list
              must be configured. Limit the list to one IPv4 and one IPv6 tunnel.";
     }
@@ -52,18 +51,18 @@ module sonic-vnet {
 
                 key "name";
 
-                must "boolean(vxlan_tunnel) or boolean(vxlan_tunnel_list)" {
+                must "boolean(vxlan_tunnel) or string-length(vxlan_tunnel_list) > 0" {
                     error-message "At least one of vxlan_tunnel or vxlan_tunnel_list must be configured.";
                 }
 
                 must "count(/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST" +
-                     "[svxlan:name = current()/vxlan_tunnel_list]" +
+                     "[contains(concat(',', current()/vxlan_tunnel_list, ','), concat(',', svxlan:name, ','))]" +
                      "[not(contains(svxlan:src_ip, ':'))]) <= 1" {
                     error-message "vxlan_tunnel_list must not contain more than one IPv4 tunnel.";
                 }
 
                 must "count(/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST" +
-                     "[svxlan:name = current()/vxlan_tunnel_list]" +
+                     "[contains(concat(',', current()/vxlan_tunnel_list, ','), concat(',', svxlan:name, ','))]" +
                      "[contains(svxlan:src_ip, ':')]) <= 1" {
                     error-message "vxlan_tunnel_list must not contain more than one IPv6 tunnel.";
                 }
@@ -84,21 +83,30 @@ module sonic-vnet {
                     }
                 }
 
-                leaf-list vxlan_tunnel_list {
-                    description "References to valid and active vxlan tunnels to be used with this vnet
-                                 for traffic encapsulation. CONFIG_DB stores this field as a
-                                 comma-separated string, like peer_list; the YANG translation converts
-                                 it to a leaf-list of leafrefs to preserve tunnel dependencies.
+                leaf vxlan_tunnel_list {
+                    description "Comma-separated names of valid and active vxlan tunnels to be used
+                                 with this vnet for traffic encapsulation. This field is a string in
+                                 both CONFIG_DB and YANG, like peer_list.
                                  As required by vnetorch, at most one IPv4 tunnel and one
                                  IPv6 tunnel are allowed, determined by each tunnel's src_ip.
-                                 The list may be empty, contain one tunnel of either address family,
-                                 or contain one of each. An empty or absent list requires vxlan_tunnel.
-                                 A non-empty list takes precedence over vxlan_tunnel.";
-                    type leafref {
-                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                                 The string may be empty, name one tunnel of either address family,
+                                 or name one of each. An empty or absent string requires vxlan_tunnel.
+                                 A non-empty string takes precedence over vxlan_tunnel.";
+                    type string {
+                        pattern '([^,]+(,[^,]+)?)?' {
+                            error-message "vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names.";
+                        }
                     }
-                    max-elements 2;
-                    ordered-by user;
+                    must "not(contains(., ',')) or substring-before(., ',') != substring-after(., ',')" {
+                        error-message "vxlan_tunnel_list must not contain duplicate tunnels.";
+                    }
+                    must ". = '' or " +
+                         "(substring-before(concat(., ','), ',') = " +
+                         "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name and " +
+                         "(not(contains(., ',')) or substring-after(., ',') = " +
+                         "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name))" {
+                        error-message "vxlan_tunnel_list must reference existing VXLAN tunnels.";
+                    }
                 }
 
                 leaf vni {

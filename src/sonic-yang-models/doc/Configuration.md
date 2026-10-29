@@ -2949,11 +2949,12 @@ It may be an empty string (""), name a single IPv4 or IPv6 tunnel, or name one o
 In ConfigDB, use a string such as "vtep1,vtep2", not a JSON array. Non-string
 values and non-empty strings containing empty comma-separated entries (such as
 ",vtep1", "vtep1,", or "vtep1,,vtep2") are rejected before translation.
-An empty string ("") remains valid when vxlan_tunnel is configured. The shared
-string-to-leaf-list conversion trims surrounding whitespace from tunnel names.
-Internally, the model uses a leaf-list of leafrefs so each tunnel's dependent VNETs can be queried. Tunnel
-names must be distinct and must exist in VXLAN_TUNNEL. Reverse translation
-converts the leaf-list back to a comma-separated string.
+An empty string ("") remains valid when vxlan_tunnel is configured. ConfigDB
+translation trims surrounding whitespace from tunnel names but keeps the value
+as a comma-separated string. The YANG model also defines this field as a string,
+like peer_list; no conversion to a leaf-list is performed. Tunnel names must be
+distinct and must exist in VXLAN_TUNNEL. SonicYang explicitly tracks the string's
+tunnel references for schema and data dependency queries.
 Two tunnels of the same address family are not supported by vnetorch and are
 rejected by the YANG model. If the list is empty or absent, vxlan_tunnel must be
 configured; a non-empty list takes precedence over vxlan_tunnel.
