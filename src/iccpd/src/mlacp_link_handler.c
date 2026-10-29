@@ -47,6 +47,7 @@
 #include "../include/iccp_netlink.h"
 #include "../include/scheduler.h"
 #include "../include/iccp_ifm.h"
+#include "../include/iccp_utils.h"
 
 /*****************************************
 * Enum
@@ -1023,22 +1024,34 @@ static void set_peerlink_mlag_port_kernel_forward(
     struct LocalInterface *lif,
     int enable)
 {
+    char *delete_command[] = {
+        "ebtables", "-D", "FORWARD",
+        "-i", NULL, "-o", NULL, "-j", "DROP", NULL
+    };
+    char *update_command[] = {
+        "ebtables", NULL, "FORWARD",
+        "-i", NULL, "-o", NULL, "-j", "DROP", NULL
+    };
+    int ret;
+
     if (!csm || !csm->peer_link_if || !lif)
         return;
 
-    char cmd[256] = { 0 };
+    delete_command[4] = csm->peer_link_if->name;
+    delete_command[6] = lif->name;
+    ret = iccp_exec_command(delete_command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "ebtables delete peer_link %s mlag_if %s ret %d",
+        csm->peer_link_if->name, lif->name, ret);
 
-    sprintf(cmd, "ebtables %s FORWARD -i %s -o %s -j DROP",
-            "-D", csm->peer_link_if->name, lif->name);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " ebtable cmd  %s", cmd );
-    system(cmd);
-
-    sprintf(cmd, "ebtables %s FORWARD -i %s -o %s -j DROP",
-            (enable) ? "-I" : "-D", csm->peer_link_if->name, lif->name);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " ebtable cmd  %s", cmd );
-    system(cmd);
-
-    return;
+    update_command[1] = enable ? "-I" : "-D";
+    update_command[4] = csm->peer_link_if->name;
+    update_command[6] = lif->name;
+    ret = iccp_exec_command(update_command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "ebtables %s peer_link %s mlag_if %s ret %d",
+        enable ? "insert" : "delete",
+        csm->peer_link_if->name, lif->name, ret);
 }
 
 void update_peerlink_isolate_from_all_csm_lif(
@@ -2178,9 +2191,11 @@ static void mlacp_conn_handler_fdb(struct CSM* csm)
 
 void mlacp_fix_bridge_mac(struct CSM* csm)
 {
-    char syscmd[128];
-    int ret = 0;
     char macaddr[64];
+    char *command[] = {
+        "ip", "link", "set", "dev", "Bridge", "address", macaddr, NULL
+    };
+    int ret = 0;
     uint8_t null_mac[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
     if (memcmp(MLACP(csm).system_id, null_mac, ETHER_ADDR_LEN) != 0)
@@ -2192,9 +2207,8 @@ void mlacp_fix_bridge_mac(struct CSM* csm)
 
         /*When changing the mac of a vlan member port, the mac of Bridge will be changed.*/
         /*The Bridge mac can not be the same as peer system id, so fix the Bridge MAC address here.*/
-        sprintf(syscmd, "ip link set dev Bridge address %s > /dev/null 2>&1", macaddr);
-        ret = system(syscmd);
-        ICCPD_LOG_DEBUG(__FUNCTION__, "  %s  ret = %d", syscmd, ret);
+        ret = iccp_exec_command(command, true);
+        ICCPD_LOG_DEBUG(__FUNCTION__, "Set Bridge address %s ret %d", macaddr, ret);
     }
 
     return;
@@ -4489,21 +4503,24 @@ int sync_unique_ip()
 
 void set_peer_mac_in_kernel(char *mac, int vlan, int add)
 {
-    char cmd[256] = { 0 };
+    char vlan_str[16];
+    char *replace_command[] = {
+        "bridge", "fdb", "replace", mac, "dev", "Bridge",
+        "vlan", vlan_str, "local", NULL
+    };
+    char *delete_command[] = {
+        "bridge", "fdb", "del", mac, "dev", "Bridge",
+        "vlan", vlan_str, "local", NULL
+    };
     int ret = 0;
 
     ICCPD_LOG_DEBUG(__FUNCTION__,"mac %s, vlan %d, add %d", mac, vlan, add);
+    snprintf(vlan_str, sizeof(vlan_str), "%d", vlan);
 
-    if (add) {
-        sprintf(cmd, "bridge fdb replace %s dev Bridge vlan %d local", mac, vlan);
-    } else {
-        sprintf(cmd, "bridge fdb del %s dev Bridge vlan %d local", mac, vlan);
-    }
-
-    ret = system(cmd);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " cmd  %s  ret = %d", cmd, ret);
-
-    return;
+    ret = iccp_exec_command(add ? replace_command : delete_command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "bridge fdb %s mac %s vlan %s ret %d",
+        add ? "replace" : "delete", mac, vlan_str, ret);
 }
 
 void set_peerlink_learn_kernel(
@@ -4511,26 +4528,27 @@ void set_peerlink_learn_kernel(
     int enable, int dir)
 {
     struct LocalInterface *lif = NULL;
+    char *command[] = {
+        "bridge", "link", "set", "dev", NULL,
+        "learning", NULL, NULL
+    };
+    int ret = 0;
+
     if (!csm || !csm->peer_link_if)
         return;
 
     lif = csm->peer_link_if;
 
     ICCPD_LOG_DEBUG(__FUNCTION__,"ifname %s, enable %d, dir %d", lif->name, enable, dir);
-    char cmd[256] = { 0 };
-    int ret = 0;
-    if (enable == 0) {
-        sprintf(cmd, "bridge link set dev %s learning off", lif->name);
-    } else {
-        sprintf(cmd, "bridge link set dev %s learning on", lif->name);
-    }
-
-    ret = system(cmd);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " cmd  %s  ret = %d", cmd, ret);
+    command[4] = lif->name;
+    command[6] = enable ? "on" : "off";
+    ret = iccp_exec_command(command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "Set learning %s on %s ret %d",
+        enable ? "on" : "off", lif->name, ret);
 
     if (ret != 0)
     {
-        ICCPD_LOG_DEBUG(__FUNCTION__, " cmd  %s  ret = %d", cmd, ret);
         csm->peer_link_learning_enable = enable;
         csm->peer_link_learning_retry_time = time(NULL);
     } else {

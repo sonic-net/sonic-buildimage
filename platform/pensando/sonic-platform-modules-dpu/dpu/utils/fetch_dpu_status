@@ -36,7 +36,7 @@ STATE_DB = 6
 REDIS_LOCALHOST_SERVER_PORT = 6379
 REDIS_LOCALHOST_SERVER_IP = '127.0.0.1'
 NOT_AVAILABLE = 'N/A'
-CONTAINERS_TO_CHECK = ['swss', 'syncd', 'database']
+CONTAINERS_TO_CHECK = ['swss', 'syncd', 'database', 'bgp']
 try:
     apiHelper = APIHelper()
     chassis = Chassis()
@@ -282,13 +282,6 @@ class DPUHealthUpdater():
             pdsagent_name = self._fetch_pdsagent_status()
             self._fetch_pciemgrd_status()
 
-            data_plane_status = self.db.hget(self.table, 'dpu_data_plane_state')
-            data_plane_reason = self.db.hget(self.table, 'dpu_data_plane_reason')
-
-            # critical event has occurred, need manual intervention
-            if (data_plane_status == 'down') and not ((data_plane_reason is None) or (data_plane_reason.startswith("DPU container"))):
-                return
-
             dpu_status = 'down'
             if self.pdsagent_status and self.pciemgrd_status:
                 dpu_status = 'up'
@@ -296,13 +289,32 @@ class DPUHealthUpdater():
             reason = f"DPU container named {dpu_docker_name} is{'' if dpu_docker_status else ' not'} running,"
             reason += f" {pdsagent_name} running : {bool_to_healthd_status(self.pdsagent_status)},"
             reason += f" pciemgrd running : {bool_to_healthd_status(self.pciemgrd_status)}"
-            fvs_data_plane_data = [
-                ('dpu_data_plane_state', dpu_status),
-                ('dpu_data_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
-                ('dpu_data_plane_reason', reason)
-            ]
-            for name, value in fvs_data_plane_data:
-                self.db.hset(self.table, name, value)
+            fvs_data_plane_data = {
+                'dpu_data_plane_state': dpu_status,
+                'dpu_data_plane_time': datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y"),
+                'dpu_data_plane_reason': reason
+            }
+
+            # dpu-db-utild writes these fields when a critical event is raised.
+            # The ownership check and the write form one transaction, so a
+            # down it writes while this poll runs is never overwritten.
+            with self.db.pipeline() as pipe:
+                pipe.watch(self.table)
+                data_plane_status = pipe.hget(self.table, 'dpu_data_plane_state')
+                data_plane_reason = pipe.hget(self.table, 'dpu_data_plane_reason')
+                data_plane_conditions = pipe.hget(self.table, 'dpu_data_plane_conditions')
+
+                # critical event has occurred, need manual intervention
+                event_owned = data_plane_status == 'down' and not (
+                    data_plane_reason is None or data_plane_reason.startswith("DPU container"))
+                if data_plane_conditions or event_owned:
+                    return
+
+                pipe.multi()
+                pipe.hset(self.table, mapping=fvs_data_plane_data)
+                pipe.execute()
+        except redis.WatchError:
+            log_info('DPU data plane state changed during this poll, leaving it to the next one')
         except Exception as e:
             log_err(f'Failed to init dpu date plane entries due to {e}')
 

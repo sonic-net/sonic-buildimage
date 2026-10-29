@@ -198,6 +198,17 @@ repack_sonic_initrd_for_tftp_installer() {
     chmod 755 "$d/sbin/sonic-fw-env-config.sh"
     cp "$PLATFORM_ASPEED/aspeed-platform-services/scripts/sonic-program-uboot-env.sh" "$d/sbin/sonic-program-uboot-env.sh"
     chmod 755 "$d/sbin/sonic-program-uboot-env.sh"
+    # Optional vendor U-Boot env hook. The initramfs has no platform deb, so
+    # stage it here as well or the vendor's bootcmd customization would only
+    # be applied on the first host boot. Only one hook is supported.
+    for _uboot_env_vendor_hook in \
+        "$PLATFORM_ASPEED"/sonic-platform-modules-*/common/scripts/sonic-uboot-env-vendor-hook; do
+        [ -f "$_uboot_env_vendor_hook" ] || continue
+        cp "$_uboot_env_vendor_hook" "$d/sbin/sonic-uboot-env-vendor-hook"
+        chmod 755 "$d/sbin/sonic-uboot-env-vendor-hook"
+        break
+    done
+    unset _uboot_env_vendor_hook
     _aspeed_repo_root="$(cd "$PLATFORM_ASPEED/../.." && pwd)"
     if [ -d "$_aspeed_repo_root/device/aspeed" ]; then
         mkdir -p "$d/device/aspeed"

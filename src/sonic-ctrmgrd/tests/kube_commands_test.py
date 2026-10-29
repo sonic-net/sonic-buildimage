@@ -1,5 +1,6 @@
 import json
 import os
+import socket
 import shutil
 import sys
 from unittest.mock import MagicMock, patch
@@ -835,18 +836,19 @@ clusters:\n\
                     json.dumps(labels, indent=4)))
                 assert False
 
-    @patch("kube_commands.requests.get")
+    @patch("kube_commands.requests.Session")
     @patch("kube_commands.swsscommon.DBConnector")
     @patch("kube_commands.swsscommon.Table")
     @patch("kube_commands.subprocess.Popen")
-    def test_join(self, mock_subproc, mock_table, mock_conn, mock_reqget):
+    def test_join(self, mock_subproc, mock_table, mock_conn, mock_session):
         self.init()
-        common_test.set_kube_mock(mock_subproc, mock_table, mock_conn, mock_reqget)
+        common_test.set_kube_mock(mock_subproc, mock_table, mock_conn,
+                                  mock_session)
 
         for (i, ct_data) in join_test_data.items():
             lock_file = ""
             common_test.do_start_test("kube:join", i, ct_data)
-            mock_reqget.reset_mock()
+            mock_session.reset_mock()
 
             if not ct_data.get(common_test.NO_INIT, False):
                 os.system("rm -f {}".format(KUBE_ADMIN_CONF))
@@ -863,16 +865,19 @@ clusters:\n\
                 assert ret == ct_data[common_test.RETVAL]
 
             if REQUEST_VERIFY in ct_data:
-                mock_reqget.assert_called_once()
-                request_kwargs = mock_reqget.call_args[1]
+                mock_session.assert_called_once()
+                request_get = mock_session.return_value.get
+                request_get.assert_called_once()
+                request_kwargs = request_get.call_args[1]
                 assert request_kwargs["cert"] == (AME_CRT, AME_KEY)
-                assert request_kwargs["timeout"] == 10
+                assert request_kwargs["timeout"] == \
+                    kube_commands.K8S_CA_TIMEOUT
                 if ct_data[REQUEST_VERIFY]:
                     assert request_kwargs.get("verify", True) is True
                 else:
                     assert request_kwargs["verify"] is False
             else:
-                mock_reqget.assert_not_called()
+                mock_session.assert_not_called()
 
             if lock_file:
                 kube_commands.LOCK_FILE = lock_file
@@ -891,13 +896,15 @@ clusters:\n\
         tls_error = kube_commands.requests.exceptions.SSLError(
                 "certificate verify failed")
 
-        with patch("kube_commands.requests.get", side_effect=tls_error), \
+        with patch("kube_commands.requests.Session") as request_session, \
                 patch("kube_commands.tempfile.mkstemp") as mock_mkstemp, \
                 patch("kube_commands.shutil.copyfile") as mock_copyfile:
+            request_session.return_value.get.side_effect = tls_error
             with pytest.raises(kube_commands.requests.exceptions.SSLError):
                 kube_commands._gen_cli_kubeconf(
                         "10.3.157.24", 6443, "false")
 
+        request_session.return_value.close.assert_called_once_with()
         mock_mkstemp.assert_not_called()
         mock_copyfile.assert_not_called()
 
@@ -949,6 +956,335 @@ clusters:\n\
             ["kubectl", "version"], shell=False, stdout=kube_commands.subprocess.PIPE,
             stderr=kube_commands.subprocess.PIPE)
         proc.communicate.assert_called_once_with(timeout=17)
+
+    @pytest.mark.parametrize("server, expected_server", [
+        ("10.3.157.24", "10.3.157.24"),
+        ("192.168.122.11", "192.168.122.11"),
+        ("fd00::10", "fd00::10"),
+        ("[fd00::10]", "fd00::10"),
+    ])
+    def test_validate_server_destination_allows_private_addresses(
+            self, server, expected_server):
+        assert kube_commands._validate_server_destination(
+            server, "6443") == (
+                expected_server, 6443, (expected_server,))
+
+    @pytest.mark.parametrize("server", [
+        "127.0.0.1",
+        "169.254.169.254",
+        "0.0.0.0",
+        "224.0.0.1",
+        "::1",
+        "fe80::1",
+        "::",
+        "ff02::1",
+        "::ffff:169.254.169.254",
+    ])
+    def test_validate_server_destination_rejects_prohibited_addresses(
+            self, server):
+        with pytest.raises(IOError, match="prohibited address"):
+            kube_commands._validate_server_destination(server, 6443)
+
+    def test_validate_server_destination_rejects_unsafe_dns_resolution(self):
+        addrinfo = [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "",
+             ("10.3.157.24", 6443)),
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "",
+             ("169.254.169.254", 6443)),
+        ]
+        with patch("kube_commands.socket.getaddrinfo",
+                   return_value=addrinfo):
+            with pytest.raises(IOError, match="prohibited address"):
+                kube_commands._validate_server_destination(
+                    "k8s.example.com", 6443)
+
+    def test_validate_server_destination_rejects_malformed_hostname(self):
+        server = "{}.example.com".format("a" * 64)
+        with patch("kube_commands.socket.getaddrinfo",
+                   side_effect=UnicodeError("label empty or too long")):
+            with pytest.raises(IOError, match="cannot be resolved"):
+                kube_commands._validate_server_destination(server, 6443)
+
+    def test_do_join_handles_malformed_hostname(self):
+        server = "{}.example.com".format("a" * 64)
+        with patch("kube_commands._get_validated_device_name",
+                   return_value="sonic"), \
+                patch("kube_commands.socket.getaddrinfo",
+                      side_effect=UnicodeError("label empty or too long")), \
+                patch("kube_commands._troubleshoot_tips"), \
+                patch("kube_commands._do_reset") as reset:
+            ret, out, error = kube_commands._do_join(
+                server, 6443, "false")
+
+        assert ret == -1
+        assert out == ""
+        assert "cannot be resolved" in error
+        reset.assert_called_once_with()
+
+    def test_validate_server_destination_preserves_safe_dns_addresses(self):
+        addrinfo = [
+            (socket.AF_INET6, socket.SOCK_STREAM, 6, "",
+             ("2001:4860:4860::8888", 6443, 0, 0)),
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "",
+             ("10.3.157.24", 6443)),
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "",
+             ("10.3.157.24", 6443)),
+        ]
+        with patch("kube_commands.socket.getaddrinfo",
+                   return_value=addrinfo):
+            assert kube_commands._validate_server_destination(
+                "k8s.example.com", "6443") == (
+                    "k8s.example.com", 6443,
+                    ("2001:4860:4860::8888", "10.3.157.24"))
+
+    @pytest.mark.parametrize("server", [
+        "[10.3.157.24]",
+        "[k8s.example.com]",
+        "[fd00::10",
+        "fd00::10]",
+    ])
+    def test_validate_server_destination_rejects_invalid_brackets(
+            self, server):
+        with pytest.raises(IOError, match="bracket"):
+            kube_commands._validate_server_destination(server, 6443)
+
+    @pytest.mark.parametrize("server", [
+        "2606:4700:4700::1111%eth0",
+        "[2606:4700:4700::1111%eth0]",
+    ])
+    def test_validate_server_destination_rejects_ipv6_scope(
+            self, server):
+        with pytest.raises(IOError, match="scope identifiers"):
+            kube_commands._validate_server_destination(server, 6443)
+
+    def test_validate_server_destination_rejects_scoped_dns_answer(self):
+        addrinfo = [
+            (socket.AF_INET6, socket.SOCK_STREAM, 6, "",
+             ("2606:4700:4700::1111", 6443, 0, 2)),
+        ]
+        with patch("kube_commands.socket.getaddrinfo",
+                   return_value=addrinfo):
+            with pytest.raises(IOError, match="scope identifiers"):
+                kube_commands._validate_server_destination(
+                    "k8s.example.com", 6443)
+
+    @pytest.mark.parametrize("port", [0, 65536, "invalid", None])
+    def test_validate_server_destination_rejects_invalid_port(self, port):
+        with pytest.raises(IOError, match="port"):
+            kube_commands._validate_server_destination(
+                "10.3.157.24", port)
+
+    @pytest.mark.parametrize("insecure", ["false", "true"])
+    def test_gen_cli_kubeconf_rejects_prohibited_destination(
+            self, insecure):
+        with patch("kube_commands.requests.Session") as request_session:
+            with pytest.raises(IOError, match="prohibited address"):
+                kube_commands._gen_cli_kubeconf(
+                    "169.254.169.254", 443, insecure)
+        request_session.assert_not_called()
+
+    @pytest.mark.parametrize("insecure, expected_verify", [
+        ("false", True),
+        ("true", False),
+    ])
+    @pytest.mark.parametrize("status_code", [300, 301, 305, 307, 308])
+    def test_gen_cli_kubeconf_pins_dns_and_rejects_redirect(
+            self, insecure, expected_verify, status_code):
+        response = MagicMock(
+            ok=True, is_redirect=status_code != 300,
+            status_code=status_code)
+        addrinfo = [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "",
+             ("10.3.157.24", 6443)),
+        ]
+        with patch("kube_commands.socket.getaddrinfo",
+                   return_value=addrinfo), \
+                patch("kube_commands.requests.Session") as request_session:
+            request_session.return_value.get.return_value = response
+            with pytest.raises(IOError, match="refused a redirect"):
+                kube_commands._gen_cli_kubeconf(
+                    "k8s.example.com", 6443, insecure)
+
+        request_session.return_value.get.assert_called_once()
+        args, kwargs = request_session.return_value.get.call_args
+        assert args[0] == (
+            "https://10.3.157.24:6443" + kube_commands.K8S_CA_PATH)
+        assert kwargs["headers"] == {"Host": "k8s.example.com:6443"}
+        assert kwargs["allow_redirects"] is False
+        assert kwargs.get("verify", True) is expected_verify
+        adapter = request_session.return_value.mount.call_args[0][1]
+        assert adapter._server_hostname == "k8s.example.com"
+        request_session.return_value.close.assert_called_once_with()
+
+    @pytest.mark.parametrize("server", [
+        "2001:4860:4860::8888",
+        "[2001:4860:4860::8888]",
+    ])
+    def test_gen_cli_kubeconf_formats_pinned_ipv6_endpoint(
+            self, server):
+        response = MagicMock(
+            ok=True, is_redirect=True, status_code=302)
+        with patch("kube_commands.requests.Session") as request_session:
+            request_session.return_value.get.return_value = response
+            with pytest.raises(IOError, match="refused a redirect"):
+                kube_commands._gen_cli_kubeconf(
+                    server, 6443, "false")
+
+        args, kwargs = request_session.return_value.get.call_args
+        assert args[0] == (
+            "https://[2001:4860:4860::8888]:6443" +
+            kube_commands.K8S_CA_PATH)
+        assert kwargs["headers"] == {
+            "Host": "[2001:4860:4860::8888]:6443"}
+        adapter = request_session.return_value.mount.call_args[0][1]
+        assert adapter._server_hostname == "2001:4860:4860::8888"
+
+    def test_gen_cli_kubeconf_writes_bracketed_ipv6_server(
+            self, tmp_path):
+        response = MagicMock(
+            ok=True, is_redirect=False, status_code=200)
+        response.json.return_value = {"data": {"ca.crt": "test"}}
+        request_session = MagicMock()
+        request_session.get.return_value = response
+        cert = tmp_path / "client.crt"
+        key = tmp_path / "client.key"
+        kubeconf = tmp_path / "kube_admin.conf"
+        generated = tmp_path / "generated"
+        cert.write_bytes(b"client certificate")
+        key.write_bytes(b"client key")
+        generated_fd = os.open(
+            str(generated), os.O_CREAT | os.O_RDWR, 0o600)
+
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session), \
+                patch.object(kube_commands, "AME_CRT", str(cert)), \
+                patch.object(kube_commands, "AME_KEY", str(key)), \
+                patch.object(kube_commands, "KUBE_ADMIN_CONF",
+                             str(kubeconf)), \
+                patch("kube_commands.tempfile.mkstemp",
+                      return_value=(generated_fd, str(generated))):
+            kube_commands._gen_cli_kubeconf(
+                "[2001:4860:4860::8888]", 6443, "false")
+
+        assert "server: https://[2001:4860:4860::8888]:6443" in \
+            kubeconf.read_text()
+
+    @pytest.mark.parametrize("first_error", [
+        kube_commands.requests.ConnectionError("first address failed"),
+        kube_commands.requests.ReadTimeout("first address timed out"),
+    ])
+    def test_request_k8s_ca_tries_each_validated_address(
+            self, first_error):
+        response = MagicMock(ok=True, is_redirect=True)
+        request_session = MagicMock()
+        request_session.get.side_effect = [
+            first_error,
+            response,
+        ]
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session):
+            assert kube_commands._request_k8s_ca(
+                "k8s.example.com", 6443,
+                ("2001:4860:4860::8888", "10.3.157.24"),
+                "false") is response
+
+        assert [
+            call[0][0] for call in request_session.get.call_args_list
+        ] == [
+            "https://[2001:4860:4860::8888]:6443" +
+            kube_commands.K8S_CA_PATH,
+            "https://10.3.157.24:6443" + kube_commands.K8S_CA_PATH,
+        ]
+        request_session.close.assert_called_once_with()
+
+    def test_request_k8s_ca_uses_timeout_for_each_address(self):
+        response = MagicMock(ok=True, is_redirect=True)
+        request_session = MagicMock()
+        request_session.get.side_effect = [
+            kube_commands.requests.ReadTimeout("first address timed out"),
+            response,
+        ]
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session):
+            assert kube_commands._request_k8s_ca(
+                "k8s.example.com", 6443,
+                ("2001:4860:4860::8888", "10.3.157.24"),
+                "false") is response
+
+        timeouts = [
+            call[1]["timeout"]
+            for call in request_session.get.call_args_list
+        ]
+        assert timeouts == [
+            kube_commands.K8S_CA_TIMEOUT,
+            kube_commands.K8S_CA_TIMEOUT,
+        ]
+
+    def test_request_k8s_ca_does_not_retry_proxy_failure(self):
+        request_session = MagicMock()
+        request_session.get.side_effect = \
+            kube_commands.requests.exceptions.ProxyError(
+                "proxy unavailable")
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session):
+            with pytest.raises(
+                    kube_commands.requests.exceptions.ProxyError):
+                kube_commands._request_k8s_ca(
+                    "k8s.example.com", 6443,
+                    ("2001:4860:4860::8888", "10.3.157.24"),
+                    "false")
+
+        request_session.get.assert_called_once()
+        request_session.close.assert_called_once_with()
+
+    def test_request_k8s_ca_preserves_hostname_proxy_selection(self):
+        response = MagicMock(ok=True, is_redirect=True)
+        request_session = MagicMock()
+        request_session.get.return_value = response
+        proxies = {"https": "http://proxy.example.com:8080"}
+        original_url = (
+            "https://k8s.example.com:6443" + kube_commands.K8S_CA_PATH)
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session), \
+                patch("kube_commands.requests.utils.get_environ_proxies",
+                      return_value=proxies) as get_proxies:
+            assert kube_commands._request_k8s_ca(
+                "k8s.example.com", 6443, ("10.3.157.24",),
+                "false") is response
+
+        get_proxies.assert_called_once_with(original_url)
+        assert request_session.get.call_args[1]["proxies"] == proxies
+
+    def test_pinned_https_adapter_preserves_tls_hostname(self):
+        adapter = kube_commands._PinnedHTTPSAdapter("k8s.example.com")
+        assert adapter.poolmanager.connection_pool_kw["assert_hostname"] == \
+            "k8s.example.com"
+        assert adapter.poolmanager.connection_pool_kw["server_hostname"] == \
+            "k8s.example.com"
+
+    def test_request_k8s_ca_normalizes_absolute_tls_hostname(self):
+        response = MagicMock(ok=True, is_redirect=False, status_code=200)
+        request_session = MagicMock()
+        request_session.get.return_value = response
+        original_url = (
+            "https://k8s.example.com.:6443" + kube_commands.K8S_CA_PATH)
+        with patch("kube_commands.requests.Session",
+                   return_value=request_session), \
+                patch("kube_commands.requests.utils.get_environ_proxies",
+                      return_value={}) as get_proxies:
+            assert kube_commands._request_k8s_ca(
+                "k8s.example.com.", 6443, ("10.3.157.24",),
+                "false") is response
+
+        adapter = request_session.mount.call_args[0][1]
+        assert adapter._server_hostname == "k8s.example.com"
+        assert adapter.poolmanager.connection_pool_kw["assert_hostname"] == \
+            "k8s.example.com"
+        assert adapter.poolmanager.connection_pool_kw["server_hostname"] == \
+            "k8s.example.com"
+        get_proxies.assert_called_once_with(original_url)
+        assert request_session.get.call_args[1]["headers"] == {
+            "Host": "k8s.example.com.:6443"}
 
     @patch("kube_commands.subprocess.Popen")
     def test_tag_latest(self, mock_subproc):

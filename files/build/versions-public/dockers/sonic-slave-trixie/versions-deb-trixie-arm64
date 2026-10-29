@@ -77,5 +77,6 @@ shim-unsigned==16.1-2~deb13u1
 squashfs-tools==1:4.6.1-1+b1
 t1utils==1.41-4+b1
 time==1.9-0.2+b1
+tzdata==2026e-0+deb13u1
 xdelta3==3.0.11-dfsg-1.2+b1
 xmlstarlet==1.6.1-4+b1

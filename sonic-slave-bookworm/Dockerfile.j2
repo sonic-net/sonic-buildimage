@@ -193,7 +193,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3-all-dev \
 #{%- endif %}
         python3-twisted \
-        phpunit \
         libbit-vector-perl \
         openjdk-17-jdk \
         javahelper \
@@ -202,7 +201,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libhttpclient-java \
         libslf4j-java \
         libservlet3.1-java \
-        pkg-php-tools \
 # For mellanox sdk build
         libpcre3 \
         libpcre3-dev \
@@ -263,6 +261,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         liblua5.1-0-dev \
         lua-bitop-dev  \
         lua-cjson-dev \
+# For sonic-py-common Redis authentication tests
+        redis-server \
 # For mft kernel module build
         dkms \
 # For Jenkins static analysis, unit testing and code coverage
