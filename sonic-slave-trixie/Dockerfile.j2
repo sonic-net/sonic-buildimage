@@ -220,6 +220,9 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For BFN sdk build
         libusb-1.0-0-dev \
         libcurl4-openssl-dev \
+        libbrotli1 \
+        libbrotli-dev \
+        libunbound8 \
         libunwind8-dev \
         telnet \
         libc-ares2 \
@@ -776,6 +779,9 @@ RUN eatmydata apt-get install -y \
         libcjson1:$arch \
         libcjson-dev:$arch \
         libcurl4-openssl-dev:$arch \
+        libbrotli1:$arch \
+        libbrotli-dev:$arch \
+        libunbound8:$arch \
         libboost-thread-dev:$arch \
         libboost-system-dev:$arch \
         libgtest-dev:$arch \

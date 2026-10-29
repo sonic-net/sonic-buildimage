@@ -1,5 +1,5 @@
 debian==20261023T003724Z
-debian-security==20261023T003032Z
+debian-security==20261028T001419Z
 download.docker.com_linux_debian_dists_bookworm==2026-10-22T08:02:42Z
 download.docker.com_linux_debian_dists_trixie==2026-10-22T10:49:28Z
 packages.trafficmanager.net_snapshot_debian-security_20261023T003032Z_dists_bookworm-security==2026-10-22T23:02:39Z
