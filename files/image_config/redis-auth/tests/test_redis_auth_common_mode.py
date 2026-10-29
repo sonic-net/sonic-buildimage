@@ -1,7 +1,6 @@
 """Common activation and generated process inventory."""
 import copy
 import json
-import os
 
 import pytest
 
@@ -9,12 +8,9 @@ import redis_auth_startup as startup
 
 
 @pytest.fixture
-def boot(tmp_path, monkeypatch):
-    if os.geteuid() != 0:
-        pytest.skip('requires root in an isolated container')
-    intent = tmp_path / 'intent.json'
+def boot(root_directory, monkeypatch):
     monkeypatch.setattr(startup, 'build_enabled', lambda: True)
-    return intent, tmp_path / 'runtime'
+    return root_directory / 'intent.json', root_directory / 'runtime'
 
 
 @pytest.mark.parametrize('setting,mode', [({}, 'legacy'), ({'mode': 'legacy'}, 'legacy'),
@@ -29,7 +25,8 @@ def test_common_activation_preserves_stored_file(boot, setting, mode):
 
 @pytest.mark.parametrize('setting', [
     {'mode': 'auto'}, {'mode': True}, {'unknown': 'legacy'}, {'tcp_exceptions': 'redis_bmp'},
-    {'tcp_exceptions': [None]}, {'tcp_exceptions': ['redis_bmp', 'redis_bmp']}, []])
+    {'tcp_exceptions': [None]}, {'tcp_exceptions': ['redis_bmp', 'redis_bmp']}, [],
+    {'unknown': 'enforce'}, {'mode': 'oops'}, ['redis']])
 def test_invalid_activation_is_rejected(boot, setting):
     intent, runtime = boot
     intent.write_text(json.dumps(setting))

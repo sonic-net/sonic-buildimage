@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """Prepare one Redis writer password for the current host boot."""
 
-import argparse
 import fcntl
 import hashlib
 import os
 import secrets
 import shutil
 import stat
-import sys
 import tempfile
 
 
@@ -29,7 +27,7 @@ def _check(info, mode, *, directory=False):
         raise CredentialStateError("incorrect file type, ownership, mode, or link count")
 
 
-def _runtime_directory(path):
+def _runtime_directory(path, *, create=True):
     # Production uses /run/redis-auth. The override is only for isolated tests.
     if (not os.path.isabs(path) or path.startswith("//")
             or os.path.normpath(path) != path or path == "/"):
@@ -42,15 +40,16 @@ def _runtime_directory(path):
                 or (info.st_mode & 0o022 and not sticky_tmp)):
             raise CredentialStateError("unsafe runtime directory ancestor")
         ancestor = os.path.dirname(ancestor)
-    try:
-        os.mkdir(path, 0o755)
-    except FileExistsError:
-        pass
-    else:
-        os.chown(path, 0, 0, follow_symlinks=False)
-        # Readers need directory search permission; credential files remain 0400.
-        # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
-        os.chmod(path, 0o755, follow_symlinks=False)
+    if create:
+        try:
+            os.mkdir(path, 0o755)
+        except FileExistsError:
+            pass
+        else:
+            os.chown(path, 0, 0, follow_symlinks=False)
+            # Readers need directory search permission; credential files remain 0400.
+            # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
+            os.chmod(path, 0o755, follow_symlinks=False)
     _check(os.lstat(path), 0o755, directory=True)
 
 
@@ -78,12 +77,12 @@ def _write(path, content):
         stream.write(content)
 
 
-def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT):
-    """Create a complete boot-only pair, or reuse it unchanged; return created."""
+def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT, create=True):
+    """Return the validated digest, creating the boot pair only when permitted."""
     if os.geteuid() != 0:
         raise CredentialStateError("must run as root")
     runtime_root = os.fspath(runtime_root)
-    _runtime_directory(runtime_root)
+    _runtime_directory(runtime_root, create=create)
     lock_fd = os.open(runtime_root, os.O_RDONLY | os.O_DIRECTORY | _NOFOLLOW)
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
@@ -94,9 +93,9 @@ def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT):
             digest = _read(os.path.join(target, "writer.sha256"), 65)
             if hashlib.sha256(password).hexdigest().encode("ascii") + b"\n" != digest:
                 raise CredentialStateError("runtime credential pair does not match")
-            return False
+            return digest.decode("ascii").strip()
 
-        if any(os.path.lexists(os.path.join(runtime_root, name))
+        if not create or any(os.path.lexists(os.path.join(runtime_root, name))
                for name in ("local.json", "server/users.acl", "server/instances.json")):
             raise CredentialStateError("published boot credential is missing; reboot required")
 
@@ -115,25 +114,6 @@ def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT):
         finally:
             if temporary is not None:
                 shutil.rmtree(temporary)
-        return True
+        return digest.decode("ascii").strip()
     finally:
         os.close(lock_fd)
-
-
-def main(argv=None):
-    argparse.ArgumentParser(description=__doc__).parse_args(argv)
-    try:
-        created = prepare_credential()
-    except CredentialStateError as error:
-        print(f"redis-auth-prepare: {error}", file=sys.stderr)
-        return 1
-    except OSError:
-        print("redis-auth-prepare: operating-system failure", file=sys.stderr)
-        return 1
-    action = "created" if created else "reused"
-    print(f"redis-auth-prepare: instance={INSTANCE} action={action}")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

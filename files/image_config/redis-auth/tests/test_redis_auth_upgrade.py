@@ -30,6 +30,26 @@ def restore(config, prefix='', pending=True):
     return subprocess.run(command[:2] + [prefix + script], capture_output=True, text=True)
 
 
+def migrate(config, host, prefix=''):
+    source = RC_LOCAL.read_text()
+    start = source.index('    if [ -d /host/old_config ]; then')
+    end = source.index('    elif [ -f /host/minigraph.xml ]; then', start)
+    script = (source[start:end] + '    fi\n').replace('/etc/sonic', shlex.quote(str(config)))
+    script = script.replace('/host', shlex.quote(str(host)))
+    return subprocess.run(['bash', '-ec', prefix + script], capture_output=True, text=True)
+
+
+@pytest.fixture
+def migration(tmp_path):
+    config, host = tmp_path / 'etc/sonic', tmp_path / 'host'
+    config.mkdir(parents=True)
+    original = host / 'old_config/redis-auth.json'
+    original.parent.mkdir(parents=True)
+    original.write_text('{"mode":"enforce"}')
+    original.chmod(0o600)
+    return config, host, original
+
+
 @pytest.mark.parametrize('mode,selected', [('enforce', ['redis', 'redis_bmp']),
                                          ('legacy', [])])
 def test_restore_preserves_explicit_mode_and_permissions(tmp_path, mode, selected):
@@ -45,7 +65,7 @@ def test_restore_preserves_explicit_mode_and_permissions(tmp_path, mode, selecte
     assert restored.read_text() == content
     assert restored.stat().st_uid == 0
     assert restored.stat().st_mode & 0o777 == 0o600
-    assert startup.selected_processes(restored) == selected
+    assert startup.selection(restored)[0] == selected
     assert not (config / 'writer.secret').exists()
 
 
@@ -67,7 +87,7 @@ def test_unsafe_mode_stays_rejected_after_copy(tmp_path):
     original.chmod(0o666)
     assert restore(tmp_path).returncode == 0
     with pytest.raises(CredentialStateError, match='unsafe'):
-        startup.selected_processes(tmp_path / 'redis-auth.json')
+        startup.selection(tmp_path / 'redis-auth.json')[0]
 
 
 def test_symlink_stays_rejected_after_copy(tmp_path):
@@ -79,7 +99,7 @@ def test_symlink_stays_rejected_after_copy(tmp_path):
     assert restore(tmp_path).returncode == 0
     assert (tmp_path / 'redis-auth.json').is_symlink()
     with pytest.raises(OSError):
-        startup.selected_processes(tmp_path / 'redis-auth.json')
+        startup.selection(tmp_path / 'redis-auth.json')[0]
 
 
 def test_copy_failure_stops_restoration(tmp_path):
@@ -113,47 +133,24 @@ def test_first_boot_restore_and_preparation_order():
     assert 'database.service' in unit['Unit']['Before'].split()
 
 
-def test_failed_backup_move_stops_before_preparation(tmp_path):
-    config = tmp_path / 'etc/sonic'
-    config.mkdir(parents=True)
-    host = tmp_path / 'host'
-    backup = host / 'old_config'
-    backup.mkdir(parents=True)
-    (backup / 'redis-auth.json').write_text('{"mode":"enforce"}')
-    script = RC_LOCAL.read_text()
-    start = script.index('    if [ -d /host/old_config ]; then')
-    end = script.index('    elif [ -f /host/minigraph.xml ]; then', start)
-    block = script[start:end] + '    fi\n'
-    block = block.replace('/etc/sonic', shlex.quote(str(config)))
-    block = block.replace('/host', shlex.quote(str(host)))
-    result = subprocess.run(['bash', '-c', 'mv() { return 7; }\n' + block],
-                            capture_output=True, text=True)
+def test_failed_backup_move_stops_before_preparation(migration):
+    config, host, original = migration
+    backup = original.parent
+    result = migrate(config, host, 'mv() { return 7; }\n')
     assert result.returncode == 1
     assert (backup / 'redis-auth.json').exists()
     assert not (config / 'redis-auth.json').exists()
     assert not (config / 'pending_config_migration').exists()
 
 
-def test_first_boot_marks_migration_before_preparation_restores_policy(tmp_path):
-    config = tmp_path / 'etc/sonic'
-    config.mkdir(parents=True)
-    host = tmp_path / 'host'
-    original = host / 'old_config/redis-auth.json'
-    original.parent.mkdir(parents=True)
-    original.write_text('{"mode":"enforce"}')
-    original.chmod(0o600)
+def test_first_boot_marks_migration_before_preparation_restores_policy(migration):
+    config, host, original = migration
     (config / 'redis-auth.json').write_text('{"mode":"legacy"}')
-    source = RC_LOCAL.read_text()
-    start = source.index('    if [ -d /host/old_config ]; then')
-    end = source.index('    elif [ -f /host/minigraph.xml ]; then', start)
-    block = source[start:end] + '    fi\n'
-    script = block.replace('/etc/sonic', shlex.quote(str(config)))
-    script = script.replace('/host', shlex.quote(str(host)))
-    result = subprocess.run(['bash', '-ec', script], capture_output=True, text=True)
+    result = migrate(config, host)
     assert result.returncode == 0, result.stderr
     assert (config / 'redis-auth.json').read_text() == '{"mode":"legacy"}'
     assert restore(config, pending=False).returncode == 0
-    assert startup.selected_processes(config / 'redis-auth.json') == ['redis', 'redis_bmp']
+    assert startup.selection(config / 'redis-auth.json')[0] == ['redis', 'redis_bmp']
     assert (config / 'pending_config_migration').exists()
     assert not original.exists()
 
@@ -166,24 +163,12 @@ def test_untrusted_owner_stays_rejected_after_copy(tmp_path):
     os.chown(original, 65534, 65534)
     assert restore(tmp_path).returncode == 0
     with pytest.raises(CredentialStateError, match='unsafe'):
-        startup.selected_processes(tmp_path / 'redis-auth.json')
+        startup.selection(tmp_path / 'redis-auth.json')[0]
 
 
-def test_failed_copy_retries_moved_backup_without_rerunning_first_boot(tmp_path):
-    config = tmp_path / 'etc/sonic'
-    config.mkdir(parents=True)
-    host = tmp_path / 'host'
-    original = host / 'old_config/redis-auth.json'
-    original.parent.mkdir(parents=True)
-    original.write_text('{"mode":"enforce"}')
-    original.chmod(0o600)
-    source = RC_LOCAL.read_text()
-    start = source.index('    if [ -d /host/old_config ]; then')
-    end = source.index('    elif [ -f /host/minigraph.xml ]; then', start)
-    block = source[start:end] + '    fi\n'
-    script = block.replace('/etc/sonic', shlex.quote(str(config)))
-    script = script.replace('/host', shlex.quote(str(host)))
-    first_boot = subprocess.run(['bash', '-ec', script], capture_output=True, text=True)
+def test_failed_copy_retries_moved_backup_without_rerunning_first_boot(migration):
+    config, host, original = migration
+    first_boot = migrate(config, host)
     assert first_boot.returncode == 0
     assert not original.exists()
     assert (config / 'old_config/redis-auth.json').exists()
@@ -193,7 +178,7 @@ def test_failed_copy_retries_moved_backup_without_rerunning_first_boot(tmp_path)
     assert (config / 'pending_config_migration').exists()
     second = restore(config, pending=False)
     assert second.returncode == 0, second.stderr
-    assert startup.selected_processes(config / 'redis-auth.json') == ['redis', 'redis_bmp']
+    assert startup.selection(config / 'redis-auth.json')[0] == ['redis', 'redis_bmp']
 
 
 def test_completed_migration_does_not_restore_old_selection(tmp_path):
@@ -224,7 +209,7 @@ def test_real_directory_copy_failure_preserves_backup_and_allows_retry(tmp_path)
     assert (tmp_path / 'pending_config_migration').is_file()
     target.rmdir()
     assert restore(tmp_path, pending=False).returncode == 0
-    assert startup.selected_processes(target) == ['redis', 'redis_bmp']
+    assert startup.selection(target)[0] == ['redis', 'redis_bmp']
 
 
 def test_dangling_backup_symlink_cannot_enable_legacy_mode(tmp_path):
@@ -234,4 +219,4 @@ def test_dangling_backup_symlink_cannot_enable_legacy_mode(tmp_path):
     assert restore(tmp_path).returncode == 0
     assert (tmp_path / 'redis-auth.json').is_symlink()
     with pytest.raises(OSError):
-        startup.selected_processes(tmp_path / 'redis-auth.json')
+        startup.selection(tmp_path / 'redis-auth.json')[0]
