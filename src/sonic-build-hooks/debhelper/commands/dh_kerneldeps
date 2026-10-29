@@ -25,6 +25,10 @@ B<dh_kerneldeps> [S<I<debhelper options>>] [B<-X>I<item>]
 B<dh_kerneldeps> is a debhelper program that is responsible for calculating
 kernel dependencies for kernel modules that are compiled and packaged.
 
+Only files named F<*.ko> are inspected. Compressed modules (F<*.ko.gz>,
+F<*.ko.xz>, F<*.ko.zst>) are skipped with a warning, so their kernel
+dependency is not recorded.
+
 =head1 OPTIONS
 
 =over 4
@@ -61,8 +65,8 @@ on_pkgs_in_parallel {
 	my $get_kernel_module_vermagic = sub {
 		my ($file) = @_;
 		my $ff = qx_cmd('readelf', '-p', '.modinfo', $file);
-		my $vermagic = $ff =~ m/\bvermagic=([^ ]+) / ? $1 : "";
-		return $vermagic;
+		return $1 if m/\bvermagic=([^ ]+) /;
+		error("no vermagic in .modinfo section of '%s', so cannot tell which kernel it was built for", $file);
 	};
 
 	foreach my $package (@_) {
@@ -90,8 +94,16 @@ on_pkgs_in_parallel {
 			}
 
 			return if not -f _;
+			if ($fn =~ m/\.ko\.(?:gz|xz|zst)$/) {
+				warning("compressed kernel module '%s' not inspected; no kernel dependency recorded for it", $fn);
+				return;
+			}
+			return if $fn !~ m/\.ko$/;
 			return if not $is_kernel_module->($fn);
-			$vermagic_strings{$get_kernel_module_vermagic->($fn)} = ();
+			if (not exists $vermagic_strings{$get_kernel_module_vermagic->($fn)}) {
+				$vermagic_strings{$get_kernel_module_vermagic->($fn)} = ()
+			}
+			$vermagic_strings{$get_kernel_module_vermagic->($fn)}{$fn} = ();
 		};
 		find({
 				wanted => $find_kernel_modules,
@@ -106,6 +118,21 @@ on_pkgs_in_parallel {
 		my $varnameprefix = 'kernel';
 		my @packages;
 
+		for my $kver (keys %vermagic_strings) {
+			my $vmlinuz = "/boot/vmlinuz-$kver";
+			open(my $fd, '-|', 'dpkg', '-S', $vmlinuz) or error("cannot run dpkg -S $vmlinuz: $!");
+			my $output = do { local $/; <$fd> };
+			if (not close($fd)) {
+				local $, = ", ";
+				error("no installed package provides $vmlinuz (needed by ${keys %{ $vermagic_strings{$kver} }});"
+					. " the kernel image for $kver must be installed in the build environment")
+			}
+			# Match the owner line only; diversion lines or several owners are not a single package.
+			error("cannot find the single package owning $vmlinuz in dpkg -S output: $output")
+				if $output !~ m/^([^\s:,]+)(?::\S+)?: \Q$vmlinuz\E$/m;
+			push @packages, $1;
+		}
+
 		for (keys %vermagic_strings) {
 			my $output = qx_cmd("dpkg", "-S", "/boot/vmlinuz-${_}");
 			my $package_name = $output =~ m/^([^:]+):\s+.*$/ ? $1 : "";
@@ -114,10 +141,12 @@ on_pkgs_in_parallel {
 
 		$substvars->load($varlistfile) if -e $varlistfile;
 		$substvars->filter(remove => sub { $_[0] =~ m/^\Q$varnameprefix\E:/ });
-        my $obj = deps_parse(join ', ', @packages);
-        error(g_('invalid dependency got generated: %s'), join(', ', @packages)) unless defined $obj;
-		$obj->sort();
-		$substvars->set_as_required("$varnameprefix:Depends", "$obj" );
+		if (@packages) {
+			my $obj = deps_parse(join ', ', @packages);
+			error(g_('invalid dependency got generated: %s'), join(', ', @packages)) unless defined $obj;
+			$obj->sort();
+			$substvars->set("$varnameprefix:Depends", "$obj" );
+		}
 		$substvars->save($varlistfilenew);
 
 		# Replace old file by new one
