@@ -1,4 +1,16 @@
+backports.zstd==1.7.0
+certifi==2026.10.23
+charset-normalizer==3.5.2
 hiredis==3.5.0
+idna==3.20
+jsonpatch==1.36
+jsonpath-ng==1.13.0
+jsonpointer==3.4
 psutil==7.2.2
 python_arptable==0.0.2
+redfish==3.4.2
+requests==2.34.2
+requests-toolbelt==1.0.0
+requests-unixsocket==0.4.1
 smbus==1.1.post2
+urllib3==2.8.0
