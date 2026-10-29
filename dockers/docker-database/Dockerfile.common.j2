@@ -5,9 +5,6 @@
 #}
 {% set _from = "--from=" + copy_from + " " if copy_from is defined else "" %}
 
-# Enforced Redis processes apply reader permissions to each newly created socket.
-RUN apt-get update && apt-get install -y --no-install-recommends acl
-
 # Configure redis settings
 RUN sed -ri 's/^# save ""$/save ""/g;                    \
              s/^daemonize yes$/daemonize no/;            \
@@ -23,7 +20,6 @@ RUN sed -ri 's/^# save ""$/save ""/g;                    \
 COPY {{ _from }}["flush_unused_database", "/usr/local/bin/"]
 COPY {{ _from }}["docker-database-init.sh", "/usr/local/bin/"]
 COPY {{ _from }}["redis_auth_configure.py", "/usr/local/bin/"]
-COPY {{ _from }}["redis_auth_server.py", "/usr/local/bin/"]
 COPY ["files/update_chassisdb_config", "/usr/local/bin/"]
 COPY {{ _from }}["database_config.json.j2", "/usr/share/sonic/templates/"]
 COPY {{ _from }}["database_global.json.j2", "/usr/share/sonic/templates/"]

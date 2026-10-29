@@ -14,7 +14,6 @@ def boot(tmp_path, monkeypatch):
         pytest.skip('requires root in an isolated container')
     intent = tmp_path / 'intent.json'
     monkeypatch.setattr(startup, 'build_enabled', lambda: True)
-    monkeypatch.setattr(startup, 'socket_groups', lambda: [100, 1001])
     return intent, tmp_path / 'runtime'
 
 
