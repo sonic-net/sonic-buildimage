@@ -23,10 +23,6 @@ ROOT = Path(__file__).resolve().parents[4]
 spec = importlib.util.spec_from_file_location('redis_auth_configure', ROOT / 'dockers/docker-database/redis_auth_configure.py')
 configure = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(configure)
-SERVER = ROOT / 'dockers/docker-database/redis_auth_server.py'
-spec = importlib.util.spec_from_file_location('redis_auth_server', SERVER)
-server = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(server)
 
 
 class Redis:
@@ -79,9 +75,6 @@ class StartupTest(unittest.TestCase):
         enabled = mock.patch.object(startup, 'build_enabled', return_value=True)
         enabled.start()
         self.addCleanup(enabled.stop)
-        groups = mock.patch.object(startup, 'socket_groups', return_value=[27, 100, 1001])
-        groups.start()
-        self.addCleanup(groups.stop)
 
     def select(self, **intent):
         self.intent.write_text(json.dumps(intent))
@@ -109,7 +102,6 @@ class StartupTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(secret.stat().st_mode), 0o400)
         self.assertEqual(stat.S_IMODE((self.runtime / 'local.json').stat().st_mode), 0o644)
         self.assertEqual(stat.S_IMODE((self.runtime / 'server/users.acl').stat().st_mode), 0o644)
-        self.assertEqual(json.loads((self.runtime / 'server/socket-groups.json').read_text()), [27, 100, 1001])
 
     def test_systemd_umask_prepares_both_processes(self):
         self.select(mode='enforce')
@@ -179,17 +171,6 @@ class StartupTest(unittest.TestCase):
         self.prepare()
         (self.runtime / 'server/users.acl').write_text('user default on nopass +@all')
         with self.assertRaises(startup.CredentialStateError):
-            startup.runtime_required(intent_path=self.intent, runtime=self.runtime)
-
-    def test_startup_check_rejects_missing_or_changed_socket_groups(self):
-        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
-        self.prepare()
-        groups = self.runtime / 'server/socket-groups.json'
-        groups.write_text('[100, 1234]')
-        with self.assertRaises(startup.CredentialStateError):
-            startup.runtime_required(intent_path=self.intent, runtime=self.runtime)
-        groups.unlink()
-        with self.assertRaises(OSError):
             startup.runtime_required(intent_path=self.intent, runtime=self.runtime)
 
     def test_partial_credential_is_not_replaced(self):
@@ -312,11 +293,8 @@ class StartupTest(unittest.TestCase):
         selected = next(line for line in commands if '--unixsocket /var/run/redis/redis.sock ' in line)
         legacy = next(line for line in commands if '--unixsocket /var/run/redis/redis_bmp.sock ' in line)
         self.assertIn('--port 0 ', selected)
-        self.assertIn('exec /usr/local/bin/redis_auth_server.py /var/run/redis/redis.sock /usr/bin/redis-server', selected)
+        self.assertIn('exec /usr/bin/redis-server', selected)
         self.assertIn('--unixsocketperm 766 --aclfile /run/redis-auth/server/users.acl', selected)
-        self.assertIn('stopasgroup=true', rendered)
-        self.assertIn('killasgroup=true', rendered)
-        self.assertNotIn('redis_auth_server.py', legacy)
         self.assertNotIn('--aclfile', legacy)
 
     def test_container_control_template_is_valid_bash(self):
@@ -391,10 +369,8 @@ class StartupTest(unittest.TestCase):
             os.setuid(identity.pw_uid)
         for name in startup.configured_instances():
             path = socket_dir / (name + '.sock')
-            process = subprocess.Popen([sys.executable, str(SERVER), '--groups',
-                                        str(self.runtime / 'server/socket-groups.json'), str(path),
-                                        '/usr/bin/redis-server', '--port', '0', '--unixsocket', str(path),
-                                        '--unixsocketperm', '760', '--save', '', '--appendonly', 'no',
+            process = subprocess.Popen(['/usr/bin/redis-server', '--port', '0', '--unixsocket', str(path),
+                                        '--unixsocketperm', '766', '--save', '', '--appendonly', 'no',
                                         '--databases', '100', '--aclfile', str(self.runtime / 'server/users.acl')],
                                        preexec_fn=demote, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.addCleanup(lambda process=process: process.wait(timeout=5) if process.poll() is not None
@@ -436,18 +412,16 @@ class StartupTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'EXECABORT'):
                 reader.command('EXEC')
             self.assertEqual(reader.command('GET', 'test:key'), b'before')
-            self.wait_for_reader_acl(path, process)
+            self.wait_for_reader_socket(path, process)
             self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o766)
             # Named writers retain existing administrative commands.
             self.assertEqual(writer.command('CONFIG', 'SET', 'timeout', 0), b'OK')
 
-    def wait_for_reader_acl(self, path, process):
+    def wait_for_reader_socket(self, path, process):
         for _ in range(200):
-            self.assertIsNone(process.poll(), 'Redis or its socket helper exited')
-            if path.exists():
-                acl = subprocess.check_output(['getfacl', '-ncp', str(path)], text=True)
-                if 'group:100:rw-' in acl:
-                    return
+            self.assertIsNone(process.poll(), 'Redis exited')
+            if path.exists() and stat.S_IMODE(path.stat().st_mode) == 0o766:
+                return
             time.sleep(0.02)
         self.fail('selected socket never granted reader access')
 
@@ -457,12 +431,10 @@ class StartupTest(unittest.TestCase):
         path.parent.chmod(0o755)
         os.chown(path.parent, identity.pw_uid, identity.pw_gid)
         command = ['/usr/bin/redis-server', '--port', str(port), '--bind', '127.0.0.1', '--unixsocket', str(path),
-                   '--unixsocketperm', '760', '--save', '', '--appendonly', 'no',
+                   '--unixsocketperm', '766' if enforce else '760', '--save', '', '--appendonly', 'no',
                    '--pidfile', str(path.with_suffix('.pid'))]
         if enforce:
             command += ['--aclfile', str(self.runtime / 'server/users.acl')]
-            command = [sys.executable, str(SERVER), '--groups',
-                       str(self.runtime / 'server/socket-groups.json'), str(path)] + command
 
         def demote():
             os.setgroups([])
@@ -474,12 +446,12 @@ class StartupTest(unittest.TestCase):
         self.addCleanup(lambda: process.wait(timeout=5) if process.poll() is not None
                         else (process.terminate(), process.wait(timeout=5)))
         for _ in range(200):
-            self.assertIsNone(process.poll(), 'Redis or its socket helper exited')
+            self.assertIsNone(process.poll(), 'Redis exited')
             if path.exists():
                 break
             time.sleep(0.02)
         if enforce:
-            self.wait_for_reader_acl(path, process)
+            self.wait_for_reader_socket(path, process)
         return process
 
     def as_reader(self, path, *command, gid=100):
@@ -575,9 +547,7 @@ class StartupTest(unittest.TestCase):
             self.assertNotEqual(denied.returncode, 0)
             self.assertIn('NOPERM', denied.stdout + denied.stderr)
         self.assertNotEqual(self.as_reader(legacy, 'PING').returncode, 0)
-        parent_acl = subprocess.check_output(['getfacl', '-ncp', str(selected.parent)], text=True)
-        self.assertNotIn('group:100:', parent_acl)
-        self.assertNotIn('default:', parent_acl)
+        self.assertNotIn('system.posix_acl_default', os.listxattr(selected.parent))
         # The host launcher must preserve admission for private-group accounts.
         self.apply_host_socket_permissions(selected, selected=selected)
         self.apply_host_socket_permissions(legacy, selected=selected)
@@ -660,45 +630,3 @@ class StartupTest(unittest.TestCase):
         denied = self.as_reader(path, 'SET', 'test:reader', 'bad', gid=1002)
         self.assertNotEqual(denied.returncode, 0)
         self.assertIn('NOPERM', denied.stdout + denied.stderr)
-
-    def test_socket_acl_failure_stops_the_redis_child(self):
-        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
-        self.prepare()
-        path = self.root / 'failed.sock'
-        pidfile = self.root / 'failed.pid'
-        command = ['/usr/bin/redis-server', '--port', '0', '--unixsocket', str(path),
-                   '--unixsocketperm', '760', '--save', '', '--appendonly', 'no',
-                   '--pidfile', str(pidfile), '--logfile', str(self.root / 'failed.log')]
-        child = None
-
-        def fail_acl(*_args, **_kwargs):
-            nonlocal child
-            child = int(pidfile.read_text())
-            raise subprocess.CalledProcessError(1, ['setfacl'])
-
-        with mock.patch.object(server.subprocess, 'run', side_effect=fail_acl):
-            with self.assertRaises(subprocess.CalledProcessError):
-                server.run(path, command, groups_path=self.runtime / 'server/socket-groups.json')
-        self.assertIsNotNone(child)
-        with self.assertRaises(ProcessLookupError):
-            os.kill(child, 0)
-
-    def test_socket_helper_preserves_early_redis_failure_status(self):
-        self.select(mode='enforce', tcp_exceptions=['redis_bmp'])
-        self.prepare()
-        self.assertEqual(server.run(self.root / 'absent.sock',
-                                    [sys.executable, '-c', 'import sys; sys.exit(23)'],
-                                    groups_path=self.runtime / 'server/socket-groups.json'), 23)
-
-    def test_socket_reader_group_policy_must_be_safe(self):
-        policy = self.root / 'socket-groups.json'
-        for value in ([], [True], [0], [-1], [2**32 - 1], ['100'], {'gid': 100}, [100, 101, 102, 103]):
-            policy.write_text(json.dumps(value))
-            with self.assertRaises(RuntimeError):
-                server.reader_acl(policy)
-        policy.write_text('[100, 1001]')
-        policy.chmod(0o666)
-        with self.assertRaises(RuntimeError):
-            server.reader_acl(policy)
-        policy.chmod(0o644)
-        self.assertIn('group:1001:rw-', server.reader_acl(policy))

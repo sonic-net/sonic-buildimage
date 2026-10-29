@@ -70,7 +70,16 @@ def main():
         info = inventory_path.lstat()
         if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
             raise ValueError('missing or unsafe Redis server inventory')
-        configure(database, additional, json.loads(policy_path.read_text()), json.loads(inventory_path.read_text()))
+        selected = configure(database, additional, json.loads(policy_path.read_text()), json.loads(inventory_path.read_text()))
+        # Redis creates protected sockets with mode 0766. A default directory ACL
+        # can still deny a named reader; do not alter a directory shared with an
+        # exempt server to compensate for that unsupported configuration.
+        directories = {Path(database['INSTANCES'][name]['unix_socket_path']).parent for name in selected}
+        for directory in sorted(directories):
+            if 'system.posix_acl_default' in os.listxattr(directory):
+                print('redis-auth-configure: protected socket directory has a default ACL: '
+                      + str(directory), file=sys.stderr)
+                return 1
         # This path is the entrypoint's unpublished temporary database map.
         path.write_text(json.dumps(database, indent=2) + '\n')
         print(json.dumps(additional))
