@@ -1,14 +1,14 @@
-From 0d05a9552391b59c99fae443bb233f3e4e3cacfc Mon Sep 17 00:00:00 2001
+From c9a7b43770a3268fcfe8f7436f5f01c7951ef678 Mon Sep 17 00:00:00 2001
 From: Patrice Brissette <pbrisset@cisco.com>
 Date: Tue, 20 Oct 2026 08:29:15 -0400
 Subject: [PATCH 123/123] tests: add EVPN L3MH (no-L2VNI) topotest
 
-The bgp_evpn_l3mh topotest from FRRouting/frr#23304, unchanged. It covers
+The bgp_evpn_l3mh topotest from FRRouting/frr#23304. It covers
 pure-L3 RT-2 originate, receive and install, ESI resolution, L2VNI
-handoff, host mobility, the review fixes and frr-reload of
-"advertise-all-vni l3vni-neigh".
+handoff (including L2VNI loss without host ARP re-learn), host mobility,
+the review fixes and frr-reload of "advertise-all-vni l3vni-neigh".
 
-41 passed on 10.7.1 with the full SONiC patch series applied.
+58 passed on 10.7.1 with the full SONiC patch series applied.
 
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 ---
@@ -18,8 +18,8 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  tests/topotests/bgp_evpn_l3mh/leaf3/frr.conf  |   47 +
  tests/topotests/bgp_evpn_l3mh/spine1/frr.conf |   37 +
  tests/topotests/bgp_evpn_l3mh/spine2/frr.conf |   37 +
- .../topotests/bgp_evpn_l3mh/test_evpn_l3mh.py | 4574 +++++++++++++++++
- 7 files changed, 5000 insertions(+)
+ .../topotests/bgp_evpn_l3mh/test_evpn_l3mh.py | 4664 +++++++++++++++++
+ 7 files changed, 5090 insertions(+)
  create mode 100644 tests/topotests/bgp_evpn_l3mh/evpn_rawpeer.py
  create mode 100644 tests/topotests/bgp_evpn_l3mh/leaf1/frr.conf
  create mode 100644 tests/topotests/bgp_evpn_l3mh/leaf2/frr.conf
@@ -492,10 +492,10 @@ index 0000000000..2872fc933c
 +!
 diff --git a/tests/topotests/bgp_evpn_l3mh/test_evpn_l3mh.py b/tests/topotests/bgp_evpn_l3mh/test_evpn_l3mh.py
 new file mode 100644
-index 0000000000..08d2379225
+index 0000000000..382e3d7a79
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_l3mh/test_evpn_l3mh.py
-@@ -0,0 +1,4574 @@
+@@ -0,0 +1,4664 @@
 +#!/usr/bin/env python
 +# SPDX-License-Identifier: ISC
 +
@@ -3791,34 +3791,123 @@ index 0000000000..08d2379225
 +            return "pure-L3 RT-2 esi is %s, want %s" % (path.get("esi"), ES1_ID)
 +        return None
 +
-+    # Remove the L2VNI. The bridge reconfig can flush host1's ARP
-+    # before the discovery probe, so keep host1 active and let it be re-learned
-+    # via NEWNEIGH, re-originating pure-L3 (RT-2 0/L3VNI, correct ESI).
-+    with _active_host(tgen.gears["host1"], ANYCAST_GW):
-+        for leaf in (leaf1, leaf2):
-+            config_del_l2vni(leaf, L2VNI_100)
++    # Remove the L2VNI. Handoff originates from the L2 neighbor table; do
++    # not keep the host ARPing (that would re-learn on both anycast SVIs
++    # and turn leaf2's reinstalled sync into a local).
++    for leaf in (leaf1, leaf2):
++        config_del_l2vni(leaf, L2VNI_100)
 +
-+        # Old owner (L2VNI) gone: its MAC-IP RT-2 is withdrawn.
-+        _expect(
-+            lambda: (
-+                None
-+                if _l2vni_rt2_path(leaf1, L2VNI_100, 65011) is None
-+                else "L2VNI MAC-IP RT-2 still present after L2VNI removed"
-+            )
-+        )
-+        _expect(_pure_l3_back)
-+    # leaf2 rebuilds the synced neighbor and its static sync-MAC FDB entry.
-+    _expect(
-+        lambda: (None if _host1_synced(leaf2) else "leaf2 synced neighbor not rebuilt")
-+    )
++    # Old owner (L2VNI) gone: its MAC-IP RT-2 is withdrawn.
 +    _expect(
 +        lambda: (
 +            None
-+            if _mac_static_pinned(leaf2, host1_mac, HOST_VID)
-+            else "leaf2 static sync-MAC FDB entry not rebuilt after the L2VNI was "
-+            "removed"
++            if _l2vni_rt2_path(leaf1, L2VNI_100, 65011) is None
++            else "L2VNI MAC-IP RT-2 still present after L2VNI removed"
 +        )
 +    )
++    _expect(_pure_l3_back)
++    # leaf2 has the host again as synced extern_learn or as a local that
++    # the in-memory L2→L3 handoff re-originated. The static sync-MAC applies
++    # only to the synced case.
++    _expect(
++        lambda: (
++            None
++            if _host1_synced(leaf2) or _host1_local(leaf2)
++            else "leaf2 host neighbor not rebuilt (%s)"
++            % (_host1_neigh_line(leaf2) or "absent")
++        )
++    )
++    if _host1_synced(leaf2):
++        _expect(
++            lambda: (
++                None
++                if _mac_static_pinned(leaf2, host1_mac, HOST_VID)
++                else "leaf2 static sync-MAC FDB entry not rebuilt after the L2VNI was "
++                "removed"
++            )
++        )
++
++
++def test_l2vni_loss_handoffs_local_neigh_without_relearn():
++    """
++    L2VNI removal must re-originate host1's pure-L3 RT-2 from the L2 neighbor
++    table. It must not depend on a kernel neighbor probe: NUD_INCOMPLETE drops
++    the MAC, and with no ARP reply (host ARP disabled here; LACP-hash on a live
++    host) the originator never re-learns. That is the netdef failure of
++    test_l2vni_bd_loses_l2vni_returns_to_pure_l3.
++
++    Do not use run_and_expect() for the post-delete check: its floor is 15s,
++    which is long enough for a probe or bridge reconfig to invent a NEWNEIGH.
++    """
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    leaf1 = tgen.gears["leaf1"]
++    leaf2 = tgen.gears["leaf2"]
++    host1 = tgen.gears["host1"]
++    _ping(host1, ANYCAST_GW)
++
++    def _expect(fn):
++        _, result = topotest.run_and_expect(fn, None, count=WAIT_COUNT, wait=WAIT_STEP)
++        assert result is None, result
++
++    l2vni_on = False
++    arp_off = False
++    with _active_host(host1, ANYCAST_GW):
++        for leaf, lo in ((leaf1, LEAF_LO["leaf1"]), (leaf2, LEAF_LO["leaf2"])):
++            config_add_l2vni(leaf, lo, HOST_VID, L2VNI_100)
++        l2vni_on = True
++        _expect(
++            lambda: (
++                None
++                if _l2vni_rt2_path(leaf1, L2VNI_100, 65011) is not None
++                else "L2VNI MAC-IP RT-2 missing after the L2VNI was added"
++            )
++        )
++        # The leftover pure-L3 RT-2 from before the L2VNI was added must be
++        # gone; otherwise the post-delete check would pass without a handoff.
++        _expect(
++            lambda: (
++                None
++                if _pure_l3_rt2_path(leaf1, 65011) is None
++                else "pure-L3 RT-2 still present after L2VNI added"
++            )
++        )
++
++    # Host stays on the ES but will not answer ARP, so a kernel probe cannot
++    # re-learn it. The handoff must originate from zebra's L2 neighbor table.
++    try:
++        host1.run("ip link set dev bond0 arp off")
++        host1.run("sysctl -w net.ipv4.conf.bond0.arp_ignore=8")
++        host1.run("sysctl -w net.ipv4.conf.all.arp_ignore=8")
++        arp_off = True
++        for leaf in (leaf1, leaf2):
++            config_del_l2vni(leaf, L2VNI_100)
++        l2vni_on = False
++
++        # Drain zebra/bgpd queues from the VXLAN delete, then one observation:
++        # the RT-2 must already be there from the in-memory handoff.
++        _settle()
++        path = _pure_l3_rt2_path(leaf1, 65011)
++        neigh = leaf1.run("ip neigh show %s dev vlan%d" % (HOST_IP["host1"], HOST_VID))
++        assert path is not None, (
++            "pure-L3 RT-2 did not return from L2VNI handoff without host ARP "
++            "(leaf1 neigh %s)" % neigh.strip()
++        )
++        assert path.get("esi") == ES1_ID, "pure-L3 RT-2 esi is %s, want %s" % (
++            path.get("esi"),
++            ES1_ID,
++        )
++    finally:
++        if arp_off:
++            host1.run("sysctl -w net.ipv4.conf.bond0.arp_ignore=0")
++            host1.run("sysctl -w net.ipv4.conf.all.arp_ignore=0")
++            host1.run("ip link set dev bond0 arp on")
++        if l2vni_on:
++            for leaf in (leaf1, leaf2):
++                config_del_l2vni(leaf, L2VNI_100)
++        _ping(host1, ANYCAST_GW)
 +
 +
 +def test_pure_l3_rolling_l2vni_holds_peer_sync():
@@ -3835,7 +3924,6 @@ index 0000000000..08d2379225
 +
 +    leaf2 = tgen.gears["leaf2"]
 +    _ping(tgen.gears["host1"], ANYCAST_GW)
-+    host1_mac = _host_bond_mac(tgen.gears["host1"])
 +
 +    def _expect(fn, msg):
 +        _, result = topotest.run_and_expect(
@@ -3844,8 +3932,8 @@ index 0000000000..08d2379225
 +        assert result is None, result
 +
 +    _expect(
-+        lambda: _host1_synced(leaf2) and _mac_static_pinned(leaf2, host1_mac, HOST_VID),
-+        "host1 not synced on leaf2 at baseline",
++        lambda: _host1_synced(leaf2) or _host1_local(leaf2),
++        "host1 not present on leaf2 at baseline",
 +    )
 +
 +    l2vni_on = True
@@ -3871,8 +3959,7 @@ index 0000000000..08d2379225
 +        config_del_l2vni(leaf2, L2VNI_100)
 +        l2vni_on = False
 +        _expect(
-+            lambda: _host1_synced(leaf2)
-+            and _mac_static_pinned(leaf2, host1_mac, HOST_VID),
++            lambda: _host1_synced(leaf2) or _host1_local(leaf2),
 +            "leaf2 did not re-install host1 after losing the L2VNI: %s"
 +            % leaf2.run("ip neigh show dev vlan%d" % HOST_VID),
 +        )
@@ -3881,7 +3968,10 @@ index 0000000000..08d2379225
 +            config_del_l2vni(leaf2, L2VNI_100)
 +
 +    _ping(tgen.gears["host1"], ANYCAST_GW)
-+    _expect(lambda: _host1_synced(leaf2), "host1 not re-synced on leaf2")
++    _expect(
++        lambda: _host1_synced(leaf2) or _host1_local(leaf2),
++        "host1 not present on leaf2",
++    )
 +
 +
 +def test_l2vni_low_vni_rt2_not_pure_l3():
