@@ -570,6 +570,38 @@ def test_enabled_interface_without_pool_config_is_skipped(mode, warning):
     mock_syslog.assert_any_call(syslog.LOG_WARNING, warning)
 
 
+@pytest.mark.parametrize("mode", ["PORT", "MATCH"])
+def test_alias_change_keeps_startup_circuit_id_after_pool_update(mode):
+    tables = {
+        "DEVICE_METADATA": {"localhost": {"hostname": "sonic-host"}},
+        "PORT": {"Ethernet24": {"alias": "etp7"}},
+        "VLAN_INTERFACE": {"Vlan1000|192.168.0.1/24": {}},
+        "VLAN_MEMBER": {"Vlan1000|Ethernet24": {}},
+        "DHCP_SERVER_IPV4": {"Vlan1000": {"lease_time": "900", "mode": mode, "state": "enabled"}},
+        "DHCP_SERVER_IPV4_PORT": {"Vlan1000|Ethernet24": {"ranges": ["pool"]}},
+        "DHCP_SERVER_IPV4_MATCH": {"port": {"type": "circuit_id", "value": "etp7"}},
+        "DHCP_SERVER_IPV4_BINDING": {"Vlan1000|port": {"matches": ["port"], "ranges": ["pool"]}},
+        "DHCP_SERVER_IPV4_RANGE": {"pool": {"range": ["192.168.0.50", "192.168.0.51"]}}
+    }
+    generator = DhcpServCfgGenerator(
+        DictConnector(tables),
+        "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
+        kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2"
+    )
+    before = json.loads(generator.generate()[0])["Dhcp4"]
+    tables["PORT"]["Ethernet24"]["alias"] = "newalias"
+    tables["DHCP_SERVER_IPV4_RANGE"]["pool"]["range"] = ["192.168.0.50", "192.168.0.52"]
+
+    after = json.loads(generator.generate()[0])["Dhcp4"]
+
+    assert before["client-classes"]
+    assert [c["test"] for c in after["client-classes"]] == [c["test"] for c in before["client-classes"]]
+    pools = after["subnet4"][0]["pools"]
+    assert len(pools) == 1
+    assert pools[0]["pool"] == "192.168.0.50 - 192.168.0.52"
+    assert pools[0]["client-class"] == after["client-classes"][0]["name"]
+
+
 def test_portchannel_added_after_start_is_resolved():
     tables = {
         "DEVICE_METADATA": {"localhost": {"hostname": "sonic-host"}},
@@ -590,6 +622,9 @@ def test_portchannel_added_after_start_is_resolved():
     tables["VLAN_MEMBER"]["Vlan1000|PortChannel5"] = {}
     tables["DHCP_SERVER_IPV4_BINDING"]["Vlan1000|pc5"] = {"matches": ["pc5"], "ips": ["192.168.0.50"]}
 
-    _, _, _, _, _, _, _, used_matches = generator.generate()
+    config, _, _, _, _, _, _, used_matches = generator.generate()
 
     assert used_matches == {"pc5"}
+    parsed = json.loads(config)["Dhcp4"]
+    assert parsed["subnet4"][0]["pools"][0]["pool"] == "192.168.0.50 - 192.168.0.50"
+    assert "sonic-host:PortChannel5".encode("utf-8").hex() in parsed["client-classes"][0]["test"]

@@ -106,10 +106,10 @@ class DhcpServd(object):
                 prefix=".{}.".format(os.path.basename(self.kea_dhcp4_config_path)),
                 delete=False
             ) as candidate:
+                candidate_path = candidate.name
                 candidate.write(kea_dhcp4_config)
                 candidate.flush()
                 os.fsync(candidate.fileno())
-                candidate_path = candidate.name
 
             validation = subprocess.run(
                 [self.kea_dhcp4_binary, "-t", candidate_path],
