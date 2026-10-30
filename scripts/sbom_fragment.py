@@ -8,7 +8,8 @@ from environment variables:
     ARTIFACT      Required. Path to the just-built .deb / .whl / .gz.
     RECIPE_TYPE   Required. One of:
                   DPKG_DEB, MAKE_DEB, DERIVED_DEB, EXTRA_DEB,
-                  ONLINE_DEB, PYTHON_STDEB, PYTHON_WHEEL, DOCKER_IMAGE.
+                  ONLINE_DEB, COPY_DEB, PYTHON_STDEB, PYTHON_WHEEL,
+                  DOCKER_IMAGE.
     SRC_PATH      Optional. Value of $($*_SRC_PATH). Used for submodule
                   + patch detection.
     URL           Optional. Value of $($*_URL) for ONLINE_DEB recipes.
@@ -23,7 +24,10 @@ What this script emits per fragment:
     - Recipe-driven identity: PURL, name, version, arch from the
       artifact filename and recipe context.
     - Source provenance: git submodule URL + commit SHA when SRC_PATH
-      is a submodule.
+      is a submodule or a directory inside one.
+    - Source repository: a pkg:github/<owner>/<repo>@<commit> component
+      for each submodule the artifact was built from, where the
+      artifact's own PURL does not already name it.
     - Patch enumeration: SHA-256 per patch file, over every directory
       sbom_cve_refs.patch_dirs() finds for SRC_PATH — the same set the
       VEX extractor reads, so the two cannot disagree about which
@@ -43,8 +47,13 @@ performed later by the aggregator (build_sbom.py) against
 copyrights.tar.gz tarballs harvested by the build hook; it is not
 done here.
 
-The script is fail-soft: any unexpected condition logs to stderr and
-exits 0. Build failure must not be caused by SBOM emit issues.
+Exit status: 1 when ARTIFACT or RECIPE_TYPE is unset, or the fragment
+could not be built or written; 0 otherwise, including when ENABLE_SBOM
+is not y. A missing artifact is
+not a failure: a declared derived .deb a build does not produce has
+nothing to describe, and build_sbom.py separately requires a fragment
+for every .deb the installer ships. slave.mk appends `|| true` unless
+SBOM_STRICT=y, so only a strict build stops at the recipe that failed.
 """
 
 import hashlib
@@ -164,45 +173,85 @@ def _find_gitmodules_for(abs_src: str) -> Optional[tuple]:
     return None
 
 
-def _lookup_submodule_url(gm: str, rel: str) -> Optional[str]:
-    """Find the submodule.<x>.url whose path = rel inside the .gitmodules file."""
-    url = run(["git", "config", "-f", gm, "--get",
-               f"submodule.{rel}.url"])
-    if url:
-        return url
-    # .gitmodules keys by section name (often != path); fall back to grep.
+def normalize_remote(url: str) -> str:
+    """A submodule URL without a trailing `/` or `.git`.
+
+    Only the literal suffix goes. `str.rstrip(".git")` strips any run
+    of the characters `.`, `g`, `i` and `t`, which spells sonic-gnmi
+    `sonic-gnm`, sonic-dash-api `sonic-dash-ap` and openconfig/gnoi
+    `gno`. Written without `str.removesuffix`, which the buster slave's
+    Python 3.7 does not have.
+    """
+    url = url.rstrip("/")
+    if url.endswith(".git"):
+        url = url[:-len(".git")]
+    return url.rstrip("/")
+
+
+def _submodule_urls(gm: str) -> dict:
+    """Every submodule a .gitmodules file declares, as {path: url}.
+
+    Keyed by `path` rather than by section name, which is often
+    different.
+    """
+    out: dict = {}
     try:
         with open(gm) as f:
             text = f.read()
-        blocks = re.split(r"^\[submodule ", text, flags=re.M)
-        for b in blocks[1:]:
-            if re.search(rf"^\s*path\s*=\s*{re.escape(rel)}\s*$", b, re.M):
-                m = re.search(r"^\s*url\s*=\s*(\S+)\s*$", b, re.M)
-                if m:
-                    return m.group(1)
-    except Exception:
-        pass
-    return None
+    except OSError:
+        return out
+    for block in re.split(r"^\[submodule ", text, flags=re.M)[1:]:
+        p = re.search(r"^\s*path\s*=\s*(\S+)\s*$", block, re.M)
+        u = re.search(r"^\s*url\s*=\s*(\S+)\s*$", block, re.M)
+        if p and u:
+            out[p.group(1).rstrip("/")] = u.group(1)
+    return out
 
 
 def detect_submodule(src_path: str) -> Optional[dict]:
-    """If src_path is a git submodule, return {url, commit, describe}."""
+    """The submodule src_path is built from, or None.
+
+    Returns {url, commit, describe, root}. src_path need not be the
+    submodule's top directory: sonic-platform-daemons builds a wheel
+    from each of its subdirectories, sonic-dhcp-relay a .deb from
+    each of two, sonic-utilities a second .deb from one. Those are
+    built from the submodule too, and are matched to the innermost
+    submodule that contains them. `root` says whether src_path is the
+    submodule's top directory.
+    """
     if not src_path or not os.path.isdir(src_path):
         return None
     abs_src = os.path.abspath(src_path)
-    found = _find_gitmodules_for(abs_src)
-    if not found:
-        return None
-    gm, rel = found
-    url = _lookup_submodule_url(gm, rel)
-    if not url:
-        return None
-    commit = run(["git", "rev-parse", "HEAD"], cwd=abs_src)
-    describe = run(["git", "describe", "--tags", "--always"], cwd=abs_src)
+    # A submodule's own .gitmodules lists its nested submodules, not
+    # itself, so a miss there continues to the superproject above it.
+    # The walk stops at the tree the build runs in, which is the
+    # working directory: sonic-buildimage checked out as a submodule of
+    # something else is not a reason to say src/bash was built from it.
+    build_root = os.getcwd()
+    cur = abs_src
+    while True:
+        found = _find_gitmodules_for(cur)
+        if not found:
+            return None
+        gm, _ = found
+        top = os.path.dirname(gm)
+        rel = os.path.relpath(abs_src, top)
+        urls = _submodule_urls(gm)
+        containing = [p for p in urls if rel == p or rel.startswith(p + "/")]
+        if containing:
+            path = max(containing, key=len)
+            break
+        if not top.startswith(build_root.rstrip("/") + "/"):
+            return None
+        cur = top
+    sub_abs = os.path.join(top, path)
+    commit = run(["git", "rev-parse", "HEAD"], cwd=sub_abs)
+    describe = run(["git", "describe", "--tags", "--always"], cwd=sub_abs)
     return {
-        "url": url.rstrip(".git").rstrip("/"),
+        "url": normalize_remote(urls[path]),
         "commit": commit,
         "describe": describe,
+        "root": rel == path,
     }
 
 
@@ -235,7 +284,7 @@ def detect_nested_submodules(src_path: str) -> list:
             u = re.search(r"^\s*url\s*=\s*(\S+)\s*$", block, re.M)
             if not u:
                 continue
-            url = u.group(1).rstrip(".git").rstrip("/")
+            url = normalize_remote(u.group(1))
             cur = os.path.dirname(gm)
             sub_abs = os.path.join(cur, path)
             commit = run(["git", "rev-parse", "HEAD"], cwd=sub_abs)
@@ -506,6 +555,81 @@ def _submodule_repo(submodule: dict) -> str:
     return repo[:-len(".git")] if repo.endswith(".git") else repo
 
 
+# Hosting services whose repositories a PURL type names, by host.
+_REPO_HOST_TYPES = {
+    "github.com": "github",
+    "gitlab.com": "gitlab",
+    "bitbucket.org": "bitbucket",
+}
+
+
+def _repo_purl(url: str, ref: str) -> Optional[str]:
+    """`pkg:<host type>/<owner>/<repo>@<ref>` for a repository URL, or
+    None when it names none of the hosts in _REPO_HOST_TYPES.
+
+    A sonic-net repository is always `sonic-net`, which is also what
+    the repositories under `Azure/` moved to.
+    """
+    m = re.search(r"^(?:\w+://)?(?:[^@/]+@)?([^/:]+)[:/]([^/]+)/([^/]+)$",
+                  normalize_remote(url))
+    if not ref or not m or m.group(1).lower() not in _REPO_HOST_TYPES:
+        return None
+    owner = "sonic-net" if is_sonic_net_url(url) else m.group(2)
+    return sbom_purl.build(
+        _REPO_HOST_TYPES[m.group(1).lower()], _submodule_repo({"url": url}),
+        ref, namespace=owner,
+    )
+
+
+def source_purl(submodule: dict) -> Optional[str]:
+    """`pkg:github/<owner>/<repo>@<commit>` for the repository a
+    submodule pins (`pkg:gitlab` or `pkg:bitbucket` for a repository
+    there), or None when its URL names none of those hosts.
+    """
+    return _repo_purl(submodule.get("url") or "",
+                      (submodule.get("commit") or "")[:12])
+
+
+def source_component(submodule: dict, artifact_filename: str) -> Optional[dict]:
+    """The repository an artifact was built from, as its own component.
+
+    The same shape a .deb built from the top of a sonic-net submodule
+    has as its own identity: the repository's PURL at the pinned
+    commit, and a `vcs` reference to the submodule URL. A wheel, a
+    .deb built from a subdirectory, a sonic-net rebuild of a Debian
+    source and anything built from a nested or non-sonic-net submodule
+    keeps an identity of its own, so without this nothing in the
+    document names the repository it came from.
+
+    It carries `sonic:source_deb` like a language dependency does, so
+    build_sbom.py hangs it off the artifact the same way. Every
+    artifact built from one submodule names the same PURL, and the
+    aggregator merges them into one component that each artifact
+    depends on.
+    """
+    purl = source_purl(submodule)
+    if not purl:
+        return None
+    commit = submodule.get("commit") or ""
+    return {
+        "bom-ref": purl,
+        "type": "library",
+        "name": _submodule_repo(submodule),
+        "version": commit[:12],
+        "purl": purl,
+        "externalReferences": [{
+            "type": "vcs",
+            "url": submodule["url"],
+            "comment": f"submodule pinned to {commit}",
+        }],
+        "properties": [
+            {"name": "sonic:fragment_kind", "value": "recipe-emit-source"},
+            {"name": "sonic:source_deb", "value": artifact_filename},
+            {"name": "sonic:submodule_commit", "value": commit},
+        ],
+    }
+
+
 def build_purl(meta: dict, submodule: Optional[dict]) -> str:
     """Construct a PURL appropriate to the artifact + source provenance.
 
@@ -518,14 +642,18 @@ def build_purl(meta: dict, submodule: Optional[dict]) -> str:
     if meta["kind"] == "deb":
         # Heuristic: when source is a sonic-net submodule, use the github
         # PURL as primary identity. Otherwise it's an apt-style deb.
-        if (submodule and is_sonic_net_url(submodule.get("url"))
+        #
+        # Only for a .deb built from the submodule's top directory. One
+        # built from a subdirectory keeps its own name: sonic-dhcp-relay
+        # builds dhcp4relay and dhcp6relay from two, and under the
+        # repository's PURL the two would collapse into one component.
+        # It names its repository through source_component instead.
+        if (submodule and submodule.get("root", True)
+                and is_sonic_net_url(submodule.get("url"))
                 and _submodule_repo(submodule)
-                not in _DEBIAN_REBUILD_SUBMODULES):
-            repo = submodule["url"].rsplit("/", 1)[-1]
-            sha = (submodule.get("commit") or "")[:12]
-            return sbom_purl.build(
-                "github", repo, sha, namespace="sonic-net",
-            )
+                not in _DEBIAN_REBUILD_SUBMODULES
+                and source_purl(submodule)):
+            return source_purl(submodule)
         # Default: deb with sonic namespace (locally rebuilt).
         return sbom_purl.build(
             "deb", meta["name"], meta["version"], namespace="sonic",
@@ -546,19 +674,11 @@ def build_purl(meta: dict, submodule: Optional[dict]) -> str:
 # ----------------------------------------------------------------------------
 
 
-def _github_purl_for_url(url: str, ref: Optional[str]) -> str:
-    """Derive a pkg:github/<org>/<repo>@<ref> PURL from a GitHub URL."""
-    m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$", url)
-    if m:
-        return f"pkg:github/{m.group(1)}/{m.group(2)}@{ref or 'unknown'}"
-    # Generic fallback for non-GitHub URLs.
-    return f"pkg:generic/{url}@{ref or 'unknown'}"
-
-
 def ancestor_from_submodule(sm: dict) -> dict:
     """Build a pedigree.ancestor entry from a non-sonic-net submodule."""
     ref = sm.get("describe") or (sm.get("commit") or "")[:12]
-    purl = _github_purl_for_url(sm["url"], ref)
+    purl = (_repo_purl(sm["url"], ref)
+            or f"pkg:generic/{sm['url']}@{ref or 'unknown'}")
     return {
         "type": "library",
         "name": sm["url"].rsplit("/", 1)[-1],
@@ -1099,10 +1219,21 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
     # Pattern A3: sonic-net wrapper with a nested non-sonic-net
     # submodule (FRR / sonic-pins / gnoi / wpa-supplicant pattern).
     # The nested submodule is the true upstream.
-    if src_path:
-        for nested in detect_nested_submodules(src_path):
-            if not is_sonic_net_url(nested.get("url")):
-                ancestors.append(ancestor_from_submodule(nested))
+    nested_submodules = detect_nested_submodules(src_path) if src_path else []
+    for nested in nested_submodules:
+        if not is_sonic_net_url(nested.get("url")):
+            ancestors.append(ancestor_from_submodule(nested))
+
+    # The repositories this was built from, where its own identity does
+    # not already name one: the submodule it was built from, and every
+    # submodule nested in the tree it was built from. A wrapper such as
+    # src/wpasupplicant builds the code of the submodule inside it.
+    sources: list = []
+    for sm in ([submodule] if submodule else []) + nested_submodules:
+        src_comp = source_component(sm, meta["filename"])
+        if (src_comp and src_comp["bom-ref"] != bom_ref
+                and all(s["bom-ref"] != src_comp["bom-ref"] for s in sources)):
+            sources.append(src_comp)
 
     # Pattern A2: dget-based recipe. Look up the upstream Debian source
     # descriptor in versions-web. Only consider this if SRC_PATH is NOT
@@ -1182,7 +1313,7 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
                  "value": os.environ.get("CONFIGURED_ARCH", "")},
             ],
         },
-        "components": [component, *lang_components],
+        "components": [component, *sources, *lang_components],
     }
     return fragment
 
@@ -1200,7 +1331,7 @@ def main() -> int:
     recipe_type = os.environ.get("RECIPE_TYPE", "")
     if not artifact or not recipe_type:
         warn("ARTIFACT and RECIPE_TYPE env vars are required")
-        return 0  # Fail-soft
+        return 1
 
     if not os.path.exists(artifact):
         warn(f"artifact does not exist: {artifact}")
@@ -1210,15 +1341,24 @@ def main() -> int:
         fragment = build_fragment(artifact, recipe_type)
     except Exception as e:
         warn(f"fragment construction failed for {artifact}: {e}")
-        return 0
+        return 1
 
+    # Written beside and renamed into place, so a failed write leaves no
+    # truncated fragment for build_sbom.py to read as a complete one.
     out_path = f"{artifact}.cdx.json"
+    tmp_path = f"{out_path}.tmp"
     try:
-        with open(out_path, "w") as f:
+        with open(tmp_path, "w") as f:
             json.dump(fragment, f, indent=2, sort_keys=True)
+        os.replace(tmp_path, out_path)
         info(f"wrote {out_path}")
     except Exception as e:
         warn(f"could not write {out_path}: {e}")
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        return 1
 
     return 0
 
