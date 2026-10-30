@@ -3,9 +3,12 @@ import utilities_common.cli as clicommon
 
 import ipaddress
 import string
+import unicodedata
 
 
 SUPPORTED_TYPE = ["binary", "boolean", "ipv4-address", "string", "uint8", "uint16", "uint32"]
+SUPPORTED_MODE = ["PORT", "MATCH"]
+SUPPORTED_MATCH_TYPE = ["circuit_id", "option60"]
 
 
 def validate_str_type(type_, value):
@@ -45,6 +48,322 @@ def validate_str_type(type_, value):
     return False
 
 
+def validate_name(value, name, forbidden=""):
+    """Validate a user-supplied name.
+
+    `forbidden` lists characters that cannot round-trip through Config DB and so
+    must be rejected for this particular name, mirroring the YANG model:
+    '|' is the key separator, and ',' is the leaf-list separator used to join
+    DHCP_SERVER_IPV4_BINDING/matches into a single 'matches@' string. It is
+    deliberately empty for values that are neither a key nor a leaf-list member.
+    """
+    if not value or len(value) > 255:
+        click.get_current_context().fail("{} must be between 1 and 255 characters".format(name))
+    if any(char in value for char in forbidden):
+        click.get_current_context().fail("{} must not contain {}".format(
+            name, " or ".join("'{}'".format(char) for char in forbidden)))
+
+
+def validate_key_name(value, name, forbidden):
+    """Validate Config DB keys without normalizing their identity."""
+    validate_name(value, name, forbidden)
+    if any(unicodedata.category(char) in ("Cc", "Zs", "Zl", "Zp") for char in (value[0], value[-1])):
+        click.get_current_context().fail(
+            "{} must not have leading or trailing whitespace or control characters".format(name))
+
+
+def split_csv(value, name):
+    if not value:
+        return []
+    values = value.split(",")
+    if any(not item for item in values):
+        click.get_current_context().fail("{} cannot contain empty values".format(name))
+    if len(values) != len(set(values)):
+        click.get_current_context().fail("{} cannot contain duplicate values".format(name))
+    return values
+
+
+def get_vlan_subnets(dbconn, dhcp_interface):
+    prefix = "VLAN_INTERFACE|{}|".format(dhcp_interface)
+    subnets = []
+    for key in dbconn.keys("CONFIG_DB", prefix + "*"):
+        try:
+            intf = ipaddress.ip_interface(key[len(prefix):])
+        except ValueError:
+            click.get_current_context().fail("Invalid subnet configured on vlan {}".format(dhcp_interface))
+        if intf.version == 4:
+            subnets.append(intf.network)
+    if not subnets:
+        click.get_current_context().fail("Vlan {} has no IPv4 subnet".format(dhcp_interface))
+    return subnets
+
+
+def add_pool_interval(intervals, subnets, start, end):
+    """Record an address interval under the first VLAN subnet that contains it."""
+    start = ipaddress.ip_address(start)
+    end = ipaddress.ip_address(end)
+    subnet = next((subnet for subnet in subnets if start in subnet and end in subnet), None)
+    if subnet is not None:
+        intervals.setdefault(subnet, []).append((int(start), int(end)))
+    return subnet is not None
+
+
+def validate_ip_pool(ips, subnets, dhcp_interface):
+    intervals = {}
+    for ip in ips:
+        if not validate_str_type("ipv4-address", ip):
+            click.get_current_context().fail("Illegal IP address {}".format(ip))
+        if not add_pool_interval(intervals, subnets, ip, ip):
+            click.get_current_context().fail("IP {} is not in any subnet of vlan {}".format(ip, dhcp_interface))
+    return intervals
+
+
+def validate_range_pool(dbconn, ranges, subnets, dhcp_interface, range_overrides=None,
+                        allow_missing_ranges=False):
+    intervals = {}
+    for range_name in ranges:
+        key = "DHCP_SERVER_IPV4_RANGE|" + range_name
+        if range_overrides and range_name in range_overrides:
+            range_value = range_overrides[range_name]
+        else:
+            if not dbconn.exists("CONFIG_DB", key):
+                if allow_missing_ranges:
+                    continue
+                click.get_current_context().fail("Range {} does not exist".format(range_name))
+            range_value = dbconn.get("CONFIG_DB", key, "range@")
+        range_ips = range_value.split(",") if range_value else []
+        if len(range_ips) not in [1, 2]:
+            click.get_current_context().fail("Range {} has an invalid value".format(range_name))
+        ip_start = range_ips[0]
+        ip_end = range_ips[-1]
+        if not validate_str_type("ipv4-address", ip_start) or not validate_str_type("ipv4-address", ip_end):
+            click.get_current_context().fail("Range {} has an invalid IPv4 address".format(range_name))
+        if count_ipv4(ip_start, ip_end) < 1:
+            click.get_current_context().fail("Range {} has an invalid address order".format(range_name))
+        if not add_pool_interval(intervals, subnets, ip_start, ip_end):
+            click.get_current_context().fail(
+                "Range {} is not in any subnet of vlan {}".format(range_name, dhcp_interface))
+    return intervals
+
+
+def get_match_entry(dbconn, match_name, match_overrides=None):
+    if match_overrides and match_name in match_overrides:
+        entry = match_overrides[match_name]
+    else:
+        key = "DHCP_SERVER_IPV4_MATCH|" + match_name
+        if not dbconn.exists("CONFIG_DB", key):
+            click.get_current_context().fail("Match {} does not exist".format(match_name))
+        entry = dbconn.get_all("CONFIG_DB", key)
+    if entry.get("type") not in SUPPORTED_MATCH_TYPE:
+        click.get_current_context().fail("Match {} has unsupported type {}".format(match_name, entry.get("type", "")))
+    if not entry.get("value") or len(entry["value"].encode("utf-8")) > 255:
+        click.get_current_context().fail("Match {} has an invalid value or exceeds 255 UTF-8 bytes".format(match_name))
+    return entry
+
+
+def resolve_port_alias(dbconn, alias, port_alias_map=None):
+    """Resolve a circuit_id value to the single port that dhcp_relay would stamp.
+
+    dhcp_relay uses the port alias, falls back to the port name when the port has
+    no alias, and stamps PortChannels with their name, so all three are accepted
+    here. This mirrors _parse_port_map_alias() in dhcp_cfggen.
+
+    A caller-provided map is populated lazily and reused for one validation operation.
+    """
+    if port_alias_map is None:
+        port_alias_map = {}
+    if not port_alias_map:
+        for key in dbconn.keys("CONFIG_DB", "PORT|*"):
+            port = key.split("|", 1)[1]
+            port_alias = dbconn.get("CONFIG_DB", key, "alias") or port
+            port_alias_map.setdefault(port_alias, []).append(port)
+        for key in dbconn.keys("CONFIG_DB", "PORTCHANNEL|*"):
+            portchannel = key.split("|", 1)[1]
+            port_alias_map.setdefault(portchannel, []).append(portchannel)
+    ports = port_alias_map.get(alias, [])
+    if not ports:
+        click.get_current_context().fail("Circuit ID alias {} does not exist".format(alias))
+    if len(ports) > 1:
+        click.get_current_context().fail("Circuit ID alias {} is ambiguous".format(alias))
+    return ports[0]
+
+
+def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_overrides=None,
+                           range_overrides=None, port_alias_map=None, allow_missing_ranges=False):
+    validate_key_name(binding_name, "Binding name", "|")
+    if not dbconn.exists("CONFIG_DB", "DHCP_SERVER_IPV4|" + dhcp_interface):
+        click.get_current_context().fail("Interface {} is not a valid dhcp interface".format(dhcp_interface))
+
+    match_names = split_csv(entry.get("matches@"), "Match list")
+    if not match_names:
+        click.get_current_context().fail("Binding {} must reference at least one match".format(binding_name))
+
+    conditions = {}
+    for match_name in match_names:
+        validate_key_name(match_name, "Match name", "|,")
+        match = get_match_entry(dbconn, match_name, match_overrides)
+        match_type = match["type"]
+        if match_type in conditions:
+            click.get_current_context().fail(
+                "Binding {} cannot reference multiple matches of type {}".format(binding_name, match_type)
+            )
+        conditions[match_type] = match["value"]
+        if match_type == "circuit_id":
+            port = resolve_port_alias(dbconn, match["value"], port_alias_map)
+            if not dbconn.exists("CONFIG_DB", "VLAN_MEMBER|{}|{}".format(dhcp_interface, port)):
+                click.get_current_context().fail(
+                    "Circuit ID alias {} is not a member of vlan {}".format(match["value"], dhcp_interface)
+                )
+
+    has_ips = bool(entry.get("ips@"))
+    has_ranges = bool(entry.get("ranges@"))
+    if has_ips == has_ranges:
+        click.get_current_context().fail("Exactly one of IP list or range list must be provided")
+
+    subnets = get_vlan_subnets(dbconn, dhcp_interface)
+    if has_ips:
+        intervals = validate_ip_pool(split_csv(entry["ips@"], "IP list"), subnets, dhcp_interface)
+    else:
+        intervals = validate_range_pool(dbconn, split_csv(entry["ranges@"], "Range list"), subnets,
+                                        dhcp_interface, range_overrides, allow_missing_ranges)
+    return conditions, {subnet: merge_pool_intervals(pool) for subnet, pool in intervals.items()}
+
+
+def merge_pool_intervals(intervals):
+    """Merge overlapping or adjacent intervals the same way dhcp_cfggen builds Kea pools."""
+    merged = []
+    for start, end in sorted(intervals):
+        if merged and start <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def pools_partially_overlap(first, second):
+    """Identical pools share one Kea pool; any other shared address cannot be compiled."""
+    for subnet in set(first) & set(second):
+        if first[subnet] != second[subnet] and any(
+                first_start <= second_end and second_start <= first_end
+                for first_start, first_end in first[subnet]
+                for second_start, second_end in second[subnet]):
+            return True
+    return False
+
+
+def predicates_overlap(first, second):
+    return all(match_type not in second or second[match_type] == value for match_type, value in first.items())
+
+
+def validate_single_prefix(dhcp_interface, prefixes):
+    prefixes = sorted(set(prefixes), key=str)
+    if len(prefixes) > 1:
+        click.get_current_context().fail(
+            "DHCP pools on {} cannot span multiple IPv4 prefixes: {}".format(
+                dhcp_interface, ", ".join(str(prefix) for prefix in prefixes)
+            )
+        )
+
+
+def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrides=None,
+                           range_overrides=None, port_alias_map=None):
+    bindings = {}
+    prefix = "DHCP_SERVER_IPV4_BINDING|{}|".format(dhcp_interface)
+    for key in dbconn.keys("CONFIG_DB", prefix + "*"):
+        bindings[key[len(prefix):]] = dbconn.get_all("CONFIG_DB", key)
+    if candidate:
+        bindings[candidate[0]] = candidate[1]
+    if port_alias_map is None:
+        port_alias_map = {}
+
+    predicates = {}
+    pools = {}
+    for binding_name in sorted(bindings):
+        try:
+            conditions, intervals = validate_binding_entry(
+                dbconn, dhcp_interface, binding_name, bindings[binding_name], match_overrides,
+                range_overrides, port_alias_map,
+                allow_missing_ranges=not (candidate and binding_name == candidate[0])
+            )
+            # Existing bindings still serve their surviving ranges, as dhcp_cfggen does.
+            if intervals:
+                predicates[binding_name], pools[binding_name] = conditions, intervals
+        except click.UsageError:
+            if candidate and binding_name == candidate[0]:
+                raise
+            # dhcp_cfggen skips a binding that is already invalid (for example after
+            # its port left the VLAN), so it must not block unrelated changes. Only
+            # reject when this change is what breaks the binding.
+            if match_overrides or range_overrides:
+                try:
+                    validate_binding_entry(dbconn, dhcp_interface, binding_name, bindings[binding_name],
+                                           port_alias_map=port_alias_map, allow_missing_ranges=True)
+                except click.UsageError:
+                    continue
+                raise
+
+    validate_single_prefix(dhcp_interface, (subnet for pool in pools.values() for subnet in pool))
+    binding_names = sorted(predicates)
+    for index, first_name in enumerate(binding_names):
+        for second_name in binding_names[index + 1:]:
+            first = predicates[first_name]
+            second = predicates[second_name]
+            if len(first) == len(second) and predicates_overlap(first, second):
+                click.get_current_context().fail(
+                    "Bindings {} and {} overlap with equal specificity on {}".format(
+                        first_name, second_name, dhcp_interface
+                    )
+                )
+            if pools_partially_overlap(pools[first_name], pools[second_name]):
+                click.get_current_context().fail(
+                    "Bindings {} and {} have partially overlapping pools on {}".format(
+                        first_name, second_name, dhcp_interface
+                    )
+                )
+
+
+def validate_range_update(dbconn, range_name, updated_value):
+    """Re-validate every binding that references a range before its endpoints move.
+
+    A binding's pool is checked against the VLAN subnet when the binding itself is
+    written, but the range it names can be edited afterwards. dhcp_cfggen drops a
+    pool that falls outside the VLAN, so an unchecked range update would silently
+    stop serving the binding.
+
+    PORT entries retain their existing validation behavior.
+    """
+    affected_vlans = set()
+    for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|*"):
+        entry = dbconn.get_all("CONFIG_DB", key)
+        if range_name in entry.get("ranges@", "").split(","):
+            affected_vlans.add(key.split("|", 2)[1])
+    port_alias_map = {}
+    for dhcp_interface in sorted(affected_vlans):
+        validate_vlan_bindings(
+            dbconn,
+            dhcp_interface,
+            range_overrides={range_name: updated_value},
+            port_alias_map=port_alias_map,
+        )
+
+
+def validate_match_update(dbconn, match_name, updated_entry, port_alias_map=None):
+    affected_vlans = set()
+    for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|*"):
+        entry = dbconn.get_all("CONFIG_DB", key)
+        if match_name in entry.get("matches@", "").split(","):
+            affected_vlans.add(key.split("|", 2)[1])
+    if port_alias_map is None:
+        port_alias_map = {}
+    for dhcp_interface in sorted(affected_vlans):
+        validate_vlan_bindings(
+            dbconn,
+            dhcp_interface,
+            match_overrides={match_name: updated_entry},
+            port_alias_map=port_alias_map,
+        )
+
+
 @click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server", invoke_without_command=True)
 @clicommon.pass_db
 def dhcp_server(db):
@@ -60,7 +379,7 @@ def dhcp_server(db):
 
 @dhcp_server.group(cls=clicommon.AliasedGroup, name="ipv4")
 def dhcp_server_ipv4():
-    """Show ipv4 related dhcp_server info"""
+    """Configure IPv4 DHCP; MATCH pools on each interface must use one IPv4 prefix."""
     pass
 
 
@@ -74,8 +393,8 @@ def dhcp_server_ipv4():
 @clicommon.pass_db
 def dhcp_server_ipv4_add(db, mode, lease_time, dup_gw_nm, gateway, netmask, dhcp_interface):
     ctx = click.get_current_context()
-    if mode != "PORT":
-        ctx.fail("Only mode PORT is supported")
+    if mode not in SUPPORTED_MODE:
+        ctx.fail("Only modes {} are supported".format(", ".join(SUPPORTED_MODE)))
     if not validate_str_type("uint32", lease_time):
         ctx.fail("lease_time is required and must be nonnegative integer")
     dbconn = db.db
@@ -114,6 +433,9 @@ def dhcp_server_ipv4_del(db, dhcp_interface):
     dbconn = db.db
     key = "DHCP_SERVER_IPV4|" + dhcp_interface
     if dbconn.exists("CONFIG_DB", key):
+        binding_keys = dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|{}|*".format(dhcp_interface))
+        if binding_keys:
+            ctx.fail("Dhcp interface {} has match bindings and cannot be deleted".format(dhcp_interface))
         click.echo("Dhcp interface {} exists in config db, proceed to delete".format(dhcp_interface))
         dbconn.delete("CONFIG_DB", key)
     else:
@@ -131,19 +453,20 @@ def dhcp_server_ipv4_del(db, dhcp_interface):
 def dhcp_server_ipv4_update(db, mode, lease_time, dup_gw_nm, gateway, netmask, dhcp_interface):
     ctx = click.get_current_context()
     dbconn = db.db
-    key = "DHCP_SERVER_IPV4|" + dhcp_interface
-    if not dbconn.exists("CONFIG_DB", key):
+    interface_key = "DHCP_SERVER_IPV4|" + dhcp_interface
+    if not dbconn.exists("CONFIG_DB", interface_key):
         ctx.fail("Dhcp interface {} does not exist in config db".format(dhcp_interface))
+    updates = {}
     if mode:
-        if mode != "PORT":
-            ctx.fail("Only mode PORT is supported")
-        else:
-            dbconn.set("CONFIG_DB", key, "mode", mode)
+        if mode not in SUPPORTED_MODE:
+            ctx.fail("Only modes {} are supported".format(", ".join(SUPPORTED_MODE)))
+        if mode == "MATCH" and dbconn.get("CONFIG_DB", interface_key, "state") == "enabled":
+            validate_vlan_bindings(dbconn, dhcp_interface)
+        updates["mode"] = mode
     if lease_time:
         if not validate_str_type("uint32", lease_time):
             ctx.fail("lease_time is required and must be nonnegative integer")
-        else:
-            dbconn.set("CONFIG_DB", key, "lease_time", lease_time)
+        updates["lease_time"] = lease_time
     if dup_gw_nm:
         dup_success = False
         for key in dbconn.keys("CONFIG_DB", "VLAN_INTERFACE|" + dhcp_interface + "|*"):
@@ -159,9 +482,11 @@ def dhcp_server_ipv4_update(db, mode, lease_time, dup_gw_nm, gateway, netmask, d
     elif netmask and not validate_str_type("ipv4-address", netmask):
         ctx.fail("netmask must be valid ipv4 string")
     if gateway:
-        dbconn.set("CONFIG_DB", key, "gateway", gateway)
+        updates["gateway"] = gateway
     if netmask:
-        dbconn.set("CONFIG_DB", key, "netmask", netmask)
+        updates["netmask"] = netmask
+    for field, value in updates.items():
+        dbconn.set("CONFIG_DB", interface_key, field, value)
 
 
 @dhcp_server_ipv4.command(name="enable")
@@ -172,6 +497,8 @@ def dhcp_server_ipv4_enable(db, dhcp_interface):
     dbconn = db.db
     key = "DHCP_SERVER_IPV4|" + dhcp_interface
     if dbconn.exists("CONFIG_DB", key):
+        if dbconn.get("CONFIG_DB", key, "mode") == "MATCH":
+            validate_vlan_bindings(dbconn, dhcp_interface)
         dbconn.set("CONFIG_DB", key, "state", "enabled")
     else:
         ctx.fail("Failed to enable, dhcp interface {} does not exist".format(dhcp_interface))
@@ -238,6 +565,7 @@ def dhcp_server_ipv4_range_update(db, range_name, ip_start, ip_end):
     dbconn = db.db
     key = "DHCP_SERVER_IPV4_RANGE|" + range_name
     if dbconn.exists("CONFIG_DB", key):
+        validate_range_update(dbconn, range_name, ip_start + "," + ip_end)
         dbconn.set("CONFIG_DB", key, "range@", ip_start + "," + ip_end)
     else:
         ctx.fail("Range {} does not exist, cannot update".format(range_name))
@@ -257,9 +585,185 @@ def dhcp_sever_ipv4_range_del(db, range_name, force):
                 ranges = dbconn.get("CONFIG_DB", port, "ranges@")
                 if ranges and range_name in ranges.split(","):
                     ctx.fail("Range {} is referenced in {}, cannot delete, add --force to bypass or range unbind to unbind range first".format(range_name, port))
+            for binding in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|*"):
+                ranges = dbconn.get("CONFIG_DB", binding, "ranges@")
+                if ranges and range_name in ranges.split(","):
+                    ctx.fail(
+                        "Range {} is referenced in {}, cannot delete, add --force to "
+                        "bypass or delete the binding first".format(
+                            range_name, binding
+                        )
+                    )
         dbconn.delete("CONFIG_DB", key)
     else:
         ctx.fail("Range {} does not exist, cannot delete".format(range_name))
+
+
+@dhcp_server_ipv4.group(cls=clicommon.AliasedGroup, name="match")
+def dhcp_server_ipv4_match():
+    pass
+
+
+@dhcp_server_ipv4_match.command(name="add")
+@click.argument("match_name", required=True)
+@click.option("--type", "match_type", required=True)
+@click.option("--value", required=True)
+@clicommon.pass_db
+def dhcp_server_ipv4_match_add(db, match_name, match_type, value):
+    ctx = click.get_current_context()
+    validate_key_name(match_name, "Match name", "|,")
+    validate_name(value, "Match value")
+    if match_type not in SUPPORTED_MATCH_TYPE:
+        ctx.fail("Only match types {} are supported".format(", ".join(SUPPORTED_MATCH_TYPE)))
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4_MATCH|" + match_name
+    if dbconn.exists("CONFIG_DB", key):
+        ctx.fail("Match {} already exists".format(match_name))
+    # The model requires a circuit_id to name a real port even when no binding
+    # references the match yet, so check here rather than only at binding time.
+    if match_type == "circuit_id":
+        resolve_port_alias(dbconn, value)
+    dbconn.hmset("CONFIG_DB", key, {"type": match_type, "value": value})
+
+
+@dhcp_server_ipv4_match.command(name="update")
+@click.argument("match_name", required=True)
+@click.option("--type", "match_type", required=False)
+@click.option("--value", required=False)
+@clicommon.pass_db
+def dhcp_server_ipv4_match_update(db, match_name, match_type, value):
+    ctx = click.get_current_context()
+    validate_key_name(match_name, "Match name", "|,")
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4_MATCH|" + match_name
+    if not dbconn.exists("CONFIG_DB", key):
+        ctx.fail("Match {} does not exist".format(match_name))
+    if match_type and match_type not in SUPPORTED_MATCH_TYPE:
+        ctx.fail("Only match types {} are supported".format(", ".join(SUPPORTED_MATCH_TYPE)))
+    if match_type is None and value is None:
+        ctx.fail("Nothing to update, provide at least one of --type or --value")
+    if value is not None:
+        validate_name(value, "Match value")
+
+    updated_entry = dict(dbconn.get_all("CONFIG_DB", key))
+    if match_type:
+        updated_entry["type"] = match_type
+    if value is not None:
+        updated_entry["value"] = value
+    port_alias_map = {}
+    if updated_entry.get("type") == "circuit_id":
+        resolve_port_alias(dbconn, updated_entry.get("value"), port_alias_map)
+    validate_match_update(dbconn, match_name, updated_entry, port_alias_map)
+    dbconn.hmset("CONFIG_DB", key, updated_entry)
+
+
+@dhcp_server_ipv4_match.command(name="del")
+@click.argument("match_name", required=True)
+@clicommon.pass_db
+def dhcp_server_ipv4_match_del(db, match_name):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4_MATCH|" + match_name
+    if not dbconn.exists("CONFIG_DB", key):
+        ctx.fail("Match {} does not exist".format(match_name))
+    for binding in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|*"):
+        matches = dbconn.get("CONFIG_DB", binding, "matches@")
+        if matches and match_name in matches.split(","):
+            ctx.fail("Match {} is referenced in {} and cannot be deleted".format(match_name, binding))
+    dbconn.delete("CONFIG_DB", key)
+
+
+def build_match_field(match_list, binding_name):
+    match_names = split_csv(match_list, "Match list")
+    if not match_names:
+        click.get_current_context().fail("Binding {} must reference at least one match".format(binding_name))
+    return ",".join(sorted(match_names))
+
+
+def build_pool_fields(range_, ip_list):
+    ctx = click.get_current_context()
+    if bool(range_) == bool(ip_list):
+        ctx.fail("Exactly one of IP list or range list must be provided")
+    if ip_list:
+        ips = split_csv(ip_list, "IP list")
+        for ip in ips:
+            if not validate_str_type("ipv4-address", ip):
+                ctx.fail("Illegal IP address {}".format(ip))
+        return {"ips@": ",".join(sorted(ips, key=ipaddress.ip_address))}
+    ranges = split_csv(range_, "Range list")
+    return {"ranges@": ",".join(sorted(ranges))}
+
+
+@dhcp_server_ipv4.group(cls=clicommon.AliasedGroup, name="binding")
+def dhcp_server_ipv4_binding():
+    pass
+
+
+@dhcp_server_ipv4_binding.command(name="add")
+@click.argument("dhcp_interface", required=True)
+@click.argument("binding_name", required=True)
+@click.option("--match", "match_list", required=True)
+@click.option("--range", "range_", required=False)
+@click.argument("ip_list", required=False)
+@clicommon.pass_db
+def dhcp_server_ipv4_binding_add(db, dhcp_interface, binding_name, match_list, range_, ip_list):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    validate_key_name(binding_name, "Binding name", "|")
+
+    entry = {"matches@": build_match_field(match_list, binding_name)}
+    entry.update(build_pool_fields(range_, ip_list))
+
+    key = "DHCP_SERVER_IPV4_BINDING|{}|{}".format(dhcp_interface, binding_name)
+    if dbconn.exists("CONFIG_DB", key):
+        ctx.fail("Binding {} already exists on {}".format(binding_name, dhcp_interface))
+    validate_vlan_bindings(dbconn, dhcp_interface, candidate=(binding_name, entry))
+    dbconn.hmset("CONFIG_DB", key, entry)
+
+
+@dhcp_server_ipv4_binding.command(name="update")
+@click.argument("dhcp_interface", required=True)
+@click.argument("binding_name", required=True)
+@click.option("--match", "match_list", required=False)
+@click.option("--range", "range_", required=False)
+@click.argument("ip_list", required=False)
+@clicommon.pass_db
+def dhcp_server_ipv4_binding_update(db, dhcp_interface, binding_name, match_list, range_, ip_list):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4_BINDING|{}|{}".format(dhcp_interface, binding_name)
+    if not dbconn.exists("CONFIG_DB", key):
+        ctx.fail("Binding {} does not exist on {}".format(binding_name, dhcp_interface))
+    if not match_list and not range_ and not ip_list:
+        ctx.fail("Nothing to update, provide at least one of --match, --range or an IP list")
+
+    existing = dict(dbconn.get_all("CONFIG_DB", key))
+    entry = {"matches@": existing.get("matches@", "")}
+    if match_list:
+        entry["matches@"] = build_match_field(match_list, binding_name)
+    if range_ or ip_list:
+        entry.update(build_pool_fields(range_, ip_list))
+    elif existing.get("ips@"):
+        entry["ips@"] = existing["ips@"]
+    else:
+        entry["ranges@"] = existing.get("ranges@", "")
+
+    validate_vlan_bindings(dbconn, dhcp_interface, candidate=(binding_name, entry))
+    dbconn.delete("CONFIG_DB", key)
+    dbconn.hmset("CONFIG_DB", key, entry)
+
+
+@dhcp_server_ipv4_binding.command(name="del")
+@click.argument("dhcp_interface", required=True)
+@click.argument("binding_name", required=True)
+@clicommon.pass_db
+def dhcp_server_ipv4_binding_del(db, dhcp_interface, binding_name):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4_BINDING|{}|{}".format(dhcp_interface, binding_name)
+    if not dbconn.exists("CONFIG_DB", key):
+        ctx.fail("Binding {} does not exist on {}".format(binding_name, dhcp_interface))
+    dbconn.delete("CONFIG_DB", key)
 
 
 @dhcp_server_ipv4.command(name="bind")

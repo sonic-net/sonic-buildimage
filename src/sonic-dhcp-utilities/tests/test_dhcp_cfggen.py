@@ -18,6 +18,9 @@ expected_dhcp_config = {
         ],
         "hooks-libraries": [
             {
+                "library": "/usr/local/lib/kea/hooks/libdhcp_lease_cmds.so"
+            },
+            {
                 "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                 "parameters": {
                     "name": "/etc/kea/lease_update.sh",
@@ -131,6 +134,9 @@ expected_dhcp_config_without_port_config = {
             }
         ],
         "hooks-libraries": [
+            {
+                "library": "/usr/local/lib/kea/hooks/libdhcp_lease_cmds.so"
+            },
             {
                 "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                 "parameters": {
@@ -404,9 +410,13 @@ def test_parse_port(test_config_db, mock_swsscommon_dbconnector_init, mock_get_r
 def test_generate(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock_get_render_template):
     with patch.object(DhcpServCfgGenerator, "_parse_hostname"), \
          patch.object(DhcpServCfgGenerator, "_parse_vlan", return_value=({}, set(["Ethernet0"]))), \
-         patch.object(DhcpServCfgGenerator, "_get_dhcp_ipv4_tables_from_db", return_value=(None, None, None, None)), \
+         patch.object(DhcpServCfgGenerator, "_get_dhcp_ipv4_tables_from_db",
+                 return_value=({"Vlan1000": {"state": "enabled", "mode": "PORT"}},
+                               None, None, None, None, None)), \
          patch.object(DhcpServCfgGenerator, "_parse_range"), \
          patch.object(DhcpServCfgGenerator, "_parse_port", return_value=(None, set(["range1"]))), \
+         patch.object(DhcpServCfgGenerator, "_parse_match_bindings",
+                      return_value=({}, [], set(["range2"]), set(["match1"]))), \
          patch.object(DhcpServCfgGenerator, "_parse_customized_options"), \
          patch.object(DhcpServCfgGenerator, "_parse_dpu", return_value=(set(), set())), \
          patch.object(DhcpServCfgGenerator, "_construct_obj_for_template",
@@ -416,14 +426,17 @@ def test_generate(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, m
          patch("dhcp_utilities.dhcpservd.dhcp_cfggen.is_smart_switch", return_value=False):
         dhcp_db_connector = DhcpDbConnector()
         dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
-        kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table = \
-            dhcp_cfg_generator.generate()
+        kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table, \
+            enabled_port_interfaces, enabled_match_interfaces, used_matches = dhcp_cfg_generator.generate()
         assert kea_dhcp4_config == "dummy_config"
-        assert used_ranges == set(["range1"])
+        assert used_ranges == set(["range1", "range2"])
         assert enabled_dhcp_interfaces == set(["Vlan1000"])
         assert used_options == set(["option1"])
         expected_tables = set(["dummy"])
         assert subscribe_table == expected_tables
+        assert enabled_port_interfaces == set(["Vlan1000"])
+        assert enabled_match_interfaces == set()
+        assert used_matches == set(["match1"])
 
 
 def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias,
