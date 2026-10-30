@@ -307,7 +307,7 @@ class TestCpoInitialization(unittest.TestCase):
         api.reset.assert_called_once_with()
         api.tx_disable.assert_called_once_with(True)
         self.assertEqual(cpo.bank, 7)
-        self.assertEqual((self.directory / "max_bank_size").read_text(), "8")
+        self.assertEqual((self.directory / "max_bank_size").read_text(), "1")
         with patch.object(els, "get_api", side_effect=AssertionError("ELS control used")):
             self.assertTrue(oe.set_lpmode(False))
             self.assertTrue(oe.reset())
@@ -324,7 +324,6 @@ class TestCpoInitialization(unittest.TestCase):
         oe = self.cpo.Oe(0, {})
         self.assertIsNone(oe.read_eeprom(0, 1))
         self.assertFalse(oe.write_eeprom(0, 1, b"A"))
-        self.assertFalse(oe.check_and_set_eeprom_bank_size())
         els = self.cpo.Elsfp(0, {}, "")
         start = (0xB0 + els.base_page + 1) * 128
         self.assertIsNone(els.read_eeprom(start, 1))
@@ -409,6 +408,23 @@ with open(sys.argv[1], 'rb') as fd:
             self.assertTrue(cpo.write_eeprom(100, 1, b'B'))
         read.assert_called_once_with(100, 1)
         write.assert_called_once_with(100, 1, b'B')
+
+    def test_construction_and_refresh_do_not_reconfigure_driver_banks(self):
+        oe, els = self.endpoints()
+        with patch.object(oe, 'get_api', side_effect=AssertionError('Unexpected OE capability read')):
+            cpo = self.cpo.MicasCpo(1, 'Ethernet0', oe, els)
+            self.assertIsNone(oe._api)
+            self.assertIsNone(els._api)
+            cpo.refresh_xcvr_api()
+        self.assertIsInstance(oe._api, BaillyOeApi)
+        self.assertIsInstance(els._api, BaillyElsfpApi)
+        self.assertEqual((self.directory / 'max_bank_size').read_text(), '1')
+        for endpoint in (oe, els):
+            eeprom = endpoint.get_api().xcvr_eeprom
+            self.assertIs(eeprom.reader.__self__, endpoint)
+            self.assertIs(eeprom.writer.__self__, endpoint)
+            self.assertIs(eeprom.reader.__func__, self.cpo._BaillyEepromAccessMixin.read_eeprom)
+            self.assertIs(eeprom.writer.__func__, self.cpo._BaillyEepromAccessMixin.write_eeprom)
 
     def test_oe_page_zero_read_restores_page_selector(self):
         oe, _ = self.endpoints()

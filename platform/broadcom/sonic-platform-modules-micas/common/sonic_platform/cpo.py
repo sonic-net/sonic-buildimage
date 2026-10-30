@@ -395,24 +395,6 @@ class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
     def is_replaceable(self):
         return False
 
-    def check_and_set_eeprom_bank_size(self):
-        if not self._eeprom_path:
-            return False
-        bank_size_path = os.path.join(os.path.dirname(self._eeprom_path), "max_bank_size")
-        try:
-            with open(bank_size_path, encoding='utf-8') as fd:
-                current = int(fd.read().strip())
-            bank_count = self.get_api().get_max_supported_banks()
-            if bank_count is None:
-                return False
-            if current != bank_count:
-                with open(bank_size_path, 'w', encoding='utf-8') as fd:
-                    fd.write(str(bank_count))
-            return True
-        except (OSError, TypeError, ValueError):
-            logging.getLogger("cpo").error("Failed to configure EEPROM banks for %s", self.get_name())
-            return False
-
 
 class Elsfp(_BaillyEepromAccessMixin, OptoeElsfpBase):
     """Bailly ELS endpoint sharing its OE MCU lock and access pacing."""
@@ -486,7 +468,6 @@ class MicasCpo(CpoBase, SfpOptoeBase):
         SfpOptoeBase.__init__(self, bank=oe.bank)
         self._log_level_config = logging.ERROR
         self._setup_logging()
-        self.oe.check_and_set_eeprom_bank_size()
 
     def get_name(self):
         return self._name
@@ -508,10 +489,6 @@ class MicasCpo(CpoBase, SfpOptoeBase):
 
     def write_eeprom(self, offset, num_bytes, write_buffer):
         return self.oe.write_eeprom(offset, num_bytes, write_buffer)
-
-    def refresh_xcvr_api(self):
-        CpoBase.refresh_xcvr_api(self)
-        self.oe.check_and_set_eeprom_bank_size()
 
     def get_reset_status(self):
         return False
