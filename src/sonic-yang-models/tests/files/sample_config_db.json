@@ -1463,6 +1463,13 @@
                 "bgp_rib_out_table": "false"
             }
         },
+        "BMC_GNOI": {
+            "certs": {
+                "ca_crt": "/etc/sonic/site-pki/root.pem",
+                "client_crt": "/etc/sonic/bmc-client/identity.pem",
+                "client_key": "/etc/sonic/bmc-client/private.key"
+            }
+        },
         "GNMI": {
             "certs": {
                 "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
