@@ -55,6 +55,9 @@
         },
         "PORT_BUFFER_DROP": {
             "FLEX_COUNTER_STATUS": "enable"
+        },
+        "COPP_STATS": {
+            "FLEX_COUNTER_STATUS": "enable"
         }
 {%- if sonic_asic_platform in ["nvidia-bluefield", "pensando"] %},
         "ENI": {
@@ -105,6 +108,7 @@
 {%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_system_otel == "y" %}{% do features.append(("otel", "disabled", false, "enabled")) %}{% endif %}
+{%- if 'hft@.service' in installer_services.split(' ') %}{% do features.append(("hft", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_system_eventd == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" %}
     {% do features.append(("eventd","disabled", false, "enabled")) %}
 {%- elif include_system_eventd == "y" %}
