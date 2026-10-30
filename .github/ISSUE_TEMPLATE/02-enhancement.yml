@@ -23,7 +23,6 @@ body:
         - innovium
         - marvell
         - mellanox
-        - nephos
       default: 0
     validations:
       required: true

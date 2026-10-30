@@ -25,12 +25,8 @@ start)
             echo "25165824" > /proc/sys/net/core/wmem_max
         fi
 
-        if ! modprobe clx_dev ; then
-            modprobe nps_dev
-        fi
-        if ! modprobe clx_netif ; then
-            modprobe nps_netif
-        fi
+        modprobe clx_dev
+        modprobe clx_netif
 
         echo "done."
         ;;
@@ -38,12 +34,8 @@ start)
 stop)
         echo -n "Unload clx kernel modules... "
 
-        if ! rmmod clx_netif ; then
-            rmmod nps_netif
-        fi
-        if ! rmmod clx_dev ; then
-            rmmod nps_dev
-        fi
+        rmmod clx_netif
+        rmmod clx_dev
 
         echo "done."
         ;;
@@ -59,4 +51,3 @@ force-reload|restart)
 esac
 
 exit 0
-

@@ -80,7 +80,6 @@
 /platform/mellanox/                               @sonic-net/sonic-mellanox-maintainer
 /device/nvidia-bluefield/                         @sonic-net/sonic-mellanox-maintainer
 /platform/nvidia-bluefield/                       @sonic-net/sonic-mellanox-maintainer
-/platform/nephos/                                 @sonic-net/sonic-nephos-maintainer
 /device/nexthop/                                  @sonic-net/sonic-nexthop-maintainer
 /platform/aspeed/sonic-platform-modules-nexthop/  @sonic-net/sonic-nexthop-maintainer
 /platform/broadcom/sonic-platform-modules/nexthop/ @sonic-net/sonic-nexthop-maintainer
