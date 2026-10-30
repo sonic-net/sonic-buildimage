@@ -1,0 +1,203 @@
+From 5a6db76f79191cb99b03a76a81abec64c10f7cf5 Mon Sep 17 00:00:00 2001
+From: SONiC <sonic@sonic.net>
+Date: Fri, 7 Aug 2026 13:51:08 +0800
+Subject: [PATCH] Handle C++ symbols and sections in the assembly parser
+
+Extend the assembly parser and ELF handling so the C++ output produced by
+libcare-cxx is recognized: mangled symbol names, C++-specific sections and
+the corresponding relocations.
+---
+ src/arch/x86/arch_parse.c  |  6 +++++-
+ src/include/kpatch_parse.h |  2 ++
+ src/kpatch_cc.c            |  4 ++++
+ src/kpatch_elf.c           |  9 ++++++++-
+ src/kpatch_gensrc.c        |  3 ++-
+ src/kpatch_parse.c         | 37 ++++++++++++++++++++++++++++++++++++-
+ 6 files changed, 57 insertions(+), 4 deletions(-)
+
+diff --git a/src/arch/x86/arch_parse.c b/src/arch/x86/arch_parse.c
+index aee82b8..eb305ef 100644
+--- a/src/arch/x86/arch_parse.c
++++ b/src/arch/x86/arch_parse.c
+@@ -108,7 +108,11 @@ int is_data_def(char *s, int type)
+ 	    /* dwarf types */
+ 	    !kpstrcmpz(&t, ".uleb128") ||
+ 	    !kpstrcmpz(&t, ".sleb128") ||
+-	    !kpstrcmpz(&t, ".4byte")
++	    !kpstrcmpz(&t, ".4byte") ||
++		/* attr */
++		!kpstrcmpz(&t, ".hidden") ||
++		!kpstrcmpz(&t, ".weak") ||
++		!kpstrcmpz(&t, ".weakref")
+ 	)
+ 		return 1;
+ 	return 0;
+diff --git a/src/include/kpatch_parse.h b/src/include/kpatch_parse.h
+index d2225c5..2c20e2d 100644
+--- a/src/include/kpatch_parse.h
++++ b/src/include/kpatch_parse.h
+@@ -21,6 +21,7 @@ int clinenum(struct kp_file *f, int l);
+ #define DIRECTIVE_SIZE		5
+ #define DIRECTIVE_LABEL		6
+ #define DIRECTIVE_LOCAL_LABEL	7
++#define DIRECTIVE_WEAKREF	8
+ 
+ #define DIRECTIVE_GLOBL		10
+ #define DIRECTIVE_LOCAL		11
+@@ -99,6 +100,7 @@ struct cblock {
+ 	char ignore;		/* ignore changes in this symbol */
+ 	char unlink;		/* unlink this symbol and do not patch */
+ 	char adapted;		/* this block marked with KPATCH_ADAPTED at source code level */
++	char duplicate;		/* this block is duplicate of another one */
+ 
+ 	struct cblock *pair;	/* matched cblock in another file */
+ 	struct rb_node rbnm, rb_hnm, rbs;
+diff --git a/src/kpatch_cc.c b/src/kpatch_cc.c
+index 0f68328..b7dd84f 100644
+--- a/src/kpatch_cc.c
++++ b/src/kpatch_cc.c
+@@ -367,6 +367,10 @@ static void init(int argc_, const char **argv_)
+ 
+ 
+ 		switch (arg[1]) {
++		case 'I':
++			if (arg[2] == '\0')
++				i++;
++			continue;
+ 		case 'x':
+ 			if (arg[2] == '\0')
+ 				i++;
+diff --git a/src/kpatch_elf.c b/src/kpatch_elf.c
+index e39bce1..17f0915 100644
+--- a/src/kpatch_elf.c
++++ b/src/kpatch_elf.c
+@@ -133,7 +133,9 @@ elf_object_look_for_buildid(struct object_file *o)
+ 						     sizeof(buf));
+ 			if (rv < 0)
+ 				return rv;
+-
++				
++			if (nhdr->n_namesz == 9 && !strcmp(data, "FRRouting"))
++				nhdr->n_namesz = 12;
+ 			if (nhdr->n_namesz == 4 && !strcmp(data, "GNU") &&
+ 			    nhdr->n_type == NT_GNU_BUILD_ID)
+ 				break;
+@@ -194,6 +196,11 @@ elf_object_is_interp_exception(struct object_file *o)
+                 (!strncmp(o->name, "libdl-", 6) &&
+                  !strncmp(o->name + strlen(o->name) - 3, ".so", 3)))
+ 		return 1;
++	/* libfrr */
++	if (!strncmp(o->name, "libfrr.so.", 10) ||
++                (!strncmp(o->name, "libfrr-", 7) &&
++                 !strncmp(o->name + strlen(o->name) - 3, ".so", 3)))
++		return 1;		
+ 	return 0;
+ }
+ 
+diff --git a/src/kpatch_gensrc.c b/src/kpatch_gensrc.c
+index 67254d7..4919d0d 100644
+--- a/src/kpatch_gensrc.c
++++ b/src/kpatch_gensrc.c
+@@ -1146,7 +1146,7 @@ static void analyze_func_cblocks(struct kp_file *f0, struct kp_file *f1)
+ 	for (b0 = cblock_first(f0); b0; b0 = cblock_next(b0)) {
+ 		if (b0->type != CBLOCK_FUNC)
+ 			continue;
+-		if (b0->auto_name)	/* skip all blocks with auto-generated names, i.e. name != human_name */
++		if (b0->auto_name && !b0->duplicate)	/* skip all blocks with auto-generated names, i.e. name != human_name */
+ 			continue;
+ 
+ 		b1 = cblock_find_by_name(f1, &b0->name);
+@@ -1502,6 +1502,7 @@ static void cblock_write_func(struct kp_file *f0, struct kp_file *fout, struct c
+ 
+ 		kplog(LOG_TRACE, "cblock_write_func pair %.*s\n", b->pair->name.l, b->pair->name.s);
+ 		/* first put the end label, so we could refer to original function end */
++		fprintf(fout->f, "\t.text\n");
+ 		fprintf(fout->f, "%.*s.Lfe:\n", b->name.l, b->name.s);
+ 		fprintf(fout->f, "#---------- kpatch begin ---------\n");
+ 		write_new_function(fout, b->pair);
+diff --git a/src/kpatch_parse.c b/src/kpatch_parse.c
+index 43c885c..141563f 100644
+--- a/src/kpatch_parse.c
++++ b/src/kpatch_parse.c
+@@ -102,6 +102,7 @@ static struct {
+ 	{ DIRECTIVE_COMM, ".comm"},
+ 	{ DIRECTIVE_SIZE, ".size"},
+ 	{ DIRECTIVE_WEAK, ".weak"},
++	{ DIRECTIVE_WEAKREF, ".weakref"},
+ 
+ 	{ DIRECTIVE_TEXT, ".text"},
+ 	{ DIRECTIVE_DATA, ".data"},
+@@ -153,7 +154,7 @@ int find_ctype(kpstr_t *t)
+ int ctype(struct kp_file *f, int l)
+ {
+ 	if (l >= f->nr_lines)
+-		kpfatal("ctype access beyond EOF");
++		kpfatal("ctype access beyond EOF,l:%d, nr_lines:%d\n", l, f->nr_lines);
+ 
+ 	return f->ctype[l];
+ }
+@@ -238,6 +239,7 @@ static void cblock_make_human_name(kpstr_t *hnm, kpstr_t *nm)
+ 
+ struct cblock * cblock_add(struct kp_file *f, int s, int e, kpstr_t *nm, int type, int globl)
+ {
++	struct cblock *b;
+ 	struct cblock *blk = malloc(sizeof(*blk));
+ 	if (!blk) {
+ 		kpfatal("Failed to allocate cblock\n");
+@@ -257,6 +259,13 @@ struct cblock * cblock_add(struct kp_file *f, int s, int e, kpstr_t *nm, int typ
+ 	blk->handled = blk->ignore = blk->unlink = 0;
+ 	blk->pair = NULL;
+ 	rb_insert_node(&f->cblocks_by_name, &blk->rbnm, cblock_name_cmp, (unsigned long)&blk->name);
++
++	b = cblock_find_by_human_name(f, &blk->human_name);
++	if (b) {
++		kplog(LOG_DEBUG, "Duplicate exit-name '%.*s' <--> new name '%.*s' :: exit-hname '%.*s' <--> new hname '%.*s'\n", 
++			b->name.l,b->name.s,blk->name.l,blk->name.s,b->human_name.l,b->human_name.s,blk->human_name.l,blk->human_name.s);
++		blk->duplicate = 1;
++	}
+ 	rb_insert_node(&f->cblocks_by_human_name, &blk->rb_hnm, cblock_human_name_cmp, (unsigned long)&blk->human_name);
+ 	rb_insert_node(&f->cblocks_by_start, &blk->rbs, cblock_start_cmp, s);
+ 	kplog(LOG_DEBUG, "Add cblock %.*s (%d: %d-%d)\n", nm->l, nm->s, f->id, s, e - 1);
+@@ -345,6 +354,26 @@ static void init_func_block(struct kp_file *f, int *i, kpstr_t *nm)
+ 
+ 	e++;
+ 
++	if (ctype(f, e-1) == DIRECTIVE_SIZE  && (ctype(f, e) == DIRECTIVE_WEAK || ctype(f, e) == DIRECTIVE_GLOBL))
++		e++;
++
++	if (ctype(f, e-1) == DIRECTIVE_SIZE && strstr(cline(f, e), ".LCOLD")) {
++		while (e < f->nr_lines - 1) {
++			if (strstr(cline(f, e), ".LHOT")) {
++				e++;
++				break;
++			}
++			e++;
++		}
++
++		while (e < f->nr_lines - 1) {
++			if (ctype(f, e) != DIRECTIVE_SET && ctype(f, e) != DIRECTIVE_GLOBL) {
++				break;
++			}
++			e++;
++		}
++	}
++
+ 	blk = cblock_add(f, s, e, nm, CBLOCK_FUNC, globl);
+ 	if (flags & KPGENSRC_ADAPTED)
+ 		blk->adapted = 1;
+@@ -436,6 +465,12 @@ static void init_other_block(struct kp_file *f, int *i)
+ 
+ 				blk = rb_entry(node, struct cblock, rbs);
+ 				if(blk->type == CBLOCK_FUNC && !kpstrcmp(&blk->name, &nm2)) {
++					if (e+1 < f->nr_lines) {
++						if (ctype(f, e+1) == DIRECTIVE_WEAK) {
++							e++;
++							kplog(LOG_DEBUG, "Found weak reference to e:%d\n", e);
++						}
++					}
+ 					kplog(LOG_DEBUG, "Extend cblock %.*s (%d: %d-%d) to (%d: %d-%d)\n", 
+ 						blk->name.l, blk->name.s, f->id, blk->start, blk->end-1, f->id, blk->start, e);
+ 					blk->end = ++e;
+-- 
+2.25.1
+
