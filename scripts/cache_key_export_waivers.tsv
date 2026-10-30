@@ -47,6 +47,7 @@ BUILD_TIMESTAMP	volatile per-build timestamp; intentionally excluded from the ke
 DEFAULT_CONTAINER_REGISTRY	registry prefix stripped from an image tag; registry location, not image content
 DOCKER_USERNAME	strips a username suffix from an image name; image naming only, not content
 SONIC_VERSION_CACHE	controls the version-cache mechanism itself; not an input to any cached artifact
+SONIC_ROUTING_STACK	single-value compatibility knob pinned to frr; stack-selection conditionals are removed, so changing it cannot alter a cached artifact
 ENABLE_FIPS	consumed only by build_image.sh (SONIC_INSTALLERS stage), which is not in the cache framework and is always rebuilt
 BUILD_MULTIASIC_KVM	consumed only by build_image.sh (non-cached installer stage); no cached artifact depends on it
 onie_recovery_image	consumed only by build_image.sh; selects a recovery ISO for the always-rebuilt installer, not a cached target
