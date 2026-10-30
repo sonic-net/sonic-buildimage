@@ -233,9 +233,9 @@ hwdata==0.394-1
 i965-va-driver==2.4.1+dfsg1-2
 ibverbs-providers==56.1-1
 icu-devtools==76.1-4
-imagemagick==8:7.1.1.43+dfsg1-1+deb13u12
-imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u12
-imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u12
+imagemagick==8:7.1.1.43+dfsg1-1+deb13u13
+imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u13
+imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u13
 inetutils-telnet==2:2.6-3+deb13u3
 inkscape==1.4-6
 install-info==7.1.1-1+b1
@@ -884,8 +884,8 @@ libidn2-dev==2.3.8-2
 libiec61883-0==1.2.0-7
 libigdgmm12==22.7.2+ds1-1
 libijs-0.35==0.35-15.2
-libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u12
-libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u12
+libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u13
+libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u13
 libimagequant0==2.18.0-1+b2
 libimath-3-1-29t64==3.1.12-1+b3
 libimport-into-perl==1.002005-2
@@ -1013,9 +1013,9 @@ liblzo2-2==2.10-3+b1
 liblzo2-dev==2.10-3+b1
 libmagic-mgc==1:5.46-5
 libmagic1t64==1:5.46-5
-libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u12
-libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u12
-libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u12
+libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u13
+libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u13
+libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u13
 libmail-sendmail-perl==0.80-3
 libmailtools-perl==2.22-1
 libmariadb-dev==1:11.8.6-0+deb13u1
