@@ -70,6 +70,13 @@ class _NvidiaSysfsCpoDevice(CpoDeviceBase, NvidiaSysfsEepromBanked):
         self.asic_index = asic_index
         super().__init__(hardware_id, bank=bank)
 
+    @staticmethod
+    def _check_sw_control():
+        # Firmware operations, including the CDB target selection, need the
+        # host to manage the modules.
+        if not DeviceDataManager.is_module_host_management_mode():
+            raise RuntimeError('Firmware operations require the modules to be under software control')
+
     def _firmware_lock(self):
         """
         Hold the CDB lock of the module for a firmware operation.
@@ -86,18 +93,22 @@ class _NvidiaSysfsCpoDevice(CpoDeviceBase, NvidiaSysfsEepromBanked):
         return get_module_cdb_lock(self).hold(self.FIRMWARE_CDB_LOCK_TIMEOUT)
 
     def download_firmware(self, file_path):
+        self._check_sw_control()
         with self._firmware_lock():
             yield from super().download_firmware(file_path)
 
     def run_firmware(self, *args, **kwargs):
+        self._check_sw_control()
         with self._firmware_lock():
             return super().run_firmware(*args, **kwargs)
 
     def commit_firmware(self):
+        self._check_sw_control()
         with self._firmware_lock():
             return super().commit_firmware()
 
     def upgrade_firmware(self, file_path):
+        self._check_sw_control()
         with self._firmware_lock():
             yield from super().upgrade_firmware(file_path)
 
@@ -116,8 +127,21 @@ class NvidiaSysfsOe(OeBase, _NvidiaSysfsCpoDevice):
     """OE whose low-power and reset controls are the shared module's.
 
     The banks of an OE share one sx_core module. These hooks read and write
-    that module's power and reset attributes.
+    that module's power and reset attributes. Firmware download, run, commit
+    and upgrade are not supported; get_firmware_info() is.
     """
+
+    def download_firmware(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def run_firmware(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def commit_firmware(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def upgrade_firmware(self, *args, **kwargs):
+        raise NotImplementedError
 
     def _is_sw_control(self):
         if not DeviceDataManager.is_module_host_management_mode():

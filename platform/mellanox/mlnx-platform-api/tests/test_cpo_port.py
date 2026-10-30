@@ -394,7 +394,9 @@ class TestCdbLock:
 
         generator = method in ('download_firmware', 'upgrade_firmware')
         with mock.patch.object(NvidiaSysfsElsfp, 'CDB_LOCK_DIR', str(tmp_path)), \
-                mock.patch.object(CdbFirmwareMixin, method, blocks if generator else operation):
+                mock.patch.object(CdbFirmwareMixin, method, blocks if generator else operation), \
+                mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode',
+                           return_value=True):
             result = getattr(self._device('els', 9), method)(*args)
             if generator:
                 assert list(result) == [1, 2]
@@ -414,6 +416,62 @@ class TestCdbLock:
                 with api.cdb_lock():
                     pass
                 assert self._held_by_another_process(str(tmp_path / 'cdb9.lock'))
+
+
+class TestFirmwareManagement:
+    @pytest.mark.parametrize('operation', [
+        lambda oe: list(oe.download_firmware('/tmp/fw.bin')),
+        lambda oe: list(oe.upgrade_firmware('/tmp/fw.bin')),
+        lambda oe: oe.run_firmware(),
+        lambda oe: oe.commit_firmware(),
+    ])
+    def test_the_engine_has_no_firmware_management(self, operation, cpo):
+        cpo.oe.get_api = mock.MagicMock()
+        with pytest.raises(NotImplementedError):
+            operation(cpo.oe)
+        cpo.oe.get_api.assert_not_called()
+
+    @pytest.mark.parametrize('method, args', [
+        ('download_firmware', ('/tmp/fw.bin',)),
+        ('upgrade_firmware', ('/tmp/fw.bin',)),
+        ('run_firmware', ()),
+        ('commit_firmware', ()),
+    ])
+    @pytest.mark.parametrize('sw_control', [True, False])
+    def test_els_firmware_operations_require_sw_control(self, cpo, method, args, sw_control):
+        cpo.elsfp.get_api = mock.MagicMock()
+        cpo.elsfp._get_cdb_fw_api = mock.MagicMock(side_effect=RuntimeError('reached the device'))
+        with mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode',
+                        return_value=sw_control), \
+                mock.patch.object(NvidiaSysfsElsfp, 'CDB_LOCK_DIR', None):
+            with pytest.raises(RuntimeError) as exc:
+                result = getattr(cpo.elsfp, method)(*args)
+                if inspect.isgenerator(result):
+                    list(result)
+        if sw_control:
+            assert str(exc.value) == 'reached the device'
+        else:
+            assert str(exc.value) == 'Firmware operations require the modules to be under software control'
+            cpo.elsfp._get_cdb_fw_api.assert_not_called()
+            cpo.elsfp.get_api.assert_not_called()
+
+    def test_firmware_info_does_not_require_sw_control(self, cpo):
+        api = mock.MagicMock()
+        api.get_module_fw_info.return_value = {'status': True, 'info': 'Active Firmware: 42.50.1003\n'}
+        cpo.elsfp.get_api = mock.MagicMock(return_value=api)
+        with mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode',
+                        return_value=False), \
+                mock.patch.object(NvidiaSysfsElsfp, 'CDB_LOCK_DIR', None):
+            assert cpo.elsfp.get_firmware_info() == {'Active Firmware': '42.50.1003'}
+
+    def test_the_engine_reports_its_firmware_info(self, cpo):
+        api = mock.MagicMock()
+        api.get_module_fw_info.return_value = {
+            'status': True, 'info': 'Active Firmware: 95.10.762\nInactive Firmware: 95.5.762\n', 'result': ()}
+        cpo.oe.get_api = mock.MagicMock(return_value=api)
+        with mock.patch.object(NvidiaSysfsOe, 'CDB_LOCK_DIR', None):
+            info = cpo.oe.get_firmware_info()
+        assert info == {'Active Firmware': '95.10.762', 'Inactive Firmware': '95.5.762'}
 
 
 class TestEeprom:
