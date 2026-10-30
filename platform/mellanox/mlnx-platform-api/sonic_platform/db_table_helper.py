@@ -17,7 +17,7 @@
 #
 
 import threading
-from swsscommon.swsscommon import DBConnector, Table
+from swsscommon.swsscommon import DBConnector, SonicDBConfig, Table
 from sonic_py_common import multi_asic
 
 TRANSCEIVER_DOM_TEMPERATURE_TABLE = 'TRANSCEIVER_DOM_TEMPERATURE'
@@ -41,8 +41,8 @@ class DbTableHelper:
     def initialize(self):
         if not self._initialized:
             for namespace in multi_asic.get_front_end_namespaces():
-                self.state_dbs[namespace] = DBConnector(STATE_DB, 0, True, namespace)
-                self.appl_dbs[namespace] = DBConnector(APPL_DB, 0, True, namespace)
+                self.state_dbs[namespace] = DBConnector(STATE_DB, 0, SonicDBConfig.getDbPort(STATE_DB, namespace) != 0, namespace)
+                self.appl_dbs[namespace] = DBConnector(APPL_DB, 0, SonicDBConfig.getDbPort(APPL_DB, namespace) != 0, namespace)
 
             # Following tables are always in global namespace
             default_namespace = multi_asic.DEFAULT_NAMESPACE

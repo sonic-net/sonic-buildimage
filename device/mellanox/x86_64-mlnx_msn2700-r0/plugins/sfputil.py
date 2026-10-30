@@ -212,7 +212,7 @@ class SfpUtil(SfpUtilBase):
             from swsscommon import swsscommon
             self.state_db = swsscommon.DBConnector("STATE_DB",
                                                    REDIS_TIMEOUT_USECS,
-                                                   True)
+                                                   swsscommon.SonicDBConfig.getDbPort("STATE_DB", "") != 0)
 
             # Subscribe to state table for SFP change notifications
             self.db_sel = swsscommon.Select()
