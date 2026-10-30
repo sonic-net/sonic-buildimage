@@ -24,6 +24,23 @@ job after hosted regressions and dependency resolution pass. Fork PRs and
 manual `skip_vs=true` runs omit source-package/full-image validation; hosted
 success alone does not establish those results.
 
+The native VS job reuses `target/docker-orchagent.gz` produced as an installer
+dependency. `build_vs_with_reused_orchagent.sh` captures that archive after the
+successful VS build, requests the remaining artifacts, and verifies the retained
+runtime archive against its Make metadata and the matching debug image. Missing,
+changed or incompatible archives fail the job; the script does not fall back to
+an unnoticed rebuild. Standalone Make archive targets keep their normal input
+and builder-switch checks.
+
+To measure the avoided request on the same revision, runner, configuration and
+warmed caches, dispatch `Bazel OCI` with `skip_vs=false` and
+`measure_orchagent_reuse=true`. This calibration deliberately executes the old
+request once and requires the runtime archive to remain identical. The local
+`artifacts/vs/orchagent-reuse-timing.json` reports its measured wall time, the new
+validation cost and their difference. This measures the removed request, not a
+paired full-job speedup. Normal PR runs omit the request. Existing source,
+installed-image, debug-symbol and firmware boot checks remain required.
+
 - `container.py` runs an owner's `:ci_tests` test suite and builds its
   `:ci_artifacts` filegroup. Tests and exported files are declared in the
   container's `BUILD.bazel`; no Python CI configuration or callback is loaded.

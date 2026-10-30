@@ -10,6 +10,10 @@ on:
         description: Skip the full VS image build
         type: boolean
         default: true
+      measure_orchagent_reuse:
+        description: Time the old redundant Orchagent request after the VS build
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -528,16 +532,25 @@ jobs:
 
       - name: Build the VS image and both OCI container variants
         id: vs_build
+        env:
+          MEASURE_ORCHAGENT_REUSE: ${{ github.event_name == 'workflow_dispatch' && inputs.measure_orchagent_reuse }}
         run: |
-          make target/sonic-vs.img.gz \
-            target/docker-orchagent.gz target/docker-orchagent-dbg.gz \
-            target/docker-syncd-vs.gz target/docker-syncd-vs-dbg.gz \
-            target/debs/trixie/sonic-p4rt_0.0.1_amd64.deb \
-            target/debs/trixie/sonic-p4rt-dbgsym_0.0.1_amd64.deb \
-            BUILD_WITH_BAZEL_WHEN_AVAILABLE=y INCLUDE_VS_DASH_SAI=y INCLUDE_FIPS=y \
-            ENABLE_ASAN=n ENABLE_SYNCD_RPC=n \
-            SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL -e BAZEL=$BAZEL -e BAZEL_CONTAINER_ARGS" \
+          measurement=()
+          if [[ "$MEASURE_ORCHAGENT_REUSE" == true ]]; then
+            measurement+=(--measure-redundant-request)
+          fi
+          bash tools/bazel/ci/build_vs_with_reused_orchagent.sh "${measurement[@]}" \
             2>&1 | tee artifacts/vs/build.log
+
+      - name: Retain Orchagent archive reuse evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-vs-orchagent-reuse-amd64
+          path: |
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/orchagent-reuse.json
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/orchagent-reuse-timing.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Validate SWSS source packages from the Make build
         id: swss_validation
@@ -648,6 +661,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
 
       - name: Verify source-built P4 runtime and debug TARs in both Syncd images
         run: |
