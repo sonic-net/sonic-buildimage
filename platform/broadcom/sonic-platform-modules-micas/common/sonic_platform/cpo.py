@@ -18,8 +18,11 @@
 #############################################################################
 
 try:
+    import fcntl
     import logging
     import os
+    import time
+    from contextlib import contextmanager
     from logging.handlers import RotatingFileHandler
     # BEGIN LEGACY imports for former port adapters - reference only; not executed
     # from platform_intf import *
@@ -37,6 +40,8 @@ try:
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import elsfp_consts
     from sonic_platform_base.sonic_xcvr.api.xcvr_api import XcvrApi
+    from sonic_platform_base.sonic_xcvr.optoe_eeprom_rw import (
+        SFP_OPTOE_PAGE_SELECT_OFFSET, SFP_OPTOE_UPPER_PAGE0_OFFSET, SFP_OPTOE_PAGE_SIZE)
 except ImportError as error:
     raise ImportError(str(error) + "- required module not found") from error
 
@@ -285,7 +290,78 @@ LOG_ERROR_LEVEL = 3
 #         return False
 # END LEGACY CPO
 
-class Oe(OptoeOeBase):
+EEPROM_LOCK_TIMEOUT = 2.0
+EEPROM_LOCK_RETRY = 0.001
+EEPROM_ACCESS_DELAY = 0.01
+
+
+class _BaillyEepromAccessMixin:
+    """Serialize joint OE/ELS MCU access and retain its settling interval."""
+
+    @contextmanager
+    def _locked_eeprom(self, mode):
+        # Lock the EEPROM node itself so all endpoints/processes sharing the
+        # MCU coordinate, including callers of the legacy CPO implementation.
+        with open(self.get_eeprom_path(), mode=mode, buffering=0) as fd:
+            deadline = time.monotonic() + EEPROM_LOCK_TIMEOUT
+            while True:
+                try:
+                    fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("EEPROM lock timeout")
+                    time.sleep(EEPROM_LOCK_RETRY)
+            try:
+                yield fd
+            finally:
+                try:
+                    # Keep the lock until the MCU can accept its next access.
+                    time.sleep(EEPROM_ACCESS_DELAY)
+                finally:
+                    fcntl.flock(fd.fileno(), fcntl.LOCK_UN)
+
+    def read_eeprom(self, offset, num_bytes):
+        if not self.get_eeprom_path():
+            return None
+        try:
+            with self._locked_eeprom('rb') as fd:
+                if SFP_OPTOE_UPPER_PAGE0_OFFSET <= offset < (
+                        SFP_OPTOE_UPPER_PAGE0_OFFSET + SFP_OPTOE_PAGE_SIZE):
+                    # Preserve Optoe's page-0 recovery without recursively
+                    # acquiring the same MCU lock through read/write_eeprom.
+                    fd.seek(SFP_OPTOE_PAGE_SELECT_OFFSET)
+                    page = fd.read(1)
+                    if len(page) != 1:
+                        return None
+                    time.sleep(EEPROM_ACCESS_DELAY)
+                    if page != b'\x00':
+                        with open(self.get_eeprom_path(), 'r+b', buffering=0) as selector:
+                            selector.seek(SFP_OPTOE_PAGE_SELECT_OFFSET)
+                            if selector.write(b'\x00') != 1:
+                                return None
+                        time.sleep(EEPROM_ACCESS_DELAY)
+                fd.seek(offset)
+                data = fd.read(num_bytes)
+            return bytearray(data) if len(data) == num_bytes else None
+        except OSError as exc:
+            logging.getLogger("cpo").error("%s EEPROM read at %s failed: %s", self.get_name(), offset, exc)
+            return None
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        if not self.get_eeprom_path() or len(write_buffer) < num_bytes:
+            return False
+        try:
+            with self._locked_eeprom('r+b') as fd:
+                fd.seek(offset)
+                written = fd.write(write_buffer[:num_bytes])
+            return written == num_bytes
+        except OSError as exc:
+            logging.getLogger("cpo").error("%s EEPROM write at %s failed: %s", self.get_name(), offset, exc)
+            return False
+
+
+class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
     def __init__(self, oe_id, oe_config, bank=0, base_page=0):
         self.oe_id = int(oe_id)
         cmis_path = oe_config.get("i2c_path")
@@ -338,8 +414,8 @@ class Oe(OptoeOeBase):
             return False
 
 
-class Elsfp(OptoeElsfpBase):
-    """Bailly ELS endpoint using community Optoe EEPROM access."""
+class Elsfp(_BaillyEepromAccessMixin, OptoeElsfpBase):
+    """Bailly ELS endpoint sharing its OE MCU lock and access pacing."""
 
     def __init__(self, els_id, els_config, eeprom_path):
         self.els_id = int(els_id)

@@ -1,11 +1,14 @@
 """Platform initialization tests with file-backed EEPROM and mocked board HAL."""
 import copy
+import fcntl
 import importlib.util
 import json
 import logging
 import os
 from pathlib import Path
 import struct
+import subprocess
+import sys
 import tempfile
 import types
 import unittest
@@ -326,6 +329,86 @@ class TestCpoInitialization(unittest.TestCase):
         start = (0xB0 + els.base_page + 1) * 128
         self.assertIsNone(els.read_eeprom(start, 1))
         self.assertFalse(els.write_eeprom(start, 1, b"A"))
+
+    def _probe_eeprom_lock(self):
+        # A separate process opens the same node, as host/pmon callers do.
+        script = '''import fcntl, sys
+with open(sys.argv[1], 'rb') as fd:
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        sys.exit(42)
+'''
+        return subprocess.run([sys.executable, '-c', script, str(self.eeprom)], check=False).returncode
+
+    def test_oe_and_els_hold_shared_lock_during_10ms_settle(self):
+        oe, els = self.endpoints()
+        for endpoint in (oe, els):
+            for operation in ('read', 'write'):
+                with self.subTest(endpoint=endpoint.get_name(), operation=operation):
+                    def settling(delay):
+                        self.assertEqual(delay, 0.01)
+                        self.assertEqual(self._probe_eeprom_lock(), 42)
+                    with patch.object(self.cpo.time, 'sleep', side_effect=settling) as sleep:
+                        if operation == 'read':
+                            self.assertIsNotNone(endpoint.read_eeprom(0, 1))
+                        else:
+                            self.assertTrue(endpoint.write_eeprom(0, 1, b'A'))
+                    sleep.assert_called_once_with(0.01)
+                    self.assertEqual(self._probe_eeprom_lock(), 0)
+
+    def test_external_lock_blocks_both_endpoints_without_touching_data(self):
+        oe, els = self.endpoints()
+        before = self.eeprom.read_bytes()
+        with self.eeprom.open('rb') as fd:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            with patch.object(self.cpo, 'EEPROM_LOCK_TIMEOUT', 0.01):
+                for endpoint in (oe, els):
+                    with self.subTest(endpoint=endpoint.get_name()), self.assertLogs('cpo', level='ERROR'):
+                        self.assertIsNone(endpoint.read_eeprom(0, 1))
+                        self.assertFalse(endpoint.write_eeprom(0, 1, b'A'))
+            self.assertEqual(self._probe_eeprom_lock(), 42)
+        self.assertEqual(self.eeprom.read_bytes(), before)
+        self.assertEqual(self._probe_eeprom_lock(), 0)
+
+    def test_eeprom_short_read_and_undersized_write_fail(self):
+        oe, els = self.endpoints()
+        for endpoint in (oe, els):
+            with self.subTest(endpoint=endpoint.get_name()):
+                self.assertIsNone(endpoint.read_eeprom(self.eeprom.stat().st_size - 1, 2))
+                self.assertFalse(endpoint.write_eeprom(0, 2, b'A'))
+
+    def test_eeprom_io_failure_still_settles_and_unlocks(self):
+        oe, els = self.endpoints()
+        for endpoint in (oe, els):
+            for operation in ('read', 'write'):
+                with self.subTest(endpoint=endpoint.get_name(), operation=operation):
+                    with self.eeprom.open('r+b') as real:
+                        fd = MagicMock()
+                        fd.fileno.return_value = real.fileno()
+                        fd.__enter__.return_value = fd
+                        getattr(fd, operation).side_effect = OSError('test I/O failure')
+                        with patch.object(self.cpo, 'open', return_value=fd, create=True), \
+                                patch.object(self.cpo.time, 'sleep') as sleep, \
+                                self.assertLogs('cpo', level='ERROR'):
+                            if operation == 'read':
+                                self.assertIsNone(endpoint.read_eeprom(0, 1))
+                            else:
+                                self.assertFalse(endpoint.write_eeprom(0, 1, b'A'))
+                        sleep.assert_called_once_with(0.01)
+                        self.assertEqual(self._probe_eeprom_lock(), 0)
+
+    def test_cpo_forwarding_and_endpoint_apis_use_locked_access(self):
+        oe, els = self.endpoints()
+        cpo = self.cpo.MicasCpo(1, 'Ethernet0', oe, els)
+        self.assertIs(oe.get_api().xcvr_eeprom.reader.__self__, oe)
+        self.assertIs(els.get_api().xcvr_eeprom.writer.__self__, els)
+        with patch.object(oe, 'read_eeprom', return_value=bytearray(b'A')) as read, \
+                patch.object(oe, 'write_eeprom', return_value=True) as write:
+            self.assertEqual(cpo.read_eeprom(100, 1), b'A')
+            self.assertTrue(cpo.write_eeprom(100, 1, b'B'))
+        read.assert_called_once_with(100, 1)
+        write.assert_called_once_with(100, 1, b'B')
 
     def test_oe_page_zero_read_restores_page_selector(self):
         oe, _ = self.endpoints()
