@@ -1,7 +1,0 @@
-diff --git a/rules/sairedis.dep b/rules/sairedis.dep
---- a/rules/sairedis.dep
-+++ b/rules/sairedis.dep
-@@ -11,2 +11,3 @@
- $(LIBSAIREDIS)_CACHE_MODE  := GIT_CONTENT_SHA
-+$(LIBSAIREDIS)_CACHE_OVERRIDE := none
- $(LIBSAIREDIS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(ENABLE_ASAN) $($(LIBSAIREDIS)_DEB_BUILD_PROFILES)

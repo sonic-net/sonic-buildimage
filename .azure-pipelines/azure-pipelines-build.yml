@@ -189,10 +189,9 @@ jobs:
             set -o pipefail
             git submodule status platform/vpp src/sonic-sairedis
             git -C platform/vpp apply ../../.azure-pipelines/packet-trim-vpp-source-build.patch
-            git apply .azure-pipelines/packet-trim-sairedis-source-build.patch
             git -C platform/vpp diff --exit-code -- vppbld/plugins vppbld/patches vppbld/vpp_version
             git -C platform/vpp diff -- rules/vpp.dep vppbld/Makefile
-            git diff -- rules/sairedis.dep
+            git diff --exit-code -- rules/sairedis.dep
             if [ $(dbg_image) == yes ]; then
               make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vpp.img.gz
               mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
