@@ -1,0 +1,17 @@
+[Unit]
+Description=Prepare the Redis writer password for this boot
+Before=database.service
+Requires=rc-local.service
+After=rc-local.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sh -c 'if [ -f /usr/share/sonic/redis-auth/build-enabled ] && \
+    [ "$(cat /usr/share/sonic/redis-auth/build-enabled)" = n ]; then exit 0; fi; \
+    if [ -f /etc/sonic/pending_config_migration ] && \
+    { [ -e /etc/sonic/old_config/redis-auth.json ] || [ -L /etc/sonic/old_config/redis-auth.json ]; }; then \
+        cp -a /etc/sonic/old_config/redis-auth.json /etc/sonic/; \
+    fi'
+ExecStart=/usr/bin/redis_auth_startup.py
+RemainAfterExit=yes
+UMask=0077
