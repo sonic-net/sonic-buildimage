@@ -10,6 +10,10 @@ export module_out_put_dir
 
 PLAT_SYSFS_DIR = $(PWD)/plat_sysfs
 S3IP_SYSFS_DIR = $(PWD)/s3ip_sysfs
+MAKEFILE_FILE_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
+BSP_KERNEL_DEBUG_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../public/include)
+
+EXTRA_CFLAGS+= -I$(BSP_KERNEL_DEBUG_PATH)
 
 export PLAT_SYSFS_DIR
 export S3IP_SYSFS_DIR
@@ -34,7 +38,6 @@ obj-m += wb_wdt.o
 obj-m += wb_spi_gpio_device.o
 obj-m += wb_xdpe132g5c.o
 obj-m += wb_uio_irq.o
-obj-m += hw_test.o
 obj-m += wb_mdio_gpio_device.o
 obj-m += wb_csu550.o
 obj-m += wb_i2c_mux_pca9641.o
@@ -44,7 +47,6 @@ obj-m += wb_i2c_algo_bit.o
 obj-m += wb_i2c_gpio.o
 obj-m += wb_xdpe132g5c_pmbus.o
 obj-m += wb_i2c_gpio_device.o
-obj-m += wb_logic_dev_common.o
 obj-m += wb_pmbus_core.o
 obj-m += wb_xdpe12284.o
 obj-m += wb_ina3221.o
@@ -58,6 +60,13 @@ obj-m += ct7148.o
 obj-m += wb_ucd9081.o
 obj-m += wb_indirect_dev.o
 obj-m += wb_vr_common.o
+obj-m += wb_spi_master.o
+obj-m += wb_rc32312.o
+obj-m += wb_logic_dev_common.o
+obj-m += ixgbe/
+obj-m += i2c-designware/
+obj-m += wb_mdio_dev.o
+obj-m += wb_switch_dev.o
 
 all :
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
@@ -65,6 +74,8 @@ all :
 	$(MAKE) -C $(KERNEL_SRC)/build M=$(PWD) modules
 	@if [ ! -d $(module_out_put_dir) ]; then mkdir -p $(module_out_put_dir) ;fi
 	cp -p  $(PWD)/*.ko $(module_out_put_dir)
+	cp -p  $(PWD)/ixgbe/*.ko $(module_out_put_dir)
+	cp -p  $(PWD)/i2c-designware/*.ko $(module_out_put_dir)
 
 clean :
 	rm  -rf $(module_out_put_dir)
