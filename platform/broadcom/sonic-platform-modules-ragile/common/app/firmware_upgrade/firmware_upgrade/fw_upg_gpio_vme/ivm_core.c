@@ -1225,6 +1225,8 @@ void ispVMData(unsigned char *ByteData)
     //09/11/07 NN added local variables initialization
     unsigned short size               = 0;
     unsigned short i, j, m, getData   = 0;
+    size_t repeat_count               = 0;
+    size_t repeat_index               = 0;
     unsigned char cDataByte           = 0;
     unsigned char compress            = 0;
     unsigned short FFcount            = 0;
@@ -1295,12 +1297,13 @@ void ispVMData(unsigned char *ByteData)
         default:
             for (index = 0; index < size; index++)
                 ByteData[index] = 0x00;
+            repeat_count = (size_t)size * 2U / compress;
             for (index = 0; index < compress; index++) {
                 if (index % 2 == 0)
                     cDataByte = GetByte();
-                for (i = 0; i < size * 2 / compress; i++) {
+                for (repeat_index = 0; repeat_index < repeat_count; repeat_index++) {
                     //09/11/07 NN Type cast mismatch variables
-                    j = (unsigned short)(index + (i * (unsigned short)compress));
+                    j = (unsigned short)(index + (repeat_index * compress));
                     /*clear the nibble to zero first*/
                     if (j % 2) {
                         if (index % 2)
@@ -1358,9 +1361,10 @@ void ispVMData(unsigned char *ByteData)
 signed char ispVMShift(signed char a_cCode)
 {
     //09/11/07 NN added local variables initialization
-    unsigned short iDataIndex  = 0;
     unsigned short iReadLoop   = 0;
     signed char cRetCode       = 0;
+    size_t copy_bytes          = 0;
+    size_t copy_index          = 0;
 
     cRetCode = 0;
     //09/11/07 NN Type cast mismatch variables
@@ -1449,6 +1453,7 @@ signed char ispVMShift(signed char a_cCode)
 
     printf(";\n");
 #endif //VME_DEBUG
+    copy_bytes = (size_t)g_usiDataSize / 8U + 1U;
     if (g_usDataType & TDO_DATA || g_usDataType & DMASK_DATA) {
         if (g_usDataType & DMASK_DATA) {
 
@@ -1465,8 +1470,8 @@ signed char ispVMShift(signed char a_cCode)
                     ispVMBypass(HDR, g_usHeadDR);
                     sclock();
                 }
-                for (iDataIndex = 0; iDataIndex < g_usiDataSize / 8 + 1; iDataIndex++)
-                    g_pucInData[iDataIndex] = g_pucOutData[iDataIndex];
+                for (copy_index = 0; copy_index < copy_bytes; copy_index++)
+                    g_pucInData[copy_index] = g_pucOutData[copy_index];
                 g_usDataType &= ~(TDO_DATA + DMASK_DATA);
                 cRetCode = ispVMSend(g_usiDataSize);
             }
@@ -1497,8 +1502,8 @@ signed char ispVMShift(signed char a_cCode)
     /*transfer the input data to the output buffer for the next verify*/
     if ((g_usDataType & EXPRESS) || (a_cCode == SDR)) {
         if (g_pucOutData) {
-            for (iDataIndex = 0; iDataIndex < g_usiDataSize / 8 + 1; iDataIndex++)
-                g_pucOutData[iDataIndex] = g_pucInData[iDataIndex];
+            for (copy_index = 0; copy_index < copy_bytes; copy_index++)
+                g_pucOutData[copy_index] = g_pucInData[copy_index];
         }
     }
 
