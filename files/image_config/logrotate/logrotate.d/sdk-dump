@@ -1,0 +1,60 @@
+# Compress NVIDIA/Mellanox SDK dumps after one day and delete the compressed
+# files after 30 days. The .gz stanza must come first: ignoreduplicates
+# prevents the broader stanza from processing compressed files again.
+
+/var/log/sdk_dbg/*.gz
+/var/log/sdk_dbg/*/*.gz
+/var/log/sdk_dbg/*/*/*.gz
+/var/log/sdk_dbg/*/*/*/*.gz
+/var/log/sai_failure_dump/*.gz
+/var/log/sai_failure_dump/*/*.gz
+/var/log/sai_failure_dump/*/*/*.gz
+/var/log/sai_failure_dump/*/*/*/*.gz
+/var/log/mellanox/sdk-dumps/*.gz
+/var/log/mellanox/sdk-dumps/*/*.gz
+/var/log/mellanox/sdk-dumps/*/*/*.gz
+/var/log/mellanox/sdk-dumps/*/*/*/*.gz
+/var/log/bluefield/sdk-dumps/*.gz
+/var/log/bluefield/sdk-dumps/*/*.gz
+/var/log/bluefield/sdk-dumps/*/*/*.gz
+/var/log/bluefield/sdk-dumps/*/*/*/*.gz
+{
+    su root root
+    hourly
+    minage 30
+    missingok
+    rotate 0
+    nocreate
+    nocompress
+    dateext
+    dateformat -%Y%m%d%H%M%S
+    ignoreduplicates
+}
+
+/var/log/sdk_dbg/*
+/var/log/sdk_dbg/*/*
+/var/log/sdk_dbg/*/*/*
+/var/log/sdk_dbg/*/*/*/*
+/var/log/sai_failure_dump/*
+/var/log/sai_failure_dump/*/*
+/var/log/sai_failure_dump/*/*/*
+/var/log/sai_failure_dump/*/*/*/*
+/var/log/mellanox/sdk-dumps/*
+/var/log/mellanox/sdk-dumps/*/*
+/var/log/mellanox/sdk-dumps/*/*/*
+/var/log/mellanox/sdk-dumps/*/*/*/*
+/var/log/bluefield/sdk-dumps/*
+/var/log/bluefield/sdk-dumps/*/*
+/var/log/bluefield/sdk-dumps/*/*/*
+/var/log/bluefield/sdk-dumps/*/*/*/*
+{
+    su root root
+    hourly
+    minage 1
+    missingok
+    rotate -1
+    nocreate
+    compress
+    dateext
+    dateformat -%Y%m%d%H%M%S
+}
