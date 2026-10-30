@@ -22,7 +22,6 @@
 0029-zebra-New-protocol-RTPROT_HW-for-hardware-learnt-MAC.patch
 0030-doc-zebra-Doc-update-for-zebra-option-kernel-mac-ext.patch
 0031-zebra-EVPN-VXLAN-MH-extern-mode-Update-debug-print-f.patch
-0032-zebra-ARP-ND-Suppression-disabled-for-kernel-mac-ext.patch
 0033-zebra-netlink-message-handling-for-mac_extern_learn-.patch
 0034-zebra-mac-sync-update-del-expiry-in-extern_learn-mod.patch
 0035-tests-topotests-EVPN-VXLAN-MH-extern-learn-mode-test.patch
@@ -47,3 +46,4 @@
 0123-bgpd-Fix-flags-used-by-use-underlays-nexthop-weight-command.patch
 0124-bgpd-Fix-route-map-use-count-for-SRv6-Service-routes.patch
 0125-bgpd-Flush-temporary-attr-after-SRv6-unicast-route-map.patch
+0130-tests-check-remote-EVPN-neighbours-in-kernel-MAC-ext.patch
