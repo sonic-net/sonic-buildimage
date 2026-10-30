@@ -529,6 +529,30 @@ with open(sys.argv[1], 'rb') as fd:
         chassis = self.make_chassis(data)
         self.assertEqual(chassis.get_num_cpos(), 64)
 
+    def test_hld_initialization_without_laser_mapping_or_legacy_reference(self):
+        data = self.topology()
+        data.pop('legacy_bailly_reference', None)
+        data['platform_data'].pop('interfaces', None)
+        for device in data['devices'].values():
+            device.pop('laser_to_asic_lane_mapping', None)
+        chassis = self.make_chassis(data)
+        self.assertEqual(chassis.get_num_cpos(), 64)
+        self.assertEqual(chassis.get_num_sfps(), 0)
+        for cpo in chassis.get_all_cpos():
+            self.assertEqual(cpo.get_port_laser_ids(), [])
+            self.assertTrue(cpo.get_presence())
+        cpo = chassis.get_cpo(1)
+        with self.eeprom.open('r+b') as fd:
+            fd.seek((0xB0 + cpo.elsfp.base_page) * 128 + 130)
+            fd.write(b'\x17')  # Synthetic module advertises eight lasers.
+            fd.seek((0xB0 + cpo.elsfp.base_page + 1) * 128 + 0x87 - 128)
+            fd.write(b'\x02\x00')
+        self.assertIsInstance(cpo.oe.get_api(), BaillyOeApi)
+        els_api = cpo.elsfp.get_api()
+        self.assertIsInstance(els_api, BaillyElsfpApi)
+        self.assertEqual(els_api.get_per_lane_state()['LaneState1'], 'Inactive')
+        self.assertEqual(els_api.get_per_lane_state()['LaneState2'], 'Active')
+
     def test_missing_hld_devices_is_rejected(self):
         data = self.topology()
         del data["devices"]
