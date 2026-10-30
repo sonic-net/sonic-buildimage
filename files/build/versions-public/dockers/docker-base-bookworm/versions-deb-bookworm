@@ -5,7 +5,7 @@ jq==1.6-2.1+deb12u3
 less==590-2.1~deb12u2
 libatomic1==12.2.0-14+deb12u1
 libbpf1==1:1.1.2-0+deb12u1
-libbrotli1==1.0.9-2+b6
+libbrotli1==1.0.9-2+deb12u1
 libbsd0==0.11.7-2
 libcap2-bin==1:2.66-4+deb12u3+b1
 libcurl4==7.88.1-10+deb12u15
