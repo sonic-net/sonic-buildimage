@@ -197,7 +197,7 @@ jobs:
               mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
             fi
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
-            for source in sonic_ext_vnet_buf.h trim_admission_node.c trim_node.c; do
+            for source in CMakeLists.txt sonic_ext.h sonic_ext_vnet_buf.h trim_admission_node.c trim_api.c; do
               cmp "platform/vpp/vppbld/plugins/src/sonic_ext/$source" \
                   "platform/vpp/vppbld/repo/src/plugins/sonic_ext/$source"
             done
