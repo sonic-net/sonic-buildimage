@@ -20,6 +20,18 @@
     },
     "VLAN_MEMBER|Vlan100|Ethernet8": {
     },
+    "PORT|Ethernet2": {
+        "alias": "etp2"
+    },
+    "PORT|Ethernet4": {
+        "alias": "etp4"
+    },
+    "PORT|Ethernet5": {
+        "alias": "etp5"
+    },
+    "PORT|Ethernet8": {
+        "alias": "etp8"
+    },
     "DHCP_SERVER_IPV4|Vlan100": {
         "gateway": "100.1.1.1",
         "lease_time": "3600",
@@ -59,6 +71,34 @@
     },
     "DHCP_SERVER_IPV4_RANGE|range6": {
         "range@": "100.1.2.11"
+    },
+    "DHCP_SERVER_IPV4_MATCH|vendor-b": {
+        "type": "option60",
+        "value": "MAIA-B"
+    },
+    "DHCP_SERVER_IPV4_MATCH|port-etp2": {
+        "type": "circuit_id",
+        "value": "etp2"
+    },
+    "DHCP_SERVER_IPV4_MATCH|vendor-a": {
+        "type": "option60",
+        "value": "MAIA-A"
+    },
+    "DHCP_SERVER_IPV4_MATCH|unused-match": {
+        "type": "option60",
+        "value": "UNUSED"
+    },
+    "DHCP_SERVER_IPV4_MATCH|port-etp5": {
+        "type": "circuit_id",
+        "value": "etp5"
+    },
+    "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-a": {
+        "matches@": "port-etp2,vendor-a",
+        "ips@": "100.1.1.20"
+    },
+    "DHCP_SERVER_IPV4_BINDING|Vlan100|fallback": {
+        "matches@": "port-etp2",
+        "ranges@": "range3"
     },
     "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4": {
         "ips@": "100.1.1.10,100.1.1.11"
