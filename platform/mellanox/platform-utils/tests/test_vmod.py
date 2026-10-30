@@ -126,16 +126,25 @@ class TestVersionsMatch:
 
 class TestIsCpoPlatform:
 
-    @mock.patch('sonic_py_common.device_info.get_cpo_data', return_value={'oe': {}})
-    def test_cpo(self, _data):
+    # sonic_py_common is not installed in every build (e.g. the BMC build).
+    @pytest.fixture(autouse=True)
+    def device_info(self):
+        self.device_info = mock.Mock()
+        package = mock.Mock(device_info=self.device_info)
+        with mock.patch.dict(sys.modules, {'sonic_py_common': package,
+                                           'sonic_py_common.device_info': self.device_info}):
+            yield
+
+    def test_cpo(self):
+        self.device_info.get_cpo_data.return_value = {'oe': {}}
         assert vmod.is_cpo_platform() is True
 
-    @mock.patch('sonic_py_common.device_info.get_cpo_data', return_value=None)
-    def test_non_cpo(self, _data):
+    def test_non_cpo(self):
+        self.device_info.get_cpo_data.return_value = None
         assert vmod.is_cpo_platform() is False
 
-    @mock.patch('sonic_py_common.device_info.get_cpo_data', side_effect=OSError("no platform"))
-    def test_error_is_logged(self, _data):
+    def test_error_is_logged(self):
+        self.device_info.get_cpo_data.side_effect = OSError("no platform")
         with mock.patch.object(vmod.logger, 'warning') as mock_warning:
             assert vmod.is_cpo_platform() is False
         mock_warning.assert_called_once()
