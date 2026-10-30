@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 
+. /usr/bin/frr_config_security.sh
+
 mkdir -p /etc/frr
 mkdir -p /etc/supervisor/conf.d
+
+# The directory is writable by frr during normal operation. Keep it owned by
+# root while the startup script writes configuration, then restore access.
+FRR_CONFIG_DIR_MODE=$(stat -c %a /etc/frr) || exit 1
+chown root:root /etc/frr && chmod 0700 /etc/frr || exit 1
+prepare_frr_config_files /etc/frr \
+    bgpd.conf zebra.conf staticd.conf sharpd.conf bfdd.conf ospfd.conf \
+    pimd.conf frr.conf vtysh.conf || exit 1
 
 CFGGEN_PARAMS=" \
     -d \
@@ -107,7 +117,8 @@ elif [ "$CONFIG_TYPE" == "unified" ]; then
           /etc/frr/sharpd.conf
 fi
 
-chown -R frr:frr /etc/frr/
+chown -Rh frr:frr /etc/frr/ || exit 1
+chmod "${FRR_CONFIG_DIR_MODE}" /etc/frr/ || exit 1
 
 # Create sr0 interface for SRv6 support
 if ! ip link show sr0 > /dev/null 2>&1; then
