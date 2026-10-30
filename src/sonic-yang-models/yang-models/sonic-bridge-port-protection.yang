@@ -1,0 +1,78 @@
+module sonic-bridge-port-protection {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-bridge-port-protection";
+    prefix bpp;
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    organization "SONiC";
+    contact "SONiC";
+    description
+        "Software bridge-port protection policy. CONFIG_DB expresses operator
+         intent; SWSS owns automatic path selection, revertive policy, and
+         the wait-to-restore timer.";
+
+    revision 2026-10-07 {
+        description "Initial software protection policy for PortChannels.";
+    }
+
+    container sonic-bridge-port-protection {
+        container BRIDGE_PORT_PROTECTION {
+            description "Software protection policy keyed by PortChannel name.";
+
+            list BRIDGE_PORT_PROTECTION_LIST {
+                key "ifname";
+
+                leaf ifname {
+                    type leafref {
+                        path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                    }
+                    description
+                        "Existing PortChannel whose PORT-type bridge port is
+                         protected. Sub-interface bridge ports are unsupported.";
+                }
+
+                leaf protection_mode {
+                    type enumeration {
+                        enum SOFTWARE;
+                    }
+                    default SOFTWARE;
+                    description "SWSS controls path selection in this release.";
+                }
+
+                leaf admin_mode {
+                    type enumeration {
+                        enum AUTO;
+                        enum PRIMARY;
+                        enum PROTECTION;
+                    }
+                    default AUTO;
+                    description
+                        "AUTO follows link state using the SWSS state machine.
+                         PRIMARY pins the local path; PROTECTION pins the backup.
+                         This policy is not forwarded directly as SAI AUTO.";
+                }
+
+                leaf revertive {
+                    type boolean;
+                    default false;
+                    description
+                        "Allow SWSS to restore the primary path after link
+                         recovery and the wait-to-restore window.";
+                }
+
+                leaf wait_to_restore_time_ms {
+                    type uint32;
+                    units "milliseconds";
+                    default 0;
+                    description
+                        "Continuous link-up interval required before automatic
+                         restoration. Zero restores immediately; ignored when
+                         revertive is false. This is a software timer.";
+                }
+            }
+        }
+    }
+}

@@ -97,6 +97,7 @@ yang_files = [
     'sonic-bgp-voq-chassis-neighbor.yang',
     'sonic-bmp.yang',
     'sonic-breakout_cfg.yang',
+    'sonic-bridge-port-protection.yang',
     'sonic-buffer-pg.yang',
     'sonic-buffer-pool.yang',
     'sonic-buffer-port-egress-profile-list.yang',
