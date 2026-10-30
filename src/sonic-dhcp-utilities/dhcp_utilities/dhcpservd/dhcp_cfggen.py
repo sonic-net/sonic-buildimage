@@ -52,7 +52,7 @@ class DhcpServCfgGenerator(object):
         self.lease_path = lease_path
         self.lease_update_script_path = lease_update_script_path
         self.hook_lib_path = hook_lib_path
-        # Read port alias map file, this file is render after container start, so it would not change any more
+        # Keep aliases at startup values until relay and server alias updates can be coordinated.
         self._parse_port_map_alias()
         # Get kea config template
         self._get_render_template(kea_conf_template_path)
@@ -72,8 +72,6 @@ class DhcpServCfgGenerator(object):
             set of match conditions used by enabled MATCH bindings
         """
         # Generate from running config_db
-        # PORT and PORTCHANNEL are not monitored, so refresh circuit ID names on every generation
-        self._parse_port_map_alias()
         # Get host name
         device_metadata = self.db_connector.get_config_db_table("DEVICE_METADATA")
         hostname = self._parse_hostname(device_metadata)

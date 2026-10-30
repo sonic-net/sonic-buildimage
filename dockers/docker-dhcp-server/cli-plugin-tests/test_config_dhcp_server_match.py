@@ -113,6 +113,103 @@ def invoke(mock_db, command, args):
 
 
 @pytest.fixture
+def binding_with_deleted_range(prefix_db):
+    db = prefix_db
+    db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3", {"range@": "100.1.1.10,100.1.1.12"})
+    db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|surviving",
+             {"matches@": "vendor-a", "ranges@": "range1,range3"})
+    result = invoke(db, RANGE_COMMAND.commands["del"], ["range1", "--force"])
+    assert result.exit_code == 0, result.output
+    return db
+
+
+@pytest.mark.parametrize("operation", [
+    "add", "binding-update", "match-update", "range-update", "enable", "mode-update"
+])
+@pytest.mark.parametrize("conflict", ["equal-specificity", "partial-pool"])
+def test_surviving_ranges_participate_in_conflict_checks(binding_with_deleted_range, operation, conflict):
+    db = binding_with_deleted_range
+    match = "vendor-a" if conflict == "equal-specificity" else "vendor-b"
+    ips = "100.1.1.40" if conflict == "equal-specificity" else "100.1.1.11,100.1.1.13"
+    entry = {"matches@": match, "ips@": ips}
+    if operation == "add":
+        command = BINDING_COMMAND.commands["add"]
+        args = ["Vlan100", "other", "--match=" + match, ips]
+    else:
+        db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|other", entry)
+        if operation == "binding-update":
+            db.set("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|other", "ips@", "100.1.1.50")
+            command, args = BINDING_COMMAND.commands["update"], ["Vlan100", "other", ips]
+        elif operation == "match-update":
+            db.set("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|other", "matches@", "vendor-b")
+            value = "MAIA-A" if conflict == "equal-specificity" else "MAIA-C"
+            command, args = MATCH_COMMAND.commands["update"], ["vendor-b", "--value=" + value]
+        elif operation == "range-update":
+            db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|other-range", {"range@": "100.1.1.50"})
+            db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|other",
+                     {"matches@": match, "ranges@": "other-range"})
+            endpoints = ["100.1.1.40"] if conflict == "equal-specificity" else ["100.1.1.11", "100.1.1.13"]
+            command, args = RANGE_COMMAND.commands["update"], ["other-range"] + endpoints
+        elif operation == "enable":
+            db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
+            db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "state", "disabled")
+            command, args = IPV4_COMMAND.commands["enable"], ["Vlan100"]
+        else:
+            command, args = IPV4_COMMAND.commands["update"], ["Vlan100", "--mode=MATCH"]
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+
+    result = invoke(db, command, args)
+
+    assert result.exit_code == 2, result.output
+    error = "overlap with equal specificity" if conflict == "equal-specificity" else "partially overlapping pools"
+    assert error in result.output
+    assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+
+
+@pytest.mark.parametrize("all_ranges_missing", [False, True])
+def test_deleted_ranges_allow_nonconflicting_changes(binding_with_deleted_range, all_ranges_missing):
+    db = binding_with_deleted_range
+    if all_ranges_missing:
+        db.delete("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3")
+    match = "vendor-a" if all_ranges_missing else "vendor-b"
+
+    result = invoke(db, BINDING_COMMAND.commands["add"], ["Vlan100", "other", "--match=" + match, "100.1.1.40"])
+
+    assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("start,end,error", [
+    ("100.1.1.40", "100.1.1.41", "partially overlapping pools"),
+    ("100.1.3.10", "100.1.3.11", "is not in any subnet"),
+])
+def test_surviving_range_update_remains_guarded(binding_with_deleted_range, start, end, error):
+    db = binding_with_deleted_range
+    db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|other",
+             {"matches@": "vendor-b", "ips@": "100.1.1.40"})
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+
+    result = invoke(db, RANGE_COMMAND.commands["update"], ["range3", start, end])
+
+    assert result.exit_code == 2, result.output
+    assert error in result.output
+    assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+
+
+@pytest.mark.parametrize("operation", ["add", "update"])
+def test_candidate_with_missing_range_remains_strict(binding_with_deleted_range, operation):
+    db = binding_with_deleted_range
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+    args = ["Vlan100", "other", "--match=vendor-b", "--range=range1,range3"] if operation == "add" else [
+        "Vlan100", "surviving", "--match=vendor-b"]
+
+    result = invoke(db, BINDING_COMMAND.commands[operation], args)
+
+    assert result.exit_code == 2, result.output
+    assert "Range range1 does not exist" in result.output
+    assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+
+
+@pytest.fixture
 def dhcp_vlan200(mock_db):
     mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan200",
                   dict(mock_db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100")))
