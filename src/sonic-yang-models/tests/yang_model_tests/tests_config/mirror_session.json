@@ -551,180 +551,1028 @@
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE": {
+    "PORT_MIRROR_SAMPLE_VALID_PORT_RX": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
-                        "sample_rate": "50000"
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "admin_state": "up"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_MIN": {
+    "PORT_MIRROR_SAMPLE_VALID_PORTCHANNEL_RX": {
+        "sonic-portchannel:sonic-portchannel": {
+            "PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel10",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "PortChannel10",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_VALID_PORTCHANNEL_TX": {
+        "sonic-portchannel:sonic-portchannel": {
+            "PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel10",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "PortChannel10",
+                        "direction": "tx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_VALID_SAMPLE_RATE_MIN": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
                         "sample_rate": "2"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE": {
+    "PORT_MIRROR_SAMPLE_VALID_SAMPLE_RATE_MAX": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
-                        "truncate_size": "128"
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "4294967295"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MIN": {
+    "PORT_MIRROR_SAMPLE_SHARED_EXPORT_DISTINCT_POLICIES": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    },
+                    {
+                        "name": "Ethernet4",
+                        "lanes": "2",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "1000",
                         "truncate_size": "64"
-                    }
-                ]
-            }
-        }
-    },
-    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MAX": {
-        "sonic-mirror-session:sonic-mirror-session": {
-            "MIRROR_SESSION": {
-                "MIRROR_SESSION_LIST": [
+                    },
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
+                        "port": "Ethernet4",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
                         "truncate_size": "9216"
+                    },
+                    {
+                        "port": "Ethernet4",
+                        "direction": "tx",
+                        "mirror_session": "export1",
+                        "sample_rate": "2048"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_AND_TRUNCATE": {
-        "sonic-mirror-session:sonic-mirror-session": {
-            "MIRROR_SESSION": {
-                "MIRROR_SESSION_LIST": [
+    "PORT_MIRROR_SAMPLE_INVALID_SAMPLE_RATE_ONE": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
-                        "sample_rate": "50000",
-                        "truncate_size": "128"
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
                     }
                 ]
             }
-        }
-    },
-    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TOO_LOW": {
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
                         "sample_rate": "1"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_LOW": {
+    "PORT_MIRROR_SAMPLE_INVALID_SAMPLE_RATE_OVERFLOW": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
-                        "truncate_size": "32"
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "4294967296"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_HIGH": {
+    "PORT_MIRROR_SAMPLE_INVALID_TRUNCATE_SIZE_BELOW_MIN": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "truncate_size": "63"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_TRUNCATE_SIZE_ABOVE_MAX": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
                         "truncate_size": "9217"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TYPE": {
+    "PORT_MIRROR_SAMPLE_INVALID_DIRECTION_BOTH": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "span",
-                        "type": "SPAN",
-                        "sample_rate": "50000"
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "both",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
                     }
                 ]
             }
         }
     },
-    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
+    "PORT_MIRROR_SAMPLE_INVALID_ADMIN_STATE": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
                 "MIRROR_SESSION_LIST": [
                     {
-                        "name": "span",
-                        "type": "SPAN",
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "admin_state": "invalid"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_PORT_REFERENCE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet999",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_PORTCHANNEL_REFERENCE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "PortChannel999",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_MIRROR_SESSION_REFERENCE": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "missing",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_MISSING_SAMPLE_RATE": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_MISSING_MIRROR_SESSION": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_DUPLICATE_KEY": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    },
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "1000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SPAN_EXPORT_REJECTED": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "SPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_EXPORT_WITH_SRC_PORT_REJECTED": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN",
+                        "src_port": "Ethernet4"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_EMPTY_BINDING_OMITTED_CONFLICT": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {
+                "global": {}
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_UP_CONFLICT": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "admin_state": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {
+                "global": {
+                    "admin_state": "up"
+                }
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_DOWN_CONFLICT": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "admin_state": "down"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {
+                "global": {
+                    "admin_state": "up"
+                }
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_UP_CONFLICT": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "admin_state": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {
+                "global": {
+                    "admin_state": "down"
+                }
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_DOWN_CONFLICT": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "admin_state": "down"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {
+                "global": {
+                    "admin_state": "down"
+                }
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_WITHOUT_GLOBAL_ALLOWED": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {}
+        }
+    },
+    "PORT_MIRROR_SAMPLE_SFLOW_DIFFERENT_PORT_CONFLICT": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    },
+                    {
+                        "name": "Ethernet4",
+                        "lanes": "2",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet4",
+                        "direction": "tx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000",
+                        "admin_state": "down"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {
+                "global": {
+                    "admin_state": "up"
+                }
+            },
+            "SFLOW_SESSION": {
+                "SFLOW_SESSION_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "admin_state": "up"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_ABSENT_UNSAMPLED_WITH_SFLOW_ALLOWED": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN",
+                        "src_port": "Ethernet0",
+                        "direction": "RX"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "SFLOW": {
+                "global": {
+                    "admin_state": "down"
+                }
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_DEFAULT_ADMIN_STATE": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "tx",
+                        "mirror_session": "export1",
+                        "sample_rate": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_MIRROR_SAMPLE_INVALID_SAMPLE_RATE_ONE_WITH_TRUNCATE": {
+        "sonic-port:sonic-port": {
+            "PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "1",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "export1",
+                        "type": "ERSPAN"
+                    }
+                ]
+            },
+            "PORT_MIRROR_SAMPLE": {
+                "PORT_MIRROR_SAMPLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "direction": "rx",
+                        "mirror_session": "export1",
+                        "sample_rate": "1",
                         "truncate_size": "128"
                     }
                 ]

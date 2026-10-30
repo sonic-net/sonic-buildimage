@@ -481,6 +481,19 @@ class Test_SonicYang(object):
 
         return
 
+    @pytest.mark.parametrize("sflow_config,expected", [
+        pytest.param({"global": {}}, {"global": {}}, id="explicit-empty-global"),
+        pytest.param({}, {}, id="absent-global"),
+        pytest.param({"global": {"admin_state": "down"}},
+                     {"global": {"admin_state": "down"}}, id="explicit-disabled-global"),
+    ])
+    def test_sflow_global_presence_round_trip(self, sonic_yang_data, sflow_config, expected):
+        # Empty presence containers carry configuration even when default leaves
+        # are omitted during serialization. An absent global must stay absent.
+        syc = sonic_yang_data['syc']
+        syc.loadData({"SFLOW": sflow_config})
+        result = syc.getData()
+        assert result.get("SFLOW", {}) == expected
     @pytest.fixture
     def dhcp_match_config(self):
         return {
