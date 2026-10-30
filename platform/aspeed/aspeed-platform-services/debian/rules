@@ -6,6 +6,12 @@
 override_dh_auto_build:
 	# Nothing to build
 
+override_dh_auto_test:
+	# Script unit tests (skipped with nocheck)
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	python3 -m pytest tests/
+endif
+
 override_dh_auto_install:
 	# Install scripts
 	install -d $(CURDIR)/debian/aspeed-platform-services/usr/bin

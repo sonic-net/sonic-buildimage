@@ -20,8 +20,8 @@
 # guard is not enabled the command returns success immediately, so autoboot
 # proceeds exactly as with the default boot_guard.
 #
-# This hook ships only in the Nexthop platform package, so nh_stormguard is
-# always present where it runs.
+# sonic-program-uboot-env.sh runs only the hook in the detected platform's
+# device directory, so nh_stormguard is always present where it runs.
 
 sonic_uboot_env_log() {
     msg="$*"
