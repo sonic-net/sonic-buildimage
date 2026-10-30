@@ -65,7 +65,7 @@ on_pkgs_in_parallel {
 	my $get_kernel_module_vermagic = sub {
 		my ($file) = @_;
 		my $ff = qx_cmd('readelf', '-p', '.modinfo', $file);
-		return $1 if m/\bvermagic=([^ ]+) /;
+		return $1 if $ff =~ m/\bvermagic=([^ ]+) /;
 		error("no vermagic in .modinfo section of '%s', so cannot tell which kernel it was built for", $file);
 	};
 
@@ -124,8 +124,9 @@ on_pkgs_in_parallel {
 			my $output = do { local $/; <$fd> };
 			if (not close($fd)) {
 				local $, = ", ";
-				error("no installed package provides $vmlinuz (needed by ${keys %{ $vermagic_strings{$kver} }});"
-					. " the kernel image for $kver must be installed in the build environment")
+				error("no installed package provides '%s' (needed by %s);"
+					. " the kernel image for %s must be installed in the build environment",
+					$vmlinuz, join(", ", keys %{ $vermagic_strings{$kver} }), $kver)
 			}
 			# Match the owner line only; diversion lines or several owners are not a single package.
 			error("cannot find the single package owning $vmlinuz in dpkg -S output: $output")
