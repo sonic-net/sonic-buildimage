@@ -1286,3 +1286,96 @@ def test___get_default_action_permit_3():
     assert mgr._BGPAllowListMgr__get_default_action_community(data) == "123:123"
 
 # FIXME: more testcases for coverage
+
+
+def allow_list_with_directory(running_default=None):
+    from bgpcfgd.managers_allow_list import BGPAllowListMgr
+    cfg_mgr = MagicMock()
+    cfg_mgr.update.return_value = None
+    cfg_mgr.changes = ""
+    cfg_mgr.get_text.return_value = [] if running_default is None else [
+        "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535", " set community %s additive" % running_default,
+        "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535", " set community %s additive" % running_default]
+    common_objs = {'directory': Directory(), 'cfg_mgr': cfg_mgr, 'tf': TemplateFabric(),
+                   'constants': deepcopy(global_constants)}
+    return BGPAllowListMgr(common_objs, "CONFIG_DB", "BGP_ALLOWED_PREFIXES"), common_objs['directory'], cfg_mgr
+
+
+def test_default_action_is_recorded_for_the_peer_render():
+    mgr, directory, cfg_mgr = allow_list_with_directory()
+
+    def recorded(route_map_name):
+        return directory.get("LOCAL", "allow_list_default_action", route_map_name)
+
+    # FRR holds no rule: nothing is recorded before a row is applied
+    assert not directory.path_exist("LOCAL", "allow_list_default_action", "ALLOW_LIST_DEPLOYMENT_ID_0_V4")
+    mgr.set_handler("DEPLOYMENT_ID|0", {"prefixes_v4": "10.20.30.0/24", "default_action": "deny"})
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_V4") == "deny"
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_V6") == "deny"
+    # other deployments and neighbor-type policies have their own route-maps and records
+    mgr.set_handler("DEPLOYMENT_ID|5", {"prefixes_v4": "10.20.30.0/24", "default_action": "permit"})
+    mgr.set_handler("DEPLOYMENT_ID|0|NEIGHBOR_TYPE|TOR", {"prefixes_v4": "10.20.30.0/24", "default_action": "permit"})
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_5_V4") == "permit"
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_NEIGHBOR_TOR_V4") == "permit"
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_V4") == "deny"
+    # the policies of one deployment share its route-maps, whose default rule is the last applied
+    # policy's (a policy without default_action applies the constants' default; a removed policy puts
+    # the constants' default back): existing behaviour of the manager, which the record follows
+    mgr.set_handler("DEPLOYMENT_ID|0|1010:2020", {"prefixes_v4": "10.20.30.0/24"})
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_V4") == "permit"
+    mgr.set_handler("DEPLOYMENT_ID|0", {"prefixes_v4": "10.20.30.0/24", "default_action": "deny"})
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_V6") == "deny"
+    mgr.del_handler("DEPLOYMENT_ID|0")
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_V4") == "permit"
+    assert recorded("ALLOW_LIST_DEPLOYMENT_ID_0_V6") == "permit"
+
+
+def test_default_rule_is_written_again_when_the_pending_changes_already_write_it():
+    mgr, directory, cfg_mgr = allow_list_with_directory(running_default="no-export")
+    pushed = []
+    cfg_mgr.push_list = lambda cmds: pushed.extend(cmds)
+    # FRR already holds the policy's action and nothing is pending: the rule is not written
+    mgr.set_handler("DEPLOYMENT_ID|0", {"prefixes_v4": "10.20.30.0/24", "default_action": "deny"})
+    assert "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535" not in pushed
+    # a peer render of this pass wrote both rules: the policy writes them again, after it
+    cfg_mgr.changes = ("route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535\n set community 123:123 additive\n"
+                       "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535\n set community 123:123 additive\n")
+    mgr.set_handler("DEPLOYMENT_ID|0", {"prefixes_v4": "10.20.30.0/24", "default_action": "deny"})
+    assert pushed[-4:] == ["route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535", " set community no-export additive",
+                           "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535", " set community no-export additive"]
+    # a pending write that already sets the policy's action is left as the last one
+    del pushed[:]
+    cfg_mgr.changes = ("route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535\n set community no-export additive\n"
+                       "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535\n set community no-export additive\n")
+    mgr.set_handler("DEPLOYMENT_ID|0", {"prefixes_v4": "10.20.30.0/24", "default_action": "deny"})
+    assert not [line for line in pushed if line.endswith("permit 65535") or line.startswith(" set community")]
+    # the running rule differs from the policy's action although a pending write already sets it (a
+    # write FRR refused earlier): the rule is written, and so the peer groups are refreshed, as before
+    del pushed[:]
+    cfg_mgr.get_text.return_value = [
+        "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535", " set community 123:123 additive",
+        "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535", " set community 123:123 additive"]
+    mgr.set_handler("DEPLOYMENT_ID|0", {"prefixes_v4": "10.20.30.0/24", "default_action": "deny"})
+    assert [line for line in pushed if line.endswith("permit 65535")] == [
+        "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535", "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535"]
+
+
+def test_record_starts_from_the_rule_frr_holds():
+    mgr, directory, cfg_mgr = allow_list_with_directory(running_default="no-export")
+    assert directory.get("LOCAL", "allow_list_default_action", "ALLOW_LIST_DEPLOYMENT_ID_0_V4") == "deny"
+    assert directory.get("LOCAL", "allow_list_default_action", "ALLOW_LIST_DEPLOYMENT_ID_0_V6") == "deny"
+
+
+def test_nothing_is_recorded_when_the_families_hold_different_rules():
+    from bgpcfgd.managers_allow_list import BGPAllowListMgr
+    cfg_mgr = MagicMock()
+    cfg_mgr.update.return_value = None
+    cfg_mgr.changes = ""
+    cfg_mgr.get_text.return_value = [
+        "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535", " set community no-export additive",
+        "route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535", " set community 123:123 additive"]
+    common_objs = {'directory': Directory(), 'cfg_mgr': cfg_mgr, 'tf': TemplateFabric(),
+                   'constants': deepcopy(global_constants)}
+    BGPAllowListMgr(common_objs, "CONFIG_DB", "BGP_ALLOWED_PREFIXES")
+    # the render applies one action to both families, so a rule the families disagree on is not repeated
+    assert not common_objs['directory'].path_exist("LOCAL", "allow_list_default_action", "ALLOW_LIST_DEPLOYMENT_ID_0_V4")
