@@ -38,6 +38,9 @@ $(RESTAPI_SYSTEMD)_PATH = files/scripts
 K8S_POD_CONTROL = k8s_pod_control.sh
 $(K8S_POD_CONTROL)_PATH = files/scripts
 
+WAIT_FOR_DEPENDENT_STARTUP_SCRIPT = wait_for_dependent_startup.sh
+$(WAIT_FOR_DEPENDENT_STARTUP_SCRIPT)_PATH = files/scripts
+
 UPDATE_CHASSISDB_CONFIG_SCRIPT = update_chassisdb_config
 $(UPDATE_CHASSISDB_CONFIG_SCRIPT)_PATH = files/scripts
 
@@ -66,6 +69,7 @@ SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(GNMI_SYSTEMD) \
                     $(RESTAPI_SYSTEMD) \
                     $(K8S_POD_CONTROL) \
+                    $(WAIT_FOR_DEPENDENT_STARTUP_SCRIPT) \
                     $(UPDATE_CHASSISDB_CONFIG_SCRIPT) \
                     $(SWSS_VARS_TEMPLATE) \
                     $(RSYSLOG_PLUGIN_CONF_J2) \

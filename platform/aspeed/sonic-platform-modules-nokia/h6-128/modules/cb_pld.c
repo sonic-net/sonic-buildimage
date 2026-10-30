@@ -38,6 +38,7 @@
 #define MUX_SEL_REG                      0x0F
 #define RESET_SIGNAL_1_REG               0x20
 #define BIOS_RED_REG                     0x37
+#define BMC_RESET_CAUSE_REG              0x3C
 #define PSU_POWERGOOD_REG                0x51
 #define CONSOLE_WDT_REG                  0x63
 
@@ -46,6 +47,7 @@ static const unsigned short cpld_address_list[] = {0x60, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
+    int bmc_reset_cause;
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -285,6 +287,12 @@ static ssize_t set_bios_red(struct device *dev, struct device_attribute *devattr
     return count;
 }
 
+static ssize_t show_bmc_reset_cause(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    return sprintf(buf, "%02x\n", data->bmc_reset_cause);
+}
+
 static ssize_t show_console_wdt(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
@@ -338,6 +346,7 @@ static SENSOR_DEVICE_ATTR(ssd2_pres, S_IRUGO, show_ssd_present, NULL, 0);
 static SENSOR_DEVICE_ATTR(mux_sel, S_IRUGO | S_IWUSR, show_mux_sel, set_mux_sel, 0);
 static SENSOR_DEVICE_ATTR(reset_sig, S_IRUGO | S_IWUSR, show_reset_sig, set_reset_sig, 0);
 static SENSOR_DEVICE_ATTR(bios_red, S_IRUGO | S_IWUSR, show_bios_red, set_bios_red, 0);
+static SENSOR_DEVICE_ATTR(bmc_reset_cause, S_IRUGO, show_bmc_reset_cause, NULL, 0);
 static SENSOR_DEVICE_ATTR(console_wdt, S_IRUGO | S_IWUSR, show_console_wdt, set_console_wdt, 0);
 
 static struct attribute *cb_pld_attributes[] = {
@@ -357,6 +366,7 @@ static struct attribute *cb_pld_attributes[] = {
     &sensor_dev_attr_mux_sel.dev_attr.attr,
     &sensor_dev_attr_reset_sig.dev_attr.attr,
     &sensor_dev_attr_bios_red.dev_attr.attr,
+    &sensor_dev_attr_bmc_reset_cause.dev_attr.attr,
     &sensor_dev_attr_console_wdt.dev_attr.attr,
     NULL
 };
@@ -393,6 +403,15 @@ static int cb_pld_probe(struct i2c_client *client)
     if (status) {
         dev_err(&client->dev, "CPLD INIT ERROR: Cannot create sysfs\n");
         goto exit_sysfs_create_group;
+    }
+
+    data->bmc_reset_cause = cpld_i2c_read(data, BMC_RESET_CAUSE_REG);
+    if (data->bmc_reset_cause < 0) {
+        dev_warn(&client->dev, "CPLD: BMC reset cause reg read failed. (err %d)\n",
+                 data->bmc_reset_cause);
+        data->bmc_reset_cause = 0;
+    } else {
+        cpld_i2c_write(data, BMC_RESET_CAUSE_REG, 0xFF);
     }
 
     return 0;
