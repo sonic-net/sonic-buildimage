@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
-"""Prepare the explicitly selected local Redis processes before database startup."""
+"""Prepare the explicitly selected local Redis processes before database startup.
+
+Topology extensions qualify a deployment and discover its owned servers. Selection,
+credentials and runtime delivery consume that inventory through the common path.
+Remote references are not owned servers; shared TCP servers require an explicit
+exception and matching client/restore support before their topology is admitted.
+"""
 
 import argparse
+import configparser
 import json
 import os
 from pathlib import Path
@@ -15,6 +22,7 @@ INTENT = Path('/etc/sonic/redis-auth.json')
 RUNTIME = Path('/run/redis-auth')
 BUILD_SETTING = Path('/usr/share/sonic/redis-auth/build-enabled')
 CONFIG = Path('/etc/sonic')
+NETNS = Path('/run/netns')
 DATABASE_TEMPLATE = Path('/usr/share/sonic/redis-auth/database_config.json.j2')
 USERNAME = 'sonic-trusted-writer'
 READ_RULES = ('reset on nopass ~* &* -@all +@read +@transaction '
@@ -38,10 +46,7 @@ def read_setting(path):
 
 
 def build_enabled():
-    try:
-        value = read_setting(BUILD_SETTING).strip()
-    except FileNotFoundError:
-        return False
+    value = read_setting(BUILD_SETTING).strip()
     if value not in ('y', 'n'):
         raise CredentialStateError('invalid Redis build setting')
     return value == 'y'
@@ -63,8 +68,67 @@ def read_intent(path=INTENT):
     return {'mode': intent.get('mode', 'legacy'), 'tcp_exceptions': sorted(exceptions)}
 
 
+def platform_directory():
+    from sonic_py_common import device_info
+    platform = device_info.get_platform(config_db=None)
+    if not platform or platform in ('.', '..') or Path(platform).name != platform:
+        raise CredentialStateError('unknown Redis platform identity')
+    directory = Path(device_info.HOST_DEVICE_PATH) / platform
+    alias = Path(device_info.CONTAINER_PLATFORM_PATH)
+    if not directory.is_dir() or (os.path.lexists(alias) and alias.resolve() != directory.resolve()):
+        raise CredentialStateError('missing or conflicting Redis platform directory')
+    return directory
+
+
+def platform_settings(path):
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read_string('[platform]\n' + read_setting(path))
+    if parser.sections() != ['platform'] or parser.defaults():
+        raise CredentialStateError('unsupported platform assignment format')
+    return parser['platform']
+
+
+def check_topology():
+    """Qualify this boot before credentials exist; initially standalone single-ASIC.
+
+    New topologies extend this boundary and configured_instances together. They
+    must establish ownership and remote-client requirements before enforcement.
+    """
+    directory = platform_directory()
+    source = CONFIG / ('old_config' if os.path.lexists(CONFIG / 'pending_config_migration') else '')
+    metadata = json.loads(read_setting(source / 'config_db.json'))['DEVICE_METADATA']['localhost']
+    asic, environment, platform = (directory / name for name in ('asic.conf', 'platform_env.conf', 'platform.json'))
+    count = int(platform_settings(asic)['num_asic']) if os.path.lexists(asic) else 1
+    flags = platform_settings(environment) if os.path.lexists(environment) else {}
+    data = json.loads(read_setting(platform)) if os.path.lexists(platform) else {}
+    roles = {'ToRRouter', 'LeafRouter', 'BackEndToRRouter', 'BackEndLeafRouter',
+             'ToRSwitch', 'MgmtToRRouter', 'MgmtLeafRouter', 'MgmtAccessRouter'}
+    if (count != 1 or not isinstance(metadata, dict) or metadata.get('platform') != directory.name
+            or metadata.get('switch_type', 'npu') != 'npu' or metadata.get('type') not in roles
+            or metadata.get('subtype') not in (None, 'DualToR')
+            or any(flags.get(key, '0') != '0' for key in ('supervisor', 'disaggregated_chassis', 'switch_bmc'))
+            or not isinstance(data, dict) or 'DPU' in data or 'DPUS' in data
+            or os.path.lexists(directory / 'chassisdb.conf') or any(NETNS.glob('asic*'))
+            or any(os.path.lexists(base / name) for base in (CONFIG, CONFIG / 'old_config')
+                   for name in ('chassisdb_address', 'enable_multidb'))
+            or any(list(base.glob(pattern)) for base in (CONFIG, CONFIG / 'old_config')
+                   for pattern in ('config_db[0-9]*.json', 'database_config[0-9]*.json', 'database_config*dpu*.json'))):
+        raise CredentialStateError('unsupported Redis deployment or namespace layout')
+    global_config = CONFIG / 'old_config/database_global.json'
+    if not os.path.lexists(global_config):
+        global_config = CONFIG / 'database_global.json'
+    if (os.path.lexists(global_config) and json.loads(read_setting(global_config))['INCLUDES'] !=
+            [{'include': '../../redis/sonic-db/database_config.json'}]):
+        raise CredentialStateError('unsupported Redis global database includes')
+
+
 def configured_instances():
-    """Use the same saved override or standard host template as the database entrypoint."""
+    """Discover owned local servers using the entrypoint's saved/current inputs.
+
+    Return one endpoint record per owned process. Namespace support extends this
+    inventory; it does not add credential, ACL or activation paths. References to
+    another host never enter it. Shared servers need reviewed TCP exceptions.
+    """
     if (CONFIG / 'enable_multidb').exists():
         raise CredentialStateError('the multi-database layout is not qualified for enforcement')
     try:
@@ -161,6 +225,8 @@ def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot; reboot after changing intent')
         return []
+    if not (runtime / 'local.json').exists():
+        check_topology()
     files = policy_files(selected, instances)
     for relative, content in files.items():
         path = runtime / relative
@@ -200,7 +266,7 @@ def main():
             print('enforce' if runtime_required() else 'legacy')
             return 0
         selected = prepare_selected()
-    except (CredentialStateError, OSError, ValueError, KeyError, TypeError):
+    except (CredentialStateError, OSError, ValueError, KeyError, TypeError, configparser.Error):
         print('redis-auth-startup: invalid activation or runtime state', file=sys.stderr)
         return 1
     message = 'legacy'

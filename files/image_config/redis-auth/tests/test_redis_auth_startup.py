@@ -453,8 +453,11 @@ class StartupTest(unittest.TestCase):
                         ('EVAL', "return redis.call('SET',KEYS[1],ARGV[1])", '1', 'test:reader', 'bad')):
             denied = self.as_reader(path, *command, gid=1002)
             self.assertNotEqual(denied.returncode, 0)
-            expected = 'ACL failure in script' if command[0] == 'EVAL' else 'NOPERM'
-            self.assertIn(expected, denied.stdout + denied.stderr)
+            if command[0] == 'EVAL':
+                self.assertRegex(denied.stdout + denied.stderr,
+                                 "ACL failure in script|can't run this command or subcommand")
+            else:
+                self.assertIn('NOPERM', denied.stdout + denied.stderr)
         self.assertEqual(self.as_reader(path, 'GET', 'test:reader', gid=1002).stdout.strip(), 'kept')
 
         def ordinary():

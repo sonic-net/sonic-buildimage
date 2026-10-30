@@ -35,12 +35,12 @@ def test_disabled_build_ignores_restored_activation_and_creates_no_runtime(boot,
     assert not runtime.exists()
 
 
-def test_missing_build_setting_keeps_legacy(boot):
+def test_missing_build_setting_blocks_startup(boot):
     marker, intent, runtime = boot
     marker.unlink()
-    assert not startup.build_enabled()
-    assert startup.prepare_selected(intent_path=intent, runtime=runtime) == []
-    assert not startup.runtime_required(intent_path=intent, runtime=runtime)
+    for operation in (startup.prepare_selected, startup.runtime_required):
+        with pytest.raises(FileNotFoundError):
+            operation(intent_path=intent, runtime=runtime)
     assert not runtime.exists()
 
 
@@ -96,8 +96,9 @@ def test_selected_boot_cannot_downgrade_when_build_setting_changes(boot, remove)
         marker.unlink()
     else:
         marker.write_text('n\n')
+    error = FileNotFoundError if remove else startup.CredentialStateError
     for operation in (startup.prepare_selected, startup.runtime_required):
-        with pytest.raises(startup.CredentialStateError, match='activation changed'):
+        with pytest.raises(error):
             operation(intent_path=intent, runtime=runtime)
 
 

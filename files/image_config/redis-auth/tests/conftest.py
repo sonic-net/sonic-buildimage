@@ -1,4 +1,5 @@
 """Use repository database templates without installing files on the test host."""
+import json
 import os
 from pathlib import Path
 import sys
@@ -15,9 +16,15 @@ def database_template(monkeypatch, tmp_path):
     root = Path(__file__).resolve().parents[4]
     config = tmp_path / 'sonic'
     config.mkdir()
+    platform = tmp_path / 'platform'
+    platform.mkdir()
+    (config / 'config_db.json').write_text(json.dumps({'DEVICE_METADATA': {'localhost': {
+        'platform': platform.name, 'type': 'ToRRouter'}}}))
     template = tmp_path / 'database_config.json.j2'
     template.write_text((root / 'dockers/docker-database/database_config.json.j2').read_text())
     monkeypatch.setattr(startup, 'CONFIG', config)
+    monkeypatch.setattr(startup, 'NETNS', tmp_path / 'netns')
+    monkeypatch.setattr(startup, 'platform_directory', lambda: platform)
     monkeypatch.setattr(startup, 'DATABASE_TEMPLATE', template)
 
 
