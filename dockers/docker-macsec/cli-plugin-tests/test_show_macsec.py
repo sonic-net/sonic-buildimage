@@ -9,6 +9,119 @@ sys.path.append('../cli/show/plugins/')
 import show_macsec
 
 
+primary_ckn = "01234567890123456789012345678912"
+fallback_ckn = "11234567890123456789012345678912"
+secret_cak = "2363647040534355560e000802065d574d400e000e030307075f0e5050000e5541"
+
+
+def mka_record():
+    return {
+        "namespace": "",
+        "interface": "Ethernet0",
+        "session": {
+            "profile": "rotation",
+            "kay_status": "active",
+            "authenticated": "false",
+            "secured": "true",
+            "failed": "false",
+            "actor_sci": "0011223344550001",
+            "key_server_sci": "0011223344550001",
+            "actor_priority": "16",
+            "key_server_priority": "16",
+            "is_key_server": "true",
+            "keys_distributed": "7",
+            "keys_received": "0",
+            "mka_hello_time_ms": "2000",
+            "config_status": "in-sync",
+        },
+        "participants": [
+            {
+                "ckn": primary_ckn,
+                "mi": "102030405060708090a0b0c0",
+                "mn": "482",
+                "active": "true",
+                "is_principal": "true",
+                "is_primary": "true",
+                "live_peers": "1",
+                "potential_peers": "0",
+                "is_key_server": "true",
+                "is_elected": "true",
+            },
+            {
+                "ckn": fallback_ckn,
+                "mi": "c0b0a0908070605040302010",
+                "mn": "324",
+                "active": "true",
+                "is_principal": "false",
+                "is_primary": "false",
+                "live_peers": "1",
+                "potential_peers": "0",
+                "is_key_server": "false",
+                "is_elected": "false",
+            },
+        ],
+        "secrets": [secret_cak],
+    }
+
+
+def populate_mka_records(records):
+    def collect(context, interface_name):
+        context.mka_records.extend(records)
+    return collect
+
+
+def state_db_for_interface(interface_name):
+    return state_db_for_snapshots([interface_name], [interface_name])
+
+
+def state_db_for_snapshots(session_interfaces, participant_interfaces,
+                           empty_participant_interfaces=(), session_overrides=None,
+                           participant_overrides=None):
+    db = MagicMock()
+    db.STATE_DB = "STATE_DB"
+    db.get_db_separator.return_value = "|"
+    session_keys = [
+        "MACSEC_MKA_SESSION_TABLE|{}".format(interface_name)
+        for interface_name in session_interfaces
+    ]
+    participant_keys = {
+        interface_name: "MACSEC_MKA_PARTICIPANT_TABLE|{}|{}".format(
+            interface_name, primary_ckn
+        )
+        for interface_name in participant_interfaces
+    }
+    empty_participant_keys = {
+        participant_keys[interface_name]
+        for interface_name in empty_participant_interfaces
+    }
+
+    def keys(db_name, pattern):
+        if pattern == "MACSEC_MKA_SESSION_TABLE|*":
+            return session_keys
+        for interface_name, participant_key in participant_keys.items():
+            if pattern == "MACSEC_MKA_PARTICIPANT_TABLE|{}|*".format(
+                    interface_name):
+                return [participant_key]
+        return []
+
+    def get_all(db_name, key):
+        if key in session_keys:
+            if session_overrides and key in session_overrides:
+                return session_overrides[key]
+            return mka_record()["session"]
+        if participant_overrides and key in participant_overrides:
+            return participant_overrides[key]
+        if key in empty_participant_keys:
+            return {}
+        if key in participant_keys.values():
+            return mka_record()["participants"][0]
+        return {}
+
+    db.keys.side_effect = keys
+    db.get_all.side_effect = get_all
+    return db
+
+
 
 class TestShowMACsec(object):
     def test_cache_json_round_trip_preserves_sa_counter_baseline(self, tmp_path):
@@ -117,6 +230,623 @@ class TestShowMACsec(object):
         runner = CliRunner()
         result = runner.invoke(show_macsec.macsec,["--profile"])
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_compact_valid_snapshot_has_no_health_columns(
+            self, collect_mka):
+        collect_mka.side_effect = populate_mka_records([mka_record()])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka"])
+
+        assert result.exit_code == 0, result.output
+        header = result.output.splitlines()[0].split()
+        assert header == [
+            "Interface",
+            "KaY",
+            "Secured",
+            "Principal",
+            "CKN",
+            "Role",
+            "prim./fall.",
+            "live",
+            "peers",
+            "Local-KS",
+            "Keys",
+            "distributed",
+        ]
+        assert "Key-server" not in header
+        assert "SCI" not in header
+        assert "Status" not in result.output
+        assert "Age" not in result.output
+        assert "query" not in result.output.lower()
+        assert "last updated" not in result.output.lower()
+
+    def test_mka_safe_formatters_reject_malformed_values(self):
+        assert show_macsec._safe_hex("+011223344550001", (16,)) == "-"
+        assert show_macsec._safe_hex(" 011223344550001", (16,)) == "-"
+        assert show_macsec._format_milliseconds(None) == "-"
+        assert show_macsec._format_milliseconds("invalid") == "-"
+        assert show_macsec._format_milliseconds("2000") == "2000 ms"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_compact_keys_distributed_is_strict_and_secret_safe(
+            self, collect_mka):
+        valid = mka_record()
+        valid["interface"] = "Ethernet0"
+        valid["session"]["keys_distributed"] = "12"
+
+        missing = mka_record()
+        missing["interface"] = "Ethernet4"
+        del missing["session"]["keys_distributed"]
+
+        malformed = mka_record()
+        malformed["interface"] = "Ethernet8"
+        malformed["session"]["keys_distributed"] = "not-a-count"
+
+        numeric_secret = "12" * 33
+        poisoned = mka_record()
+        poisoned["interface"] = "Ethernet12"
+        poisoned["session"]["keys_distributed"] = numeric_secret
+        poisoned["secrets"] = [numeric_secret, numeric_secret[2:]]
+
+        collect_mka.side_effect = populate_mka_records([
+            poisoned,
+            malformed,
+            missing,
+            valid,
+        ])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka"])
+
+        assert result.exit_code == 0, result.output
+        header = result.output.splitlines()[0].split()
+        assert "Keys" in header
+        assert "distributed" in header
+        rows = {
+            columns[0]: columns
+            for columns in (
+                line.split()
+                for line in result.output.splitlines()
+                if line.startswith("Ethernet")
+            )
+        }
+        assert rows["Ethernet0"][-1] == "12"
+        assert rows["Ethernet4"][-1] == "-"
+        assert rows["Ethernet8"][-1] == "-"
+        assert rows["Ethernet12"][-1] == "-"
+        assert numeric_secret not in result.output
+        assert numeric_secret[2:] not in result.output
+
+    def test_config_error_redacts_cak_shapes_without_hiding_ckn(self):
+        decoded_current_cak = secret_cak[2:]
+        stale_decoded_cak = "ab" * 32
+        stale_raw_256_cak = "cd" * 64
+        contextual_caks = ("ba" * 32, "dc" * 32, "12" * 32)
+        safe_ckn = "ef" * 32
+        error = (
+            "encoded={} decoded={} previous_cak={} snapshot={} "
+            "current_cak={} replacement_cak={} configured_cak={} "
+            "ckn={} interface=Ethernet0"
+        ).format(
+            secret_cak,
+            decoded_current_cak,
+            stale_decoded_cak,
+            stale_raw_256_cak,
+            *contextual_caks,
+            safe_ckn,
+        )
+
+        redacted = show_macsec._redact_known_secrets(
+            error, [secret_cak]
+        )
+
+        assert secret_cak not in redacted
+        assert decoded_current_cak not in redacted
+        assert stale_decoded_cak not in redacted
+        assert stale_raw_256_cak not in redacted
+        assert "previous_cak=[redacted]" in redacted
+        assert "snapshot=[redacted]" in redacted
+        for label, cak in zip(
+                ("current_cak", "replacement_cak", "configured_cak"),
+                contextual_caks):
+            assert cak not in redacted
+            assert "{}=[redacted]".format(label) in redacted
+        assert "ckn={}".format(safe_ckn) in redacted
+        assert "interface=Ethernet0" in redacted
+
+    def test_controlled_port_mode_state_matrix(self):
+        cases = (
+            ("active", "false", "true", "false", "secured"),
+            ("active", "true", "false", "false", "authenticated-only"),
+            ("active", "false", "false", "true", "failed"),
+            ("active", "true", "true", "true", "failed"),
+            ("not-active", "false", "false", "false", "inactive"),
+            ("active", "true", "true", "false", "inconsistent"),
+            ("active", "false", "false", "false", "inconsistent"),
+            ("not-active", "true", "false", "false", "inconsistent"),
+            ("invalid", "false", "true", "false", "-"),
+            ("active", "invalid", "true", "false", "-"),
+        )
+        for kay_status, authenticated, secured, failed, expected in cases:
+            session = {
+                "kay_status": kay_status,
+                "authenticated": authenticated,
+                "secured": secured,
+                "failed": failed,
+                "primary_cak": secret_cak,
+            }
+            assert show_macsec._controlled_port_mode(session) == expected
+
+        assert show_macsec._controlled_port_mode({
+            "kay_status": "active",
+            "authenticated": "false",
+            "secured": "true",
+        }) == "-"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_compact_live_peers_by_configured_role(self, collect_mka):
+        primary_principal = mka_record()
+        primary_principal["interface"] = "Ethernet0"
+        primary_principal["participants"][0]["live_peers"] = "1"
+        primary_principal["participants"][1]["live_peers"] = "1"
+
+        fallback_principal_primary_live = mka_record()
+        fallback_principal_primary_live["interface"] = "Ethernet4"
+        fallback_principal_primary_live["participants"][0].update({
+            "is_principal": "false",
+            "live_peers": "3",
+        })
+        fallback_principal_primary_live["participants"][1].update({
+            "is_principal": "true",
+            "live_peers": "4",
+        })
+
+        fallback_principal_primary_not_live = mka_record()
+        fallback_principal_primary_not_live["interface"] = "Ethernet8"
+        fallback_principal_primary_not_live["participants"][0].update({
+            "is_principal": "false",
+            "live_peers": "0",
+        })
+        fallback_principal_primary_not_live["participants"][1].update({
+            "is_principal": "true",
+            "live_peers": "5",
+        })
+
+        primary_only = mka_record()
+        primary_only["interface"] = "Ethernet12"
+        primary_only["participants"] = primary_only["participants"][:1]
+        primary_only["participants"][0]["live_peers"] = "6"
+
+        duplicate_primary = mka_record()
+        duplicate_primary["interface"] = "Ethernet16"
+        duplicate_primary["participants"].append({
+            "ckn": "21234567890123456789012345678912",
+            "is_principal": "false",
+            "is_primary": "true",
+            "live_peers": "7",
+        })
+
+        malformed_role = mka_record()
+        malformed_role["interface"] = "Ethernet20"
+        malformed_role["participants"].append({
+            "ckn": "31234567890123456789012345678912",
+            "is_principal": "false",
+            "is_primary": "invalid",
+            "live_peers": "8",
+        })
+
+        collect_mka.side_effect = populate_mka_records([
+            malformed_role,
+            primary_only,
+            fallback_principal_primary_not_live,
+            primary_principal,
+            duplicate_primary,
+            fallback_principal_primary_live,
+        ])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka"])
+
+        assert result.exit_code == 0, result.output
+        header = result.output.splitlines()[0].split()
+        assert header == [
+            "Interface",
+            "KaY",
+            "Secured",
+            "Principal",
+            "CKN",
+            "Role",
+            "prim./fall.",
+            "live",
+            "peers",
+            "Local-KS",
+            "Keys",
+            "distributed",
+        ]
+        assert "Key-server" not in header
+        assert "SCI" not in header
+
+        rows = {
+            columns[0]: columns
+            for columns in (
+                line.split()
+                for line in result.output.splitlines()
+                if line.startswith("Ethernet")
+            )
+        }
+        assert rows["Ethernet0"][4:6] == ["primary", "1/1"]
+        assert rows["Ethernet4"][4:6] == ["fallback", "3/4"]
+        assert rows["Ethernet8"][4:6] == ["fallback", "0/5"]
+        assert rows["Ethernet12"][4:6] == ["primary", "6/-"]
+        assert rows["Ethernet16"][4:6] == ["primary", "-/1"]
+        assert rows["Ethernet20"][4:6] == ["primary", "-/-"]
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_compact_naturally_sorts_interfaces_and_namespaces(self, collect_mka):
+        records = []
+        for interface, namespace in (
+            ("Ethernet104", "asic0"),
+            ("Ethernet8", "asic1"),
+            ("Ethernet16", "asic0"),
+            ("Ethernet0", "asic0"),
+            ("Ethernet8", "asic0"),
+        ):
+            record = mka_record()
+            record["interface"] = interface
+            record["namespace"] = namespace
+            records.append(record)
+        collect_mka.side_effect = populate_mka_records(records)
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka"])
+
+        assert result.exit_code == 0, result.output
+        assert "Namespace" in result.output
+        output_rows = [
+            line.split()[:2]
+            for line in result.output.splitlines()
+            if "Ethernet" in line
+        ]
+        assert output_rows == [
+            ["asic0", "Ethernet0"],
+            ["asic0", "Ethernet8"],
+            ["asic1", "Ethernet8"],
+            ["asic0", "Ethernet16"],
+            ["asic0", "Ethernet104"],
+        ]
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_detail_uses_secret_safe_allowlist(self, collect_mka):
+        record = mka_record()
+        record["session"]["primary_cak"] = secret_cak
+        record["participants"][0]["sak"] = secret_cak
+        record["participants"].append({
+            "ckn": secret_cak[2:],
+            "active": "true",
+            "is_principal": "false",
+            "is_primary": "false",
+            "live_peers": "1",
+            "potential_peers": "0",
+            "is_key_server": "false",
+            "is_elected": "false",
+        })
+        collect_mka.side_effect = populate_mka_records([record])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka", "Ethernet0"])
+
+        assert result.exit_code == 0, result.output
+        assert "Interface:             Ethernet0" in result.output
+        detail = {
+            label.strip(): value.strip()
+            for label, value in (
+                line.split(":", 1)
+                for line in result.output.splitlines()
+                if ":" in line
+            )
+        }
+        assert detail["Controlled port mode"] == "secured"
+        assert "Authenticated-only CP:" not in result.output
+        assert "\nSecured:" not in result.output
+        assert primary_ckn in result.output
+        assert fallback_ckn in result.output
+        assert secret_cak not in result.output
+        assert secret_cak[2:] not in result.output
+        assert "primary_cak" not in result.output
+        assert "sak" not in result.output.lower()
+        assert "Query status:" not in result.output
+        assert "Last updated:" not in result.output
+        assert detail["Config status"] == "in-sync"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_numeric_fields_redact_decimal_keys(self, collect_mka):
+        record = mka_record()
+        numeric_cak = "12" * 33
+        record["secrets"] = [numeric_cak, numeric_cak[2:]]
+        for field in (
+            "actor_priority", "key_server_priority", "keys_distributed",
+            "keys_received", "mka_hello_time_ms",
+        ):
+            record["session"][field] = numeric_cak
+        for field in ("live_peers", "potential_peers", "mn"):
+            record["participants"][0][field] = numeric_cak[2:]
+        collect_mka.side_effect = populate_mka_records([record])
+
+        result = CliRunner().invoke(
+            show_macsec.macsec, ["--mka", "Ethernet0"]
+        )
+
+        assert result.exit_code == 0, result.output
+        assert numeric_cak not in result.output
+        assert numeric_cak[2:] not in result.output
+        for label in (
+            "Actor priority", "Key server priority", "Keys distributed",
+            "Keys received", "MKA hello time",
+        ):
+            assert next(
+                line.split(":", 1)[1].strip()
+                for line in result.output.splitlines()
+                if line.startswith("{}:".format(label))
+            ) == "-"
+        assert show_macsec._safe_uint_not_secret("34" * 33, []) == "-"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_rejects_unknown_leading_zero_numeric_keys(
+            self, collect_mka):
+        record = mka_record()
+        unknown_key = "0" * 62 + "12"
+        record["secrets"] = []
+        for field in (
+            "actor_priority", "key_server_priority", "keys_distributed",
+            "keys_received", "mka_hello_time_ms",
+        ):
+            record["session"][field] = unknown_key
+        for field in ("live_peers", "potential_peers", "mn"):
+            record["participants"][0][field] = unknown_key
+        collect_mka.side_effect = populate_mka_records([record])
+        runner = CliRunner()
+
+        compact = runner.invoke(show_macsec.macsec, ["--mka"])
+        assert compact.exit_code == 0, compact.output
+        compact_row = next(
+            line.split() for line in compact.output.splitlines()
+            if line.startswith("Ethernet0")
+        )
+        assert compact_row[5] == "-/1"
+        assert compact_row[-1] == "-"
+
+        detail = runner.invoke(show_macsec.macsec, ["--mka", "Ethernet0"])
+        assert detail.exit_code == 0, detail.output
+        for label in (
+            "Actor priority", "Key server priority", "Keys distributed",
+            "Keys received", "MKA hello time",
+        ):
+            assert next(
+                line.split(":", 1)[1].strip()
+                for line in detail.output.splitlines()
+                if line.startswith("{}:".format(label))
+            ) == "-"
+        participant = next(
+            line.split() for line in detail.output.splitlines()
+            if line.startswith(primary_ckn)
+        )
+        assert participant[4:6] == ["-", "-"]
+        assert participant[-1] == "-"
+        assert unknown_key not in detail.output
+        assert show_macsec._safe_uint_not_secret("0" * 19 + "12", []) == "-"
+        assert show_macsec._safe_uint_not_secret("00012", []) == "12"
+        assert show_macsec._safe_uint_not_secret("12" * 33, ["12" * 33]) == "-"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_detail_preserves_zero_key_server_sci(self, collect_mka):
+        record = mka_record()
+        record["session"]["key_server_sci"] = "0000000000000000"
+        collect_mka.side_effect = populate_mka_records([record])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka", "Ethernet0"])
+
+        assert result.exit_code == 0, result.output
+        detail = {
+            label.strip(): value.strip()
+            for label, value in (
+                line.split(":", 1)
+                for line in result.output.splitlines()
+                if ":" in line
+            )
+        }
+        assert detail["Key server SCI"] == "0000000000000000"
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_missing_session_is_silent(self, collect_mka):
+        collect_mka.side_effect = populate_mka_records([])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka", "Ethernet0"])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_zero_participant_session_renders_session_only(
+            self, collect_mka):
+        record = mka_record()
+        record["participants"] = []
+        collect_mka.side_effect = populate_mka_records([record])
+        runner = CliRunner()
+
+        compact = runner.invoke(show_macsec.macsec, ["--mka"])
+        assert compact.exit_code == 0, compact.output
+        compact_row = next(
+            line.split() for line in compact.output.splitlines()
+            if line.startswith("Ethernet0")
+        )
+        assert compact_row[0:6] == [
+            "Ethernet0", "active", "true", "-", "-", "-/-"
+        ]
+        assert compact_row[-2:] == ["true", "7"]
+
+        detail = runner.invoke(
+            show_macsec.macsec, ["--mka", "Ethernet0"]
+        )
+        assert detail.exit_code == 0, detail.output
+        assert "Interface:             Ethernet0" in detail.output
+        assert "Controlled port mode:  secured" in detail.output
+        assert "Keys distributed:      7" in detail.output
+        assert "CKN  Role" not in detail.output
+        assert "No MACsec MKA participant state found" not in detail.output
+        assert primary_ckn not in detail.output
+        assert fallback_ckn not in detail.output
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_zero_participant_degraded_session_keeps_redacted_error(
+            self, collect_mka):
+        record = mka_record()
+        record["participants"] = []
+        record["session"]["config_status"] = "degraded"
+        record["session"]["config_error"] = (
+            "WPA rejected stale_cak={}".format(secret_cak)
+        )
+        collect_mka.side_effect = populate_mka_records([record])
+        runner = CliRunner()
+
+        result = runner.invoke(
+            show_macsec.macsec, ["--mka", "Ethernet0"]
+        )
+
+        assert result.exit_code == 0, result.output
+        assert "Config status:         degraded" in result.output
+        assert "CONFIG ERROR:          WPA rejected stale_cak=[redacted]" in result.output
+        assert secret_cak not in result.output
+        assert secret_cak[2:] not in result.output
+        assert "Query status:" not in result.output
+        assert "Last updated:" not in result.output
+        assert "CKN  Role" not in result.output
+        assert "No MACsec MKA participant state found" not in result.output
+
+    def test_mka_mutual_exclusivity(self):
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka", "--profile"])
+        assert result.exit_code == 0
+        assert "mka is not valid with profile or dump-file" in result.output
+
+        result = runner.invoke(show_macsec.macsec, ["--mka", "--post-status"])
+        assert result.exit_code == 0
+        assert "POST status is not valid with other options/arguments" in result.output
+
+    def test_mka_collection_aggregates_namespace_local_state(self):
+        context = show_macsec.MacsecContext.__new__(show_macsec.MacsecContext)
+        context.mka_records = []
+        context.config_db = MagicMock()
+        context.config_db.get_entry.return_value = {
+            "primary_cak": secret_cak,
+        }
+        context.multi_asic = MagicMock()
+
+        context.multi_asic.current_namespace = "asic0"
+        context.db = state_db_for_interface("Ethernet0")
+        show_macsec.MacsecContext.collect_mka.__wrapped__(context, None)
+
+        context.multi_asic.current_namespace = "asic1"
+        context.db = state_db_for_interface("Ethernet4")
+        show_macsec.MacsecContext.collect_mka.__wrapped__(context, None)
+
+        assert [
+            (record["namespace"], record["interface"])
+            for record in context.mka_records
+        ] == [
+            ("asic0", "Ethernet0"),
+            ("asic1", "Ethernet4"),
+        ]
+        assert secret_cak in context.mka_records[0]["secrets"]
+        assert secret_cak[2:] in context.mka_records[0]["secrets"]
+
+    def test_mka_collection_skips_incomplete_snapshot_and_keeps_valid_port(
+            self, capsys):
+        context = show_macsec.MacsecContext.__new__(show_macsec.MacsecContext)
+        context.mka_records = []
+        context.config_db = MagicMock()
+        context.config_db.get_entry.return_value = {
+            "primary_cak": secret_cak,
+        }
+        context.multi_asic = MagicMock()
+        context.multi_asic.current_namespace = ""
+        context.db = state_db_for_snapshots(
+            ["Ethernet0", "Ethernet4", "Ethernet8"],
+            ["Ethernet0", "Ethernet8"],
+            empty_participant_interfaces=["Ethernet8"],
+        )
+
+        show_macsec.MacsecContext.collect_mka.__wrapped__(context, None)
+
+        assert [
+            record["interface"] for record in context.mka_records
+        ] == ["Ethernet0", "Ethernet4"]
+
+        context.show_mka(None)
+        output = capsys.readouterr().out
+        assert "Ethernet0" in output
+        assert "Ethernet4" in output
+        assert "Ethernet8" not in output
+
+    def test_mka_collection_skips_partial_session_and_keeps_valid_port(
+            self, capsys):
+        context = show_macsec.MacsecContext.__new__(show_macsec.MacsecContext)
+        context.mka_records = []
+        context.config_db = MagicMock()
+        context.config_db.get_entry.return_value = {}
+        context.multi_asic = MagicMock()
+        context.multi_asic.current_namespace = ""
+        missing_field = mka_record()["session"]
+        del missing_field["keys_received"]
+        context.db = state_db_for_snapshots(
+            ["Ethernet0", "Ethernet4", "Ethernet8"],
+            ["Ethernet0", "Ethernet4", "Ethernet8"],
+            session_overrides={
+                "MACSEC_MKA_SESSION_TABLE|Ethernet0": {
+                    "profile": "rotation", "query_status": "error",
+                },
+                "MACSEC_MKA_SESSION_TABLE|Ethernet8": missing_field,
+            },
+        )
+
+        show_macsec.MacsecContext.collect_mka.__wrapped__(context, None)
+
+        assert [record["interface"] for record in context.mka_records] == [
+            "Ethernet4"
+        ]
+        context.show_mka(None)
+        output = capsys.readouterr().out
+        assert "Ethernet4" in output
+        assert "Ethernet0" not in output
+        assert "Ethernet8" not in output
+
+    def test_mka_collection_skips_partial_participant_and_keeps_valid_port(
+            self, capsys):
+        context = show_macsec.MacsecContext.__new__(show_macsec.MacsecContext)
+        context.config_db = MagicMock()
+        context.config_db.get_entry.return_value = {}
+        context.multi_asic = MagicMock()
+        context.multi_asic.current_namespace = ""
+        participant_key = "MACSEC_MKA_PARTICIPANT_TABLE|Ethernet8|{}".format(
+            primary_ckn
+        )
+
+        for missing_field in show_macsec.MKA_PARTICIPANT_FIELDS:
+            partial = dict(mka_record()["participants"][0])
+            del partial[missing_field]
+            context.mka_records = []
+            context.db = state_db_for_snapshots(
+                ["Ethernet0", "Ethernet4", "Ethernet8"],
+                ["Ethernet0", "Ethernet8"],
+                participant_overrides={participant_key: partial},
+            )
+
+            show_macsec.MacsecContext.collect_mka.__wrapped__(context, None)
+
+            assert [record["interface"] for record in context.mka_records] == [
+                "Ethernet0", "Ethernet4"
+            ], missing_field
+            context.show_mka(None)
+            output = capsys.readouterr().out
+            assert "Ethernet0" in output
+            assert "Ethernet4" in output
+            assert "Ethernet8" not in output
 
     @patch('show_macsec.SonicV2Connector')
     def test_post_status_success(self, mock_connector):
