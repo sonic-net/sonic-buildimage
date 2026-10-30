@@ -2392,6 +2392,72 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertIn('Target="9.9.9.9"', output, 'Clean server value not found in rendered rsyslog.conf')
         self.assertIn('Device="mgmtvrf"', output, 'Clean vrf value not found in rendered rsyslog.conf')
 
+    def _render_pmon_supervisord(self, data):
+        template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-platform-monitor',
+                                'docker-pmon.supervisord.conf.j2')
+        output = self.run_script(['-a', json.dumps(data), '-t', template], output_file=self.output_file)
+        programs = {}
+        for block in re.split(r'^\[program:', output, flags=re.M)[1:]:
+            name, _, body = block.partition(']')
+            # Stripped: thermalctld's option block leaves its `command=` indented,
+            # which supervisord reads as the same directive.
+            programs[name] = dict(line.strip().split('=', 1) for line in body.splitlines() if '=' in line)
+        return programs
+
+    def test_pmon_supervisord_rust_daemons(self):
+        """Each pmon daemon with a Rust port runs it only where the platform's
+        pmon_daemon_control.json sets `use_rust_<daemon>`, and never on Python 2.
+        """
+        daemons = ['chassisd', 'psud', 'syseepromd', 'thermalctld', 'pcied', 'stormond']
+        # What docker_init passes with -a, on a modular chassis (or chassisd is
+        # not rendered), and a thermalctld option that both daemons take.
+        base = {'HAVE_SENSORS_CONF': 0, 'HAVE_FANCONTROL_CONF': 0, 'API_VERSION': 3,
+                'IS_MODULAR_CHASSIS': 1, 'IS_SWITCH_BMC': 0,
+                'thermalctld': {'thermal_monitor_initial_interval': 5}}
+        rust = dict(base, **{'use_rust_' + d: True for d in daemons})
+        python = {
+            'chassisd': '/usr/local/bin/chassisd',
+            'psud': 'python3 /usr/local/bin/psud',
+            'syseepromd': 'python3 /usr/local/bin/syseepromd',
+            'thermalctld': 'python3 /usr/local/bin/thermalctld --thermal-monitor-initial-interval 5',
+            'pcied': '/usr/local/bin/pcied',
+            'stormond': '/usr/local/bin/stormond',
+        }
+
+        def rust_command(d, api='pyo3'):
+            options = ' --thermal-monitor-initial-interval 5' if d == 'thermalctld' else ''
+            return '/usr/bin/{}-rs{} --platform-api {}'.format(d, options, api)
+
+        cases = [
+            # No key: the daemon the platform has always run.
+            ('no key', base, dict(python), 'docker-pmon.supervisord.conf'),
+            # The key: the Rust daemon, over the pyo3 bridge by default.
+            ('use_rust', rust, {d: rust_command(d) for d in daemons}, 'docker-pmon-rust.supervisord.conf'),
+            # platform_api_<daemon> picks the bridge.
+            ('platform_api', dict(rust, platform_api_psud='native', platform_api_thermalctld='native'),
+             dict({d: rust_command(d) for d in daemons},
+                  psud=rust_command('psud', 'native'), thermalctld=rust_command('thermalctld', 'native')),
+             None),
+            # Python 2 is never the Rust path, key or not, and the Python
+            # daemon is not handed the Rust daemon's --platform-api.
+            ('python2', dict(rust, python2_daemons=['psud', 'syseepromd', 'thermalctld']),
+             dict({d: rust_command(d) for d in daemons},
+                  psud='python2 /usr/local/bin/psud', syseepromd='python2 /usr/local/bin/syseepromd',
+                  thermalctld='python2 /usr/local/bin/thermalctld --thermal-monitor-initial-interval 5'),
+             None),
+        ]
+        for case, data, expected, sample in cases:
+            programs = self._render_pmon_supervisord(data)
+            for d in daemons:
+                self.assertEqual(programs[d]['command'], expected[d], case)
+                # Every directive on a line of its own: under trim_blocks a
+                # `command=` line that ends in a block tag loses its newline
+                # and swallows the `priority=` after it.
+                self.assertIn('priority', programs[d], case)
+            if sample:
+                self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, sample),
+                                          self.output_file), case)
+
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
         try:

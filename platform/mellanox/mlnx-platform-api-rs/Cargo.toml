@@ -1,0 +1,52 @@
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+
+[package]
+# The name sonic-platform-common's provider takes its native implementation
+# by; see ../platform-api-rs-crates/README.md for how this crate takes the
+# stub's place.
+name = "platform-native"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "Apache-2.0"
+description = "The NVIDIA (Mellanox) platform API, natively in Rust"
+
+# This crate is always built as ../platform-api-rs-crates/platform-native --
+# by the daemons' build, whose provider finds it there, and by its own tests --
+# so its path dependencies name its siblings in that directory.  Cargo resolves
+# a relative path from wherever it found the manifest, and
+# platform-native.cargo.toml patches the daemons' git dependencies to the same
+# siblings, so this crate and the provider resolve one platform-api.  Test it
+# from there:
+#   cargo test --manifest-path ../platform-api-rs-crates/platform-native/Cargo.toml
+[dependencies]
+libc = "0.2"
+platform-api = { path = "../platform-api" }
+platform-base = { path = "../platform-base" }
+# hw-management's Python modules, run in an embedded interpreter (src/hw_mgmt.rs).
+# The version platform-pyo3 has, so that a daemon has one pyo3 and one
+# interpreter; the interpreter starts on first use.
+pyo3 = { version = "0.25", features = ["auto-initialize"] }
+# Python's `re`, for the handful of patterns the vendor code matches with it.
+regex = "1"
+
+[dev-dependencies]
+# The scripted cURL its BMC tests talk to, among platform-base's test doubles.
+platform-base = { path = "../platform-base", features = ["testing"] }

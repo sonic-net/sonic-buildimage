@@ -1,0 +1,39 @@
+[
+[
+"shell",
+"mkdir -p $R/etc/sonic; cp $R/usr/share/sonic/platform/bmc.json $R/etc/sonic/bmc.json"
+],
+[
+"new",
+"c",
+"CPLD",
+1
+],
+[
+"call",
+"c",
+"update_firmware",
+[
+"/tmp/c/fw/good.mpfa"
+]
+],
+[
+"shell",
+"cat $R/var/run/hw-management/system/aux_pwr_cycle; echo"
+],
+[
+"shell",
+"rm -f $R/var/run/hw-management/system/aux_pwr_cycle; mkdir $R/var/run/hw-management/system/aux_pwr_cycle"
+],
+[
+"call",
+"c",
+"update_firmware",
+[
+"/tmp/c/fw/good.mpfa"
+]
+],
+[
+"host_list"
+]
+]
