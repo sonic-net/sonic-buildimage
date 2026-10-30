@@ -59,6 +59,27 @@ variables:
     value: $(Build.SourceBranchName)
 
 stages:
+- stage: LauncherTests
+  displayName: 'gNMI and telemetry launcher tests'
+  dependsOn: []
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  pool:
+    vmImage: 'ubuntu-24.04'
+  jobs:
+  - job: launcher_tests
+    timeoutInMinutes: 10
+    steps:
+    - checkout: self
+      submodules: false
+    - script: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y bats=1.10.0-1 jq
+      displayName: 'Install Bats and jq'
+    - script: |
+        bats --tap dockers/docker-sonic-gnmi/tests
+      displayName: 'Run gNMI and telemetry launcher tests'
+
 # Tier 1 - per-PR dpkg cache-key completeness gate. Static analysis (no build)
 # over rules/*.mk, rules/*.dep, slave.mk and Makefile.cache. In --base (diff)
 # mode the audit fails (P0, exit 1) on any completeness gap THIS PR introduces,
