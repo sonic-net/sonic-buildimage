@@ -27,6 +27,8 @@ PTCH_DIR = $(TEMP_HW_MGMT_DIR)/patch_dir/
 NON_UP_PTCH_DIR = $(TEMP_HW_MGMT_DIR)/non_up_patch_dir/
 PTCH_LIST  = $(TEMP_HW_MGMT_DIR)/series
 HWMGMT_RESOLVED_REF_ENV = $(TEMP_HW_MGMT_DIR)/resolved_hw_mgmt_ref.env
+# y: write hw-mgmt kconfig values even when they conflict with existing config.local entries
+HWMGMT_KCFG_FORCE_OVERWRITE ?= n
 HWMGMT_NONUP_LIST = $(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hwmgmt_nonup_patches
 HWMGMT_USER_OUTFILE = $(BUILD_WORKDIR)/integrate-mlnx-hw-mgmt_user.out
 SDK_USER_OUTFILE = $(BUILD_WORKDIR)/integrate-mlnx-sdk_user.out
@@ -39,6 +41,9 @@ SLK_HEAD = $(shell cd src/sonic-linux-kernel; git rev-parse --short HEAD)
 
 # kconfig related variables
 KCFG_BASE_TMPDIR = $(TEMP_HW_MGMT_DIR)/linux_kconfig/
+# Debian kernel packaging of the kernel SONiC builds; keep the URL in sync with src/sonic-linux-kernel/Makefile
+KCFG_DEBIAN_TARBALL = linux_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION).debian.tar.xz
+KCFG_DEBIAN_TARBALL_URL = https://packages.trafficmanager.net/public/debian-security/pool/updates/main/l/linux/$(KCFG_DEBIAN_TARBALL)
 KCFG_BASE = $(KCFG_BASE_TMPDIR)/amd64.config
 KCFG_LIST = $(TEMP_HW_MGMT_DIR)/kconfig_amd64
 KCFG_DOWN_LIST = $(TEMP_HW_MGMT_DIR)/kconfig_downstream_amd64
@@ -72,21 +77,21 @@ integrate-mlnx-hw-mgmt:
 		--env-file $(HWMGMT_RESOLVED_REF_ENV) $(LOG_SIMPLE)
 	. $(HWMGMT_RESOLVED_REF_ENV)
 
-	# Fetch the vanilla .config files
+	# Kconfig base: Debian's own config fragments for the kernel SONiC builds, merged the way
+	# debian/rules does it (debian/bin/kconfig.py, last wins). The marker blocks then carry only
+	# what hw-mgmt changes relative to that kernel; a value Debian already sets is not a change.
 	pushd $(KCFG_BASE_TMPDIR) $(LOG_SIMPLE)
-	rm -rf linux/; mkdir linux
-	# Note: gregkh is the stable linux mirror
-	git clone --depth 1 --branch v$(KERNEL_VERSION) https://github.com/gregkh/linux.git linux $(LOG_SIMPLE)
-
-	pushd linux
-	rm -rf .config; make ARCH=x86_64 defconfig; cp -f .config $(KCFG_BASE) $(LOG_SIMPLE)
-	rm -rf .config; make ARCH=arm64 defconfig; cp -f .config $(KCFG_BASE_ARM) $(LOG_SIMPLE)
+	wget -O $(KCFG_DEBIAN_TARBALL) $(KCFG_DEBIAN_TARBALL_URL) $(LOG_SIMPLE)
+	tar -xJf $(KCFG_DEBIAN_TARBALL) $(LOG_SIMPLE)
+	PYTHONPATH=debian/lib/python python3 debian/bin/kconfig.py $(KCFG_BASE) \
+		debian/config/config debian/config/kernelarch-x86/config debian/config/amd64/config $(LOG_SIMPLE)
+	PYTHONPATH=debian/lib/python python3 debian/bin/kconfig.py $(KCFG_BASE_ARM) \
+		debian/config/config debian/config/arm64/config $(LOG_SIMPLE)
 	cp -f $(KCFG_BASE_ARM) $(KCFG_BASE_ASPEED)
-	popd
 	popd $(LOG_SIMPLE)
 
 	# clean up existing untracked files
-	pushd $(BUILD_WORKDIR); git clean -f -- $(MLNX_PLATFORM_PATH)/
+	pushd $(BUILD_WORKDIR); git clean -f -- $(MLNX_PLATFORM_PATH)/non-upstream-patches/
 ifeq ($(CREATE_BRANCH), y)
 	# Tag path: HWMGMT_PACKAGE_VERSION == input (today's name). Branch path:
 	# "-<sha9>" suffix makes two runs against the same hw-mgmt branch produce
@@ -96,7 +101,7 @@ ifeq ($(CREATE_BRANCH), y)
 endif
 	popd
 
-	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patch/
+	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patches-sonic/
 ifeq ($(CREATE_BRANCH), y)
 	git checkout -B "$(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$$HWMGMT_PACKAGE_VERSION" HEAD
 	echo $(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$$HWMGMT_PACKAGE_VERSION branch created in sonic-linux-kernel
@@ -170,6 +175,8 @@ endif
 	# Deploy aspeed/BMC kernel patches.
 	# Guarded at runtime: Patch_BMC_Status_Table.txt indicates this hw-mgmt supports aspeed/BMC.
 	# Must use shell if (not Make ifeq) because hw-mgmt is git-checked-out during this recipe.
+	# Commands are separated by ';', not '&&': bash -e does not stop on a failing command
+	# of an && list, so a failed deploy would reach `post` with a half-deployed state.
 	if [ -f $(BMC_PATCH_TABLE) ]; then \
 		$(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/deploy_kernel_patches.py \
 							--dst_accepted_folder $(PTCH_DIR) \
@@ -178,8 +185,8 @@ endif
 							--config_file $(KCFG_LIST_ASPEED) \
 							--kernel_version $(KERNEL_VERSION) \
 							--arch aspeed \
-							--os_type sonic $(LOG_SIMPLE) && \
-		cp -f $(PTCH_LIST) $(PTCH_LIST).pre_bmc && \
+							--os_type sonic $(LOG_SIMPLE) ; \
+		cp -f $(PTCH_LIST) $(PTCH_LIST).pre_bmc ; \
 		$(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/deploy_kernel_patches.py \
 							--dst_accepted_folder $(PTCH_DIR) \
 							--dst_candidate_folder $(NON_UP_PTCH_DIR) \
@@ -188,14 +195,15 @@ endif
 							--kernel_version $(KERNEL_VERSION) \
 							--arch aspeed \
 							--os_type sonic \
-							--patch_table Patch_BMC_Status_Table.txt $(LOG_SIMPLE) && \
+							--patch_table Patch_BMC_Status_Table.txt $(LOG_SIMPLE) ; \
 		{ grep -vFxf $(PTCH_LIST).pre_bmc $(PTCH_LIST) > $(TEMP_HW_MGMT_DIR)/bmc_only_patches || true; } ; \
 	else \
 		echo "NOTICE: Patch_BMC_Status_Table.txt not found in hw-mgmt, skipping aspeed/BMC patch deploy" ; \
 		touch $(TEMP_HW_MGMT_DIR)/bmc_only_patches ; \
 	fi
 
-	# Post-processing
+	# Post-processing. Fails before touching sonic-linux-kernel on kconfig conflicts
+	# (HWMGMT_KCFG_FORCE_OVERWRITE=y overrides) or patch name collisions.
 	integration-scripts/hwmgmt_kernel_patches.py post \
 							--patches $(PTCH_DIR) \
 							--non_up_patches $(NON_UP_PTCH_DIR) \
@@ -214,6 +222,7 @@ endif
 							--bmc_patches $(TEMP_HW_MGMT_DIR)/bmc_only_patches \
 							--build_root $(BUILD_WORKDIR) \
 							--sb_msg $(SB_COM_MSG) \
+							$(if $(filter y,$(HWMGMT_KCFG_FORCE_OVERWRITE)),--force-overwrite,) \
 							--slk_msg $(SLK_COM_MSG) $(LOG_SIMPLE)
 
 	# Commit the changes in linux kernel and and log the diff
@@ -248,7 +257,7 @@ endif
 
 	# Commit the changes in buildimage and log the diff
 	pushd $(BUILD_WORKDIR)
-	git add -- $($(MLNX_HW_MANAGEMENT)_SRC_PATH)
+	git add -- $($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt $($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hwmgmt_nonup_patches
 	git add -- $(MLNX_PLATFORM_PATH)/non-upstream-patches/
 	git add -- $(MLNX_PLATFORM_PATH)/hw-management.mk
 
@@ -293,7 +302,7 @@ else
 	tar -xf sys_sdk-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz --strip-components=1 -C $(SDK_TMPDIR) sxd_kernel/kernel_backports $(LOG_SIMPLE)
 endif
 
-	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patch/; git stash -- patch/
+	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patches-sonic/; git stash -- patches-sonic/
 ifeq ($(CREATE_BRANCH), y)
 	git checkout -B "$(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$(MLNX_SDK_VERSION)" HEAD
 	echo $(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$(MLNX_SDK_VERSION) branch created in sonic-linux-kernel $(LOG_SIMPLE)

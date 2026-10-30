@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -203,6 +204,12 @@ class TestSDKAction(TestCase):
         assert "mellanox_sdk-end" in Data.old_series[Data.i_sdk_end]
         assert len(Data.old_patches) == 1
         assert Data.old_patches[-1] == "0001-psample-Encapsulate-packet-metadata-in-a-struct.patch"
+
+    def test_refresh_markers_missing_end_marker_exits(self):
+        # the old guard compared with > len(lines), which find_marker_indices never exceeds
+        Data.old_series = [l for l in MOCK_SLK_SERIES.splitlines(True) if "mellanox_sdk-end" not in l]
+        with self.assertRaises(SystemExit):
+            self.action.refresh_markers()
 
     def test_get_new_patches(self):
         root_dir = "/tmp/kernel_backports/5.10/5.10.27"
