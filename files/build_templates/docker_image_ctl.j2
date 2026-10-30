@@ -416,7 +416,7 @@ function postStartAction()
         fi
 
         # Preserve local reader admission on explicitly protected sockets.
-        REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
+        REDIS_BMP_SOCK="/var/run/redis${DEV}/redis_bmp.sock"
         set_redis_socket_permissions "$REDIS_BMP_SOCK"
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
@@ -523,8 +523,8 @@ start() {
     fi
     if [ "$REDIS_AUTH_MODE" == "enforce" ]; then
         {%- if docker_container_name == "database" %}
-        if [ -n "$DEV" ] || [ -n "$DATABASE_TYPE" ] || [ "${NUM_ASIC:-1}" -gt 1 ] || [ "${NUM_DPU:-0}" -gt 0 ]; then
-            echo "Redis protection requires the qualified single-host database container" >&2
+        if [ -n "$DATABASE_TYPE" ] || [ "${NUM_DPU:-0}" -gt 0 ]; then
+            echo "Redis protection requires the qualified local database container" >&2
             exit 1
         fi
         {%- endif %}

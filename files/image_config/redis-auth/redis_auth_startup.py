@@ -88,85 +88,108 @@ def platform_settings(path):
     return parser['platform']
 
 
+def platform_layout():
+    directory = platform_directory()
+    asic = directory / 'asic.conf'
+    count = int(platform_settings(asic)['num_asic']) if os.path.lexists(asic) else 1
+    if count < 1:
+        raise CredentialStateError('invalid ASIC count')
+    return directory, [''] + ([str(index) for index in range(count)] if count > 1 else [])
+
+
+def effective_override(name):
+    saved = CONFIG / 'old_config' / name
+    return saved if os.path.lexists(saved) else CONFIG / name
+
+
 def check_topology():
-    """Qualify this boot before credentials exist; initially standalone single-ASIC.
+    """Qualify a standalone NPU host and return its host/ASIC layout before startup.
 
     New topologies extend this boundary and configured_instances together. They
     must establish ownership and remote-client requirements before enforcement.
     """
-    directory = platform_directory()
+    directory, numbers = platform_layout()
     source = CONFIG / ('old_config' if os.path.lexists(CONFIG / 'pending_config_migration') else '')
     metadata = json.loads(read_setting(source / 'config_db.json'))['DEVICE_METADATA']['localhost']
-    asic, environment, platform = (directory / name for name in ('asic.conf', 'platform_env.conf', 'platform.json'))
-    count = int(platform_settings(asic)['num_asic']) if os.path.lexists(asic) else 1
+    environment, platform = directory / 'platform_env.conf', directory / 'platform.json'
     flags = platform_settings(environment) if os.path.lexists(environment) else {}
     data = json.loads(read_setting(platform)) if os.path.lexists(platform) else {}
     roles = {'ToRRouter', 'LeafRouter', 'BackEndToRRouter', 'BackEndLeafRouter',
              'ToRSwitch', 'MgmtToRRouter', 'MgmtLeafRouter', 'MgmtAccessRouter'}
-    if (count != 1 or not isinstance(metadata, dict) or metadata.get('platform') != directory.name
+    if (not isinstance(metadata, dict) or metadata.get('platform') != directory.name
             or metadata.get('switch_type', 'npu') != 'npu' or metadata.get('type') not in roles
             or metadata.get('subtype') not in (None, 'DualToR')
             or any(flags.get(key, '0') != '0' for key in ('supervisor', 'disaggregated_chassis', 'switch_bmc'))
             or not isinstance(data, dict) or 'DPU' in data or 'DPUS' in data
-            or os.path.lexists(directory / 'chassisdb.conf') or any(NETNS.glob('asic*'))
+            or os.path.lexists(directory / 'chassisdb.conf')
             or any(os.path.lexists(base / name) for base in (CONFIG, CONFIG / 'old_config')
                    for name in ('chassisdb_address', 'enable_multidb'))
-            or any(list(base.glob(pattern)) for base in (CONFIG, CONFIG / 'old_config')
-                   for pattern in ('config_db[0-9]*.json', 'database_config[0-9]*.json', 'database_config*dpu*.json'))):
+            or any(list(base.glob('database_config*dpu*.json')) for base in (CONFIG, CONFIG / 'old_config'))):
         raise CredentialStateError('unsupported Redis deployment or namespace layout')
-    global_config = CONFIG / 'old_config/database_global.json'
-    if not os.path.lexists(global_config):
-        global_config = CONFIG / 'database_global.json'
+    allowed = {prefix + number + '.json' for number in numbers for prefix in ('config_db', 'database_config')}
+    expected = {'asic' + number for number in numbers if number}
+    if (not {path.name for path in NETNS.glob('asic*')} <= expected
+            or any(path.name not in allowed for base in (CONFIG, CONFIG / 'old_config')
+                   for prefix in ('config_db', 'database_config') for path in base.glob(prefix + '[0-9]*.json'))):
+        raise CredentialStateError('unsupported Redis namespace layout')
+    global_config = effective_override('database_global.json')
+    includes = [{'include': '../../redis' + number + '/sonic-db/database_config.json',
+                 **({'namespace': 'asic' + number} if number else {})} for number in numbers]
     if (os.path.lexists(global_config) and json.loads(read_setting(global_config))['INCLUDES'] !=
-            [{'include': '../../redis/sonic-db/database_config.json'}]):
+            includes):
         raise CredentialStateError('unsupported Redis global database includes')
+    return numbers
 
 
-def configured_instances():
+def configured_instances(numbers=None):
     """Discover owned local servers using the entrypoint's saved/current inputs.
 
     Return one endpoint record per owned process. Namespace support extends this
     inventory; it does not add credential, ACL or activation paths. References to
     another host never enter it. Shared servers need reviewed TCP exceptions.
     """
-    if (CONFIG / 'enable_multidb').exists():
+    if any(os.path.lexists(base / 'enable_multidb') for base in (CONFIG, CONFIG / 'old_config')):
         raise CredentialStateError('the multi-database layout is not qualified for enforcement')
-    try:
-        override = CONFIG / 'old_config/database_config.json'
-        if not os.path.lexists(override):
-            override = CONFIG / 'database_config.json'
-        database = json.loads(read_setting(override))
-    except FileNotFoundError:
-        import jinja2
-        database = json.loads(jinja2.Template(read_setting(DATABASE_TEMPLATE)).render(
-            HOST_IP='127.0.0.1', REDIS_PORT=6379, BMP_DB_PORT=6400, DEV='', DATABASE_TYPE=''))
-    instances = dict(database['INSTANCES'])
-    # The entrypoint removes this reference before launching standalone servers.
-    instances.pop('redis_chassis', None)
-    if not instances:
-        raise CredentialStateError('no configured local Redis processes')
-    sockets = set()
-    for name, instance in instances.items():
-        path = instance['unix_socket_path']
-        if (name == 'remote_redis' or instance['hostname'] != '127.0.0.1' or instance.get('database_type')
-                or instance.get('bmc_link_ip') or not isinstance(path, str)
-                or Path(path).parent != Path('/var/run/redis') or '..' in Path(path).parts
-                or path in sockets or type(instance['port']) is not int or not 0 <= instance['port'] <= 65535):
-            raise CredentialStateError('Redis inventory requires distinct qualified local endpoints')
-        sockets.add(path)
-    return {name: {key: instance[key] for key in ('hostname', 'port', 'unix_socket_path')}
-            for name, instance in sorted(instances.items())}
+    numbers = platform_layout()[1] if numbers is None else numbers
+    result, sockets = {}, set()
+    for number in numbers:
+        try:
+            database = json.loads(read_setting(effective_override('database_config' + number + '.json')))
+        except FileNotFoundError:
+            import jinja2
+            database = json.loads(jinja2.Template(read_setting(DATABASE_TEMPLATE)).render(
+                HOST_IP='127.0.0.1', REDIS_PORT=6379, BMP_DB_PORT=6400, DEV=number, DATABASE_TYPE=''))
+        instances = dict(database['INSTANCES'])
+        # The entrypoint removes this unused standalone template reference.
+        instances.pop('redis_chassis', None)
+        if not instances or (number and set(instances) != {'redis', 'redis_bmp'}):
+            raise CredentialStateError('expected the standard local Redis namespace layout')
+        for name, instance in sorted(instances.items()):
+            path = instance['unix_socket_path']
+            if (not isinstance(name, str) or '/' in name or name == 'remote_redis'
+                    or instance['hostname'] != '127.0.0.1' or instance.get('database_type')
+                    or instance.get('bmc_link_ip') or not isinstance(path, str)
+                    or Path(path).parent != Path('/var/run/redis' + number) or '..' in Path(path).parts
+                    or path in sockets or type(instance['port']) is not int or not 0 <= instance['port'] <= 65535):
+                raise CredentialStateError('Redis inventory requires distinct qualified local endpoints')
+            sockets.add(path)
+            result[('asic' + number + '/' if number else '') + name] = {
+                key: instance[key] for key in ('hostname', 'port', 'unix_socket_path')}
+    return result
 
 
-def selection(path=INTENT):
+def selection(path=INTENT, *, runtime=None):
     intent = read_intent(path)
     if intent['mode'] == 'legacy':
         return [], {}
-    instances = configured_instances()
+    numbers = check_topology() if runtime is not None and not (runtime / 'local.json').exists() else None
+    instances = configured_instances(numbers)
     exceptions = set(intent['tcp_exceptions'])
-    if exceptions - instances.keys() or any(instances[name]['port'] == 0 for name in exceptions):
+    names = {identity.rsplit('/', 1)[-1] for identity in instances}
+    if exceptions - names or any(item['port'] == 0 for identity, item in instances.items()
+                                 if identity.rsplit('/', 1)[-1] in exceptions):
         raise CredentialStateError('TCP exceptions must name configured TCP processes')
-    selected = sorted(instances.keys() - exceptions)
+    selected = sorted(identity for identity in instances if identity.rsplit('/', 1)[-1] not in exceptions)
     if not selected:
         raise CredentialStateError('enforcement must select at least one local Redis process')
     for name, instance in instances.items():
@@ -219,14 +242,12 @@ def atomic(path, content, mode=0o644):
 def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
     if os.geteuid() != 0:
         raise CredentialStateError('must run as root')
-    selected, instances = selection(intent_path) if build_enabled() else ([], {})
+    selected, instances = selection(intent_path, runtime=runtime) if build_enabled() else ([], {})
     if not selected:
         # Changing activation requires a controlled host reboot, not a live flip.
         if (runtime / 'local.json').exists():
             raise CredentialStateError('activation changed during this boot; reboot after changing intent')
         return []
-    if not (runtime / 'local.json').exists():
-        check_topology()
     files = policy_files(selected, instances)
     for relative, content in files.items():
         path = runtime / relative

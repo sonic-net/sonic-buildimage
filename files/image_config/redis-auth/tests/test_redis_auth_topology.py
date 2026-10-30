@@ -44,7 +44,7 @@ def test_unsupported_metadata_never_creates_credentials(boot, field, value):
 
 
 @pytest.mark.parametrize('file,value', [
-    ('asic.conf', 'NUM_ASIC=0'), ('asic.conf', 'NUM_ASIC=2'), ('asic.conf', 'NUM_ASIC=unknown'),
+    ('asic.conf', 'NUM_ASIC=0'), ('asic.conf', 'NUM_ASIC=-1'), ('asic.conf', 'NUM_ASIC=unknown'),
     ('asic.conf', ''), ('asic.conf', 'NUM_ASIC=1\nNUM_ASIC=2'),
     ('asic.conf', '[other]\nNUM_ASIC=1'), ('platform.json', '{'),
     ('platform.json', {'DPU': {}}), ('platform.json', {'DPUS': {}}),

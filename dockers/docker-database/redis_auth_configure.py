@@ -11,39 +11,53 @@ RUNTIME = Path('/run/redis-auth')
 
 
 def configure(database, additional, policy, inventory, *, environ=os.environ,
-              chassis=Path('/usr/share/sonic/platform/chassisdb.conf').exists()):
-    if (environ.get('NAMESPACE_ID') or environ.get('DATABASE_TYPE')
-            or int(environ.get('NAMESPACE_COUNT') or '1') > 1
-            or int(environ.get('NUM_DPU') or '0') > 0 or chassis):
-        raise ValueError('selected Redis protection supports local single-host processes only')
+              local_ip='127.0.0.1', chassis=Path('/usr/share/sonic/platform/chassisdb.conf').exists()):
+    number = environ.get('NAMESPACE_ID', '')
+    count = int(environ.get('NAMESPACE_COUNT') or '1')
+    if (environ.get('DATABASE_TYPE') or int(environ.get('NUM_DPU') or '0') > 0 or chassis
+            or count < 1 or (number and (not number.isdecimal() or str(int(number)) != number
+                                        or count == 1 or int(number) >= count))):
+        raise ValueError('unsupported Redis namespace or remote topology')
     if not isinstance(policy, list) or not policy:
         raise ValueError('missing selected Redis process policy')
-    if not isinstance(inventory, dict) or set(inventory) != set(database['INSTANCES']):
+    if not isinstance(inventory, dict):
+        raise ValueError('missing prepared Redis inventory')
+    namespaces = {identity.rsplit('/', 1)[0] for identity in inventory if '/' in identity}
+    if namespaces != ({'asic' + str(index) for index in range(count)} if count > 1 else set()):
+        raise ValueError('prepared Redis namespaces differ from the configured ASIC count')
+    prefix = 'asic' + number + '/' if number else ''
+    local = {identity.removeprefix(prefix): record for identity, record in inventory.items()
+             if (identity.startswith(prefix) if prefix else '/' not in identity)}
+    if set(local) != set(database['INSTANCES']):
         raise ValueError('prepared Redis inventory differs from final server configuration')
-    expected, selected = {}, set()
-    for name, record in inventory.items():
-        instance = database['INSTANCES'][name]
+    expected = {}
+    protected = sum(record['protected'] is True for record in inventory.values())
+    for record in inventory.values():
         if (set(record) != {'hostname', 'port', 'unix_socket_path', 'protected'}
-                or type(record['protected']) is not bool
-                or any(instance[field] != record[field] for field in ('hostname', 'port', 'unix_socket_path'))):
-            raise ValueError('configured Redis endpoint differs from prepared inventory')
+                or record['hostname'] != '127.0.0.1' or type(record['protected']) is not bool):
+            raise ValueError('invalid prepared Redis inventory')
         if record['protected']:
-            selected.add(name)
             expected[record['unix_socket_path']] = {
                 'username': 'sonic-trusted-writer', 'unix_socket': record['unix_socket_path'],
                 'tcp_host': '127.0.0.1', 'tcp_port': 0}
-    if (len(expected) != len(selected) or len(policy) != len(expected)
+    if (len(expected) != protected or len(policy) != len(expected)
             or {entry['unix_socket']: entry for entry in policy} != expected):
         raise ValueError('selected Redis policy is incomplete, duplicated or differs from inventory')
-    for name in selected:
+    selected = set()
+    for name, record in local.items():
         instance = database['INSTANCES'][name]
         extras = additional['INSTANCES'].setdefault(name, {})
-        if (instance['hostname'] != '127.0.0.1'
+        # Namespace templates use their own bridge IP, which can change when the
+        # container is recreated. The entrypoint supplies its current local IP.
+        if (instance['hostname'] not in ({'127.0.0.1', local_ip} if number else {'127.0.0.1'})
+                or any(instance[field] != record[field] for field in ('port', 'unix_socket_path'))
                 or instance.get('database_type') or extras.get('bmc_link_ip')
-                or not extras.get('is_protected_mode', False)):
-            raise ValueError('selected Redis process has a nonlocal or unexpected endpoint')
-        instance['port'] = 0
-        extras.update({'port': 0, 'redis_auth_enforce': True})
+                or (not number and not extras.get('is_protected_mode', False))):
+            raise ValueError('configured Redis endpoint differs from prepared local inventory')
+        if record['protected']:
+            instance['port'] = 0
+            extras.update({'port': 0, 'redis_auth_enforce': True, 'is_protected_mode': True})
+            selected.add(name)
     return selected
 
 
@@ -61,7 +75,8 @@ def main():
         info = inventory_path.lstat()
         if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
             raise ValueError('missing or unsafe Redis server inventory')
-        selected = configure(database, additional, json.loads(policy_path.read_text()), json.loads(inventory_path.read_text()))
+        selected = configure(database, additional, json.loads(policy_path.read_text()),
+                             json.loads(inventory_path.read_text()), local_ip=sys.argv[3])
         # Redis creates protected sockets with mode 0766. A default directory ACL
         # can still deny a named reader; do not alter a directory shared with an
         # exempt server to compensate for that unsupported configuration.

@@ -151,7 +151,7 @@ if [ -f "$chassisdb_config" ] && [[ "$start_chassis_db" != "1" ]]; then
     additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: false})}' "$db_cfg_file_tmp")
 fi
 if [[ "${REDIS_AUTH_REQUIRED:-0}" == "1" ]]; then
-    additional_data_json=$(/usr/local/bin/redis_auth_configure.py "$db_cfg_file_tmp" "$additional_data_json") || exit 1
+    additional_data_json=$(/usr/local/bin/redis_auth_configure.py "$db_cfg_file_tmp" "$additional_data_json" "$host_ip") || exit 1
 fi
 sonic-cfggen -j "$db_cfg_file_tmp" -a "$additional_data_json" \
 -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
