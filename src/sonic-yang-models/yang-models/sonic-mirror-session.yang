@@ -13,6 +13,18 @@ module sonic-mirror-session {
         prefix port;
     }
 
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-sflow {
+        prefix sflow;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
     import sonic-policer {
         prefix policer;
     }
@@ -29,6 +41,13 @@ module sonic-mirror-session {
     revision 2021-06-15 {
         description
             "Initial revision.";
+    }
+
+    revision 2026-10-16 {
+        description
+            "Move sample_rate and truncate_size from MIRROR_SESSION to
+             PORT_MIRROR_SAMPLE source bindings, and add system-wide sFlow
+             configuration exclusion.";
     }
 
     typedef session_type {
@@ -189,23 +208,83 @@ module sonic-mirror-session {
                     description
                         "Policer to be applied for the mirrored traffic.";
                 }
+            }
+        }
+
+        container PORT_MIRROR_SAMPLE {
+            description "Sampled ERSPAN source bindings.";
+
+            list PORT_MIRROR_SAMPLE_LIST {
+                key "port direction";
+                description
+                    "A sampling policy for one physical port or PortChannel and direction.";
+
+                must "not(/sflow:sonic-sflow/sflow:SFLOW/sflow:global)" {
+                    error-message
+                        "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist.";
+                    error-app-tag "sampling-config-conflict";
+                }
+
+                leaf port {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+                    description "Physical port or PortChannel used as the sampling source.";
+                }
+
+                leaf direction {
+                    type enumeration {
+                        enum rx {
+                            description "Ingress sampling.";
+                        }
+                        enum tx {
+                            description "Egress sampling.";
+                        }
+                    }
+                    description "Sampling direction. A bidirectional request uses two entries.";
+                }
+
+                leaf admin_state {
+                    type stypes:admin_status;
+                    default down;
+                    description
+                        "Requested binding state. Disabled bindings still participate
+                         in global sFlow configuration exclusion.";
+                }
+
+                leaf mirror_session {
+                    mandatory true;
+                    type leafref {
+                        path "/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST/sms:name";
+                    }
+                    must "/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()]/sms:type = 'ERSPAN'" {
+                        error-message "The referenced mirror session must be ERSPAN.";
+                        error-app-tag "sample-mirror-session-type-invalid";
+                    }
+                    must "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()]/sms:src_port)" {
+                        error-message "A sampled export session must not configure src_port.";
+                        error-app-tag "sample-mirror-source-conflict";
+                    }
+                    description "ERSPAN export session referenced by this binding.";
+                }
 
                 leaf sample_rate {
-                    when "current()/../type = 'ERSPAN'";
+                    mandatory true;
                     type uint32 {
                         range "2..max" {
                             error-message "Sample rate must be in range 2..max";
-                            error-app-tag sample-rate-invalid;
+                            error-app-tag "sample-rate-invalid";
                         }
                     }
-                    description
-                        "Sampling rate for mirrored packets. When not configured,
-                         full mirroring is used (no sampling). N means mirror 1 out
-                         of every N packets.";
+                    description "Intended sampling probability of 1/N packets.";
                 }
 
                 leaf truncate_size {
-                    when "current()/../type = 'ERSPAN'";
                     type uint32 {
                         range "64..9216" {
                             error-message "Truncate size must be 64..9216";

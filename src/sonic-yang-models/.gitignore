@@ -64,5 +64,6 @@ tests/yang-models/sonic_yang_tree
 yang-models/sonic-acl.yang
 yang-models/sonic-extension.yang
 yang-models/sonic-policer.yang
+yang-models/sonic-sflow.yang
 yang-models/sonic-types.yang
 cvlyang-models/
