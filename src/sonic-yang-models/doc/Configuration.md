@@ -3037,13 +3037,41 @@ channel name as object key, and tagging mode as attributes.
 
 ### VNET
 
-VNET table has Vnet name as the object key, and vxlan_tunnel name, scope, vni, peer list, advertised prefix, src mac, and overlay dest mac as attributes.
-The vxlan_tunnel name (mandatory) is the tunnel name from the VXLAN table. scope (optional) must "default", vni (mandatory) is the vxlan tunnel vni, peer_list (optional) is for Vnet
+VNET table has Vnet name as the object key, and vxlan_tunnel name, vxlan tunnel list, scope, vni, peer list, advertised prefix, src mac, and overlay dest mac as attributes.
+The vxlan_tunnel name is a tunnel name from the VXLAN table and vxlan_tunnel_list is a comma-separated string of such tunnel names, like peer_list; at least one of the two must be configured. scope (optional) must
+"default", vni (mandatory) is the vxlan tunnel vni, peer_list (optional) is for Vnet
 peering, advertise_prefix (optional) is used to allow advertisement of this vnet's routes, overlay_dmac (optional) is the mac address which is used for VNET ping
 monitoring sessions for the vnet routes and is optional.
 
+The vxlan_tunnel_list supports at most two tunnels: one IPv4 tunnel and one IPv6
+tunnel, with the address family determined by each tunnel's src_ip in VXLAN_TUNNEL.
+It may be an empty string (""), name a single IPv4 or IPv6 tunnel, or name one of each.
+In ConfigDB, use a string such as "vtep1,vtep2", not a JSON array. Non-string
+values and non-empty strings containing empty comma-separated entries (such as
+",vtep1", "vtep1,", or "vtep1,,vtep2") are rejected before translation.
+An empty string ("") remains valid when vxlan_tunnel is configured. ConfigDB
+translation trims surrounding whitespace from tunnel names but keeps the value
+as a comma-separated string. The YANG model also defines this field as a string,
+like peer_list; no conversion to a leaf-list is performed. Tunnel names must be
+distinct and must exist in VXLAN_TUNNEL. SonicYang explicitly tracks the string's
+tunnel references for schema and data dependency queries.
+Two tunnels of the same address family are not supported by vnetorch and are
+rejected by the YANG model. If the list is empty or absent, vxlan_tunnel must be
+configured; a non-empty list takes precedence over vxlan_tunnel.
+
+The following example defines vtep1 with an IPv4 source and vtep2 with an IPv6
+source, so Vnet2-1 uses a valid dual-stack tunnel list.
+
 ```
 {
+"VXLAN_TUNNEL": {
+	"vtep1": {
+		"src_ip": "192.0.2.1"
+	},
+	"vtep2": {
+		"src_ip": "2001:db8::1"
+	}
+},
 "VNET": {
 	"Vnet1-1": {
 	    "vxlan_tunnel": "vtep1",
@@ -3056,7 +3084,12 @@ monitoring sessions for the vnet routes and is optional.
     "Vnetv4_v4-0": {
 	    "vxlan_tunnel": "vtep2",
 		"scope": "default",
-		"vni": "10011",
+		"vni": "10011"
+	},
+    "Vnet2-1": {
+	    "vxlan_tunnel_list": "vtep1,vtep2",
+		"scope": "default",
+		"vni": "10012"
 	}
   }
 }
