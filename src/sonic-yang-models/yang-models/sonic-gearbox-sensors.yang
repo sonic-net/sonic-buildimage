@@ -1,0 +1,43 @@
+module sonic-gearbox-sensors {
+  yang-version 1.1;
+  namespace "http://github.com/sonic-net/sonic-gearbox-sensors";
+  prefix gearbox-sensors;
+
+  import sonic-types {
+    prefix stypes;
+  }
+
+  description "GEARBOX SENSORs config yang Module for SONiC OS";
+
+  revision 2026-08-17 {
+    description "First Revision";
+  }
+
+  container sonic-gearbox-sensors {
+    container GEARBOX_SENSORS {
+      description "Gearbox internal thermal sensor poller configuration.";
+
+      container GEARBOX_SENSORS_POLLER_INTERVAL {
+        description "Polling interval configuration for gearbox thermal sensors.";
+        leaf interval {
+          description "GEARBOX SENSORS polling interval";
+          type uint32 {
+            range "1..999";
+          }
+          units seconds;
+          default "60";
+        }
+      } /* GEARBOX_SENSORS_POLLER_INTERVAL */
+
+      container GEARBOX_SENSORS_POLLER_STATUS {
+        description "Administrative status of the gearbox thermal sensor poller.";
+        leaf admin_status {
+          description "GEARBOX SENSORS polling administrative status";
+          type stypes:mode-status;
+          default "enable";
+        } /* admin_status */
+      } /* GEARBOX_SENSORS_POLLER_STATUS */
+
+    } /* end of GEARBOX_SENSORS */
+  } /* end of container sonic-gearbox-sensors */
+} /* end of module sonic-gearbox-sensors */
