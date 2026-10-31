@@ -327,10 +327,21 @@ def _reset_targets_in_parallel(
     if not targets:
         return 0
 
+    # Wait for every target's power-off call before starting the initial power-on.
+    barrier = threading.Barrier(len(targets))
+
     def _reset_one(index: int) -> int:
         target = targets[index]
         logger.info("Resetting DPU %s", target.dpu)
-        if not reset_dpu.reset_dpu(target.dpu, verbose):
+
+        reset_result = False
+        try:
+            reset_result = reset_dpu.reset_dpu(target.dpu, verbose, barrier)
+        finally:
+            if not reset_result:
+                barrier.abort()
+
+        if not reset_result:
             logger.error("Resetting DPU %s failed", target.dpu)
             return 1
         return 0
