@@ -141,8 +141,8 @@ class BgpdClientMgr(threading.Thread):
                         (r'show ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip igmp($|\s+\S+)', ['pimd']),
-                        (r'show isis($|\s+\S+)', ['isisd']),
-                        (r'clear isis($|\s+\S+)', ['isisd']),
+                        (r'show isis($|\s+.*)', ['isisd']),
+                        (r'clear isis($|\s+.*)', ['isisd']),
                         (r'.*', ['bgpd'])]
     @staticmethod
     def __create_proxy_socket():
@@ -1525,8 +1525,8 @@ def handle_isis_is_type(daemon, cmd_str, op, st_idx, args, data):
 
 def handle_isis_circuit_type(daemon, cmd_str, op, st_idx, args, data):
     cmd_list = []
-    no_op = 'no ' if op == CachedDataWithOp.OP_DELETE else ''
-    circuit_type = args[0]
+    no_op = ''
+    circuit_type = 'p2p' if op == CachedDataWithOp.OP_DELETE else args[0]
     if circuit_type == 'p2p':
         cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
                                        CommandArgument(daemon, True, 'point-to-point')))
