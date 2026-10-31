@@ -12,6 +12,7 @@
   * [BGP BBR](#bgp-bbr)
   * [ASIC SDK health event](#asic-sdk-health-event)
   * [BGP Device Global](#bgp-device-global)
+  * [BGP Device Global AF](#bgp-device-global-af)
   * [BGP Sessions](#bgp-sessions)
   * [BUFFER_PG](#buffer_pg)
   * [Buffer pool](#buffer-pool)
@@ -527,6 +528,43 @@ The **CONFED** object contains BGP confederation configuration for disaggregated
     "CONFED": {
         "asn": 65100,
         "peers": "66000;63000"
+    }
+}
+}
+```
+
+### BGP Device Global AF
+
+The **BGP_DEVICE_GLOBAL_AF** table contains device-level BGP settings per address family for the default VRF, keyed by **afi_safi** (e.g. `ipv4_unicast`, `ipv6_unicast`).
+
+**install_backup_path** controls BGP PIC Local (Prefix Independent Convergence) backup path installation and is rendered as FRR `install backup-path [ecmp]` under the address family:
+
+- **disabled** (default): no backup paths are computed or installed.
+- **pic**: install a single backup path (`install backup-path`).
+- **pic-ecmp**: install equal-cost backup paths (`install backup-path ecmp`).
+
+It is supported only for unicast address families.
+
+```json
+{
+"BGP_DEVICE_GLOBAL_AF": {
+    "ipv4_unicast": {
+        "install_backup_path": "pic"
+    },
+    "ipv6_unicast": {
+        "install_backup_path": "pic-ecmp"
+    }
+}
+}
+```
+
+The same **install_backup_path** leaf is available per VRF in **BGP_GLOBALS_AF** (key `<vrf_name>|<afi_safi>`):
+
+```json
+{
+"BGP_GLOBALS_AF": {
+    "Vrf1|ipv4_unicast": {
+        "install_backup_path": "pic-ecmp"
     }
 }
 }
