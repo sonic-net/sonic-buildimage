@@ -50,6 +50,8 @@ chassis_backend_role = 'ChassisBackendRouter'
 
 backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter']
 console_device_types = ['MgmtTsToR']
+# The console feature default for these comes from the platform init_cfg.json
+platform_console_device_types = ['NetworkBmc']
 dhcp_server_enabled_device_types = ['BmcMgmtToRRouter']
 mgmt_device_types = ['BmcMgmtToRRouter', 'MgmtToRRouter', 'MgmtTsToR']
 leafrouter_device_types = ['LeafRouter']
@@ -2741,12 +2743,14 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if current_device and current_device['type'] == spine_chassis_frontend_role:
         parse_spine_chassis_fe(results, vni, lo_intfs, phyport_intfs, pc_intfs, pc_members, devices)
 
-    # Enable console management feature for console swtich
-    results['CONSOLE_SWITCH'] = {
-        'console_mgmt' : {
-            'enabled' : 'yes' if current_device and current_device['type'] in console_device_types else 'no'
+    # Enable console management feature for console switch. Leave it out for a
+    # BMC, so the platform default from init_cfg.json is not overridden.
+    if not (current_device and current_device['type'] in platform_console_device_types):
+        results['CONSOLE_SWITCH'] = {
+            'console_mgmt' : {
+                'enabled' : 'yes' if current_device and current_device['type'] in console_device_types else 'no'
+            }
         }
-    }
 
     # Enable DHCP Server feature for specific device type
     if current_device and current_device['type'] in dhcp_server_enabled_device_types:
