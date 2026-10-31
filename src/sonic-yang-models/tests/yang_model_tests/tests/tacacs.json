@@ -2,6 +2,28 @@
     "TACPLUS_TEST": {
         "desc": "Tacplus global configuration in TACPLUS table."
     },
+    "TACPLUS_TRACEID_FALSE_TEST": {
+        "desc": "TraceId authorization accepts the CLI value False."
+    },
+    "TACPLUS_TRACEID_LOWERCASE_TRUE_TEST": {
+        "desc": "TraceId authorization accepts the lowercase value true."
+    },
+    "TACPLUS_TRACEID_LOWERCASE_FALSE_TEST": {
+        "desc": "TraceId authorization accepts the lowercase value false."
+    },
+    "TACPLUS_TRACEID_INVALID_TEST": {
+        "desc": "TraceId authorization rejects values outside the boolean string pattern.",
+        "eStrKey": "Pattern"
+    },
+    "TACPLUS_TRACEID_DEFAULT_TEST": {
+        "desc": "TraceId authorization defaults to the string false when the field is absent.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-system-tacacs:sonic-system-tacacs/TACPLUS/global/traceid_authorization",
+            "key": "sonic-system-tacacs:traceid_authorization",
+            "value": "false"
+        }
+    },
     "TACPLUS_INVALID_TIMEOUT_TEST": {
         "desc": "Tacplus global configuration with invalid timeout value in TACPLUS table.",
         "eStr": "TACACS timeout must be 1..60"
