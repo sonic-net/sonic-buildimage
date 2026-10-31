@@ -3,13 +3,13 @@ click-log==0.4.0
 colorful==0.5.8
 docker==7.2.0
 docker-image-py==0.2.0
-filelock==4.2.4
+filelock==4.2.5
 ijson==3.6.0
 inotify==0.2.12
 ipaddress==1.0.23
 jsondiff==2.2.1
-jsonpatch==1.36
-jsonpointer==3.4
+jsonpatch==1.38
+jsonpointer==3.6
 jsonschema==2.6.0
 lazy-object-proxy==1.13.0
 libyang==3.1.0
@@ -19,7 +19,7 @@ pexpect==4.9.0
 prettyprinter==0.18.0
 ptyprocess==0.7.0
 pycairo==1.26.1
-pyroute2==0.9.6
+pyroute2==0.9.7
 responses==0.26.3
 semantic-version==2.10.0
 tabulate==0.9.0
