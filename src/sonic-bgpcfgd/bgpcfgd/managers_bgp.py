@@ -330,7 +330,7 @@ class BGPPeerMgrBase(Manager):
             if (not interface_neighbor
                     and not TemplateFabric.is_ipv4(nbr)
                     and not TemplateFabric.is_ipv6(nbr)):
-                log_err("Peer '%s' is neither a valid IP address nor present in the PORT or interface tables" % nbr)
+                log_debug("Peer '%s' is not yet present in the PORT or interface tables" % nbr)
                 return False
         else:
             interface_neighbor = is_interface_neighbor(nbr)
