@@ -22,7 +22,7 @@ module sonic-isis-global {
     }
 
     container sonic-isis-global {
-        
+
         container ISIS_GLOBALS {
             list ISIS_GLOBALS_LIST {
                 key "vrf_name";
