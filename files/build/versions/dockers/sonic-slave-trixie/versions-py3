@@ -64,7 +64,7 @@ jaraco.functools==4.1.0
 jaraco.text==4.0.0
 jedi==0.19.1
 jinja2==3.1.6
-jsonpath-ng==1.12.0
+jsonpath-ng==1.15.0
 jsonpickle==4.0.2+dfsg
 kiwisolver==1.4.7
 legacy-cgi==2.6.3
@@ -112,7 +112,7 @@ pooch==1.8.2
 prefixed==0.7.0
 prompt_toolkit==3.0.51
 protobuf==5.29.6
-psutil==7.2.2
+psutil==7.0.0
 psutils==3.3.8
 ptyprocess==0.7.0
 pure_eval==0.2.3
