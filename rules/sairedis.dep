@@ -10,8 +10,11 @@ $(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(a
 
 
 $(LIBSAIREDIS)_CACHE_MODE  := GIT_CONTENT_SHA
+# Validation-only: source-build the paired VPP SAI candidate.
+ifeq ($(CONFIGURED_PLATFORM),vpp)
+$(LIBSAIREDIS)_CACHE_OVERRIDE := none
+endif
 $(LIBSAIREDIS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(ENABLE_ASAN) $($(LIBSAIREDIS)_DEB_BUILD_PROFILES)
 $(LIBSAIREDIS)_DEP_FILES   := $(DEP_FILES)
 $(LIBSAIREDIS)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
 $(LIBSAIREDIS)_SMDEP_PATHS := $(SMDEP_PATHS)
-
