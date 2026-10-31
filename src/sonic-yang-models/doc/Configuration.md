@@ -36,6 +36,7 @@
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
   * [EVPN](#evpn)
+  * [FDB_SYNC](#fdb_sync)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
   * [FG_NHG_PREFIX](#fg_nhg_prefix)
@@ -1431,6 +1432,23 @@ The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN m
             "startup_delay": "1800",
             "mac_holdtime": "1000",
             "neigh_holdtime": "600"
+        }
+    }
+}
+```
+
+### FDB_SYNC
+
+The **FDB_SYNC** table selects how MAC (FDB) state is synchronized between SONiC and FRR. It has a single `global` entry with one field, `mac_sync_mode`:
+
+- `kernel` (default): fdbsyncd synchronizes MACs through the Linux kernel bridge FDB.
+- `fpm`: fpmsyncd exchanges MACs with zebra over the FPM channel.
+
+```json
+{
+    "FDB_SYNC": {
+        "global": {
+            "mac_sync_mode": "fpm"
         }
     }
 }
