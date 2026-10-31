@@ -3,6 +3,7 @@
 import datetime
 import pytest
 import textwrap
+from typing import ClassVar
 
 from fixtures import test_helpers_adm1266
 from fixtures.test_helpers_adm1266 import create_raw_adm1266_blackbox_record
@@ -686,3 +687,229 @@ class TestAdm1266:
             assert reboot_causes[2].dpm_records[0].uid == 1237
             assert reboot_causes[2].dpm_records[1].uid == 1238
             assert reboot_causes[2].dpm_records[2].uid == 1239
+
+    def test_rail_undervoltage_decodes_when_no_pdio_signal_matches(self, adm1266_module):
+        """A 12V rail collapse with no PDI latched still decodes to a cause.
+
+        The switch card latches its "both PSUs lost input power" PDI only when
+        both inputs transition; losing the input of the one live PSU asserts no
+        PDI, leaving the rail undervoltage as the only evidence.
+        """
+        RECORDS = [
+            create_raw_adm1266_blackbox_record(uid=4000, powerup_counter=11, vh_uv=0b0001),
+        ]
+        with temp_file(
+            content=b"".join(RECORDS), file_prefix="nvmem", dir_prefix="test_adm1266"
+        ) as nvmem_path:
+            platform_spec = {
+                "dpm": "DPM1",
+                "dpm_signal_to_fault_cause": [
+                    {
+                        "pdio_mask": "0x0001", "gpio_mask": "0x0000",
+                        "pdio_value": "0x0001", "gpio_value": "0x0000",
+                        "hw_cause": "PSU_VIN_LOSS",
+                        "hw_desc": "Both PSUs lost input power",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+                    },
+                    {
+                        "pdio_mask": "0x0000", "gpio_mask": "0x0000",
+                        "pdio_value": "0x0000", "gpio_value": "0x0000",
+                        "vh_uv_mask": "0x1", "vh_uv_value": "0x1",
+                        "hw_cause": "MAIN_12V_LOSS",
+                        "hw_desc": "Main 12V rail lost input power",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+                    },
+                ],
+            }
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            adm1266._nvmem_path = nvmem_path
+
+            powerups = adm1266.get_powerup_entries()
+
+            assert powerups[0].power_fault_cause.cause == "MAIN_12V_LOSS"
+
+    def test_pdio_signal_wins_over_the_rail_undervoltage_fallback(self, adm1266_module):
+        """With the PDI latched, the specific cause is reported, not the fallback."""
+        RECORDS = [
+            create_raw_adm1266_blackbox_record(
+                uid=4001, powerup_counter=12, vh_uv=0b0001, pdio_in=0b0000_0000_0000_0001
+            ),
+        ]
+        with temp_file(
+            content=b"".join(RECORDS), file_prefix="nvmem", dir_prefix="test_adm1266"
+        ) as nvmem_path:
+            platform_spec = {
+                "dpm": "DPM1",
+                "dpm_signal_to_fault_cause": [
+                    {
+                        "pdio_mask": "0x0001", "gpio_mask": "0x0000",
+                        "pdio_value": "0x0001", "gpio_value": "0x0000",
+                        "hw_cause": "PSU_VIN_LOSS",
+                        "hw_desc": "Both PSUs lost input power",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+                    },
+                    {
+                        "pdio_mask": "0x0000", "gpio_mask": "0x0000",
+                        "pdio_value": "0x0000", "gpio_value": "0x0000",
+                        "vh_uv_mask": "0x1", "vh_uv_value": "0x1",
+                        "hw_cause": "MAIN_12V_LOSS",
+                        "hw_desc": "Main 12V rail lost input power",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+                    },
+                ],
+            }
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            adm1266._nvmem_path = nvmem_path
+
+            powerups = adm1266.get_powerup_entries()
+
+            assert powerups[0].power_fault_cause.cause == "PSU_VIN_LOSS"
+
+    def test_rail_undervoltage_fallback_ignores_other_rails(self, adm1266_module):
+        """A record whose undervoltage is on another rail must not match the fallback."""
+        RECORDS = [
+            create_raw_adm1266_blackbox_record(uid=4002, powerup_counter=13, vh_uv=0b1000),
+        ]
+        with temp_file(
+            content=b"".join(RECORDS), file_prefix="nvmem", dir_prefix="test_adm1266"
+        ) as nvmem_path:
+            platform_spec = {
+                "dpm": "DPM1",
+                "dpm_signal_to_fault_cause": [
+                    {
+                        "pdio_mask": "0x0000", "gpio_mask": "0x0000",
+                        "pdio_value": "0x0000", "gpio_value": "0x0000",
+                        "vh_uv_mask": "0x1", "vh_uv_value": "0x1",
+                        "hw_cause": "MAIN_12V_LOSS",
+                        "hw_desc": "Main 12V rail lost input power",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+                    },
+                ],
+            }
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            adm1266._nvmem_path = nvmem_path
+
+            powerups = adm1266.get_powerup_entries()
+
+            assert powerups[0].power_fault_cause is None
+
+    FALLBACK_SPEC: ClassVar[dict] = {
+        "dpm": "DPM1",
+        "dpm_signal_to_fault_cause": [
+            {
+                "pdio_mask": "0x0004", "gpio_mask": "0x0000",
+                "pdio_value": "0x0004", "gpio_value": "0x0000",
+                "hw_cause": "CPU_PWR_BAD",
+                "hw_desc": "CPU card power bad",
+                "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER",
+            },
+            {
+                "pdio_mask": "0x0000", "gpio_mask": "0x0000",
+                "pdio_value": "0x0000", "gpio_value": "0x0000",
+                "vh_uv_mask": "0x1", "vh_uv_value": "0x1",
+                "hw_cause": "MAIN_12V_LOSS",
+                "hw_desc": "Loss of 12V power from PSU",
+                "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+            },
+        ],
+    }
+
+    def _powerups_with_fallback_spec(self, adm1266_module, records, platform_spec=None):
+        with temp_file(
+            content=b"".join(records), file_prefix="nvmem", dir_prefix="test_adm1266"
+        ) as nvmem_path:
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266(
+                "test-dpm", platform_spec or self.FALLBACK_SPEC, pddf_device_data
+            )
+            adm1266._nvmem_path = nvmem_path
+            return adm1266.get_powerup_entries()
+
+    def test_earlier_specific_cause_outranks_a_later_fallback_in_the_same_powerup(self, adm1266_module):
+        """A 12V collapse logged after a specific fault must not bury that fault."""
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=5000, powerup_counter=20, pdio_in=0x0004),
+            create_raw_adm1266_blackbox_record(uid=5001, powerup_counter=20, vh_uv=0b0001),
+        ])
+
+        assert len(powerups) == 1
+        assert powerups[0].power_fault_cause.cause == "CPU_PWR_BAD"
+        assert not powerups[0].power_fault_cause.is_fallback
+        assert [record.uid for record in powerups[0].dpm_records] == [5000, 5001]
+
+    def test_fallback_cause_is_used_when_no_record_has_a_specific_cause(self, adm1266_module):
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=5002, powerup_counter=21),
+            create_raw_adm1266_blackbox_record(uid=5003, powerup_counter=21, vh_uv=0b0001),
+        ])
+
+        assert powerups[0].power_fault_cause.cause == "MAIN_12V_LOSS"
+        assert powerups[0].power_fault_cause.is_fallback
+
+    def test_specific_cause_in_the_last_record_is_kept(self, adm1266_module):
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=5004, powerup_counter=22, vh_uv=0b0001),
+            create_raw_adm1266_blackbox_record(uid=5005, powerup_counter=22, pdio_in=0x0004),
+        ])
+
+        assert powerups[0].power_fault_cause.cause == "CPU_PWR_BAD"
+
+    def test_no_cause_in_the_last_record_ignores_earlier_records(self, adm1266_module):
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=5006, powerup_counter=23, pdio_in=0x0004),
+            create_raw_adm1266_blackbox_record(uid=5007, powerup_counter=23),
+        ])
+
+        assert powerups[0].power_fault_cause is None
+
+    def test_fallback_rule_listed_first_does_not_shadow_a_specific_rule(self, adm1266_module):
+        reversed_spec = {
+            "dpm": "DPM1",
+            "dpm_signal_to_fault_cause": list(reversed(self.FALLBACK_SPEC["dpm_signal_to_fault_cause"])),
+        }
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=5010, powerup_counter=26, pdio_in=0x0004, vh_uv=0b0001),
+        ], reversed_spec)
+
+        assert powerups[0].power_fault_cause.cause == "CPU_PWR_BAD"
+        assert not powerups[0].power_fault_cause.is_fallback
+
+    def test_rule_with_a_zero_rail_mask_is_still_a_fallback(self, adm1266_module):
+        zero_mask_spec = {
+            "dpm": "DPM1",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0x0000", "gpio_mask": "0x0000",
+                    "pdio_value": "0x0000", "gpio_value": "0x0000",
+                    "vh_uv_mask": "0x0", "vh_uv_value": "0x0",
+                    "hw_cause": "MAIN_12V_LOSS",
+                    "hw_desc": "Loss of 12V power from PSU",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+                },
+            ],
+        }
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=5011, powerup_counter=27),
+        ], zero_mask_spec)
+
+        assert powerups[0].power_fault_cause.cause == "MAIN_12V_LOSS"
+        assert powerups[0].power_fault_cause.is_fallback
+
+    def test_specific_cause_from_another_powerup_is_not_borrowed(self, adm1266_module):
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=5008, powerup_counter=24, pdio_in=0x0004),
+            create_raw_adm1266_blackbox_record(uid=5009, powerup_counter=25, vh_uv=0b0001),
+        ])
+
+        assert [powerup.power_fault_cause.cause for powerup in powerups] == ["CPU_PWR_BAD", "MAIN_12V_LOSS"]
