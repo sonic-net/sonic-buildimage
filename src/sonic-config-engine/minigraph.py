@@ -2600,6 +2600,12 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     elif results['DEVICE_METADATA']['localhost']['type'].lower() == 'torrouter' and ('gemini' in str(redundancy_type).lower() or 'libra' in str(redundancy_type).lower()):
         enable_tunnel_qos_map = True
 
+    # O32V192 currently uses the standard AZURE QoS maps. Tunnel remapping
+    # triggered syncd failures during dual-ToR validation on this SKU.
+    if hwsku == 'Arista-7060X6-64PE-B-O32V192':
+        enable_tunnel_qos_map = False
+        system_defaults['tunnel_qos_remap'] = {"status": "disabled"}
+
     if enable_tunnel_qos_map:
         system_defaults['tunnel_qos_remap'] = {"status": "enabled"}
 
