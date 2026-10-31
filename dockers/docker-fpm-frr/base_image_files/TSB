@@ -27,7 +27,7 @@ if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggr
       echo "Chassis is already in Normal mode"
       logger -t TSB -p user.info "Chassis is already in Normal mode"
     else
-      sonic-db-cli -s $CHASSIS_TSA_STATE_UPDATE
+      sonic-db-cli $CHASSIS_TSA_STATE_UPDATE
       sonic-cfggen -a "$CONFIG_DB_TSA_STATE_UPDATE" -w
       echo "Chassis Mode: Maintenance -> Normal"
       logger -t TSB -p user.info "Chassis Mode: Maintenance -> Normal"
