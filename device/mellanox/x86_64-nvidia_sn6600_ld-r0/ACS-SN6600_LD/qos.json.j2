@@ -1,1 +1,69 @@
-../../x86_64-mlnx_msn2700-r0/ACS-MSN2700/qos.json.j2
+{#
+    SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+    Copyright (c) 2017-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    Apache-2.0
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+#}
+{#- Build the service-port set here so generate_queue_config can see it: a macro only
+    closes over this template's namespace, not qos_config.j2's locals. The set comes
+    from buffers_defaults (single source of truth: service_port_names); the service
+    ports are identical across topologies, so the t0 defaults are enough. #}
+{%- set PORT_SERVICE = [] %}
+{%- if template_exists('buffers_defaults_t0.j2') %}
+    {%- import 'buffers_defaults_t0.j2' as sp_defs with context %}
+    {%- if sp_defs.generate_service_port_list is defined %}
+        {%- if sp_defs.generate_service_port_list(PORT_SERVICE) %}{% endif %}
+    {%- endif %}
+{%- endif %}
+{#- Service ports carry only lossy traffic, so their queue 3-4 uses the lossy
+    scheduler without WRED instead of the lossless one; every other queue is
+    identical to a data port. #}
+{%- macro generate_queue_config(port_names_active) %}
+    "QUEUE": {
+{% for port in port_names_active.split(',') if port %}
+        "{{ port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|1": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|2": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|3": {
+{% if port in PORT_SERVICE %}
+            "scheduler"   : "scheduler.0"
+{% else %}
+            "wred_profile": "AZURE_LOSSLESS",
+            "scheduler"   : "scheduler.1"
+{% endif %}
+        },
+        "{{ port }}|4": {
+{% if port in PORT_SERVICE %}
+            "scheduler"   : "scheduler.0"
+{% else %}
+            "wred_profile": "AZURE_LOSSLESS",
+            "scheduler"   : "scheduler.1"
+{% endif %}
+        },
+        "{{ port }}|5": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|6": {
+            "scheduler": "scheduler.0"
+        }{{ "," if not loop.last else "" }}
+{% endfor %}
+    }
+{%- endmacro %}
+{%- include 'qos_config.j2' %}
