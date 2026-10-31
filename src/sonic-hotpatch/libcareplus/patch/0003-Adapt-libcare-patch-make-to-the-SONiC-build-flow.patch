@@ -1,0 +1,129 @@
+From 61461f1a8ea5a5130e3c42eac561d1a96d4a95d8 Mon Sep 17 00:00:00 2001
+From: SONiC <sonic@sonic.net>
+Date: Fri, 7 Aug 2026 13:51:08 +0800
+Subject: [PATCH] Adapt libcare-patch-make to the SONiC build flow
+
+Point CXX at libcare-cxx instead of aliasing it to libcare-cc, pass CC/CXX
+explicitly into the target make invocation rather than swapping the system
+cc symlink, and drop the QEMU-specific link-flag handling that does not
+apply here.
+---
+ src/libcare-patch-make | 45 ++++++++----------------------------------
+ 1 file changed, 8 insertions(+), 37 deletions(-)
+
+diff --git a/src/libcare-patch-make b/src/libcare-patch-make
+index 9476063..6fad959 100755
+--- a/src/libcare-patch-make
++++ b/src/libcare-patch-make
+@@ -42,7 +42,7 @@ prepare_env() {
+ 
+ 	export IS_LIBCARE_CC=y
+ 	export CC=$KPATCH_PATH/libcare-cc
+-	export CXX=$CC
++	export CXX=$KPATCH_PATH/libcare-cxx
+ 
+ 	MAKE_OUTPUT=/dev/stdout
+ 
+@@ -78,38 +78,15 @@ restore_origs() {
+ 			{ vers[fname] = origfname; }
+ 	}
+ 	END { for (f in vers) system("mv " vers[f] " " f); }
+-' > /dev/null 2>&1
++'
+ }
+ 
+ trap "restore_origs" 0
+ 
+-replace_qemu_ld_flags() {
+-	local qemu_ld_flags_old=$1
+-	ret=$(echo $qemu_ld_flags_old | grep "\-Wl,-q")
+-	if [[ "$ret" == "" ]]; then
+-		local qemu_ld_flags="${qemu_ld_flags_old} -Wl,-q"
+-		echo "replace QEMU_LDFLAGS to '${qemu_ld_flags}'"
+-		sed -i "/^QEMU_LDFLAGS=/c\\${qemu_ld_flags}" config-host.mak
+-	fi
+-}
+ 
+-recover_qemu_ld_flags() {
+-	local qemu_ld_flags=$1
+-	echo "recover QEMU_LDFLAGS to '${qemu_ld_flags}'"
+-	sed -i "/^QEMU_LDFLAGS=/c\\${qemu_ld_flags}" config-host.mak
+-}
+ 
+-replace_cc_symbolink() {
+-	unlink $SYMBOLINK_CC
+-	ln -s $LIBCARE_CC $SYMBOLINK_CC
+-}
+ 
+-recover_cc_symbolink() {
+-	unlink $SYMBOLINK_CC
+-	ln -s $REAL_CC $SYMBOLINK_CC
+-}
+ 
+-trap "recover_cc_symbolink" SIGINT SIGTERM SIGQUIT
+ 
+ build_objects() {
+ 	restore_origs
+@@ -126,7 +103,8 @@ build_objects() {
+ 	export KPCC_DBGFILTER_ARGS=""
+ 
+ 	echo "${green}BUILDING ORIGINAL CODE${reset}"
+-	make $LPMAKEFILE $JOBS_MAKE >$MAKE_OUTPUT 2>&1
++	local lp_make_env_original="CC=${CC} CXX=${CXX}"
++	make $LPMAKEFILE $JOBS_MAKE ${lp_make_env_original} >$MAKE_OUTPUT 2>&1
+ 
+ 	echo "${green}INSTALLING ORIGINAL OBJECTS INTO $LPMAKE_ORIGINAL_DIR${reset}"
+ 	make $LPMAKEFILE $JOBS_MAKE install			\
+@@ -141,7 +119,7 @@ build_objects() {
+ 	i=0
+ 	for patch; do
+ 		echo "${red}applying $patch...${reset}"
+-		patch -b -z .${i}.lpmakeorig -p1 < $patch
++		patch -b -z .${i}.lpmakeorig -p0 < $patch
+ 	done
+ 
+ 	if test -n "$srcdir"; then
+@@ -151,20 +129,17 @@ build_objects() {
+ 	export KPATCH_STAGE=patched
+ 	export KPCC_APPEND_ARGS="-Wl,-q"
+ 
+-	qemu_ld_flags_bak=$(grep "^QEMU_LDFLAGS=" config-host.mak)
+-	#add '-Wl,-q' to LD_FLAGS
+-	replace_qemu_ld_flags "$qemu_ld_flags_bak"
+ 
+ 	echo "${green}BUILDING PATCHED CODE${reset}"
+-	make $LPMAKEFILE $JOBS_MAKE >$MAKE_OUTPUT 2>&1
++	local lp_make_env_patched="CC=${CC} CXX=${CXX}"
++	sed -i 's#^CC="gcc -std=gnu11"#CC="/usr/bin/libcare-cc -std=gnu11"#' ./libtool
++	make $LPMAKEFILE $JOBS_MAKE ${lp_make_env_patched} >$MAKE_OUTPUT 2>&1
+ 
+ 	echo "${green}INSTALLING PATCHED OBJECTS INTO $LPMAKE_PATCHED_DIR${reset}"
+ 	make $LPMAKEFILE $JOBS_MAKE install			\
+ 		"$destdir=$LPMAKE_PATCHED_DIR"			\
+ 		>$MAKE_OUTPUT 2>&1
+ 
+-	# recover LD_FLAGS
+-	recover_qemu_ld_flags "$qemu_ld_flags_bak"
+ }
+ 
+ build_kpatches() {
+@@ -276,16 +251,12 @@ main() {
+ 
+ 	prepare_env
+ 
+-	# replace cc
+-	replace_cc_symbolink
+ 
+ 	if test -z "$only_update"; then
+ 		build_objects "$@"
+ 	fi
+ 	build_kpatches
+ 
+-	# recover cc
+-	recover_cc_symbolink
+ }
+ 
+ main "$@"
+-- 
+2.25.1
+
