@@ -1,3 +1,6 @@
+import pytest
+from pathlib import Path
+
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler, LeaseHanlder
 from freezegun import freeze_time
@@ -44,10 +47,42 @@ def test_read_kea_lease_with_file_not_found(mock_swsscommon_dbconnector_init):
             pass
 
 
-def test_read_kea_lease(mock_swsscommon_dbconnector_init):
+def test_read_kea_lease_retries_then_succeeds(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch.object(KeaDhcp4LeaseHandler, "_read_once",
+                      side_effect=[ValueError("incomplete snapshot"), expected_lease]) as mock_read, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.time.sleep") as mock_sleep:
+        handler = KeaDhcp4LeaseHandler(DhcpDbConnector())
+
+        assert handler._read() == expected_lease
+        assert mock_read.call_count == 2
+        mock_sleep.assert_called_once_with(0.05)
+        assert "attempt 1/3: incomplete snapshot" in mock_syslog.call_args.args[1]
+
+
+def test_read_kea_lease_raises_after_retry_exhaustion(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch.object(KeaDhcp4LeaseHandler, "_read_once",
+                      side_effect=FileNotFoundError("lease file rotated")) as mock_read, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.time.sleep") as mock_sleep:
+        handler = KeaDhcp4LeaseHandler(DhcpDbConnector())
+
+        with pytest.raises(FileNotFoundError, match="lease file rotated"):
+            handler._read()
+        assert mock_read.call_count == 3
+        assert mock_sleep.call_args_list == [call(0.05), call(0.05)]
+        assert [f"attempt {attempt}/3" in item.args[1]
+                for attempt, item in enumerate(mock_syslog.call_args_list, 1)] == [True] * 3
+
+
+def test_read_kea_lease(mock_swsscommon_dbconnector_init, tmp_path):
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_bytes(Path("tests/test_data/kea-lease.csv").read_bytes() + b"\n")
     with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
         db_connector = DhcpDbConnector()
-        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file="tests/test_data/kea-lease.csv")
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
         # Verify whether lease information read is as expected
         lease = kea_lease_handler._read()
         assert lease == expected_lease
