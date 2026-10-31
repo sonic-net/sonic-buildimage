@@ -103,6 +103,7 @@
                             "IF_OUT_UCAST_PKTS",
                             "OUT_CURR_OCCUPANCY_BYTES",
                             "TRIM_PACKETS",
+                            "DROPPED_TRIM_PACKETS",
                             "PAUSE_RX_PKTS",
                             "PAUSE_TX_PKTS",
                             "PFC_0_RX_PKTS",
@@ -141,6 +142,7 @@
                             "WATERMARK_BYTES",
                             "WRED_ECN_MARKED_PACKETS",
                             "TRIM_PACKETS",
+                            "DROPPED_TRIM_PACKETS",
                             "CURR_OCCUPANCY_CELLS",
                             "WATERMARK_CELLS"
                         ]
