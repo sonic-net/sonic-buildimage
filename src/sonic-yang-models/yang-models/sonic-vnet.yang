@@ -44,6 +44,10 @@ module sonic-vnet {
 
                 key "name";
 
+                must "vxlan_tunnel or string-length(vxlan_tunnel_list) > 0" {
+                    error-message "Either vxlan_tunnel or a non-empty vxlan_tunnel_list must be configured.";
+                }
+
                 leaf name {
                     description "Unique alphanumeric name identifying the virtual network";
                     type string {
@@ -52,11 +56,15 @@ module sonic-vnet {
                 }
 
                 leaf vxlan_tunnel {
-                    mandatory true;
                     description "A valid and active vxlan tunnel to be used with this vnet for traffic encapsulation.";
                     type leafref {
                         path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
                     }
+                }
+
+                leaf vxlan_tunnel_list {
+                    description "Comma-separated VXLAN tunnel names. Takes precedence over vxlan_tunnel when non-empty.";
+                    type string;
                 }
 
                 leaf vni {

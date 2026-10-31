@@ -3037,8 +3037,11 @@ channel name as object key, and tagging mode as attributes.
 
 ### VNET
 
-VNET table has Vnet name as the object key, and vxlan_tunnel name, scope, vni, peer list, advertised prefix, src mac, and overlay dest mac as attributes.
-The vxlan_tunnel name (mandatory) is the tunnel name from the VXLAN table. scope (optional) must "default", vni (mandatory) is the vxlan tunnel vni, peer_list (optional) is for Vnet
+VNET table has Vnet name as the object key, and vxlan_tunnel name, vxlan_tunnel_list, scope, vni, peer list, advertised prefix, src mac, and overlay dest mac as attributes.
+Either vxlan_tunnel or a non-empty vxlan_tunnel_list is required. vxlan_tunnel is a tunnel name from the VXLAN_TUNNEL table.
+vxlan_tunnel_list is a comma-separated string of tunnel names, like peer_list, and takes precedence when both fields are configured and the list is non-empty.
+SWSS validates that the list references existing tunnels and contains at most one IPv4 and one IPv6 tunnel.
+scope (optional) must "default", vni (mandatory) is the vxlan tunnel vni, peer_list (optional) is for Vnet
 peering, advertise_prefix (optional) is used to allow advertisement of this vnet's routes, overlay_dmac (optional) is the mac address which is used for VNET ping
 monitoring sessions for the vnet routes and is optional.
 
@@ -3054,9 +3057,9 @@ monitoring sessions for the vnet routes and is optional.
 		"overlay_dmac": "22:33:44:55:66:77"
 	},
     "Vnetv4_v4-0": {
-	    "vxlan_tunnel": "vtep2",
+	    "vxlan_tunnel_list": "vtep1,vtep2",
 		"scope": "default",
-		"vni": "10011",
+		"vni": "10011"
 	}
   }
 }
