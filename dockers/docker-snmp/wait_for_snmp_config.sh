@@ -19,8 +19,8 @@ if [ -n "${IMAGE_VERSION}" ]; then
 fi
 
 for i in $(seq 1 "$TIMEOUT"); do
-    if [ -n "$(sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'hwsku' 2>/dev/null)" ] \
-       && [ -n "$(sonic-db-cli CONFIG_DB KEYS 'SNMP_COMMUNITY|*' 2>/dev/null)" ]; then
+    if [ -n "$(sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'hwsku' 2>/dev/null)" ] \
+       && [ -n "$(sonic-db-cli -s CONFIG_DB KEYS 'SNMP_COMMUNITY|*' 2>/dev/null)" ]; then
         logger -t wait-for-snmp-config -p daemon.info \
             "DEVICE_METADATA and SNMP_COMMUNITY present in CONFIG_DB after ${i}s"
         exit 0

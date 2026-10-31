@@ -141,7 +141,7 @@ handle_prefix_list_asic() {
             logger -t $operation -p user.info "Added prefix list: $PREFIX_TYPE with network: $network"
             echo "BGP$asic: Added prefix list: $PREFIX_TYPE with network: $network"
         elif [ $operation == 'remove' ]; then
-            sonic-db-cli -n $namespace_prefix$asic CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
+            sonic-db-cli -s -n $namespace_prefix$asic CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
             logger -t $operation -p user.info "Removed prefix list: $PREFIX_TYPE with network: $network"
             echo "BGP$asic: Removed prefix list: $PREFIX_TYPE with network: $network"
         fi
@@ -164,7 +164,7 @@ handle_prefix_list_single() {
             logger -t $operation -p user.info "Added prefix list: $PREFIX_TYPE with network: $network"
             echo "Added prefix list: $PREFIX_TYPE with network: $network"
         elif [ $operation == 'remove' ]; then
-            sonic-db-cli CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
+            sonic-db-cli -s CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
             logger -t $operation -p user.info "Removed prefix list: $PREFIX_TYPE with network: $network"
             echo "Removed prefix list: $PREFIX_TYPE with network: $network"
         fi

@@ -1,14 +1,14 @@
 #!/bin/bash -e
 
-STATE=$(sonic-db-cli CONFIG_DB HGET 'BANNER_MESSAGE|global' state)
+STATE=$(sonic-db-cli -s CONFIG_DB HGET 'BANNER_MESSAGE|global' state)
 LOGIN=
 MOTD=
 LOGOUT=
 
 if [[ $STATE == "enabled" ]]; then
-    LOGIN=$(sonic-db-cli CONFIG_DB HGET 'BANNER_MESSAGE|global' login)
-    MOTD=$(sonic-db-cli CONFIG_DB HGET 'BANNER_MESSAGE|global' motd)
-    LOGOUT=$(sonic-db-cli CONFIG_DB HGET 'BANNER_MESSAGE|global' logout)
+    LOGIN=$(sonic-db-cli -s CONFIG_DB HGET 'BANNER_MESSAGE|global' login)
+    MOTD=$(sonic-db-cli -s CONFIG_DB HGET 'BANNER_MESSAGE|global' motd)
+    LOGOUT=$(sonic-db-cli -s CONFIG_DB HGET 'BANNER_MESSAGE|global' logout)
 
     echo -e "$LOGIN" > /etc/issue.net
     echo -e "$LOGIN" > /etc/issue

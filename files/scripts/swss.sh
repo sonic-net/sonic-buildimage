@@ -321,7 +321,7 @@ is_feature_enabled()
 {
     s=$1
     service=${s%@*}
-    state=$(sonic-db-cli CONFIG_DB hget "FEATURE|${service}" "state")
+    state=$(sonic-db-cli -s CONFIG_DB hget "FEATURE|${service}" "state")
     if [[ $state == "enabled" ]]; then
         echo "true"
     else
@@ -648,10 +648,10 @@ fi
 
 if [ "$DEV" ]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
-    SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
+    SONIC_DB_CLI="sonic-db-cli -s -n $NET_NS"
 else
     NET_NS=""
-    SONIC_DB_CLI="sonic-db-cli"
+    SONIC_DB_CLI="sonic-db-cli -s"
 fi
 
 PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Wait until redis starts
-until [[ $(sonic-db-cli PING | grep -c PONG) -gt 0 ]]; do
+until [[ $(sonic-db-cli -s PING | grep -c PONG) -gt 0 ]]; do
   sleep 1;
 done
 
@@ -14,4 +14,4 @@ if [ -r /etc/sonic/config_db.json ]; then
     fi
 fi
 
-sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+sonic-db-cli -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"

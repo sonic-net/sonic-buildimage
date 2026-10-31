@@ -333,7 +333,7 @@ function postStartAction()
         # database-config.json files are not ready yet, it will generate the sonic-db-cli core files.
 	waitForAllInstanceDatabaseConfigJsonFilesReady
         until [[ ($(docker exec -i database$DEV pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
-                 ($(docker exec -i database$DEV sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do
+                 ($(docker exec -i database$DEV sonic-db-cli -s PING | grep -c PONG) -gt 0) ]]; do
           sleep 1;
         done
 
@@ -1057,11 +1057,11 @@ if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
 
     SONIC_CFGGEN="sonic-cfggen -n $NET_NS"
-    SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
+    SONIC_DB_CLI="sonic-db-cli -s -n $NET_NS"
  else
     NET_NS=""
     SONIC_CFGGEN="sonic-cfggen"
-    SONIC_DB_CLI="sonic-db-cli"
+    SONIC_DB_CLI="sonic-db-cli -s"
 fi
 
 # read SONiC immutable variables

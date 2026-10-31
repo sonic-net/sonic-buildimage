@@ -27,7 +27,7 @@ if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggr
       echo "Chassis is already in Normal mode"
       logger -t TSB -p user.info "Chassis is already in Normal mode"
     else
-      sonic-db-cli $CHASSIS_TSA_STATE_UPDATE
+      sonic-db-cli -s $CHASSIS_TSA_STATE_UPDATE
       sonic-cfggen -a "$CONFIG_DB_TSA_STATE_UPDATE" -w
       echo "Chassis Mode: Maintenance -> Normal"
       logger -t TSB -p user.info "Chassis Mode: Maintenance -> Normal"
@@ -59,7 +59,7 @@ if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
      [[ $(/bin/systemctl show $service --property SubState  --value) == "running" ]]; then
       echo "Stopping $service before configuring TSB"
       systemctl stop $service
-      if sonic-db-cli STATE_DB HDEL "ALL_SERVICE_STATUS|tsa_tsb_service" "running" >/dev/null; then
+      if sonic-db-cli -s STATE_DB HDEL "ALL_SERVICE_STATUS|tsa_tsb_service" "running" >/dev/null; then
         echo "Successfully removed TSA-TSB service flag."
       else
         echo "Failed to remove TSA-TSB service flag!" >&2
