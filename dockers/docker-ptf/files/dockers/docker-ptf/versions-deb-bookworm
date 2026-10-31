@@ -594,6 +594,7 @@ thrift-compiler==0.17.0-2+b2
 tk8.6-blt2.5==2.5.3+dfsg-4.1
 tmux==3.3a-3
 traceroute==1:2.1.2-1
+tzdata==2026f-0+deb12u1
 ucf==3.0043+nmu1+deb12u1
 unicode-data==15.0.0-1
 unzip==6.0-28+deb12u1
