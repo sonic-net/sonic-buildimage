@@ -59,6 +59,43 @@ run_ipv6_multicast_ping() {
         timeout "$wait_time" ping6 -I "$ifname" -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null 2>&1
 }
 
+# Succeed if APPL_DB holds, or is about to hold, the given MAC for a neighbor.
+# neighsyncd's writes wait in _NEIGH_TABLE until orchagent pops them into
+# NEIGH_TABLE, so while orchagent is busy a new or changed neighbor is only in
+# _NEIGH_TABLE. That queued row is read only when NEIGH_TABLE disagrees.
+appl_db_neigh_has_mac() {
+    local ifname="$1"
+    local neighbor_ip="$2"
+    local mac="$3"
+
+    [[ "$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${ifname}:${neighbor_ip}" neigh)" == "$mac" ]] ||
+        [[ "$(sonic-db-cli -s APPL_DB hget "_NEIGH_TABLE:${ifname}:${neighbor_ip}" neigh)" == "$mac" ]]
+}
+
+# Flush a kernel neighbor whose MAC differs from APPL_DB and ping it to relearn.
+# Returns 0 if the neighbor was flushed.
+flush_mac_mismatch_neighbor() {
+    local ifname="$1"
+    local neighbor_ip="$2"
+    local kernel_mac="$3"
+    local appl_db_mac ping_prefix
+
+    if appl_db_neigh_has_mac "$ifname" "$neighbor_ip" "$kernel_mac"; then
+        return 1
+    fi
+    appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${ifname}:${neighbor_ip}" neigh)"
+    logger -p warning "MAC mismatch for ${neighbor_ip} on ${ifname} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
+    ip neigh flush "$neighbor_ip"
+    if [[ $neighbor_ip == *":"* ]]; then
+        ping_prefix=ping6
+    else
+        ping_prefix=ping
+    fi
+    run_with_retry_cmd "mac mismatch ping to $neighbor_ip on $ifname" \
+        timeout 0.2 $ping_prefix -I "$ifname" -n -q -i 0 -c 1 -W 1 "$neighbor_ip" >/dev/null 2>&1
+    return 0
+}
+
 flush_unsynced_neighbors() {
     local vlan="$1"
     local neighbors="$2"
@@ -179,18 +216,7 @@ while /bin/true; do
         ip="$( cut -d ',' -f 1 <<< "$neigh" )"
         intf="$( cut -d ',' -f 2 <<< "$neigh" )"
         kernel_mac="$( cut -d ',' -f 3 <<< "$neigh" )"
-        appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${intf}:${ip}" neigh)"
-        if [[ $kernel_mac != $appl_db_mac ]]; then
-            logger -p warning "MAC mismatch for ${ip} on ${intf} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
-            ip neigh flush "$ip"
-            if [[ $ip == *":"* ]]; then
-                ping_prefix=ping6
-            else
-                ping_prefix=ping
-            fi
-            run_with_retry_cmd "mac mismatch ping to $ip on $intf" \
-                timeout 0.2 $ping_prefix -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
-        fi
+        flush_mac_mismatch_neighbor "$intf" "$ip" "$kernel_mac"
   done
 
   VLAN=$(echo $ARP_UPDATE_VARS | jq -r '.vlan')
