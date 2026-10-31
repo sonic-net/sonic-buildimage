@@ -449,10 +449,13 @@ def test_aggregate_conf_bbr_required_disabled():
 
 
 def test_aggregate_conf_bbr_required_uses_constants_default_disabled():
-    """A bbr-required aggregate must be suppressed when constants.yml defaults BBR to disabled."""
+    """A bbr-required aggregate must be suppressed with disabled constants."""
+    constants_path = os.path.join(DATA_PATH,
+                                  "bgpd.aggregate.conf.j2/bbr_default_disabled_constants.yml")
     run_aggregate_test("bgpd.aggregate.conf.j2 BBR required + constants default disabled",
                        "bgpd.aggregate.conf.j2/bbr_required_no_explicit_bbr.json",
-                       "bgpd.aggregate.conf.j2/bbr_required_constants_default_disabled.conf")
+                       "bgpd.aggregate.conf.j2/bbr_required_constants_default_disabled.conf",
+                       constants_path)
 
 
 def test_aggregate_conf_bbr_required_uses_constants_default_state():
