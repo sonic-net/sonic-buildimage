@@ -293,7 +293,7 @@ else
 	tar -xf sys_sdk-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz --strip-components=1 -C $(SDK_TMPDIR) sxd_kernel/kernel_backports $(LOG_SIMPLE)
 endif
 
-	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patch/; git stash -- patch/
+	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patches-sonic/; git stash -- patches-sonic/
 ifeq ($(CREATE_BRANCH), y)
 	git checkout -B "$(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$(MLNX_SDK_VERSION)" HEAD
 	echo $(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$(MLNX_SDK_VERSION) branch created in sonic-linux-kernel $(LOG_SIMPLE)
