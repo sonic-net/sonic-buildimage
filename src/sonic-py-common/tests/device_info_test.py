@@ -714,6 +714,32 @@ liquid_cooled=true
         assert device_info.get_expected_asic_list() == []
         mock_open.assert_called_once_with("/x/expected_asic_list")
 
+    @mock.patch("sonic_py_common.device_info.get_path_to_hwsku_dir")
+    def test_get_bmc_os(self, mock_get_hwsku_dir, tmp_path):
+        mock_get_hwsku_dir.return_value = str(tmp_path)
+        bmc_os_file = tmp_path / device_info.BMC_OS_FILE
+
+        # File does not exist
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
+        bmc_os_file.write_text(json.dumps({'os': device_info.BMC_OS_SONIC}))
+        assert device_info.get_bmc_os() == device_info.BMC_OS_SONIC
+
+        bmc_os_file.write_text(json.dumps({'os': device_info.BMC_OS_OPENBMC}))
+        assert device_info.get_bmc_os() == device_info.BMC_OS_OPENBMC
+
+        bmc_os_file.write_text(json.dumps({'os': 'linux'}))
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
+        bmc_os_file.write_text(json.dumps({}))
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
+        bmc_os_file.write_text("invalid json")
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
+        mock_get_hwsku_dir.side_effect = OSError("Failed to locate platform directory")
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
     @classmethod
     def teardown_class(cls):
         print("TEARDOWN")

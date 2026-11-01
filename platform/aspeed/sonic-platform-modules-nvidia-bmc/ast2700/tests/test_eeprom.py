@@ -41,6 +41,7 @@ IPMI_FRU_OUTPUT = (
     "FRU Board Serial Number: SN1234567\n"
     "FRU Board Custom Info: MAC: aa:bb:cc:dd:ee:ff\n"
     "FRU Product Version: A0\n"
+    "FRU Board Manufacturer: NVIDIA\n"
 )
 
 
@@ -94,6 +95,7 @@ class TestIpmiFru:
         assert Eeprom._TLV_CODE_SERIAL_NUMBER in tlv_list
         assert Eeprom._TLV_CODE_MAC_BASE in tlv_list
         assert Eeprom._TLV_CODE_LABEL_REVISION in tlv_list
+        assert Eeprom._TLV_CODE_MANUF_NAME in tlv_list
 
     def test_get_tlv_dict_parses_output(self):
         fru = IpmiFru("/dev/null")
@@ -104,6 +106,7 @@ class TestIpmiFru:
         assert tlvs[Eeprom._TLV_CODE_SERIAL_NUMBER] == "SN1234567"
         assert tlvs[Eeprom._TLV_CODE_MAC_BASE] == "aa:bb:cc:dd:ee:ff"
         assert tlvs[Eeprom._TLV_CODE_LABEL_REVISION] == "A0"
+        assert tlvs[Eeprom._TLV_CODE_MANUF_NAME] == "NVIDIA"
 
     def test_get_tlv_dict_ignores_unknown_lines(self):
         fru = IpmiFru("/dev/null")
@@ -169,6 +172,7 @@ class TestEeprom:
             hex(Eeprom._TLV_CODE_SERIAL_NUMBER): "serial",
             hex(Eeprom._TLV_CODE_MAC_BASE): "11:22:33:44:55:66",
             hex(Eeprom._TLV_CODE_LABEL_REVISION): "A0",
+            hex(Eeprom._TLV_CODE_MANUF_NAME): "NVIDIA",
         }
         eeprom._eeprom_info_dict = info
 
@@ -177,6 +181,7 @@ class TestEeprom:
         assert eeprom.get_serial_number() == "serial"
         assert eeprom.get_base_mac() == "11:22:33:44:55:66"
         assert eeprom.get_revision() == "A0"
+        assert eeprom.get_manufacturer() == "NVIDIA"
 
     def test_getters_return_none_when_code_missing(self):
         eeprom = self._make_eeprom()
@@ -186,6 +191,7 @@ class TestEeprom:
         assert eeprom.get_serial_number() is None
         assert eeprom.get_base_mac() is None
         assert eeprom.get_revision() is None
+        assert eeprom.get_manufacturer() is None
 
     def test_read_eeprom_caches_raw_buffer(self):
         eeprom = self._make_eeprom()
