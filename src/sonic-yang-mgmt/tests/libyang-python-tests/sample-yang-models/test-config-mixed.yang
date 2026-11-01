@@ -1,0 +1,34 @@
+module test-config-mixed {
+    namespace "http://github.com/Azure/test-config-mixed";
+    prefix tcm;
+
+    revision 2026-10-22 {
+        description "Test YANG model with both config-true and config-false child containers";
+    }
+
+    container test-config-mixed {
+        container TEST_CONFIG_MIXED_CFG {
+            list TEST_CONFIG_MIXED_CFG_LIST {
+                key "name";
+                leaf name {
+                    type string;
+                }
+                leaf value {
+                    type string;
+                }
+            }
+        }
+        container TEST_CONFIG_MIXED_INFO {
+            config false;
+            list TEST_CONFIG_MIXED_INFO_LIST {
+                key "name";
+                leaf name {
+                    type string;
+                }
+                leaf value {
+                    type string;
+                }
+            }
+        }
+    }
+}
