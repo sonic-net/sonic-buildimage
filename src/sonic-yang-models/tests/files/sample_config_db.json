@@ -1904,6 +1904,7 @@
             },
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
+                "advertise-all-vni-l3vni-neigh": "true",
                 "advertise-svi-ip": "true",
                 "autort": "rfc8365-compatible"
             }
