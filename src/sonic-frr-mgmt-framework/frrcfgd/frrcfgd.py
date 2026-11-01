@@ -103,6 +103,8 @@ class BgpdClientMgr(threading.Thread):
             'BGP_GLOBALS_EVPN_VNI': ['bgpd'],
             'BGP_GLOBALS_EVPN_RT': ['bgpd'],
             'BGP_GLOBALS_EVPN_VNI_RT': ['bgpd'],
+            'EVPN_ETHERNET_SEGMENT': ['mgmtd'],
+            'EVPN_MH_GLOBAL': ['zebra'],
             'BFD_PEER': ['bfdd'],
             'BFD_PEER_SINGLE_HOP': ['bfdd'],
             'BFD_PEER_MULTI_HOP': ['bfdd'],
@@ -1991,6 +1993,10 @@ class BGPConfigDaemon:
                                ('import-rts',                                  '{no:no-prefix}route-target import {}', hdl_import_list),
                                ('export-rts',                                  '{no:no-prefix}route-target export {}', hdl_export_list)]
 
+    evpn_mh_global_key_map = [('startup_delay',  '{no:no-prefix}evpn mh startup-delay {}'),
+                              ('mac_holdtime',   '{no:no-prefix}evpn mh mac-holdtime {}'),
+                              ('neigh_holdtime', '{no:no-prefix}evpn mh neigh-holdtime {}')]
+
     ospfv2_global_key_map = [('enable',                        '{no:no-prefix}'),
                              ('auto-cost-reference-bandwidth', '{no:no-prefix}auto-cost reference-bandwidth {}'),
                              ('ospf-rfc1583-compatible',       '{no:no-prefix}compatible rfc1583', ['true', 'false']),
@@ -2120,6 +2126,7 @@ class BGPConfigDaemon:
                       'BGP_GLOBALS_AF_AGGREGATE_ADDR':  af_aggregate_key_map,
                       'BGP_GLOBALS_AF_NETWORK':         af_network_key_map,
                       'BGP_GLOBALS_EVPN_VNI':           global_evpn_vni_key_map,
+                      'EVPN_MH_GLOBAL':                 evpn_mh_global_key_map,
                       'BFD_PEER_SINGLE_HOP':            bfd_peer_shop_key_map,
                       'BFD_PEER_MULTI_HOP':             bfd_peer_mhop_key_map,
                       'IP_SLA':                         ip_sla_key_map,
@@ -2511,6 +2518,8 @@ class BGPConfigDaemon:
             ('BGP_GLOBALS_EVPN_VNI', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
+            ('EVPN_ETHERNET_SEGMENT', self.bgp_table_handler_common),
+            ('EVPN_MH_GLOBAL', self.bgp_table_handler_common),
             ('BFD_PEER', self.bfd_handler),
             ('NEIGHBOR_SET', self.bgp_table_handler_common),
             ('NEXTHOP_SET', self.bgp_table_handler_common),
@@ -2540,20 +2549,59 @@ class BGPConfigDaemon:
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
+        # EVPN_ETHERNET_SEGMENT interfaces whose ES config FRR refused.
+        self.evpn_es_pending = set()
+        # Type-3 ES interfaces taking es-sys-mac from PORTCHANNEL -> the system_mac last used.
+        self.evpn_es_pc_mac = {}
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
-        if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
+        # FRR's ESs, whether rendered from the template or replayed, start from these values.
+        for ifname, es_row in self.config_db.get_table('EVPN_ETHERNET_SEGMENT').items():
+            if es_row.get('type') == 'TYPE_3_MAC_BASED' and not es_row.get('es_sys_mac'):
+                pc_entry = self.config_db.get_entry('PORTCHANNEL', ifname) or {}
+                self.evpn_es_pc_mac[ifname] = pc_entry.get('system_mac', '').lower()
+        # True only while CONFIG_DB is replayed into FRR, which may already hold that config.
+        self._replaying = self.config_mode == "unified" and self.use_template_render_for_restore == 'false'
+        if self._replaying:
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
                     self.__replay_table_entry(table, key, data)
+        self._replaying = False
+
+    def __queue_evpn_es(self, ifname):
+        entry = self.config_db.get_entry('EVPN_ETHERNET_SEGMENT', ifname)
+        if not entry:
+            return
+        upd_data = {k: CachedDataWithOp(v, CachedDataWithOp.OP_ADD) for k, v in entry.items()}
+        self.bgp_message.put((ifname, False, 'EVPN_ETHERNET_SEGMENT', upd_data))
+
+    def __retry_evpn_es(self, done_ifname):
+        """An ES was removed or changed on done_ifname, so an ESI it held may be free again."""
+        for ifname in sorted(self.evpn_es_pending - {done_ifname}):
+            self.evpn_es_pending.discard(ifname)
+            self.__queue_evpn_es(ifname)
+
+    def portchannel_handler(self, table, key, data):
+        """Re-apply a Type-3 ES whose es-sys-mac comes from this PortChannel's system_mac."""
+        if key not in self.evpn_es_pc_mac:
+            return
+        if (data or {}).get('system_mac', '').lower() == self.evpn_es_pc_mac[key]:
+            return
+        self.__queue_evpn_es(key)
+        upd_data_list = []
+        self.__update_bgp(upd_data_list)
+        for table1, key1, data1 in upd_data_list:
+            self.__update_cache_data(ExtConfigDBConnector.get_table_key(table1, key1), data1)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
             self.config_db.subscribe(table, hdlr)
+        # Not in table_handler_list: only system_mac matters here, and the ES handler reads it on replay.
+        self.config_db.subscribe('PORTCHANNEL', self.portchannel_handler)
 
     @staticmethod
     def __run_command(table, command, daemons = None):
@@ -3307,6 +3355,106 @@ class BGPConfigDaemon:
                     continue
                 else:
                     data['route-target-type'].status = CachedDataWithOp.STAT_SUCC
+            elif table == 'EVPN_MH_GLOBAL':
+                cmd_prefix = ['configure terminal']
+                if not key_map.run_command(self, table, data, cmd_prefix):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running EVPN MH global config command')
+                    continue
+            elif table == 'EVPN_ETHERNET_SEGMENT':
+                ifname = prefix
+                intf_cmd = 'interface {}'.format(ifname)
+                entry = {} if del_table else self.config_db.get_entry('EVPN_ETHERNET_SEGMENT', ifname)
+
+                # Tear the ES down only when its identity changed; a df_pref-only update must not.
+                changed = set(f for f, dval in data.items()
+                              if isinstance(dval, CachedDataWithOp) and dval.op != CachedDataWithOp.OP_NONE)
+                identity_changed = del_table or bool(changed - {'df_pref'})
+                es_cache_key = ExtConfigDBConnector.get_table_key(table, ifname)
+                had_es = bool(self.table_data_cache.get(es_cache_key))
+
+                es_type = entry.get('type', '')
+                esi     = entry.get('esi', '')
+                es_id   = ''
+                es_sys_mac = ''
+                pc_mac  = None
+                if es_type == 'TYPE_0_OPERATOR_CONFIGURED' and esi and esi != 'AUTO':
+                    es_id = esi
+                elif es_type == 'TYPE_3_MAC_BASED':
+                    es_id = entry.get('es_id', '')
+                    if not es_id:
+                        m = re.search(r'(\d+)$', ifname)
+                        if m and 1 <= int(m.group(1)) <= 16777215:
+                            es_id = str(int(m.group(1)))
+                    es_sys_mac = entry.get('es_sys_mac', '')
+                    if not es_sys_mac:
+                        pc_entry = self.config_db.get_entry('PORTCHANNEL', ifname)
+                        if pc_entry and 'system_mac' in pc_entry:
+                            es_sys_mac = pc_entry['system_mac']
+                        pc_mac = es_sys_mac
+
+                if es_type == 'TYPE_3_MAC_BASED':
+                    es_valid = bool(es_id) and bool(es_sys_mac)
+                else:
+                    es_valid = bool(es_id)
+
+                command = ['vtysh', '-c', 'configure terminal', '-c', intf_cmd]
+                emitted = False
+                es_applied = False
+                # A replay may find the ES already live; the adds replace it in place, the clears would flap it.
+                readd = self._replaying and es_valid
+                if identity_changed:
+                    if not readd:
+                        command += ['-c', 'no evpn mh es-sys-mac',
+                                    '-c', 'no evpn mh es-df-pref',
+                                    '-c', 'no evpn mh es-id']
+                    emitted = True
+                    if es_valid:
+                        command += ['-c', 'evpn mh es-id {}'.format(es_id)]
+                        if es_sys_mac:
+                            command += ['-c', 'evpn mh es-sys-mac {}'.format(es_sys_mac)]
+                        es_applied = True
+                    elif es_type == 'TYPE_3_MAC_BASED':
+                        syslog.syslog(syslog.LOG_WARNING,
+                            'EVPN ES {}: Type-3 ES not created; es-id ({}) and es-sys-mac ({}) '
+                            'both required (set PORTCHANNEL.system_mac and es_id, or use a '
+                            'numbered interface)'.format(ifname, es_id or 'unset', es_sys_mac or 'unset'))
+
+                # DF preference applied as a delta so a df_pref-only change is non-disruptive.
+                df_pref = entry.get('df_pref', '')
+                if es_valid and (identity_changed or 'df_pref' in changed):
+                    if df_pref and str(df_pref) != '32767':
+                        command += ['-c', 'evpn mh es-df-pref {}'.format(df_pref)]
+                    elif not identity_changed or readd:
+                        command += ['-c', 'no evpn mh es-df-pref']
+                    emitted = True
+                    es_applied = True
+
+                if not emitted:
+                    continue
+                if not self.__run_command(table, command):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running EVPN ethernet segment config command')
+                    if identity_changed and not del_table:
+                        # zebra refuses an ESI another interface holds. The clears ran, so drop the
+                        # cached row; the row is retried when another ES is removed or re-identified.
+                        self.evpn_es_pending.add(ifname)
+                        self.table_data_cache.pop(es_cache_key, None)
+                    continue
+                self.evpn_es_pending.discard(ifname)
+                if identity_changed:
+                    # The PortChannel system_mac this ES now uses, if it takes one.
+                    if pc_mac is None:
+                        self.evpn_es_pc_mac.pop(ifname, None)
+                    else:
+                        self.evpn_es_pc_mac[ifname] = pc_mac.lower()
+                if identity_changed and had_es:
+                    self.__retry_evpn_es(ifname)
+                # Mark applied only when the ES was programmed; a skipped Type-3 is re-evaluated
+                # when its row or its PortChannel system_mac changes.
+                if del_table or es_applied:
+                    for _, dval in data.items():
+                        if isinstance(dval, CachedDataWithOp):
+                            dval.status = CachedDataWithOp.STAT_SUCC
+
             elif table == 'ROUTE_MAP':
                 map_name = prefix
                 seq_no = key
