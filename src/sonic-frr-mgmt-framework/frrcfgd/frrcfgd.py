@@ -85,8 +85,12 @@ class BgpdClientMgr(threading.Thread):
             'PREFIX_SET': ['bgpd'],
             'COMMUNITY_SET': ['bgpd'],
             'EXTENDED_COMMUNITY_SET': ['bgpd'],
-            'ROUTE_MAP': ['zebra', 'bgpd', 'ospfd'],
-            'PREFIX': ['zebra', 'bgpd', 'ospfd', 'pimd'],
+            # zebra's route-maps and prefix-lists are mgmtd-owned: zebra's vty
+            # has no route-map or prefix-list commands, so a line sent to it is
+            # refused while bgpd's success hides that. mgmtd pushes them down
+            # to zebra as a backend client.
+            'ROUTE_MAP': ['mgmtd', 'bgpd', 'ospfd'],
+            'PREFIX': ['mgmtd', 'bgpd', 'ospfd', 'pimd'],
             'BGP_PEER_GROUP': ['bgpd'],
             'BGP_NEIGHBOR': ['bgpd'],
             'BGP_PEER_GROUP_AF': ['bgpd'],
@@ -122,7 +126,8 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
+            'PROTOCOL_ROUTE_MAP': ['mgmtd']
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -1931,7 +1936,7 @@ class BGPConfigDaemon:
                          ('match_prefix_set|ipv6',          '{no:no-prefix}match ipv6 address prefix-list {}'),
                          ('match_neighbor',                 '[bgpd]{no:no-prefix}match peer {:peer-ip}'),
                          ('match_tag',                      '{no:no-prefix}match tag {}'),
-                         ('match_protocol',                 '[zebra]{no:no-prefix}match source-protocol {:src-proto}'),
+                         ('match_protocol',                 '[mgmtd]{no:no-prefix}match source-protocol {:src-proto}'),
                          ('match_next_hop_set|ipv4',        '{no:no-prefix}match ip next-hop prefix-list {}'),
                          ('match_next_hop_set|ipv6',        '{no:no-prefix}match ip next-hop prefix-list {}'), #match ipv6 next-hop prefix-list not suppported by frr
                          ('match_med',                      '{no:no-prefix}match metric {}'),
@@ -1945,6 +1950,7 @@ class BGPConfigDaemon:
                          ('set_origin',                     '[bgpd]{no:no-prefix}set origin {:tolower}'),
                          ('set_local_pref',                 '[bgpd]{no:no-prefix}set local-preference {}'),
                          ('set_next_hop',                   '{no:no-prefix}set ip next-hop {}'),
+                         ('set_src',                        '[mgmtd]{no:no-prefix}set src {}'),
                          ('set_ipv6_next_hop_global',       '[bgpd]{no:no-prefix}set ipv6 next-hop global {}'),
                          ('set_ipv6_next_hop_prefer_global', '[bgpd]{no:no-prefix}set ipv6 next-hop prefer-global', ['true', 'false']),
                          (['set_metric_action', '+set_metric', '+set_med'], '{}set metric {} ', handle_rmap_set_metric),
@@ -2493,6 +2499,17 @@ class BGPConfigDaemon:
                                         nh_attr('ifname'), nh_attr('tag'), nh_attr('distance'),
                                         nh_attr('nexthop-vrf'))
 
+        # PROTOCOL_ROUTE_MAP state: normalized "<vrf>|<afi>|<proto>" key
+        # -> currently applied route_map name. Used to emit `no ip protocol ...
+        # route-map <NAME>` on delete, and to short-circuit idempotent sets.
+        self.protocol_route_map_state = {}
+        prm_table = self.config_db.get_table('PROTOCOL_ROUTE_MAP')
+        for key, entry in prm_table.items():
+            prm_key = '|'.join(key) if isinstance(key, tuple) else str(key)
+            rm = entry.get('route_map') if isinstance(entry, dict) else None
+            if rm:
+                self.protocol_route_map_state[prm_key] = rm
+
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
             ('DEVICE_METADATA', self.metadata_handler),
@@ -2538,6 +2555,7 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
+            ('PROTOCOL_ROUTE_MAP', self.protocol_route_map_handler),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -3134,7 +3152,7 @@ class BGPConfigDaemon:
                         # use table daemons setting
                         daemons = None
                     else:
-                        daemons = ['bgpd', 'zebra']
+                        daemons = ['bgpd', 'mgmtd']
                     if pfx_action.op == CachedDataWithOp.OP_DELETE or pfx_action.op == CachedDataWithOp.OP_UPDATE:
                         del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
                                                                                          pfx_action.data, seq)
@@ -4154,6 +4172,94 @@ class BGPConfigDaemon:
                                                          {'remote-address', 'vrf', 'interface', 'local-address'}])
     def bfd_mhop_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'remote-address', 'vrf', 'local-address'}])
+
+    def protocol_route_map_handler(self, table, key, data):
+        """
+        Translate PROTOCOL_ROUTE_MAP rows to zebra commands.
+
+        CONFIG_DB key: "<vrf>|<addr_family>|<protocol>". Emits:
+            [vrf <vrf>]
+             ip|ipv6 protocol <protocol> route-map <route_map>
+            [exit-vrf]
+        The default VRF renders without the vrf/exit-vrf wrapping.
+
+        Per-key state (self.protocol_route_map_state) lets deletes emit
+        'no ... route-map <NAME>' using the last-applied name, and lets
+        idempotent sets short-circuit.
+        """
+        syslog.syslog(syslog.LOG_INFO,
+                      '[bgp cfgd](protocol_route_map) table={} key={} data={}'.format(table, key, data))
+
+        prm_key = '|'.join(key) if isinstance(key, tuple) else str(key)
+        parts = prm_key.split('|')
+        if len(parts) != 3:
+            syslog.syslog(syslog.LOG_ERR,
+                          'PROTOCOL_ROUTE_MAP: malformed key {} (expected vrf|afi|protocol)'.format(prm_key))
+            return
+
+        # addr_family uses sonic-types:ip-family (values 'IPv4'/'IPv6'); FRR
+        # expects 'ip'/'ipv6' as the CLI keyword. Same mapping used by
+        # bgpd.conf.db.pref_list.j2 and bgpd.conf.db.route_map.j2.
+        entry_vrf, afi, protocol = parts
+        ip_kw = {'IPv4': 'ip', 'IPv6': 'ipv6'}.get(afi)
+        if ip_kw is None:
+            syslog.syslog(syslog.LOG_ERR,
+                          'PROTOCOL_ROUTE_MAP: unsupported addr_family {} in key {}'.format(afi, prm_key))
+            return
+
+        prev_rm = self.protocol_route_map_state.get(prm_key)
+
+        # Decide what command to push, but DON'T mutate state yet — state must
+        # only reflect what FRR has actually accepted. Mutating before the
+        # vtysh succeeds would let a transient failure desync us permanently:
+        # the idempotent `prev_rm == route_map` guard would then silently skip
+        # every retry.
+        is_delete = data is None
+        if is_delete:
+            if prev_rm is None:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              'PROTOCOL_ROUTE_MAP: del for untracked key {}; skipping'.format(prm_key))
+                return
+            inner = 'no {} protocol {} route-map {}'.format(ip_kw, protocol, prev_rm)
+            new_rm = None
+        else:
+            route_map = data.get('route_map') if isinstance(data, dict) else None
+            if not route_map:
+                syslog.syslog(syslog.LOG_ERR,
+                              'PROTOCOL_ROUTE_MAP: missing route_map for key {}'.format(prm_key))
+                return
+            if prev_rm == route_map:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              'PROTOCOL_ROUTE_MAP: {} already bound to {}; skipping vtysh'.format(prm_key, route_map))
+                return
+            # FRR's `ip|ipv6 protocol X route-map Y` is upsert-style: emitting
+            # the new binding replaces any prior route-map for the same
+            # (vrf, afi, proto). No explicit `no ... route-map <prev>` needed.
+            inner = '{} protocol {} route-map {}'.format(ip_kw, protocol, route_map)
+            new_rm = route_map
+
+        # entry_vrf is the union type (literal "default" or a leafref into
+        # VRF_LIST) and route_map is a leafref into ROUTE_MAP_SET, both
+        # validated by YANG against ^[A-Za-z0-9_][A-Za-z0-9_-]*$-ish
+        # identifiers, so inserting them into the vtysh command string carries
+        # no shell-injection risk. If the schema is ever loosened, this
+        # assumption needs revisiting.
+        if entry_vrf == self.DEFAULT_VRF:
+            command = "vtysh -c 'configure terminal' -c '{}'".format(inner)
+        else:
+            command = ("vtysh -c 'configure terminal' "
+                       "-c 'vrf {}' -c '{}' -c 'exit-vrf'".format(entry_vrf, inner))
+
+        if not self.__run_command(table, command):
+            syslog.syslog(syslog.LOG_ERR,
+                          'PROTOCOL_ROUTE_MAP: failed running vtysh for key {}'.format(prm_key))
+            return
+
+        # Command succeeded — now it's safe to publish the new state.
+        if is_delete:
+            self.protocol_route_map_state.pop(prm_key, None)
+        else:
+            self.protocol_route_map_state[prm_key] = new_rm
 
     def start(self):
         self.subscribe_all()

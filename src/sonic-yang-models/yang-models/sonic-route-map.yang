@@ -308,6 +308,15 @@ module sonic-route-map {
                     description "Set IP nexthop";
                 }
 
+                leaf set_src {
+                    type inet:ip-address;
+                    description
+                        "Set the source IP address (IPv4 or IPv6) that zebra uses when
+                         installing matched routes into the kernel FIB. The address must
+                         be locally configured on the device (typically a Loopback0
+                         address). Renders to FRR's route-map 'set src <addr>' clause.";
+                }
+
                 leaf set_ipv6_next_hop_global {
                     type string;
                     description "Set IPv6 global next hop";
