@@ -9,6 +9,8 @@ import contextlib
 import os
 import signal
 import sys
+import threading
+import time
 from unittest import mock
 
 import pytest
@@ -1131,23 +1133,40 @@ def test_reset_failure_counts_as_a_failed_target():
     assert failures == len(targets)
 
 
-def test_reset_exception_counts_as_a_failed_target_and_logs():
-    """An exception from one reset worker is counted without hiding other results."""
-    mock_log = mock.MagicMock()
+@pytest.mark.parametrize("early_failure", ["returns_false", "raises"])
+def test_reset_failure_before_barrier_releases_other_targets(early_failure):
+    """A target that fails before reaching the barrier must not leave the others waiting."""
+    wait_limit_secs = 10
+    released_at = []
 
-    def reset(dpu, _verbose):
-        if dpu == "dpu2":
-            raise RuntimeError("reset failed")
+    def reset(dpu, _verbose, barrier):
+        if dpu == "dpu0":
+            if early_failure == "raises":
+                raise RuntimeError("power-off failed")
+            return False
+        try:
+            barrier.wait(timeout=wait_limit_secs)
+        except threading.BrokenBarrierError:
+            pass
+        released_at.append(time.monotonic())
         return True
 
+    start = time.monotonic()
     with (
         mock.patch.object(doca_install_core.reset_dpu, "reset_dpu", side_effect=reset),
-        mock.patch.object(doca_install_core.install_executor, "logger", mock_log),
+        mock.patch.object(doca_install_core.install_executor, "logger") as executor_log,
+        mock.patch.object(doca_install_core, "logger") as core_log,
     ):
         failures = doca_install_core._reset_targets_in_parallel(_targets(), False)
 
     assert failures == 1
-    assert "Parallel task failed" in str(mock_log.error.call_args)
+    assert len(released_at) == 1
+    assert released_at[0] - start < wait_limit_secs / 2
+    if early_failure == "raises":
+        assert "Parallel task failed" in str(executor_log.error.call_args)
+        assert "power-off failed" in str(executor_log.error.call_args)
+    else:
+        core_log.error.assert_called_once_with("Resetting DPU %s failed", "dpu0")
 
 
 def test_reset_failure_makes_a_successful_flash_report_failure(tmp_path):
