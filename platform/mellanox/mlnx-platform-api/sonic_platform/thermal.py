@@ -472,7 +472,9 @@ class ModuleThermal(ThermalBase):
         index should be a string for category ambient and int for other categories
         """
         super(ModuleThermal, self).__init__()
-        self.name = f'xSFP module {sfp.sdk_index + 1} Temp'
+        # The chassis position, not sdk_index: the four CPO ports sharing an
+        # optical engine share its sdk_index and would collide here.
+        self.name = f'xSFP module {sfp.index} Temp'
         self.sfp = sfp
 
     def get_name(self):
