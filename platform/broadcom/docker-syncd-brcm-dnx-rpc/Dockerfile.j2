@@ -44,13 +44,12 @@ RUN apt-get update \
 {{ install_debian_packages(docker_syncd_brcm_dnx_rpc_pydebs.split(' ')) }}
 {% endif %}
 
-RUN pip3 install cffi==1.16.0    \
- && pip3 install wheel  \
- && pip3 install nnpy   \
+RUN pip3 install nnpy   \
  && mkdir -p /opt       \
  && cd /opt             \
- && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
- && apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y \
+ && wget https://raw.githubusercontent.com/p4lang/ptf/9d41838d634c479fc24fac7a527ec5ee2d0ce8eb/ptf_nn/ptf_nn_agent.py \
+ && mkdir ptf && cd ptf && wget https://raw.githubusercontent.com/p4lang/ptf/9d41838d634c479fc24fac7a527ec5ee2d0ce8eb/src/ptf/afpacket.py && touch __init__.py \
+ && ( apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y ) \
  && rm -rf /root/deps
 
 COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
