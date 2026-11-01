@@ -560,6 +560,15 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "L3EvpnMH"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
