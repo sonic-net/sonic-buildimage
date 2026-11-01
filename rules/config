@@ -392,6 +392,9 @@ REGISTRY_SERVER_PATH ?=
 # BUILD_MULTIASIC_KVM - if set to y multi-asic KVM images will be generated.
 BUILD_MULTIASIC_KVM = n
 
+# BUILD_UEFI_VS - publish the UEFI VS image under the standard image filename.
+BUILD_UEFI_VS ?= n
+
 # INCLUDE_MUX - build docker-mux for dual ToR (Gemini)
 INCLUDE_MUX = y
 
