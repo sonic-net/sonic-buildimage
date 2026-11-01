@@ -1,0 +1,37 @@
+{% from "dockers/dockerfile-macros.j2" import rsync_from_builder_stage %}
+ARG BASE=docker-swss-layer-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+# countersyncd is shipped by the swss package, which docker-swss-layer already
+# installs, so this image only adds its own scripts on top of that shared layer.
+# Fail the build early if the binary is ever missing from the base layer.
+RUN test -x /usr/bin/countersyncd
+
+COPY ["docker_init.sh", "start.sh", "countersyncd.sh", "readiness_probe_hook", "/usr/bin/"]
+RUN chmod 755 /usr/bin/docker_init.sh /usr/bin/start.sh /usr/bin/countersyncd.sh /usr/bin/readiness_probe_hook
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["critical_processes", "/etc/supervisor/"]
+
+FROM $BASE
+
+ARG image_version
+
+{{ rsync_from_builder_stage() }}
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENTRYPOINT ["/usr/bin/docker_init.sh"]
