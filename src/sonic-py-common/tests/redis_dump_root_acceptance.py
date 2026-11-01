@@ -31,9 +31,7 @@ def test_real_ordinary_dump_and_load_denial(protected_redis):
 import io, json, sys
 from unittest.mock import patch
 import redis
-from sonic_py_common import redis_auth
 from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
-redis_auth.AUTH_DIRECTORY = sys.argv[1]
 socket = sys.argv[2]
 with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=socket), \\
      patch('swsscommon.swsscommon.SonicDBConfig.getDbPort', return_value=0), \\
@@ -41,10 +39,10 @@ with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=socket)
      patch('swsscommon.swsscommon.SonicDBConfig.getDbHostname', return_value='127.0.0.1'), \\
      patch('sonic_py_common.multi_asic.is_multi_asic', return_value=False):
     output = io.StringIO()
-    with patch('sys.argv', ['sonic-db-dump']), patch('sys.stdout', output):
+    with patch('sys.argv', ['sonic-db-dump', '-t', 'unix_socket']), patch('sys.stdout', output):
         sonic_db_dump_load()
     assert json.loads(output.getvalue())['ordinary-readable']['value'] == 'value'
-    with patch('sys.argv', ['sonic-db-load']), patch('sys.stdin', io.StringIO(output.getvalue())):
+    with patch('sys.argv', ['sonic-db-load', '-t', 'unix_socket']), patch('sys.stdin', io.StringIO(output.getvalue())):
         try:
             sonic_db_dump_load()
         except redis.exceptions.ResponseError:
@@ -66,8 +64,8 @@ with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=socket)
     (65534, 'unix_socket', 'tcp', '760', False),
     (0, 'tcp', 'tcp', '760', True),
     (65534, 'tcp', 'tcp', '760', True),
-    (0, None, '0', '666', True),
-    (65534, None, '0', '666', True),
+    (0, None, '0', '666', False),
+    (65534, None, '0', '666', False),
     (0, 'tcp', '0', '666', False),
     (65534, 'tcp', '0', '666', False),
     (65534, None, '0', '760', False),
@@ -80,26 +78,29 @@ def test_real_legacy_transport_permissions(uid, transport, metadata_port, socket
         with socket_module.socket() as reservation:
             reservation.bind(('127.0.0.1', 0))
             port = reservation.getsockname()[1]
+        log = (root / 'redis.log').open('w')
         server = subprocess.Popen([
             'redis-server', '--bind', '127.0.0.1', '--port', str(port),
             '--unixsocket', path, '--unixsocketperm', socket_mode,
             '--save', '', '--appendonly', 'no',
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        ], stdout=log, stderr=subprocess.STDOUT)
         writer = redis.Redis(host='127.0.0.1', port=port)
         try:
             for _ in range(200):
-                if Path(path).exists():
+                try:
+                    writer.ping()
                     break
-                if server.poll() is not None:
-                    pytest.fail('legacy test Redis exited before startup')
-                time.sleep(0.01)
+                except redis.ConnectionError:
+                    if server.poll() is not None:
+                        pytest.fail('legacy test Redis exited: ' + (root / 'redis.log').read_text())
+                    time.sleep(0.01)
+            else:
+                pytest.fail('legacy test Redis did not answer PING')
             writer.set('legacy-readable', 'value')
             code = '''
 import io, json, sys
 from unittest.mock import patch
-from sonic_py_common import redis_auth
 from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
-redis_auth.AUTH_DIRECTORY = sys.argv[1] + '/absent-auth'
 argv = ['sonic-db-dump', '-n', 'APPL_DB'] + (['-t', sys.argv[4]] if sys.argv[4] else [])
 with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=sys.argv[1] + '/redis.sock'), \\
      patch('swsscommon.swsscommon.SonicDBConfig.getDbPort', return_value=int(sys.argv[2])), \\
@@ -121,3 +122,4 @@ with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=sys.arg
             writer.close()
             server.terminate()
             server.wait(timeout=10)
+            log.close()

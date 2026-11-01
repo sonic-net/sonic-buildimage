@@ -1,317 +1,111 @@
-from io import StringIO
+"""Verify explicit dump/load endpoints and native-pool forwarding."""
+import io
 import sys
-from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
-from swsscommon.swsscommon import SonicDBKey
 from unittest.mock import patch
-
-@patch("redisdl.dump")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis/redis.sock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6379)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=0)
-@patch("sys.argv", ["sonic-db-dump", "-n", "APPL_DB"])
-def test_sonic_db_dump(
-        mock_getDbId, mock_getDbPort, mock_getDbHostname, mock_getDbSock,
-        mock_dump):
-    sonic_db_dump_load()
-    mock_dump.assert_called_once_with(sys.stdout, **
-        {
-            "host": None,
-            "port": None,
-            "unix_socket_path": "/var/run/redis/redis.sock",
-            "db": 0,
-            "encoding": "utf-8",
-        }
-    )
-    mock_getDbHostname.assert_called_once_with("APPL_DB", SonicDBKey())
-    mock_getDbSock.assert_called_once_with("APPL_DB", SonicDBKey())
-    mock_getDbPort.assert_called_once()
-
-
-@patch("redisdl.RedisWrapper")
-@patch("sonic_py_common.multi_asic.is_multi_asic", return_value=False)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis/redis.sock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6379)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=2)
-@patch("sys.argv", ["sonic-db-dump", "-n", "COUNTERS_DB", "-y"])
-def test_sonic_db_dump_pretty_uses_unix_socket(
-        mock_getDbId, mock_getDbPort, mock_getDbHostname, mock_getDbSock,
-        mock_is_multi_asic, mock_redis):
-    mock_redis.return_value.keys.return_value = []
-
-    with patch("sys.stdout", new_callable=StringIO) as output:
-        sonic_db_dump_load()
-
-    assert output.getvalue() == "{}"
-    mock_redis.assert_called_once_with(
-        unix_socket_path="/var/run/redis/redis.sock",
-        password=None,
-        db=2,
-        encoding="utf-8",
-    )
-    mock_getDbHostname.assert_called_once_with("COUNTERS_DB", SonicDBKey())
-    mock_getDbSock.assert_called_once_with("COUNTERS_DB", SonicDBKey())
-    mock_getDbPort.assert_called_once()
-
-
-@patch("redisdl.dump")
-@patch("sonic_py_common.multi_asic.is_multi_asic", return_value=True)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis0/redis.sock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6379)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=0)
-@patch("sys.argv", ["sonic-db-dump", "--netns", "asic0", "-n", "APPL_DB"])
-def test_sonic_db_dump_multi_asic(
-        mock_getDbId, mock_getDbPort, mock_getDbHostname, mock_getDbSock,
-        mock_is_multi_asic, mock_dump):
-    sonic_db_dump_load()
-    mock_dump.assert_called_once_with(sys.stdout, **
-        {
-            "host": None,
-            "port": None,
-            "unix_socket_path": "/var/run/redis0/redis.sock",
-            "db": 0,
-            "encoding": "utf-8",
-        }
-    )
-    mock_getDbHostname.assert_called_once_with("APPL_DB", SonicDBKey("asic0"))
-    mock_getDbSock.assert_called_once_with("APPL_DB", SonicDBKey("asic0"))
-    mock_getDbPort.assert_called_once()
-
-
-@patch("redisdl.load")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis/redis.sock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6379)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=0)
-@patch("sys.argv", ["sonic-db-load", "-n", "APPL_DB"])
-def test_sonic_db_load(
-        mock_getDbId, mock_getDbPort, mock_getDbHostname, mock_getDbSock,
-        mock_load):
-    sonic_db_dump_load()
-    mock_load.assert_called_once_with(sys.stdin, **
-        {
-            "host": None,
-            "port": None,
-            "unix_socket_path": "/var/run/redis/redis.sock",
-            "db": 0,
-            "encoding": "utf-8",
-        }
-    )
-    args, kwargs = mock_getDbHostname.call_args
-    assert args[0] == "APPL_DB"
-    assert args[1].netns == ""
-    mock_getDbSock.assert_called_once_with("APPL_DB", SonicDBKey())
-    mock_getDbPort.assert_called_once()
-
-
-@patch("redisdl.load")
-@patch("sonic_py_common.multi_asic.is_multi_asic", return_value=True)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis0/redis.sock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6379)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=0)
-@patch("sys.argv", ["sonic-db-load", "--netns", "asic0", "-n", "APPL_DB"])
-def test_sonic_db_load_multi_asic(
-        mock_getDbId, mock_getDbPort, mock_getDbHostname, mock_getDbSock,
-        mock_is_multi_asic, mock_load):
-    sonic_db_dump_load()
-    mock_load.assert_called_once_with(sys.stdin, **
-        {
-            "host": None,
-            "port": None,
-            "unix_socket_path": "/var/run/redis0/redis.sock",
-            "db": 0,
-            "encoding": "utf-8",
-        }
-    )
-    mock_getDbHostname.assert_called_once_with("APPL_DB", SonicDBKey("asic0"))
-    mock_getDbSock.assert_called_once_with("APPL_DB", SonicDBKey("asic0"))
-    mock_getDbPort.assert_called_once()
-
 
 import pytest
 
-LOCAL_SOCKET = "/var/run/redis/redis.sock"
+from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
 
 
-def run_command(argv, action="dump", multi_asic=False):
-    action_path = "redisdl.{}".format(action)
-    with patch("sys.argv", argv), \
-            patch("sonic_py_common.multi_asic.is_multi_asic", return_value=multi_asic), \
-            patch(action_path) as mock_action:
+@pytest.fixture
+def metadata():
+    with patch('swsscommon.swsscommon.SonicDBConfig') as config, \
+            patch('sonic_py_common.multi_asic.is_multi_asic', return_value=False), \
+            patch('swsscommon.redis.connection_pool') as pool:
+        config.getDbSock.return_value = '/run/redis/example.sock'
+        config.getDbHostname.return_value = '127.0.0.2'
+        config.getDbPort.return_value = 6385
+        config.getDbId.return_value = 6
+        yield config, pool
+
+
+def test_explicit_socket_preserves_namespace_and_database(metadata):
+    config, pool = metadata
+    with patch.object(sys, 'argv', ['sonic-db-dump', '-n', 'STATE_DB', '--netns', 'asic0', '-t', 'unix_socket']), \
+            patch('redisdl.dump') as dump:
         sonic_db_dump_load()
-    return mock_action
+    pool.assert_called_once_with(unix_socket_path='/run/redis/example.sock', db=6, encoding='utf-8', host=None, port=None)
+    assert config.getDbSock.call_args.args[0] == 'STATE_DB'
+    assert config.getDbSock.call_args.args[1].netns == 'asic0'
+    config.getDbPort.assert_not_called()
+    assert dump.call_args.kwargs['connection_pool'] is pool.return_value
+    assert dump.call_args.kwargs['db'] == 6
 
 
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value=LOCAL_SOCKET)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=0)
-def test_dump_without_dbname_preserves_db_zero_and_uses_local_socket(
-        mock_get_db_id, mock_get_hostname, mock_get_socket):
-    mock_dump = run_command(["sonic-db-dump"])
-
-    mock_dump.assert_called_once_with(sys.stdout, **{
-        "host": None,
-        "port": None,
-        "unix_socket_path": LOCAL_SOCKET,
-        "db": 0,
-        "encoding": "utf-8",
-    })
-    mock_get_db_id.assert_called_once_with("APPL_DB", SonicDBKey())
-    mock_get_hostname.assert_called_once_with("APPL_DB", SonicDBKey())
-    mock_get_socket.assert_called_once_with("APPL_DB", SonicDBKey())
-
-
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value=LOCAL_SOCKET)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=0)
-def test_load_without_dbname_preserves_db_zero_and_uses_local_socket(
-        mock_get_db_id, mock_get_hostname, mock_get_socket):
-    mock_load = run_command(["sonic-db-load"], action="load")
-
-    mock_load.assert_called_once_with(sys.stdin, **{
-        "host": None,
-        "port": None,
-        "unix_socket_path": LOCAL_SOCKET,
-        "db": 0,
-        "encoding": "utf-8",
-    })
-    mock_get_db_id.assert_called_once_with("APPL_DB", SonicDBKey())
-
-
-@patch("swsscommon.swsscommon.SonicDBConfig.initializeGlobalConfig")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis0/redis.sock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="127.0.0.1")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=1)
-def test_auto_uses_namespace_socket_and_configured_db_id(
-        mock_get_db_id, mock_get_hostname, mock_get_socket, mock_initialize):
-    mock_dump = run_command(
-        ["sonic-db-dump", "--netns", "asic0", "-n", "ASIC_DB"],
-        multi_asic=True,
-    )
-
-    mock_dump.assert_called_once_with(sys.stdout, **{
-        "host": None,
-        "port": None,
-        "unix_socket_path": "/var/run/redis0/redis.sock",
-        "db": 1,
-        "encoding": "utf-8",
-    })
-    mock_get_db_id.assert_called_once_with("ASIC_DB", SonicDBKey("asic0"))
-    mock_initialize.assert_called_once_with()
-
-
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6385)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="192.0.2.10")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=17)
-def test_explicit_tcp_is_strict(
-        mock_get_db_id, mock_get_hostname, mock_get_port, mock_get_socket):
-    mock_dump = run_command([
-        "sonic-db-dump", "-n", "DPU_STATE_DB", "-t", "tcp",
-    ])
-
-    mock_dump.assert_called_once_with(sys.stdout, **{
-        "host": "192.0.2.10",
-        "port": 6385,
-        "unix_socket_path": None,
-        "db": 17,
-        "encoding": "utf-8",
-    })
-    mock_get_socket.assert_not_called()
-
-
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value=LOCAL_SOCKET)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=4)
-def test_explicit_unix_socket_is_strict(
-        mock_get_db_id, mock_get_socket, mock_get_hostname, mock_get_port):
-    mock_dump = run_command([
-        "sonic-db-dump", "-n", "CONFIG_DB", "-t", "unix_socket",
-    ])
-
-    mock_dump.assert_called_once_with(sys.stdout, **{
-        "host": None,
-        "port": None,
-        "unix_socket_path": LOCAL_SOCKET,
-        "db": 4,
-        "encoding": "utf-8",
-    })
-    mock_get_hostname.assert_not_called()
-    mock_get_port.assert_not_called()
-
-
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6385)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="192.0.2.10")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=17)
-def test_auto_keeps_empty_socket_remote_metadata_on_tcp(
-        mock_get_db_id, mock_get_hostname, mock_get_port, mock_get_socket):
-    mock_dump = run_command(["sonic-db-dump", "-n", "DPU_STATE_DB"])
-
-    mock_dump.assert_called_once_with(sys.stdout, **{
-        "host": "192.0.2.10",
-        "port": 6385,
-        "unix_socket_path": None,
-        "db": 17,
-        "encoding": "utf-8",
-    })
-
-
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="/var/run/redis-chassis/redis_chassis.sock")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort", return_value=6380)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname", return_value="redis_chassis.server")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=12)
-def test_auto_keeps_chassis_metadata_on_tcp(
-        mock_get_db_id, mock_get_hostname, mock_get_port, mock_get_socket):
-    mock_dump = run_command(["sonic-db-dump", "-n", "CHASSIS_APP_DB"])
-
-    mock_dump.assert_called_once_with(sys.stdout, **{
-        "host": "redis_chassis.server",
-        "port": 6380,
-        "unix_socket_path": None,
-        "db": 12,
-        "encoding": "utf-8",
-    })
-
-
-@patch("redisdl.dump")
-@patch("sonic_py_common.multi_asic.is_multi_asic", return_value=False)
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbSock", return_value="")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbPort")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbHostname")
-@patch("swsscommon.swsscommon.SonicDBConfig.getDbId", return_value=17)
-@patch("sys.argv", ["sonic-db-dump", "-n", "DPU_STATE_DB", "-t", "unix_socket"])
-def test_explicit_unix_socket_fails_when_not_configured(
-        mock_get_db_id, mock_get_hostname, mock_get_port, mock_get_socket,
-        mock_is_multi_asic, mock_dump):
-    with pytest.raises(ValueError, match="No Unix socket is configured"):
+@pytest.mark.parametrize('port', [0, 6385])
+@pytest.mark.parametrize('name', ['STATE_DB', 'CHASSIS_STATE_DB'])
+def test_default_keeps_explicit_tcp_contract(metadata, port, name):
+    config, pool = metadata
+    config.getDbPort.return_value = port
+    with patch.object(sys, 'argv', ['sonic-db-dump', '-n', name]), patch('redisdl.dump'):
         sonic_db_dump_load()
-
-    mock_dump.assert_not_called()
-    mock_get_hostname.assert_not_called()
-    mock_get_port.assert_not_called()
+    config.getDbSock.assert_not_called()
+    pool.assert_called_once_with(host='127.0.0.2', port=port, db=6, unix_socket_path=None, encoding='utf-8')
 
 
-@pytest.fixture(autouse=True)
-def accessible_configured_socket():
-    with patch('os.access', return_value=True), \
-            patch('swsscommon.swsscommon.SonicDBConfig.getDbPort', return_value=6379):
-        yield
+def test_missing_explicit_socket_fails_before_creating_pool(metadata):
+    config, pool = metadata
+    config.getDbSock.return_value = ''
+    with patch.object(sys, 'argv', ['sonic-db-dump', '-n', 'STATE_DB', '-t', 'unix_socket']), patch('redisdl.dump') as dump:
+        with pytest.raises(ValueError, match='No Unix socket'):
+            sonic_db_dump_load()
+    pool.assert_not_called()
+    dump.assert_not_called()
 
 
-@pytest.mark.parametrize('port,accessible,expected', [
-    (6379, False, 'tcp'), (6379, True, 'unix_socket'), (0, False, 'unix_socket'),
-])
-def test_auto_preserves_legacy_access_and_honors_port_zero(port, accessible, expected):
-    with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=LOCAL_SOCKET), \
-            patch('swsscommon.swsscommon.SonicDBConfig.getDbHostname', return_value='127.0.0.1'), \
-            patch('swsscommon.swsscommon.SonicDBConfig.getDbPort', return_value=port), \
-            patch('swsscommon.swsscommon.SonicDBConfig.getDbId', return_value=0), \
-            patch('os.access', return_value=accessible):
-        result = run_command(['sonic-db-dump']).call_args.kwargs
-    assert result['unix_socket_path'] == (LOCAL_SOCKET if expected == 'unix_socket' else None)
-    assert result['port'] == (None if expected == 'unix_socket' else port)
+def test_pretty_dump_forwards_native_pool(metadata):
+    _, pool = metadata
+    output = io.StringIO()
+    with patch.object(sys, 'argv', ['sonic-db-dump', '-n', 'STATE_DB', '-t', 'unix_socket', '-y']), \
+            patch('sys.stdout', output), patch('redisdl.dumps', return_value='{}') as dumps, patch('redisdl.dump') as dump:
+        sonic_db_dump_load()
+    assert output.getvalue() == '{}'
+    assert dumps.call_args.kwargs['connection_pool'] is pool.return_value
+    dump.assert_not_called()
+
+
+def test_load_keeps_encoding_on_the_native_pool(metadata):
+    _, pool = metadata
+    with patch.object(sys, 'argv', ['sonic-db-load', '-n', 'STATE_DB', '-t', 'unix_socket', '-E', 'latin-1']), \
+            patch('sys.stdin', io.StringIO('{}')), patch('redisdl.load') as load:
+        sonic_db_dump_load()
+    assert pool.call_args.kwargs['encoding'] == 'latin-1'
+    assert load.call_args.kwargs['connection_pool'] is pool.return_value
+
+
+@pytest.mark.parametrize('action', ['dump', 'load'])
+def test_omitted_database_selects_configured_appl_db(metadata, action):
+    config, pool = metadata
+    config.getDbId.return_value = 0
+    with patch.object(sys, 'argv', ['sonic-db-' + action]), \
+            patch('redisdl.' + action) as operation:
+        sonic_db_dump_load()
+    name, key = config.getDbId.call_args.args
+    assert name == 'APPL_DB' and key.netns == ''
+    assert pool.call_args.kwargs['db'] == 0
+    assert operation.call_args.kwargs['db'] == 0
+
+
+@pytest.mark.parametrize('namespace', ['asic3', ''])
+def test_multi_asic_infers_namespace_before_endpoint_lookup(metadata, namespace):
+    config, pool = metadata
+    with patch('sonic_py_common.multi_asic.is_multi_asic', return_value=True), \
+            patch('sonic_py_common.multi_asic.get_current_namespace', return_value=namespace), \
+            patch.object(sys, 'argv', ['sonic-db-dump', '-t', 'unix_socket']), \
+            patch('redisdl.dump'):
+        sonic_db_dump_load()
+    config.initializeGlobalConfig.assert_called_once_with()
+    name, key = config.getDbSock.call_args.args
+    assert name == 'APPL_DB' and key.netns == namespace
+    assert pool.call_args.kwargs['unix_socket_path'] == '/run/redis/example.sock'
+
+
+def test_explicit_tcp_never_looks_up_socket(metadata):
+    config, pool = metadata
+    with patch.object(sys, 'argv', ['sonic-db-dump', '-t', 'tcp', '-n', 'CHASSIS_APP_DB']), \
+            patch('redisdl.dump'):
+        sonic_db_dump_load()
+    config.getDbSock.assert_not_called()
+    assert pool.call_args.kwargs['host'] == '127.0.0.2'
+    assert pool.call_args.kwargs['port'] == 6385
