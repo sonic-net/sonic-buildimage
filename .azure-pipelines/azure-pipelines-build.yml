@@ -19,6 +19,9 @@ parameters:
 - name: 'qemuOrCrossBuild'
   type: boolean
   default: false
+- name: bazelRemoteCacheUpload
+  type: boolean
+  default: false
 - name: SUBMODULE
   type: string
   default: ''
@@ -29,6 +32,7 @@ parameters:
 jobs:
 - template: azure-pipelines-image-template.yml
   parameters:
+    bazelRemoteCacheUpload: ${{ parameters.bazelRemoteCacheUpload }}
     jobFilters: ${{ parameters.jobFilters }}
     preSteps: ${{ parameters.preSteps }}
     postSteps: ${{ parameters.postSteps }}
@@ -230,4 +234,3 @@ jobs:
           BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
           ManifestDirPath: 'target/'
           BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-

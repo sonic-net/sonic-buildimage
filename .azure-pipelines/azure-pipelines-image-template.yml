@@ -19,6 +19,9 @@ parameters:
 - name: jobVariables
   type: object
   default: []
+- name: bazelRemoteCacheUpload
+  type: boolean
+  default: false
 - name: SUBMODULE
   type: string
   default: ''
@@ -59,6 +62,18 @@ jobs:
             echo "No specific commit id provided, checkout to latest commit"
           fi
         displayName: 'Checkout commit'
+      - bash: |
+          set -euo pipefail
+          upload=false
+          if [[ "${REQUEST_CACHE_UPLOAD,,}" == true && "$BUILD_REASON" != PullRequest ]]; then
+            upload=true
+          fi
+          printf '\nbuild --remote_upload_local_results=%s\n' "$upload" >> .bazelrc.user
+          echo "Bazel remote cache upload: $upload"
+        env:
+          REQUEST_CACHE_UPLOAD: ${{ parameters.bazelRemoteCacheUpload }}
+          BUILD_REASON: $(Build.Reason)
+        displayName: 'Configure Bazel remote cache access'
       - script: |
           set -ex
           sudo apt-get update

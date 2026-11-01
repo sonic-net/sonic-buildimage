@@ -1,4 +1,5 @@
 common --lockfile_mode=update
+build --remote_upload_local_results=false
 
 # Default direct invocations to AMD64; the Make container bridge selects the
 # configured native architecture, and ARM64 callers can pass both platform flags.

@@ -2,3 +2,7 @@
 common --registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
 common --registry=https://bcr.bazel.build
 import %workspace%/tools/bazel/common.bazelrc
+
+common --remote_cache=grpc://172.16.0.4:9092
+common --experimental_remote_downloader=grpc://172.16.0.4:9092
+common --experimental_remote_downloader_local_fallback
