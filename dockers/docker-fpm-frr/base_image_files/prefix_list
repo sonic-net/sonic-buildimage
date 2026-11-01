@@ -15,7 +15,7 @@ display_help() {
     echo "            No additional parameters required."
     echo ""
     echo "Arguments:"
-    echo "  <PREFIX_TYPE>  Type of prefix list. Allowed values: {$(printf "%s" "${supported_prefix_types[*]}" | tr ' ' '|')}."
+    echo "  <PREFIX_TYPE>  Prefix-list base name. FRR uses <PREFIX_TYPE>_V4 or <PREFIX_TYPE>_V6."
     echo "  <NETWORK>      Network in CIDR format."
     echo ""
     echo "Options:"
@@ -32,40 +32,6 @@ check_root_privileges() {
     fi
 }
 
-# Function to check if the device is a supported device type
-DEVICE_TYPE=""
-DEVICE_SUBTYPE=""
-
-read_device_metadata() {
-    if [[ -z "$DEVICE_TYPE" ]]; then
-        DEVICE_TYPE=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
-        DEVICE_SUBTYPE=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
-    fi
-}
-
-declare -A prefix_type_devices
-prefix_type_devices=(
-    ["ANCHOR_PREFIX"]="SpineRouter:UpstreamLC UpperSpineRouter UpperRegionalHub"
-    ["SUPPRESS_PREFIX"]=""
-)
-
-validate_device_for_type() {
-    local prefix_type=$1
-    local allowed="${prefix_type_devices[$prefix_type]}"
-    [[ -z "$allowed" ]] && return
-    read_device_metadata
-    local device_id="$DEVICE_TYPE:$DEVICE_SUBTYPE"
-    for entry in $allowed; do
-        if [[ "$entry" == *":"* ]]; then
-            [[ "$device_id" == "$entry" ]] && return
-        else
-            [[ "$DEVICE_TYPE" == "$entry" ]] && return
-        fi
-    done
-    echo "Prefix type '$prefix_type' is not supported on device type '$DEVICE_TYPE' (subtype: '$DEVICE_SUBTYPE')." >&2
-    exit 1
-}
-
 # Function to skip operation on chassis supervisor
 skip_chassis_supervisor() {
     local PLATFORM supervisor
@@ -79,10 +45,9 @@ skip_chassis_supervisor() {
     fi
 }
 
-# Function to validate the operation and prefix type parameters
+# Function to validate the operation and prefix-list name parameters
 validate_operation() {
     local valid_operation=false
-    local valid_prefix_type=false
 
     for operation in "${prefix_list_operations[@]}"; do
         if [[ "$1" == "$operation" ]]; then
@@ -98,7 +63,7 @@ validate_operation() {
         exit 1
     fi
 
-    # Check if the prefix type is supported or not if the operation is not status
+    # Validate the prefix-list name for add and remove operations
     if [ "$1" == "status" ]; then
         if [ -n "$2" ]; then
             echo "No additional parameters required for status operation." >&2
@@ -107,15 +72,8 @@ validate_operation() {
             exit 1
         fi
     else
-        for prefix_type in "${supported_prefix_types[@]}"; do
-            if [[ "$2" == "$prefix_type" ]]; then
-                valid_prefix_type=true
-                break
-            fi
-        done
-
-        if [ $valid_prefix_type == false ]; then
-            echo "Invalid parameter $2, Prefix type not supported" >&2
+        if [[ ! "$2" =~ ^[A-Za-z0-9][A-Za-z0-9_.:-]*$ ]]; then
+            echo "Invalid parameter $2, Prefix-list name is invalid" >&2
             echo ""
             display_help
             exit 1
@@ -172,7 +130,6 @@ handle_prefix_list_single() {
 }
 
 prefix_list_operations=("add" "remove" "status")
-supported_prefix_types=("ANCHOR_PREFIX" "SUPPRESS_PREFIX")
 # Main script execution
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     display_help
@@ -184,10 +141,6 @@ fi
 skip_chassis_supervisor
 
 validate_operation $1 $2
-if [[ "$1" == "add" || "$1" == "remove" ]]; then
-    validate_device_for_type "$2"
-fi
-
 # Read SONiC immutable variables
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
