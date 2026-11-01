@@ -1,0 +1,118 @@
+Subject: [PATCH] Handle current Redis client arguments and TTL results
+
+--- a/redisdl.py
++++ b/redisdl.py
+@@ -55,7 +55,7 @@
+     def pttl_or_ttl(self, key):
+         if self.have_pttl:
+             pttl = self.pttl(key)
+-            if pttl is None:
++            if pttl is None or pttl < 0:
+                 return None
+             else:
+                 return float(pttl) / 1000
+@@ -69,7 +69,7 @@
+             return p.ttl(key)
+ 
+     def decode_pttl_or_ttl_pipeline_value(self, value):
+-        if value is None:
++        if value is None or value < 0:
+             return None
+         if self.have_pttl:
+             return float(value) / 1000
+@@ -110,13 +110,13 @@
+         r = RedisWrapper(unix_socket_path=unix_socket_path,
+                         password=password,
+                         db=db,
+-                        charset=encoding)
++                        encoding=encoding)
+     else:
+         r = RedisWrapper(host=host,
+                         port=port,
+                         password=password,
+                         db=db,
+-                        charset=encoding)
++                        encoding=encoding)
+     return r
+ 
+ def dumps(host='localhost', port=6379, password=None, db=0, pretty=False,
+@@ -523,7 +523,7 @@
+             p.sadd(key, element)
+     elif type == 'zset':
+         for element, score in value:
+-            p.zadd(key, element, score)
++            p.zadd(key, {element: float(score)})
+     elif type == 'hash':
+         p.hmset(key, value)
+     else:
+--- /dev/null
++++ b/tests/client_compatibility_test.py
+@@ -0,0 +1,68 @@
++"""Regression coverage for Redis client arguments and persistent-key expiry."""
++import io
++import json
++from pathlib import Path
++import subprocess
++import tempfile
++import time
++import unittest
++
++import redis
++import redisdl
++
++
++class ClientCompatibilityTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.directory = tempfile.TemporaryDirectory(prefix='redisdl-client-test-')
++        cls.socket = str(Path(cls.directory.name) / 'redis.sock')
++        cls.server = subprocess.Popen(['redis-server', '--port', '0', '--unixsocket', cls.socket,
++            '--save', '', '--appendonly', 'no'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
++        cls.writer = redis.Redis(unix_socket_path=cls.socket)
++        for _ in range(200):
++            try:
++                cls.writer.ping()
++                return
++            except redis.exceptions.ConnectionError:
++                time.sleep(0.01)
++        cls.tearDownClass()
++        raise RuntimeError('isolated Redis did not become ready')
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.writer.close()
++        cls.server.terminate()
++        cls.server.wait(timeout=10)
++        cls.directory.cleanup()
++
++    def setUp(self):
++        self.writer.flushdb()
++
++    def test_client_encoding(self):
++        self.writer.set('binary', b'\x00\xff')
++        document = redisdl.dumps(unix_socket_path=self.socket, encoding='latin1')
++        self.assertEqual('\x00\xff', json.loads(document)['binary']['value'])
++
++    def test_sorted_set_load(self):
++        document = json.dumps({'sorted': {'type': 'zset', 'value': [['one', 1.5]]}})
++        redisdl.loads(document, unix_socket_path=self.socket)
++        self.assertEqual(1.5, self.writer.zscore('sorted', 'one'))
++
++    def test_persistent_key_round_trip(self):
++        for pipelined in (False, True):
++            with self.subTest(pipelined=pipelined):
++                self.writer.set('persistent', 'value')
++                if pipelined:
++                    output = io.StringIO()
++                    redisdl.dump(output, unix_socket_path=self.socket)
++                    document = output.getvalue()
++                else:
++                    document = redisdl.dumps(unix_socket_path=self.socket)
++                self.writer.flushdb()
++                redisdl.loads(document, unix_socket_path=self.socket)
++                self.assertEqual(b'value', self.writer.get('persistent'))
++                self.assertEqual(-1, self.writer.ttl('persistent'))
++
++
++if __name__ == '__main__':
++    unittest.main()
