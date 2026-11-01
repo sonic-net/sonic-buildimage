@@ -19,6 +19,7 @@ RUN sed -ri 's/^# save ""$/save ""/g;                    \
 
 COPY {{ _from }}["flush_unused_database", "/usr/local/bin/"]
 COPY {{ _from }}["docker-database-init.sh", "/usr/local/bin/"]
+COPY {{ _from }}["redis_auth_configure.py", "/usr/local/bin/"]
 COPY ["files/update_chassisdb_config", "/usr/local/bin/"]
 COPY {{ _from }}["database_config.json.j2", "/usr/share/sonic/templates/"]
 COPY {{ _from }}["database_global.json.j2", "/usr/share/sonic/templates/"]
