@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PLATFORM=$(sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform)
+PLATFORM=$(sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform)
 
 # Parse the device specific asic conf file, if it exists
 ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
@@ -20,13 +20,13 @@ fi
 
 bridged_syslog_features="dhcp_server"
 for feature in $bridged_syslog_features; do
-    if [ -n "$(sonic-db-cli CONFIG_DB keys "FEATURE|$feature")" ]; then
+    if [ -n "$(sonic-db-cli -s CONFIG_DB keys "FEATURE|$feature")" ]; then
         docker0_ip=$(ip -o -4 addr list docker0 | awk '{print $4}' | cut -d/ -f1)
         break
     fi
 done
 
-syslog_with_osversion=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion")
+syslog_with_osversion=$(sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion")
 if [ -z "$syslog_with_osversion" ]; then
     syslog_with_osversion="false"
 fi
@@ -36,7 +36,7 @@ if [ -z "$os_version" ]; then
     os_version="Unknown"
 fi
 
-syslog_counter=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_counter")
+syslog_counter=$(sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_counter")
 if [ -z "$syslog_counter" ]; then
     syslog_counter="false"
 fi

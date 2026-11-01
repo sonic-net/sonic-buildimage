@@ -151,14 +151,14 @@ function preStartAction()
     fi
 {%- elif docker_container_name == "snmp" %}
     if decode-syseeprom -s > /dev/null 2>&1; then
-        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+        $SONIC_DB_CLI -s STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
     else
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
-        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
+        $SONIC_DB_CLI -s STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
 {%- elif docker_container_name in bridged_containers %}
     # Wait for caclmgrd to allow {{ docker_container_name }} syslog before startup.
-    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "enabled" ]; then
+    if [ "$($SONIC_DB_CLI -s CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "enabled" ]; then
         local attempt status
         for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
             "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
@@ -332,8 +332,8 @@ function postStartAction()
         # database will try to access to all other instance database-config.json. If other instance
         # database-config.json files are not ready yet, it will generate the sonic-db-cli core files.
 	waitForAllInstanceDatabaseConfigJsonFilesReady
-        until [[ ($(docker exec -i database$DEV pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
-                 ($(docker exec -i database$DEV sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do
+        until [[ ($(docker exec -i database$DEV pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI -s PING | grep -c PONG) -gt 0) &&
+                 ($(docker exec -i database$DEV sonic-db-cli -s PING | grep -c PONG) -gt 0) ]]; do
           sleep 1;
         done
 
@@ -354,10 +354,10 @@ function postStartAction()
             if [[ "$BOOT_TYPE" == "fast" ]]; then
                 # Flush ASIC DB. On fast-boot there should be nothing in there.
                 # In the older versions there has been an issue where a queued FDB event might get into ASIC_DB causing syncd crash at boot.
-                $SONIC_DB_CLI ASIC_DB FLUSHDB
+                $SONIC_DB_CLI -s ASIC_DB FLUSHDB
                 # this is the case when base OS version does not support fast-reboot with reconciliation logic (dump.rdb is absent)
                 # In this case, we need to set the flag to indicate fast-reboot is in progress. Set the key to expire in 3 minutes
-                $SONIC_DB_CLI STATE_DB SET "FAST_REBOOT|system" "1" "EX" "180"
+                $SONIC_DB_CLI -s STATE_DB SET "FAST_REBOOT|system" "1" "EX" "180"
             fi
         fi
 
@@ -372,9 +372,9 @@ function postStartAction()
                 # For first boot/fast/cold reboot case, DB contains nothing at this point
                 # unset CONFIG_DB_INITIALIZED to indicate pending config load and migration
                 # This flag will be set to "1" after DB migration/initialization is completed as part of config-setup
-                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+                $SONIC_DB_CLI -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
             else
-                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+                $SONIC_DB_CLI -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
                 # this is not a first time boot to a new image. Database container starts w/ old pre-existing config
                 if [[ -x /usr/local/bin/db_migrator.py ]]; then
                     # Migrate the DB to the latest schema version if needed
@@ -383,15 +383,15 @@ function postStartAction()
                     fi
                 fi
                 # set CONFIG_DB_INITIALIZED to indicate end of config load and migration
-                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+                $SONIC_DB_CLI -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
             fi
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
         if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
-           chassis_tsa_supported_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "chassis_tsa_supported")"
+           chassis_tsa_supported_cfg="$($SONIC_DB_CLI -s CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "chassis_tsa_supported")"
            if [[ "$chassis_tsa_supported_cfg" == "true" ]]; then
-              tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+              tsa_cfg="$($SONIC_DB_CLI -s CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
               if [[ -n "$tsa_cfg" ]]; then
                  docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
                  OP_CODE=$?
@@ -574,7 +574,7 @@ start() {
 
     if [ -d "$HWSKU_FOLDER" ]; then
         # This default should be undefined, set by runtime_vars.json
-        $SONIC_DB_CLI CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
+        $SONIC_DB_CLI -s CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
     fi
 
     if [ -n "$RUNTIME_VARS_JSON" ]; then
@@ -1005,7 +1005,7 @@ stop() {
     fi
 {%- if docker_container_name in bridged_containers %}
     # Wait for caclmgrd to remove the rule after feature disable.
-    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "disabled" ]; then
+    if [ "$($SONIC_DB_CLI -s CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "disabled" ]; then
         local attempt status
         for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
             "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
