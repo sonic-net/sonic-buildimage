@@ -482,8 +482,10 @@ SBOM_INCLUDE_LICENSES ?= y
 
 # SBOM_STRICT - when y, the build fails if a critical SBOM input is
 # missing (host rootfs fsroot-<machine>/, any declared installer
-# docker .gz, or the scanner binary). Set n to downgrade to warnings
-# for debugging or one-off partial emits. Soft optional features
+# docker .gz, the scanner binary, or the recipe fragment of any .deb
+# the installer ships), and a recipe stops when its fragment cannot be
+# written. Set n to downgrade to warnings for debugging or one-off
+# partial emits. Soft optional features
 # (SPDX conversion, provenance emit, license resolution) always
 # warn-and-continue regardless.
 SBOM_STRICT ?= y

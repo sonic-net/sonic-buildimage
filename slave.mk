@@ -648,14 +648,38 @@ endef
 # Failure handling honors SBOM_STRICT:
 #   SBOM_STRICT=y  → fragment-emit failures abort the recipe (consistent
 #                    with the strict contract: user opted in, surface
-#                    every problem).
+#                    every problem). The artifact is first dated to the
+#                    epoch, so it is out of date and a retry runs the
+#                    recipe again instead of finding it built.
 #   SBOM_STRICT=n  → failures swallowed via `|| true` so a script bug
 #                    can never break a build (defensive fallback).
 #
 # Recipes can set $(ARTIFACT)_LICENSE = "<SPDX expression>" to provide an
 # explicit license for SONiC-native artifacts where no debian/copyright
 # ships and the DEP-5 resolver would otherwise emit NOASSERTION.
-sbom_emit_fragment = $(if $(filter y,$(ENABLE_SBOM)),ARTIFACT="$(1)" RECIPE_TYPE="$(2)" SRC_PATH="$(3)" URL="$(4)" DEPENDS="$(5)" RDEPENDS="$(6)" MAIN_DEB="$(7)" ARTIFACT_LICENSE="$($(notdir $(1))_LICENSE)" ENABLE_SBOM="$(ENABLE_SBOM)" CONFIGURED_PLATFORM="$(CONFIGURED_PLATFORM)" CONFIGURED_ARCH="$(CONFIGURED_ARCH)" SONIC_IMAGE_VERSION="$(SONIC_IMAGE_VERSION)" python3 ./scripts/sbom_fragment.py$(if $(filter y,$(SBOM_STRICT)),, || true),:)
+sbom_emit_fragment = $(if $(filter y,$(ENABLE_SBOM)),ARTIFACT="$(1)" RECIPE_TYPE="$(2)" SRC_PATH="$(3)" URL="$(4)" DEPENDS="$(5)" RDEPENDS="$(6)" MAIN_DEB="$(7)" ARTIFACT_LICENSE="$($(notdir $(1))_LICENSE)" ENABLE_SBOM="$(ENABLE_SBOM)" CONFIGURED_PLATFORM="$(CONFIGURED_PLATFORM)" CONFIGURED_ARCH="$(CONFIGURED_ARCH)" SONIC_IMAGE_VERSION="$(SONIC_IMAGE_VERSION)" python3 ./scripts/sbom_fragment.py$(if $(filter y,$(SBOM_STRICT)), || { touch -c -d @0 "$(1)"; exit 1; }, || true),:)
+
+# $(call main_deb_newer_than_companions,main_deb)
+# Date the derived and extra debs main_deb's recipe wrote one second before
+# main_deb, so each companion's own rule runs whenever the build wants that
+# companion. That rule is the only writer of the companion's SBOM fragment.
+# Its prerequisites are main_deb and ones older than it, so without this a
+# companion written after main_deb is up to date whenever make first looks
+# at it after the main recipe ran, and which companions that hits depends on
+# the order make visits them. Touching main_deb instead is not enough: the
+# touch can land in the same timestamp tick as the last companion write,
+# and make treats equal times as up to date. -c leaves a companion the
+# recipe did not produce absent.
+main_deb_newer_than_companions = $(if $($(1)_DERIVED_DEBS)$($(1)_EXTRA_DEBS),touch -c -r $(DEBS_PATH)/$(1) -d '-1 second' $(addprefix $(DEBS_PATH)/,$($(1)_DERIVED_DEBS) $($(1)_EXTRA_DEBS)),:)
+
+# $(call sbom_fragment_missing,artifact)
+# A prerequisite that forces a derived or extra deb's rule to run when the
+# deb exists without its SBOM fragment, as in a workspace a build before
+# main_deb_newer_than_companions left behind. Empty otherwise.
+sbom_fragment_missing = $(if $(filter y,$(ENABLE_SBOM)),$(if $(wildcard $(1)),$(if $(wildcard $(1).cdx.json),,sbom-fragment-missing)))
+
+.PHONY: sbom-fragment-missing
+sbom-fragment-missing: ;
 
 # Test containers that DON'T ship in any .bin installer payload but DO
 # get built (controlled by their respective INCLUDE_* flags) and need
@@ -753,6 +777,10 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS)) : $(DEBS_PATH)/% : .platform \
 
 	fi
 
+	# Emit SBOM fragment for the copied deb.
+	$(call main_deb_newer_than_companions,$*)
+	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,COPY_DEB,,,$($*_DEPENDS),$($*_RDEPENDS),)
+
 	$(FOOTER)
 
 
@@ -796,6 +824,7 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_ONLINE_DEBS)) : $(DEBS_PATH)/% : .platform \
 		$(call SAVE_CACHE,$*,$@)
 	fi
 	# Emit SBOM fragment for the downloaded vendor/online deb.
+	$(call main_deb_newer_than_companions,$*)
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,ONLINE_DEB,,$($*_URL),$($*_DEPENDS),$($*_RDEPENDS),)
 	$(FOOTER)
 
@@ -979,6 +1008,7 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
 
 	# Emit SBOM fragment next to the .deb (no-op when ENABLE_SBOM != y).
+	$(call main_deb_newer_than_companions,$*)
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,MAKE_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
 
 	$(FOOTER)
@@ -1034,6 +1064,7 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
 
 	# Emit SBOM fragment next to the .deb (no-op when ENABLE_SBOM != y).
+	$(call main_deb_newer_than_companions,$*)
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,DPKG_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
 
 	$(FOOTER)
@@ -1045,13 +1076,16 @@ SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS))
 # we depend on it and move our deb to other targets
 # Add new dev package:
 #     $(eval $(call add_derived_package,$(ORIGINAL_DEB),derived_deb_file.deb))
-$(addprefix $(DEBS_PATH)/, $(SONIC_DERIVED_DEBS)) : $(DEBS_PATH)/% : .platform $$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))
+$(addprefix $(DEBS_PATH)/, $(SONIC_DERIVED_DEBS)) : $(DEBS_PATH)/% : .platform $$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS)) \
+			$$(call sbom_fragment_missing,$(DEBS_PATH)/$$*)
 	$(HEADER)
 	# All noise takes place in main deb recipe, so we are just telling that
 	# we depend on it
 	# Put newer timestamp
 	[ -f $@ ] && touch $@
-	# Emit SBOM fragment (references parent's bom-ref).
+	# Emit SBOM fragment (references parent's bom-ref). This rule runs
+	# because the main recipe dated this deb before the main deb; see
+	# main_deb_newer_than_companions.
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,DERIVED_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),$($*_MAIN_DEB))
 	$(FOOTER)
 
@@ -1062,13 +1096,16 @@ SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_DERIVED_DEBS))
 # we need to build the main deb and move our deb to other targets
 # Add new dev package:
 #     $(eval $(call add_extra_package,$(ORIGINAL_DEB),extra_deb_file.deb))
-$(addprefix $(DEBS_PATH)/, $(SONIC_EXTRA_DEBS)) : $(DEBS_PATH)/% : .platform $$(addprefix $(DEBS_PATH)/,$$($$*_MAIN_DEB))
+$(addprefix $(DEBS_PATH)/, $(SONIC_EXTRA_DEBS)) : $(DEBS_PATH)/% : .platform $$(addprefix $(DEBS_PATH)/,$$($$*_MAIN_DEB)) \
+			$$(call sbom_fragment_missing,$(DEBS_PATH)/$$*)
 	$(HEADER)
 	# All noise takes place in main deb recipe, so we are just telling that
 	# we depend on it
 	# Put newer timestamp
 	[ -f $@ ] && touch $@
-	# Emit SBOM fragment (references parent's bom-ref).
+	# Emit SBOM fragment (references parent's bom-ref). This rule runs
+	# because the main recipe dated this deb before the main deb; see
+	# main_deb_newer_than_companions.
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,EXTRA_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),$($*_MAIN_DEB))
 	$(FOOTER)
 
@@ -1754,6 +1791,42 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 
 	$(FOOTER)
 
+# Debs every installer installs or carries, beside its own _INSTALLS and
+# lazy lists. Each is a prerequisite, so its rule runs and writes its SBOM
+# fragment, and build_sbom.py requires that fragment.
+SONIC_INSTALLER_IMAGE_DEBS = $(INITRAMFS_TOOLS) \
+        $(LINUX_KERNEL) \
+        $(LINUX_KBUILD) \
+        $(SONIC_DEVICE_DATA) \
+        $(IFUPDOWN2) \
+        $(MAKEDUMPFILE) \
+        $(KDUMP_TOOLS) \
+        $(LIBPAM_RADIUS) \
+        $(LIBNSS_RADIUS) \
+        $(LIBPAM_TACPLUS) \
+        $(LIBNSS_TACPLUS) \
+        $(MONIT) \
+        $(OPENSSH_SERVER) \
+        $(PYTHON3_SWSSCOMMON) \
+        $(SONIC_DB_CLI) \
+        $(SONIC_NETTOOLS) \
+        $(SONIC_RSYSLOG_PLUGIN) \
+        $(SONIC_UTILITIES_DATA) \
+        $(SONIC_CTRMGRD_RS) \
+        $(SONIC_HOST_SERVICES_RS) \
+        $(SONIC_HOST_SERVICES_DATA) \
+        $(SOCAT) \
+        $(BASH) \
+        $(BASH_TACPLUS) \
+        $(AUDISP_TACPLUS) \
+        $(SYSLOG_COUNTER) \
+        $(SEDUTIL) \
+        $(if $(findstring y,$(ENABLE_ZTP)),$(SONIC_ZTP)) \
+        $(SONIC_INSTALLER_EXTRA_DEBS) \
+        $(if $(findstring y,$(INCLUDE_FIPS)),$(SYMCRYPT_OPENSSL)) \
+        $(if $(findstring amd64,$(CONFIGURED_ARCH)),$(RASDAEMON)) \
+        $(FIPS_BASEIMAGE_INSTALLERS)
+
 # targets for building installers with base image
 $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : private export PASSWORD := $(PASSWORD)
 $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : private export BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD := $(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)
@@ -1779,39 +1852,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_BUILD_INSTALLS)) \
 		$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_PYTHON_WHEELS)) \
-        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) \
-                $(LINUX_KERNEL) \
-                $(LINUX_KBUILD) \
-                $(SONIC_DEVICE_DATA) \
-                $(IFUPDOWN2) \
-                $(MAKEDUMPFILE) \
-                $(KDUMP_TOOLS) \
-                $(LIBPAM_RADIUS) \
-                $(LIBNSS_RADIUS) \
-                $(LIBPAM_TACPLUS) \
-                $(LIBNSS_TACPLUS) \
-                $(MONIT) \
-                $(OPENSSH_SERVER) \
-                $(PYTHON3_SWSSCOMMON) \
-                $(SONIC_DB_CLI) \
-                $(SONIC_NETTOOLS) \
-                $(SONIC_RSYSLOG_PLUGIN) \
-                $(SONIC_UTILITIES_DATA) \
-                $(SONIC_CTRMGRD_RS) \
-                $(SONIC_HOST_SERVICES_RS) \
-                $(SONIC_HOST_SERVICES_DATA) \
-                $(SOCAT) \
-                $(BASH) \
-                $(BASH_TACPLUS) \
-                $(AUDISP_TACPLUS) \
-                $(SYSLOG_COUNTER) \
-                $(SEDUTIL)) \
+        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_INSTALLER_IMAGE_DEBS)) \
         $$(addprefix $(TARGET_PATH)/,$$($$*_DOCKERS)) \
         $$(addprefix $(TARGET_PATH)/,$$(SONIC_PACKAGES_LOCAL)) \
         $$(addprefix $(FILES_PATH)/,$$($$*_FILES)) \
-        $(if $(findstring y,$(ENABLE_ZTP)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_ZTP))) \
-        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_INSTALLER_EXTRA_DEBS)) \
-        $(if $(findstring y,$(INCLUDE_FIPS)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SYMCRYPT_OPENSSL))) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_UTILITIES_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PY_COMMON_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PY_COMMON_PY3)) \
@@ -1823,7 +1867,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY3)) \
         $(if $(findstring y,$(PDDF_SUPPORT)),$(addprefix $(PYTHON_WHEELS_PATH)/,$(PDDF_PLATFORM_API_BASE_PY2))) \
         $(if $(findstring y,$(PDDF_SUPPORT)),$(addprefix $(PYTHON_WHEELS_PATH)/,$(PDDF_PLATFORM_API_BASE_PY3))) \
-        $(if $(findstring amd64,$(CONFIGURED_ARCH)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(RASDAEMON))) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_YANG_MODELS_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CTRMGRD)) \
         $(addprefix $(FILES_PATH)/,$($(SONIC_CTRMGRD)_FILES)) \
@@ -2099,7 +2142,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		CONFIGURED_PLATFORM="$(CONFIGURED_PLATFORM)" \
 		SONIC_VERSION_CONTROL_COMPONENTS="$(SONIC_VERSION_CONTROL_COMPONENTS)" \
 		SBOM_INSTALLER_DOCKERS="$($*_DOCKERS)" \
-		SBOM_INSTALLER_DEBS="$($*_INSTALLS) $($*_LAZY_INSTALLS) $($*_LAZY_BUILD_INSTALLS)" \
+		SBOM_INSTALLER_DEBS="$($*_INSTALLS) $($*_LAZY_INSTALLS) $($*_LAZY_BUILD_INSTALLS) $(SONIC_INSTALLER_IMAGE_DEBS)" \
+		SBOM_INSTALLER_DEBS_PATH="$(IMAGE_DISTRO_DEBS_PATH)" \
 		SBOM_INSTALLER_WHEELS="$($*_PYTHON_WHEELS)" \
 			./scripts/build_sbom.sh $(LOG)
 	)
