@@ -1,0 +1,52 @@
+From c136f26432f9e38ae0b63ba3933b23e09116b135 Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 6 Oct 2026 16:48:10 -0700
+Subject: [PATCH] zebra: count a local MAC delete with no kernel entry as done
+
+When the kernel has no entry for a local MAC that zebra deletes, it
+answers ENOENT and the dataplane context fails. A failed context skips
+the providers after the kernel, so a dataplane plugin never sees the
+delete: a MAC pin it pushed to the hardware stays there after zebra
+removed it, for instance when the kernel entry was deleted by hand.
+
+The state zebra asked for holds, so report such a delete as done.
+Remote MAC deletes are left as they are: they also target the VXLAN
+device entry, which an ENOENT on the bridge entry leaves in place.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ zebra/kernel_netlink.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/kernel_netlink.c b/zebra/kernel_netlink.c
+index 55b0312f64..894f0c3219 100644
+--- a/zebra/kernel_netlink.c
++++ b/zebra/kernel_netlink.c
+@@ -1145,6 +1145,18 @@ int netlink_request(struct nlsock *nl, void *req)
+ 	return 0;
+ }
+ 
++/* The entry is already gone, so later providers (e.g. FPM) must still see it. */
++static bool nl_local_mac_del_already_gone(struct zebra_dplane_ctx *ctx,
++					  struct nlmsghdr *h)
++{
++	struct nlmsgerr *err = (struct nlmsgerr *)NLMSG_DATA(h);
++
++	return err->error == -ENOENT &&
++	       dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_DELETE &&
++	       !CHECK_FLAG(dplane_ctx_mac_get_update_flags(ctx),
++			   DPLANE_MAC_REMOTE);
++}
++
+ static int nl_batch_read_resp(struct nl_batch *bth, struct nlsock *nl)
+ {
+ 	struct nlmsghdr *h;
+@@ -1266,7 +1278,7 @@ static int nl_batch_read_resp(struct nl_batch *bth, struct nlsock *nl)
+ 			int err = netlink_parse_error(nl, h, bth->zns->is_cmd,
+ 						      false);
+ 
+-			if (err == -1)
++			if (err == -1 && !nl_local_mac_del_already_gone(ctx, h))
+ 				dplane_ctx_set_status(
+ 					ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+ 
