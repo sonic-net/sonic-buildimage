@@ -185,6 +185,116 @@ class TestPcie:
             p._create_device_id_to_bus_map()
             assert p._device_id_to_bus_map == {'23:22':'01'}
 
+    @mock.patch('sonic_platform.pcie.os.listdir')
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=[]))
+    def test_create_nvme_device_list(self, mock_dir):
+        p = Pcie('')
+        # A name that is not a PCI address is skipped without reading its class
+        mock_dir.return_value = ['0000:00:01.4', '0000:02:00.0', 'not-a-pci-device', '0000:01:00.0']
+        classes = {
+            '0000:00:01.4': '0x060400\n',
+            '0000:02:00.0': '0x010802\n',
+            '0000:01:00.0': '0x010802\n'
+        }
+
+        def mock_open(path, mode):
+            return mock.mock_open(read_data=classes[path.split('/')[-2]])()
+
+        lspci = {
+            # Only the first line names the device
+            '0000:01:00.0': '01:00.0 Non-Volatile memory controller: Silicon Motion, Inc. SM2268XT (DRAM-less) '
+                            'NVMe SSD Controller (rev 10)\n'
+                            '0001:01:00.0 Ethernet controller: Mellanox Technologies Spectrum-6 (rev a0)',
+            # lspci failed
+            '0000:02:00.0': None
+        }
+        with mock.patch('sonic_platform.pcie.open', mock_open), \
+                mock.patch('sonic_platform.pcie.utils.run_command', side_effect=lambda cmd: lspci[cmd[2]]) as mock_run:
+            p._create_nvme_device_list()
+        # lspci is given the PCI domain too
+        assert [call.args[0] for call in mock_run.call_args_list] == [
+            ['lspci', '-s', '0000:01:00.0'], ['lspci', '-s', '0000:02:00.0']
+        ]
+        assert p._nvme_devices == [('01', '00', '0'), ('02', '00', '0')]
+        assert p._nvme_names == {
+            ('01', '00', '0'): 'Non-Volatile memory controller: Silicon Motion, Inc. SM2268XT (DRAM-less) '
+                               'NVMe SSD Controller (rev 10)'
+        }
+
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=[]))
+    def test_get_pcie_check_nvme(self):
+        p = Pcie('')
+        p.dpu_pcie_devices = []
+        nvme_conf = {
+            'id': '5765',
+            'name': 'Non-Volatile memory controller: Device 1f9f:5765 (rev 01)',
+            'bus': '01',
+            'dev': '00',
+            'fn': '0'
+        }
+        phison_name = 'Non-Volatile memory controller: Phison Electronics Corporation PS5029-E29T PCIe4 NVMe ' \
+                      'Controller (DRAM-less) (rev 01)'
+        # A second source SSD with another device id passes and shows its own name
+        p.confInfo = [dict(nvme_conf)]
+        p._device_id_to_bus_map = {'5029:00': '01'}
+        p._nvme_devices = [('01', '00', '0')]
+        p._nvme_names = {('01', '00', '0'): phison_name}
+        p.check_pcie_sysfs = mock.MagicMock(return_value=True)
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Passed'
+        assert info[0]['name'] == phison_name
+        p.check_pcie_sysfs.assert_called_with(bus=1, device=0, func=0)
+
+        # Without a name from lspci the yaml name is shown
+        p.confInfo = [dict(nvme_conf)]
+        p._nvme_names = {}
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Passed'
+        assert info[0]['name'] == nvme_conf['name']
+
+        # An SSD that drops off the bus after the list was created fails with its own name
+        p.confInfo = [dict(nvme_conf)]
+        p._nvme_names = {('01', '00', '0'): phison_name}
+        p.check_pcie_sysfs = mock.MagicMock(return_value=False)
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Failed'
+        assert info[0]['name'] == phison_name
+        p.check_pcie_sysfs = mock.MagicMock(return_value=True)
+
+        # No NVMe device fails with the yaml name, even if a device with the yaml id exists
+        p.confInfo = [dict(nvme_conf)]
+        p._device_id_to_bus_map = {'5765:00': '01'}
+        p._nvme_devices = []
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Failed'
+        assert info[0]['name'] == nvme_conf['name']
+
+        # An NVMe device at another dev or fn does not match the entry
+        p.confInfo = [dict(nvme_conf)]
+        p._nvme_devices = [('01', '01', '0'), ('01', '00', '1')]
+        p._nvme_names = {}
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Failed'
+        assert info[0]['name'] == nvme_conf['name']
+
+        # The NVMe device at the entry's dev and fn passes on whatever bus it sits
+        p.confInfo = [dict(nvme_conf)]
+        p._nvme_devices = [('01', '00', '1'), ('05', '00', '0')]
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Passed'
+        p.check_pcie_sysfs.assert_called_with(bus=5, device=0, func=0)
+
+        # Each NVMe entry needs its own NVMe device
+        p.confInfo = [dict(nvme_conf), dict(nvme_conf, bus='02')]
+        p._nvme_devices = [('03', '00', '0')]
+        p._nvme_names = {('03', '00', '0'): phison_name}
+        info = p.get_pcie_check()
+        assert [item['result'] for item in info] == ['Passed', 'Failed']
+        assert [item['name'] for item in info] == [phison_name, nvme_conf['name']]
+        assert p._nvme_devices == [('03', '00', '0')]
+
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
     @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_count')
     @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_interface')
