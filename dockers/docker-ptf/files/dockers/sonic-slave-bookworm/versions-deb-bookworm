@@ -1219,10 +1219,10 @@ librubberband2==3.1.2+dfsg0-1
 libruby==1:3.1
 libruby3.1==3.1.2-7+deb12u1
 libsamplerate0==0.2.2-3
-libsasl2-2==2.1.28+dfsg-10
-libsasl2-dev==2.1.28+dfsg-10
-libsasl2-modules==2.1.28+dfsg-10
-libsasl2-modules-db==2.1.28+dfsg-10
+libsasl2-2==2.1.28+dfsg-10+deb12u1
+libsasl2-dev==2.1.28+dfsg-10+deb12u1
+libsasl2-modules==2.1.28+dfsg-10+deb12u1
+libsasl2-modules-db==2.1.28+dfsg-10+deb12u1
 libsaxon-java==1:6.5.5-13
 libsdl2-2.0-0==2.26.5+dfsg-1
 libselinux1-dev==3.4-1+b6
