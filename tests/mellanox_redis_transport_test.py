@@ -23,7 +23,7 @@ def calls():
 @pytest.mark.parametrize("call", list(calls()))
 @pytest.mark.parametrize("namespace", ["", "asic0"])
 @pytest.mark.parametrize("port", [0, 6379, 6400, None])
-def test_transport_uses_target_metadata(call, namespace, port):
+def test_local_transport_is_explicit_despite_tcp_metadata(call, namespace, port):
     captured = []
     names = {"namespace": namespace, "STATE_DB": "STATE_DB",
              "APPL_DB": "APPL_DB", "REDIS_TIMEOUT_USECS": 0}
@@ -44,13 +44,8 @@ def test_transport_uses_target_metadata(call, namespace, port):
     names["SonicDBConfig"] = SimpleNamespace(getDbPort=get_port)
     names["swsscommon"] = SimpleNamespace(
         DBConnector=names["DBConnector"], SonicDBConfig=names["SonicDBConfig"])
-    if port is None:
-        with pytest.raises(RuntimeError, match="metadata unavailable"):
-            evaluate(call)
-        assert captured == []
-    else:
-        evaluate(call)
-        assert len(captured) == 1
-        assert captured[0][:3] == (database, 0, port != 0)
-        if len(call.args) > 3:
-            assert captured[0][3] == target_namespace
+    evaluate(call)
+    assert len(captured) == 1
+    assert captured[0][:3] == (database, 0, False)
+    if len(call.args) > 3:
+        assert captured[0][3] == target_namespace
