@@ -14,8 +14,8 @@ def eeprom(monkeypatch):
     modules = {
         'sonic_py_common._redis_transport': types.SimpleNamespace(
             use_local_redis_socket=MagicMock(return_value=True)),
-        'sonic_py_common.redis_auth': types.SimpleNamespace(
-            connection_kwargs=MagicMock(return_value={})),
+        'swsscommon.redis': types.SimpleNamespace(
+            connection_pool=MagicMock(return_value={})),
         'sonic_platform_base.sonic_eeprom.eeprom_base': types.SimpleNamespace(
             EepromDecoder=type('EepromDecoder', (), {})),
         'sonic_platform_base.sonic_eeprom.eeprom_tlvinfo': types.SimpleNamespace(
@@ -37,23 +37,22 @@ def eeprom(monkeypatch):
 
 
 @pytest.mark.parametrize('use_unix', [True, False])
-@pytest.mark.parametrize('writer', [True, False])
-def test_configured_endpoint_and_login(eeprom, use_unix, writer):
+def test_configured_endpoint_uses_native_pool(eeprom, use_unix):
     eeprom.use_local_redis_socket.return_value = use_unix
-    credentials = {'username': 'writer', 'password': 'test-only'} if writer else {}
-    eeprom.connection_kwargs.return_value = credentials
+    pool = MagicMock(name='native-pool')
+    eeprom.connection_pool.return_value = pool
     endpoint = ({'unix_socket_path': '/run/redis/custom-state.sock'} if use_unix
                 else {'host': '127.0.0.1', 'port': 6381})
 
     assert eeprom._get_state_db_client() is eeprom.redis.Redis.return_value
 
     eeprom.use_local_redis_socket.assert_called_once_with('STATE_DB')
-    eeprom.connection_kwargs.assert_called_once_with(**endpoint)
-    eeprom.redis.Redis.assert_called_once_with(db=16, **endpoint, **credentials)
+    eeprom.connection_pool.assert_called_once_with(db=16, **endpoint)
+    eeprom.redis.Redis.assert_called_once_with(connection_pool=pool)
 
 
 def test_authentication_setup_error_is_not_ignored(eeprom):
-    eeprom.connection_kwargs.side_effect = RuntimeError('missing selected credential')
+    eeprom.connection_pool.side_effect = RuntimeError('missing selected credential')
     with pytest.raises(RuntimeError, match='missing selected credential'):
         eeprom._get_state_db_client()
     eeprom.redis.Redis.assert_not_called()

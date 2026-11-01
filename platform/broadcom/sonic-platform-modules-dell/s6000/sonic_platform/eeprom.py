@@ -23,7 +23,7 @@ try:
     import struct
     from collections import OrderedDict
     from sonic_py_common._redis_transport import use_local_redis_socket
-    from sonic_py_common.redis_auth import connection_kwargs
+    from swsscommon.redis import connection_pool
     from sonic_platform_base.sonic_eeprom.eeprom_base import EepromDecoder
     from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
     from swsscommon.swsscommon import SonicDBConfig
@@ -39,8 +39,8 @@ def _get_state_db_client():
     else:
         endpoint = {'host': SonicDBConfig.getDbHostname(STATE_DB_NAME),
                     'port': SonicDBConfig.getDbPort(STATE_DB_NAME)}
-    return redis.Redis(db=SonicDBConfig.getDbId(STATE_DB_NAME),
-                       **endpoint, **connection_kwargs(**endpoint))
+    return redis.Redis(connection_pool=connection_pool(
+        db=SonicDBConfig.getDbId(STATE_DB_NAME), **endpoint))
 
 
 # PSU eeprom fields in format required by EepromDecoder
