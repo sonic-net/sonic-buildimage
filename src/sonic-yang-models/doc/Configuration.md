@@ -13,6 +13,7 @@
   * [ASIC SDK health event](#asic-sdk-health-event)
   * [BGP Device Global](#bgp-device-global)
   * [BGP Sessions](#bgp-sessions)
+  * [BMC_GNOI](#bmc_gnoi)
   * [BUFFER_PG](#buffer_pg)
   * [Buffer pool](#buffer-pool)
   * [Buffer profile](#buffer-profile)
@@ -597,6 +598,22 @@ form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
         "src_address": "10.1.0.32"
      }
   }
+}
+```
+
+### BMC_GNOI
+
+The **BMC_GNOI** table lives in the BMC's CONFIG_DB. It holds the client credential paths that the BMC daemon, running in the BMC's PMON container, uses for the gNOI calls it makes to the switch host during a BMC-controlled graceful shutdown or restart. Its single `certs` row carries absolute paths to the CA certificate, the client certificate and the client private key. Every field is optional. An absent field uses the default shown below; a configured path is used as given and does not fall back to the default. The image does not seed this table. Deployment installs the files and configures any non-default paths.
+
+```
+{
+    "BMC_GNOI": {
+        "certs": {
+            "ca_crt": "/etc/sonic/bmc-link/ca.crt",
+            "client_crt": "/etc/sonic/bmc-link/client.crt",
+            "client_key": "/etc/sonic/bmc-link/client.key"
+        }
+    }
 }
 ```
 

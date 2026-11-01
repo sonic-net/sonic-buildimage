@@ -95,6 +95,7 @@ yang_files = [
     'sonic-bgp-prefix-list.yang',
     'sonic-bgp-sentinel.yang',
     'sonic-bgp-voq-chassis-neighbor.yang',
+    'sonic-bmc-gnoi.yang',
     'sonic-bmp.yang',
     'sonic-breakout_cfg.yang',
     'sonic-buffer-pg.yang',
