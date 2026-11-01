@@ -14,7 +14,7 @@ SYSLOG_IDENTIFIER = "nh_asic_thermal"
 log = syslogger.SysLogger(SYSLOG_IDENTIFIER, log_level=logging.INFO, enable_runtime_config=False)
 
 
-class AsicThermal(PddfAsicThermal, MinMaxTempMixin, PidThermalMixin):
+class AsicThermal(PidThermalMixin, PddfAsicThermal, MinMaxTempMixin):
     """PDDF Platform-Specific ASIC Thermal class"""
 
     _polling_enabled_checked = False
@@ -25,7 +25,7 @@ class AsicThermal(PddfAsicThermal, MinMaxTempMixin, PidThermalMixin):
         position_offset,
         pddf_data=None,
     ):
-        super().__init__(index, position_offset, pddf_data)
+        PddfAsicThermal.__init__(self, index, position_offset, pddf_data)
         MinMaxTempMixin.__init__(self)
 
         # Get PID configuration from PDDF data
