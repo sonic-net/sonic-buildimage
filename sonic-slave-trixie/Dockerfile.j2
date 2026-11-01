@@ -711,9 +711,6 @@ RUN eatmydata apt-get install -y libthrift-0.19.0t64\
 RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
 
 {% if CONFIGURED_ARCH != "amd64" -%}
-# Install node.js for azure pipeline
-RUN eatmydata apt-get install -y nodejs
-
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN eatmydata apt-get install -y rsync dh-python
 
@@ -799,8 +796,6 @@ RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsc
 RUN apt-get download python3.13-dev:$arch && apt-get download python3-dev:$arch && eatmydata dpkg --force-all -i python3*-dev*
 {% endif %}
 
-# Tell azure pipeline to use node.js in the docker
-LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
 {% endif -%}
 
 RUN eatmydata apt install -y python-is-python3
