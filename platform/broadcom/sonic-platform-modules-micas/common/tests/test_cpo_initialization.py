@@ -27,7 +27,7 @@ PLATFORM = ROOT / "platform/broadcom/sonic-platform-modules-micas/common/sonic_p
 
 class FakeSfp:
     def __init__(self, index):
-        self.index = int(index)
+        self.index = index
 
     def get_presence(self):
         return True
@@ -152,7 +152,7 @@ class TestCpoInitialization(unittest.TestCase):
             self.assertIsInstance(cpo.oe, OeBase)
             self.assertIsInstance(cpo.elsfp, ElsfpBase)
             self.assertIs(chassis._cpo_list[port], cpo)
-            self.assertIs(chassis.get_sfp(port), cpo)
+            self.assertIsNone(chassis.get_sfp(port))
             self.assertFalse(hasattr(cpo, "port"))
             self.assertFalse(hasattr(cpo.oe, "port"))
             self.assertFalse(hasattr(cpo.elsfp, "port"))
@@ -186,7 +186,8 @@ class TestCpoInitialization(unittest.TestCase):
         chassis = self.make_chassis(data)
         self.assertEqual(chassis.get_num_cpos(), 1)
         self.assertEqual(chassis.get_cpo(0).get_name(), "Ethernet0")
-        self.assertEqual(chassis.get_transceiver_change_event(), {0: "1"})
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {"0": "1"}}))
+        self.assertEqual(chassis.get_transceiver_change_event(), {})
 
     def test_sparse_out_of_order_physical_indices(self):
         data = self.topology()
@@ -198,7 +199,8 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertIsNone(chassis.get_cpo(2))
         self.assertEqual(chassis._sfp_list, [])
         self.assertEqual(chassis.get_cpo(3).get_name(), "Ethernet16")
-        self.assertEqual(chassis.get_transceiver_change_event(), {1: "1", 3: "1"})
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {"1": "1", "3": "1"}}))
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {}}))
         self.assertEqual(chassis.get_transceiver_change_event(), {})
 
     def test_mixed_sfp_and_cpo_lists_do_not_overlap(self):
@@ -207,7 +209,7 @@ class TestCpoInitialization(unittest.TestCase):
                               "Ethernet8": {"associated_devices": []}}
         chassis = self.make_chassis(data)
         chassis._validate_port_lists()
-        self.assertIs(chassis.get_sfp(1), chassis.get_cpo(1))
+        self.assertIsNone(chassis.get_sfp(1))
         self.assertIsNone(chassis._sfp_list[1])
         self.assertIsNone(chassis._cpo_list[2])
         self.assertEqual(chassis.get_num_sfps(), 1)
@@ -215,7 +217,32 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertEqual(chassis.get_num_cpos(), 1)
         self.assertIsNone(chassis.get_cpo(2))
         self.assertIsInstance(chassis.get_sfp(2), FakeSfp)
-        self.assertEqual(chassis.get_transceiver_change_event(), {1: "1", 2: "1"})
+        self.assertEqual(chassis.get_transceiver_change_event(), {2: "1"})
+        self.assertEqual(chassis.get_transceiver_change_event(), {})
+
+    def test_mixed_topology_constructs_real_sfp_with_integer_index(self):
+        with patch.dict(sys.modules, {"platform_intf": types.ModuleType("platform_intf")}):
+            real_sfp = load_source("micas_real_sfp_under_test", PLATFORM / "sfp.py")
+        for version in [1, 2, 3]:
+            with self.subTest(version=version):
+                data = self.topology()
+                data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"],
+                                      "Ethernet8": {"associated_devices": []}}
+                path = "/test/port-%d/eeprom" if version == 2 else "/test/i2c-%d/%d-0050/eeprom"
+                self.baseutil.get_config.return_value = {"sfps": {
+                    "ver": version, "log_level": 99,
+                    "eeprom_path": path, "eeprom_path_key": [11, 12]}}
+                with patch.object(self.chassis, "Sfp", real_sfp.Sfp):
+                    chassis = self.make_chassis(data)
+                self.assertTrue(chassis._cpo_initialized, chassis._cpo_init_error)
+                sfp = chassis.get_sfp(2)
+                self.assertIsInstance(sfp, real_sfp.Sfp)
+                self.assertIs(type(sfp._sfp_api._port_id), int)
+                self.assertEqual(sfp._sfp_api._port_id, 2)
+                expected = "/test/port-2/eeprom" if version == 2 else "/test/i2c-12/12-0050/eeprom"
+                self.assertEqual(sfp.get_eeprom_path(), expected)
+                self.assertIsNone(chassis.get_sfp(1))
+                self.assertIsNone(chassis.get_cpo(2))
 
     def test_non_cpo_initialization_is_unchanged(self):
         chassis = self.make_chassis(None)
@@ -232,20 +259,23 @@ class TestCpoInitialization(unittest.TestCase):
             chassis._sfp_list[1] = None
             self.assertIsNone(chassis.get_sfp(1))
 
-    def test_pure_cpo_get_sfp_bridge_never_accesses_empty_sfp_storage(self):
+    def test_pure_cpo_get_sfp_returns_none_without_cpo_lookup(self):
         chassis = self.make_chassis(self.topology())
-        cpo = chassis.get_cpo(1)
-        with patch.object(ChassisBase, "get_sfp", side_effect=AssertionError("empty SFP storage accessed")):
-            self.assertIs(chassis.get_sfp(1), cpo)
+        self.assertIsNotNone(chassis.get_cpo(1))
+        with patch.object(chassis, "get_cpo", side_effect=AssertionError("CPO fallback used")), \
+                patch.object(ChassisBase, "get_sfp", side_effect=AssertionError("empty SFP storage accessed")):
+            self.assertIsNone(chassis.get_sfp(1))
             self.assertIsNone(chassis.get_sfp(0))
+            self.assertIsNone(chassis.get_sfp(65))
         self.assertEqual(chassis._sfp_list, [])
 
-    def test_mixed_get_sfp_prefers_existing_sfp(self):
+    def test_mixed_get_sfp_only_returns_existing_sfp(self):
         data = self.topology()
         data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"], "Ethernet8": {"associated_devices": []}}
         chassis = self.make_chassis(data)
         sfp = chassis._sfp_list[2]
-        with patch.object(chassis, "get_cpo", side_effect=AssertionError("existing SFP replaced")):
+        with patch.object(chassis, "get_cpo", side_effect=AssertionError("CPO fallback used")):
+            self.assertIsNone(chassis.get_sfp(1))
             self.assertIs(chassis.get_sfp(2), sfp)
 
     def test_els_optoe_access_uses_shared_eeprom_offsets_directly(self):

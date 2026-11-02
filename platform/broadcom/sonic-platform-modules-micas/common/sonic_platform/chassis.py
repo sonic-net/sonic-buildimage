@@ -57,6 +57,7 @@ class Chassis(ChassisBase):
     def __init__(self):
         self.sfp_present_dict = {}
         self._cpo_devices = {}
+        self._cpo_init_error = None
         ChassisBase.__init__(self)
         self._dcdc_list = []
         self.int_case = interface()
@@ -530,10 +531,9 @@ class Chassis(ChassisBase):
 
         # Check for OIR events and return ret_dict
         for i in range(self.port_start_index, self.port_start_index + self.port_num):
-
-            device = self.get_cpo(i)
-            if device is None and self._sfp_list:
-                device = self.get_sfp(i)
+            if i >= len(self._sfp_list):
+                break
+            device = self._sfp_list[i]
             if device is None:
                 continue
             if device.get_presence():
@@ -547,7 +547,7 @@ class Chassis(ChassisBase):
             return ret_dict
 
         for index, status in current_sfp_present_dict.items():
-            if self.sfp_present_dict[index] != status:
+            if self.sfp_present_dict.get(index, self.STATUS_REMOVED) != status:
                 ret_dict[index] = status
 
         self.sfp_present_dict = current_sfp_present_dict
@@ -681,7 +681,7 @@ class Chassis(ChassisBase):
             if not associations:
                 if not self._sfp_list:
                     self._sfp_list = [None] * (last_port + 1)
-                self._sfp_list[port_id] = Sfp(str(port_id))
+                self._sfp_list[port_id] = Sfp(port_id)
             else:
                 oe_name, oe_bank = associations["optical_engine"]
                 els_name, els_bank = associations["external_laser_source"]
@@ -698,17 +698,10 @@ class Chassis(ChassisBase):
             self.sfp_present_dict[port_id] = self.STATUS_REMOVED
 
     def get_sfp(self, index):
-        """Temporarily expose CPO objects to xcvrd's remaining SFP callers."""
-        if not self.is_cpo_device():
-            return super().get_sfp(index)
-        if self._sfp_list:
-            sfp = super().get_sfp(index)
-            if sfp is not None:
-                return sfp
-        # TODO: Remove this compatibility bridge once xcvrd uses get_cpo()
-        # for CPO ports throughout its state, DOM and firmware handling.
-        # CPO storage remains separate; both accessors return the same object.
-        return self.get_cpo(index)
+        """Return only SFP objects; CPO ports are accessed through get_cpo()."""
+        if not self._sfp_list:
+            return None
+        return super().get_sfp(index)
 
     def construct_cpo_devices(self, cpo_data):
         """Create CPO objects from devices/associated_devices, ignoring legacy references."""
