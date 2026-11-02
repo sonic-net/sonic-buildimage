@@ -1,0 +1,79 @@
+name: Micas platform unit tests
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'platform/broadcom/sonic-platform-modules-micas/common/**'
+      - 'device/micas/x86_64-micas_m2-w6940-128x1-fr4-r0/**'
+      - 'src/sonic-platform-common'
+      - 'src/sonic-py-common'
+      - '.github/workflows/micas-platform-tests.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'platform/broadcom/sonic-platform-modules-micas/common/**'
+      - 'device/micas/x86_64-micas_m2-w6940-128x1-fr4-r0/**'
+      - 'src/sonic-platform-common'
+      - 'src/sonic-py-common'
+      - '.github/workflows/micas-platform-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  component-dependencies:
+    name: Check paired API dependency
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      ready: ${{ steps.api.outputs.ready }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Initialize platform-common source
+        run: git submodule update --init --depth 1 src/sonic-platform-common
+      - name: Check required endpoint support
+        id: api
+        shell: bash
+        run: |
+          component=src/sonic-platform-common
+          ready=true
+          if ! git -C "$component" grep -q BROADCOM_BAILLY HEAD -- sonic_platform_base/sonic_xcvr/cpo/cpo_base.py; then
+            ready=false
+          fi
+          for path in \
+            sonic_platform_base/sonic_xcvr/api/broadcom/bailly_oe.py \
+            sonic_platform_base/sonic_xcvr/api/broadcom/bailly_elsfp.py \
+            sonic_platform_base/sonic_xcvr/mem_maps/broadcom/bailly_oe.py \
+            sonic_platform_base/sonic_xcvr/mem_maps/broadcom/bailly_elsfp.py; do
+            if ! git -C "$component" cat-file -e "HEAD:$path" 2>/dev/null; then
+              ready=false
+            fi
+          done
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          if [ "$ready" = false ]; then
+            echo "::notice::Pinned platform-common lacks paired Bailly endpoint support; platform tests will be skipped."
+            echo 'Platform tests were not run: merge the paired API support and update the platform-common pin.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+  unit-tests:
+    name: Platform unit tests
+    needs: component-dependencies
+    if: needs.component-dependencies.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Initialize Python component sources
+        run: git submodule update --init --depth 1 src/sonic-platform-common src/sonic-py-common
+      - name: Install test dependencies
+        run: python -m pip install -r platform/broadcom/sonic-platform-modules-micas/common/tests/requirements.txt
+      - name: Run platform tests
+        run: make -C platform/broadcom/sonic-platform-modules-micas/common/tests test PYTHON=python
