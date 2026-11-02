@@ -1,0 +1,269 @@
+Enable kdump and vmcore capture on Wistron ARM64 platforms.
+
+1. Build makedumpfile with ARM64 52-bit VA support for 4K-page kernels
+   using fixed upstream commit cecce00ab4f3, with epoch 1 and apt hold.
+2. Configure kdump-tools cmdline: remove irqpoll, add reset_devices, and
+   set systemd.unit=kdump-tools-dump.service on ARM64 platforms.
+3. Update default KDUMP memory in init_cfg.json.j2 to
+   0M-2G:0M,2G-64G:512M,64G-:512M.
+
+diff --git a/build_debian.sh b/build_debian.sh
+index 1d2db21f5..07ff9653d 100755
+--- a/build_debian.sh
++++ b/build_debian.sh
+@@ -361,7 +361,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
+     cgroup-tools            \
+     ipmitool                \
+     ndisc6                  \
+-    makedumpfile            \
+     conntrack               \
+     python3                 \
+     python3-pip             \
+@@ -385,6 +384,16 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
+     zstd                    \
+     nvme-cli
+ 
++## Install self-built makedumpfile (with ARM64 VA Bits 52 fix)
++echo '[INFO] Install self-built makedumpfile'
++sudo cp $debs_path/makedumpfile_*.deb $FILESYSTEM_ROOT
++basename_makedumpfile=$(basename $debs_path/makedumpfile_*.deb)
++sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT \
++    apt-get -y install --allow-downgrades ./$basename_makedumpfile
++sudo LANG=C chroot $FILESYSTEM_ROOT rm -f /$basename_makedumpfile
++## Keep apt from replacing it with Debian's makedumpfile, which lacks the fix
++sudo LANG=C chroot $FILESYSTEM_ROOT apt-mark hold makedumpfile
++
+ sudo cp files/initramfs-tools/pzstd $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
+ sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
+ 
+diff --git a/rules/makedumpfile.dep b/rules/makedumpfile.dep
+new file mode 100644
+index 000000000..3518a7c6e
+--- /dev/null
++++ b/rules/makedumpfile.dep
+@@ -0,0 +1,7 @@
++SPATH       := $($(MAKEDUMPFILE)_SRC_PATH)
++DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/makedumpfile.mk rules/makedumpfile.dep
++DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
++DEP_FILES   += $(shell git ls-files $(SPATH))
++$(MAKEDUMPFILE)_CACHE_MODE  := GIT_CONTENT_SHA
++$(MAKEDUMPFILE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
++$(MAKEDUMPFILE)_DEP_FILES   := $(DEP_FILES)
+diff --git a/rules/makedumpfile.mk b/rules/makedumpfile.mk
+new file mode 100644
+index 000000000..aaf87d682
+--- /dev/null
++++ b/rules/makedumpfile.mk
+@@ -0,0 +1,21 @@
++# makedumpfile package
++#
++# ARM64 52-bit VA support for 4K pages (upstream b7587f1) landed after the
++# 1.7.9 release, so build a fixed upstream commit instead of the release tag.
++# The epoch keeps this package newer than Debian's 1:1.7.x makedumpfile.
++MAKEDUMPFILE_VERSION = 1.7.9
++MAKEDUMPFILE_COMMIT = cecce00ab4f3bab6b24f437d7a6d19bb8738081f
++MAKEDUMPFILE_VERSION_FULL = $(MAKEDUMPFILE_VERSION)+git20260924.cecce00-0~sonic1
++export MAKEDUMPFILE_VERSION
++export MAKEDUMPFILE_COMMIT
++export MAKEDUMPFILE_VERSION_FULL
++
++MAKEDUMPFILE = makedumpfile_$(MAKEDUMPFILE_VERSION_FULL)_$(CONFIGURED_ARCH).deb
++$(MAKEDUMPFILE)_SRC_PATH = $(SRC_PATH)/makedumpfile
++SONIC_MAKE_DEBS += $(MAKEDUMPFILE)
++
++MAKEDUMPFILE_DBG = makedumpfile-dbgsym_$(MAKEDUMPFILE_VERSION_FULL)_$(CONFIGURED_ARCH).deb
++$(eval $(call add_derived_package,$(MAKEDUMPFILE),$(MAKEDUMPFILE_DBG)))
++
++export MAKEDUMPFILE
++export MAKEDUMPFILE_DBG
+diff --git a/slave.mk b/slave.mk
+index ba67a50d6..17141bc31 100644
+--- a/slave.mk
++++ b/slave.mk
+@@ -1405,6 +1405,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
+                 $(SONIC_DEVICE_DATA) \
+                 $(IFUPDOWN2) \
+                 $(KDUMP_TOOLS) \
++                $(MAKEDUMPFILE) \
+                 $(LIBPAM_RADIUS) \
+                 $(LIBNSS_RADIUS) \
+                 $(LIBPAM_TACPLUS) \
+diff --git a/src/makedumpfile/Makefile b/src/makedumpfile/Makefile
+new file mode 100644
+index 000000000..7fd7b7128
+--- /dev/null
++++ b/src/makedumpfile/Makefile
+@@ -0,0 +1,40 @@
++.ONESHELL:
++SHELL = /bin/bash
++.SHELLFLAGS += -e
++
++MAIN_TARGET = $(MAKEDUMPFILE)
++DERIVED_TARGETS = $(MAKEDUMPFILE_DBG)
++
++$(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
++	# Remove any stale files from previous builds
++	rm -rf ./makedumpfile-build
++	rm -f makedumpfile_*.deb makedumpfile-dbgsym_*.deb makedumpfile_*.buildinfo makedumpfile_*.changes
++
++	# Build a fixed upstream commit so every build uses the same source
++	git clone https://github.com/makedumpfile/makedumpfile.git makedumpfile-build
++	pushd ./makedumpfile-build
++	git -c advice.detachedHead=false checkout $(MAKEDUMPFILE_COMMIT)
++	test "$$(git rev-parse HEAD)" = "$(MAKEDUMPFILE_COMMIT)"
++
++	# Copy debian packaging structure into source tree
++	cp -r ../debian ./debian
++
++	# Build debian package
++ifeq ($(CROSS_BUILD_ENVIRON), y)
++	dpkg-buildpackage -rfakeroot -d -b -us -uc \
++		-a$(CONFIGURED_ARCH) \
++		-Pcross,nocheck \
++		-j$(SONIC_CONFIG_MAKE_JOBS) \
++		--admindir $(SONIC_DPKG_ADMINDIR)
++else
++	dpkg-buildpackage -rfakeroot -d -b -us -uc \
++		-j$(SONIC_CONFIG_MAKE_JOBS) \
++		--admindir $(SONIC_DPKG_ADMINDIR)
++endif
++
++	popd
++
++	# Move the newly-built .deb packages to the destination directory
++	mv $(DERIVED_TARGETS) $* $(DEST)/
++
++$(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)
+diff --git a/src/makedumpfile/debian/changelog b/src/makedumpfile/debian/changelog
+new file mode 100644
+index 000000000..8a5727cdf
+--- /dev/null
++++ b/src/makedumpfile/debian/changelog
+@@ -0,0 +1,9 @@
++makedumpfile (1:1.7.9+git20260924.cecce00-0~sonic1) unstable; urgency=medium
++
++  * Build upstream commit cecce00ab4f3 (1.7.9 plus later fixes)
++  * Fix: ARM64 PAGE SIZE 0x1000 and VA Bits 52 not supported
++  * Fix: Add 5-level page table support for 4K pages with 52-bit VA
++  * Enable dynamic linking with lzo and zstd support
++  * Use epoch 1 so the package is newer than Debian 1:1.7.x
++
++ -- SONiC <sonic@microsoft.com>  Mon, 26 Oct 2026 00:00:00 +0000
+diff --git a/src/makedumpfile/debian/control b/src/makedumpfile/debian/control
+new file mode 100644
+index 000000000..0e0edded7
+--- /dev/null
++++ b/src/makedumpfile/debian/control
+@@ -0,0 +1,21 @@
++Source: makedumpfile
++Section: utils
++Priority: optional
++Maintainer: SONiC <sonic@microsoft.com>
++Build-Depends: debhelper-compat (= 13),
++               libelf-dev,
++               libdw-dev,
++               zlib1g-dev,
++               liblzo2-dev,
++               libzstd-dev
++Standards-Version: 4.6.0
++
++Package: makedumpfile
++Architecture: any
++Depends: ${shlibs:Depends}, ${misc:Depends},
++         liblzo2-2,
++         libzstd1
++Description: VMcore extraction tool
++ makedumpfile makes a small DUMPFILE by compressing dump data or
++ by excluding unnecessary pages for analysis. This version includes
++ ARM64 VA Bits 52 support fix.
+diff --git a/src/makedumpfile/debian/copyright b/src/makedumpfile/debian/copyright
+new file mode 100644
+index 000000000..566f8f9f0
+--- /dev/null
++++ b/src/makedumpfile/debian/copyright
+@@ -0,0 +1,15 @@
++Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
++Upstream-Name: makedumpfile
++Upstream-Contact: https://github.com/makedumpfile/makedumpfile
++Source: https://github.com/makedumpfile/makedumpfile
++
++Files: *
++Copyright: 2006 NEC Corporation
++License: GPL-2+
++ This program is free software; you can redistribute it and/or modify
++ it under the terms of the GNU General Public License as published by
++ the Free Software Foundation; either version 2 of the License, or
++ (at your option) any later version.
++ .
++ On Debian systems, the complete text of the GNU General Public License
++ version 2 can be found in /usr/share/common-licenses/GPL-2.
+diff --git a/src/makedumpfile/debian/rules b/src/makedumpfile/debian/rules
+new file mode 100755
+index 000000000..50394ef23
+--- /dev/null
++++ b/src/makedumpfile/debian/rules
+@@ -0,0 +1,36 @@
++#!/usr/bin/make -f
++
++export DH_VERBOSE = 1
++
++%:
++	dh $@
++
++override_dh_auto_build:
++	$(MAKE) \
++		LINKTYPE=dynamic \
++		USELZO=on \
++		USESNAPPY=off \
++		USEZSTD=on
++
++override_dh_auto_install:
++	install -D -m 755 makedumpfile \
++		$(CURDIR)/debian/makedumpfile/usr/bin/makedumpfile
++	install -D -m 755 makedumpfile-R.pl \
++		$(CURDIR)/debian/makedumpfile/usr/bin/makedumpfile-R.pl
++	install -D -m 644 makedumpfile.conf \
++		$(CURDIR)/debian/makedumpfile/usr/share/makedumpfile/makedumpfile.conf.sample
++	[ -f makedumpfile.8.in ] && \
++		sed "s/@VERSION@/$(MAKEDUMPFILE_VERSION)/g" makedumpfile.8.in \
++		> makedumpfile.8 || true
++	[ -f makedumpfile.conf.5.in ] && \
++		sed "s/@VERSION@/$(MAKEDUMPFILE_VERSION)/g" makedumpfile.conf.5.in \
++		> makedumpfile.conf.5 || true
++	[ -f makedumpfile.8 ] && \
++		install -D -m 644 makedumpfile.8 \
++		$(CURDIR)/debian/makedumpfile/usr/share/man/man8/makedumpfile.8 || true
++	[ -f makedumpfile.conf.5 ] && \
++		install -D -m 644 makedumpfile.conf.5 \
++		$(CURDIR)/debian/makedumpfile/usr/share/man/man5/makedumpfile.conf.5 || true
++
++override_dh_auto_test:
++	# Skip tests
+diff --git a/files/image_config/kdump/kdump-tools b/files/image_config/kdump/kdump-tools
+index 2fb39d81b..31dfa4f07 100644
+--- a/files/image_config/kdump/kdump-tools
++++ b/files/image_config/kdump/kdump-tools
+@@ -1,5 +1,9 @@
+ # Default configuration
+-KDUMP_CMDLINE_APPEND="irqpoll nr_cpus=1 nousb systemd.unit=kdump-tools.service ata_piix.prefer_ms_hyperv=0"
++if [ "$(uname -m)" = "aarch64" ]; then
++    KDUMP_CMDLINE_APPEND="nr_cpus=1 reset_devices nousb systemd.unit=kdump-tools-dump.service ata_piix.prefer_ms_hyperv=0"
++else
++    KDUMP_CMDLINE_APPEND="irqpoll nr_cpus=1 nousb systemd.unit=kdump-tools.service ata_piix.prefer_ms_hyperv=0"
++fi
+ 
+ # ---------------------------------------------------------------------------
+ # Additional Kdump environment settings used in SONiC
+diff --git a/files/build_templates/init_cfg.json.j2 b/files/build_templates/init_cfg.json.j2
+index 1d1c1817b..7f09086a5 100644
+--- a/files/build_templates/init_cfg.json.j2
++++ b/files/build_templates/init_cfg.json.j2
+@@ -199,7 +199,7 @@
+ {% else %}
+             "enabled": "false",
+ {% endif %}
+-            "memory": "0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-:448M",
++            "memory": "0M-2G:0M,2G-64G:512M,64G-:512M",
+             "num_dumps": "3"
+         }
+     },
