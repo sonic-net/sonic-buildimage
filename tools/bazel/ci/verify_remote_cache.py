@@ -32,6 +32,7 @@ def run_build(bazel, workspace, work, phase, upload):
             "--remote_upload_local_results=" + str(upload).lower(),
             "--execution_log_json_file=" + str(evidence / "execution.json"),
             "--build_event_json_file=" + str(evidence / "events.jsonl"),
+            "--nobuild_event_json_file_path_conversion",
         ],
         cwd=workspace, check=True,
     )

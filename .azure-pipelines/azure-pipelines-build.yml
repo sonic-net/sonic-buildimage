@@ -139,7 +139,7 @@ jobs:
           case " $BUILD_OPTIONS " in
             *" BUILD_WITH_BAZEL_WHEN_AVAILABLE=y "*)
               SONIC_RUN_CMDS="python3 -B tools/bazel/ci/verify_remote_cache.py --upload-local-results=$(BAZEL_REMOTE_CACHE_UPLOAD)" \
-                make $BUILD_OPTIONS sonic-slave-run
+                make $BUILD_OPTIONS -f Makefile.work BLDENV=trixie sonic-slave-run
               ;;
             *)
               echo "Skipping Bazel remote cache check: Bazel bridge is disabled."
