@@ -17,7 +17,7 @@ SONIC_VERSION=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v build_version)
 SONIC_OVERLAY_UPPERDIR="/host/image-$SONIC_VERSION/rw/etc/sonic"
 
 SERVICES_STOPPED=0
-trap "error_cleanup" HUP INT QUIT PIPE TERM
+trap "error_cleanup" INT QUIT PIPE TERM
 
 # Command usage and help
 usage()
@@ -74,6 +74,39 @@ clear_sonic_dir()
     find $SONIC_OVERLAY_UPPERDIR -type f | grep -ve ${EXCLUDE_LIST} | xargs rm -rf
     # remount root
     mount -o remount /
+}
+
+restore_default_hwsku()
+{
+    # Only restore in default or only-config factory reset scenarios
+    if [ -z "$FACTORY_TYPE" ] || [ "$FACTORY_TYPE" = "only-config" ]; then
+        # Read the original default_sku saved during first boot. Stored in /etc
+        if [ -f /etc/factory_default_sku ]; then
+            DEF_HWSKU=$(head -n 1 /etc/factory_default_sku | awk '{print $1}')
+            if [ -z "$DEF_HWSKU" ]; then
+                echo "Error: Factory default_sku file is empty or malformed"
+                return
+            fi
+
+            # Update default_sku file
+            CURRENT_SKU=$(head -n 1 /usr/share/sonic/device/$PLATFORM/default_sku | awk '{print $1}')
+            if [ "$CURRENT_SKU" != "$DEF_HWSKU" ]; then
+                echo "Restoring default HWSKU in default_sku: $CURRENT_SKU -> $DEF_HWSKU"
+                sed -i "1s/$CURRENT_SKU/$DEF_HWSKU/" /usr/share/sonic/device/$PLATFORM/default_sku
+            fi
+
+            # Update sonic-environment file
+            if [ -f /etc/sonic/sonic-environment ]; then
+                CURRENT_ENV_HWSKU=$(grep "^HWSKU=" /etc/sonic/sonic-environment | cut -d'=' -f2)
+                if [ "$CURRENT_ENV_HWSKU" != "$DEF_HWSKU" ]; then
+                    echo "Restoring default HWSKU in sonic-environment: $CURRENT_ENV_HWSKU -> $DEF_HWSKU"
+                    sed -i "s/^HWSKU=.*/HWSKU=$DEF_HWSKU/" /etc/sonic/sonic-environment
+                fi
+            fi
+        else
+            echo "Warning: Factory default_sku file not found at /etc/factory_default_sku"
+        fi
+    fi
 }
 
 # Get list of defaults users names and passwords from DEFAULT_USERS_FILE
@@ -144,6 +177,9 @@ cp ${CONFIG_DB_JSON} ${TEMP_CFG}
 if [ "$FACTORY_TYPE" != "keep-basic" ] && [ "$FACTORY_TYPE" != "keep-all-config" ]; then
     rm -f ${CONFIG_DB_JSON}
 fi
+
+# Restore default HWSKU BEFORE config-setup so it uses the correct HWSKU
+restore_default_hwsku
 
 echo "Call config-setup factory"
 config-setup factory $FACTORY_TYPE
