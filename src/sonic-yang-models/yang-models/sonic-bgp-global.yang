@@ -891,11 +891,12 @@ module sonic-bgp-global {
                     type leafref {
                         path
                             "../../../BGP_GLOBALS_EVPN_VNI/"
-                          + "BGP_GLOBALS_EVPN_VNI_LIST/vni";
+                          + "BGP_GLOBALS_EVPN_VNI_LIST[vrf_name=current()/../vrf_name]/vni";
                     }
                     description
-                        "L2 VNI identifier. RFC 7432 24-bit VNI range
-                         (1..16777215).";
+                        "L2 VNI identifier; must match an existing
+                         BGP_GLOBALS_EVPN_VNI entry in the same VRF.
+                         RFC 7432 24-bit VNI range (1..16777215).";
                 }
 
                 leaf rt {
