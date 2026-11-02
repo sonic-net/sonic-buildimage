@@ -389,9 +389,9 @@ libre2-dev==20220601+dfsg-1+b1
 libreadline8==8.2-1.3
 librhash0==1.4.3-3
 librtmp1==2.4+20151223.gitfa8646d.1-2+b2
-libsasl2-2==2.1.28+dfsg-10
-libsasl2-modules==2.1.28+dfsg-10
-libsasl2-modules-db==2.1.28+dfsg-10
+libsasl2-2==2.1.28+dfsg-10+deb12u1
+libsasl2-modules==2.1.28+dfsg-10+deb12u1
+libsasl2-modules-db==2.1.28+dfsg-10+deb12u1
 libselinux1-dev==3.4-1+b6
 libsepol-dev==3.4-2.1
 libsodium23==1.0.18-1+deb12u1
