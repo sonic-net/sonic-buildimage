@@ -47,7 +47,7 @@ module sonic-isis-global {
 
                 leaf net_title {
                     type string {
-                        pattern '^[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.[0-9a-fA-F]{2}$';
+                        pattern '[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.[0-9a-fA-F]{2}';
                     }
                     description "Network Entity Title (NET) for this intermediate system.";
                 }
