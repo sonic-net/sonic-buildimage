@@ -1,6 +1,5 @@
 """CPO temperature polling through independent OE and ELS endpoints."""
 import importlib.util
-import os
 from pathlib import Path
 import sys
 import types
@@ -9,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 
 
-ROOT = Path(os.environ.get("CPO_DRAFT_REPO", Path(__file__).resolve().parents[5]))
+ROOT = Path(__file__).resolve().parents[5]
 PLUGIN = ROOT / "device/micas/x86_64-micas_m2-w6940-128x1-fr4-r0/plugins/sfputil.py"
 METHODS = [("get_highest_temperature_cpo_oe", "oe"),
            ("get_highest_temperature_cpo_rlm", "elsfp")]

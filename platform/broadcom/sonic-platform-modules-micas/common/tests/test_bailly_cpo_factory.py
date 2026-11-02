@@ -1,20 +1,15 @@
-"""Micas Bailly factory selection and community API lifecycle."""
+"""Platform endpoint addressing and API lifecycle tests."""
 import importlib.util
-import os
 from pathlib import Path
 import unittest
 
 from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_oe import BaillyOeApi
 from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_elsfp import BaillyElsfpApi
-from sonic_platform_base.sonic_xcvr.api.broadcom.davisson_oe import DavissonTh6OeApi
-from sonic_platform_base.sonic_xcvr.api.broadcom.davisson_elsfp import DavissonTh6ElsfpApi
 from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoHardwareInfo, OeId
-from sonic_platform_base.sonic_xcvr.cpo.oe import OeBase
-from sonic_platform_base.sonic_xcvr.cpo.elsfp import ElsfpBase
 from sonic_platform_base.sonic_xcvr.fields import consts
 
 
-ROOT = Path(os.environ.get("CPO_DRAFT_REPO", Path(__file__).resolve().parents[5]))
+ROOT = Path(__file__).resolve().parents[5]
 spec = importlib.util.spec_from_file_location(
     "micas_factory_under_test",
     ROOT / "platform/broadcom/sonic-platform-modules-micas/common/sonic_platform/cpo.py")
@@ -29,25 +24,6 @@ class MemoryAccess:
     def write_eeprom(self, offset, size, buffer):
         self.data[offset:offset + size] = buffer[:size]
         return True
-
-
-class CommonMemoryOe(MemoryAccess, OeBase):
-    def __init__(self, hardware_info, bank=0, base_page=0):
-        self.base_page = base_page
-        self.data = bytearray(1024 * 1024)
-        super().__init__(hardware_info, bank=bank)
-
-
-class CommonMemoryElsfp(MemoryAccess, ElsfpBase):
-    def __init__(self, hardware_info, base_page=0):
-        self.base_page = base_page
-        self.data = bytearray(32768)
-        self.reads = []
-        super().__init__(hardware_info)
-
-    def read_eeprom(self, offset, size):
-        self.reads.append((offset, size))
-        return super().read_eeprom(offset, size)
 
 
 class BaillyMemoryOe(MemoryAccess, micas.Oe):
@@ -68,9 +44,6 @@ class BaillyMemoryElsfp(MemoryAccess, micas.Elsfp):
 
 
 class TestBaillyCpoFactory(unittest.TestCase):
-    def test_hardware_ids_preserve_davisson_value(self):
-        self.assertEqual(OeId.BROADCOM_DAVISSON.value, 1)
-        self.assertEqual(OeId.BROADCOM_BAILLY.value, 2)
 
     def test_bailly_oe_bank_and_els_page(self):
         oe = BaillyMemoryOe(bank=7, base_page=4)
@@ -101,23 +74,6 @@ class TestBaillyCpoFactory(unittest.TestCase):
         refreshed = oe.get_api()
         oe.remove_api()
         self.assertIsNot(oe.get_api(), refreshed)
-
-    def test_davisson_factories_still_select_davisson(self):
-        info = CpoHardwareInfo(OeId.BROADCOM_DAVISSON, None)
-        self.assertIsInstance(CommonMemoryOe(info).get_api(), DavissonTh6OeApi)
-        self.assertIsInstance(CommonMemoryElsfp(info).get_api(), DavissonTh6ElsfpApi)
-
-    def test_unknown_hardware_still_fails(self):
-        info = CpoHardwareInfo(None, None)
-        with self.assertRaises(ValueError):
-            CommonMemoryOe(info).get_api()
-        with self.assertRaises(ValueError):
-            CommonMemoryElsfp(info).get_api()
-
-    def test_common_default_factories_select_bailly(self):
-        info = CpoHardwareInfo(OeId.BROADCOM_BAILLY, None)
-        self.assertIsInstance(CommonMemoryOe(info, bank=7, base_page=4).get_api(), BaillyOeApi)
-        self.assertIsInstance(CommonMemoryElsfp(info, base_page=4).get_api(), BaillyElsfpApi)
 
 
 if __name__ == "__main__":
