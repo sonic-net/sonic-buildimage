@@ -392,7 +392,10 @@
     },
     "BGP_GLOBAL_AF_NEG_EVPN_RD_INVALID_FORMAT": {
         "desc": "Invalid evpn_rd format.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "evpn_rd"
+        ]
     },
     "BGP_GLOBAL_AF_NEG_USE_ES_L3NHG_WRONG_AF": {
         "desc": "use_es_l3nhg must only be set on l2vpn_evpn address family.",
@@ -511,7 +514,10 @@
     },
     "BGP_GLOBAL_AF_NEG_LEGACY_RD_INVALID_FORMAT": {
         "desc": "Invalid format for legacy route-distinguisher.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "route-distinguisher"
+        ]
     },
     "BGP_GLOBALS_AF_IMPORT_EXPORT_RTS_VALID": {
         "desc": "import-rts and export-rts lists are permitted under l2vpn_evpn."
@@ -524,7 +530,10 @@
     },
     "BGP_GLOBAL_AF_NEG_EXPORT_RTS_INVALID_FORMAT": {
         "desc": "Invalid RT format in export-rts.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "export-rts"
+        ]
     },
     "BGP_GLOBAL_AF_NEG_ADVERTISE_ALL_VNI_WRONG_AF": {
         "desc": "advertise-all-vni must only be set on l2vpn_evpn.",
@@ -561,11 +570,17 @@
     },
     "BGP_GLOBALS_EVPN_VNI_NEG_RD_INVALID_FORMAT": {
         "desc": "route-distinguisher must match IP:N or ASN:N.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "route-distinguisher"
+        ]
     },
     "BGP_GLOBALS_EVPN_VNI_NEG_IMPORT_RT_INVALID_FORMAT": {
         "desc": "import-rts entries must match IP:N or ASN:N.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "import-rts"
+        ]
     },
     "BGP_GLOBALS_EVPN_VNI_NEG_VRF_NOT_EXIST": {
         "desc": "vrf_name must leafref to an existing BGP_GLOBALS entry.",
@@ -596,7 +611,41 @@
     },
     "BGP_GLOBALS_EVPN_RT_NEG_RT_VALUE_INVALID_FORMAT": {
         "desc": "rt must match IP:N or ASN:N.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "rt"
+        ]
+    },
+    "BGP_GLOBALS_EVPN_RT_VALID_RT_FORMAT_LIMITS": {
+        "desc": "rt accepts ASN:NN, IPv4:NN and 4-byte-ASN:NN values at their range limits."
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_IPV4_NN_OUT_OF_RANGE": {
+        "desc": "IPv4:NN rt with NN above 65535 is rejected.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "rt"
+        ]
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_INVALID_IPV4": {
+        "desc": "IPv4:NN rt with an IPv4 octet above 255 is rejected.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "rt"
+        ]
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_4BYTE_ASN_NN_OUT_OF_RANGE": {
+        "desc": "4-byte-ASN:NN rt with NN above 65535 is rejected.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "rt"
+        ]
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_NN_OUT_OF_RANGE": {
+        "desc": "ASN:NN rt with NN above 4294967295 is rejected.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "rt"
+        ]
     },
     "BGP_GLOBALS_EVPN_RT_NEG_VRF_NOT_EXIST": {
         "desc": "vrf_name must leafref to an existing BGP_GLOBALS entry.",
@@ -625,7 +674,10 @@
     },
     "BGP_GLOBALS_EVPN_VNI_RT_NEG_RT_VALUE_INVALID_FORMAT": {
         "desc": "rt on BGP_GLOBALS_EVPN_VNI_RT must match IP:N or ASN:N.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "rt"
+        ]
     },
     "BGP_GLOBAL_AF_NEG_MUST_REDISTRIBUTE_STATIC_RMAP_WRONG_AF": {
         "desc": "redistribute_static_rmap must NOT be set under l2vpn_evpn (afi_safi gate).",

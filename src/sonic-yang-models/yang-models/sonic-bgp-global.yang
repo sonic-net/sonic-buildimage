@@ -37,6 +37,45 @@ module sonic-bgp-global {
             "Initial revision.";
     }
 
+    typedef rd-rt-format {
+        type union {
+            // <2-byte ASN>:<4-byte number>, 0-65535:0-4294967295
+            type string {
+                pattern
+                    '([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|'
+                  + '65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]|[1-9][0-9]{1,8}|'
+                  + '[1-3][0-9]{9}|4[01][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|'
+                  + '4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|'
+                  + '4294967[01][0-9]{2}|42949672[0-8][0-9]|429496729[0-5])';
+            }
+            // <IPv4 address>:<2-byte number>, a.b.c.d:0-65535
+            type string {
+                pattern
+                    '([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|'
+                  + '[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}:([0-9]|'
+                  + '[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|'
+                  + '655[0-2][0-9]|6553[0-5])';
+            }
+            // <4-byte ASN>:<2-byte number>, 0-4294967295:0-65535
+            type string {
+                pattern
+                    '([0-9]|[1-9][0-9]{1,8}|[1-3][0-9]{9}|4[01][0-9]{8}|'
+                  + '42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|'
+                  + '42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[01][0-9]{2}|'
+                  + '42949672[0-8][0-9]|429496729[0-5]):([0-9]|[1-9][0-9]{1,3}|'
+                  + '[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|'
+                  + '6553[0-5])';
+            }
+        }
+        description
+            "Route distinguisher or route target value in ASN:NN,
+             IPv4:NN or 4-byte-ASN:NN form. Patterns match the
+             openconfig-network-instance-types route-distinguisher
+             typedef.";
+        reference
+            "RFC 4364 Section 4.2, RFC 4360, RFC 5668";
+    }
+
     container sonic-bgp-global {
         container BGP_GLOBALS {
             list BGP_GLOBALS_LIST {
@@ -477,9 +516,7 @@ module sonic-bgp-global {
                     must "current()/../afi_safi = 'l2vpn_evpn'" {
                         error-message "evpn_rd is only applicable to l2vpn_evpn address family";
                     }
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "EVPN route distinguisher in IP:N or ASN:N form (e.g. 10.0.0.1:101),
                          per RFC 4364. Preferred YANG/CVL-validated key for the EVPN address
@@ -716,9 +753,7 @@ module sonic-bgp-global {
                         error-message
                             "route-distinguisher is only valid under l2vpn_evpn";
                     }
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "Legacy EVPN route-distinguisher. Prefer 'evpn_rd'
                          (same value, YANG-validated under that name) for new
@@ -730,9 +765,7 @@ module sonic-bgp-global {
                         error-message
                             "import-rts is only valid under l2vpn_evpn";
                     }
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "EVPN import route-targets in IP:N or ASN:N form.";
                 }
@@ -742,9 +775,7 @@ module sonic-bgp-global {
                         error-message
                             "export-rts is only valid under l2vpn_evpn";
                     }
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "EVPN export route-targets in IP:N or ASN:N form.";
                 }
@@ -810,9 +841,7 @@ module sonic-bgp-global {
                 }
 
                 leaf rt {
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "Route-target value in IP:N or ASN:N form
                          (RFC 4364).";
@@ -870,9 +899,7 @@ module sonic-bgp-global {
                 }
 
                 leaf rt {
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "Route-target value in IP:N or ASN:N form
                          (RFC 4364).";
@@ -931,26 +958,20 @@ module sonic-bgp-global {
                 }
 
                 leaf route-distinguisher {
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "Per-VNI EVPN route-distinguisher in IP:N or
                          ASN:N form (RFC 4364).";
                 }
 
                 leaf-list import-rts {
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "Per-VNI EVPN import route-targets.";
                 }
 
                 leaf-list export-rts {
-                    type string {
-                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
-                    }
+                    type rd-rt-format;
                     description
                         "Per-VNI EVPN export route-targets.";
                 }

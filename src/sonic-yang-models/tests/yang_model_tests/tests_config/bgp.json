@@ -3929,6 +3929,139 @@
             }
         }
     },
+    "BGP_GLOBALS_EVPN_RT_VALID_RT_FORMAT_LIMITS": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_RT": {
+                "BGP_GLOBALS_EVPN_RT_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "0:0",
+                        "route-target-type": "import"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "65535:4294967295",
+                        "route-target-type": "import"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "4294967295:65535",
+                        "route-target-type": "import"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "255.255.255.255:65535",
+                        "route-target-type": "import"
+                    }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_IPV4_NN_OUT_OF_RANGE": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_RT": {
+                "BGP_GLOBALS_EVPN_RT_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "10.1.0.1:70000",
+                        "route-target-type": "import"
+                    }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_INVALID_IPV4": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_RT": {
+                "BGP_GLOBALS_EVPN_RT_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "256.1.1.1:1",
+                        "route-target-type": "import"
+                    }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_4BYTE_ASN_NN_OUT_OF_RANGE": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_RT": {
+                "BGP_GLOBALS_EVPN_RT_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "70000:70000",
+                        "route-target-type": "import"
+                    }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_NN_OUT_OF_RANGE": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_EVPN_RT": {
+                "BGP_GLOBALS_EVPN_RT_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "afi_safi": "l2vpn_evpn",
+                        "rt": "100:4294967296",
+                        "route-target-type": "import"
+                    }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        }
+    },
+
     "BGP_GLOBALS_EVPN_RT_NEG_VRF_NOT_EXIST": {
         "sonic-bgp-global:sonic-bgp-global": {
             "sonic-bgp-global:BGP_GLOBALS_EVPN_RT": {
