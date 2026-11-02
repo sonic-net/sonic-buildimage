@@ -63,6 +63,7 @@ DPU_NAME_PREFIX = "dpu"
 sonic_ver_info = {}
 hw_info_dict = {}
 hwsku_info = None
+is_chassis_info = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -824,9 +825,33 @@ def is_virtual_chassis():
 
 
 def is_chassis():
-    if get_localhost_info('type') == 'SpineRouter':
-        return True
-    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
+    global is_chassis_info
+
+    # Some CLI commands call this once per port, and each call reads DEVICE_METADATA three
+    # times through get_localhost_info(), opening a CONFIG_DB connection every time. Cache the
+    # answer, including a negative one, which is the normal case on a non-chassis device.
+    #
+    # A failed lookup makes get_localhost_info() return None, which looks the same as an unset
+    # switch_type. The device type is always set in a loaded config, so only cache once it was
+    # read; otherwise the next call retries.
+    #
+    # Whether a device is a chassis does not change while a process runs. A long-running
+    # process keeps the value it read first until it restarts.
+    #
+    # The slot is unsynchronized on purpose: racing threads may both perform the read, but
+    # they store the same value, so the interleaving does not matter.
+    if is_chassis_info is not None:
+        return is_chassis_info
+
+    device_type = get_localhost_info('type')
+    if device_type == 'SpineRouter':
+        result = True
+    else:
+        result = bool((is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis())
+
+    if device_type:
+        is_chassis_info = result
+    return result
 
 
 def is_smartswitch():
