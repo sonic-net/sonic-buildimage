@@ -4,7 +4,7 @@ blinker==1.9.0
 cffi==2.1.1
 click==8.5.0
 cryptography==50.0.2
-cython==3.3.0
+cython==3.3.1
 dpkt==1.9.8
 exabgp==4.2.25
 executing==2.3.0
@@ -13,7 +13,7 @@ grpcio==1.82.0
 grpcio-tools==1.82.0
 invoke==3.0.3
 ipaddress==1.0.23
-ipython==9.17.1
+ipython==9.18.0
 ipython_pygments_lexers==1.1.1
 itsdangerous==2.2.0
 jedi==0.20.1
