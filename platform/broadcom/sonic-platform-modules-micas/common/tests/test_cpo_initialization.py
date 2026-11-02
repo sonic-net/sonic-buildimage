@@ -326,6 +326,8 @@ class TestCpoInitialization(unittest.TestCase):
                     self.assertEqual(chassis.port_start_index, start)
                     self.assertEqual(chassis.port_num, 2)
                     self.assertFalse(chassis._cpo_init_attempted)
+                    self.assertNotIn("sfp_present_dict", vars(chassis))
+                    self.assertIs(chassis.sfp_present_dict, type(chassis).sfp_present_dict)
 
     def test_failed_first_cpo_build_has_cpo_only_port_defaults(self):
         data = self.topology()
@@ -334,6 +336,8 @@ class TestCpoInitialization(unittest.TestCase):
             chassis = self.make_chassis(data)
         self.assertEqual(chassis.port_start_index, 1)
         self.assertEqual(chassis.port_num, 0)
+        self.assertIn("sfp_present_dict", vars(chassis))
+        self.assertEqual(chassis.sfp_present_dict, {})
         self.assertEqual(chassis.get_transceiver_change_event(), {})
 
     def test_els_event_reads_shared_els_once_and_fans_out_removal(self):
@@ -844,12 +848,16 @@ with open(sys.argv[1], 'rb') as fd:
                               "Ethernet8": {"associated_devices": []}}
         chassis = self.make_chassis(data)
         existing_sfp = chassis.get_sfp(2)
+        chassis.get_transceiver_change_event()
         previous_range = (chassis.port_start_index, chassis.port_num)
+        previous_presence = dict(chassis.sfp_present_dict)
         data["interfaces"]["Ethernet0"]["associated_devices"][1]["device_id"] = "ELS99"
         with patch.object(self.chassis.syslog, "syslog"):
             chassis.construct_cpo_devices(data)
         self.assertIs(chassis.get_sfp(2), existing_sfp)
         self.assertEqual((chassis.port_start_index, chassis.port_num), previous_range)
+        self.assertEqual(chassis.sfp_present_dict, previous_presence)
+        self.assertEqual(chassis.get_transceiver_change_event(), {})
         self.assertEqual(chassis.get_all_cpos(), [])
         self.assertFalse(chassis._cpo_initialized)
 

@@ -63,7 +63,6 @@ class Chassis(ChassisBase):
     voltage_status_dict = {}
 
     def __init__(self):
-        self.sfp_present_dict = {}
         self.elsfp_present_dict = {}
         self._cpo_devices = {}
         self._cpo_init_attempted = False
@@ -776,6 +775,7 @@ class Chassis(ChassisBase):
             # Defaults for a failed initial CPO build; normal SFP setup is unchanged.
             self.port_start_index = 1
             self.port_num = 0
+            self.sfp_present_dict = {}
         self._cpo_init_attempted = True
         self._cpo_initialized = False
         try:
