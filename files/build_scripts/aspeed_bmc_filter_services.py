@@ -70,7 +70,8 @@ BMC_REQUIRED_SERVICES = {
     'chrony.service',                 # Chrony time synchronization
 
     # Zero Touch Provisioning: intentionally NOT listed. ZTP is opt-in on
-    # BMC: the image ships ztp.service disabled and admins enable it with
+    # BMC: the image ships ztp.service disabled unless built with
+    # ENABLE_BMC_ZTP=y, and admins enable it with
     # 'systemctl enable --now ztp'. Listing it here would make
     # systemd-sonic-generator re-enable and start it at every boot,
     # defeating the disabled-by-default policy.

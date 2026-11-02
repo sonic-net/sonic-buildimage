@@ -89,8 +89,12 @@ BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
-# BMC (aspeed) images always include ZTP support. The service ships
-# disabled on these images; admins opt in with 'systemctl enable --now ztp'.
+# BMC (aspeed) images always include ZTP support.
+# ENABLE_BMC_ZTP - enables ztp.service in BMC (aspeed) images. Default n: the
+# service ships disabled and admins opt in at runtime with
+# 'systemctl enable --now ztp'. Set to y to ship it enabled, e.g.
+# make PLATFORM=aspeed PLATFORM_ARCH=arm64 ENABLE_BMC_ZTP=y ...
+ENABLE_BMC_ZTP ?= n
 ifeq ($(CONFIGURED_PLATFORM),aspeed)
 ENABLE_ZTP = y
 endif
