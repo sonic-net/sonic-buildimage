@@ -1906,3 +1906,136 @@ def test_get_all_service_list_multi_asic(mock_config_db, mock_run, mock_docker_c
     # Global-scope services should remain
     assert 'radv.service' in result
     assert 'database.service' in result
+
+
+@patch('health_checker.bmc_checker.device_info')
+@patch('health_checker.bmc_checker.swsscommon')
+def test_bmc_checker(mock_swss, mock_devinfo):
+    from health_checker.bmc_checker import BmcChecker
+
+    # No address configured
+    mock_devinfo.get_bmc_address.return_value = None
+    checker = BmcChecker()
+    checker.check(Config())
+    assert checker._info['BMC']['status'] == 'Not OK'
+
+    # Link pre-check: link down
+    mock_devinfo.get_bmc_address.return_value = '169.254.100.1'
+    mock_swss.DBConnector.side_effect = None
+    checker = BmcChecker()
+    mock_chassis = MagicMock()
+    mock_chassis.get_bmc_if_link_status.return_value = (False, 'bmc0 link is down')
+    checker._chassis = mock_chassis
+    checker.check(Config())
+    assert checker._info['BMC-Connectivity']['status'] == 'Not OK'
+    assert 'bmc0 link is down' in checker._info['BMC-Connectivity']['message']
+
+    # Link pre-check: peer unreachable
+    mock_chassis.get_bmc_if_link_status.return_value = (
+        False, 'bmc0 peer 169.254.100.1 unreachable')
+    checker = BmcChecker()
+    checker._chassis = mock_chassis
+    checker.check(Config())
+    assert 'peer 169.254.100.1 unreachable' in checker._info['BMC-Connectivity']['message']
+
+    # Link OK, connection failure
+    mock_chassis.get_bmc_if_link_status.return_value = (True, '')
+    mock_swss.DBConnector.side_effect = Exception('Connection refused')
+    checker = BmcChecker()
+    checker._chassis = mock_chassis
+    checker.check(Config())
+    assert 'Cannot connect' in checker._info['BMC-Connectivity']['message']
+
+    # Link OK, successful pull with mixed status
+    mock_swss.DBConnector.side_effect = None
+    mock_tbl = MagicMock()
+    mock_tbl.getKeys.return_value = ['_meta', 'Services|database', 'Services|pmon']
+    mock_tbl.get.side_effect = lambda k: {
+        '_meta': (True, [('last_updated', '2026-09-29T10:00:00Z'),
+                         ('summary', 'Not OK'), ('polling_interval', '300')]),
+        'Services|database': (True, [('status', 'OK'), ('message', '')]),
+        'Services|pmon': (True, [('status', 'Not OK'),
+                                  ('message', 'pmon is not running')]),
+    }[k]
+    mock_swss.Table.return_value = mock_tbl
+    checker = BmcChecker()
+    checker._chassis = mock_chassis
+    checker.check(Config())
+    assert checker._info['Services|database']['status'] == 'OK'
+    assert checker._info['Services|pmon']['status'] == 'Not OK'
+    assert 'BMC-LastUpdate' in checker._info
+    assert 'BMC-RefreshInterval' in checker._info
+
+
+def test_get_bmc_if_link_status():
+    from unittest.mock import mock_open
+    from sonic_platform_base.chassis_base import ChassisBase
+
+    chassis = ChassisBase()
+    dev_patch = 'sonic_platform_base.chassis_base.device_info'
+    sub_patch = 'sonic_platform_base.chassis_base.subprocess.run'
+    bmc_data = {'bmc_if_name': 'bmc0', 'bmc_addr': '169.254.100.1'}
+
+    # Not a BMC platform
+    with patch(dev_patch) as m:
+        m.is_switch_host.return_value = False
+        m.is_switch_bmc.return_value = False
+        assert chassis.get_bmc_if_link_status() == (False, "Platform does not support BMC")
+
+    # BMC interface not configured
+    with patch(dev_patch) as m:
+        m.is_switch_host.return_value = True
+        m.is_switch_bmc.return_value = False
+        m.get_bmc_data.return_value = {}
+        assert chassis.get_bmc_if_link_status() == (False, "BMC interface not configured in bmc.json")
+
+    # bmc0 link down (sysfs operstate != up)
+    with patch(dev_patch) as m, \
+         patch('builtins.open', mock_open(read_data='down\n')):
+        m.is_switch_host.return_value = True
+        m.is_switch_bmc.return_value = False
+        m.get_bmc_data.return_value = bmc_data
+        link_state, message = chassis.get_bmc_if_link_status()
+        assert link_state is False
+        assert 'link is down' in message
+
+    # bmc0 link up, ping fails
+    with patch(dev_patch) as m, \
+         patch('builtins.open', mock_open(read_data='up\n')), \
+         patch(sub_patch, return_value=MagicMock(returncode=1)):
+        m.is_switch_host.return_value = True
+        m.is_switch_bmc.return_value = False
+        m.get_bmc_data.return_value = bmc_data
+        link_state, message = chassis.get_bmc_if_link_status()
+        assert link_state is False
+        assert 'unreachable' in message
+
+    # bmc0 link up, ping OK
+    with patch(dev_patch) as m, \
+         patch('builtins.open', mock_open(read_data='up\n')), \
+         patch(sub_patch, return_value=MagicMock(returncode=0)):
+        m.is_switch_host.return_value = True
+        m.is_switch_bmc.return_value = False
+        m.get_bmc_data.return_value = bmc_data
+        link_state, message = chassis.get_bmc_if_link_status()
+        assert link_state is True
+        assert message == ''
+
+
+def test_healthd_full_stats():
+    MockConnector.data = {}
+    daemon = HealthDaemon()
+    config = MagicMock()
+    config.interval = 60
+    stat = {
+        'Services': {
+            'redis': {'type': 'Process', 'status': 'OK', 'message': ''},
+            'syncd': {'type': 'Process', 'status': 'Not OK',
+                      'message': 'syncd is not running'},
+        },
+    }
+    daemon._process_stat(MagicMock(), config, stat)
+    assert 'SYSTEM_HEALTH_INFO|Services|redis' in MockConnector.data
+    assert MockConnector.data['SYSTEM_HEALTH_INFO|Services|redis']['status'] == 'OK'
+    assert MockConnector.data['SYSTEM_HEALTH_INFO|Services|syncd']['status'] == 'Not OK'
+    assert 'last_updated' in MockConnector.data['SYSTEM_HEALTH_INFO|_meta']
