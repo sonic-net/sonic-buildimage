@@ -1,0 +1,56 @@
+{
+    "FEATURE": {
+        "bgp": {
+            "state": "disabled"
+        },
+        "dhcp_relay": {
+            "state": "disabled"
+        },
+        "eventd": {
+            "state": "disabled"
+        },
+        "macsec": {
+            "state": "disabled"
+        },
+        "mgmt-framework": {
+            "state": "disabled"
+        },
+        "nat": {
+            "state": "disabled"
+        },
+        "radv": {
+            "state": "disabled"
+        },
+        "restapi": {
+            "state": "disabled"
+        },
+        "sflow": {
+            "state": "disabled"
+        },
+        "snmp": {
+            "state": "disabled"
+        },
+        "swss": {
+            "state": "disabled"
+        },
+        "syncd": {
+            "state": "disabled"
+        },
+        "teamd": {
+            "state": "disabled"
+        },
+        "gnmi": {
+            "state": "enabled",
+            "delayed": "False"
+        },
+        "database": {
+            "delayed": "False"
+        },
+        "lldp": {
+            "delayed": "False"
+        },
+        "pmon": {
+            "delayed": "False"
+        }
+    }
+}
