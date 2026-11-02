@@ -11,6 +11,11 @@ endif
 
 PACKAGE_NAME = sys_sdk
 
+# The SDK CLI assets are published next to SOURCES/, so their base URL is the
+# source URL without that suffix. If the source URL does not end in /SOURCES,
+# set MLNX_SDK_RELEASE_BASE_URL on the make command line.
+MLNX_SDK_RELEASE_BASE_URL ?= $(patsubst %/SOURCES,%,$(MLNX_SDK_SOURCE_BASE_URL))
+
 # Patch drops name the wheel without the dash in the SDK version, so
 # 4.10.2026-001 ships sdkcli-4.10.2026001-wheel.tar.gz. Drops before
 # 4.10.1984-002 do not reliably publish all of SDKCLI_ASSETS.
@@ -71,11 +76,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf $(PACKAGE_NAME)-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION)
 	rm -rf $(SDKCLI_BUNDLE_DIR)
 
-	# The SDK CLI assets are published next to SOURCES/. sdk.mk derives their URL
+	# The SDK CLI assets are published next to SOURCES/. The release URL is derived
 	# by dropping that suffix, which does nothing for a source URL not ending in it.
 	if [ -z "$(MLNX_SDK_RELEASE_BASE_URL)" ] || [ "$(MLNX_SDK_RELEASE_BASE_URL)" = "$(MLNX_SDK_SOURCE_BASE_URL)" ]; then
 		echo "Error: cannot derive the SDK release URL from MLNX_SDK_SOURCE_BASE_URL='$(MLNX_SDK_SOURCE_BASE_URL)'." >&2
-		echo "It must end in /SOURCES, or MLNX_SDK_RELEASE_BASE_URL must be set on the make command line or in sdk.mk." >&2
+		echo "It must end in /SOURCES, or MLNX_SDK_RELEASE_BASE_URL must be set on the make command line." >&2
 		exit 1
 	fi
 
