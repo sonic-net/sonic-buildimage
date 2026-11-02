@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Xichen Lin <lukelin0907@gmail.com>
+Date: Thu, 30 Oct 2026 05:04:15 +1100
+Subject: [PATCH] teamd: let the external supervisor own startup timeout
+
+teamd inherited a fixed 20-second daemon startup acknowledgment timeout
+from libdaemon's generic example. SONiC startup can legitimately exceed
+that limit, after which the child may complete initialization and delete
+its newly created team interface when it processes the queued SIGTERM.
+
+Wait without an internal deadline. The SONiC TeamMgr startup helper owns
+the bounded 60-second deadline, exact-child termination, reaping, and
+cleanup verification.
+---
+ teamd/teamd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/teamd/teamd.c b/teamd/teamd.c
+--- a/teamd/teamd.c
++++ b/teamd/teamd.c
+@@ -1547,2 +1547,2 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+-			ret = daemon_retval_wait(20);
++			ret = daemon_retval_wait(0);
+ 			if (ret < 0) {
