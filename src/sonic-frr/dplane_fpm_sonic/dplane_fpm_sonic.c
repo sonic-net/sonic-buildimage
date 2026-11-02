@@ -88,6 +88,9 @@
  */
 #define FPM_HEADER_SIZE 4
 
+/* Room for the largest message fpm_nl_enqueue() encodes. */
+#define DPLANE_FPM_NL_BUF_SIZE 65536
+
 /* Default SRv6 SID format values */
 #define DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN 32
 #define DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN 16
@@ -801,15 +804,19 @@ static void fpm_hw_mac_del(uint16_t vid, const uint8_t *mac)
  * Pins: the static MACs zebra writes on the local port of an Ethernet Segment
  * for a host the segment peer synced, on a VLAN with or without an L2VNI.
  * Nothing else carries them to the ASIC. A pin zebra removed stays here,
- * unpinned, until its delete has left the output buffer. Main thread only.
+ * unpinned, until its delete has left the output buffer. A pin with a write
+ * left, or a removed one waiting for that, is also on one of the two work
+ * lists below, which are all fpm_pin_flush() visits. Main thread only.
  */
 PREDECL_HASH(fpm_mac_pins);
+PREDECL_DLIST(fpm_pin_work);
 
 struct fpm_pin {
 	struct fpm_mac_pins_item item;
+	struct fpm_pin_work_item work_item;
+	struct fpm_pin_work_head *work;	/* the work list it is on, or NULL */
 	struct fpm_mac_pin pin;
 	bool unpinned;	/* zebra removed it; only its delete is left to write */
-	bool synced;	/* written in this session, add or delete as it stands */
 	uint32_t session; /* fnc->pin_session of the last write */
 };
 
@@ -827,11 +834,30 @@ static uint32_t fpm_pin_hash(const struct fpm_pin *p)
 }
 
 DECLARE_HASH(fpm_mac_pins, struct fpm_pin, item, fpm_pin_cmp, fpm_pin_hash);
+DECLARE_DLIST(fpm_pin_work, struct fpm_pin, work_item);
 
 static struct fpm_mac_pins_head mac_pins = INIT_HASH(mac_pins);
 
+/* Pins to write in this session, the add or the delete as each stands. */
+static struct fpm_pin_work_head pins_unwritten = INIT_DLIST(pins_unwritten);
+/* Removed pins whose delete is in the output buffer. */
+static struct fpm_pin_work_head pins_draining = INIT_DLIST(pins_draining);
+
 /* The number of pins, for the FPM thread, which may not look at them. */
 static _Atomic uint32_t mac_pin_count;
+
+/* Puts the pin on a work list, or with NULL on neither. */
+static void fpm_pin_work_move(struct fpm_pin *p, struct fpm_pin_work_head *work)
+{
+	if (p->work == work)
+		return;
+
+	if (p->work)
+		fpm_pin_work_del(p->work, p);
+	if (work)
+		fpm_pin_work_add_tail(work, p);
+	p->work = work;
+}
 
 static struct fpm_pin *fpm_pin_find(uint16_t vid, const uint8_t *mac)
 {
@@ -845,6 +871,7 @@ static struct fpm_pin *fpm_pin_find(uint16_t vid, const uint8_t *mac)
 
 static void fpm_pin_forget(struct fpm_pin *p)
 {
+	fpm_pin_work_move(p, NULL);
 	fpm_mac_pins_del(&mac_pins, p);
 	XFREE(MTYPE_FPM_MAC_PIN, p);
 	atomic_fetch_sub_explicit(&mac_pin_count, 1, memory_order_relaxed);
@@ -874,7 +901,12 @@ static bool fpm_pin_write(struct fpm_nl_ctx *fnc, const struct fpm_mac_pin *pin,
 	if (nl_len == 0)
 		return true;
 
-	if (STREAM_WRITEABLE(fnc->obuf) < (nl_len + FPM_HEADER_SIZE)) {
+	/* fpm_process_queue() takes a context once DPLANE_FPM_NL_BUF_SIZE bytes
+	 * are free, and drops it if they are not when fpm_nl_enqueue() writes it,
+	 * as the lock is not held in between: leave it that room.
+	 */
+	if (STREAM_WRITEABLE(fnc->obuf) <
+	    DPLANE_FPM_NL_BUF_SIZE + nl_len + FPM_HEADER_SIZE) {
 		atomic_fetch_add_explicit(&fnc->counters.buffer_full, 1,
 					  memory_order_relaxed);
 		return false;
@@ -920,37 +952,23 @@ static bool fpm_pin_obuf_drained(struct fpm_nl_ctx *fnc, uint32_t *session)
 }
 
 /*
- * Writes every pin not yet written in this session, and the delete of every
- * pin zebra removed, but nothing for a MAC zebra now sends as remote: that
- * write replaces the pin in SONiC. A removed pin is forgotten once its delete
- * has left the output buffer in the session that wrote it; fpm_reconnect()
- * drops the buffer, and fpm_pin_replay() writes the delete again. When the
- * buffer is full, or a delete is still in it, it tries again a second later.
- * Without a session it leaves them to fpm_pin_replay().
+ * Writes the pins on pins_unwritten, adds and deletes, but nothing for a MAC
+ * zebra now sends as remote: that write replaces the pin in SONiC. A removed
+ * pin then waits on pins_draining until its delete has left the output buffer
+ * in the session that wrote it, and is forgotten; fpm_reconnect() drops the
+ * buffer, and fpm_pin_replay() writes the delete again. When the buffer is
+ * full, or a delete is still in it, it tries again a second later. Without a
+ * session it leaves them to fpm_pin_replay().
  */
 static void fpm_pin_flush(struct fpm_nl_ctx *fnc)
 {
-	bool waiting = false;
 	struct fpm_pin *p;
 	uint32_t session;
-	bool drained;
 
 	if (fnc == NULL || fnc->socket == -1 || fnc->connecting)
 		return;
 
-	drained = fpm_pin_obuf_drained(fnc, &session);
-
-	frr_each_safe (fpm_mac_pins, &mac_pins, p) {
-		if (p->synced) {
-			if (!p->unpinned)
-				continue;
-			if (drained && p->session == session)
-				fpm_pin_forget(p);
-			else
-				waiting = true;
-			continue;
-		}
-
+	while ((p = fpm_pin_work_first(&pins_unwritten))) {
 		if (fpm_pin_superseded(p)) {
 			fpm_pin_forget(p);
 			continue;
@@ -961,12 +979,19 @@ static void fpm_pin_flush(struct fpm_nl_ctx *fnc)
 					&fnc->t_pinwalk);
 			return;
 		}
-		p->synced = true;
-		if (p->unpinned)
-			waiting = true;
+		fpm_pin_work_move(p, p->unpinned ? &pins_draining : NULL);
 	}
 
-	if (waiting)
+	if (fpm_pin_work_count(&pins_draining) == 0)
+		return;
+
+	if (fpm_pin_obuf_drained(fnc, &session)) {
+		frr_each_safe (fpm_pin_work, &pins_draining, p)
+			if (p->session == session)
+				fpm_pin_forget(p);
+	}
+
+	if (fpm_pin_work_count(&pins_draining))
 		event_add_timer(zrouter.master, fpm_pin_retry, fnc, 1,
 				&fnc->t_pinwalk);
 }
@@ -981,7 +1006,7 @@ static void fpm_pin_replay(struct event *t)
 	struct fpm_pin *p;
 
 	frr_each (fpm_mac_pins, &mac_pins, p)
-		p->synced = false;
+		fpm_pin_work_move(p, &pins_unwritten);
 
 	fpm_pin_flush(EVENT_ARG(t));
 }
@@ -992,7 +1017,7 @@ static void fpm_pin_unpin(struct fpm_pin *p)
 		zlog_debug("%s: unpinning %pEA vlan %u", __func__,
 			   (const struct ethaddr *)p->pin.mac, p->pin.vid);
 	p->unpinned = true;
-	p->synced = false;
+	fpm_pin_work_move(p, &pins_unwritten);
 	fpm_pin_flush(gfnc);
 }
 
@@ -1116,8 +1141,14 @@ static struct interface *fpm_mac_bridge_port(int ifindex,
  * learnt, which the kernel needs to complete ARP/ND to the host, then give it
  * to zebra as a local MAC. In mac-ext-learn mode zebra writes only
  * local-inactive entries, so the active one is written here, also after a move
- * between ports. It is queued ahead of any write zebra makes for the MAC, so
- * zebra's lands last.
+ * between ports, marked as this module's (dplane_local_mac_learnt()). It is
+ * queued ahead of any write zebra makes for the MAC, so zebra's lands last.
+ *
+ * Not while the port is down: zebra skips such kernel learns in mac-ext-learn
+ * mode, and in fpm mode the learns come from here, be it one fpmsyncd reported
+ * before the port went down or a MAC given back from the table above. SONiC
+ * flushes the port's MACs as it goes down, and the hardware learns them again
+ * once it is up.
  */
 static void fpm_hw_mac_learnt(struct interface *ifp, struct interface *br_if,
 			      const struct fpm_hw_mac *hm)
@@ -1126,7 +1157,14 @@ static void fpm_hw_mac_learnt(struct interface *ifp, struct interface *br_if,
 
 	memcpy(mac.octet, hm->mac, ETH_ALEN);
 
-	dplane_local_mac_add(ifp, br_if, hm->vid, &mac, hm->sticky, 0, 0);
+	if (!if_is_operative(ifp)) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: %s is down, not learning %pEA vlan %u",
+				   __func__, ifp->name, &mac, hm->vid);
+		return;
+	}
+
+	dplane_local_mac_learnt(ifp, br_if, hm->vid, &mac, hm->sticky);
 
 	zebra_vxlan_local_mac_add_update(ifp, br_if, &mac, hm->vid, hm->sticky,
 					 false, false);
@@ -1165,18 +1203,18 @@ done:
 }
 
 /*
- * zebra wrote or removed a local MAC. A static write is a pin. This module
- * never removes a pinned entry itself, fpm_hw_mac_lost() restores it instead,
- * so a removal on the pinned port is zebra's. On a VLAN with an L2VNI zebra
- * also ends a pin with a plain write, once the segment peer no longer has the
- * MAC; the plain write fpm_hw_mac_learnt() makes leaves zebra's MAC static.
+ * zebra or this module wrote or removed a local MAC. A static write is a pin.
+ * A plain write ends it, unless it is this module's own for a MAC the hardware
+ * learnt (DPLANE_MAC_LEARNT): zebra writes one when the MAC stops being static,
+ * also as it removes the L2VNI, and on a VLAN with no L2VNI when the host is
+ * learnt locally. This module never removes a pinned entry itself,
+ * fpm_hw_mac_lost() restores it instead, so a removal on the pinned port is
+ * zebra's.
  */
 static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 {
 	struct interface *br_if = NULL;
-	struct zebra_evpn *zevpn;
 	struct interface *ifp;
-	struct ethaddr mac;
 	struct fpm_pin *p;
 	bool pinned;
 
@@ -1190,15 +1228,7 @@ static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 	}
 
 	if (!written->set_static) {
-		if (!pinned)
-			return;
-
-		ifp = fpm_mac_bridge_port(written->ifindex, &br_if);
-		zevpn = ifp ? zebra_evpn_map_vlan(ifp, br_if, written->vid)
-			    : NULL;
-		memcpy(mac.octet, written->mac, ETH_ALEN);
-		if (zevpn &&
-		    !fpm_mac_bgp_owned(zebra_evpn_mac_lookup(zevpn, &mac)))
+		if (pinned && !written->learnt)
 			fpm_pin_unpin(p);
 		return;
 	}
@@ -1221,7 +1251,7 @@ static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 	}
 	p->pin.ifindex = written->ifindex;
 	p->unpinned = false;
-	p->synced = false;
+	fpm_pin_work_move(p, &pins_unwritten);
 
 	if (IS_ZEBRA_DEBUG_FPM)
 		zlog_debug("%s: pinning %pEA vlan %u on %s", __func__,
@@ -1301,7 +1331,7 @@ static void fpm_pin_remote_written(struct event *t)
 
 	if (!fpm_mac_bgp_owned(zmac))
 		p->unpinned = true;
-	p->synced = false;
+	fpm_pin_work_move(p, &pins_unwritten);
 	fpm_pin_flush(gfnc);
 
 done:
@@ -1385,6 +1415,7 @@ static int fpm_dplane_mac_read(struct zebra_evpn *zevpn)
  */
 static void fpm_kernel_mac_write(const struct zebra_dplane_ctx *ctx)
 {
+	uint32_t flags = dplane_ctx_mac_get_update_flags(ctx);
 	struct fpm_hw_mac *written;
 
 	written = XCALLOC(MTYPE_FPM_MAC_EVENT, sizeof(*written));
@@ -1392,8 +1423,8 @@ static void fpm_kernel_mac_write(const struct zebra_dplane_ctx *ctx)
 	written->vid = dplane_ctx_mac_get_vlan(ctx);
 	memcpy(written->mac, dplane_ctx_mac_get_addr(ctx)->octet, ETH_ALEN);
 	written->del = dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_DELETE;
-	written->set_static = CHECK_FLAG(dplane_ctx_mac_get_update_flags(ctx),
-					 DPLANE_MAC_SET_STATIC);
+	written->set_static = CHECK_FLAG(flags, DPLANE_MAC_SET_STATIC);
+	written->learnt = CHECK_FLAG(flags, DPLANE_MAC_LEARNT);
 
 	event_add_event(zrouter.master, fpm_hw_mac_recheck, written, 0, NULL);
 }
@@ -3398,7 +3429,6 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 	return buf_used;
 }
 
-#define DPLANE_FPM_NL_BUF_SIZE 65536
 /**
  * Encode data plane operation context into netlink and enqueue it in the FPM
  * output buffer.
@@ -4336,9 +4366,13 @@ static int fpm_nl_finish_late(struct fpm_nl_ctx *fnc)
 		XFREE(MTYPE_FPM_HW_MAC, e);
 	fpm_hw_macs_fini(&hw_macs);
 
-	while ((p = fpm_mac_pins_pop(&mac_pins)))
+	while ((p = fpm_mac_pins_pop(&mac_pins))) {
+		fpm_pin_work_move(p, NULL);
 		XFREE(MTYPE_FPM_MAC_PIN, p);
+	}
 	fpm_mac_pins_fini(&mac_pins);
+	fpm_pin_work_fini(&pins_unwritten);
+	fpm_pin_work_fini(&pins_draining);
 	atomic_store_explicit(&mac_pin_count, 0, memory_order_relaxed);
 
 	return 0;
