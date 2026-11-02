@@ -316,6 +316,26 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertIsInstance(chassis.get_sfp(1), FakeSfp)
         self.assertEqual(chassis.get_transceiver_change_event(), {1: "1", 2: "1"})
 
+    def test_non_cpo_uses_configured_index_and_original_presence_storage(self):
+        with patch.object(self.chassis.Chassis, "sfp_present_dict", {}):
+            for start in [0, 1]:
+                with self.subTest(start=start):
+                    self.baseutil.get_config.return_value = {
+                        "sfps": {"port_num": 2, "port_index_start": start}}
+                    chassis = self.make_chassis(None)
+                    self.assertEqual(chassis.port_start_index, start)
+                    self.assertEqual(chassis.port_num, 2)
+                    self.assertFalse(chassis._cpo_init_attempted)
+
+    def test_failed_first_cpo_build_has_cpo_only_port_defaults(self):
+        data = self.topology()
+        del data["devices"]
+        with patch.object(self.chassis.syslog, "syslog"):
+            chassis = self.make_chassis(data)
+        self.assertEqual(chassis.port_start_index, 1)
+        self.assertEqual(chassis.port_num, 0)
+        self.assertEqual(chassis.get_transceiver_change_event(), {})
+
     def test_els_event_reads_shared_els_once_and_fans_out_removal(self):
         chassis = self.make_chassis(self.topology())
         with patch.object(self.cpo.Elsfp, "get_presence", autospec=True, return_value=True) as presence:
@@ -824,10 +844,12 @@ with open(sys.argv[1], 'rb') as fd:
                               "Ethernet8": {"associated_devices": []}}
         chassis = self.make_chassis(data)
         existing_sfp = chassis.get_sfp(2)
+        previous_range = (chassis.port_start_index, chassis.port_num)
         data["interfaces"]["Ethernet0"]["associated_devices"][1]["device_id"] = "ELS99"
         with patch.object(self.chassis.syslog, "syslog"):
             chassis.construct_cpo_devices(data)
         self.assertIs(chassis.get_sfp(2), existing_sfp)
+        self.assertEqual((chassis.port_start_index, chassis.port_num), previous_range)
         self.assertEqual(chassis.get_all_cpos(), [])
         self.assertFalse(chassis._cpo_initialized)
 

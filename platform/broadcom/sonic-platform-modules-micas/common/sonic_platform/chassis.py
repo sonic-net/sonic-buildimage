@@ -68,8 +68,6 @@ class Chassis(ChassisBase):
         self._cpo_devices = {}
         self._cpo_init_attempted = False
         self._cpo_init_error = None
-        self.port_start_index = 1
-        self.port_num = 0
         ChassisBase.__init__(self)
         self._dcdc_list = []
         self.int_case = interface()
@@ -774,6 +772,10 @@ class Chassis(ChassisBase):
 
     def construct_cpo_devices(self, cpo_data):
         """Build CPO ports while allowing unrelated platform devices to initialize."""
+        if not self._cpo_init_attempted:
+            # Defaults for a failed initial CPO build; normal SFP setup is unchanged.
+            self.port_start_index = 1
+            self.port_num = 0
         self._cpo_init_attempted = True
         self._cpo_initialized = False
         try:
