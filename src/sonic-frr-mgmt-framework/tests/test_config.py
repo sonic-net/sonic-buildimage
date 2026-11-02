@@ -1253,3 +1253,62 @@ def test_bgp_confederation_template():
         BGP_GLOBALS={'default': {'local_asn': '65100'}}
     )
     assert 'bgp confederation' not in result
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_g_run_command_uses_argv_without_shell():
+    from frrcfgd.frrcfgd import g_run_command
+
+    with patch('frrcfgd.frrcfgd.subprocess.Popen') as popen:
+        popen.return_value.communicate.return_value = (b'', None)
+        popen.return_value.returncode = 0
+
+        assert g_run_command('TEST', ['true'], False, None)
+
+    args, kwargs = popen.call_args
+    assert args[0] == ['true']
+    assert kwargs['shell'] is False
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_g_run_command_rejects_string_commands():
+    from frrcfgd.frrcfgd import g_run_command
+
+    with patch('frrcfgd.frrcfgd.subprocess.Popen') as popen:
+        assert not g_run_command('TEST', 'true', False, None)
+        assert not g_run_command('TEST', [], False, None)
+
+    popen.assert_not_called()
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_vtysh_command_preserves_argument_boundaries():
+    from frrcfgd.frrcfgd import BgpdClientMgr
+
+    manager = object.__new__(BgpdClientMgr)
+    manager.lock = MagicMock()
+    manager._BgpdClientMgr__proc_command = MagicMock(return_value=(True, ''))
+    description = "Branch office's -c 'annotation'"
+    command = ['vtysh', '-c', 'configure terminal',
+               '-c', 'ip prefix-list PL_EDGE description {}'.format(description)]
+
+    assert manager.run_vtysh_command('PREFIX_SET', command, ['bgpd'])
+    assert manager._BgpdClientMgr__proc_command.call_args_list == [
+        call('configure terminal', ['bgpd']),
+        call('ip prefix-list PL_EDGE description {}'.format(description), ['bgpd']),
+        call('end', ['bgpd']),
+    ]
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_vtysh_command_rejects_multiline_argument():
+    from frrcfgd.frrcfgd import BgpdClientMgr
+
+    manager = object.__new__(BgpdClientMgr)
+    manager.lock = MagicMock()
+    manager._BgpdClientMgr__proc_command = MagicMock(return_value=(True, ''))
+    command = ['vtysh', '-c', 'configure terminal',
+               '-c', 'ip prefix-list PL_EDGE description line one\nline two']
+
+    assert not manager.run_vtysh_command('PREFIX_SET', command, ['bgpd'])
+    manager._BgpdClientMgr__proc_command.assert_not_called()

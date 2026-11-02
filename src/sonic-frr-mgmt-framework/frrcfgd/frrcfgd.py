@@ -56,7 +56,10 @@ def vtysh_cmd(*config_cmds):
 
 def g_run_command(table, command, use_bgpd_client, daemons, ignore_fail = False):
     syslog.syslog(syslog.LOG_DEBUG, "execute command {} for table {}.".format(command, table))
-    if not (len(command) > 0 and command[0] == 'vtysh'):
+    if not isinstance(command, list) or not command:
+        syslog.syslog(syslog.LOG_ERR, 'command must be a non-empty argument list')
+        return False
+    if command[0] != 'vtysh':
         use_bgpd_client = False
     if use_bgpd_client:
         if not bgpd_client.run_vtysh_command(table, command, daemons) and not ignore_fail:
@@ -301,7 +304,12 @@ class BgpdClientMgr(threading.Thread):
         i = 1
         while i < len(command):
             if command[i] == '-c' and i + 1 < len(command):
-                cmd_list.append(command[i + 1])
+                cmd = command[i + 1]
+                if not isinstance(cmd, str) or any(ord(char) < 0x20 or ord(char) == 0x7f
+                                                   for char in cmd):
+                    syslog.syslog(syslog.LOG_ERR, 'invalid control character in vtysh command argument')
+                    return False
+                cmd_list.append(cmd)
                 i += 2
             else:
                 i += 1
