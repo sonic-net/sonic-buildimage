@@ -84,3 +84,59 @@ jobs:
     env:
       REGISTRY_SERVER: ${{ parameters.registry_url }}
     displayName: Build sonic-slave-${{ parameters.dist }}-${{ parameters.arch }}
+  - bash: |
+      set -ex
+      case "${{ parameters.arch }}" in
+        amd64) trivy_arch=64bit ;;
+        arm64) trivy_arch=ARM64 ;;
+        armhf) trivy_arch=ARM ;;
+      esac
+      TRIVY_VERSION="0.70.0"
+      trivy_package="trivy_${TRIVY_VERSION}_Linux-${trivy_arch}.deb"
+      curl -fLO "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${trivy_package}"
+      sudo apt install -y "./${trivy_package}"
+      trivy --version
+    displayName: "Install Trivy"
+    continueOnError: true
+  - bash: |
+      set -x
+      build_options="$(VERSION_CONTROL_OPTIONS)"
+      tags=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 2)
+      image_tag=$(printf '%s\n' "$tags" | tail -n 1)
+      registry_image_tag="${REGISTRY_SERVER}/${image_tag}"
+
+      if docker image inspect "$image_tag" >/dev/null 2>&1; then
+        scan_image="$image_tag"
+      elif docker image inspect "$registry_image_tag" >/dev/null 2>&1; then
+        scan_image="$registry_image_tag"
+      else
+        echo "##vso[task.logissue type=error]Sonic slave image not found: $image_tag or $registry_image_tag"
+        exit 1
+      fi
+
+      report="$(Build.ArtifactStagingDirectory)/trivy-sonic-slave-${{ parameters.dist }}-${{ parameters.arch }}.txt"
+      trivy image \
+        --scanners vuln \
+        --severity MEDIUM,HIGH,CRITICAL \
+        --ignore-unfixed \
+        --exit-code 1 \
+        --format table \
+        --no-progress \
+        --timeout 30m \
+        --output "$report" \
+        "$scan_image"
+      trivy_exit=$?
+
+      echo ""
+      echo "=== Trivy scan results ($image_tag) ==="
+      cat "$report"
+      exit $trivy_exit
+    env:
+      REGISTRY_SERVER: ${{ parameters.registry_url }}
+    displayName: "Trivy vulnerability scan"
+    continueOnError: true
+  - publish: $(Build.ArtifactStagingDirectory)/trivy-sonic-slave-${{ parameters.dist }}-${{ parameters.arch }}.txt
+    artifact: trivy-scan-results-${{ parameters.dist }}-${{ parameters.arch }}
+    displayName: "Publish Trivy scan results"
+    condition: always()
+    continueOnError: true

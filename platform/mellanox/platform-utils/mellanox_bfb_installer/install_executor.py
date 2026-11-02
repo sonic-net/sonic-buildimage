@@ -15,84 +15,39 @@
 # limitations under the License.
 #
 
-"""
-Parallel install executor with signal handling.
-"""
+"""Run independent installer tasks in parallel."""
 
 import logging
-import os
-import signal
-import sys
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable
 
 logger = logging.getLogger(__name__)
 
 
-class PidCollection:
-    """Thread-safe list of child process PIDs."""
-
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._pids: list[int] = []
-
-    def append(self, pid: int) -> None:
-        with self._lock:
-            self._pids.append(pid)
-
-    def remove_if_contains(self, pid: int) -> None:
-        with self._lock:
-            try:
-                self._pids.remove(pid)
-            except ValueError:
-                pass
-
-    def copy_to_list(self) -> list[int]:
-        """Return a copy of the PID list for safe iteration (e.g. in a signal handler)."""
-        with self._lock:
-            return list(self._pids)
-
-
 def run_parallel(
     task_count: int,
-    task_fn: Callable[[int, PidCollection], int],
+    task_fn: Callable[[int], int],
 ) -> int:
+    """Run indexed tasks in parallel and return the number that failed.
+
+    Signal and subprocess supervision belong to the caller that owns the installation
+    transaction. A running task cannot be cancelled; executor shutdown waits for every worker.
+
+    Args:
+        task_count: Number of tasks to run.
+        task_fn: Task receiving its index and returning a per-task status.
+
+    Returns:
+        Number of tasks that returned a non-zero status or raised an exception.
     """
-    Run task_fn(0, child_pids), task_fn(1, child_pids), ... in parallel via ThreadPoolExecutor.
-
-    The task_fn is expected to install a bfb image to a single device, by forking child processes.
-    The task_fn must append the child process PIDs to the child_pids collection that is passed to
-    it as the second argument. This parallel executor will install signal handlers that kill all
-    child processes on SIGINT/SIGTERM/SIGHUP.
-
-    Returns the number of tasks that exited with a non-zero status or raised an exception.
-    """
-    child_pids = PidCollection()
-
-    def _kill_child_procs(_signum=None, _frame=None):
-        logger.warning("Installation interrupted. Killing all child procs.")
-        pids = child_pids.copy_to_list()
-        for pid in pids:
-            try:
-                logger.debug("Killing child proc PID %s.", pid)
-                os.kill(pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
-                pass
-        raise SystemExit(1)
-
-    signal.signal(signal.SIGINT, _kill_child_procs)
-    signal.signal(signal.SIGTERM, _kill_child_procs)
-    signal.signal(signal.SIGHUP, _kill_child_procs)
-
     failed = 0
     with ThreadPoolExecutor(max_workers=task_count) as executor:
-        futures = {executor.submit(task_fn, i, child_pids): i for i in range(task_count)}
+        futures = [executor.submit(task_fn, index) for index in range(task_count)]
         for future in as_completed(futures):
             try:
-                if future.result() != 0:
+                if future.result():
                     failed += 1
-            except Exception as e:
-                logger.error("Install task failed: %s", e)
+            except Exception as error:
+                logger.error("Parallel task failed: %s", error)
                 failed += 1
     return failed

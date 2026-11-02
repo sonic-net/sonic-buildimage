@@ -1,0 +1,36 @@
+#!/bin/sh
+# Copyright 2026 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Nexthop U-Boot env vendor hook.
+#
+# Invoked by sonic-program-uboot-env.sh (aspeed-platform-services) after the
+# vendor-neutral defaults are programmed. It overrides the 'boot_guard' seam so
+# that autoboot is gated on the Nexthop 'nh_stormguard' U-Boot command: after N
+# consecutive watchdog-caused resets nh_stormguard disarms WDT0 and fails, so the
+# 'if run boot_guard' in bootcmd drops to the U-Boot prompt for investigation
+# instead of continuing an unrecoverable reboot loop.
+#
+# Only boot_guard is overridden -- the boot payload (print_menu/boot_once/
+# boot_next) stays owned by the common script, so this hook cannot drift from it.
+#
+# The guard is opt-in via 'stormguard_enable' in the U-Boot environment (set by
+# the Nexthop U-Boot). nh_stormguard gates itself on that variable using U-Boot's
+# env_get_yesno(), which accepts 1/y/Y/t/T (and words like yes/true); when the
+# guard is not enabled the command returns success immediately, so autoboot
+# proceeds exactly as with the default boot_guard.
+#
+# This hook ships only in the Nexthop platform package, so nh_stormguard is
+# always present where it runs.
+
+sonic_uboot_env_log() {
+    msg="$*"
+    echo "$msg" >&2
+    if [ -n "${SONIC_UBOOT_ENV_LOG_FILE:-}" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $msg" >> "$SONIC_UBOOT_ENV_LOG_FILE"
+    fi
+}
+
+sonic_uboot_env_log "Applying Nexthop storm-guard boot_guard"
+fw_setenv boot_guard "nh_stormguard" \
+    || sonic_uboot_env_log "ERROR: Failed to set storm-guard boot_guard"

@@ -1060,7 +1060,7 @@ devices = {
     "sfps": {
         "ver": '2.0',
         "port_index_start": 1,
-        "port_num": 129,
+        "port_num": 132,
         "log_level": 2,
         "eeprom_retry_times": 5,
         "eeprom_retry_break_sec": 0.2,
@@ -1068,7 +1068,7 @@ devices = {
         "presence_val_is_present": 1,
         "eeprom_path": "/sys/s3ip/transceiver/eth%d/eeprom",
         "optoe_driver_path": "/sys/bus/i2c/devices/i2c-%d/%d-0050/dev_class",
-        "optoe_driver_key": list(range(201, 330)),
+        "optoe_driver_key": list(range(201, 329)) + [329] * 4,
         "lpmode_path": "/sys/s3ip/transceiver/eth%d/low_power_mode",
         "reset_path": "/sys/s3ip/transceiver/eth%d/reset",
         "reset_val_is_reset": 0,

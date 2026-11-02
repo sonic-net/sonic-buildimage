@@ -9,11 +9,11 @@ https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz.asc
 https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://download.docker.com/linux/ubuntu/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64==2dc74b7ad6bdd6b6b08f6802d14fc1fd
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==bf259781802f31e42aa6a31a7f61c218
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==7773876ee1c20fefff55a42d8a43f02d
 https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.32.0/cyclonedx-linux-x64==94b2f43b950920b140fc4930d8f0dca7
 https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh==2e8b2fb7d799d83acf895e20bd1966aa
 https://github.com/nanomsg/nanomsg/archive/refs/tags/1.2.1.tar.gz==42deeb4b2e4a73b4a913734c281b7185
 https://github.com/sonic-net/DASH/archive/refs/heads/main.tar.gz==316918c50ec2216fe6e576ce67e46f4f
 https://packages.microsoft.com/keys/microsoft.asc==ea6fe6b411de7800159372ea536c7ef9
-https://sh.rustup.rs==b3e3de7b5ea0154dd9f73cca18658c65
-https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==bdf5b89af30385f0e3729e1baa51adf9
+https://sh.rustup.rs==ec8a4c36c2ee60d06fb8a29fec169d91
+https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==3fa0f2a99bcebb3350cb1bef6775e1a2

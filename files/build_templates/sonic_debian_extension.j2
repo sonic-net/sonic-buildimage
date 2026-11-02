@@ -205,6 +205,9 @@ fi
 # Install Python module for smbus2
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install smbus2
 
+# Install Python module for IPMI FRU decoding
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install python-ipmi
+
 # Install Python module for telnetlib3
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install telnetlib3
 
@@ -722,6 +725,14 @@ sudo cp $IMAGE_CONFIGS/otel/otel_config.yml $FILESYSTEM_ROOT/etc/sonic/
 
 {%- endif %}
 
+{%- if 'hft@.service' in installer_services.split(' ') %}
+
+# Copy the settings file of the hft container (read by countersyncd.sh)
+sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/hft
+sudo cp $IMAGE_CONFIGS/hft/hft.env $FILESYSTEM_ROOT/etc/sonic/hft/
+
+{%- endif %}
+
 # Copy platform topology configuration scripts
 sudo cp $IMAGE_CONFIGS/config-topology/config-topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "config-topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
@@ -1208,6 +1219,7 @@ sudo LANG=C cp $SCRIPTS_DIR/snmp.sh $FILESYSTEM_ROOT/usr/local/bin/snmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/telemetry.sh $FILESYSTEM_ROOT/usr/local/bin/telemetry.sh
 sudo LANG=C cp $SCRIPTS_DIR/gnmi.sh $FILESYSTEM_ROOT/usr/local/bin/gnmi.sh
 sudo LANG=C cp $SCRIPTS_DIR/otel.sh $FILESYSTEM_ROOT/usr/local/bin/otel.sh
+sudo LANG=C cp $SCRIPTS_DIR/hft.sh $FILESYSTEM_ROOT/usr/local/bin/hft.sh
 sudo LANG=C cp $SCRIPTS_DIR/bmp.sh $FILESYSTEM_ROOT/usr/local/bin/bmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgmt-framework.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
@@ -1292,6 +1304,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sx-kernel.service
 sudo cp platform/mellanox/files/mlnx-fw-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/mlnx-fw-manager.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable mlnx-fw-manager.service
+
+# Install the upstream RShim 2.6.6 global service without enabling it.
+# sonic-bfb-installer owns its lifecycle and starts/stops it only while installing a BFB.
+sudo install -m 644 platform/mellanox/files/rshim.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
 # Install mlnx-sonic-platform Python 3 package
 install_pip_package {{mlnx_platform_api_py3_wheel_path}}

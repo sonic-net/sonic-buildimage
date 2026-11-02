@@ -1,5 +1,5 @@
 import time
-from unittest.mock import patch
+from unittest.mock import call, patch
 #from unittest.mock import MagicMock, patch
 
 from staticroutebfd.main import *
@@ -15,6 +15,25 @@ def constructor(mock_db, mock_producer, mock_tbl):
 
     srt_bfd = StaticRouteBfd()
     return srt_bfd
+
+
+@patch('staticroutebfd.main.swsscommon.SonicV2Connector')
+def test_reconciliation_uses_unix_socket(mock_connector):
+    dut = constructor()
+    db = mock_connector.return_value
+    db.CONFIG_DB = "CONFIG_DB"
+    db.APPL_DB = "APPL_DB"
+    db.STATE_DB = "STATE_DB"
+    db.keys.return_value = []
+
+    dut.reconciliation()
+
+    mock_connector.assert_called_once_with(use_unix_socket_path=True)
+    assert db.connect.call_args_list == [
+        call("CONFIG_DB"),
+        call("APPL_DB"),
+        call("STATE_DB"),
+    ]
 
 def set_del_test(dut, hdlr, op, args, e_bfd_dict, e_srt_dict):
     set_del_test.bfd_dict = {}

@@ -22,7 +22,7 @@ MODULE_DIRS += nh-4220-r0
 MODULE_DIRS += nh-5010
 
 SERVICE_DIR := service
-SYSTEM_DIR := etc/systemd/system
+SYSTEM_DIR := etc/systemd
 UTILS_DIR := utils
 
 # Uncomment this to turn on verbose mode.
@@ -106,6 +106,11 @@ override_dh_auto_install:
 			dh_installdirs -p$${pkg_name} etc/modprobe.d; \
 			cp $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d/* \
 				debian/$${pkg_name}/etc/modprobe.d/; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/etc/modules-load.d ]; then \
+			dh_installdirs -p$${pkg_name} etc/modules-load.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/etc/modules-load.d/* \
+				debian/$${pkg_name}/etc/modules-load.d/; \
 		fi; \
 	done)
 	python3 setup.py install \
