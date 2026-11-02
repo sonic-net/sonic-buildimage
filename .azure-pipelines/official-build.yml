@@ -44,7 +44,7 @@ stages:
   - template: azure-pipelines-build.yml
     parameters:
       bazelRemoteCacheUpload: true
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BLDENV=trixie BUILD_WITH_BAZEL_WHEN_AVAILABLE=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobFilters: none
       ${{ if contains(variables['Build.DefinitionName'], 'cross') }}:
         qemuOrCrossBuild: true

@@ -173,7 +173,9 @@ jobs:
               mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
               rm target/sonic-vs.img
             fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            # A docker-sonic-vs goal disables Bazel Syncd for the whole invocation.
+            make $BUILD_OPTIONS target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/docker-sonic-vs.gz
             make $BUILD_OPTIONS target/docker-ptf.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz

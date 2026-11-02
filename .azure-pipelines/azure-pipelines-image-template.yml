@@ -37,8 +37,16 @@ jobs:
       - template: .azure-pipelines/cleanup.yml@buildimage
       - ${{ parameters.preSteps }}
       - script: |
+          set -e
           [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
           BUILD_OPTIONS="$(BUILD_OPTIONS) $OVERRIDE_BUILD_OPTIONS"
+          bazel_cache="$(Agent.BuildDirectory)/sonic-cache/bazel"
+          mkdir -p -- "$bazel_cache"
+          if [ ! -w "$bazel_cache" ]; then
+            echo "ERROR: Agent-local Bazel cache directory must be writable: $bazel_cache" >&2
+            exit 1
+          fi
+          BUILD_OPTIONS="$BUILD_OPTIONS SONIC_BAZEL_CACHE_SOURCE=$bazel_cache"
           if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-prestera-armhf|marvell-prestera-arm64|vpp|nvidia-bluefield|alpinevs)$"; then
             CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
             BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
