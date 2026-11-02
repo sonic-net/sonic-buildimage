@@ -169,8 +169,22 @@ function postStartAction()
         SYSCTL_NET_CONFIG="/etc/sysctl.d/sysctl-net.conf"
         docker exec -i database$DEV sed -i -e "s/^net.ipv4.conf.eth0.forwarding=0/net.ipv4.conf.eth0.forwarding=1/;
                                                s/^net.ipv6.conf.eth0.forwarding=0/net.ipv6.conf.eth0.forwarding=1/" $SYSCTL_NET_CONFIG
-        docker exec -i database$DEV sysctl --system -e
         link_namespace $DEV
+        # /proc/sys is read-only in the unprivileged container; validate its net.* settings and apply them from the host
+        SYSCTL_NET=$(docker exec database$DEV cat $SYSCTL_NET_CONFIG) || {
+            echo "Failed to read $SYSCTL_NET_CONFIG from database$DEV" >&2
+            exit 1
+        }
+        if ! grep -q '^net\.' <<< "$SYSCTL_NET" ||
+           grep -Evq '^(#.*|net(\.[A-Za-z0-9_-]+)+=("[0-9]+( [0-9]+)*"|[0-9]+( [0-9]+)*))?$' <<< "$SYSCTL_NET"; then
+            echo "Rejected invalid $SYSCTL_NET_CONFIG from database$DEV" >&2
+            exit 1
+        fi
+        # sysctl -p does not strip quotes, e.g. from ip_local_port_range
+        sed -E 's/^([^#][^=]*)="(.*)"$/\1=\2/' <<< "$SYSCTL_NET" | ip netns exec "$NET_NS" sysctl -e -p - || {
+            echo "Failed to apply $SYSCTL_NET_CONFIG in $NET_NS" >&2
+            exit 1
+        }
 
 
         if [[ -n "$midplane_subnet" ]]; then
@@ -418,7 +432,6 @@ start() {
     {%- if docker_container_name == "database" %}
     # Don't mount HWSKU in {{docker_container_name}} container.
     HWSKU=""
-    MOUNTPATH=""
     {%- else %}
     # Obtain our HWSKU as we will mount directories with these names in each docker
     HWSKU=${HWSKU:-`$SONIC_CFGGEN -d -v 'DEVICE_METADATA["localhost"]["hwsku"]'`}
@@ -443,31 +456,72 @@ start() {
     fi
     {%- endif %}
 
-    DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
-    if [ "$?" -eq "0" ]; then
-        {%- if docker_container_name == "database" %}
-        DOCKERMOUNT=""
-        {%- else %}
-        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-        {%- endif %}
-        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+    {% if docker_container_name == "database" -%}
+    DB_ID=$(docker ps -a -q --no-trunc --filter "name=^/${DOCKERNAME}$") || {
+        echo "Failed to query ${DOCKERNAME} container" >&2
+        exit 5
+    }
+    if [ -n "$DB_ID" ]; then
+        DB_PRIVILEGED=$(docker inspect --type container -f {{"'{{.HostConfig.Privileged}}'"}} "$DB_ID") || {
+            echo "Failed to inspect ${DOCKERNAME} container" >&2
+            exit 5
+        }
+        if [ "$DB_PRIVILEGED" == "false" ]; then
             CONTAINER_EXISTS="yes"
             preStartAction
-            {%- if docker_container_name == "database" %}
             echo "Starting existing ${DOCKERNAME} container"
-            docker start ${DOCKERNAME}
-            {%- else %}
+            docker start ${DOCKERNAME} || {
+                echo "Failed to start ${DOCKERNAME} container" >&2
+                exit 1
+            }
+            postStartAction
+            exit $?
+        elif [ "$DB_PRIVILEGED" == "true" ]; then
+            # Created by an image that still ran the database container with --privileged
+            echo "Removing legacy privileged ${DOCKERNAME} container"
+            docker rm -f ${DOCKERNAME} || {
+                echo "Failed to remove legacy privileged ${DOCKERNAME} container" >&2
+                exit 5
+            }
+        else
+            echo "Unexpected privileged state for ${DOCKERNAME} container: $DB_PRIVILEGED" >&2
+            exit 5
+        fi
+    fi
+    {%- else -%}
+    DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
+    if [ "$?" -eq "0" ]; then
+        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
+        NET_MODE=$(docker inspect --type container -f {{"'{{.HostConfig.NetworkMode}}'"}} ${DOCKERNAME}) || {
+            echo "Failed to inspect network mode of ${DOCKERNAME} container" >&2
+            exit 1
+        }
+        NET_PROVIDER="none"
+        if [[ "$NET_MODE" == container:* ]]; then
+            # Docker pins container:<name> to the provider's ID at create time
+            NET_PROVIDER=$(docker ps -a -q --no-trunc --filter "id=${NET_MODE#container:}") || {
+                echo "Failed to query network namespace provider of ${DOCKERNAME} container" >&2
+                exit 1
+            }
+        fi
+        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ] && [ -n "$NET_PROVIDER" ]; then
+            CONTAINER_EXISTS="yes"
+            preStartAction
             echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
             /usr/local/bin/container start ${DOCKERNAME}
-            {%- endif %}
             postStartAction
             exit $?
         fi
 
-        # docker created with a different HWSKU, remove and recreate
-        echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        if [ -z "$NET_PROVIDER" ]; then
+            echo "Removing ${DOCKERNAME} container attached to removed network namespace ${NET_MODE#container:}"
+        else
+            # docker created with a different HWSKU, remove and recreate
+            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        fi
         docker rm -f ${DOCKERNAME}
     fi
+    {%- endif %}
 
     {%- if docker_container_name == "database" %}
 
@@ -710,7 +764,10 @@ start() {
 
     preStartAction
     {%- if docker_container_name == "database" %}
-    docker start $DOCKERNAME
+    docker start $DOCKERNAME || {
+        echo "Failed to start ${DOCKERNAME} container" >&2
+        exit 1
+    }
     {%- else %}
     /usr/local/bin/container start ${DOCKERNAME}
     {%- endif %}
