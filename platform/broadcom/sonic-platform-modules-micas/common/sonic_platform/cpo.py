@@ -36,8 +36,6 @@ except ImportError as error:
     raise ImportError(str(error) + "- required module not found") from error
 
 
-OE_BANK_NUM = 8
-# LOG_TRACE_LEVEL = 0  # Legacy constant, retained for reference.
 LOG_DEBUG_LEVEL = 1
 LOG_WARNING_LEVEL = 2
 LOG_ERROR_LEVEL = 3

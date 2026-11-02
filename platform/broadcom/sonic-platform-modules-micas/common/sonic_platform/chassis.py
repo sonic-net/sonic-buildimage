@@ -752,6 +752,11 @@ class Chassis(ChassisBase):
                 elsfp = Elsfp(int(els_name[3:]), els_config, oe.get_eeprom_path(), hardware_info, bank=els_bank)
                 cpo_list[port_id] = MicasCpo(port_id, name, oe, elsfp, lasers)
 
+        # All banks must be accessible before any endpoint API is used. The
+        # topology already declares the capacity; configure each OE only once.
+        for oe_name, oe in oe_devices.items():
+            oe.set_optoe_max_bank_size(int(self._cpo_devices[oe_name].get("max_banks", 1)))
+
         # Publish only after every configured port has been constructed.
         self.port_start_index = port_start_index
         self.port_num = last_port - port_start_index + 1

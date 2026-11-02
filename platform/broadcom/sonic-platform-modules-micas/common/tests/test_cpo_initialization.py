@@ -595,6 +595,38 @@ with open(sys.argv[1], 'rb') as fd:
             self.assertIs(eeprom.reader.__func__, self.cpo._BaillyEepromAccessMixin.read_eeprom)
             self.assertIs(eeprom.writer.__func__, self.cpo._BaillyEepromAccessMixin.write_eeprom)
 
+    def test_chassis_sets_driver_capacity_once_per_oe_without_api_reads(self):
+        setter = self.cpo.Oe.set_optoe_max_bank_size
+        with patch.object(self.cpo.Oe, "get_api", side_effect=AssertionError("Unexpected capability read")), \
+                patch.object(self.cpo.Oe, "set_optoe_max_bank_size", autospec=True,
+                             side_effect=setter) as configure:
+            chassis = self.make_chassis(self.topology())
+        self.assertTrue(chassis._cpo_initialized, chassis._cpo_init_error)
+        self.assertEqual(chassis.get_num_cpos(), 64)
+        self.assertEqual(configure.call_count, 8)
+        self.assertEqual({call.args[0].get_name() for call in configure.call_args_list},
+                         {"OE{}".format(index) for index in range(8)})
+        self.assertTrue(all(call.args[1] == 8 for call in configure.call_args_list))
+        self.assertTrue(all(cpo.oe._api is None for cpo in chassis.get_all_cpos()))
+        self.assertEqual(chassis.get_cpo(1).oe.bank, 0)
+        self.assertEqual((self.directory / "max_bank_size").read_text(), "8")
+
+    def test_chassis_uses_public_setter_when_sysfs_capacity_is_not_exposed(self):
+        (self.directory / "max_bank_size").unlink()
+        chassis = self.make_chassis(self.topology())
+        self.assertTrue(chassis._cpo_initialized, chassis._cpo_init_error)
+        self.assertEqual(chassis.get_num_cpos(), 64)
+
+    def test_driver_setup_error_does_not_publish_partial_topology(self):
+        with patch.object(self.cpo.Oe, "set_optoe_max_bank_size", side_effect=OSError("test setup failure")), \
+                patch.object(self.chassis.syslog, "syslog") as log:
+            chassis = self.make_chassis(self.topology())
+        self.assertEqual(chassis.get_all_cpos(), [])
+        self.assertEqual(chassis._sfp_list, [])
+        self.assertFalse(chassis._cpo_initialized)
+        self.assertEqual(chassis._cpo_init_error, "test setup failure")
+        log.assert_called_once()
+
     def test_oe_page_zero_read_restores_page_selector(self):
         oe, _ = self.endpoints()
         with self.eeprom.open("r+b") as fd:
@@ -694,8 +726,6 @@ with open(sys.argv[1], 'rb') as fd:
         self.assertFalse(chassis._cpo_initialized)
         self.assertIn("Conflicting CPO mapping", chassis._cpo_init_error)
         log.assert_called_once()
-
-
 
     def test_initialization_without_laser_mapping(self):
         data = self.topology()
