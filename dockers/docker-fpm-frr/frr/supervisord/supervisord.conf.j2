@@ -36,3 +36,17 @@ dependent_startup=true
 {% set use_dependent_startup = true %}
 {% set frr_wait_for = "rsyslogd:running" %}
 {% include "supervisord.conf.common.j2" %}
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:isisd]
+command=/usr/lib/frr/isisd -A 127.0.0.1 -P 0
+priority=5
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
