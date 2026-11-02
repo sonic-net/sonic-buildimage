@@ -15,6 +15,9 @@
   neighbor {{nbr_name}} addpath-tx-bestpath-per-AS
 {% endif %}
 {% endif %}
+{% if 'tx_add_best_path_count' in n_af_val %}
+  neighbor {{nbr_name}} addpath-tx-best-selected {{n_af_val['tx_add_best_path_count']}}
+{% endif %}
 {% if 'nhself' in n_af_val and n_af_val['nhself'] == 'true' %}
 {% if 'nexthop_self_force' in n_af_val and n_af_val['nexthop_self_force'] == 'true' %}
   neighbor {{nbr_name}} next-hop-self force
