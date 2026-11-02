@@ -78,6 +78,7 @@ jobs:
           fi
           printf '\nbuild --remote_upload_local_results=%s\n' "$upload" >> .bazelrc.user
           echo "Bazel remote cache upload: $upload"
+          echo "##vso[task.setvariable variable=BAZEL_REMOTE_CACHE_UPLOAD]$upload"
         env:
           REQUEST_CACHE_UPLOAD: ${{ parameters.bazelRemoteCacheUpload }}
           BUILD_REASON: $(Build.Reason)

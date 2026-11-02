@@ -134,6 +134,19 @@ jobs:
             dbg_image: yes
 
     buildSteps:
+      - bash: |
+          set -euo pipefail
+          case " $BUILD_OPTIONS " in
+            *" BUILD_WITH_BAZEL_WHEN_AVAILABLE=y "*)
+              SONIC_RUN_CMDS="python3 -B tools/bazel/ci/verify_remote_cache.py --upload-local-results=$(BAZEL_REMOTE_CACHE_UPLOAD)" \
+                make $BUILD_OPTIONS sonic-slave-run
+              ;;
+            *)
+              echo "Skipping Bazel remote cache check: Bazel bridge is disabled."
+              ;;
+          esac
+        condition: and(succeeded(), eq(variables['GROUP_NAME'], 'vs'))
+        displayName: 'Verify Bazel remote cache'
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
