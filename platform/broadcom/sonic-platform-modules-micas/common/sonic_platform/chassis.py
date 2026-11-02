@@ -66,7 +66,10 @@ class Chassis(ChassisBase):
         self.sfp_present_dict = {}
         self.elsfp_present_dict = {}
         self._cpo_devices = {}
+        self._cpo_init_attempted = False
         self._cpo_init_error = None
+        self.port_start_index = 1
+        self.port_num = 0
         ChassisBase.__init__(self)
         self._dcdc_list = []
         self.int_case = interface()
@@ -75,7 +78,7 @@ class Chassis(ChassisBase):
         cpo_data = device_info.get_cpo_data()
         if cpo_data:
             # Older ChassisBase versions do not call the construction hook.
-            if not getattr(self, "_cpo_initialized", False):
+            if not self._cpo_init_attempted:
                 self.construct_cpo_devices(cpo_data)
         else:
             # sfp.py will read eeprom contents and retrive the eeprom data.
@@ -722,30 +725,41 @@ class Chassis(ChassisBase):
                     continue
                 ports[port_id] = (name, associations, lasers, signature)
 
-        self.port_start_index = 0 if 0 in ports else 1
-        last_port = max(ports, default=self.port_start_index - 1)
-        self.port_num = last_port - self.port_start_index + 1
-        self._cpo_list = [None] * (last_port + 1)
-        self._port_lists_validated = False
+        port_start_index = 0 if 0 in ports else 1
+        last_port = max(ports, default=port_start_index - 1)
+        cpo_list = [None] * (last_port + 1)
+        sfp_list = list(self._sfp_list)
+        sfp_present_dict = {}
+        oe_devices = {}
         for port_id, (name, associations, lasers, _) in ports.items():
             if not associations:
-                if not self._sfp_list:
-                    self._sfp_list = [None] * (last_port + 1)
-                self._sfp_list[port_id] = Sfp(port_id)
+                if not sfp_list:
+                    sfp_list = [None] * (last_port + 1)
+                sfp_list[port_id] = Sfp(port_id)
+                sfp_present_dict[port_id] = self.STATUS_REMOVED
             else:
                 oe_name, oe_bank = associations["optical_engine"]
                 els_name, els_bank = associations["external_laser_source"]
                 oe_config = self._cpo_devices[oe_name]
-                els_config = dict(self._cpo_devices[els_name], **extensions.get(els_name, {}))
                 hardware_info = self._cpo_hardware_info
+                els_config = dict(self._cpo_devices[els_name], **extensions.get(els_name, {}))
                 oe = Oe(int(oe_name[2:]), oe_config, hardware_info, bank=oe_bank,
                              base_page=els_config.get("base_page", 0))
+                oe_devices.setdefault(oe_name, oe)
                 els_path = els_config.get("i2c_path", oe_config.get("i2c_path"))
                 if els_path != oe_config.get("i2c_path"):
                     raise ValueError("Bailly ELS must share its OE EEPROM path")
                 elsfp = Elsfp(int(els_name[3:]), els_config, oe.get_eeprom_path(), hardware_info, bank=els_bank)
-                self._cpo_list[port_id] = MicasCpo(port_id, name, oe, elsfp, lasers)
-            self.sfp_present_dict[port_id] = self.STATUS_REMOVED
+                cpo_list[port_id] = MicasCpo(port_id, name, oe, elsfp, lasers)
+
+        # Publish only after every configured port has been constructed.
+        self.port_start_index = port_start_index
+        self.port_num = last_port - port_start_index + 1
+        self._cpo_list = cpo_list
+        self._sfp_list = sfp_list
+        self.sfp_present_dict = sfp_present_dict
+        self.elsfp_present_dict = {}
+        self._port_lists_validated = False
 
     def get_sfp(self, index):
         """Return only SFP objects; CPO ports are accessed through get_cpo()."""
@@ -754,20 +768,32 @@ class Chassis(ChassisBase):
         return super().get_sfp(index)
 
     def construct_cpo_devices(self, cpo_data):
-        """Create CPO objects from devices/associated_devices, ignoring legacy references."""
-        devices = cpo_data.get("devices")
-        interfaces = cpo_data.get("interfaces")
-        if not isinstance(devices, dict) or not devices or not isinstance(interfaces, dict) or not interfaces:
-            raise ValueError("CPO topology requires non-empty devices and interfaces")
-        self._cpo_devices = {name.lower(): config for name, config in devices.items()}
-        self._ports_config = interfaces
-        self._cpo_platform_data = cpo_data.get("platform_data", {})
-        cpo_type = cpo_data.get("cpo_type")
-        if cpo_type not in CPO_TYPES:
-            raise ValueError("Unsupported CPO type {!r}".format(cpo_type))
-        self._cpo_hardware_info = CpoHardwareInfo(CPO_TYPES[cpo_type], None)
-        self._cpo_eeprom_mode = self._cpo_platform_data.get("cpo_eeprom_mode", "joint")
-        self._init_port_mappings()
+        """Build CPO ports while allowing unrelated platform devices to initialize."""
+        self._cpo_init_attempted = True
+        self._cpo_initialized = False
+        try:
+            devices = cpo_data.get("devices")
+            interfaces = cpo_data.get("interfaces")
+            if not isinstance(devices, dict) or not devices or not isinstance(interfaces, dict) or not interfaces:
+                raise ValueError("CPO topology requires non-empty devices and interfaces")
+            self._cpo_devices = {name.lower(): config for name, config in devices.items()}
+            self._ports_config = interfaces
+            self._cpo_platform_data = cpo_data.get("platform_data", {})
+            cpo_type = cpo_data.get("cpo_type")
+            if cpo_type not in CPO_TYPES:
+                raise ValueError("Unsupported CPO type {!r}".format(cpo_type))
+            self._cpo_hardware_info = CpoHardwareInfo(CPO_TYPES[cpo_type], None)
+            self._cpo_eeprom_mode = self._cpo_platform_data.get("cpo_eeprom_mode", "joint")
+            self._init_port_mappings()
+        except Exception as exc:
+            # This hook can run before the board HAL and other devices exist.
+            self._cpo_devices = {}
+            self._cpo_list = []
+            self._port_lists_validated = False
+            self._cpo_init_error = str(exc)
+            syslog.syslog(syslog.LOG_ERR, "CPO initialization failed: {}".format(exc))
+            return
+        self._cpo_init_error = None
         self._cpo_initialized = True
 
     def get_watchdog(self):

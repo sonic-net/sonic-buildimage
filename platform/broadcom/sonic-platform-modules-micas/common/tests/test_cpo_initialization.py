@@ -210,6 +210,20 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertIsInstance(cpo.oe.get_api(), DavissonTh6OeApi)
         self.assertIsInstance(cpo.elsfp.get_api(), DavissonTh6ElsfpApi)
 
+    def test_missing_or_unknown_cpo_type_does_not_default_to_bailly(self):
+        for cpo_type in [None, "unknown"]:
+            with self.subTest(cpo_type=cpo_type):
+                data = self.topology()
+                if cpo_type is None:
+                    del data["cpo_type"]
+                else:
+                    data["cpo_type"] = cpo_type
+                with patch.object(self.chassis.syslog, "syslog"):
+                    chassis = self.make_chassis(data)
+                self.assertEqual(chassis.get_all_cpos(), [])
+                self.assertFalse(chassis._cpo_initialized)
+                self.assertIn("Unsupported CPO type", chassis._cpo_init_error)
+
     def test_els_bank_is_passed_during_construction(self):
         data = self.topology()
         data["devices"]["ELS0"]["max_banks"] = 2
@@ -674,8 +688,12 @@ with open(sys.argv[1], 'rb') as fd:
         self.device_info.get_platform_json_data.return_value["interfaces"]["Ethernet1"] = copy.deepcopy(
             self.device_info.get_platform_json_data.return_value["interfaces"]["Ethernet0"])
         data["interfaces"] = {"Ethernet0": first, "Ethernet1": second}
-        with self.assertRaises(ValueError):
-            self.make_chassis(data)
+        with patch.object(self.chassis.syslog, "syslog") as log:
+            chassis = self.make_chassis(data)
+        self.assertEqual(chassis.get_all_cpos(), [])
+        self.assertFalse(chassis._cpo_initialized)
+        self.assertIn("Conflicting CPO mapping", chassis._cpo_init_error)
+        log.assert_called_once()
 
 
 
@@ -698,14 +716,90 @@ with open(sys.argv[1], 'rb') as fd:
     def test_missing_hld_devices_is_rejected(self):
         data = self.topology()
         del data["devices"]
-        with self.assertRaisesRegex(ValueError, "non-empty devices"):
-            self.make_chassis(data)
+        with patch.object(self.chassis.syslog, "syslog") as log:
+            chassis = self.make_chassis(data)
+        self.assertEqual(chassis.get_all_cpos(), [])
+        self.assertIn("non-empty devices", chassis._cpo_init_error)
+        log.assert_called_once()
 
     def test_bank_is_not_silently_wrapped(self):
         data = self.topology()
         data["interfaces"]["Ethernet0"]["associated_devices"][0]["bank"] = 8
-        with self.assertRaisesRegex(ValueError, "Invalid bank"):
-            self.make_chassis(data)
+        with patch.object(self.chassis.syslog, "syslog") as log:
+            chassis = self.make_chassis(data)
+        self.assertEqual(chassis.get_all_cpos(), [])
+        self.assertIn("Invalid bank", chassis._cpo_init_error)
+        log.assert_called_once()
+
+    def test_bad_cpo_association_does_not_stop_board_devices(self):
+        data = self.topology()
+        data["interfaces"]["Ethernet0"]["associated_devices"][1]["device_id"] = "ELS99"
+        with patch.object(self.chassis.syslog, "syslog") as log, \
+                patch.object(self.board.get_fan_total_number, "return_value", 1), \
+                patch.object(self.board.get_psu_total_number, "return_value", 1), \
+                patch.object(self.board.get_temp_id_number, "return_value", 1), \
+                patch.object(self.chassis.Chassis, "construct_cpo_devices", autospec=True,
+                             side_effect=self.chassis.Chassis.construct_cpo_devices) as build:
+            chassis = self.make_chassis(data)
+        build.assert_called_once()
+        log.assert_called_once_with(self.chassis.syslog.LOG_ERR,
+                                    "CPO initialization failed: Unknown CPO device els99")
+        self.assertEqual(chassis.get_all_cpos(), [])
+        self.assertEqual(chassis.get_all_sfps(), [])
+        self.assertFalse(chassis._cpo_initialized)
+        self.assertEqual(len(chassis._fan_drawer_list), 1)
+        self.assertEqual(len(chassis._psu_list), 1)
+        self.assertEqual(len(chassis._thermal_list), 1)
+        self.assertIsNotNone(chassis._eeprom)
+        self.assertIsNotNone(chassis.get_watchdog())
+        self.assertEqual(chassis.get_transceiver_change_event(), {})
+
+    def test_port_validation_still_raises_before_runtime_boundary(self):
+        data = self.topology()
+        chassis = self.make_chassis(data)
+        previous = chassis.get_cpo(1)
+        data["interfaces"]["Ethernet0"]["associated_devices"][1]["device_id"] = "ELS99"
+        with self.assertRaisesRegex(ValueError, "Unknown CPO device"):
+            chassis._init_port_mappings()
+        self.assertIs(chassis.get_cpo(1), previous)
+
+    def test_endpoint_failure_does_not_publish_partial_ports(self):
+        data = self.topology()
+        data["interfaces"] = {name: data["interfaces"][name] for name in ["Ethernet0", "Ethernet8"]}
+        original = self.cpo.MicasCpo
+        created = []
+
+        def create(*args, **kwargs):
+            if created:
+                raise OSError("test endpoint construction failure")
+            endpoint = original(*args, **kwargs)
+            created.append(endpoint)
+            return endpoint
+
+        with patch.object(self.chassis, "MicasCpo", side_effect=create) as constructor, \
+                patch.object(self.chassis.syslog, "syslog") as log:
+            chassis = self.make_chassis(data)
+        self.assertEqual(constructor.call_count, 2)
+        self.assertEqual(len(created), 1)
+        self.assertEqual(chassis.get_all_cpos(), [])
+        self.assertEqual(chassis.get_all_sfps(), [])
+        self.assertEqual(chassis.sfp_present_dict, {})
+        self.assertEqual(chassis.port_num, 0)
+        self.assertEqual(chassis._cpo_init_error, "test endpoint construction failure")
+        log.assert_called_once()
+
+    def test_failed_reconstruction_preserves_existing_sfp_objects(self):
+        data = self.topology()
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"],
+                              "Ethernet8": {"associated_devices": []}}
+        chassis = self.make_chassis(data)
+        existing_sfp = chassis.get_sfp(2)
+        data["interfaces"]["Ethernet0"]["associated_devices"][1]["device_id"] = "ELS99"
+        with patch.object(self.chassis.syslog, "syslog"):
+            chassis.construct_cpo_devices(data)
+        self.assertIs(chassis.get_sfp(2), existing_sfp)
+        self.assertEqual(chassis.get_all_cpos(), [])
+        self.assertFalse(chassis._cpo_initialized)
 
     def test_precise_hld_lasers_override_coarse_platform_group(self):
         data = self.topology()
