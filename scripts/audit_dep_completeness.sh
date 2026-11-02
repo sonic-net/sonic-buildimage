@@ -817,6 +817,11 @@ flag_tracked_anywhere() {
     return 1
 }
 
+flag_covered_by_forwarded_key() {
+    [[ -f "$EXPORT_SCANNER" ]] || return 1
+    python3 "$EXPORT_SCANNER" --check-forwarded-flag "$1" "$2" <<< "$3"
+}
+
 # True (0) if slave.mk pins $flag to 'n' for all modern build envs
 # (bookworm/trixie), making it effectively deprecated/dead (e.g. ENABLE_PY2_MODULES).
 flag_forced_off_for_modern_bldenv() {
@@ -1104,6 +1109,8 @@ check_dep_flags_coverage() {
 
                 if $flag_in_common; then
                     log_verbose "$base: $flag is in SONIC_COMMON_FLAGS_LIST (OK)"
+                elif flag_covered_by_forwarded_key "$flag" "$mk_file" "$block_content"; then
+                    log_verbose "$base: $flag is forwarded unchanged into the affected package cache keys"
                 elif echo "$dep_flags" | grep -q "SONIC_COMMON_FLAGS_LIST"; then
                     # The dep uses SONIC_COMMON_FLAGS_LIST — check if the flag is there
                     if echo "$common_flags_list" | grep -q "^${flag}$" || \
@@ -1506,13 +1513,14 @@ check_nested_derived_packages() {
 # trust-store that can drift. scripts/cache_key_scan.py enumerates EVERY exported
 # variable from live git-tracked source and classifies each by concrete evidence:
 #   in-key    -> literally in SONIC_COMMON_FLAGS_LIST / a *_DEP_FLAGS. PROVABLY safe.
+#   derived   -> slave selector formed from a literal and an input in every key.
 #   filename  -> value flows into a cached target's *.deb/*.whl/*.gz name. PROVABLY safe.
 #   gap       -> referenced by a cached build recipe but untracked. REPORTED (P1).
 #   assembly  -> referenced in the make/assembly layer, no cached-recipe consumer.
 #                NOT provably safe (can still reach a cached `docker build`). REPORTED (P2).
 #   external-env -> exported, NO in-repo consumer (read from the env by an external
 #                tool). Cannot be proven safe by static analysis. REPORTED (P2).
-# Only in-key/filename auto-clear (both recomputed live). Everything else is a
+# Only in-key/derived/filename auto-clear (all recomputed live). Everything else is a
 # finding (default-deny). A human clears a specific variable by recording it — WITH
 # A REASON — in scripts/cache_key_export_waivers.tsv.
 #
@@ -1541,7 +1549,7 @@ check_exported_flags() {
 
         # Provably cache-safe — no finding.
         case "$disp" in
-            in-key|filename)
+            in-key|derived|filename)
                 log_verbose "  $flag — $disp (provably cache-safe)"
                 continue
                 ;;
