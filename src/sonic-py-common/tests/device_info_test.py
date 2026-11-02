@@ -89,9 +89,9 @@ class TestDeviceInfo(object):
 
     @pytest.fixture(autouse=True)
     def clear_chassis_info(self):
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         yield
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
 
     def test_get_machine_info(self):
         with mock.patch("os.path.isfile") as mock_isfile:
@@ -136,7 +136,7 @@ class TestDeviceInfo(object):
         mock_platform_info.return_value = {"switch_type": "npu"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
@@ -147,7 +147,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == True
         assert device_info.is_packet_chassis() == False
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "voq"
@@ -156,7 +156,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == True
         assert device_info.is_packet_chassis() == False
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
 
         mock_localhost_info.return_value = "voq"
@@ -165,7 +165,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = True
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
 
         mock_localhost_info.return_value = "chassis-packet"
@@ -174,14 +174,14 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == True
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "SpineRouter"
         mock_platform_info.return_value = {}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "dummy-sup"
@@ -191,7 +191,7 @@ class TestDeviceInfo(object):
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
         assert device_info.is_virtual_chassis() == True
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = None
@@ -200,7 +200,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
-        device_info.chassis_info = None
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
 
     @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
@@ -290,11 +290,11 @@ class TestDeviceInfo(object):
         mock_cfg_db.side_effect = connector
 
         assert device_info.is_chassis() is False
-        assert device_info.chassis_info is None
+        assert device_info.is_chassis_info is None
 
         reachable = True
         assert device_info.is_chassis() is True
-        assert device_info.chassis_info is True
+        assert device_info.is_chassis_info is True
 
         # Now cached: CONFIG_DB is not read again
         reads_by_second_call = mock_cfg_db.call_count

@@ -63,7 +63,7 @@ DPU_NAME_PREFIX = "dpu"
 sonic_ver_info = {}
 hw_info_dict = {}
 hwsku_info = None
-chassis_info = None
+is_chassis_info = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -825,7 +825,7 @@ def is_virtual_chassis():
 
 
 def is_chassis():
-    global chassis_info
+    global is_chassis_info
 
     # Some CLI commands call this once per port, and each call reads DEVICE_METADATA three
     # times through get_localhost_info(), opening a CONFIG_DB connection every time. Cache the
@@ -840,8 +840,8 @@ def is_chassis():
     #
     # The slot is unsynchronized on purpose: racing threads may both perform the read, but
     # they store the same value, so the interleaving does not matter.
-    if chassis_info is not None:
-        return chassis_info
+    if is_chassis_info is not None:
+        return is_chassis_info
 
     device_type = get_localhost_info('type')
     if device_type == 'SpineRouter':
@@ -850,7 +850,7 @@ def is_chassis():
         result = bool((is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis())
 
     if device_type:
-        chassis_info = result
+        is_chassis_info = result
     return result
 
 
