@@ -545,11 +545,11 @@
         "desc": "Minimal BGP_GLOBALS_EVPN_VNI row (just key)."
     },
     "BGP_GLOBALS_EVPN_VNI_NEG_VNI_RANGE_LOW": {
-        "desc": "vni_number below 1 is rejected.",
+        "desc": "vni below 1 is rejected.",
         "eStrKey": "Range"
     },
     "BGP_GLOBALS_EVPN_VNI_NEG_VNI_RANGE_HIGH": {
-        "desc": "vni_number above 16777215 is rejected.",
+        "desc": "vni above 16777215 is rejected.",
         "eStrKey": "Range"
     },
     "BGP_GLOBALS_EVPN_VNI_NEG_AFI_SAFI_INVALID": {
@@ -595,7 +595,7 @@
         ]
     },
     "BGP_GLOBALS_EVPN_RT_NEG_RT_VALUE_INVALID_FORMAT": {
-        "desc": "rt_value must match IP:N or ASN:N.",
+        "desc": "rt must match IP:N or ASN:N.",
         "eStrKey": "Pattern"
     },
     "BGP_GLOBALS_EVPN_RT_NEG_VRF_NOT_EXIST": {
@@ -613,7 +613,7 @@
         "desc": "BGP_GLOBALS_EVPN_VNI_RT row referencing a real VNI."
     },
     "BGP_GLOBALS_EVPN_VNI_RT_NEG_VNI_NOT_EXIST": {
-        "desc": "vni_number must leafref to an existing BGP_GLOBALS_EVPN_VNI entry.",
+        "desc": "vni must leafref to an existing BGP_GLOBALS_EVPN_VNI entry.",
         "eStrKey": "LeafRef"
     },
     "BGP_GLOBALS_EVPN_VNI_RT_NEG_RT_TYPE_MISSING": {
@@ -624,7 +624,7 @@
         ]
     },
     "BGP_GLOBALS_EVPN_VNI_RT_NEG_RT_VALUE_INVALID_FORMAT": {
-        "desc": "rt_value on BGP_GLOBALS_EVPN_VNI_RT must match IP:N or ASN:N.",
+        "desc": "rt on BGP_GLOBALS_EVPN_VNI_RT must match IP:N or ASN:N.",
         "eStrKey": "Pattern"
     },
     "BGP_GLOBAL_AF_NEG_MUST_REDISTRIBUTE_STATIC_RMAP_WRONG_AF": {

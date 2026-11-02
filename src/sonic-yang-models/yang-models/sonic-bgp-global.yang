@@ -793,7 +793,7 @@ module sonic-bgp-global {
 
         container BGP_GLOBALS_EVPN_RT {
             list BGP_GLOBALS_EVPN_RT_LIST {
-                key "vrf_name afi_safi rt_value";
+                key "vrf_name afi_safi rt";
 
                 leaf vrf_name {
                     type leafref {
@@ -809,7 +809,7 @@ module sonic-bgp-global {
                     description "Address family name and subsequent address family name";
                 }
 
-                leaf rt_value {
+                leaf rt {
                     type string {
                         pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
                     }
@@ -836,7 +836,7 @@ module sonic-bgp-global {
 
         container BGP_GLOBALS_EVPN_VNI_RT {
             list BGP_GLOBALS_EVPN_VNI_RT_LIST {
-                key "vrf_name afi_safi vni_number rt_value";
+                key "vrf_name afi_safi vni rt";
 
                 leaf vrf_name {
                     type leafref {
@@ -858,18 +858,18 @@ module sonic-bgp-global {
                     description "Address family name and subsequent address family name";
                 }
 
-                leaf vni_number {
+                leaf vni {
                     type leafref {
                         path
                             "../../../BGP_GLOBALS_EVPN_VNI/"
-                          + "BGP_GLOBALS_EVPN_VNI_LIST/vni_number";
+                          + "BGP_GLOBALS_EVPN_VNI_LIST/vni";
                     }
                     description
                         "L2 VNI identifier. RFC 7432 24-bit VNI range
                          (1..16777215).";
                 }
 
-                leaf rt_value {
+                leaf rt {
                     type string {
                         pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
                     }
@@ -894,7 +894,7 @@ module sonic-bgp-global {
 
         container BGP_GLOBALS_EVPN_VNI {
             list BGP_GLOBALS_EVPN_VNI_LIST {
-                key "vrf_name afi_safi vni_number";
+                key "vrf_name afi_safi vni";
 
                 must "../../BGP_GLOBALS_AF/BGP_GLOBALS_AF_LIST[vrf_name=current()/vrf_name][afi_safi='l2vpn_evpn']/advertise-all-vni = 'true'" {
                     error-message "advertise-all-vni must be enabled on the parent l2vpn_evpn address-family before configuring per-VNI entries";
@@ -914,7 +914,7 @@ module sonic-bgp-global {
                     description "Address family name and subsequent address family name";
                 }
 
-                leaf vni_number {
+                leaf vni {
                     type uint32 {
                         range "1..16777215";
                     }

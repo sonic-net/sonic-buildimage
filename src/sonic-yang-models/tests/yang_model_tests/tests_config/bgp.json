@@ -3560,7 +3560,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100,
+                        "vni": 100,
                         "advertise-default-gw": true,
                         "route-distinguisher": "10.0.0.1:100",
                         "import-rts": [
@@ -3599,7 +3599,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 1
+                        "vni": 1
                     }
                 ]
             },
@@ -3629,7 +3629,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 0
+                        "vni": 0
                     }
                 ]
             },
@@ -3659,7 +3659,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 16777216
+                        "vni": 16777216
                     }
                 ]
             },
@@ -3689,7 +3689,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "ipv4_unicast",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
@@ -3719,7 +3719,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100,
+                        "vni": 100,
                         "route-distinguisher": "not-a-valid-rd"
                     }
                 ]
@@ -3750,7 +3750,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100,
+                        "vni": 100,
                         "import-rts": [
                             "not-a-valid-rt"
                         ]
@@ -3783,7 +3783,7 @@
                     {
                         "vrf_name": "Vrf_does_not_exist",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
@@ -3805,7 +3805,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "rt_value": "10.0.0.1:100",
+                        "rt": "10.0.0.1:100",
                         "route-target-type": "import"
                     }
                 ]
@@ -3827,7 +3827,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "rt_value": "65001:100",
+                        "rt": "65001:100",
                         "route-target-type": "export"
                     }
                 ]
@@ -3849,7 +3849,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "rt_value": "10.0.0.1:100",
+                        "rt": "10.0.0.1:100",
                         "route-target-type": "both"
                     }
                 ]
@@ -3871,7 +3871,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "rt_value": "10.0.0.1:100",
+                        "rt": "10.0.0.1:100",
                         "route-target-type": "bogus"
                     }
                 ]
@@ -3893,7 +3893,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "rt_value": "10.0.0.1:100"
+                        "rt": "10.0.0.1:100"
                     }
                 ]
             },
@@ -3914,7 +3914,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "rt_value": "not-a-valid-rt",
+                        "rt": "not-a-valid-rt",
                         "route-target-type": "import"
                     }
                 ]
@@ -3936,7 +3936,7 @@
                     {
                         "vrf_name": "Vrf_does_not_exist",
                         "afi_safi": "l2vpn_evpn",
-                        "rt_value": "10.0.0.1:100",
+                        "rt": "10.0.0.1:100",
                         "route-target-type": "import"
                     }
                 ]
@@ -3950,7 +3950,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "ipv4_unicast",
-                        "rt_value": "10.0.0.1:100",
+                        "rt": "10.0.0.1:100",
                         "route-target-type": "import"
                     }
                 ]
@@ -3972,7 +3972,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
@@ -3981,8 +3981,8 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100,
-                        "rt_value": "10.0.0.1:100",
+                        "vni": 100,
+                        "rt": "10.0.0.1:100",
                         "route-target-type": "both"
                     }
                 ]
@@ -4013,7 +4013,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
@@ -4022,8 +4022,8 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 999,
-                        "rt_value": "10.0.0.1:999",
+                        "vni": 999,
+                        "rt": "10.0.0.1:999",
                         "route-target-type": "import"
                     }
                 ]
@@ -4054,7 +4054,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
@@ -4063,8 +4063,8 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100,
-                        "rt_value": "10.0.0.1:100"
+                        "vni": 100,
+                        "rt": "10.0.0.1:100"
                     }
                 ]
             },
@@ -4094,7 +4094,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
@@ -4103,8 +4103,8 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100,
-                        "rt_value": "garbage",
+                        "vni": 100,
+                        "rt": "garbage",
                         "route-target-type": "import"
                     }
                 ]
@@ -5439,7 +5439,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
@@ -5469,7 +5469,7 @@
                     {
                         "vrf_name": "default",
                         "afi_safi": "l2vpn_evpn",
-                        "vni_number": 100
+                        "vni": 100
                     }
                 ]
             },
