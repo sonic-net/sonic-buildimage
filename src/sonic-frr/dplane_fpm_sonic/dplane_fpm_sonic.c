@@ -1082,7 +1082,9 @@ static bool fpm_pin_superseded(const struct fpm_pin *p)
  * hardware and BGP to BGP only: zebra keeps it local-inactive and keeps its
  * kernel entry. Otherwise no owner is left and the kernel entry is removed, or
  * on a VLAN with no L2VNI gives way to the pin it was written over. On an L2VNI
- * zebra holds the MAC, pin included, so no pin is put back.
+ * zebra holds the MAC, pin included, so no pin is put back. The pins may not
+ * have zebra's latest writes yet; fpm_pin_reconcile() checks the result once
+ * they have.
  */
 static void fpm_hw_mac_lost(struct interface *ifp, struct interface *br_if,
 			    vlanid_t vid, struct ethaddr *mac)
@@ -1103,12 +1105,12 @@ static void fpm_hw_mac_lost(struct interface *ifp, struct interface *br_if,
 	if (p && !p->unpinned)
 		pin_ifp = fpm_mac_bridge_port(p->pin.ifindex, &pin_br_if);
 	if (pin_ifp) {
-		dplane_local_mac_add(pin_ifp, pin_br_if, vid, mac, false, true,
-				     false);
+		dplane_local_mac_learnt(pin_ifp, pin_br_if, vid, mac, false,
+					true);
 		return;
 	}
 
-	dplane_local_mac_del(ifp, br_if, vid, mac);
+	dplane_local_mac_learnt_del(ifp, br_if, vid, mac);
 }
 
 static struct interface *fpm_mac_bridge_port(int ifindex,
@@ -1164,7 +1166,7 @@ static void fpm_hw_mac_learnt(struct interface *ifp, struct interface *br_if,
 		return;
 	}
 
-	dplane_local_mac_learnt(ifp, br_if, hm->vid, &mac, hm->sticky);
+	dplane_local_mac_learnt(ifp, br_if, hm->vid, &mac, hm->sticky, false);
 
 	zebra_vxlan_local_mac_add_update(ifp, br_if, &mac, hm->vid, hm->sticky,
 					 false, false);
@@ -1203,13 +1205,69 @@ done:
 }
 
 /*
- * zebra or this module wrote or removed a local MAC. A static write is a pin.
- * A plain write ends it, unless it is this module's own for a MAC the hardware
- * learnt (DPLANE_MAC_LEARNT): zebra writes one when the MAC stops being static,
- * also as it removes the L2VNI, and on a VLAN with no L2VNI when the host is
- * learnt locally. This module never removes a pinned entry itself,
- * fpm_hw_mac_lost() restores it instead, so a removal on the pinned port is
- * zebra's.
+ * This module put the static entry back, or removed the entry, of a MAC the
+ * hardware lost on a VLAN with no L2VNI, from the pins as they stood. zebra's
+ * writes reach the pins only once the dataplane has made them, so one queued
+ * before may have pinned or unpinned the MAC since; all of them have by now.
+ * Write the entry the pins call for, a static one on the pin's port or none,
+ * unless the hardware has the MAC again: its own write follows. A write made
+ * here is checked the same way.
+ */
+static void fpm_pin_reconcile(const struct fpm_hw_mac *written)
+{
+	struct interface *pin_br_if = NULL;
+	struct interface *br_if = NULL;
+	struct interface *pin_ifp;
+	struct interface *ifp;
+	struct ethaddr mac;
+	struct fpm_pin *p;
+
+	/* A plain entry is for a MAC the hardware has. */
+	if (!written->del && !written->set_static)
+		return;
+
+	if (fpm_hw_mac_lookup(written->vid, written->mac))
+		return;
+
+	/* On an L2VNI zebra holds the MAC, pin included. */
+	ifp = fpm_mac_bridge_port(written->ifindex, &br_if);
+	if (!ifp || zebra_evpn_map_vlan(ifp, br_if, written->vid))
+		return;
+
+	memcpy(mac.octet, written->mac, ETH_ALEN);
+	p = fpm_pin_find(written->vid, written->mac);
+	if (p && !p->unpinned) {
+		if (!written->del && written->ifindex == p->pin.ifindex)
+			return;
+
+		pin_ifp = fpm_mac_bridge_port(p->pin.ifindex, &pin_br_if);
+		if (!pin_ifp)
+			return;
+
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: zebra pinned %pEA vlan %u on %s meanwhile",
+				   __func__, &mac, written->vid, pin_ifp->name);
+		dplane_local_mac_learnt(pin_ifp, pin_br_if, written->vid, &mac,
+					false, true);
+		return;
+	}
+
+	if (written->del)
+		return;
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: zebra unpinned %pEA vlan %u meanwhile",
+			   __func__, &mac, written->vid);
+	dplane_local_mac_learnt_del(ifp, br_if, written->vid, &mac);
+}
+
+/*
+ * zebra or this module wrote or removed a local MAC. A static write of zebra's
+ * is a pin, and a plain one, or a removal on the pinned port, ends it: zebra
+ * writes a plain entry when the MAC stops being static, also as it removes the
+ * L2VNI, and on a VLAN with no L2VNI when the host is learnt locally. This
+ * module's own writes (DPLANE_MAC_LEARNT) neither pin nor unpin;
+ * fpm_pin_reconcile() checks them against the pins.
  */
 static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 {
@@ -1217,6 +1275,11 @@ static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 	struct interface *ifp;
 	struct fpm_pin *p;
 	bool pinned;
+
+	if (written->learnt) {
+		fpm_pin_reconcile(written);
+		return;
+	}
 
 	p = fpm_pin_find(written->vid, written->mac);
 	pinned = p && !p->unpinned;
@@ -1228,12 +1291,12 @@ static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 	}
 
 	if (!written->set_static) {
-		if (pinned && !written->learnt)
+		if (pinned)
 			fpm_pin_unpin(p);
 		return;
 	}
 
-	/* Already pinned there, as when fpm_hw_mac_lost() restored it. */
+	/* Already pinned there. */
 	if (pinned && p->pin.ifindex == written->ifindex)
 		return;
 
