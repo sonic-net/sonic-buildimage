@@ -113,22 +113,34 @@ def invoke(mock_db, command, args):
 
 
 @pytest.fixture
-def binding_with_deleted_range(prefix_db):
+def binding_with_surviving_pools(prefix_db, request):
     db = prefix_db
     db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3", {"range@": "100.1.1.10,100.1.1.12"})
     db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|surviving",
              {"matches@": "vendor-a", "ranges@": "range1,range3"})
-    result = invoke(db, RANGE_COMMAND.commands["del"], ["range1", "--force"])
-    assert result.exit_code == 0, result.output
+    pool_state = getattr(request, "param", "deleted-range")
+    if pool_state == "deleted-range":
+        result = invoke(db, RANGE_COMMAND.commands["del"], ["range1", "--force"])
+        assert result.exit_code == 0, result.output
+    else:
+        db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range1", {"range@": "100.1.1.120,100.1.1.140"})
+        if pool_state == "shrunk-ips":
+            db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|surviving",
+                     {"matches@": "vendor-a", "ips@": "100.1.1.10,100.1.1.11,100.1.1.12,100.1.1.200"})
+        db.delete("CONFIG_DB", "VLAN_INTERFACE|Vlan100|100.1.1.1/24")
+        db.hmset("CONFIG_DB", "VLAN_INTERFACE|Vlan100|100.1.1.1/25", {})
     return db
 
 
+@pytest.mark.parametrize("binding_with_surviving_pools", [
+    "deleted-range", "shrunk-ips", "shrunk-ranges"
+], indirect=True)
 @pytest.mark.parametrize("operation", [
     "add", "binding-update", "match-update", "range-update", "enable", "mode-update"
 ])
 @pytest.mark.parametrize("conflict", ["equal-specificity", "partial-pool"])
-def test_surviving_ranges_participate_in_conflict_checks(binding_with_deleted_range, operation, conflict):
-    db = binding_with_deleted_range
+def test_surviving_pools_participate_in_conflict_checks(binding_with_surviving_pools, operation, conflict):
+    db = binding_with_surviving_pools
     match = "vendor-a" if conflict == "equal-specificity" else "vendor-b"
     ips = "100.1.1.40" if conflict == "equal-specificity" else "100.1.1.11,100.1.1.13"
     entry = {"matches@": match, "ips@": ips}
@@ -167,8 +179,8 @@ def test_surviving_ranges_participate_in_conflict_checks(binding_with_deleted_ra
 
 
 @pytest.mark.parametrize("all_ranges_missing", [False, True])
-def test_deleted_ranges_allow_nonconflicting_changes(binding_with_deleted_range, all_ranges_missing):
-    db = binding_with_deleted_range
+def test_deleted_ranges_allow_nonconflicting_changes(binding_with_surviving_pools, all_ranges_missing):
+    db = binding_with_surviving_pools
     if all_ranges_missing:
         db.delete("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3")
     match = "vendor-a" if all_ranges_missing else "vendor-b"
@@ -182,8 +194,8 @@ def test_deleted_ranges_allow_nonconflicting_changes(binding_with_deleted_range,
     ("100.1.1.40", "100.1.1.41", "partially overlapping pools"),
     ("100.1.3.10", "100.1.3.11", "is not in any subnet"),
 ])
-def test_surviving_range_update_remains_guarded(binding_with_deleted_range, start, end, error):
-    db = binding_with_deleted_range
+def test_surviving_range_update_remains_guarded(binding_with_surviving_pools, start, end, error):
+    db = binding_with_surviving_pools
     db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|other",
              {"matches@": "vendor-b", "ips@": "100.1.1.40"})
     before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
@@ -196,8 +208,8 @@ def test_surviving_range_update_remains_guarded(binding_with_deleted_range, star
 
 
 @pytest.mark.parametrize("operation", ["add", "update"])
-def test_candidate_with_missing_range_remains_strict(binding_with_deleted_range, operation):
-    db = binding_with_deleted_range
+def test_candidate_with_missing_range_remains_strict(binding_with_surviving_pools, operation):
+    db = binding_with_surviving_pools
     before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
     args = ["Vlan100", "other", "--match=vendor-b", "--range=range1,range3"] if operation == "add" else [
         "Vlan100", "surviving", "--match=vendor-b"]
@@ -206,6 +218,78 @@ def test_candidate_with_missing_range_remains_strict(binding_with_deleted_range,
 
     assert result.exit_code == 2, result.output
     assert "Range range1 does not exist" in result.output
+    assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+
+
+@pytest.mark.parametrize("binding_with_surviving_pools", ["shrunk-ips", "shrunk-ranges"], indirect=True)
+@pytest.mark.parametrize("all_pools_off_subnet", [False, True])
+def test_prefix_shrink_allows_nonconflicting_changes(binding_with_surviving_pools, all_pools_off_subnet):
+    db = binding_with_surviving_pools
+    if all_pools_off_subnet:
+        db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|surviving",
+                 {"matches@": "vendor-a", "ips@": "100.1.1.200"})
+    match = "vendor-a" if all_pools_off_subnet else "vendor-b"
+
+    result = invoke(db, BINDING_COMMAND.commands["add"], ["Vlan100", "other", "--match=" + match, "100.1.1.40"])
+
+    assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("binding_with_surviving_pools", ["shrunk-ips", "shrunk-ranges"], indirect=True)
+@pytest.mark.parametrize("operation", ["add", "update"])
+def test_candidate_after_prefix_shrink_remains_strict(binding_with_surviving_pools, operation):
+    db = binding_with_surviving_pools
+    existing = db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|surviving")
+    args = ["Vlan100", "surviving", "--match=vendor-b"]
+    if operation == "add":
+        args[1] = "other"
+        args += [existing["ips@"]] if "ips@" in existing else ["--range=" + existing["ranges@"]]
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+
+    result = invoke(db, BINDING_COMMAND.commands[operation], args)
+
+    assert result.exit_code == 2, result.output
+    assert "is not in any subnet" in result.output
+    assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+
+
+@pytest.mark.parametrize("binding_with_surviving_pools", ["shrunk-ranges"], indirect=True)
+@pytest.mark.parametrize("start,end,error", [
+    ("100.1.1.40", "100.1.1.41", "partially overlapping pools"),
+    ("100.1.1.130", "100.1.1.140", "is not in any subnet"),
+])
+def test_range_update_after_prefix_shrink_remains_guarded(binding_with_surviving_pools, start, end, error):
+    db = binding_with_surviving_pools
+    db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|other",
+             {"matches@": "vendor-b", "ips@": "100.1.1.40"})
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+
+    result = invoke(db, RANGE_COMMAND.commands["update"], ["range3", start, end])
+
+    assert result.exit_code == 2, result.output
+    assert error in result.output
+    assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+
+
+@pytest.mark.parametrize("binding_with_surviving_pools", ["shrunk-ranges"], indirect=True)
+def test_prefix_shrink_allows_repairing_range(binding_with_surviving_pools):
+    db = binding_with_surviving_pools
+
+    result = invoke(db, RANGE_COMMAND.commands["update"], ["range1", "100.1.1.50", "100.1.1.60"])
+
+    assert result.exit_code == 0, result.output
+    assert db.get("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range1", "range@") == "100.1.1.50,100.1.1.60"
+
+
+@pytest.mark.parametrize("binding_with_surviving_pools", ["shrunk-ips", "shrunk-ranges"], indirect=True)
+def test_match_update_after_prefix_shrink_remains_guarded(binding_with_surviving_pools):
+    db = binding_with_surviving_pools
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+
+    result = invoke(db, MATCH_COMMAND.commands["update"], ["vendor-a", "--type=circuit_id", "--value=etp5"])
+
+    assert result.exit_code == 2, result.output
+    assert "is not a member of vlan Vlan100" in result.output
     assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
 
 

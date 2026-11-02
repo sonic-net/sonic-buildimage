@@ -108,18 +108,18 @@ def add_pool_interval(intervals, subnets, start, end):
     return subnet is not None
 
 
-def validate_ip_pool(ips, subnets, dhcp_interface):
+def validate_ip_pool(ips, subnets, dhcp_interface, allow_off_subnet=False):
     intervals = {}
     for ip in ips:
         if not validate_str_type("ipv4-address", ip):
             click.get_current_context().fail("Illegal IP address {}".format(ip))
-        if not add_pool_interval(intervals, subnets, ip, ip):
+        if not add_pool_interval(intervals, subnets, ip, ip) and not allow_off_subnet:
             click.get_current_context().fail("IP {} is not in any subnet of vlan {}".format(ip, dhcp_interface))
     return intervals
 
 
 def validate_range_pool(dbconn, ranges, subnets, dhcp_interface, range_overrides=None,
-                        allow_missing_ranges=False):
+                        allow_missing_ranges=False, allow_off_subnet=False):
     intervals = {}
     for range_name in ranges:
         key = "DHCP_SERVER_IPV4_RANGE|" + range_name
@@ -140,7 +140,8 @@ def validate_range_pool(dbconn, ranges, subnets, dhcp_interface, range_overrides
             click.get_current_context().fail("Range {} has an invalid IPv4 address".format(range_name))
         if count_ipv4(ip_start, ip_end) < 1:
             click.get_current_context().fail("Range {} has an invalid address order".format(range_name))
-        if not add_pool_interval(intervals, subnets, ip_start, ip_end):
+        if not add_pool_interval(intervals, subnets, ip_start, ip_end) and (
+                not allow_off_subnet or (range_overrides and range_name in range_overrides)):
             click.get_current_context().fail(
                 "Range {} is not in any subnet of vlan {}".format(range_name, dhcp_interface))
     return intervals
@@ -189,7 +190,8 @@ def resolve_port_alias(dbconn, alias, port_alias_map=None):
 
 
 def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_overrides=None,
-                           range_overrides=None, port_alias_map=None, allow_missing_ranges=False):
+                           range_overrides=None, port_alias_map=None, allow_missing_ranges=False,
+                           allow_off_subnet=False):
     validate_key_name(binding_name, "Binding name", "|")
     if not dbconn.exists("CONFIG_DB", "DHCP_SERVER_IPV4|" + dhcp_interface):
         click.get_current_context().fail("Interface {} is not a valid dhcp interface".format(dhcp_interface))
@@ -222,10 +224,11 @@ def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_ov
 
     subnets = get_vlan_subnets(dbconn, dhcp_interface)
     if has_ips:
-        intervals = validate_ip_pool(split_csv(entry["ips@"], "IP list"), subnets, dhcp_interface)
+        intervals = validate_ip_pool(split_csv(entry["ips@"], "IP list"), subnets, dhcp_interface,
+                                     allow_off_subnet=allow_off_subnet)
     else:
         intervals = validate_range_pool(dbconn, split_csv(entry["ranges@"], "Range list"), subnets,
-                                        dhcp_interface, range_overrides, allow_missing_ranges)
+                                        dhcp_interface, range_overrides, allow_missing_ranges, allow_off_subnet)
     return conditions, {subnet: merge_pool_intervals(pool) for subnet, pool in intervals.items()}
 
 
@@ -279,17 +282,18 @@ def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrid
     predicates = {}
     pools = {}
     for binding_name in sorted(bindings):
+        is_candidate = candidate and binding_name == candidate[0]
         try:
             conditions, intervals = validate_binding_entry(
                 dbconn, dhcp_interface, binding_name, bindings[binding_name], match_overrides,
                 range_overrides, port_alias_map,
-                allow_missing_ranges=not (candidate and binding_name == candidate[0])
+                allow_missing_ranges=not is_candidate, allow_off_subnet=not is_candidate
             )
-            # Existing bindings still serve their surviving ranges, as dhcp_cfggen does.
+            # Existing bindings still serve their usable pools, as dhcp_cfggen does.
             if intervals:
                 predicates[binding_name], pools[binding_name] = conditions, intervals
         except click.UsageError:
-            if candidate and binding_name == candidate[0]:
+            if is_candidate:
                 raise
             # dhcp_cfggen skips a binding that is already invalid (for example after
             # its port left the VLAN), so it must not block unrelated changes. Only
@@ -297,7 +301,8 @@ def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrid
             if match_overrides or range_overrides:
                 try:
                     validate_binding_entry(dbconn, dhcp_interface, binding_name, bindings[binding_name],
-                                           port_alias_map=port_alias_map, allow_missing_ranges=True)
+                                           port_alias_map=port_alias_map, allow_missing_ranges=True,
+                                           allow_off_subnet=True)
                 except click.UsageError:
                     continue
                 raise
