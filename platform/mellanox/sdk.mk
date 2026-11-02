@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-MLNX_SDK_VERSION = 4.10.1144
+MLNX_SDK_VERSION = 4.10.2066
 MLNX_SDK_ISSU_VERSION = 101
 
 MLNX_SDK_DRIVERS_GITHUB_URL = https://github.com/Mellanox/Spectrum-SDK-Drivers
@@ -29,6 +29,7 @@ MLNX_SDK_ASSETS_BASE_URL =
 
 # Place here URL where SDK sources exist
 MLNX_SDK_SOURCE_BASE_URL =
+MLNX_SDK_RELEASE_BASE_URL = $(patsubst %/SOURCES,%,$(MLNX_SDK_SOURCE_BASE_URL))
 
 # Use alternate assets URL if provided
 ifneq ($(MLNX_SDK_ASSETS_BASE_URL), )
@@ -38,7 +39,7 @@ endif
 # Use source build if no assets URL is provided but source URL is available
 SDK_FROM_SRC = $(if $(MLNX_SDK_ASSETS_BASE_URL),n,$(if $(MLNX_SDK_SOURCE_BASE_URL),y,n))
 
-export MLNX_SDK_SOURCE_BASE_URL MLNX_SDK_VERSION MLNX_SDK_ISSU_VERSION MLNX_SDK_DEB_VERSION MLNX_ASSETS_GITHUB_URL MLNX_SDK_DRIVERS_GITHUB_URL
+export MLNX_SDK_SOURCE_BASE_URL MLNX_SDK_RELEASE_BASE_URL MLNX_SDK_VERSION MLNX_SDK_ISSU_VERSION MLNX_SDK_DEB_VERSION MLNX_ASSETS_GITHUB_URL MLNX_SDK_DRIVERS_GITHUB_URL
 
 MLNX_SDK_RDEBS += $(SYSSDK)
 MLNX_SDK_DEBS += $(SYSSDK_DEV)
