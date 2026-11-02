@@ -23,7 +23,7 @@ try:
     from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoHardwareInfo, OeId
     from sonic_py_common import device_info
     from sonic_platform.sfp import Sfp
-    from sonic_platform.cpo import MicasCpo, Oe, Elsfp
+    from sonic_platform.cpo import Cpo, Oe, Elsfp
     from sonic_platform.psu import Psu
     # from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
@@ -747,7 +747,7 @@ class Chassis(ChassisBase):
                 if els_path != oe_config.get("i2c_path"):
                     raise ValueError("Bailly ELS must share its OE EEPROM path")
                 elsfp = Elsfp(int(els_name[3:]), els_config, oe.get_eeprom_path(), hardware_info, bank=els_bank)
-                cpo_list[port_id] = MicasCpo(port_id, name, oe, elsfp, lasers)
+                cpo_list[port_id] = Cpo(port_id, name, oe, elsfp, lasers)
 
         # All banks must be accessible before any endpoint API is used. The
         # topology already declares the capacity; configure each OE only once.

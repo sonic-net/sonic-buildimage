@@ -83,7 +83,7 @@ class TestCpoInitialization(unittest.TestCase):
         cls.base_device_patch = patch("sonic_platform_base.chassis_base.device_info", device_info)
         cls.base_device_patch.start()
         cls.chassis = load_source("micas_chassis_under_test", PLATFORM / "chassis.py")
-        cls.log_patch = patch.object(cls.cpo.MicasCpo, "_setup_logging",
+        cls.log_patch = patch.object(cls.cpo.Cpo, "_setup_logging",
                                     lambda obj: setattr(obj, "logger", logging.getLogger("cpo-test")))
         cls.log_patch.start()
 
@@ -164,7 +164,7 @@ class TestCpoInitialization(unittest.TestCase):
 
     def test_hook_initializes_before_board_hal_without_double_construction(self):
         data = self.topology()
-        original = self.cpo.MicasCpo
+        original = self.cpo.Cpo
         mapping = self.chassis.Chassis._init_port_mappings
         ordering = []
 
@@ -172,7 +172,7 @@ class TestCpoInitialization(unittest.TestCase):
             ordering.append(hasattr(obj, "int_case"))
             return mapping(obj)
 
-        with patch.object(self.chassis, "MicasCpo", side_effect=original) as constructor, \
+        with patch.object(self.chassis, "Cpo", side_effect=original) as constructor, \
                 patch.object(self.chassis.Chassis, "_init_port_mappings", record_order):
             chassis = self.make_chassis(data)
         self.assertEqual(constructor.call_count, 64)
@@ -487,7 +487,7 @@ class TestCpoInitialization(unittest.TestCase):
         api.tx_disable.return_value = True
         api.get_transceiver_info.return_value = {"manufacturer": "test"}
         oe._api = api
-        cpo = self.cpo.MicasCpo(8, "Ethernet56", oe, els)
+        cpo = self.cpo.Cpo(8, "Ethernet56", oe, els)
         with patch.object(els, "get_api", side_effect=AssertionError("ELS control used")):
             self.assertFalse(cpo.get_lpmode())
             self.assertTrue(cpo.set_lpmode(True))
@@ -592,7 +592,7 @@ with open(sys.argv[1], 'rb') as fd:
 
     def test_cpo_forwarding_and_endpoint_apis_use_locked_access(self):
         oe, els = self.endpoints()
-        cpo = self.cpo.MicasCpo(1, 'Ethernet0', oe, els)
+        cpo = self.cpo.Cpo(1, 'Ethernet0', oe, els)
         self.assertIs(oe.get_api().xcvr_eeprom.reader.__self__, oe)
         self.assertIs(els.get_api().xcvr_eeprom.writer.__self__, els)
         with patch.object(oe, 'read_eeprom', return_value=bytearray(b'A')) as read, \
@@ -605,7 +605,7 @@ with open(sys.argv[1], 'rb') as fd:
     def test_construction_and_refresh_do_not_reconfigure_driver_banks(self):
         oe, els = self.endpoints()
         with patch.object(oe, 'get_api', side_effect=AssertionError('Unexpected OE capability read')):
-            cpo = self.cpo.MicasCpo(1, 'Ethernet0', oe, els)
+            cpo = self.cpo.Cpo(1, 'Ethernet0', oe, els)
             self.assertIsNone(oe._api)
             self.assertIsNone(els._api)
             cpo.refresh_xcvr_api()
@@ -713,7 +713,7 @@ with open(sys.argv[1], 'rb') as fd:
             "OptPowerMonitor{}".format(i + 1): 1.0 for i in range(8)}
         els_api.amps_to_ma.side_effect = lambda value: value * 1000.0
         oe._api, els._api = api, els_api
-        cpo = self.cpo.MicasCpo(1, "Ethernet0", oe, els, laser_ids=[4, 5])
+        cpo = self.cpo.Cpo(1, "Ethernet0", oe, els, laser_ids=[4, 5])
         dom = cpo.get_transceiver_dom_real_value()
         self.assertEqual(dom["temperature"], 40.0)
         self.assertEqual(dom["els_temperature"], 25.5)
@@ -732,7 +732,7 @@ with open(sys.argv[1], 'rb') as fd:
         api.get_max_supported_banks.return_value = 1
         api.get_transceiver_dom_real_value.return_value = {"temperature": 40.0}
         oe._api = api
-        cpo = self.cpo.MicasCpo(1, "Ethernet0", oe, els, laser_ids=[4])
+        cpo = self.cpo.Cpo(1, "Ethernet0", oe, els, laser_ids=[4])
         with patch.object(els, "get_api", side_effect=OSError("ELS read failed")):
             self.assertEqual(cpo.get_transceiver_dom_real_value(), {"temperature": 40.0})
 
@@ -820,7 +820,7 @@ with open(sys.argv[1], 'rb') as fd:
     def test_endpoint_failure_does_not_publish_partial_ports(self):
         data = self.topology()
         data["interfaces"] = {name: data["interfaces"][name] for name in ["Ethernet0", "Ethernet8"]}
-        original = self.cpo.MicasCpo
+        original = self.cpo.Cpo
         created = []
 
         def create(*args, **kwargs):
@@ -830,7 +830,7 @@ with open(sys.argv[1], 'rb') as fd:
             created.append(endpoint)
             return endpoint
 
-        with patch.object(self.chassis, "MicasCpo", side_effect=create) as constructor, \
+        with patch.object(self.chassis, "Cpo", side_effect=create) as constructor, \
                 patch.object(self.chassis.syslog, "syslog") as log:
             chassis = self.make_chassis(data)
         self.assertEqual(constructor.call_count, 2)

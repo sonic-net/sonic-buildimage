@@ -199,7 +199,7 @@ class Elsfp(_BaillyEepromAccessMixin, OptoeElsfpBase):
         return True
 
 
-class MicasCpo(CpoBase, SfpOptoeBase):
+class Cpo(CpoBase, SfpOptoeBase):
     """Community CPO object with the transceiver methods used by xcvrd.
 
     CPO/SFP transceiver methods use the OE API; RLM monitors use the ELS API.
