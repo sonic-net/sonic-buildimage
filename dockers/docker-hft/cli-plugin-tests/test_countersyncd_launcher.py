@@ -2,6 +2,7 @@
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import textwrap
@@ -84,10 +85,6 @@ print("ARGV=" + json.dumps(sys.argv[1:]))
 """
 
 
-def nul_separated(args):
-    return b"".join(arg.encode() + b"\0" for arg in args)
-
-
 @pytest.fixture
 def hft(tmp_path):
     """Run countersyncd.sh against a fake countersyncd binary."""
@@ -99,21 +96,17 @@ def hft(tmp_path):
 
     class Runner:
         settings_file = tmp_path / "hft.env"
-        container_args_file = tmp_path / "container_args"
 
-        def run(self, env=None, container_args=None, unset=()):
-            if container_args is not None:
-                self.container_args_file.write_bytes(nul_separated(container_args))
+        def run(self, env=None, container_args=(), unset=()):
             full_env = {
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
                 "HFT_COUNTERSYNCD_BIN": str(binary),
                 "HFT_CONFIG_FILE": str(self.settings_file),
-                "HFT_CONTAINER_ARGS_FILE": str(self.container_args_file),
             }
             full_env.update(env or {})
             for name in unset:
                 full_env.pop(name, None)
-            result = subprocess.run(["bash", str(LAUNCHER)], env=full_env,
+            result = subprocess.run(["bash", str(LAUNCHER)] + list(container_args), env=full_env,
                                     capture_output=True, text=True, check=False)
             self.output = result.stdout + result.stderr
             self.returncode = result.returncode
@@ -189,20 +182,13 @@ def test_settings_file_is_overridden_by_environment(hft):
         hft.settings_file) in hft.output
 
 
-@pytest.mark.skipif(os.path.exists("/var/run/hft/container_args"),
-                    reason="the default container arguments file exists on this host")
-def test_settings_file_cannot_change_the_container_variables(hft, tmp_path):
-    other_args_file = tmp_path / "other_args"
-    other_args_file.write_bytes(nul_separated(["--log-level=warn"]))
+def test_settings_file_cannot_change_the_container_variables(hft):
     hft.write_settings("""\
-        HFT_CONTAINER_ARGS_FILE={}
         HFT_COUNTERSYNCD_BIN=/bin/false
         HFT_CONFIG_FILE=/nonexistent
-        """.format(other_args_file))
-    # HFT_CONTAINER_ARGS_FILE is not in the environment, but must not be taken
-    # from the settings file either
-    assert hft.run(unset=["HFT_CONTAINER_ARGS_FILE"]) == []
-    for lineno in (1, 2, 3):
+        """)
+    assert hft.run() == []
+    for lineno in (1, 2):
         assert "Ignoring line {} of {}: only COUNTERSYNCD_<NAME> and HFT_COUNTERSYNCD_ARGS".format(
             lineno, hft.settings_file) in hft.output
 
@@ -365,26 +351,19 @@ def test_missing_binary(hft, tmp_path):
     assert hft.returncode == 1
 
 
-def run_docker_init(tmp_path, args):
+def run_docker_init(args):
     """Run docker_init.sh, with the exec of supervisord replaced by a dump of the environment."""
-    args_file = tmp_path / "run" / "container_args"
-    # HFT_CONTAINER_ARGS_FILE is set, but not exported
-    script = 'HFT_CONTAINER_ARGS_FILE="{}"; exec() {{ env; }}; source "$0" "$@"'.format(args_file)
+    script = 'exec() { env; }; source "$0" "$@"'
     result = subprocess.run(["bash", "-c", script, str(DOCKER_INIT)] + args,
                             env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")},
                             capture_output=True, text=True, check=True)
-    return args_file, result.stdout.splitlines()
+    return result.stdout.splitlines()
 
 
 @pytest.mark.parametrize("args", [[], ["--otel-endpoint", "http://x:4317", "a b", ""]])
-def test_docker_init_saves_container_arguments(tmp_path, args):
-    args_file, _ = run_docker_init(tmp_path, args)
-    assert args_file.read_bytes() == nul_separated(args)
-
-
-def test_docker_init_exports_the_container_args_file(tmp_path):
-    args_file, environment = run_docker_init(tmp_path, ["-o"])
-    assert "HFT_CONTAINER_ARGS_FILE={}".format(args_file) in environment
+def test_docker_init_exports_container_arguments(args):
+    exported = [line for line in run_docker_init(args) if line.startswith("HFT_CONTAINER_ARGS=")]
+    assert [shlex.split(line[len("HFT_CONTAINER_ARGS="):]) for line in exported] == [args]
 
 
 def test_countersyncd_is_a_critical_process():
