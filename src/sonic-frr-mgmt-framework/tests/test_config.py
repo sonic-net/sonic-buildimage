@@ -1312,3 +1312,40 @@ def test_vtysh_command_rejects_multiline_argument():
 
     assert not manager.run_vtysh_command('PREFIX_SET', command, ['bgpd'])
     manager._BgpdClientMgr__proc_command.assert_not_called()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_rt_type_change_removes_old_direction(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'local_asn': '65000'})
+    rt_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_GLOBALS_EVPN_RT'][0]
+    vni_rt_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_GLOBALS_EVPN_VNI_RT'][0]
+
+    rt_hdlr('BGP_GLOBALS_EVPN_RT', 'default|l2vpn_evpn|65000:100',
+            {'route-target-type': 'both'})
+    run_cmd.reset_mock()
+    rt_hdlr('BGP_GLOBALS_EVPN_RT', 'default|l2vpn_evpn|65000:100',
+            {'route-target-type': 'import'})
+    run_cmd.assert_called_once_with(
+        'BGP_GLOBALS_EVPN_RT',
+        CmdMapTestInfo.compose_vtysh_cmd(['configure terminal', 'router bgp 65000 vrf default',
+                                          'address-family l2vpn evpn',
+                                          'route-target import 65000:100',
+                                          'no route-target export 65000:100']),
+        True, None)
+
+    vni_rt_hdlr('BGP_GLOBALS_EVPN_VNI_RT', 'default|l2vpn_evpn|100|65000:200',
+                {'route-target-type': 'both'})
+    run_cmd.reset_mock()
+    vni_rt_hdlr('BGP_GLOBALS_EVPN_VNI_RT', 'default|l2vpn_evpn|100|65000:200',
+                {'route-target-type': 'export'})
+    run_cmd.assert_called_once_with(
+        'BGP_GLOBALS_EVPN_VNI_RT',
+        CmdMapTestInfo.compose_vtysh_cmd(['configure terminal', 'router bgp 65000 vrf default',
+                                          'address-family l2vpn evpn', 'vni 100',
+                                          'route-target export 65000:200',
+                                          'no route-target import 65000:200']),
+        True, None)

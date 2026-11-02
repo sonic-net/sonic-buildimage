@@ -4041,7 +4041,7 @@ class BGPConfigDaemon:
                        '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
                        '-c', 'address-family {} {}'.format(af, ip_type),
                        '-c', '{}route-target {} {}'.format(nostr, data['route-target-type'].data, rt)]
-                cache_tbl_key = 'BGP_GLOBALS_EVPN_RT&&{}|L2VPN_EVPN|{}'.format(vrf, rt)
+                cache_tbl_key = 'BGP_GLOBALS_EVPN_RT&&{}|{}|{}'.format(vrf, af_type, rt)
                 if not del_table and cache_tbl_key in self.table_data_cache.keys():
                     new_rttype = data['route-target-type'].data
                     cache_tbl_data = self.table_data_cache[cache_tbl_key]
@@ -4068,7 +4068,7 @@ class BGPConfigDaemon:
                        '-c', 'address-family {} {}'.format(af, ip_type),
                        '-c', 'vni {}'.format(vni),
                        '-c', '{}route-target {} {}'.format(nostr, data['route-target-type'].data, rt)]
-                cache_tbl_key = 'BGP_GLOBALS_EVPN_VNI_RT&&{}|L2VPN_EVPN|{}|{}'.format(vrf, vni, rt)
+                cache_tbl_key = 'BGP_GLOBALS_EVPN_VNI_RT&&{}|{}|{}|{}'.format(vrf, af_type, vni, rt)
                 if not del_table and cache_tbl_key in self.table_data_cache.keys():
                     new_rttype = data['route-target-type'].data
                     cache_tbl_data = self.table_data_cache[cache_tbl_key]
