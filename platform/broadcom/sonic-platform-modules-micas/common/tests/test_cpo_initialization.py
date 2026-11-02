@@ -325,7 +325,10 @@ class TestCpoInitialization(unittest.TestCase):
                     chassis = self.make_chassis(None)
                     self.assertEqual(chassis.port_start_index, start)
                     self.assertEqual(chassis.port_num, 2)
-                    self.assertFalse(chassis._cpo_init_attempted)
+                    for name in ("elsfp_present_dict", "_cpo_devices", "_cpo_init_attempted",
+                                 "_cpo_init_error", "_cpo_initialized"):
+                        self.assertNotIn(name, vars(chassis))
+                    self.assertFalse(chassis.is_cpo_device())
                     self.assertNotIn("sfp_present_dict", vars(chassis))
                     self.assertIs(chassis.sfp_present_dict, type(chassis).sfp_present_dict)
 

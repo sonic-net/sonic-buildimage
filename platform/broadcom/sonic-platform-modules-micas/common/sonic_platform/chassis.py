@@ -63,10 +63,6 @@ class Chassis(ChassisBase):
     voltage_status_dict = {}
 
     def __init__(self):
-        self.elsfp_present_dict = {}
-        self._cpo_devices = {}
-        self._cpo_init_attempted = False
-        self._cpo_init_error = None
         ChassisBase.__init__(self)
         self._dcdc_list = []
         self.int_case = interface()
@@ -75,7 +71,7 @@ class Chassis(ChassisBase):
         cpo_data = device_info.get_cpo_data()
         if cpo_data:
             # Older ChassisBase versions do not call the construction hook.
-            if not self._cpo_init_attempted:
+            if not getattr(self, "_cpo_init_attempted", False):
                 self.construct_cpo_devices(cpo_data)
         else:
             # sfp.py will read eeprom contents and retrive the eeprom data.
@@ -665,7 +661,7 @@ class Chassis(ChassisBase):
         return ret_dict
 
     def is_cpo_device(self):
-        return bool(self._cpo_devices)
+        return bool(getattr(self, "_cpo_devices", {}))
 
 
     def _init_port_mappings(self):
@@ -771,11 +767,12 @@ class Chassis(ChassisBase):
 
     def construct_cpo_devices(self, cpo_data):
         """Build CPO ports while allowing unrelated platform devices to initialize."""
-        if not self._cpo_init_attempted:
+        if not getattr(self, "_cpo_init_attempted", False):
             # Defaults for a failed initial CPO build; normal SFP setup is unchanged.
             self.port_start_index = 1
             self.port_num = 0
             self.sfp_present_dict = {}
+            self.elsfp_present_dict = {}
         self._cpo_init_attempted = True
         self._cpo_initialized = False
         try:
