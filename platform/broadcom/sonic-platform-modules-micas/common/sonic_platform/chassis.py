@@ -18,6 +18,7 @@
 try:
     import time
     import sys
+    import syslog
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoHardwareInfo, OeId
     from sonic_py_common import device_info
@@ -63,6 +64,7 @@ class Chassis(ChassisBase):
 
     def __init__(self):
         self.sfp_present_dict = {}
+        self.elsfp_present_dict = {}
         self._cpo_devices = {}
         self._cpo_init_error = None
         ChassisBase.__init__(self)
@@ -560,6 +562,47 @@ class Chassis(ChassisBase):
         self.sfp_present_dict = current_sfp_present_dict
 
         return ret_dict
+
+    def get_elsfp_change_event(self, timeout=0):
+        """Poll ELS presence and report changes for its associated physical ports."""
+        events = {"elsfp": {}}
+        if timeout < 0:
+            return False, events
+        deadline = time.monotonic() + timeout / 1000.0 if timeout else None
+        endpoints = {}
+        for port, cpo in enumerate(self._cpo_list):
+            if cpo is None:
+                continue
+            els = cpo.elsfp
+            name = els.get_name()
+            if name not in endpoints:
+                endpoints[name] = (els, [])
+            endpoints[name][1].append(port)
+
+        while True:
+            current = {}
+            changes = {}
+            try:
+                for name, (els, ports) in endpoints.items():
+                    status = self.STATUS_INSERTED if els.get_presence() else self.STATUS_REMOVED
+                    current[name] = status
+                    if self.elsfp_present_dict.get(name, self.STATUS_REMOVED) != status:
+                        changes.update((str(port), status) for port in ports)
+            except Exception as exc:
+                syslog.syslog(syslog.LOG_ERR, "ELS presence polling failed: {}".format(exc))
+                return False, events
+
+            # Keep this stream independent from get_change_event()['sfp'].
+            self.elsfp_present_dict = current
+            if changes:
+                return True, {"elsfp": changes}
+            if deadline is None:
+                time.sleep(1)
+            else:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return True, events
+                time.sleep(min(1, remaining))
 
     def get_fan_change_event(self):
         current_fan_present_dict = {}

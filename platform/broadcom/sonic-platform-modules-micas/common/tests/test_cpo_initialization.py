@@ -268,6 +268,7 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertIsNone(chassis.get_cpo(2))
         self.assertIsInstance(chassis.get_sfp(2), FakeSfp)
         self.assertEqual(chassis.get_transceiver_change_event(), {2: "1"})
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {"1": "1"}}))
         self.assertEqual(chassis.get_transceiver_change_event(), {})
 
     def test_mixed_topology_constructs_real_sfp_with_integer_index(self):
@@ -299,6 +300,80 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertEqual(chassis.get_num_cpos(), 0)
         self.assertIsNone(chassis.get_cpo(1))
         self.assertIsInstance(chassis.get_sfp(1), FakeSfp)
+        self.assertEqual(chassis.get_transceiver_change_event(), {1: "1", 2: "1"})
+
+    def test_els_event_reads_shared_els_once_and_fans_out_removal(self):
+        chassis = self.make_chassis(self.topology())
+        with patch.object(self.cpo.Elsfp, "get_presence", autospec=True, return_value=True) as presence:
+            status, events = chassis.get_elsfp_change_event(1)
+        self.assertTrue(status)
+        self.assertEqual(len(events["elsfp"]), 64)
+        self.assertEqual(presence.call_count, 16)
+        self.assertEqual(len({call.args[0].get_name() for call in presence.call_args_list}), 16)
+        cache = dict(chassis.elsfp_present_dict)
+        self.assertEqual(chassis.get_transceiver_change_event(), {})
+        self.assertEqual(chassis.elsfp_present_dict, cache)
+        expected = {str(port): "0" for port, cpo in enumerate(chassis._cpo_list)
+                    if cpo is not None and cpo.elsfp.get_name() == "ELS0"}
+        self.assertEqual(len(expected), 4)
+        with patch.object(self.cpo.Elsfp, "get_presence", autospec=True,
+                          side_effect=lambda els: els.get_name() != "ELS0") as presence:
+            self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": expected}))
+        self.assertEqual(presence.call_count, 16)
+        self.assertEqual(chassis.get_transceiver_change_event(), {})
+
+    def test_els_events_follow_fpga_presence_changes(self):
+        data = self.topology()
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"]}
+        chassis = self.make_chassis(data)
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {"1": "1"}}))
+        bit = int(chassis.get_cpo(1).elsfp._presence_config["presence_bit"])
+        self.presence.write_bytes((1 << bit).to_bytes(4, "little"))
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {"1": "0"}}))
+        self.presence.write_bytes(bytes(4))
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {"1": "1"}}))
+
+    def test_els_event_zero_timeout_waits_for_insertion(self):
+        data = self.topology()
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"]}
+        chassis = self.make_chassis(data)
+        with patch.object(chassis.get_cpo(1).elsfp, "get_presence", side_effect=[False, True]), \
+                patch.object(self.chassis.time, "sleep") as sleep:
+            self.assertEqual(chassis.get_elsfp_change_event(0), (True, {"elsfp": {"1": "1"}}))
+        sleep.assert_called_once_with(1)
+
+    def test_els_event_timeout_is_in_milliseconds(self):
+        data = self.topology()
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"]}
+        chassis = self.make_chassis(data)
+        with patch.object(chassis.get_cpo(1).elsfp, "get_presence", return_value=False), \
+                patch.object(self.chassis.time, "monotonic", side_effect=[10, 10, 10.025]), \
+                patch.object(self.chassis.time, "sleep") as sleep:
+            self.assertEqual(chassis.get_elsfp_change_event(25), (True, {"elsfp": {}}))
+        self.assertEqual(sleep.call_count, 1)
+        self.assertAlmostEqual(sleep.call_args.args[0], 0.025)
+
+    def test_els_event_rejects_negative_timeout_without_presence_io(self):
+        chassis = self.make_chassis(self.topology())
+        with patch.object(self.cpo.Elsfp, "get_presence") as presence:
+            self.assertEqual(chassis.get_elsfp_change_event(-1), (False, {"elsfp": {}}))
+        presence.assert_not_called()
+
+    def test_els_event_error_preserves_last_presence_cache(self):
+        data = self.topology()
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"]}
+        chassis = self.make_chassis(data)
+        chassis.get_elsfp_change_event(1)
+        cache = dict(chassis.elsfp_present_dict)
+        with patch.object(chassis.get_cpo(1).elsfp, "get_presence", side_effect=OSError("test read failure")), \
+                patch.object(self.chassis.syslog, "syslog") as log:
+            self.assertEqual(chassis.get_elsfp_change_event(1), (False, {"elsfp": {}}))
+        self.assertEqual(chassis.elsfp_present_dict, cache)
+        log.assert_called_once()
+
+    def test_sfp_only_chassis_has_no_els_events(self):
+        chassis = self.make_chassis(None)
+        self.assertEqual(chassis.get_elsfp_change_event(1), (True, {"elsfp": {}}))
         self.assertEqual(chassis.get_transceiver_change_event(), {1: "1", 2: "1"})
 
     def test_non_cpo_get_sfp_uses_community_implementation(self):
