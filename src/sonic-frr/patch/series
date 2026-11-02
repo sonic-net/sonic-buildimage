@@ -47,3 +47,4 @@
 0123-bgpd-Fix-flags-used-by-use-underlays-nexthop-weight-command.patch
 0124-bgpd-Fix-route-map-use-count-for-SRv6-Service-routes.patch
 0125-bgpd-Flush-temporary-attr-after-SRv6-unicast-route-map.patch
+0126-lib-zebra-store-resolving-nexthop-group-id-with-recursive-nexthops.patch
