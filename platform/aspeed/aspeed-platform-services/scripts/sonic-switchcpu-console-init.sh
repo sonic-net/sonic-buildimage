@@ -50,22 +50,6 @@ log "Found switch CPU console rules, configuring console..."
 ln -sf "$RULES_SRC" "$RULES_DEST"
 log "Created symlink: $RULES_DEST -> $RULES_SRC"
 
-# Enable console feature
-log "Enabling console feature..."
-if config console enable; then
-    log "Console feature enabled via config command"
-else
-    log "WARNING: config console enable failed, trying direct DB write..."
-fi
-
-# Verify and ensure it's actually enabled in CONFIG_DB
-if sonic-db-cli CONFIG_DB HSET "CONSOLE_SWITCH|console_mgmt" enabled yes; then
-    log "Console feature enabled in CONFIG_DB"
-else
-    log "ERROR: Failed to enable console feature in CONFIG_DB"
-    exit 1
-fi
-
 # Reload udev to activate the rules
 log "Reloading udev rules..."
 udevadm control --reload-rules
