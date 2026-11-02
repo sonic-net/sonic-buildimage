@@ -1,0 +1,30 @@
+cpldupdate --gpio --print-progress /tmp/c/fw/cpld.bin
+cpldupdate --gpio --print-progress /tmp/mpfa-4k_gwt08/burn.vme
+cpldupdate --gpio --print-progress /tmp/mpfa-4k_gwt08/refresh.vme
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/c/fw/cpld.bin
+mst stop
+mst start
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/c/fw/cpld.bin
+mst stop
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/mpfa-jpegole9/burn.vme
+mst stop
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/mpfa-0lh22z4s/burn.vme
+mst stop
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/mpfa-0lh22z4s/refresh.vme
+mst stop
+reboot  session=new
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/mpfa-mkxj2v2d/burn.vme
+mst stop
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/mpfa-mkxj2v2d/refresh.vme
+mst stop
+reboot  session=new
+mst start
+cpldupdate --cpld_chain 2 --gpio --print-progress /tmp/mpfa-_qqn4lm0/burn.vme
+mst stop
