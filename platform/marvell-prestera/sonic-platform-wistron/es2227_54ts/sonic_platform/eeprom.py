@@ -11,7 +11,6 @@ try:
     import glob
     import os
     import sys
-    import imp
     import re
     from array import array
     from io import StringIO
