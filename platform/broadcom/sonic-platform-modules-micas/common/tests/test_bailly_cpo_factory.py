@@ -29,14 +29,14 @@ class MemoryAccess:
 class BaillyMemoryOe(MemoryAccess, micas.Oe):
     def __init__(self, bank=0, base_page=0):
         self.data = bytearray(1024 * 1024)
-        super().__init__(0, {}, bank=bank, base_page=base_page)
+        super().__init__(0, {}, CpoHardwareInfo(OeId.BROADCOM_BAILLY, None), bank=bank, base_page=base_page)
 
 
 class BaillyMemoryElsfp(MemoryAccess, micas.Elsfp):
     def __init__(self, base_page=0):
         self.data = bytearray(32768)
         self.reads = []
-        super().__init__(0, {"base_page": base_page}, "")
+        super().__init__(0, {"base_page": base_page}, "", CpoHardwareInfo(OeId.BROADCOM_BAILLY, None))
 
     def read_eeprom(self, offset, size):
         self.reads.append((offset, size))

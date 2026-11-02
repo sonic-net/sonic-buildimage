@@ -19,6 +19,7 @@ try:
     import time
     import sys
     from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoHardwareInfo, OeId
     from sonic_py_common import device_info
     from sonic_platform.sfp import Sfp
     from sonic_platform.cpo import MicasCpo, Oe, Elsfp
@@ -36,6 +37,12 @@ try:
 
 except ImportError as error:
     raise ImportError(str(error) + "- required module not found")from error
+
+
+CPO_TYPES = {
+    "bailly": OeId.BROADCOM_BAILLY,
+    "davisson": OeId.BROADCOM_DAVISSON,
+}
 
 
 class Chassis(ChassisBase):
@@ -687,13 +694,13 @@ class Chassis(ChassisBase):
                 els_name, els_bank = associations["external_laser_source"]
                 oe_config = self._cpo_devices[oe_name]
                 els_config = dict(self._cpo_devices[els_name], **extensions.get(els_name, {}))
-                oe = Oe(int(oe_name[2:]), oe_config, bank=oe_bank,
+                hardware_info = self._cpo_hardware_info
+                oe = Oe(int(oe_name[2:]), oe_config, hardware_info, bank=oe_bank,
                              base_page=els_config.get("base_page", 0))
                 els_path = els_config.get("i2c_path", oe_config.get("i2c_path"))
                 if els_path != oe_config.get("i2c_path"):
                     raise ValueError("Bailly ELS must share its OE EEPROM path")
-                elsfp = Elsfp(int(els_name[3:]), els_config, oe.get_eeprom_path())
-                elsfp.bank = els_bank
+                elsfp = Elsfp(int(els_name[3:]), els_config, oe.get_eeprom_path(), hardware_info, bank=els_bank)
                 self._cpo_list[port_id] = MicasCpo(port_id, name, oe, elsfp, lasers)
             self.sfp_present_dict[port_id] = self.STATUS_REMOVED
 
@@ -712,6 +719,10 @@ class Chassis(ChassisBase):
         self._cpo_devices = {name.lower(): config for name, config in devices.items()}
         self._ports_config = interfaces
         self._cpo_platform_data = cpo_data.get("platform_data", {})
+        cpo_type = cpo_data.get("cpo_type")
+        if cpo_type not in CPO_TYPES:
+            raise ValueError("Unsupported CPO type {!r}".format(cpo_type))
+        self._cpo_hardware_info = CpoHardwareInfo(CPO_TYPES[cpo_type], None)
         self._cpo_eeprom_mode = self._cpo_platform_data.get("cpo_eeprom_mode", "joint")
         self._init_port_mappings()
         self._cpo_initialized = True

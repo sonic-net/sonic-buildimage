@@ -1,4 +1,5 @@
 {
+    "cpo_type": "bailly",
     "devices": {
         "OE0": {
             "device_type": "optical_engine",

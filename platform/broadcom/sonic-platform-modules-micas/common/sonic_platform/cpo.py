@@ -25,7 +25,7 @@ try:
     from contextlib import contextmanager
     from logging.handlers import RotatingFileHandler
 
-    from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoBase, CpoHardwareInfo, OeId
+    from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoBase
     from sonic_platform_base.sonic_xcvr.cpo.cpo_optoe_base import OptoeOeBase, OptoeElsfpBase
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import elsfp_consts
@@ -116,13 +116,11 @@ class _BaillyEepromAccessMixin:
 
 
 class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
-    def __init__(self, oe_id, oe_config, bank=0, base_page=0):
+    def __init__(self, oe_id, oe_config, hardware_info, bank=0, base_page=0):
         self.oe_id = int(oe_id)
         cmis_path = oe_config.get("i2c_path")
         self._eeprom_path = os.path.join(cmis_path, "eeprom") if cmis_path else ""
         self.base_page = int(base_page)
-        hardware_info = CpoHardwareInfo(
-            oe_id=OeId.BROADCOM_BAILLY, elsfp_id=None)
         super().__init__(hardware_info, bank=bank)
 
     def get_eeprom_path(self) -> str:
@@ -153,14 +151,12 @@ class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
 class Elsfp(_BaillyEepromAccessMixin, OptoeElsfpBase):
     """Bailly ELS endpoint sharing its OE MCU lock and access pacing."""
 
-    def __init__(self, els_id, els_config, eeprom_path):
+    def __init__(self, els_id, els_config, eeprom_path, hardware_info, bank=0):
         self.els_id = int(els_id)
         self._presence_config = dict(els_config.get("els_presence") or {})
         self._eeprom_path = eeprom_path or ""
         self.base_page = int(els_config.get("base_page", 0))
-        hardware_info = CpoHardwareInfo(
-            oe_id=OeId.BROADCOM_BAILLY, elsfp_id=None)
-        super().__init__(hardware_info)
+        super().__init__(hardware_info, bank=bank)
 
     def get_eeprom_path(self) -> str:
         return self._eeprom_path

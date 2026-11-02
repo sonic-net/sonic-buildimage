@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from sonic_platform_base.chassis_base import ChassisBase
-from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoBase, OeId
+from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoBase, CpoHardwareInfo, OeId
 from sonic_platform_base.sonic_xcvr.cpo.oe import OeBase
 from sonic_platform_base.sonic_xcvr.cpo.elsfp import ElsfpBase
 from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_oe import BaillyOeApi
@@ -123,11 +123,12 @@ class TestCpoInitialization(unittest.TestCase):
         return self.chassis.Chassis()
 
     def endpoints(self, base_page=4, bank=7):
-        oe = self.cpo.Oe(0, {"i2c_path": str(self.directory)}, bank, base_page)
+        hardware_info = CpoHardwareInfo(OeId.BROADCOM_BAILLY, None)
+        oe = self.cpo.Oe(0, {"i2c_path": str(self.directory)}, hardware_info, bank, base_page)
         els_config = {"base_page": base_page, "els_presence": {
             "presence_file": str(self.presence), "presence_offset": "0x0",
             "presence_len": "4", "presence_bit": "1", "presence_value": "0"}}
-        els = self.cpo.Elsfp(1, els_config, oe.get_eeprom_path())
+        els = self.cpo.Elsfp(1, els_config, oe.get_eeprom_path(), hardware_info)
         return oe, els
 
     def test_full_topology_uses_only_community_cpo_list(self):
@@ -177,6 +178,55 @@ class TestCpoInitialization(unittest.TestCase):
         self.assertEqual(constructor.call_count, 64)
         self.assertEqual(ordering, [False])
         self.assertTrue(chassis._cpo_initialized)
+
+    def test_json_bailly_type_selects_both_endpoint_apis(self):
+        data = self.topology()
+        self.assertEqual(data["cpo_type"], "bailly")
+        self.assertNotIn("oe_type", data["platform_data"])
+        self.assertTrue(all("oe_type" not in device for device in data["devices"].values()))
+        chassis = self.make_chassis(data)
+        cpo = chassis.get_cpo(1)
+        self.assertTrue(all(port.hardware_id is cpo.hardware_id for port in chassis.get_all_cpos()))
+        self.assertIs(cpo.oe.hardware_id, cpo.elsfp.hardware_id)
+        self.assertEqual(cpo.hardware_id.oe_id, OeId.BROADCOM_BAILLY)
+        self.assertIsInstance(cpo.oe.get_api(), BaillyOeApi)
+        self.assertIsInstance(cpo.elsfp.get_api(), BaillyElsfpApi)
+        self.assertEqual(type(cpo.oe.get_api().xcvr_eeprom.mem_map).__name__, "BaillyOeMemMap")
+        self.assertEqual(type(cpo.elsfp.get_api().xcvr_eeprom.mem_map).__name__, "BaillyElsfpMemMap")
+
+    def test_json_davisson_type_selects_both_endpoint_factories(self):
+        from sonic_platform_base.sonic_xcvr.api.broadcom.davisson_oe import DavissonTh6OeApi
+        from sonic_platform_base.sonic_xcvr.api.broadcom.davisson_elsfp import DavissonTh6ElsfpApi
+
+        data = self.topology()
+        data["cpo_type"] = "davisson"
+        chassis = self.make_chassis(data)
+        cpo = chassis.get_cpo(1)
+        self.assertEqual(chassis.get_num_cpos(), 64)
+        self.assertTrue(all(port.hardware_id.oe_id == OeId.BROADCOM_DAVISSON
+                            for port in chassis.get_all_cpos()))
+        self.assertEqual(cpo.oe.hardware_id.oe_id, OeId.BROADCOM_DAVISSON)
+        self.assertIs(cpo.oe.hardware_id, cpo.elsfp.hardware_id)
+        self.assertIsInstance(cpo.oe.get_api(), DavissonTh6OeApi)
+        self.assertIsInstance(cpo.elsfp.get_api(), DavissonTh6ElsfpApi)
+
+    def test_els_bank_is_passed_during_construction(self):
+        data = self.topology()
+        data["devices"]["ELS0"]["max_banks"] = 2
+        data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"]}
+        data["interfaces"]["Ethernet0"]["associated_devices"][1]["bank"] = 1
+        original = self.cpo.Elsfp
+        initial_banks = []
+
+        def create(*args, **kwargs):
+            endpoint = original(*args, **kwargs)
+            initial_banks.append(endpoint.bank)
+            return endpoint
+
+        with patch.object(self.chassis, "Elsfp", side_effect=create):
+            chassis = self.make_chassis(data)
+        self.assertEqual(initial_banks, [1])
+        self.assertEqual(chassis.get_cpo(1).elsfp.get_api().xcvr_eeprom.mem_map.bank, 1)
 
     def test_zero_based_physical_indices(self):
         data = self.topology()
@@ -350,10 +400,11 @@ class TestCpoInitialization(unittest.TestCase):
             els.reset()
 
     def test_missing_eeprom_retains_failure_returns(self):
-        oe = self.cpo.Oe(0, {})
+        hardware_info = CpoHardwareInfo(OeId.BROADCOM_BAILLY, None)
+        oe = self.cpo.Oe(0, {}, hardware_info)
         self.assertIsNone(oe.read_eeprom(0, 1))
         self.assertFalse(oe.write_eeprom(0, 1, b"A"))
-        els = self.cpo.Elsfp(0, {}, "")
+        els = self.cpo.Elsfp(0, {}, "", hardware_info)
         start = (0xB0 + els.base_page + 1) * 128
         self.assertIsNone(els.read_eeprom(start, 1))
         self.assertFalse(els.write_eeprom(start, 1, b"A"))
