@@ -8,6 +8,7 @@ trigger:
     include:
       - master
       - 202???
+      - bazel-build
   paths:
     exclude:
       - .github
