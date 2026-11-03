@@ -110,9 +110,17 @@ module sonic-static-route {
              inherited from the default preference of the implementation for
              static routes.";
         }
+        leaf tag {
+          type string {
+            pattern "[0-9,]*";
+          }
+          default "";
+          description
+            "Route tag value used to identify a particular route (for example, for redistribution or filtering).";
+        }
         leaf nexthop-vrf {
           type string {
-            pattern "((((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)))?";
+            pattern "(((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)|),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)|)?";
           }
           description
             "VRF name of the nexthop. This is for vrf leaking";
@@ -124,6 +132,13 @@ module sonic-static-route {
           default "false";
           description
             "blackhole refers to a route that, if matched, discards the message silently.";
+        }
+        leaf bfd {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+          description "Enable BFD monitoring for each nexthop, comma-separated per nexthop.";
         }
       } /* end of list STATIC_ROUTE_LIST */
     } /* end of container STATIC_ROUTE */

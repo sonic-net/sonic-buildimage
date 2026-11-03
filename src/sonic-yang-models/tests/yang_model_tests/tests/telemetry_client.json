@@ -19,5 +19,13 @@
   "DST_ADDR_INCORRECT_FORMAT": {
     "desc": "Add dst_addr which is not in correct ip-port format.",
     "eStrKey" : "Pattern"
+  },
+  "OC_YANG_PATH_TARGET": {
+    "desc": "TELEMETRY_CLIENT subscription with OC_YANG path_target."
+  },
+  "INCORRECT_PATH_TARGET": {
+    "desc": "Configure wrong value for path_target.",
+    "eStrKey" : "InvalidValue",
+    "eStr": ["path_target"]
   }
 }

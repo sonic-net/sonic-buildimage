@@ -95,5 +95,18 @@
                 ]
             }
         }
+    },
+    "LOOPBACK_INTERFACE_DESCRIPTION_VALID": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0",
+                        "description": "mgmt loopback",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        }
     }
 }

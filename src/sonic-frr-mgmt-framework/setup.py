@@ -45,6 +45,10 @@ setuptools.setup(
                                      'templates/staticd/staticd.conf.j2',
                                      'templates/staticd/staticd.db.conf.j2',
                                      'templates/staticd/staticd.db.default_route.conf.j2',
+                                     'templates/zebra/zebra.vlan.conf.j2',
+                                     'templates/zebra/zebra.vrf.conf.j2',
+                                     'templates/zebra/zebra.evpn_mh_global.conf.j2',
+                                     'templates/zebra/zebra.evpn_mh_interface.conf.j2',
                                      'templates/frr/frr.conf.j2'])
     ]
 )
