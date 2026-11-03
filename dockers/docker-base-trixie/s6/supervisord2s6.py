@@ -15,8 +15,11 @@ The converter reproduces what supervisord + supervisord-dependent-startup would
 actually do:
   * only programs that would actually start are converted: autostart=true OR
     dependent_startup=true (so e.g. FRR 'sharpd', which has neither, is skipped);
-  * commands are shlex-split (no shell), exactly like supervisord's exec, and
-    re-emitted as execline argv so globs like Ethernet[0-9]* stay literal;
+  * commands get supervisord's %-expansion first (%% -> %, %(ENV_X)s,
+    %(program_name)s, %(group_name)s) - SONiC templates write dhcrelay's
+    "-a %%h:%%p %%P" for exactly this reason - then are shlex-split (no
+    shell), exactly like supervisord's exec, and re-emitted as execline argv
+    so globs like Ethernet[0-9]* stay literal;
   * dependent_startup_wait_for=X:running|exited -> a dependencies.d/X edge;
     dangling edges (target not converted) are pruned so s6-rc-compile succeeds;
   * a program waited on as X:exited is a oneshot; X:running is a longrun; a
@@ -156,17 +159,36 @@ def read_critical(path, group_of=None):
     return names
 
 
-def parse_environment(raw):
+_EXPAND_RE = re.compile(r"%%|%\(([A-Za-z_][A-Za-z0-9_]*)\)s")
+
+
+def expand_supervisor(s, names=None):
+    """Reproduce supervisord's %-expansion of command=/environment= values in a
+    single pass: '%%' -> '%', '%(ENV_X)s' -> our own environment (the parent
+    process environment, as supervisord does), and any key in `names`
+    (program_name, group_name). Unknown %(key)s are left untouched. Single pass
+    so an expanded value is never re-expanded."""
+    names = names or {}
+
+    def repl(m):
+        key = m.group(1)
+        if key is None:  # '%%'
+            return "%"
+        if key.startswith("ENV_"):
+            return os.environ.get(key[4:], "")
+        return names.get(key, m.group(0))
+    return _EXPAND_RE.sub(repl, s)
+
+
+def parse_environment(raw, names=None):
     """Parse a supervisord `environment=A="1",B=2` directive into [(k, v), ...],
-    interpolating %(ENV_X)s against our own environment the way supervisord
-    expands it from the parent process environment."""
+    applying supervisord's %-expansion (see expand_supervisor) to each value."""
     pairs = []
     for k, v in re.findall(r'''([^,=\s]+)=("[^"]*"|'[^']*'|[^,]*)''', raw):
         v = v.strip()
         if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
             v = v[1:-1]
-        v = re.sub(r"%\(ENV_([A-Za-z_][A-Za-z0-9_]*)\)s",
-                   lambda m: os.environ.get(m.group(1), ""), v)
+        v = expand_supervisor(v, names)
         pairs.append((k.strip(), v))
     return pairs
 
@@ -289,9 +311,12 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
         # program for dependencies.d/ edges to resolve.
         display_name = "%s:%s" % (group_of[pname], pname) if pname in group_of else pname
         _write(os.path.join(sd, "supervisor-name"), display_name + "\n")
-        argv = shlex.split(progs[pname]["command"])
+        names = {"program_name": pname}
+        if pname in group_of:
+            names["group_name"] = group_of[pname]
+        argv = shlex.split(expand_supervisor(progs[pname]["command"], names))
         user = progs[pname].get("user")
-        env_pairs = parse_environment(progs[pname].get("environment", ""))
+        env_pairs = parse_environment(progs[pname].get("environment", ""), names)
         syslog_tag = pname if _truthy(progs[pname].get("stdout_syslog", "false")) else None
         cmd = _command_line(argv, user, env_pairs, syslog_tag)
         if t == "longrun":
