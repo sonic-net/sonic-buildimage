@@ -77,19 +77,25 @@ $(addprefix $(DEST)/, $(KERNEL_MFT_TARGET)): $(DEST)/% :
 
 	pushd $(MFT_NAME)/SDEBS
 
-	# put a lock here because dpkg does not allow installing packages in parallel
-	flock $(DEST)/dpkg_lock.lk sudo dpkg -i $(SRC_DEB)
+	# put a lock here because dpkg does not allow installing packages in parallel.
+	# Starting MFT 4.37 the package postinst builds the module for the kernel
+	# given in the kversion env var (falling back to the build host kernel);
+	# pass it through sudo so it targets the SONiC kernel.
+	flock $(DEST)/dpkg_lock.lk sudo kversion=$(KVERSION) dpkg -i $(SRC_DEB)
 
 	popd
 
 	if [ -d /usr/src/kernel-mft-dkms-$(MFT_VERSION).$(MFT_REVISION) ]; then
-		sudo dkms build kernel-mft-dkms/$(MFT_VERSION).$(MFT_REVISION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
+		DKMS_VER=$(MFT_VERSION).$(MFT_REVISION)
 	else
-		sudo dkms build kernel-mft-dkms/$(MFT_VERSION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
+		DKMS_VER=$(MFT_VERSION)
 	fi
+	sudo dkms build kernel-mft-dkms/$${DKMS_VER} -k $(KVERSION) -a $(CONFIGURED_ARCH)
 
-	# copy the built modules
-	cp -r $(DKMS_CTRL)/kernel-$(KVERSION)-$(CONFIGURED_ARCH)/module/*.ko \
+	# copy the built modules. Take them from the dkms build tree rather than the
+	# kernel-<kver>-<arch> symlink: that symlink is only created by "dkms install",
+	# which MFT 4.37+ postinst runs for the uname -m arch (x86_64), not amd64.
+	cp -r $(DKMS_CTRL)/$${DKMS_VER}/$(KVERSION)/$(CONFIGURED_ARCH)/module/*.ko \
 			$(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms/
 
 	pushd $(MFT_NAME)/DEBS
