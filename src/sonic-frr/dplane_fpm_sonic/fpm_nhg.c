@@ -68,12 +68,15 @@ DEFINE_MTYPE_STATIC(ZEBRA, FPM_NHG_FRAME, "FPM pending output frame");
 			zlog_debug("nhg-fib: " __VA_ARGS__);                    \
 	} while (0)
 
+struct fpm_nhg_rib_entry;
+
 static void fpm_nhg_ref(struct fpm_dplane_nhg *obj);
 static void fpm_nhg_unref(struct fpm_nhg_tables *t,
 			  struct fpm_dplane_nhg *obj,
 			  struct fpm_nhg_del_queue *delq);
-static void fpm_nhg_record_rib_id(struct fpm_nhg_tables *t,
-				  struct fpm_dplane_nhg *obj, uint32_t rib_id);
+static struct fpm_nhg_rib_entry *
+fpm_nhg_record_rib_id(struct fpm_nhg_tables *t, struct fpm_dplane_nhg *obj,
+		      uint32_t rib_id);
 static void fpm_nhg_release_rib_id(struct fpm_nhg_tables *t,
 				   struct fpm_dplane_nhg *obj, uint32_t rib_id);
 
@@ -315,6 +318,8 @@ static bool fpm_nhg_id_cmp(const void *data1, const void *data2)
  * are their own small allocation; the value is a borrowed pointer (the map's
  * refcount on the object is taken/released by the caller, not here).
  */
+struct fpm_nhg_rib_entry;
+
 struct fpm_nhg_route_entry {
 	struct fpm_nhg_route_key key;
 	struct fpm_dplane_nhg *obj;
@@ -325,6 +330,14 @@ struct fpm_nhg_route_entry {
 	 * known to be dead: the object itself may still serve other routes.
 	 */
 	uint32_t rib_id;
+	/*
+	 * Intrusive membership in that rib id's route list. A route belongs to
+	 * exactly one rib id, so this costs two pointers and lets an NH event
+	 * find every route bound to the group it changed without scanning the
+	 * whole route map.
+	 */
+	struct fpm_nhg_rib_entry *rib;
+	struct fpm_nhg_route_entry *rib_prev, *rib_next;
 	/*
 	 * The (leaf, vrf, prefix) resolutions this route's committed tree
 	 * used; the set the next build is diffed against. NULL until the
@@ -380,6 +393,8 @@ struct fpm_nhg_rib_entry {
 	struct fpm_dplane_nhg *obj;
 	/* Routes currently mapping this rib id onto obj. */
 	uint32_t refcount;
+	/* Those routes, linked through fpm_nhg_route_entry.rib_prev/next. */
+	struct fpm_nhg_route_entry *routes;
 };
 
 static unsigned int fpm_nhg_rib_id_key(const void *data)
@@ -393,6 +408,39 @@ static bool fpm_nhg_rib_id_cmp(const void *data1, const void *data2)
 	       ((const struct fpm_nhg_rib_entry *)data2)->rib_id;
 }
 
+/*
+ * A route belongs to exactly one rib id's list, so an NH event can find every
+ * route bound to the group it changed without scanning the route map.
+ */
+static void fpm_nhg_rib_route_link(struct fpm_nhg_rib_entry *rb,
+				   struct fpm_nhg_route_entry *e)
+{
+	if (e->rib == rb)
+		return;
+	e->rib = rb;
+	e->rib_prev = NULL;
+	e->rib_next = rb->routes;
+	if (rb->routes)
+		rb->routes->rib_prev = e;
+	rb->routes = e;
+}
+
+static void fpm_nhg_rib_route_unlink(struct fpm_nhg_route_entry *e)
+{
+	struct fpm_nhg_rib_entry *rb = e->rib;
+
+	if (!rb)
+		return;
+	if (e->rib_prev)
+		e->rib_prev->rib_next = e->rib_next;
+	else
+		rb->routes = e->rib_next;
+	if (e->rib_next)
+		e->rib_next->rib_prev = e->rib_prev;
+	e->rib = NULL;
+	e->rib_prev = NULL;
+	e->rib_next = NULL;
+}
 
 /*
  * Resolving-prefix index: (vrf, resolving prefix) -> every live dplane NHG
@@ -1674,32 +1722,31 @@ struct fpm_dplane_nhg *fpm_nhg_route_get(struct fpm_nhg_tables *t,
 
 /*
  * Move the per-membership counts from the route's previous contribution set
- * to the build being committed: entries only in the old set release their
- * membership, entries only in the new set acquire one, and the entry takes
- * over the new set. Runs before the old top object is unreffed, so every
- * leaf either set names is still alive.
+ * to `newc`: entries only in the old set release their membership, entries
+ * only in the new set acquire one. The route's stored set is left alone.
  */
-static void fpm_nhg_leaf_contrib_apply(struct fpm_nhg_tables *t,
-				       struct fpm_nhg_route_entry *e,
-				       struct fpm_nhg_staging *newq)
+static void fpm_nhg_contrib_diff(struct fpm_nhg_tables *t,
+				 struct fpm_nhg_route_entry *e,
+				 const struct fpm_nhg_contrib *newc,
+				 uint32_t newn)
 {
 	const struct fpm_nhg_contrib *c;
 	uint32_t i, j, released = 0, acquired = 0;
 
 	for (i = 0; i < e->contrib_count; i++) {
 		c = &e->contribs[i];
-		for (j = 0; j < newq->contrib_count; j++)
-			if (fpm_nhg_contrib_same(c, &newq->contribs[j]))
+		for (j = 0; j < newn; j++)
+			if (fpm_nhg_contrib_same(c, &newc[j]))
 				break;
-		if (j == newq->contrib_count) {
+		if (j == newn) {
 			fpm_nhg_leaf_member_release(t, c->obj, c->vrf_id,
 						    &c->p);
 			released++;
 		}
 	}
 
-	for (i = 0; i < newq->contrib_count; i++) {
-		c = &newq->contribs[i];
+	for (i = 0; i < newn; i++) {
+		c = &newc[i];
 		for (j = 0; j < e->contrib_count; j++)
 			if (fpm_nhg_contrib_same(c, &e->contribs[j]))
 				break;
@@ -1711,8 +1758,20 @@ static void fpm_nhg_leaf_contrib_apply(struct fpm_nhg_tables *t,
 	}
 
 	FPM_NHG_DEBUG("route %pFX table %u contributions: %u released, %u acquired, %u total",
-		      &e->key.p, e->key.table_id, released, acquired,
-		      newq->contrib_count);
+		      &e->key.p, e->key.table_id, released, acquired, newn);
+}
+
+/*
+ * Move the per-membership counts from the route's previous contribution set
+ * to the build being committed, then take over the build's set. Runs before
+ * the old top object is unreffed, so every leaf either set names is still
+ * alive.
+ */
+static void fpm_nhg_leaf_contrib_apply(struct fpm_nhg_tables *t,
+				       struct fpm_nhg_route_entry *e,
+				       struct fpm_nhg_staging *newq)
+{
+	fpm_nhg_contrib_diff(t, e, newq->contribs, newq->contrib_count);
 
 	XFREE(MTYPE_FPM_NHG, e->contribs);
 	e->contribs = newq->contribs;
@@ -1720,6 +1779,29 @@ static void fpm_nhg_leaf_contrib_apply(struct fpm_nhg_tables *t,
 	newq->contribs = NULL;
 	newq->contrib_count = 0;
 	newq->contrib_cap = 0;
+}
+
+/*
+ * Give every route currently bound to rib_id the build's contribution set,
+ * replacing the one it carried. The memberships are identical for all of
+ * them (same tree), but each route owns its copy: the next build of that
+ * route diffs against it.
+ */
+static void fpm_nhg_contrib_adopt(struct fpm_nhg_tables *t,
+				  struct fpm_nhg_route_entry *e,
+				  const struct fpm_nhg_contrib *newc,
+				  uint32_t newn)
+{
+	struct fpm_nhg_contrib *copy = NULL;
+
+	fpm_nhg_contrib_diff(t, e, newc, newn);
+	if (newn) {
+		copy = XCALLOC(MTYPE_FPM_NHG, newn * sizeof(*copy));
+		memcpy(copy, newc, newn * sizeof(*copy));
+	}
+	XFREE(MTYPE_FPM_NHG, e->contribs);
+	e->contribs = copy;
+	e->contrib_count = newn;
 }
 
 /*
@@ -1743,6 +1825,7 @@ static void fpm_nhg_route_set(struct fpm_nhg_tables *t,
 			      struct fpm_nhg_staging *newq)
 {
 	struct fpm_nhg_route_entry ref = { .key = *k }, *e;
+	struct fpm_nhg_rib_entry *rb = NULL;
 	bool changed;
 
 	e = hash_get(t->route_map, &ref, fpm_nhg_route_entry_alloc);
@@ -1752,8 +1835,14 @@ static void fpm_nhg_route_set(struct fpm_nhg_tables *t,
 	 * a re-pointed or re-numbered route would leak its old association and
 	 * the object would keep advertising a stale zebra NHG id.
 	 */
-	if (e->obj && changed)
+	if (e->obj && changed) {
+		/*
+		 * Unlink first: the release may drop the rib entry itself, and
+		 * a route must never be left on a freed list.
+		 */
+		fpm_nhg_rib_route_unlink(e);
 		fpm_nhg_release_rib_id(t, e->obj, e->rib_id);
+	}
 
 	if (e->obj == NULL)
 		FPM_NHG_DEBUG("bind route %pFX table %u -> dplane NHG %u (%s), rib nhg %u",
@@ -1771,8 +1860,11 @@ static void fpm_nhg_route_set(struct fpm_nhg_tables *t,
 	 * the same object and zebra NHG id must not count this route twice, or
 	 * the last route release would leave a stale entry behind.
 	 */
-	if (changed)
-		fpm_nhg_record_rib_id(t, obj, rib_id);
+	if (changed) {
+		rb = fpm_nhg_record_rib_id(t, obj, rib_id);
+		if (rb)
+			fpm_nhg_rib_route_link(rb, e);
+	}
 	fpm_nhg_leaf_contrib_apply(t, e, newq);
 }
 
@@ -1789,6 +1881,7 @@ fpm_nhg_route_pop(struct fpm_nhg_tables *t, const struct fpm_nhg_route_key *k)
 	FPM_NHG_DEBUG("unbind route %pFX table %u from dplane NHG %u, rib nhg %u",
 		      &k->p, k->table_id, obj ? obj->dplane_id : 0, e->rib_id);
 	fpm_nhg_leaf_contribs_drop(t, e);
+	fpm_nhg_rib_route_unlink(e);
 	fpm_nhg_release_rib_id(t, obj, e->rib_id);
 	fpm_nhg_route_entry_free(e);
 	return obj;
@@ -1837,44 +1930,68 @@ static void *fpm_nhg_rib_entry_alloc(void *arg)
 	return e;
 }
 
-static void fpm_nhg_record_rib_id(struct fpm_nhg_tables *t,
-				  struct fpm_dplane_nhg *obj, uint32_t rib_id)
+/*
+ * Object-side id list: the zebra NHG ids this object serves. by_rib_id
+ * mirrors it, and the list is what lets an object drop exactly its own
+ * entries when it dies (fpm_nhg_rib_ids_purge()).
+ */
+static void fpm_nhg_rib_ids_add(struct fpm_dplane_nhg *obj, uint32_t rib_id)
 {
-	struct fpm_nhg_rib_entry ref = { .rib_id = rib_id }, *e;
-	bool known = false;
 	uint16_t i;
 
-	if (rib_id == 0)
-		return;
+	for (i = 0; i < obj->rib_nhg_id_count; i++)
+		if (obj->rib_nhg_ids[i] == rib_id)
+			return;
+
+	if (obj->rib_nhg_id_count == obj->rib_nhg_id_cap) {
+		/*
+		 * cap doubles only when count reaches it, so it stays the
+		 * smallest power of two >= count. count is bounded by the
+		 * number of distinct zebra NHG ids mapping to this object, far
+		 * below the uint16 range.
+		 */
+		obj->rib_nhg_id_cap = obj->rib_nhg_id_cap
+					      ? obj->rib_nhg_id_cap * 2
+					      : 4;
+		obj->rib_nhg_ids = XREALLOC(MTYPE_FPM_NHG, obj->rib_nhg_ids,
+					    obj->rib_nhg_id_cap *
+						    sizeof(*obj->rib_nhg_ids));
+	}
+	obj->rib_nhg_ids[obj->rib_nhg_id_count++] = rib_id;
+	FPM_NHG_DEBUG("record rib nhg %u on dplane NHG %u (%s), %u id(s) mapped",
+		      rib_id, obj->dplane_id, fpm_nhg_level_str(obj->level),
+		      obj->rib_nhg_id_count);
+}
+
+static void fpm_nhg_rib_ids_del(struct fpm_dplane_nhg *obj, uint32_t rib_id)
+{
+	uint16_t i;
 
 	for (i = 0; i < obj->rib_nhg_id_count; i++) {
-		if (obj->rib_nhg_ids[i] == rib_id) {
-			known = true;
-			break;
-		}
-	}
-	if (!known) {
-		if (obj->rib_nhg_id_count == obj->rib_nhg_id_cap) {
-			/*
-			 * cap doubles only when count reaches it, so it stays
-			 * the smallest power of two >= count. count is bounded
-			 * by the number of distinct zebra NHG ids mapping to
-			 * this object, far below the uint16 range.
-			 */
-			obj->rib_nhg_id_cap = obj->rib_nhg_id_cap
-						      ? obj->rib_nhg_id_cap * 2
-						      : 4;
-			obj->rib_nhg_ids =
-				XREALLOC(MTYPE_FPM_NHG, obj->rib_nhg_ids,
-					 obj->rib_nhg_id_cap *
-						 sizeof(*obj->rib_nhg_ids));
-		}
-		obj->rib_nhg_ids[obj->rib_nhg_id_count++] = rib_id;
-		FPM_NHG_DEBUG("record rib nhg %u on dplane NHG %u (%s), %u id(s) mapped",
+		if (obj->rib_nhg_ids[i] != rib_id)
+			continue;
+		memmove(&obj->rib_nhg_ids[i], &obj->rib_nhg_ids[i + 1],
+			(obj->rib_nhg_id_count - i - 1) *
+				sizeof(*obj->rib_nhg_ids));
+		obj->rib_nhg_id_count--;
+		FPM_NHG_DEBUG("release rib nhg %u from dplane NHG %u (%s), %u id(s) left",
 			      rib_id, obj->dplane_id,
 			      fpm_nhg_level_str(obj->level),
 			      obj->rib_nhg_id_count);
+		return;
 	}
+}
+
+static struct fpm_nhg_rib_entry *
+fpm_nhg_record_rib_id(struct fpm_nhg_tables *t, struct fpm_dplane_nhg *obj,
+		      uint32_t rib_id)
+{
+	struct fpm_nhg_rib_entry ref = { .rib_id = rib_id }, *e;
+
+	if (rib_id == 0)
+		return NULL;
+
+	fpm_nhg_rib_ids_add(obj, rib_id);
 
 	/*
 	 * Steal the entry only when it has no live references: re-pointing a
@@ -1890,7 +2007,11 @@ static void fpm_nhg_record_rib_id(struct fpm_nhg_tables *t,
 			FPM_NHG_DEBUG("rib nhg %u keeps owner dplane NHG %u (%u live ref(s)), not re-pointed to dplane NHG %u",
 				      rib_id, e->obj->dplane_id, e->refcount,
 				      obj->dplane_id);
-			return;
+			/*
+			 * Do not link: the list tracks the routes counted by
+			 * this entry, and this route is not one of them.
+			 */
+			return NULL;
 		}
 		if (e->obj)
 			FPM_NHG_DEBUG("rib nhg %u re-pointed: dplane NHG %u -> dplane NHG %u",
@@ -1898,6 +2019,7 @@ static void fpm_nhg_record_rib_id(struct fpm_nhg_tables *t,
 		e->obj = obj;
 	}
 	e->refcount++;
+	return e;
 }
 
 /*
@@ -1910,7 +2032,6 @@ static void fpm_nhg_release_rib_id(struct fpm_nhg_tables *t,
 				   struct fpm_dplane_nhg *obj, uint32_t rib_id)
 {
 	struct fpm_nhg_rib_entry ref = { .rib_id = rib_id }, *e;
-	uint16_t i;
 
 	if (rib_id == 0 || obj == NULL)
 		return;
@@ -1920,6 +2041,11 @@ static void fpm_nhg_release_rib_id(struct fpm_nhg_tables *t,
 		if (e->refcount > 0)
 			e->refcount--;
 		if (e->refcount == 0) {
+			/*
+			 * Every counted route has unlinked itself first; a
+			 * stale pointer here would dangle.
+			 */
+			assert(e->routes == NULL);
 			hash_release(t->by_rib_id, &ref);
 			XFREE(MTYPE_FPM_NHG, e);
 		} else {
@@ -1930,19 +2056,7 @@ static void fpm_nhg_release_rib_id(struct fpm_nhg_tables *t,
 		/* another object owns the mapping now; only drop our own list */
 	}
 
-	for (i = 0; i < obj->rib_nhg_id_count; i++) {
-		if (obj->rib_nhg_ids[i] != rib_id)
-			continue;
-		memmove(&obj->rib_nhg_ids[i], &obj->rib_nhg_ids[i + 1],
-			(obj->rib_nhg_id_count - i - 1) *
-				sizeof(*obj->rib_nhg_ids));
-		obj->rib_nhg_id_count--;
-		FPM_NHG_DEBUG("release rib nhg %u from dplane NHG %u (%s), %u id(s) left",
-			      rib_id, obj->dplane_id,
-			      fpm_nhg_level_str(obj->level),
-			      obj->rib_nhg_id_count);
-		break;
-	}
+	fpm_nhg_rib_ids_del(obj, rib_id);
 }
 
 /* Reverse lookup: zebra NHG id -> dplane object, NULL when unmapped. */
@@ -1955,6 +2069,93 @@ struct fpm_dplane_nhg *fpm_nhg_lookup_rib_id(struct fpm_nhg_tables *t,
 		return NULL;
 	e = hash_lookup(t->by_rib_id, &ref);
 	return e ? e->obj : NULL;
+}
+
+/*
+ * Re-point every route bound to rib_id onto new_top, keeping the rib id. The
+ * caller has already emitted the new objects and the route replaces that move
+ * the peer onto new_top, so this is the model-side half: contributions move to
+ * the build's set, each route swaps its object reference, and the old top
+ * loses one reference per route. When its last reference goes, its DEL is
+ * queued behind the frames the caller just wrote.
+ *
+ * Returns false when there is nothing to rebind (unknown id or unchanged top).
+ */
+bool fpm_nhg_rebind_rib(struct fpm_nhg_tables *t, uint32_t rib_id,
+			struct fpm_dplane_nhg *new_top,
+			struct fpm_nhg_staging *newq,
+			struct fpm_nhg_del_queue *delq)
+{
+	struct fpm_nhg_rib_entry ref = { .rib_id = rib_id }, *rb;
+	struct fpm_nhg_route_entry *e;
+	struct fpm_dplane_nhg *old_top;
+	uint32_t old_id;
+
+	if (rib_id == 0 || new_top == NULL)
+		return false;
+
+	rb = hash_lookup(t->by_rib_id, &ref);
+	if (!rb || rb->obj == NULL || rb->obj == new_top)
+		return false;
+
+	old_top = rb->obj;
+	old_id = old_top->dplane_id;
+	/*
+	 * Move the index first: the per-route unrefs below can free old_top on
+	 * the last route, and by then it must no longer own this rib id.
+	 */
+	rb->obj = new_top;
+	fpm_nhg_rib_ids_add(new_top, rib_id);
+	fpm_nhg_rib_ids_del(old_top, rib_id);
+
+	for (e = rb->routes; e; e = e->rib_next) {
+		fpm_nhg_contrib_adopt(t, e, newq->contribs,
+				      newq->contrib_count);
+		e->obj = new_top;
+		fpm_nhg_ref(new_top);
+		fpm_nhg_unref(t, old_top, delq);
+	}
+
+	FPM_NHG_DEBUG("re-pointed rib nhg %u (%u route(s)) from dplane NHG %u to dplane NHG %u",
+		      rib_id, rb->refcount, old_id, new_top->dplane_id);
+	return true;
+}
+
+/*
+ * Snapshot the route keys currently bound to rib_id. The caller owns the
+ * returned array and frees it with XFREE(MTYPE_FPM_NHG, ...). The route count
+ * and the array are consistent under the lock that serializes the tables.
+ */
+uint32_t fpm_nhg_rib_route_keys(struct fpm_nhg_tables *t, uint32_t rib_id,
+				struct fpm_nhg_route_key **keys)
+{
+	struct fpm_nhg_rib_entry ref = { .rib_id = rib_id }, *rb;
+	struct fpm_nhg_route_entry *e;
+	struct fpm_nhg_route_key *out;
+	uint32_t n = 0, i = 0;
+
+	if (keys)
+		*keys = NULL;
+	if (rib_id == 0 || keys == NULL)
+		return 0;
+
+	rb = hash_lookup(t->by_rib_id, &ref);
+	if (!rb || !rb->routes)
+		return 0;
+
+	for (e = rb->routes; e; e = e->rib_next)
+		n++;
+
+	out = XCALLOC(MTYPE_FPM_NHG, n * sizeof(*out));
+	for (e = rb->routes; e; e = e->rib_next)
+		out[i++] = e->key;
+	*keys = out;
+	return n;
+}
+
+void fpm_nhg_rib_route_keys_free(struct fpm_nhg_route_key *keys)
+{
+	XFREE(MTYPE_FPM_NHG, keys);
 }
 
 /*

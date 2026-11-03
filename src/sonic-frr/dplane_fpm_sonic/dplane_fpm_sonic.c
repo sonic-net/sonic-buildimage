@@ -49,9 +49,12 @@
 #include "lib/ns.h"
 #include "lib/frr_pthread.h"
 #include "lib/termtable.h"
+#include "lib/nexthop_group.h"
+#include "lib/srcdest_table.h"
 #include "zebra/debug.h"
 #include "zebra/interface.h"
 #include "zebra/zebra_dplane.h"
+#include "zebra/rib.h"
 #include "zebra/zebra_mpls.h"
 #include "zebra/zebra_router.h"
 #include "zebra/zebra_vrf.h"
@@ -180,6 +183,28 @@ static const char *prov_name = "dplane_fpm_sonic";
 
 static atomic_bool fpm_cleaning_up;
 
+DEFINE_MTYPE_STATIC(ZEBRA, FPM_NHG_REPOINT, "FPM pending NHG re-point");
+
+/*
+ * One NH-driven rebuild waiting for the zebra main thread. The nexthop group
+ * is the NH context's resolved set, copied before that context is freed; the
+ * rebuild itself (and the route replaces it needs) can only run where the RIB
+ * is owned, so the FPM pthread hands it over through this list.
+ */
+struct fpm_nhg_repoint {
+	struct fpm_nhg_repoint *next;
+	uint32_t rib_id;
+	struct nexthop_group ng;
+};
+
+/* ng is embedded, so release its nexthops without freeing the group itself. */
+static void fpm_nhg_repoint_ng_free(struct fpm_nhg_repoint *p)
+{
+	if (p->ng.nexthop)
+		nexthops_free(p->ng.nexthop);
+	memset(&p->ng, 0, sizeof(p->ng));
+}
+
 struct fpm_nl_ctx {
 	/* data plane connection. */
 	int socket;
@@ -274,6 +299,15 @@ struct fpm_nl_ctx {
 	struct event *t_ribwalk;
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
+	struct event *t_nhg_repoint;
+
+	/*
+	 * NH-driven NHG rebuilds waiting for the zebra main thread. Serialized
+	 * by obuf_mutex together with nhg_tables and pending_dels; dropped
+	 * without emission on reconnect like the deferred DELs, since the ids
+	 * they name belong to the old connection.
+	 */
+	struct fpm_nhg_repoint *nhg_repoints;
 
 	/* Statistic counters. */
 	struct {
@@ -358,6 +392,9 @@ static void fpm_rib_send(struct event *t);
 static void fpm_rib_reset(struct event *t);
 static void fpm_rmac_send(struct event *t);
 static void fpm_rmac_reset(struct event *t);
+static void fpm_nhg_repoint_event(struct event *t);
+static int fpm_nl_enqueue_nhg_repoint(struct fpm_nl_ctx *fnc,
+				      struct zebra_dplane_ctx *ctx);
 
 /*
  * CLI.
@@ -828,6 +865,7 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_ribwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_nhg_repoint, NULL);
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -851,6 +889,18 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	 */
 	fpm_nhg_tables_flush(&fnc->nhg_tables);
 	fpm_nhg_del_queue_reset(&fnc->pending_dels);
+
+	/*
+	 * Pending NH repoints name ids of the connection being dropped, and the
+	 * RIB replay rebuilds from scratch: no reason to carry them over.
+	 */
+	while (fnc->nhg_repoints) {
+		struct fpm_nhg_repoint *p = fnc->nhg_repoints;
+
+		fnc->nhg_repoints = p->next;
+		fpm_nhg_repoint_ng_free(p);
+		XFREE(MTYPE_FPM_NHG_REPOINT, p);
+	}
 	event_cancel(&fnc->t_read);
 	event_cancel(&fnc->t_write);
 
@@ -2861,6 +2911,45 @@ static bool fpm_obuf_can_ever_fit(struct fpm_nl_ctx *fnc, size_t bytes)
 }
 
 /**
+ * NH-driven NHG update: the context carries the zebra group id and its new
+ * resolved nexthop set, but no route attributes. The rebuild, and the route
+ * replaces that follow the new id, need the RIB, which only the zebra main
+ * thread owns. Copy the set, coalesce with any pending update for the same id
+ * (the latest state wins), and wake the main-thread drain.
+ */
+static int fpm_nl_enqueue_nhg_repoint(struct fpm_nl_ctx *fnc,
+				      struct zebra_dplane_ctx *ctx)
+{
+	const struct nexthop_group *ng = dplane_ctx_get_nhe_ng(ctx);
+	uint32_t rib_id = dplane_ctx_get_nhe_id(ctx);
+	struct fpm_nhg_repoint *p;
+
+	if (rib_id == 0 || ng == NULL)
+		return 0;
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	for (p = fnc->nhg_repoints; p; p = p->next)
+		if (p->rib_id == rib_id)
+			break;
+
+	if (!p) {
+		p = XCALLOC(MTYPE_FPM_NHG_REPOINT, sizeof(*p));
+		p->rib_id = rib_id;
+		p->next = fnc->nhg_repoints;
+		fnc->nhg_repoints = p;
+	} else {
+		fpm_nhg_repoint_ng_free(p);
+	}
+
+	nexthop_group_copy(&p->ng, ng);
+
+	event_add_event(zrouter.master, fpm_nhg_repoint_event, fnc, 0,
+			&fnc->t_nhg_repoint);
+	return 0;
+}
+
+/**
  * Encode data plane operation context into netlink and enqueue it in the FPM
  * output buffer.
  *
@@ -2877,6 +2966,16 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	enum dplane_op_e op = dplane_ctx_get_op(ctx);
 	struct nexthop *nexthop;
 	bool localsid_transition = false;
+
+	/*
+	 * In nhg-fib mode an NHG change carries the new member set while the
+	 * routes that reference the group may not be re-installed at all. Hand
+	 * it to the main-thread drain so the derived object follows; the
+	 * remaining NH/PIC ops stay ignored below.
+	 */
+	if (fnc->use_nhg_fib &&
+	    (op == DPLANE_OP_NH_INSTALL || op == DPLANE_OP_NH_UPDATE))
+		return fpm_nl_enqueue_nhg_repoint(fnc, ctx);
 
 	/*
 	 * If we were configured to not use next hop groups, then quit as soon
@@ -3849,6 +3948,7 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_ribwalk);
 	event_cancel(&fnc->t_rmacreset);
 	event_cancel(&fnc->t_rmacwalk);
+	event_cancel(&fnc->t_nhg_repoint);
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
 	event_cancel(&fnc->t_nhg_fib);
@@ -3885,6 +3985,15 @@ static int fpm_nl_finish_late(struct fpm_nl_ctx *fnc)
 	 */
 	fpm_nhg_tables_fini(&fnc->nhg_tables);
 	fpm_nhg_del_queue_free(&fnc->pending_dels);
+
+	/* No writer is left: drop whatever repoints never reached the drain. */
+	while (fnc->nhg_repoints) {
+		struct fpm_nhg_repoint *p = fnc->nhg_repoints;
+
+		fnc->nhg_repoints = p->next;
+		fpm_nhg_repoint_ng_free(p);
+		XFREE(MTYPE_FPM_NHG_REPOINT, p);
+	}
 	/* Runs after frr_pthread_stop(), so nothing can be racing the slot. */
 	if (fnc->stashed_ctx != NULL)
 		dplane_ctx_fini(&fnc->stashed_ctx);
@@ -4189,6 +4298,58 @@ static void fpm_nhg_pending_dels_flush_locked(struct fpm_nl_ctx *fnc,
 	fpm_nhg_frame_batch_free(&batch);
 }
 
+/*
+ * Encode a route message that references `top`'s dplane id. SRv6 VPN routes
+ * carry the id as the two encap attributes of their own message; everything
+ * else carries it as RTA_NH_ID appended to the legacy-format route message.
+ * Returns the message length, or <= 0 on encode failure.
+ */
+static ssize_t fpm_nhg_route_msg_encode(struct fpm_nl_ctx *fnc,
+					struct zebra_dplane_ctx *ctx,
+					uint8_t *buf, size_t buf_size,
+					struct fpm_dplane_nhg *top)
+{
+	struct nlmsghdr *n;
+	ssize_t rv;
+
+	if (has_srv6_sidlist_nexthop(ctx)) {
+		/*
+		 * Received id = the L-A object; nh id = its resolved view,
+		 * which the peer derives from that very same NHGFIB message,
+		 * so both attributes carry the same dplane id.
+		 */
+		return netlink_vpn_route_msg_encode(RTM_NEWROUTE, ctx, buf,
+						    buf_size, top->dplane_id,
+						    top->dplane_id);
+	}
+
+	/*
+	 * force_nhg is false on purpose: it would make the encoder emit
+	 * RTA_NH_ID from dplane_ctx_get_nhe_id(), which is the zebra NHG id.
+	 * The wire id must be the plugin allocated dplane id, so the attribute
+	 * is appended below instead.
+	 *
+	 * The encoder builds the message through the very same nl_attr_put*()
+	 * helpers and returns NLMSG_ALIGN(nlmsg_len), so the assembled header
+	 * is complete and every nested attribute is already closed: one more
+	 * top level attribute is exactly what the encoder itself does for
+	 * RTA_PREFSRC. nl_attr_put32() appends at NLMSG_ALIGN(nlmsg_len) and
+	 * bounds itself by maxlen measured from the start of the header, hence
+	 * buf_size. Alignment of the cast is inherited from the encoder, which
+	 * casts the same address to its own header struct.
+	 */
+	rv = netlink_route_multipath_msg_encode(RTM_NEWROUTE, ctx, buf, buf_size,
+						true, false,
+						fnc->use_route_replace);
+	if (rv <= 0)
+		return rv;
+
+	n = (struct nlmsghdr *)buf;
+	if (!nl_attr_put32(n, buf_size, RTA_NH_ID, top->dplane_id))
+		return 0;
+	return NLMSG_ALIGN(n->nlmsg_len);
+}
+
 /**
  * Route operation handling in nhg-fib mode: the route event itself drives
  * the dplane NHG object lifecycle and the route message carries a plugin
@@ -4238,7 +4399,6 @@ static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
 	struct fpm_nhg_route_key key;
 	size_t nl_buf_len = 0, route_off;
 	bool encode_ok = true;
-	struct nlmsghdr *n;
 	ssize_t rv;
 	int ret;
 	/*
@@ -4298,58 +4458,10 @@ static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
 		}
 
 		route_off = nl_buf_len;
-		if (srv6_vpn) {
-			/*
-			 * Received id = the L-A object; nh id = its resolved
-			 * view, which the peer derives from that very same NHGFIB
-			 * message, so both attributes carry the same dplane id
-			 */
-			rv = netlink_vpn_route_msg_encode(RTM_NEWROUTE, ctx,
-							  &nl_buf[route_off],
-							  nl_buf_size - route_off,
-							  new_top->dplane_id,
-							  new_top->dplane_id);
-			if (rv > 0)
-				nl_buf_len = route_off + (size_t)rv;
-		} else {
-			/*
-			 * force_nhg is false on purpose: it would make the
-			 * encoder emit RTA_NH_ID from dplane_ctx_get_nhe_id(),
-			 * which is the zebra NHG id. The wire id must be the
-			 * plugin allocated dplane id, so the attribute is
-			 * appended below instead.
-			 */
-			rv = netlink_route_multipath_msg_encode(RTM_NEWROUTE, ctx,
-							       &nl_buf[route_off],
-							       nl_buf_size - route_off,
-							       true, false,
-							       fnc->use_route_replace);
-			if (rv > 0) {
-				/*
-				 * Append RTA_NH_ID to the message just encoded.
-				 * The encoder builds the message through the very
-				 * same nl_attr_put*() helpers and returns
-				 * NLMSG_ALIGN(nlmsg_len), so the assembled header
-				 * is complete and every nested attribute is
-				 * already closed: one more top level attribute is
-				 * exactly what the encoder itself does for
-				 * RTA_PREFSRC. nl_attr_put32() appends at
-				 * NLMSG_ALIGN(nlmsg_len) and bounds itself by
-				 * maxlen measured from the start of the header,
-				 * hence nl_buf_size - route_off. Alignment of the
-				 * cast is inherited from the encoder, which casts
-				 * the same address to its own header struct
-				 * (route_off is NLMSG_ALIGN'ed).
-				 */
-				n = (struct nlmsghdr *)&nl_buf[route_off];
-				if (!nl_attr_put32(n, nl_buf_size - route_off,
-						   RTA_NH_ID, new_top->dplane_id))
-					rv = 0;
-				else
-					nl_buf_len = route_off +
-						     NLMSG_ALIGN(n->nlmsg_len);
-			}
-		}
+		rv = fpm_nhg_route_msg_encode(fnc, ctx, &nl_buf[route_off],
+					      nl_buf_size - route_off, new_top);
+		if (rv > 0)
+			nl_buf_len = route_off + (size_t)rv;
 		if (rv <= 0) {
 			/* Encode failure: roll back and emit nothing at all. */
 			zlog_err("%s: route encode failed, dropping ctx",
@@ -4517,6 +4629,168 @@ static void fpm_nhg_fib_forget_route_locked(struct fpm_nl_ctx *fnc,
 			       dplane_ctx_get_dest(ctx), dplane_ctx_get_src(ctx));
 
 	fpm_nhg_route_forget(&fnc->nhg_tables, &key, &fnc->pending_dels);
+}
+
+/*
+ * Route key -> route node. The route key already carries the table id, and a
+ * namespace holds only a handful of tables, so walking them is cheaper than
+ * tracking a table pointer. Returns a locked node, or NULL.
+ */
+static struct route_node *
+fpm_nhg_route_node_lookup(const struct fpm_nhg_route_key *k)
+{
+	rib_tables_iter_t it;
+	struct route_table *rt;
+
+	it.state = RIB_TABLES_ITER_S_INIT;
+	while ((rt = rib_tables_iter_next(&it))) {
+		struct rib_table_info *info = rib_table_info(rt);
+
+		if (info->table_id != k->table_id || info->afi != k->afi)
+			continue;
+		if (k->src_p.family == AF_INET6)
+			return srcdest_rnode_lookup(
+				rt, &k->p,
+				(const struct prefix_ipv6 *)&k->src_p);
+		return route_node_lookup(rt, &k->p);
+	}
+	return NULL;
+}
+
+/*
+ * Rebuild one NH-driven group on the main thread: emit the new objects
+ * child-first, re-send every route bound to the id with the new top's id, then
+ * move the model. Returns 0 when the entry is done (including "no change"),
+ * -1 when the batch does not fit yet and the caller should retry.
+ */
+static int fpm_nhg_repoint_one(struct fpm_nl_ctx *fnc, uint32_t rib_id,
+			       const struct nexthop_group *ng)
+{
+	struct fpm_nhg_staging newq = {};
+	struct fpm_frame_batch batch = {};
+	struct fpm_dplane_nhg *old_top, *new_top;
+	struct fpm_nhg_route_key *keys = NULL;
+	uint32_t nkeys, i;
+	uint8_t nl_buf[DPLANE_FPM_NL_BUF_SIZE];
+
+	old_top = fpm_nhg_lookup_rib_id(&fnc->nhg_tables, rib_id);
+	if (!old_top)
+		return 0;
+
+	new_top = fpm_nhg_build(&fnc->nhg_tables, ng->nexthop, &newq);
+	if (!new_top) {
+		fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+		fpm_nhg_staging_free(&newq);
+		zlog_err("%s: NHG rebuild failed for rib nhg %u", __func__,
+			 rib_id);
+		return 0;
+	}
+
+	if (new_top == old_top) {
+		fpm_nhg_staging_free(&newq);
+		return 0;
+	}
+
+	if (!fpm_nhg_batch_add_staging(&newq, &batch)) {
+		fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+		fpm_nhg_staging_free(&newq);
+		fpm_nhg_frame_batch_free(&batch);
+		zlog_err("%s: NHG encode failed for rib nhg %u", __func__,
+			 rib_id);
+		return 0;
+	}
+
+	nkeys = fpm_nhg_rib_route_keys(&fnc->nhg_tables, rib_id, &keys);
+	for (i = 0; i < nkeys; i++) {
+		struct zebra_dplane_ctx *ctx = dplane_ctx_alloc();
+		struct route_node *rn;
+		rib_dest_t *dest;
+		ssize_t rv;
+
+		rn = fpm_nhg_route_node_lookup(&keys[i]);
+		if (!rn) {
+			dplane_ctx_fini(&ctx);
+			continue;
+		}
+		dest = rib_dest_from_rnode(rn);
+		if (!dest || !dest->selected_fib ||
+		    dplane_ctx_route_init(ctx, DPLANE_OP_ROUTE_INSTALL, rn,
+					  dest->selected_fib) != AOK) {
+			route_unlock_node(rn);
+			dplane_ctx_fini(&ctx);
+			continue;
+		}
+		rv = fpm_nhg_route_msg_encode(fnc, ctx, nl_buf, sizeof(nl_buf),
+					      new_top);
+		route_unlock_node(rn);
+		dplane_ctx_fini(&ctx);
+		if (rv <= 0) {
+			zlog_err("%s: replace encode failed for rib nhg %u, route skipped",
+				 __func__, rib_id);
+			continue;
+		}
+		fpm_nhg_frame_batch_add(&batch, nl_buf, (size_t)rv);
+	}
+	if (keys)
+		fpm_nhg_rib_route_keys_free(keys);
+
+	if (!fpm_obuf_have_bytes_locked(fnc, batch.total_len, __func__)) {
+		size_t batch_len = batch.total_len;
+		bool never = !fpm_obuf_can_ever_fit(fnc, batch_len);
+
+		fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+		fpm_nhg_staging_free(&newq);
+		fpm_nhg_frame_batch_free(&batch);
+		if (never) {
+			zlog_err("%s: re-point batch of %zu bytes exceeds the output buffer, rib nhg %u dropped",
+				 __func__, batch_len, rib_id);
+			return 0;
+		}
+		return -1;
+	}
+	if (fpm_frame_batch_write_locked(fnc, &batch, __func__) != 0) {
+		fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+		fpm_nhg_staging_free(&newq);
+		fpm_nhg_frame_batch_free(&batch);
+		return -1;
+	}
+	fpm_nhg_frame_batch_free(&batch);
+
+	/*
+	 * The replaces are on the wire; move the model. The old top loses its
+	 * last reference here and its DEL is queued behind them, never inside
+	 * this batch.
+	 */
+	fpm_nhg_rebind_rib(&fnc->nhg_tables, rib_id, new_top, &newq,
+			   &fnc->pending_dels);
+	fpm_nhg_staging_free(&newq);
+	return 0;
+}
+
+/*
+ * Main-thread drain for NH-driven rebuilds. Runs with obuf_mutex held, so it
+ * serializes with the FPM pthread exactly like the route path, and it owns the
+ * RIB: route contexts can be rebuilt from the live route entries here.
+ */
+static void fpm_nhg_repoint_event(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+	struct fpm_nhg_repoint **pp, *p;
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	pp = &fnc->nhg_repoints;
+	while ((p = *pp) != NULL) {
+		if (fpm_nhg_repoint_one(fnc, p->rib_id, &p->ng) != 0) {
+			/* obuf full: retry the whole queue shortly */
+			event_add_timer(zrouter.master, fpm_nhg_repoint_event,
+					fnc, 1, &fnc->t_nhg_repoint);
+			return;
+		}
+		*pp = p->next;
+		fpm_nhg_repoint_ng_free(p);
+		XFREE(MTYPE_FPM_NHG_REPOINT, p);
+	}
 }
 
 FRR_MODULE_SETUP(
