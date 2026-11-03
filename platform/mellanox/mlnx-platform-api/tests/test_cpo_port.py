@@ -395,8 +395,7 @@ class TestCdbLock:
         generator = method in ('download_firmware', 'upgrade_firmware')
         with mock.patch.object(NvidiaSysfsElsfp, 'CDB_LOCK_DIR', str(tmp_path)), \
                 mock.patch.object(CdbFirmwareMixin, method, blocks if generator else operation), \
-                mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode',
-                           return_value=True):
+                mock.patch.object(NvidiaSysfsElsfp, '_is_sw_control', return_value=True):
             result = getattr(self._device('els', 9), method)(*args)
             if generator:
                 assert list(result) == [1, 2]
@@ -437,12 +436,18 @@ class TestFirmwareManagement:
         ('run_firmware', ()),
         ('commit_firmware', ()),
     ])
-    @pytest.mark.parametrize('sw_control', [True, False])
-    def test_els_firmware_operations_require_sw_control(self, cpo, method, args, sw_control):
+    @pytest.mark.parametrize('host_mgmt, control, sw_control', [
+        (True, 1, True),
+        # A module that was not ready at detection stays under firmware control.
+        (True, 0, False),
+        (False, 1, False),
+    ])
+    def test_els_firmware_operations_require_sw_control(self, cpo, method, args, host_mgmt, control, sw_control):
         cpo.elsfp.get_api = mock.MagicMock()
         cpo.elsfp._get_cdb_fw_api = mock.MagicMock(side_effect=RuntimeError('reached the device'))
         with mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode',
-                        return_value=sw_control), \
+                        return_value=host_mgmt), \
+                mock.patch('sonic_platform.utils.read_int_from_file', return_value=control), \
                 mock.patch.object(NvidiaSysfsElsfp, 'CDB_LOCK_DIR', None):
             with pytest.raises(RuntimeError) as exc:
                 result = getattr(cpo.elsfp, method)(*args)
@@ -451,7 +456,7 @@ class TestFirmwareManagement:
         if sw_control:
             assert str(exc.value) == 'reached the device'
         else:
-            assert str(exc.value) == 'Firmware operations require the modules to be under software control'
+            assert str(exc.value) == 'Firmware operations require the module to be under software control'
             cpo.elsfp._get_cdb_fw_api.assert_not_called()
             cpo.elsfp.get_api.assert_not_called()
 

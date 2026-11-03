@@ -70,12 +70,23 @@ class _NvidiaSysfsCpoDevice(CpoDeviceBase, NvidiaSysfsEepromBanked):
         self.asic_index = asic_index
         super().__init__(hardware_id, bank=bank)
 
-    @staticmethod
-    def _check_sw_control():
-        # Firmware operations, including the CDB target selection, need the
-        # host to manage the modules.
+    def _is_sw_control(self):
         if not DeviceDataManager.is_module_host_management_mode():
-            raise RuntimeError('Firmware operations require the modules to be under software control')
+            return False
+        try:
+            return utils.read_int_from_file(
+                self.module_attr_path(SFP_SYSFS_CONTROL),
+                raise_exception=True, log_func=None) == 1
+        except Exception:
+            raise Exception(
+                'control sysfs for module {} does not exist'.format(self.get_sdk_index()))
+
+    def _check_sw_control(self):
+        # Firmware operations, including the CDB target selection, need the
+        # host to manage the module. In host management mode, a module that
+        # was not ready at detection stays under firmware control.
+        if not self._is_sw_control():
+            raise RuntimeError('Firmware operations require the module to be under software control')
 
     def _firmware_lock(self):
         """
@@ -142,17 +153,6 @@ class NvidiaSysfsOe(OeBase, _NvidiaSysfsCpoDevice):
 
     def upgrade_firmware(self, *args, **kwargs):
         raise NotImplementedError
-
-    def _is_sw_control(self):
-        if not DeviceDataManager.is_module_host_management_mode():
-            return False
-        try:
-            return utils.read_int_from_file(
-                self.module_attr_path(SFP_SYSFS_CONTROL),
-                raise_exception=True, log_func=None) == 1
-        except Exception:
-            raise Exception(
-                'control sysfs for OE {} does not exist'.format(self.get_sdk_index()))
 
     def get_lpmode(self) -> bool:
         """Return whether the OE module is in low power."""
