@@ -308,7 +308,7 @@ static void fpm_nhg_send(struct event *t);
 static void fpm_nhg_reset(struct event *t);
 static bool fpm_rib_walk(struct fpm_nl_ctx *fnc,
 			 void (*reschedule_fn)(struct event *t),
-			 struct event **reschedule_handle);
+			 struct event **reschedule_handle, bool srv6_only);
 static void fpm_rib_send(struct event *t);
 static void fpm_rib_reset(struct event *t);
 static void fpm_rmac_send(struct event *t);
@@ -1130,6 +1130,23 @@ static bool has_srv6_localsid_nexthop(struct zebra_dplane_ctx *ctx)
 	return false;
 }
 
+static bool fpm_srv6_route_has_segment(struct route_entry *re)
+{
+	struct nexthop *nexthop;
+
+	if (!re || !re->nhe)
+		return false;
+
+	for (ALL_NEXTHOPS_PTR(&re->nhe->nhg, nexthop))
+		if (!CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE) &&
+		    NEXTHOP_IS_ACTIVE(nexthop->flags) && nexthop->nh_srv6 &&
+		    nexthop->nh_srv6->seg6_segs &&
+		    !sid_zero(nexthop->nh_srv6->seg6_segs))
+			return true;
+
+	return false;
+}
+
 /**
  * Resets the SRv6 routes FPM flags so we send all SRv6 routes again.
  */
@@ -1140,7 +1157,6 @@ static void fpm_srv6_route_reset(struct event *t)
 	struct route_node *rn;
 	struct route_entry *re;
 	struct route_table *rt;
-	struct nexthop *nexthop;
 	rib_tables_iter_t rt_iter;
 
 	/* Queue one refresh behind the reconnect chain or the current walk. */
@@ -1161,14 +1177,11 @@ static void fpm_srv6_route_reset(struct event *t)
 				continue;
 
 			re = dest->selected_fib;
-			if (re == NULL)
+			if (!fpm_srv6_route_has_segment(re))
 				continue;
 
-			nexthop = re->nhe->nhg.nexthop;
-			if (nexthop && nexthop->nh_srv6 &&
-				    !sid_zero((const struct seg6_seg_stack *)nexthop->nh_srv6->seg6_segs))
-				/* Unset FPM installation flag so it gets installed again. */
-				UNSET_FLAG(dest->flags, RIB_DEST_UPDATE_FPM);
+			/* Unset the flag so the route gets installed again. */
+			UNSET_FLAG(dest->flags, RIB_DEST_UPDATE_FPM);
 		}
 	}
 
@@ -3134,7 +3147,7 @@ static void fpm_rib_send(struct event *t)
 {
 	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
 
-	if (!fpm_rib_walk(fnc, fpm_rib_send, &fnc->t_ribwalk))
+	if (!fpm_rib_walk(fnc, fpm_rib_send, &fnc->t_ribwalk, false))
 		return;
 
 	/* All RIB routes sent! */
@@ -3150,7 +3163,7 @@ static void fpm_srv6_route_send(struct event *t)
 {
 	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
 
-	if (!fpm_rib_walk(fnc, fpm_srv6_route_send, &fnc->t_srv6walk))
+	if (!fpm_rib_walk(fnc, fpm_srv6_route_send, &fnc->t_srv6walk, true))
 		return;
 
 	WALK_FINISH(fnc, FNE_SRV6_FINISHED);
@@ -3164,12 +3177,12 @@ static void fpm_srv6_route_send(struct event *t)
 
 /*
  * Walk the RIB and enqueue every destination whose FPM flag is clear.
- * The caller supplies its own retry callback and event handle so the
- * standalone SRv6 walk cannot collide with the refresh-chain walk.
+ * The caller supplies its retry callback and event handle. A standalone
+ * SRv6 walk skips unrelated routes whose FPM flags are also clear.
  */
 static bool fpm_rib_walk(struct fpm_nl_ctx *fnc,
 			 void (*reschedule_fn)(struct event *t),
-			 struct event **reschedule_handle)
+			 struct event **reschedule_handle, bool srv6_only)
 {
 	rib_dest_t *dest;
 	struct route_node *rn;
@@ -3187,6 +3200,10 @@ static bool fpm_rib_walk(struct fpm_nl_ctx *fnc,
 			/* Skip bad route entries. */
 			if (dest == NULL || dest->selected_fib == NULL)
 				continue;
+			if (srv6_only &&
+			    !fpm_srv6_route_has_segment(dest->selected_fib))
+				continue;
+
 			/* Check for already sent routes. */
 			if (CHECK_FLAG(dest->flags, RIB_DEST_UPDATE_FPM))
 				continue;
