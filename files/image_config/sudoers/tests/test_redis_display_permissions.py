@@ -1,4 +1,4 @@
-"""Check fixed orchagent display permissions in an opted-in disposable container."""
+"""Check fixed Redis-backed display permissions in an opted-in disposable container."""
 
 import json
 import os
@@ -25,6 +25,9 @@ def disposable_sudo_policy():
         "print(json.dumps({'uid':os.geteuid(), 'args':sys.argv[1:], "
         "'pythonpath':os.environ.get('PYTHONPATH')}))\n")
     show.chmod(0o755)
+    consutil = Path("/usr/local/bin/consutil")
+    consutil.write_text(show.read_text())
+    consutil.chmod(0o755)
 
 
 def ordinary_sudo(arguments, executable="show"):
@@ -55,6 +58,8 @@ def test_named_read_runs_as_root(arguments):
     ["orchagent", "tasks", "--namespace", "asic0", "--extra"],
     ["orchagent", "tasks", "--namespace", "asic0-extra"],
     ["orchagent", "tasks", "--unexpected", "value"],
+    ["orchagent", "tasks", "--namespace", "asic0;id"],
+    ["orchagent", "tasks", ";", "id"],
     ["config", "hostname", "changed"],
 ])
 def test_other_operations_and_extra_arguments_are_denied(arguments):
@@ -68,5 +73,64 @@ def test_environment_assignment_is_denied():
         ["/usr/sbin/runuser", "-u", "nobody", "--", "/usr/bin/sudo", "-n",
          "PYTHONPATH=/not-trusted", "/usr/local/bin/show", "orchagent", "tasks"],
         capture_output=True, text=True)
+    assert result.returncode != 0
+    assert not result.stdout
+
+
+CONSOLE_COMMANDS = [["refresh-state", "0"], ["refresh-state", "123"]]
+MUX_COMMANDS = [
+    ["muxcable", "status"],
+    ["muxcable", "status", "--json"],
+    ["muxcable", "status", "--", "Ethernet0"],
+    ["muxcable", "status", "--json", "--", "Ethernet0"],
+    ["muxcable", "hwmode", "muxdirection"],
+    ["muxcable", "hwmode", "muxdirection", "--json"],
+    ["muxcable", "hwmode", "muxdirection", "--", "Ethernet0"],
+    ["muxcable", "hwmode", "muxdirection", "--json", "--", "Ethernet0"],
+    ["muxcable", "hwmode", "switchmode"],
+    ["muxcable", "hwmode", "switchmode", "--", "Ethernet0"],
+    ["muxcable", "firmware", "version", "--", "Ethernet0"],
+    ["muxcable", "firmware", "version", "--active", "--", "Ethernet0"],
+]
+for operation in ["berinfo", "eyeinfo", "fecstatistics", "pcsstatistics"]:
+    for target in ["NIC", "TORA", "TORB", "LOCAL"]:
+        for options in [[], ["--json"]]:
+            MUX_COMMANDS.append(["muxcable", operation] + options + ["--", "Ethernet0", target])
+for operation in ["alivecablestatus", "event-log", "get-fec-anlt-speed", "health",
+                  "resetcause", "operationtime", "queueinfo"]:
+    for options in [[], ["--json"]]:
+        MUX_COMMANDS.append(["muxcable", operation] + options + ["--", "Ethernet0"])
+
+
+@pytest.mark.parametrize("executable,arguments", [
+    *[("consutil", args) for args in CONSOLE_COMMANDS],
+    *[("show", args) for args in MUX_COMMANDS],
+])
+def test_console_and_mux_queries_preserve_arguments(executable, arguments):
+    result = ordinary_sudo(arguments, executable)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {"uid": 0, "args": arguments, "pythonpath": None}
+
+
+@pytest.mark.parametrize("executable,arguments", [
+    ("consutil", ["refresh-state", "-1"]),
+    ("consutil", ["refresh-state", "all"]),
+    ("consutil", ["refresh-state", "0", "extra"]),
+    ("consutil", ["refresh-state", "0;id"]),
+    ("consutil", ["connect", "0"]),
+    ("consutil", ["refresh-state", "0\n1"]),
+    ("show", ["muxcable", "status", "--", "Ethernet0", "extra"]),
+    ("show", ["muxcable", "status", "--", "Ethernet0; id"]),
+    ("show", ["muxcable", "status", "--", "Ethernet0\nextra"]),
+    ("show", ["muxcable", "berinfo", "--", "Ethernet0", "INVALID"]),
+    ("show", ["muxcable", "berinfo", "--", "Ethernet0"]),
+    ("show", ["muxcable", "hwmode", "switchmode", "--json"]),
+    ("show", ["muxcable", "firmware", "version", "--json", "--", "Ethernet0"]),
+    ("show", ["muxcable", "firmware", "activate", "--", "Ethernet0"]),
+    ("show", ["muxcable", "debugdumpregisters", "Ethernet0", "all"]),
+    ("show", ["muxcable", "config", "Ethernet0"]),
+])
+def test_other_console_and_mux_operations_are_denied(executable, arguments):
+    result = ordinary_sudo(arguments, executable)
     assert result.returncode != 0
     assert not result.stdout
