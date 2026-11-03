@@ -12,6 +12,9 @@ expected_kea_config = {
     "Dhcp4": {
         "hooks-libraries": [
             {
+                "library": "/usr/local/lib/kea/hooks/libdhcp_lease_cmds.so"
+            },
+            {
                 "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                 "parameters": {
                     "name": "/etc/kea/lease_update.sh",

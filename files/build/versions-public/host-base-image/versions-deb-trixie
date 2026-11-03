@@ -52,7 +52,7 @@ libsemanage2==3.8.1-1
 libsepol2==3.8.1-1
 libsmartcols1==2.41.5-0+deb13u1
 libsqlite3-0==3.46.1-7+deb13u2
-libssl3t64==3.5.7-1~deb13u2+fips
+libssl3t64==3.5.7-1~deb13u3+fips
 libstdc++6==14.2.0-19
 libsystemd0==257.13-1~deb13u1
 libtinfo6==6.5+20250216-2
@@ -73,6 +73,6 @@ sed==4.9-2+deb13u1
 sqv==1.3.0-3+b2
 sysvinit-utils==3.14-4
 tar==1.35+dfsg-3.1
-tzdata==2026c-0+deb13u1
+tzdata==2026e-0+deb13u1
 util-linux==2.41.5-0+deb13u1
 zlib1g==1:1.3.dfsg+really1.3.1-1+b1

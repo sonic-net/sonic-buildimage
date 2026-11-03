@@ -69,11 +69,11 @@ class TunnelPacketHandler(object):
     """
 
     def __init__(self):
-        self.config_db = ConfigDBConnector()
+        self.config_db = ConfigDBConnector(use_unix_socket_path=True)
         self.config_db.connect()
-        self.state_db = SonicV2Connector()
+        self.state_db = SonicV2Connector(use_unix_socket_path=True)
         self.state_db.connect(STATE_DB)
-        self.counters_db = SonicV2Connector()
+        self.counters_db = SonicV2Connector(use_unix_socket_path=True)
         self.counters_db.connect(COUNTERS_DB)
         counters_db_separator = self.counters_db.get_db_separator(COUNTERS_DB)
         self.tunnel_counter_table = TUNNEL_PKT_COUNTER_TEMPLATE.format(counters_db_separator)

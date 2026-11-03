@@ -414,3 +414,127 @@ def test_cleanup_no_shutdown_protect_magic_closes(tmp_path, monkeypatch):
     writes, closed, _ = _cleanup_capture(daemon, monkeypatch)
     assert writes == [b"V"]
     assert closed == [999]
+
+
+def _stage_marker_capture(daemon, monkeypatch):
+    """Capture stage marker values written by cleanup()."""
+    markers = []
+    monkeypatch.setattr(daemon, "_write_stage_marker",
+                        lambda v: markers.append(v))
+    return markers
+
+
+def test_cleanup_system_stopping_writes_shutdown_marker(tmp_path, monkeypatch):
+    # During a system shutdown/reboot the daemon stamps the shutdown stage so a
+    # hang on the reboot path is attributed correctly on the next boot.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == [wdtd.STAGE_MARKER_DAEMON_SHUTDOWN]
+
+
+def test_cleanup_normal_stop_keeps_stage_marker(tmp_path, monkeypatch):
+    # A plain daemon stop/restart is not a shutdown: the resident marker (0x24
+    # armed) must be left alone so a WDT reset before the daemon comes back is
+    # not misattributed to the shutdown stage.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: False)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == []
+
+
+# ------------------------------------------------- boot-stage attribution
+STAGE_REG = 0x14c3704c
+
+
+def _devmem_capture(monkeypatch, fail_on=None):
+    """Capture busybox devmem invocations from _write_stage_marker.
+
+    `fail_on` is the 0-based index of the call that should raise, to exercise
+    the early-return path.
+    """
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        if fail_on is not None and len(calls) - 1 == fail_on:
+            raise wdtd.subprocess.CalledProcessError(1, argv)
+        return None
+
+    monkeypatch.setattr(wdtd.subprocess, "run", fake_run)
+    return calls
+
+
+def test_write_stage_marker_clears_then_sets(monkeypatch):
+    # WDT4C scratch is write-1-to-set, so the marker must be preceded by the
+    # magic clear and both go to the configured register as 32-bit writes.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_scratch_reg = STAGE_REG
+    calls = _devmem_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    addr = "0x%08x" % STAGE_REG
+    assert calls == [
+        ["busybox", "devmem", addr, "32",
+         "0x%08x" % wdtd.STAGE_SCRATCH_MAGIC_CLEAR],
+        ["busybox", "devmem", addr, "32",
+         "0x%02x" % wdtd.STAGE_MARKER_DAEMON_ARMED],
+    ]
+
+
+def test_write_stage_marker_noop_without_register(monkeypatch):
+    # Platforms without stage_scratch_reg in platform.json never touch devmem.
+    daemon = wdtd.WatchdogManager()
+    assert daemon.stage_scratch_reg is None
+    calls = _devmem_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == []
+
+
+def test_write_stage_marker_stops_after_failed_clear(monkeypatch):
+    # If the magic clear fails, the marker write is skipped (a set on top of a
+    # stale value would corrupt the marker) and the error is swallowed so
+    # attribution never affects petting.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_scratch_reg = STAGE_REG
+    calls = _devmem_capture(monkeypatch, fail_on=0)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert len(calls) == 1
+
+
+def test_load_platform_config_stage_scratch_reg_hex_string(monkeypatch):
+    # platform.json carries the register as a hex string (b27 style).
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_scratch_reg": "0x14c3704c"}})
+    daemon._load_platform_config()
+    assert daemon.stage_scratch_reg == STAGE_REG
+
+
+def test_load_platform_config_stage_scratch_reg_integer(monkeypatch):
+    # An integer value is accepted as-is.
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_scratch_reg": STAGE_REG}})
+    daemon._load_platform_config()
+    assert daemon.stage_scratch_reg == STAGE_REG
+
+
+def test_load_platform_config_stage_scratch_reg_absent(monkeypatch):
+    # Absent key -> attribution disabled, even if a stale value was set.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_scratch_reg = STAGE_REG
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": True}})
+    daemon._load_platform_config()
+    assert daemon.stage_scratch_reg is None

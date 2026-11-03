@@ -110,7 +110,22 @@
             {
                 "name": "Port Card",
                 "controllable": false
-
+            },
+            {
+                "name": "IBC SWC1",
+                "controllable": false
+            },
+            {
+                "name": "IBC SWC2",
+                "controllable": false
+            },
+            {
+                "name": "IBC Fan1",
+                "controllable": false
+            },
+            {
+                "name": "IBC Fan2",
+                "controllable": false
             }
         ],
         "sfps": [

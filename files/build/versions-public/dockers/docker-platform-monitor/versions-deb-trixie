@@ -46,7 +46,7 @@ libcc1-0==14.2.0-19
 libcrypt-dev==1:4.4.38-1
 libctf-nobfd0==2.44-3
 libctf0==2.44-3
-libcurl3t64-gnutls==8.14.1-2+deb13u5
+libcurl3t64-gnutls==8.14.1-2+deb13u7
 libdatrie1==0.2.13-3+b1
 libdbi1t64==0.9.0-6.1+b1
 libdebuginfod-common==0.192-4
@@ -54,7 +54,7 @@ libdebuginfod1t64==0.192-4
 libdpkg-perl==1.22.22
 libdw1t64==0.192-4
 libedit2==3.1-20250104-1
-libexpat1-dev==2.8.3-1~deb13u1
+libexpat1-dev==2.9.0-1~deb13u1
 libfido2-1==1.15.0-1+b1
 libfontconfig1==2.15.0-2.3
 libfreeipmi17==1.6.15-1
@@ -124,11 +124,11 @@ libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u3
 libxrender1==1:0.9.12-1
 libyaml-cpp0.8==0.8.0+dfsg-7
 libyang3-dbgsym==3.12.2-1
-linux-libc-dev==6.12.111-1
+linux-libc-dev==6.12.113-1
 lm-sensors==1:3.6.0-7.1
 lm-sensors-dbgsym==1:3.6.0-7.1
 make==4.4.1-2
-mft==4.36.0-1033
+mft==4.36.0-1038
 nvme-cli==2.13-2
 openssh-client==1:10.0p1-7+fips
 patch==2.8-2
