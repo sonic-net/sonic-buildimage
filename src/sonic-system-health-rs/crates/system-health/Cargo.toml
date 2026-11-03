@@ -1,0 +1,37 @@
+[package]
+name = "system-health"
+description = "SONiC system health checks, shared by healthd and healthcheck"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+bollard.workspace = true
+chrono.workspace = true
+futures-util.workspace = true
+indexmap.workspace = true
+minijinja.workspace = true
+natord.workspace = true
+nix = { workspace = true, features = ["process"] }
+platform-api.workspace = true
+platform-provider.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sonic-rs-common.workspace = true
+swss-common.workspace = true
+tokio.workspace = true
+zbus.workspace = true
+zbus_systemd.workspace = true
+
+[dev-dependencies]
+pyo3.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true

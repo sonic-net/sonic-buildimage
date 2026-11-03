@@ -150,7 +150,6 @@ sudo cp $IMAGE_CONFIGS/environment/logout_message $FILESYSTEM_ROOT/etc/
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/
 sudo mkdir -p $FILESYSTEM_ROOT/etc/modprobe.d/
 sudo mkdir -p $FILESYSTEM_ROOT/var/cache/sonic/
-sudo install -d -m 0700 -o root -g root $FILESYSTEM_ROOT/var/cache/sonic/system-health/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_FIRMWARE/
 # This is needed for Stretch and might not be needed for Buster where Linux create this directory by default.
@@ -257,9 +256,6 @@ install_pip_package {{pddf_platform_api_base_py3_wheel_path}}
 {% if sonic_asic_platform == "barefoot" %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift==0.13.0
 {% endif %}
-
-# Install system-health Python 3 package
-install_pip_package {{system_health_py3_wheel_path}}
 
 # Install m2crypto, cryptography, cffi, and pynacl packages, used by sonic-utilities
 # Install python packages used by sonic-utilities
@@ -399,6 +395,9 @@ install_deb_package {{deb}}
 
 # Install SONiC host services Rust deb package
 install_deb_package $debs_path/sonic-host-services-rs_*.deb
+
+# Install system-health: healthd and the healthcheck backend of "show system-health"
+install_deb_package $debs_path/sonic-system-health_*.deb
 
 # Install sonic-db-cli
 install_deb_package $debs_path/sonic-db-cli_*.deb
