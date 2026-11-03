@@ -2630,6 +2630,10 @@
             "Vlan100|Ethernet0": {
                 "path_cost": "200000",
                 "priority": "128"
+            },
+            "Vlan100|PortChannel0003": {
+                "path_cost": "200",
+                "priority": "128"
             }
         },
         "STP_PORT": {
@@ -2642,6 +2646,22 @@
                 "priority": "128",
                 "portfast": "false",
                 "uplink_fast": "false"
+            },
+            "PortChannel0003": {
+                "enabled": "true",
+                "path_cost": "200",
+                "priority": "128"
+            }
+        },
+        "STP_MST_INST": {
+            "0": {
+                "bridge_priority": "32768"
+            }
+        },
+        "STP_MST_PORT": {
+            "0|Ethernet0": {
+                "path_cost": "200",
+                "priority": "128"
             }
         },
 

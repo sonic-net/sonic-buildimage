@@ -73,6 +73,7 @@
   * [Syslog Global Configuration](#syslog-global-configuration)
   * [Syslog Servers](#syslog-servers)
   * [Sflow](#sflow)
+  * [Spanning Tree](#spanning-tree)
   * [Restapi](#restapi)
   * [System Port](#system-port)
   * [Tacplus Server](#tacplus-server)
@@ -2571,6 +2572,179 @@ key - name
 | collector_ip   | IPv4/IPv6 address of the Sflow collector                                                | true        |           |             |
 | collector_port | Destination L4 port of the Sflow collector                                              |             | 6343      |             |
 | collector_vrf  | Specify the Collector VRF. In this revision, it is either default VRF or Management VRF.|             |           |             |
+
+### Spanning Tree
+
+Spanning tree runs in one of two modes, PVST (one tree per VLAN) or MSTP (VLANs mapped to MST instances). The `STP` table selects the mode; with no `STP|GLOBAL` row spanning tree is disabled. The MST region in `STP_MST` may be kept while spanning tree is disabled, so it comes back on the next enable.
+
+**Config Sample (PVST)**
+```
+{
+    "STP": {
+        "GLOBAL": {
+            "mode": "pvst",
+            "forward_delay": "15",
+            "hello_time": "2",
+            "max_age": "20",
+            "priority": "32768",
+            "rootguard_timeout": "30"
+        }
+    },
+    "STP_VLAN": {
+        "Vlan100": {
+            "vlanid": "100",
+            "enabled": "true",
+            "forward_delay": "15",
+            "hello_time": "2",
+            "max_age": "20",
+            "priority": "32768"
+        }
+    },
+    "STP_PORT": {
+        "Ethernet0": {
+            "enabled": "true",
+            "path_cost": "200",
+            "priority": "128",
+            "portfast": "false",
+            "root_guard": "false",
+            "bpdu_guard": "false"
+        }
+    },
+    "STP_VLAN_PORT": {
+        "Vlan100|Ethernet0": {
+            "path_cost": "200",
+            "priority": "128"
+        }
+    }
+}
+```
+
+**Config Sample (MSTP)**
+```
+{
+    "STP": {
+        "GLOBAL": {
+            "mode": "mst"
+        }
+    },
+    "STP_MST": {
+        "GLOBAL": {
+            "name": "region1",
+            "revision": "1",
+            "max_hops": "20",
+            "max_age": "20",
+            "hello_time": "2",
+            "forward_delay": "15"
+        }
+    },
+    "STP_MST_INST": {
+        "0": {
+            "bridge_priority": "32768"
+        },
+        "1": {
+            "bridge_priority": "4096",
+            "vlan": ["100", "200"]
+        }
+    },
+    "STP_PORT": {
+        "Ethernet0": {
+            "enabled": "true",
+            "edge_port": "false",
+            "link_type": "auto"
+        }
+    },
+    "STP_MST_PORT": {
+        "1|Ethernet0": {
+            "path_cost": "200",
+            "priority": "128"
+        }
+    }
+}
+```
+
+STP
+
+key - GLOBAL
+| Field             | Description                                                             | Mandatory | Default | Reference |
+|-------------------|-------------------------------------------------------------------------|-----------|---------|-----------|
+| mode              | `pvst` or `mst`                                                         | true      |         |           |
+| rootguard_timeout | Seconds a root-guarded port stays blocked after superior BPDUs stop, 5..600 |       | 30      |           |
+| forward_delay     | Forward delay in seconds, 4..30                                         |           | 15      |           |
+| hello_time        | Hello time in seconds, 1..10                                            |           | 2       |           |
+| max_age           | Max age in seconds, 6..40                                               |           | 20      |           |
+| priority          | Bridge priority, a multiple of 4096 from 0 to 61440                     |           | 32768   |           |
+
+STP_VLAN (PVST)
+
+key - VLAN name (`Vlan<id>`)
+| Field         | Description                                          | Mandatory | Default | Reference |
+|---------------|------------------------------------------------------|-----------|---------|-----------|
+| vlanid        | VLAN id, 1..4095                                     |           |         |           |
+| enabled       | Spanning tree on this VLAN                           | true      |         |           |
+| forward_delay | As in `STP`                                          |           | 15      |           |
+| hello_time    | As in `STP`                                          |           | 2       |           |
+| max_age       | As in `STP`                                          |           | 20      |           |
+| priority      | Bridge priority, a multiple of 4096 from 0 to 61440  |           | 32768   |           |
+
+STP_PORT
+
+key - interface name
+| Field                 | Description                                                    | Mandatory | Default | Reference              |
+|-----------------------|----------------------------------------------------------------|-----------|---------|------------------------|
+| ifname                | Ethernet interface or PortChannel                              |           |         | PORT:name, PORTCHANNEL:name |
+| enabled               | Spanning tree on this interface                                | true      |         |                        |
+| path_cost             | Path cost, 1..200000000                                        |           | 200     |                        |
+| priority              | Port priority, a multiple of 16 from 0 to 240                  |           | 128     |                        |
+| root_guard            | Root guard                                                     |           | false   |                        |
+| bpdu_guard            | BPDU guard                                                     |           | false   |                        |
+| bpdu_guard_do_disable | Shut the port down when BPDU guard sees a BPDU                 |           | false   |                        |
+| uplink_fast           | Uplink fast                                                    |           | false   |                        |
+| portfast              | Portfast, PVST only                                            |           | false   |                        |
+| edge_port             | Edge port, MSTP only                                           |           | false   |                        |
+| link_type             | `auto`, `shared` or `point-to-point`, MSTP only                |           |         |                        |
+
+STP_VLAN_PORT (PVST)
+
+key - VLAN name | interface name
+| Field     | Description                                    | Mandatory | Default | Reference |
+|-----------|------------------------------------------------|-----------|---------|-----------|
+| path_cost | Path cost in this VLAN, 1..200000000           |           | 200     |           |
+| priority  | Port priority in this VLAN, a multiple of 16   |           | 128     |           |
+
+The VLAN must have an `STP_VLAN` row and the interface an `STP_PORT` row.
+
+STP_MST (MSTP)
+
+key - GLOBAL
+| Field         | Description                       | Mandatory | Default | Reference |
+|---------------|-----------------------------------|-----------|---------|-----------|
+| name          | Region name                       |           |         |           |
+| revision      | Region revision                   |           |         |           |
+| max_hops      | Max hops                          |           | 20      |           |
+| max_age       | Max age in seconds                |           | 20      |           |
+| hello_time    | Hello time in seconds             |           | 2       |           |
+| forward_delay | Forward delay in seconds          |           | 15      |           |
+| hold_count    | Transmit hold count               |           |         |           |
+
+These fields are refused while `STP|GLOBAL` is in PVST mode.
+
+STP_MST_INST (MSTP)
+
+key - instance id; instance 0 is the CIST
+| Field           | Description                                         | Mandatory | Default | Reference |
+|-----------------|-----------------------------------------------------|-----------|---------|-----------|
+| vlan            | VLANs mapped to the instance                        |           |         |           |
+| bridge_priority | Bridge priority, a multiple of 4096 from 0 to 61440 |           | 32768   |           |
+
+STP_MST_PORT (MSTP)
+
+key - instance id | interface name
+| Field     | Description                                      | Mandatory | Default | Reference |
+|-----------|--------------------------------------------------|-----------|---------|-----------|
+| path_cost | Path cost in this instance, 1..200000000         |           | 200     |           |
+| priority  | Port priority in this instance, a multiple of 16 |           | 128     |           |
+
+The instance must have an `STP_MST_INST` row and the interface an `STP_PORT` row.
 
 ### Storage Monitoring Daemon Interval Configuration
 
