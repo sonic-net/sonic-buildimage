@@ -1,0 +1,31 @@
+From 24e10c413292bcd9b288d5b4322247b92e57ebfc Mon Sep 17 00:00:00 2001
+From: Brad House <bhouse@nexthop.ai>
+Date: Tue, 3 Nov 2026 00:40:24 +0000
+Subject: [PATCH] zebra: Copy the VxLAN encap data to a nexthop resolved
+ through EVPN
+
+nexthop_set_resolved() copies NEXTHOP_FLAG_EVPN, the encap type and the
+router MAC of an EVPN nexthop to the nexthop it resolves, but not
+nh_encap. The FPM encoder sends the router MAC from
+nh_encap.encap_data.rmac, so a route resolved through an EVPN route
+reached fpmsyncd with a zero router MAC and was dropped. Copy nh_encap
+as well; the VNI in it is set again from the L3 VNI when the dataplane
+context is built.
+
+Signed-off-by: Brad House <bhouse@nexthop.ai>
+---
+ zebra/zebra_nhg.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 03441ba..5bdc39a 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -2005,6 +2005,7 @@ static struct nexthop *nexthop_set_resolved(afi_t afi, const struct nexthop *new
+ 	/* Handle evpn nexthop - capture that info also */
+ 	if (CHECK_FLAG(newhop->flags, NEXTHOP_FLAG_EVPN)) {
+ 		resolved_hop->nh_encap_type = newhop->nh_encap_type;
++		resolved_hop->nh_encap = newhop->nh_encap;
+ 		memcpy(&(resolved_hop->rmac), &(newhop->rmac), ETH_ALEN);
+ 		SET_FLAG(resolved_hop->flags, NEXTHOP_FLAG_EVPN);
+ 	}
