@@ -2719,6 +2719,14 @@ REBOOT_CAUSE_PARA = {
                 {"gettype": "cmd", "cmd": "rm -rf /etc/.otp_other_reboot_flag"},
             ]
         },
+        {
+            "name": "wdt_reboot",
+            "monitor_point": {"gettype":"cmd", "cmd":"busybox devmem 0xfe00192c", "mask": 0x40, "okval":0x40},
+            "record": [
+                {"record_type": "file", "mode": "cover", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+                {"record_type": "file", "mode": "add", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
+            ],
+        },
     ],
     "other_reboot_cause_record": [
         {"record_type": "file", "mode": "cover", "log": "Other, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
