@@ -1,0 +1,108 @@
+[wistron][es1227_54ts_p2] add ES-1227-54TS-P2 DTS quilt patch for kernel 6.12
+
+ES-1227-54TS-P2 has a DS1338 RTC; ES-1227-54TS, ES-2227-54TS and
+ES-2227-54TS-P have a DS1388 at the same address. All four used to boot
+es1227-54ts.dtb, and the old 0020 patch switched that shared DTS to
+ds1338, which broke the RTC time and the DS1388 watchdog on the DS1388
+boards. 0020 is removed, so es1227-54ts.dtsi stays as shipped in
+sonic-linux-kernel (ds1388). This adds a P2-only es1227-54ts-p2.dtb
+(es1227-54ts.dts + es1227-54ts-p2.dtsi, which replaces the RTC node).
+
+The series entry goes under the internal-patch marker at the end of the
+file, away from the lines 0021 and 0027 edit, so each patch's
+applied-state check keeps working. Apply with ./apply_patches.sh; do not
+commit into sonic-linux-kernel.
+
+diff --git a/src/sonic-linux-kernel/patches-sonic/0033-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-P2-board.patch b/src/sonic-linux-kernel/patches-sonic/0033-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-P2-board.patch
+new file mode 100644
+index 0000000..9c71253
+--- /dev/null
++++ b/src/sonic-linux-kernel/patches-sonic/0033-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-P2-board.patch
+@@ -0,0 +1,78 @@
++From: Owen Wu <owen_wu@wistron.com>
++Date: Tue, 3 Nov 2026 13:31:06 +0800
++Subject: [PATCH] arm64: dts: marvell: Add DTS for Wistron ES-1227-54TS-P2
++ board
++
++ES-1227-54TS-P2 is the ES-1227-54TS board with a DS1338 RTC instead
++of the DS1388 (both at 0x68 on I2C mux channel 4). rtc-ds1307 drives
++the two chips with different register layouts, and only the DS1388
++has a watchdog, so the boards cannot share es1227-54ts.dtb.
++
++Add es1227-54ts-p2.dts. It reuses es1227-54ts.dts and applies the P2
++differences from es1227-54ts-p2.dtsi, which deletes the DS1388 node
++and adds a DS1338 node in its place. es1227-54ts.dts and
++es1227-54ts.dtsi are unchanged.
++
++Signed-off-by: Owen Wu <owen_wu@wistron.com>
++---
++ arch/arm64/boot/dts/marvell/Makefile            |  1 +
++ arch/arm64/boot/dts/marvell/es1227-54ts-p2.dts  | 14 ++++++++++++++
++ arch/arm64/boot/dts/marvell/es1227-54ts-p2.dtsi | 21 +++++++++++++++++++++
++ 3 files changed, 36 insertions(+)
++
++diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
++index be7a2cc..df79bbf 100644
++--- a/arch/arm64/boot/dts/marvell/Makefile
+++++ b/arch/arm64/boot/dts/marvell/Makefile
++@@ -38,3 +38,4 @@ dtb-$(CONFIG_ARCH_MVEBU) += 7215-ixs-a1.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += smc_sse-g3748.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += es1227-54ts.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += es1227-36ts-p.dtb
+++dtb-$(CONFIG_ARCH_MVEBU) += es1227-54ts-p2.dtb
++diff --git a/arch/arm64/boot/dts/marvell/es1227-54ts-p2.dts b/arch/arm64/boot/dts/marvell/es1227-54ts-p2.dts
++new file mode 100644
++index 0000000..fbbe77d
++--- /dev/null
+++++ b/arch/arm64/boot/dts/marvell/es1227-54ts-p2.dts
++@@ -0,0 +1,14 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Device tree for the Wistron ES1227-54TS-P2 board.
+++ *
+++ * Same board as ES1227-54TS. The P2 differences are kept in
+++ * es1227-54ts-p2.dtsi so es1227-54ts.dts/.dtsi stay unchanged.
+++ */
+++
+++#include "es1227-54ts.dts"
+++#include "es1227-54ts-p2.dtsi"
+++
+++/ {
+++	model = "Wistron ES1227-54TS-P2 board";
+++};
++diff --git a/arch/arm64/boot/dts/marvell/es1227-54ts-p2.dtsi b/arch/arm64/boot/dts/marvell/es1227-54ts-p2.dtsi
++new file mode 100644
++index 0000000..9d37efa
++--- /dev/null
+++++ b/arch/arm64/boot/dts/marvell/es1227-54ts-p2.dtsi
++@@ -0,0 +1,21 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Wistron ES1227-54TS-P2 differences from ES1227-54TS.
+++ * Include after es1227-54ts.dts.
+++ */
+++
+++/*
+++ * RTC: P2 has a DS1338 at the address where ES1227-54TS has a DS1388
+++ * (0x68 on I2C mux channel 4). The two chips have different register
+++ * layouts, so replace the DS1388 node instead of only changing its
+++ * compatible. The full path makes the build fail if the mux layout in
+++ * es1227-54ts.dtsi ever changes.
+++ */
+++/delete-node/ &rtc0;
+++
+++&{/cp0/config-space@f2000000/i2c@701000/i2c-switch1@77/i2c@4} {
+++	rtc0:rtc-ds1338@68 {
+++		compatible = "dallas,ds1338";
+++		reg = <0x68>;
+++	};
+++};
+diff --git a/src/sonic-linux-kernel/patches-sonic/series b/src/sonic-linux-kernel/patches-sonic/series
+index 0449371..16a4b3e 100644
+--- a/src/sonic-linux-kernel/patches-sonic/series
++++ b/src/sonic-linux-kernel/patches-sonic/series
+@@ -215,3 +215,4 @@ cisco-npu-disable-other-bars.patch
+ # Do not add any public patch below this marker
+ #
+ ############################################################
++0033-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-P2-board.patch
