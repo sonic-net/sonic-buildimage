@@ -47,7 +47,7 @@ function debug()
 function is_asic_service()
 {
     local -r service=$1
-    local -r has_per_asic_scope=$(sonic-db-cli CONFIG_DB hget "FEATURE|$service" has_per_asic_scope)
+    local -r has_per_asic_scope=$(sonic-db-cli -s CONFIG_DB hget "FEATURE|$service" has_per_asic_scope)
     [[ x"${has_per_asic_scope,,}" == x"true" ]] && echo 1 || echo 0
 }
 
@@ -55,7 +55,7 @@ function is_asic_service()
 function is_global_service()
 {
     local -r service=$1
-    local -r has_global_scope=$(sonic-db-cli CONFIG_DB hget "FEATURE|$service" has_global_scope)
+    local -r has_global_scope=$(sonic-db-cli -s CONFIG_DB hget "FEATURE|$service" has_global_scope)
     [[ x"${has_global_scope,,}" == x"true" ]] && echo 1 || echo 0
 }
 
@@ -94,7 +94,7 @@ function get_component_list()
     COMPONENT_LIST=""
     for service in ${SVC_LIST}; do
         components=${RECONCILE_COMPONENTS[${service}]}
-        status=$(sonic-db-cli CONFIG_DB HGET "FEATURE|${service}" state)
+        status=$(sonic-db-cli -s CONFIG_DB HGET "FEATURE|${service}" state)
         if [[ x"${status}" == x"enabled" || x"${status}" == x"always_enabled" ]]; then
             COMPONENT_LIST="${COMPONENT_LIST} ${components}"
         fi
@@ -103,13 +103,13 @@ function get_component_list()
 
 function check_warm_boot()
 {
-    WARM_BOOT=`sonic-db-cli -n "$NETNS" STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
+    WARM_BOOT=`sonic-db-cli -s -n "$NETNS" STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
 }
 
 function check_fast_reboot()
 {
     debug "Checking if fast-reboot is enabled..."
-    FAST_REBOOT=`sonic-db-cli -n "$NETNS" STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    FAST_REBOOT=`sonic-db-cli -s -n "$NETNS" STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
     if [[ x"${FAST_REBOOT}" == x"true" ]]; then
        debug "Fast-reboot is enabled..."
     else
@@ -123,12 +123,12 @@ function wait_for_database_service()
     debug "Wait for database to become ready..."
 
     # Wait for redis server start before database clean
-    until [[ $(sonic-db-cli -n "$NETNS" PING | grep -c PONG) -gt 0 ]]; do
+    until [[ $(sonic-db-cli -s -n "$NETNS" PING | grep -c PONG) -gt 0 ]]; do
       sleep 1;
     done
 
     # Wait for configDB initialization
-    until [[ $(sonic-db-cli -n "$NETNS" CONFIG_DB GET "CONFIG_DB_INITIALIZED") -eq 1 ]];
+    until [[ $(sonic-db-cli -s -n "$NETNS" CONFIG_DB GET "CONFIG_DB_INITIALIZED") -eq 1 ]];
         do sleep 1;
     done
 
@@ -138,7 +138,7 @@ function wait_for_database_service()
 
 function get_component_state()
 {
-    sonic-db-cli -n "$NETNS" STATE_DB hget "WARM_RESTART_TABLE|$1" state
+    sonic-db-cli -s -n "$NETNS" STATE_DB hget "WARM_RESTART_TABLE|$1" state
 }
 
 
@@ -171,8 +171,8 @@ function finalize_warm_boot()
 function finalize_fast_reboot()
 {
     debug "Finalizing fast-reboot..."
-    sonic-db-cli -n "$NETNS" STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null
-    sonic-db-cli -n "$NETNS" CONFIG_DB DEL "WARM_RESTART|teamd" &>/dev/null
+    sonic-db-cli -s -n "$NETNS" STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null
+    sonic-db-cli -s -n "$NETNS" CONFIG_DB DEL "WARM_RESTART|teamd" &>/dev/null
 }
 
 # Finalize warm/fast boot in an ASIC namespace.

@@ -47,7 +47,7 @@ xcvr_state_tbl = {
 # Wait for port init is done
 def wait_for_port_init_done():
     # Connect to APPL_DB and subscribe to PORT table notifications
-    appl_db = daemon_base.db_connect("APPL_DB")
+    appl_db = daemon_base.db_connect("APPL_DB", use_tcp=False)
 
     sel = swsscommon.Select()
     sst = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
@@ -85,12 +85,12 @@ def notify_port_xcvr_status(port_name, app_status_port_tbl, state_port_tbl, flag
 def main():
     helper_logger.log_notice("Start port_notify")
     # Connect to APP_DB and create transceiver dom info table
-    appl_db = daemon_base.db_connect("APPL_DB")
+    appl_db = daemon_base.db_connect("APPL_DB", use_tcp=False)
 
     app_status_port_tbl = swsscommon.ProducerStateTable(appl_db,
                                                      swsscommon.APP_PORT_APP_STATUS_TABLE_NAME)
 
-    state_db = daemon_base.db_connect("STATE_DB")
+    state_db = daemon_base.db_connect("STATE_DB", use_tcp=False)
     state_port_tbl = swsscommon.Table(state_db, STATE_PORT_TABLE)
 
     # Wait for PortInitDone

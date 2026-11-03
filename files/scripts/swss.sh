@@ -52,8 +52,8 @@ function unlock_service_state_change()
 
 function check_warm_boot()
 {
-    SYSTEM_WARM_START=`$SONIC_DB_CLI STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
-    SERVICE_WARM_START=`$SONIC_DB_CLI STATE_DB hget "WARM_RESTART_ENABLE_TABLE|${SERVICE}" enable`
+    SYSTEM_WARM_START=`$SONIC_DB_CLI -s STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
+    SERVICE_WARM_START=`$SONIC_DB_CLI -s STATE_DB hget "WARM_RESTART_ENABLE_TABLE|${SERVICE}" enable`
     if [[ x"$SYSTEM_WARM_START" == x"true" ]] || [[ x"$SERVICE_WARM_START" == x"true" ]]; then
         WARM_BOOT="true"
     else
@@ -63,7 +63,7 @@ function check_warm_boot()
 
 function check_fast_boot()
 {
-    SYSTEM_FAST_REBOOT=`$SONIC_DB_CLI STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    SYSTEM_FAST_REBOOT=`$SONIC_DB_CLI -s STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
     if [[ x"${SYSTEM_FAST_REBOOT}" == x"true" ]]; then
         FAST_BOOT="true"
     else
@@ -74,7 +74,7 @@ function check_fast_boot()
 function validate_restore_count()
 {
     if [[ x"$WARM_BOOT" == x"true" ]]; then
-        RESTORE_COUNT=`$SONIC_DB_CLI STATE_DB hget "WARM_RESTART_TABLE|orchagent" restore_count`
+        RESTORE_COUNT=`$SONIC_DB_CLI -s STATE_DB hget "WARM_RESTART_TABLE|orchagent" restore_count`
         # We have to make sure db data has not been flushed.
         if [[ -z "$RESTORE_COUNT" ]]; then
             WARM_BOOT="false"
@@ -85,12 +85,12 @@ function validate_restore_count()
 function wait_for_database_service()
 {
     # Wait for redis server start before database clean
-    until [[ $($SONIC_DB_CLI PING | grep -c PONG) -gt 0 ]]; do
+    until [[ $($SONIC_DB_CLI -s PING | grep -c PONG) -gt 0 ]]; do
       sleep 1;
     done
 
     # Wait for configDB initialization
-    until [[ $($SONIC_DB_CLI CONFIG_DB GET "CONFIG_DB_INITIALIZED") -eq 1 ]];
+    until [[ $($SONIC_DB_CLI -s CONFIG_DB GET "CONFIG_DB_INITIALIZED") -eq 1 ]];
         do sleep 1;
     done
 }
@@ -100,7 +100,7 @@ function wait_for_database_service()
 # $2 the string of a list of table prefixes
 function clean_up_tables()
 {
-    $SONIC_DB_CLI $1 EVAL "
+    $SONIC_DB_CLI -s $1 EVAL "
     local tables = {$2}
     for i = 1, table.getn(tables) do
         local matches = redis.call('KEYS', tables[i])
@@ -242,8 +242,8 @@ function delete_system_lag_entries() {
 function clean_up_chassis_db_tables()
 {
 
-    switch_type=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'switch_type'`
-    platform=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'platform'`
+    switch_type=`$SONIC_DB_CLI -s CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'switch_type'`
+    platform=`$SONIC_DB_CLI -s CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'platform'`
 
     # Run clean up only in swss running for voq switches
     if is_chassis_supervisor || [[ $switch_type != 'voq' ]]; then
@@ -260,16 +260,16 @@ function clean_up_chassis_db_tables()
         sleep 1
     done
 
-    lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+    lc=`$SONIC_DB_CLI -s CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
     until [[ -n "${lc}" ]]; do
-        lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+        lc=`$SONIC_DB_CLI -s CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
         sleep 1
     done
     debug "Chassis db clean up for ${SERVICE}$DEV. hostname=$lc"
 
-    asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+    asic=`$SONIC_DB_CLI -s CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
     until [[ -n "${asic}" ]]; do
-        asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+        asic=`$SONIC_DB_CLI -s CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
         sleep 1
     done
     debug "Chassis db clean up for ${SERVICE}$DEV. asic=$asic"
@@ -321,7 +321,7 @@ is_feature_enabled()
 {
     s=$1
     service=${s%@*}
-    state=$(sonic-db-cli CONFIG_DB hget "FEATURE|${service}" "state")
+    state=$(sonic-db-cli -s CONFIG_DB hget "FEATURE|${service}" "state")
     if [[ $state == "enabled" ]]; then
         echo "true"
     else
@@ -428,19 +428,19 @@ start() {
     # Don't flush DB during warm boot
     if [[ x"$WARM_BOOT" != x"true" ]]; then
         debug "Flushing APP, ASIC, COUNTER, CONFIG, and partial STATE databases ..."
-        $SONIC_DB_CLI APPL_DB FLUSHDB
-        $SONIC_DB_CLI ASIC_DB FLUSHDB
-        $SONIC_DB_CLI COUNTERS_DB FLUSHDB
-        $SONIC_DB_CLI FLEX_COUNTER_DB FLUSHDB
-        $SONIC_DB_CLI GB_ASIC_DB FLUSHDB
-        $SONIC_DB_CLI GB_COUNTERS_DB FLUSHDB
-        $SONIC_DB_CLI RESTAPI_DB FLUSHDB
+        $SONIC_DB_CLI -s APPL_DB FLUSHDB
+        $SONIC_DB_CLI -s ASIC_DB FLUSHDB
+        $SONIC_DB_CLI -s COUNTERS_DB FLUSHDB
+        $SONIC_DB_CLI -s FLEX_COUNTER_DB FLUSHDB
+        $SONIC_DB_CLI -s GB_ASIC_DB FLUSHDB
+        $SONIC_DB_CLI -s GB_COUNTERS_DB FLUSHDB
+        $SONIC_DB_CLI -s RESTAPI_DB FLUSHDB
         clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*', 'HIGH_FREQUENCY_TELEMETRY_SESSION_TABLE*', 'PROCESS_HEALTH*', 'COPP_TRAP_TABLE*' "
-        $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
+        $SONIC_DB_CLI -s APPL_STATE_DB FLUSHDB
         # Flush DPU remote databases (DPU device only)
         # Only run if this is a DPU device (type=SmartSwitchDPU or switch_type=dpu)
-        DEVICE_TYPE=`$SONIC_DB_CLI CONFIG_DB hget "DEVICE_METADATA|localhost" type`
-        SWITCH_TYPE=`$SONIC_DB_CLI CONFIG_DB hget "DEVICE_METADATA|localhost" switch_type`
+        DEVICE_TYPE=`$SONIC_DB_CLI -s CONFIG_DB hget "DEVICE_METADATA|localhost" type`
+        SWITCH_TYPE=`$SONIC_DB_CLI -s CONFIG_DB hget "DEVICE_METADATA|localhost" switch_type`
         if [[ x"${DEVICE_TYPE}" == x"SmartSwitchDPU" || x"${SWITCH_TYPE}" == x"dpu" ]]; then
             # Check if DPU_APPL_DB remote database is reachable
             if $SONIC_DB_CLI DPU_APPL_DB PING >/dev/null 2>&1; then
@@ -562,7 +562,7 @@ stop() {
     if [[ x"$WARM_BOOT" != x"true" ]] && [[ x"$FAST_BOOT" != x"true" ]]; then
         /usr/bin/${SERVICE}.sh stop $DEV
         debug "Stopped ${SERVICE}$DEV service..."
-        $SONIC_DB_CLI APPL_DB DEL PORT_TABLE:PortInitDone
+        $SONIC_DB_CLI -s APPL_DB DEL PORT_TABLE:PortInitDone
         debug "Cleared PortInitDone from APPL_DB for ${SERVICE}$DEV..."
         clean_up_tables STATE_DB "'FABRIC_PORT_TABLE*'"
         debug "Cleared FABRIC_PORT_TABLE from STATE_DB for ${SERVICE}$DEV..."
@@ -577,7 +577,7 @@ stop() {
     # be restarted.
     if [[ x"$FAST_BOOT" != x"true" ]]; then
         debug "Clearing FAST_RESTART_ENABLE_TABLE flag..."
-        $SONIC_DB_CLI STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false"
+        $SONIC_DB_CLI -s STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false"
     fi
     # Unlock has to happen before reaching out to peer service
     unlock_service_state_change
@@ -596,7 +596,7 @@ function check_peer_gbsyncd()
 
 function check_macsec()
 {
-    MACSEC_STATE=`$SONIC_DB_CLI CONFIG_DB hget 'FEATURE|macsec' state`
+    MACSEC_STATE=`$SONIC_DB_CLI -s CONFIG_DB hget 'FEATURE|macsec' state`
 
     if [[ ${MACSEC_STATE} == 'enabled' ]]; then
         if [ "$DEV" ]; then
@@ -668,8 +668,8 @@ else
     SONIC_DB_CLI="sonic-db-cli"
 fi
 
-PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
-HWSKU=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' hwsku`
+PLATFORM=`$SONIC_DB_CLI -s CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
+HWSKU=`$SONIC_DB_CLI -s CONFIG_DB hget 'DEVICE_METADATA|localhost' hwsku`
 
 check_peer_gbsyncd
 check_macsec
