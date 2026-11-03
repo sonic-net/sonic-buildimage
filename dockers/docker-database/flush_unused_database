@@ -5,7 +5,7 @@ import time
 import syslog
 
 while(True):
-    output = subprocess.Popen(['sonic-db-cli', 'PING'], stdout=subprocess.PIPE, text=True).communicate()[0]
+    output = subprocess.Popen(['sonic-db-cli', '-s', 'PING'], stdout=subprocess.PIPE, text=True).communicate()[0]
     if 'PONG' in output:
         break
     time.sleep(1)

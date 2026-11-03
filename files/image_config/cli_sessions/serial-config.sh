@@ -5,7 +5,7 @@ sonic-cfggen -d -t /usr/share/sonic/templates/sysrq-sysctl.conf.j2 > /etc/sysctl
 
 SYSRQ_CONF=0
 # update sysrq for current boot.
-sysrq_conf=`sonic-db-cli CONFIG_DB HGET "SERIAL_CONSOLE|POLICIES" sysrq_capabilities`
+sysrq_conf=`sonic-db-cli -s CONFIG_DB HGET "SERIAL_CONSOLE|POLICIES" sysrq_capabilities`
 if [ ${sysrq_conf} = "enabled" ]; then
         SYSRQ_CONF=1
 fi

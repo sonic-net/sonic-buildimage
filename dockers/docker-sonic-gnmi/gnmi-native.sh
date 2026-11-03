@@ -28,8 +28,8 @@ X509=$(jq -r '.x509 // empty' <<< "$TELEMETRY_VARS")
 GNMI=$(jq -r '.gnmi // empty' <<< "$TELEMETRY_VARS")
 CERTS=$(jq -r '.certs // empty' <<< "$TELEMETRY_VARS")
 
-DEVICE_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "type")
-SWITCH_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type")
+DEVICE_TYPE=$(sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "type")
+SWITCH_TYPE=$(sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type")
 IS_SMART_SWITCH_DPU=false
 if [[ "$DEVICE_TYPE" == "SmartSwitchDPU" || "$SWITCH_TYPE" == "dpu" ]]; then
     IS_SMART_SWITCH_DPU=true
@@ -132,7 +132,7 @@ else
 fi
 
 # Enable ZMQ for SmartSwitch
-LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
+LOCALHOST_SUBTYPE=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024)) -max_send_msg_size=$((32*1024*1024))"
 fi
@@ -147,7 +147,7 @@ if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
 fi
 
 # Add VRF parameter when mgmt-vrf enabled
-MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
+MGMT_VRF_ENABLED=`sonic-db-cli -s CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
 if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
     TELEMETRY_ARGS+=" --vrf mgmt"
 fi

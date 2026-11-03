@@ -10,3 +10,6 @@ $(SONIC_MGMT_COMMON)_DEP_FILES   := $(DEP_FILES)
 $(SONIC_MGMT_COMMON)_SMDEP_FILES := $(SMDEP_FILES)
 $(SONIC_MGMT_COMMON)_SMDEP_PATHS := $(SPATH)
 
+# Hash sibling Go sources as workspace inputs; .smdep paths are module-relative.
+$(SONIC_MGMT_COMMON)_DEP_FILES += $(patsubst $(CURDIR)/%,%,$(addprefix $(SRC_PATH)/sonic-swss-common/,$(shell cd $(SRC_PATH)/sonic-swss-common && git ls-files go.mod goext/redisconn)))
+$(SONIC_MGMT_COMMON)_SMDEP_PATHS += $(SRC_PATH)/sonic-swss-common

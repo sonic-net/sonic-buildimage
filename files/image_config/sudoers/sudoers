@@ -47,6 +47,8 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/local/bin/lldpshow, \
                                  /usr/local/bin/pcieutil *, \
                                  /usr/local/bin/psuutil *, \
+                                 /usr/local/bin/show orchagent tasks, \
+                                 /usr/local/bin/show ^orchagent tasks --namespace asic[0-9]+$, \
                                  /usr/local/bin/sonic-installer list, \
                                  /usr/local/bin/sfputil show *, \
                                  /usr/sbin/dmidecode -s system-product-name
