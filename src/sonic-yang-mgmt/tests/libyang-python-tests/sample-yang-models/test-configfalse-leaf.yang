@@ -1,0 +1,18 @@
+module test-configfalse-leaf {
+    namespace "http://github.com/Azure/test-configfalse-leaf";
+    prefix tconl;
+
+    revision 2026-11-03 {
+        description "Test YANG model with config-false top-level container only contains leaf node";
+    }
+
+    container test-configfalse-leaf {
+        config false;
+        leaf name {
+            type string;
+        }
+        leaf value {
+            type string;
+        }
+    }
+}

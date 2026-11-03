@@ -183,6 +183,9 @@ class Test_SonicYang_ConfigFalse(object):
     CF_CONFIGFALSE = 'test-configfalse-only'
     CF_NORMAL = 'test-normal-config'
     CF_OVERLAP = 'test-overlap-configfalse'
+    CF_LEAF = 'test-configfalse-leaf'
+    CF_LIST = 'test-configfalse-list'
+    CF_COMBINED = 'test-cfgfalse-container-cfg-list'
 
     @pytest.fixture(autouse=True, scope='class')
     def yang_s(self):
@@ -216,6 +219,19 @@ class Test_SonicYang_ConfigFalse(object):
         assert self.CF_OVERLAP in yang_s.configFalseModules
         assert 'TEST_OVERLAP_CONFIGFALSE' not in yang_s.confDbYangMap
 
+    def test_configfalse_leaf(self, yang_s):
+        """top container with config-false only contains leaf node -> module in configFalseModules."""
+        assert self.CF_LEAF in yang_s.configFalseModules
+
+    def test_configfalse_list(self, yang_s):
+        """top container with config-false only contains list node -> module in configFalseModules."""
+        assert self.CF_LIST in yang_s.configFalseModules
+
+    def test_combined_config(self, yang_s):
+        """top container with both config-true and config-false children -> module not in configFalseModules, not in confDbYangMap."""
+        assert self.CF_COMBINED not in yang_s.configFalseModules
+        assert 'TEST_NONCONFIG' not in yang_s.confDbYangMap
+
     def test_validate_config_false_mechanism(self, yang_s):
         """
         Validates the non-config module filter formula
@@ -225,7 +241,7 @@ class Test_SonicYang_ConfigFalse(object):
         yangFilesSet = set(yang_s.yangFiles)
         BASE_NON_CONFIG_MODULES = {
             'test-port', 'test-acl', 'test-vlan', 'test-interface', 'test-head',
-            'test-portchannel', 'test-grouping', 'test-yang-structure',
+            'test-portchannel', 'test-grouping', 'test-yang-structure', 'test-cfgfalse-container-cfg-list',
         }
 
         # ConfigModules: test-normal-config, test-configfalse-only.yang
