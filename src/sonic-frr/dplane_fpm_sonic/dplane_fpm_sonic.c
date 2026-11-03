@@ -1112,17 +1112,45 @@ static bool has_srv6_localsid_nexthop(struct zebra_dplane_ctx *ctx)
 /*
  * fpmsyncd reads an EVPN route's VNI and router MAC only from inline route
  * nexthops, and zebra's nexthop group messages carry no VxLAN encap, so EVPN
- * routes go out inline with groups on too.
+ * routes go out inline with groups on too. Only the top-level nexthops of a
+ * next hop entry count: they are fixed for its life, unlike resolved ones.
  */
-static bool nhg_has_evpn_nexthop(const struct nexthop_group *nhg)
+static bool nexthops_have_evpn(const struct nexthop *nexthop)
 {
-	struct nexthop *nexthop;
-
-	for (ALL_NEXTHOPS_PTR(nhg, nexthop))
+	for (; nexthop; nexthop = nexthop->next)
 		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN))
 			return true;
 
 	return false;
+}
+
+/*
+ * A route is judged by the entry it names. On a single recursive nexthop that
+ * is the entry the nexthop resolves to (zebra_nhg_resolve()), whose top-level
+ * nexthops are the resolved ones.
+ */
+static bool route_has_evpn_nexthop(struct zebra_dplane_ctx *ctx)
+{
+	const struct nexthop *nexthop = dplane_ctx_get_ng(ctx)->nexthop;
+
+	if (dplane_ctx_get_nhe_id(ctx) != dplane_ctx_get_nhg_id(ctx))
+		while (nexthop && !nexthop->next &&
+		       CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+			nexthop = nexthop->resolved;
+
+	return nexthops_have_evpn(nexthop);
+}
+
+/*
+ * Whether zebra made this next hop entry a group, as zebra_nhe_find() does.
+ * Unlike the group's member count, this does not change over its life.
+ */
+static bool nhe_is_group(struct zebra_dplane_ctx *ctx)
+{
+	const struct nexthop *nexthop = dplane_ctx_get_nhe_ng(ctx)->nexthop;
+
+	return dplane_ctx_get_nhe_id(ctx) >= ZEBRA_NHG_PROTO_LOWER ||
+	       (nexthop && nexthop->next);
 }
 
 /**
@@ -2685,7 +2713,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	if (use_nhg &&
 	    (op == DPLANE_OP_ROUTE_INSTALL || op == DPLANE_OP_ROUTE_UPDATE ||
 	     op == DPLANE_OP_ROUTE_DELETE) &&
-	    nhg_has_evpn_nexthop(dplane_ctx_get_ng(ctx)))
+	    route_has_evpn_nexthop(ctx))
 		use_nhg = false;
 
 	/*
@@ -2697,8 +2725,8 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	 */
 	if ((op == DPLANE_OP_NH_INSTALL || op == DPLANE_OP_NH_UPDATE ||
 	     op == DPLANE_OP_NH_DELETE) &&
-	    dplane_ctx_get_nhe_nh_grp_count(ctx) &&
-	    nhg_has_evpn_nexthop(dplane_ctx_get_nhe_ng(ctx)))
+	    nhe_is_group(ctx) &&
+	    nexthops_have_evpn(dplane_ctx_get_nhe_ng(ctx)->nexthop))
 		return 0;
 
 	nl_buf_len = 0;
