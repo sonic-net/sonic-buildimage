@@ -65,7 +65,7 @@ stages:
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y BUILD_WITH_BAZEL_WHEN_AVAILABLE=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y BUILD_WITH_BAZEL_WHEN_AVAILABLE=y SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=y SONIC_SLAVE_APPARMOR_PROFILE=sonic-bazel-builder ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
       - name: vs
         variables:
