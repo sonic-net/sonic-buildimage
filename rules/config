@@ -68,6 +68,10 @@ DEFAULT_BUILD_LOG_TIMESTAMP = none
 # already be loaded on the agent. Custom profiles are not supported with DinD.
 SONIC_SLAVE_APPARMOR_PROFILE ?= unconfined
 
+# Remove Docker's masked/read-only system paths for nested Linux sandboxes.
+# This relaxes /proc and /sys protections; opt in only for approved native builds.
+SONIC_SLAVE_UNCONFINED_SYSTEM_PATHS ?= n
+
 # SONIC_CONFIG_ENABLE_COLORS - enable colored output in build system.
 # Comment next line to disable:
 # SONIC_CONFIG_ENABLE_COLORS = y

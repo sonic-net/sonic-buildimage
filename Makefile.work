@@ -443,6 +443,11 @@ endif
 # When using native dockerd (DooD), we don't need --privileged for Docker-in-Docker.
 # Use specific capabilities instead for better security.
 # When using DinD (default), --privileged is required for the nested dockerd.
+ifneq ($(SONIC_SLAVE_UNCONFINED_SYSTEM_PATHS),y)
+ifneq ($(SONIC_SLAVE_UNCONFINED_SYSTEM_PATHS),n)
+$(error SONIC_SLAVE_UNCONFINED_SYSTEM_PATHS must be y or n)
+endif
+endif
 ifeq ($(strip $(SONIC_SLAVE_APPARMOR_PROFILE)),)
 $(error SONIC_SLAVE_APPARMOR_PROFILE must not be empty)
 endif
@@ -450,7 +455,13 @@ ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
 DOCKER_PRIVMODE := --cap-add SYS_ADMIN --cap-add SYS_CHROOT --cap-add NET_ADMIN \
     --cap-add MKNOD --cap-add DAC_OVERRIDE \
     --security-opt apparmor=$(SONIC_SLAVE_APPARMOR_PROFILE) --security-opt seccomp=unconfined
+ifeq ($(SONIC_SLAVE_UNCONFINED_SYSTEM_PATHS),y)
+DOCKER_PRIVMODE += --security-opt systempaths=unconfined
+endif
 else
+ifeq ($(SONIC_SLAVE_UNCONFINED_SYSTEM_PATHS),y)
+$(error SONIC_SLAVE_UNCONFINED_SYSTEM_PATHS=y requires SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=y)
+endif
 ifneq ($(SONIC_SLAVE_APPARMOR_PROFILE),unconfined)
 $(error A custom SONIC_SLAVE_APPARMOR_PROFILE requires SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=y)
 endif
