@@ -27,6 +27,10 @@ actually do:
     or a non-zero startsecs -> longrun, startsecs=0 -> oneshot (a daemon must
     never become a oneshot or s6-rc bring-up would block forever);
   * user=<u> -> s6-setuidgid <u>;
+  * startsecs/startretries (supervisord defaults 1 / 3): every longrun gets a `supervisor-meta`
+    file for the supervisorctl shim; a non-critical longrun with startsecs > 0 also stamps its
+    spawn time in `run` and counts too-quick exits in `finish` (BACKOFF with n s waits, FATAL
+    and left down after more than startretries in a row; see finish_script);
   * each critical longrun gets a finish script that halts the container so
     systemd restarts it (mirrors supervisor-proc-exit-listener); critical names
     with no matching program (e.g. radv's radvd) are ignored, as service_checker
@@ -44,6 +48,11 @@ HALT_CMD = "/run/s6/basedir/bin/halt"
 # finish script can tell a requested stop from a crash (supervisord reports requested
 # stops as STOPPED, which supervisor-proc-exit-listener ignores).
 EXPECTED_DIR = "/run/s6-expected"
+# Per-service runtime state (tmpfs): `started` (/proc/uptime at the last spawn, written by the
+# run script), `backoff` (consecutive too-quick exits), `state` (backoff|fatal|exited|stopped,
+# written by finish / the supervisorctl shim; keep in sync with supervisorctl.SUPER_DIR) and
+# `stop-request` (supervisorctl is stopping the service).
+SUPER_DIR = "/run/s6-super"
 DEFAULT_BASE_CONF = "/etc/supervisor/supervisord.conf"
 DEFAULT_CONFD_GLOB = "/etc/supervisor/conf.d/*.conf"
 DEFAULT_CRITICAL = "/etc/supervisor/critical_processes"
@@ -301,21 +310,127 @@ def unsupported_settings(pname, attrs):
 # supervisord program keys the converter maps to s6 (anything else is ignored; see IGNORED_KEYS).
 HANDLED_KEYS = {"command", "autostart", "autorestart", "exitcodes", "user", "environment",
                 "dependent_startup", "dependent_startup_wait_for", "stdout_syslog",
-                "stopsignal", "stopwaitsecs"}
+                "stopsignal", "stopwaitsecs", "startsecs", "startretries"}
 # Known-ignored keys, deliberately: s6 has no equivalent, or it is irrelevant to the program.
 #   priority          ordering comes from the dependent_startup edges
-#   startsecs/startretries  s6 restarts a longrun unconditionally (autorestart semantics only)
 #   stdout_logfile/stderr_logfile  KNOWN DEVIATION: log files are never written. SONiC renders
 #                     NONE and uses stdout_syslog (handled); a real path would be silently
 #                     dropped (output goes to syslog if stdout_syslog is on, else the console)
 #   stderr_syslog     stderr is always folded into stdout when stdout_syslog is on
 #   stdout_capture_maxbytes  no capture mode
-IGNORED_KEYS = {"priority", "startsecs", "startretries", "stdout_logfile", "stderr_logfile",
+IGNORED_KEYS = {"priority", "stdout_logfile", "stderr_logfile",
                 "stderr_syslog", "stdout_capture_maxbytes"}
 
 
 def _execline_quote(arg):
     return '"' + arg.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+# supervisord defaults for a program that does not set the key
+DEFAULT_STARTSECS = 1
+DEFAULT_STARTRETRIES = 3
+
+
+def _int(v, default):
+    """Tolerant non-negative integer (supervisord ints; '1.0'/junk/negative -> default)."""
+    try:
+        n = int(float(str(v).strip()))
+    except (TypeError, ValueError):
+        return default
+    return n if n >= 0 else default
+
+
+def exit_codes(raw):
+    """supervisord exitcodes= (default "0") -> list of code strings."""
+    codes = [c.strip() for c in str(raw).replace(",", " ").split() if c.strip()]
+    return codes or ["0"]
+
+
+def meta_text(attrs, critical):
+    """Contents of the per-service `supervisor-meta` file the supervisorctl shim reads
+    (copied into /run/service/<svc>/ by s6-rc-compile like `supervisor-name`)."""
+    return ("startsecs=%d\nstartretries=%d\nstopwaitsecs=%d\nautorestart=%s\nexitcodes=%s\ncritical=%d\n" % (
+        _int(attrs.get("startsecs"), DEFAULT_STARTSECS),
+        _int(attrs.get("startretries"), DEFAULT_STARTRETRIES),
+        _int(attrs.get("stopwaitsecs"), 10),
+        _autorestart(attrs.get("autorestart")),
+        ",".join(exit_codes(attrs.get("exitcodes", "0"))),
+        1 if critical else 0))
+
+
+def start_stamp(name):
+    """execline prefix for `run`: record /proc/uptime at every spawn, so finish can tell a
+    too-quick exit (monotonic; the wall clock can step and is not trusted)."""
+    sh = ("mkdir -p %s/%s; read u _ < /proc/uptime; echo $u > %s/%s/started"
+          % (SUPER_DIR, name, SUPER_DIR, name))
+    return "foreground { /bin/sh -c %s } " % _execline_quote(sh)
+
+
+_FINISH_ACCOUNTING = """#!/bin/sh
+# $1 exit code (256 = killed by a signal)  $2 signal  $3 service  $4 pgid
+# supervisord startsecs/startretries: an exit within startsecs of the spawn is "too quick"
+# (BACKOFF, retried after n s), more than startretries of them in a row is FATAL (left down).
+N=@NAME@; D=@SUPER@/$N; SS=@SS@; RT=@RT@; CODES="@CODES@"
+mkdir -p "$D"
+if [ -e @EXPECTED@/$N ] || [ -e "$D/stop-request" ]; then     # requested by supervisorctl: not a crash
+    rm -f @EXPECTED@/$N "$D/backoff"
+    echo stopped > "$D/state"
+    exit 0
+fi
+cs() { _u=$1; _f=${_u#*.}; _f=${_f#0}; echo $(( ${_u%.*} * 100 + ${_f:-0} )); }
+t0=0; [ -r "$D/started" ] && read t0 _ < "$D/started"
+read u _ < /proc/uptime
+run=$(( $(cs "$u") - $(cs "$t0") ))
+if [ "$run" -ge 0 ] && [ "$run" -lt $((SS * 100)) ]; then
+    n=0; [ -r "$D/backoff" ] && read n < "$D/backoff"
+    n=$((n + 1)); echo $n > "$D/backoff"
+    if [ "$n" -gt "$RT" ]; then
+        echo fatal > "$D/state"
+        logger -t s6-super "$N exited too quickly $n times (startretries=$RT); giving up (FATAL)"
+        exit 125
+    fi
+    echo backoff > "$D/state"
+    # supervisord waits n s before retry n; s6 itself adds 1 s, so wait n-1 s (stop interrupts it)
+    i=0
+    while [ "$i" -lt $(( (n - 1) * 10 )) ] && [ ! -e "$D/stop-request" ] && [ ! -e @EXPECTED@/$N ]; do
+        sleep 0.1; i=$((i + 1))
+    done
+    exit 0
+fi
+rm -f "$D/backoff"
+echo exited > "$D/state"
+@TAIL@"""
+
+_FINISH_TAIL = {
+    "true": "exit 0\n",                      # restart unconditionally
+    "false": "exit 125\n",                   # run once: leave it down
+    "unexpected": 'for c in $CODES; do [ "$1" = "$c" ] && exit 125; done\nexit 0\n',
+}
+
+
+def finish_script(name, startsecs, startretries, mode, codes):
+    """Finish script of a NON-critical longrun, or None for "no finish" (restart always).
+
+    With startsecs == 0 supervisord never counts an exit as too quick, so the plain
+    autorestart script is emitted (unchanged from before startsecs support). With
+    startsecs > 0 the retry accounting wraps the same autorestart decision.
+    """
+    if startsecs <= 0:
+        if mode == "unexpected":
+            # exit codes listed in exitcodes (default "0") are expected: exit 125 tells
+            # s6-supervise to leave the service down instead of restarting it.
+            cond = " || ".join('[ "$1" = "%s" ]' % c for c in codes)
+            return ("#!/bin/sh\nif " + cond + "; then\n    exit 125\nfi\nexit 0\n")
+        if mode == "true":
+            return None           # let s6-supervise restart it unconditionally
+        # autorestart=false: run once. finish exit 125 brings the service down (no tight loop).
+        return "#!/bin/sh\nexit 125\n"
+    txt = _FINISH_ACCOUNTING
+    for k, v in (("@NAME@", shlex.quote(name)), ("@SUPER@", SUPER_DIR), ("@EXPECTED@", EXPECTED_DIR),
+                 ("@SS@", str(startsecs)), ("@RT@", str(startretries)), ("@CODES@", " ".join(codes)),
+                 ("@TAIL@", _FINISH_TAIL[mode])):
+        txt = txt.replace(k, v)
+    return txt
+
 
 
 def _command_line(argv, user, env_pairs=None, syslog_tag=None):
@@ -379,9 +494,20 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
                    str(stop_signal(progs[pname].get("stopsignal", "TERM"))) + "\n")
             _write(os.path.join(sd, "timeout-kill"),
                    str(stop_wait_ms(progs[pname].get("stopwaitsecs", "10"))) + "\n")
-            _write(os.path.join(sd, "run"),
-                   "#!/command/execlineb -P\n" + cmd + "\n", 0o755)
             autorestart = _autorestart(progs[pname].get("autorestart"))
+            startsecs = _int(progs[pname].get("startsecs"), DEFAULT_STARTSECS)
+            startretries = _int(progs[pname].get("startretries"), DEFAULT_STARTRETRIES)
+            # retry accounting for non-critical programs only: a critical process that dies
+            # halts the container whatever its age, so there is nothing to count.
+            accounting = pname not in critical and startsecs > 0
+            _write(os.path.join(sd, "run"),
+                   "#!/command/execlineb -P\n" + (start_stamp(pname) if accounting else "") + cmd + "\n",
+                   0o755)
+            _write(os.path.join(sd, "supervisor-meta"), meta_text(progs[pname], pname in critical))
+            if accounting and startretries >= 5:
+                # the finish script sleeps up to (startretries - 1) s between retries; s6 kills a
+                # finish that runs longer than timeout-finish (default 5 s)
+                _write(os.path.join(sd, "timeout-finish"), "%d\n" % ((startretries + 2) * 1000))
             if pname in critical:
                 # critical process died -> halt container so systemd restarts it
                 # (mirrors supervisor-proc-exit-listener)
@@ -394,31 +520,11 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
                        'logger -t s6-super "critical process ' + pname +
                        ' exited (code=$1 signal=$2); halting container for restart"\n'
                        "exec " + HALT_CMD + "\n", 0o755)
-            elif autorestart == "unexpected":
-                # Only restart on exit codes NOT listed in exitcodes (default
-                # "0"), matching supervisord's autorestart=unexpected. finish
-                # is called as "finish $exit_code $signal"; exiting 125 tells
-                # s6-supervise to leave the service down instead of
-                # restarting it.
-                exitcodes = progs[pname].get("exitcodes", "0")
-                codes = [c.strip() for c in exitcodes.replace(",", " ").split() if c.strip()]
-                if not codes:
-                    codes = ["0"]
-                cond = " || ".join('[ "$1" = "%s" ]' % c for c in codes)
-                _write(os.path.join(sd, "finish"),
-                       "#!/bin/sh\n"
-                       "if " + cond + "; then\n"
-                       "    exit 125\n"
-                       "fi\n"
-                       "exit 0\n", 0o755)
-            elif autorestart == "true":
-                pass  # let s6-supervise restart it unconditionally (default longrun behaviour)
             else:
-                # autorestart=false, non-critical: run once / do not restart.
-                # finish exit code 125 tells s6-supervise to bring the service
-                # down instead of restarting (no tight-loop), matching supervisord.
-                _write(os.path.join(sd, "finish"),
-                       "#!/bin/sh\nexit 125\n", 0o755)
+                fin = finish_script(pname, startsecs, startretries, autorestart,
+                                    exit_codes(progs[pname].get("exitcodes", "0")))
+                if fin is not None:
+                    _write(os.path.join(sd, "finish"), fin, 0o755)
         else:  # oneshot: single-line execline 'up', no shebang
             _write(os.path.join(sd, "up"), cmd + "\n", 0o755)
         for tgt in deps.get(pname, []):

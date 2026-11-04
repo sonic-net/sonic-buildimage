@@ -157,7 +157,7 @@ def _write_state(svc, value):
 
 def _clear_run_state(svc):
     """Forget BACKOFF/FATAL/stopped accounting (supervisor resets it on a (re)start)."""
-    for n in ("state", "backoff"):
+    for n in ("state", "backoff", "stop-request"):
         try:
             os.remove(_super_file(svc, n))
         except OSError:
@@ -348,6 +348,8 @@ def stop_one(name, svc, path):
         # container. Only when a process is alive: a marker left for a service that is not
         # running would make the next *real* crash look like a requested stop.
         _touch(os.path.join(EXPECTED_DIR, svc))
+    # the finish script's BACKOFF wait polls this, so stopping a backing-off program is prompt
+    _touch(_super_file(svc, "stop-request"))
     try:
         r = subprocess.run([S6_SVC, "-d", "-wD", "-T", str(_stop_timeout_ms(path, meta)), path],
                            timeout=_stop_timeout_ms(path, meta) / 1000.0 + 5)
@@ -355,6 +357,7 @@ def stop_one(name, svc, path):
     except Exception:
         ok = False
     _rm(os.path.join(EXPECTED_DIR, svc))      # normally consumed by finish already
+    _rm(_super_file(svc, "stop-request"))
     if not ok:
         print("%s: ERROR (abnormal termination)" % name)
         return RC_FAILED
