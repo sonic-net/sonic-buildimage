@@ -154,17 +154,10 @@ class Elsfp(_BaillyEepromAccessMixin, OptoeElsfpBase):
         return self._eeprom_path
 
     def get_lpmode(self) -> bool:
-        api = self.get_api()
-        status = api.get_rlm_status()
-        if not isinstance(status, dict):
+        lpmode = self.get_api().get_lpmode()
+        if not isinstance(lpmode, bool):
             raise OSError("ELS low-power status is unavailable")
-        power_mode = status.get("els_module_low_power_state")
-        power_codes = api.xcvr_eeprom.mem_map.codes.POWER_MODE
-        if power_mode == power_codes[1]:
-            return True
-        if power_mode == power_codes[0]:
-            return False
-        raise OSError("ELS low-power status is unavailable: {!r}".format(power_mode))
+        return lpmode
 
     def get_name(self):
         return "ELS{}".format(self.els_id)

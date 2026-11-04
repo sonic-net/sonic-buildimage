@@ -883,12 +883,10 @@ with open(sys.argv[1], 'rb') as fd:
         oe_api.get_lpmode.return_value = None
         with self.assertRaises(OSError):
             oe.get_lpmode()
-        els_api.xcvr_eeprom = MagicMock()
-        els_api.xcvr_eeprom.mem_map.codes.POWER_MODE = {0: "High Power Mode", 1: "Low Power Mode"}
-        for value, expected in (("High Power Mode", False), ("Low Power Mode", True)):
-            els_api.get_rlm_status.return_value = {"els_module_low_power_state": value}
-            self.assertIs(els.get_lpmode(), expected)
-        els_api.get_rlm_status.return_value = None
+        for value in (False, True):
+            els_api.get_lpmode.return_value = value
+            self.assertIs(els.get_lpmode(), value)
+        els_api.get_lpmode.return_value = None
         with self.assertRaises(OSError):
             els.get_lpmode()
 
