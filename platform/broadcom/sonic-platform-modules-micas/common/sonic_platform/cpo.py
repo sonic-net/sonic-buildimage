@@ -130,12 +130,6 @@ class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
             raise OSError("OE low-power status is unavailable")
         return lpmode
 
-    def set_lpmode(self, lpmode):
-        return self.get_api().set_lpmode(lpmode)
-
-    def reset(self):
-        return self.get_api().reset()
-
     def get_name(self):
         return "OE{}".format(self.oe_id)
 
@@ -240,15 +234,6 @@ class Cpo(CpoBase, SfpOptoeBase):
 
     def get_reset_status(self):
         return False
-
-    def reset(self):
-        return SfpOptoeBase.reset(self)
-
-    def get_lpmode(self):
-        return SfpOptoeBase.get_lpmode(self)
-
-    def set_lpmode(self, lpmode):
-        return SfpOptoeBase.set_lpmode(self, lpmode)
 
     def get_tx_disable(self):
         return SfpOptoeBase.get_tx_disable(self)
