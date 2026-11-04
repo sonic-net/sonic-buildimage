@@ -22,11 +22,19 @@ exit closes the last writer and returns EOF, and a live daemon permanently
 stuck in initialization retains the writer and remains the accepted
 external-recovery case.
 ---
- teamd/teamd.c | 94 ++++++++++++++++++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 82 insertions(+), 12 deletions(-)
+ teamd/teamd.c | 104 +++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 92 insertions(+), 12 deletions(-)
 --- a/teamd/teamd.c
 +++ b/teamd/teamd.c
-@@ -1505,8 +1505,55 @@
+@@ -25,6 +25,7 @@
+ #include <ctype.h>
+ #include <getopt.h>
+ #include <errno.h>
++#include <fcntl.h>
+ #include <signal.h>
+ #include <stdbool.h>
+ #include <inttypes.h>
+@@ -1505,8 +1506,69 @@
  	team_free(ctx->th);
  }
  
@@ -37,6 +45,22 @@ external-recovery case.
 +		close(*fd);
 +		*fd = -1;
 +	}
++}
++
++static int teamd_move_fd_up(int *fd)
++{
++	int new_fd;
++
++	if (*fd > STDERR_FILENO)
++		return 0;
++
++	new_fd = fcntl(*fd, F_DUPFD_CLOEXEC, STDERR_FILENO + 1);
++	if (new_fd < 0)
++		return -errno;
++
++	teamd_close_fd(fd);
++	*fd = new_fd;
++	return 0;
 +}
 +
 +static void teamd_startup_status_send(int *fd, int status)
@@ -77,36 +101,29 @@ external-recovery case.
  static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  {
 +	int startup_pipe[2] = { -1, -1 };
-+	int startup_pipe_reserve[4];
-+	int startup_pipe_reserve_count = 0;
  	pid_t pid;
  	int err = 0;
  
-@@ -1532,22 +1579,44 @@
+@@ -1532,22 +1594,39 @@
  	}
  
  	if (ctx->daemonize) {
 -		daemon_retval_init();
-+		for (;;) {
-+			if (pipe(startup_pipe) < 0) {
-+				err = -errno;
-+				while (startup_pipe_reserve_count)
-+					teamd_close_fd(&startup_pipe_reserve[
-+						--startup_pipe_reserve_count]);
-+				teamd_log_err("Failed to create startup status pipe.");
-+				return err;
-+			}
-+			if (startup_pipe[0] > STDERR_FILENO)
-+				break;
-+
-+			startup_pipe_reserve[startup_pipe_reserve_count++] =
-+				startup_pipe[0];
-+			startup_pipe_reserve[startup_pipe_reserve_count++] =
-+				startup_pipe[1];
++		if (pipe(startup_pipe) < 0) {
++			err = -errno;
++			teamd_log_err("Failed to create startup status pipe.");
++			return err;
 +		}
-+		while (startup_pipe_reserve_count)
-+			teamd_close_fd(&startup_pipe_reserve[
-+				--startup_pipe_reserve_count]);
++
++		err = teamd_move_fd_up(&startup_pipe[0]);
++		if (!err)
++			err = teamd_move_fd_up(&startup_pipe[1]);
++		if (err) {
++			teamd_close_fd(&startup_pipe[0]);
++			teamd_close_fd(&startup_pipe[1]);
++			teamd_log_err("Failed to move startup status pipe.");
++			return err;
++		}
  
  		pid = daemon_fork();
  		if (pid < 0) {
@@ -133,7 +150,7 @@ external-recovery case.
  			}
  			if (ret > 0)
  				teamd_log_err("Daemon process failed.");
-@@ -1555,6 +1624,7 @@
+@@ -1555,6 +1634,7 @@
  		}
  
  	/* Child */
@@ -141,7 +158,7 @@ external-recovery case.
  	}
  
  	ctx->log_output = ctx->log_output ? : getenv("TEAM_LOG_OUTPUT");
-@@ -1567,21 +1637,21 @@
+@@ -1567,21 +1647,21 @@
  			daemon_log_use = DAEMON_LOG_SYSLOG;
  	}
  
@@ -167,7 +184,7 @@ external-recovery case.
  		err = -errno;
  		goto pid_file_remove;
  	}
-@@ -1589,12 +1659,12 @@
+@@ -1589,12 +1669,12 @@
  	err = teamd_init(ctx);
  	if (err) {
  		teamd_log_err("teamd_init() failed.");
