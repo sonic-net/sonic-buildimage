@@ -43,6 +43,7 @@ try:
     from .sed_mgmt import SedMgmt
     import re
     import select
+    import sys
     import threading
     import time
     from pathlib import Path
@@ -639,6 +640,19 @@ class Chassis(ChassisBase):
         self.sfp_wait_ready_and_initialize()
         return self._all_ports()
 
+    def _is_valid_port_index(self, index, port_kind):
+        """Whether (1-based) index <index> names a front panel port.
+
+        The base class bounds-checks the 0-based list position, so an index
+        of 0 would wrap to the last port and its error would quote a 0-based
+        range. Checking here keeps both in the caller's 1-based terms.
+        """
+        num_ports = self.get_num_ports()
+        if 1 <= index <= num_ports:
+            return True
+        sys.stderr.write("{} index {} out of range (1-{})\n".format(port_kind, index, num_ports))
+        return False
+
     def get_cpo(self, index):
         """
         Retrieves the CPO port represented by (1-based) index <index>
@@ -648,10 +662,12 @@ class Chassis(ChassisBase):
 
         Returns:
             A CpoPort object, or None if the port at that index is not a CPO port
+            or the index is out of range
         """
-        index = index - 1
+        if not self._is_valid_port_index(index, 'CPO'):
+            return None
         self.sfp_wait_ready_and_initialize()
-        return super(Chassis, self).get_cpo(index)
+        return super(Chassis, self).get_cpo(index - 1)
 
     def get_sfp(self, index):
         """
@@ -664,11 +680,13 @@ class Chassis(ChassisBase):
                    For example, 1 for Ethernet0, 2 for Ethernet4 and so on.
 
         Returns:
-            An object dervied from SfpBase representing the specified sfp
+            An object derived from SfpBase representing the specified sfp,
+            or None if the port is not an SFP port or the index is out of range
         """
-        index = index - 1
+        if not self._is_valid_port_index(index, 'SFP'):
+            return None
         self.sfp_wait_ready_and_initialize()
-        return super(Chassis, self).get_sfp(index)
+        return super(Chassis, self).get_sfp(index - 1)
 
     def get_port_or_cage_type(self, index):
         """

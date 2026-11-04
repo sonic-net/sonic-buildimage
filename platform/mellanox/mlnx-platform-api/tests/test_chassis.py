@@ -129,6 +129,14 @@ class TestChassis:
         assert len(sfp_list) == 3
         assert chassis.sfp_initialized_count == 3
 
+        # Without CPO ports, every in-range get_cpo() is a silent None, so
+        # xcvrd asking for a CPO before an SFP on each port logs nothing.
+        with mock.patch('sys.stderr') as stderr:
+            for index in range(1, chassis.get_num_ports() + 1):
+                assert chassis.get_cpo(index) is None
+                assert chassis.get_sfp(index) is chassis._sfp_list[index - 1]
+        stderr.write.assert_not_called()
+
         # Get all SFPs, with RJ45 ports
         sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[0,1,2])
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
@@ -213,6 +221,23 @@ class TestChassis:
         assert chassis.get_cpo(6) is None
         assert chassis.get_sfp(6) is chassis._sfp_list[5]
         assert chassis.get_sfp(1) is None
+        # Index 0 must not wrap around to the last port, the service port here,
+        # and the out of range error quotes the caller's 1-based range.
+        for index in (0, -1, 7):
+            with mock.patch('sys.stderr') as stderr:
+                assert chassis.get_sfp(index) is None
+            stderr.write.assert_called_once_with('SFP index {} out of range (1-6)\n'.format(index))
+            with mock.patch('sys.stderr') as stderr:
+                assert chassis.get_cpo(index) is None
+            stderr.write.assert_called_once_with('CPO index {} out of range (1-6)\n'.format(index))
+        # An in-range port of the other kind is not an error: the caller
+        # learns the port's kind from the None, as with the base class.
+        with mock.patch('sys.stderr') as stderr:
+            assert chassis.get_sfp(1) is None
+            assert chassis.get_cpo(6) is None
+            assert chassis.get_sfp(6) is chassis._sfp_list[5]
+            assert chassis.get_cpo(1) is chassis._cpo_list[0]
+        stderr.write.assert_not_called()
         assert chassis.get_all_ports() == chassis._cpo_list[:5] + [chassis._sfp_list[5]]
 
         polling = chassis.get_sfp_list_for_polling()
