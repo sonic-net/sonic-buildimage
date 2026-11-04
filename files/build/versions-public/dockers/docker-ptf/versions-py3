@@ -281,7 +281,7 @@ ufolib2==0.17.1
 unicodedata2==15.1.0
 unittest-xml-reporting==4.0.0
 urllib3==2.3.0
-wcwidth==0.9.3
+wcwidth==0.9.4
 webencodings==0.5.1
 werkzeug==3.1.9
 wheel==0.46.1

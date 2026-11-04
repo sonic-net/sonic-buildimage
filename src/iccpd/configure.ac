@@ -2,7 +2,7 @@ AC_INIT([iccpd],[0.5])
 AC_CONFIG_SRCDIR([])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_LANG_C
 AC_PROG_CC
 AC_PROG_LIBTOOL
