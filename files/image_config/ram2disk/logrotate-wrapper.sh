@@ -35,9 +35,28 @@ args=("$@")
 [ "$verbose" -eq 1 ] || args=(-v "${args[@]}")
 
 TMP_STATUS_FILE=$(mktemp)
+if [ -z "$TMP_STATUS_FILE" ]; then
+    echo "logrotate: cannot create rotation status file" >&2
+    exit 1
+fi
 trap 'rm -f "$TMP_STATUS_FILE"' EXIT
+# Bash defers these traps until a foreground child finishes, keeping the lock
+# while original logrotate runs.
+SIGNAL_RC=0
+trap 'SIGNAL_RC=143' TERM
+trap 'SIGNAL_RC=130' INT
 
-"$ORIG_LOGROTATE" "${args[@]}" 2>"$TMP_STATUS_FILE"
+if ! . "$COUNTER_FUNCS"; then
+    echo "logrotate: cannot load $COUNTER_FUNCS" >&2
+    exit 1
+fi
+if ! lrc_operation_lock; then
+    echo "logrotate: cannot acquire rotation/sync lock" >&2
+    exit 1
+fi
+[ "$SIGNAL_RC" -eq 0 ] || exit "$SIGNAL_RC"
+
+"$ORIG_LOGROTATE" "${args[@]}" {LRC_LOCK_FD}>&- 2>"$TMP_STATUS_FILE"
 RC=$?
 
 # Re-emit stderr to the caller when they asked for -v (preserve requested
@@ -47,12 +66,16 @@ if [ "$verbose" -eq 1 ] || [ "$RC" -ne 0 ]; then
     cat "$TMP_STATUS_FILE" >&2
 fi
 
-# Count the rotations that actually happened. Source the counter library and
-# increment all rotated files.
+# Record completed rotations before releasing the lock, even after a signal.
 mapfile -t ROTATED < <(sed -n 's/^rotating log \(.*\), log->rotateCount.*/\1/p' "$TMP_STATUS_FILE")
-if [ "${#ROTATED[@]}" -gt 0 ] && [ -r "$COUNTER_FUNCS" ]; then
-    . "$COUNTER_FUNCS"
-    lrc_file_increment "${ROTATED[@]}"
+if [ "${#ROTATED[@]}" -gt 0 ]; then
+    if ! lrc_file_increment "${ROTATED[@]}"; then
+        echo "logrotate: cannot record rotation counters" >&2
+        [ "$RC" -ne 0 ] || RC=1
+    fi
 fi
 
+{LRC_LOCK_FD}>&-
+
+[ "$SIGNAL_RC" -eq 0 ] || RC="$SIGNAL_RC"
 exit "$RC"
