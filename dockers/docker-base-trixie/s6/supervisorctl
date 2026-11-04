@@ -5,20 +5,36 @@ SONiC health tooling (system-health's service_checker, monit) runs
     docker exec <c> bash -c "supervisorctl status"
 and parses each line as "<name> <STATUS> ...", treating a critical process as
 healthy only when STATUS == RUNNING (names absent from the output are ignored).
-Where s6 replaced supervisord (otherwise the call is passed to supervisorctl.real), this shim answers `status` from the live s6
-scandir so those checks keep working - avoiding false "process down" alarms,
-their event/log spam, and the repeated docker-exec churn a failing exec causes.
+Where s6 replaced supervisord (otherwise the call is passed to supervisorctl.real),
+this shim answers from the live s6 scandir and mimics supervisor 4.x closely
+enough for those checks and for sonic-mgmt / containercfgd / monit:
 
-Only `status` needs to be faithful; start/stop/restart are mapped to s6-svc
-best-effort for the rare manual/monit action.
+  status [names]      one line per process, "%-*s%-10s%s" like supervisor
+                      (RUNNING "pid N, uptime H:MM:SS", STARTING, BACKOFF, FATAL,
+                      STOPPED, EXITED); exit 3 if any listed process is STOPPED/EXITED/
+                      FATAL, 4 for an unknown name (supervisor's LSB status codes).
+  start <names>       wait until the process has stayed up for startsecs, else
+                      "ERROR (abnormal termination)" (rc 7); clears BACKOFF/FATAL.
+  stop <names>        wait until the process (and its finish script) is down.
+  restart <names>     stop then start, printing "X: stopped" / "X: started"
+                      (supervisor's do_restart; there is no "restarted" string).
+
+The s6 state is read with `s6-svstat -o up,wantedup,pid,updownfor,exitcode,signum`
+(machine-readable); the legacy human-readable format is only a fallback for an s6
+without `-o`. Per-program startsecs/startretries/stopwaitsecs come from the
+`supervisor-meta` file the converter (supervisord2s6) drops in each service dir; when
+it is missing, supervisor's defaults (1 / 3 / 10) apply.
 """
+import datetime
 import os
 import re
 import sys
 import subprocess
+import time
 
 SCANDIR = "/run/service"
 EXPECTED_DIR = "/run/s6-expected"      # keep in sync with supervisord2s6.EXPECTED_DIR
+SUPER_DIR = "/run/s6-super"            # keep in sync with supervisord2s6.SUPER_DIR
 # s6-overlay puts its tools in /command; fall back to PATH.
 S6_SVSTAT = "/command/s6-svstat" if os.path.exists("/command/s6-svstat") else "s6-svstat"
 S6_SVC = "/command/s6-svc" if os.path.exists("/command/s6-svc") else "s6-svc"
@@ -27,24 +43,184 @@ S6_SVC = "/command/s6-svc" if os.path.exists("/command/s6-svc") else "s6-svc"
 SKIP_PREFIXES = ("s6-", "s6rc-", ".s6")
 SKIP_EXACT = {"s6rc-fdholder", "s6rc-oneshot-runner", "s6-linux-init-shutdownd"}
 
+# supervisor's defaults for a program that does not set the key
+DEFAULT_STARTSECS = 1
+DEFAULT_STARTRETRIES = 3
+DEFAULT_STOPWAITSECS = 10
+SPAWNERR = "Exited too quickly (process log may have details)"
+# supervisor.states.STOPPED_STATES (status exits 3 if any listed process is in one)
+STOPPED_STATES = ("STOPPED", "EXITED", "FATAL")
+# supervisor exit codes (LSBStatusExitCode / ExitCodes)
+RC_OK, RC_FAILED, RC_USAGE, RC_NOT_RUNNING, RC_STATUS_UNKNOWN, RC_ABNORMAL = 0, 1, 2, 3, 4, 7
+# s6-supervise's own finish timeout (timeout-finish default), added to stop waits
+FINISH_TIMEOUT_MS = 5000
 
-def _svstat(path):
+
+# ---------------------------------------------------------------- s6 state
+
+def _stat(path):
+    """-> dict(up, wanted, pid, secs, exitcode, signum) for a service dir, or None
+    when s6-supervise is not running there / the probe fails."""
+    try:
+        r = subprocess.run([S6_SVSTAT, "-o", "up,wantedup,pid,updownfor,exitcode,signum", path],
+                           capture_output=True, text=True, timeout=5)
+    except Exception:
+        return None
+    if r.returncode == 100:                     # usage error: s6 without -o
+        return _stat_legacy(path)
+    if r.returncode != 0:
+        return None
+    p = r.stdout.split()
+    if len(p) != 6:
+        return None
+    try:
+        return {"up": p[0] == "true", "wanted": p[1] == "true", "pid": int(p[2]),
+                "secs": int(p[3]), "exitcode": int(p[4]), "signum": int(p[5])}
+    except ValueError:
+        return None
+
+
+def _stat_legacy(path):
+    """Fallback for an s6 without `s6-svstat -o`: parse the human-readable summary
+    ("up (pid 52 pgid 52) 68095 seconds", "down (exitcode 0) 3 seconds, want up")."""
     try:
         r = subprocess.run([S6_SVSTAT, path], capture_output=True, text=True, timeout=5)
     except Exception:
         return None
     if r.returncode != 0:
         return None
-    return r.stdout.strip()
+    st = r.stdout.strip()
+    m = re.match(r"(up|down) \((pid|exitcode|signal) (\S+?)(?: pgid -?\d+)?\) (\d+) seconds(.*)", st)
+    if not m:
+        return None
+    state, kind, val, secs, rest = m.groups()
+    up = state == "up"
+    wanted = ("want down" not in rest) if up else ("want up" in rest)
+    exitcode, signum, pid = -1, -1, -1
+    if kind == "pid":
+        pid = int(val)
+    elif kind == "exitcode":
+        exitcode = int(val)
+    else:
+        signum = int(val) if val.isdigit() else {"SIGTERM": 15, "SIGKILL": 9, "SIGHUP": 1, "SIGINT": 2,
+                                                "SIGQUIT": 3, "SIGUSR1": 10, "SIGUSR2": 12}.get(val, 0)
+    return {"up": up, "wanted": wanted, "pid": pid, "secs": int(secs),
+            "exitcode": exitcode, "signum": signum}
+
+
+def _int(v, default):
+    try:
+        return int(float(str(v).strip()))
+    except (TypeError, ValueError):
+        return default
+
+
+def _meta(path):
+    """supervisor-meta (key=value lines written by the converter) with supervisor's defaults."""
+    m = {"startsecs": DEFAULT_STARTSECS, "startretries": DEFAULT_STARTRETRIES,
+         "stopwaitsecs": DEFAULT_STOPWAITSECS}
+    try:
+        with open(os.path.join(path, "supervisor-meta")) as f:
+            for line in f:
+                k, sep, v = line.strip().partition("=")
+                if sep:
+                    m[k.strip()] = v.strip()
+    except OSError:
+        pass
+    for k, d in (("startsecs", DEFAULT_STARTSECS), ("startretries", DEFAULT_STARTRETRIES),
+                 ("stopwaitsecs", DEFAULT_STOPWAITSECS)):
+        m[k] = _int(m[k], d)
+    return m
+
+
+def _super_file(svc, name):
+    return os.path.join(SUPER_DIR, svc, name)
+
+
+def _read_state(svc):
+    """One-word state a finish script / this shim left behind: backoff|fatal|exited|stopped|''."""
+    try:
+        with open(_super_file(svc, "state")) as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def _write_state(svc, value):
+    try:
+        os.makedirs(os.path.join(SUPER_DIR, svc), exist_ok=True)
+        with open(_super_file(svc, "state"), "w") as f:
+            f.write(value + "\n")
+    except OSError:
+        pass
+
+
+def _clear_run_state(svc):
+    """Forget BACKOFF/FATAL/stopped accounting (supervisor resets it on a (re)start)."""
+    for n in ("state", "backoff"):
+        try:
+            os.remove(_super_file(svc, n))
+        except OSError:
+            pass
+
+
+def _touch(path):
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        open(path, "w").close()
+    except OSError:
+        pass
+
+
+def _rm(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
 
 
 def _fmt_uptime(seconds):
+    """supervisor prints str(timedelta): 0:00:05, 1 day, 2:03:04, 3 days, 0:00:09."""
     try:
-        s = int(seconds)
-    except (TypeError, ValueError):
+        return str(datetime.timedelta(seconds=int(seconds)))
+    except (TypeError, ValueError, OverflowError):
         return "0:00:00"
-    return "%d:%02d:%02d" % (s // 3600, (s % 3600) // 60, s % 60)
 
+
+def _fmt_stop_time(secs):
+    """supervisor's STOPPED/EXITED description: the stop time as '%b %d %I:%M %p'."""
+    return time.strftime("%b %d %I:%M %p", time.localtime(time.time() - max(0, secs)))
+
+
+def proc_state(svc, path, st=None, meta=None):
+    """-> (STATE, description, stat) the way supervisor would describe the process.
+
+    s6 only knows up/down/wanted; BACKOFF/FATAL/STOPPED come from the state file the
+    finish script (retry accounting) and this shim leave under SUPER_DIR/<svc>/.
+    """
+    st = st or _stat(path)
+    if st is None:
+        return None, "", None
+    meta = meta or _meta(path)
+    if st["up"]:
+        # supervisor reports RUNNING only once the process has stayed up for startsecs
+        if meta["startsecs"] == 0 or st["secs"] >= meta["startsecs"]:
+            return "RUNNING", "pid %d, uptime %s" % (st["pid"], _fmt_uptime(st["secs"])), st
+        return "STARTING", "", st
+    state = _read_state(svc)
+    if state == "fatal":
+        return "FATAL", SPAWNERR, st
+    if state == "backoff" and st["wanted"]:
+        return "BACKOFF", SPAWNERR, st
+    if state == "stopped":
+        return "STOPPED", _fmt_stop_time(st["secs"]), st
+    if state == "exited" or not st["wanted"]:
+        return "EXITED", _fmt_stop_time(st["secs"]), st
+    # wanted and down with no verdict yet: s6 is about to (re)spawn it
+    return "STARTING", "", st
+
+
+# ---------------------------------------------------------------- name handling
 
 def _display_name(dirname, path):
     # supervisord prints "group:program" for processes that belong to a
@@ -63,48 +239,34 @@ def _display_name(dirname, path):
     return dirname
 
 
-def cmd_status(args):
+def _services():
+    """-> sorted [(display_name, dirname, path)] of every supervised program."""
     try:
-        entries = sorted(os.listdir(SCANDIR))
+        entries = os.listdir(SCANDIR)
     except FileNotFoundError:
-        return 0
-    wanted = list(args)
-    matched = set()
+        return []
+    out = []
     for dirname in entries:
         path = os.path.join(SCANDIR, dirname)
         if not os.path.isdir(path):
             continue
         if dirname in SKIP_EXACT or dirname.startswith(SKIP_PREFIXES):
             continue
-        name = _display_name(dirname, path)
-        # supervisorctl status <name> [<name> ...] filters to just those
-        # processes; a bare "supervisorctl status" lists everything. Accept
-        # either the bare program name or the group-qualified name so both
-        # conventions work (readiness_probe.sh uses the former, a
-        # "group:program" filter would use the latter).
-        if wanted and name not in wanted and dirname not in wanted:
-            continue
-        matched.add(name)
-        if dirname in wanted:
-            matched.add(dirname)
-        st = _svstat(path)
-        if st is None:
-            continue
-        toks = st.split()
-        if toks and toks[0] == "up":
-            m = re.search(r"\(pid (\d+)\) (\d+) seconds", st)
-            pid = m.group(1) if m else "0"
-            secs = m.group(2) if m else "0"
-            print("%-32s RUNNING   pid %s, uptime %s" % (name, pid, _fmt_uptime(secs)))
-        else:
-            # down/exited -> report a non-RUNNING state so checks can react
-            print("%-32s EXITED    %s" % (name, st))
-    rc = 0
-    for name in wanted:
-        if name not in matched:
-            print("%s: ERROR (no such process)" % name)
-            rc = 1
-    return rc
+        out.append((_display_name(dirname, path), dirname, path))
+    return sorted(out)
+
+
+def _match(token, svcs):
+    """Services selected by one name token: a bare program name, "group:program",
+    "group:*" / "group:" (every member), or "all"."""
+    if token == "all":
+        return list(svcs)
+    if token.endswith(":*") or (token.endswith(":") and len(token) > 1):
+        grp = token.rsplit(":", 1)[0]
+        return [s for s in svcs if s[0].startswith(grp + ":")]
+    # accept the bare program name or the group-qualified name so both conventions work
+    # (readiness_probe.sh uses the former, a "group:program" filter the latter)
+    return [s for s in svcs if token in (s[0], s[1])]
 
 
 def _resolve(name):
@@ -122,32 +284,174 @@ def _resolve(name):
     return name
 
 
+# ---------------------------------------------------------------- status
+
+def cmd_status(args):
+    svcs = _services()
+    wanted = list(args)
+    if not wanted or "all" in wanted:
+        selected = svcs
+        bad = []
+    else:
+        selected, seen, bad = [], set(), []
+        for tok in wanted:
+            hit = _match(tok, svcs)
+            if not hit:
+                bad.append(tok)
+            for s in hit:
+                if s[1] not in seen:
+                    seen.add(s[1])
+                    selected.append(s)
+        selected.sort()
+    rows = []
+    for name, dirname, path in selected:
+        state, desc, _ = proc_state(dirname, path)
+        if state is None:
+            continue
+        rows.append((name, state, desc))
+    width = max([30] + [len(r[0]) for r in rows]) + 3
+    for name, state, desc in rows:
+        print("%-*s%-10s%s" % (width, name, state, desc))
+    rc = RC_OK
+    for tok in bad:
+        group_form = tok.endswith(":*") or tok.endswith(":")
+        print("%s: ERROR (%s)" % (tok, "no such group" if group_form else "no such process"))
+        rc = RC_STATUS_UNKNOWN
+    if any(r[1] in STOPPED_STATES for r in rows):     # supervisor: NOT_RUNNING wins over STATUS_UNKNOWN
+        rc = RC_NOT_RUNNING
+    return rc
+
+
+# ---------------------------------------------------------------- start / stop / restart
+
+def _stop_timeout_ms(path, meta):
+    """Upper bound for `s6-svc -wD`: timeout-kill + finish timeout + slack."""
+    kill_ms = meta["stopwaitsecs"] * 1000
+    try:
+        with open(os.path.join(path, "timeout-kill")) as f:
+            kill_ms = _int(f.read(), kill_ms)
+    except OSError:
+        pass
+    return kill_ms + FINISH_TIMEOUT_MS + 3000
+
+
+def stop_one(name, svc, path):
+    """supervisor's stop: wait until it is down; rc 0 even if it was not running."""
+    st = _stat(path)
+    state, _, st = proc_state(svc, path, st)
+    if state not in ("RUNNING", "STARTING", "BACKOFF"):
+        print("%s: ERROR (not running)" % name)
+        return RC_OK
+    meta = _meta(path)
+    if st["up"]:
+        # Mark the stop as requested so a critical process' finish does not halt the
+        # container. Only when a process is alive: a marker left for a service that is not
+        # running would make the next *real* crash look like a requested stop.
+        _touch(os.path.join(EXPECTED_DIR, svc))
+    try:
+        r = subprocess.run([S6_SVC, "-d", "-wD", "-T", str(_stop_timeout_ms(path, meta)), path],
+                           timeout=_stop_timeout_ms(path, meta) / 1000.0 + 5)
+        ok = r.returncode == 0
+    except Exception:
+        ok = False
+    _rm(os.path.join(EXPECTED_DIR, svc))      # normally consumed by finish already
+    if not ok:
+        print("%s: ERROR (abnormal termination)" % name)
+        return RC_FAILED
+    _write_state(svc, "stopped")
+    try:
+        os.remove(_super_file(svc, "backoff"))
+    except OSError:
+        pass
+    print("%s: stopped" % name)
+    return RC_OK
+
+
+def start_one(name, svc, path):
+    """supervisor's start: wait until the process has stayed up for startsecs."""
+    st = _stat(path)
+    state, _, st = proc_state(svc, path, st)
+    if state in ("RUNNING", "STARTING", "BACKOFF"):
+        print("%s: ERROR (already started)" % name)
+        return RC_OK
+    meta = _meta(path)
+    # a FATAL/stopped verdict and any stale "requested stop" marker die with the new start
+    _clear_run_state(svc)
+    _rm(os.path.join(EXPECTED_DIR, svc))
+    try:
+        # -u in the down state starts at once, even after a finish script's exit 125
+        r = subprocess.run([S6_SVC, "-u", "-wu", "-T", "5000", path], timeout=15)
+        spawned = r.returncode == 0
+    except Exception:
+        spawned = False
+    if not spawned:
+        print("%s: ERROR (spawn error)" % name)
+        return RC_ABNORMAL
+    t0 = time.monotonic()
+    first_pid = None
+    while True:
+        cur = _stat(path)
+        if cur is None or not cur["up"] or (first_pid is not None and cur["pid"] != first_pid):
+            if meta["startsecs"] > 0:     # died (or was respawned) inside startsecs
+                print("%s: ERROR (abnormal termination)" % name)
+                return RC_ABNORMAL
+            break
+        first_pid = cur["pid"] if first_pid is None else first_pid
+        remaining = meta["startsecs"] - (time.monotonic() - t0)
+        if remaining <= 0:
+            break
+        time.sleep(min(0.1, remaining))
+    print("%s: started" % name)
+    return RC_OK
+
+
+def _targets(args, only):
+    """-> ([(display, dirname, path)], rc) for a start/stop/restart name list. `only` is a
+    predicate on proc_state names selecting what `all` / `group:*` act on (supervisor's
+    start all / stop all skip processes that are already in the wanted state)."""
+    svcs = _services()
+    out, seen, rc = [], set(), RC_OK
+    for tok in args:
+        if tok == "all":
+            hit = [s for s in svcs if only(proc_state(s[1], s[2])[0])]
+        else:
+            hit = _match(tok, svcs)
+            if not hit:
+                # a bare name may be a service dir that is not in the scan list (kept lenient)
+                svc = _resolve(tok)
+                path = os.path.join(SCANDIR, svc)
+                if os.path.isdir(path):
+                    hit = [(tok, svc, path)]
+        if not hit:
+            print("%s: ERROR (%s)" % (tok, "no such group" if tok.endswith(":*") or tok.endswith(":")
+                                  else "no such process"))
+            rc = RC_FAILED
+            continue
+        for s in hit:
+            if s[1] not in seen:
+                seen.add(s[1])
+                out.append(s)
+    return out, rc
+
+
+_RUNNING_LIKE = ("RUNNING", "STARTING", "BACKOFF")
+
+
 def cmd_ctl(action, args):
     if not args:
-        return 1
-    flag = {"start": "-u", "stop": "-d", "restart": "-r"}[action]
-    rc = 0
-    for name in args:
-        svc = _resolve(name)
-        path = os.path.join(SCANDIR, svc)
-        if not os.path.isdir(path):
-            print("%s: ERROR (no such process)" % name)
-            rc = 1
-            continue
-        if action in ("stop", "restart"):
-            # a requested stop must not look like a crash to a critical process' finish script
-            try:
-                os.makedirs(EXPECTED_DIR, exist_ok=True)
-                open(os.path.join(EXPECTED_DIR, svc), "w").close()
-            except OSError:
-                pass
-        try:
-            subprocess.run([S6_SVC, flag, path], timeout=10)
-            print("%s: %s" % (name, "started" if action == "start"
-                              else "stopped" if action == "stop" else "restarted"))
-        except Exception as e:
-            print("%s: ERROR (%s)" % (name, e))
-            rc = 1
+        print("Error: %s requires a process name" % action)
+        return RC_USAGE if action == "start" else RC_FAILED
+    rc = RC_OK
+    if action in ("stop", "restart"):
+        targets, trc = _targets(args, lambda s: s in _RUNNING_LIKE)
+        rc = max(rc, trc)
+        for name, svc, path in targets:
+            rc = max(rc, stop_one(name, svc, path))
+    if action in ("start", "restart"):
+        targets, trc = _targets(args, lambda s: s is not None and s not in _RUNNING_LIKE)
+        rc = max(rc, trc)
+        for name, svc, path in targets:
+            rc = max(rc, start_one(name, svc, path))
     return rc
 
 
