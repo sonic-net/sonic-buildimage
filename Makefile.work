@@ -452,6 +452,8 @@ ifeq ($(strip $(SONIC_SLAVE_APPARMOR_PROFILE)),)
 $(error SONIC_SLAVE_APPARMOR_PROFILE must not be empty)
 endif
 ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
+# The chroot Docker startup needs this limit without CAP_SYS_RESOURCE.
+DOCKER_NOFILE_LIMIT := 1048576
 DOCKER_PRIVMODE := --cap-add SYS_ADMIN --cap-add SYS_CHROOT --cap-add NET_ADMIN \
     --cap-add MKNOD --cap-add DAC_OVERRIDE \
     --security-opt apparmor=$(SONIC_SLAVE_APPARMOR_PROFILE) --security-opt seccomp=unconfined
@@ -466,6 +468,7 @@ ifneq ($(SONIC_SLAVE_APPARMOR_PROFILE),unconfined)
 $(error A custom SONIC_SLAVE_APPARMOR_PROFILE requires SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=y)
 endif
 DOCKER_PRIVMODE := --privileged
+DOCKER_NOFILE_LIMIT := 524288
 endif
 
 DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
@@ -478,7 +481,7 @@ DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -e "https_proxy=$(https_proxy)" \
     -e "no_proxy=$(no_proxy)" \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
-    --ulimit nofile=524288:524288 \
+    --ulimit nofile=$(DOCKER_NOFILE_LIMIT):$(DOCKER_NOFILE_LIMIT) \
     $(SONIC_BUILDER_EXTRA_CMDLINE)
 
 export PASSWORD
