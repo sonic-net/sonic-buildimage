@@ -1609,8 +1609,6 @@
                     3
                 ]
             }
-        },
-        "laser_ids_numbering": "zero-based legacy API IDs; not HLD one-based laser mapping keys",
-        "laser_mapping_status": "UNVERIFIED: precise laser-to-ASIC wiring is unavailable; only whole-interface laser groups are provided"
+        }
     }
 }
