@@ -1,0 +1,44 @@
+From 56fa1cb5a67d443ddcee4d5436eeca746a8c525a Mon Sep 17 00:00:00 2001
+From: Pooja Jagadeesh Doijode <pdoijode@nvidia.com>
+Date: Tue, 5 Mar 2024 10:03:46 -0800
+Subject: [PATCH] bgpd: [GR] Premature EOR sent after GR
+
+In a scaled setup, because the peer's subgroup packet queue was full,
+BGP was unable to generate UPDATE messages for all the L2VPN NLRIs
+and encode them into packets. Because of this, BGP thought there were
+no further packets to send, and sent EOR prematurely.
+
+On GR helper, since EOR was received before all the routes could be
+refreshed, stale paths were deleted and added back once the restarting
+node advertised those paths again. This resulted in traffic loss after
+GR.
+
+Signed-off-by: Pooja Jagadeesh Doijode <pdoijode@nvidia.com>
+(cherry picked from commit cd1d953b97472edf3febc8cedea8ff9696463b6c)
+Signed-off-by: Anant Kishor Sharma <anant.kishor-sharma@hpe.com>
+---
+ bgpd/bgp_packet.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/bgpd/bgp_packet.c b/bgpd/bgp_packet.c
+index e5b7e8e05..5ecada8d1 100644
+--- a/bgpd/bgp_packet.c
++++ b/bgpd/bgp_packet.c
+@@ -580,11 +580,10 @@ void bgp_generate_updgrp_packets(struct event *thread)
+ 				 *   general, and thus the practice is
+ 				 *   recommended.
+ 				 */
+-				if (!(PAF_SUBGRP(paf))->t_coalesce &&
+-				    peer->afc_nego[afi][safi] &&
++				if (!(PAF_SUBGRP(paf))->t_coalesce && peer->afc_nego[afi][safi] &&
+ 				    peer->synctime &&
+-				    !CHECK_FLAG(peer->af_sflags[afi][safi],
+-						PEER_STATUS_EOR_SEND)) {
++				    !CHECK_FLAG(peer->af_sflags[afi][safi], PEER_STATUS_EOR_SEND) &&
++				    advertise_list_is_empty(PAF_SUBGRP(paf))) {
+ 					/* If EOR is disabled, the message is
+ 					 * not sent.
+ 					 */
+-- 
+2.54.0 (Apple Git-157)
+
