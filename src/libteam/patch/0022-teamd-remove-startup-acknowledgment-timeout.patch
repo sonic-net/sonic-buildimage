@@ -22,11 +22,11 @@ exit closes the last writer and returns EOF, and a live daemon permanently
 stuck in initialization retains the writer and remains the accepted
 external-recovery case.
 ---
- teamd/teamd.c | 82 +++++++++++++++++++++++++++++++++++++++++-----------
- 1 file changed, 67 insertions(+), 15 deletions(-)
+ teamd/teamd.c | 77 ++++++++++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 65 insertions(+), 12 deletions(-)
 --- a/teamd/teamd.c
 +++ b/teamd/teamd.c
-@@ -1505,8 +1505,50 @@
+@@ -1505,8 +1505,53 @@
  	team_free(ctx->th);
  }
  
@@ -41,12 +41,15 @@ external-recovery case.
 +
 +static void teamd_startup_status_send(int *fd, int status)
 +{
++	int saved_errno = errno;
++
 +	if (*fd < 0)
 +		return;
 +
 +	if (write(*fd, &status, sizeof(status)) != sizeof(status))
 +		teamd_log_err("Failed to send startup status to parent.");
 +	teamd_close_fd(fd);
++	errno = saved_errno;
 +}
 +
 +static int teamd_startup_status_wait(int *fd)
@@ -77,7 +80,7 @@ external-recovery case.
  	pid_t pid;
  	int err = 0;
  
-@@ -1532,22 +1574,29 @@
+@@ -1532,22 +1577,29 @@
  	}
  
  	if (ctx->daemonize) {
@@ -113,7 +116,7 @@ external-recovery case.
  			}
  			if (ret > 0)
  				teamd_log_err("Daemon process failed.");
-@@ -1555,6 +1604,7 @@
+@@ -1555,6 +1607,7 @@
  		}
  
  	/* Child */
@@ -121,38 +124,33 @@ external-recovery case.
  	}
  
  	ctx->log_output = ctx->log_output ? : getenv("TEAM_LOG_OUTPUT");
-@@ -1567,34 +1617,36 @@
+@@ -1567,21 +1620,21 @@
  			daemon_log_use = DAEMON_LOG_SYSLOG;
  	}
  
 -	if (daemon_close_all(-1) < 0) {
 +	if (daemon_close_all(startup_pipe[1], -1) < 0) {
-+		err = -errno;
  		teamd_log_err("Failed to close all file descriptors.");
 -		daemon_retval_send(errno);
--		return -errno;
-+		teamd_startup_status_send(&startup_pipe[1], -err);
-+		return err;
++		teamd_startup_status_send(&startup_pipe[1], errno);
+ 		return -errno;
  	}
  
  	if (daemon_pid_file_create() < 0) {
-+		err = -errno;
  		teamd_log_err("Could not create PID file.");
 -		daemon_retval_send(errno);
--		return -errno;
-+		teamd_startup_status_send(&startup_pipe[1], -err);
-+		return err;
++		teamd_startup_status_send(&startup_pipe[1], errno);
+ 		return -errno;
  	}
  
  	if (daemon_signal_init(SIGINT, SIGTERM, SIGQUIT, SIGHUP, SIGUSR1, SIGUSR2, 0) < 0) {
--		teamd_log_err("Could not register signal handlers.");
+ 		teamd_log_err("Could not register signal handlers.");
 -		daemon_retval_send(errno);
++		teamd_startup_status_send(&startup_pipe[1], errno);
  		err = -errno;
-+		teamd_log_err("Could not register signal handlers.");
-+		teamd_startup_status_send(&startup_pipe[1], -err);
  		goto pid_file_remove;
  	}
- 
+@@ -1589,12 +1642,12 @@
  	err = teamd_init(ctx);
  	if (err) {
  		teamd_log_err("teamd_init() failed.");
