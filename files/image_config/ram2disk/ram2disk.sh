@@ -36,7 +36,6 @@ MODE="${1:-sync}"    # sync | restore | pre-shutdown
 
 # Counter library that maintains per-file rotation counters in /dev/shm/logrotate.
 COUNTER_FUNCS="/usr/local/bin/logrotate-counter-functions.sh"
-[ -r "$COUNTER_FUNCS" ] && . "$COUNTER_FUNCS"
 
 # Disk cleanup kicks in once disk usage of the DST_DISK_DIR filesystem exceeds this
 # percentage
@@ -136,13 +135,16 @@ ensure_current_dir() {
 # Replays, on current_session/, every logrotate cycle that happened since the last run.
 #
 # The set of files to replay and their counts come entirely from
-# /dev/shm/logrotate/rotation_counts (maintained by the logrotate-wrapper). We
-# consume it with lrc_file_read_reset, which atomically
-# fetches every "<path> <count>" line and clears the file, so the next run only
-# sees rotations that occur after this one.
+# /dev/shm/logrotate/rotation_counts (maintained by the logrotate-wrapper). This script
+# consumes it with lrc_file_read_reset() while holding the operation synchronization
+# lock through rename replay and rsync. Logrotate process cannot rotate or update counters meanwhile.
 # =============================================================================
 replay_rotations() {
-    declare -F lrc_file_read_reset >/dev/null || return 0
+    local rotations
+    if ! rotations=$(lrc_file_read_reset); then
+        log_err "Cannot read/reset rotation counters"
+        return 1
+    fi
 
     local path count base
     while read -r path count; do
@@ -150,13 +152,16 @@ replay_rotations() {
         [[ "$count" =~ ^[0-9]+$ ]] || continue
         [ "$count" -gt 0 ] || continue
 
-        # Only mirror files that live under ${SRC_RAM_DIR} (what current_session/ mirrors)
-	# Consider adding a warning for files not under SRC_RAM_DIR to understand other files managed by logrotate
+    # Only mirror files that live under ${SRC_RAM_DIR} (what current_session/ mirrors)
+	# Consider adding a warning later for files not under SRC_RAM_DIR to understand other files managed by logrotate
 	[[ "$path" == "${SRC_RAM_DIR}/"* ]] || continue
 	base="${path#"${SRC_RAM_DIR}/"}"
 
-        mirror_renames "$base" "$count"
-    done < <(lrc_file_read_reset 2>/dev/null)
+        if ! mirror_renames "$base" "$count"; then
+            log_err "Cannot replay rotations for $path"
+            return 1
+        fi
+    done <<< "$rotations"
 }
 
 # =============================================================================
@@ -169,7 +174,7 @@ mirror_renames() {
     local shift="$2"
     local dst_base="${CURRENT_MIRROR_DIR}/${base}"
 
-    [ "$shift" -eq 0 ] && return
+    [ "$shift" -eq 0 ] && return 0
 
     log_info "${base}: mirroring ${shift} rotation(s) on disk"
 
@@ -187,22 +192,24 @@ mirror_renames() {
     for s in $(seq 1 "$shift"); do
         # Shift .gz archives up by 1 (highest first to avoid collision)
         for i in $(seq "$max_n" -1 2); do
-            [ -f "${dst_base}.${i}.gz" ] && \
-                mv "${dst_base}.${i}.gz" "${dst_base}.$((i + 1)).gz"
+            if [ -f "${dst_base}.${i}.gz" ]; then
+                mv "${dst_base}.${i}.gz" "${dst_base}.$((i + 1)).gz" || return
+            fi
         done
         max_n=$((max_n + 1))
 
         # delaycompress: .1 to .2.gz (one gzip write)
         if [ -f "${dst_base}.1" ]; then
-            gzip -c "${dst_base}.1" > "${dst_base}.2.gz"
-            rm -f "${dst_base}.1"
+            gzip -c "${dst_base}.1" > "${dst_base}.2.gz" || return
+            rm -f "${dst_base}.1" || return
         fi
 
         # active to .1
         if [ "$s" -eq 1 ] && [ -f "${dst_base}" ]; then
-            mv "${dst_base}" "${dst_base}.1"
+            mv "${dst_base}" "${dst_base}.1" || return
         fi
     done
+    return 0
 }
 
 # =============================================================================
@@ -262,10 +269,13 @@ do_sync() {
     ensure_current_dir
 
     # --- Step 2: Replay logrotate rotations on current_session/ ---
-    replay_rotations
+    replay_rotations || return
 
     # --- Step 3: rsync into disk's current_session/ ---
-    rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"
+    if ! rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"; then
+        log_err "Sync failed"
+        return 1
+    fi
 
     # --- Step 4: Disk space management ---
     cleanup_disk
@@ -291,14 +301,17 @@ do_restore() {
     if [ -d "$CURRENT_MIRROR_DIR" ]; then
         log_info "Restoring active logs from current_session/"
 
-        rsync -a --remove-source-files \
+        if ! rsync -a --remove-source-files \
             --exclude='*.[0-9]' \
             --exclude='*.[0-9][0-9]' \
             --exclude='*.[0-9][0-9][0-9]' \
             --exclude='*.[0-9].gz' \
             --exclude='*.[0-9][0-9].gz' \
             --exclude='*.[0-9][0-9][0-9].gz' \
-            "${CURRENT_MIRROR_DIR}/" "${SRC_RAM_DIR}/"
+            "${CURRENT_MIRROR_DIR}/" "${SRC_RAM_DIR}/"; then
+            log_err "Restore failed"
+            return 1
+        fi
     else
         log_info "No previous current_session/ to restore from"
     fi
@@ -326,9 +339,12 @@ do_pre_shutdown() {
     ensure_current_dir
 
     # Replay logrotate rotations + rsync
-    replay_rotations
+    replay_rotations || return
 
-    rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"
+    if ! rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"; then
+        log_err "Pre-reboot sync failed"
+        return 1
+    fi
     save_boot_id
     log_info "Pre-reboot sync complete"
 }
@@ -339,6 +355,18 @@ do_pre_shutdown() {
 # checking if DST_DISK_DIR is present or mounted
 if ! mountpoint -q "$DST_DISK_DIR" 2>/dev/null; then
     log_err "$DST_DISK_DIR is not mounted, skipping"
+    exit 1
+fi
+
+# Import common logrotate counter helper functions
+if ! . "$COUNTER_FUNCS"; then
+    log_err "Cannot load $COUNTER_FUNCS"
+    exit 1
+fi
+
+# Acquire operation lock before proceeding with any actions
+if ! lrc_operation_lock; then
+    log_err "Cannot acquire rotation/sync lock"
     exit 1
 fi
 
