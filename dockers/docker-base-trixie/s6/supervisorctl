@@ -28,6 +28,7 @@ it is missing, supervisor's defaults (1 / 3 / 10) apply.
 import datetime
 import os
 import re
+import shutil
 import sys
 import subprocess
 import time
@@ -458,6 +459,179 @@ def cmd_ctl(action, args):
     return rc
 
 
+# ---------------------------------------------------------------- reread / update
+
+S6_SVSCANCTL = "/command/s6-svscanctl" if os.path.exists("/command/s6-svscanctl") else "s6-svscanctl"
+RESTART_NOTICE = "restart the container to apply"
+SUPERVISE_WAIT = 5.0       # s: s6-svscan spawns s6-supervise for a new servicedir within ms
+
+
+def _converter():
+    """The supervisord2s6 module (shared generation code), imported lazily: only reread/update
+    need it. Installed as /usr/local/bin/supervisord2s6; a sibling .py is used from a source tree."""
+    import importlib.machinery
+    import importlib.util
+    here = os.path.dirname(os.path.realpath(__file__))
+    for p in (os.environ.get("SUPERVISORD2S6"), os.path.join(here, "supervisord2s6.py"),
+              "/usr/local/bin/supervisord2s6", "/usr/bin/supervisord2s6"):
+        if p and os.path.isfile(p):
+            loader = importlib.machinery.SourceFileLoader("supervisord2s6", p)
+            spec = importlib.util.spec_from_loader("supervisord2s6", loader)
+            mod = importlib.util.module_from_spec(spec)
+            loader.exec_module(mod)
+            return mod
+    raise ImportError("supervisord2s6 not found")
+
+
+def _config_diff():
+    """-> (diff, rc): diff = (s2s, manifest, sections, order, group_of, (added, changed, removed))
+    from the config files on disk vs what was loaded, or None (rc says how to exit) when it cannot
+    be determined: a container without the manifest is a no-op like before (rc 0), an invalid
+    config is an error like supervisor's CANT_REREAD (rc 1)."""
+    s2s = _converter()
+    manifest = s2s.read_loaded_manifest()
+    if manifest is None:
+        sys.stderr.write("supervisorctl: no loaded-program manifest (%s); reread/update need a container "
+                         "started by this s6 shim\n" % s2s.LOADED_MANIFEST)
+        return None, RC_OK
+    sections, order, group_of = s2s.current_config(manifest)
+    for name in order:      # supervisord refuses the whole config on a program without command
+        if name.startswith("program:") and not sections[name].get("command", "").strip():
+            print("ERROR: CANT_REREAD: section '%s' is missing required key 'command'" % name)
+            return None, RC_FAILED
+    new = s2s.loaded_programs(sections, order, group_of)
+    return (s2s, manifest, sections, order, group_of, s2s.diff_loaded(manifest["programs"], new)), RC_OK
+
+
+def cmd_reread(args):
+    """supervisor's reread: report what the config files add/change/drop vs the loaded config
+    (nothing is applied; `update` applies new programs)."""
+    if args:
+        print("Error: reread accepts no arguments")
+        return RC_FAILED
+    got, rc = _config_diff()
+    if got is None:
+        return rc
+    added, changed, removed = got[5]
+    lines = {}
+    for names, word in ((added, "available"), (changed, "changed"), (removed, "disappeared")):
+        lines.update({n: word for n in names})
+    for n in sorted(lines):
+        print("%s: %s" % (n, lines[n]))
+    if not lines:
+        print("No config updates to processes")
+    return RC_OK
+
+
+def _autostart(attrs):
+    """supervisord's autostart (default true when the key is absent)."""
+    return str(attrs.get("autostart", "true")).strip().lower() in ("true", "1", "yes", "on")
+
+
+def _build_program(s2s, pname, attrs, group_of):
+    """Create the servicedir of one new program under DYN_DIR (not yet visible to s6-svscan).
+    -> error string or None."""
+    if (not pname or pname.startswith(".") or "/" in pname or pname in SKIP_EXACT
+            or pname.startswith(SKIP_PREFIXES)):
+        return "bad program name"
+    if os.path.lexists(os.path.join(SCANDIR, pname)):   # also a boot-time s6-rc service of that name
+        return "already exists"
+    dest = os.path.join(s2s.DYN_DIR, pname)
+    try:
+        s2s.build_runtime_servicedir(pname, attrs, group_of, dest, autostart=_autostart(attrs))
+    except Exception as e:                  # e.g. unbalanced quotes in command=
+        sys.stderr.write("supervisorctl: %s: cannot create service: %s\n" % (pname, e))
+        shutil.rmtree(dest, ignore_errors=True)
+        return "spawn error"
+    return None
+
+
+def _wait_supervised(path):
+    """True once s6-supervise answers on the servicedir."""
+    deadline = time.monotonic() + SUPERVISE_WAIT
+    while True:
+        if _stat(path) is not None:
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
+
+
+def cmd_update(args):
+    """supervisor's update, restricted to NEW programs: build their servicedirs (same generate()
+    code as the boot-time conversion), link them into the scan directory, `s6-svscanctl -a`,
+    honour autostart.  Changed/removed groups cannot be applied to a running s6 tree: a notice on
+    stderr, nothing else (rc stays 0 so that `reread && update && start X` flows continue)."""
+    got, rc = _config_diff()
+    if got is None:
+        return rc
+    s2s, manifest, sections, order, group_of, (added, changed, removed) = got
+    wanted = set(args) - {"all"}
+    if wanted:
+        known = set(s2s.config_groups(manifest["programs"])) | set(added)
+        for g in sorted(wanted - known):
+            print("ERROR: no such group: %s" % g)
+            rc = RC_FAILED
+    pick = lambda names: [n for n in names if not wanted or n in wanted]   # noqa: E731
+    for g in pick(removed):
+        sys.stderr.write("%s: removed; %s\n" % (g, RESTART_NOTICE))
+    for g in pick(changed):
+        sys.stderr.write("%s: changed; %s\n" % (g, RESTART_NOTICE))
+    cur = s2s.loaded_programs(sections, order, group_of)
+    members = s2s.config_groups(cur)
+    # phase 1: build every member's servicedir; a group is all-or-nothing
+    groups, failed = {}, {}
+    for g in pick(added):
+        groups[g] = sorted(members[g])
+        for i, p in enumerate(groups[g]):
+            err = _build_program(s2s, p, sections["program:" + p], group_of)
+            if err:
+                failed[g] = err
+                for q in groups[g][:i]:
+                    shutil.rmtree(os.path.join(s2s.DYN_DIR, q), ignore_errors=True)
+                break
+    # phase 2: make the complete groups visible to s6-svscan, one rescan for all of them
+    linked = []
+    for g in groups:
+        if g in failed:
+            continue
+        for p in groups[g]:
+            _clear_run_state(p)
+            link = os.path.join(SCANDIR, p)
+            try:
+                os.symlink(os.path.join(s2s.DYN_DIR, p), link)    # atomic: never a half-written dir
+            except OSError as e:
+                sys.stderr.write("supervisorctl: %s: cannot link into %s: %s\n" % (p, SCANDIR, e))
+                failed[g] = "spawn error"
+                break
+            linked.append((g, p, link))
+    if linked:
+        scanned = subprocess.run([S6_SVSCANCTL, "-a", SCANDIR], capture_output=True).returncode == 0
+        for g, p, link in linked:
+            if g not in failed and not (scanned and _wait_supervised(link)):
+                failed[g] = "spawn error"
+        for g, p, link in linked:
+            if g in failed:
+                _rm(link)
+                shutil.rmtree(os.path.join(s2s.DYN_DIR, p), ignore_errors=True)
+    for g in groups:
+        if g in failed:
+            print("%s: ERROR (%s)" % (g, failed[g]))
+            rc = RC_FAILED
+            continue
+        for p in groups[g]:
+            if not _autostart(sections["program:" + p]):
+                _write_state(p, "stopped")      # shown as STOPPED until `supervisorctl start`
+            manifest["programs"][p] = cur[p]
+        print("%s: added process group" % g)
+    if linked:
+        try:
+            s2s.save_loaded_manifest(manifest)
+        except OSError as e:
+            sys.stderr.write("supervisorctl: cannot update %s: %s\n" % (s2s.LOADED_MANIFEST, e))
+    return rc
+
+
 REAL_SUPERVISORCTL = ("/usr/local/bin/supervisorctl.real", "/usr/bin/supervisorctl.real")
 
 
@@ -482,7 +656,11 @@ def main(argv):
         return cmd_status(argv[1:])
     if argv[0] in ("start", "stop", "restart"):
         return cmd_ctl(argv[0], argv[1:])
-    # Unknown subcommands (e.g. reread/update/tail): no-op success so callers
+    if argv[0] == "reread":
+        return cmd_reread(argv[1:])
+    if argv[0] == "update":
+        return cmd_update(argv[1:])
+    # Unknown subcommands (e.g. tail): no-op success so callers
     # that probe supervisorctl don't error out.
     return 0
 
