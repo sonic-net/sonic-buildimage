@@ -22,11 +22,11 @@ exit closes the last writer and returns EOF, and a live daemon permanently
 stuck in initialization retains the writer and remains the accepted
 external-recovery case.
 ---
- teamd/teamd.c | 77 ++++++++++++++++++++++++++++++++++++++++++-----------
- 1 file changed, 65 insertions(+), 12 deletions(-)
+ teamd/teamd.c | 94 ++++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 82 insertions(+), 12 deletions(-)
 --- a/teamd/teamd.c
 +++ b/teamd/teamd.c
-@@ -1505,8 +1505,53 @@
+@@ -1505,8 +1505,55 @@
  	team_free(ctx->th);
  }
  
@@ -77,19 +77,36 @@ external-recovery case.
  static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  {
 +	int startup_pipe[2] = { -1, -1 };
++	int startup_pipe_reserve[4];
++	int startup_pipe_reserve_count = 0;
  	pid_t pid;
  	int err = 0;
  
-@@ -1532,22 +1577,29 @@
+@@ -1532,22 +1579,44 @@
  	}
  
  	if (ctx->daemonize) {
 -		daemon_retval_init();
-+		if (pipe(startup_pipe) < 0) {
-+			err = -errno;
-+			teamd_log_err("Failed to create startup status pipe.");
-+			return err;
++		for (;;) {
++			if (pipe(startup_pipe) < 0) {
++				err = -errno;
++				while (startup_pipe_reserve_count)
++					teamd_close_fd(&startup_pipe_reserve[
++						--startup_pipe_reserve_count]);
++				teamd_log_err("Failed to create startup status pipe.");
++				return err;
++			}
++			if (startup_pipe[0] > STDERR_FILENO)
++				break;
++
++			startup_pipe_reserve[startup_pipe_reserve_count++] =
++				startup_pipe[0];
++			startup_pipe_reserve[startup_pipe_reserve_count++] =
++				startup_pipe[1];
 +		}
++		while (startup_pipe_reserve_count)
++			teamd_close_fd(&startup_pipe_reserve[
++				--startup_pipe_reserve_count]);
  
  		pid = daemon_fork();
  		if (pid < 0) {
@@ -116,7 +133,7 @@ external-recovery case.
  			}
  			if (ret > 0)
  				teamd_log_err("Daemon process failed.");
-@@ -1555,6 +1607,7 @@
+@@ -1555,6 +1624,7 @@
  		}
  
  	/* Child */
@@ -124,7 +141,7 @@ external-recovery case.
  	}
  
  	ctx->log_output = ctx->log_output ? : getenv("TEAM_LOG_OUTPUT");
-@@ -1567,21 +1620,21 @@
+@@ -1567,21 +1637,21 @@
  			daemon_log_use = DAEMON_LOG_SYSLOG;
  	}
  
@@ -150,7 +167,7 @@ external-recovery case.
  		err = -errno;
  		goto pid_file_remove;
  	}
-@@ -1589,12 +1642,12 @@
+@@ -1589,12 +1659,12 @@
  	err = teamd_init(ctx);
  	if (err) {
  		teamd_log_err("teamd_init() failed.");
