@@ -63,6 +63,35 @@ def _truthy(v):
     return str(v).strip().lower() in ("true", "1", "yes", "on")
 
 
+_FALSY = ("false", "0", "no", "off")
+
+
+def _autorestart(v):
+    """supervisord's autorestart= -> "true" | "false" | "unexpected".
+
+    A missing key is "unexpected" (supervisord's default). supervisord's boolean words
+    are true/yes/on/1 and false/no/off/0 (any case); "unexpected" is the third value.
+    Anything else is a config error in supervisord; we keep the program running with
+    the default policy and warn.
+    """
+    if v is None or not str(v).strip():
+        return "unexpected"
+    w = str(v).strip().lower()
+    if w == "unexpected":
+        return w
+    if w in ("true", "1", "yes", "on"):
+        return "true"
+    if w in _FALSY:
+        return "false"
+    _warn("autorestart=%r is not a supervisord value; using the default 'unexpected'" % str(v))
+    return "unexpected"
+
+
+def _warn(msg):
+    sys.stderr.write("supervisord2s6: warning: %s\n" % msg)
+    sys.stderr.flush()
+
+
 def parse_ini(paths):
     """Minimal, predictable INI reader. Whole-line values (no inline-comment
     stripping) so command= with ';' inside quotes survives. Later files/keys
@@ -204,6 +233,8 @@ def build_model(sections, order, critical):
         if not (_truthy(attrs.get("autostart", "false")) or
                 _truthy(attrs.get("dependent_startup", "false"))):
             continue  # never started by supervisord/dependent-startup
+        for msg in unsupported_settings(pname, attrs):
+            _warn(msg)
         progs[pname] = attrs
         prog_order.append(pname)
 
@@ -246,6 +277,27 @@ def stop_wait_ms(secs):
         return 10000
 
 
+# Keys with no s6 mapping that change what supervisord would do if they were set; none is
+# used by SONiC's rendered configs, so a hit is a regression worth a visible warning.
+WARNED_KEYS = {"numprocs", "process_name", "redirect_stderr"}
+
+
+def unsupported_settings(pname, attrs):
+    """-> list of warning strings for settings the converter cannot honour for one program."""
+    out = []
+    n = attrs.get("numprocs")
+    if n is not None and str(n).strip() not in ("", "1"):
+        out.append("program:%s sets numprocs=%s; only one instance is started" % (pname, n))
+    pn = attrs.get("process_name")
+    if pn is not None and pn.strip() not in ("", "%(program_name)s"):
+        out.append("program:%s sets process_name=%s; the s6 service keeps the program name" % (pname, pn))
+    rs = attrs.get("redirect_stderr")
+    if rs is not None and _truthy(rs):
+        out.append("program:%s sets redirect_stderr=%s; stderr is only folded into stdout "
+                   "when stdout_syslog is on" % (pname, rs))
+    return out
+
+
 # supervisord program keys the converter maps to s6 (anything else is ignored; see IGNORED_KEYS).
 HANDLED_KEYS = {"command", "autostart", "autorestart", "exitcodes", "user", "environment",
                 "dependent_startup", "dependent_startup_wait_for", "stdout_syslog",
@@ -253,7 +305,9 @@ HANDLED_KEYS = {"command", "autostart", "autorestart", "exitcodes", "user", "env
 # Known-ignored keys, deliberately: s6 has no equivalent, or it is irrelevant to the program.
 #   priority          ordering comes from the dependent_startup edges
 #   startsecs/startretries  s6 restarts a longrun unconditionally (autorestart semantics only)
-#   stdout_logfile/stderr_logfile=NONE  output goes to syslog (stdout_syslog) or the console
+#   stdout_logfile/stderr_logfile  KNOWN DEVIATION: log files are never written. SONiC renders
+#                     NONE and uses stdout_syslog (handled); a real path would be silently
+#                     dropped (output goes to syslog if stdout_syslog is on, else the console)
 #   stderr_syslog     stderr is always folded into stdout when stdout_syslog is on
 #   stdout_capture_maxbytes  no capture mode
 IGNORED_KEYS = {"priority", "startsecs", "startretries", "stdout_logfile", "stderr_logfile",
@@ -327,7 +381,7 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
                    str(stop_wait_ms(progs[pname].get("stopwaitsecs", "10"))) + "\n")
             _write(os.path.join(sd, "run"),
                    "#!/command/execlineb -P\n" + cmd + "\n", 0o755)
-            autorestart = progs[pname].get("autorestart", "false").strip().lower()
+            autorestart = _autorestart(progs[pname].get("autorestart"))
             if pname in critical:
                 # critical process died -> halt container so systemd restarts it
                 # (mirrors supervisor-proc-exit-listener)
