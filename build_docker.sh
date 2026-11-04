@@ -9,7 +9,7 @@ set -e
 usage() {
     cat >&2 <<EOF
 Usage:
-  sudo ./build_docker.sh [-i DOCKER_IMAGE_NAME] [-t DOCKER_IMAGE_TAG] DOCKER_BUILD_DIR [REGISTRY_SERVER REGISTRY_PORT REGISTRY_USERNAME REGISTRY_PASSWD]
+  sudo --preserve-env=REGISTRY_PASSWD ./build_docker.sh [-i DOCKER_IMAGE_NAME] [-t DOCKER_IMAGE_TAG] DOCKER_BUILD_DIR [REGISTRY_SERVER REGISTRY_PORT REGISTRY_USERNAME]
   
 Description:
   -i DOCKER_IMAGE_NAME
@@ -22,6 +22,8 @@ Description:
        The server name of the docker registry
   REGISTRY_PORT
        The port of the docker registry
+  REGISTRY_PASSWD
+       Set this environment variable when publishing to a registry
        
 Example:
   ./build_docker.sh -i docker-orchagent-mlnx docker-orchagent
@@ -105,5 +107,5 @@ command -v pigz > /dev/null && GZ_COMPRESS_PROGRAM=pigz || GZ_COMPRESS_PROGRAM=g
 docker save $docker_image_name | $GZ_COMPRESS_PROGRAM -c > target/$docker_image_name.gz
 
 if [ -n "$1" ]; then
-    ./push_docker.sh target/$docker_image_name.gz $@ $docker_image_tag
+    ./push_docker.sh "target/$docker_image_name.gz" "$@" "$docker_image_tag"
 fi

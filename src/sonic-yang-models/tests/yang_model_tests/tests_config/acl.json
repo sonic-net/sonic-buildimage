@@ -2284,57 +2284,28 @@
             }
         }
     },
-    "ACL_INNERSRCMACREWRITE_VALID_INNER_SRC_IPV6": {
+    "ACL_RULE_WITH_ARBITRARY_IPV4_SRC_MASK": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
                 "ACL_RULE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE",
-                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
-                        "PRIORITY": "999960",
-                        "RULE_NAME": "Rule_10",
-                        "INNER_SRC_IPV6": "2001:db8:2::2/128",
-                        "TUNNEL_VNI": "45"
-                    },
-                    {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE",
-                        "PRIORITY": "999950",
-                        "RULE_NAME": "Rule_9",
-                        "INNER_SRC_IPV6": "2001:db8:3::/64",
-                        "INNER_SRC_MAC_REWRITE_ACTION": "60:46:BD:08:19:68",
-                        "TUNNEL_VNI": "47"
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IP": "10.1.2.3",
+                        "SRC_IP_MASK": "255.0.255.0"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE": {
                 "ACL_TABLE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE",
-                        "policy_desc": "Replace inner src MAC with ENI MAC for IPv6 workloads",
-                        "ports": [
-                            "Ethernet0",
-                            "Ethernet1"
-                        ],
-                        "stage": "EGRESS",
-                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
-                    }
-                ]
-            },
-            "sonic-acl:ACL_TABLE_TYPE": {
-                "ACL_TABLE_TYPE_LIST": [
-                    {
-                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
-                        "ACTIONS": [
-                            "INNER_SRC_MAC_REWRITE_ACTION"
-                        ],
-                        "MATCHES": [
-                            "INNER_SRC_IPV6",
-                            "TUNNEL_VNI"
-                        ],
-                        "BIND_POINTS": [
-                            "PORT",
-                            "PORTCHANNEL"
-                        ]
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3"
                     }
                 ]
             }
@@ -2345,68 +2316,38 @@
                     {
                         "admin_status": "up",
                         "alias": "eth0",
+                        "lanes": "0,1,2,3",
                         "description": "Ethernet0",
                         "mtu": 9000,
-                        "lanes": "0,1,2,3",
                         "name": "Ethernet0",
-                        "speed": 25000
-                    },
-                    {
-                        "admin_status": "up",
-                        "alias": "eth1",
-                        "description": "Ethernet1",
-                        "mtu": 9000,
-                        "lanes": "10,11,12,13",
-                        "name": "Ethernet1",
                         "speed": 25000
                     }
                 ]
             }
         }
     },
-    "ACL_INNERSRCMACREWRITE_INVALID_INNER_SRC_IPV6": {
+    "ACL_RULE_WITH_ARBITRARY_IPV4_DST_MASK": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
                 "ACL_RULE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-INVALID-IPV6",
-                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
-                        "PRIORITY": "999963",
-                        "RULE_NAME": "Rule_13",
-                        "INNER_SRC_IPV6": "2001:db8:gggg::1/128",
-                        "TUNNEL_VNI": "45"
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "DST_IP": "192.168.5.1",
+                        "DST_IP_MASK": "255.0.255.0"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE": {
                 "ACL_TABLE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-INVALID-IPV6",
-                        "policy_desc": "Replace inner src MAC with ENI MAC for IPv6 workloads",
-                        "ports": [
-                            "Ethernet0",
-                            "Ethernet1"
-                        ],
-                        "stage": "EGRESS",
-                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
-                    }
-                ]
-            },
-            "sonic-acl:ACL_TABLE_TYPE": {
-                "ACL_TABLE_TYPE_LIST": [
-                    {
-                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
-                        "ACTIONS": [
-                            "INNER_SRC_MAC_REWRITE_ACTION"
-                        ],
-                        "MATCHES": [
-                            "INNER_SRC_IPV6",
-                            "TUNNEL_VNI"
-                        ],
-                        "BIND_POINTS": [
-                            "PORT",
-                            "PORTCHANNEL"
-                        ]
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3"
                     }
                 ]
             }
@@ -2417,68 +2358,38 @@
                     {
                         "admin_status": "up",
                         "alias": "eth0",
+                        "lanes": "0,1,2,3",
                         "description": "Ethernet0",
                         "mtu": 9000,
-                        "lanes": "0,1,2,3",
                         "name": "Ethernet0",
-                        "speed": 25000
-                    },
-                    {
-                        "admin_status": "up",
-                        "alias": "eth1",
-                        "description": "Ethernet1",
-                        "mtu": 9000,
-                        "lanes": "10,11,12,13",
-                        "name": "Ethernet1",
                         "speed": 25000
                     }
                 ]
             }
         }
     },
-    "ACL_INNERSRCMACREWRITE_INVALID_MAC_WITH_IPV6": {
+    "ACL_RULE_WITH_ARBITRARY_IPV6_SRC_MASK": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
                 "ACL_RULE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-INVALID-MAC",
-                        "INNER_SRC_MAC_REWRITE_ACTION": "60.45.BD.08:19:68",
-                        "PRIORITY": "999964",
-                        "RULE_NAME": "Rule_14",
-                        "INNER_SRC_IPV6": "2001:db8:2::2/128",
-                        "TUNNEL_VNI": "45"
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IPV6": "2001::1",
+                        "SRC_IPV6_MASK": "ffff::ffff"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE": {
                 "ACL_TABLE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-INVALID-MAC",
-                        "policy_desc": "Replace inner src MAC with ENI MAC for IPv6 workloads",
-                        "ports": [
-                            "Ethernet0",
-                            "Ethernet1"
-                        ],
-                        "stage": "EGRESS",
-                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
-                    }
-                ]
-            },
-            "sonic-acl:ACL_TABLE_TYPE": {
-                "ACL_TABLE_TYPE_LIST": [
-                    {
-                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
-                        "ACTIONS": [
-                            "INNER_SRC_MAC_REWRITE_ACTION"
-                        ],
-                        "MATCHES": [
-                            "INNER_SRC_IPV6",
-                            "TUNNEL_VNI"
-                        ],
-                        "BIND_POINTS": [
-                            "PORT",
-                            "PORTCHANNEL"
-                        ]
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3V6"
                     }
                 ]
             }
@@ -2489,68 +2400,38 @@
                     {
                         "admin_status": "up",
                         "alias": "eth0",
+                        "lanes": "0,1,2,3",
                         "description": "Ethernet0",
                         "mtu": 9000,
-                        "lanes": "0,1,2,3",
                         "name": "Ethernet0",
-                        "speed": 25000
-                    },
-                    {
-                        "admin_status": "up",
-                        "alias": "eth1",
-                        "description": "Ethernet1",
-                        "mtu": 9000,
-                        "lanes": "10,11,12,13",
-                        "name": "Ethernet1",
                         "speed": 25000
                     }
                 ]
             }
         }
     },
-    "ACL_INNERSRCMACREWRITE_INVALID_VNI_WITH_IPV6": {
+    "ACL_RULE_WITH_ARBITRARY_IPV6_DST_MASK": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
                 "ACL_RULE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-INVALID-VNI",
-                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
-                        "PRIORITY": "999960",
-                        "RULE_NAME": "Rule_15",
-                        "INNER_SRC_IPV6": "2001:db8:2::2/128",
-                        "TUNNEL_VNI": 16777216
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "DST_IPV6": "fe80::1",
+                        "DST_IPV6_MASK": "ffff::ffff"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE": {
                 "ACL_TABLE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-INVALID-VNI",
-                        "policy_desc": "Replace inner src MAC with ENI MAC for IPv6 workloads",
-                        "ports": [
-                            "Ethernet0",
-                            "Ethernet1"
-                        ],
-                        "stage": "EGRESS",
-                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
-                    }
-                ]
-            },
-            "sonic-acl:ACL_TABLE_TYPE": {
-                "ACL_TABLE_TYPE_LIST": [
-                    {
-                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
-                        "ACTIONS": [
-                            "INNER_SRC_MAC_REWRITE_ACTION"
-                        ],
-                        "MATCHES": [
-                            "INNER_SRC_IPV6",
-                            "TUNNEL_VNI"
-                        ],
-                        "BIND_POINTS": [
-                            "PORT",
-                            "PORTCHANNEL"
-                        ]
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3V6"
                     }
                 ]
             }
@@ -2561,67 +2442,38 @@
                     {
                         "admin_status": "up",
                         "alias": "eth0",
+                        "lanes": "0,1,2,3",
                         "description": "Ethernet0",
                         "mtu": 9000,
-                        "lanes": "0,1,2,3",
                         "name": "Ethernet0",
-                        "speed": 25000
-                    },
-                    {
-                        "admin_status": "up",
-                        "alias": "eth1",
-                        "description": "Ethernet1",
-                        "mtu": 9000,
-                        "lanes": "10,11,12,13",
-                        "name": "Ethernet1",
                         "speed": 25000
                     }
                 ]
             }
         }
     },
-    "ACL_INNERSRCMACREWRITE_NO_INNERSRCIPV6": {
+    "ACL_RULE_WITH_INVALID_IPV4_MASK": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
                 "ACL_RULE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-NO-SRCIPV6",
-                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
-                        "PRIORITY": "999960",
-                        "RULE_NAME": "Rule_16",
-                        "TUNNEL_VNI": 16777213
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IP": "10.1.2.3",
+                        "SRC_IP_MASK": "999.999.999.999"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE": {
                 "ACL_TABLE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "V6-SRC-MAC-REWRITE-TABLE-NO-SRCIPV6",
-                        "policy_desc": "Replace inner src MAC with ENI MAC for IPv6 workloads",
-                        "ports": [
-                            "Ethernet0",
-                            "Ethernet1"
-                        ],
-                        "stage": "EGRESS",
-                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
-                    }
-                ]
-            },
-            "sonic-acl:ACL_TABLE_TYPE": {
-                "ACL_TABLE_TYPE_LIST": [
-                    {
-                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
-                        "ACTIONS": [
-                            "INNER_SRC_MAC_REWRITE_ACTION"
-                        ],
-                        "MATCHES": [
-                            "INNER_SRC_IPV6",
-                            "TUNNEL_VNI"
-                        ],
-                        "BIND_POINTS": [
-                            "PORT",
-                            "PORTCHANNEL"
-                        ]
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3"
                     }
                 ]
             }
@@ -2632,19 +2484,384 @@
                     {
                         "admin_status": "up",
                         "alias": "eth0",
+                        "lanes": "0,1,2,3",
                         "description": "Ethernet0",
                         "mtu": 9000,
-                        "lanes": "0,1,2,3",
                         "name": "Ethernet0",
                         "speed": 25000
-                    },
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WITH_INVALID_IPV6_MASK": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IPV6": "2001::1",
+                        "SRC_IPV6_MASK": "gggg::hhhh"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3V6"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
                     {
                         "admin_status": "up",
-                        "alias": "eth1",
-                        "description": "Ethernet1",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
                         "mtu": 9000,
-                        "lanes": "10,11,12,13",
-                        "name": "Ethernet1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_SRC_MASK_WITHOUT_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IP_MASK": "255.0.255.0"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_SRC_MASK_WITH_CIDR_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IP": "10.0.0.0/8",
+                        "SRC_IP_MASK": "255.0.255.0"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_DST_MASK_WITHOUT_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "DST_IP_MASK": "255.0.255.0"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_DST_MASK_WITH_CIDR_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "DST_IP": "192.168.0.0/16",
+                        "DST_IP_MASK": "255.0.255.0"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V4",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_IPV6_SRC_MASK_WITHOUT_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IPV6_MASK": "ffff::ffff"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3V6"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_IPV6_SRC_MASK_WITH_CIDR_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "SRC_IPV6": "2001:db8::/32",
+                        "SRC_IPV6_MASK": "ffff::ffff"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3V6"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_IPV6_DST_MASK_WITHOUT_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "DST_IPV6_MASK": "ffff::ffff"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3V6"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_IPV6_DST_MASK_WITH_CIDR_IP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_1",
+                        "DST_IPV6": "2001:db8::/32",
+                        "DST_IPV6_MASK": "ffff::ffff"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACL_V6",
+                        "policy_desc": "Test table",
+                        "ports": ["Ethernet0"],
+                        "stage": "INGRESS",
+                        "type": "L3V6"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "lanes": "0,1,2,3",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
                         "speed": 25000
                     }
                 ]

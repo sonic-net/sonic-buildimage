@@ -8191,6 +8191,50 @@
           }
         }
       }
+    },
+    "65": {
+      "Default": {
+        "main": {
+          "lane0": "0x11"
+        },
+        "post1": {
+          "lane0": "0x5"
+        },
+        "post2": {
+          "lane0": "0x0"
+        },
+        "post3": {
+          "lane0": "0x0"
+        },
+        "pre1": {
+          "lane0": "0x1"
+        },
+        "pre2": {
+          "lane0": "0x0"
+        }
+      }
+    },
+    "66": {
+      "Default": {
+        "main": {
+          "lane0": "0x11"
+        },
+        "post1": {
+          "lane0": "0x5"
+        },
+        "post2": {
+          "lane0": "0x0"
+        },
+        "post3": {
+          "lane0": "0x0"
+        },
+        "pre1": {
+          "lane0": "0x1"
+        },
+        "pre2": {
+          "lane0": "0x0"
+        }
+      }
     }
   }
 }

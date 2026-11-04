@@ -1,7 +1,11 @@
+from bgpcfgd.config import ConfigMgr
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME, BGP_BBR_TABLE_NAME
-from bgpcfgd.managers_aggregate_address import validate_prefix
+from bgpcfgd.managers_aggregate_address import generate_prefix_list_commands, validate_prefix
+from jinja2 import Environment, FileSystemLoader
+import ipaddress
+import os
 import pytest
 from swsscommon import swsscommon
 from unittest.mock import MagicMock, patch
@@ -12,6 +16,10 @@ BGP_BBR_TABLE_NAME = "BGP_BBR"
 BGP_BBR_STATUS_KEY = "status"
 BGP_BBR_STATUS_ENABLED = "enabled"
 BGP_BBR_STATUS_DISABLED = "disabled"
+TEMPLATE_PATH = os.path.abspath(os.path.join(
+    os.path.dirname(__file__),
+    '../../../dockers/docker-fpm-frr/frr/bgpd'
+))
 
 
 class MockAddressTable(object):
@@ -286,6 +294,311 @@ def __switch_bbr_state(
     assert data == expected_state
 
 
+BBR_REQUIRED_ATTR = (
+    ('bbr-required', 'true'),
+    ('summary-only', 'false'),
+    ('as-set', 'false'),
+    ('aggregate-address-prefix-list', 'AGG'),
+    ('contributing-address-prefix-list', 'CON'),
+)
+
+
+def _use_real_config_mgr(mgr, snapshots, write_result=True):
+    frr = MagicMock()
+    frr.get_config.side_effect = snapshots
+    frr.write.return_value = write_result
+    frr.restart_peer_groups.return_value = True
+    mgr.cfg_mgr = ConfigMgr(frr)
+    return frr
+
+
+def _installed_snapshot(prefix):
+    return '\n'.join(_address_commands(prefix, remove=False))
+
+
+def _address_commands(prefix, remove):
+    is_v4 = '.' in prefix
+    af = 'ipv4' if is_v4 else 'ipv6'
+    command = 'no aggregate-address ' if remove else 'aggregate-address '
+    commands = [
+        'router bgp 65001',
+        'address-family ' + af,
+        command + prefix,
+        'exit-address-family',
+        'exit',
+    ]
+    prefix_cmd = ('no ' if remove else '') + ('ip' if is_v4 else 'ipv6') + ' prefix-list '
+    commands.append(prefix_cmd + 'AGG permit ' + prefix)
+    commands.append(prefix_cmd + 'CON permit ' + prefix + (' le 32' if is_v4 else ' le 128'))
+    return commands
+
+
+@pytest.mark.parametrize("aggregate_prefix", ["192.168.1.0/24", "2ff::/64"])
+def test_disabled_bbr_callback_skips_never_installed_inactive_entry(aggregate_prefix):
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    frr = _use_real_config_mgr(mgr, ['hostname sonic', 'hostname sonic'])
+    mgr.set_handler(aggregate_prefix, BBR_REQUIRED_ATTR)
+
+    mgr.on_bbr_change()
+    mgr.on_bbr_change()
+
+    assert mgr.cfg_mgr.changes == ''
+    assert frr.get_config.call_count == 2
+    assert mgr.address_table.get(aggregate_prefix)[1] == dict(
+        BBR_REQUIRED_ATTR + (('state', 'inactive'),)
+    )
+
+
+@pytest.mark.parametrize("aggregate_prefix", ["192.168.1.0/24", "2ff::/64"])
+def test_disabled_bbr_callback_removes_installed_entry_then_allows_later_enable(aggregate_prefix):
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    frr = _use_real_config_mgr(mgr, [_installed_snapshot(aggregate_prefix), 'hostname sonic'])
+    mgr.set_handler(aggregate_prefix, BBR_REQUIRED_ATTR)
+
+    mgr.on_bbr_change()
+    assert mgr.cfg_mgr.changes.splitlines() == _address_commands(aggregate_prefix, remove=True)
+    assert mgr.cfg_mgr.commit() is True
+
+    mgr.on_bbr_change()
+    assert mgr.cfg_mgr.changes == ''
+
+    mgr.directory.put(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY, BGP_BBR_STATUS_ENABLED)
+    assert mgr.cfg_mgr.changes.splitlines() == _address_commands(aggregate_prefix, remove=False)
+    assert mgr.address_table.get(aggregate_prefix)[1]['state'] == 'active'
+    assert frr.get_config.call_count == 2
+
+
+@pytest.mark.parametrize("second_snapshot,expected_retry", [
+    (
+        _installed_snapshot("192.168.1.0/24"),
+        _address_commands("192.168.1.0/24", remove=True),
+    ),
+    (
+        '\n'.join([
+            'hostname sonic',
+            'ip prefix-list AGG permit 192.168.1.0/24',
+            'ip prefix-list CON permit 192.168.1.0/24 le 32',
+        ]),
+        [
+            'no ip prefix-list AGG permit 192.168.1.0/24',
+            'no ip prefix-list CON permit 192.168.1.0/24 le 32',
+        ],
+    ),
+])
+def test_disabled_bbr_callback_retries_failed_or_partial_write(second_snapshot, expected_retry):
+    prefix = "192.168.1.0/24"
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    _use_real_config_mgr(mgr, [_installed_snapshot(prefix), second_snapshot], write_result=False)
+    mgr.set_handler(prefix, BBR_REQUIRED_ATTR)
+
+    mgr.on_bbr_change()
+    assert mgr.cfg_mgr.changes.splitlines() == _address_commands(prefix, remove=True)
+    assert mgr.cfg_mgr.commit() is False
+
+    mgr.on_bbr_change()
+    assert mgr.cfg_mgr.changes.splitlines() == expected_retry
+
+
+def test_disabled_bbr_callback_does_not_duplicate_pending_cleanup():
+    prefix = "192.168.1.0/24"
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    _use_real_config_mgr(mgr, [_installed_snapshot(prefix), _installed_snapshot(prefix)])
+    mgr.set_handler(prefix, BBR_REQUIRED_ATTR)
+
+    mgr.on_bbr_change()
+    mgr.on_bbr_change()
+
+    assert mgr.cfg_mgr.changes.splitlines() == _address_commands(prefix, remove=True)
+
+
+@pytest.mark.parametrize("initial_status,initial_state,sequence", [
+    (
+        BGP_BBR_STATUS_DISABLED,
+        'inactive',
+        [BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED],
+    ),
+    (
+        BGP_BBR_STATUS_ENABLED,
+        'active',
+        [BGP_BBR_STATUS_DISABLED, BGP_BBR_STATUS_ENABLED],
+    ),
+])
+def test_bbr_callbacks_preserve_pending_last_writer(initial_status, initial_state, sequence):
+    prefix = "192.168.1.0/24"
+    mgr = constructor(bbr_status=initial_status)
+    frr = _use_real_config_mgr(mgr, [])
+    mgr.set_address_state(prefix, dict(BBR_REQUIRED_ATTR), initial_state)
+
+    for status in sequence:
+        mgr.directory.put(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY, status)
+
+    expected_commands = []
+    for status in sequence:
+        expected_commands.extend(_address_commands(prefix, remove=status == BGP_BBR_STATUS_DISABLED))
+    assert mgr.cfg_mgr.changes.splitlines() == expected_commands
+    assert mgr.address_table.get(prefix)[1]['state'] == (
+        'active' if sequence[-1] == BGP_BBR_STATUS_ENABLED else 'inactive'
+    )
+    frr.get_config.assert_not_called()
+
+
+@pytest.mark.parametrize("snapshot", [
+    '',
+    'router bgp invalid\n address-family ipv4\n  aggregate-address 192.168.1.0/24',
+    'hostname sonic\nip prefix-list AGG permit not-a-prefix',
+    'router bgp 65001\n address-family ipv4\n  aggregate-address 192.168.1.1/24',
+    'hostname sonic\nip prefix-list AGG permit 192.168.1.1/24',
+])
+def test_disabled_bbr_callback_preserves_inactive_metadata_on_invalid_snapshot(snapshot):
+    prefix = "192.168.1.0/24"
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    _use_real_config_mgr(mgr, [snapshot])
+    mgr.set_handler(prefix, BBR_REQUIRED_ATTR)
+
+    with patch('bgpcfgd.managers_aggregate_address.log_err') as mocked_log_err:
+        mgr.on_bbr_change()
+
+    assert mgr.cfg_mgr.changes == ''
+    assert mgr.address_table.get(prefix)[1]['state'] == 'inactive'
+    mocked_log_err.assert_called_once()
+
+
+def test_disabled_bbr_callback_ignores_wrong_context_and_unrelated_rules():
+    prefix = "192.168.1.0/24"
+    snapshot = '\n'.join([
+        'router bgp 65002',
+        ' address-family ipv4',
+        '  aggregate-address 192.168.1.0/24',
+        'exit',
+        'router bgp 65001 vrf BLUE',
+        ' address-family ipv4',
+        '  aggregate-address 192.168.1.0/24',
+        'end',
+        'router bgp 65001',
+        ' address-family ipv4',
+        ' address-family ipv4 multicast',
+        '  aggregate-address 192.168.1.0/24',
+        ' exit-address-family',
+        ' address-family ipv6',
+        '  aggregate-address 2001:db8::/64',
+        ' exit-address-family',
+        'exit',
+        'ip prefix-list AGG deny 192.168.1.0/24',
+        'ip prefix-list AGG permit 198.51.100.0/24',
+        'ip prefix-list CON permit 192.168.1.0/24 ge 25 le 32',
+    ])
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    _use_real_config_mgr(mgr, [snapshot])
+    mgr.set_handler(prefix, BBR_REQUIRED_ATTR)
+
+    mgr.on_bbr_change()
+
+    assert mgr.cfg_mgr.changes == ''
+
+
+def test_disabled_bbr_callback_applies_sequence_changes_and_normalizes_ipv6():
+    prefix = "2001:db8::/64"
+    expanded = "2001:0db8:0000:0000:0000:0000:0000:0000/64"
+    snapshot = '\n'.join([
+        'router bgp 1.10',
+        ' address-family ipv6 unicast',
+        '  aggregate-address ' + expanded,
+        ' exit-address-family',
+        'exit',
+        'ipv6 prefix-list AGG seq 10 permit ' + expanded,
+        'ipv6 prefix-list CON seq 20 permit ' + expanded + ' le 128',
+    ])
+    pending = [
+        'no ipv6 prefix-list AGG seq 10',
+        'ipv6 prefix-list AGG seq 10 permit 2001:db8:1::/64',
+        'ipv6 prefix-list CON seq 20 permit 2001:db8:1::/64 le 128',
+        'ipv6 prefix-list CON seq 30 permit ' + expanded + ' le 128',
+    ]
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    _use_real_config_mgr(mgr, [snapshot])
+    mgr.directory.put(
+        CONFIG_DB_NAME,
+        swsscommon.CFG_DEVICE_METADATA_TABLE_NAME,
+        "localhost",
+        {"bgp_asn": "65546"},
+    )
+    mgr.set_handler(prefix, BBR_REQUIRED_ATTR)
+    mgr.cfg_mgr.push_list(pending)
+
+    mgr.on_bbr_change()
+
+    assert mgr.cfg_mgr.changes.splitlines() == pending + [
+        'router bgp 65546',
+        'address-family ipv6',
+        'no aggregate-address 2001:db8::/64',
+        'exit-address-family',
+        'exit',
+        'no ipv6 prefix-list CON permit 2001:db8::/64 le 128',
+    ]
+
+
+@pytest.mark.parametrize("pending", [
+    'no ip prefix-list AGG seq 99 permit 192.168.1.0/24',
+    'no ip prefix-list AGG seq 10 permit 192.168.1.0/24',
+    'no ip prefix-list AGG permit 192.168.1.0/24',
+])
+def test_inactive_reconciliation_preserves_remaining_sequence_matches(pending):
+    prefix = '192.168.1.0/24'
+    snapshot = '\n'.join([
+        'hostname sonic',
+        'ip prefix-list AGG description aggregate routes',
+        'ip prefix-list AGG seq 10 permit ' + prefix,
+        'ip prefix-list AGG seq 20 permit ' + prefix,
+        'ip prefix-list AGG seq 30 permit 198.51.100.0/24',
+    ])
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    _use_real_config_mgr(mgr, [snapshot])
+    mgr.set_handler(prefix, BBR_REQUIRED_ATTR)
+    mgr.cfg_mgr.push_list([pending])
+
+    mgr.on_bbr_change()
+
+    assert mgr.cfg_mgr.changes.splitlines() == [
+        pending, 'no ip prefix-list AGG permit ' + prefix,
+    ]
+
+
+def test_inactive_reconciliation_does_not_guess_auto_assigned_sequences():
+    prefix = '192.168.1.0/24'
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    _use_real_config_mgr(mgr, ['hostname sonic'])
+    mgr.set_handler(prefix, BBR_REQUIRED_ATTR)
+    pending = [
+        'ip prefix-list AGG permit ' + prefix,
+        'ip prefix-list AGG seq 5 deny ' + prefix,
+    ]
+    mgr.cfg_mgr.push_list(pending)
+
+    with patch('bgpcfgd.managers_aggregate_address.log_err') as mocked_log_err:
+        mgr.on_bbr_change()
+
+    mocked_log_err.assert_called_once()
+    assert mgr.cfg_mgr.changes.splitlines() == pending
+    assert mgr.address_table.get(prefix)[1]['state'] == 'inactive'
+
+
+@pytest.mark.parametrize("state_value", [None, "mystery"])
+def test_disabled_bbr_callback_still_cleans_unknown_state(state_value):
+    prefix = "192.168.1.0/24"
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    frr = _use_real_config_mgr(mgr, [])
+    for key, value in BBR_REQUIRED_ATTR:
+        mgr.address_table.hset(prefix, key, value)
+    if state_value is not None:
+        mgr.address_table.hset(prefix, 'state', state_value)
+
+    mgr.on_bbr_change()
+
+    assert mgr.cfg_mgr.changes.splitlines() == _address_commands(prefix, remove=True)
+    assert mgr.address_table.get(prefix)[1]['state'] == 'inactive'
+    frr.get_config.assert_not_called()
+
+
 @pytest.mark.parametrize("prefix,expected", [
     ("10.100.0.0/16", True),
     ("10.100.1.0/24", True),
@@ -352,3 +665,103 @@ def test_inactive_entry_skips_frr_removal(bad_prefix):
 
     # STATE_DB entry should be cleaned up
     assert bad_prefix not in mgr.address_table.getKeys()
+
+
+def _is_ipv4(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).version == 4
+    except ValueError:
+        return False
+
+
+def _is_ipv6(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).version == 6
+    except ValueError:
+        return False
+
+
+def _ip_network(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).network_address
+    except ValueError:
+        return ''
+
+
+def _ip(value):
+    try:
+        return ipaddress.ip_interface(value).ip
+    except ValueError:
+        return ''
+
+
+def _network(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).network_address
+    except ValueError:
+        return ''
+
+
+def _render_bootstrap_aggregate_config():
+    env = Environment(loader=FileSystemLoader(TEMPLATE_PATH))
+    env.filters['ipv4'] = _is_ipv4
+    env.filters['ipv6'] = _is_ipv6
+    env.filters['ip_network'] = _ip_network
+    env.filters['ip'] = _ip
+    env.filters['network'] = _network
+    template = env.get_template('bgpd.aggregate.conf.j2')
+
+    return template.render(
+        DEVICE_METADATA={'localhost': {'bgp_asn': '65000'}},
+        constants={
+            'bgp': {
+                'bbr': {'enabled': True, 'default_state': 'enabled'},
+                'peers': {'general': {'bbr': {'TIER0_V4': ['ipv4']}}},
+            },
+        },
+        BGP_BBR={'all': {'status': 'enabled'}},
+        BGP_AGGREGATE_ADDRESS={
+            '10.0.0.0/24': {
+                'bbr-required': 'true',
+                'summary-only': 'true',
+                'as-set': 'false',
+                'aggregate-address-prefix-list': 'AGG',
+                'contributing-address-prefix-list': 'CON',
+            },
+            '2001:db8::/64': {
+                'bbr-required': 'true',
+                'summary-only': 'true',
+                'as-set': 'false',
+                'aggregate-address-prefix-list': 'AGG_V6',
+                'contributing-address-prefix-list': 'CON_V6',
+            },
+        },
+    )
+
+
+def _config_lines(output):
+    return [
+        line.strip()
+        for line in output.splitlines()
+        if line.strip() and not line.strip().startswith('!')
+    ]
+
+
+def _manager_prefix_list_commands(is_remove=False):
+    commands = []
+    commands.extend(generate_prefix_list_commands('AGG', '10.0.0.0/24', True, False, is_remove))
+    commands.extend(generate_prefix_list_commands('CON', '10.0.0.0/24', True, True, is_remove))
+    commands.extend(generate_prefix_list_commands('AGG_V6', '2001:db8::/64', False, False, is_remove))
+    commands.extend(generate_prefix_list_commands('CON_V6', '2001:db8::/64', False, True, is_remove))
+    return commands
+
+
+def test_bootstrap_manager_reconciliation_and_delete_use_same_prefix_list_rules():
+    bootstrap_lines = set(_config_lines(_render_bootstrap_aggregate_config()))
+    manager_add_commands = _manager_prefix_list_commands(is_remove=False)
+    manager_delete_commands = _manager_prefix_list_commands(is_remove=True)
+
+    assert set(manager_add_commands).issubset(bootstrap_lines)
+    assert all(' seq ' not in command for command in manager_add_commands)
+    assert all(' seq ' not in command for command in manager_delete_commands)
+    assert manager_delete_commands == ["no %s" % command for command in manager_add_commands]

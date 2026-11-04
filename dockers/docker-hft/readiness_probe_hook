@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# Readiness hook of the hft container. It is run by /usr/bin/readiness_probe.sh,
+# the Kubernetes readiness probe of SONiC containers, once the "start" program
+# has exited successfully. The container is ready when countersyncd is running.
+# Exit codes 1 and 2 are reserved by readiness_probe.sh.
+
+if [[ "$(supervisorctl status countersyncd 2>/dev/null | awk '{print $2}')" == "RUNNING" ]]; then
+    exit 0
+fi
+
+exit 3

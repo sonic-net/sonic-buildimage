@@ -27,6 +27,9 @@ MCTP_ARCHIVE_SHA256 ?= 9cb001d64afbc03f656ef0852a9e616864096d2b0b1d7fcc15cfc4dbb
 
 MCTP = mctp_$(MCTP_PKG_VERSION)_$(CONFIGURED_ARCH).deb
 $(MCTP)_SRC_PATH = $(PLATFORM_PATH)/mctp
+# Lazy-installed on the NVIDIA AST2700 BMC platform (needs a _PLATFORM device
+# so the lazy-install dev@deb mapping in slave.mk is well-formed).
+$(MCTP)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
 
 export MCTP_UPSTREAM_TAG MCTP_PKG_VERSION MCTP_DEB_VERSION MCTP_ARCHIVE_URL MCTP_ARCHIVE_SHA256 MCTP
 

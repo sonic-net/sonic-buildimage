@@ -8,16 +8,22 @@ The goal: when a SONiC patch fixes an upstream CVE, that CVE should
 **not** appear as an active finding in the vulnerability report for
 the corresponding component, even though the underlying upstream
 version in the SBOM ancestor pedigree is still vulnerable. OpenVEX
-status `not_affected` with justification `vulnerable_code_not_in_execute_path`
-encodes that "the patch fixed it; don't bother me about it".
+status `fixed` encodes that: the patch changed the vulnerable code, so
+the artifact we ship carries the fix even though the version string
+does not say so.
 
-Where it looks:
+Where it looks — the directories SONiC keeps its own patches in, and
+only the entries their `series` (or their recipe) actually applies:
 
-    src/*/patch/*.patch
-    src/*/patches/*.patch
-    src/*/patches-sonic/*.patch    (sonic-linux-kernel kernel patches)
-    src/*.patch/*.patch            (sidecar patch directories)
-    src/*/debian/patches/*.patch   (Debian-style nested)
+    src/*.patch/                   (sidecar patch directories)
+    src/*/patch/
+    src/*/patches/
+    src/sonic-linux-kernel/patches-sonic/
+
+The same set sbom_fragment.py records in the SBOM's pedigree, via
+sbom_cve_refs.patch_dirs(). Patches carried by upstream sources the
+build unpacks — Debian's own debian/patches under src/<pkg>/<pkg>-<ver>/
+— are deliberately not ours to make claims about, and are skipped.
 
 What it looks for, in order of confidence:
 
@@ -53,12 +59,11 @@ import os
 import re
 import sys
 
+# Invoked with an arbitrary working directory, so locate the sibling
+# module relative to this file rather than relying on cwd.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-_CVE_RE = re.compile(r"CVE-(\d{4})-(\d{4,7})", re.IGNORECASE)
-_FIXES_RE = re.compile(r"^\s*Fixes:\s*(CVE-\d{4}-\d{4,7})",
-                       re.IGNORECASE | re.MULTILINE)
-_SUBJECT_RE = re.compile(r"^Subject:.*?(CVE-\d{4}-\d{4,7})",
-                         re.IGNORECASE | re.MULTILINE)
+import sbom_cve_refs  # noqa: E402  (needs the path set above)
 
 
 def warn(msg: str) -> None:
@@ -75,19 +80,23 @@ def info(msg: str) -> None:
 
 
 def find_patches(root: str = "src") -> list:
-    """Walk the src/ tree (and the few well-known patch dirs that live
-    elsewhere) returning every *.patch file."""
+    """Every patch SONiC maintains and applies, under ``root``.
+
+    Both the directories and the patches within them come from
+    sbom_cve_refs — the same answers sbom_fragment.py records in the
+    pedigree — so the two describe one patch set by construction.
+
+    Taking every directory that held a *.patch instead reached the
+    Debian sources the build unpacks under src/<pkg>/, whose own
+    debian/patches then produced statements reading "Fixed by SONiC
+    local patch" about fixes that are Debian's and are already in the
+    versions we ship. On one broadcom build that was 13 of the 17
+    statements written, none of them ours to make.
+    """
     found = []
-    for r, dirs, files in os.walk(root):
-        # Skip build artifacts and large unrelated trees.
-        skip = {"build", ".git", "node_modules", "target", "deb_dist"}
-        dirs[:] = [d for d in dirs if d not in skip]
-        if "/patch" in r or "/patches" in r or r.endswith(".patch") \
-                or r.endswith("/debian"):
-            pass
-        for fn in files:
-            if fn.endswith(".patch"):
-                found.append(os.path.join(r, fn))
+    for d in sbom_cve_refs.patch_dirs_under(root):
+        for fname in sbom_cve_refs.applied_patches(d):
+            found.append(os.path.join(d, fname))
     return sorted(found)
 
 
@@ -97,42 +106,13 @@ def find_patches(root: str = "src") -> list:
 
 
 def cves_in(path: str) -> tuple:
-    """Returns (high_confidence_cves, low_confidence_cves).
+    """High- and low-confidence CVE ids claimed by a patch.
 
-    High-confidence: the patch declares it via filename or Fixes:/Subject:
-    header.
-    Low-confidence: CVE mentioned somewhere in the patch body — could be
-    a passing reference, not actually being fixed.
+    Shared with sbom_fragment.py, which records the high-confidence ones
+    in the SBOM's pedigree, so the VEX statements and the SBOM cannot
+    disagree about what a patch claims to fix.
     """
-    high: set = set()
-    low: set = set()
-    fname = os.path.basename(path)
-
-    for m in _CVE_RE.finditer(fname):
-        high.add(f"CVE-{m.group(1)}-{m.group(2)}")
-
-    try:
-        with open(path, "rb") as f:
-            data = f.read()
-    except Exception as e:
-        warn(f"could not read {path}: {e}")
-        return set(), set()
-
-    # The header is up to the first 'diff --git' / '---' / '+++' boundary.
-    text = data.decode("utf-8", errors="replace")
-    header_end = re.search(r"^(?:diff --git|---|\+\+\+) ", text, re.M)
-    header = text[: header_end.start()] if header_end else text[:4000]
-
-    for m in _FIXES_RE.finditer(header):
-        high.add(m.group(1).upper())
-    for m in _SUBJECT_RE.finditer(header):
-        high.add(m.group(1).upper())
-    for m in _CVE_RE.finditer(header):
-        cve = f"CVE-{m.group(1)}-{m.group(2)}".upper()
-        if cve not in high:
-            low.add(cve)
-
-    return high, low
+    return sbom_cve_refs.cves_in(path)
 
 
 # ---------------------------------------------------------------------------
@@ -195,13 +175,19 @@ def make_openvex_json(
             "products": [{"@id": f"pkg:generic/{component}"}],
         }
         if is_high:
-            stmt["status"] = "not_affected"
-            stmt["justification"] = "vulnerable_code_not_in_execute_path"
+            # `fixed`, not `not_affected`: the patch changed the
+            # vulnerable code, so the shipped artifact carries the
+            # fix. Saying not_affected would claim the code is
+            # untouched and merely unreachable, which is a different
+            # thing and not what happened.
+            stmt["status"] = "fixed"
             stmt["impact_statement"] = (
                 f"Fixed by SONiC local patch {patch_path}. "
-                "Promote to a curated vex/ file with an exact product "
-                "PURL if grype's PURL matcher doesn't catch this "
-                "component automatically."
+                f"The product is named by source tree only, so this "
+                f"statement covers any version of {component} in the "
+                "document; promote it to a curated vex/ file with an "
+                "exact product PURL to bound it to the version built "
+                "from that patch."
             )
         else:
             stmt["status"] = "under_investigation"
