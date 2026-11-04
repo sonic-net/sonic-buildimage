@@ -34,7 +34,11 @@ actually do:
   * each critical longrun gets a finish script that halts the container so
     systemd restarts it (mirrors supervisor-proc-exit-listener); critical names
     with no matching program (e.g. radv's radvd) are ignored, as service_checker
-    itself tolerates.
+    itself tolerates;
+  * like the listener, that halt is gated on CONFIG_DB FEATURE|<container> auto_restart: the
+    container name comes from the (dropped) supervisor-proc-exit-listener eventlistener's
+    --container-name, and the finish skips the halt only when auto_restart is `disabled`
+    (see critical_finish_script for the semantics and the fail-safe deviation).
 """
 import os
 import re
@@ -432,6 +436,114 @@ def finish_script(name, startsecs, startretries, mode, codes):
     return txt
 
 
+# supervisor-proc-exit-listener(-rs) is the stock eventlistener that halts a SONiC container
+# when a critical process dies; its --container-name is the CONFIG_DB FEATURE key it consults.
+LISTENER_PROG = "supervisor-proc-exit-listener"
+# FEATURE keys are plain feature names; anything else is not put into a shell script.
+_CONTAINER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+# Upper bound of the on-box auto_restart query (`timeout -k 1 N sonic-db-cli ...`, so N + 1 s at
+# worst). It must stay well below the finish script's timeout-finish: s6-supervise SIGKILLs a
+# finish that overruns and then simply respawns the service, i.e. a hung query would silently
+# skip the halt the fail-safe promises.
+AUTORESTART_QUERY_TIMEOUT_S = 2
+CRITICAL_TIMEOUT_FINISH_MS = 10000
+
+
+def listener_options(sections):
+    """supervisor-proc-exit-listener's options -> {"container": name, "unix_socket": bool}, or None.
+
+    Looks at every [eventlistener:*] whose command runs the listener (the Rust
+    `supervisor-proc-exit-listener-rs` or the Python `supervisor-proc-exit-listener`) and reads
+    `--container-name X` / `-c X` (also `=X` / `-cX`) and `-s` / `--use-unix-socket-path`. The
+    converter drops these listeners (s6 replaces them); this keeps what the critical finish needs to
+    mirror them. None when there is no listener, no container name, or an implausible name
+    (a warning is printed for the last case).
+    """
+    for sec, attrs in sections.items():
+        if not sec.startswith("eventlistener:"):
+            continue
+        try:
+            toks = shlex.split(attrs.get("command", ""))
+        except ValueError:
+            continue
+        idx = [i for i, t in enumerate(toks) if os.path.basename(t).startswith(LISTENER_PROG)]
+        if not idx:
+            continue
+        args, name, unix = toks[idx[0] + 1:], None, False
+        j = 0
+        while j < len(args):
+            a = args[j]
+            if a in ("-c", "--container-name") and j + 1 < len(args):
+                name, j = args[j + 1], j + 1
+            elif a.startswith("--container-name="):
+                name = a.split("=", 1)[1]
+            elif a.startswith("-c") and not a.startswith("--") and len(a) > 2:
+                name = a[2:]
+            elif a in ("-s", "--use-unix-socket-path"):
+                unix = True
+            j += 1
+        if not name:
+            continue
+        if not _CONTAINER_NAME_RE.match(name):
+            _warn("[%s] --container-name %r is not a plausible FEATURE key; "
+                  "critical processes always halt the container" % (sec, name))
+            continue
+        return {"container": name, "unix_socket": unix}
+    return None
+
+
+def critical_finish_script(name, listener, mode, codes):
+    """Finish script of a CRITICAL longrun: halt the container (systemd restarts it) when it exits.
+
+    An exit that supervisorctl requested (marker in EXPECTED_DIR) never halts.
+
+    With a known container (`listener`, see listener_options) the halt is gated like stock's
+    supervisor-proc-exit-listener, which only terminates supervisord when CONFIG_DB
+    FEATURE|<container> auto_restart is `enabled` (sonic-mgmt tests disable it and then kill/stop
+    critical processes). The finish asks `sonic-db-cli CONFIG_DB HGET FEATURE|<container> auto_restart`
+    once (this rare exit path only; at most AUTORESTART_QUERY_TIMEOUT_S + 1 s):
+      * `disabled`  -> log one line, do NOT halt, and treat the exit like any other program's:
+                       the program's own autorestart policy decides (`false`, every critical
+                       program SONiC ships bar sysmgr's rebootbackend: stays down, exit 125;
+                       `true`: s6 respawns it; `unexpected`: down iff the exit code is in
+                       exitcodes), which is what supervisord does while the listener only alerts;
+      * anything else (`enabled`, an unset field, an unreadable/empty/odd answer, query error or
+        timeout, sonic-db-cli missing) -> halt.
+    Deliberate deviation from stock: stock halts only on exactly `enabled` and treats an unreachable
+    CONFIG_DB (or a missing FEATURE row) as "not enabled" (no halt); here every doubt halts, because
+    a container that cannot reach its database is already broken and a silent dead critical process
+    is the worse outcome. exitcodes are NOT consulted: a critical process that exits 0 on its own
+    still halts (stock treats exit codes listed in exitcodes as expected and does not).
+    Without a listener the container name is unknown and the finish always halts (as before).
+    """
+    marker = EXPECTED_DIR + "/" + name
+    head = ("#!/command/with-contenv sh\n"
+            "if [ -e " + marker + " ]; then\n"
+            "    rm -f " + marker + "\n"
+            "    exit 0\n"
+            "fi\n")
+    what = "critical process " + name + " exited (code=$1 signal=$2)"
+    if not listener:
+        return (head + 'logger -t s6-super "' + what + '; halting container for restart"\n'
+                "exec " + HALT_CMD + "\n")
+    container = listener["container"]
+    key = shlex.quote("FEATURE|" + container)
+    tail = _FINISH_TAIL[mode].replace("$CODES", " ".join(codes))
+    return (head +
+            "# auto_restart gate (stock supervisor-proc-exit-listener parity; empty/error -> halt)\n"
+            "v=$(timeout -k 1 " + str(AUTORESTART_QUERY_TIMEOUT_S) + " sonic-db-cli" +
+            (" -s" if listener.get("unix_socket") else "") +
+            " CONFIG_DB HGET " + key + " auto_restart 2>/dev/null) || v=\n"
+            'if [ "$v" = "disabled" ]; then\n'
+            '    logger -t s6-super "' + what + "; auto_restart=disabled for " + container +
+            ', not halting container"\n'
+            "    mkdir -p " + SUPER_DIR + "/" + name + "; echo exited > " + SUPER_DIR + "/" + name + "/state\n" +
+            "".join("    " + ln + "\n" for ln in tail.splitlines()) +
+            "fi\n"
+            'logger -t s6-super "' + what + '; halting container for restart (auto_restart=${v:-unknown})"\n'
+            "exec " + HALT_CMD + "\n")
+
+
 
 def _command_line(argv, user, env_pairs=None, syslog_tag=None):
     parts = ["with-contenv"]
@@ -456,7 +568,8 @@ def _write(path, content, mode=0o644):
     os.chmod(path, mode)
 
 
-def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of=None):
+def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of=None, listener=None):
+    """Write the s6-rc source tree. `listener` = listener_options(sections) (None: no auto_restart gate)."""
     group_of = group_of or {}
     os.makedirs(outdir, exist_ok=True)
     # Only remove service directories this converter created on a previous
@@ -510,16 +623,14 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
                 _write(os.path.join(sd, "timeout-finish"), "%d\n" % ((startretries + 2) * 1000))
             if pname in critical:
                 # critical process died -> halt container so systemd restarts it
-                # (mirrors supervisor-proc-exit-listener)
+                # (mirrors supervisor-proc-exit-listener, incl. its auto_restart gate)
                 _write(os.path.join(sd, "finish"),
-                       "#!/command/with-contenv sh\n"
-                       "if [ -e " + EXPECTED_DIR + "/" + pname + " ]; then\n"
-                       "    rm -f " + EXPECTED_DIR + "/" + pname + "\n"
-                       "    exit 0\n"
-                       "fi\n"
-                       'logger -t s6-super "critical process ' + pname +
-                       ' exited (code=$1 signal=$2); halting container for restart"\n'
-                       "exec " + HALT_CMD + "\n", 0o755)
+                       critical_finish_script(pname, listener, autorestart,
+                                              exit_codes(progs[pname].get("exitcodes", "0"))), 0o755)
+                if listener:
+                    # the gate's query (bounded to AUTORESTART_QUERY_TIMEOUT_S + 1 s) must never
+                    # run into s6's default 5 s finish timeout, which would skip the halt
+                    _write(os.path.join(sd, "timeout-finish"), "%d\n" % CRITICAL_TIMEOUT_FINISH_MS)
             else:
                 fin = finish_script(pname, startsecs, startretries, autorestart,
                                     exit_codes(progs[pname].get("exitcodes", "0")))
@@ -552,7 +663,8 @@ def convert(config=None, critical_path=DEFAULT_CRITICAL, outdir=S6_RC_D,
     group_of = parse_groups(sections, order)
     critical = read_critical(critical_path, group_of)
     progs, prog_order, deps, types = build_model(sections, order, critical)
-    generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of)
+    generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of,
+             listener=listener_options(sections))
     return progs, prog_order, deps, types, critical
 
 
@@ -589,7 +701,8 @@ def main(argv):
         progs, prog_order, deps, types = build_model(sections, order, critical)
         out = out or "./s6-rc.d"
         generate(progs, prog_order, deps, types, critical,
-                 out, bundle or os.path.join(out, "user"), group_of)
+                 out, bundle or os.path.join(out, "user"), group_of,
+                 listener=listener_options(sections))
         for p in prog_order:
             d = ",".join(t for t in deps.get(p, []) if t in progs) or "-"
             star = "*" if p in critical and types[p] == "longrun" else " "
