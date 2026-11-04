@@ -665,7 +665,121 @@ def convert(config=None, critical_path=DEFAULT_CRITICAL, outdir=S6_RC_D,
     progs, prog_order, deps, types = build_model(sections, order, critical)
     generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of,
              listener=listener_options(sections))
+    try:
+        write_loaded_manifest(sections, order, group_of, config)
+    except OSError as e:  # only `supervisorctl reread/update` needs it; never block the boot
+        _warn("cannot record the loaded program set (%s); supervisorctl reread/update disabled" % e)
     return progs, prog_order, deps, types, critical
+
+
+# ---------------------------------------------------------------------------
+# Runtime support for `supervisorctl reread` / `update` (programs added after boot).
+#
+# convert() records which [program:x] sections were loaded (and a digest of each) in
+# LOADED_MANIFEST; the supervisorctl shim diffs the config files against it (reread) and adds
+# the new programs to the live s6 scan directory (update) with the same generate() code the
+# boot-time conversion uses.  Changed/removed programs cannot be applied live.
+# ---------------------------------------------------------------------------
+import hashlib
+import json
+import tempfile
+
+# Loaded-program manifest.  Lives next to the generated s6-rc source tree (written before /init
+# starts, so it must not be under /run); rewritten on every container start.
+LOADED_MANIFEST = "/etc/s6-overlay/supervisord2s6.loaded.json"
+# Live servicedirs of programs added at runtime; linked into the scan directory (/run/service)
+# by supervisorctl update.  Not part of the s6-rc compiled database.
+DYN_DIR = "/run/s6-dyn"
+
+
+def program_digest(attrs):
+    """Stable digest of one [program:x] section (any key change shows up as 'changed')."""
+    return hashlib.sha1(json.dumps(sorted(attrs.items())).encode()).hexdigest()
+
+
+def loaded_programs(sections, order, group_of):
+    """-> {program: {"group": <group name or None>, "sha": digest}} for EVERY [program:x] section,
+    including those build_model skips (autostart=false) - supervisord has them loaded too."""
+    out = {}
+    for name in order:
+        if name.startswith("program:"):
+            p = name.split(":", 1)[1].strip()
+            out[p] = {"group": group_of.get(p), "sha": program_digest(sections[name])}
+    return out
+
+
+def save_loaded_manifest(data, path=None):
+    path = path or LOADED_MANIFEST
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, sort_keys=True)
+    os.replace(tmp, path)
+
+
+def write_loaded_manifest(sections, order, group_of, config, path=None):
+    save_loaded_manifest({"config": config, "programs": loaded_programs(sections, order, group_of)}, path)
+
+
+def read_loaded_manifest(path=None):
+    """-> manifest dict, or None when missing/unreadable (container not converted by this version)."""
+    try:
+        with open(path or LOADED_MANIFEST) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data.get("programs"), dict) else None
+
+
+def config_groups(programs):
+    """-> {group name: {program: digest}}; a program outside any [group:x] is its own group
+    (supervisord names process groups, and `reread`/`update` speak in group names)."""
+    out = {}
+    for p, e in programs.items():
+        out.setdefault(e.get("group") or p, {})[p] = e.get("sha")
+    return out
+
+
+def diff_loaded(old, new):
+    """supervisord's diff_to_active over two {program: entry} maps -> (added, changed, removed)
+    sorted lists of group names."""
+    og, ng = config_groups(old), config_groups(new)
+    return (sorted(set(ng) - set(og)),
+            sorted(g for g in set(og) & set(ng) if og[g] != ng[g]),
+            sorted(set(og) - set(ng)))
+
+
+def current_config(manifest):
+    """Re-read the config files the container was started with -> (sections, order, group_of)."""
+    sections, order = parse_ini(resolve_config_files(manifest.get("config")))
+    return sections, order, parse_groups(sections, order)
+
+
+def build_runtime_servicedir(pname, attrs, group_of, dest, autostart=True):
+    """Create the live servicedir `dest` of a program added after boot.
+
+    The files come from generate() itself (single-program call into a scratch tree, always a
+    non-critical longrun: supervisord only reads critical_processes at start, so a program added
+    later cannot halt the container), minus the s6-rc-source-only entries (type, dependencies.d,
+    managed marker).  A program with autostart=false gets a ./down file, so s6-supervise
+    leaves it stopped until `supervisorctl start`.  dest appears atomically (rename)."""
+    parent = os.path.dirname(dest)
+    os.makedirs(parent, exist_ok=True)
+    scratch = tempfile.mkdtemp(prefix=".gen-", dir=parent)
+    try:
+        generate({pname: attrs}, [pname], {}, {pname: "longrun"}, set(),
+                 scratch, os.path.join(scratch, "user"), group_of)
+        sd = os.path.join(scratch, pname)
+        for n in ("type", MANAGED_MARKER):
+            os.remove(os.path.join(sd, n))
+        shutil.rmtree(os.path.join(sd, "dependencies.d"))
+        if not autostart:
+            _write(os.path.join(sd, "down"), "")
+        if os.path.lexists(dest):  # stale leftover of a previous run of this container
+            shutil.rmtree(dest)
+        os.rename(sd, dest)
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
 REAL_SUPERVISORD = ("/usr/local/bin/supervisord.real", "/usr/bin/supervisord.real")
