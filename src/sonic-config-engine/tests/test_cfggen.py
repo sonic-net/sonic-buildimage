@@ -28,6 +28,7 @@ class TestCfgGen(TestCase):
         self.sample_device_desc = os.path.join(self.test_dir, 'device.xml')
         self.port_config = os.path.join(self.test_dir, 't0-sample-port-config.ini')
         self.port_config_autoneg = os.path.join(self.test_dir, 't0-sample-autoneg-port-config.ini')
+        self.port_config_legacy_autoneg = os.path.join(self.test_dir, 't0-sample-legacy-autoneg-port-config.ini')
         self.mlnx_port_config = os.path.join(self.test_dir, 'mellanox-sample-port-config.ini')
         self.output_file = os.path.join(self.test_dir, 'output')
         self.output2_file = os.path.join(self.test_dir, 'output2')
@@ -486,6 +487,21 @@ class TestCfgGen(TestCase):
                 "'Ethernet124': {'lanes': '101,102,103,104', 'fec': 'rs', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/124', 'admin_status': 'up', 'autoneg': 'on', 'speed': '100000', 'description': 'ARISTA04T1:Ethernet1/1', 'speed': '100000'}}"
             )
         )
+
+    def test_hwsku_port_legacy_autoneg(self):
+        # Some port_config.ini files still use the legacy 1/0 autoneg values.
+        # The factory default config generated from them must pass YANG validation.
+        argument = ['-k', 'DellEMC-N3248TE', '--preset', 't1', '-p', self.port_config_legacy_autoneg]
+        output = json.loads(self.run_script(argument))
+        port = output['PORT']
+        self.assertEqual(port['Ethernet0']['autoneg'], 'on')
+        self.assertEqual(port['Ethernet0']['adv_speeds'], '1000')
+        self.assertEqual(port['Ethernet1']['autoneg'], 'on')
+        self.assertNotIn('adv_speeds', port['Ethernet1'])
+        self.assertEqual(port['Ethernet48']['autoneg'], 'off')
+        self.assertNotIn('adv_speeds', port['Ethernet48'])
+        self.assertEqual(port['Ethernet52']['autoneg'], 'off')
+        self.assertNotIn('adv_speeds', port['Ethernet52'])
 
     def test_minigraph_port_rs(self):
         argument = ['-m', self.sample_graph_t0, '-p', self.port_config, '-v', "PORT[\'Ethernet124\']"]
