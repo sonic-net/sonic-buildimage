@@ -4713,9 +4713,11 @@ static int fpm_nhg_repoint_one(struct fpm_nl_ctx *fnc, uint32_t rib_id,
 			continue;
 		}
 		dest = rib_dest_from_rnode(rn);
+		/* dplane_ctx_route_init() returns 0 on success (AOK is private
+		 * to zebra_dplane.c, so compare against zero). */
 		if (!dest || !dest->selected_fib ||
 		    dplane_ctx_route_init(ctx, DPLANE_OP_ROUTE_INSTALL, rn,
-					  dest->selected_fib) != AOK) {
+					  dest->selected_fib) != 0) {
 			route_unlock_node(rn);
 			dplane_ctx_fini(&ctx);
 			continue;
