@@ -178,11 +178,15 @@ Command extraction preserves the input's execution context:
 | Python | Known `subprocess`/`os` command APIs and imported aliases use POSIX argument and shell semantics, including literal `shell` and `executable` options. `shell`/`exec_command` helpers take shell source; `command`/`run_command` split command strings into arguments. `getstatusoutput_noshell`, `check_output_pipe`, and `getstatusoutput_noshell_pipe` preserve executable strings and argument lists without shell splitting; all explicit pipeline stages and `cmd0` are checked. |
 | Shell | Bash syntax trees identify executable positions, substitutions, quotes, continuations and here-documents. Common options of `sudo`, `env`, `command`, `exec`, `timeout`, `nice` and `nohup` are recognized. `bash`/`sh`/`dash` command strings support combined and separate options before `-c`, including ordered `-n`/`+n` and `-o`/`+o noexec`; following positional arguments are not commands. |
 | YAML | YAML decoding preserves scalar quoting and folding. Command fields in root fragments and job/stage/step/task structures include namespaced Ansible `shell`/`command`, `cmd`/`argv`, and Azure Bash/CmdLine scripts. GitHub `run` bodies honor step, job, then workflow shell precedence: `bash`/`sh` use shell analysis and `python` uses Python analysis. Simple explicit `bash {0}`, `sh {0}`, `dash {0}`, `python {0}`, and `python3 {0}` templates are also recognized. Display names, environment values and shell selectors are not command bodies. |
-| Jinja templates | Literal shell/YAML command regions in `.j2` files are analyzed with comments/control directives removed and expressions marked unknown. This does not render the template or determine which branches execute. |
+| Jinja templates | The Jinja lexer distinguishes comments, control directives, expressions and raw blocks, including quoted delimiters and explicit whitespace control. Literal shell/YAML output regions are analyzed, with expressions marked unknown. This does not render the template or determine which branches execute. |
 
-Quoted shell punctuation, multiline literal diagnostics, and literal
-here-document text are not executable commands. Executable substitutions
-within expandable text are still checked. For example, on POSIX,
+Quoted shell punctuation, multiline literal diagnostics, and here-document
+data supplied to commands such as `cat` are not treated as commands.
+Literal heredocs and here-strings consumed as stdin by `bash`/`sh`/`dash`
+are analyzed as shell source, even when the heredoc delimiter is quoted.
+Direct redirection order, `-s`, noexec options and `-c` data-only input are
+respected. Executable substitutions within expandable text are still checked.
+For example, on POSIX,
 `subprocess.run("sonic-cfggen -m")` names one executable; it does not invoke
 a shell. Use an argument list or explicit `shell=True` in examples intended
 to demonstrate an actual minigraph command.
@@ -206,8 +210,9 @@ not exempt. XML fixture exclusion is not a blanket exemption for test code.
 
 ### Running the checker locally
 
-Use Python 3.10 or later. These pinned packages are checker-only dependencies;
-they are not installed into SONiC images by this change.
+Use Python 3.10 or later. These pinned packages, including the Jinja lexer
+and its MarkupSafe dependency, are checker-only dependencies; they are not
+installed into SONiC images by this change.
 
 ```sh
 python3 -m pip install -r scripts/requirements-minigraph-freeze.txt
@@ -238,6 +243,13 @@ Minigraph-related `run` bodies or interpreter selectors fail analysis when
 the selected interpreter is unsupported or unresolved, instead of being
 interpreted as Bash. Other languages and arbitrary custom interpreter
 templates are not analyzed.
+Unresolved expansion of executable stdin, indirect stdin routing through
+pipelines/compound commands or nested shells, interactive stdin, read/write
+descriptor aliases, and script descriptor indirection fail analysis.
+Shell syntax outside the tree-sitter grammar
+(including some escaped heredocs and descriptor forms) also fails analysis,
+even when valid in Bash. This is not a complete model of stdin consumption
+by arbitrary commands. Malformed Jinja lexical regions fail analysis.
 Standard YAML escapes are
 decoded as YAML, not as JSON. Investigate analysis failures separately from
 policy violations; do not silently skip a file or disable the guard.

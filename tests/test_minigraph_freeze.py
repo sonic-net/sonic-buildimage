@@ -591,6 +591,87 @@ assert "config load_minigraph" not in commands
             with self.subTest(source=source):
                 self.assertTrue(guard.shell_dependencies(source))
 
+    def test_literal_shell_stdin_follows_the_consumer_and_options(self):
+        for command in [
+            "bash", "sh", "dash", "bash -s -- argument", "bash -",
+            "bash -n +o noexec", "sudo -u root bash", "env MODE=test bash",
+            "command bash", "timeout 10 bash",
+        ]:
+            for delimiter in ("EOF", "'EOF'", '"EOF"', r"\EOF"):
+                source = "{} <<{}\nsonic-cfggen -m\nEOF\n".format(command, delimiter)
+                with self.subTest(source=source):
+                    self.assertTrue(guard.shell_dependencies(source))
+        for source, expected in [
+            ("bash <<-'EOF'\n\tsonic-cfggen -m\n\tEOF\n", True),
+            ("bash <<'EOF'\necho 'sonic-cfggen -m'\nEOF\n", False),
+            ("bash <<'EOF'\necho \"$(sonic-cfggen -m)\"\nEOF\n", True),
+            ("bash <<EOF\nsonic-\\\ncfggen -m\nEOF\n", True),
+            ("cat <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash -n <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash -o noexec <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash -n <<EOF\n$(sonic-cfggen -m)\nEOF\n", True),
+            ("bash -c 'echo done' <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash -c cat <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash script.sh <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash /dev/null <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash --help <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash <<'EOF' </dev/null\nsonic-cfggen -m\nEOF\n", False),
+            ("bash </dev/null <<'EOF'\nsonic-cfggen -m\nEOF\n", True),
+            ("bash <<'EOF' >/dev/null\nsonic-cfggen -m\nEOF\n", True),
+            ("bash <<'EOF' >\"$OUTPUT\"\nsonic-cfggen -m\nEOF\n", True),
+            ("bash 3<<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash <<'EOF' | cat\nsonic-cfggen -m\nEOF\n", True),
+            ("cat <<'EOF' | grep sonic\nsonic-cfggen -m\nEOF\n", False),
+            ("bash <<< 'sonic-cfggen -m'", True),
+            ("bash 0<<< 'sonic-cfggen -m'", True),
+            ("bash '0'<<< 'sonic-cfggen -m'", False),
+            ("bash 0 <<< 'sonic-cfggen -m'", False),
+            ("bash <<< 'sonic-cfggen -m' </dev/null", False),
+            ("bash -n <<< 'sonic-cfggen -m'", False),
+            ("cat <<< 'sonic-cfggen -m'", False),
+            ("bash <<'EOF'\nEOF\n", False),
+            ("bash <<< ''", False),
+            ("<<< 'sonic-cfggen -m'", False),
+            ('<<< "$(sonic-cfggen -m)"', True),
+            ("bash <<'EOF' <&0\nsonic-cfggen -m\nEOF\n", True),
+            ("bash 3<<'EOF' <&3\nsonic-cfggen -m\nEOF\n", True),
+            ("bash 3<<'EOF' <&3-\nsonic-cfggen -m\nEOF\n", True),
+            ("bash <<'EOF' <&-\nsonic-cfggen -m\nEOF\n", False),
+            ("bash <<'EOF' <&0-\nsonic-cfggen -m\nEOF\n", False),
+            ("bash <<< 'sonic-cfggen -m' 0<&0", True),
+            ("bash <<< 'sonic-cfggen -m' '0'<&0", False),
+            ("bash <<< 'sonic-cfggen -m' 0 <&0", False),
+            ("bash -n <<'EOF' <\"$INPUT\"\nsonic-cfggen -m\nEOF\n", False),
+            ("bash -c 'echo done' <<'EOF' <\"$INPUT\"\nsonic-cfggen -m\nEOF\n", False),
+            ("bash /dev/null <<'EOF' <\"$INPUT\"\nsonic-cfggen -m\nEOF\n", False),
+            ("bash -c cat arg /dev/stdin <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+            ("bash script.sh /dev/stdin <<'EOF'\nsonic-cfggen -m\nEOF\n", False),
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(expected, bool(guard.shell_dependencies(source)))
+
+    def test_unresolved_executable_stdin_is_not_clean(self):
+        for source in [
+            "cat <<'EOF' | bash\nsonic-cfggen -m\nEOF\n",
+            "{ bash; } <<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "bash -c bash <<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "bash --unknown <<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "sudo --unknown bash <<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "CMD='sonic-cfggen -m'\nbash <<EOF\n$CMD\nEOF\n",
+            "bash /dev/fd/3 3<<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "bash <<EOF\n\\$(sonic-cfggen -m)\nEOF\n",
+            "bash 0<<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "bash <<'EOF' <\"$INPUT\"\nsonic-cfggen -m\nEOF\n",
+            "bash <<< \"$SCRIPT\"",
+            "bash 3<<< 'sonic-cfggen -m'",
+            "bash \"$SCRIPT\" <<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "bash -c \"$COMMAND\" <<'EOF'\nsonic-cfggen -m\nEOF\n",
+            "bash <<'EOF' <>/dev/stdin\nsonic-cfggen -m\nEOF\n",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.shell_dependencies(source)
+
     def test_mixed_quoted_and_expanded_shell_fields(self):
         for source, expected in [
             ("PREFIX='sonic-cfggen '\nSUFFIX=-m\n\"$PREFIX\"$SUFFIX", False),
@@ -774,6 +855,34 @@ assert "config load_minigraph" not in commands
             "Makefile", b"all: $(TARGET)\n\t@echo sonic-buildimage\n", "100644"
         ))
 
+    def test_jinja_lexical_regions_and_whitespace_control(self):
+        for source, expected in [
+            ("{# Example: {% if enabled %}sonic-cfggen -m{% endif %} #}", False),
+            ("{# Example:\n{% if enabled %}\nsonic-cfggen -m\n{% endif %}\n#}", False),
+            ('{% set note = "#}sonic-cfggen -m" %}\necho done\n', False),
+            ('{% set note = "%}sonic-cfggen -m" %}\necho done\n', False),
+            ("# {{ '{#' }}\nsonic-cfggen -m\n# {{ '#}' }}\n", True),
+            ("{% raw %}# {#\nsonic-cfggen -m\n# #}\n{% endraw %}", True),
+            ("{% raw %}echo '{# sonic-cfggen -m #}'{% endraw %}", False),
+            ("sonic- {#- ignored -#} cfggen -m", True),
+            ("sonic- {% if enabled -%} cfggen -m{% endif %}", False),
+            ("{% if enabled -%}\nsonic-cfggen -m\n{% endif %}", True),
+            ("echo '{{ \"}} sonic-cfggen -m\" }}'\n", False),
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(expected, bool(guard.dependencies(
+                    "example.sh.j2", source.encode(), "100644"
+                )))
+        self.assertTrue(guard.dependencies(
+            "example.yml.j2",
+            b"run: >\n  sonic- {#- ignored -#} cfggen -m\n",
+            "100644",
+        ))
+        for source in ("{# unfinished", "{{ value", "{% if enabled", "{% raw %}text"):
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.dependencies("example.sh.j2", source.encode(), "100644")
+
     def test_added_use_of_existing_shell_path_variable(self):
         before = 'MINGRAPH_FILE="/etc/sonic/minigraph.xml"\ncat "$MINGRAPH_FILE"\n'
         after = before + 'cat "${MINGRAPH_FILE}"\n'
@@ -859,6 +968,23 @@ class GitComparisonTest(GitFixtureTest):
             ("workflow.yml", "shell: sonic-cfggen -m {0}\nrun: echo done", 2),
             ("script.sh", "bash -o noexec -c 'sonic-cfggen -m'", 0),
             ("script.sh", "bash -n +o noexec -c 'sonic-cfggen -m'", 1),
+            ("script.sh", "bash <<'EOF'\nsonic-cfggen -m\nEOF\n", 1),
+            ("script.py", "subprocess.run(\"bash <<'EOF'\\nsonic-cfggen -m\\nEOF\\n\", "
+             "shell=True)", 1),
+            ("workflow.yml", "run: |\n  bash <<'EOF'\n  sonic-cfggen -m\n  EOF\n", 1),
+            ("script.sh", "cat <<'EOF'\nsonic-cfggen -m\nEOF\n", 0),
+            ("script.sh", "bash -n <<'EOF'\nsonic-cfggen -m\nEOF\n", 0),
+            ("script.sh", "cat <<'EOF' | bash\nsonic-cfggen -m\nEOF\n", 2),
+            ("script.sh", "bash <<EOF\n\\$(sonic-cfggen -m)\nEOF\n", 2),
+            ("script.sh", "bash <<'EOF' </dev/null\nsonic-cfggen -m\nEOF\n", 0),
+            ("script.sh", "bash 0<<< 'sonic-cfggen -m'", 1),
+            ("script.sh", "<<< 'sonic-cfggen -m'", 0),
+            ("script.sh", "bash 3<<'EOF' <&3-\nsonic-cfggen -m\nEOF\n", 1),
+            ("script.sh", "bash <<< \"$SCRIPT\"", 2),
+            ("script.sh", "bash <<'EOF' <\"$INPUT\"\nsonic-cfggen -m\nEOF\n", 2),
+            ("script.sh.j2", "{# {% if enabled %}sonic-cfggen -m{% endif %} #}", 0),
+            ("script.sh.j2", "sonic- {#- ignored -#} cfggen -m", 1),
+            ("script.sh.j2", "{{ value", 2),
         ]
         for path, source, expected in cases:
             with self.subTest(path=path, source=source):

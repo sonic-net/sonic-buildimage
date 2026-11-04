@@ -11,6 +11,7 @@ import shlex
 import subprocess
 import sys
 
+from jinja2 import Environment, TemplateSyntaxError
 import tree_sitter_bash
 from tree_sitter import Language, Parser
 import yaml
@@ -32,7 +33,9 @@ PROCESS_CALLS = {"Popen", "call", "check_call", "check_output", "run"}
 SHELL_CALLS = {"exec_command", "shell"}
 ARGV_CALLS = {"command", "run_command"}
 PIPE_CALLS = {"check_output_pipe", "getstatusoutput_noshell_pipe"}
+SHELLS = {"bash", "sh", "dash"}
 SHELL_PARSER = Parser(Language(tree_sitter_bash.language()))
+JINJA_ENVIRONMENT = Environment(keep_trailing_newline=True)
 FILE_CALLS = {
     "Path", "PurePath", "copy", "copy2", "copyfile", "exists", "is_file",
     "isfile", "move", "open", "parse", "read_bytes", "read_text", "remove",
@@ -254,15 +257,19 @@ def option_end(words, flags, values):
     return index
 
 
-def shell_payload(words):
+def shell_payload(words, mode="command"):
+    stdin = mode != "command"
     index = 1
     command = False
     execute = True
+    read_stdin = False
     while index < len(words):
         word = words[index]
         if word is None:
+            if stdin:
+                raise AnalysisError("Cannot determine shell stdin options")
             return None, False
-        if word == "--":
+        if word == "--" or (stdin and word == "-"):
             index += 1
             break
         if word in {"--help", "--version"}:
@@ -273,6 +280,8 @@ def shell_payload(words):
             continue
         if word in {"--rcfile", "--init-file"}:
             index += 2
+            if stdin and index > len(words):
+                raise AnalysisError("Missing shell option argument")
             continue
         if len(word) < 2 or word[0] not in "-+":
             break
@@ -281,7 +290,7 @@ def shell_payload(words):
             if char in "oO":
                 option = words[index] if index < len(words) else None
                 if option is None:
-                    if re.search(r"minigraph|sonic-cfggen", str(words)):
+                    if stdin or re.search(r"minigraph|sonic-cfggen", str(words)):
                         raise AnalysisError("Cannot determine named shell option")
                     return None, False
                 index += 1
@@ -289,13 +298,23 @@ def shell_payload(words):
                     execute = word[0] == "+"
                 continue
             if char not in "abcefhiklmnprstuvxBCEHPT":
-                if not re.search(r"minigraph|sonic-cfggen", str(words)):
+                if not stdin and not re.search(r"minigraph|sonic-cfggen", str(words)):
                     return None, False
                 raise AnalysisError("Unsupported shell option: " + word)
             if char == "c":
                 command = True
             if char == "n":
                 execute = word[0] == "+"
+            if char == "s":
+                read_stdin = word[0] == "-"
+            if stdin and char == "i":
+                raise AnalysisError("Interactive shell stdin is not supported")
+    if mode == "stdin":
+        return (index, execute) if not command and (
+            read_stdin or index == len(words)
+        ) else (None, execute)
+    if mode == "script":
+        return (index, execute) if not command and not read_stdin and index < len(words) else (None, execute)
     return (index, execute) if command and index < len(words) else (None, False)
 
 
@@ -331,14 +350,13 @@ def cfggen_minigraph(words):
     return args.minigraph is not None
 
 
-def command_dependencies(words):
-    references = Counter()
+def unwrap_command(words, strict=False):
     words = [word if isinstance(word, str) else None for word in words]
     while words and isinstance(words[0], str):
         executable = words[0].rsplit("/", 1)[-1]
         index = None
         if executable in {"echo", "printf", "logger"}:
-            return references
+            return []
         if executable == "sudo":
             index = option_end(
                 words, {"-" + flag for flag in "bEHiknPSs"},
@@ -357,7 +375,7 @@ def command_dependencies(words):
                 index += 1
         elif executable == "command":
             if any(word in {"-v", "-V"} for word in words[1:2]):
-                return references
+                return []
             index = option_end(words, {"-p"}, set())
         elif executable == "exec":
             index = option_end(words, {"-c", "-l"}, {"-a"})
@@ -375,13 +393,21 @@ def command_dependencies(words):
         else:
             break
         if index is None:
+            if strict:
+                raise AnalysisError("Cannot resolve shell stdin wrapper")
             break
         words = words[index:]
+    return words
+
+
+def command_dependencies(words):
+    references = Counter()
+    words = unwrap_command(words)
     if not words:
         return references
     executable = words[0].rsplit("/", 1)[-1] if isinstance(words[0], str) else ""
     operands = words[1:]
-    if executable in {"bash", "sh", "dash"}:
+    if executable in SHELLS:
         payload, execute = shell_payload(words)
         if payload is not None:
             if execute and isinstance(words[payload], str):
@@ -398,6 +424,156 @@ def command_dependencies(words):
             for path in XML_PATH.findall(word):
                 references[("XML path", path)] += 1
     return references
+
+
+def redirection_descriptor(node):
+    descriptor = node.child_by_field_name("descriptor")
+    # After here-strings, the grammar can expose descriptors as argv numbers.
+    previous = node.prev_named_sibling
+    if descriptor is None and node.type in {"herestring_redirect", "file_redirect"} and previous is not None:
+        if previous.type == "command":
+            previous = previous.named_children[-1]
+        if previous.type == "number" and previous.end_byte == node.start_byte:
+            descriptor = previous
+    return descriptor
+
+
+def shell_words(node, bindings):
+    parts = [node.child_by_field_name("name")]
+    parts.extend(node.children_by_field_name("argument"))
+    redirects = list(node.children_by_field_name("redirect"))
+    if node.parent.type == "redirected_statement" and node.parent.child_by_field_name("body") == node:
+        redirects.extend(node.parent.children_by_field_name("redirect"))
+    descriptors = {descriptor.id for redirect in redirects
+                   if (descriptor := redirection_descriptor(redirect)) is not None}
+    return [word for part in parts if part is not None and part.id not in descriptors
+            for word in shell_fields(part, bindings)]
+
+
+def contains_shell(node, bindings):
+    for child in syntax_nodes(node):
+        if child.type == "command":
+            words = unwrap_command(shell_words(child, bindings), strict=True)
+            if words and isinstance(words[0], str) and words[0].rsplit("/", 1)[-1] in SHELLS:
+                return True
+    return False
+
+
+def stdin_dependencies(redirect, bindings):
+    owner = redirect.parent
+    if owner.type == "command" and owner.parent.type == "redirected_statement":
+        owner = owner.parent
+    body = owner.child_by_field_name("body") if owner.type == "redirected_statement" else owner
+    if body is None:
+        return Counter()
+    words = unwrap_command(shell_words(body, bindings), strict=True) if body.type == "command" else []
+    executable = words[0].rsplit("/", 1)[-1] if words and isinstance(words[0], str) else ""
+    downstream = [child for child in redirect.named_children if child.type == "pipeline"]
+    if owner.parent.type == "pipeline":
+        downstream.append(owner.parent)
+    indirect = (body.type != "command" and contains_shell(body, bindings)) or (
+        executable not in SHELLS and any(contains_shell(node, bindings) for node in downstream)
+    )
+    if executable not in SHELLS and not indirect:
+        return Counter()
+    selected = None
+    script_descriptor = False
+    if executable in SHELLS:
+        selected, execute = shell_payload(words, mode="stdin")
+        if not execute:
+            return Counter()
+        if selected is None:
+            script, _ = shell_payload(words, mode="script")
+            if script is not None and "${dynamic}" in words[script]:
+                raise AnalysisError("Cannot resolve shell script input")
+            script_descriptor = script is not None and re.fullmatch(
+                r"/(?:dev/(?:stdin|fd/\d+)|proc/self/fd/\d+)", words[script]
+            )
+            payload, _ = shell_payload(words)
+            nested = payload is not None and (
+                not isinstance(words[payload], str)
+                or "${dynamic}" in words[payload]
+                or contains_shell(shell_tree(words[payload]), bindings)
+            )
+            if not nested and not script_descriptor:
+                return Counter()
+
+    # Follow direct descriptor assignments in source order. Nested commands
+    # in heredoc expansions have their own descriptors and are not included.
+    pending = list(owner.children_by_field_name("redirect"))
+    if body != owner:
+        pending.extend(body.children_by_field_name("redirect"))
+    redirects = {}
+    while pending:
+        item = pending.pop()
+        if item.id not in redirects:
+            redirects[item.id] = item
+            pending.extend(item.children_by_field_name("redirect"))
+    descriptors = {}
+    unknown = object()
+    for item in sorted(redirects.values(), key=lambda node: node.start_byte):
+        operator = next(child.type for child in item.children if not child.is_named)
+        descriptor = redirection_descriptor(item)
+        if descriptor is not None and not descriptor.text.isdigit():
+            raise AnalysisError("Cannot resolve shell file descriptor")
+        fd = int(descriptor.text) if descriptor is not None else (0 if operator.startswith("<") else 1)
+        if item.type in {"heredoc_redirect", "herestring_redirect"}:
+            descriptors[fd] = item.id
+        elif operator in {"<&-", ">&-"}:
+            descriptors[fd] = None
+        else:
+            destination = shell_value(item.child_by_field_name("destination"), bindings)
+            if destination is None or "${dynamic}" in destination:
+                descriptors[fd] = unknown
+                continue
+            alias = re.fullmatch(r"/(?:dev/fd|proc/self/fd)/(\d+)", destination)
+            if operator in {"<&", ">&"}:
+                duplicate = re.fullmatch(r"(\d+)(-?)", destination)
+                if duplicate:
+                    source_fd = int(duplicate[1])
+                    descriptors[fd] = descriptors.get(source_fd)
+                    if duplicate[2]:
+                        descriptors[source_fd] = None
+                else:
+                    descriptors[fd] = unknown
+            elif operator == "<" and (alias or destination == "/dev/stdin"):
+                descriptors[fd] = descriptors.get(int(alias[1]) if alias else 0)
+            elif operator == "<>" and (alias or destination == "/dev/stdin"):
+                descriptors[fd] = unknown
+            else:
+                descriptors[fd] = None
+    if descriptors.get(0) is unknown:
+        raise AnalysisError("Cannot resolve redirected shell input")
+    if descriptors.get(0) != redirect.id:
+        if script_descriptor:
+            raise AnalysisError("Cannot resolve shell script descriptor input")
+        return Counter()
+    if indirect:
+        raise AnalysisError("Cannot resolve pipeline or compound shell stdin")
+
+    if selected is None:
+        raise AnalysisError("Cannot resolve nested shell or script descriptor input")
+
+    if redirect.type == "herestring_redirect":
+        value = next(child for child in redirect.named_children if child.type != "file_descriptor")
+        source = shell_value(value, bindings)
+        if source is None or "${dynamic}" in source:
+            raise AnalysisError("Cannot resolve shell here-string")
+        source += "\n"
+    else:
+        delimiter = next(child for child in redirect.named_children if child.type == "heredoc_start")
+        content = next(child for child in redirect.named_children if child.type == "heredoc_body")
+        source = content.text.decode()
+        if any(child.type == "<<-" for child in redirect.children):
+            source = re.sub(r"(?m)^\t+", "", source)
+        if not any(char in delimiter.text.decode() for char in "'\"\\"):
+            def expand(match):
+                text = match[0]
+                if not text.startswith("\\"):
+                    raise AnalysisError("Cannot resolve expansions in executable heredoc")
+                return "" if text.endswith("\n") else text[1:]
+            source = re.sub(r"\\(?:\r?\n|[$`\\])|[$`]", expand, source)
+    return shell_dependencies(source)
 
 
 def shell_dependencies(source):
@@ -420,11 +596,9 @@ def shell_dependencies(source):
             ))
     for node in syntax_nodes(root):
         if node.type == "command":
-            parts = [node.child_by_field_name("name")]
-            parts.extend(node.children_by_field_name("argument"))
-            words = [word for part in parts if part is not None
-                     for word in shell_fields(part, bindings)]
-            references.update(command_dependencies(words))
+            references.update(command_dependencies(shell_words(node, bindings)))
+        elif node.type in {"heredoc_redirect", "herestring_redirect"}:
+            references.update(stdin_dependencies(node, bindings))
         elif node.type == "file_redirect":
             value = shell_value(node.child_by_field_name("destination"), bindings)
             for path in XML_PATH.findall(value or ""):
@@ -715,6 +889,26 @@ def python_dependencies(source):
     return references
 
 
+def template_source(source):
+    output = []
+    region = None
+    try:
+        for _, kind, value in JINJA_ENVIRONMENT.lex(source):
+            if kind == "data":
+                output.append(value)
+            elif kind in {"block_begin", "comment_begin", "variable_begin"}:
+                region = kind
+                if kind == "variable_begin":
+                    output.append("${dynamic}")
+            elif kind in {"block_end", "comment_end", "variable_end"}:
+                region = None
+        if region is not None:
+            raise AnalysisError("Unterminated Jinja region: " + region)
+    except TemplateSyntaxError as error:
+        raise AnalysisError("Cannot tokenize Jinja: " + str(error)) from error
+    return "".join(output)
+
+
 def dependencies(path, content, mode):
     name = PurePosixPath(path)
     references = Counter()
@@ -735,8 +929,7 @@ def dependencies(path, content, mode):
     if name.suffix == ".py" or re.match(r"^#!.*python", source):
         return python_dependencies(source)
     if name.suffix == ".j2":
-        source = re.sub(r"\{[#%].*?[#%]\}", "", source, flags=re.DOTALL)
-        source = re.sub(r"\{\{.*?\}\}", "${dynamic}", source, flags=re.DOTALL)
+        source = template_source(source)
         name = name.with_suffix("")
     if name.suffix in {".yml", ".yaml"}:
         return yaml_dependencies(source)
