@@ -2065,6 +2065,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     macsec_enabled = is_chassis_lc_macsec_enabled(root, hostname)
 
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
+    has_port_config = bool(ports) or port_config_file is not None or hwsku_config_file is not None
 
     asic_hostname = get_asic_hostname_from_asic_name(chassis_type, asic_name, hostname)
 
@@ -2379,11 +2380,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         ports.setdefault(port_name, {})['speed'] = port_speeds_default[port_name]
 
     for port_name in port_speed_png:
-        # not consider port not in port_config.ini
-        # If no port_config_file is found ports is empty so ignore this error
-        if port_config_file is not None:
+        # Do not recreate ports omitted from the realized port configuration.
+        if has_port_config:
             if port_name not in ports:
-                print("Warning: ignore interface '%s' as it is not in the port_config.ini" % port_name, file=sys.stderr)
+                print("Warning: ignore interface '%s' as it is not in the port configuration" % port_name, file=sys.stderr)
                 continue
 
         # skip management ports
@@ -2515,13 +2515,12 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if bool( fabric_ports ):
         results['FABRIC_PORT'] = fabric_ports
 
-    if port_config_file:
+    if has_port_config:
         port_set = set(ports.keys())
         for (pc_name, pc_member) in list(pc_members.keys()):
-            # remove portchannels that contain ports not existing in port_config.ini
-            # when port_config.ini exists
+            # Remove portchannels containing ports omitted from the port configuration.
             if (pc_name, pc_member) in pc_members and pc_member not in port_set:
-                print("Warning: ignore '%s' as at least one of its member interfaces ('%s') is not in the port_config.ini" % (pc_name, pc_member), file=sys.stderr)
+                print("Warning: ignore '%s' as at least one of its member interfaces ('%s') is not in the port configuration" % (pc_name, pc_member), file=sys.stderr)
                 del pcs[pc_name]
                 pc_mbr_del_keys = [f for f in list(pc_members.keys()) if f[0] == pc_name]
                 for pc_mbr_del_key in pc_mbr_del_keys:
@@ -2645,8 +2644,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     for nghbr in list(neighbors.keys()):
         # remove port not in port_config.ini
         if nghbr not in ports:
-            if port_config_file is not None:
-                print("Warning: ignore interface '%s' in DEVICE_NEIGHBOR as it is not in the port_config.ini" % nghbr, file=sys.stderr)
+            if has_port_config:
+                print("Warning: ignore interface '%s' in DEVICE_NEIGHBOR as it is not in the port configuration" % nghbr, file=sys.stderr)
             del neighbors[nghbr]
     results['DEVICE_NEIGHBOR'] = neighbors
     if is_multi_asic() == False or asic_name is None:
