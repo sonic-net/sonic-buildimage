@@ -28,7 +28,7 @@ try:
     from sonic_platform_base.sonic_xcvr.cpo.cpo_base import CpoBase
     from sonic_platform_base.sonic_xcvr.cpo.cpo_optoe_base import OptoeOeBase, OptoeElsfpBase
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
-    from sonic_platform_base.sonic_xcvr.fields import elsfp_consts
+    from sonic_platform_base.sonic_xcvr.fields.broadcom import bailly
     from sonic_platform_base.sonic_xcvr.api.xcvr_api import XcvrApi
     from sonic_platform_base.sonic_xcvr.optoe_eeprom_rw import (
         SFP_OPTOE_PAGE_SELECT_OFFSET, SFP_OPTOE_UPPER_PAGE0_OFFSET, SFP_OPTOE_PAGE_SIZE)
@@ -293,21 +293,21 @@ class Cpo(CpoBase, SfpOptoeBase):
             laser_ids = self.get_port_laser_ids()
             if not laser_ids:
                 return info
-            currents = api.get_per_lane_bias_current_monitor()
-            powers = api.get_per_lane_opt_power_monitor()
+            currents = api.get_rlm_laser_current()
+            powers = api.get_rlm_laser_power()
             if currents is None or powers is None:
                 self._cpolog(LOG_ERROR_LEVEL, "ELS laser monitor read failed: {}".format(self._port_id))
                 return info
 
             for laser in laser_ids:
-                current_key = "{}{}".format(elsfp_consts.BIAS_CURRENT_MONITOR_FIELD, laser + 1)
-                power_key = "{}{}".format(elsfp_consts.OPT_POWER_MONITOR_FIELD, laser + 1)
+                current_key = bailly.LASER_CURRENT_MONITOR.format(laser)
+                power_key = bailly.LASER_OPTICAL_POWER_MONITOR.format(laser)
                 current = currents.get(current_key)
                 power_mw = powers.get(power_key)
                 if current is None or power_mw is None:
                     self._cpolog(LOG_ERROR_LEVEL, "ELS laser {} monitor unavailable: {}".format(laser, self._port_id))
                     continue
-                current_ma = round(api.amps_to_ma(current), 3)
+                current_ma = round(current, 3)
                 power_dbm = XcvrApi.mw_to_dbm(power_mw)
                 info["RLM{}_Laser{}_current".format(self._els_id, laser)] = "{} mA".format(current_ma)
                 info["RLM{}_Laser{}_power".format(self._els_id, laser)] = "%.03f dBm" % power_dbm

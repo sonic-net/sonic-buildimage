@@ -701,7 +701,7 @@ with open(sys.argv[1], 'rb') as fd:
         self.assertEqual(last.get_api().xcvr_eeprom.read(consts.TX_DISABLE_FIELD), 255)
         self.assertEqual(first.get_api().xcvr_eeprom.read(consts.TX_DISABLE_FIELD), 0)
 
-    def test_dom_keeps_port_laser_fields_using_separate_els_api(self):
+    def test_dom_keeps_port_laser_fields_using_raw_rlm_readers(self):
         oe, els = self.endpoints()
         api = MagicMock(spec=BaillyOeApi)
         api.get_max_supported_banks.return_value = 1
@@ -709,12 +709,11 @@ with open(sys.argv[1], 'rb') as fd:
         els_api = MagicMock(spec=BaillyElsfpApi)
         els_api.get_non_banked_elsfp_dom_real_value.return_value = {
             "temperature": 25.5, "voltage": 3.3, "tec_current": 1.0}
-        els_api.get_per_lane_bias_current_monitor.return_value = {
-            "BiasCurrentMonitor{}".format(i + 1): i / 1000.0 for i in range(8)}
-        els_api.get_per_lane_bias_current_monitor.return_value["BiasCurrentMonitor6"] = 0.10001
-        els_api.get_per_lane_opt_power_monitor.return_value = {
-            "OptPowerMonitor{}".format(i + 1): 1.0 for i in range(8)}
-        els_api.amps_to_ma.side_effect = lambda value: value * 1000.0
+        els_api.get_rlm_laser_current.return_value = {
+            "Laser{}CurrentMonitor".format(i): float(i) for i in range(8)}
+        els_api.get_rlm_laser_current.return_value["Laser5CurrentMonitor"] = 100.01
+        els_api.get_rlm_laser_power.return_value = {
+            "Laser{}OpticalPowerMonitor".format(i): 1.0 for i in range(8)}
         oe._api, els._api = api, els_api
         cpo = self.cpo.Cpo(1, "Ethernet0", oe, els, laser_ids=[4, 5])
         dom = cpo.get_transceiver_dom_real_value()
@@ -727,7 +726,7 @@ with open(sys.argv[1], 'rb') as fd:
         self.assertEqual(dom["RLM1_Laser5_power"], "0.000 dBm")
         self.assertNotIn("RLM1_Laser0_current", dom)
         els_api.get_non_banked_elsfp_dom_real_value.assert_called_once_with()
-        els_api.get_per_lane_bias_current_monitor.assert_called_once_with()
+        els_api.get_rlm_laser_current.assert_called_once_with()
 
     def test_els_read_failure_keeps_oe_dom(self):
         oe, els = self.endpoints()
