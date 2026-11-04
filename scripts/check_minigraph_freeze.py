@@ -43,6 +43,10 @@ FILE_CALLS = {
     "isfile", "move", "open", "parse", "read_bytes", "read_text", "remove",
     "unlink", "write_bytes", "write_text",
 }
+BYTE_FILE_CALLS = {
+    "copy", "copy2", "copyfile", "exists", "isfile", "move", "open", "parse",
+    "remove", "unlink",
+}
 
 
 class AnalysisError(Exception):
@@ -75,7 +79,7 @@ def qualified_name(node, imports=None):
 
 def static_value(node, bindings, seen=(), imports=None):
     """Resolve literal fragments while preserving argument sequence types."""
-    if isinstance(node, ast.Constant) and isinstance(node.value, (str, bool)):
+    if isinstance(node, ast.Constant) and isinstance(node.value, (str, bytes, bool)):
         return node.value
     if isinstance(node, ast.Name) and node.id not in seen:
         values = bindings.get(node.id, [])
@@ -87,7 +91,7 @@ def static_value(node, bindings, seen=(), imports=None):
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
         left = static_value(node.left, bindings, seen, imports)
         right = static_value(node.right, bindings, seen, imports)
-        if isinstance(left, (str, list, tuple)) and type(left) is type(right):
+        if isinstance(left, (str, bytes, list, tuple)) and type(left) is type(right):
             return left + right
         return None
     if isinstance(node, ast.JoinedStr):
@@ -100,13 +104,27 @@ def static_value(node, bindings, seen=(), imports=None):
         if isinstance(node.func, ast.Attribute) and node.func.attr == "format":
             return static_text(node.func.value, bindings, seen, imports)
         if qualified_name(node.func, imports).rsplit(".", 1)[-1] in {"Path", "PurePath"}:
-            return "/".join(static_text(arg, bindings, seen, imports) for arg in node.args)
+            parts = [static_value(arg, bindings, seen, imports) for arg in node.args]
+            if not any(isinstance(part, bytes) for part in parts):
+                return "/".join(part if isinstance(part, str) else "" for part in parts)
     return None
 
 
 def static_text(node, bindings, seen=(), imports=None):
     value = static_value(node, bindings, seen, imports)
     return value if isinstance(value, str) else ""
+
+
+def decode_arguments(value):
+    """Normalize bytes only at APIs accepting POSIX byte arguments."""
+    if isinstance(value, bytes):
+        try:
+            return value.decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise AnalysisError("Cannot decode literal byte argument as UTF-8") from error
+    if isinstance(value, (list, tuple)):
+        return type(value)(decode_arguments(item) for item in value)
+    return value
 
 
 def syntax_nodes(root):
@@ -640,6 +658,12 @@ def yaml_dependencies(source):
             if isinstance(key, yaml.ScalarNode)
         } if isinstance(node, yaml.MappingNode) else {}
 
+    def wrapper(key):
+        return isinstance(key, yaml.ScalarNode) and re.fullmatch(
+            r"\$\{\{\s*(?:(?:if|elseif|each)\s+.+?|else)\s*\}\}",
+            key.value, flags=re.DOTALL,
+        )
+
     def run(source, interpreter):
         selector = interpreter.value.strip() if isinstance(interpreter, yaml.ScalarNode) else None
         if interpreter is None or selector in {
@@ -672,7 +696,7 @@ def yaml_dependencies(source):
                         for item in child.value
                     ]))
 
-    def walk(node, ancestors=(), inherited_shell=None):
+    def walk(node, ancestors=(), inherited_shell=None, named_jobs=False, inherited_task=None):
         nonlocal visits
         if node is None:
             return
@@ -686,12 +710,20 @@ def yaml_dependencies(source):
             for child in node.value:
                 walk(child, ancestors, inherited_shell)
         elif isinstance(node, yaml.MappingNode):
+            if named_jobs:
+                for key, child in node.value:
+                    walk(child, ancestors, inherited_shell, named_jobs=bool(wrapper(key)))
+                return
             values = fields(node)
+            task = values.get("task", inherited_task)
             default_shell = fields(fields(values.get("defaults")).get("run")).get(
                 "shell", inherited_shell
             )
             for key, value in node.value:
                 if not isinstance(key, yaml.ScalarNode):
+                    continue
+                if wrapper(key):
+                    walk(value, ancestors, default_shell, inherited_task=task)
                     continue
                 name = key.value.rsplit(".", 1)[-1]
                 if key.value == "shell" and "run" in values:
@@ -702,14 +734,13 @@ def yaml_dependencies(source):
                     interpreter = values.get("shell", default_shell) if name == "run" else None
                     command(value, name != "command", interpreter)
                 elif key.value == "inputs" and isinstance(
-                    values.get("task"), yaml.ScalarNode
-                ) and re.fullmatch(r"(?:Bash|CmdLine)@\d+", values["task"].value):
+                    task, yaml.ScalarNode
+                ) and re.fullmatch(r"(?:Bash|CmdLine)@\d+", task.value):
                     walk(value, ancestors, default_shell)
                 elif key.value in {"jobs", "stages"} and isinstance(
                     value, yaml.MappingNode
                 ):
-                    for _, child in value.value:
-                        walk(child, ancestors, default_shell)
+                    walk(value, ancestors, default_shell, named_jobs=True)
                 elif key.value in {
                     "jobs", "stages", "steps", "tasks", "handlers",
                     "pre_tasks", "post_tasks", "block", "rescue", "always",
@@ -733,7 +764,7 @@ def python_command(node, name, bindings, imports=None):
                       if keyword.arg == keyword_name)
         references = Counter()
         for stage in stages:
-            value = static_value(stage, bindings, imports=imports)
+            value = decode_arguments(static_value(stage, bindings, imports=imports))
             words = value if isinstance(value, (list, tuple)) else [value]
             references.update(command_dependencies(words))
         return references
@@ -744,6 +775,14 @@ def python_command(node, name, bindings, imports=None):
     if not arguments:
         return Counter()
     value = static_value(arguments[0], bindings, imports=imports)
+    if (owner == "subprocess" and call in PROCESS_CALLS | {"getoutput", "getstatusoutput"}) or (
+        owner == "os" and call == "system"
+    ):
+        value = decode_arguments(value)
+    elif call in SHELL_CALLS | ARGV_CALLS:
+        values = value if isinstance(value, (list, tuple)) else [value]
+        if any(isinstance(item, bytes) for item in values):
+            raise AnalysisError("Unsupported byte-valued command helper arguments")
     if owner == "subprocess" and call in {"getoutput", "getstatusoutput"}:
         words = list(value) if isinstance(value, (list, tuple)) else [value]
         return command_dependencies(["/bin/sh", "-c", *words])
@@ -776,17 +815,17 @@ def python_command(node, name, bindings, imports=None):
     executable = options.get("executable", node.args[2] if len(node.args) > 2 else None)
     if isinstance(executable, ast.Constant) and executable.value is None:
         executable = None
-    if executable and not isinstance(static_value(executable, bindings, imports=imports), str):
+    program = decode_arguments(static_value(executable, bindings, imports=imports))
+    if executable and not isinstance(program, str):
         if "minigraph" in str(value) or "sonic-cfggen" in str(value):
             raise AnalysisError("Cannot determine subprocess executable")
         return Counter()
     if shell:
         words = list(value) if isinstance(value, (list, tuple)) else [value]
-        program = static_text(executable, bindings, imports=imports) if executable else "/bin/sh"
-        return command_dependencies([program, "-c", *words])
+        return command_dependencies([program if executable else "/bin/sh", "-c", *words])
     words = list(value) if isinstance(value, (list, tuple)) else [value]
     if executable and words:
-        words[0] = static_value(executable, bindings, imports=imports)
+        words[0] = program
     return command_dependencies(words)
 
 
@@ -885,30 +924,113 @@ def python_dependencies(source):
             arguments = list(node.args) + [keyword.value for keyword in node.keywords]
             if isinstance(node.func, ast.Attribute):
                 arguments.append(node.func.value)
-            for argument in arguments:
-                for path in XML_PATH.findall(static_text(argument, bindings, imports=imports)):
+            values = [static_value(argument, bindings, imports=imports) for argument in arguments]
+            if call in {"Path", "PurePath"} and any(isinstance(value, bytes) for value in values):
+                continue
+            for value in values:
+                if call in BYTE_FILE_CALLS:
+                    value = decode_arguments(value)
+                for path in XML_PATH.findall(value if isinstance(value, str) else ""):
                     references[("XML path", path)] += 1
     return references
 
 
-def template_source(source):
+def template_sources(source, required=True):
     output = []
+    current = output
+    stack = []
     region = None
+    tag = None
     try:
         for _, kind, value in JINJA_ENVIRONMENT.lex(source):
             if kind == "data":
-                output.append(value)
+                current.append(value)
             elif kind in {"block_begin", "comment_begin", "variable_begin"}:
                 region = kind
+                tag = None
                 if kind == "variable_begin":
-                    output.append("${dynamic}")
-            elif kind in {"block_end", "comment_end", "variable_end"}:
+                    current.append("${dynamic}")
+            elif kind == "name" and region == "block_begin" and tag is None:
+                tag = value
+            elif kind == "block_end":
+                if tag in {"if", "for"}:
+                    if len(stack) >= 64:
+                        raise AnalysisError("Jinja nesting exceeds analysis limit")
+                    branches = [[]]
+                    current.append(branches)
+                    stack.append({
+                        "tag": tag, "parent": current, "branches": branches, "else": False,
+                    })
+                    current = branches[0]
+                elif tag in {"elif", "else"}:
+                    if not stack or stack[-1]["else"] or (
+                        tag == "elif" and stack[-1]["tag"] != "if"
+                    ):
+                        raise AnalysisError("Unmatched Jinja branch: " + tag)
+                    frame = stack[-1]
+                    frame["else"] = tag == "else"
+                    current = []
+                    frame["branches"].append(current)
+                elif tag in {"endif", "endfor"}:
+                    if not stack or tag != "end" + stack[-1]["tag"]:
+                        raise AnalysisError("Unmatched Jinja control ending: " + tag)
+                    frame = stack.pop()
+                    if not frame["else"]:
+                        frame["branches"].append([])
+                    current = frame["parent"]
+                region = None
+            elif kind in {"comment_end", "variable_end"}:
                 region = None
         if region is not None:
             raise AnalysisError("Unterminated Jinja region: " + region)
+        if stack:
+            raise AnalysisError("Unterminated Jinja control block")
     except TemplateSyntaxError as error:
         raise AnalysisError("Cannot tokenize Jinja: " + str(error)) from error
-    return "".join(output)
+
+    markers = ("minigraph", "cfggen")
+    prefixes = {marker[:length] for marker in markers for length in range(len(marker))}
+
+    def suffixes(parts, states):
+        # Track only prefixes of relevant identifiers, including across branches.
+        # This avoids expanding unrelated mixed-format templates exponentially.
+        for part in parts:
+            following = set()
+            if isinstance(part, str):
+                for state in states:
+                    text = state + part
+                    if any(marker in text for marker in markers):
+                        return None
+                    following.add(max(
+                        (prefix for prefix in prefixes if text.endswith(prefix)), key=len
+                    ))
+            else:
+                for branch in part:
+                    result = suffixes(branch, states)
+                    if result is None:
+                        return None
+                    following.update(result)
+            states = following
+        return states
+
+    if not required and suffixes(output, {""}) is not None:
+        return []
+
+    def expand(parts):
+        results = [""]
+        for part in parts:
+            choices = [part] if isinstance(part, str) else []
+            if not isinstance(part, str):
+                for branch in part:
+                    choices.extend(expand(branch))
+                    if len(choices) > 64:
+                        raise AnalysisError("Jinja alternatives exceed analysis limit")
+            if len(results) * len(choices) > 64:
+                raise AnalysisError("Jinja alternatives exceed analysis limit")
+            results = [prefix + suffix for prefix in results for suffix in choices]
+        return results
+
+    return expand(output)
 
 
 def dependencies(path, content, mode):
@@ -930,16 +1052,24 @@ def dependencies(path, content, mode):
     source = content.decode("utf-8")
     if name.suffix == ".py" or re.match(r"^#!.*python", source):
         return python_dependencies(source)
+    sources = [source]
     if name.suffix == ".j2":
-        source = template_source(source)
         name = name.with_suffix("")
-    if name.suffix in {".yml", ".yaml"}:
-        return yaml_dependencies(source)
-    if name.suffix not in {".sh", ".bash"} and not re.search(
-        r"minigraph|cfggen", source
-    ):
-        return references
-    return shell_dependencies(source)
+        sources = template_sources(
+            source, required=name.suffix in {".sh", ".bash", ".yml", ".yaml"}
+        )
+    for source in sources:
+        if name.suffix in {".yml", ".yaml"}:
+            found = yaml_dependencies(source)
+        elif name.suffix in {".sh", ".bash"} or re.search(r"minigraph|cfggen", source):
+            found = shell_dependencies(source)
+        else:
+            continue
+        if found:
+            if references:
+                raise AnalysisError("Jinja alternatives have ambiguous static reference counts")
+            references.update(found)
+    return references
 
 
 def read_blob(repo, tree, path):

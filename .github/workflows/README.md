@@ -177,8 +177,26 @@ Command extraction preserves the input's execution context:
 | --- | --- |
 | Python | Known `subprocess`/`os` command APIs and imported aliases use POSIX argument and shell semantics, including literal `shell` and `executable` options. `shell`/`exec_command` helpers take shell source; `command`/`run_command` split command strings into arguments. `getstatusoutput_noshell`, `check_output_pipe`, and `getstatusoutput_noshell_pipe` preserve executable strings and argument lists without shell splitting; all explicit pipeline stages and `cmd0` are checked. |
 | Shell | Bash syntax trees identify executable positions, substitutions, quotes, continuations and here-documents. Common options of `sudo`, `env`, `command`, `exec`, `timeout`, `nice` and `nohup` are recognized. `bash`/`sh`/`dash` command strings support combined and separate options before `-c`, including ordered `-n`/`+n` and `-o`/`+o noexec`; following positional arguments are not commands. |
-| YAML | YAML decoding preserves scalar quoting and folding. Command fields in root fragments and job/stage/step/task structures include namespaced Ansible `shell`/`command`, `cmd`/`argv`, and Azure Bash/CmdLine scripts. GitHub `run` bodies honor step, job, then workflow shell precedence: `bash`/`sh` use shell analysis and `python` uses Python analysis. Simple explicit `bash {0}`, `sh {0}`, `dash {0}`, `python {0}`, and `python3 {0}` templates are also recognized. Display names, environment values and shell selectors are not command bodies. |
-| Jinja templates | The Jinja lexer distinguishes comments, control directives, expressions and raw blocks, including quoted delimiters and explicit whitespace control. Literal shell/YAML output regions are analyzed, with expressions marked unknown. This does not render the template or determine which branches execute. |
+| YAML | YAML decoding preserves scalar quoting and folding. Command fields in root fragments and job/stage/step/task structures include namespaced Ansible `shell`/`command`, `cmd`/`argv`, and Azure Bash/CmdLine scripts. Azure `${{ if ... }}`, `${{ elseif ... }}`, `${{ else }}`, and `${{ each ... }}` wrappers are traversed within these command structures, preserving inherited interpreters and task context. GitHub `run` bodies honor step, job, then workflow shell precedence: `bash`/`sh` use shell analysis and `python` uses Python analysis. Simple explicit `bash {0}`, `sh {0}`, `dash {0}`, `python {0}`, and `python3 {0}` templates are also recognized. Display names, variables, environment values and shell selectors are not command bodies. |
+| Jinja templates | The Jinja lexer distinguishes comments, control directives, expressions and raw blocks, including quoted delimiters and explicit whitespace control. Literal shell/YAML output alternatives preserve `if`/`elif`/`else` branches and inline fragments, including implicit empty branches. A `for` body is considered once as a static source occurrence, separately from its empty/`else` alternative. Expressions remain unknown; conditions, iteration counts, filters and included templates are not evaluated. This does not render templates. |
+
+Literal bytes retain their type until a supported API boundary. POSIX
+subprocess arguments, `executable`, `os.system`, the direct-argv helpers
+above, and common byte-compatible file APIs normalize UTF-8 bytes for
+analysis. Byte arguments are not shell-split unless that API invokes a
+shell. `Path`/`PurePath` and `importlib.import_module` do not accept bytes;
+byte literals are not converted into valid inputs for those APIs.
+
+Jinja alternatives are not concatenated into one command. A single
+dependency-bearing alternative supplies its reference counts; if multiple
+alternatives contain references, counts are ambiguous and analysis fails.
+This includes identical dependency-bearing alternatives and shared commands
+outside a conditional: summing or taking a maximum could conceal added
+source references. There is a limit of 64 output alternatives and 64 nested
+control blocks, with no silent truncation. Unrelated mixed-format templates
+retain best-effort relevance filtering, including identifiers assembled
+across branch boundaries. Some existing conditional consumers may therefore
+require manual investigation when edited.
 
 Quoted shell punctuation, multiline literal diagnostics, and here-document
 data supplied to commands such as `cat` are not treated as commands.
@@ -239,6 +257,8 @@ unresolved execution options on literal
 minigraph subprocess calls, decoding errors, or unavailable Git objects fail
 analysis rather than return a clean result. Non-scalar YAML `cmd` arguments
 and recursive/excessively expanded command structures also fail analysis.
+Non-UTF-8 byte arguments at supported API boundaries and byte arguments to
+helpers with unsupported byte contracts fail analysis rather than disappearing.
 Minigraph-related `run` bodies or interpreter selectors fail analysis when
 the selected interpreter is unsupported or unresolved, instead of being
 interpreted as Bash. Other languages and arbitrary custom interpreter
@@ -249,7 +269,8 @@ descriptor aliases, and script descriptor indirection fail analysis.
 Shell syntax outside the tree-sitter grammar
 (including some escaped heredocs and descriptor forms) also fails analysis,
 even when valid in Bash. This is not a complete model of stdin consumption
-by arbitrary commands. Malformed Jinja lexical regions fail analysis.
+by arbitrary commands. Malformed Jinja lexical/control regions, excessive
+branch expansion and ambiguous Jinja reference counts fail analysis.
 Standard YAML escapes are
 decoded as YAML, not as JSON. Investigate analysis failures separately from
 policy violations; do not silently skip a file or disable the guard.

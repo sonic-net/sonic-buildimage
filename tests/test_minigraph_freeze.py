@@ -219,6 +219,62 @@ class DependencyTest(unittest.TestCase):
                 "{}(['sonic-cfggen', '-m'], ['sonic-cfggen', '-m'])".format(helper)
             )[("command", "sonic-cfggen minigraph mode")])
 
+    def test_python_bytes_are_normalized_only_at_supported_api_boundaries(self):
+        for source in [
+            "subprocess.run([b'sonic-cfggen', b'-m'])",
+            "subprocess.run(['sonic-cfggen', b'-m'])",
+            "from subprocess import run as execute\n"
+            "CMD = b'sonic-' + b'cfggen'\nexecute([CMD] + [b'-m'])",
+            "subprocess.run(b'sonic-cfggen -m', shell=True)",
+            "subprocess.run([b'sonic-cfggen -m'], shell=True)",
+            "subprocess.run([b'alias', b'-m'], executable=b'sonic-cfggen')",
+            "subprocess.run(b'sonic-cfggen -m', shell=True, executable=b'/bin/bash')",
+            "subprocess.getoutput(b'sonic-cfggen -m')",
+            "os.system(b'sonic-cfggen -m')",
+            "getstatusoutput_noshell([b'sonic-cfggen', b'-m'])",
+            "check_output_pipe([b'echo', b'data'], [b'sonic-cfggen', b'-m'])",
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(
+                    guard.python_dependencies("subprocess.run(['sonic-cfggen', '-m'])"),
+                    guard.python_dependencies(source),
+                )
+        for source in [
+            "open(b'/etc/sonic/minigraph.xml')",
+            "from builtins import open as read_graph\n"
+            "BASE = b'/etc/sonic/'\nread_graph(BASE + b'minigraph.xml')",
+            "from os.path import exists as present\npresent(b'/etc/sonic/minigraph.xml')",
+            "ET.parse(b'/etc/sonic/minigraph.xml')",
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(
+                    guard.python_dependencies("open('/etc/sonic/minigraph.xml')"),
+                    guard.python_dependencies(source),
+                )
+        for source in [
+            "fixture = b'sonic-cfggen -m'",
+            "subprocess.run(b'sonic-cfggen -m')",
+            "subprocess.run([b'echo', b'$(sonic-cfggen -m)'])",
+            "getstatusoutput_noshell(b'sonic-cfggen -m')",
+            "os.popen(b'sonic-cfggen -m')",
+            "Path(b'/etc/sonic/minigraph.xml')",
+            "Path(b'/etc/sonic', 'minigraph.xml').read_text()",
+            "from pathlib import PurePath as P\nP(b'/etc/sonic', 'minigraph.xml')",
+            "import importlib\nimportlib.import_module(b'minigraph')",
+            "Path('/tmp/output').write_bytes(b'minigraph.xml')",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.python_dependencies(source))
+        for source in [
+            r"open(b'/tmp/\xff/minigraph.xml')",
+            r"subprocess.run([b'/tmp/\xff/sonic-cfggen', b'-m'])",
+            "host.shell(b'sonic-cfggen -m')",
+            "host.command([b'sonic-cfggen', b'-m'])",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.python_dependencies(source)
+
     def test_cfggen_options_respect_bundles_abbreviations_and_operands(self):
         for arguments, expected in [
             (["-Hm"], True),
@@ -839,6 +895,51 @@ assert "config load_minigraph" not in commands
                 with self.assertRaises(guard.AnalysisError):
                     guard.yaml_dependencies(source)
 
+    def test_yaml_azure_wrappers_preserve_command_context(self):
+        for directive in ("if parameters.enabled", "elseif parameters.enabled",
+                          "else", "each item in parameters.items"):
+            for body in [
+                "- script: sonic-cfggen -m\n",
+                "- task: Bash@3\n  inputs:\n    script: sonic-cfggen -m\n",
+                "- ${{ if item.enabled }}:\n    - bash: sonic-cfggen -m\n",
+            ]:
+                source = "steps:\n  - ${{{{ {} }}}}:\n{}".format(
+                    directive, textwrap.indent(body, "      ")
+                )
+                with self.subTest(source=source):
+                    self.assertEqual(
+                        guard.yaml_dependencies("steps:\n  - script: sonic-cfggen -m"),
+                        guard.yaml_dependencies(source),
+                    )
+        for source in [
+            "jobs:\n  - ${{ if parameters.enabled }}:\n"
+            "      - job: build\n        steps:\n          - bash: sonic-cfggen -m\n",
+            "jobs:\n  ${{ if parameters.enabled }}:\n"
+            "    build:\n      steps:\n        - bash: sonic-cfggen -m\n",
+            "defaults:\n  run:\n    shell: python\nsteps:\n"
+            "  - ${{ if parameters.enabled }}:\n      - run: import minigraph\n",
+            "steps:\n  - task: Bash@3\n    inputs:\n"
+            "      ${{ if parameters.enabled }}:\n        script: sonic-cfggen -m\n",
+            "steps:\n  - task: Bash@3\n    ${{ if parameters.enabled }}:\n"
+            "      inputs:\n        script: sonic-cfggen -m\n",
+        ]:
+            with self.subTest(source=source):
+                self.assertTrue(guard.yaml_dependencies(source))
+        for source in [
+            "steps:\n  - ${{ if parameters.enabled }}:\n"
+            "      - script: echo 'sonic-cfggen -m'\n",
+            "variables:\n  ${{ if parameters.enabled }}:\n    script: sonic-cfggen -m\n",
+            "steps:\n  - env:\n      ${{ if parameters.enabled }}:\n"
+            "        script: sonic-cfggen -m\n",
+            "displayName:\n  ${{ if parameters.enabled }}:\n    script: sonic-cfggen -m\n",
+            "steps:\n  - task: Download@1\n    ${{ if parameters.enabled }}:\n"
+            "      inputs:\n        script: sonic-cfggen -m\n",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.yaml_dependencies(source))
+        with self.assertRaises(guard.AnalysisError):
+            guard.yaml_dependencies("&cycle { '${{ if parameters.enabled }}': *cycle }")
+
     def test_template_commands_and_comments_remain_distinct(self):
         for path, source, expected in [
             ("example.sh.j2", "{# sonic-cfggen -m #}\necho done", False),
@@ -879,6 +980,56 @@ assert "config load_minigraph" not in commands
             "100644",
         ))
         for source in ("{# unfinished", "{{ value", "{% if enabled", "{% raw %}text"):
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.dependencies("example.sh.j2", source.encode(), "100644")
+
+    def test_jinja_branch_alternatives_preserve_inline_fragments(self):
+        for source in [
+            "{% if flag %}echo {% else %}sonic-cfggen -m{% endif %}",
+            "{% if a %}echo {% elif b %}sonic-cfggen -m{% else %}echo done{% endif %}",
+            "{% if flag %}sonic-cfggen{% else %}printf{% endif %} -m",
+            "sonic-cfg{% if flag %}ignored{% endif %}gen -m",
+            "{% if a %}{% if b %}sonic-cfggen -m{% endif %}{% else %}echo done{% endif %}",
+            "{% for item in items %}echo done{% else %}sonic-cfggen -m{% endfor %}",
+            "'sonic-{% if flag %}cfggen{% else %}example{% endif %}' -m",
+        ]:
+            for path in ("example.sh.j2", "example.j2"):
+                with self.subTest(path=path, source=source):
+                    self.assertEqual(
+                        guard.shell_dependencies("sonic-cfggen -m"),
+                        guard.dependencies(path, source.encode(), "100644"),
+                    )
+        self.assertTrue(guard.dependencies(
+            "example.yml.j2",
+            b"run: {% if flag %}echo done{% else %}sonic-cfggen -m{% endif %}\n",
+            "100644",
+        ))
+        for source in [
+            "{% if flag %}echo 'sonic-cfggen -m'{% else %}printf done{% endif %}",
+            "echo '{% if flag %}$(sonic-cfggen -m){% else %}done{% endif %}'",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.dependencies("example.sh.j2", source.encode(), "100644"))
+
+    def test_jinja_ambiguous_counts_and_expansion_limits_fail_closed(self):
+        for source in [
+            "{% if flag %}sonic-cfggen -m{% else %}sonic-cfggen -m{% endif %}",
+            "sonic-cfggen -m\n{% if flag %}echo done{% endif %}",
+            "{% if a %}sonic-cfggen -m\n{% endif %}"
+            "{% if b %}sonic-cfggen -m\n{% endif %}",
+            "{% for item in items %}sonic-cfggen -m{% else %}sonic-cfggen -m{% endfor %}",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaisesRegex(guard.AnalysisError, "ambiguous"):
+                    guard.dependencies("example.sh.j2", source.encode(), "100644")
+        many_branches = "{% if flag %}echo yes\n{% else %}echo no\n{% endif %}" * 7
+        with self.assertRaisesRegex(guard.AnalysisError, "limit"):
+            guard.dependencies("example.sh.j2", many_branches.encode(), "100644")
+        self.assertFalse(guard.dependencies(
+            "example.json.j2", many_branches.encode(), "100644"
+        ))
+        for source in ("{% if flag %}echo done", "{% else %}echo done{% endif %}"):
             with self.subTest(source=source):
                 with self.assertRaises(guard.AnalysisError):
                     guard.dependencies("example.sh.j2", source.encode(), "100644")
@@ -985,6 +1136,15 @@ class GitComparisonTest(GitFixtureTest):
             ("script.sh.j2", "{# {% if enabled %}sonic-cfggen -m{% endif %} #}", 0),
             ("script.sh.j2", "sonic- {#- ignored -#} cfggen -m", 1),
             ("script.sh.j2", "{{ value", 2),
+            ("script.py", "subprocess.run([b'sonic-cfggen', b'-m'])", 1),
+            ("script.py", "open(b'/etc/sonic/minigraph.xml')", 1),
+            ("script.py", "Path(b'/etc/sonic', 'minigraph.xml')", 0),
+            ("script.py", r"open(b'/tmp/\xff/minigraph.xml')", 2),
+            ("workflow.yml", "steps:\n  - ${{ if parameters.enabled }}:\n"
+             "      - bash: sonic-cfggen -m\n", 1),
+            ("script.sh.j2", "{% if flag %}echo {% else %}sonic-cfggen -m{% endif %}", 1),
+            ("script.sh.j2", "{% if flag %}sonic-cfggen -m"
+             "{% else %}sonic-cfggen -m{% endif %}", 2),
         ]
         for path, source, expected in cases:
             with self.subTest(path=path, source=source):
@@ -1021,6 +1181,18 @@ class GitComparisonTest(GitFixtureTest):
         self.assertTrue(self.compare({}, {path: source}))
         self.assertTrue(self.compare({path: source}, {path: source * 2}))
         self.assertTrue(self.compare({path: source}, {"files/new.sh": source}))
+
+    def test_jinja_reference_counts_and_removals_are_compared(self):
+        path = "files/example.sh.j2"
+        source = "{% if flag %}sonic-cfggen -m\n{% endif %}"
+        self.assertFalse(self.compare({path: source}, {path: source + "\n# unchanged"}))
+        self.assertFalse(self.compare({path: source}, {path: "echo done\n"}))
+        self.assertTrue(self.compare({}, {path: source}))
+        added = source.replace("sonic-cfggen -m\n", "sonic-cfggen -m\n" * 2)
+        self.assertTrue(self.compare({path: source}, {path: added}))
+        ambiguous = source.replace("{% endif %}", "{% else %}sonic-cfggen -m{% endif %}")
+        with self.assertRaises(guard.AnalysisError):
+            self.compare({path: source}, {path: ambiguous})
 
     def test_literal_imports_and_command_aliases_are_compared(self):
         path = "scripts/example.py"
