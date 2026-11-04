@@ -35,6 +35,8 @@ ARGV_CALLS = {"command", "run_command"}
 PIPE_CALLS = {"check_output_pipe", "getstatusoutput_noshell_pipe"}
 SHELLS = {"bash", "sh", "dash"}
 SHELL_PARSER = Parser(Language(tree_sitter_bash.language()))
+# Tokenization only; this checker never renders templates or HTML.
+# nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
 JINJA_ENVIRONMENT = Environment(keep_trailing_newline=True)
 FILE_CALLS = {
     "Path", "PurePath", "copy", "copy2", "copyfile", "exists", "is_file",
