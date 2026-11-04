@@ -171,13 +171,18 @@ relative imports), literal
 `importlib.import_module` imports and simple bindings of their results,
 literal file APIs and their imported aliases (including `Path`/`PurePath`
 receivers), simple literal bindings and argument-list concatenation.
+File calls select their path/source/destination arguments; pathlib methods
+select the receiver (or explicit `self` for unbound calls). Write payloads,
+encodings, error handlers and other non-path options are not file paths.
+Literal `Path` components use POSIX joining rules, including replacement
+of earlier components by a later absolute path.
 Command extraction preserves the input's execution context:
 
 | Input | Recognized command context |
 | --- | --- |
 | Python | Known `subprocess`/`os` command APIs and imported aliases use POSIX argument and shell semantics, including literal `shell` and `executable` options. `shell`/`exec_command` helpers take shell source; `command`/`run_command` split command strings into arguments. `getstatusoutput_noshell`, `check_output_pipe`, and `getstatusoutput_noshell_pipe` preserve executable strings and argument lists without shell splitting; all explicit pipeline stages and `cmd0` are checked. |
 | Shell | Bash syntax trees identify executable positions, substitutions, quotes, continuations and here-documents. Common options of `sudo`, `env`, `command`, `exec`, `timeout`, `nice` and `nohup` are recognized. `bash`/`sh`/`dash` command strings support combined and separate options before `-c`, including ordered `-n`/`+n` and `-o`/`+o noexec`; following positional arguments are not commands. |
-| YAML | YAML decoding preserves scalar quoting and folding. Command fields in root fragments and job/stage/step/task structures include namespaced Ansible `shell`/`command`, `cmd`/`argv`, and Azure Bash/CmdLine scripts. Azure `${{ if ... }}`, `${{ elseif ... }}`, `${{ else }}`, and `${{ each ... }}` wrappers are traversed within these command structures, preserving inherited interpreters and task context. GitHub `run` bodies honor step, job, then workflow shell precedence: `bash`/`sh` use shell analysis and `python` uses Python analysis. Simple explicit `bash {0}`, `sh {0}`, `dash {0}`, `python {0}`, and `python3 {0}` templates are also recognized. Display names, variables, environment values and shell selectors are not command bodies. |
+| YAML | YAML decoding preserves scalar quoting and folding. Command fields in root fragments and job/stage/step/task structures include namespaced Ansible `shell`/`command`, `cmd`/`argv`, and POSIX Azure `Bash@3`/`CmdLine@2` scripts. `Bash@3` honors `targetType`, defaulting to `filePath`: inline mode analyzes `script`; file mode analyzes the script-path operand and shell-expanded `arguments`, not unused inline text. Referenced script files are not loaded or followed. Azure `${{ if ... }}`, `${{ elseif ... }}`, `${{ else }}`, and `${{ each ... }}` wrappers are traversed within these command structures, preserving inherited interpreters and task context. GitHub `run` bodies honor step, job, then workflow shell precedence: `bash`/`sh` use shell analysis and `python` uses Python analysis. Simple explicit `bash {0}`, `sh {0}`, `dash {0}`, `python {0}`, and `python3 {0}` templates are also recognized. Display names, variables, environment values and shell selectors are not command bodies. |
 | Jinja templates | The Jinja lexer distinguishes comments, control directives, expressions and raw blocks, including quoted delimiters and explicit whitespace control. Literal shell/YAML output alternatives preserve `if`/`elif`/`else` branches and inline fragments, including implicit empty branches. A `for` body is considered once as a static source occurrence, separately from its empty/`else` alternative. Expressions remain unknown; conditions, iteration counts, filters and included templates are not evaluated. This does not render templates. |
 
 Literal bytes retain their type until a supported API boundary. POSIX
@@ -257,6 +262,13 @@ unresolved execution options on literal
 minigraph subprocess calls, decoding errors, or unavailable Git objects fail
 analysis rather than return a clean result. Non-scalar YAML `cmd` arguments
 and recursive/excessively expanded command structures also fail analysis.
+YAML merge keys in command structures/defaults, unsupported Azure command
+task versions, unresolved Bash `targetType` values and conditional mode
+overrides fail analysis rather than silently dropping commands or guessing
+an interpreter. These are explicit unsupported boundaries, not exemptions.
+Unresolved shell/wrapper options with visible legacy references also fail
+analysis; subprocess relevance includes its explicit executable override,
+not only its argument list.
 Non-UTF-8 byte arguments at supported API boundaries and byte arguments to
 helpers with unsupported byte contracts fail analysis rather than disappearing.
 Minigraph-related `run` bodies or interpreter selectors fail analysis when

@@ -275,6 +275,112 @@ class DependencyTest(unittest.TestCase):
                 with self.assertRaises(guard.AnalysisError):
                     guard.python_dependencies(source)
 
+    def test_python_file_apis_exclude_payloads_and_nonpath_options(self):
+        for source in [
+            "Path('/tmp/notice.txt').write_text('minigraph.xml')",
+            "Path('/tmp/notice.txt').write_text(data='minigraph.xml')",
+            "TEXT = 'minigraph.xml'\nPath('/tmp/notice.txt').write_text(TEXT)",
+            "from pathlib import Path as P\n"
+            "notice = P('/tmp/notice.txt')\nnotice.write_text('minigraph.xml')",
+            "Path.write_text(Path('/tmp/notice.txt'), 'minigraph.xml')",
+            "Path.write_text(self=Path('/tmp/notice.txt'), data='minigraph.xml')",
+            "Path('/tmp/notice.txt').write_bytes(b'minigraph.xml')",
+            "Path('/tmp/notice.txt').read_text(errors='minigraph.xml')",
+            "Path('/tmp/notice.txt').open(errors='minigraph.xml')",
+            "Path.open(Path('/tmp/notice.txt'), errors='minigraph.xml')",
+            "open('/tmp/notice.txt', errors='minigraph.xml')",
+            "from builtins import open as read_file\n"
+            "read_file('/tmp/notice.txt', errors='minigraph.xml')",
+            "ET.parse('/tmp/notice.xml', parser='minigraph.xml')",
+            "shutil.copyfile('/tmp/a', '/tmp/b', follow_symlinks='minigraph.xml')",
+            "Path('/tmp/minigraph.xml', '/tmp/notice.txt').read_text()",
+            "Path('/tmp/notice.txt', unused='minigraph.xml')",
+            "import ast\nast.parse('minigraph.xml')",
+            "from ast import parse as parse_source\nparse_source('minigraph.xml')",
+            "import copy\ncopy.copy('minigraph.xml')",
+            "from copy import copy as duplicate\nduplicate(b'minigraph.xml')",
+            "host.copy(dest='/tmp/notice.txt', content='minigraph.xml')",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.python_dependencies(source))
+        for method, arguments in [
+            ("write_text", "data='minigraph.xml'"),
+            ("write_bytes", "data=b'minigraph.xml'"),
+            ("read_text", "errors='minigraph.xml'"),
+            ("open", "errors='minigraph.xml'"),
+            ("read_bytes", ""), ("exists", ""), ("is_file", ""), ("unlink", "missing_ok=True"),
+        ]:
+            with self.subTest(method=method, arguments=arguments):
+                self.assertEqual(
+                    guard.python_dependencies("Path('/tmp/minigraph.xml').read_text()"),
+                    guard.python_dependencies(
+                        "Path('/tmp/minigraph.xml').{}({})".format(method, arguments)
+                    ),
+                )
+
+    def test_python_file_api_path_selection_preserves_real_references(self):
+        for source in [
+            "open(file='/tmp/minigraph.xml')",
+            "os.open(path=b'/tmp/minigraph.xml', flags=0)",
+            "os.remove(path='/tmp/minigraph.xml')",
+            "os.unlink(path='/tmp/minigraph.xml')",
+            "os.path.exists(path='/tmp/minigraph.xml')",
+            "os.path.isfile(path='/tmp/minigraph.xml')",
+            "ET.parse(source='/tmp/minigraph.xml')",
+            "minidom.parse(file='/tmp/minigraph.xml')",
+            "shutil.copyfile(src='/tmp/minigraph.xml', dst='/tmp/notice.xml')",
+            "shutil.copy2('/tmp/notice.xml', dst=b'/tmp/minigraph.xml')",
+            "shutil.move(src='/tmp/notice.xml', dst='/tmp/minigraph.xml')",
+            "host.copy(dest='/tmp/minigraph.xml', content='notice')",
+            "open('/tmp/notice.txt', opener=lambda name, flags: os.open('/tmp/minigraph.xml', flags))",
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(
+                    guard.python_dependencies("open('/tmp/minigraph.xml')"),
+                    guard.python_dependencies(source),
+                )
+        self.assertTrue(guard.python_dependencies(
+            "Path('/tmp/notice.txt').write_text(subprocess.check_output(['sonic-cfggen', '-m']))"
+        ))
+        for source in [
+            "Path('/tmp', 'minigraph.xml').read_text()",
+            "from pathlib import Path as P\nP('/tmp', 'minigraph.xml').read_text()",
+            "Path.read_text(Path('/tmp/minigraph.xml'))",
+            "Path.open(self=Path('/tmp/minigraph.xml'))",
+            "p = Path('/tmp/minigraph.xml')\np.write_text('notice')",
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(
+                    guard.python_dependencies("Path('/tmp/minigraph.xml').read_text()"),
+                    guard.python_dependencies(source),
+                )
+
+    def test_unresolved_execution_boundaries_do_not_return_clean(self):
+        for source in [
+            "subprocess.run(['alias', '-m'], executable='sonic-cfggen', shell=mode)",
+            "subprocess.run(['alias', '-m'], executable=b'sonic-cfggen', **options)",
+            "subprocess.run(['bash', options, '-c', 'sonic-cfggen -m'])",
+            "subprocess.run(['sudo', options, 'sonic-cfggen', '-m'])",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.python_dependencies(source)
+        for source in [
+            "bash $OPTIONS -c 'sonic-cfggen -m'",
+            "sudo $OPTIONS sonic-cfggen -m",
+            "bash -- $SCRIPT <<'EOF'\nsonic-cfggen -m\nEOF\n",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.shell_dependencies(source)
+        for source in [
+            "subprocess.run(['echo', options, 'sonic-cfggen -m'])",
+            "subprocess.run(['bash', '/tmp/script.sh', 'sonic-cfggen -m'])",
+            "subprocess.run(['alias', '-m'], executable='/bin/echo', shell=mode)",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.python_dependencies(source))
+
     def test_cfggen_options_respect_bundles_abbreviations_and_operands(self):
         for arguments, expected in [
             (["-Hm"], True),
@@ -834,7 +940,7 @@ assert "config load_minigraph" not in commands
             ("- ansible.builtin.shell:\n  args:\n"
              "    cmd: sonic-cfggen -m\n", True),
             ("steps:\n  - task: Bash@3\n    inputs:\n"
-             "      script: sonic-cfggen -m\n", True),
+             "      targetType: inline\n      script: sonic-cfggen -m\n", True),
             ("steps:\n  - task: Download@1\n    inputs:\n"
              "      script: sonic-cfggen -m\n", False),
         ]
@@ -900,7 +1006,7 @@ assert "config load_minigraph" not in commands
                           "else", "each item in parameters.items"):
             for body in [
                 "- script: sonic-cfggen -m\n",
-                "- task: Bash@3\n  inputs:\n    script: sonic-cfggen -m\n",
+                "- task: Bash@3\n  inputs:\n    targetType: inline\n    script: sonic-cfggen -m\n",
                 "- ${{ if item.enabled }}:\n    - bash: sonic-cfggen -m\n",
             ]:
                 source = "steps:\n  - ${{{{ {} }}}}:\n{}".format(
@@ -919,9 +1025,10 @@ assert "config load_minigraph" not in commands
             "defaults:\n  run:\n    shell: python\nsteps:\n"
             "  - ${{ if parameters.enabled }}:\n      - run: import minigraph\n",
             "steps:\n  - task: Bash@3\n    inputs:\n"
+            "      targetType: inline\n"
             "      ${{ if parameters.enabled }}:\n        script: sonic-cfggen -m\n",
             "steps:\n  - task: Bash@3\n    ${{ if parameters.enabled }}:\n"
-            "      inputs:\n        script: sonic-cfggen -m\n",
+            "      inputs:\n        targetType: inline\n        script: sonic-cfggen -m\n",
         ]:
             with self.subTest(source=source):
                 self.assertTrue(guard.yaml_dependencies(source))
@@ -939,6 +1046,58 @@ assert "config load_minigraph" not in commands
                 self.assertFalse(guard.yaml_dependencies(source))
         with self.assertRaises(guard.AnalysisError):
             guard.yaml_dependencies("&cycle { '${{ if parameters.enabled }}': *cycle }")
+
+    def test_yaml_task_inputs_follow_the_selected_execution_mode(self):
+        for inputs, expected in [
+            ("targetType: inline\nscript: sonic-cfggen -m\n", True),
+            ("targetType: INLINE\nscript: sonic-cfggen -m\n", True),
+            ("filePath: notice.sh\nscript: sonic-cfggen -m\n", False),
+            ("targetType: filePath\nfilePath: notice.sh\nscript: sonic-cfggen -m\n", False),
+            ("targetType: filePath\nfilePath: /tmp/minigraph.xml\n", True),
+            ("targetType: inline\nscript: echo done\nfilePath: /tmp/minigraph.xml\n", False),
+            ("filePath: notice.sh\narguments: \"$(sonic-cfggen -m)\"\n", True),
+            ("filePath: notice.sh\narguments: \"'sonic-cfggen -m'\"\n", False),
+            ("targetType: inline\n${{ if parameters.enabled }}:\n  script: sonic-cfggen -m\n", True),
+            ("filePath: notice.sh\n${{ if parameters.enabled }}:\n"
+             "  arguments: \"$(sonic-cfggen -m)\"\n", True),
+            ("targetType: inline\nscript: echo done\nrun: sonic-cfggen -m\n", False),
+        ]:
+            source = "steps:\n- task: Bash@3\n  inputs:\n" + textwrap.indent(inputs, "    ")
+            with self.subTest(source=source):
+                self.assertEqual(expected, bool(guard.yaml_dependencies(source)))
+        self.assertTrue(guard.yaml_dependencies(
+            "steps:\n- task: CmdLine@2\n  inputs:\n    script: sonic-cfggen -m\n"
+        ))
+        for source in [
+            "steps:\n- task: Bash@3\n  inputs:\n"
+            "    targetType: ${{ parameters.mode }}\n    script: sonic-cfggen -m\n",
+            "steps:\n- task: Bash@3\n  inputs:\n"
+            "    script: sonic-cfggen -m\n    ${{ if parameters.enabled }}:\n"
+            "      targetType: inline\n",
+            "steps:\n- task: Bash@99\n  inputs:\n    script: sonic-cfggen -m\n",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.yaml_dependencies(source)
+
+    def test_yaml_unresolved_merge_keys_fail_only_in_command_structures(self):
+        for source in [
+            "definition: &body {run: sonic-cfggen -m}\nsteps:\n- <<: *body\n",
+            "jobs:\n  <<: {example: {steps: [{run: 'sonic-cfggen -m'}]}}\n",
+            "defaults:\n  run:\n    <<: {shell: python}\nrun: import minigraph\n",
+            "command:\n  <<: {argv: [sonic-cfggen, -m]}\n",
+            "steps:\n- !!merge '<<': {run: sonic-cfggen -m}\n",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.yaml_dependencies(source)
+        for source in [
+            "env:\n  <<: {run: sonic-cfggen -m}\nrun: echo done\n",
+            "'<<': {run: sonic-cfggen -m}\nrun: echo done\n",
+            "!!str <<: {run: sonic-cfggen -m}\nrun: echo done\n",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.yaml_dependencies(source))
 
     def test_template_commands_and_comments_remain_distinct(self):
         for path, source, expected in [
@@ -1145,6 +1304,17 @@ class GitComparisonTest(GitFixtureTest):
             ("script.sh.j2", "{% if flag %}echo {% else %}sonic-cfggen -m{% endif %}", 1),
             ("script.sh.j2", "{% if flag %}sonic-cfggen -m"
              "{% else %}sonic-cfggen -m{% endif %}", 2),
+            ("script.py", "Path('/tmp/notice.txt').write_text('minigraph.xml')", 0),
+            ("script.py", "Path('/tmp/minigraph.xml').write_text('notice')", 1),
+            ("script.py", "Path('/tmp/minigraph.xml', '/tmp/notice.txt').read_text()", 0),
+            ("script.py", "subprocess.run(['alias', '-m'], "
+             "executable='sonic-cfggen', shell=mode)", 2),
+            ("script.sh", "bash $OPTIONS -c 'sonic-cfggen -m'", 2),
+            ("script.sh", "bash -- $SCRIPT <<'EOF'\nsonic-cfggen -m\nEOF\n", 2),
+            ("workflow.yml", "definition: &body {run: sonic-cfggen -m}\n"
+             "steps:\n- <<: *body\n", 2),
+            ("workflow.yml", "steps:\n- task: Bash@3\n  inputs:\n"
+             "    filePath: notice.sh\n    script: sonic-cfggen -m\n", 0),
         ]
         for path, source, expected in cases:
             with self.subTest(path=path, source=source):
@@ -1193,6 +1363,29 @@ class GitComparisonTest(GitFixtureTest):
         ambiguous = source.replace("{% endif %}", "{% else %}sonic-cfggen -m{% endif %}")
         with self.assertRaises(guard.AnalysisError):
             self.compare({path: source}, {path: ambiguous})
+
+    def test_python_file_payload_changes_do_not_hide_or_invent_paths(self):
+        path = "scripts/example.py"
+        source = "Path('/tmp/notice.txt').write_text('notice')"
+        payload = source.replace("write_text('notice')", "write_text('minigraph.xml')")
+        self.assertFalse(self.compare({path: source}, {path: payload}))
+        real = payload.replace("/tmp/notice.txt", "/tmp/minigraph.xml")
+        self.assertTrue(self.compare({path: payload}, {path: real}))
+        self.assertFalse(self.compare({path: real}, {path: payload}))
+        self.assertFalse(self.compare({path: real}, {path: real.replace("'minigraph.xml'", "'notice'")}))
+        self.assertTrue(self.compare({path: real}, {path: real + "\n" + real}))
+
+    def test_non_utf8_git_path_is_a_controlled_analysis_failure(self):
+        base = self.tree({})
+        object_id = self.run_git("hash-object", "-w", "--stdin", data=b"echo done\n")
+        self.run_git(
+            "update-index", "--index-info",
+            data=b"100644 " + object_id.encode() + b"\tinvalid-\xff.sh\n",
+        )
+        head = self.run_git("write-tree")
+        with mock.patch.object(guard.Path, "cwd", return_value=self.repo), \
+                redirect_stdout(io.StringIO()):
+            self.assertEqual(2, guard.main(["--base", base, "--head", head]))
 
     def test_literal_imports_and_command_aliases_are_compared(self):
         path = "scripts/example.py"

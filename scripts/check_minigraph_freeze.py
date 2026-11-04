@@ -106,7 +106,9 @@ def static_value(node, bindings, seen=(), imports=None):
         if qualified_name(node.func, imports).rsplit(".", 1)[-1] in {"Path", "PurePath"}:
             parts = [static_value(arg, bindings, seen, imports) for arg in node.args]
             if not any(isinstance(part, bytes) for part in parts):
-                return "/".join(part if isinstance(part, str) else "" for part in parts)
+                return str(PurePosixPath(*(
+                    part if isinstance(part, str) else "${dynamic}" for part in parts
+                )))
     return None
 
 
@@ -125,6 +127,44 @@ def decode_arguments(value):
     if isinstance(value, (list, tuple)):
         return type(value)(decode_arguments(item) for item in value)
     return value
+
+
+def path_instance(node, bindings, imports=None, seen=()):
+    if isinstance(node, ast.Name) and node.id not in seen:
+        values = bindings.get(node.id, [])
+        if len(values) == 1:
+            return path_instance(values[0], bindings, imports, (*seen, node.id))
+    return isinstance(node, ast.Call) and qualified_name(
+        node.func, imports
+    ).rsplit(".", 1)[-1] in {"Path", "PurePath"}
+
+
+def file_arguments(node, name, bindings, imports):
+    """Select path operands, not file contents, encodings or other options."""
+    if name in {"ast.parse", "copy.copy"}:
+        return []
+    owner, _, call = name.rpartition(".")
+    if call in {"Path", "PurePath"}:
+        return [node]
+    receiver = node.func.value if isinstance(node.func, ast.Attribute) else None
+    path_class = owner.rsplit(".", 1)[-1] in {"Path", "PurePath"}
+    if call in {"read_text", "read_bytes", "write_text", "write_bytes", "is_file"} or (
+        call in {"open", "exists", "unlink"} and (
+            path_class or path_instance(receiver, bindings, imports)
+        )
+    ):
+        if path_class:
+            return list(node.args[:1]) + [
+                keyword.value for keyword in node.keywords if keyword.arg == "self"
+            ]
+        return [receiver] if path_instance(receiver, bindings, imports) else []
+    count = 2 if call in {"copy", "copy2", "copyfile", "move"} else 1
+    keywords = {"src", "dst", "dest"} if count == 2 else {
+        "open": {"file", "path"}, "parse": {"source", "file", "filename"},
+    }.get(call, {"path"})
+    return list(node.args[:count]) + [
+        keyword.value for keyword in node.keywords if keyword.arg in keywords
+    ]
 
 
 def syntax_nodes(root):
@@ -249,6 +289,8 @@ def option_end(words, flags, values):
     while index < len(words):
         word = words[index]
         if word is None:
+            if re.search(r"minigraph|sonic-cfggen", str(words)):
+                raise AnalysisError("Cannot determine wrapper options")
             return None
         if word == "--":
             return index + 1
@@ -286,8 +328,8 @@ def shell_payload(words, mode="command"):
     while index < len(words):
         word = words[index]
         if word is None:
-            if stdin:
-                raise AnalysisError("Cannot determine shell stdin options")
+            if stdin or re.search(r"minigraph|sonic-cfggen", str(words)):
+                raise AnalysisError("Cannot determine shell options")
             return None, False
         if word == "--" or (stdin and word == "-"):
             index += 1
@@ -504,7 +546,9 @@ def stdin_dependencies(redirect, bindings):
             return Counter()
         if selected is None:
             script, _ = shell_payload(words, mode="script")
-            if script is not None and "${dynamic}" in words[script]:
+            if script is not None and (
+                not isinstance(words[script], str) or "${dynamic}" in words[script]
+            ):
                 raise AnalysisError("Cannot resolve shell script input")
             script_descriptor = script is not None and re.fullmatch(
                 r"/(?:dev/(?:stdin|fd/\d+)|proc/self/fd/\d+)", words[script]
@@ -653,6 +697,10 @@ def yaml_dependencies(source):
     visits = 0
 
     def fields(node):
+        if isinstance(node, yaml.MappingNode) and any(
+            key.tag == "tag:yaml.org,2002:merge" for key, _ in node.value
+        ):
+            raise AnalysisError("YAML merge keys in command structures require manual analysis")
         return {
             key.value: value for key, value in node.value
             if isinstance(key, yaml.ScalarNode)
@@ -683,6 +731,7 @@ def yaml_dependencies(source):
                 else argument_dependencies(value.value)
             )
         elif isinstance(value, yaml.MappingNode):
+            fields(value)
             for key, child in value.value:
                 if key.value == "cmd":
                     if not isinstance(child, yaml.ScalarNode):
@@ -696,7 +745,8 @@ def yaml_dependencies(source):
                         for item in child.value
                     ]))
 
-    def walk(node, ancestors=(), inherited_shell=None, named_jobs=False, inherited_task=None):
+    def walk(node, ancestors=(), inherited_shell=None, named_jobs=False,
+             inherited_task=None, input_mode=None):
         nonlocal visits
         if node is None:
             return
@@ -706,15 +756,54 @@ def yaml_dependencies(source):
         if id(node) in ancestors:
             raise AnalysisError("Recursive YAML aliases in command structure")
         ancestors = (*ancestors, id(node))
+        if input_mode is not None and not isinstance(node, yaml.MappingNode):
+            raise AnalysisError("Azure task inputs must be a mapping")
         if isinstance(node, yaml.SequenceNode):
             for child in node.value:
                 walk(child, ancestors, inherited_shell)
         elif isinstance(node, yaml.MappingNode):
+            values = fields(node)
+            if input_mode is not None:
+                task_name = inherited_task.value
+                if task_name not in {"Bash@3", "CmdLine@2"}:
+                    raise AnalysisError("Unsupported Azure command task version: " + task_name)
+                if task_name == "CmdLine@2":
+                    mode = "inline"
+                else:
+                    if input_mode and "targetType" in values:
+                        raise AnalysisError("Conditional Azure Bash targetType requires manual analysis")
+                    selector = values.get("targetType")
+                    mode = input_mode or (
+                        selector.value.strip().lower() if isinstance(selector, yaml.ScalarNode)
+                        else "filepath" if selector is None else ""
+                    )
+                if mode not in {"inline", "filepath"}:
+                    raise AnalysisError("Unsupported or unresolved Azure Bash targetType")
+                if mode == "inline":
+                    script = values.get("script")
+                    if script is not None and not isinstance(script, yaml.ScalarNode):
+                        raise AnalysisError("Azure inline script must be a scalar string")
+                    if script is not None:
+                        references.update(shell_dependencies(script.value))
+                elif any(key in values for key in ("filePath", "arguments")):
+                    path = values.get("filePath")
+                    arguments = values.get("arguments")
+                    if any(value is not None and not isinstance(value, yaml.ScalarNode)
+                           for value in (path, arguments)):
+                        raise AnalysisError("Azure script path and arguments must be scalar strings")
+                    references.update(shell_dependencies("exec bash {} {}".format(
+                        shlex.quote(path.value if path is not None else "${dynamic}"),
+                        arguments.value if arguments is not None else "",
+                    )))
+                for key, child in node.value:
+                    if wrapper(key):
+                        walk(child, ancestors, inherited_shell,
+                             inherited_task=inherited_task, input_mode=mode)
+                return
             if named_jobs:
                 for key, child in node.value:
                     walk(child, ancestors, inherited_shell, named_jobs=bool(wrapper(key)))
                 return
-            values = fields(node)
             task = values.get("task", inherited_task)
             default_shell = fields(fields(values.get("defaults")).get("run")).get(
                 "shell", inherited_shell
@@ -736,7 +825,7 @@ def yaml_dependencies(source):
                 elif key.value == "inputs" and isinstance(
                     task, yaml.ScalarNode
                 ) and re.fullmatch(r"(?:Bash|CmdLine)@\d+", task.value):
-                    walk(value, ancestors, default_shell)
+                    walk(value, ancestors, default_shell, inherited_task=task, input_mode="")
                 elif key.value in {"jobs", "stages"} and isinstance(
                     value, yaml.MappingNode
                 ):
@@ -748,7 +837,7 @@ def yaml_dependencies(source):
                     walk(value, ancestors, default_shell)
 
     try:
-        for document in yaml.compose_all(source, Loader=yaml.BaseLoader):
+        for document in yaml.compose_all(source, Loader=yaml.SafeLoader):
             walk(document)
     except yaml.YAMLError as error:
         raise AnalysisError("Cannot parse YAML: " + str(error)) from error
@@ -803,21 +892,22 @@ def python_command(node, name, bindings, imports=None):
     if owner != "subprocess" or call not in PROCESS_CALLS:
         return Counter()
     options = {keyword.arg: keyword.value for keyword in node.keywords}
-    if None in options and re.search(r"minigraph|sonic-cfggen", str(value)):
+    executable = options.get("executable", node.args[2] if len(node.args) > 2 else None)
+    if isinstance(executable, ast.Constant) and executable.value is None:
+        executable = None
+    program = decode_arguments(static_value(executable, bindings, imports=imports))
+    relevant = re.search(r"minigraph|sonic-cfggen", str((value, program)))
+    if None in options and relevant:
         raise AnalysisError("Cannot determine expanded subprocess options")
     shell = static_value(options.get(
         "shell", node.args[8] if len(node.args) > 8 else ast.Constant(False)
     ), bindings, imports=imports)
     if not isinstance(shell, bool):
-        if "minigraph" in str(value) or "sonic-cfggen" in str(value):
+        if relevant:
             raise AnalysisError("Cannot determine subprocess shell mode")
         return Counter()
-    executable = options.get("executable", node.args[2] if len(node.args) > 2 else None)
-    if isinstance(executable, ast.Constant) and executable.value is None:
-        executable = None
-    program = decode_arguments(static_value(executable, bindings, imports=imports))
     if executable and not isinstance(program, str):
-        if "minigraph" in str(value) or "sonic-cfggen" in str(value):
+        if relevant:
             raise AnalysisError("Cannot determine subprocess executable")
         return Counter()
     if shell:
@@ -921,12 +1011,8 @@ def python_dependencies(source):
         if call in {"load_minigraph", "reload_minigraph"}:
             references[("legacy helper", call)] += 1
         if call in FILE_CALLS:
-            arguments = list(node.args) + [keyword.value for keyword in node.keywords]
-            if isinstance(node.func, ast.Attribute):
-                arguments.append(node.func.value)
+            arguments = file_arguments(node, name, bindings, imports)
             values = [static_value(argument, bindings, imports=imports) for argument in arguments]
-            if call in {"Path", "PurePath"} and any(isinstance(value, bytes) for value in values):
-                continue
             for value in values:
                 if call in BYTE_FILE_CALLS:
                     value = decode_arguments(value)
@@ -1130,7 +1216,7 @@ def main(argv=None):
     guide_url = os.environ.get("MINIGRAPH_GUIDE_URL", GUIDE_URL)
     try:
         violations = check_changes(Path.cwd(), args.base, args.head)
-    except (AnalysisError, OSError) as error:
+    except (AnalysisError, OSError, UnicodeError) as error:
         annotation("Minigraph comparison could not be completed: {}".format(error))
         print("This is an analysis failure, not a successful freeze check.")
         print("Guide: " + guide_url)
