@@ -29,8 +29,10 @@ enough for those checks and for sonic-mgmt / containercfgd / monit:
 The s6 state is read with `s6-svstat -o up,wantedup,pid,updownfor,exitcode,signum`
 (machine-readable); the legacy human-readable format is only a fallback for an s6
 without `-o`. Per-program startsecs/startretries/stopwaitsecs come from the
-`supervisor-meta` file the converter (supervisord2s6) drops in each service dir; when
-it is missing, supervisor's defaults (1 / 3 / 10) apply.
+`supervisor-meta` file the converter (supervisord2s6) drops in each service dir, and the
+"group:program" display name from its `supervisor-name` file; both are read from
+`<servicedir>/data/` first (the only place they survive s6-rc-compile for boot services),
+then `<servicedir>/`. When supervisor-meta is missing, supervisor's defaults (1 / 3 / 10) apply.
 """
 import datetime
 import os
@@ -123,18 +125,34 @@ def _int(v, default):
         return default
 
 
+def _servicedir_file(path, name):
+    """Contents of the converter's metadata file `name` (supervisor-name, supervisor-meta) of the
+    live servicedir `path` (/run/service/<svc>, followed through its symlink), or None.
+
+    s6-rc-compile copies only its known files plus data/ and env/ from a source servicedir into
+    /run/s6-rc/servicedirs/<svc>, so on a boot-time service the file exists only as data/<name>;
+    a servicedir built by `supervisorctl update` (/run/s6-dyn) has it in both places.  data/
+    first, then the top level (older trees, hand-made servicedirs).  An empty file counts as
+    missing."""
+    for rel in (os.path.join("data", name), name):
+        try:
+            with open(os.path.join(path, rel)) as f:
+                text = f.read()
+        except OSError:
+            continue
+        if text.strip():
+            return text
+    return None
+
+
 def _meta(path):
     """supervisor-meta (key=value lines written by the converter) with supervisor's defaults."""
     m = {"startsecs": DEFAULT_STARTSECS, "startretries": DEFAULT_STARTRETRIES,
          "stopwaitsecs": DEFAULT_STOPWAITSECS}
-    try:
-        with open(os.path.join(path, "supervisor-meta")) as f:
-            for line in f:
-                k, sep, v = line.strip().partition("=")
-                if sep:
-                    m[k.strip()] = v.strip()
-    except OSError:
-        pass
+    for line in (_servicedir_file(path, "supervisor-meta") or "").splitlines():
+        k, sep, v = line.strip().partition("=")
+        if sep:
+            m[k.strip()] = v.strip()
     for k, d in (("startsecs", DEFAULT_STARTSECS), ("startretries", DEFAULT_STARTRETRIES),
                  ("stopwaitsecs", DEFAULT_STOPWAITSECS)):
         m[k] = _int(m[k], d)
@@ -233,18 +251,13 @@ def proc_state(svc, path, st=None, meta=None):
 def _display_name(dirname, path):
     # supervisord prints "group:program" for processes that belong to a
     # [group:X] section; the converter records that mapping in a
-    # "supervisor-name" file alongside the service definition since the s6
-    # service directory itself must still be named after the bare program
+    # "supervisor-name" file in the service definition (data/supervisor-name:
+    # the only place it survives s6-rc-compile, see _servicedir_file) since the
+    # s6 service directory itself must still be named after the bare program
     # (dependencies.d/ edges reference it). Fall back to the bare dirname
-    # for ungrouped programs or if the marker is missing.
-    try:
-        with open(os.path.join(path, "supervisor-name")) as f:
-            name = f.read().strip()
-            if name:
-                return name
-    except OSError:
-        pass
-    return dirname
+    # for ungrouped programs or if the file is missing.
+    name = _servicedir_file(path, "supervisor-name")
+    return name.strip() if name else dirname
 
 
 def _services():

@@ -28,7 +28,8 @@ actually do:
     never become a oneshot or s6-rc bring-up would block forever);
   * user=<u> -> s6-setuidgid <u>;
   * startsecs/startretries (supervisord defaults 1 / 3): every longrun gets a `supervisor-meta`
-    file for the supervisorctl shim; a non-critical longrun with startsecs > 0 also stamps its
+    file for the supervisorctl shim (like `supervisor-name`, under data/ because that is all
+    s6-rc-compile copies into the live servicedir; see _write_shim_file); a non-critical longrun with startsecs > 0 also stamps its
     spawn time in `run` and counts too-quick exits in `finish` (BACKOFF with n s waits, FATAL
     and left down after more than startretries in a row; see finish_script);
   * each critical longrun gets a finish script that halts the container so
@@ -68,7 +69,9 @@ S6_BUNDLE_D = os.path.join(S6_RC_D, "user")
 
 # Marker file dropped into every service directory this converter creates, so
 # a later run can tell its own output apart from s6-overlay-owned service
-# definitions and only clean up the former (see generate()).
+# definitions and only clean up the former (see generate()).  It is only ever read from
+# the SOURCE tree; s6-rc-compile drops it, so it is absent from live servicedirs and
+# nothing at runtime (supervisorctl included) may depend on it.
 MANAGED_MARKER = ".supervisord2s6-managed"
 
 
@@ -351,7 +354,7 @@ def exit_codes(raw):
 
 def meta_text(attrs, critical):
     """Contents of the per-service `supervisor-meta` file the supervisorctl shim reads
-    (copied into /run/service/<svc>/ by s6-rc-compile like `supervisor-name`)."""
+    (see _write_shim_files for how it reaches the live servicedir)."""
     return ("startsecs=%d\nstartretries=%d\nstopwaitsecs=%d\nautorestart=%s\nexitcodes=%s\ncritical=%d\n" % (
         _int(attrs.get("startsecs"), DEFAULT_STARTSECS),
         _int(attrs.get("startretries"), DEFAULT_STARTRETRIES),
@@ -568,6 +571,32 @@ def _write(path, content, mode=0o644):
     os.chmod(path, mode)
 
 
+# Non-s6 files the supervisorctl shim reads from a LIVE servicedir: `supervisor-name` (the
+# "group:program" display name) and `supervisor-meta` (startsecs & co).  The live servicedir is
+# /run/service/<svc>, a symlink to /run/s6-rc/servicedirs/<svc> for boot services and to
+# /run/s6-dyn/<svc> for programs added by `supervisorctl update`.
+#
+# s6-rc-compile does NOT copy every file of a longrun's source definition directory into the
+# servicedir: it recreates only the files it knows (run, finish, timeout-kill, timeout-finish,
+# down-signal, ...) and copies the subdirectories `data` and `env` verbatim.  Anything else at
+# the top level (type, dependencies.d, MANAGED_MARKER, and `supervisor-name` / `supervisor-meta`
+# if they are put there) is dropped, so on a boot-time service the shim's metadata survives only
+# under data/.  A servicedir built straight into /run/s6-dyn is not compiled, so it keeps both
+# copies.  supervisorctl._servicedir_file therefore reads data/<file> first, then <file>.
+SHIM_DATA_DIR = "data"
+
+
+def _write_shim_file(sd, fname, text, longrun=True):
+    """Write one shim metadata file into the source servicedir `sd`: under data/ (the copy that
+    survives s6-rc-compile; longruns only, a oneshot has no servicedir and no data/) and at the
+    top level (ignored by s6-rc-compile, as compiling a tree that has them
+    shows; kept for runtime-built servicedirs, older shims and tools)."""
+    _write(os.path.join(sd, fname), text)
+    if longrun:
+        os.makedirs(os.path.join(sd, SHIM_DATA_DIR), exist_ok=True)
+        _write(os.path.join(sd, SHIM_DATA_DIR, fname), text)
+
+
 def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of=None, listener=None):
     """Write the s6-rc source tree. `listener` = listener_options(sections) (None: no auto_restart gate)."""
     group_of = group_of or {}
@@ -590,9 +619,10 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
         # (service_checker.py's group: critical-process expansion and
         # docker-dhcp-relay's start.sh both rely on this exact format); record
         # it since the s6 service dir itself must stay named after the bare
-        # program for dependencies.d/ edges to resolve.
+        # program for dependencies.d/ edges to resolve.  data/ is what survives
+        # s6-rc-compile (see _write_shim_file).
         display_name = "%s:%s" % (group_of[pname], pname) if pname in group_of else pname
-        _write(os.path.join(sd, "supervisor-name"), display_name + "\n")
+        _write_shim_file(sd, "supervisor-name", display_name + "\n", longrun=(t == "longrun"))
         names = {"program_name": pname}
         if pname in group_of:
             names["group_name"] = group_of[pname]
@@ -616,7 +646,7 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
             _write(os.path.join(sd, "run"),
                    "#!/command/execlineb -P\n" + (start_stamp(pname) if accounting else "") + cmd + "\n",
                    0o755)
-            _write(os.path.join(sd, "supervisor-meta"), meta_text(progs[pname], pname in critical))
+            _write_shim_file(sd, "supervisor-meta", meta_text(progs[pname], pname in critical))
             if accounting and startretries >= 5:
                 # the finish script sleeps up to (startretries - 1) s between retries; s6 kills a
                 # finish that runs longer than timeout-finish (default 5 s)
@@ -761,7 +791,9 @@ def build_runtime_servicedir(pname, attrs, group_of, dest, autostart=True):
     The files come from generate() itself (single-program call into a scratch tree, always a
     non-critical longrun: supervisord only reads critical_processes at start, so a program added
     later cannot halt the container), minus the s6-rc-source-only entries (type, dependencies.d,
-    managed marker).  A program with autostart=false gets a ./down file, so s6-supervise
+    managed marker).  supervisor-name / supervisor-meta stay in both places (top level and
+    data/), so the shim finds them the same way as on a compiled boot service.
+    A program with autostart=false gets a ./down file, so s6-supervise
     leaves it stopped until `supervisorctl start`.  dest appears atomically (rename)."""
     parent = os.path.dirname(dest)
     os.makedirs(parent, exist_ok=True)
