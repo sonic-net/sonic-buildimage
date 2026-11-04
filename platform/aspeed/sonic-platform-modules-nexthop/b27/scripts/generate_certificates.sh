@@ -166,6 +166,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# The client CN is substituted into the OpenSSL config and into the command
+# run on the BMC over SSH, so it is limited to characters that need no quoting.
+check_client_cn() {
+    if [[ ! "$1" =~ ^[A-Za-z0-9._@-]+$ ]]; then
+        echo "ERROR: client CN '$1' ($2) may contain only letters, digits, '.', '_', '@' and '-'"
+        exit 1
+    fi
+}
+
+if $CLIENT_CN_SET; then
+    check_client_cn "$CLIENT_CN" "--client-cn"
+fi
+
 TOTAL=6
 
 # =========================================================================
@@ -193,7 +206,10 @@ if $INSTALL; then
     # The trusted client CN is the one the client certificate was issued with.
     if ! $CLIENT_CN_SET && [ -f client-cert.pem ]; then
         cn="$(openssl x509 -in client-cert.pem -noout -subject -nameopt RFC2253 | sed -n 's/^subject=.*CN=\([^,]*\).*/\1/p')"
-        [ -n "$cn" ] && CLIENT_CN="$cn"
+        if [ -n "$cn" ]; then
+            check_client_cn "$cn" "from client-cert.pem"
+            CLIENT_CN="$cn"
+        fi
     fi
 
     # Check if SSH key auth works, otherwise require sshpass
