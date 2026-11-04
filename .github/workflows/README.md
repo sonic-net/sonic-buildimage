@@ -169,14 +169,15 @@ the separate existing protected-file policy.
 The detector recognizes named Python parser imports/aliases (including
 relative imports), literal
 `importlib.import_module` imports and simple bindings of their results,
-literal file APIs, simple literal bindings and argument-list concatenation.
+literal file APIs and their imported aliases (including `Path`/`PurePath`
+receivers), simple literal bindings and argument-list concatenation.
 Command extraction preserves the input's execution context:
 
 | Input | Recognized command context |
 | --- | --- |
-| Python | Known `subprocess`/`os` command APIs and imported aliases use POSIX argument and shell semantics, including literal `shell` and `executable` options. Argument-list elements are data, not shell source. Conventional `shell`, `exec_command`, `check_output_pipe`, `command`, `run_command`, and `getstatusoutput_noshell` helpers use their shell/direct-command conventions. |
-| Shell | Bash syntax trees identify executable positions, substitutions, quotes, continuations and here-documents. Common options of `sudo`, `env`, `command`, `exec`, `timeout`, `nice` and `nohup` are recognized. `bash`/`sh`/`dash` command strings support combined and separate options before `-c`; following positional arguments are not commands. |
-| YAML | YAML decoding preserves quoted scalars, folding, blank lines, indentation and chomping indicators. Command fields in root fragments and job/stage/step/task structures are analyzed, including namespaced Ansible `shell`/`command`, `cmd`/`argv` arguments, and Azure Bash/CmdLine task scripts. Display names, environment values and other metadata are not shell programs. |
+| Python | Known `subprocess`/`os` command APIs and imported aliases use POSIX argument and shell semantics, including literal `shell` and `executable` options. `shell`/`exec_command` helpers take shell source; `command`/`run_command` split command strings into arguments. `getstatusoutput_noshell`, `check_output_pipe`, and `getstatusoutput_noshell_pipe` preserve executable strings and argument lists without shell splitting; all explicit pipeline stages and `cmd0` are checked. |
+| Shell | Bash syntax trees identify executable positions, substitutions, quotes, continuations and here-documents. Common options of `sudo`, `env`, `command`, `exec`, `timeout`, `nice` and `nohup` are recognized. `bash`/`sh`/`dash` command strings support combined and separate options before `-c`, including ordered `-n`/`+n` and `-o`/`+o noexec`; following positional arguments are not commands. |
+| YAML | YAML decoding preserves scalar quoting and folding. Command fields in root fragments and job/stage/step/task structures include namespaced Ansible `shell`/`command`, `cmd`/`argv`, and Azure Bash/CmdLine scripts. GitHub `run` bodies honor step, job, then workflow shell precedence: `bash`/`sh` use shell analysis and `python` uses Python analysis. Simple explicit `bash {0}`, `sh {0}`, `dash {0}`, `python {0}`, and `python3 {0}` templates are also recognized. Display names, environment values and shell selectors are not command bodies. |
 | Jinja templates | Literal shell/YAML command regions in `.j2` files are analyzed with comments/control directives removed and expressions marked unknown. This does not render the template or determine which branches execute. |
 
 Quoted shell punctuation, multiline literal diagnostics, and literal
@@ -185,6 +186,12 @@ within expandable text are still checked. For example, on POSIX,
 `subprocess.run("sonic-cfggen -m")` names one executable; it does not invoke
 a shell. Use an argument list or explicit `shell=True` in examples intended
 to demonstrate an actual minigraph command.
+
+`sonic-cfggen` option extraction uses its known option spellings and arities,
+including short bundles such as `-Hm` and unique long abbreviations such as
+`--minig`. Option values such as `--var=-m` are not minigraph flags. Keep this
+option model synchronized with `src/sonic-config-engine/sonic-cfggen`; it
+extracts dependencies, not all runtime argument validation or behavior.
 
 It also checks literal minigraph XML access, including shell file-existence
 and readability tests, and new shipped `minigraph.xml`
@@ -221,11 +228,16 @@ conservative and do not provide scope/control-flow analysis. Other text
 formats are best-effort shell inputs, not fully parsed languages: a
 minigraph-related Makefile or other mixed-format file may fail analysis.
 
-Unsupported Python syntax, unparseable shell/YAML input, unsupported
-minigraph-related wrapper options, unresolved execution options on literal
+Unsupported Python syntax, unparseable shell/YAML input, unsupported or
+ambiguous cfggen options, unsupported minigraph-related wrapper options,
+unresolved execution options on literal
 minigraph subprocess calls, decoding errors, or unavailable Git objects fail
 analysis rather than return a clean result. Non-scalar YAML `cmd` arguments
 and recursive/excessively expanded command structures also fail analysis.
+Minigraph-related `run` bodies or interpreter selectors fail analysis when
+the selected interpreter is unsupported or unresolved, instead of being
+interpreted as Bash. Other languages and arbitrary custom interpreter
+templates are not analyzed.
 Standard YAML escapes are
 decoded as YAML, not as JSON. Investigate analysis failures separately from
 policy violations; do not silently skip a file or disable the guard.

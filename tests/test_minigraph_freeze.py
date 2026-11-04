@@ -142,6 +142,112 @@ class DependencyTest(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertFalse(guard.python_dependencies(source))
 
+    def test_imported_file_and_helper_aliases_preserve_reference_counts(self):
+        for original, renamed in [
+            ("from builtins import open\nopen(file='/etc/sonic/minigraph.xml')",
+             "from builtins import open as read_graph\n"
+             "read_graph(file='/etc/sonic/minigraph.xml')"),
+            ("from pathlib import Path\n"
+             "GRAPH = Path('/etc/sonic')\nPath(GRAPH, 'minigraph.xml').read_text()",
+             "from pathlib import Path as P\n"
+             "GRAPH = P('/etc/sonic')\nP(GRAPH, 'minigraph.xml').read_text()"),
+            ("from pathlib import PurePath\nPurePath('/etc/sonic/minigraph.xml')",
+             "from pathlib import PurePath as P\nP('/etc/sonic/minigraph.xml')"),
+            ("from tools import load_minigraph\nload_minigraph(host)",
+             "from tools import load_minigraph as load\nload(host)"),
+            ("from tools import reload_minigraph\nreload_minigraph(host)",
+             "from tools import reload_minigraph as reload\nreload(host)"),
+            ("import pathlib\npathlib.Path('/etc/sonic/minigraph.xml').exists()",
+             "import pathlib as p\np.Path('/etc/sonic/minigraph.xml').exists()"),
+        ]:
+            with self.subTest(source=renamed):
+                expected = guard.python_dependencies(original)
+                self.assertTrue(expected)
+                self.assertEqual(expected, guard.python_dependencies(renamed))
+        for source in [
+            "from builtins import open as read_graph\nread_graph = print\n"
+            "read_graph('/etc/sonic/minigraph.xml')",
+            "from pathlib import Path as P\nP = diagnostic\n"
+            "P('/etc/sonic/minigraph.xml').read_text()",
+            "from tools import load_minigraph as load\n"
+            "def diagnostic(load):\n    load(host)",
+            "from builtins import open as read_graph\n"
+            "read_graph('/etc/sonic/config_db.json')",
+        ]:
+            with self.subTest(source=source):
+                self.assertFalse(guard.python_dependencies(source))
+        self.assertTrue(guard.python_dependencies(
+            "from pathlib import Path as P\n"
+            "subprocess.run(['cat', P('/etc/sonic/minigraph.xml')])"
+        ))
+
+    def test_noshell_helpers_preserve_each_pipeline_stage(self):
+        for helper in (
+            "getstatusoutput_noshell", "getstatusoutput_noshell_pipe",
+            "check_output_pipe",
+        ):
+            prefix = "from sonic_py_common.general import {} as execute\n".format(helper)
+            for arguments, expected in [
+                ("['sonic-cfggen', '-m']", True),
+                ("('sonic-cfggen', '-m')", True),
+                ("'sonic-cfggen -m'", False),
+                ("['echo', 'sonic-cfggen -m']", False),
+                ("['printf', '%s\\n', '$(sonic-cfggen -m)']", False),
+            ]:
+                with self.subTest(helper=helper, arguments=arguments):
+                    self.assertEqual(expected, bool(guard.python_dependencies(
+                        prefix + "execute({})".format(arguments)
+                    )))
+            keyword = "cmd" if helper == "getstatusoutput_noshell" else "cmd0"
+            self.assertTrue(guard.python_dependencies(
+                prefix + "execute({}=['sonic-cfggen', '-m'])".format(keyword)
+            ))
+        for helper in ("getstatusoutput_noshell_pipe", "check_output_pipe"):
+            for stages, expected in [
+                ("['sonic-cfggen', '-m'], ['cat']", True),
+                ("['echo', 'data'], ['sonic-cfggen', '-m']", True),
+                ("['echo', 'data'], ['cat'], ['sonic-cfggen', '-m']", True),
+                ("['echo', 'data'], 'sonic-cfggen -m'", False),
+                ("'sonic-cfggen -m', ['cat']", False),
+            ]:
+                with self.subTest(helper=helper, stages=stages):
+                    self.assertEqual(expected, bool(guard.python_dependencies(
+                        "from sonic_py_common import general\n"
+                        "general.{}({})".format(helper, stages)
+                    )))
+            self.assertEqual(2, guard.python_dependencies(
+                "{}(['sonic-cfggen', '-m'], ['sonic-cfggen', '-m'])".format(helper)
+            )[("command", "sonic-cfggen minigraph mode")])
+
+    def test_cfggen_options_respect_bundles_abbreviations_and_operands(self):
+        for arguments, expected in [
+            (["-Hm"], True),
+            (["-dHm/tmp/graph.xml"], True),
+            (["--m"], True),
+            (["--minig=/tmp/graph.xml"], True),
+            (["-n", "asic0", "-Hm"], True),
+            (["--plat", "--minig"], True),
+            (["-nm"], False),
+            (["-Hvm"], False),
+            (["-p-m"], False),
+            (["--var=-m"], False),
+            (["--namespace=-m"], False),
+            (["-Hm", "--help"], False),
+        ]:
+            words = ["sonic-cfggen", *arguments]
+            with self.subTest(arguments=arguments):
+                self.assertEqual(expected, bool(guard.command_dependencies(words)))
+                self.assertEqual(expected, bool(guard.python_dependencies(
+                    "subprocess.run({!r})".format(words)
+                )))
+                self.assertEqual(expected, bool(guard.yaml_dependencies(
+                    "run: " + " ".join(words)
+                )))
+        for arguments in (["-xm"], ["--mi-unknown"], ["--p", "-m"]):
+            with self.subTest(arguments=arguments):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.command_dependencies(["sonic-cfggen", *arguments])
+
     def test_comments_docstrings_fixture_strings_and_negative_assertions(self):
         source = '''
 """import minigraph; sonic-cfggen -m"""
@@ -434,6 +540,37 @@ assert "config load_minigraph" not in commands
             "bash -nc 'sonic-cfggen -m'"
         ))
 
+    def test_named_noexec_options_and_short_overrides_are_ordered(self):
+        for flags, expected in [
+            (["-o", "noexec", "-c"], False),
+            (["-n", "+o", "noexec", "-c"], True),
+            (["-o", "noexec", "+n", "-c"], True),
+            (["-o", "noexec", "+o", "noexec", "-n", "-c"], False),
+            (["-oc", "noexec"], False),
+            (["-co", "noexec"], False),
+            (["-nc", "+o", "noexec"], True),
+            (["-o", "noexec", "+on", "noexec", "-c"], True),
+            (["-o", "noexec", "+co", "noexec"], True),
+            (["-o", "errexit", "-c"], True),
+            (["-O", "extglob", "-c"], True),
+        ]:
+            with self.subTest(flags=flags):
+                self.assertEqual(expected, bool(guard.shell_dependencies(
+                    "bash {} 'sonic-cfggen -m'".format(" ".join(flags))
+                )))
+                self.assertEqual(expected, bool(guard.python_dependencies(
+                    "subprocess.run({!r})".format(
+                        ["bash", *flags, "sonic-cfggen -m"]
+                    )
+                )))
+        self.assertTrue(guard.shell_dependencies(
+            'bash -o noexec -c "$(sonic-cfggen -m)"'
+        ))
+        with self.assertRaises(guard.AnalysisError):
+            guard.python_dependencies(
+                "subprocess.run(['bash', '-n', '+o', mode, '-c', 'sonic-cfggen -m'])"
+            )
+
     def test_multiline_shell_data_and_executable_substitutions(self):
         for source in [
             "echo 'example:\nsonic-cfggen -m\n'",
@@ -579,6 +716,48 @@ assert "config load_minigraph" not in commands
                 with self.assertRaises(guard.AnalysisError):
                     guard.dependencies("example.yml", source.encode(), "100644")
 
+    def test_yaml_run_interpreter_and_default_precedence(self):
+        for source, expected in [
+            ("shell: python\nrun: import minigraph\n", True),
+            ("shell: python\nrun: print('sonic-cfggen -m')\n", False),
+            ("shell: python {0}\nrun: import minigraph\n", True),
+            ("shell: bash {0}\nrun: sonic-cfggen -m\n", True),
+            ("defaults:\n  run:\n    shell: python\njobs:\n"
+             "  test:\n    steps:\n      - run: import minigraph\n", True),
+            ("jobs:\n  test:\n    defaults:\n      run:\n        shell: python\n"
+             "    steps:\n      - run: import minigraph\n", True),
+            ("defaults:\n  run:\n    shell: python\njobs:\n"
+             "  test:\n    defaults:\n      run:\n        shell: bash\n"
+             "    steps:\n      - run: sonic-cfggen -m\n", True),
+            ("defaults:\n  run:\n    shell: bash\njobs:\n"
+             "  test:\n    steps:\n      - shell: python\n"
+             "        run: import minigraph\n", True),
+            ("defaults:\n  run:\n    shell: python\njobs:\n"
+             "  test:\n    steps:\n      - shell: bash\n"
+             "        run: echo 'import minigraph'\n", False),
+            ("jobs:\n  first:\n    defaults:\n      run:\n        shell: python\n"
+             "    steps:\n      - run: pass\n"
+             "  second:\n    steps:\n      - run: sonic-cfggen -m\n", True),
+            ("steps:\n  - shell: python\n    run: pass\n"
+             "  - run: sonic-cfggen -m\n", True),
+            ("- ansible.builtin.shell: sonic-cfggen -m\n", True),
+            ("jobs:\n  test:\n    steps:\n      - shell: pwsh\n"
+             "        run: Write-Output done\n", False),
+        ]:
+            with self.subTest(source=source):
+                self.assertEqual(expected, bool(guard.yaml_dependencies(source)))
+        for source in [
+            "shell: pwsh\nrun: sonic-cfggen -m\n",
+            "shell: sonic-cfggen -m {0}\nrun: echo done\n",
+            "shell: ${{ matrix.shell }}\nrun: import minigraph\n",
+            "shell: {cmd: python}\nrun: import minigraph\n",
+            "shell: python -c {0}\nrun: import minigraph\n",
+            "shell: python\nrun: 'import minigraph; if'\n",
+        ]:
+            with self.subTest(source=source):
+                with self.assertRaises(guard.AnalysisError):
+                    guard.yaml_dependencies(source)
+
     def test_template_commands_and_comments_remain_distinct(self):
         for path, source, expected in [
             ("example.sh.j2", "{# sonic-cfggen -m #}\necho done", False),
@@ -661,6 +840,25 @@ class GitComparisonTest(GitFixtureTest):
              "  sonic-cfggen\n  -m\n", 1),
             ("workflow.yml", "name: sonic-cfggen -m inspection\nrun: echo done", 0),
             ("workflow.yml", 'run: "sonic-cfggen\\q-m"', 2),
+            ("script.sh", "sonic-cfggen -Hm", 1),
+            ("script.sh", "sonic-cfggen --minig=/tmp/graph.xml", 1),
+            ("script.sh", "sonic-cfggen --var=-m", 0),
+            ("script.sh", "sonic-cfggen --p -m", 2),
+            ("script.py", "check_output_pipe(['echo', 'data'], "
+             "['sonic-cfggen', '-m'])", 1),
+            ("script.py", "getstatusoutput_noshell('sonic-cfggen -m')", 0),
+            ("script.py", "from builtins import open as read_graph\n"
+             "read_graph('/etc/sonic/minigraph.xml')", 1),
+            ("script.py", "from pathlib import Path as P\n"
+             "P('/etc/sonic/minigraph.xml').read_text()", 1),
+            ("script.py", "from tools import load_minigraph as load\nload(host)", 1),
+            ("workflow.yml", "defaults:\n  run:\n    shell: python\n"
+             "jobs:\n  test:\n    steps:\n      - run: import minigraph\n", 1),
+            ("workflow.yml", "shell: python\nrun: print('sonic-cfggen -m')", 0),
+            ("workflow.yml", "shell: pwsh\nrun: sonic-cfggen -m", 2),
+            ("workflow.yml", "shell: sonic-cfggen -m {0}\nrun: echo done", 2),
+            ("script.sh", "bash -o noexec -c 'sonic-cfggen -m'", 0),
+            ("script.sh", "bash -n +o noexec -c 'sonic-cfggen -m'", 1),
         ]
         for path, source, expected in cases:
             with self.subTest(path=path, source=source):

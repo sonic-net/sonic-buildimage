@@ -29,8 +29,9 @@ XML_PATH = re.compile(
     r"(?<![\w.])(?:[\w$./{}-]+/)?minigraph\.xml(?:[.\w-]*)"
 )
 PROCESS_CALLS = {"Popen", "call", "check_call", "check_output", "run"}
-SHELL_CALLS = {"check_output_pipe", "exec_command", "shell"}
-ARGV_CALLS = {"command", "getstatusoutput_noshell", "run_command"}
+SHELL_CALLS = {"exec_command", "shell"}
+ARGV_CALLS = {"command", "run_command"}
+PIPE_CALLS = {"check_output_pipe", "getstatusoutput_noshell_pipe"}
 SHELL_PARSER = Parser(Language(tree_sitter_bash.language()))
 FILE_CALLS = {
     "Path", "PurePath", "copy", "copy2", "copyfile", "exists", "is_file",
@@ -41,6 +42,11 @@ FILE_CALLS = {
 
 class AnalysisError(Exception):
     pass
+
+
+class CfggenArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise AnalysisError("Cannot analyze sonic-cfggen arguments: " + message)
 
 
 def git(repo, *args):
@@ -62,39 +68,39 @@ def qualified_name(node, imports=None):
     return ""
 
 
-def static_value(node, bindings, seen=()):
+def static_value(node, bindings, seen=(), imports=None):
     """Resolve literal fragments while preserving argument sequence types."""
     if isinstance(node, ast.Constant) and isinstance(node.value, (str, bool)):
         return node.value
     if isinstance(node, ast.Name) and node.id not in seen:
         values = bindings.get(node.id, [])
         if len(values) == 1:
-            return static_value(values[0], bindings, (*seen, node.id))
+            return static_value(values[0], bindings, (*seen, node.id), imports)
     if isinstance(node, (ast.List, ast.Tuple)):
-        values = [static_value(item, bindings, seen) for item in node.elts]
+        values = [static_value(item, bindings, seen, imports) for item in node.elts]
         return tuple(values) if isinstance(node, ast.Tuple) else values
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-        left = static_value(node.left, bindings, seen)
-        right = static_value(node.right, bindings, seen)
+        left = static_value(node.left, bindings, seen, imports)
+        right = static_value(node.right, bindings, seen, imports)
         if isinstance(left, (str, list, tuple)) and type(left) is type(right):
             return left + right
         return None
     if isinstance(node, ast.JoinedStr):
         return "".join(
-            static_text(value, bindings, seen)
+            static_text(value, bindings, seen, imports)
             if isinstance(value, ast.Constant) else "${dynamic}"
             for value in node.values
         )
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Attribute) and node.func.attr == "format":
-            return static_text(node.func.value, bindings, seen)
-        if qualified_name(node.func).rsplit(".", 1)[-1] in {"Path", "PurePath"}:
-            return "/".join(static_text(arg, bindings, seen) for arg in node.args)
+            return static_text(node.func.value, bindings, seen, imports)
+        if qualified_name(node.func, imports).rsplit(".", 1)[-1] in {"Path", "PurePath"}:
+            return "/".join(static_text(arg, bindings, seen, imports) for arg in node.args)
     return None
 
 
-def static_text(node, bindings, seen=()):
-    value = static_value(node, bindings, seen)
+def static_text(node, bindings, seen=(), imports=None):
+    value = static_value(node, bindings, seen, imports)
     return value if isinstance(value, str) else ""
 
 
@@ -271,20 +277,58 @@ def shell_payload(words):
         if len(word) < 2 or word[0] not in "-+":
             break
         index += 1
-        for offset, char in enumerate(word[1:], 2):
+        for char in word[1:]:
             if char in "oO":
-                if offset == len(word):
-                    index += 1
-                break
+                option = words[index] if index < len(words) else None
+                if option is None:
+                    if re.search(r"minigraph|sonic-cfggen", str(words)):
+                        raise AnalysisError("Cannot determine named shell option")
+                    return None, False
+                index += 1
+                if char == "o" and option == "noexec":
+                    execute = word[0] == "+"
+                continue
             if char not in "abcefhiklmnprstuvxBCEHPT":
                 if not re.search(r"minigraph|sonic-cfggen", str(words)):
                     return None, False
                 raise AnalysisError("Unsupported shell option: " + word)
-            if char == "c" and word[0] == "-":
+            if char == "c":
                 command = True
             if char == "n":
                 execute = word[0] == "+"
     return (index, execute) if command and index < len(words) else (None, False)
+
+
+def cfggen_minigraph(words):
+    # Match option spellings/arities in src/sonic-config-engine/sonic-cfggen.
+    # argparse handles bundles and unique abbreviations without scanning values.
+    parser = CfggenArgumentParser(add_help=False)
+    for options in [
+        ("-h", "--help"), ("-d", "--from-db"), ("-H", "--platform-info"),
+        ("--print-data",), ("-w", "--write-to-db"),
+    ]:
+        parser.add_argument(*options, action="store_true")
+    for options in [
+        ("-m", "--minigraph"), ("-Y", "--yang"), ("-n", "--namespace"),
+        ("-p", "--port-config"), ("-S", "--hwsku-config"),
+    ]:
+        parser.add_argument(*options, nargs="?", const=True)
+    for options in [
+        ("-M", "--device-description"), ("-k", "--hwsku"),
+        ("-y", "--yaml"), ("-j", "--json"), ("-a", "--additional-data"),
+        ("-s", "--redis-unix-sock-file"), ("-t", "--template"),
+        ("-T", "--template_dir"), ("-v", "--var"), ("--var-json",),
+        ("--preset",), ("-K", "--key"),
+    ]:
+        parser.add_argument(*options)
+    args, unknown = parser.parse_known_args([
+        word if word is not None else "${dynamic}" for word in words
+    ])
+    if args.help:
+        return False
+    if unknown:
+        raise AnalysisError("Unsupported sonic-cfggen arguments: " + " ".join(unknown))
+    return args.minigraph is not None
 
 
 def command_dependencies(words):
@@ -343,12 +387,7 @@ def command_dependencies(words):
             if execute and isinstance(words[payload], str):
                 references.update(shell_dependencies(words[payload]))
             operands = words[payload + 1:]
-    if executable == "sonic-cfggen" and any(
-        isinstance(flag, str) and (
-            flag == "--minigraph" or flag.startswith("--minigraph=")
-            or flag.startswith("-m")
-        ) for flag in operands
-    ):
+    if executable == "sonic-cfggen" and cfggen_minigraph(operands):
         references[("command", "sonic-cfggen minigraph mode")] += 1
     if executable == "config" and operands[:1] == ["load_minigraph"]:
         references[("command", "config load_minigraph")] += 1
@@ -419,10 +458,28 @@ def yaml_dependencies(source):
     references = Counter()
     visits = 0
 
-    def command(value, shell):
+    def fields(node):
+        return {
+            key.value: value for key, value in node.value
+            if isinstance(key, yaml.ScalarNode)
+        } if isinstance(node, yaml.MappingNode) else {}
+
+    def run(source, interpreter):
+        selector = interpreter.value.strip() if isinstance(interpreter, yaml.ScalarNode) else None
+        if interpreter is None or selector in {
+            "bash", "sh", "bash {0}", "sh {0}", "dash {0}",
+        }:
+            return shell_dependencies(source)
+        if selector in {"python", "python {0}", "python3 {0}"}:
+            return python_dependencies(source)
+        if re.search(r"minigraph|sonic-cfggen", source + "\n" + (selector or "")):
+            raise AnalysisError("Unsupported or unresolved YAML run interpreter")
+        return Counter()
+
+    def command(value, shell, interpreter=None):
         if isinstance(value, yaml.ScalarNode):
             references.update(
-                shell_dependencies(value.value) if shell
+                run(value.value, interpreter) if shell
                 else argument_dependencies(value.value)
             )
         elif isinstance(value, yaml.MappingNode):
@@ -430,7 +487,7 @@ def yaml_dependencies(source):
                 if key.value == "cmd":
                     if not isinstance(child, yaml.ScalarNode):
                         raise AnalysisError("YAML cmd arguments must be scalar strings")
-                    command(child, shell)
+                    command(child, shell, interpreter)
                 elif key.value == "argv" and not shell and isinstance(
                     child, yaml.SequenceNode
                 ):
@@ -439,7 +496,7 @@ def yaml_dependencies(source):
                         for item in child.value
                     ]))
 
-    def walk(node, ancestors=()):
+    def walk(node, ancestors=(), inherited_shell=None):
         nonlocal visits
         if node is None:
             return
@@ -451,32 +508,37 @@ def yaml_dependencies(source):
         ancestors = (*ancestors, id(node))
         if isinstance(node, yaml.SequenceNode):
             for child in node.value:
-                walk(child, ancestors)
+                walk(child, ancestors, inherited_shell)
         elif isinstance(node, yaml.MappingNode):
-            fields = {key.value: value for key, value in node.value
-                      if isinstance(key, yaml.ScalarNode)}
+            values = fields(node)
+            default_shell = fields(fields(values.get("defaults")).get("run")).get(
+                "shell", inherited_shell
+            )
             for key, value in node.value:
                 if not isinstance(key, yaml.ScalarNode):
                     continue
                 name = key.value.rsplit(".", 1)[-1]
+                if key.value == "shell" and "run" in values:
+                    continue
                 if name in {"run", "shell", "command", "script", "bash"}:
                     if isinstance(value, yaml.ScalarNode) and not value.value:
-                        value = fields.get("args", value)
-                    command(value, name != "command")
+                        value = values.get("args", value)
+                    interpreter = values.get("shell", default_shell) if name == "run" else None
+                    command(value, name != "command", interpreter)
                 elif key.value == "inputs" and isinstance(
-                    fields.get("task"), yaml.ScalarNode
-                ) and re.fullmatch(r"(?:Bash|CmdLine)@\d+", fields["task"].value):
-                    walk(value, ancestors)
+                    values.get("task"), yaml.ScalarNode
+                ) and re.fullmatch(r"(?:Bash|CmdLine)@\d+", values["task"].value):
+                    walk(value, ancestors, default_shell)
                 elif key.value in {"jobs", "stages"} and isinstance(
                     value, yaml.MappingNode
                 ):
                     for _, child in value.value:
-                        walk(child, ancestors)
+                        walk(child, ancestors, default_shell)
                 elif key.value in {
                     "jobs", "stages", "steps", "tasks", "handlers",
                     "pre_tasks", "post_tasks", "block", "rescue", "always",
                 }:
-                    walk(value, ancestors)
+                    walk(value, ancestors, default_shell)
 
     try:
         for document in yaml.compose_all(source, Loader=yaml.BaseLoader):
@@ -486,15 +548,26 @@ def yaml_dependencies(source):
     return references
 
 
-def python_command(node, name, bindings):
+def python_command(node, name, bindings, imports=None):
+    owner, _, call = name.rpartition(".")
+    if call in PIPE_CALLS or call == "getstatusoutput_noshell":
+        keyword_name = "cmd0" if call in PIPE_CALLS else "cmd"
+        stages = list(node.args if call in PIPE_CALLS else node.args[:1])
+        stages.extend(keyword.value for keyword in node.keywords
+                      if keyword.arg == keyword_name)
+        references = Counter()
+        for stage in stages:
+            value = static_value(stage, bindings, imports=imports)
+            words = value if isinstance(value, (list, tuple)) else [value]
+            references.update(command_dependencies(words))
+        return references
     arguments = list(node.args) + [
         keyword.value for keyword in node.keywords
         if keyword.arg in {"args", "command", "cmd"}
     ]
     if not arguments:
         return Counter()
-    value = static_value(arguments[0], bindings)
-    owner, _, call = name.rpartition(".")
+    value = static_value(arguments[0], bindings, imports=imports)
     if owner == "subprocess" and call in {"getoutput", "getstatusoutput"}:
         words = list(value) if isinstance(value, (list, tuple)) else [value]
         return command_dependencies(["/bin/sh", "-c", *words])
@@ -504,7 +577,7 @@ def python_command(node, name, bindings):
         unsafe = next((keyword.value for keyword in node.keywords
                        if keyword.arg == "use_unsafe_shell"), None)
         if unsafe is not None:
-            mode = static_value(unsafe, bindings)
+            mode = static_value(unsafe, bindings, imports=imports)
             if not isinstance(mode, bool) and re.search(
                 r"minigraph|sonic-cfggen", str(value)
             ):
@@ -519,7 +592,7 @@ def python_command(node, name, bindings):
         raise AnalysisError("Cannot determine expanded subprocess options")
     shell = static_value(options.get(
         "shell", node.args[8] if len(node.args) > 8 else ast.Constant(False)
-    ), bindings)
+    ), bindings, imports=imports)
     if not isinstance(shell, bool):
         if "minigraph" in str(value) or "sonic-cfggen" in str(value):
             raise AnalysisError("Cannot determine subprocess shell mode")
@@ -527,17 +600,17 @@ def python_command(node, name, bindings):
     executable = options.get("executable", node.args[2] if len(node.args) > 2 else None)
     if isinstance(executable, ast.Constant) and executable.value is None:
         executable = None
-    if executable and not isinstance(static_value(executable, bindings), str):
+    if executable and not isinstance(static_value(executable, bindings, imports=imports), str):
         if "minigraph" in str(value) or "sonic-cfggen" in str(value):
             raise AnalysisError("Cannot determine subprocess executable")
         return Counter()
     if shell:
         words = list(value) if isinstance(value, (list, tuple)) else [value]
-        program = static_text(executable, bindings) if executable else "/bin/sh"
+        program = static_text(executable, bindings, imports=imports) if executable else "/bin/sh"
         return command_dependencies([program, "-c", *words])
     words = list(value) if isinstance(value, (list, tuple)) else [value]
     if executable and words:
-        words[0] = static_value(executable, bindings)
+        words[0] = static_value(executable, bindings, imports=imports)
     return command_dependencies(words)
 
 
@@ -602,7 +675,7 @@ def python_dependencies(source):
         arguments = list(node.args) + [
             keyword.value for keyword in node.keywords if keyword.arg == "name"
         ]
-        module = static_text(arguments[0], bindings) if arguments else ""
+        module = static_text(arguments[0], bindings, imports=imports) if arguments else ""
         if any(part in PARSER_MODULES for part in module.split(".")):
             return module
         return None
@@ -625,9 +698,10 @@ def python_dependencies(source):
         module = literal_parser_import(node)
         if module:
             references[("parser import", module)] += 1
-        call = qualified_name(node.func).rsplit(".", 1)[-1]
+        name = qualified_name(node.func, imports)
+        call = name.rsplit(".", 1)[-1]
         references.update(python_command(
-            node, qualified_name(node.func, imports), bindings
+            node, name, bindings, imports
         ))
         if call in {"load_minigraph", "reload_minigraph"}:
             references[("legacy helper", call)] += 1
@@ -636,7 +710,7 @@ def python_dependencies(source):
             if isinstance(node.func, ast.Attribute):
                 arguments.append(node.func.value)
             for argument in arguments:
-                for path in XML_PATH.findall(static_text(argument, bindings)):
+                for path in XML_PATH.findall(static_text(argument, bindings, imports=imports)):
                     references[("XML path", path)] += 1
     return references
 
