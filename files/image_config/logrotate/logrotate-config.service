@@ -1,7 +1,5 @@
 [Unit]
 Description=Update logrotate configuration
-Requires=config-setup.service
-After=config-setup.service
 
 [Service]
 Type=oneshot
@@ -10,4 +8,3 @@ RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
-
