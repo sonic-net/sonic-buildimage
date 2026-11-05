@@ -31,7 +31,12 @@ jobs:
   parameters:
     jobFilters: ${{ parameters.jobFilters }}
     preSteps: ${{ parameters.preSteps }}
-    postSteps: ${{ parameters.postSteps }}
+    postSteps:
+      - ${{ parameters.postSteps }}
+      - bash: |
+          rm -rf "$(Build.SourcesDirectory)/.secureboot-ci/$(Build.BuildId)"
+        condition: and(always(), eq(variables['GROUP_NAME'], 'vs'), eq(variables['secure_boot_image'], 'yes'))
+        displayName: Remove ephemeral Secure Boot private keys
     SUBMODULE: ${{ parameters.SUBMODULE }}
     COMMIT_ID: ${{ parameters.COMMIT_ID }}
     jobVariables:
@@ -46,6 +51,9 @@ jobs:
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
       platform_rpc: no
+      secure_boot_image: no
+      # The kernel cache includes the certificate path; isolate each build attempt.
+      secure_boot_vars_file: $(Build.SourcesDirectory)/.secureboot-ci/$(Build.BuildId)/$(System.JobAttempt)/sonic-vs_vars.fd
       ${{ if parameters.qemuOrCrossBuild }}:
         SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
         CACHE_MODE: 'none'
@@ -57,6 +65,7 @@ jobs:
           variables:
             dbg_image: yes
             asan_image: yes
+            secure_boot_image: yes
 
         - name: alpinevs
           variables:
@@ -133,6 +142,31 @@ jobs:
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
+          set -euo pipefail
+          secureboot_dir="$(dirname "$(secure_boot_vars_file)")"
+          sudo apt-get update
+          sudo apt-get install -y efitools ovmf python3-venv
+          python3 -m venv "$secureboot_dir/venv"
+          "$secureboot_dir/venv/bin/python" -m pip install \
+            --disable-pip-version-check virt-firmware==26.5.4
+          echo "##vso[task.prependpath]$secureboot_dir/venv/bin"
+          export PATH="$secureboot_dir/venv/bin:$PATH"
+
+          scripts/generate_secureboot_vs_artifacts.sh \
+            --workdir "$secureboot_dir" \
+            --output-vars "$(secure_boot_vars_file)" \
+            --build-id "$(Build.BuildId)"
+
+          {
+            echo "SECURE_UPGRADE_MODE := dev"
+            echo "SECURE_UPGRADE_DEV_SIGNING_KEY := $secureboot_dir/DB.key"
+            echo "SECURE_UPGRADE_SIGNING_CERT := $secureboot_dir/DB.crt"
+            echo "SECURE_UPGRADE_KERNEL_CAFILE := $secureboot_dir/DB.crt"
+            echo "SECURE_BOOT_DB_CERT := $secureboot_dir/DB.auth"
+          } >> rules/config.user
+        condition: and(succeeded(), eq(variables['GROUP_NAME'], 'vs'), eq(variables['secure_boot_image'], 'yes'))
+        displayName: Generate ephemeral Secure Boot hierarchy
+      - bash: |
           set -ex
           if echo $(GROUP_NAME) | grep mellanox; then
             BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
@@ -177,7 +211,20 @@ jobs:
               mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
               rm target/sonic-vs.img
             fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/docker-sonic-vs.gz
+            make $BUILD_OPTIONS target/sonic-vs.img.gz
+            if [ "$(secure_boot_image)" == "yes" ]; then
+              test -f "$(secure_boot_vars_file)"
+              test -f target/sonic-vs.img-uefi.img.gz
+              test -f target/sonic-vs.img-uefi_vars.fd
+              secure_boot_dir="$(dirname "$(secure_boot_vars_file)")"
+              scripts/generate_secureboot_vs_artifacts.sh \
+                --workdir "$secure_boot_dir" \
+                --ovmf-vars target/sonic-vs.img-uefi_vars.fd \
+                --output-vars target/sonic-vs_vars.fd \
+                --build-id "$(Build.BuildId)" \
+                --reuse-keys
+            fi
             make $BUILD_OPTIONS target/docker-ptf.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz
@@ -243,4 +290,3 @@ jobs:
           BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
           ManifestDirPath: 'target/'
           BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-
