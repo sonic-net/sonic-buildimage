@@ -1,0 +1,30 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build tools needed for sonic-gnmi development
+RUN apt-get update && apt-get install -y \
+        build-essential \
+        redis-server \
+        protobuf-compiler \
+        wget \
+        git \
+        && rm -rf /var/lib/apt/lists/*
+
+{% if docker_sonic_gnmi_dev_debs.strip() -%}
+# Copy sonic-gnmi build dependency debs
+# These are derived from $(SONIC_TELEMETRY)_DEPENDS in telemetry.mk
+# so they stay in sync automatically
+{{ copy_files("debs/", docker_sonic_gnmi_dev_debs.split(' '), "/debs/") }}
+
+# Install build dependency packages
+{{ install_debian_packages(docker_sonic_gnmi_dev_debs.split(' ')) }}
+{%- endif %}
+
+# Set CGO environment for sonic-gnmi builds
+ENV CGO_LDFLAGS="-lswsscommon -lhiredis"
+ENV CGO_CXXFLAGS="-I/usr/include/swss -w -Wall -fpermissive"
