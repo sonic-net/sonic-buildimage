@@ -1,6 +1,6 @@
 [Unit]
 Description=Accton AS7816-64X Platform Monitoring service
-Before=pmon.service
+Before=pmon.service system-health.service
 After=as7816-64x-platform-init.service
 Requires=as7816-64x-platform-init.service
 DefaultDependencies=no
