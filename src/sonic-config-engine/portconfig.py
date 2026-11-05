@@ -598,7 +598,8 @@ def get_breakout_mode(hwsku=None, platform=None, port_config_file=None, hwsku_co
                 return config_db.get_table("BREAKOUT_CFG") or None
 
     if not port_config_file:
-        port_config_file = device_info.get_path_to_port_config_file(hwsku)
+        asic_id = None if asic_name is None else str(get_asic_id_from_name(asic_name))
+        port_config_file = device_info.get_path_to_port_config_file(hwsku, asic_id)
         if not port_config_file:
             return None
     if port_config_file.endswith('.json'):
