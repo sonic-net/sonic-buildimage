@@ -1,0 +1,192 @@
+#!/bin/sh
+
+set -e
+
+action="$1"
+#oldversion="$2"
+
+umask 022
+
+migrate_roles_to_gecos="$(mktemp -t tmp.XXXXXXXXXX)"
+# Use a trap to make sure the temporary file
+# gets deleted even in the case of a kill or crashes
+trap "rm -rf '${migrate_roles_to_gecos}'" EXIT
+cat <<-EOF >>"${migrate_roles_to_gecos}"
+#!/usr/bin/env python3
+#
+# Script to reconcile user roles. In previous releases the roles were
+# mapped to the primary group. Then, they were mapped to the supplementary
+# groups. Now the roles are saved in the GECOS field. This script will
+# make sure that existing users have their roles saved to the GECOS and
+# not in the Linux groups.
+#
+
+import grp
+import pwd
+import dbus
+
+def print_cmd(cmd, end=''):
+    print('{:<60}'.format(cmd), end=end)
+
+def print_cmd_result(success, errmsg):
+    print("[{}]".format("\x1b[0;32msuccess\x1b[0m" if success else "\x1b[0;31mfailed\x1b[0m: {}".format(errmsg)))
+
+def config_private_primary_group(user, uid):
+    ''' Create a personal user group (if one doesn't already exist).
+        The new group will have the same name as the user and the GID
+        will be the same as the user's UID (if possible).
+    '''
+    import subprocess
+
+    try:
+        grp.getgrnam(user)
+    except KeyError:
+        # A group by that name doesn't currently exist. Let's create it.
+        cmd = ['/usr/sbin/groupadd', '--gid', str(uid), user]
+        print_cmd(' '.join(cmd))
+        cp = subprocess.run(cmd, stderr=subprocess.PIPE, universal_newlines=True)
+        print_cmd_result(cp.returncode == 0, cp.stderr)
+        if cp.returncode != 0:
+            # It probably failed because the GID specified is
+            # already in use. Let the system assign an ID.
+            cmd = ['/usr/sbin/groupadd', user]
+            print_cmd(' '.join(cmd))
+            cp = subprocess.run(cmd, stderr=subprocess.PIPE, universal_newlines=True)
+            print_cmd_result(cp.returncode == 0, cp.stderr)
+
+    cmd = ['/usr/sbin/usermod', '--gid', user, user]
+    print_cmd(' '.join(cmd))
+    cp = subprocess.run(cmd, stderr=subprocess.PIPE, universal_newlines=True)
+    print_cmd_result(cp.returncode == 0, cp.stderr)
+
+def get_roles_from_gecos(pw_gecos):
+    ''' Retrieve current roles from GECOS (if any)
+    '''
+    try:
+        gecos = pw_gecos.split(',')
+        if len(gecos) > 4:
+            others = gecos[4:] # Skip first 4 members of GECOS (FullName, Room, ...)
+            for other in others:
+                if other.startswith('roles='):
+                    return set(other[6:].split(';'))
+    except:
+        pass
+
+    return set()
+
+# Prepare a D-Bus interface to communicate with hamd
+bus      = dbus.SystemBus()
+hamd     = bus.get_object('org.SONiC.HostAccountManagement', '/org/SONiC/HostAccountManagement')
+accounts = dbus.Interface(hamd, dbus_interface='ham.accounts')
+
+# Gather information for group 'admin' and 'operator'
+gids       = {} # key=gid,       value=group-name       -> value is "admin" or "operator"
+user_roles = {} # key=user-name, value=list(group-name) -> value is a list containing "admin" and/or "operator"
+for group in ('admin', 'operator'):
+    try:
+        ent = grp.getgrnam(group)
+        gr_mem = ent.gr_mem
+        gids[ent.gr_gid] = group
+    except KeyError:
+        gr_mem = []
+
+    for member in gr_mem:
+        user_roles.setdefault(member, []).append(group)
+
+# Parse all the existing users and fix their GECOS, GID, Groups, if needed.
+for ent in pwd.getpwall():
+    user = ent.pw_name
+
+    # Check if this user's primary group is "admin" or "operator". If it is,
+    # add this user and its primary group to the <user_roles> dictionary.
+    # And since this user's primary group is "admin" or "operator" check
+    # whether we need to create a private group for this user, which will
+    # be use as this user's primary group instead of "admin" or "operator".
+    # In other words, "admin"/"operator" simply cannot be used as a user's
+    # primary group. This would create security issues between users that
+    # share the same primary group.
+    need_private_primary_group = False
+    group = gids.get(ent.pw_gid, None)
+    if group is not None:
+        user_roles.setdefault(user, []).append(group)
+        need_private_primary_group = group != user
+
+    # Retrieve current roles from GECOS (if any)
+    cur_gecos_roles = get_roles_from_gecos(ent.pw_gecos)
+
+    # Determine what the roles should be set to in the GECOS
+    new_gecos_roles = set(user_roles.get(user, []))
+    new_gecos_roles.update(cur_gecos_roles)
+
+    # Do we need to change the roles in the GECOS?
+    if new_gecos_roles != cur_gecos_roles:
+        # Let hamd update the roles for that user. This will
+        # set the roles in the GECOS, update the supplementary
+        # groups, and update the roles in the REDIS DB.
+        new_gecos_roles = list(new_gecos_roles)
+        print_cmd("ham.accounts.set_roles({}, {})".format(user, new_gecos_roles))
+        success, errmsg = accounts.set_roles(user, new_gecos_roles)
+        print_cmd_result(success, errmsg)
+
+
+    # Do we need to change the Primary group?
+    # Each user should have their own, private, Primary group.
+    if need_private_primary_group:
+        config_private_primary_group(user, ent.pw_uid)
+EOF
+
+
+#****************************************
+group_create() {
+	group=$1
+	shift
+	args=$*
+	if ! getent group "${group}" >/dev/null; then
+		echo "groupadd ${args} ${group}"
+		groupadd ${args} ${group}
+	fi
+}
+
+#****************************************
+hamd_dbus_config() {
+	group_create hamd --system
+	group_create hamd_accounts --system
+	conf_file="/etc/dbus-1/system.d/org.SONiC.HostAccountManagement.conf"
+	chmod 644 ${conf_file}
+	if [ -f /usr/bin/dbus-send ]; then
+		/usr/bin/dbus-send --system --type=method_call --dest=org.freedesktop.DBus / org.freedesktop.DBus.ReloadConfig
+	fi
+}
+
+#****************************************
+systemd_add() {
+	service=$1
+	deb-systemd-helper unmask "${service}" >/dev/null || true
+	if deb-systemd-helper --quiet was-enabled "${service}"; then
+		deb-systemd-helper enable "${service}" >/dev/null || true
+		if [ -d /run/systemd/system ]; then
+			systemctl --system daemon-reload >/dev/null || true
+			deb-systemd-invoke start "${service}" >/dev/null || true
+		fi
+	else
+		deb-systemd-helper update-state "${service}" >/dev/null || true
+	fi
+}
+
+#****************************************
+# configure
+#****************************************
+if [ "${action}" = configure ]; then
+
+	hamd_dbus_config
+	systemd_add hamd.service
+	echo "Migrating roles from Linux groups to GECOS"
+#	/usr/bin/python3 "${migrate_roles_to_gecos}"
+
+fi
+
+#DEBHELPER#
+
+exit 0
+
+

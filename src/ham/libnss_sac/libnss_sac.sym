@@ -1,0 +1,7 @@
+
+{
+global:
+        _nss_sac_getpwnam_r;
+
+local: *;
+};

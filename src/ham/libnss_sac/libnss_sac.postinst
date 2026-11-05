@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+action="$1"
+oldversion="$2"
+
+umask 022
+
+#****************************************
+# configure
+#****************************************
+if [ "${action}" = configure ]; then
+
+	ldconfig
+
+	# Add ham to /etc/nsswitch.conf (if not already)
+	if ! grep --silent sac /etc/nsswitch.conf; then
+		/bin/sed -i 's/^\(passwd:.*\)$/\1 sac/' /etc/nsswitch.conf
+	fi
+fi
+
+#DEBHELPER#
+
+exit 0
+
