@@ -673,10 +673,7 @@ def get_sonic_version_info():
 
     import yaml  # lazy: keep yaml (~3.2MB) off the module import surface
     with open(SONIC_VERSION_YAML_PATH) as stream:
-        if yaml.__version__ >= "5.1":
-            sonic_ver_info = yaml.full_load(stream)
-        else:
-            sonic_ver_info = yaml.safe_load(stream)
+        sonic_ver_info = yaml.safe_load(stream)
 
     return sonic_ver_info
 
