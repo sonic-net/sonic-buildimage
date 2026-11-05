@@ -10,7 +10,7 @@
 
 try:
     from sonic_platform_base.psu_base import PsuBase
-    from common import Common
+    from sonic_platform.common import Common
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
