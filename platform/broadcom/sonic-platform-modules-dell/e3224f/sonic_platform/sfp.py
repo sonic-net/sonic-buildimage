@@ -13,6 +13,7 @@ try:
     import struct
     import mmap
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from sonic_platform_base.sonic_xcvr.eeprom_rw import ModuleEepromLowerMemoryInfo
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -115,7 +116,7 @@ class Sfp(SfpOptoeBase):
         Reads optic eeprom byte to determine media type inserted
         """
         eeprom_raw = []
-        eeprom_raw = self._xcvr_api_factory._get_id()
+        eeprom_raw = ModuleEepromLowerMemoryInfo(self.read_eeprom).get_id()
         if eeprom_raw is not None:
             eeprom_raw = hex(eeprom_raw)
             if eeprom_raw in SFP_TYPE_LIST:
