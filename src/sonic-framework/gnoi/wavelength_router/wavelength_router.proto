@@ -1,0 +1,197 @@
+//
+// Copyright 2019 Google LLC. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package gnoi.optical;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/wavelength_router";
+
+option (types.gnoi_version) = "0.2.0";
+
+service WavelengthRouter {
+  // AdjustPSD performs a power spectral density (PSD) adjustment on an optical
+  // DWDM line system port.
+  //
+  // This RPC's initial message triggers adjustments. The target should validate
+  // the request, and immediately begin the adjustment as long as another
+  // adjustment is not already running. As this RPC may take multiple minutes,
+  // the state should be regularly streamed to the client. The operation should
+  // be completed on the device regardless of the state of the RPC channel to
+  // the initiating client. A client that becomes disconnected during an
+  // operation can reconnect, requesting the same operation, and receive status
+  // updates this way. There is no means by which an adjustment that has been
+  // triggered by a client can be cancelled unless the CancelAdjustPSD RPC is
+  // used.
+  // DEPRECATED, use AdjustSpectrum.
+  rpc AdjustPSD(AdjustPSDRequest) returns (stream AdjustPSDResponse) {
+    option deprecated = true;
+  }
+
+  // CancelAdjustPSD cancels an in-progress AdjustPSD request. If an
+  // adjustment is not being performed for the provided request, then the RPC
+  // should return successfully.
+  // DEPRECATED, use CancelAdjustSpectrum.
+  rpc CancelAdjustPSD(AdjustPSDRequest) returns (CancelAdjustPSDResponse) {
+    option deprecated = true;
+  }
+
+  // AdjustSpectrum performs a spectrum power adjustment on an optical
+  // DWDM line system port.
+  //
+  // This RPC's initial message triggers adjustments. The target should validate
+  // the request, and immediately begin the adjustment as long as another
+  // adjustment is not already running. As this RPC may take multiple minutes,
+  // the state should be regularly streamed to the client. The operation should
+  // be completed on the device regardless of the state of the RPC channel to
+  // the initiating client. A client that becomes disconnected during an
+  // operation can reconnect, requesting the same operation, and receive status
+  // updates this way. There is no means by which an adjustment that has been
+  // triggered by a client can be cancelled unless the CancelAdjustSpectrum
+  // RPC is used.
+  rpc AdjustSpectrum(AdjustSpectrumRequest)
+    returns (stream AdjustSpectrumResponse) {}
+
+  // CancelAdjustSpectrum cancels an in-progress AdjustSpectrum request. If an
+  // adjustment is not being performed for the provided request, then the RPC
+  // should return successfully.
+  rpc CancelAdjustSpectrum(AdjustSpectrumRequest)
+    returns (CancelAdjustSpectrumResponse) {}
+}
+
+message AdjustPSDRequest {
+  option deprecated = true;
+  // Absolute path to the /components/component list member in the OpenConfig
+  // model corresponding to the port to perform the adjustment for.
+  // (e.g., /components/component[name=amp-1-1])
+  types.Path component = 1;
+
+  enum SignalDirection {
+    DIRECTION_UNKNOWN = 0;
+    DIRECTION_INPUT = 1;
+    DIRECTION_OUTPUT = 2;
+  }
+  // Describes the signal direction that should be adjusted relative to the
+  // device. For example, "input" would be the signal entering into the device
+  // from the far end device.
+  SignalDirection direction = 2;
+}
+
+message AdjustPSDProgress {
+  option deprecated = true;
+  enum State {
+    UNKNOWN = 0;
+    RUNNING = 1;   // The PSD adjustment is running.
+    COMPLETE = 2;  // The PSD adjustment completed successfully.
+  }
+  // The state of the OTDR trace requested. Note that this does not include
+  // error states as these should be returned as a gRPC error.
+  State state = 1;
+}
+
+message AdjustPSDError {
+  option deprecated = true;
+  enum Type {
+    // An unspecified error. Must use the detail value to describe the issue.
+    UNSPECIFIED = 0;
+    // An adjustment was requested for a port that is busy (e.g., requesting
+    // input adjustment for a port that is currently running an output
+    // adjustment)
+    PORT_BUSY = 1;
+    // The hardware has failed and cannot complete an adjustment.
+    HARDWARE_FAILURE = 2;
+  }
+  Type type = 1;
+  string detail = 2;
+}
+
+// AdjustPSDResponse describes the possible response messages that will be
+// streamed after the RPC is initiated. While the OTDR is running,
+// "progress" messages should be sent at a regular interval. When the
+// adjustment is completed, an "error" message should be streamed if an
+// error is encountered or the RPC should be terminated on success.
+message AdjustPSDResponse {
+  option deprecated = true;
+  oneof response {
+    AdjustPSDProgress progress = 1;
+    AdjustPSDError error = 2;
+  }
+}
+
+message CancelAdjustPSDResponse {
+  option deprecated = true;
+}
+
+message AdjustSpectrumRequest {
+  // Absolute path to the /components/component list member in the OpenConfig
+  // model corresponding to the port to perform the adjustment for.
+  // (e.g., /components/component[name=wavelength-router-1-1])
+  types.Path component = 1;
+
+  enum SignalDirection {
+    DIRECTION_UNKNOWN = 0;
+    DIRECTION_INPUT = 1;
+    DIRECTION_OUTPUT = 2;
+  }
+  // Describes the signal direction that should be adjusted relative to the
+  // device. For example, "input" would be the signal entering into the device
+  // from the far end device.
+  SignalDirection direction = 2;
+}
+
+message AdjustSpectrumProgress {
+  enum State {
+    UNKNOWN = 0;
+    RUNNING = 1;   // The spectrum adjustment is running.
+    COMPLETE = 2;  // The spectrum adjustment completed successfully.
+  }
+  // The state of the OTDR trace requested. Note that this does not include
+  // error states as these should be returned as a gRPC error.
+  State state = 1;
+}
+
+message AdjustSpectrumError {
+  enum Type {
+    // An unspecified error. Must use the detail value to describe the issue.
+    UNSPECIFIED = 0;
+    // An adjustment was requested for a port that is busy (e.g., requesting
+    // input adjustment for a port that is currently running an output
+    // adjustment)
+    PORT_BUSY = 1;
+    // The hardware has failed and cannot complete an adjustment.
+    HARDWARE_FAILURE = 2;
+  }
+  Type type = 1;
+  string detail = 2;
+}
+
+// AdjustSpectrumResponse describes the possible response messages that will be
+// streamed after the RPC is initiated. While the OTDR is running,
+// "progress" messages should be sent at a regular interval. When the
+// adjustment is completed, an "error" message should be streamed if an
+// error is encountered or the RPC should be terminated on success.
+message AdjustSpectrumResponse {
+  oneof response {
+    AdjustSpectrumProgress progress = 1;
+    AdjustSpectrumError error = 2;
+  }
+}
+
+message CancelAdjustSpectrumResponse {
+}
+

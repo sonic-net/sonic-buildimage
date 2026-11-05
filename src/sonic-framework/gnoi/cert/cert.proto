@@ -1,0 +1,466 @@
+//
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// DEPRECATION NOTICE: This API will be removed as it has been replaced via
+// gNSI Certz service. This will be removed in the v1 release of the gNOI API.
+//
+// This file defines the gNOI API to be used for certificate installation and
+// rotation.
+syntax = "proto3";
+
+package gnoi.certificate;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/cert";
+
+option (types.gnoi_version) = "0.2.0";
+
+// The Certificate Management Service exported by targets.
+//
+// The service primarily exports two main RPCs, Install & Rotate which are used
+// for installation of a new certificate, and rotation of an existing
+// certificate on a target, along with a few management related RPCs.
+//
+// In addition, the actions from the Install and Rotate RPCs are made available
+// as separate RPCs. These use the same request/response protos.
+service CertificateManagement {
+
+  // Rotate will replace an existing Certificate on the target by creating a
+  // new CSR request and placing the new Certificate based on the CSR on the
+  // target. If the stream is broken or any steps in the process fail the
+  // target must rollback to the original Certificate.
+  //
+  // The following describes the sequence of messages that must be exchanged
+  // in the Rotate() RPC.
+  //
+  // Sequence of expected messages:
+  // Case 1: When Target generates the CSR.
+  //
+  //   Step 1: Start the stream
+  //     Client <---- Rotate() RPC stream begin ------> Target
+  //
+  //   Step 2: CSR
+  //     Client -----> GenerateCSRRequest----> Target
+  //     Client <----- GenerateCSRResponse <--- Target
+  //
+  //   Step 3: Certificate Signing
+  //     Client gets the certificate signed by the CA.
+  //
+  //   Step 4: Send Certificate to Target.
+  //     Client --> LoadCertificateRequest ----> Target
+  //     Client <-- LoadCertificateResponse <--- Target
+  //
+  //   Step 5: Test/Validation by the client.
+  //     This step should be to create a new connection to the target using
+  //     The new certificate and validate that the certificate works.
+  //     Once verfied, the client will then proceed to finalize the rotation.
+  //     If the new connection cannot be completed the client will cancel the
+  //     RPC thereby forcing the target to rollback the certificate.
+  //
+  //   Step 6: Final commit.
+  //     Client ---> FinalizeRequest ----> Target
+  //
+  //
+  // Case 2: When Client generates the CSR.
+  //   Step 1: Start the stream
+  //     Client <---- Rotate() RPC stream begin ----> Target
+  //
+  //   Step 2: CSR
+  //     Client generates its own certificate.
+  //
+  //   Step 3: Certificate Signing
+  //     Client gets the certificate signed by the CA.
+  //
+  //   Step 4: Send Certificate to Target.
+  //     Client ---> LoadCertificateRequest ----> Target
+  //     Client <--- LoadCertificateResponse <--- Target
+  //
+  //   Step 5: Test/Validation by the client.
+  //
+  //   Step 6: Final commit.
+  //     Client ---> FinalizeRequest ----> Target
+  rpc Rotate(stream RotateCertificateRequest)
+    returns (stream RotateCertificateResponse) {
+    option deprecated = true;
+  };
+
+  // Install will put a new Certificate on the target by creating a new CSR
+  // request and placing the new Certificate based on the CSR on the target.The
+  // new Certificate will be associated with a new Certificate Id on the target.
+  // If the target has a pre existing Certificate with the given Certificate Id,
+  // the operation should fail.
+  // If the stream is broken or any steps in the process fail the target must
+  // revert any changes in state.
+  //
+  // The following describes the sequence of messages that must be exchanged
+  // in the Install() RPC.
+  //
+  // Sequence of expected messages:
+  // Case 1: When Target generates the CSR-------------------------:
+  //
+  //   Step 1: Start the stream
+  //     Client <---- Install() RPC stream begin ------> Target
+  //
+  //   Step 2: CSR
+  //     Client -----> GenerateCSRRequest() ----> Target
+  //     Client <---- GenerateCSRResponse() <---- Target
+  //
+  //   Step 3: Certificate Signing
+  //     Client gets the certificate signed by the CA.
+  //
+  //   Step 4: Send Certificate to Target.
+  //     Client -> LoadCertificateRequest() ----> Target
+  //     Client <- LoadCertificateResponse() <--- Target
+  //
+  // Case 2: When Client generates the CSR-------------------------:
+  //   Step 1: Start the stream
+  //     Client <---- Install() RPC stream begin ------> Target
+  //
+  //   Step 2: CSR
+  //     Client generates its own certificate.
+  //
+  //   Step 3: Certificate Signing
+  //     Client gets the certificate signed by the CA.
+  //
+  //   Step 4: Send Certificate to Target.
+  //     Client -> LoadCertificateRequest() ----> Target
+  //     Client <- LoadCertificateResponse() <--- Target
+  //
+  rpc Install(stream InstallCertificateRequest)
+    returns (stream InstallCertificateResponse) {
+    option deprecated = true;
+  };
+
+  // When credentials are generated on the device, generates a keypair and
+  // returns the Certificate Signing Request (CSR). The CSR has the public key,
+  // which when signed by the CA, becomes the Certificate.
+  rpc GenerateCSR(GenerateCSRRequest) returns (GenerateCSRResponse) {
+    option deprecated = true;
+  };
+
+  // Loads a certificate signed by a Certificate Authority (CA).
+  rpc LoadCertificate(LoadCertificateRequest)
+    returns (LoadCertificateResponse) {
+    option deprecated = true;
+  };
+
+  // Loads a bundle of CA certificates.
+  rpc LoadCertificateAuthorityBundle(LoadCertificateAuthorityBundleRequest)
+    returns (LoadCertificateAuthorityBundleResponse) {
+    option deprecated = true;
+  };
+
+  // An RPC to get the certificates on the target.
+  rpc GetCertificates(GetCertificatesRequest)
+    returns (GetCertificatesResponse) {
+    option deprecated = true;
+  };
+
+  // An RPC to revoke specific certificates.
+  // If a certificate is not present on the target, the request should silently
+  // succeed. Revoking a certificate should render the existing certificate
+  // unusable by any endpoints.
+  rpc RevokeCertificates(RevokeCertificatesRequest)
+    returns (RevokeCertificatesResponse) {
+    option deprecated = true;
+  };
+
+  // An RPC to ask a target if it can generate a Certificate.
+  rpc CanGenerateCSR(CanGenerateCSRRequest) returns (CanGenerateCSRResponse) {
+    option deprecated = true;
+  };
+}
+
+// Request messages to rotate existing certificates on the target.
+message RotateCertificateRequest {
+  // Request Messages.
+  oneof rotate_request {
+    GenerateCSRRequest generate_csr = 1;
+    LoadCertificateRequest load_certificate = 2;
+    FinalizeRequest finalize_rotation = 3;
+  }
+}
+
+// Response Messages from the target.
+message RotateCertificateResponse {
+  // Response messages.
+  oneof rotate_response {
+    GenerateCSRResponse generated_csr = 1;
+    LoadCertificateResponse load_certificate = 2;
+  }
+}
+
+// Request messages to install new certificates on the target.
+message InstallCertificateRequest {
+  // Request Messages.
+  oneof install_request {
+    GenerateCSRRequest generate_csr = 1;
+    LoadCertificateRequest load_certificate = 2;
+  }
+}
+
+// Response Messages from the target for the InstallCertificateRequest.
+message InstallCertificateResponse {
+  // Response messages.
+  oneof install_response {
+    GenerateCSRResponse generated_csr = 1;
+    LoadCertificateResponse load_certificate = 2;
+  }
+}
+
+// Request to generate the CSR.
+// When this request is made for rotating an existing certificate as part of the
+// Rotate() RPC, then the target must ensure that the "certificate_id" is
+// already created and exists on the target. If the Certificate Rotation
+// proceeds to load the certificate, it must associate the new certificate with
+// the previously created "certificate_id".
+//
+// When this request is made for installing a completely new certificate as part
+// of the Install() RPC , then the target must ensure that the "certificate_id"
+// is completely new and no entities on the target are should be bound to this
+// certificate_id. If any existing certificate matches the certificate_id, then
+// this request should fail.
+//
+// If there is another ongoing Rotate/Install RPC with the same certificate_id,
+// the GenerateCSRRequest should fail.
+message GenerateCSRRequest {
+  // Parameters for creating a CSR.
+  CSRParams csr_params = 1;
+  // The certificate id with which this CSR will be associated. The target
+  // configuration should bind an entity which wants to use a certificate to
+  // the certificate_id it should use.
+  string certificate_id = 2;
+}
+
+// Parameters to be used when generating a Certificate Signing Request.
+message CSRParams {
+  // The type of certificate which will be associated for this CSR.
+  CertificateType type = 1;
+
+  // Minimum size of the key to be used by the target when generating a
+  // public/private key pair.
+  uint32 min_key_size = 2;
+
+  // If provided, the target must use the provided key type. If the target
+  // cannot use the algorithm specified in the key_type, it should cancel the
+  // stream with an Unimplemented error.
+  KeyType key_type = 3;
+
+  // --- common set of parameters applicable for any type of certificate --- //
+  string common_name = 4;           // e.g "device.corp.google.com"
+  string country = 5;               // e.g "US"
+  string state = 6;                 // e.g "CA"
+  string city = 7;                  // e.g "Mountain View"
+  string organization = 8;          // e.g "Google"
+  string organizational_unit = 9;   // e.g "Security"
+  string ip_address = 10;
+  string email_id = 11;
+
+  // TODO(lokagarw): Define a way to add any other parameters/extensions to be
+  // used for generating the CSR depending upon the type of certificate being
+  // requested.
+}
+
+// GenerateCSRResponse contains the CSR associated with the Certificate ID
+// supplied in the GenerateCSRRequest. When a Certificate is subsequently
+// installed on the target in the same streaming RPC session, it must be
+// associated to that Certificate ID.
+//
+// An Unimplemented error will be returned if the target cannot generate a CSR
+// as per the request. In this case, the caller must generate its own key pair.
+message GenerateCSRResponse {
+  CSR csr = 1;
+}
+
+// LoadCertificateRequest instructs the target to store the given certificate.
+//
+// Case 1: Target Generated CSR and Key Pair.
+// If the target generated the CSR (and the public/private key pair) during the
+// GenerateCSR request, then the target must associate the certificate with the
+// certificate ID specified in the preceding GenerateCSR request.
+//
+// Case 2: Externally Generated Key Pair.
+// If the target can not generate a CSR, then the public/private key pair is
+// generated externally. In this case provide the target with the key pair,
+// and the certificate_id to be associated with the new certificate.
+//
+// If there is another ongoing Rotate/Install RPC with the same certificate_id,
+// the LoadCertificateRequest must fail.
+message LoadCertificateRequest {
+  // The certificate to be Loaded on the target.
+  Certificate certificate = 1;
+
+  // The key pair to be used with the certificate. This is provided in the event
+  // that the target cannot generate a CSR (and the corresponding public/private
+  // keys).
+  KeyPair key_pair = 2;
+
+  // Certificate Id of the above certificate. This is to be provided only when
+  // there is an externally generated key pair.
+  string certificate_id = 3;
+
+  // Optional bundle of CA certificates. When not empty, the provided
+  // certificates should squash the existing bundle. This field provides a
+  // simplified means to provision a CA bundle that can be used to validate
+  // other peer's certificates.
+  // To improve performance in the Target, certificates can be ordered.
+  // Groups of chained certificates should be last, where within, the root
+  // certificate is the last one. E.g.:
+  // CertA, CertB, CertB-Root, CertC, CertC-Intermediate, CertC-Root
+  repeated Certificate ca_certificates = 4;
+}
+
+// Response from target after Loading a Certificate.
+// If the target could not load the certificate, it must end the RPC stream with
+// a suitable RPC error about why the Certificate was not loaded.
+message LoadCertificateResponse {
+}
+
+// Bundle of CA certificates. Same as LoadCertificateRequest::ca_certificates.
+message LoadCertificateAuthorityBundleRequest {
+  // Squashes the existing certificate bundle.
+  // To improve performance in the Target, certificates can be ordered.
+  // Groups of chained certificates should be last, where within, the root
+  // certificate is the last one. E.g.:
+  // CertA, CertB, CertB-Root, CertC, CertC-Intermediate, CertC-Root
+  repeated Certificate ca_certificates = 1;
+}
+
+// Response from target after Loading a certificate authority bundle.
+// If the target could not load the certificates, it must end the RPC stream
+// with a suitable RPC error about why the Certificate was not loaded.
+message LoadCertificateAuthorityBundleResponse {
+}
+
+// A Finalize message is sent to the target to confirm the Rotation of
+// the certificate and that the certificate should not be rolled back when
+// the RPC concludes. The certificate must be rolled back if the target returns
+// an error after receiving a Finalize message.
+message FinalizeRequest {
+}
+
+// The request to query all the certificates on the target.
+message GetCertificatesRequest {
+}
+
+// Response from the target about the certificates that exist on the target what
+// what is using them.
+message GetCertificatesResponse {
+  repeated CertificateInfo certificate_info = 1;
+}
+
+message CertificateInfo {
+  string certificate_id = 1;
+  Certificate certificate = 2;
+
+  // List of endpoints using this certificate.
+  repeated Endpoint endpoints = 3;
+
+  // System modification time when the certificate was installed/rotated in
+  // nanoseconds since epoch.
+  int64 modification_time = 4;
+}
+
+message RevokeCertificatesRequest {
+  // Certificates to revoke.
+  repeated string certificate_id = 1;
+}
+
+message RevokeCertificatesResponse {
+  // List of certificates successfully revoked.
+  repeated string revoked_certificate_id = 1;
+
+  // List of errors why certain certificates could not be revoked.
+  repeated CertificateRevocationError certificate_revocation_error = 2;
+}
+
+// An error message indicating why a certificate id could not be revoked.
+message CertificateRevocationError {
+  string certificate_id = 1;
+  string error_message = 2;
+}
+
+// A request to ask the target if it can generate key pairs.
+message CanGenerateCSRRequest {
+  KeyType key_type = 1;
+  CertificateType certificate_type = 2;
+  uint32 key_size = 3;
+}
+
+// Response from the target about whether it can generate a CSR with the given
+// parameters.
+message CanGenerateCSRResponse {
+  bool can_generate = 4;
+}
+
+// Types of certificates.
+enum CertificateType {
+  // 1 - 500 for public use.
+  // 501 onwards for private use.
+  CT_UNKNOWN = 0;
+  CT_X509 = 1;
+}
+
+// A certificate.
+message Certificate {
+  // Type of certificate.
+  CertificateType type = 1;
+
+  // Actual certificate.
+  // The exact encoding depends upon the type of certificate.
+  // for X509, this should be a PEM encoded Certificate.
+  bytes certificate = 2;
+}
+
+// A Certificate Signing Request.
+message CSR {
+  // Type of certificate.
+  CertificateType type = 1;
+
+  // Bytes representing the CSR.
+  // The exact encoding depends upon the type of certificate requested.
+  // for X509: This should be the PEM encoded CSR.
+  bytes csr = 2;
+}
+
+// A message representing a pair of public/private keys.
+message KeyPair {
+  bytes private_key = 1;
+  bytes public_key = 2;
+}
+
+// Algorithm to be used for generation the key pair.
+enum KeyType {
+  // 1 - 500, for known types.
+  // 501 and onwards for private use.
+  KT_UNKNOWN = 0;
+  KT_RSA = 1;
+}
+
+// An endpoint represents an entity on the target which can use a certificate.
+message Endpoint {
+  // Type of endpoint that can use a cert. This list is to be extended based on
+  // conversation with vendors.
+  enum Type {
+    EP_UNSPECIFIED = 0;
+    EP_IPSEC_TUNNEL = 1;
+    EP_DAEMON = 2;
+  }
+  Type type = 1;
+
+  // Human readable identifier for an endpoint.
+  string endpoint = 2;
+}

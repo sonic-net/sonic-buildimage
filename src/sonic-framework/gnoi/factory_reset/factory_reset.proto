@@ -1,0 +1,62 @@
+// This file defines a gNOI API used for factory reseting a Target.
+syntax = "proto3";
+
+package gnoi.factory_reset;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/factory_reset";
+
+option (types.gnoi_version) = "0.1.0";
+
+// The FactoryReset service exported by Targets.
+service FactoryReset {
+  // The Start RPC allows the Client to instruct the Target to immediately
+  // clean all existing state and boot the Target in the same condition as it is
+  // shipped from factory. State includes storage, configuration, logs,
+  // certificates and licenses.
+  //
+  // Optionally allows rolling back the OS to the same version shipped from
+  // factory.
+  //
+  // Optionally allows for the Target to zero-fill permanent storage where state
+  // data is stored.
+  //
+  // If any of the optional flags is set but not supported, a gRPC Status with
+  // code INVALID_ARGUMENT must be returned with the details value set to a
+  // properly populated ResetError message.
+  rpc Start(StartRequest) returns (StartResponse);
+}
+
+message StartRequest {
+  // Instructs the Target to rollback the OS to the same version as it shipped
+  // from factory.
+  bool factory_os = 1;
+  // Instructs the Target to zero fill persistent storage state data.
+  bool zero_fill = 2;
+  // Instructs the Target to retain certificates
+  bool retain_certs = 3;
+}
+
+message ResetSuccess {
+}
+
+// Message also used in gRPC status.details field.
+message ResetError {
+  // Factory OS reset is not supported.
+  bool factory_os_unsupported = 1;
+  // Zero fill is not supported.
+  bool zero_fill_unsupported = 2;
+  // Unspecified error, must provide detail message.
+  bool other = 3;
+  string detail = 4;
+}
+
+message StartResponse {
+  oneof response {
+    // Reset will be executed.
+    ResetSuccess reset_success = 1;
+    // Reset will not be executed.
+    ResetError reset_error = 2;
+  }
+}
