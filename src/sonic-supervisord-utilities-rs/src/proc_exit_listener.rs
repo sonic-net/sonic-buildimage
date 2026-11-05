@@ -205,6 +205,48 @@ pub fn get_autorestart_state(container_name: &str, config_db: &dyn ConfigDBTrait
     Some(feature_config.get("auto_restart").cloned().unwrap_or_else(|| "enabled".to_string()))
 }
 
+/// Read feature state from ConfigDB
+/// Returns None on error, if the FEATURE table or the container entry is not
+/// found, or if the container entry has no 'state' field. Unlike
+/// get_autorestart_state(), there is no default value here: a missing state
+/// is a distinct, intentionally-unresolved case, left to the caller to
+/// interpret (see should_track_for_alerting()).
+fn get_feature_state(container_name: &str, config_db: &dyn ConfigDBTrait) -> Option<String> {
+    let features_table = match config_db.get_table(FEATURE_TABLE_NAME) {
+        Ok(table) => table,
+        Err(e) => {
+            warn!("Unable to retrieve features table from Config DB: {}", e);
+            return None;
+        }
+    };
+
+    if features_table.is_empty() {
+        warn!("Empty features table");
+        return None;
+    }
+
+    let feature_config = match features_table.get(container_name) {
+        Some(config) => config,
+        None => {
+            warn!("Unable to retrieve feature '{}'", container_name);
+            return None;
+        }
+    };
+
+    feature_config.get("state").cloned()
+}
+
+/// Decide whether a process should be tracked for recurring "not running"
+/// alerting, based on the owning container's FEATURE.state.
+///
+/// Only an explicit "disabled" state suppresses alerting. Missing config,
+/// DB errors, "enabled", "always_enabled", and any other/unknown value all
+/// keep the listener fail-open (i.e. alerting continues), so real errors
+/// are never accidentally silenced by absent or unexpected config.
+fn should_track_for_alerting(container_name: &str, config_db: &dyn ConfigDBTrait) -> bool {
+    get_feature_state(container_name, config_db).as_deref() != Some("disabled")
+}
+
 /// Load heartbeat alert intervals from ConfigDB
 pub fn load_heartbeat_alert_interval(config_db: &dyn ConfigDBTrait) -> HashMap<String, f64> {
     let mut mapping = HashMap::new();
@@ -416,11 +458,14 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                                     }
                                     return Ok(());
                                 } else {
-                                    // Add to alerting processes
-                                    let mut process_info = HashMap::new();
-                                    process_info.insert("last_alerted".to_string(), get_current_time());
-                                    process_info.insert("dead_minutes".to_string(), 0.0);
-                                    process_under_alerting.insert(process_name.clone(), process_info);
+                                    // Add to alerting processes, unless the owning feature is
+                                    // intentionally disabled (FEATURE.<container>.state == "disabled").
+                                    if should_track_for_alerting(&container_name, config_db) {
+                                        let mut process_info = HashMap::new();
+                                        process_info.insert("last_alerted".to_string(), get_current_time());
+                                        process_info.insert("dead_minutes".to_string(), 0.0);
+                                        process_under_alerting.insert(process_name.clone(), process_info);
+                                    }
                                 }
                             }
                         }
@@ -477,10 +522,14 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                                     }
                                     return Ok(());
                                 } else {
-                                    let mut process_info = HashMap::new();
-                                    process_info.insert("last_alerted".to_string(), get_current_time());
-                                    process_info.insert("dead_minutes".to_string(), 0.0);
-                                    process_under_alerting.insert(process_name.clone(), process_info);
+                                    // Add to alerting processes, unless the owning feature is
+                                    // intentionally disabled (FEATURE.<container>.state == "disabled").
+                                    if should_track_for_alerting(&container_name, config_db) {
+                                        let mut process_info = HashMap::new();
+                                        process_info.insert("last_alerted".to_string(), get_current_time());
+                                        process_info.insert("dead_minutes".to_string(), 0.0);
+                                        process_under_alerting.insert(process_name.clone(), process_info);
+                                    }
                                 }
                             }
                         }
@@ -604,5 +653,80 @@ mod tests {
     fn test_generate_alerting_message_edge_cases() {
         generate_alerting_message("", "", 0, Level::Error);
         generate_alerting_message("very_long_process_name_exceeding_normal_length_by_a_lot", "some status", u64::MAX, Level::Warn);
+    }
+
+    /// Minimal ConfigDBTrait mock holding a pre-built FEATURE table, for
+    /// unit-testing should_track_for_alerting()'s FEATURE-table lookups in
+    /// isolation from the full MockConfigDB/config_db.json fixture used by
+    /// tests/test_listener.rs.
+    struct MockFeatureTable(HashMap<String, HashMap<String, String>>);
+
+    impl ConfigDBTrait for MockFeatureTable {
+        fn get_table(&self, table: &str) -> std::result::Result<HashMap<String, HashMap<String, String>>, Box<dyn std::error::Error>> {
+            if table == FEATURE_TABLE_NAME {
+                Ok(self.0.clone())
+            } else {
+                Ok(HashMap::new())
+            }
+        }
+    }
+
+    /// ConfigDBTrait mock that always fails, to exercise the DB-error
+    /// fail-open path.
+    struct MockErrorConfigDB;
+
+    impl ConfigDBTrait for MockErrorConfigDB {
+        fn get_table(&self, _table: &str) -> std::result::Result<HashMap<String, HashMap<String, String>>, Box<dyn std::error::Error>> {
+            Err("simulated Config DB error".into())
+        }
+    }
+
+    fn feature_table_with(container: &str, fields: &[(&str, &str)]) -> MockFeatureTable {
+        let mut entry = HashMap::new();
+        for (k, v) in fields {
+            entry.insert(k.to_string(), v.to_string());
+        }
+        let mut table = HashMap::new();
+        table.insert(container.to_string(), entry);
+        MockFeatureTable(table)
+    }
+
+    #[test]
+    fn test_should_track_for_alerting_disabled_does_not_track() {
+        let db = feature_table_with("snmp", &[("state", "disabled")]);
+        assert!(!should_track_for_alerting("snmp", &db));
+    }
+
+    #[test]
+    fn test_should_track_for_alerting_enabled_tracks() {
+        let db = feature_table_with("swss", &[("state", "enabled")]);
+        assert!(should_track_for_alerting("swss", &db));
+    }
+
+    #[test]
+    fn test_should_track_for_alerting_missing_config_tracks() {
+        // Missing container entry entirely.
+        let db = feature_table_with("other", &[("state", "enabled")]);
+        assert!(should_track_for_alerting("missing_container", &db));
+
+        // Container present but has no 'state' field.
+        let db = feature_table_with("mycontainer", &[("auto_restart", "enabled")]);
+        assert!(should_track_for_alerting("mycontainer", &db));
+    }
+
+    #[test]
+    fn test_should_track_for_alerting_db_error_tracks() {
+        let db = MockErrorConfigDB;
+        assert!(should_track_for_alerting("swss", &db));
+    }
+
+    /// FEATURE.state and FEATURE.auto_restart must not be conflated — this
+    /// fixture (state disabled, auto_restart enabled) mirrors the real
+    /// dhcp_relay entry in tests/test_data/config_db.json.
+    #[test]
+    fn test_should_track_for_alerting_independent_of_autorestart() {
+        let db = feature_table_with("dhcp_relay", &[("state", "disabled"), ("auto_restart", "enabled")]);
+        assert!(!should_track_for_alerting("dhcp_relay", &db));
+        assert_eq!(get_autorestart_state("dhcp_relay", &db), Some("enabled".to_string()));
     }
 }
