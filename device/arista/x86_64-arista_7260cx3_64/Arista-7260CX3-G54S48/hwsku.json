@@ -1,0 +1,256 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet4": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet8": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet12": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet16": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet20": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet24": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet28": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet32": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet36": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet40": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet44": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet48": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet52": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet56": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet60": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet64": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet68": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet72": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet76": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet80": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet84": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet88": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet92": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet96": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet100": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet104": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet108": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet112": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet116": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet120": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet124": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet128": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet132": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet136": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet140": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet144": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet148": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet152": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet156": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet160": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet164": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet168": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet172": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet176": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet180": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet184": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet188": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet192": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet196": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet200": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet204": {
+            "default_brkout_mode": "4x10G[25G]"
+        },
+        "Ethernet208": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet212": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet216": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet220": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet224": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet228": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet232": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet236": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet240": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet244": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet248": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet252": {
+            "default_brkout_mode": "1x1G[10G](1)",
+            "port_type": "RJ45"
+        },
+        "Ethernet256": {
+            "default_brkout_mode": "1x1G[10G]",
+            "port_type": "RJ45"
+        },
+        "Ethernet260": {
+            "default_brkout_mode": "1x1G[10G]",
+            "port_type": "RJ45"
+        }
+    }
+}
