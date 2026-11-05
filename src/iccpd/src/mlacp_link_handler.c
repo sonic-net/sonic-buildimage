@@ -1144,7 +1144,7 @@ void update_peerlink_isolate_from_all_csm_lif(
         if (lif->isolate_to_peer_link == 1)
         {
             //The return value of the snprintf function is the length of the source string.
-            if ((sizeof(mlag_po_buf) - dst_len) > 
+            if ((sizeof(mlag_po_buf) - dst_len) >
                 (strlen(lif->name) + strlen(lif->portchannel_member_buf) + 2))
             {
                 /* need to isolate port,  get it's member name */
@@ -1158,7 +1158,7 @@ void update_peerlink_isolate_from_all_csm_lif(
             }
             else
             {
-                ICCPD_LOG_WARN(__FUNCTION__, "the remaining length %d is not enough to store:%s%s%s", 
+                ICCPD_LOG_WARN(__FUNCTION__, "the remaining length %d is not enough to store:%s%s%s",
                     sizeof(mlag_po_buf) - dst_len, lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
             }
         }
