@@ -221,7 +221,7 @@ fi
 # Enroll the UEFI Secure Boot db certificate BEFORE installing the SONiC image, so the signed
 # image is trusted by firmware on first boot. Extract only boot/DB.auth from the payload up
 # front; the full image extraction below repopulates boot/ with the rest.
-if [ "$install_env" != "build" ]; then
+if [ "$install_env" != "build" ] && [ -d /sys/firmware/efi ]; then
     unzip -o $INSTALLER_PAYLOAD "boot/DB.auth" -d $demo_mnt/$image_dir > /dev/null 2>&1 || true
     enroll_secure_boot_db "$demo_mnt" || exit 1
 fi
