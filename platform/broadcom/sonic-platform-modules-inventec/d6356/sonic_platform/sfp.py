@@ -73,6 +73,7 @@ class Sfp(SfpBase):
 
         self.__presence_attr = None
         self.__eeprom_path = None
+        self.sfp_type = "SFP"
         if self.__index in range(0, self.__port_end + 1):
             self.__presence_attr = "/sys/class/swps/port{}/present".format(self.__index)
             self.__eeprom_path = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom".format(self.__port_to_i2c_mapping[self.__index])
@@ -310,6 +311,7 @@ class Sfp(SfpBase):
 
         transceiver_info_dict['cable_type']   = "Unknown"
         transceiver_info_dict['cable_length'] = "Unknown"
+        transceiver_info_dict['application_advertisement'] = "Unknown"
         for key in sfp_cable_length_tup:
             if key in sfp_interface_bulk_data['data']:
                 transceiver_info_dict['cable_type']   = key

@@ -119,7 +119,7 @@ drivers =[
 'i2c-i801',
 'i2c-mux',
 'i2c-mux-pca954x',
-'i2c-mux-pca9541',
+'inv-mux-9641',
 'i2c-dev',
 'ucd9000',
 #inv-modules
@@ -134,14 +134,8 @@ drivers =[
 def system_install():
     global FORCE
 
-    #remove default drivers to avoid modprobe order conflicts
-    status, output = exec_cmd("rmmod i2c_ismt ", 1)
-    status, output = exec_cmd("rmmod i2c-i801 ", 1)
-    status, output = exec_cmd("rmmod gpio_ich ", 1)
-    status, output = exec_cmd("rmmod lpc_ich ", 1)
-
     #insert extra module
-    status, output = exec_cmd("insmod /lib/modules/4.9.0-11-2-amd64/kernel/drivers/gpio/gpio-ich.ko gpiobase=0",1)
+    status, output = exec_cmd("modprobe gpio-ich gpiobase=0",1)
 
     #install drivers
     for i in range(0,len(drivers)):
