@@ -58,6 +58,11 @@ EXPECTED_DIR = "/run/s6-expected"
 # written by finish / the supervisorctl shim; keep in sync with supervisorctl.SUPER_DIR) and
 # `stop-request` (supervisorctl is stopping the service).
 SUPER_DIR = "/run/s6-super"
+# The base image's rsyslog drop-in (etc/rsyslog.d/supervisor.conf) tails this file with imfile.
+# supervisord creates it; the s6 shim does not, so every container start would log
+# "imfile: on startup file ... does not exist" at ERR. We leave rsyslog's config stock and just
+# supply the (empty) file it names.
+SUPERVISOR_LOG = "/var/log/supervisor/supervisord.log"
 DEFAULT_BASE_CONF = "/etc/supervisor/supervisord.conf"
 DEFAULT_CONFD_GLOB = "/etc/supervisor/conf.d/*.conf"
 DEFAULT_CRITICAL = "/etc/supervisor/critical_processes"
@@ -817,6 +822,23 @@ def build_runtime_servicedir(pname, attrs, group_of, dest, autostart=True):
 REAL_SUPERVISORD = ("/usr/local/bin/supervisord.real", "/usr/bin/supervisord.real")
 
 
+def ensure_supervisor_log(path=None):
+    """Create an empty supervisord.log if missing (mkdir -p its directory); never truncates.
+
+    Best-effort: a failure only warns, it must never block container boot. Returns True when the
+    file exists afterwards.
+    """
+    path = path or SUPERVISOR_LOG
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)   # no O_TRUNC: keep existing content
+        os.close(fd)
+        return True
+    except Exception as e:
+        _warn("cannot create %s (rsyslog imfile will log an ERR): %r" % (path, e))
+        return False
+
+
 def exec_real(argv):
     """Replace this process with the real supervisord (kept as *.real)."""
     for real in REAL_SUPERVISORD:
@@ -874,6 +896,9 @@ def main(argv):
         sys.stderr.write("supervisord2s6: conversion failed: %r\n" % e)
         sys.stderr.flush()
         raise
+    # After convert() and before /init (hence before rsyslogd starts); /var/log/supervisor is
+    # tmpfs, so this must run on every start. Real-start path only (not --emit-only / fallback).
+    ensure_supervisor_log()
     os.execv("/init", ["/init"])
 
 
