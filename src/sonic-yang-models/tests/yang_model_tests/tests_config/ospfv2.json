@@ -1,0 +1,661 @@
+{
+    "OSPFV2_ROUTER_DEFAULT_VRF_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true",
+                        "router-id": "1.1.1.1"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_CUSTOM_VRF_TEST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf_ospf"
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "Vrf_ospf",
+                        "enable": "true",
+                        "router-id": "2.2.2.2"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_ALL_PARAMS_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true",
+                        "router-id": "10.10.10.1",
+                        "abr-type": "STANDARD",
+                        "auto-cost-reference-bandwidth": "100000",
+                        "ospf-rfc1583-compatible": "false",
+                        "passive-interface-default": "false",
+                        "default-metric": "20",
+                        "write-multiplier": "20",
+                        "log-adjacency-changes": "DETAIL",
+                        "distance-all": "110",
+                        "distance-intra-area": "50",
+                        "distance-inter-area": "60",
+                        "distance-external": "70",
+                        "spf-initial-delay": "200",
+                        "spf-maximum-delay": "5000",
+                        "spf-throttle-delay": "1000",
+                        "lsa-min-interval-timer": "1000",
+                        "lsa-min-arrival-timer": "1000",
+                        "lsa-refresh-timer": "1800",
+                        "max-metric-administrative": "false",
+                        "graceful-restart-enable": "true",
+                        "graceful-restart-grace-period": "120",
+                        "graceful-restart-helper-enable": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_AREA_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA": {
+                "OSPFV2_ROUTER_AREA_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.1",
+                        "authentication": "MD5HMAC",
+                        "shortcut": "DEFAULT",
+                        "import-list": "OSPF_IMPORT_LIST",
+                        "export-list": "OSPF_EXPORT_LIST",
+                        "filter-list-in": "OSPF_FILTER_IN",
+                        "filter-list-out": "OSPF_FILTER_OUT"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_AREA_STUB_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA": {
+                "OSPFV2_ROUTER_AREA_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.2",
+                        "stub": "true",
+                        "stub-no-summary": "true",
+                        "stub-default-cost": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_AREA_NETWORK_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA_NETWORK": {
+                "OSPFV2_ROUTER_AREA_NETWORK_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.0",
+                        "network": "10.0.0.0/8"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.1",
+                        "network": "192.168.1.0/24"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_AREA_VIRTUAL_LINK_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA_VIRTUAL_LINK": {
+                "OSPFV2_ROUTER_AREA_VIRTUAL_LINK_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.1",
+                        "nbr_router_id": "10.0.0.2",
+                        "enable": "true",
+                        "hello-interval": "10",
+                        "dead-interval": "40",
+                        "retransmission-interval": "5",
+                        "transmit-delay": "1",
+                        "authentication-type": "MD5HMAC",
+                        "authentication-key-id": "1",
+                        "authentication-md5-key": "ospfmd5key"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_AREA_RANGE_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE": {
+                "OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.1",
+                        "prefix": "192.168.0.0/24",
+                        "advertise": "true",
+                        "metric": "100",
+                        "substitue-prefix": "192.168.1.0/24"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_IMPORT_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_DISTRIBUTE_ROUTE": {
+                "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "protocol": "BGP",
+                        "direction": "IMPORT",
+                        "metric": "100",
+                        "metric-type": "TYPE_2",
+                        "route-map": "SET_BGP_METRIC"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "protocol": "STATIC",
+                        "direction": "IMPORT",
+                        "metric": "200",
+                        "metric-type": "TYPE_1"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "protocol": "CONNECTED",
+                        "direction": "IMPORT"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_DEFAULT_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_DISTRIBUTE_ROUTE": {
+                "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "protocol": "DEFAULT_ROUTE",
+                        "direction": "IMPORT",
+                        "always": "true",
+                        "metric": "10",
+                        "metric-type": "TYPE_1"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_EXPORT_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_DISTRIBUTE_ROUTE": {
+                "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "protocol": "BGP",
+                        "direction": "EXPORT",
+                        "access-list": "FILTER_BGP_OUT"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "protocol": "STATIC",
+                        "direction": "EXPORT",
+                        "access-list": "FILTER_STATIC_OUT"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_INTERFACE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "Eth0",
+                        "lanes": "0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_INTERFACE": {
+                "OSPFV2_INTERFACE_LIST": [
+                    {
+                        "if_name": "Ethernet0",
+                        "if_addr": "192.168.1.1",
+                        "vrf_name": "default",
+                        "area-id": "0.0.0.0",
+                        "metric": "100",
+                        "priority": "1",
+                        "hello-interval": "10",
+                        "dead-interval": "40",
+                        "retransmission-interval": "5",
+                        "transmit-delay": "1",
+                        "authentication-type": "TEXT",
+                        "authentication-key": "secret01"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_INTERFACE_ALL_ADDR_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet4",
+                        "alias": "Eth4",
+                        "lanes": "4",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_INTERFACE": {
+                "OSPFV2_INTERFACE_LIST": [
+                    {
+                        "if_name": "Ethernet4",
+                        "if_addr": "0.0.0.0",
+                        "vrf_name": "default",
+                        "area-id": "0.0.0.1",
+                        "network-type": "POINT_TO_POINT_NETWORK",
+                        "bfd-enable": "true",
+                        "metric": "10",
+                        "hello-interval": "10",
+                        "dead-interval": "40",
+                        "mtu-ignore": "true",
+                        "authentication-type": "MD5HMAC",
+                        "authentication-key-id": "5",
+                        "authentication-md5-key": "ospfmd5key"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_PASSIVE_INTERFACE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet4",
+                        "alias": "Eth4",
+                        "lanes": "4",
+                        "speed": 25000
+                    },
+                    {
+                        "name": "Ethernet8",
+                        "alias": "Eth8",
+                        "lanes": "8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_PASSIVE_INTERFACE": {
+                "OSPFV2_ROUTER_PASSIVE_INTERFACE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "if_name": "Ethernet4",
+                        "if_addr": "10.0.0.1"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "if_name": "Ethernet8",
+                        "if_addr": "0.0.0.0"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_INTERFACE_BFD_WITH_ADDR_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "Eth0",
+                        "lanes": "0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_INTERFACE": {
+                "OSPFV2_INTERFACE_LIST": [
+                    {
+                        "if_name": "Ethernet0",
+                        "if_addr": "192.168.1.1",
+                        "vrf_name": "default",
+                        "bfd-enable": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_INTERFACE_NETWORK_TYPE_WITH_ADDR_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "Eth0",
+                        "lanes": "0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_INTERFACE": {
+                "OSPFV2_INTERFACE_LIST": [
+                    {
+                        "if_name": "Ethernet0",
+                        "if_addr": "192.168.1.1",
+                        "vrf_name": "default",
+                        "network-type": "BROADCAST_NETWORK"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_INVALID_ROUTER_ID_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true",
+                        "router-id": "not.a.valid.ip"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_INVALID_ABR_TYPE_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true",
+                        "abr-type": "ospf-abr"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_INVALID_WRITE_MULTIPLIER_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true",
+                        "write-multiplier": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_AREA_INVALID_AUTH_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA": {
+                "OSPFV2_ROUTER_AREA_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.1",
+                        "authentication": "PLAINTEXT"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_DISTRIBUTE_INVALID_PROTOCOL_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_DISTRIBUTE_ROUTE": {
+                "OSPFV2_ROUTER_DISTRIBUTE_ROUTE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "protocol": "ISIS",
+                        "direction": "IMPORT"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_INTERFACE_METRIC_ZERO_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "Eth0",
+                        "lanes": "0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_INTERFACE": {
+                "OSPFV2_INTERFACE_LIST": [
+                    {
+                        "if_name": "Ethernet0",
+                        "if_addr": "192.168.1.1",
+                        "vrf_name": "default",
+                        "area-id": "0.0.0.0",
+                        "metric": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_INTERFACE_HELLO_MULTIPLIER_DEAD_INTERVAL_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "Eth0",
+                        "lanes": "0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_INTERFACE": {
+                "OSPFV2_INTERFACE_LIST": [
+                    {
+                        "if_name": "Ethernet0",
+                        "if_addr": "192.168.1.1",
+                        "vrf_name": "default",
+                        "area-id": "0.0.0.0",
+                        "dead-interval": "40",
+                        "hello-multiplier": "3"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_VLINK_MD5_KEY_ID_ONLY_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA_VIRTUAL_LINK": {
+                "OSPFV2_ROUTER_AREA_VIRTUAL_LINK_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.1",
+                        "nbr_router_id": "10.0.0.2",
+                        "authentication-type": "MD5HMAC",
+                        "authentication-key-id": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_VLINK_MD5_KEY_ONLY_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true"
+                    }
+                ]
+            },
+            "sonic-ospfv2:OSPFV2_ROUTER_AREA_VIRTUAL_LINK": {
+                "OSPFV2_ROUTER_AREA_VIRTUAL_LINK_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "area_id": "0.0.0.1",
+                        "nbr_router_id": "10.0.0.2",
+                        "authentication-type": "MD5HMAC",
+                        "authentication-md5-key": "ospfmd5key"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_SPF_TIMER_ONE_OF_THREE_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true",
+                        "spf-initial-delay": "200"
+                    }
+                ]
+            }
+        }
+    },
+    "OSPFV2_ROUTER_SPF_TIMER_TWO_OF_THREE_TEST": {
+        "sonic-ospfv2:sonic-ospfv2": {
+            "sonic-ospfv2:OSPFV2_ROUTER": {
+                "OSPFV2_ROUTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enable": "true",
+                        "spf-initial-delay": "200",
+                        "spf-maximum-delay": "5000"
+                    }
+                ]
+            }
+        }
+    }
+}
