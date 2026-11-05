@@ -544,7 +544,7 @@ static ssize_t system_led_show(struct device *dev, struct device_attribute *deva
     if (ret < 0)
         return sprintf(buf, "read error");
 
-    data = (u8)(ret & 0x30) >> 5;
+    data = (u8)(ret & 0x30) >> 4;
 
     switch (data)
     {
@@ -876,6 +876,7 @@ static ssize_t watchdog_store(struct device *dev, struct device_attribute *devat
     if (err)
         return err;
 
+    data = (u8) val;
     if (data)
     {
         ret = i2c_smbus_write_byte_data(pdata[cpu_cpld].client, 0x7, data);
@@ -996,9 +997,9 @@ static SENSOR_DEVICE_ATTR(fan2_dir, S_IRUGO, fan_dir_show, NULL, FAN_2);
 static SENSOR_DEVICE_ATTR(fan0_prs, S_IRUGO, fan_prs_show, NULL, FAN_0);
 static SENSOR_DEVICE_ATTR(fan1_prs, S_IRUGO, fan_prs_show, NULL, FAN_1);
 static SENSOR_DEVICE_ATTR(fan2_prs, S_IRUGO, fan_prs_show, NULL, FAN_2);
-static SENSOR_DEVICE_ATTR(fan0_led, S_IRUGO, fani_led_show, fani_led_store, FAN_0);
-static SENSOR_DEVICE_ATTR(fan1_led, S_IRUGO, fani_led_show, fani_led_store, FAN_1);
-static SENSOR_DEVICE_ATTR(fan2_led, S_IRUGO, fani_led_show, fani_led_store, FAN_2);
+static SENSOR_DEVICE_ATTR(fan0_led, S_IRUGO | S_IWUSR, fani_led_show, fani_led_store, FAN_0);
+static SENSOR_DEVICE_ATTR(fan1_led, S_IRUGO | S_IWUSR, fani_led_show, fani_led_store, FAN_1);
+static SENSOR_DEVICE_ATTR(fan2_led, S_IRUGO | S_IWUSR, fani_led_show, fani_led_store, FAN_2);
 
 static struct attribute *n3248pxe_cpld_attrs[] = {
     &dev_attr_sfp_txdis.attr,
