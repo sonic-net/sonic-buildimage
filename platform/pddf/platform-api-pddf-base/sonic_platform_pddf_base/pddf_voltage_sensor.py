@@ -56,6 +56,14 @@ class PddfVoltageSensor(VoltageSensorBase):
         except (ValueError, TypeError):
             self._decimate_factor = 1.0
 
+        # Corrects a rail read back through a divider. Unlike multi/decimate it
+        # also applies to sysfs thresholds, which the chip reports in the same
+        # divided units as the reading.
+        try:
+            self._scaling_factor = float(self._top_dev_attr.get('scaling_factor', 1))
+        except (ValueError, TypeError):
+            self._scaling_factor = 1.0
+
     def get_name(self):
         return self.display_name
 
@@ -80,8 +88,10 @@ class PddfVoltageSensor(VoltageSensorBase):
         """Apply multi/decimate scaling.  Returns millivolts (whole number)."""
         if raw_value is None or self._decimate_factor == 0:
             return None
-        # Truncate to integer millivolts, return as float for API consistency
-        return float(int(raw_value * self._multi_factor / self._decimate_factor))
+        # Truncate to integer millivolts, return as float for API consistency.
+        # round() first so float error (e.g. 2830 * 1.2) doesn't lose a millivolt.
+        scaled = raw_value * self._multi_factor * self._scaling_factor / self._decimate_factor
+        return float(int(round(scaled, 3)))
 
     # ------------------------------------------------------------------ #
     #  Thresholds — sysfs first (chip hw), JSON dev_attr fallback
@@ -97,7 +107,7 @@ class PddfVoltageSensor(VoltageSensorBase):
         if not output:
             return None
         try:
-            return float(output['status'])
+            return round(float(output['status']) * self._scaling_factor, 3)
         except (KeyError, TypeError, ValueError):
             return None
 
