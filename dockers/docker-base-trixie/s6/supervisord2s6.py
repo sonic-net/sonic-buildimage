@@ -713,7 +713,8 @@ def convert(config=None, critical_path=DEFAULT_CRITICAL, outdir=S6_RC_D,
 # convert() records which [program:x] sections were loaded (and a digest of each) in
 # LOADED_MANIFEST; the supervisorctl shim diffs the config files against it (reread) and adds
 # the new programs to the live s6 scan directory (update) with the same generate() code the
-# boot-time conversion uses.  Changed/removed programs cannot be applied live.
+# boot-time conversion uses.  Changed non-critical programs are re-rendered and swapped into their
+# live servicedir (apply_changed); removed and critical ones cannot be applied live.
 # ---------------------------------------------------------------------------
 import hashlib
 import json
@@ -790,17 +791,17 @@ def current_config(manifest):
     return sections, order, parse_groups(sections, order)
 
 
-def build_runtime_servicedir(pname, attrs, group_of, dest, autostart=True):
-    """Create the live servicedir `dest` of a program added after boot.
+def render_servicedir(pname, attrs, group_of, parent, autostart=True):
+    """Render the live servicedir of one program into a scratch tree under `parent`.
+    -> (scratch, sd): `sd` is the servicedir, `scratch` the temp dir the caller must rmtree.
 
-    The files come from generate() itself (single-program call into a scratch tree, always a
-    non-critical longrun: supervisord only reads critical_processes at start, so a program added
-    later cannot halt the container), minus the s6-rc-source-only entries (type, dependencies.d,
+    The files come from generate() itself (single-program call, always a non-critical longrun:
+    supervisord only reads critical_processes at start, so a program added or changed later
+    cannot halt the container), minus the s6-rc-source-only entries (type, dependencies.d,
     managed marker).  supervisor-name / supervisor-meta stay in both places (top level and
     data/), so the shim finds them the same way as on a compiled boot service.
     A program with autostart=false gets a ./down file, so s6-supervise
-    leaves it stopped until `supervisorctl start`.  dest appears atomically (rename)."""
-    parent = os.path.dirname(dest)
+    leaves it stopped until `supervisorctl start`."""
     os.makedirs(parent, exist_ok=True)
     scratch = tempfile.mkdtemp(prefix=".gen-", dir=parent)
     try:
@@ -812,9 +813,89 @@ def build_runtime_servicedir(pname, attrs, group_of, dest, autostart=True):
         shutil.rmtree(os.path.join(sd, "dependencies.d"))
         if not autostart:
             _write(os.path.join(sd, "down"), "")
+    except BaseException:
+        shutil.rmtree(scratch, ignore_errors=True)
+        raise
+    return scratch, sd
+
+
+def build_runtime_servicedir(pname, attrs, group_of, dest, autostart=True):
+    """Create the live servicedir `dest` of a program added after boot (see render_servicedir).
+    dest appears atomically (rename)."""
+    scratch, sd = render_servicedir(pname, attrs, group_of, os.path.dirname(dest), autostart)
+    try:
         if os.path.lexists(dest):  # stale leftover of a previous run of this container
             shutil.rmtree(dest)
         os.rename(sd, dest)
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
+# Files of a rendered servicedir that a live servicedir may lack (generate() only writes them for some
+# configs): removed from the live dir when the new render does not have them, else a stale one would
+# outlive the change (e.g. a finish script after autorestart=true, startsecs=0 dropped it).
+SWAP_OPTIONAL = ("finish", "timeout-finish")
+SHIM_TOP_FILES = ("supervisor-name", "supervisor-meta")
+
+
+def _replace_file(src, dst):
+    """Copy src over dst atomically (same-directory temp + rename; mode kept).  Never writes through
+    dst, so a symlinked or hard-linked dst keeps its target unchanged."""
+    tmp = os.path.join(os.path.dirname(dst), ".%s.new" % os.path.basename(dst))
+    shutil.copyfile(src, tmp)
+    shutil.copymode(src, tmp)
+    os.replace(tmp, dst)
+
+
+def swap_servicedir(rendered, live):
+    """Replace the files of the live servicedir `live` (/run/service/<svc> is followed through its
+    symlink: /run/s6-rc/servicedirs/<svc> for a boot service, /run/s6-dyn/<svc> for an added one)
+    with those of the freshly `rendered` servicedir, file by file and atomically.
+
+    In place, so the s6-supervise running on the directory keeps its supervise/ and event/ state and
+    its up/down verdict; the caller stops the service first and starts it afterwards.  ./down is the
+    default state at s6-supervise start only: it is synced for directories we built ourselves
+    (DYN_DIR) so they stay identical to a fresh render, and left alone in a compiled boot servicedir
+    (s6-rc never replicates it).  -> sorted list of the top-level files written."""
+    live = os.path.realpath(live)
+    # supervisor-name / supervisor-meta are also written at the top level for runtime-built dirs;
+    # s6-rc-compile drops them from a boot service, whose dir must stay what a restart would make
+    top = sorted(f for f in os.listdir(rendered)
+                 if f != "down" and os.path.isfile(os.path.join(rendered, f))
+                 and (f not in SHIM_TOP_FILES or os.path.lexists(os.path.join(live, f))))
+    for f in top:
+        _replace_file(os.path.join(rendered, f), os.path.join(live, f))
+    rdata = os.path.join(rendered, SHIM_DATA_DIR)
+    if os.path.isdir(rdata):
+        os.makedirs(os.path.join(live, SHIM_DATA_DIR), exist_ok=True)
+        for f in sorted(os.listdir(rdata)):
+            _replace_file(os.path.join(rdata, f), os.path.join(live, SHIM_DATA_DIR, f))
+    for f in SWAP_OPTIONAL:
+        if f not in top:
+            try:
+                os.remove(os.path.join(live, f))
+            except FileNotFoundError:
+                pass
+    if os.path.dirname(live) == os.path.realpath(DYN_DIR):
+        down = os.path.join(live, "down")
+        if os.path.exists(os.path.join(rendered, "down")):
+            _write(down, "")
+        else:
+            try:
+                os.remove(down)
+            except FileNotFoundError:
+                pass
+    return top
+
+
+def apply_changed(pname, attrs, group_of, live, autostart=True):
+    """Re-render the program `pname` from its (changed) config and swap the result into its live
+    servicedir `live` (render_servicedir + swap_servicedir).  Does not touch the process: stopping
+    it first and starting it afterwards is the caller's job (supervisorctl update).  A render error
+    (e.g. unbalanced quotes in command=) raises before the live directory is touched."""
+    scratch, sd = render_servicedir(pname, attrs, group_of, DYN_DIR, autostart)
+    try:
+        return swap_servicedir(sd, live)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
