@@ -28,6 +28,7 @@ try:
     import logging.config
     import time  # this is only being used as part of the example
     import signal
+    import sys
     from as5712_54x.fanutil import FanUtil
     from as5712_54x.thermalutil import ThermalUtil
 except ImportError as e:
