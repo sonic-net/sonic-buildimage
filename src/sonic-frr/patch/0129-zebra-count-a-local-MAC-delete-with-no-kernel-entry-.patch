@@ -3,15 +3,27 @@ From: Tamer Ahmed <tamerahmed@microsoft.com>
 Date: Tue, 6 Oct 2026 16:48:10 -0700
 Subject: [PATCH] zebra: count a local MAC delete with no kernel entry as done
 
-When the kernel has no entry for a local MAC that zebra deletes, it
-answers ENOENT and the dataplane context fails. A failed context skips
-the providers after the kernel, so a dataplane plugin never sees the
-delete: a MAC pin it pushed to the hardware stays there after zebra
-removed it, for instance when the kernel entry was deleted by hand.
+In SONiC's FPM MAC sync mode, dplane_fpm_sonic installs a sync MAC (a
+host the Ethernet Segment peer advertises) in the ASIC as a static entry
+when zebra writes the MAC as static, and removes the entry when zebra
+deletes the MAC. It sees zebra's MAC writes after the kernel has made
+them.
 
-The state zebra asked for holds, so report such a delete as done.
-Remote MAC deletes are left as they are: they also target the VXLAN
-device entry, which an ENOENT on the bridge entry leaves in place.
+When the kernel has no entry for the MAC, it answers zebra's delete with
+ENOENT and the dataplane request fails. A failed request goes back to
+zebra without passing the dataplane providers after the kernel
+(dplane_thread_loop()), so dplane_fpm_sonic never sees the delete: the
+ASIC keeps the static entry, and every FPM reconnect installs it again.
+zebra is the only writer of these kernel entries, but in this mode it
+ignores the kernel's FDB messages for local ports, so it does not notice
+when an entry is removed outside FRR, for instance by bridge fdb del.
+
+zebra asked for the entry to be gone, and it is, so report such a delete
+as done, as netlink_parse_error() already does for a route delete
+answered with ENODEV or ESRCH. Remote MAC deletes still fail on ENOENT:
+one request removes both the bridge entry and the VXLAN device entry,
+and the kernel stops at the bridge entry's ENOENT, so the VXLAN device
+entry may still be there.
 
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---

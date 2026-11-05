@@ -3,21 +3,36 @@ From: Tamer Ahmed <tamerahmed@microsoft.com>
 Date: Mon, 2 Nov 2026 08:58:02 -0800
 Subject: [PATCH] zebra: let a dataplane module mark the local MACs it writes
 
-A dataplane module that learns local MACs writes their kernel bridge FDB
-entries itself: the plain entry of a MAC its hardware has and, once the
-hardware loses it, the removal of that entry, or the static entry zebra
-had written for the MAC, which the plain one replaced. zebra writes such
-entries too, and while a module learns local MACs a plain one ends a
-static entry: zebra writes one when a MAC stops being static, and when
-it removes an L2VNI it writes one for each static MAC before it deletes
-the EVPN. A module that pins the static entries in its hardware sees all
-these writes, but cannot tell its own from zebra's, so it cannot tell
-which one ends a pin, least of all once the L2VNI is gone and zebra's
-state no longer shows it.
+In SONiC's FPM MAC sync mode a local MAC has two sources: the data
+plane, when the ASIC learnt it, and the control plane, when the Ethernet
+Segment peer advertises it (a sync MAC). The kernel bridge FDB holds the
+MAC while either source has it, and two parts of zebra write the
+entries. zebra's EVPN code writes them for the control plane: a sync MAC
+as static while this switch has it only from the peer (local-inactive),
+then as a normal entry when it stops being static, or a delete when
+zebra flushes it. dplane_fpm_sonic, the dataplane plugin that talks FPM
+to fpmsyncd, writes them for the data plane: a normal entry while the
+ASIC has the MAC and, once the ASIC loses it, the removal of that entry,
+or on a VLAN with no L2VNI the sync MAC's static entry put back. In
+kernel mode fdbsyncd wrote the data-plane entries; in this mode it does
+not, and zebra's EVPN code writes only local-inactive MACs in
+mac-ext-learn mode and keeps no MACs for a VLAN with no L2VNI.
 
-Add dplane_local_mac_learnt() and dplane_local_mac_learnt_del(), which
-write and remove the same entries, marked DPLANE_MAC_LEARNT. The kernel
-write does not look at the flag.
+dplane_fpm_sonic also installs each sync MAC in the ASIC as a static
+entry, and removes it, following zebra's writes as they pass through the
+dataplane: a static write installs the entry, and a normal write, or a
+delete on the same port, removes it. dplane_fpm_sonic's own writes pass
+there too and look like zebra's, so it cannot tell which writes install
+or end a static entry. zebra's MAC state does not settle it: when zebra
+removes an L2VNI, it writes a normal entry for each static MAC and then
+deletes the EVPN with its MACs.
+
+Add dplane_local_mac_learnt() and dplane_local_mac_learnt_del() for
+dplane_fpm_sonic's writes. They write the same kernel entries as
+dplane_local_mac_add() and dplane_local_mac_del() and mark the request
+DPLANE_MAC_LEARNT. The kernel write does not look at the flag;
+dplane_fpm_sonic's own writes then neither install nor remove a static
+entry in the ASIC.
 
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
