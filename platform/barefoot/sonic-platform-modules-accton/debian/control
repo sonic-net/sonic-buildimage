@@ -7,6 +7,6 @@ Standards-Version: 3.9.3
 
 Package: sonic-platform-accton-wedge100bf-32qs
 Architecture: amd64
-Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Depends: linux-image-5.10.0-18-2-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
