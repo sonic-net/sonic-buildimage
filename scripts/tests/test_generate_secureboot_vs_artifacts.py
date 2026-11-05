@@ -284,35 +284,3 @@ def test_pipeline_fetches_and_verifies_triggering_pr_before_signing(tmp_path, mi
         assert (target / "marker").read_text() == "PR code"
 
 
-def test_pipeline_reuses_workdir_without_preliminary_vars_file(tmp_path):
-    pipeline_dir = SCRIPT.parents[1] / ".azure-pipelines"
-    pipeline = yaml.safe_load(
-        (pipeline_dir / "azure-pipelines-build-secureboot-vs.yml").read_text()
-    )
-    variables = pipeline["stages"][0]["jobs"][0]["parameters"]["jobGroups"][0]["variables"]
-    workdir = variables["secure_boot_workdir"].replace("$(Build.SourcesDirectory)", str(tmp_path))
-    Path(workdir).mkdir()
-    (tmp_path / "target").mkdir()
-    (tmp_path / "target/sonic-vs.img-uefi_vars.fd").touch()
-    shared = yaml.safe_load((pipeline_dir / "azure-pipelines-build.yml").read_text())
-    steps = shared["jobs"][0]["parameters"]["buildSteps"]
-    script = next(step["bash"] for step in steps if "bash" in step)
-    for name, value in {
-        "GROUP_NAME": "vs", "PLATFORM_ARCH": "amd64", "dbg_image": "no",
-        "asan_image": "no", "K8S_MASTER_CHANGED": "NO", "secure_boot_image": "yes",
-        "secure_boot_workdir": workdir, "Build.BuildId": "test-build",
-        "Build.Reason": "PullRequest",
-    }.items():
-        script = script.replace(f"$({name})", value)
-    result = subprocess.run(
-        ["bash", "-c", 'make() { :; }\npython3() { printf "%s\\n" "$@" > invocation; }\n' + script],
-        cwd=tmp_path, env=dict(os.environ, BUILD_OPTIONS=""), capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0, result.stderr
-    assert (tmp_path / "invocation").read_text().splitlines() == [
-        "scripts/generate_secureboot_vs_artifacts.py",
-        "--workdir", workdir,
-        "--ovmf-vars", "target/sonic-vs.img-uefi_vars.fd",
-        "--output-vars", "target/sonic-vs_vars.fd",
-        "--build-id", "test-build", "--reuse-keys",
-    ]

@@ -1,3 +1,4 @@
+# Legacy entry point; regular VS builds also publish BIOS and Secure Boot images.
 pr: none
 trigger: none
 
@@ -73,40 +74,10 @@ stages:
             SOURCE_REPOSITORY: ${{ parameters.SOURCE_REPOSITORY }}
             SOURCE_REF: ${{ parameters.SOURCE_REF }}
             SOURCE_COMMIT: ${{ parameters.SOURCE_COMMIT }}
-      - bash: |
-          set -euo pipefail
-          sudo apt-get update
-          secureboot_dir="$(Build.SourcesDirectory)/.secureboot-ci"
-          sudo apt-get install -y efitools ovmf python3-venv
-          python3 -m venv "$secureboot_dir/venv"
-          "$secureboot_dir/venv/bin/python" -m pip install \
-            --disable-pip-version-check virt-firmware==26.5.4
-          echo "##vso[task.prependpath]$secureboot_dir/venv/bin"
-          export PATH="$secureboot_dir/venv/bin:$PATH"
-
-          python3 scripts/generate_secureboot_vs_artifacts.py \
-            --workdir "$secureboot_dir" \
-            --output-vars "$secureboot_dir/sonic-vs_vars.fd" \
-            --build-id "$(Build.BuildId)"
-
-          {
-            echo "SECURE_UPGRADE_MODE := dev"
-            echo "SECURE_UPGRADE_DEV_SIGNING_KEY := $secureboot_dir/DB.key"
-            echo "SECURE_UPGRADE_SIGNING_CERT := $secureboot_dir/DB.crt"
-            echo "SECURE_UPGRADE_KERNEL_CAFILE := $secureboot_dir/DB.crt"
-            echo "SECURE_BOOT_DB_CERT := $secureboot_dir/DB.auth"
-          } >> rules/config.user
-        displayName: Generate ephemeral Secure Boot hierarchy
-      postSteps:
-      - bash: |
-          rm -rf "$(Build.SourcesDirectory)/.secureboot-ci"
-        condition: always()
-        displayName: Remove ephemeral Secure Boot private keys
       jobGroups:
       - name: vs
         variables:
           secure_boot_image: yes
-          secure_boot_workdir: $(Build.SourcesDirectory)/.secureboot-ci
       SUBMODULE: ${{ parameters.SUBMODULE }}
       ${{ if ne(parameters.SOURCE_REPOSITORY, '') }}:
         COMMIT_ID: ''
