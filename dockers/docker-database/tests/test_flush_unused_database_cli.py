@@ -23,6 +23,7 @@ def test_readiness_passes_socket_option_as_a_separate_argument(tmp_path, monkeyp
     package.swsscommon = types.SimpleNamespace(
         SonicDBConfig=types.SimpleNamespace(getInstanceList=lambda: {}))
     monkeypatch.setitem(sys.modules, 'swsscommon', package)
+    monkeypatch.setitem(sys.modules, 'swsscommon.redis', types.SimpleNamespace(connection_pool=lambda **kwargs: None))
     script = Path(__file__).resolve().parents[1] / 'flush_unused_database'
     runpy.run_path(str(script), run_name='__main__')
     assert json.loads(record.read_text()) == ['-s', 'PING']

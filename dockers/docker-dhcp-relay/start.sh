@@ -12,7 +12,7 @@ fi
 
 keys=$(sonic-db-cli -s COUNTERS_DB keys "DHCPV4_COUNTER_TABLE:*")
 for key in $keys; do
-    sonic-db-cli -s COUNTERS_DB del "$key"
+    sonic-db-cli -s --authenticate COUNTERS_DB del "$key"
 done
 
 # If our supervisor config has entries in the "dhcp-relay" group...

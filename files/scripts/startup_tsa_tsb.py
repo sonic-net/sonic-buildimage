@@ -69,7 +69,7 @@ def config_tsa():
     if tsa_ena == True:
         logger.log_info("Setting TSA-TSB service field in STATE_DB")
         subprocess.check_output([
-            'sonic-db-cli', '-s', 'STATE_DB', 'HSET', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running', 'OK'
+            'sonic-db-cli', '-s', '--authenticate', 'STATE_DB', 'HSET', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running', 'OK'
         ]).strip()
         logger.log_info("Configuring TSA")
         subprocess.check_output(['TSA']).strip()
@@ -100,7 +100,7 @@ def config_tsb():
 
     logger.log_info("Removing the TSA-TSB service field from STATE_DB")
     subprocess.check_output([
-        'sonic-db-cli', '-s', 'STATE_DB', 'HDEL', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running'
+        'sonic-db-cli', '-s', '--authenticate', 'STATE_DB', 'HDEL', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running'
     ]).strip()
 
     tsb_issued = True
