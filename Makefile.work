@@ -422,8 +422,9 @@ ifneq ($(SECURE_BOOT_DB_CERT),)
     SECURE_BOOT_DB_CERT_ABSPATH := $(shell realpath -ms -- '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))')
     DOCKER_RUN += -v '$(subst ','"'"',$(SECURE_BOOT_DB_CERT_ABSPATH):$(SECURE_BOOT_DB_CERT_ABSPATH):ro)'
 endif
-# Preserve the path through the nested shells by forwarding it in the container environment.
-DOCKER_RUN += -e 'SECURE_BOOT_DB_CERT=$(subst ','"'"',$(SECURE_BOOT_DB_CERT_ABSPATH))'
+# Quote for the build shell and su's single-quoted command, then escape the outer bash -c double quotes.
+SECURE_BOOT_DB_CERT_MAKE_ARG := $(subst ','"'"','$(subst ','"'"',$(SECURE_BOOT_DB_CERT_ABSPATH))')
+SECURE_BOOT_DB_CERT_MAKE_ARG_ESCAPED := $(subst ",\",$(subst `,\`,$(subst $$,\$$,$(subst \,\\,$(SECURE_BOOT_DB_CERT_MAKE_ARG)))))
 # Mount the Signing prod tool in the slave container
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
@@ -651,6 +652,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
                            SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
+                           SECURE_BOOT_DB_CERT=$(SECURE_BOOT_DB_CERT_MAKE_ARG_ESCAPED) \
                            SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
                            SECURE_UPGRADE_KERNEL_CAFILE=$(SECURE_UPGRADE_KERNEL_CAFILE) \
