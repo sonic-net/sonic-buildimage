@@ -65,9 +65,7 @@
 {% for rr_key, rr_val in ROUTE_REDISTRIBUTE.items() %}
 {% if vrf == rr_key[0] and af_str == rr_key[3] %}
 {% if 'route_map' in rr_val %}
-{% for rmap in rr_val['route_map'] %}
-  redistribute {{rr_key[1]}} route-map {{rmap}}
-{% endfor %}
+  redistribute {{rr_key[1]}} route-map {{rr_val['route_map']}}
 {% else %}
   redistribute {{rr_key[1]}}
 {% endif %}
