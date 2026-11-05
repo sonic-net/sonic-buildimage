@@ -33,6 +33,11 @@ sram_scan_enable.0=0
 tdma_timeout_usec.0=15000000
 tslam_timeout_usec.0=15000000
 
+# Broadcom community sai
+bcm_tunnel_term_compatible_mode.0=1
+sai_tunnel_support=2
+sai_tunnel_global_sip_mask_enable=1
+
 #BC0#
 dport_map_port_1=81
 dport_map_port_2=82
@@ -1281,6 +1286,8 @@ serdes_core_tx_polarity_flip_physical{254}=0xD6
 serdes_core_tx_polarity_flip_physical{255}=0xD6
 serdes_core_tx_polarity_flip_physical{256}=0xD6
 
+#Set default medium to copper
+serdes_lane_config_media_type=backplane
 #dport_map_port_38=129
 #portmap_38=257:10
 #dport_map_port_118=130

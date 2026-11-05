@@ -1,3 +1,5 @@
+
+#include <linux/string.h>
 #include <linux/module.h>
 #include <linux/jiffies.h>
 #include <linux/i2c.h>
@@ -15,16 +17,22 @@ ssize_t pddf_show_custom_psu_v_out(struct device *dev, struct device_attribute *
 extern PSU_SYSFS_ATTR_DATA access_psu_v_out;
 ssize_t pddf_get_custom_psu_model_name(struct device *dev, struct device_attribute *da, char *buf);
 ssize_t pddf_get_custom_psu_serial_num(struct device *dev, struct device_attribute *da, char *buf);
+ssize_t pddf_get_custom_psu_fan_dir(struct device *dev, struct device_attribute *da, char *buf);
 extern PSU_SYSFS_ATTR_DATA access_psu_model_name;
 extern PSU_SYSFS_ATTR_DATA access_psu_serial_num;
+extern PSU_SYSFS_ATTR_DATA access_psu_fan_dir;
 
-#define MAX_MODEL_NAME          16
+#define MAX_FAN_DIR_LEN         3
+#define MAX_MODEL_NAME          18
 #define MAX_SERIAL_NUMBER       19
+const char FAN_DIR_F2B[] = "F2B";
+const char FAN_DIR_B2F[] = "B2F";
 
 enum psu_type {
-    PSU_TYPE_AC_ACBEL_FSF019,
-    PSU_TYPE_AC_ACBEL_FSH082,
-    PSU_TYPE_YESM1300
+    PSU_TYPE_AC_ACBEL_FSF019_F2B, // FSF019-11G
+    PSU_TYPE_AC_ACBEL_FSH082_F2B, // FSH082-610G
+    PSU_TYPE_AC_ACBEL_FSH095_B2F, // FSH095-610G
+    PSU_TYPE_3Y_YESM1300AM // YESM1300AM-2A01P10(F2B) or YESM1300AM-2R01P10(B2F)
 };
 
 struct model_name_info {
@@ -33,6 +41,7 @@ struct model_name_info {
     u8 length;
     u8 chk_length;
     char* model_name;
+    const char* fan_dir;
 };
 
 struct serial_number_info {
@@ -42,22 +51,24 @@ struct serial_number_info {
     u8 chk_length;
     char* serial_number;
 };
-
 struct model_name_info models[] = {
-{PSU_TYPE_AC_ACBEL_FSF019, 0x15, 10, 7, "FSF019-"},
-{PSU_TYPE_AC_ACBEL_FSH082, 0x20, 10, 7, "FSH082-"},
-{PSU_TYPE_YESM1300, 0x20, 11, 8, "YESM1300"},
+    { PSU_TYPE_AC_ACBEL_FSF019_F2B, 0x15, 13, 6, "FSF019", FAN_DIR_F2B },
+    { PSU_TYPE_AC_ACBEL_FSH082_F2B, 0x20, 13, 6, "FSH082", FAN_DIR_F2B },
+    { PSU_TYPE_AC_ACBEL_FSH095_B2F, 0x20, 13, 6, "FSH095", FAN_DIR_B2F },
+    { PSU_TYPE_3Y_YESM1300AM, 0x20, 19, 8, "YESM1300", NULL }
 };
 
 struct serial_number_info serials[] = {
-{PSU_TYPE_AC_ACBEL_FSF019, 0x2e, 16, 16, "FSF019-"},
-{PSU_TYPE_AC_ACBEL_FSH082, 0x35, 18, 18, "FSH082-"},
-{PSU_TYPE_YESM1300,   0x35, 20, 19, "YESM1300"},
+    { PSU_TYPE_AC_ACBEL_FSF019_F2B, 0x2e, 16, 16, "FSF019" },
+    { PSU_TYPE_AC_ACBEL_FSH082_F2B, 0x35, 18, 18, "FSH082" },
+    { PSU_TYPE_AC_ACBEL_FSH095_B2F, 0x35, 18, 18, "FSH095" },
+    { PSU_TYPE_3Y_YESM1300AM, 0x35, 19, 19, "YESM1300" }
 };
 
-struct pddf_psu_data {    
+struct pddf_psu_data {
     char model_name[MAX_MODEL_NAME+1];
     char serial_number[MAX_SERIAL_NUMBER+1];
+    char fan_dir[MAX_FAN_DIR_LEN+1];
 };
 
 
@@ -89,7 +100,6 @@ static int pddf_psu_read_block(struct i2c_client *client, u8 command, u8 *data,
 
     return result;
 }
-
 
 static int two_complement_to_int(u16 data, u8 valid_bit, int mask)
 {
@@ -182,12 +192,12 @@ ssize_t pddf_get_custom_psu_serial_num(struct device *dev, struct device_attribu
 	struct i2c_client *client = to_i2c_client(dev);
 	struct pddf_psu_data data;
     int i, status;
-    
+    char buffer[32]={0};
+
     for (i = 0; i < ARRAY_SIZE(models); i++) {
-        memset(data.serial_number, 0, sizeof(data.serial_number));
 
         status = pddf_psu_read_block(client, models[i].offset,
-                                           data.model_name, models[i].length);
+                                           buffer, models[i].length);
         if (status < 0) {
             data.model_name[0] = '\0';
             dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x%x)\n",
@@ -195,16 +205,16 @@ ssize_t pddf_get_custom_psu_serial_num(struct device *dev, struct device_attribu
             return status;
         }
         else {
-            data.model_name[models[i].length] = '\0';
+            buffer[models[i].length >= (sizeof(buffer)-1)?(sizeof(buffer)-1):models[i].length] = '\0';
         }
 
         /* Determine if the model name is known, if not, read next index
          */
-        
-        if (strncmp(data.model_name, models[i].model_name, models[i].chk_length) == 0) {
+        data.serial_number[0] = '\0';
+        if (strncmp(buffer, models[i].model_name, models[i].chk_length) == 0) {
             status = pddf_psu_read_block(client, serials[i].offset,
                                            data.serial_number, serials[i].length);
-            
+
             if (status < 0) {
                 data.serial_number[0] = '\0';
                 dev_dbg(&client->dev, "unable to read serial num from (0x%x) offset(0x%x)\n",
@@ -212,10 +222,10 @@ ssize_t pddf_get_custom_psu_serial_num(struct device *dev, struct device_attribu
                 return status;
             }
             else {
-                data.serial_number[serials[i].length] = '\0';
+                data.serial_number[serials[i].length>=(sizeof(data.serial_number)-1)?(sizeof(data.serial_number)-1):serials[i].length] = '\0';
 	            return sprintf(buf, "%s\n", data.serial_number);
             }
-                        
+
             return 0;
         }
         else {
@@ -225,18 +235,17 @@ ssize_t pddf_get_custom_psu_serial_num(struct device *dev, struct device_attribu
 
     return -ENODATA;
 
-	
+
 }
 
 ssize_t pddf_get_custom_psu_model_name(struct device *dev, struct device_attribute *da, char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct pddf_psu_data data;	
+	struct pddf_psu_data data;
     int i, status;
-    
-    for (i = 0; i < ARRAY_SIZE(models); i++) {
-        memset(data.model_name, 0, sizeof(data.model_name));
 
+    data.model_name[0]='\0';
+    for (i = 0; i < ARRAY_SIZE(models); i++) {
         status = pddf_psu_read_block(client, models[i].offset,
                                            data.model_name, models[i].length);
         if (status < 0) {
@@ -246,48 +255,121 @@ ssize_t pddf_get_custom_psu_model_name(struct device *dev, struct device_attribu
             return status;
         }
         else {
-            data.model_name[models[i].length] = '\0';
+            data.model_name[models[i].length >= (sizeof(data.model_name)-1)?(sizeof(data.model_name)-1):models[i].length] = '\0';
         }
 
         /* Determine if the model name is known, if not, read next index
          */
         if (strncmp(data.model_name, models[i].model_name, models[i].chk_length) == 0) {
-            if (models[i].type==PSU_TYPE_YESM1300)
+            if (models[i].type==PSU_TYPE_3Y_YESM1300AM)
             {
-                if (data.model_name[9]=='A' && data.model_name[10]=='M')
-                {
-                    data.model_name[8]='A';
-                    data.model_name[9]='M';
-                    data.model_name[strlen("YESM1300AM")]='\0';
-                }
-                else  
-                    data.model_name[strlen("YESM1300")]='\0';
+                char buf[10] = {0};
+                memcpy(buf, &data.model_name[9], 10);
+                memcpy(&data.model_name[8], buf, 10);
+                data.model_name[MAX_MODEL_NAME] = '\0';
             }
+            else if ((models[i].type == PSU_TYPE_AC_ACBEL_FSH082_F2B) ||
+                     (models[i].type == PSU_TYPE_AC_ACBEL_FSH095_B2F) ||
+                     (models[i].type == PSU_TYPE_AC_ACBEL_FSF019_F2B)) {
+                      // Adjust model name for FSH082 / FSH095 / FSF019
+                char buf[4] = {0};
+                memcpy(buf, &data.model_name[9], 4);
+                memcpy(&data.model_name[7], buf, 4);
+                data.model_name[6] = '-';
+                data.model_name[11] = '\0';
+            }
+            else
+                data.model_name[0]='\0';
 
             return sprintf(buf, "%s\n", data.model_name);
         }
         else {
             data.model_name[0] = '\0';
         }
+
+
     }
 
     return -ENODATA;
 
 }
 
+ssize_t pddf_get_custom_psu_fan_dir(struct device *dev, struct device_attribute *da, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct pddf_psu_data data;
+    int i, status;
+    char buffer[32]={0};
 
+    data.fan_dir[0]='\0';
+    for (i = 0; i < ARRAY_SIZE(models); i++) {
+        buffer[0]='\0';
+        status = pddf_psu_read_block(client, models[i].offset,
+                                           buffer, models[i].length);
+        if (status < 0) {
+            buffer[0] = '\0';
+            dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x%x)\n",
+                                  client->addr, models[i].offset);
+            return status;
+        }
+        else {
+            buffer[models[i].length >= (sizeof(buffer)-1)?(sizeof(buffer)-1):models[i].length]='\0';
+        }
+
+        /* Determine if the model name is known, if not, read next index
+         */
+        if (strncmp(buffer, models[i].model_name, models[i].chk_length) == 0) {
+            if (models[i].type==PSU_TYPE_3Y_YESM1300AM)
+            {
+               /*YESM1300AM-2A01P10(F2B) or YESM1300AM-2R01P10(B2F)*/
+               if(strstr(buffer, "2A01P10"))
+               {
+                   snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "F2B");
+               }
+               else if(strstr(buffer, "2R01P10"))
+               {
+                   snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "B2F");
+               }
+
+            }
+            else if ((models[i].type == PSU_TYPE_AC_ACBEL_FSH082_F2B) ||
+                     (models[i].type == PSU_TYPE_AC_ACBEL_FSF019_F2B))
+            {
+                snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "F2B");
+            }
+            else if ((models[i].type == PSU_TYPE_AC_ACBEL_FSH095_B2F))
+            {
+                snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "B2F");
+            }
+
+            data.fan_dir[MAX_FAN_DIR_LEN] = '\0';
+
+            return sprintf(buf, "%s\n", data.fan_dir);
+        }
+        else {
+            data.fan_dir[0] = '\0';
+        }
+    }
+
+    return -ENODATA;
+
+
+}
 
 static int __init pddf_custom_psu_init(void)
 {
-	access_psu_v_out.show = pddf_show_custom_psu_v_out;
-	access_psu_v_out.do_get = NULL;
+    access_psu_v_out.show = pddf_show_custom_psu_v_out;
+    access_psu_v_out.do_get = NULL;
 
-	access_psu_serial_num.show = pddf_get_custom_psu_serial_num;
-	access_psu_serial_num.do_get = NULL;
-	
-	access_psu_model_name.show = pddf_get_custom_psu_model_name;
-	access_psu_model_name.do_get = NULL;	
-	
+    access_psu_serial_num.show = pddf_get_custom_psu_serial_num;
+    access_psu_serial_num.do_get = NULL;
+
+    access_psu_model_name.show = pddf_get_custom_psu_model_name;
+    access_psu_model_name.do_get = NULL;
+
+    access_psu_fan_dir.show = pddf_get_custom_psu_fan_dir;
+    access_psu_fan_dir.do_get = NULL;
+
 	return 0;
 }
 
