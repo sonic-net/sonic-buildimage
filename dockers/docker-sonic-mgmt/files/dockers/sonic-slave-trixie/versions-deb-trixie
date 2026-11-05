@@ -6,9 +6,10 @@ ant==1.10.15-1
 ant-optional==1.10.15-1
 apparmor==4.1.0-1
 appstream==1.0.5-1
+apt==3.0.4
 apt-file==3.3
-apt-transport-https==3.0.3
-apt-utils==3.0.3
+apt-transport-https==3.0.4
+apt-utils==3.0.4
 arch-test==0.22-1
 asciidoctor==2.0.23-1
 aspell==0.60.8.1-4
@@ -115,7 +116,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.9.2-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.9.3-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -233,9 +234,9 @@ hwdata==0.394-1
 i965-va-driver==2.4.1+dfsg1-2
 ibverbs-providers==56.1-1
 icu-devtools==76.1-4
-imagemagick==8:7.1.1.43+dfsg1-1+deb13u13
-imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u13
-imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u13
+imagemagick==8:7.1.1.43+dfsg1-1+deb13u14
+imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u14
+imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u14
 inetutils-telnet==2:2.6-3+deb13u3
 inkscape==1.4-6
 install-info==7.1.1-1+b1
@@ -295,6 +296,7 @@ libapparmor1==4.1.0-1
 libappconfig-perl==1.71-2.3
 libappstream5==1.0.5-1
 libapt-pkg-perl==0.1.42
+libapt-pkg7.0==3.0.4
 libarchive-cpio-perl==0.10-3
 libarchive-zip-perl==1.68-1
 libarchive13t64==3.7.4-4+deb13u1
@@ -884,8 +886,8 @@ libidn2-dev==2.3.8-2
 libiec61883-0==1.2.0-7
 libigdgmm12==22.7.2+ds1-1
 libijs-0.35==0.35-15.2
-libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u13
-libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u13
+libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u14
+libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u14
 libimagequant0==2.18.0-1+b2
 libimath-3-1-29t64==3.1.12-1+b3
 libimport-into-perl==1.002005-2
@@ -1013,9 +1015,9 @@ liblzo2-2==2.10-3+b1
 liblzo2-dev==2.10-3+b1
 libmagic-mgc==1:5.46-5
 libmagic1t64==1:5.46-5
-libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u13
-libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u13
-libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u13
+libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u14
+libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u14
+libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u14
 libmail-sendmail-perl==0.80-3
 libmailtools-perl==2.22-1
 libmariadb-dev==1:11.8.6-0+deb13u1
@@ -1704,7 +1706,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.113-1
+linux-libc-dev==6.12.115-2
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
