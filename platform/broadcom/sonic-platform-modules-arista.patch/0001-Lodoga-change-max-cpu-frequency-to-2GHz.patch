@@ -1,0 +1,93 @@
+From 8c8f0c11bd9bda663c1ef671ebc6314a3d6d625f Mon Sep 17 00:00:00 2001
+From: Boyang Yu <byu@arista.com>
+Date: Thu, 22 May 2025 22:26:18 +0000
+Subject: [PATCH] Lodoga: change max cpu frequency to 2GHz
+
+Change-Id: Ia2c39c92fe2e71f0b162b31a3e4aaa60da1042b4
+---
+ arista/components/cpu/crow.py | 17 +++++++++++++++++
+ arista/platforms/cpu/crow.py  |  4 ++++
+ arista/platforms/lodoga.py    |  6 +++++-
+ 3 files changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/arista/components/cpu/crow.py b/arista/components/cpu/crow.py
+index 3c8a2619..b1552dca 100644
+--- a/arista/components/cpu/crow.py
++++ b/arista/components/cpu/crow.py
+@@ -67,6 +67,23 @@ class DramScrubberQuirk(Quirk):
+       with open(path, 'w', encoding='utf8') as f:
+          f.write(str(self.rate))
+ 
++class CrowCpuFreqQuirk(Quirk):
++   def __init__(self, freq=2000000, description='change CPU max frequency'):
++      self.freq = freq
++      self.cores = 4
++      self.description = description
++
++   def __str__(self):
++      return self.description
++
++   def run(self, component):
++      if inSimulation():
++         return
++      pathFmt = '/sys/devices/system/cpu/cpu%d/cpufreq/scaling_max_freq'
++      for i in range(self.cores):
++         with open(pathFmt % i, 'w', encoding='utf8') as f:
++            f.write(str(self.freq))
++
+ class CrowSysCpld(SysCpld):
+    REGISTER_CLS = CrowCpldRegisters
+    QUIRKS = [
+diff --git a/arista/platforms/cpu/crow.py b/arista/platforms/cpu/crow.py
+index ba57c950..434337e6 100644
+--- a/arista/platforms/cpu/crow.py
++++ b/arista/platforms/cpu/crow.py
+@@ -65,3 +65,7 @@ class CrowCpu(Cpu):
+       }[num]
+       bridge = self.pciRoot.pciBridge(device=device, func=func)
+       return bridge.downstreamPort(port=0)
++
++   def setup(self):
++      self.applyQuirks()
++      super(CrowCpu, self).setup()
+diff --git a/arista/platforms/lodoga.py b/arista/platforms/lodoga.py
+index 1d56f865..049eb8d1 100644
+--- a/arista/platforms/lodoga.py
++++ b/arista/platforms/lodoga.py
+@@ -11,6 +11,7 @@ from ..components.cpld import (
+    SysCpldCommonRegistersV2,
+    SysCpldReloadCauseRegistersV2,
+ )
++from ..components.cpu.crow import CrowCpuFreqQuirk
+ from ..components.dpm.ucd import Ucd90120A, UcdGpi
+ from ..components.max6658 import Max6658
+ from ..components.psu.delta import DPS495CB, DPS500AB
+@@ -42,6 +43,7 @@ class LodogaPrimeCpldRegisters(SysCpldCommonRegistersV2):
+    pass
+ 
+ class LodogaBase(FixedSystem):
++   LODOGA_QUIRKS = []
+ 
+    PORTS = PortLayout(
+       (Qsfp28(i, leds=4) for i in incrange(1, 32)),
+@@ -51,7 +53,8 @@ class LodogaBase(FixedSystem):
+    def __init__(self, cpuCls, syscpldRegisters):
+       super().__init__()
+ 
+-      cpu = self.newComponent(cpuCls, registerCls=syscpldRegisters)
++      cpu = self.newComponent(cpuCls, registerCls=syscpldRegisters,
++                              quirks=self.LODOGA_QUIRKS)
+       self.cpu = cpu
+       self.syscpld = cpu.syscpld
+ 
+@@ -153,6 +156,7 @@ class Lodoga(LodogaBase):
+    PSU_CLS = [DPS495CB, DS495SPE]
+    SCD_PCI_PORT_IDX = 1
+    SWITCH_CHIPSET_PCI_PORT_IDX = 0
++   LODOGA_QUIRKS = [CrowCpuFreqQuirk()]
+ 
+    class SmBusAddresses(object):
+       TS  = 9
+-- 
+2.41.0
+
