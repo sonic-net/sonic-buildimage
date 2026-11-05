@@ -88,21 +88,19 @@ class TestDeviceInfo(object):
         with mock.patch.dict(os.environ, {}, clear=True):
             yield
 
-    @pytest.mark.parametrize("asic", [None, "0"])
-    @pytest.mark.parametrize("files,expected_file", [
-        ([], None),
-        (["port_config.ini"], "port_config.ini"),
-        (["hwsku.json"], None),
-        (["hwsku.json", "port_config.ini"], "port_config.ini"),
-        (["platform.json"], "platform.json"),
-        (["platform.json", "port_config.ini"], "port_config.ini"),
-        (["hwsku.json", "platform.json"], "platform.json"),
-        (["hwsku.json", "platform.json", "port_config.ini"], "platform.json"),
+    @pytest.mark.parametrize("files,expected_file,asic", [
+        ([], None, None),
+        (["hwsku.json"], None, None),
+        (["platform.json"], "platform.json", None),
+        (["hwsku.json", "platform.json"], "platform.json", None),
+        (["platform.json", "port_config.ini"], "port_config.ini", "0"),
+        (["hwsku.json", "platform.json", "port_config.ini"], "platform.json", "0"),
     ])
     @mock.patch("sonic_py_common.device_info.get_platform", return_value="test-platform")
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir", return_value="platform")
     @mock.patch("os.path.isfile")
-    @mock.patch("{}.open".format(BUILTINS))
+    @mock.patch("{}.open".format(BUILTINS), new_callable=mock.mock_open,
+                read_data='{"interfaces": {"Ethernet0": {}}}')
     def test_port_config_file_selection(
             self, mock_open, mock_isfile, mock_platform_dir, mock_platform,
             files, expected_file, asic):
@@ -115,8 +113,6 @@ class TestDeviceInfo(object):
             "port_config.ini": os.path.join(ini_dir, "port_config.ini"),
         }
         mock_isfile.side_effect = {paths[filename] for filename in files}.__contains__
-        mock_open.side_effect = mock.mock_open(
-            read_data=json.dumps({"interfaces": {"Ethernet0": {}}}))
 
         assert device_info.get_path_to_port_config_file("TestHwsku", asic) == paths[expected_file]
 

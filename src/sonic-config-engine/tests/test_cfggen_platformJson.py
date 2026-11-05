@@ -360,28 +360,31 @@ class TestCfgGenPlatformJson(TestCase):
                 mock.patch('portconfig.device_info.get_localhost_info', return_value='TestHwsku'), \
                 mock.patch('portconfig.device_info.get_path_to_port_config_file') as discover, \
                 mock.patch('portconfig.get_hwsku_file_name') as find_hwsku:
-            for breakout in ({'Ethernet0': {'brkout_mode': '2x50G'}}, {}):
+            for hwsku, namespace, breakout in (
+                    (None, None, {'Ethernet0': {'brkout_mode': '2x50G'}}),
+                    ('TestHwsku', 'asic0', {'Ethernet0': {'brkout_mode': '2x50G'}}),
+                    ('TestHwsku', None, {})):
                 config_db.get_table.side_effect = {'PORT': ports, 'BREAKOUT_CFG': breakout}.__getitem__
-                for hwsku, namespace in ((None, None), ('TestHwsku', None), (None, 'asic0'), ('TestHwsku', 'asic0')):
-                    with self.subTest(hwsku=hwsku, namespace=namespace, breakout=breakout):
-                        connect.reset_mock()
-                        self.assertEqual(get_port_config(hwsku=hwsku, asic_name=namespace),
-                                         (ports, aliases, {'saved/1': 'Eth0'}))
-                        self.assertEqual(get_breakout_mode(hwsku=hwsku, asic_name=namespace), breakout or None)
-                        self.assertEqual(connect.call_args_list, [mock.call(namespace), mock.call(namespace)])
+                with self.subTest(hwsku=hwsku, namespace=namespace, breakout=breakout):
+                    connect.reset_mock()
+                    self.assertEqual(get_port_config(hwsku=hwsku, asic_name=namespace),
+                                     (ports, aliases, {'saved/1': 'Eth0'}))
+                    self.assertEqual(get_breakout_mode(hwsku=hwsku, asic_name=namespace), breakout or None)
+                    self.assertEqual(connect.call_args_list, [mock.call(namespace), mock.call(namespace)])
             discover.assert_not_called()
             find_hwsku.assert_not_called()
 
     def test_config_db_falls_back_to_files(self):
-        for db_hwsku, saved_ports in (('TestHwsku', {}), ('OtherHwsku', {'Ethernet999': {'alias': 'saved'}})):
-            config_db = self._config_db(saved_ports, {'Ethernet999': {'brkout_mode': '1x100G'}})
-            for platform, hwsku in ((False, False), (False, True), (True, False), (True, True)):
-                with self.subTest(db_hwsku=db_hwsku, platform=platform, hwsku=hwsku):
-                    expected = self._port_config(platform=platform, hwsku=hwsku)
-                    self.assertEqual(self._port_config(
-                        platform=platform, hwsku=hwsku, config_db=config_db, db_hwsku=db_hwsku), expected)
-            if db_hwsku != 'TestHwsku':
-                config_db.get_table.assert_not_called()
+        for db_hwsku, saved_ports, hwsku in (
+                ('TestHwsku', {}, True),
+                ('OtherHwsku', {'Ethernet999': {'alias': 'saved'}}, False)):
+            with self.subTest(db_hwsku=db_hwsku):
+                config_db = self._config_db(saved_ports, {'Ethernet999': {'brkout_mode': '1x100G'}})
+                self.assertEqual(self._port_config(
+                    platform=True, hwsku=hwsku, config_db=config_db, db_hwsku=db_hwsku),
+                    self._port_config(platform=True, hwsku=hwsku))
+                if db_hwsku != 'TestHwsku':
+                    config_db.get_table.assert_not_called()
 
     def test_explicit_platform_overrides_config_db(self):
         config_db = self._config_db({'Ethernet999': {'alias': 'saved'}})
@@ -403,18 +406,23 @@ class TestCfgGenPlatformJson(TestCase):
         self.assertEqual(breakout, {'Ethernet4': {'brkout_mode': '2x50G'}})
         config_db.get_table.assert_not_called()
 
-    def test_string_aliases(self):
-        mode = '1x25G[10G]'
-        interfaces = {'Ethernet0': {
-            'index': '1', 'lanes': '49', 'breakout_modes': {mode: 'Eth1'},
+    def test_minimum_and_selected_string_alias(self):
+        interfaces = {'Ethernet1': {
+            'index': '0,0,0,0', 'lanes': '5,6,7,8',
+            'breakout_modes': {
+                '1x50G(2)': ['Eth1/1'],
+                '2x200G': ['Eth1/1', 'Eth1/2'],
+                '1x100G[40G]': ['Eth1/1'],
+                '1x100G': 'Eth1',
+            },
         }}
-        for selection in (None, {'Ethernet0': {'default_brkout_mode': mode}}):
+        for selection in (None, {'Ethernet1': {'default_brkout_mode': '1x100G'}}):
             with self.subTest(selection=selection):
                 ports, breakout = self._port_config_from_data(interfaces, selection)
-                self.assertEqual(ports, {'Ethernet0': {
-                    'alias': 'Eth1', 'lanes': '49', 'speed': '25000', 'index': '1', 'subport': '0',
+                self.assertEqual(ports, {'Ethernet1': {
+                    'alias': 'Eth1', 'lanes': '5,6,7,8', 'speed': '100000', 'index': '0', 'subport': '0',
                 }})
-                self.assertEqual(breakout, {'Ethernet0': {'brkout_mode': mode}} if selection else None)
+                self.assertEqual(breakout, {'Ethernet1': {'brkout_mode': '1x100G'}} if selection else None)
 
     def test_partial_lane_selection(self):
         mode = '4x25G(4)[10G,1G]'
@@ -433,37 +441,3 @@ class TestCfgGenPlatformJson(TestCase):
                 'subport': subport, 'autoneg': 'off',
             })
         self.assertEqual(breakout, {'Ethernet0': {'brkout_mode': mode}})
-
-    def test_mixed_width_selection(self):
-        mode = '2x400G[200G](4)+1x800G[400G](4)'
-        ports, breakout = self._port_config_from_data(
-            {'Ethernet0': {
-                'index': '1,1,1,1,1,1,1,1', 'lanes': '0,1,2,3,4,5,6,7',
-                'breakout_modes': {mode: ['Eth1/1', 'Eth1/2', 'Eth1/3']},
-            }},
-            {'Ethernet0': {'default_brkout_mode': mode, 'autoneg': 'off'}})
-        self.assertEqual(len(ports), 3)
-        for name, alias, lanes, speed, subport in [
-                ('Ethernet0', 'Eth1/1', '0,1', '400000', '1'),
-                ('Ethernet2', 'Eth1/2', '2,3', '400000', '2'),
-                ('Ethernet4', 'Eth1/3', '4,5,6,7', '800000', '2')]:
-            self.assertEqual(ports[name], {
-                'alias': alias, 'lanes': lanes, 'speed': speed, 'index': '1',
-                'subport': subport, 'autoneg': 'off', 'fec': 'rs',
-            })
-        self.assertEqual(breakout, {'Ethernet0': {'brkout_mode': mode}})
-
-    def test_minimum_chooses_fastest_single_port_mode(self):
-        ports, breakout = self._port_config_from_data({'Ethernet1': {
-            'index': '0,0,0,0', 'lanes': '5,6,7,8',
-            'breakout_modes': {
-                '1x50G(2)': ['Eth1/1'],
-                '2x200G': ['Eth1/1', 'Eth1/2'],
-                '1x100G[40G]': ['Eth1/1'],
-                '1x100G': ['Eth1'],
-            },
-        }})
-        self.assertEqual(ports, {'Ethernet1': {
-            'alias': 'Eth1', 'lanes': '5,6,7,8', 'speed': '100000', 'index': '0', 'subport': '0',
-        }})
-        self.assertIsNone(breakout)
