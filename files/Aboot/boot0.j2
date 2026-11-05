@@ -465,7 +465,8 @@ EOF
 
 read_eeprom() {
     if [ -x /bin/readprefdl ] && [ -f "$1" ]; then
-        readprefdl -f "$1" -d > $target_path/.system-prefdl
+        readprefdl -f "$1" -d > $target_path/.system-prefdl || err "Failed on readprefdl -f $1 -d"
+
     elif [ -f /etc/prefdl ]; then
         cp /etc/prefdl $target_path/.system-prefdl
         chmod a+r $target_path/.system-prefdl
