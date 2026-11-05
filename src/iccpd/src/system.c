@@ -358,11 +358,22 @@ void system_update_netlink_counters(
     struct nlmsghdr *nlh)
 {
     struct System *sys;
-    struct ndmsg *ndm = NLMSG_DATA(nlh);
+    struct ndmsg *ndm = NULL;
 
     sys = system_get_instance();
     if (!sys)
         return;
+
+    if (netlink_msg_type == RTM_NEWNEIGH ||
+        netlink_msg_type == RTM_DELNEIGH)
+    {
+        if (nlh->nlmsg_len < NLMSG_LENGTH(sizeof(*ndm)))
+        {
+            ++sys->dbg_counters.unknown_type_count;
+            return;
+        }
+        ndm = NLMSG_DATA(nlh);
+    }
 
     switch (netlink_msg_type)
     {
