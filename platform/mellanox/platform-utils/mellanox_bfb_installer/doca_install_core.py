@@ -557,6 +557,7 @@ def _get_dpu_auto_recovery() -> Optional[str]:
         state = subprocess.check_output(
             [
                 "sonic-db-cli",
+                "-s",
                 "CONFIG_DB",
                 "HGET",
                 *AUTO_RECOVERY_DB_ARGS,
@@ -579,6 +580,7 @@ def _set_dpu_auto_recovery(state: str) -> bool:
         subprocess.check_output(
             [
                 "sonic-db-cli",
+                "-s", '--authenticate',
                 "CONFIG_DB",
                 "HSET",
                 *AUTO_RECOVERY_DB_ARGS,
