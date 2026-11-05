@@ -5,7 +5,8 @@
         "num_fans_pertray": 2,
         "num_ports": 66,
         "num_temps": 12,
-        "num_components":7,
+        "num_asic_temps": 14,
+        "num_components":8,
         "pddf_dev_types": {
             "description": "PDDF supported devices",
             "CPLD": [
@@ -27,35 +28,33 @@
             "i2c-i801"
         ],
         "std_kos": [
-            "i2c_dev",
             "i2c_mux_pca954x",
             "optoe",
-            "gpio-pca953x"
+            "gpio-pca953x",
+            "i2c_dev"
         ],
         "pddf_kos": [
-            "pddf_client_module",
-            "pddf_cpld_module",
-            "pddf_cpld_driver",
+            "pddf_custom_sysstatus_module",
             "pddf_mux_module",
-            "pddf_cpldmux_module",
             "pddf_cpldmux_driver",
+            "pddf_cpldmux_module",
             "pddf_xcvr_module",
-            "pddf_fpgapci_driver",
             "pddf_xcvr_driver_module",
-            "pddf_psu_driver_module",
             "pddf_psu_module",
-            "pddf_fpgai2c_module",
-            "pddf_fpgai2c_driver",
-            "pddf_fan_driver_module",
+            "pddf_psu_driver_module",
             "pddf_fan_module",
+            "pddf_fan_driver_module",
             "pddf_led_module",
-            "pddf_gpio_module"
+            "pddf_gpio_module",
+            "pddf_cpld_driver",
+            "pddf_cpld_module",
+            "pddf_fpgai2c_driver",
+            "pddf_fpgai2c_module",
+            "pddf_multifpgapci_driver"
         ],
         "custom_kos": [
             "x86-64-ufispace-s9321-64e-lpc",
-            "x86-64-ufispace-s9321-64e-sys-eeprom",
-            "pddf_custom_sysstatus_module",
-            "pddf_custom_cpldmux_driver"
+            "x86-64-ufispace-s9321-64e-sys-eeprom"
         ]
     },
     "COMPONENT1":
@@ -112,6 +111,13 @@
         "attr_list":
         [
             { "attr_name":"version", "get_cmd": "r=(`ipmitool raw 0x6 0x1 | cut -d ' ' -f 4,5,16,15,14`) && echo ${r[0]}.${r[1]}.${r[4]}.${r[3]}${r[2]}" }
+        ]
+    },
+    "COMPONENT8": {
+        "comp_attr": { "name": "MU", "type": "updater", "description": "Firmware Update Package" },
+        "attr_list":
+        [
+            { "attr_name": "version", "get_cmd": "mkdir -p /mnt/onie-boot && mount LABEL=ONIE-BOOT /mnt/onie-boot &> /dev/null; if [ -f \"/mnt/onie-boot/onie/update/update_details.log\" ]; then ver=$(grep -i 'Updater version:' \"/mnt/onie-boot/onie/update/update_details.log\" | tail -1 | awk '{print $3}' | tr -d '\\r\\n'); if [ -n \"$ver\" ]; then result=$(/mnt/onie-boot/onie/tools/bin/onie-fwpkg | grep \"$ver\" | awk -F'|' '{print $3}' | tail -1 | xargs | tr -d '\\r\\n'); echo \"$ver ($result)\"; else echo \"NA ()\"; fi; else echo \"NA ()\"; fi" }
         ]
     },
     "SYSTEM": {
@@ -887,6 +893,188 @@
                     }
                 ]
             }
+        }
+    },
+    "ASIC_TEMP1": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP1",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT0",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "maximum_temperature"
+        }
+    },
+    "ASIC_TEMP2": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP2",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+             "display_name": "TEMP_MAC0_PVT1",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_1"
+        }
+    },
+    "ASIC_TEMP3": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP3",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT2",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_2"
+        }
+    },
+    "ASIC_TEMP4": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP4",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT3",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_3"
+        }
+    },
+    "ASIC_TEMP5": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP5",
+            "device_parent": "None"
+        },
+            "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT4",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_4"
+        }
+    },
+    "ASIC_TEMP6": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP6",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT5",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_5"
+        }
+    },
+    "ASIC_TEMP7": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP7",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT6",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_6"
+        }
+    },
+    "ASIC_TEMP8": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP8",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT7",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_7"
+        }
+    },
+    "ASIC_TEMP9": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP9",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT8",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_8"
+        }
+    },
+    "ASIC_TEMP10": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP10",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT9",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_9"
+        }
+    },
+    "ASIC_TEMP11": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP11",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT10",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_10"
+        }
+    },
+    "ASIC_TEMP12": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP12",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT11",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_11"
+        }
+    },
+    "ASIC_TEMP13": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP13",
+            "device_parent": "None"
+        },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT12",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_12"
+        }
+    },
+    "ASIC_TEMP14": {
+        "dev_info": {
+            "device_type": "ASIC_TEMP_SENSOR",
+            "device_name": "ASIC_TEMP14",
+            "device_parent": "None"
+      },
+        "dev_attr": {
+            "display_name": "TEMP_MAC0_PVT13",
+            "temp1_high_threshold": 90,
+            "temp1_high_crit_threshold": 95,
+            "table_index": "temperature_13"
         }
     },
     "SYSSTATUS": {
