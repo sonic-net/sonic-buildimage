@@ -4334,12 +4334,12 @@
                 "low-crit-threshold": false
             },
             {
-                "name": "DCDC0_MEZZ0",
+                "name": "MEZZ0_DCDC0",
                 "low-threshold": false,
                 "low-crit-threshold": false
             },
             {
-                "name": "DCDC0_MEZZ1",
+                "name": "MEZZ1_DCDC0",
                 "low-threshold": false,
                 "low-crit-threshold": false
             },
@@ -4439,7 +4439,7 @@
                 "name": "DCDC11"
             },
             {
-                "name": "DCDC12"
+                "name": "DCDC20"
             }
         ],
         "fans": [
