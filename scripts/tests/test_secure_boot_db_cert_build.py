@@ -1,9 +1,7 @@
 import json
 import os
-import pwd
 import re
 import shlex
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -40,7 +38,6 @@ def test_build_recipe_forwards_db_certificate(tmp_path, monkeypatch, recipe, cer
 
 
 @pytest.mark.parametrize("recipe", BUILD_RECIPES, ids=["rootfs", "installer"])
-@pytest.mark.parametrize("use_real_su", [False, True], ids=["mock-su", "real-su"])
 @pytest.mark.parametrize("cert_path", [
     "",
     "DB.auth",
@@ -48,10 +45,10 @@ def test_build_recipe_forwards_db_certificate(tmp_path, monkeypatch, recipe, cer
     "/signing keys/DB.auth",
     "signing keys/../keys/DB.auth",
     "signing keys/DB's.auth",
+    'signing keys/DB"quoted".auth',
+    r"signing keys/DB\cert.auth",
 ])
-def test_docker_and_nested_make_preserve_certificate_path(tmp_path, monkeypatch, recipe, cert_path, use_real_su):
-    if use_real_su and (os.geteuid() != 0 or shutil.which("su") is None):
-        pytest.skip("real su coverage requires root and su")
+def test_docker_and_nested_make_preserve_certificate_path(tmp_path, monkeypatch, recipe, cert_path):
     monkeypatch.delenv("SECURE_BOOT_DB_CERT", raising=False)
     monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ["PATH"])
     source = (ROOT / "Makefile.work").read_text()
@@ -78,13 +75,9 @@ def test_docker_and_nested_make_preserve_certificate_path(tmp_path, monkeypatch,
         "Path(record).write_text(json.dumps(volumes))\n"
         "sys.exit(subprocess.run(args, env=env).returncode)\n"
     )
-    if use_real_su:
-        user = pwd.getpwuid(os.geteuid()).pw_name
-    else:
-        user = "builder"
-        su = tmp_path / "su"
-        su.write_text('#!/bin/sh\nexec /bin/bash "$2" "$3"\n')
-        su.chmod(0o755)
+    su = tmp_path / "su"
+    su.write_text('#!/bin/sh\nexec env -u SECURE_BOOT_DB_CERT /bin/bash "$2" "$3"\n')
+    su.chmod(0o755)
     build = tmp_path / "build_debian.sh"
     build.write_text('#!/bin/sh\nprintf "%s" "$SECURE_BOOT_DB_CERT"\n')
     build.chmod(0o755)
@@ -99,7 +92,7 @@ def test_docker_and_nested_make_preserve_certificate_path(tmp_path, monkeypatch,
         + mount
         + "\nSONIC_BUILD_INSTRUCTION := $(MAKE) --silent --no-print-directory -f slave.mk "
         + " ".join(assignment)
-        + f"\nDOCKER_USER_COMMANDS := :\nUSER := {user}\nCOLLECT_BUILD_VERSION := :\nSLAVE_SHELL := :\n"
+        + "\nDOCKER_USER_COMMANDS := :\nUSER := builder\nCOLLECT_BUILD_VERSION := :\nSLAVE_SHELL := :\n"
         + ".PHONY: all\nall:\n\t$(DOCKER_RUN) \\\n"
         + launch + "\n",
     )
