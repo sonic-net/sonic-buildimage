@@ -882,11 +882,8 @@ with open(sys.argv[1], 'rb') as fd:
         oe_api.get_lpmode.return_value = None
         with self.assertRaises(OSError):
             oe.get_lpmode()
-        for value in (False, True):
-            els_api.get_lpmode.return_value = value
-            self.assertIs(els.get_lpmode(), value)
-        els_api.get_lpmode.return_value = None
-        with self.assertRaises(OSError):
+        # Bailly ELS exposes RLM power status, but no standalone lpmode API.
+        with self.assertRaises(AttributeError):
             els.get_lpmode()
 
 
