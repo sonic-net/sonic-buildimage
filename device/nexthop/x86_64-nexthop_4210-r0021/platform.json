@@ -4339,6 +4339,48 @@
                 "low-crit-threshold": false
             },
             {
+                "name": "DCDC12",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC13",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC15",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC16",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC17",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC18",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC19",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
                 "name": "ASIC Min",
                 "low-threshold": false,
                 "low-crit-threshold": false,

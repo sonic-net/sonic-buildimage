@@ -1,10 +1,10 @@
 {
   "PLATFORM": {
     "num_psus": 4,
-    "num_temps": 18,
+    "num_temps": 25,
     "num_asic_temps": 0,
     "num_nexthop_fpga_asic_temp_sensors": 2,
-    "num_voltage_sensors": 70,
+    "num_voltage_sensors": 77,
     "num_current_sensors": 23,
     "num_components": 28,
     "num_fantrays": 8,
@@ -41,7 +41,8 @@
       "nh_tmp464",
       "nh_adm1266",
       "nh_tda38740",
-      "nh_isl68137"
+      "nh_isl68137",
+      "fs1412"
     ],
     "num_ports": 129,
     "nexthop_thermal_xcvr_setpoint_margin": 8,
@@ -1386,6 +1387,34 @@
         {
           "chn": "5",
           "dev": "DCDC10"
+        },
+        {
+          "chn": "9",
+          "dev": "DCDC12"
+        },
+        {
+          "chn": "9",
+          "dev": "DCDC13"
+        },
+        {
+          "chn": "2",
+          "dev": "DCDC15"
+        },
+        {
+          "chn": "2",
+          "dev": "DCDC16"
+        },
+        {
+          "chn": "2",
+          "dev": "DCDC17"
+        },
+        {
+          "chn": "3",
+          "dev": "DCDC18"
+        },
+        {
+          "chn": "3",
+          "dev": "DCDC19"
         }
       ],
       "channel_irq": [
@@ -27249,6 +27278,552 @@
     },
     "dev_attr": {
       "display_name": "MEZZ1_DCDC0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "DCDC12": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC12",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x66",
+        "dev_addr": "0x71",
+        "dev_type": "fs1412"
+      }
+    }
+  },
+  "VOLTAGE71": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC12",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC12"
+    },
+    "dev_attr": {
+      "display_name": "DCDC12_POS1V0",
+      "multi_factor": 1.739505
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "TEMP19": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC12_TEMP",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC12",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "DCDC12"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "DCDC13": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC13",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x66",
+        "dev_addr": "0x72",
+        "dev_type": "fs1412"
+      }
+    }
+  },
+  "VOLTAGE72": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC13",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC13"
+    },
+    "dev_attr": {
+      "display_name": "DCDC13_POS1V8",
+      "multi_factor": 3.198268
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "TEMP20": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC13_TEMP",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC13",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "DCDC13"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "DCDC15": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC15",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5f",
+        "dev_addr": "0x70",
+        "dev_type": "fs1412"
+      }
+    }
+  },
+  "VOLTAGE73": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC15",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC15"
+    },
+    "dev_attr": {
+      "display_name": "DCDC15_POS1V8_DP",
+      "multi_factor": 3.198268
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "TEMP21": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC15_TEMP",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC15",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "DCDC15"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "DCDC16": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC16",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5f",
+        "dev_addr": "0x71",
+        "dev_type": "fs1412"
+      }
+    }
+  },
+  "VOLTAGE74": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC16",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC16"
+    },
+    "dev_attr": {
+      "display_name": "DCDC16_POS1V2_DP_0",
+      "multi_factor": 2.09222
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "TEMP22": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC16_TEMP",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC16",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "DCDC16"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "DCDC17": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC17",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5f",
+        "dev_addr": "0x72",
+        "dev_type": "fs1412"
+      }
+    }
+  },
+  "VOLTAGE75": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC17",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC17"
+    },
+    "dev_attr": {
+      "display_name": "DCDC17_POS1V2_DP_1",
+      "multi_factor": 2.09222
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "TEMP23": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC17_TEMP",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC17",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "DCDC17"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "DCDC18": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC18",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x60",
+        "dev_addr": "0x70",
+        "dev_type": "fs1412"
+      }
+    }
+  },
+  "VOLTAGE76": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC18",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC18"
+    },
+    "dev_attr": {
+      "display_name": "DCDC18_POS1V5_DP",
+      "multi_factor": 2.656886
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "TEMP24": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC18_TEMP",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC18",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "DCDC18"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "DCDC19": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC19",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x60",
+        "dev_addr": "0x71",
+        "dev_type": "fs1412"
+      }
+    }
+  },
+  "VOLTAGE77": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC19",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC19"
+    },
+    "dev_attr": {
+      "display_name": "DCDC19_POS1V2_PCIE",
+      "multi_factor": 2.09222
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "TEMP25": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC19_TEMP",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC19",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "DCDC19"
     },
     "i2c": {
       "attr_list": [
