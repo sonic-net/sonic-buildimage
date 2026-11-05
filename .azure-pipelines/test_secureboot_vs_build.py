@@ -148,6 +148,23 @@ fi
             config,
         )
 
+    def test_regular_pr_pipeline_enables_signing_only_for_vs(self):
+        pipeline = yaml.load(
+            (PIPELINE.parents[1] / "azure-pipelines.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        vs_jobs = 0
+        for stage in pipeline["stages"]:
+            for job in stage.get("jobs", []):
+                for group in job.get("parameters", {}).get("jobGroups", []):
+                    enabled = group.get("variables", {}).get("secure_boot_image", "no")
+                    if group["name"] == "vs":
+                        vs_jobs += 1
+                        self.assertEqual(enabled, "yes")
+                    else:
+                        self.assertEqual(enabled, "no")
+        self.assertGreater(vs_jobs, 0)
+
     def test_retry_uses_a_different_kernel_trust_input(self):
         self.prepare()
         first_workdir = self.workdir
