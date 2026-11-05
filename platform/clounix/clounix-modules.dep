@@ -1,0 +1,11 @@
+
+SPATH       :=  $($(CLOUNIX_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/clounix/clounix-modules.mk platform/clounix/clounix-modules.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+$(CLOUNIX_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(CLOUNIX_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(CLOUNIX_MODULE)_DEP_FILES   := $(DEP_FILES)
+$(CLOUNIX_MODULE)_SMDEP_FILES := $(SMDEP_FILES)
+$(CLOUNIX_MODULE)_SMDEP_PATHS := $(SPATH)

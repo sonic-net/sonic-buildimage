@@ -1,7 +1,0 @@
-#!/bin/bash
-/usr/local/bin/sonic-fanthrml-monitor &
-/usr/local/bin/sonic-led-monitor &
-/usr/local/bin/sonic-qsfp-monitor &
-/usr/local/bin/sonic-psu-monitor &
-exit 0
-

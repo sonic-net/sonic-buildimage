@@ -1,0 +1,212 @@
+import signal
+import syslog
+import threading
+import time
+from abc import abstractmethod
+from datetime import datetime
+from dhcp_utilities.common.utils import is_smart_switch
+
+DHCP_SERVER_IPV4_LEASE = "DHCP_SERVER_IPV4_LEASE"
+DHCP_SERVER_IPV4_LEASE_SYNC = "DHCP_SERVER_IPV4_LEASE_SYNC|GLOBAL"
+KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
+DEFAULE_LEASE_UPDATE_INTERVAL = 2  # unit: sec
+KEA_LEASE_READ_RETRY_COUNT = 3
+KEA_LEASE_READ_RETRY_INTERVAL = 0.05  # unit: sec
+
+# Column indexes in the Kea memfile (kea-lease4 CSV schema):
+# address,hwaddr,client_id,valid_lifetime,expire,subnet_id,fqdn_fwd,fqdn_rev,hostname,state,...
+KEA_LEASE_COL_ADDRESS = 0
+KEA_LEASE_COL_HWADDR = 1
+KEA_LEASE_COL_VALID_LIFETIME = 3
+KEA_LEASE_COL_EXPIRE = 4
+KEA_LEASE_COL_SUBNET_ID = 5
+KEA_LEASE_COL_STATE = 9
+KEA_LEASE_MIN_COLS = KEA_LEASE_COL_STATE + 1
+
+# Kea lease states (see Kea's Lease::STATE_* definitions). Only STATE_DEFAULT
+# represents an assigned/active lease; STATE_DECLINED and STATE_EXPIRED_RECLAIMED
+# rows are never active even when valid_lifetime is still non-zero.
+KEA_LEASE_STATE_DEFAULT = 0
+
+
+class LeaseManager(object):
+    def __init__(self, db_connector, kea_lease_file=KEA_LEASE_FILE_PATH):
+        self.lease_handlers = [KeaDhcp4LeaseHandler(db_connector, kea_lease_file)]
+
+    def start(self):
+        """
+        Register lease hanlder
+        """
+        for handler in self.lease_handlers:
+            handler.register()
+
+
+class LeaseHanlder(object):
+    def __init__(self, db_connector, lease_update_interval=DEFAULE_LEASE_UPDATE_INTERVAL):
+        self.db_connector = db_connector
+        self.lease_update_interval = lease_update_interval
+        self.last_update_time = None
+        self.lock = threading.Lock()
+        device_metadata = self.db_connector.get_config_db_table("DEVICE_METADATA")
+        self.is_smart_switch = is_smart_switch(device_metadata)
+
+        if self.is_smart_switch:
+            mid_plane_table = self.db_connector.get_config_db_table("MID_PLANE_BRIDGE")
+            if "GLOBAL" in mid_plane_table and mid_plane_table["GLOBAL"]:
+                self.midplane_bridge_name = mid_plane_table["GLOBAL"]["bridge"]
+
+    @abstractmethod
+    def _read(self):
+        """
+        Read lease file to get newest lease information
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def register(self):
+        """
+        Register callback function
+        """
+        raise NotImplementedError
+
+    def update_lease(self):
+        """
+        Update lease table in STATE_DB
+        """
+        last_update_time = self.last_update_time
+        curr_time = datetime.now()
+        # If the time since the last update is less than self.lease_update_interval, then wait for a
+        # self.lease_update_interval
+        if last_update_time is not None and (curr_time - last_update_time).seconds < self.lease_update_interval:
+            time.sleep(self.lease_update_interval)
+            if self.last_update_time != last_update_time:
+                # Means lease has been updated during sleep, no need to update this lease
+                return
+        if not self.lock.acquire(False):
+            return
+        try:
+            # Read the clear request before the lease file, so acknowledging it proves
+            # that this refresh observed every Kea change made before the request.
+            request_id = self.db_connector.state_db.hget(DHCP_SERVER_IPV4_LEASE_SYNC, "request_id")
+            new_lease = self._read()
+            # Store old lease key
+            old_lease_table = self.db_connector.get_state_db_table(DHCP_SERVER_IPV4_LEASE)
+            old_lease_key = set(old_lease_table.keys())
+
+            # 1.1 If start time equal to end time or lease expired, means lease has been released
+            #     1.1.1 If current lease table has this old lease, delete it
+            #     1.1.2 Else skip
+            # 1.2 Else, means lease valid, save it.
+            for key, value in new_lease.items():
+                unix_time = datetime.now().timestamp()
+                if value["lease_start"] == value["lease_end"] or unix_time >= int(value["lease_end"]):
+                    if key in old_lease_key:
+                        self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
+                    continue
+                new_key = "{}|{}".format(DHCP_SERVER_IPV4_LEASE, key)
+                for k, v in new_lease[key].items():
+                    self.db_connector.state_db.hset(new_key, k, v)
+            # Delete old lease not in new lease set
+            for key in old_lease_key:
+                if key not in new_lease.keys():
+                    # Delete entry
+                    self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
+            self.last_update_time = datetime.now()
+            if request_id:
+                self.db_connector.state_db.hset(DHCP_SERVER_IPV4_LEASE_SYNC, "completed_id", request_id)
+        finally:
+            self.lock.release()
+
+
+class KeaDhcp4LeaseHandler(LeaseHanlder):
+    def __init__(self, db_connector, lease_file=KEA_LEASE_FILE_PATH):
+        LeaseHanlder.__init__(self, db_connector)
+        self.lease_file = lease_file
+
+    def register(self):
+        """
+        Register callback function of signal
+        """
+        signal.signal(signal.SIGUSR1, self._update_lease)
+
+    def _lease_key(self, subnet_id, mac_address):
+        if self.is_smart_switch:
+            return f"{self.midplane_bridge_name}|{mac_address}"
+        else:
+            return f"Vlan{subnet_id}|{mac_address}"
+
+    def _read(self):
+        for attempt in range(1, KEA_LEASE_READ_RETRY_COUNT + 1):
+            try:
+                return self._read_once()
+            except (OSError, UnicodeError, ValueError) as err:
+                syslog.syslog(
+                    syslog.LOG_ERR if attempt == KEA_LEASE_READ_RETRY_COUNT else syslog.LOG_WARNING,
+                    "Lease file read failed on attempt {}/{}: {}".format(
+                        attempt, KEA_LEASE_READ_RETRY_COUNT, err
+                    )
+                )
+                if attempt == KEA_LEASE_READ_RETRY_COUNT:
+                    raise
+                time.sleep(KEA_LEASE_READ_RETRY_INTERVAL)
+
+    def _read_once(self):
+        with open(self.lease_file, "r", encoding="utf-8") as fb:
+            rows = fb.readlines()
+        if rows and not rows[-1].endswith("\n"):
+            raise ValueError("lease file final row is incomplete")
+
+        # The Kea memfile is append-only and chronological, so process rows from
+        # oldest to newest and let the latest event for each client win. Duplicate
+        # precedence is decided by CSV order, the Kea lease state and same-IP
+        # transitions - never by comparing expiry times across different IPs (a
+        # long-lived stale lease for an old IP must not outrank a newer event on
+        # the IP the client currently holds).
+        new_lease = {}
+        for row in rows:
+            splits = row.split(",")
+            # Skip header and any malformed/short rows
+            if splits[KEA_LEASE_COL_ADDRESS] == "address":
+                continue
+            if len(splits) < KEA_LEASE_MIN_COLS:
+                continue
+            ip_str = splits[KEA_LEASE_COL_ADDRESS]
+            mac_address = splits[KEA_LEASE_COL_HWADDR]
+            try:
+                valid_lifetime = int(splits[KEA_LEASE_COL_VALID_LIFETIME])
+                lease_end = int(splits[KEA_LEASE_COL_EXPIRE])
+                state = int(splits[KEA_LEASE_COL_STATE])
+            except ValueError:
+                continue
+            subnet_id = splits[KEA_LEASE_COL_SUBNET_ID]
+
+            new_key = self._lease_key(subnet_id, mac_address)
+            # A row is an active lease only when Kea marks it assigned (STATE_DEFAULT)
+            # with a positive lifetime. Release rows (valid_lifetime == 0) and
+            # STATE_DECLINED/STATE_EXPIRED_RECLAIMED rows are not active even if they
+            # still carry a non-zero valid_lifetime.
+            is_active = state == KEA_LEASE_STATE_DEFAULT and valid_lifetime > 0
+
+            if is_active:
+                new_lease[new_key] = {
+                    "lease_start": str(lease_end - valid_lifetime),
+                    "lease_end": str(lease_end),
+                    "ip": ip_str
+                }
+                continue
+
+            # Non-active (release/declined/expired) row. It only clears the client's
+            # lease when it refers to the IP the client currently holds. A stale
+            # release for a previously-held IP (e.g. after a MAC move) is ignored so
+            # the active lease on the new IP is preserved.
+            existing = new_lease.get(new_key)
+            if existing is None or existing["ip"] == ip_str:
+                new_lease[new_key] = {
+                    "lease_start": str(lease_end),
+                    "lease_end": str(lease_end),
+                    "ip": ip_str
+                }
+        return new_lease
+
+    def _update_lease(self, signum, frame):
+        self.update_lease()

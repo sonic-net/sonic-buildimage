@@ -24,6 +24,28 @@
                         "nhopself": "0",
                         "rrclient": "0",
                         "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "Ethernet24",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "name": "ASIC0",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet24",
+                        "alias": "eth24",
+                        "lanes": "24",
+                        "speed": 100000
                     }
                 ]
             }
@@ -110,6 +132,30 @@
                         "nhopself": "0",
                         "rrclient": "0",
                         "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_INTERNAL_NEG_MULTILINE_NAME": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65001",
+                        "local_addr": "10.0.0.2",
+                        "name": "ASIC0\nSECOND LINE"
                     }
                 ]
             }

@@ -9,10 +9,10 @@ Subject: [PATCH 2/3] Bugfix: Ensure HAVE_SO_BINDTODEVICE has a chance to be
  1 file changed, 120 insertions(+), 119 deletions(-)
 
 diff --git a/includes/osdep.h b/includes/osdep.h
-index cfae90b..f07c43c 100644
+index 0742858..dfccb8c 100644
 --- a/includes/osdep.h
 +++ b/includes/osdep.h
-@@ -48,37 +48,6 @@
+@@ -47,37 +47,6 @@
  #define BYTE_ORDER DHCP_BYTE_ORDER
  #endif /* BYTE_ORDER */
  
@@ -50,7 +50,7 @@ index cfae90b..f07c43c 100644
  #if !defined (TIME_MAX)
  # define TIME_MAX 2147483647
  #endif
-@@ -91,94 +60,6 @@
+@@ -90,98 +59,10 @@
  # define vsnprintf isc_print_vsnprintf
  #endif
  
@@ -102,6 +102,10 @@ index cfae90b..f07c43c 100644
 -#  define USE_UPF_RECEIVE
 -#endif
 -
+ #if defined (SO_BINDTODEVICE) && !defined (HAVE_SO_BINDTODEVICE)
+ # define HAVE_SO_BINDTODEVICE
+ #endif
+ 
 -/* Porting::
 -
 -   If you add support for sending packets directly out an interface,
@@ -145,7 +149,7 @@ index cfae90b..f07c43c 100644
  /* If we don't have a DLPI packet filter, we have to filter in userland.
     Probably not worth doing, actually. */
  #if defined (USE_DLPI_RECEIVE) && !defined (USE_DLPI_PFMOD)
-@@ -288,4 +169,124 @@
+@@ -287,4 +168,124 @@
  # define STDERR_FILENO 2
  #endif
  
@@ -271,5 +275,5 @@ index cfae90b..f07c43c 100644
 +
  #endif /* __ISC_DHCP_OSDEP_H__ */
 -- 
-2.17.1
+2.25.1
 

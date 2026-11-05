@@ -13,6 +13,7 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 #define DRIVER_DESCRIPTION_NAME "accton i2c psu driver"
 /* PMBus Protocol. */
@@ -322,8 +323,12 @@ static const struct attribute_group accton_i2c_psu_group = {
     .attrs = accton_i2c_psu_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int accton_i2c_psu_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int accton_i2c_psu_probe(struct i2c_client *client)
+#endif
 {
     struct accton_i2c_psu_data *data;
     int status;
@@ -372,7 +377,7 @@ exit:
     return status;
 }
 
-static int accton_i2c_psu_remove(struct i2c_client *client)
+static void accton_i2c_psu_remove(struct i2c_client *client)
 {
     struct accton_i2c_psu_data *data = i2c_get_clientdata(client);
 
@@ -380,7 +385,6 @@ static int accton_i2c_psu_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &accton_i2c_psu_group);
     kfree(data);
     
-    return 0;
 }
 /* Support psu moduel
  */

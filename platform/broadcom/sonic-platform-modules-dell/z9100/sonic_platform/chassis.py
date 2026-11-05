@@ -86,8 +86,8 @@ class Chassis(ChassisBase):
         # low power mode.
         # We pass the eeprom path and sfp control path from chassis.py
         # So that sfp.py implementation can be generic to all platforms
-        eeprom_base = "/sys/class/i2c-adapter/i2c-{0}/i2c-{1}/{1}-0050/eeprom"
-        sfp_ctrl_base = "/sys/class/i2c-adapter/i2c-{0}/{0}-003e/"
+        eeprom_base = "/sys/bus/i2c/devices/i2c-{0}/i2c-{1}/{1}-0050/eeprom"
+        sfp_ctrl_base = "/sys/bus/i2c/devices/i2c-{0}/{0}-003e/"
         for index in range(0, PORTS_IN_BLOCK):
             eeprom_path = eeprom_base.format(self.EEPROM_I2C_MAPPING[index][0],
                                              self.EEPROM_I2C_MAPPING[index][1])
@@ -275,17 +275,17 @@ class Chassis(ChassisBase):
         is_port_dict_updated = False
 
         cpld2_abs_int = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-14/14-003e/qsfp_abs_int")
+                    "/sys/bus/i2c/devices/i2c-14/14-003e/qsfp_abs_int")
         cpld2_abs_sta = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-14/14-003e/qsfp_abs_sta")
+                    "/sys/bus/i2c/devices/i2c-14/14-003e/qsfp_abs_sta")
         cpld3_abs_int = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-15/15-003e/qsfp_abs_int")
+                    "/sys/bus/i2c/devices/i2c-15/15-003e/qsfp_abs_int")
         cpld3_abs_sta = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-15/15-003e/qsfp_abs_sta")
+                    "/sys/bus/i2c/devices/i2c-15/15-003e/qsfp_abs_sta")
         cpld4_abs_int = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-16/16-003e/qsfp_abs_int")
+                    "/sys/bus/i2c/devices/i2c-16/16-003e/qsfp_abs_int")
         cpld4_abs_sta = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-16/16-003e/qsfp_abs_sta")
+                    "/sys/bus/i2c/devices/i2c-16/16-003e/qsfp_abs_sta")
 
         if (cpld2_abs_int == 'ERR' or cpld2_abs_sta == 'ERR' or
                 cpld3_abs_int == 'ERR' or cpld3_abs_sta == 'ERR' or

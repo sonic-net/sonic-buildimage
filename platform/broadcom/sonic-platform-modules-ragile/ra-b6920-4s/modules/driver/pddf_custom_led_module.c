@@ -22,8 +22,8 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/hwmon-sysfs.h>
-#include "../../../../../pddf/i2c/modules/include/pddf_led_defs.h"
-#include "../../../../../pddf/i2c/modules/include/pddf_client_defs.h"
+#include "../../../ra-b6510-32c/modules/driver/pddf_led_defs.h"
+#include "../../../ra-b6510-32c/modules/driver//pddf_client_defs.h"
 #include <linux/err.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>

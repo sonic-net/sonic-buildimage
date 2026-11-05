@@ -49,7 +49,6 @@ struct cpld_data {
     struct mutex  update_lock;
 };
 
-
 static void dell_s6100_iom_cpld_add_client(struct i2c_client *client)
 {
     struct cpld_data *data = kzalloc(sizeof(struct cpld_data), GFP_KERNEL);
@@ -68,7 +67,6 @@ static void dell_s6100_iom_cpld_remove_client(struct i2c_client *client)
 {
     struct cpld_data *data = i2c_get_clientdata(client);
     kfree(data);
-    return;
 }
 
 int dell_s6100_iom_cpld_read(struct cpld_data *data,unsigned short cpld_addr, u8 reg)
@@ -449,8 +447,7 @@ static struct attribute_group i2c_cpld_attr_grp = {
     .attrs = i2c_cpld_attrs,
 };
 
-static int dell_s6100_iom_cpld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int dell_s6100_iom_cpld_probe(struct i2c_client *client)
 {
     int status;
 
@@ -474,10 +471,9 @@ exit:
     return status;
 }
 
-static int dell_s6100_iom_cpld_remove(struct i2c_client *client)
+static void dell_s6100_iom_cpld_remove(struct i2c_client *client)
 {
     dell_s6100_iom_cpld_remove_client(client);
-    return 0;
 }
 
 

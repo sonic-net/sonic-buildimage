@@ -3,4 +3,5 @@
 !debian/
 debian/libnl-*/
 !Makefile
-!patch
+!patch/
+!patch/*

@@ -1,0 +1,115 @@
+From 73f320a3383b94a36cad8f2ae7004dd02c6063d3 Mon Sep 17 00:00:00 2001
+From: Spandan Chowdhury <spandan@nexthop.ai>
+Date: Fri, 1 May 2026 18:21:00 -0700
+Subject: [PATCH] Replace FD_SET/select() with poll() to avoid FD_SETSIZE abort
+
+cli_usock_wait_recv() in libteamdctl and team_check_events() in
+libteam use FD_SET()/select() to wait for readability on a single
+fd. Both fail when the fd value reaches or exceeds FD_SETSIZE (1024
+in glibc): under _FORTIFY_SOURCE=2, FD_SET expands to __fdelt_chk()
+and aborts the process with:
+
+    *** bit out of range 0 - FD_SETSIZE on fd_set ***
+
+A long-running consumer that manages many team interfaces
+concurrently will hit this. Each team_alloc()/team_init() keeps 4
+libnl sockets (nl_sock, nl_sock_event, nl_cli.sock,
+nl_cli.sock_event) and 1 epoll fd (from team_init_event_fd()) open
+for the lifetime of the team handle. Once the persistent fd table
+grows past 1024, the next unix socket opened by teamdctl_connect()
+is assigned a fd >= FD_SETSIZE, and the next teamdctl_*() call that
+reaches cli_usock_wait_recv() aborts the process.
+
+Replace both sites with poll(), which takes raw fd numbers and has
+no FD_SETSIZE ceiling. Behavior is preserved: single fd,
+read-readiness, same timeout semantics (5000 ms in
+cli_usock_wait_recv, non-blocking in team_check_events).
+---
+ libteam/libteam.c       | 16 +++++++---------
+ libteamdctl/cli_usock.c | 20 +++++++-------------
+ 2 files changed, 14 insertions(+), 22 deletions(-)
+
+diff --git a/libteam/libteam.c b/libteam/libteam.c
+index ee78aff..d36b9fa 100644
+--- a/libteam/libteam.c
++++ b/libteam/libteam.c
+@@ -42,7 +42,7 @@
+ #include <stdarg.h>
+ #include <unistd.h>
+ #include <syslog.h>
+-#include <sys/select.h>
++#include <poll.h>
+ #include <sys/epoll.h>
+ #include <time.h>
+ #include <netlink/netlink.h>
+@@ -1031,17 +1031,15 @@ int team_handle_events(struct team_handle *th)
+ TEAM_EXPORT
+ int team_check_events(struct team_handle *th)
+ {
+-	fd_set rfds;
+-	int fdmax;
+-	struct timeval tv;
+ 	int fd = team_get_event_fd(th);
++	struct pollfd pfd = {
++		.fd = fd,
++		.events = POLLIN,
++	};
+ 	int ret;
+ 
+-	memset(&tv, 0, sizeof(tv));
+-	FD_ZERO(&rfds);
+-	FD_SET(fd, &rfds);
+-	fdmax = fd + 1;
+-	ret = select(fdmax, &rfds, NULL, NULL, &tv);
++	/* Non-blocking, equivalent to the original timeval=0 select(). */
++	ret = poll(&pfd, 1, 0);
+ 	if (ret == -1)
+ 		return -errno;
+ 	return team_handle_events(th);
+diff --git a/libteamdctl/cli_usock.c b/libteamdctl/cli_usock.c
+index d3fbdba..141c34b 100644
+--- a/libteamdctl/cli_usock.c
++++ b/libteamdctl/cli_usock.c
+@@ -23,6 +23,7 @@
+ #include <stdarg.h>
+ #include <sys/types.h>
+ #include <sys/socket.h>
++#include <poll.h>
+ #include <unistd.h>
+ #include <teamdctl.h>
+ #include "teamdctl_private.h"
+@@ -79,25 +80,18 @@ static int cli_usock_send(int sock, char *msg)
+ 	return 0;
+ }
+ 
+-#define WAIT_SEC (TEAMDCTL_REPLY_TIMEOUT / 1000)
+-#define WAIT_USEC (TEAMDCTL_REPLY_TIMEOUT % 1000 * 1000)
+-
+ static int cli_usock_wait_recv(int sock)
+ {
+-	fd_set rfds;
+-	int fdmax;
++	struct pollfd pfd = {
++		.fd = sock,
++		.events = POLLIN,
++	};
+ 	int ret;
+-	struct timeval tv;
+ 
+-	tv.tv_sec = WAIT_SEC;
+-	tv.tv_usec = WAIT_USEC;
+-	FD_ZERO(&rfds);
+-	FD_SET(sock, &rfds);
+-	fdmax = sock + 1;
+-	ret = select(fdmax, &rfds, NULL, NULL, &tv);
++	ret = poll(&pfd, 1, TEAMDCTL_REPLY_TIMEOUT);
+ 	if (ret == -1)
+ 		return -errno;
+-	if (!FD_ISSET(sock, &rfds))
++	if (ret == 0)
+ 		return -ETIMEDOUT;
+ 	return 0;
+ }
+-- 
+2.43.0
+

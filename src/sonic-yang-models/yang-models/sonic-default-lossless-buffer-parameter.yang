@@ -15,12 +15,13 @@ module sonic-default-lossless-buffer-parameter {
     container sonic-default-lossless-buffer-parameter {
         container DEFAULT_LOSSLESS_BUFFER_PARAMETER {
 
-            description "DEFAULT_LOSSLESS_BUFFER_PARAMETER part of config_db.json";
+            description "Default parameters for dynamically generated lossless buffer profiles";
 
             list DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST {
                 key "name";
 
                 leaf name {
+                    description "Name of the default lossless buffer parameter entry";
                     type string {
                         pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
                             error-message "Invalid default lossless buffer parameter list name.";

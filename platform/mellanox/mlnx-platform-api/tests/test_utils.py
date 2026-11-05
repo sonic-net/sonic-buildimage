@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +18,10 @@
 
 import os
 import pytest
+import signal
 import sys
+import threading
+import time
 if sys.version_info.major == 3:
     from unittest import mock
 else:
@@ -120,8 +124,421 @@ class TestUtils:
     def test_run_command(self):
         output = utils.run_command(['ls'])
         assert output
+        assert utils.run_command(['not_a_command']) is None
 
+    def test_run_command_exception(self):
+        output = utils.run_command(['ls'])
+        assert output
+
+    @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='.'))
     @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
-    def test_extract_RJ45_ports_index(self):
+    @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.utils.load_json_file')
+    @mock.patch('os.path.exists')
+    def test_extract_RJ45_ports_index(self, mock_exists, mock_load_json):
+        mock_exists.return_value = False
         rj45_list = utils.extract_RJ45_ports_index()
         assert rj45_list is None
+
+        mock_exists.return_value = True
+        platform_json = {
+            'interfaces': {
+                "Ethernet0": {
+                    "index": "1",
+                    "lanes": "0",
+                    "breakout_modes": {
+                        "1x1000[100,10]": ["etp1"]
+                    }
+                }
+            }
+        }
+        hwsku_json = {
+            'interfaces': {
+                "Ethernet0": {
+                    "default_brkout_mode": "1x1000[100,10]",
+                    "port_type": "RJ45"
+                }
+            }
+        }
+
+        mock_load_json.side_effect = [platform_json, hwsku_json]
+        assert utils.extract_RJ45_ports_index() == [0]
+
+    @pytest.mark.parametrize(
+        "platform_json, hwsku_json, expected_result",
+        [
+            # Case 1: platform.json and hwsku.json files do not exist
+            ({}, {}, None),
+
+            # Case 2: platform.json file does not exist
+            (
+                {},
+                {
+                    "interfaces": {
+                        "Ethernet0": {
+                            "port_type": "CPO"
+                        }
+                    }
+                },
+                None
+            ),
+
+            # Case 3: hwsku.json file does not exist
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0"
+                        }
+                    }
+                },
+                {},
+                None
+            ),
+
+            # Case 4: no CPO ports
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0",
+                            "breakout_modes": {
+                                "2x400G[200G]": ["etp1a", "etp1b"]
+                            }
+                        }
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "default_brkout_mode": "2x400G[200G]",
+                            "port_type": "SFP"
+                        }
+                    }
+                },
+                None
+            ),
+
+            # Case 5: one CPO port
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0",
+                            "breakout_modes": {
+                                "2x400G[200G]": ["etp1a", "etp1b"]
+                            }
+                        }
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "default_brkout_mode": "2x400G[200G]",
+                            "port_type": "CPO"
+                        }
+                    }
+                },
+                [0]
+            ),
+
+            # Case 6: multiple CPO ports
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {"index": "1"},
+                        "Ethernet4": {"index": "5"},
+                        "Ethernet8": {"index": "9"}
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {"port_type": "CPO"},
+                        "Ethernet4": {"port_type": "CPO"},
+                        "Ethernet8": {"port_type": "CPO"}
+                    }
+                },
+                [0, 4, 8]
+            ),
+        ]
+    )
+    @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='.'))
+    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
+    @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.utils.load_json_file')
+    @mock.patch('os.path.exists')
+    def test_extract_cpo_ports_index(self, mock_exists, mock_load_json, platform_json, hwsku_json, expected_result):
+        if platform_json and hwsku_json:
+            mock_exists.side_effect = [True, True]
+            mock_load_json.side_effect = [platform_json, hwsku_json]
+        elif platform_json:
+            mock_exists.side_effect = [True, False]
+            mock_load_json.side_effect = [platform_json, None]
+        elif hwsku_json:
+            mock_exists.side_effect = [False, True]
+            mock_load_json.side_effect = [None, hwsku_json]
+        else:
+            mock_exists.side_effect = [False, False]
+            mock_load_json.side_effect = [None, None]
+
+        assert utils.extract_cpo_ports_index() == expected_result
+
+    def test_wait_until(self):
+        values = []
+        assert utils.wait_until(lambda: len(values) == 0, timeout=1)
+        assert not utils.wait_until(lambda: len(values) > 0, timeout=1)
+
+        def thread_func(items):
+            time.sleep(3)
+            items.append(0)
+
+        t = threading.Thread(target=thread_func, args=(values, ))
+        t.start()
+        assert utils.wait_until(lambda: len(values) > 0, timeout=5)
+        t.join()
+
+    def test_load_json_file(self):
+        assert utils.load_json_file('some_file') is None
+
+        mock_os_open = mock.mock_open(read_data='')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.load_json_file('some_file') is None
+
+        mock_os_open = mock.mock_open(read_data='{"a": "b"}')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            data = utils.load_json_file('some_file')
+            assert data['a'] == 'b'
+
+    def test_read_key_value_file(self):
+        mock_os_open = mock.mock_open(read_data='a:b')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.read_key_value_file('some_file') == {'a':'b'}
+
+        mock_os_open = mock.mock_open(read_data='a=b')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.read_key_value_file('some_file', delimeter='=') == {'a':'b'}
+            
+    @mock.patch('sonic_platform.utils._shutdown_event.wait', mock.MagicMock(return_value=False))
+    def test_wait_until_conditions(self):
+        conditions = [lambda: True]
+        assert utils.wait_until_conditions(conditions, 1)
+        conditions = [lambda: False]
+        assert not utils.wait_until_conditions(conditions, 1)
+
+    def test_wait_until_aborts_on_shutdown(self):
+        utils.get_shutdown_event().set()
+        try:
+            assert not utils.wait_until(lambda: False, timeout=10, interval=1)
+        finally:
+            utils.get_shutdown_event().clear()
+
+    def test_wait_until_conditions_aborts_on_shutdown(self):
+        utils.get_shutdown_event().set()
+        try:
+            assert not utils.wait_until_conditions([lambda: False], timeout=10, interval=1)
+        finally:
+            utils.get_shutdown_event().clear()
+
+    def test_handle_shutdown_signal_sets_event_and_chains(self):
+        previous_handler = mock.MagicMock()
+        try:
+            utils._handle_shutdown_signal(previous_handler, signal.SIGTERM, None)
+            assert utils.get_shutdown_event().is_set()
+            previous_handler.assert_called_once_with(signal.SIGTERM, None)
+        finally:
+            utils.get_shutdown_event().clear()
+
+    @mock.patch('sonic_platform.utils.inotify.adapters.Inotify')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_immediate(self, mock_access, mock_inotify):
+        mock_access.return_value = True
+        assert utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+        mock_inotify.assert_not_called()
+
+    @mock.patch('sonic_platform.utils.logger.log_debug')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_dir_missing(self, mock_access, mock_exists, mock_log_debug):
+        """When directory does not exist, return False immediately (no wait)."""
+        mock_access.return_value = False
+        mock_exists.return_value = False
+        assert not utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+        mock_log_debug.assert_called_once()
+
+    @pytest.mark.parametrize("event_type", [
+        "IN_CREATE",
+        "IN_CLOSE_WRITE",
+        "IN_MOVED_TO",
+    ])
+    @mock.patch('sonic_platform.utils.logger.log_info')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_inotify_event(self, mock_access, mock_exists, mock_log_info, event_type):
+        """All inotify event types that indicate file creation are handled."""
+        # First os.access: file not readable at start; second: readable when inotify event is processed
+        mock_access.side_effect = [False, True]
+        mock_exists.return_value = True
+
+        mock_notifier = mock.MagicMock()
+        mock_notifier.event_gen.return_value = [
+            (None, [event_type], "/tmp", "test.file")
+        ]
+
+        with mock.patch('sonic_platform.utils.inotify.adapters.Inotify', return_value=mock_notifier):
+            assert utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+
+        mock_log_info.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_inotify_error(self, mock_access, mock_exists, mock_log_error):
+        mock_access.side_effect = [False, False]
+        mock_exists.return_value = True
+
+        with mock.patch('sonic_platform.utils.inotify.adapters.Inotify', side_effect=Exception('boom')):
+            assert not utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+
+        mock_log_error.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_immediate(self, mock_access, mock_wait):
+        mock_access.return_value = True
+        assert utils.ensure_sysfs_labels_ready()
+        mock_wait.assert_not_called()
+
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_wait_success(self, mock_access, mock_wait_until, mock_wait):
+        mock_access.return_value = False
+        mock_wait.return_value = True
+        assert utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=False)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_parent_dir_timeout(self, mock_access, mock_wait_until,
+                                                          mock_wait, mock_log_error):
+        mock_access.return_value = False
+        assert not utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_not_called()
+        mock_log_error.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_timeout(self, mock_access, mock_wait_until, mock_wait, mock_log_error):
+        mock_access.return_value = False
+        mock_wait.return_value = False
+        assert not utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+        mock_log_error.assert_called_once()
+
+    def test_ensure_sysfs_labels_ready_late_parent_directory(self, tmp_path):
+        """Regression: wait succeeds when parent directory is created after the caller starts."""
+        parent_dir = tmp_path / 'late_hw_mgmt'
+        ready_file = parent_dir / 'sysfs_labels_rdy'
+
+        def create_parent_and_file():
+            time.sleep(0.5)
+            parent_dir.mkdir()
+            time.sleep(0.2)
+            ready_file.write_text('1')
+            os.chmod(ready_file, 0o644)
+
+        thread = threading.Thread(target=create_parent_and_file)
+        thread.start()
+        try:
+            assert utils.ensure_sysfs_labels_ready(str(ready_file), timeout=5)
+        finally:
+            thread.join()
+
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('os.access')
+    def test_ensure_sysfs_mlxsw_ready_immediate(self, mock_access, mock_wait):
+        mock_access.return_value = True
+        assert utils.ensure_sysfs_mlxsw_ready()
+        mock_wait.assert_not_called()
+
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_mlxsw_ready_wait_success(self, mock_access, mock_wait_until, mock_wait):
+        mock_access.return_value = False
+        mock_wait.return_value = True
+        assert utils.ensure_sysfs_mlxsw_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=False)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_mlxsw_ready_parent_dir_timeout(self, mock_access, mock_wait_until,
+                                                          mock_wait, mock_log_error):
+        mock_access.return_value = False
+        assert not utils.ensure_sysfs_mlxsw_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_not_called()
+        mock_log_error.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_mlxsw_ready_timeout(self, mock_access, mock_wait_until, mock_wait, mock_log_error):
+        mock_access.return_value = False
+        mock_wait.return_value = False
+        assert not utils.ensure_sysfs_mlxsw_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+        mock_log_error.assert_called_once()
+
+    def test_ensure_sysfs_mlxsw_ready_late_parent_directory(self, tmp_path):
+        """Regression: wait succeeds when parent directory is created after the caller starts."""
+        parent_dir = tmp_path / 'late_hw_mgmt'
+        ready_file = parent_dir / 'sysfs_mlxsw_rdy'
+
+        def create_parent_and_file():
+            time.sleep(0.5)
+            parent_dir.mkdir()
+            time.sleep(0.2)
+            ready_file.write_text('1')
+            os.chmod(ready_file, 0o644)
+
+        thread = threading.Thread(target=create_parent_and_file)
+        thread.start()
+        try:
+            assert utils.ensure_sysfs_mlxsw_ready(str(ready_file), timeout=5)
+        finally:
+            thread.join()
+
+    def test_timer(self):
+        timer = utils.Timer()
+        timer.start()
+        mock_cb_1000_run_now = mock.MagicMock()
+        mock_cb_1000_run_future = mock.MagicMock()
+        mock_cb_1_run_future_once = mock.MagicMock()
+        mock_cb_1_run_future_repeat = mock.MagicMock()
+        timer.schedule(1000, cb=mock_cb_1000_run_now, repeat=False, run_now=True)
+        timer.schedule(1000, cb=mock_cb_1000_run_future, repeat=False, run_now=False)
+        timer.schedule(1, cb=mock_cb_1_run_future_once, repeat=False, run_now=False)
+        timer.schedule(1, cb=mock_cb_1_run_future_repeat, repeat=True, run_now=False)
+        time.sleep(3)
+        timer.stop()
+
+        mock_cb_1000_run_now.assert_called_once()
+        mock_cb_1000_run_future.assert_not_called()
+        mock_cb_1_run_future_once.assert_called_once()
+        assert mock_cb_1_run_future_repeat.call_count > 1

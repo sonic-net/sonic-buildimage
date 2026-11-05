@@ -1,0 +1,8 @@
+#!/bin/bash
+
+BCM_COMMON=/usr/bin/bcm_common
+if [ -f "$BCM_COMMON" ]; then
+    source $BCM_COMMON
+fi
+docker exec -i syncd$DEV bcmcmd "$@"
+

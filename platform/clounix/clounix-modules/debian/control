@@ -1,0 +1,12 @@
+Source: clounix-modules
+Section: main
+Priority: extra
+Maintainer: support <lufq@clounix.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: clounix-modules
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for clounix asic
+

@@ -21,8 +21,8 @@ FROM {{ prefix }}debian:bullseye
 
 MAINTAINER gulv@microsoft.com
 
-COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
-COPY ["apt-multiple-retries", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/apt-timeout-n-retries", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
@@ -39,9 +39,9 @@ ARG PYTHON_CROSS_PLATFORM=linux_aarch64
 {%- endif %}
 
 RUN dpkg --add-architecture $arch
-RUN apt-get update
-RUN apt-get install -y crossbuild-essential-$arch
-RUN apt-get install -y gcc-$gcc_arch
+RUN apt-get update && apt-get install -y eatmydata
+RUN eatmydata apt-get install -y crossbuild-essential-$arch
+RUN eatmydata apt-get install -y gcc-$gcc_arch
 
 RUN apt-mark hold g++-$gcc_arch
 RUN apt-mark hold g++-10-$gcc_arch
@@ -56,10 +56,10 @@ ARG CROSS_CXX=${gcc_arch}-g++
 ENV DEBIAN_FRONTEND=noninteractive
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
-RUN apt-get install -y python3 python3-pip
-RUN apt-get install -y python3-minimal:$arch python3.9:$arch python3:$arch python3-dev:$arch python3-setuptools:$arch 
-RUN apt-get download python3-distutils && dpkg --force-all -i python3-distutils*
-RUN apt-get download python3-pip && dpkg --force-all -i python3-pip*
+RUN eatmydata apt-get install -y python3 python3-pip
+RUN apt-get install -y python3-minimal:$arch python3.9:$arch python3:$arch python3-dev:$arch python3-setuptools:$arch
+RUN apt-get download python3-distutils && eatmydata dpkg --force-all -i python3-distutils*
+RUN apt-get download python3-pip && eatmydata dpkg --force-all -i python3-pip*
 RUN which pip3 && pip3 install enum34
 RUN pip3 install virtualenv
 
@@ -67,12 +67,12 @@ RUN pip3 install virtualenv
 RUN mkdir /python_virtualenv
 RUN cd /python_virtualenv && python3 -m virtualenv --copies -p /usr/bin/python3 env3
 
-RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install setuptools==49.6.00 wheel==0.35.1 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==5.4.1 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3 
+RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install setuptools==49.6.00 wheel==0.35.1 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==5.4.1 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3
 
-RUN apt-get --fix-broken install -y
-RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {'print \$2;'}|tr "\n" " "`" && apt-get install -y libpython2.7-dev:$arch $LIBPYTHON3_DEPS libxml2-dev:$arch libxslt-dev:$arch libssl-dev:$arch libz-dev:$arch
+RUN eatmydata apt-get --fix-broken install -y
+RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {'print \$2;'}|tr "\n" " "`" && eatmydata apt-get install -y libpython2.7-dev:$arch $LIBPYTHON3_DEPS libxml2-dev:$arch libxslt-dev:$arch libssl-dev:$arch libz-dev:$arch
 
-RUN apt-get install -y swig libssl-dev
+RUN eatmydata apt-get install -y swig libssl-dev
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.1
@@ -80,16 +80,25 @@ RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
 {%- endif %}
 
-RUN apt-get update && apt-get install -y \
+{%- if CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
+# multiarch/debian-debootstrap:arm64-bullseye is too old. It needs to install keys
+RUN apt-get update || apt-get install -y gnupg
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131
+{%- endif %}
+
+RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install -y \
         apt-utils \
         default-jre-headless \
         openssh-server \
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
+        remake \
         libtool \
         lintian \
         sudo \
@@ -116,6 +125,8 @@ RUN apt-get update && apt-get install -y \
         uuid-dev \
         jq \
         cron \
+# For sonic-swss-common
+        nlohmann-json3-dev \
 # For quagga build
         libreadline-dev \
         texlive-latex-base \
@@ -137,6 +148,8 @@ RUN apt-get update && apt-get install -y \
         libsystemd-dev \
         python3-ipaddr \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \
@@ -174,7 +187,6 @@ RUN apt-get update && apt-get install -y \
         python3-all-dev \
 #{%- endif %}
         python3-twisted \
-        phpunit \
         libbit-vector-perl \
         openjdk-11-jdk \
         javahelper \
@@ -183,7 +195,6 @@ RUN apt-get update && apt-get install -y \
         libhttpclient-java \
         libslf4j-java \
         libservlet3.1-java \
-        pkg-php-tools \
 # For mellanox sdk build
         libpcre3 \
         libpcre3-dev \
@@ -197,12 +208,13 @@ RUN apt-get update && apt-get install -y \
         libdb-dev \
         libiptc-dev \
         libxtables-dev \
+	libbpf-dev \
 # For mellanox sai build
         libtool-bin \
         libxml2-dev \
 # For BFN sdk build
         libusb-1.0-0-dev \
-        libcurl3-nss-dev \
+        libcurl4-openssl-dev \
         libunwind8-dev \
         telnet \
         libc-ares2 \
@@ -227,6 +239,9 @@ RUN apt-get update && apt-get install -y \
         libpcap-dev \
         dnsutils \
         libusb-dev \
+# For cisco sdk build
+        libgrpc++1 \
+        libabsl-dev \
 # For debian image reconfiguration
         augeas-tools \
 # For p4 build
@@ -266,7 +281,7 @@ RUN apt-get update && apt-get install -y \
 	debhelper \
         autotools-dev \
         libbsd-dev \
-        pkg-config \
+        pkgconf \
         check \
 # For mpdecimal
         docutils-common \
@@ -299,6 +314,7 @@ RUN apt-get update && apt-get install -y \
 # For iproute2
         cm-super-minimal \
         libatm1-dev \
+        libbpf-dev \
         libelf-dev \
         libmnl-dev \
         libselinux1-dev \
@@ -339,14 +355,17 @@ RUN apt-get update && apt-get install -y \
         libnetfilter-conntrack-dev \
         libnftnl-dev \
 # For SAI3.7
-        protobuf-compiler \
-        libprotobuf-dev \
         xxd \
 # For DHCP Monitor tool
         libexplain-dev \
         libevent-dev \
 # For libyang
         swig \
+        pkgconf \
+        tcl-expect \
+        libxxhash-dev \
+# For libyang3-py3
+        python3-cffi \
 # For build dtb
         device-tree-compiler \
 # For sonic-mgmt-framework
@@ -356,7 +375,7 @@ RUN apt-get update && apt-get install -y \
         xsltproc \
         python3-lxml \
         libexpat1-dev \
-        libcurl3-gnutls \
+        libcurl4 \
         libcjson-dev \
 # For WPA supplication
         qtbase5-dev          \
@@ -400,28 +419,75 @@ RUN apt-get update && apt-get install -y \
         libdbus-1-dev \
         libgirepository1.0-dev \
         libsystemd-dev \
-        pkg-config \
+        pkgconf \
+# For sonic-swss-common build
+        libhiredis-dev \
 # For audisp-tacplus
         libauparse-dev \
-        auditd
+        auditd \
+# For protobuf
+        dh-elpa \
+        xmlto \
+        rake-compiler \
+        default-jdk \
+        libgoogle-gson-java
+
+{%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
+# For DASH BMv2
+RUN eatmydata apt install -y \
+# For grpc
+        libgflags-dev                       \
+        libgoogle-perftools-dev             \
+        ruby-googleauth                     \
+        ruby-googleapis-common-protos-types \
+        ruby-simplecov                      \
+        cython3                             \
+# For p4 libraries
+        valgrind \
+        thrift-compiler \
+        gfortran \
+        libopenmpi-dev \
+        libthrift-0.13.0 \
+        libthrift-dev \
+        libboost-all-dev \
+        libboost-graph-dev \
+        libboost-iostreams-dev \
+        libgc-dev \
+        tcpdump \
+        llvm \
+        net-tools \
+        python3-pyroute2 \
+        python3-ply \
+        python3-scapy \
+        python3-thrift \
+        libabsl20200923 libc-ares2 python3-six libboost-thread1.74.0 libboost-dev libboost-system-dev libboost-thread-dev libboost-filesystem1.74.0 libboost-program-options1.74.0 libboost-thread1.74.0 libnanomsg5 libpcap0.8 libthrift-0.13.0 libboost-dev libboost-filesystem-dev libboost-program-options-dev libgmp-dev libnanomsg-dev libpcap-dev libtool pkgconf libthrift-dev python3-thrift thrift-compiler libboost-iostreams1.74.0 libgc1 cpp libboost-dev libboost-all-dev libboost-graph-dev libboost-iostreams-dev libfl-dev libgc-dev libgmp-dev libbpf-dev tcpdump libelf-dev llvm clang python3-pyroute2 python3-ply python3-scapy python3-setuptools python3-thrift libthrift-0.13.0
+{%- endif %}
+
+{%- if CONFIGURED_ARCH == "amd64" %}
+# Upgrade CMAKE version
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
+RUN chmod +x cmake-3.27.6-linux-x86_64.sh
+RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN sudo apt-get update -y
+{%- endif %}
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200
-RUN apt-get install -y libpcre3:$arch
+RUN eatmydata apt-get install -y libpcre3:$arch
 {%- endif %}
 
-RUN apt-get -y build-dep openssh
+RUN eatmydata apt-get -y build-dep openssh
 
 # Build fix for ARM64 and ARMHF /etc/debian_version
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
-RUN apt upgrade -y base-files libc-bin=$(dpkg-query -W -f '${Version}' libc-bin)
+RUN eatmydata apt upgrade -y base-files libc-bin=$(dpkg-query -W -f '${Version}' libc-bin)
 {%- endif %}
 
 # Build fix for ARMHF bullseye libsairedis
 {%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
        # Install doxygen build dependency packages
-       RUN apt install -y libxapian-dev yui-compressor texlive-extra-utils \
+       RUN eatmydata apt install -y libxapian-dev yui-compressor texlive-extra-utils \
            texlive-font-utils rdfind llvm-11-dev libclang-11-dev sassc faketime mat2
 
        # Update doxygen with 64bit file offset patch
@@ -430,12 +496,12 @@ RUN apt upgrade -y base-files libc-bin=$(dpkg-query -W -f '${Version}' libc-bin)
            sed -i '56 a add_definitions(-D_FILE_OFFSET_BITS=64)' CMakeLists.txt && \
            DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -b && \
            cd .. && \
-           dpkg -i ./doxygen_1.9.1-2_armhf.deb && \
+           eatmydata dpkg -i ./doxygen_1.9.1-2_armhf.deb && \
            rm -fr doxygen*
 
        # Aspell is unable to locate the language dictionaries.
        # Re-installing aspell-en dictionary to fix it.
-       RUN apt-get install --reinstall -y aspell-en
+       RUN eatmydata apt-get install --reinstall -y aspell-en
 
        # workaround because of https://bugs.launchpad.net/qemu/+bug/1805913, just disable aspell
        # Issue now being tracked here - https://gitlab.com/qemu-project/qemu/-/issues/263
@@ -452,27 +518,28 @@ RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 # For linux build
-RUN apt-get -y build-dep linux
+RUN eatmydata apt-get -y build-dep linux
 {%- else %}
-RUN apt-get install -y kernel-wedge
+RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN apt-get install -y golang-1.15 && ln -s /usr/lib/go-1.15 /usr/local/go
-{%- if ENABLE_FIPS_FEATURE == "y" %}
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-src_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
- && dpkg -i golang-go.deb golang-src.deb \
+RUN eatmydata apt-get install -y golang-1.15 && ln -s /usr/lib/go-1.15 /usr/local/go
+{%- if INCLUDE_FIPS == "y" %}
+RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-src_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-1.15 /usr/local/go \
  && rm golang-go.deb golang-src.deb
 {%- endif %}
 
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade pip==24.2
 RUN apt-get purge -y python3-pip python3-yaml
 
 # For building Python packages
 RUN pip3 install setuptools==49.6.00
-RUN pip3 install wheel==0.35.1
+RUN pip3 install setuptools-scm==8.1.0
+RUN pip3 install wheel==0.38.1
 
 {%- if CONFIGURED_ARCH == "armhf" %}
 # Allow only manylinux wheels on armhf, to ensure that binaries/libraries work correctly on armhf
@@ -487,10 +554,28 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.9/dist-pack
 # For building sonic-utilities
 RUN pip3 install fastentrypoints mock
 
+# For building sonic_ycabled
+# Note: upstream build breaks with old version of setuptools
+# ref: https://github.com/grpc/grpc/issues/34569
+RUN pip3 install grpcio==1.58.0 grpcio-tools==1.58.0
+
 # For running Python unit tests
 RUN pip3 install pytest-runner==5.2
 RUN pip3 install nose==1.3.7
 RUN pip3 install mockredispy==2.9.3
+
+# Fix CVE-2021-23437, need to build and install libjpeg-dev for armhf for pillow 9.4.0
+{%- if CONFIGURED_ARCH == "armhf" %}
+RUN TMP_DIR=$(mktemp -d) && \
+    cd $TMP_DIR && \
+    eatmydata apt-get install -y nasm && \
+    apt-get source libjpeg-turbo && \
+    cd $(ls -d libjpeg-turbo*/) && \
+    dpkg-buildpackage -rfakeroot -b -us -uc > $TMP_DIR/libjpeg-dev.log && \
+    eatmydata dpkg -i $TMP_DIR/libjpeg*-dev*.deb && \
+    rm -rf $TMP_DIR
+{%- endif %}
+RUN pip3 install pillow==9.4.0
 
 # For p4 build
 RUN pip3 install \
@@ -508,13 +593,15 @@ RUN pip3 uninstall -y enum34
 RUN pip3 install j2cli==0.3.10
 
 # For sonic-mgmt-framework
-RUN pip3 install "PyYAML==5.4.1"
+
 {%- if CROSS_BUILD_ENVIRON != "y" %}
-RUN pip3 install "lxml==4.6.2"
+RUN pip3 install "lxml==4.9.1"
 {%- endif %}
 
 # For sonic-platform-common testing
 RUN pip3 install redis
+RUN pip3 install psutil
+RUN pip3 install blkinfo
 
 # For vs image build
 RUN pip3 install pexpect==4.8.0
@@ -530,16 +617,19 @@ RUN pip3 install mmh3==2.5.1
 
 RUN pip3 install parameterized==0.8.1
 
-RUN apt-get install -y xsltproc
+# For DASH BMv2
+RUN pip3 install jsonpath_ng
+
+RUN eatmydata apt-get install -y xsltproc
 
 # Install dependencies for isc-dhcp-relay build
-RUN apt-get -y build-dep isc-dhcp
+RUN eatmydata apt-get -y build-dep isc-dhcp
 
 # Install vim
-RUN apt-get install -y vim
+RUN eatmydata apt-get install -y vim
 
 # Install rsyslog
-RUN apt-get install -y rsyslog
+RUN eatmydata apt-get install -y rsyslog
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN cd /usr/src/gtest && CXX=$CROSS_CXX CC=$CROSS_CC cmake . && make -C /usr/src/gtest
@@ -550,17 +640,13 @@ RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
 RUN mkdir /var/run/sshd
 EXPOSE 22
 
-# Install depot-tools (for git-retry)
-RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /usr/share/depot_tools
-ENV PATH /usr/share/depot_tools:$PATH
-
 # Install dependencies for dhcp relay test
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
 
-# Install docker engine 20.10 inside docker and enable experimental feature
+# Install docker engine 24 inside docker and enable experimental feature
 RUN apt-get update
-RUN apt-get install -y \
+RUN eatmydata apt-get install -y \
            apt-transport-https \
            ca-certificates \
            curl \
@@ -579,7 +665,7 @@ RUN add-apt-repository \
            $(lsb_release -cs) \
            stable"
 RUN apt-get update
-RUN apt-get install -y docker-ce=5:20.10.14~3-0~debian-bullseye docker-ce-cli=5:20.10.14~3-0~debian-bullseye containerd.io=1.5.11-1
+RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.11~bullseye docker-ce-cli=5:24.0.2-1~debian.11~bullseye containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.11~bullseye docker-compose-plugin=2.18.1-1~debian.11~bullseye
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
@@ -592,20 +678,20 @@ RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
-RUN apt-get install -y nodejs
+RUN eatmydata apt-get install -y nodejs
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
-RUN apt-get install -y rsync dh-python
+RUN eatmydata apt-get install -y rsync dh-python
 
-RUN apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.74-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch libexplain-dev:$arch libc-ares-dev:$arch libiptc0:$arch libxtables12:$arch libatm1-dev:$arch libdb-dev:$arch pkg-config:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl3-gnutls:$arch libcurl3-nss-dev:$arch libboost-thread1.74-dev:$arch libboost-thread-dev:$arch libboost-system1.74-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch libfido2-dev:$arch libcunit1:$arch libcunit1-dev:$arch libauparse-dev:$arch libnetsnmptrapd40:$arch qtbase5-dev:$arch libboost-log-dev:$arch libboost-filesystem-dev:$arch libboost-program-options-dev:$arch 
+RUN eatmydata apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.74-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch libexplain-dev:$arch libc-ares-dev:$arch libiptc0:$arch libxtables12:$arch libatm1-dev:$arch libbpf-dev:$arch libdb-dev:$arch pkgconf:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl4-openssl-dev:$arch libboost-thread1.74-dev:$arch libboost-thread-dev:$arch libboost-system1.74-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch libfido2-dev:$arch libcunit1:$arch libcunit1-dev:$arch libauparse-dev:$arch libnetsnmptrapd40:$arch qtbase5-dev:$arch libboost-log-dev:$arch libboost-filesystem-dev:$arch libboost-program-options-dev:$arch
 
-RUN apt-get download libgirepository1.0-dev:$arch && dpkg --force-all -i libgirepository1.0-dev*
+RUN apt-get download libgirepository1.0-dev:$arch && eatmydata dpkg --force-all -i libgirepository1.0-dev*
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install pycairo
 
 # Install libpcsclite-dev for wpasupplicant using download because regular install removes amd64 python package
-RUN apt-get download libpcsclite1:$arch && dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && dpkg --force-all -i libpcsclite-dev*
+RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && eatmydata dpkg --force-all -i libpcsclite-dev*
 # Install python3-dev for frr (/usr/bin/python3-config for $arch) using download because regular install removes amd64 python package
-RUN apt-get download python3.9-dev:$arch && apt-get download python3-dev:$arch && dpkg --force-all -i python3*-dev*
+RUN apt-get download python3.9-dev:$arch && apt-get download python3-dev:$arch && eatmydata dpkg --force-all -i python3*-dev*
 {% endif %}
 
 # Tell azure pipeline to use node.js in the docker
@@ -619,5 +705,50 @@ ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download
 RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
 # Bazel requires "python"
 # TODO(PINS): remove when Bazel is okay with "python3" binary name
-RUN apt install -y python-is-python3
+RUN eatmydata apt install -y python-is-python3
 {% endif -%}
+
+# Install Rust
+ARG RUST_ROOT=/usr/.cargo
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.86.0 -y'
+{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "armhf" %}
+RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add armv7-unknown-linux-gnueabihf && echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
+{% endif -%}
+{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "arm64" %}
+RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-gnu && echo "[target.aarch64-unknown-linux-gnu]\nlinker = \"aarch64-linux-gnu-gcc\"" >> /.cargo/config.toml
+{% endif -%}
+ENV RUSTUP_HOME $RUST_ROOT
+ENV PATH $PATH:$RUST_ROOT/bin
+
+# Install cargo-auditable so every `cargo build` embeds the resolved
+# Cargo.lock into the produced binary's .dep-v0 ELF section. Syft reads
+# that section at SBOM scan time, giving SONiC SBOMs full per-crate
+# visibility for Rust packages without source-tree changes to any
+# debian/rules file. Pinned for reproducibility (>= 0.6.6 required to
+# parse Rust edition 2024 crates, see #29881). CARGO_HOME=$RUST_ROOT
+# ensures the binary lands at /usr/.cargo/bin/cargo-auditable (in PATH
+# for all users) rather than /root/.cargo/bin/ (root-only).
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.7.6
+
+# rust-audit-info is the official CLI for reading the .dep-v0 section
+# that cargo-auditable embedded. scripts/sbom_fragment.py invokes it
+# on every ELF binary inside each SONiC-built .deb to recover the
+# resolved Rust crate set that shipped in that .deb, then emits each
+# crate as a CycloneDX component with sonic:source_deb=<filename>
+# linking it back to the owning artifact. Same install pattern as
+# cargo-auditable so the binary lands at /usr/.cargo/bin/rust-audit-info.
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked rust-audit-info@0.5.4
+
+# /usr/local/bin/cargo is a transparent shim that routes `cargo build`
+# through `cargo auditable` (other subcommands pass through). Single
+# source of truth: files/build/cargo-wrapper; staged into the slave's
+# buildinfo/ directory by scripts/prepare_docker_buildinfo.sh. The
+# shim must sit ahead of $RUST_ROOT/bin in PATH, which the default
+# /usr/local/bin already does.
+COPY buildinfo/cargo-wrapper /usr/local/bin/cargo
+RUN chmod 0755 /usr/local/bin/cargo
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='bullseye' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

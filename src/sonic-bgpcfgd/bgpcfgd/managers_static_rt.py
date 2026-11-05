@@ -6,6 +6,11 @@ import socket
 from swsscommon import swsscommon
 from ipaddress import ip_network, IPv4Network
 
+
+class InvalidIdentifierError(ValueError):
+    """Raised when a nexthop identifier is unsafe to render."""
+
+
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
     def __init__(self, common_objs, db, table):
@@ -21,10 +26,11 @@ class StaticRouteMgr(Manager):
             db,
             table,
         )
-        
+
         self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),], self.on_bgp_asn_change)
         self.static_routes = {}
         self.vrf_pending_redistribution = set()
+        self.config_db = None
 
     OP_DELETE = 'DELETE'
     OP_ADD = 'ADD'
@@ -32,7 +38,10 @@ class StaticRouteMgr(Manager):
     ROUTE_ADVERTISE_DISABLE_TAG = '2'
 
     def set_handler(self, key, data):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return True
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         arg_list    = lambda v: v.split(',') if len(v.strip()) != 0 else None
@@ -41,12 +50,24 @@ class StaticRouteMgr(Manager):
         intf_list   = arg_list(data['ifname']) if 'ifname' in data else None
         dist_list   = arg_list(data['distance']) if 'distance' in data else None
         nh_vrf_list = arg_list(data['nexthop-vrf']) if 'nexthop-vrf' in data else None
-        route_tag   = self.ROUTE_ADVERTISE_DISABLE_TAG if 'advertise' in data and data['advertise'] == "false" else self.ROUTE_ADVERTISE_ENABLE_TAG 
+        bfd_enable  = arg_list(data['bfd']) if 'bfd' in data else None
+        route_tag   = self.ROUTE_ADVERTISE_DISABLE_TAG if 'advertise' in data and data['advertise'] == "false" else self.ROUTE_ADVERTISE_ENABLE_TAG
+
+        # bfd enabled route would be handled in staticroutebfd, skip here
+        if bfd_enable and bfd_enable[0].lower() == "true":
+            log_debug("{} static route {} bfd flag is true".format(self.db_name, key))
+            tmp_nh_set, tmp_route_tag = self.static_routes.get(vrf, {}).get(ip_prefix, (IpNextHopSet(is_ipv6), route_tag))
+            if tmp_nh_set: #clear nexthop set if it is not empty
+                log_debug("{} static route {} bfd flag is true, cur_nh is not empty, clear it".format(self.db_name, key))
+                self.static_routes.setdefault(vrf, {}).pop(ip_prefix, None)
+            return True
 
         try:
             ip_nh_set = IpNextHopSet(is_ipv6, bkh_list, nh_list, intf_list, dist_list, nh_vrf_list)
             cur_nh_set, cur_route_tag = self.static_routes.get(vrf, {}).get(ip_prefix, (IpNextHopSet(is_ipv6), route_tag))
             cmd_list = self.static_route_commands(ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag)
+        except InvalidIdentifierError:
+            return True
         except Exception as exc:
             log_crit("Got an exception %s: Traceback: %s" % (str(exc), traceback.format_exc()))
             return False
@@ -60,18 +81,72 @@ class StaticRouteMgr(Manager):
 
         if cmd_list:
             self.cfg_mgr.push_list(cmd_list)
-            log_debug("Static route {} is scheduled for updates".format(key))
+            log_debug("{} Static route {} is scheduled for updates. {}".format(self.db_name, key, str(cmd_list)))
         else:
-            log_debug("Nothing to update for static route {}".format(key))
+            log_debug("{} Nothing to update for static route {}".format(self.db_name, key))
 
         self.static_routes.setdefault(vrf, {})[ip_prefix] = (ip_nh_set, route_tag)
 
         return True
 
 
+    def skip_appl_del(self, vrf, ip_prefix):
+        """
+        If a static route is bfd enabled, the processed static route is written into application DB by staticroutebfd.
+        When we disable bfd for that route at runtime, that static route entry will be removed from APPL_DB STATIC_ROUTE_TABLE.
+        In the case, the StaticRouteMgr(appl_db) cannot uninstall the static route from FRR if the static route is still in CONFIG_DB,
+        so need this checking (skip appl_db deletion) to avoid race condition between StaticRouteMgr(appl_db) and StaticRouteMgr(config_db)
+        For more detailed information:
+        https://github.com/sonic-net/SONiC/blob/master/doc/static-route/SONiC_static_route_bfd_hld.md#bfd-field-changes-from-true-to-false
+        but if the deletion is caused by no nexthop available (bfd field is true but all the sessions are down), need to allow this deletion.
+        :param vrf: vrf from the split_key(key) return
+        :param ip_prefix: ip_prefix from the split_key(key) return
+        :return: True if the deletion comes from APPL_DB and the vrf|ip_prefix exists in CONFIG_DB, otherwise return False
+        """
+        if self.db_name == "CONFIG_DB":
+            return False
+
+        if self.config_db is None:
+            self.config_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
+            self.config_db.connect(self.config_db.CONFIG_DB)
+
+        #just pop local cache if the route exist in config_db
+        cfg_key = "STATIC_ROUTE|" + vrf + "|" + ip_prefix
+        if vrf == "default":
+            default_key = "STATIC_ROUTE|" + ip_prefix
+            bfd = self.config_db.get(self.config_db.CONFIG_DB, default_key, "bfd")
+            if bfd == "true":
+                log_debug("skip_appl_del: {}, key {}, bfd flag {}".format(self.db_name, default_key, bfd))
+                return False
+        bfd = self.config_db.get(self.config_db.CONFIG_DB, cfg_key, "bfd")
+        if bfd == "true":
+            log_debug("skip_appl_del: {}, key {}, bfd flag {}".format(self.db_name, cfg_key, bfd))
+            return False
+
+        nexthop = self.config_db.get(self.config_db.CONFIG_DB, cfg_key, "nexthop")
+        if nexthop and len(nexthop)>0:
+            self.static_routes.setdefault(vrf, {}).pop(ip_prefix, None)
+            return True
+
+        if vrf == "default":
+            cfg_key = "STATIC_ROUTE|" + ip_prefix
+        nexthop = self.config_db.get(self.config_db.CONFIG_DB, cfg_key, "nexthop")
+        if nexthop and len(nexthop)>0:
+            self.static_routes.setdefault(vrf, {}).pop(ip_prefix, None)
+            return True
+
+        return False
+
     def del_handler(self, key):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
+
+        if self.skip_appl_del(vrf, ip_prefix):
+            log_debug("{} ignore appl_db static route deletion because of key {} exist in config_db and bfd is not true".format(self.db_name, key))
+            return
 
         ip_nh_set = IpNextHopSet(is_ipv6)
         cur_nh_set, route_tag = self.static_routes.get(vrf, {}).get(ip_prefix, (IpNextHopSet(is_ipv6), self.ROUTE_ADVERTISE_DISABLE_TAG))
@@ -85,9 +160,9 @@ class StaticRouteMgr(Manager):
 
         if cmd_list:
             self.cfg_mgr.push_list(cmd_list)
-            log_debug("Static route {} is scheduled for updates".format(key))
+            log_debug("{} Static route {} is scheduled for updates. {}".format(self.db_name, key, str(cmd_list)))
         else:
-            log_debug("Nothing to update for static route {}".format(key))
+            log_debug("{} Nothing to update for static route {}".format(self.db_name, key))
 
         self.static_routes.setdefault(vrf, {}).pop(ip_prefix, None)
 
@@ -100,24 +175,41 @@ class StaticRouteMgr(Manager):
         key example: APPL_DB   vrf:5.5.5.0/24, 5.5.5.0/24, vrf:2001::0/64, 2001::0/64
                      CONFIG_DB vrf|5.5.5.0/24, 5.5.5.0/24, vrf|2001::0/64, 2001::0/64
         """
-        vrf = ""
-        prefix = ""
+        if not isinstance(key, str):
+            log_err("Invalid static route key {!r}".format(key))
+            return None
 
         if '|' in key:
-            return tuple(key.split('|', 1))
+            vrf, prefix = key.split('|', 1)
         else:
             try:
-                _ = ip_network(key)
                 vrf, prefix = 'default', key
+                ip_network(prefix, strict=False)
             except ValueError:
                 # key in APPL_DB
-                log_debug("static route key {} is not prefix only formart, split with ':'".format(key))
+                log_debug("static route key {!r} is not prefix-only format, split with ':'".format(key))
                 output = key.split(':', 1)
                 if len(output) < 2:
-                    log_debug("invalid input in APPL_DB {}".format(key))
-                    raise ValueError
+                    log_err("Invalid static route key {!r}".format(key))
+                    return None
                 vrf = output[0]
                 prefix = key[len(vrf)+1:]
+
+        if not swsscommon.isVrfNameValid(vrf):
+            log_err("Invalid VRF in static route key {!r}".format(key))
+            return None
+
+        if (not prefix or '%' in prefix or
+                any(char < '\x21' or char > '\x7e' for char in prefix)):
+            log_err("Invalid prefix in static route key {!r}".format(key))
+            return None
+
+        try:
+            ip_network(prefix, strict=False)
+        except ValueError:
+            log_err("Invalid prefix in static route key {!r}".format(key))
+            return None
+
         return vrf, prefix
 
     def static_route_commands(self, ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag):
@@ -169,6 +261,8 @@ class StaticRouteMgr(Manager):
         for af in ["ipv4", "ipv6"]:
             cmd_list.append(" address-family %s" % af)
             cmd_list.append("  redistribute static route-map STATIC_ROUTE_FILTER")
+            cmd_list.append(" exit-address-family")
+        cmd_list.append("exit")
         return cmd_list
 
     def disable_redistribution_command(self, vrf):
@@ -182,6 +276,8 @@ class StaticRouteMgr(Manager):
         for af in ["ipv4", "ipv6"]:
             cmd_list.append(" address-family %s" % af)
             cmd_list.append("  no redistribute static route-map STATIC_ROUTE_FILTER")
+            cmd_list.append(" exit-address-family")
+        cmd_list.append("exit")
         cmd_list.append("no route-map STATIC_ROUTE_FILTER")
         return cmd_list
 
@@ -202,9 +298,19 @@ class IpNextHop:
         self.ip = zero_ip(af_id) if dst_ip is None or dst_ip == '' else dst_ip
         self.interface = '' if if_name is None else if_name
         self.nh_vrf = '' if vrf is None else vrf
-        if not self.is_portchannel():
+        portchannel_nexthop = self.is_portchannel()
+        if self.interface and not swsscommon.isInterfaceNameValid(self.interface):
+            log_err("Invalid interface name for nexthop: {!r}".format(self.interface))
+            raise InvalidIdentifierError
+        if portchannel_nexthop and not swsscommon.isInterfaceNameValid(self.ip):
+            log_err("Invalid PortChannel name for nexthop: {!r}".format(self.ip))
+            raise InvalidIdentifierError
+        if self.nh_vrf and not swsscommon.isVrfNameValid(self.nh_vrf):
+            log_err("Invalid VRF name for nexthop: {!r}".format(self.nh_vrf))
+            raise InvalidIdentifierError
+        if not portchannel_nexthop:
             self.is_ip_valid()
-        if self.blackhole != 'true' and self.is_zero_ip() and not self.is_portchannel() and len(self.interface.strip()) == 0:
+        if self.blackhole != 'true' and self.is_zero_ip() and not portchannel_nexthop and len(self.interface.strip()) == 0:
             log_err('Mandatory attribute not found for nexthop')
             raise ValueError
     def __eq__(self, other):
@@ -259,5 +365,7 @@ class IpNextHopSet(set):
             try:
                 self.add(IpNextHop(af, item(bkh_list, idx), item(ip_list, idx), item(intf_list, idx),
                                    item(dist_list, idx), item(vrf_list, idx), ))
+            except InvalidIdentifierError:
+                raise
             except ValueError:
                 continue

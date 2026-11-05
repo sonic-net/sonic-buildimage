@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +17,20 @@
 #
 import ctypes
 import functools
+import signal
 import subprocess
 import json
+import queue
 import sys
+import threading
+import time
 import os
+
+# Inotify causes an exception when DEBUG env variable is set to a non-integer convertible
+# https://github.com/dsoprea/PyInotify/blob/0.2.10/inotify/adapters.py#L37
+os.environ['DEBUG'] = '0'
+import inotify.adapters
+import inotify.constants
 from sonic_py_common import device_info
 from sonic_py_common.logger import Logger
 
@@ -28,6 +39,7 @@ HWSKU_JSON = 'hwsku.json'
 PORT_INDEX_KEY = "index"
 PORT_TYPE_KEY = "port_type"
 RJ45_PORT_TYPE = "RJ45"
+CPO_PORT_TYPE = "CPO"
 
 logger = Logger()
 
@@ -99,15 +111,15 @@ def read_float_from_file(file_path, default=0.0, raise_exception=False, log_func
     return read_from_file(file_path=file_path, target_type=float, default=default, raise_exception=raise_exception, log_func=log_func)
 
 
-def _key_value_converter(content):
+def _key_value_converter(content, delimeter):
     ret = {}
     for line in content.splitlines():
-        k,v = line.split(':')
+        k,v = line.split(delimeter, 1)
         ret[k.strip()] = v.strip()
     return ret
 
 
-def read_key_value_file(file_path, default={}, raise_exception=False, log_func=logger.log_error):
+def read_key_value_file(file_path, default={}, raise_exception=False, log_func=logger.log_error, delimeter=':'):
     """Read file content and parse the content to a dict. The file content should like:
        key1:value1
        key2:value2
@@ -118,7 +130,8 @@ def read_key_value_file(file_path, default={}, raise_exception=False, log_func=l
         raise_exception (bool, optional): If exception should be raised or hiden. Defaults to False.
         log_func (optional): logger function.. Defaults to logger.log_error.
     """
-    return read_from_file(file_path=file_path, target_type=_key_value_converter, default=default, raise_exception=raise_exception, log_func=log_func)
+    converter = lambda content: _key_value_converter(content, delimeter)
+    return read_from_file(file_path=file_path, target_type=converter, default=default, raise_exception=raise_exception, log_func=log_func)
 
 
 def write_file(file_path, content, raise_exception=False, log_func=logger.log_error):
@@ -234,19 +247,14 @@ def load_json_file(filename, log_func=logger.log_error):
         return None
 
 
-def extract_RJ45_ports_index():
-    # Cross check 'platform.json' and 'hwsku.json' to extract the RJ45 port index if exists.
-    hwsku_path = device_info.get_path_to_hwsku_dir()
-    hwsku_file = os.path.join(hwsku_path, HWSKU_JSON)
-    if not os.path.exists(hwsku_file):
-        # Platforms having no hwsku.json do not have RJ45 port
+def _extract_ports_index_by_type(port_type, num_of_asics=1):
+    platform_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.PLATFORM_JSON_FILE)
+    if not os.path.exists(platform_file):
         return None
 
-    platform_file = device_info.get_path_to_port_config_file()
     platform_dict = load_json_file(platform_file)['interfaces']
-    hwsku_dict = load_json_file(hwsku_file)['interfaces']
     port_name_to_index_map_dict = {}
-    RJ45_port_index_list = []
+    port_index_list = []
 
     # Compose a interface name to index mapping from 'platform.json'
     for i, (key, value) in enumerate(platform_dict.items()):
@@ -259,10 +267,375 @@ def extract_RJ45_ports_index():
     if not bool(port_name_to_index_map_dict):
         return None
 
-    # Check if "port_type" specified as "RJ45", if yes, add the port index to the list.
+    hwsku_jsons = get_path_list_to_asic_hwsku_dir(num_of_asics)
+    hwsku_dict = {}
+    for hwsku_json in hwsku_jsons:
+        if not os.path.exists(hwsku_json):
+            continue
+        hwsku_dict.update(load_json_file(hwsku_json)['interfaces'])
+
+    # Check platform has no hwsku.json(s)
+    if not hwsku_dict:
+        return None
+
+    # Check if "port_type" matches, if yes, add the port index to the list.
     for i, (key, value) in enumerate(hwsku_dict.items()):
-        if key in port_name_to_index_map_dict and PORT_TYPE_KEY in value and value[PORT_TYPE_KEY] == RJ45_PORT_TYPE:
-            RJ45_port_index_list.append(int(port_name_to_index_map_dict[key])-1)
+        if key in port_name_to_index_map_dict and PORT_TYPE_KEY in value and value[PORT_TYPE_KEY] == port_type:
+            port_index_list.append(int(port_name_to_index_map_dict[key]) - 1)
 
-    return RJ45_port_index_list if bool(RJ45_port_index_list) else None
+    # Remove duplicates
+    port_index_list = list(dict.fromkeys(port_index_list))
 
+    return port_index_list if port_index_list else None
+
+
+def get_path_list_to_asic_hwsku_dir(num_of_asics):
+    platform_path = device_info.get_path_to_platform_dir()
+    hwsku = device_info.get_hwsku()
+    if num_of_asics == 1:
+        return [os.path.join(platform_path, hwsku, HWSKU_JSON)]
+    else:
+        return [os.path.join(platform_path, hwsku, str(asic_id), HWSKU_JSON) for asic_id in range(num_of_asics)]
+
+
+def extract_RJ45_ports_index(num_of_asics=1):
+    return _extract_ports_index_by_type(RJ45_PORT_TYPE, num_of_asics)
+
+
+def extract_cpo_ports_index(num_of_asics=1):
+    return _extract_ports_index_by_type(CPO_PORT_TYPE, num_of_asics)
+
+
+# Use this function only for files that have user read permission.
+def wait_for_file_creation(file_path, timeout):
+    """
+    Wait for a file to be created using inotify
+
+    Args:
+        file_path: Path to the file to wait for
+        timeout: Timeout in seconds
+
+    Returns:
+        True if file was created/copied from a temporary file, and is readable, False otherwise
+    """
+    # If file already exists and is readable, return immediately
+    if os.access(file_path, os.R_OK):
+        return True
+
+    dir_path = os.path.dirname(file_path)
+    file_name = os.path.basename(file_path)
+
+    if not os.path.exists(dir_path):
+        logger.log_debug("Directory {} does not exist".format(dir_path))
+        return False
+
+    try:
+        notifier = inotify.adapters.Inotify()
+        notifier.add_watch(dir_path,
+                           mask=(inotify.constants.IN_CREATE
+                                 | inotify.constants.IN_CLOSE_WRITE
+                                 | inotify.constants.IN_MOVED_TO))
+
+        for event in notifier.event_gen(timeout_s=timeout, yield_nones=False):
+            (_, type_names, path, filename) = event
+            if filename == file_name:
+                if "IN_CREATE" in type_names or "IN_CLOSE_WRITE" in type_names or "IN_MOVED_TO" in type_names:
+                    if os.access(file_path, os.R_OK):
+                        logger.log_info("File {} created and readable".format(file_path))
+                        return True
+
+    except Exception as e:
+        logger.log_error("Inotify error while waiting for {}: {}".format(file_path, repr(e)))
+
+    if os.access(file_path, os.R_OK):
+        return True
+
+    return False
+
+
+SYSFS_LABELS_READY_FILE = '/var/run/hw-management/sysfs_labels_rdy'
+SYSFS_LABELS_READY_WAIT_TIMEOUT = 60
+
+
+def ensure_sysfs_labels_ready(file_path=SYSFS_LABELS_READY_FILE,
+                              timeout=SYSFS_LABELS_READY_WAIT_TIMEOUT):
+    """
+    Wait until hw-mgmt sysfs labels are ready before reading sysfs paths.
+
+    Returns immediately if the ready file already exists. Waits for the parent
+    directory to appear first, then uses inotify via wait_for_file_creation().
+    timeout is the maximum wait time in seconds for the whole operation.
+
+    Returns:
+        True if the ready file is accessible, False on timeout.
+    """
+    if os.access(file_path, os.R_OK):
+        return True
+
+    dir_path = os.path.dirname(file_path)
+    logger.log_info("Sysfs labels ready file {} not accessible, waiting for creation".format(file_path))
+
+    deadline = time.monotonic() + timeout
+
+    def remaining_timeout():
+        return max(0, deadline - time.monotonic())
+
+    if not wait_until(lambda: os.path.exists(dir_path), remaining_timeout(), interval=1):
+        logger.log_error("Parent directory {} not available after timeout".format(dir_path))
+        return False
+
+    if wait_for_file_creation(file_path, remaining_timeout()):
+        return True
+
+    logger.log_error("Sysfs labels ready file {} not available after timeout".format(file_path))
+    return False
+
+
+SYSFS_MLXSW_READY_FILE = '/var/run/hw-management/sysfs_mlxsw_rdy'
+SYSFS_MLXSW_READY_WAIT_TIMEOUT = 300
+
+
+def ensure_sysfs_mlxsw_ready(file_path=SYSFS_MLXSW_READY_FILE,
+                              timeout=SYSFS_MLXSW_READY_WAIT_TIMEOUT):
+    """
+    Wait until hw-mgmt has created the mlxsw ASIC sysfs tree after ASIC bring-up.
+
+    Unlike sysfs_labels_rdy, this file is only created by hw-mgmt after the
+    mlxsw_minimal sysfs is actually populated, so its existence alone is
+    readiness. Returns immediately if the ready file already exists. Waits
+    for the parent directory to appear first, then uses inotify via
+    wait_for_file_creation(). timeout is the maximum wait time in seconds
+    for the whole operation.
+
+    Returns:
+        True if the ready file is accessible, False on timeout.
+    """
+    if os.access(file_path, os.R_OK):
+        return True
+
+    dir_path = os.path.dirname(file_path)
+    logger.log_info("Sysfs mlxsw ready file {} not accessible, waiting for creation".format(file_path))
+
+    deadline = time.monotonic() + timeout
+
+    def remaining_timeout():
+        return max(0, deadline - time.monotonic())
+
+    if not wait_until(lambda: os.path.exists(dir_path), remaining_timeout(), interval=1):
+        logger.log_error("Parent directory {} not available after timeout".format(dir_path))
+        return False
+
+    if wait_for_file_creation(file_path, remaining_timeout()):
+        return True
+
+    logger.log_error("Sysfs mlxsw ready file {} not available after timeout".format(file_path))
+    return False
+
+
+def extract_asic_id_map(num_of_asics=1):
+    asic_id_map = {}
+
+    hwsku_jsons = get_path_list_to_asic_hwsku_dir(num_of_asics)
+    interface2asic = {}
+    for asic_id, hwsku_json in enumerate(hwsku_jsons):
+        interface2asic.update({interface: asic_id for interface in load_json_file(hwsku_json)['interfaces'].keys()})
+
+    platform_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.PLATFORM_JSON_FILE)
+    platform_dict = load_json_file(platform_file)['interfaces']
+
+    for inteface, value in platform_dict.items():
+        if PORT_INDEX_KEY in value:
+            index_raw = value[PORT_INDEX_KEY]
+            # The index could be "1" or "1, 1, 1, 1"
+            index = index_raw.split(',')[0]
+            asic_id_map[int(index)-1] = interface2asic[inteface]
+    return asic_id_map
+
+
+def get_path_to_hwsku_directory(asic_id=None):
+    platform_path = device_info.get_path_to_platform_dir()
+    hwsku = device_info.get_hwsku()
+    if asic_id is not None:
+        return os.path.join(platform_path, hwsku, str(asic_id))
+    else:
+        return os.path.join(platform_path, hwsku)
+
+
+def get_path_list_to_asic_hwsku_dir(num_of_asics):
+    if num_of_asics == 1:
+        return [os.path.join(get_path_to_hwsku_directory(), HWSKU_JSON)]
+    else:
+        return [os.path.join(get_path_to_hwsku_directory(asic_id), HWSKU_JSON) for asic_id in range(num_of_asics)]
+
+
+_shutdown_event = threading.Event()
+_shutdown_watch_installed = False
+
+SHUTDOWN_SIGNALS = (signal.SIGTERM, signal.SIGINT)
+
+
+def get_shutdown_event():
+    return _shutdown_event
+
+
+def _handle_shutdown_signal(previous_handler, signum, frame):
+    """Set the shutdown event, then preserve the signal's original behavior by
+    chaining onto whatever handler was installed before us.
+    """
+    _shutdown_event.set()
+    if callable(previous_handler):
+        previous_handler(signum, frame)
+    elif previous_handler == signal.SIG_DFL:
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+
+def watch_shutdown_signals():
+    """Set the shutdown event when a termination signal arrives, so readiness
+    waits can abort.
+    """
+    global _shutdown_watch_installed
+
+    if _shutdown_watch_installed:
+        return
+
+    if threading.current_thread() is not threading.main_thread():
+        logger.log_notice('watch_shutdown_signals skipped: not in main thread, '
+                          'readiness waits will not abort on shutdown until armed from the main thread')
+        return
+
+    for sig in SHUTDOWN_SIGNALS:
+        signal.signal(sig, functools.partial(_handle_shutdown_signal, signal.getsignal(sig)))
+
+    _shutdown_watch_installed = True
+
+
+def wait_until(predict, timeout, interval=1, *args, **kwargs):
+    """Wait until a condition become true
+
+    The wait aborts early if a shutdown signal has been received (see
+    watch_shutdown_signals).
+
+    Args:
+        predict (object): a callable such as function, lambda
+        timeout (int): wait time in seconds
+        interval (int, optional): interval to check the predict. Defaults to 1.
+
+    Returns:
+        _type_: _description_
+    """
+    if predict(*args, **kwargs):
+        return True
+    while timeout > 0:
+        if _shutdown_event.wait(interval):
+            return False
+        timeout -= interval
+        if predict(*args, **kwargs):
+            return True
+    return False
+
+
+def wait_until_conditions(conditions, timeout, interval=1):
+    """
+    Wait until all the conditions become true
+
+    The wait aborts early if a shutdown signal has been received (see
+    watch_shutdown_signals).
+
+    Args:
+        conditions (list): a list of callable which generate True|False
+        timeout (int): wait time in seconds
+        interval (int, optional):  interval to check the predict. Defaults to 1.
+
+    Returns:
+        bool: True if wait success else False
+    """
+    while timeout > 0:
+        pending_conditions = []
+        for condition in conditions:
+            if not condition():
+                pending_conditions.append(condition)
+        if not pending_conditions:
+            return True
+        conditions = pending_conditions
+        if _shutdown_event.wait(interval):
+            return False
+        timeout -= interval
+    return False
+
+
+class TimerEvent:
+    def __init__(self, interval, cb, repeat):
+        self.interval = interval
+        self._cb = cb
+        self.repeat = repeat
+
+    def execute(self):
+        self._cb()
+
+
+class Timer(threading.Thread):
+    def __init__(self):
+        super(Timer, self).__init__()
+        self._timestamp_queue = queue.PriorityQueue()
+        self._wait_event = threading.Event()
+        self._stop_event = threading.Event()
+        self._min_timestamp = None
+
+    def schedule(self, interval, cb, repeat=True, run_now=True):
+        timer_event = TimerEvent(interval, cb, repeat)
+        self.add_timer_event(timer_event, run_now)
+
+    def add_timer_event(self, timer_event, run_now=True):
+        timestamp = time.monotonic()
+        if not run_now:
+            timestamp += timer_event.interval
+
+        self._timestamp_queue.put_nowait((timestamp, timer_event))
+        if self._min_timestamp is not None and timestamp < self._min_timestamp:
+            self._wait_event.set()
+
+    def stop(self):
+        if self.is_alive():
+            self._wait_event.set()
+            self._stop_event.set()
+            self.join()
+
+    def run(self):
+        while not self._stop_event.is_set():
+            now = time.monotonic()
+            item = self._timestamp_queue.get()
+            self._min_timestamp = item[0]
+            if self._min_timestamp > now:
+                self._wait_event.wait(self._min_timestamp - now)
+                self._wait_event.clear()
+                self._timestamp_queue.put(item)
+                continue
+
+            timer_event = item[1]
+            timer_event.execute()
+            if timer_event.repeat:
+                self.add_timer_event(timer_event, False)
+
+
+class DbUtils:
+    lock = threading.Lock()
+    db_instances = threading.local()
+
+    @classmethod
+    def get_db_instance(cls, db_name, **kargs):
+        try:
+            if not hasattr(cls.db_instances, 'data'):
+                with cls.lock:
+                    if not hasattr(cls.db_instances, 'data'):
+                        cls.db_instances.data = {}
+
+            if db_name not in cls.db_instances.data:
+                from swsscommon.swsscommon import ConfigDBConnector
+                db = ConfigDBConnector(use_unix_socket_path=True)
+                db.db_connect(db_name)
+                cls.db_instances.data[db_name] = db
+            return cls.db_instances.data[db_name]
+        except Exception as e:
+            logger.log_error(f'Failed to get DB instance for DB {db_name} - {e}')
+            raise e

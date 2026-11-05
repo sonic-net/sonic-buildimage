@@ -2,10 +2,10 @@
 FROM {{IMAGENAME}}
 
 # Copy the cache data to host
-From scratch as output
+FROM scratch AS output
 COPY --from={{IMAGENAME}} /cache.tgz cache.tgz
 
 # Clean up the cache data
-FROM {{IMAGENAME}} as final
+FROM {{IMAGENAME}} AS final
 RUN rm /cache.tgz
 

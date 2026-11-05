@@ -24,14 +24,16 @@ module sonic-scheduler {
 
         container SCHEDULER {
 
-            description "SCHEDULER part of config_db.json";
+            description "Configures queue scheduling (WRR/DWRR/strict priority) and traffic shaping profiles.";
 
             list SCHEDULER_LIST {
 
                 key "name";
 
+                description "A named scheduler profile with scheduling algorithm and optional shaping parameters.";
+
                 leaf name {
-                    type string; 
+                    type string;
                     description "Scheduler name";
                 }
 
@@ -76,7 +78,7 @@ module sonic-scheduler {
                         }
                     }
                     default bytes;
-                    description "meter type";
+                    description "Metering unit for shaping rates (packets or bytes).";
                 }
 
                 leaf cir {
@@ -85,16 +87,15 @@ module sonic-scheduler {
                         "Committed information rate for the dual-rate token
                         bucket policer.This value represents the rate at which
                         tokens are added to the primary bucket.nt Units is
-                        Bps(Bytes per second) for meter type is bytes else 
+                        Bps(Bytes per second) for meter type is bytes else
                         Pps(packets per second) for meter type is packets";
                 }
 
                 leaf pir {
-                    must "((current()/../cir) and (current()/../cir > 0))" {
-                        error-message "pir can't be configured without cir.";
-                    }
-                    must "(current() >= current()/../cir)" {
-                        error-message "pir must be greater than or equal to cir";
+                    must "not(current()/../cir) or
+                          current() >= current()/../cir" {
+                        error-message
+                            "pir must be greater than or equal to cir when cir is configured";
                     }
                     type uint64;
                     description

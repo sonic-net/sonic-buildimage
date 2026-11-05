@@ -1,0 +1,12 @@
+DPATH       := $($(DOCKER_GBSYNCD_MILLENIOB)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST)
+DEP_FILES   += platform/components/docker-gbsyncd-milleniob.mk
+DEP_FILES   += platform/components/docker-gbsyncd-milleniob.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_GBSYNCD_MILLENIOB)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_GBSYNCD_MILLENIOB)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_GBSYNCD_MILLENIOB)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_GBSYNCD_MILLENIOB),$(DOCKER_GBSYNCD_MILLENIOB_DBG)))

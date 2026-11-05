@@ -1,3 +1,0 @@
-mrvl-prestera/cpssEnabler/linuxNoKernelModule/drivers/mvDmaDrv.ko /lib/modules/KVERSION/kernel/extra
-mrvl-prestera/cpssEnabler/linuxNoKernelModule/drivers/mvIntDrv.ko /lib/modules/KVERSION/kernel/extra
-mrvl-prestera/platform/armhf/*	/

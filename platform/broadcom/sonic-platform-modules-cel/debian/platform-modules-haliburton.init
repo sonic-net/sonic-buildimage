@@ -35,6 +35,15 @@ case "$1" in
 start)
         echo -n "Setting up board... "
 
+        modprobe i2c-i801
+        modprobe i2c-isch
+        modprobe i2c-ismt
+        modprobe i2c-dev
+        modprobe i2c-mux
+        modprobe i2c-smbus
+        modprobe i2c-mux-gpio
+        modprobe i2c-mux-pca954x
+
         modprobe smc
         modprobe hlx_gpio_ich
         modprobe dps200
@@ -53,6 +62,7 @@ start)
         [ $found -eq 0 ] && echo "cannot find iSMT" && exit 1
 
         i2cset -y ${devnum} 0x73 0x10 0x00 0x01 i
+        sleep 0.5
 
         # Attach PCA9548 0x73 Channel Extender for CPU Board
         echo pca9548 0x73 > /sys/bus/i2c/devices/i2c-${devnum}/new_device

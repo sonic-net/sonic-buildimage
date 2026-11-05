@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +32,7 @@ try:
     from .led import ComponentFaultyIndicator
     from . import utils
     from .thermal import Thermal
+    from .fan_drawer import VirtualDrawer
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
@@ -45,7 +47,12 @@ CONFIG_PATH = "/var/run/hw-management/config"
 FAN_DIR = "/var/run/hw-management/thermal/fan{}_dir"
 FAN_DIR_VALUE_EXHAUST = 0
 FAN_DIR_VALUE_INTAKE = 1
-
+FAN_DIR_VALUE_NOT_APPLICABLE = 2
+FAN_DIR_MAPPING = {
+    FAN_DIR_VALUE_EXHAUST: FanBase.FAN_DIRECTION_EXHAUST,
+    FAN_DIR_VALUE_INTAKE: FanBase.FAN_DIRECTION_INTAKE,
+    FAN_DIR_VALUE_NOT_APPLICABLE: FanBase.FAN_DIRECTION_NOT_APPLICABLE,
+}
 
 class MlnxFan(FanBase):
     def __init__(self, fan_index, position):
@@ -125,6 +132,20 @@ class MlnxFan(FanBase):
         """
         return False
 
+    @classmethod
+    def get_fan_direction(cls, dir_path):
+        try:
+            fan_dir = utils.read_int_from_file(dir_path, raise_exception=True)
+            ret = FAN_DIR_MAPPING.get(fan_dir)
+            if ret is None:
+                logger.log_error(f"Got wrong value {fan_dir} for fan direction {dir_path}")
+                return FanBase.FAN_DIRECTION_NOT_APPLICABLE
+            else:
+                return ret
+        except (ValueError, IOError) as e:
+            logger.log_error(f"Failed to read fan direction from {dir_path} - {e}")
+            return FanBase.FAN_DIRECTION_NOT_APPLICABLE
+
 
 class PsuFan(MlnxFan):
     # PSU fan speed vector
@@ -145,13 +166,14 @@ class PsuFan(MlnxFan):
         self.psu_i2c_bus_path = os.path.join(CONFIG_PATH, 'psu{0}_i2c_bus'.format(self.index))
         self.psu_i2c_addr_path = os.path.join(CONFIG_PATH, 'psu{0}_i2c_addr'.format(self.index))
         self.psu_i2c_command_path = os.path.join(CONFIG_PATH, 'fan_command')
+        self.psu_fan_dir_path = os.path.join(FAN_PATH, "psu{}_fan_dir".format(self.index))
 
     def get_direction(self):
         """
         Retrieves the fan's direction
 
         Returns:
-            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
+            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST or FAN_DIRECTION_NOT_APPLICABLE
             depending on fan direction
 
         Notes:
@@ -162,10 +184,14 @@ class PsuFan(MlnxFan):
             Air flow from QSFP side to fans side, for example: MSN2700-CS2R
             which means exhaust in community
             According to hw-mgmt:
+                2 stands for N/A, in case fan direction could not be determined
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """
-        return self.FAN_DIRECTION_NOT_APPLICABLE
+        if not os.path.exists(self.psu_fan_dir_path) or not self.get_presence():
+            return self.FAN_DIRECTION_NOT_APPLICABLE
+
+        return MlnxFan.get_fan_direction(self.psu_fan_dir_path)
 
     def get_status(self):
         """
@@ -185,6 +211,56 @@ class PsuFan(MlnxFan):
         """
         return self.psu.get_presence() and self.psu.get_powergood_status() and os.path.exists(self.fan_presence_path)
 
+    def get_speed_tolerance(self):
+        """
+        Retrieves the speed tolerance of the fan
+
+        Returns:
+            An integer, the percentage of variance from min/max speed which is
+                 considered tolerable
+        """
+        # The tolerance value is fixed as 30% for PSU fans
+        return 30
+
+    def is_under_speed(self):
+        """
+        Checks if PSU fan speed is below the hardware minimum RPM threshold.
+
+        Returns:
+            bool: True if fan speed is under the minimum threshold, False if not
+        """
+        if not self.get_presence():
+            return False
+
+        try:
+            speed_in_rpm = utils.read_int_from_file(self.fan_speed_get_path, raise_exception=True)
+            min_speed_in_rpm = utils.read_int_from_file(self.fan_min_speed_path, raise_exception=True)
+        except (ValueError, IOError):
+            return False
+
+        return speed_in_rpm < min_speed_in_rpm * (1 - self.get_speed_tolerance() / 100.0)
+
+    def is_over_speed(self):
+        """
+        Checks if PSU fan speed is above the hardware maximum RPM threshold.
+
+        Returns:
+            bool: True if fan speed is over the maximum threshold, False if not
+        """
+        if not self.get_presence():
+            return False
+
+        try:
+            speed_in_rpm = utils.read_int_from_file(self.fan_speed_get_path, raise_exception=True)
+            max_speed_in_rpm = utils.read_int_from_file(self.fan_max_speed_path, raise_exception=True)
+        except (ValueError, IOError):
+            return False
+
+        if max_speed_in_rpm == 0:
+            return False
+
+        return speed_in_rpm > max_speed_in_rpm * (1 + self.get_speed_tolerance() / 100.0)
+
     def get_target_speed(self):
         """
         Retrieves the expected speed of fan
@@ -192,12 +268,31 @@ class PsuFan(MlnxFan):
         Returns:
             int: percentage of the max fan speed
         """
+        if not self.get_presence():
+            return 0
+
         try:
-            # Get PSU fan target speed according to current system cooling level
-            cooling_level = Thermal.get_cooling_level()
-            return int(self.PSU_FAN_SPEED[cooling_level], 16)
-        except Exception:
+            speed_in_rpm = utils.read_int_from_file(self.fan_speed_get_path, raise_exception=True)
+            max_speed_in_rpm = utils.read_int_from_file(self.fan_max_speed_path, raise_exception=True)
+            min_speed_in_rpm = utils.read_int_from_file(self.fan_min_speed_path, raise_exception=True)
+        except (ValueError, IOError):
             return self.get_speed()
+
+        if max_speed_in_rpm == 0:
+            return self.get_speed()
+
+        if speed_in_rpm < min_speed_in_rpm:
+            target_rpm = min_speed_in_rpm
+        elif speed_in_rpm > max_speed_in_rpm:
+            target_rpm = max_speed_in_rpm
+        else:
+            target_rpm = speed_in_rpm
+
+        speed = 100 * target_rpm // max_speed_in_rpm
+        if speed > 100:
+            speed = 100
+
+        return speed
 
     def set_speed(self, speed):
         """
@@ -228,6 +323,12 @@ class PsuFan(MlnxFan):
             logger.log_error('Failed to set PSU FAN speed - {}'.format(e))
             return False
 
+    def get_speed(self):
+        if not self.get_presence():
+            logger.log_notice(f"No PSU presence detected, returning default value for {self._name}")
+            return 0
+        return super().get_speed()
+
 class Fan(MlnxFan):
     """Platform-specific Fan class"""
     def __init__(self, fan_index, fan_drawer, position):
@@ -249,7 +350,7 @@ class Fan(MlnxFan):
         Retrieves the fan's direction
 
         Returns:
-            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
+            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST or FAN_DIRECTION_NOT_APPLICABLE
             depending on fan direction
 
         Notes:
@@ -260,10 +361,14 @@ class Fan(MlnxFan):
             Air flow from QSFP side to fans side, for example: MSN2700-CS2R
             which means exhaust in community
             According to hw-mgmt:
+                2 stands for N/A, in case fan direction could not be determined
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """
-        return self.fan_drawer.get_direction()
+        if not isinstance(self.fan_drawer, VirtualDrawer):
+            return self.fan_drawer.get_direction()
+        else:
+            return MlnxFan.get_fan_direction(FAN_DIR.format(self.index))
 
     def get_status(self):
         """
@@ -292,6 +397,12 @@ class Fan(MlnxFan):
             int: percentage of the max fan speed
         """
         pwm = utils.read_int_from_file(self.fan_speed_set_path)
+        # Sanity-check the PWM value before converting to a percentage: an out-of-range
+        # or garbage read would otherwise yield a wrong (possibly >100%) target speed and
+        # feed bad data into monitoring and the under/over-speed checks. Clamp to [0, PWM_MAX].
+        if pwm < 0 or pwm > PWM_MAX:
+            logger.log_error(f'Fan {self._name}: invalid PWM {pwm} read from {self.fan_speed_set_path}, clamping to [0, {PWM_MAX}]')
+            pwm = min(max(pwm, 0), PWM_MAX)
         return int(round(pwm*100.0/PWM_MAX))
 
     def set_speed(self, speed):

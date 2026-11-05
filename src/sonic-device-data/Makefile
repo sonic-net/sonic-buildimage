@@ -10,20 +10,26 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale data
 	rm -rf ./device
 
+	# set asic type for virtual switch
+	if [ "$(CONFIGURED_PLATFORM)" = "vpp" ]; then \
+		echo "vpp" > ../../../device/virtual/x86_64-kvm_x86_64-r0/platform_asic; \
+	else \
+		echo "vs" > ../../../device/virtual/x86_64-kvm_x86_64-r0/platform_asic; \
+	fi;
+
 	# Create a new dir and copy all ONIE-platform-string-named dirs into it
 	mkdir ./device
 	cp -r -L ../../../device/*/* ./device/
 
-	# Create hwsku for virtual switch
-	for d in `find -L ../../../device -maxdepth 3 -mindepth 3 -type d | grep -vE "(plugins|led-code)"`; do \
-		cp -Lr $$d device/x86_64-kvm_x86_64-r0/ ; \
-		cp ./sai.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai.profile; \
-		cp ./sai_mlnx.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai_mlnx.profile; \
-		grep -v ^# device/x86_64-kvm_x86_64-r0/$$(basename $$d)/port_config.ini | awk '{i=i+1;print "eth"i":"$$2}' > device/x86_64-kvm_x86_64-r0/$$(basename $$d)/lanemap.ini
-		cp ./pai.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/pai.profile; \
-		grep -v ^# device/x86_64-kvm_x86_64-r0/$$(basename $$d)/port_config.ini | awk '{i=i+1;print "eth"i":"$$2}' > device/x86_64-kvm_x86_64-r0/$$(basename $$d)/lanemap.ini
+	if [ "$(CONFIGURED_PLATFORM)" = "mellanox" ]; then \
+		for sai_profile in `find device/ -name sai.profile | grep simx`; do \
+			echo SAI_KEY_IS_SIMX=1 >> $$sai_profile; \
+		done; \
+	fi;
 
-	done;
+	# Generate VS HwSKU data (lanemap.ini, coreportindexmap.ini, profiles)
+	# Uses Python for ~200x faster processing than the equivalent bash loop
+	python3 ./generate_vs_hwsku.py ../../../device
 
 	# Build the package
 ifeq ($(CROSS_BUILD_ENVIRON), y)

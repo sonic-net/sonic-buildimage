@@ -3,51 +3,51 @@
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
                 "PORT_LIST": [
-                {
-                    "admin_status": "up",
-                    "alias": "eth0",
-                    "description": "Ethernet0",
-                    "lanes": "65",
-                    "mtu": "9000",
-                    "name": "Ethernet4",
-                    "tpid": "0x8100",
-                    "speed": "25000"
-                }
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet4",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
                 ]
             }
         },
         "sonic-buffer-pool:sonic-buffer-pool": {
             "sonic-buffer-pool:BUFFER_POOL": {
                 "BUFFER_POOL_LIST": [
-                {
-                    "name": "egress_lossless_pool",
-                    "mode": "static",
-                    "size": "12766208",
-                    "type": "ingress"
-                }
+                    {
+                        "name": "egress_lossless_pool",
+                        "mode": "static",
+                        "size": "12766208",
+                        "type": "ingress"
+                    }
                 ]
             }
         },
         "sonic-buffer-profile:sonic-buffer-profile": {
             "sonic-buffer-profile:BUFFER_PROFILE": {
                 "BUFFER_PROFILE_LIST": [
-                {
-                    "name": "lossless_buffer_profile",
-                    "size": 1518,
-                    "dynamic_th": "2",
-                    "pool": "egress_lossless_pool"
-                }
+                    {
+                        "name": "lossless_buffer_profile",
+                        "size": 1518,
+                        "dynamic_th": "2",
+                        "pool": "egress_lossless_pool"
+                    }
                 ]
             }
         },
         "sonic-buffer-queue:sonic-buffer-queue": {
             "sonic-buffer-queue:BUFFER_QUEUE": {
                 "BUFFER_QUEUE_LIST": [
-                {
-                    "port": "Ethernet4",
-                    "qindex": "15",
-                    "profile": "lossless_buffer_profile"
-                }
+                    {
+                        "port": "Ethernet4",
+                        "qindex": "15",
+                        "profile": "lossless_buffer_profile"
+                    }
                 ]
             }
         }
@@ -56,50 +56,50 @@
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
                 "PORT_LIST": [
-                {
-                    "admin_status": "up",
-                    "alias": "eth0",
-                    "description": "Ethernet0",
-                    "lanes": "65",
-                    "mtu": "9000",
-                    "name": "Ethernet4",
-                    "tpid": "0x8100",
-                    "speed": "25000"
-                }
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet4",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
                 ]
             }
         },
         "sonic-buffer-pool:sonic-buffer-pool": {
             "sonic-buffer-pool:BUFFER_POOL": {
                 "BUFFER_POOL_LIST": [
-                {
-                    "name": "egress_lossless_pool",
-                    "mode": "static",
-                    "size": "12766208",
-                    "type": "ingress"
-                }
+                    {
+                        "name": "egress_lossless_pool",
+                        "mode": "static",
+                        "size": "12766208",
+                        "type": "ingress"
+                    }
                 ]
             }
         },
         "sonic-buffer-profile:sonic-buffer-profile": {
             "sonic-buffer-profile:BUFFER_PROFILE": {
                 "BUFFER_PROFILE_LIST": [
-                {
-                    "name": "lossless_buffer_profile",
-                    "size": "1518",
-                    "pool": "egress_lossless_pool"
-                }
+                    {
+                        "name": "lossless_buffer_profile",
+                        "size": "1518",
+                        "pool": "egress_lossless_pool"
+                    }
                 ]
             }
         },
         "sonic-buffer-queue:sonic-buffer-queue": {
             "sonic-buffer-queue:BUFFER_QUEUE": {
                 "BUFFER_QUEUE_LIST": [
-                {
-                    "port": "Ethernet4",
-                    "qindex": "3",
-                    "profile": "wrong"
-                }
+                    {
+                        "port": "Ethernet4",
+                        "qindex": "3",
+                        "profile": "wrong"
+                    }
                 ]
             }
         }
@@ -108,50 +108,50 @@
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
                 "PORT_LIST": [
-                {
-                    "admin_status": "up",
-                    "alias": "eth0",
-                    "description": "Ethernet0",
-                    "lanes": "65",
-                    "mtu": "9000",
-                    "name": "Ethernet4",
-                    "tpid": "0x8100",
-                    "speed": "25000"
-                }
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet4",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
                 ]
             }
         },
         "sonic-buffer-pool:sonic-buffer-pool": {
             "sonic-buffer-pool:BUFFER_POOL": {
                 "BUFFER_POOL_LIST": [
-                {
-                    "name": "egress_lossless_pool",
-                    "mode": "static",
-                    "size": "12766208",
-                    "type": "ingress"
-                }
+                    {
+                        "name": "egress_lossless_pool",
+                        "mode": "static",
+                        "size": "12766208",
+                        "type": "ingress"
+                    }
                 ]
             }
         },
         "sonic-buffer-profile:sonic-buffer-profile": {
             "sonic-buffer-profile:BUFFER_PROFILE": {
                 "BUFFER_PROFILE_LIST": [
-                {
-                    "name": "lossless_buffer_profile",
-                    "size": "1518",
-                    "pool": "egress_lossless_pool"
-                }
+                    {
+                        "name": "lossless_buffer_profile",
+                        "size": "1518",
+                        "pool": "egress_lossless_pool"
+                    }
                 ]
             }
         },
         "sonic-buffer-queue:sonic-buffer-queue": {
             "sonic-buffer-queue:BUFFER_QUEUE": {
                 "BUFFER_QUEUE_LIST": [
-                {
-                    "port": "Ethernet4",
-                    "qindex": "16",
-                    "profile": "lossless_buffer_profile"
-                }
+                    {
+                        "port": "Ethernet4",
+                        "qindex": "16",
+                        "profile": "lossless_buffer_profile"
+                    }
                 ]
             }
         }
@@ -160,50 +160,96 @@
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
                 "PORT_LIST": [
-                {
-                    "admin_status": "up",
-                    "alias": "eth0",
-                    "description": "Ethernet0",
-                    "lanes": "65",
-                    "mtu": "9000",
-                    "name": "Ethernet4",
-                    "tpid": "0x8100",
-                    "speed": "25000"
-                }
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet4",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
                 ]
             }
         },
         "sonic-buffer-pool:sonic-buffer-pool": {
             "sonic-buffer-pool:BUFFER_POOL": {
                 "BUFFER_POOL_LIST": [
-                {
-                    "name": "egress_lossless_pool",
-                    "mode": "static",
-                    "size": "12766208",
-                    "type": "ingress"
-                }
+                    {
+                        "name": "egress_lossless_pool",
+                        "mode": "static",
+                        "size": "12766208",
+                        "type": "ingress"
+                    }
                 ]
             }
         },
         "sonic-buffer-profile:sonic-buffer-profile": {
             "sonic-buffer-profile:BUFFER_PROFILE": {
                 "BUFFER_PROFILE_LIST": [
-                {
-                    "name": "lossless_buffer_profile",
-                    "size": "1518",
-                    "pool": "egress_lossless_pool"
-                }
+                    {
+                        "name": "lossless_buffer_profile",
+                        "size": "1518",
+                        "pool": "egress_lossless_pool"
+                    }
                 ]
             }
         },
         "sonic-buffer-queue:sonic-buffer-queue": {
             "sonic-buffer-queue:BUFFER_QUEUE": {
                 "BUFFER_QUEUE_LIST": [
-                {
-                    "port": "wrong",
-                    "qindex": "4",
-                    "profile": "lossless_buffer_profile"
+                    {
+                        "port": "wrong",
+                        "qindex": "4",
+                        "profile": "lossless_buffer_profile"
+                    }
+                ]
+            }
+        }
+    },
+    "VOQ_BUFFER_QUEUE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "voq"
                 }
+            }
+        },
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                    {
+                        "name": "egress_lossless_pool",
+                        "mode": "static",
+                        "size": "12766208",
+                        "type": "ingress"
+                    }
+                ]
+            }
+        },
+        "sonic-buffer-profile:sonic-buffer-profile": {
+            "sonic-buffer-profile:BUFFER_PROFILE": {
+                "BUFFER_PROFILE_LIST": [
+                    {
+                        "name": "lossless_buffer_profile",
+                        "size": 1518,
+                        "dynamic_th": "2",
+                        "pool": "egress_lossless_pool"
+                    }
+                ]
+            }
+        },
+        "sonic-buffer-queue:sonic-buffer-queue": {
+            "sonic-buffer-queue:BUFFER_QUEUE": {
+                "VOQ_BUFFER_QUEUE_LIST": [
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic0",
+                        "port": "Ethernet4",
+                        "qindex": "15",
+                        "profile": "lossless_buffer_profile"
+                    }
                 ]
             }
         }

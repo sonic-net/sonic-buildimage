@@ -3,18 +3,25 @@ from setuptools import setup
 setup(
     name='sonic-platform',
     version='1.0',
-    description='SONiC platform API implementation on RAGILE Platforms',
+    description='SONiC platform API implementation',
     license='Apache 2.0',
     author='SONiC Team',
-    author_email='support@ragile.com',
+    author_email='support',
     url='',
-    maintainer='RAGILE SUPPORT TEAM',
+    maintainer='support',
     maintainer_email='',
     packages=[
         'sonic_platform',
-        'rgutil',
+        'plat_hal',
+        'wbutil',
         'eepromutil',
-        'sonic_pcie',
+        'hal-config',
+        'config',
+    ],
+    py_modules=[
+        'hal_pltfm',
+        'platform_util',
+        'platform_intf',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -30,4 +37,3 @@ setup(
     ],
     keywords='sonic SONiC platform PLATFORM',
 )
-

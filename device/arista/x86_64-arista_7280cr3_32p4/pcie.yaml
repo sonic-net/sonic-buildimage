@@ -66,11 +66,6 @@
     Security Processor'
 - bus: '00'
   dev: 09
-  fn: '0'
-  id: '0001'
-  name: 'Host bridge: Arista Networks, Inc. Device 0001'
-- bus: '00'
-  dev: 09
   fn: '2'
   id: 157a
   name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)

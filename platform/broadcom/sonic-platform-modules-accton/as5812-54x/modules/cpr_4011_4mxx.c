@@ -33,6 +33,7 @@
 #include <linux/mutex.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define MAX_FAN_DUTY_CYCLE 100
 
@@ -217,8 +218,12 @@ static const struct attribute_group cpr_4011_4mxx_group = {
     .attrs = cpr_4011_4mxx_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int cpr_4011_4mxx_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int cpr_4011_4mxx_probe(struct i2c_client *client)
+#endif
 {
     struct cpr_4011_4mxx_data *data;
     int status;
@@ -267,7 +272,7 @@ exit:
     return status;
 }
 
-static int cpr_4011_4mxx_remove(struct i2c_client *client)
+static void cpr_4011_4mxx_remove(struct i2c_client *client)
 {
     struct cpr_4011_4mxx_data *data = i2c_get_clientdata(client);
 
@@ -275,7 +280,6 @@ static int cpr_4011_4mxx_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &cpr_4011_4mxx_group);
     kfree(data);
     
-    return 0;
 }
 
 static const struct i2c_device_id cpr_4011_4mxx_id[] = {

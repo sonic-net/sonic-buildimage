@@ -11,7 +11,7 @@ libpam-radius-auth (1.4.0-3~deb10u1) buster; urgency=medium
   * Rebuild for buster.
   * Revert packaging changes:
     - Lower Standards-Version to 4.2.0
-    - Lower Debhelper compat level to 11   
+    - Lower Debhelper compat level to 11
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 11 Jul 2020 21:24:48 +0200
 

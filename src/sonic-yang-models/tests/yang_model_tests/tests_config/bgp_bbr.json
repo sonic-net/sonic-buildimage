@@ -1,0 +1,22 @@
+{
+    "BGP_BBR_TABLE": {
+        "sonic-bgp-bbr:sonic-bgp-bbr": {
+            "sonic-bgp-bbr:BGP_BBR": {
+                "all":
+                {
+                    "status": "enabled"
+                }
+            }
+        }
+    },
+    "BGP_BBR_INVALID_STATUS": {
+        "sonic-bgp-bbr:sonic-bgp-bbr": {
+            "sonic-bgp-bbr:BGP_BBR": {
+                "all":
+                {
+                    "status": "true"
+                }
+            }
+        }
+    }
+}

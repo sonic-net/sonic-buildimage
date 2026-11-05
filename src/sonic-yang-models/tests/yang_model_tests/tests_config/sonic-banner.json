@@ -1,0 +1,50 @@
+{
+    "BANNER_MESSAGE_TEST_STATE": {
+        "sonic-banner:sonic-banner": {
+            "sonic-banner:BANNER_MESSAGE": {
+                "global": {
+                    "state": "enabled",
+                    "login": "Some login message",
+                    "motd": "Some message of the day",
+                    "logout": "Some logout message"
+                }
+            }
+        }
+    },
+    "BANNER_MESSAGE_TEST_LOGIN": {
+        "sonic-banner:sonic-banner": {
+            "sonic-banner:BANNER_MESSAGE": {
+                "global": {
+                    "state": "enabled",
+                    "login": "Some login message",
+                    "motd": "Some message of the day",
+                    "logout": "Some logout message"
+                }
+            }
+        }
+    },
+    "BANNER_MESSAGE_TEST_MOTD": {
+        "sonic-banner:sonic-banner": {
+            "sonic-banner:BANNER_MESSAGE": {
+                "global": {
+                    "state": "enabled",
+                    "login": "Some login message",
+                    "motd": "Some message of the day",
+                    "logout": "Some logout message"
+                }
+            }
+        }
+    },
+    "BANNER_MESSAGE_TEST_LOGOUT": {
+        "sonic-banner:sonic-banner": {
+            "sonic-banner:BANNER_MESSAGE": {
+                "global": {
+                    "state": "enabled",
+                    "login": "Some login message",
+                    "motd": "Some message of the day",
+                    "logout": "Some logout message"
+                }
+            }
+        }
+    }
+}

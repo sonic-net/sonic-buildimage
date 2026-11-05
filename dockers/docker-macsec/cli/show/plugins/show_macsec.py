@@ -1,23 +1,36 @@
 import typing
 from natsort import natsorted
 import datetime
-import pickle
+import hashlib
+import json
 import os
 import copy
-
+import tempfile
 import click
 from tabulate import tabulate
 
 import utilities_common.multi_asic as multi_asic_util
-from swsscommon.swsscommon import CounterTable, MacsecCounter
+from swsscommon.swsscommon import CounterTable, MacsecCounter, SonicV2Connector
 from utilities_common.cli import UserCache
+from sonic_py_common import device_info
 
 CACHE_MANAGER = UserCache(app_name="macsec")
-CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}")
+CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}.json")
 
 DB_CONNECTOR = None
 COUNTER_TABLE = None
 
+class MACsecCfgMeta(object):
+    def __init__(self, *args) -> None:
+        SEPARATOR = DB_CONNECTOR.get_db_separator(DB_CONNECTOR.CONFIG_DB)
+        self.key = self.__class__.get_cfg_table_name() + SEPARATOR + \
+            SEPARATOR.join(args)
+        self.cfgMeta = DB_CONNECTOR.get_all(
+            DB_CONNECTOR.CONFIG_DB, self.key)
+        if len(self.cfgMeta) == 0:
+            raise ValueError("No such MACsecCfgMeta: {}".format(self.key))
+        for k, v in self.cfgMeta.items():
+            setattr(self, k, v)
 
 class MACsecAppMeta(object):
     def __init__(self, *args) -> None:
@@ -51,9 +64,10 @@ class MACsecSA(MACsecAppMeta, MACsecCounters):
         meta = sorted(self.meta.items(), key=lambda x: x[0])
         counters = copy.deepcopy(self.counters)
         if cache:
+            cached_counters = cache.get("counters", {})
             for k, v in counters.items():
-                if k in cache.counters:
-                    counters[k] = int(counters[k]) - int(cache.counters[k])
+                if k in cached_counters and k.startswith("SAI_MACSEC_SA_STAT"):
+                    counters[k] = int(counters[k]) - int(cached_counters[k])
         counters = sorted(counters.items(), key=lambda x: x[0])
         buffer += tabulate(meta + counters)
         buffer = "\n".join(["\t\t" + line for line in buffer.splitlines()])
@@ -126,23 +140,55 @@ class MACsecEgressSC(MACsecSC):
         return "MACsec Egress SC ({})\n".format(self.sci)
 
 
-class MACsecPort(MACsecAppMeta):
+class MACsecPort(MACsecAppMeta, MACsecCfgMeta):
     def __init__(self,  port_name: str) -> None:
         self.port_name = port_name
-        super(MACsecPort, self).__init__(port_name)
+        MACsecAppMeta.__init__(self, port_name)
+        MACsecCfgMeta.__init__(self, port_name)
 
     @classmethod
     def get_appl_table_name(cls) -> str:
         return "MACSEC_PORT_TABLE"
 
+    @classmethod
+    def get_cfg_table_name(cls) -> str:
+        return "PORT"
+
     def dump_str(self, cache = None) -> str:
         buffer = self.get_header()
+
+        # Add the profile information to the meta dict from config meta dict
+        self.meta["profile"] = self.cfgMeta.get("macsec", "")
+
         buffer += tabulate(sorted(self.meta.items(), key=lambda x: x[0]))
         return buffer
 
     def get_header(self) -> str:
         return "MACsec port({})\n".format(self.port_name)
 
+class MACsecProfile(MACsecCfgMeta):
+    def __init__(self, profile_name: str) -> None:
+        self.profile_name = profile_name
+        super(MACsecProfile, self).__init__(profile_name)
+
+    @classmethod
+    def get_cfg_table_name(cls) -> str:
+        return "MACSEC_PROFILE"
+
+    def dump_str(self, cache = None) -> str:
+        buffer = self.get_header()
+
+        # Don't display the primary and fallback CAK
+        if 'primary_cak' in self.cfgMeta: del self.cfgMeta['primary_cak']
+        if 'fallback_cak' in self.cfgMeta: del self.cfgMeta['fallback_cak']
+
+        t_buffer = tabulate(sorted(self.cfgMeta.items(), key=lambda x: x[0]))
+        t_buffer = "\n".join(["\t" + line for line in t_buffer.splitlines()])
+        buffer += t_buffer
+        return buffer
+
+    def get_header(self) -> str:
+        return "MACsec profile : {}\n".format(self.profile_name)
 
 def create_macsec_obj(key: str) -> MACsecAppMeta:
     attr = key.split(":")
@@ -161,10 +207,20 @@ def create_macsec_obj(key: str) -> MACsecAppMeta:
     except ValueError as e:
         return None
 
+def create_macsec_profile_obj(key: str) -> MACsecCfgMeta:
+    attr = key.split("|")
+    try:
+        if attr[0] == MACsecProfile.get_cfg_table_name():
+            return MACsecProfile(attr[1])
+        raise TypeError("Unknown MACsec object type")
+    except ValueError as e:
+        return None
 
 def create_macsec_objs(interface_name: str) -> typing.List[MACsecAppMeta]:
     objs = []
-    objs.append(create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name))
+    port = create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name)
+    if port is not None:
+        objs.append(port)
     egress_scs = DB_CONNECTOR.keys(DB_CONNECTOR.APPL_DB, MACsecEgressSC.get_appl_table_name() + ":" + interface_name + ":*")
     for sc_name in natsorted(egress_scs):
         sc = create_macsec_obj(sc_name)
@@ -192,25 +248,117 @@ def create_macsec_objs(interface_name: str) -> typing.List[MACsecAppMeta]:
     return objs
 
 
-def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
+def create_macsec_profiles_objs(profile_name: str) -> typing.List[MACsecCfgMeta]:
+    objs = []
+    objs.append(create_macsec_profile_obj(MACsecProfile.get_cfg_table_name() + "|" + profile_name))
+    return objs
+
+
+def cache_find(cache: dict, target: MACsecAppMeta) -> dict:
     if not cache or not cache["objs"]:
         return None
     for obj in cache["objs"]:
-        if type(obj) == type(target) and obj.key == target.key:
+        if obj["type"] == type(target).__name__ and obj["key"] == target.key:
             # MACsec SA may be refreshed by a cycle that use the same key
             # So, use the SA as the identifier
-            if isinstance(obj, MACsecSA) and obj.sak != target.sak:
+            if isinstance(target, MACsecSA) and obj["sak_hash"] != _sak_hash(target.sak):
                 continue
             return obj
     return None
 
 
+def _sak_hash(sak: str) -> str:
+    return hashlib.sha256(sak.encode("utf-8")).hexdigest()
+
+
+def _cache_entry(obj: MACsecAppMeta) -> dict:
+    entry = {
+        "type": type(obj).__name__,
+        "key": obj.key,
+    }
+    if isinstance(obj, MACsecSA):
+        entry["sak_hash"] = _sak_hash(obj.sak)
+        entry["counters"] = obj.counters
+    return entry
+
+
+def _save_cache(path: str, cache: dict) -> None:
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=os.path.dirname(path),
+                prefix=".macsecstats-", delete=False) as cache_file:
+            temp_path = cache_file.name
+            json.dump(cache, cache_file)
+            cache_file.flush()
+            os.fsync(cache_file.fileno())
+        os.replace(temp_path, path)
+        temp_path = None
+    finally:
+        if temp_path is not None and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def _load_cache(path: str) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as cache_file:
+            cache = json.load(cache_file)
+    except (OSError, UnicodeError, ValueError):
+        return {}
+
+    if (not isinstance(cache, dict) or type(cache.get("version")) is not int or
+            cache["version"] != 1):
+        return {}
+    if not isinstance(cache.get("time"), str) or not isinstance(cache.get("objs"), list):
+        return {}
+
+    sa_types = {"MACsecIngressSA", "MACsecEgressSA"}
+    for obj in cache["objs"]:
+        if (not isinstance(obj, dict) or not isinstance(obj.get("type"), str) or
+                not isinstance(obj.get("key"), str)):
+            return {}
+        if obj["type"] in sa_types:
+            sak_hash = obj.get("sak_hash")
+            counters = obj.get("counters")
+            if (not isinstance(sak_hash, str) or len(sak_hash) != 64 or
+                    any(char not in "0123456789abcdef" for char in sak_hash) or
+                    not isinstance(counters, dict)):
+                return {}
+            for name, value in counters.items():
+                if (not isinstance(name, str) or isinstance(value, bool) or
+                        not isinstance(value, (str, int))):
+                    return {}
+                try:
+                    int(value)
+                except ValueError:
+                    return {}
+    return cache
+
+
 @click.command()
 @click.argument('interface_name', required=False)
-@click.option('--dump-file', is_flag=True, required=False, default=False)
+@click.option('--profile', is_flag=True, required=False, default=False, help="show all macsec profiles")
+@click.option('--dump-file', is_flag=True, required=False, default=False, help="store show output to a file")
+@click.option('--post-status', is_flag=True, required=False, default=False, help="show macsec FIPS POST(Pre-Operational Self-Test) status")
+@click.option('--fips-module', is_flag=True, required=False, default=False, help="show macsec FIPS module")
 @multi_asic_util.multi_asic_click_options
-def macsec(interface_name, dump_file, namespace, display):
-    MacsecContext(namespace, display).show(interface_name, dump_file)
+def macsec(interface_name, dump_file, namespace, display, profile, post_status, fips_module):
+    if post_status:
+        if interface_name is not None or profile or dump_file or fips_module:
+            click.echo('POST status is not valid with other options/arguments')
+            return
+        MacsecContext(namespace, display).show_post_status()
+        return
+    if fips_module:
+        if interface_name is not None or profile or dump_file or post_status:
+            click.echo('fips-module is not valid with other options/arguments')
+            return
+        MacsecContext(namespace, display).show_fips_module()
+        return
+    if interface_name is not None and profile:
+        click.echo('Interface name is not valid with profile option')
+        return
+    MacsecContext(namespace, display).show(interface_name, dump_file, profile)
 
 class MacsecContext(object):
 
@@ -218,27 +366,51 @@ class MacsecContext(object):
         self.db = None
         self.multi_asic = multi_asic_util.MultiAsic(
             display_option, namespace_option)
+        self.macsec_profiles = []
 
     @multi_asic_util.run_on_multi_asic
-    def show(self, interface_name, dump_file):
+    def show(self, interface_name, dump_file, profile):
         global DB_CONNECTOR
         global COUNTER_TABLE
         DB_CONNECTOR = self.db
-        COUNTER_TABLE = CounterTable(self.db.get_redis_client(self.db.COUNTERS_DB))
 
-        interface_names = [name.split(":")[1] for name in self.db.keys(self.db.APPL_DB, "MACSEC_PORT*")]
-        if interface_name is not None:
-            if interface_name not in interface_names:
-                return
-            interface_names = [interface_name]
-        objs = []
+        if not profile:
+            COUNTER_TABLE = CounterTable(self.db.get_redis_client(self.db.COUNTERS_DB))
 
-        for interface_name in natsorted(interface_names):
-            objs += create_macsec_objs(interface_name)
+            separator = self.db.get_db_separator(self.db.APPL_DB)
+            port_key_prefix = MACsecPort.get_appl_table_name() + separator
+            interface_names = [
+                name[len(port_key_prefix):]
+                for name in self.db.keys(self.db.APPL_DB, port_key_prefix + "*")
+            ]
+            if interface_name is not None:
+                if interface_name not in interface_names:
+                    return
+                interface_names = [interface_name]
+            objs = []
+
+            for interface_name in natsorted(interface_names):
+                objs += create_macsec_objs(interface_name)
+        else:
+            separator = self.db.get_db_separator(self.db.CONFIG_DB)
+            profile_key_prefix = MACsecProfile.get_cfg_table_name() + separator
+            profile_names = [
+                name[len(profile_key_prefix):]
+                for name in self.db.keys(self.db.CONFIG_DB, profile_key_prefix + "*")
+            ]
+            objs = []
+
+            for profile_name in natsorted(profile_names):
+                # Check if this macsec profile is already added to profile list. This is in case of
+                # multi-asic devices where all namespaces will have the same macsec profile defined.
+                if profile_name not in self.macsec_profiles and not dump_file:
+                    self.macsec_profiles.append(profile_name)
+                    objs += create_macsec_profiles_objs(profile_name)
 
         cache = {}
-        if os.path.isfile(CACHE_FILE.format(self.multi_asic.current_namespace)):
-            cache = pickle.load(open(CACHE_FILE.format(self.multi_asic.current_namespace), "rb"))
+        cache_path = CACHE_FILE.format(self.multi_asic.current_namespace)
+        if not dump_file and os.path.isfile(cache_path):
+            cache = _load_cache(cache_path)
 
         if not dump_file:
             if cache and cache["time"] and objs:
@@ -248,12 +420,85 @@ class MacsecContext(object):
                 print(obj.dump_str(cache_obj))
         else:
             dump_obj = {
-                "time": datetime.datetime.now(),
-                "objs": objs
+                "version": 1,
+                "time": str(datetime.datetime.now()),
+                "objs": [_cache_entry(obj) for obj in objs]
             }
-            with open(CACHE_FILE.format(self.multi_asic.current_namespace), 'wb') as dump_file:
-                pickle.dump(dump_obj, dump_file)
-                dump_file.flush()
+            _save_cache(cache_path, dump_obj)
+
+    @multi_asic_util.run_on_multi_asic
+    def show_post_status(self):
+        """Show POST (Pre-Operational Self-Test) status"""
+        # Define the table name
+        table_name = "FIPS_MACSEC_POST_TABLE"
+
+        def format_module_status(module, namespace):
+            # Get all fields from the table
+            post_data = state_db.get_all("STATE_DB", table_name+"|"+module)
+
+            # Format according to SONiC CLI guidelines
+            output = []
+            indent = "  " if namespace else ""
+            output.append(f"{indent}{'Module'.ljust(11)} : {module}")
+
+            for field in post_data:
+                value = post_data[field]
+                # Format field name for consistent alignment (capitalize and pad to 11 chars)
+                display_name = field.capitalize().ljust(11)
+                output.append(f"{indent}{display_name} : {value}")
+
+            return "\n".join(output)
+
+        namespace = self.multi_asic.current_namespace
+        # Connect to STATE_DB
+        state_db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
+        state_db.connect(state_db.STATE_DB)
+
+        # Get all keys in the FIPS_MACSEC_POST_TABLE
+        all_keys = state_db.keys(state_db.STATE_DB, table_name + "|*")
+        if not len(all_keys):
+            click.echo("")  # Add blank line for separation
+            if namespace:
+                click.echo(f"Namespace ({namespace})")
+                click.echo("  No entries found")
+            else:
+                click.echo("No entries found")
+            return
+
+        # Extract module names from the keys and sort them
+        modules = []
+        for key in all_keys:
+            # Key format is "FIPS_MACSEC_POST_TABLE|module_name"
+            if "|" in key:
+                module = key.split("|", 1)[1]
+                modules.append(module)
+
+        # Sort modules for consistent output
+        modules.sort()
+
+        display_output = [""]
+        if namespace:
+            display_output.append(f"Namespace ({namespace})")
+        for i, module in enumerate(modules):
+            if i > 0:
+                display_output.append("")  # Add separator between modules
+            module_output = format_module_status(module, namespace)
+            display_output.append(module_output)
+
+        if display_output:
+            click.echo("\n".join(display_output))
+
+    def show_fips_module(self):
+        json_file = device_info.get_path_to_platform_dir() + '/' + device_info.PLATFORM_JSON_FILE
+        if not os.path.exists(json_file):
+            return
+        try:
+            with open(json_file, 'r') as file:
+                platform_data = json.load(file)
+        except (json.JSONDecodeError, IOError, TypeError, ValueError):
+            return
+        if 'fips_module' in platform_data:
+            click.echo(platform_data['fips_module'])
 
 def register(cli):
     cli.add_command(macsec)

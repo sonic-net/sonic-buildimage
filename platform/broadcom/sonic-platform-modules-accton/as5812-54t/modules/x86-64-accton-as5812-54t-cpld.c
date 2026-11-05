@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/list.h>
+#include <linux/version.h>
 
 static LIST_HEAD(cpld_client_list);
 static struct mutex     list_lock;
@@ -389,8 +390,12 @@ static void as5812_54t_cpld_remove_client(struct i2c_client *client)
     mutex_unlock(&list_lock);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as5812_54t_cpld_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as5812_54t_cpld_probe(struct i2c_client *client)
+#endif
 {
     int status;
     struct as5812_54t_cpld_data *data = NULL;
@@ -447,7 +452,7 @@ exit:
     return status;
 }
 
-static int as5812_54t_cpld_remove(struct i2c_client *client)
+static void as5812_54t_cpld_remove(struct i2c_client *client)
 {
     struct as5812_54t_cpld_data *data = i2c_get_clientdata(client);
 
@@ -456,7 +461,6 @@ static int as5812_54t_cpld_remove(struct i2c_client *client)
     kfree(data);
     as5812_54t_cpld_remove_client(client);
 
-    return 0;
 }
 
 int as5812_54t_cpld_read(unsigned short cpld_addr, u8 reg)

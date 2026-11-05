@@ -96,10 +96,18 @@ echo "onie_platform: $onie_platform"
 # Get platform specific linux kernel command line arguments
 ONIE_PLATFORM_EXTRA_CMDLINE_LINUX=""
 
+# Start with build time value, set either using env variable
+# or from onie-image.conf. onie-mk-demo.sh will string replace
+# below value to env value. Platform specific installer.conf
+# will override this value if necessary by reading $onie_platform
+# after this.
+ONIE_IMAGE_PART_SIZE="%%ONIE_IMAGE_PART_SIZE%%"
+
 # Default var/log device size in MB
 VAR_LOG_SIZE=4096
 
-[ -r platforms/$onie_platform ] && . platforms/$onie_platform
+[ -r "platforms/$onie_platform" ] && . "platforms/$onie_platform"
+[ -r "platforms/$onie_platform.override" ] && . "platforms/$onie_platform.override"
 
 # Verify image platform is inside devices list
 if [ "$install_env" = "onie" ]; then
@@ -134,9 +142,14 @@ if [ "$install_env" = "onie" ]; then
     onie_initrd_tmp=/
 fi
 
+arch="%%ARCH%%"
+
 # The build system prepares this script by replacing %%DEMO-TYPE%%
 # with "OS" or "DIAG".
 demo_type="%%DEMO_TYPE%%"
+
+# take final partition size after platform installer.conf override
+demo_part_size=$ONIE_IMAGE_PART_SIZE
 
 # The build system prepares this script by replacing %%IMAGE_VERSION%%
 # with git revision hash as a version identifier
@@ -206,11 +219,13 @@ else
 fi
 
 # Decompress the file for the file system directly to the partition
+# A dockerfs of 4GiB or more does not fit in the zip payload and is shipped next to it
 if [ x"$docker_inram" = x"on" ]; then
     # when disk is small, keep dockerfs.tar.gz in disk, expand it into ramfs during initrd
-    unzip -o $ONIE_INSTALLER_PAYLOAD -x "platform.tar.gz" -d $demo_mnt/$image_dir
+    unzip -o $INSTALLER_PAYLOAD -x "platform.tar.gz" -d $demo_mnt/$image_dir
+    [ -f $FILESYSTEM_DOCKERFS ] && cp $FILESYSTEM_DOCKERFS $demo_mnt/$image_dir/
 else
-    unzip -o $ONIE_INSTALLER_PAYLOAD -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d $demo_mnt/$image_dir
+    unzip -o $INSTALLER_PAYLOAD -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d $demo_mnt/$image_dir
 
     if [ "$install_env" = "onie" ]; then
         TAR_EXTRA_OPTION="--numeric-owner"
@@ -218,11 +233,15 @@ else
         TAR_EXTRA_OPTION="--numeric-owner --warning=no-timestamp"
     fi
     mkdir -p $demo_mnt/$image_dir/$DOCKERFS_DIR
-    unzip -op $ONIE_INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    if [ -f $FILESYSTEM_DOCKERFS ]; then
+        tar xz $TAR_EXTRA_OPTION -f $FILESYSTEM_DOCKERFS -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    else
+        unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    fi
 fi
 
 mkdir -p $demo_mnt/$image_dir/platform
-unzip -op $ONIE_INSTALLER_PAYLOAD "platform.tar.gz" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/platform
+unzip -op $INSTALLER_PAYLOAD "platform.tar.gz" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/platform
 
 if [ "$install_env" = "onie" ]; then
     # Store machine description in target file system
@@ -236,10 +255,14 @@ if [ "$install_env" = "onie" ]; then
     fi
 fi
 
-demo_part_size="%%ONIE_IMAGE_PART_SIZE%%"
 echo "ONIE_IMAGE_PART_SIZE=$demo_part_size"
 
 extra_cmdline_linux=%%EXTRA_CMDLINE_LINUX%%
+# Inherit the FIPS option, so not necessary to do another reboot after upgraded
+if grep -q '\bsonic_fips=1\b' /proc/cmdline && echo " $extra_cmdline_linux" | grep -qv '\bsonic_fips=.\b'; then
+    extra_cmdline_linux="$extra_cmdline_linux sonic_fips=1"
+fi
+
 echo "EXTRA_CMDLINE_LINUX=$extra_cmdline_linux"
 
 # Update Bootloader Menu with installed image

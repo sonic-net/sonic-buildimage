@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  Copyright (c) 2016-2021 NVIDIA CORPORATION & AFFILIATES.
+  Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
   Apache-2.0
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,135 +16,138 @@
   limitations under the License.
 -->
 <root>
-	<platform_info type="2100">
+    <platform_info type="2100">
 
-		<!-- Device MAC address  -->
-		<device-mac-address>00:02:03:04:05:00</device-mac-address>
+        <!-- Device MAC address  -->
+        <device-mac-address>00:02:03:04:05:00</device-mac-address>
 
-                <!-- ISSU enabled -->
-                <issu-enabled>1</issu-enabled>
+        <!-- ISSU enabled -->
+        <issu-enabled>1</issu-enabled>
 
-		<!-- Number of ports in the following port list -->
-		<number-of-physical-ports>16</number-of-physical-ports>
+        <!-- Number of ports in the following port list -->
+        <number-of-physical-ports>16</number-of-physical-ports>
 
-		<!-- List of ports in the device -->
-		<ports-list>
-			<port-info>
-				<local-port>25</local-port>
-				<width>4</width>
-				<module>0</module>
+        <!-- Global port late create -->
+        <late-create-all-ports>1</late-create-all-ports>
 
-				<!-- 0 none, 1=2, 2=4, 3=2,4 -->
-				<breakout-modes>3</breakout-modes>
-
-				<!-- (BITMASK) 28700 - 10Gb , 939524096 - 25Gb , 98368 - 40Gb , 3221487616 - 50Gb , 11534336 - 100Gb-->
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>29</local-port>
-				<width>4</width>
-				<module>1</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
+        <!-- List of ports in the device -->
+        <ports-list>
             <port-info>
-				<local-port>17</local-port>
-				<width>4</width>
-				<module>2</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>21</local-port>
-				<width>4</width>
-				<module>3</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>9</local-port>
-				<width>4</width>
-				<module>4</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>13</local-port>
-				<width>4</width>
-				<module>5</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>1</local-port>
-				<width>4</width>
-				<module>6</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>5</local-port>
-				<width>4</width>
-				<module>7</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>37</local-port>
-				<width>4</width>
-				<module>8</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>33</local-port>
-				<width>4</width>
-				<module>9</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>45</local-port>
-				<width>4</width>
-				<module>10</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>41</local-port>
-				<width>4</width>
-				<module>11</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>53</local-port>
-				<width>4</width>
-				<module>12</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>49</local-port>
-				<width>4</width>
-				<module>13</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>61</local-port>
-				<width>4</width>
-				<module>14</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
-			<port-info>
-				<local-port>57</local-port>
-				<width>4</width>
-				<module>15</module>
-				<breakout-modes>3</breakout-modes>
-				<port-speed>98368</port-speed>
-			</port-info>
+                <local-port>25</local-port>
+                <width>4</width>
+                <module>0</module>
+
+                <!-- 0 none, 1=2, 2=4, 3=2,4 -->
+                <breakout-modes>3</breakout-modes>
+
+                <!-- (BITMASK) 28700 - 10Gb , 939524096 - 25Gb , 98368 - 40Gb , 3221487616 - 50Gb , 11534336 - 100Gb-->
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>29</local-port>
+                <width>4</width>
+                <module>1</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>17</local-port>
+                <width>4</width>
+                <module>2</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>21</local-port>
+                <width>4</width>
+                <module>3</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>9</local-port>
+                <width>4</width>
+                <module>4</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>13</local-port>
+                <width>4</width>
+                <module>5</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>1</local-port>
+                <width>4</width>
+                <module>6</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>5</local-port>
+                <width>4</width>
+                <module>7</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>37</local-port>
+                <width>4</width>
+                <module>8</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>33</local-port>
+                <width>4</width>
+                <module>9</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>45</local-port>
+                <width>4</width>
+                <module>10</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>41</local-port>
+                <width>4</width>
+                <module>11</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>53</local-port>
+                <width>4</width>
+                <module>12</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>49</local-port>
+                <width>4</width>
+                <module>13</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>61</local-port>
+                <width>4</width>
+                <module>14</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
+            <port-info>
+                <local-port>57</local-port>
+                <width>4</width>
+                <module>15</module>
+                <breakout-modes>3</breakout-modes>
+                <port-speed>98368</port-speed>
+            </port-info>
         </ports-list>
-	</platform_info>
+    </platform_info>
 </root>

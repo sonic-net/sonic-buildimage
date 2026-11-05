@@ -27,8 +27,8 @@
 #include <linux/slab.h>
 #include <linux/version.h>
 #include <linux/i2c.h>
-#include "../../../../../pddf/i2c/modules/include/pddf_led_defs.h"
-#include "../../../../../pddf/i2c/modules/include/pddf_client_defs.h"
+#include "pddf_led_defs.h"
+#include "pddf_client_defs.h"
 
 #define DEBUG 0
 LED_OPS_DATA sys_led_ops_data[1]={0};

@@ -1,0 +1,136 @@
+{
+    "interval": 4,
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "True",
+        "fan_speed_when_suspend": "50"
+    },
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "psu_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.shutdown"
+                }
+            ]
+        },
+        {
+            "name": "any fantray absence",
+            "conditions": [
+                {
+                    "type": "fantray.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "more than one fan rotor failed",
+            "conditions": [
+                {
+                    "type": "fan.rotor.more_than_one.failed"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any psu absence",
+            "conditions": [
+                {
+                    "type": "psu.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any thermal over high threshold",
+            "conditions": [
+                {
+                    "type": "thermal.any.over.high_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any thermal below high threshold",
+            "conditions": [
+                {
+                    "type": "thermal.any.below.low_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "10"
+                }
+            ]
+        },
+        {
+            "name": "thermal control algorithm",
+            "conditions": [
+                {
+                    "type": "fantray.all.presence"
+                },
+                {
+                    "type": "fan.rotor.less_than_two.failed"
+                },
+                {
+                    "type": "psu.all.presence"
+                },
+                {
+                    "type": "thermal.all.below.high_threshold"
+                },
+                {
+                    "type": "thermal.all.over.low_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "thermal_log_level": 5,
+                    "type": "thermal.temp_check_and_fsc_algo_control",
+                    "cpu_pid_params": [78, 3, 0.5, 0.2],
+                    "bcm_pid_params": [88, 4, 0.3, 0.4],
+                    "f2b_linear_params": [34, 54, 3, 35, 100],
+                    "b2f_linear_params": [27, 48, 3, 35, 100]
+                }
+            ]
+        }
+    ]
+}

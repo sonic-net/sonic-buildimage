@@ -3,14 +3,17 @@
 mkdir -p /etc/swss/config.d/
 mkdir -p /etc/supervisor/
 mkdir -p /etc/supervisor/conf.d/
-
+mkdir -p /dev/shm/supervisor/
 
 CFGGEN_PARAMS=" \
     -d \
 {% if ENABLE_ASAN == "y" %}
-     -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" \
+    -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\",\"ASIC_VENDOR\":\"${ASIC_VENDOR:-unknown}\"}" \
+{% else %}
+    -a "{\"ASIC_VENDOR\":\"${ASIC_VENDOR:-unknown}\"}" \
 {% endif %}
     -y /etc/sonic/constants.yml \
+    -t /usr/share/sonic/templates/orch_zmq_tables.conf.j2,/etc/swss/orch_zmq_tables.conf \
     -t /usr/share/sonic/templates/switch.json.j2,/etc/swss/config.d/switch.json \
     -t /usr/share/sonic/templates/vxlan.json.j2,/etc/swss/config.d/vxlan.json \
     -t /usr/share/sonic/templates/ipinip.json.j2,/etc/swss/config.d/ipinip.json \
@@ -18,12 +21,13 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/vlan_vars.j2 \
     -t /usr/share/sonic/templates/ndppd.conf.j2,/etc/ndppd.conf \
     -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes \
-    -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf
+    -t /usr/share/sonic/templates/watchdog_processes.j2,/etc/supervisor/watchdog_processes \
+    -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
     -t /usr/share/sonic/templates/wait_for_link.sh.j2,/usr/bin/wait_for_link.sh \
 "
 VLAN=$(sonic-cfggen $CFGGEN_PARAMS)
-SUBTYPE=$(sonic-cfggen -d -v "DEVICE_METADATA['localhost']['subtype']")
-SWITCH_TYPE=${SWITCH_TYPE:-`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['switch_type']"`}
+SUBTYPE=$(sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'subtype')
+SWITCH_TYPE=${SWITCH_TYPE:-`sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'switch_type'`}
 chmod +x /usr/bin/wait_for_link.sh
 
 # Executed platform specific initialization tasks.
@@ -61,7 +65,7 @@ if [ -f "$IS_SUPERVISOR" ]; then
             else
                 # Update asic_id in CONFIG_DB, which is used by orchagent and fed to syncd
                 if [[ $PCI_ID == ????:??:??.? ]]; then
-                    sonic-db-cli CONFIG_DB HSET 'DEVICE_METADATA|localhost' 'asic_id' ${PCI_ID#*:}
+                    sonic-db-cli -s CONFIG_DB HSET 'DEVICE_METADATA|localhost' 'asic_id' ${PCI_ID#*:}
                     break
                 fi
             fi

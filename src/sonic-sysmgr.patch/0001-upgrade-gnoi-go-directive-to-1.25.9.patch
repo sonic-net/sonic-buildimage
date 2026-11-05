@@ -1,0 +1,19 @@
+From: security-fix <security@sonic>
+Date: Tue, 9 Sep 2026 00:00:00 +0000
+Subject: [PATCH] Upgrade go directive in gnoi/go.mod to 1.25.9
+
+---
+ gnoi/go.mod | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/gnoi/go.mod b/gnoi/go.mod
+--- a/gnoi/go.mod
++++ b/gnoi/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/openconfig/gnoi
+ 
+-go 1.22
++go 1.25.9
+ 
+-toolchain go1.22.4
++toolchain go1.25.9

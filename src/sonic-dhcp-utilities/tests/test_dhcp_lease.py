@@ -1,0 +1,274 @@
+import pytest
+from pathlib import Path
+
+from dhcp_utilities.common.utils import DhcpDbConnector
+from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler, LeaseHanlder
+from freezegun import freeze_time
+from swsscommon import swsscommon
+from unittest.mock import patch, call, MagicMock
+from common_utils import mock_get_config_db_table
+
+expected_lease = {
+    "Vlan1000|10:70:fd:b6:13:00": {
+        "lease_start": "1693997305",
+        "lease_end": "1693997305",
+        "ip": "192.168.0.2"
+    },
+    "Vlan1000|10:70:fd:b6:13:17": {
+        "lease_start": "1693997315",
+        "lease_end": "1694000915",
+        "ip": "192.168.0.131"
+    },
+    "Vlan1000|10:70:fd:b6:13:18": {
+        "lease_start": "1697607205",
+        "lease_end": "1697610805",
+        "ip": "193.168.0.132"
+    },
+    "Vlan2000|10:70:fd:b6:13:15": {
+        "lease_start": "1693995705",
+        "lease_end": "1693999305",
+        "ip": "193.168.2.2"
+    },
+    "Vlan2000|10:70:fd:b6:13:20": {
+        "lease_start": "1693995705",
+        "lease_end": "1693999305",
+        "ip": "193.168.2.3"
+    }
+}
+
+
+@pytest.mark.parametrize("initially_exists", [False, True])
+def test_read_kea_lease_retries_then_succeeds(
+        mock_swsscommon_dbconnector_init, tmp_path, initially_exists):
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_data = Path("tests/test_data/kea-lease.csv").read_bytes()
+    if initially_exists:
+        lease_file.write_bytes(lease_data)
+
+    def complete_lease_file(_):
+        lease_file.write_bytes(lease_data + b"\n")
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.time.sleep",
+               side_effect=complete_lease_file) as mock_sleep:
+        handler = KeaDhcp4LeaseHandler(DhcpDbConnector(), lease_file=lease_file)
+
+        assert handler._read() == expected_lease
+        mock_sleep.assert_called_once_with(0.05)
+        assert "attempt 1/3" in mock_syslog.call_args.args[1]
+
+
+@pytest.mark.parametrize(("initially_exists", "error_type"), [
+    (False, FileNotFoundError),
+    (True, ValueError),
+])
+def test_read_kea_lease_raises_after_retry_exhaustion(
+        mock_swsscommon_dbconnector_init, tmp_path, initially_exists, error_type):
+    lease_file = tmp_path / "kea-lease.csv"
+    if initially_exists:
+        lease_file.write_bytes(Path("tests/test_data/kea-lease.csv").read_bytes())
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch.object(swsscommon.DBConnector, "hget", return_value=None), \
+         patch.object(DhcpDbConnector, "get_state_db_table") as mock_get_state_db_table, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.time.sleep") as mock_sleep:
+        handler = KeaDhcp4LeaseHandler(DhcpDbConnector(), lease_file=lease_file)
+
+        with pytest.raises(error_type):
+            handler.update_lease()
+        assert not handler.lock.locked()
+        mock_get_state_db_table.assert_not_called()
+        assert mock_sleep.call_args_list == [call(0.05), call(0.05)]
+        assert [f"attempt {attempt}/3" in item.args[1]
+                for attempt, item in enumerate(mock_syslog.call_args_list, 1)] == [True] * 3
+
+
+def test_read_kea_lease(mock_swsscommon_dbconnector_init, tmp_path):
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_bytes(Path("tests/test_data/kea-lease.csv").read_bytes() + b"\n")
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
+        # Verify whether lease information read is as expected
+        lease = kea_lease_handler._read()
+        assert lease == expected_lease
+
+
+def test_read_kea_lease_prefers_active_lease_over_newer_stale_release(
+        mock_swsscommon_dbconnector_init, tmp_path):
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_text(
+        "address,hwaddr,client_id,valid_lifetime,expire,subnet_id,"
+        "fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id\n"
+        "192.168.0.131,10:70:fd:b6:13:17,,3600,1694000915,1000,0,0,,0,,1\n"
+        "192.168.0.2,10:70:fd:b6:13:17,,0,1693997309,1000,0,0,,2,,1\n",
+        encoding="utf-8"
+    )
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
+
+        assert kea_lease_handler._read() == {
+            "Vlan1000|10:70:fd:b6:13:17": {
+                "lease_start": "1693997315",
+                "lease_end": "1694000915",
+                "ip": "192.168.0.131"
+            }
+        }
+
+
+def test_read_kea_lease_does_not_resurrect_older_lease_when_newer_ip_is_legitimately_released(
+        mock_swsscommon_dbconnector_init, tmp_path):
+    """
+    Timeline (Kea memfile is chronological / append-only):
+      1. Client holds IP_A (active, oldest row).
+      2. Client moves; receives IP_B (active, middle row).
+      3. Client legitimately releases IP_B (release, newest row).
+
+    IP_A is deliberately given a *later* expiry (1694999999) than the IP_B release
+    timestamp (1694003700). This is the case the cross-IP expiry comparison got
+    wrong: because IP_A expires after the release, an expiry-based rule would
+    resurrect the stale IP_A lease. Precedence must instead follow CSV order and
+    same-IP transitions, so the legitimate IP_B release wins.
+    """
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_text(
+        "address,hwaddr,client_id,valid_lifetime,expire,subnet_id,"
+        "fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id\n"
+        # IP_A active — oldest, but expires LATER than the IP_B release below
+        "192.168.0.10,10:70:fd:b6:13:17,,3600,1694999999,1000,0,0,,0,,1\n"
+        # IP_B active — client moved (expire=1694003600)
+        "192.168.0.20,10:70:fd:b6:13:17,,3600,1694003600,1000,0,0,,0,,1\n"
+        # IP_B release — newest, legitimate (expire=1694003700, valid_lifetime=0)
+        "192.168.0.20,10:70:fd:b6:13:17,,0,1694003700,1000,0,0,,2,,1\n",
+        encoding="utf-8"
+    )
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
+
+        assert kea_lease_handler._read() == {
+            "Vlan1000|10:70:fd:b6:13:17": {
+                # lease_start == lease_end signals a release; IP_B must be preserved
+                # and the longer-lived IP_A must NOT be resurrected.
+                "lease_start": "1694003700",
+                "lease_end": "1694003700",
+                "ip": "192.168.0.20"
+            }
+        }
+
+
+def test_read_kea_lease_ignores_expired_reclaimed_state_with_nonzero_lifetime(
+        mock_swsscommon_dbconnector_init, tmp_path):
+    """
+    A Kea state=2 (EXPIRED_RECLAIMED) row can retain a non-zero valid_lifetime, so
+    checking valid_lifetime alone would wrongly treat it as an active lease. The
+    newest event here is the reclaim of the same IP, so the client must end up with
+    a release entry (lease_start == lease_end), not an active lease.
+    """
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_text(
+        "address,hwaddr,client_id,valid_lifetime,expire,subnet_id,"
+        "fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id\n"
+        # Active lease first
+        "192.168.0.50,10:70:fd:b6:13:99,,3600,1694000000,1000,0,0,,0,,1\n"
+        # Expired-reclaimed for the SAME IP, still carrying valid_lifetime=3600
+        "192.168.0.50,10:70:fd:b6:13:99,,3600,1694999999,1000,0,0,,2,,1\n",
+        encoding="utf-8"
+    )
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
+
+        assert kea_lease_handler._read() == {
+            "Vlan1000|10:70:fd:b6:13:99": {
+                "lease_start": "1694999999",
+                "lease_end": "1694999999",
+                "ip": "192.168.0.50"
+            }
+        }
+
+
+# Cannot mock built-in/extension type function(datetime.datetime.timestamp), need to free time
+@freeze_time("2023-09-08")
+def test_update_kea_lease(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
+    tested_lease = expected_lease
+    mock_lease_table = {
+        "Vlan1000|aa:bb:cc:dd:ee:ff": {},
+        "Vlan1000|10:70:fd:b6:13:00": {},
+        "Vlan1000|10:70:fd:b6:13:17": {},
+        "Vlan1000|10:70:fd:b6:13:18": {}
+    }
+    with patch.object(swsscommon.Table, "getKeys"), \
+         patch.object(swsscommon.DBConnector, "hget", return_value=None), \
+         patch.object(swsscommon.DBConnector, "hset") as mock_hset, \
+         patch.object(KeaDhcp4LeaseHandler, "_read", MagicMock(return_value=tested_lease)), \
+         patch.object(DhcpDbConnector, "get_state_db_table",
+                      return_value=mock_lease_table), \
+         patch.object(swsscommon.DBConnector, "delete") as mock_delete, \
+         patch("time.sleep", return_value=None) as mock_sleep:
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector)
+        kea_lease_handler.update_lease()
+        # Verify that old key was deleted
+        mock_delete.assert_has_calls([
+            call("DHCP_SERVER_IPV4_LEASE|Vlan1000|10:70:fd:b6:13:00"),
+            call("DHCP_SERVER_IPV4_LEASE|Vlan1000|10:70:fd:b6:13:17"),
+            call("DHCP_SERVER_IPV4_LEASE|Vlan1000|aa:bb:cc:dd:ee:ff")
+        ])
+        # Verify that lease has been updated, to be noted that lease for "192.168.0.2" didn't been updated because
+        # lease_start equals to lease_end
+        mock_hset.assert_has_calls([
+            call("DHCP_SERVER_IPV4_LEASE|Vlan1000|10:70:fd:b6:13:18", "lease_start", "1697607205"),
+            call("DHCP_SERVER_IPV4_LEASE|Vlan1000|10:70:fd:b6:13:18", "lease_end", "1697610805"),
+            call("DHCP_SERVER_IPV4_LEASE|Vlan1000|10:70:fd:b6:13:18", "ip", "193.168.0.132")
+        ])
+        kea_lease_handler.update_lease()
+        mock_sleep.assert_called_once_with(2)
+
+
+def test_update_kea_lease_acknowledges_request_read_before_lease_file(
+        mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
+    order = []
+    with patch.object(swsscommon.Table, "getKeys"), \
+         patch.object(swsscommon.DBConnector, "hget", side_effect=lambda *args: order.append("request") or "R1"), \
+         patch.object(swsscommon.DBConnector, "hset") as mock_hset, \
+         patch.object(swsscommon.DBConnector, "delete"), \
+         patch.object(KeaDhcp4LeaseHandler, "_read", side_effect=lambda: order.append("read") or {}), \
+         patch.object(DhcpDbConnector, "get_state_db_table", return_value={"Vlan1000|aa:bb:cc:dd:ee:ff": {}}):
+        kea_lease_handler = KeaDhcp4LeaseHandler(DhcpDbConnector())
+        kea_lease_handler.update_lease()
+    assert order == ["request", "read"]
+    assert mock_hset.call_args_list == [call("DHCP_SERVER_IPV4_LEASE_SYNC|GLOBAL", "completed_id", "R1")]
+
+
+def test_update_kea_lease_failure_releases_lock_without_acknowledgement(
+        mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
+    with patch.object(swsscommon.Table, "getKeys"), \
+         patch.object(swsscommon.DBConnector, "hget", return_value="R1"), \
+         patch.object(swsscommon.DBConnector, "hset") as mock_hset, \
+         patch.object(KeaDhcp4LeaseHandler, "_read", side_effect=FileNotFoundError):
+        kea_lease_handler = KeaDhcp4LeaseHandler(DhcpDbConnector())
+        with pytest.raises(FileNotFoundError):
+            kea_lease_handler.update_lease()
+    assert not kea_lease_handler.lock.locked()
+    mock_hset.assert_not_called()
+
+
+def test_no_implement(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        lease_handler = LeaseHanlder(db_connector)
+        try:
+            lease_handler._read()
+        except NotImplementedError:
+            pass
+        try:
+            lease_handler.register()
+        except NotImplementedError:
+            pass

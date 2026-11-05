@@ -1,0 +1,14 @@
+{
+	"ChassisType": "Module",
+	"Health": "OK",
+	"HealthRollup": "OK",
+	"Id": "BMC_eeprom",
+	"Location": "{'PartLocation': {'LocationType': 'Embedded'}}",
+	"Manufacturer": "NVIDIA",
+	"Model": "P3809",
+	"Name": "BMC_eeprom",
+	"PartNumber": "692-13809-3404-000",
+	"PowerState": "On",
+	"SerialNumber": "1320725102601",
+	"State": "Enabled"
+}

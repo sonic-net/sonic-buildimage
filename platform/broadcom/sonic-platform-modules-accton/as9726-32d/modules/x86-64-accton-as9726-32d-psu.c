@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 #define MAX_MODEL_NAME          20
 #define MAX_SERIAL_NUMBER       19
@@ -137,11 +138,18 @@ static const struct attribute_group as9726_32d_psu_group = {
     .attrs = as9726_32d_psu_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as9726_32d_psu_probe(struct i2c_client *client,
                                 const struct i2c_device_id *dev_id)
+#else
+static int as9726_32d_psu_probe(struct i2c_client *client)
+#endif
 {
     struct as9726_32d_psu_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_I2C_BLOCK)) {
         status = -EIO;
@@ -187,7 +195,7 @@ exit:
     return status;
 }
 
-static int as9726_32d_psu_remove(struct i2c_client *client)
+static void as9726_32d_psu_remove(struct i2c_client *client)
 {
     struct as9726_32d_psu_data *data = i2c_get_clientdata(client);
 
@@ -195,7 +203,6 @@ static int as9726_32d_psu_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &as9726_32d_psu_group);
     kfree(data);
 
-    return 0;
 }
 
 enum psu_index
@@ -267,7 +274,6 @@ static struct as9726_32d_psu_data *as9726_32d_psu_update_device(struct device *d
 
         /* Read psu status */
         status = as9726_32d_cpld_read(0x60, 0x03);
-        //printk("status=0x%x in %s\n", status, __FUNCTION__);
 
         if (status < 0) {
             dev_dbg(&client->dev, "cpld reg 0x60 err %d\n", status);

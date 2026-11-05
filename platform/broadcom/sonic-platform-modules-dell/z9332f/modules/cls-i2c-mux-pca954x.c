@@ -50,7 +50,6 @@
 #define PCA954X_MAX_NCHANS 8
 
 #define PCA954X_IRQ_OFFSET 4
-
 enum pca_type {
 	pca_9540,
 	pca_9542,
@@ -412,9 +411,9 @@ static int pca954x_init(struct i2c_client *client, struct pca954x *data)
 /*
  * I2C init/probing/exit functions
  */
-static int pca954x_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int pca954x_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct i2c_adapter *adap = client->adapter;
 	struct pca954x_platform_data *pdata = dev_get_platdata(&client->dev);
 	struct device *dev = &client->dev;
@@ -502,7 +501,7 @@ static int pca954x_probe(struct i2c_client *client,
 				break;
 		}
 
-		ret = i2c_mux_add_adapter(muxc, force, num, 0);
+		ret = i2c_mux_add_adapter(muxc, force, num);
 		if (ret)
 			goto fail_cleanup;
 	}
@@ -533,14 +532,13 @@ fail_cleanup:
 	return ret;
 }
 
-static int pca954x_remove(struct i2c_client *client)
+static void pca954x_remove(struct i2c_client *client)
 {
 	struct i2c_mux_core *muxc = i2c_get_clientdata(client);
 
 	device_remove_file(&client->dev, &dev_attr_idle_state);
 
 	pca954x_cleanup(muxc);
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP

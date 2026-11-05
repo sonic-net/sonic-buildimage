@@ -29,6 +29,7 @@
 #include <linux/leds.h>
 #include <linux/slab.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 extern int as7726_32x_cpld_read (unsigned short cpld_addr, u8 reg);
 extern int as7726_32x_cpld_write(unsigned short cpld_addr, u8 reg, u8 value);
@@ -370,7 +371,11 @@ static int accton_as7726_32x_led_probe(struct platform_device *pdev)
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int accton_as7726_32x_led_remove(struct platform_device *pdev)
+#else
+static void accton_as7726_32x_led_remove(struct platform_device *pdev)
+#endif
 {
     int i;
 
@@ -378,7 +383,9 @@ static int accton_as7726_32x_led_remove(struct platform_device *pdev)
         led_classdev_unregister(&accton_as7726_32x_leds[i]);
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
     return 0;
+#endif
 }
 
 static struct platform_driver accton_as7726_32x_led_driver = {

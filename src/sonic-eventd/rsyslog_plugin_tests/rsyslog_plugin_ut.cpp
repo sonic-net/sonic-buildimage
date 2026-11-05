@@ -8,9 +8,10 @@ extern "C"
 #include <fstream>
 #include <memory>
 #include <regex>
+#include <thread>
+#include <swss/events.h>
 #include "gtest/gtest.h"
-#include "json.hpp"
-#include "events.h"
+#include <nlohmann/json.hpp>
 #include "../rsyslog_plugin/rsyslog_plugin.h"
 #include "../rsyslog_plugin/syslog_parser.h"
 #include "../rsyslog_plugin/timestamp_formatter.h"
@@ -32,14 +33,14 @@ vector<EventParam> createEventParams(vector<string> params, vector<string> luaCo
     return eventParams;
 }
 
-TEST(syslog_parser, matching_regex) {    
+TEST(syslog_parser, matching_regex) {
     json jList = json::array();
     vector<RegexStruct> regexList;
     string regexString = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*message (.*) other_data (.*) even_more_data (.*)";
     vector<string> params = { "month", "day", "time", "message", "other_data", "even_more_data" };
     vector<string> luaCodes = { "", "", "", "", "", "" };
     regex expression(regexString);
-    
+
     RegexStruct rs = RegexStruct();
     rs.tag = "test_tag";
     rs.regexExpression = expression;
@@ -63,11 +64,11 @@ TEST(syslog_parser, matching_regex) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
-TEST(syslog_parser, matching_regex_timestamp) {    
+TEST(syslog_parser, matching_regex_timestamp) {
     json jList = json::array();
     vector<RegexStruct> regexList;
     string regexString = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*message (.*) other_data (.*)";
@@ -101,7 +102,7 @@ TEST(syslog_parser, matching_regex_timestamp) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
@@ -165,7 +166,7 @@ TEST(syslog_parser, lua_code_valid_1) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
@@ -204,7 +205,7 @@ TEST(syslog_parser, lua_code_valid_2) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
@@ -253,12 +254,37 @@ TEST(rsyslog_plugin, onMessage_noParams) {
     infile.close();
 }
 
+TEST(rsyslog_plugin, run) {
+    unique_ptr<RsyslogPlugin> plugin(new RsyslogPlugin("test_mod_name", "./rsyslog_plugin_tests/test_regex_5.rc.json"));
+    EXPECT_EQ(0, plugin->onInit());
+    istringstream ss("");
+    streambuf* cinbuf = cin.rdbuf();
+    cin.rdbuf(ss.rdbuf());
+    plugin->run();
+    cin.rdbuf(cinbuf);
+}
+
+TEST(rsyslog_plugin, run_SIGTERM) {
+    unique_ptr<RsyslogPlugin> plugin(new RsyslogPlugin("test_mod_name", "./rsyslog_plugin_tests/test_regex_5.rc.json"));
+    EXPECT_EQ(0, plugin->onInit());
+    EXPECT_TRUE(RsyslogPlugin::g_running);
+    thread pluginThread([&]() {
+        plugin->run();
+    });
+
+    RsyslogPlugin::signalHandler(SIGTERM);
+
+    pluginThread.join();
+
+    EXPECT_FALSE(RsyslogPlugin::g_running);
+}
+
 TEST(timestampFormatter, changeTimestampFormat) {
     unique_ptr<TimestampFormatter> formatter(new TimestampFormatter());
-    
+
     vector<string> timestampOne = { "Jul", "20", "10:09:40.230874" };
     vector<string> timestampTwo = { "Jan", "1", "00:00:00.000000" };
-    vector<string> timestampThree = { "Dec", "31", "23:59:59.000000" }; 
+    vector<string> timestampThree = { "Dec", "31", "23:59:59.000000" };
 
     formatter->m_storedTimestamp = "010100:00:00.000000";
     formatter->m_storedYear = g_stored_year;

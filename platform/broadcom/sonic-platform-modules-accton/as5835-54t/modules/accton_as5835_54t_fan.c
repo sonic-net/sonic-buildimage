@@ -30,6 +30,7 @@
 #include <linux/slab.h>
 #include <linux/dmi.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 #define DRVNAME "as5835_54t_fan"
 #define MAX_FAN_SPEED_RPM	21500
@@ -398,8 +399,12 @@ static ssize_t show_version(struct device *dev, struct device_attribute *attr, c
     return sprintf(buf, "%d\n", val);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as5835_54t_fan_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as5835_54t_fan_probe(struct i2c_client *client)
+#endif
 {
     struct as5835_54t_fan_data *data;
     int status;
@@ -447,13 +452,12 @@ exit:
     return status;
 }
 
-static int as5835_54t_fan_remove(struct i2c_client *client)
+static void as5835_54t_fan_remove(struct i2c_client *client)
 {
     struct as5835_54t_fan_data *data = i2c_get_clientdata(client);
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &as5835_54t_fan_group);
     
-    return 0;
 }
 
 /* Addresses to scan */

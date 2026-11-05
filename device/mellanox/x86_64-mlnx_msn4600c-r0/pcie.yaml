@@ -154,7 +154,7 @@
 - bus: '09'
   dev: '00'
   fn: '0'
-  id: 1533
+  id: '1533'
   name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
     03)'
 - bus: 'ff'

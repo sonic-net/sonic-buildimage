@@ -47,6 +47,7 @@
 #include "../include/iccp_netlink.h"
 #include "../include/scheduler.h"
 #include "../include/iccp_ifm.h"
+#include "../include/iccp_utils.h"
 
 /*****************************************
 * Enum
@@ -258,39 +259,6 @@ done:
  * Port-Channel Status Handler
  *
  ****************************************/
-static void set_route_by_linux_route(struct CSM* csm,
-                                     struct LocalInterface *local_if,
-                                     int is_add)
-{
-    /* TODO Need to remove this function
-         when set static route with zebra works fine*/
-
-    char ipv4_dest_str[INET_ADDRSTRLEN];
-    char syscmd[128];
-    char *ptr;
-    int ret = 0;
-
-    /* enable kernel forwarding support*/
-    system("echo 1 > /proc/sys/net/ipv4/ip_forward");
-
-    if (!csm || !local_if)
-        return;
-
-    sprintf(ipv4_dest_str, "%s", show_ip_str(htonl(local_if->ipv4_addr)));
-    ptr = strrchr(ipv4_dest_str, '.');
-    strcpy(ptr, ".0\0");
-
-    /* set gw route */
-    /* sprintf(syscmd, "ip route %s %s/%d proto static metric 200 nexthop via %s > /dev/null 2>&1", */
-    sprintf(syscmd, "ip route %s %s/%d metric 200 nexthop via %s > /dev/null 2>&1",
-            (is_add) ? "add" : "del", ipv4_dest_str, local_if->prefixlen, csm->peer_ip);
-
-    ret = system(syscmd);
-    ICCPD_LOG_DEBUG(__FUNCTION__, "%s  ret = %d", syscmd, ret);
-
-    return;
-}
-
 static void update_vlan_if_info(struct CSM *csm,
                                 struct LocalInterface *local_if,
                                 struct LocalInterface *vlan_if,
@@ -354,7 +322,6 @@ static void set_l3_itf_state(struct CSM *csm,
         /* set static route*/
         if (route_type == ROUTE_ADD)
         {
-            /*set_route_by_linux_route(csm, set_l3_local_if, 1);*/   /*add static route by linux route tool*/
             /*If the L3 intf is not Vlan, del ARP; else wait ARP age*/
             if (strncmp(set_l3_local_if->name, VLAN_PREFIX, 4) != 0)
             {
@@ -364,7 +331,6 @@ static void set_l3_itf_state(struct CSM *csm,
         }
         else if (route_type == ROUTE_DEL)
         {
-            /*set_route_by_linux_route(csm, set_l3_local_if, 0);*/    /*del static route by linux route tool*/
             arp_set_handler(csm, set_l3_local_if, 1);     /* add arp*/
             ndisc_set_handler(csm, set_l3_local_if, 1); /* add nd */
         }
@@ -559,7 +525,7 @@ void set_peerlink_mlag_port_learn(struct LocalInterface *lif, int enable)
     return;
 }
 
-/* Send request to Mclagsyncd to enable or disable traffic on 
+/* Send request to Mclagsyncd to enable or disable traffic on
  * MLAG interface
  */
 static int mlacp_link_set_traffic_dist_mode(
@@ -1058,22 +1024,34 @@ static void set_peerlink_mlag_port_kernel_forward(
     struct LocalInterface *lif,
     int enable)
 {
+    char *delete_command[] = {
+        "ebtables", "-D", "FORWARD",
+        "-i", NULL, "-o", NULL, "-j", "DROP", NULL
+    };
+    char *update_command[] = {
+        "ebtables", NULL, "FORWARD",
+        "-i", NULL, "-o", NULL, "-j", "DROP", NULL
+    };
+    int ret;
+
     if (!csm || !csm->peer_link_if || !lif)
         return;
 
-    char cmd[256] = { 0 };
+    delete_command[4] = csm->peer_link_if->name;
+    delete_command[6] = lif->name;
+    ret = iccp_exec_command(delete_command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "ebtables delete peer_link %s mlag_if %s ret %d",
+        csm->peer_link_if->name, lif->name, ret);
 
-    sprintf(cmd, "ebtables %s FORWARD -i %s -o %s -j DROP",
-            "-D", csm->peer_link_if->name, lif->name);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " ebtable cmd  %s", cmd );
-    system(cmd);
-
-    sprintf(cmd, "ebtables %s FORWARD -i %s -o %s -j DROP",
-            (enable) ? "-I" : "-D", csm->peer_link_if->name, lif->name);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " ebtable cmd  %s", cmd );
-    system(cmd);
-
-    return;
+    update_command[1] = enable ? "-I" : "-D";
+    update_command[4] = csm->peer_link_if->name;
+    update_command[6] = lif->name;
+    ret = iccp_exec_command(update_command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "ebtables %s peer_link %s mlag_if %s ret %d",
+        enable ? "insert" : "delete",
+        csm->peer_link_if->name, lif->name, ret);
 }
 
 void update_peerlink_isolate_from_all_csm_lif(
@@ -1085,7 +1063,7 @@ void update_peerlink_isolate_from_all_csm_lif(
     char *msg_buf = g_iccp_mlagsyncd_send_buf;
     struct System *sys;
 
-    char mlag_po_buf[512];
+    char mlag_po_buf[MCLAG_MEMBER_NAME_STR_LEN];
     int src_len = 0, dst_len = 0;
     ssize_t rc;
 
@@ -1100,7 +1078,7 @@ void update_peerlink_isolate_from_all_csm_lif(
         return;
 
     memset(msg_buf, 0, ICCP_MLAGSYNCD_SEND_MSG_BUFFER_SIZE);
-    memset(mlag_po_buf, 0, 511);
+    memset(mlag_po_buf, 0, MCLAG_MEMBER_NAME_STR_LEN);
 
     msg_hdr = (struct IccpSyncdHDr *)msg_buf;
     msg_hdr->ver = ICCPD_TO_MCLAGSYNCD_HDR_VERSION;
@@ -1165,12 +1143,24 @@ void update_peerlink_isolate_from_all_csm_lif(
         /* check pif port state and lif pochannel state */
         if (lif->isolate_to_peer_link == 1)
         {
-            /* need to isolate port,  get it's member name */
-            if (strlen(mlag_po_buf) != 0)
-                dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s", ",");
+            //The return value of the snprintf function is the length of the source string.
+            if ((sizeof(mlag_po_buf) - dst_len) > 
+                (strlen(lif->name) + strlen(lif->portchannel_member_buf) + 2))
+            {
+                /* need to isolate port,  get it's member name */
+                if (strlen(mlag_po_buf) != 0)
+                {
+                    dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s", ",");
+                }
 
-            dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s%s%s",
-                                lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+                dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s%s%s",
+                                    lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+            }
+            else
+            {
+                ICCPD_LOG_WARN(__FUNCTION__, "the remaining length %d is not enough to store:%s%s%s", 
+                    sizeof(mlag_po_buf) - dst_len, lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+            }
         }
     }
 
@@ -1939,7 +1929,7 @@ static void update_l2_mac_state(struct CSM *csm,
                 }
 
 // Dont set local learn unless learned from MCLAGSYNCD.
-// When interface is UP MAC addresses gets re-learned 
+// When interface is UP MAC addresses gets re-learned
 #if 0
                 /*this may be peerlink is not configured and portchannel is down*/
                 /*when this portchannel up, add the mac back to ASIC*/
@@ -2130,7 +2120,7 @@ void mlacp_mlag_intf_detach_handler(struct CSM* csm, struct LocalInterface* loca
     ICCPD_LOG_DEBUG("ICCP_FSM",
         "MLAG_IF(%s) %s Detach: state %s, po_active %d, traffic_dis %d, sync_state %s",
         local_if_is_l3_mode(local_if) ? "L3" : "L2",
-        local_if->name, 
+        local_if->name,
         (local_if->state == PORT_STATE_UP) ? "up" : "down",
         local_if->po_active, local_if->is_traffic_disable,
         mlacp_state(csm));
@@ -2147,14 +2137,14 @@ void mlacp_mlag_intf_detach_handler(struct CSM* csm, struct LocalInterface* loca
     else
         update_l3_po_state(csm, local_if, 0);
 
-  
+
     //If the traffic is disabled due to interface flap; while coming up, if
     //mclag interface is removed before receiving ack, it will be in
     //blocked state; to address timing scenario unblock Tx/Rx of
     //traffic on this portchannel if the traffic is blocked on this port
     if(local_if->is_traffic_disable)
     {
-        if ( !csm->peer_link_if || !(strcmp(csm->peer_link_if->name, local_if->name)) ) 
+        if ( !csm->peer_link_if || !(strcmp(csm->peer_link_if->name, local_if->name)) )
         {
             mlacp_link_enable_traffic_distribution(local_if);
         }
@@ -2178,7 +2168,7 @@ void mlacp_peer_mlag_intf_delete_handler(struct CSM* csm, char *mlag_if_name)
     ICCPD_LOG_DEBUG("ICCP_FSM",
         "MLAG_IF(%s) %s Peer IF Delete Event: state %s, po_active %d, traffic_dis %d, sync_state %s",
         local_if_is_l3_mode(local_if) ? "L3" : "L2",
-        local_if->name, 
+        local_if->name,
         (local_if->state == PORT_STATE_UP) ? "up" : "down",
         local_if->po_active, local_if->is_traffic_disable,
         mlacp_state(csm));
@@ -2201,9 +2191,11 @@ static void mlacp_conn_handler_fdb(struct CSM* csm)
 
 void mlacp_fix_bridge_mac(struct CSM* csm)
 {
-    char syscmd[128];
-    int ret = 0;
     char macaddr[64];
+    char *command[] = {
+        "ip", "link", "set", "dev", "Bridge", "address", macaddr, NULL
+    };
+    int ret = 0;
     uint8_t null_mac[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
     if (memcmp(MLACP(csm).system_id, null_mac, ETHER_ADDR_LEN) != 0)
@@ -2215,9 +2207,8 @@ void mlacp_fix_bridge_mac(struct CSM* csm)
 
         /*When changing the mac of a vlan member port, the mac of Bridge will be changed.*/
         /*The Bridge mac can not be the same as peer system id, so fix the Bridge MAC address here.*/
-        sprintf(syscmd, "ip link set dev Bridge address %s > /dev/null 2>&1", macaddr);
-        ret = system(syscmd);
-        ICCPD_LOG_DEBUG(__FUNCTION__, "  %s  ret = %d", syscmd, ret);
+        ret = iccp_exec_command(command, true);
+        ICCPD_LOG_DEBUG(__FUNCTION__, "Set Bridge address %s ret %d", macaddr, ret);
     }
 
     return;
@@ -3084,11 +3075,11 @@ int iccp_mclagsyncd_mclag_domain_cfg_handler(struct System *sys, char *msg_buf)
     struct mclag_domain_cfg_info* cfg_info;
     int count, i = 0;
     char system_mac_str[ETHER_ADDR_STR_LEN];
-    
+
     msg_hdr = (struct IccpSyncdHDr *)msg_buf;
 
     count = (msg_hdr->len- sizeof(struct IccpSyncdHDr ))/sizeof(struct mclag_domain_cfg_info);
-    ICCPD_LOG_DEBUG(__FUNCTION__, "recv domain cfg msg ; count %d   ",count);  
+    ICCPD_LOG_DEBUG(__FUNCTION__, "recv domain cfg msg ; count %d   ",count);
 
     for (i = 0; i < count; i++)
     {
@@ -3096,7 +3087,7 @@ int iccp_mclagsyncd_mclag_domain_cfg_handler(struct System *sys, char *msg_buf)
 
         memcpy(system_mac_str, mac_addr_to_str(cfg_info->system_mac), sizeof(system_mac_str));
 
-        ICCPD_LOG_NOTICE(__FUNCTION__, "recv cfg msg ; domain_id:%d op_type:%d attr_bmap:0x%x local_ip:%s peer_ip:%s peer_ifname:%s system_mac:%s session_timeout:%d keepalive_time:%d",cfg_info->domain_id, cfg_info->op_type, cfg_info->attr_bmap, cfg_info->local_ip, cfg_info->peer_ip, cfg_info->peer_ifname, system_mac_str, cfg_info->session_timeout, cfg_info->keepalive_time);  
+        ICCPD_LOG_NOTICE(__FUNCTION__, "recv cfg msg ; domain_id:%d op_type:%d attr_bmap:0x%x local_ip:%s peer_ip:%s peer_ifname:%s system_mac:%s session_timeout:%d keepalive_time:%d",cfg_info->domain_id, cfg_info->op_type, cfg_info->attr_bmap, cfg_info->local_ip, cfg_info->peer_ip, cfg_info->peer_ifname, system_mac_str, cfg_info->session_timeout, cfg_info->keepalive_time);
 
         if (cfg_info->op_type == MCLAG_CFG_OPER_ADD || cfg_info->op_type == MCLAG_CFG_OPER_UPDATE) //mclag domain create/update
         {
@@ -3153,7 +3144,7 @@ int iccp_mclagsyncd_mclag_domain_cfg_handler(struct System *sys, char *msg_buf)
             if(cfg_info->attr_bmap & MCLAG_CFG_ATTR_PEER_LINK)
             {
                 unset_peer_link(cfg_info->domain_id);
-            } 
+            }
             else if(cfg_info->attr_bmap & MCLAG_CFG_ATTR_KEEPALIVE_INTERVAL)
             {
                 //reset to default
@@ -3183,16 +3174,16 @@ int iccp_mclagsyncd_mclag_iface_cfg_handler(struct System *sys, char *msg_buf)
     struct IccpSyncdHDr * msg_hdr;
     struct mclag_iface_cfg_info* cfg_info;
     int count, i = 0;
-    
+
     msg_hdr = (struct IccpSyncdHDr *)msg_buf;
 
     count = (msg_hdr->len- sizeof(struct IccpSyncdHDr))/sizeof(struct mclag_iface_cfg_info);
-    ICCPD_LOG_DEBUG(__FUNCTION__, "recv domain cfg msg ; count %d   ",count);  
+    ICCPD_LOG_DEBUG(__FUNCTION__, "recv domain cfg msg ; count %d   ",count);
 
     for (i =0; i<count; i++)
     {
         cfg_info = (struct mclag_iface_cfg_info*)((char *)(msg_buf) + sizeof(struct IccpSyncdHDr) + i * sizeof(struct mclag_iface_cfg_info));
-        ICCPD_LOG_NOTICE(__FUNCTION__, "recv mclag iface cfg msg ; domain_id:%d op_type:%d mclag_iface:%s ",cfg_info->domain_id, cfg_info->op_type, cfg_info->mclag_iface);  
+        ICCPD_LOG_NOTICE(__FUNCTION__, "recv mclag iface cfg msg ; domain_id:%d op_type:%d mclag_iface:%s ",cfg_info->domain_id, cfg_info->op_type, cfg_info->mclag_iface);
 
         if (cfg_info->op_type == MCLAG_CFG_OPER_ADD)
         {
@@ -3236,7 +3227,7 @@ int iccp_mclagsyncd_mclag_unique_ip_cfg_handler(struct System *sys, char *msg_bu
                 }
             }
 
-            if (!unq_ip_if) 
+            if (!unq_ip_if)
             {
                 unq_ip_if = (struct Unq_ip_If_info *)malloc(sizeof(struct Unq_ip_If_info));
                 if (!unq_ip_if)
@@ -3359,7 +3350,7 @@ int iccp_receive_fdb_handler_from_syncd(struct System *sys, char *msg_buf)
     msg_hdr = (struct IccpSyncdHDr *)msg_buf;
 
     count = (msg_hdr->len- sizeof(struct IccpSyncdHDr))/sizeof(struct mclag_fdb_info);
-    ICCPD_LOG_DEBUG(__FUNCTION__, "recv msg fdb count %d   ",count );  
+    ICCPD_LOG_DEBUG(__FUNCTION__, "recv msg fdb count %d   ",count );
 
     for (i =0; i<count;i++)
     {
@@ -3592,7 +3583,7 @@ int iccp_mclagsyncd_msg_handler(struct System *sys)
         {
             iccp_mclagsyncd_vlan_mbr_update_handler(sys, &msg_buf[pos]);
         }
-        else 
+        else
         {
             ICCPD_LOG_ERR(__FUNCTION__, "recv unknown msg type %d ", msg_hdr->type);
             pos += msg_hdr->len;
@@ -3612,10 +3603,10 @@ int iccp_mclagsyncd_msg_handler(struct System *sys)
  {
      int    rc;
 
-     /* Update traffic distribution only if local interface is still bound to MLAG */ 
+     /* Update traffic distribution only if local interface is still bound to MLAG */
      if (!lif || !lif->csm)
          return;
- 
+
      /* Expecting ACK from peer only after reaching EXCHANGE state */
      if (MLACP(lif->csm).current_state != MLACP_STATE_EXCHANGE)
          return;
@@ -4197,7 +4188,7 @@ int mclagd_ctl_interactive_process(int client_fd)
 
         case INFO_TYPE_DUMP_MAC:
             mclagd_ctl_handle_dump_mac(client_fd, req->mclag_id);
-            break;        
+            break;
 
         case INFO_TYPE_DUMP_LOCAL_PORTLIST:
             mclagd_ctl_handle_dump_local_portlist(client_fd, req->mclag_id);
@@ -4218,7 +4209,7 @@ int mclagd_ctl_interactive_process(int client_fd)
         case INFO_TYPE_CONFIG_LOGLEVEL:
             mclagd_ctl_handle_config_loglevel(client_fd, req->mclag_id);
             break;
-			
+
         default:
             return MCLAG_ERROR;
     }
@@ -4512,21 +4503,24 @@ int sync_unique_ip()
 
 void set_peer_mac_in_kernel(char *mac, int vlan, int add)
 {
-    char cmd[256] = { 0 };
+    char vlan_str[16];
+    char *replace_command[] = {
+        "bridge", "fdb", "replace", mac, "dev", "Bridge",
+        "vlan", vlan_str, "local", NULL
+    };
+    char *delete_command[] = {
+        "bridge", "fdb", "del", mac, "dev", "Bridge",
+        "vlan", vlan_str, "local", NULL
+    };
     int ret = 0;
 
     ICCPD_LOG_DEBUG(__FUNCTION__,"mac %s, vlan %d, add %d", mac, vlan, add);
+    snprintf(vlan_str, sizeof(vlan_str), "%d", vlan);
 
-    if (add) {
-        sprintf(cmd, "bridge fdb replace %s dev Bridge vlan %d local", mac, vlan);
-    } else {
-        sprintf(cmd, "bridge fdb del %s dev Bridge vlan %d local", mac, vlan);
-    }
-
-    ret = system(cmd);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " cmd  %s  ret = %d", cmd, ret);
-
-    return;
+    ret = iccp_exec_command(add ? replace_command : delete_command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "bridge fdb %s mac %s vlan %s ret %d",
+        add ? "replace" : "delete", mac, vlan_str, ret);
 }
 
 void set_peerlink_learn_kernel(
@@ -4534,26 +4528,27 @@ void set_peerlink_learn_kernel(
     int enable, int dir)
 {
     struct LocalInterface *lif = NULL;
+    char *command[] = {
+        "bridge", "link", "set", "dev", NULL,
+        "learning", NULL, NULL
+    };
+    int ret = 0;
+
     if (!csm || !csm->peer_link_if)
         return;
 
     lif = csm->peer_link_if;
 
     ICCPD_LOG_DEBUG(__FUNCTION__,"ifname %s, enable %d, dir %d", lif->name, enable, dir);
-    char cmd[256] = { 0 };
-    int ret = 0;
-    if (enable == 0) {
-        sprintf(cmd, "bridge link set dev %s learning off", lif->name);
-    } else {
-        sprintf(cmd, "bridge link set dev %s learning on", lif->name);
-    }
-
-    ret = system(cmd);
-    ICCPD_LOG_DEBUG(__FUNCTION__, " cmd  %s  ret = %d", cmd, ret);
+    command[4] = lif->name;
+    command[6] = enable ? "on" : "off";
+    ret = iccp_exec_command(command, false);
+    ICCPD_LOG_DEBUG(__FUNCTION__,
+        "Set learning %s on %s ret %d",
+        enable ? "on" : "off", lif->name, ret);
 
     if (ret != 0)
     {
-        ICCPD_LOG_DEBUG(__FUNCTION__, " cmd  %s  ret = %d", cmd, ret);
         csm->peer_link_learning_enable = enable;
         csm->peer_link_learning_retry_time = time(NULL);
     } else {

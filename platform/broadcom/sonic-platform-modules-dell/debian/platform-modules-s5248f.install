@@ -5,7 +5,7 @@ s5248f/scripts/sensors usr/bin
 s5248f/scripts/qsfp_irq_enable.py usr/bin
 s5248f/cfg/s5248f-modules.conf etc/modules-load.d
 s5248f/systemd/platform-modules-s5248f.service etc/systemd/system
-s5248f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5248f_c3538-r0
+build-s5248f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5248f_c3538-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_s5248f_c3538-r0
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin

@@ -3,6 +3,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = audisp-tacplus_$(AUDISP_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS = audisp-tacplus-dbgsym_$(AUDISP_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Obtain audisp-tacplus
@@ -26,7 +27,7 @@ ifeq ($(CROSS_BUILD_ENVIRON), y)
 else
 	# build package
 	dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
-endif	
+endif
 	popd
 
 	mv $(DERIVED_TARGETS) $* $(DEST)/

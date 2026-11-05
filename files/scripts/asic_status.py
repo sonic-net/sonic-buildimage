@@ -69,8 +69,9 @@ def main():
                 logger.log_info('Detected asic{} is online'.format(global_asic_id))
                 sys.exit(0)
         elif asic_op == 'DEL':
-            logger.log_info('Detected asic{} is offline'.format(global_asic_id))
-            sys.exit(1)
+            if (global_asic_id == args_asic_id):
+                logger.log_info('Detected asic{} is offline'.format(global_asic_id))
+                sys.exit(1)
         else:
             continue
 

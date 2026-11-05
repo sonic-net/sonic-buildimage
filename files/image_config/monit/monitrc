@@ -38,7 +38,7 @@
 ## default the file is placed in $HOME/.monit.id.
 #
 # set idfile /var/.monit.id
-  set idfile /var/lib/monit/id
+  set idfile /dev/shm/monit/id
 #
 ## Set the location of the Monit state file which saves monitoring states
 ## on each cycle. By default the file is placed in $HOME/.monit.state. If
@@ -46,7 +46,7 @@
 ## the monitoring state across reboots. If it is on temporary filesystem, the
 ## state will be lost on reboot which may be convenient in some situations.
 #
-  set statefile /var/lib/monit/state
+  set statefile /dev/shm/monit/state
 #
 #
 
@@ -91,7 +91,7 @@
 ## available in the back end filesystem).
 #
   set eventqueue
-      basedir /var/lib/monit/events # set the base directory where events will be stored
+      basedir /dev/shm/monit/events # set the base directory where events will be stored
       slots 100                     # optionally limit the queue size
 #
 #

@@ -1,0 +1,74 @@
+module sonic-tc-dscp-map {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-tc-dscp-map";
+
+    prefix tdm;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "TC_TO_DSCP_MAP yang Module for SONiC OS";
+
+    revision 2025-01-10 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-tc-dscp-map {
+
+        container TC_TO_DSCP_MAP {
+
+            description "Maps traffic class to DSCP values for egress packet remarking.";
+
+            list TC_TO_DSCP_MAP_LIST {
+
+                key "name";
+
+                description "A named traffic class to DSCP remarking map.";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for map name.";
+                            error-app-tag map-name-invalid-length;
+                        }
+                    }
+                    description "Name of the TC to DSCP map.";
+                }
+
+                list TC_TO_DSCP_MAP {
+
+                    key "tc";
+
+                    description "Single mapping entry from a traffic class to a DSCP value.";
+
+                    leaf tc {
+                        type stypes:tc_type;
+                        description "Source traffic class.";
+                    }
+
+                    leaf dscp {
+                        type string {
+                            pattern "6[0-3]|[1-5][0-9]?|[0-9]?" {
+                                error-message "Invalid DSCP";
+                                error-app-tag dscp-invalid;
+                            }
+                        }
+                        description "DSCP value (0-63) to remark on egress.";
+                    }
+                }
+            }
+        }
+    }
+}

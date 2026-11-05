@@ -1,0 +1,15 @@
+[Unit]
+Description=Dell S5448F Platform modules
+Before=pmon.service
+After=platform-init.service
+Before=platform-ready.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/s5448f_platform.sh init
+ExecStop=/usr/local/bin/s5448f_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

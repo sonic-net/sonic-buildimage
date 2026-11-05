@@ -1,7 +1,17 @@
 {
     "chassis": {
         "name": "DCS-7050QX-32",
-        "components": [],
+        "components": [
+            {
+                "name": "Scd(addr=0000:04:00.0)"
+            },
+            {
+                "name": "Ucd90120A(addr=6-004e)"
+            },
+            {
+                "name": "Ucd90160(addr=10-004e)"
+            }
+	],
         "fans": [
             {
                 "name": "fan1"
@@ -53,37 +63,43 @@
         "psus": [
             {
                 "name": "psu1",
-                "fans": []
+                "fans": [
+                    {
+                        "name": "psu1/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
             },
             {
                 "name": "psu2",
-                "fans": []
+                "fans": [
+                    {
+                        "name": "psu2/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
             }
         ],
         "thermals": [
             {
-                "name": "Cpu temp sensor"
+                "name": "Cpu temp sensor",
+                "controllable": false
             },
             {
-                "name": "Board sensor"
+                "name": "Board sensor",
+                "controllable": false
             },
             {
-                "name": "Front-panel temp sensor"
+                "name": "Front-panel temp sensor",
+                "controllable": false
             },
             {
-                "name": "Rear temp sensor"
-            },
-            {
-                "name": "Power supply 1 inlet temp sensor"
-            },
-            {
-                "name": "Power supply 1 internal sensor"
-            },
-            {
-                "name": "Power supply 2 inlet temp sensor"
-            },
-            {
-                "name": "Power supply 2 internal sensor"
+                "name": "Rear temp sensor",
+                "controllable": false
             }
         ],
         "sfps": [

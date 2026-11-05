@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,41 +49,47 @@ check_sdk_upgrade()
         return "${FFB_SUCCESS}"
     fi
 
-    while :; do
-        mkdir -p "${FS_MOUNTPOINT}"
-        mount -t squashfs "${FS_PATH}" "${FS_MOUNTPOINT}" || {
-            >&2 echo "Failed to mount next SONiC image"
+    ISSU_VERSION_FILE_PATH="/etc/mlnx/issu-version"
+    CURRENT_ISSU_VERSION="$(cat ${ISSU_VERSION_FILE_PATH})"
+    NEXT_ISSU_VERSION="Unknown"
+
+    # /host/image-<version>/platform/fw/asic/issu-version is now the new location for ISSU version.
+    NEXT_IMAGE_ISSU_VERSION_FILE_PATH="/host/image-${NEXT_SONIC_IMAGE#SONiC-OS-}/platform/fw/asic/issu-version"
+
+    if [ -f "${NEXT_IMAGE_ISSU_VERSION_FILE_PATH}" ]; then
+        NEXT_ISSU_VERSION="$(cat ${NEXT_IMAGE_ISSU_VERSION_FILE_PATH})"
+    else
+        while :; do
+            mkdir -p "${FS_MOUNTPOINT}"
+            mount -t squashfs "${FS_PATH}" "${FS_MOUNTPOINT}" || {
+                >&2 echo "Failed to mount next SONiC image"
+                break
+            }
+
+            [ -f "${ISSU_VERSION_FILE_PATH}" ] || {
+                >&2 echo "No ISSU version file found ${ISSU_VERSION_FILE_PATH}"
+                break
+            }
+
+            [ -f "${FS_MOUNTPOINT}/${ISSU_VERSION_FILE_PATH}" ] || {
+                >&2 echo "No ISSU version file found ${ISSU_VERSION_FILE_PATH} in ${NEXT_SONIC_IMAGE}"
+                break
+            }
+            NEXT_ISSU_VERSION="$(cat ${FS_MOUNTPOINT}/${ISSU_VERSION_FILE_PATH})"
             break
-        }
+        done
 
-        ISSU_VERSION_FILE_PATH="/etc/mlnx/issu-version"
+        umount -rf "${FS_MOUNTPOINT}" 2> /dev/null || true
+        rm -rf "${FS_MOUNTPOINT}" 2> /dev/null || true
+    fi
 
-        [ -f "${ISSU_VERSION_FILE_PATH}" ] || {
-            >&2 echo "No ISSU version file found ${ISSU_VERSION_FILE_PATH}"
-            break
-        }
-
-        [ -f "${FS_MOUNTPOINT}/${ISSU_VERSION_FILE_PATH}" ] || {
-            >&2 echo "No ISSU version file found ${ISSU_VERSION_FILE_PATH} in ${NEXT_SONIC_IMAGE}"
-            break
-        }
-
-        CURRENT_ISSU_VERSION="$(cat ${ISSU_VERSION_FILE_PATH})"
-        NEXT_ISSU_VERSION="$(cat ${FS_MOUNTPOINT}/${ISSU_VERSION_FILE_PATH})"
-
-        if [[ "${CURRENT_ISSU_VERSION}" == "${NEXT_ISSU_VERSION}" ]]; then
-            CHECK_RESULT="${FFB_SUCCESS}"
-        else
-            >&2 echo "Current and next ISSU version do not match:"
-            >&2 echo "Current ISSU version: ${CURRENT_ISSU_VERSION}"
-            >&2 echo "Next ISSU version: ${NEXT_ISSU_VERSION}"
-        fi
-
-        break
-    done
-
-    umount -rf "${FS_MOUNTPOINT}" 2> /dev/null || true
-    rm -rf "${FS_MOUNTPOINT}" 2> /dev/null || true
+    if [[ "${CURRENT_ISSU_VERSION}" == "${NEXT_ISSU_VERSION}" ]]; then
+        CHECK_RESULT="${FFB_SUCCESS}"
+    else
+        >&2 echo "Current and next ISSU version do not match:"
+        >&2 echo "Current ISSU version: ${CURRENT_ISSU_VERSION}"
+        >&2 echo "Next ISSU version: ${NEXT_ISSU_VERSION}"
+    fi
 
     return "${CHECK_RESULT}"
 }

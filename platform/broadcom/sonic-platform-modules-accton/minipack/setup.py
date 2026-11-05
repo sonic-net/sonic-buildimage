@@ -5,7 +5,7 @@ import sys
 from setuptools import setup, Extension
 os.listdir
 
-module1 = Extension("fbfpgaio", sources = ["minipack/lib/fbfpgaiomodule.c"])
+module1 = Extension("fbfpgaio", sources = ["lib/fbfpgaiomodule.c"])
 
 setup(
    name='minipack',
@@ -13,7 +13,7 @@ setup(
    description='Module to initialize Accton MiniPack platforms',
    
    packages=['minipack'],
-   package_dir={'minipack': 'minipack/classes'},
+   package_dir={'minipack': 'classes'},
    ext_modules=[module1],
    
 )

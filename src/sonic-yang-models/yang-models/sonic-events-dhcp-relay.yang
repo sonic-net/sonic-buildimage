@@ -8,14 +8,6 @@ module sonic-events-dhcp-relay {
         revision-date 2022-12-01;
     }
 
-    import sonic-port {
-        prefix port;
-    }
-
-    import sonic-portchannel {
-        prefix lag;
-    }
-
     organization
         "SONiC";
 
@@ -40,16 +32,11 @@ module sonic-events-dhcp-relay {
                     name of the interface discarding.";
 
             leaf ifname {
-                type union {
-                    type leafref {
-                        path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name"; 
-                    }
-                    type leafref {
-                        path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
-                    }
+                type string {
+                    pattern '[a-zA-Z0-9]+';
                 }
                 description "Name of the i/f discarding";
-            } 
+            }
 
             uses evtcmn:sonic-events-cmn;
         }

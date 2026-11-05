@@ -1,0 +1,201 @@
+# $Id: Makefile.linux-xlr-4_19,v 0.1 Broadcom SDK $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+
+#
+# XLR system make file.
+#
+# Most of this was taken from target x86-smp_generic_64-2_6.
+#
+
+#############################################################################
+# this segment is custom and not sourced from any existing makefile         #
+# (base thanks to http:<slash><slash>confluence.broadcom.com/display/NTSWSW/X86+System) #
+#############################################################################
+
+# set up a basic feature list. tcl, etc. #
+#ifeq (,$(FEATURE_LIST))
+#FEATURE_LIST = TCL BFD PTP CINT L3 I2C MEM_SCAN EDITLINE BCM_SAL_PROFILE CUSTOMER TEST CHASSIS MSTP RCPU
+#endif
+
+# some basic path variables for tools and kernel source, etc #
+XLR_TOOLS_BASE ?= /projects/ntsw-tools/linux/xlr-66
+TOOLCHAIN_DIR = $(XLR_TOOLS_BASE)/buildroot/host/usr
+ifeq (1,$(USE_CLANG))
+KERNDIR = $(XLR_TOOLS_BASE)/kernel/linux-clang
+endif
+KERNDIR ?= $(XLR_TOOLS_BASE)/kernel/linux
+
+# Target machine for EDK-Host defconfig
+TARGET_MACHINE ?= x86_64
+
+# set up cross compile prefix, tools dir variables. #
+export CROSS_COMPILE := x86_64-linux-
+export TOOLS_DIR     := $(TOOLCHAIN_DIR)/bin
+
+# architecture. #
+ARCH                = x86_64
+TARGET_ARCHITECTURE = x86_64-broadcom-linux-gnu
+
+# Noisy kernel build
+KBUILD_VERBOSE = 1
+
+export ARCH KBUILD_VERBOSE
+
+# set up paths. #
+export LIBRARY_PATH := $(TOOLCHAIN_DIR)/lib:$(TOOLCHAIN_DIR)/lib64:$(LIBRARY_PATH)
+export PATH         := $(TOOLCHAIN_DIR)/bin:$(KERNDIR):$(PATH)
+
+# set up SYSINC path #
+CROSS_GCC_VER ?= $(shell $(TOOLCHAIN_DIR)/bin/$(CROSS_COMPILE)gcc -dumpversion)
+CROSS_GCC_VER_MAJOR := $(shell echo $(CROSS_GCC_VER) | cut -f1 -d.)
+export SYSINC := $(TOOLCHAIN_DIR)/lib/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
+
+# Glibc 2.27 or later version doesn't support SVID libm error handling.
+# Building tcl 8.3.3 with the new toolchain will occur errors.
+export TCL840  := 1
+
+# Common CFLAGS
+CFGFLAGS += -DUSE_LINUX_BDE_MMAP=1
+#CFGFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
+ifneq (1,$(USE_CLANG))
+CFLAGS += -L$(TOOLCHAIN_DIR)/lib
+CFLAGS += -L$(TOOLCHAIN_DIR)/lib64
+endif
+#OPT_CFLAGS += -Wl,--rpath=/lib64                                 # may need to set rpath and dynamic-linker path here (and possibly in KLFAGS below) in the future, #
+#OPT_CFLAGS += -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2   # if we want to build the target executable to be used with shared libs #
+
+# Needed for a warning in src/soc/phy/fcmap/src/bfcmap88060_a0.c that can't be
+# fixed because of a Montreal2 FW dependency
+ifeq ($(LOCALDIR),src/soc/phy/fcmap/src)
+OPT_CFLAGS += -Wno-address-of-packed-member
+endif
+
+# Compiler-specific CFLAGS
+ifeq (1,$(USE_CLANG)) # CLANG-specific CFLAGS
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
+	export LIBNSL_DEPRECATED := 1
+endif
+else # GCC-specific CFLAGS
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
+	CFLAGS += -fcommon
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
+	CFLAGS += -flarge-source-files
+	export LIBNSL_DEPRECATED := 1
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
+	CFLAGS += -fcf-protection
+endif
+endif # Compiler-specific CFLAGS
+
+#XLDK-568 fix inline references
+CFGFLAGS += -fgnu89-inline
+
+# set up KFLAGS appropriately. #
+ifeq (,$(KFLAGS))
+KFLAGS := -I$(KERNDIR) -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/generated/uapi -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h -D__KERNEL__ -DNDEBUG -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-format-security -fno-delete-null-pointer-checks -Os -mno-sse -m64 -mtune=generic -mno-red-zone -mcmodel=kernel -fstack-protector -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -pipe -Wno-sign-compare -fno-asynchronous-unwind-tables -fno-omit-frame-pointer -Wdeclaration-after-statement -Wno-pointer-sign -fno-dwarf2-cfi-asm
+ifneq (1,$(USE_CLANG))
+KFLAGS += -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib64 -lc -funit-at-a-time -maccumulate-outgoing-args -fconserve-stack
+else
+KFLAGS += -fno-pie
+endif
+endif
+
+
+######################################################################
+# this segment comes from make/Makefile.linux-x86-smp_generic_64-2_6 #
+######################################################################
+CFGFLAGS += -DLONGS_ARE_64BITS
+CFGFLAGS += -DPTRS_ARE_64BITS
+CFGFLAGS += -DPHYS_ADDRS_ARE_64BITS
+CFGFLAGS += -DSAL_SPL_LOCK_ON_IRQ
+
+
+##############################################################
+# This segment comes from make/Makefile.linux-x86-common-2_6 #
+##############################################################
+CFGFLAGS += -DSYS_BE_PIO=0 -DSYS_BE_PACKET=0 -DSYS_BE_OTHER=0
+ENDIAN = LE_HOST=1
+CFGFLAGS += -D$(ENDIAN)
+CFGFLAGS += -DBCM_PLATFORM_STRING=\"X86\"
+CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=32
+
+# Extra variables.
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+
+comma = ,
+basetarget = $(basename $(notdir $@))
+modname = $(basetarget)
+
+name-fix = $(subst $(comma),_,$(subst -,_,$1))
+basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"
+modname_flags  = $(if $(filter 1,$(words $(modname))),\
+-D"KBUILD_MODNAME=KBUILD_STR($(call name-fix,$(modname)))")
+
+ifdef LTSW_CHIPS
+# Ensure we do not use an out-of-date libelf.so
+ELFUTILS_MIN = 158
+ELFUTILS_DIR ?= /projects/ntsw-tools/lib
+
+# Default open source target build
+OPENSRC_BUILD ?= fed21-x86_64
+
+# Hardware interface (see $SDKLT/bcma/sys/probe directory)
+SYSTEM_INTERFACE ?= ngbde
+
+# Support BCMSIM in the same build
+ifeq (1,$(BCM_SIM_PATH_SUPPORT))
+EXTRA_SYSTEM_INTERFACES = plisim
+endif
+
+# Turn on direct register access if running on real hardware.
+ifeq (ngbde,$(SYSTEM_INTERFACE))
+# Except if using multiple probe interfaces
+ifeq (,$(EXTRA_SYSTEM_INTERFACES))
+LTSW_ADD_CPPFLAGS += -DBCMDRD_CONFIG_MEMMAP_DIRECT=1
+endif
+endif
+
+export SYSTEM_INTERFACE
+export EXTRA_SYSTEM_INTERFACES
+endif
+
+ifneq (, $(EDKHOST))
+# Default open source target build
+OPENSRC_BUILD ?= fed21-x86_64
+endif
+
+ifneq ($(targetplat),user)
+# By default we exclude -Werror from x86 kernel builds
+BCM_CFLAGS   = -Wall
+include ${SDK}/make/Makefile.linux-kernel-2_6
+endif

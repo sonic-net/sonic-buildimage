@@ -111,14 +111,11 @@ struct i2c_board_info *i2c_get_fan_board_info(FAN_DATA *fdata, NEW_DEV_ATTR *cda
     static struct i2c_board_info board_info;
     FAN_PDATA *fan_platform_data;
 
-    if (strcmp(cdata->dev_type, "fan_ctrl")==0 ||
-            strcmp(cdata->dev_type, "fan_eeprom")==0 ||
-            strcmp(cdata->dev_type, "fan_cpld")==0 )
-    {
+    if (strcmp(cdata->dev_type, "fan_ctrl") == 0 || strcmp(cdata->dev_type, "fan_eeprom") == 0 ||
+        strcmp(cdata->dev_type, "fan_cpld") == 0 || strcmp(cdata->dev_type, "fan_multifpgapci") == 0) {
         /* Allocate the fan_platform_data */
         fan_platform_data = (FAN_PDATA *)kzalloc(sizeof(FAN_PDATA), GFP_KERNEL);
         fan_platform_data->fan_attrs = (FAN_DATA_ATTR *)kzalloc(num*sizeof(FAN_DATA_ATTR), GFP_KERNEL);
-
 
         fan_platform_data->num_fantrays = fdata->num_fantrays;
         fan_platform_data->len = fdata->len;
@@ -144,6 +141,16 @@ struct i2c_board_info *i2c_get_fan_board_info(FAN_DATA *fdata, NEW_DEV_ATTR *cda
 }
 
 
+static void fan_free_pdata(void *pdata)
+{
+    FAN_PDATA *d = pdata;
+    if (d)
+    {
+        kfree(d->fan_attrs);
+        kfree(d);
+    }
+}
+
 static ssize_t do_device_operation(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
 {
     PDDF_ATTR *ptr = (PDDF_ATTR *)da;
@@ -156,6 +163,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     if (strncmp(buf, "add", strlen(buf)-1)==0)
     {
         adapter = i2c_get_adapter(cdata->parent_bus);
+        if (!adapter) {
+            printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+            goto clear_data;
+        }
         board_info = i2c_get_fan_board_info(fdata, cdata);
 
         /* Populate the platform data for fan */
@@ -165,7 +176,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         {
             i2c_put_adapter(adapter);
             pddf_dbg(FAN, KERN_ERR "Created a %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
-            add_device_table(cdata->i2c_name, (void*)client_ptr);
+            add_device_table_owned(cdata->i2c_name, (void*)client_ptr, fan_free_pdata, THIS_MODULE);
         }
         else 
         {

@@ -7,6 +7,7 @@ Requires=config-topology.service
 Requires=database.service
 {% if sonic_asic_platform == 'mellanox' -%}
 Requires=hw-management.service
+After=hw-management.service
 {% endif -%}
 
 

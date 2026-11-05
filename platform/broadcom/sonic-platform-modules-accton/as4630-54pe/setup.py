@@ -11,6 +11,6 @@ setup(
    description='Module to initialize Accton AS4630-54PE platforms',
    
    packages=['as4630_54pe'],
-   package_dir={'as4630_54pe': 'as4630-54pe/classes'},
+   package_dir={'as4630_54pe': 'classes'},
 )
 

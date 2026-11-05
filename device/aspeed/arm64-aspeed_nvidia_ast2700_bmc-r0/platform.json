@@ -1,0 +1,22 @@
+{
+    "chassis": {
+        "name": "NVIDIA-AST2700-BMC",
+        "model": "NVIDIA AST2700 BMC",
+        "thermal_manager": false,
+        "liquid_cooled": true,
+        "components": [{
+            "name": "BMC"
+        }],
+        "fans": [],
+        "psus": [],
+        "thermals": [{
+            "name": "BMC Ambient"
+        }],
+        "sfps": []
+    },
+    "interfaces": {},
+    "watchdog": {
+        "boot_arm": true,
+        "shutdown_protect": true
+    }
+}

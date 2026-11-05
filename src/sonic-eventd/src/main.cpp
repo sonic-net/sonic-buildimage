@@ -1,4 +1,4 @@
-#include "logger.h"
+#include <swss/logger.h>
 #include "eventd.h"
 
 void run_eventd_service();
@@ -6,8 +6,7 @@ void run_eventd_service();
 int main()
 {
     swss::Logger::setMinPrio(swss::Logger::SWSS_DEBUG);
-    SWSS_LOG_INFO("The eventd service started");
-    SWSS_LOG_ERROR("ERR:The eventd service started");
+    SWSS_LOG_INFO("The eventd service started"); 
 
     run_eventd_service();
 

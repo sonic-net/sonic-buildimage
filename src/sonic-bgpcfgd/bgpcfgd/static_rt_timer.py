@@ -5,14 +5,15 @@ import time
 class StaticRouteTimer(object):
     """ This class checks the static routes and deletes those entries that have not been refreshed """
     def __init__(self):
-        self.db = swsscommon.SonicV2Connector()
+        self.db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
         self.db.connect(self.db.APPL_DB)
         self.timer = None
         self.start = None
 
     DEFAULT_TIMER = 180
     DEFAULT_SLEEP = 60
-    MAX_TIMER     = 1800
+    # keep same range as value defined in sonic-restapi/sonic_api.yaml
+    MAX_TIMER     = 172800
 
     def set_timer(self):
         """ Check for custom route expiry time in STATIC_ROUTE_EXPIRY_TIME """

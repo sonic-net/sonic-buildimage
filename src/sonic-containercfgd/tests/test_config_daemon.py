@@ -2,6 +2,9 @@ import os
 import sys
 from unittest import mock
 
+from swsscommon import swsscommon
+swsscommon.RestartWaiter = mock.MagicMock()
+
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)

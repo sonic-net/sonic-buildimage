@@ -1,0 +1,55 @@
+#!/usr/bin/python3
+
+import argparse
+import sys
+
+from nexthop.pddf_config_parser import load_pddf_device_config
+from nexthop.powercycle import log_to_kernel, powercycle, watchdog_powercycle
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    # Positional action systemd passes at shutdown ("halt"/"poweroff"/"reboot"/"kexec").
+    parser.add_argument("action", nargs="?", default=None)
+
+    # "--via-watchdog" power cycles via the FPGA watchdog counter, so the
+    # DPM records the watchdog signature as the reboot cause.
+    parser.add_argument("--via-watchdog", action="store_true")
+
+    args, _ = parser.parse_known_args()
+    return args
+
+
+def main(via_watchdog=False):
+    try:
+        config = load_pddf_device_config()
+    except Exception as e:
+        log_to_kernel(f"Failed to load PDDF configuration: {str(e)}")
+        return 1
+
+    if via_watchdog:
+        try:
+            watchdog_powercycle(config)
+        except Exception as e:
+            log_to_kernel(f"Watchdog powercycle failed: {str(e)}, falling back to power cycle control register")
+
+    try:
+        powercycle(config)
+    except Exception as e:
+        log_to_kernel(f"Powercycle failed: {str(e)}")
+        log_to_kernel("The control plane will reboot and leave the dataplane in an undefined state")
+
+    return 1
+
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    # Systemd calls this script with one of 4 arguments. "poweroff" and "halt" we don't expect.
+    # A cold reboot will pass "reboot". In the first 3 cases, we continue with the powercycle.
+    # Warm reboots will use kexec and will pass "kexec" as the first argument, therefore we
+    # must skip the powercycle in that case.
+    if args.action == "kexec":
+        sys.exit(0)
+    sys.exit(main(via_watchdog=args.via_watchdog))

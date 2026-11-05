@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/list.h>
+#include <linux/version.h>
 
 static LIST_HEAD(cpld_client_list);
 static struct mutex	 list_lock;
@@ -505,8 +506,6 @@ static ssize_t sfp_value_store(struct device *dev, struct device_attribute *da,
     int index;
     long keyin = 0;
 
-    //printk("sfp_value_store\n");
-    //printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
@@ -550,8 +549,6 @@ static ssize_t sfp_value_show(struct device *dev, struct device_attribute *da,
     int index;
     int status = -EINVAL;
 
-    //printk("sfp_value_show, attr->index=%d\n", attr->index);
-    //printk("TRANSCEIVER_PRESENT_ATTR_ID(1)=%d, TRANSCEIVER_RESET_ATTR_ID(1)=%d\n", TRANSCEIVER_PRESENT_ATTR_ID(1), TRANSCEIVER_RESET_ATTR_ID(1));
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
@@ -569,7 +566,6 @@ static ssize_t sfp_value_show(struct device *dev, struct device_attribute *da,
     case MODULE_RESET_17 ... MODULE_RESET_24:
     case MODULE_RESET_25 ... MODULE_RESET_32:
         index=sfp_array_index_get(attr->index);
-        //printk("rst:attr->index=%d, index=%d\n",attr->index,  index);
         if(index < 0 || index > PORT_NUM_MAX -1)
             break;
         status = sprintf(buf, "%u\n", data->reset[index]);
@@ -765,8 +761,12 @@ static void as7716_32xb_cpld_remove_client(struct i2c_client *client)
     mutex_unlock(&list_lock);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32xb_cpld_probe(struct i2c_client *client,
                                   const struct i2c_device_id *dev_id)
+#else
+static int as7716_32xb_cpld_probe(struct i2c_client *client)
+#endif
 {
     int status;
     struct as7716_32xb_cpld_data *data = NULL;
@@ -809,7 +809,7 @@ exit:
     return status;
 }
 
-static int as7716_32xb_cpld_remove(struct i2c_client *client)
+static void as7716_32xb_cpld_remove(struct i2c_client *client)
 {
     struct as7716_32xb_cpld_data *data = i2c_get_clientdata(client);
 
@@ -818,7 +818,6 @@ static int as7716_32xb_cpld_remove(struct i2c_client *client)
     kfree(data);
     as7716_32xb_cpld_remove_client(client);
 
-    return 0;
 }
 
 int as7716_32xb_cpld_read(unsigned short cpld_addr, u8 reg)
@@ -930,7 +929,6 @@ static ssize_t set_mode_reset(struct device *dev, struct device_attribute *da,
     if (error) {
         return error;
     }
-    //printk("set_mode_reset:attr->index=%d\n",attr->index);
     switch (attr->index) {
     case MODULE_RESET_1 ... MODULE_RESET_8:
         reg  = 0x04;
@@ -957,17 +955,14 @@ static ssize_t set_mode_reset(struct device *dev, struct device_attribute *da,
     if (unlikely(status < 0)) {
         goto exit;
     }
-    //printk("set_mode_reset:reset=%d, reg=0x%x, mask=0x%x, ori_val=0x%x\n", reset, reg, mask, status);
     /* Update lp_mode status */
     if (reset)
     {
         val = status&(~mask);
-        //printk("1:new val=0x%x\n", val);
     }
     else
     {
         val =status | (mask);
-        //printk("0:new val=0x%x\n", val);
     }
 
     status = as7716_32xb_cpld_write_internal(client, reg, val);

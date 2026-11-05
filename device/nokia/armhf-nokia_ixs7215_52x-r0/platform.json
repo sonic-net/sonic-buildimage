@@ -267,16 +267,16 @@
                 "name": "Ethernet47"
             },
             {
-                "name": "Ethernet48"
+                "name": "SFP48"
             },
             {
-                "name": "Ethernet49"
+                "name": "SFP49"
             },
             {
-                "name": "Ethernet50"
+                "name": "SFP50"
             },
             {
-                "name": "Ethernet51"
+                "name": "SFP51"
             }
        	]
     },

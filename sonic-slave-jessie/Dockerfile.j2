@@ -10,6 +10,7 @@ FROM {{ prefix }}debian:jessie
 MAINTAINER johnar@microsoft.com
 
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
 
 ## Remove retired jessie-updates repo
 RUN sed -i '/http:\/\/deb.debian.org\/debian jessie-updates main/d' /etc/apt/sources.list
@@ -111,8 +112,6 @@ RUN apt-get update && apt-get install -y \
         libqt4-dev \
         python-all-dev \
         python-twisted \
-        php5-dev \
-        phpunit \
         libbit-vector-perl \
         openjdk-7-jdk \
         javahelper \
@@ -123,7 +122,6 @@ RUN apt-get update && apt-get install -y \
         libslf4j-java \
         libservlet3.1-java \
         qt5-default \
-        pkg-php-tools \
 # For mellanox sdk build
         libpcre3 \
         libpcre3-dev \
@@ -261,7 +259,7 @@ RUN apt-get -y build-dep linux
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN export VERSION=1.14.2 \
+RUN export VERSION=1.15.15 \
 {%- if CONFIGURED_ARCH == "armhf" %}
  && wget https://storage.googleapis.com/golang/go$VERSION.linux-armv6l.tar.gz \
  && tar -C /usr/local -xzf go$VERSION.linux-armv6l.tar.gz \
@@ -362,3 +360,8 @@ RUN python -m pip install git+https://github.com/aristanetworks/swi-tools.git@d5
 ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
 RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
 {% endif -%}
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='jessie' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

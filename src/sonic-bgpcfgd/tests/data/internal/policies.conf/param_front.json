@@ -1,7 +1,13 @@
 {
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
-            "sub_role": "FrontkEnd"
+            "sub_role": "FrontEnd"
+        }
+    },
+    "constants": {
+        "bgp": {
+            "internal_community": "12345:556",
+	    "internal_community_match_tag": "101"
         }
     },
     "loopback0_ipv4": "10.10.10.10/32"

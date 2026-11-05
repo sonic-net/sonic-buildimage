@@ -1,0 +1,45 @@
+From 5f7c9ed30f17dfd1cf42ec265417326a6af3a378 Mon Sep 17 00:00:00 2001
+From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
+Date: Thu, 21 Nov 2024 20:57:11 -0800
+Subject: [PATCH] lib: reduce expected config replay error severity
+
+Treat command failures and absent per-daemon configuration files as warnings so SONiC replay can continue and log analysis does not report unsupported-daemon files as breakages.
+
+The former mgmtd adapter warning hunk is omitted because that adapter path no longer exists in FRR 10.7.1.
+
+Original-SONiC-Patch: 0015-SONiC-ONLY-When-the-file-is-config-replayed-we-cannot-handle-th.patch
+---
+ lib/vty.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/lib/vty.c b/lib/vty.c
+index 3932f35a2a..07b2251da2 100644
+--- a/lib/vty.c
++++ b/lib/vty.c
+@@ -2598,7 +2598,7 @@ void vty_read_file_finish(struct vty *vty, struct nb_config *config)
+ 		nl = strchr(ve->error_buf, '\n');
+ 		if (nl)
+ 			*nl = '\0';
+-		flog_err(EC_LIB_VTY, "%s on config line %u: %s", message,
++		flog_warn(EC_LIB_VTY, "%s on config line %u: %s", message,
+ 			 ve->line_num, ve->error_buf);
+ 	}
+ 
+@@ -2717,7 +2717,7 @@ FILE *vty_open_config(const char *config_file, char *config_default_dir)
+ 				flog_warn(EC_LIB_BACKUP_CONFIG,
+ 					  "using backup configuration file!");
+ 			else {
+-				flog_err(
++				flog_warn(
+ 					EC_LIB_VTY,
+ 					"%s: can't open configuration file [%s]",
+ 					__func__, config_file);
+@@ -2766,7 +2766,7 @@ FILE *vty_open_config(const char *config_file, char *config_default_dir)
+ 					  "using backup configuration file!");
+ 				fullpath = config_default_dir;
+ 			} else {
+-				flog_err(EC_LIB_VTY,
++				flog_warn(EC_LIB_VTY,
+ 					 "can't open configuration file [%s]",
+ 					 config_default_dir);
+ 				goto tmp_free_and_out;

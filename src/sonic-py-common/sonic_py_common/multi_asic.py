@@ -2,11 +2,11 @@ import glob
 import os
 import subprocess
 
-from natsort import natsorted
 from swsscommon import swsscommon
 
-from .device_info import get_asic_conf_file_path
+from .device_info import get_asic_conf_file_path, get_expected_asic_list
 from .device_info import is_supervisor, is_chassis
+from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
 
 ASIC_NAME_PREFIX = 'asic'
 NAMESPACE_PATH_GLOB = '/run/netns/*'
@@ -17,8 +17,9 @@ FABRIC_ASIC_SUB_ROLE = 'Fabric'
 EXTERNAL_PORT = 'Ext'
 INTERNAL_PORT = 'Int'
 INBAND_PORT = 'Inb'
-RECIRC_PORT ='Rec'
-PORT_CHANNEL_CFG_DB_TABLE = 'PORTCHANNEL'
+RECIRC_PORT = 'Rec'
+DPU_CONNECT_PORT = 'Dpc'
+PORT_CHANNEL_MEMBER_CFG_DB_TABLE = 'PORTCHANNEL_MEMBER'
 PORT_CFG_DB_TABLE = 'PORT'
 BGP_NEIGH_CFG_DB_TABLE = 'BGP_NEIGHBOR'
 BGP_INTERNAL_NEIGH_CFG_DB_TABLE = 'BGP_INTERNAL_NEIGHBOR'
@@ -52,9 +53,9 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
 def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
     """
     The function connects to the DBs for a given namespace and
-    returns the handle 
-    
-    For voq chassis systems, the db list includes databases from 
+    returns the handle
+
+    For voq chassis systems, the db list includes databases from
     supervisor card. Avoid connecting to these databases from linecards
 
     If no namespace is provided, it will connect to the db in the
@@ -150,6 +151,21 @@ def get_asic_device_id(asic_id):
 
     return None
 
+def get_asic_sub_role(asic_id):
+    asic_conf_file_path = get_asic_conf_file_path()
+    if asic_conf_file_path is None:
+        return None
+
+    with open(asic_conf_file_path) as asic_conf_file:
+        for line in asic_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0] == f"SUB_ROLE_ASIC_{asic_id}":
+                return tokens[1].strip()
+
+    return None
+
 def get_current_namespace(pid=None):
     """
     This API returns the network namespace in which it is
@@ -157,7 +173,7 @@ def get_current_namespace(pid=None):
     """
 
     net_namespace = None
-    command = ["sudo", '/bin/ip', 'netns', 'identify', "{}".format(os.getpid() if not pid else pid)]
+    command = ['/bin/ip', 'netns', 'identify', "{}".format(os.getpid() if not pid else pid)]
     proc = subprocess.Popen(command,
                             stdout=subprocess.PIPE,
                             universal_newlines=True,
@@ -195,6 +211,7 @@ def get_namespaces_from_linux():
     if current_ns:
         return [current_ns]
 
+    from natsort import natsorted  # lazy: keep this ~4.2MB dependency off the module import surface
     ns_list = []
     for path in glob.glob(NAMESPACE_PATH_GLOB):
         ns = os.path.basename(path)
@@ -271,27 +288,60 @@ def get_port_table(namespace=None):
     Returns:
         a dict of all the ports
     """
-    all_ports = {}
+    return get_table(PORT_CFG_DB_TABLE, namespace)
+
+
+def get_table(table, namespace=None):
+    """
+    Retrieves a merged table containing all entries across specified namespaces
+
+    Returns:
+        a dict of all entries of table across namespaces
+    """
+    merged_table = {}
     ns_list = get_namespace_list(namespace)
 
     for ns in ns_list:
-        ports = get_port_table_for_asic(ns)
-        all_ports.update(ports)
+        ns_table = get_table_for_asic(table, ns)
+        merged_table.update(ns_table)
 
-    return all_ports
+    return merged_table
+
 
 def get_port_entry_for_asic(port, namespace):
 
-    config_db = connect_config_db_for_ns(namespace)
-    ports = config_db.get_entry(PORT_CFG_DB_TABLE, port)
-    return ports
+    return get_table_entry_for_asic(PORT_CFG_DB_TABLE, port, namespace)
 
+
+def get_table_entry_for_asic(table, entry, namespace):
+
+    config_db = connect_config_db_for_ns(namespace)
+    return config_db.get_entry(table, entry)
 
 def get_port_table_for_asic(namespace):
 
+    return get_table_for_asic(PORT_CFG_DB_TABLE, namespace)
+
+
+def get_table_for_asic(table, namespace):
+
     config_db = connect_config_db_for_ns(namespace)
-    ports = config_db.get_table(PORT_CFG_DB_TABLE)
-    return ports
+    return config_db.get_table(table)
+
+
+def mod_entry(table, key, value, namespace=None, modIfExists=False):
+    """
+    Modifies an entry in a table with a value in a specified namespace.
+    If no namespace is specified all namespaces are modified.
+    If modIfExists is true, the entry will be modified only if the key
+    already exists in the table.
+    """
+    ns_list = get_namespace_list(namespace)
+
+    for ns in ns_list:
+        if not modIfExists or get_table_entry_for_asic(table, key, ns):
+            config_db = connect_config_db_for_ns(ns)
+            config_db.mod_entry(table, key, value)
 
 
 def get_namespace_for_port(port_name):
@@ -323,15 +373,18 @@ def get_port_role(port_name, namespace=None):
     role = ports_config[PORT_ROLE]
     return role
 
+def is_role_internal(role=None):
+    """
+    Check if the role belongs to one of the internal variants
+    """
+    if role and role in [INTERNAL_PORT, INBAND_PORT, RECIRC_PORT, DPU_CONNECT_PORT]:
+        return True
+    return False
+
 
 def is_port_internal(port_name, namespace=None):
-
     role = get_port_role(port_name, namespace)
-
-    if role in [INTERNAL_PORT, INBAND_PORT, RECIRC_PORT]:
-        return True
-
-    return False
+    return is_role_internal(role)
 
 
 def get_external_ports(port_names, namespace=None):
@@ -354,13 +407,12 @@ def is_port_channel_internal(port_channel, namespace=None):
 
     for ns in ns_list:
         config_db = connect_config_db_for_ns(ns)
-        port_channels = config_db.get_entry(PORT_CHANNEL_CFG_DB_TABLE, port_channel)
+        port_channel_members = config_db.get_keys(PORT_CHANNEL_MEMBER_CFG_DB_TABLE)
 
-        if port_channels:
-            if 'members' in port_channels:
-                members = port_channels['members']
-                if is_port_internal(members[0], namespace):
-                    return True
+        for port_channel_member in port_channel_members:
+            if port_channel_member[0] != port_channel:
+                continue
+            return is_port_internal(port_channel_member[1], namespace)
 
     return False
 
@@ -380,14 +432,14 @@ def get_back_end_interface_set(namespace=None):
         ns_list = get_namespace_list(namespace)
         for ns in ns_list:
             config_db = connect_config_db_for_ns(ns)
-            port_channels = config_db.get_table(PORT_CHANNEL_CFG_DB_TABLE)
+            port_channel_members = config_db.get_keys(PORT_CHANNEL_MEMBER_CFG_DB_TABLE)
             # a back-end LAG must be configured with all of its member from back-end interfaces.
             # mixing back-end and front-end interfaces is miss configuration and not allowed.
             # To determine if a LAG is back-end LAG, just need to check its first member is back-end or not
             # is sufficient. Note that a user defined LAG may have empty members so the list expansion logic
             # need to ensure there are members before inspecting member[0].
-            bk_end_intf_list.extend([port_channel for port_channel, lag_info in port_channels.items()\
-                                if 'members' in lag_info and lag_info['members'][0] in bk_end_intf_list])
+            bk_end_intf_list.extend(set([port_channel_member[0] for port_channel_member in port_channel_members\
+                                if port_channel_member[1] in bk_end_intf_list]))
     a = set()
     a.update(bk_end_intf_list)
     return a
@@ -460,12 +512,15 @@ def validate_namespace(namespace):
 
 def get_asic_presence_list():
     """
-    @summary: This function will get the asic presence list. On Supervisor, the list includes only the asics
-              for inserted and detected fabric cards. For non-supervisor cards, e.g. line card, the list should
-              contain all supported asics by the card. The function gets the asic list from CHASSIS_ASIC_TABLE from
-              CHASSIS_STATE_DB. The function assumes that the first N asic ids (asic0 to asic(N-1)) in
-              CHASSIS_ASIC_TABLE belongs to the supervisor, where N is the max number of asics supported by the Chassis 
-    @return:  List of asics present
+    @summary: This function retrieves the asic presence list. On Supervisor, the list includes asics
+              for inserted and detected fabric cards. For non-supervisor cards (e.g., line cards), the
+              list contains all supported asics by the card.
+
+              For Line Cards: Retrieves asic list from CHASSIS_ASIC_TABLE in CHASSIS_STATE_DB.
+              For Supervisor: First attempts to get expected asic list from platform. If that list is
+                              empty, retrieves asic list from CHASSIS_FABRIC_ASIC_INFO_TABLE in
+                              CHASSIS_STATE_DB (as supervisor handles fabric asics).
+    @return:  List of asics present (list of integers)
     """
     asics_list = []
     if is_multi_asic():
@@ -475,13 +530,55 @@ def get_asic_presence_list():
             asics_list = list(range(0, get_num_asics()))
         else:
             # This is supervisor card. Some fabric cards may not be inserted.
-            # Get asic list from CHASSIS_ASIC_TABLE which lists only the asics
+            # Get asic list from platform or CHASSIS_FABRIC_ASIC_INFO_TABLE which lists only the asics
             # present based on Fabric card detection by the platform.
-            db = swsscommon.DBConnector(CHASSIS_STATE_DB, 0, True)
-            asic_table = swsscommon.Table(db, CHASSIS_FABRIC_ASIC_INFO_TABLE)
-            if asic_table:
-                asics_presence_list = list(asic_table.getKeys())
-                for asic in asics_presence_list:
-                    # asic is asid id: asic0, asic1.... asicN. Get the numeric value.
-                    asics_list.append(int(get_asic_id_from_name(asic)))
+
+            # Get expected asic list. "Expected" refers to the ASIC IDs anticipated to be present based on
+            # platform configuration, which may include ASICs that failed enumeration and therefore do not
+            # appear in CHASSIS_FABRIC_ASIC_INFO_TABLE. If the expected list is empty, retrieve the list from the database.
+            asics_list = get_expected_asic_list()
+            # Ensure asics_list is a list of integers
+            asics_list = [int(a) for a in asics_list]
+            if not asics_list:
+                # expected list returned empty, get the asic list from the database
+                db = swsscommon.DBConnector(CHASSIS_STATE_DB, 0, False)
+                asic_table = swsscommon.Table(db, CHASSIS_FABRIC_ASIC_INFO_TABLE)
+                if asic_table:
+                    asics_presence_list = list(asic_table.getKeys())
+                    for asic in asics_presence_list:
+                        # asic is asid id: asic0, asic1.... asicN. Get the numeric value.
+                        asics_list.append(int(get_asic_id_from_name(asic)))
+    else:
+        # This is not multi-asic, all asics should be present.
+        asics_list = list(range(0, get_num_asics()))
     return asics_list
+
+def get_container_name_from_asic_id(service_name, asic_id):
+    """Get the container name for a service according to the ASIC ID
+
+    Args:
+        service_name (str): feature/service name
+        asic_id (int): ASIC ID
+
+    Returns:
+        str: container name of the service in the given ASIC namespace
+    """
+    return '{}{}'.format(service_name, asic_id)
+
+  
+def is_front_panel_port(port, role=None):
+    """
+    @summary: This function will check if the interface is a front-panel port
+    @return:  Boolean
+    """
+    if not port.startswith(front_panel_prefix()):
+        return False
+
+    if port.startswith((backplane_prefix(), inband_prefix(), recirc_prefix())):
+        return False
+
+    # subinterfaces
+    if '.' in port:
+        return False
+
+    return not is_role_internal(role)

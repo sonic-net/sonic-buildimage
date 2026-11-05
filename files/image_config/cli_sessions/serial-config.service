@@ -1,0 +1,13 @@
+[Unit]
+Description=Update serial console config
+Requires=sonic.target
+After=sonic.target
+Before=getty-pre.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/serial-config.sh
+
+[Install]
+WantedBy=sonic.target

@@ -1,4 +1,0 @@
-#!/usr/bin/dh-exec
-debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-cli-3*.so.*
-debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/cls/*.so usr/lib/${DEB_HOST_MULTIARCH}/libnl-3/cli/cls
-debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/qdisc/*.so usr/lib/${DEB_HOST_MULTIARCH}/libnl-3/cli/qdisc

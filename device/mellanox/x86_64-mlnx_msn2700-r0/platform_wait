@@ -1,69 +1,32 @@
-#!/bin/bash
+#!/usr/bin/python3
 
-declare -r SYSLOG_LOGGER="/usr/bin/logger"
-declare -r SYSLOG_IDENTIFIER="platform_wait"
-declare -r SYSLOG_ERROR="error"
-declare -r SYSLOG_NOTICE="notice"
-declare -r SYSLOG_INFO="info"
+#
+# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-declare -r HW_MGMT_CONFIG="/var/run/hw-management/config"
+import sys
+from sonic_platform.device_data import DeviceDataManager
+from sonic_py_common.logger import Logger
 
-declare -r MODULE_COUNTER="${HW_MGMT_CONFIG}/module_counter"
-declare -r SFP_COUNTER="${HW_MGMT_CONFIG}/sfp_counter"
 
-declare -r EXIT_SUCCESS="0"
-declare -r EXIT_TIMEOUT="1"
-
-function log_error() {
-    eval "${SYSLOG_LOGGER} -t ${SYSLOG_IDENTIFIER} -p ${SYSLOG_ERROR} $@"
-}
-
-function log_notice() {
-    eval "${SYSLOG_LOGGER} -t ${SYSLOG_IDENTIFIER} -p ${SYSLOG_NOTICE} $@"
-}
-
-function log_info() {
-    eval "${SYSLOG_LOGGER} -t ${SYSLOG_IDENTIFIER} -p ${SYSLOG_INFO} $@"
-}
-
-function wait_for_sfp() {
-    local -r _NUM_MATCH="^[0-9]+$"
-    local -r _NUM_ZERO="0"
-
-    local _MODULE_CNT="0"
-    local _SFP_CNT="0"
-
-    local -i _WDOG_CNT="1"
-    local -ir _WDOG_MAX="300"
-
-    local -r _TIMEOUT="1s"
-
-    while [[ "${_WDOG_CNT}" -le "${_WDOG_MAX}" ]]; do
-        _MODULE_CNT="$(cat ${MODULE_COUNTER} 2>&1)"
-        _SFP_CNT="$(cat ${SFP_COUNTER} 2>&1)"
-
-        if [[ "${_MODULE_CNT}" =~ ${_NUM_MATCH} && "${_SFP_CNT}" =~ ${_NUM_MATCH} ]]; then
-            if [[ "${_SFP_CNT}" -gt "${_NUM_ZERO}" && "${_MODULE_CNT}" -eq "${_SFP_CNT}" ]]; then
-                return "${EXIT_SUCCESS}"
-            fi
-        fi
-
-        let "_WDOG_CNT++"
-        sleep "${_TIMEOUT}"
-    done
-
-    return "${EXIT_TIMEOUT}"
-}
-
-log_info "Wait for SFP interfaces to be ready"
-
-wait_for_sfp
-EXIT_CODE="$?"
-if [[ "${EXIT_CODE}" != "${EXIT_SUCCESS}" ]]; then
-    log_error "SFP interfaces are not ready: timeout"
-    exit "${EXIT_CODE}"
-fi
-
-log_info "SFP interfaces are ready"
-
-exit "${EXIT_SUCCESS}"
+logger = Logger(log_identifier='platform_wait')
+logger.log_notice('Nvidia: Wait for PMON dependencies to be ready')
+if DeviceDataManager.wait_platform_ready():
+    logger.log_notice('Nvidia: PMON dependencies are ready')
+    sys.exit(0)
+else:
+    logger.log_error('Nvidia: PMON dependencies are not ready: timeout')
+    sys.exit(-1)

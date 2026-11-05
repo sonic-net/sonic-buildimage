@@ -6,7 +6,8 @@ Description: bgpmon.py -- populating bgp related information in stateDB.
 
     Initial creation of this daemon is to assist SNMP agent in obtaining the
     BGP related information for its MIB support. The MIB that this daemon is
-    assisting is for the CiscoBgp4MIB (Neighbor state only). If there are other
+    assisting is for the CiscoBgp4MIB (Neighbor state only). Also for chassis use-case
+    it identify if the given BGP neighbors as i-BGP vs e-BGP. If there are other
     BGP related items that needs to be updated in a periodic manner in the
     future, then more can be added into this process.
 
@@ -25,6 +26,7 @@ Description: bgpmon.py -- populating bgp related information in stateDB.
 """
 import json
 import os
+import sys
 import syslog
 from swsscommon import swsscommon
 import time
@@ -43,10 +45,11 @@ class BgpStateGet:
         self.new_peer_l = set()
         self.new_peer_state = {}
         self.cached_timestamp = 0
-        self.db = swsscommon.SonicV2Connector()
+        self.db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
         self.db.connect(self.db.STATE_DB, False)
         self.pipe = swsscommon.RedisPipeline(self.db.get_redis_client(self.db.STATE_DB))
         self.db.delete_all_by_pattern(self.db.STATE_DB, "NEIGH_STATE_TABLE|*" )
+        self.MAX_RETRY_ATTEMPTS = 3
 
     # A quick way to check if there are anything happening within BGP is to
     # check its log file has any activities. This is by checking its modified
@@ -68,23 +71,54 @@ class BgpStateGet:
         peer_l = peer_dict["peers"].keys()
         self.new_peer_l.update(peer_l)
         for peer in peer_l:
-            self.new_peer_state[peer] = peer_dict["peers"][peer]["state"]
+            self.new_peer_state[peer] = (peer_dict["peers"][peer]["state"], 
+                                         peer_dict["peers"][peer]["remoteAs"],
+                                         peer_dict["peers"][peer]["localAs"])
 
     # Get a new snapshot of BGP neighbors and store them in the "new" location
     def get_all_neigh_states(self):
-        cmd = ["vtysh", "-c", 'show bgp summary json']
-        rc, output = getstatusoutput_noshell(cmd)
-        if rc:
-            syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
-            return
+        cmd = ["vtysh", "-H", "/dev/null",  "-c", 'show bgp summary json']
+        retry_attempt = 0
 
-        peer_info = json.loads(output)
-        # cmd ran successfully, safe to Clean the "new" set/dict for new snapshot
-        self.new_peer_l.clear()
-        self.new_peer_state.clear()
-        for key, value in peer_info.items():
-            if key == "ipv4Unicast" or key == "ipv6Unicast":
-                self.update_new_peer_states(value)
+        while retry_attempt < self.MAX_RETRY_ATTEMPTS:
+            try:
+                rc, output = getstatusoutput_noshell(cmd)
+                if rc:
+                    if os.system('pgrep -x bgpd > /dev/null 2>&1') != 0 or os.system('pgrep -x zebra > /dev/null 2>&1') != 0:
+                        syslog.syslog(syslog.LOG_WARNING, "vtysh failed (rc={}) when execute: {} Output: {} bgpd or zebra not running — container may be shutting down".format(rc, cmd, output[:200] if output else ""))
+                    else:
+                        syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
+                    return
+                if len(output) == 0:
+                    syslog.syslog(syslog.LOG_WARNING, "*WARNING* output none when execute: {}".format(cmd))
+                    return
+
+                peer_info = json.loads(output)
+                # cmd ran successfully, safe to Clean the "new" set/dict for new snapshot
+                self.new_peer_l.clear()
+                self.new_peer_state.clear()
+                for key, value in peer_info.items():
+                    if key == "ipv4Unicast" or key == "ipv6Unicast":
+                        self.update_new_peer_states(value)
+                return
+
+            except json.JSONDecodeError as decode_error:
+                # Log the exception and retry if within the maximum attempts
+                retry_attempt += 1
+                syslog.syslog(syslog.LOG_WARNING, "*WARNING* JSONDecodeError: {} when execute: {} Retry attempt: {}".format(decode_error, cmd, retry_attempt))
+                time.sleep(1)
+                continue
+            except Exception as e:
+                # Log other exceptions and return failure
+                retry_attempt += 1
+                syslog.syslog(syslog.LOG_WARNING, "*WARNING* An unexpected error occurred: {} when execute: {} Retry attempt: {}".format(e, cmd, retry_attempt))
+                time.sleep(1)
+                continue
+
+        # Log an error if the maximum retry attempts are reached
+        syslog.syslog(syslog.LOG_ERR, "*ERROR* Maximum retry attempts reached. Failed to execute: {} Output: {}".format(cmd, output))
+        sys.exit(1)
+
 
     # This method will take the caller's dictionary which contains the peer state operation
     # That need to be updated in StateDB using Redis pipeline.
@@ -123,17 +157,19 @@ class BgpStateGet:
             key = "NEIGH_STATE_TABLE|%s" % peer
             if peer in self.peer_l:
                 # only update the entry if state changed
-                if self.peer_state[peer] != self.new_peer_state[peer]:
+                if self.peer_state[peer] != self.new_peer_state[peer][0]:
                     # state changed. Update state DB for this entry
-                    state = self.new_peer_state[peer]
-                    data[key] = {'state':state}
+                    state = self.new_peer_state[peer][0]
+                    peerType = "i-BGP" if self.new_peer_state[peer][1] == self.new_peer_state[peer][2] else "e-BGP"
+                    data[key] = {'state':state, 'peerType':peerType}
                     self.peer_state[peer] = state
                 # remove this neighbor from old set since it is accounted for
                 self.peer_l.remove(peer)
             else:
                 # New neighbor found case. Add to dictionary and state DB
-                state = self.new_peer_state[peer]
-                data[key] = {'state':state}
+                state = self.new_peer_state[peer][0]
+                peerType = "i-BGP" if self.new_peer_state[peer][1] == self.new_peer_state[peer][2] else "e-BGP"
+                data[key] = {'state':state, 'peerType':peerType}
                 self.peer_state[peer] = state
             if len(data) > PIPE_BATCH_MAX_COUNT:
                 self.flush_pipe(data)
@@ -160,7 +196,7 @@ def main():
         bgp_state_get = BgpStateGet()
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, "{}: error exit 1, reason {}".format("THIS_MODULE", str(e)))
-        exit(1)
+        sys.exit(1)
 
     # periodically obtain the new neighbor information and update if necessary
     while True:

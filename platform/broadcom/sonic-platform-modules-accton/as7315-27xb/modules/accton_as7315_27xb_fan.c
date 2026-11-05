@@ -34,6 +34,7 @@
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/printk.h>
+#include <linux/version.h>
 
 
 #define DRV_NAME "as5812_54x_fan"
@@ -569,8 +570,12 @@ static int _add_attributes(struct i2c_client *client,
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int fan_probe(struct i2c_client *client,
                      const struct i2c_device_id *dev_id)
+#else
+static int fan_probe(struct i2c_client *client)
+#endif
 {
     int status;
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
@@ -630,14 +635,13 @@ out_kfree:
 }
 
 
-static int fan_remove(struct i2c_client *client)
+static void fan_remove(struct i2c_client *client)
 {
     struct fan_data_t *data = i2c_get_clientdata(client);
 
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &data->group);
     kfree(data->group.attrs);
-    return 0;
 }
 
 

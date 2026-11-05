@@ -10,6 +10,7 @@ Subject: [PATCH] Modify user map profile
 * Added "many_to_one" mode, create one local user for many TACACS+ users which
   has the same privilege.
 * Modified configuration parse and file to adapt to the new user map profile.
+* Stop authorization after user being rejected by server.
 ---
  Makefile.am                   |    4 +-
  Makefile.in                   |    2 +-
@@ -17,9 +18,9 @@ Subject: [PATCH] Modify user map profile
  debian/changelog              |   11 +
  debian/control                |   11 +-
  debian/libnss-tacplus.symbols |    1 -
- nss_tacplus.c                 | 1004 +++++++++++++++++++----------------------
- tacplus_nss.conf              |   91 ++--
- 8 files changed, 518 insertions(+), 608 deletions(-)
+ nss_tacplus.c                 | 1015 +++++++++++++++------------------
+ tacplus_nss.conf              |   91 ++-
+ 8 files changed, 525 insertions(+), 612 deletions(-)
 
 diff --git a/Makefile.am b/Makefile.am
 index 293951e..b33c455 100644
@@ -179,7 +180,7 @@ index 79e62b9..ecfa0b0 100644
  
  /*
   * pwbuf is used to reduce number of arguments passed around; the strings in
-@@ -63,255 +59,239 @@ struct pwbuf {
+@@ -63,255 +59,245 @@ struct pwbuf {
  typedef struct {
      struct addrinfo *addr;
      char *key;
@@ -444,9 +445,15 @@ index 79e62b9..ecfa0b0 100644
 +                tac_srv[tac_srv_no].key = strdup(token + 7);
 +            }
 +            else if(!strncmp(token, "timeout=", 8)) {
-+                tac_srv[tac_srv_no].timeout = (int)strtoul(token + 8, NULL, 0);
-+                if(tac_srv[tac_srv_no].timeout < 0)
-+                    tac_srv[tac_srv_no].timeout = 0;
++                int timeout = (int)strtoul(token + 8, NULL, 0);
++                if(timeout < 0) {
++                   tac_srv[tac_srv_no].timeout = 0;
++                   tac_readtimeout_enable = 0;
++                }
++                else {
++                   tac_srv[tac_srv_no].timeout = timeout;
++                   tac_readtimeout_enable = 1;
++                }
 +                /* Limit timeout to make sure upper application not wait
 +                 * for a long time*/
 +                if(tac_srv[tac_srv_no].timeout > 5)
@@ -1082,7 +1089,7 @@ index 79e62b9..ecfa0b0 100644
          tac_add_attrib(attr, "service", tac_service);
          if(tac_protocol[0])
              tac_add_attrib(attr, "protocol", tac_protocol);
-@@ -598,34 +659,9 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -598,52 +659,25 @@ lookup_tacacs_user(struct pwbuf *pb)
  {
      struct areply arep;
      int ret = 1, done = 0;
@@ -1118,11 +1125,17 @@ index 79e62b9..ecfa0b0 100644
      for(srvr=0; srvr < tac_srv_no && !done; srvr++) {
          arep.msg = NULL;
          arep.attr = NULL;
-@@ -636,14 +672,13 @@ lookup_tacacs_user(struct pwbuf *pb)
-                 syslog(LOG_WARNING, "%s: failed to connect TACACS+ server %s,"
-                     " ret=%d: %m", nssname, tac_srv[srvr].addr ?
-                     tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
+         arep.status = TAC_PLUS_AUTHOR_STATUS_ERROR; /* if author_send fails */
+         tac_fd = connect_tacacs(&attr, srvr);
+         if (tac_fd < 0) {
+-            if(debug)
+-                syslog(LOG_WARNING, "%s: failed to connect TACACS+ server %s,"
+-                    " ret=%d: %m", nssname, tac_srv[srvr].addr ?
+-                    tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
 -            tac_free_attrib(&attr);
++            syslog(LOG_ERR, "%s: failed to connect TACACS+ server %s,"
++                " ret=%d: %m", nssname, tac_srv[srvr].addr ?
++                tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
              continue;
          }
 -        ret = tac_author_send(tac_fd, pb->name, "", tac_rhost, attr);
@@ -1136,7 +1149,7 @@ index 79e62b9..ecfa0b0 100644
                      tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", ret,
                      pb->name);
          }
-@@ -668,14 +703,11 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -668,14 +702,11 @@ lookup_tacacs_user(struct pwbuf *pb)
          if(arep.status == AUTHOR_STATUS_PASS_ADD ||
             arep.status == AUTHOR_STATUS_PASS_REPL) {
              ret = got_tacacs_user(arep.attr, pb);
@@ -1153,7 +1166,18 @@ index 79e62b9..ecfa0b0 100644
              done = 1; /* break out of loop after arep cleanup */
          }
          else {
-@@ -692,30 +724,12 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -685,6 +716,10 @@ lookup_tacacs_user(struct pwbuf *pb)
+                     " invalid (%d)", nssname,
+                     tac_ntop(tac_srv[srvr].addr->ai_addr), pb->name,
+                     arep.status);
++
++                    if (arep.status == TAC_PLUS_AUTHOR_STATUS_FAIL) {
++                        done = 1; /* break out of loop after server reject user */
++                    }
+         }
+         if(arep.msg)
+             free(arep.msg);
+@@ -692,30 +727,12 @@ lookup_tacacs_user(struct pwbuf *pb)
              tac_free_attrib(&arep.attr);
      }
  
@@ -1186,7 +1210,7 @@ index 79e62b9..ecfa0b0 100644
   *
   * We try the lookup to the tacacs server first.  If we can't make a
   * connection to the server for some reason, we also try looking up
-@@ -730,20 +744,25 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+@@ -730,20 +747,25 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
      int result;
      struct pwbuf pbuf;
  
@@ -1221,7 +1245,7 @@ index 79e62b9..ecfa0b0 100644
          /* marshal the args for the lower level functions */
          pbuf.name = (char *)name;
          pbuf.pw = pw;
-@@ -751,126 +770,13 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+@@ -751,126 +773,13 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
          pbuf.buflen = buflen;
          pbuf.errnop = errnop;
  
@@ -1456,4 +1480,3 @@ index bb4eb1e..7cb756f 100644
 +# many_to_one=y
 -- 
 2.7.4
-

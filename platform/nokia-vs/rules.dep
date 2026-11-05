@@ -1,0 +1,4 @@
+include $(PLATFORM_PATH)/syncd-vs.dep
+include $(PLATFORM_PATH)/docker-syncd-vs.dep
+include $(PLATFORM_PATH)/one-image.dep
+include $(PLATFORM_PATH)/platform-nokia.dep

@@ -3,4 +3,22 @@
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 [ -z $REAL_COMMAND ] && REAL_COMMAND=/usr/bin/curl
 
+# Retry if something super-weird has happened. Use --retry-connrefused and
+# --retry options for curl.
+# --retry-connrefused - Consider "connection refused" a transient error and try
+# again. Normally wget/curl gives up on a URL when it is unable to connect to
+# the site because failure to connect is taken as a sign that the server is not
+# running at all and that retries would not help. This option is for mirroring
+# unreliable sites whose servers tend to disappear for short periods of time.
+# --retry - If a transient error is returned when curl tries to perform a
+# transfer, it will retry this number of times before giving up. Transient error
+# means either: a timeout, an FTP 4xx response code or an HTTP 408, 429, 500,
+# 502, 503 or 504 response code.
+REAL_COMMAND="$REAL_COMMAND --retry-connrefused --retry 5"
+
+if [ "$SKIP_BUILD_HOOK" == y ]; then
+    $REAL_COMMAND "$@"
+    exit $?
+fi
+
 REAL_COMMAND=$REAL_COMMAND download_packages "$@"

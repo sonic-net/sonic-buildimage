@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 #define MAX_MODEL_NAME          16
 
@@ -131,11 +132,18 @@ static const struct attribute_group as7716_32x_psu_group = {
     .attrs = as7716_32x_psu_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32x_psu_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as7716_32x_psu_probe(struct i2c_client *client)
+#endif
 {
     struct as7716_32x_psu_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_I2C_BLOCK)) {
         status = -EIO;
@@ -181,7 +189,7 @@ exit:
     return status;
 }
 
-static int as7716_32x_psu_remove(struct i2c_client *client)
+static void as7716_32x_psu_remove(struct i2c_client *client)
 {
     struct as7716_32x_psu_data *data = i2c_get_clientdata(client);
 
@@ -189,7 +197,6 @@ static int as7716_32x_psu_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &as7716_32x_psu_group);
     kfree(data);
     
-    return 0;
 }
 
 enum psu_index 

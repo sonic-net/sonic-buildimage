@@ -1,15 +1,3 @@
-{%- set vlan2ports = {} %}
-{%- for vlan in VLAN %}
-    {% set portlist = [] %}
-    {%- for vlan_name, port in VLAN_MEMBER %}
-        {%- if vlan_name == vlan %}
-            {%- if portlist.append(port) %}{%- endif %}
-        {%- endif %}
-    {%- endfor %}
-    {%- set _ = vlan2ports.update({vlan: portlist| sort | join(',')}) %}
-{%- endfor %}
-
-
 {
         "acl": {
                 "acl-sets": {
@@ -31,13 +19,6 @@
                                                                      "config": {
                                                                              "vlan_id": "{{ vlan_entries['vlanid'] }}"
                                                                      }
-                                                             },
-                                                             "input_interface": {
-                                                                     "interface_ref": {
-                                                                             "config": {
-                                                                                     "interface": "{{ vlan2ports[vlan] }}"
-                                                                             }
-                                                                      }
                                                              }
 
                                                      }{% if not loop.last %},{% endif %} 

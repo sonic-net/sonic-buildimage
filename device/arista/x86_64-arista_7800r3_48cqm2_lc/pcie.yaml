@@ -152,11 +152,6 @@
   id: '1466'
   name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
     Data Fabric: Device 18h; Function 6'
-- bus: '00'
-  dev: '18'
-  fn: '7'
-  id: '0001'
-  name: 'Host bridge: Arista Networks, Inc. Device 0001'
 - bus: '04'
   dev: '00'
   fn: '0'

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+kernel_version=$(uname -r)
+
+for i in $(seq 1 10);
+do
+    if [ -e /lib/modules/${kernel_version}/modules.dep ];then
+        wisko=$(cat /lib/modules/${kernel_version}/modules.dep | grep wistron)
+        ipdko=$(cat /lib/modules/${kernel_version}/modules.dep | grep ipd)
+        if [ "$wisko" == "" ] || [ "$ipdko" == "" ];then
+            depmod -a
+        else
+            if [ ! -e /lib/modules/${kernel_version}/modules.dep.bin ];then
+                depmod -a
+            else
+                break
+            fi
+        fi
+
+        echo "depmod -a"
+        sleep 1
+    else
+        sleep 1
+    fi
+done
+
+#Install sonic-platform package
+DEVICE="/usr/share/sonic/device"
+PLATFORM=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+if [ -e $DEVICE/$PLATFORM/sonic_platform-1.0-py3-none-any.whl ]; then
+    pip3 install $DEVICE/$PLATFORM/sonic_platform-1.0-py3-none-any.whl
+fi
+
+systemctl enable platform-modules-6512-32r.service
+systemctl start platform-modules-6512-32r.service
+systemctl enable 6512-32r-platform.service
+systemctl start 6512-32r-platform.service
+systemctl enable 6512-32r-syseeprom.service
+systemctl start 6512-32r-syseeprom.service
+systemctl enable 6512-32r-firmware_ver.service
+systemctl start 6512-32r-firmware_ver.service

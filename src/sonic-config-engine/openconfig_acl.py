@@ -4,9 +4,9 @@
 # Detail step to regenerate this file:
 # 1. Sync openconfig ACL yang models from https://github.com/openconfig/public/tree/master/release/models/acl
 # 2. Sync inet yang models which contain type dependencies for openconfig ACL yang models from https://github.com/YangModels/yang/tree/master/standard/ietf/RFC , and put them in the same folder with models from step 1.
-# 3. Install PyangBind: 
+# 3. Install PyangBind:
 #    pip3 install pyangbind
-# 4. Get PyangBind install path: 
+# 4. Get PyangBind install path:
 #    export PYBINDPLUGIN=`/usr/bin/env python3 -c \
 #      'import pyangbind; import os; print "%s/plugin" % os.path.dirname(pyangbind.__file__)'`
 # 5. Generate this file with pyang:
@@ -43,7 +43,7 @@ class sonic_acl_extension(PybindBase):
   """
   _pyangbind_elements = {}
 
-  
+
 
 class yc_state_openconfig_acl__acl_state(PybindBase):
   """
@@ -102,7 +102,7 @@ class yc_state_openconfig_acl__acl_state(PybindBase):
 by the target
     """
     return self.__counter_capability
-      
+
   def _set_counter_capability(self, v, load=False):
     """
     Setter method for counter_capability, mapped from YANG variable /acl/state/counter_capability (identityref)
@@ -195,7 +195,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_config(PybindBase):
     YANG Description: The name of the access-list set
     """
     return self.__name
-      
+
   def _set_name(self, v, load=False):
     """
     Setter method for name, mapped from YANG variable /acl/acl_sets/acl_set/config/name (string)
@@ -232,7 +232,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_config(PybindBase):
     YANG Description: Description, or comment, for the ACL set
     """
     return self.__description
-      
+
   def _set_description(self, v, load=False):
     """
     Setter method for description, mapped from YANG variable /acl/acl_sets/acl_set/config/description (string)
@@ -325,7 +325,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_state(PybindBase):
     YANG Description: The name of the access-list set
     """
     return self.__name
-      
+
   def _set_name(self, v, load=False):
     """
     Setter method for name, mapped from YANG variable /acl/acl_sets/acl_set/state/name (string)
@@ -362,7 +362,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_state(PybindBase):
     YANG Description: Description, or comment, for the ACL set
     """
     return self.__description
-      
+
   def _set_description(self, v, load=False):
     """
     Setter method for description, mapped from YANG variable /acl/acl_sets/acl_set/state/description (string)
@@ -459,7 +459,7 @@ rules in the order determined by sequence id, rather than
 the relying only on order in the list.
     """
     return self.__sequence_id
-      
+
   def _set_sequence_id(self, v, load=False):
     """
     Setter method for sequence_id, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/config/sequence_id (uint32)
@@ -501,7 +501,7 @@ the relying only on order in the list.
 Entry.
     """
     return self.__description
-      
+
   def _set_description(self, v, load=False):
     """
     Setter method for description, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/config/description (string)
@@ -601,7 +601,7 @@ rules in the order determined by sequence id, rather than
 the relying only on order in the list.
     """
     return self.__sequence_id
-      
+
   def _set_sequence_id(self, v, load=False):
     """
     Setter method for sequence_id, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/state/sequence_id (uint32)
@@ -643,7 +643,7 @@ the relying only on order in the list.
 Entry.
     """
     return self.__description
-      
+
   def _set_description(self, v, load=False):
     """
     Setter method for description, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/state/description (string)
@@ -694,7 +694,7 @@ e.g., per entry -- the user is expected to be able implement
 the required aggregation if such a count is needed.
     """
     return self.__matched_packets
-      
+
   def _set_matched_packets(self, v, load=False):
     """
     Setter method for matched_packets, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/state/matched_packets (yang:counter64)
@@ -757,7 +757,7 @@ e.g., per entry -- the user is expected to be able implement
 the required aggregation if such a count is needed.
     """
     return self.__matched_octets
-      
+
   def _set_matched_octets(self, v, load=False):
     """
     Setter method for matched_octets, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/state/matched_octets (yang:counter64)
@@ -869,7 +869,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_co
     YANG Description: Source IEEE 802 MAC address.
     """
     return self.__source_mac
-      
+
   def _set_source_mac(self, v, load=False):
     """
     Setter method for source_mac, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/config/source_mac (yang:mac-address)
@@ -906,7 +906,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_co
     YANG Description: Source IEEE 802 MAC address mask.
     """
     return self.__source_mac_mask
-      
+
   def _set_source_mac_mask(self, v, load=False):
     """
     Setter method for source_mac_mask, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/config/source_mac_mask (yang:mac-address)
@@ -943,7 +943,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_co
     YANG Description: Destination IEEE 802 MAC address.
     """
     return self.__destination_mac
-      
+
   def _set_destination_mac(self, v, load=False):
     """
     Setter method for destination_mac, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/config/destination_mac (yang:mac-address)
@@ -980,7 +980,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_co
     YANG Description: Destination IEEE 802 MAC address mask.
     """
     return self.__destination_mac_mask
-      
+
   def _set_destination_mac_mask(self, v, load=False):
     """
     Setter method for destination_mac_mask, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/config/destination_mac_mask (yang:mac-address)
@@ -1017,7 +1017,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_co
     YANG Description: Ethertype field to match in Ethernet packets
     """
     return self.__ethertype
-      
+
   def _set_ethertype(self, v, load=False):
     """
     Setter method for ethertype, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/config/ethertype (oc-pkt-match-types:ethertype-type)
@@ -1054,7 +1054,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_co
     YANG Description: VLAN ID field to match in DOT1Q packets
     """
     return self.__vlan_id
-      
+
   def _set_vlan_id(self, v, load=False):
     """
     Setter method for vlan_id, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/config/vlan_id (vlan-id-type)
@@ -1154,7 +1154,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_sta
     YANG Description: Source IEEE 802 MAC address.
     """
     return self.__source_mac
-      
+
   def _set_source_mac(self, v, load=False):
     """
     Setter method for source_mac, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/state/source_mac (yang:mac-address)
@@ -1191,7 +1191,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_sta
     YANG Description: Source IEEE 802 MAC address mask.
     """
     return self.__source_mac_mask
-      
+
   def _set_source_mac_mask(self, v, load=False):
     """
     Setter method for source_mac_mask, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/state/source_mac_mask (yang:mac-address)
@@ -1228,7 +1228,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_sta
     YANG Description: Destination IEEE 802 MAC address.
     """
     return self.__destination_mac
-      
+
   def _set_destination_mac(self, v, load=False):
     """
     Setter method for destination_mac, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/state/destination_mac (yang:mac-address)
@@ -1265,7 +1265,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_sta
     YANG Description: Destination IEEE 802 MAC address mask.
     """
     return self.__destination_mac_mask
-      
+
   def _set_destination_mac_mask(self, v, load=False):
     """
     Setter method for destination_mac_mask, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/state/destination_mac_mask (yang:mac-address)
@@ -1302,7 +1302,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2_sta
     YANG Description: Ethertype field to match in Ethernet packets
     """
     return self.__ethertype
-      
+
   def _set_ethertype(self, v, load=False):
     """
     Setter method for ethertype, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/state/ethertype (oc-pkt-match-types:ethertype-type)
@@ -1398,7 +1398,7 @@ class yc_l2_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2(Pybind
     YANG Description: Configuration data
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/config (container)
@@ -1435,7 +1435,7 @@ class yc_l2_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_l2(Pybind
     YANG Description: State Information.
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2/state (container)
@@ -1534,7 +1534,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
     YANG Description: IP version of the header.
     """
     return self.__ip_version
-      
+
   def _set_ip_version(self, v, load=False):
     """
     Setter method for ip_version, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/ip_version (inet:ip-version)
@@ -1571,7 +1571,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
     YANG Description: Destination IP address prefix.
     """
     return self.__source_ip_address
-      
+
   def _set_source_ip_address(self, v, load=False):
     """
     Setter method for source_ip_address, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/source_ip_address (inet:ip-prefix)
@@ -1608,7 +1608,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
     YANG Description: Source IPv6 Flow label.
     """
     return self.__source_ip_flow_label
-      
+
   def _set_source_ip_flow_label(self, v, load=False):
     """
     Setter method for source_ip_flow_label, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/source_ip_flow_label (inet:ipv6-flow-label)
@@ -1645,7 +1645,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
     YANG Description: Destination IP address prefix.
     """
     return self.__destination_ip_address
-      
+
   def _set_destination_ip_address(self, v, load=False):
     """
     Setter method for destination_ip_address, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/destination_ip_address (inet:ip-prefix)
@@ -1682,7 +1682,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
     YANG Description: Destination IPv6 Flow label.
     """
     return self.__destination_ip_flow_label
-      
+
   def _set_destination_ip_flow_label(self, v, load=False):
     """
     Setter method for destination_ip_flow_label, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/destination_ip_flow_label (inet:ipv6-flow-label)
@@ -1719,7 +1719,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
     YANG Description: Value of diffserv codepoint.
     """
     return self.__dscp
-      
+
   def _set_dscp(self, v, load=False):
     """
     Setter method for dscp, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/dscp (inet:dscp)
@@ -1756,7 +1756,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
     YANG Description: Internet Protocol number.
     """
     return self.__protocol
-      
+
   def _set_protocol(self, v, load=False):
     """
     Setter method for protocol, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/protocol (oc-pkt-match-types:ip-protocol-type)
@@ -1794,7 +1794,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_co
 IPv4 packets, and hop limit in IPv6
     """
     return self.__hop_limit
-      
+
   def _set_hop_limit(self, v, load=False):
     """
     Setter method for hop_limit, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config/hop_limit (uint8)
@@ -1900,7 +1900,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
     YANG Description: IP version of the header.
     """
     return self.__ip_version
-      
+
   def _set_ip_version(self, v, load=False):
     """
     Setter method for ip_version, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/ip_version (inet:ip-version)
@@ -1937,7 +1937,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
     YANG Description: Destination IP address prefix.
     """
     return self.__source_ip_address
-      
+
   def _set_source_ip_address(self, v, load=False):
     """
     Setter method for source_ip_address, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/source_ip_address (inet:ip-prefix)
@@ -1974,7 +1974,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
     YANG Description: Source IPv6 Flow label.
     """
     return self.__source_ip_flow_label
-      
+
   def _set_source_ip_flow_label(self, v, load=False):
     """
     Setter method for source_ip_flow_label, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/source_ip_flow_label (inet:ipv6-flow-label)
@@ -2011,7 +2011,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
     YANG Description: Destination IP address prefix.
     """
     return self.__destination_ip_address
-      
+
   def _set_destination_ip_address(self, v, load=False):
     """
     Setter method for destination_ip_address, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/destination_ip_address (inet:ip-prefix)
@@ -2048,7 +2048,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
     YANG Description: Destination IPv6 Flow label.
     """
     return self.__destination_ip_flow_label
-      
+
   def _set_destination_ip_flow_label(self, v, load=False):
     """
     Setter method for destination_ip_flow_label, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/destination_ip_flow_label (inet:ipv6-flow-label)
@@ -2085,7 +2085,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
     YANG Description: Value of diffserv codepoint.
     """
     return self.__dscp
-      
+
   def _set_dscp(self, v, load=False):
     """
     Setter method for dscp, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/dscp (inet:dscp)
@@ -2122,7 +2122,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
     YANG Description: Internet Protocol number.
     """
     return self.__protocol
-      
+
   def _set_protocol(self, v, load=False):
     """
     Setter method for protocol, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/protocol (oc-pkt-match-types:ip-protocol-type)
@@ -2160,7 +2160,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip_sta
 IPv4 packets, and hop limit in IPv6
     """
     return self.__hop_limit
-      
+
   def _set_hop_limit(self, v, load=False):
     """
     Setter method for hop_limit, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state/hop_limit (uint8)
@@ -2260,7 +2260,7 @@ class yc_ip_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip(Pybind
     YANG Description: Configuration data
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/config (container)
@@ -2297,7 +2297,7 @@ class yc_ip_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_ip(Pybind
     YANG Description: State information
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip/state (container)
@@ -2353,9 +2353,9 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
     self._path_helper = False
 
     self._extmethods = False
-    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
+    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
     self.__tcp_flags = YANGDynClass(unique=True, base=TypedListType(allowed_type=RestrictedClassType(base_type=six.text_type, restriction_type="dict_key", restriction_arg={u'TCP_FIN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_ACK': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_URG': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_RST': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_SYN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_ECE': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_ACK': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_SYN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_CWR': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_CWR': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_URG': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_RST': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_FIN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_ECE': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_PSH': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_PSH': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}},)), is_leaf=False, yang_name="tcp-flags", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='identityref', is_config=True)
-    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
+    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
 
     load = kwargs.pop("load", None)
     if args:
@@ -2391,7 +2391,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
     YANG Description: Source port or range
     """
     return self.__source_port
-      
+
   def _set_source_port(self, v, load=False):
     """
     Setter method for source_port, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/config/source_port (oc-pkt-match-types:port-num-range)
@@ -2405,12 +2405,12 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
     if hasattr(v, "_utype"):
       v = v._utype(v)
     try:
-      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
+      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
     except (TypeError, ValueError):
       raise ValueError({
           'error-string': """source_port must be of a type compatible with oc-pkt-match-types:port-num-range""",
           'defined-type': "oc-pkt-match-types:port-num-range",
-          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)""",
+          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)""",
         })
 
     self.__source_port = t
@@ -2418,7 +2418,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
       self._set()
 
   def _unset_source_port(self):
-    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
+    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
 
 
   def _get_destination_port(self):
@@ -2428,7 +2428,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
     YANG Description: Destination port or range
     """
     return self.__destination_port
-      
+
   def _set_destination_port(self, v, load=False):
     """
     Setter method for destination_port, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/config/destination_port (oc-pkt-match-types:port-num-range)
@@ -2442,12 +2442,12 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
     if hasattr(v, "_utype"):
       v = v._utype(v)
     try:
-      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
+      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
     except (TypeError, ValueError):
       raise ValueError({
           'error-string': """destination_port must be of a type compatible with oc-pkt-match-types:port-num-range""",
           'defined-type': "oc-pkt-match-types:port-num-range",
-          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)""",
+          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)""",
         })
 
     self.__destination_port = t
@@ -2455,7 +2455,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
       self._set()
 
   def _unset_destination_port(self):
-    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
+    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=True)
 
 
   def _get_tcp_flags(self):
@@ -2465,7 +2465,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_trans
     YANG Description: List of TCP flags to match
     """
     return self.__tcp_flags
-      
+
   def _set_tcp_flags(self, v, load=False):
     """
     Setter method for tcp_flags, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/config/tcp_flags (identityref)
@@ -2522,9 +2522,9 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
     self._path_helper = False
 
     self._extmethods = False
-    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
+    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
     self.__tcp_flags = YANGDynClass(unique=True, base=TypedListType(allowed_type=RestrictedClassType(base_type=six.text_type, restriction_type="dict_key", restriction_arg={u'TCP_FIN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_ACK': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_URG': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_RST': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_SYN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_ECE': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_ACK': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_SYN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_CWR': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_CWR': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_URG': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_RST': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_FIN': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_ECE': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'TCP_PSH': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}, u'oc-pkt-match-types:TCP_PSH': {u'@namespace': u'http://openconfig.net/yang/packet-match-types', u'@module': u'openconfig-packet-match-types'}},)), is_leaf=False, yang_name="tcp-flags", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='identityref', is_config=False)
-    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
+    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
 
     load = kwargs.pop("load", None)
     if args:
@@ -2560,7 +2560,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
     YANG Description: Source port or range
     """
     return self.__source_port
-      
+
   def _set_source_port(self, v, load=False):
     """
     Setter method for source_port, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/state/source_port (oc-pkt-match-types:port-num-range)
@@ -2574,12 +2574,12 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
     if hasattr(v, "_utype"):
       v = v._utype(v)
     try:
-      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
+      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
     except (TypeError, ValueError):
       raise ValueError({
           'error-string': """source_port must be of a type compatible with oc-pkt-match-types:port-num-range""",
           'defined-type': "oc-pkt-match-types:port-num-range",
-          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)""",
+          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)""",
         })
 
     self.__source_port = t
@@ -2587,7 +2587,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
       self._set()
 
   def _unset_source_port(self):
-    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
+    self.__source_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="source-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
 
 
   def _get_destination_port(self):
@@ -2597,7 +2597,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
     YANG Description: Destination port or range
     """
     return self.__destination_port
-      
+
   def _set_destination_port(self, v, load=False):
     """
     Setter method for destination_port, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/state/destination_port (oc-pkt-match-types:port-num-range)
@@ -2611,12 +2611,12 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
     if hasattr(v, "_utype"):
       v = v._utype(v)
     try:
-      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
+      t = YANGDynClass(v,base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
     except (TypeError, ValueError):
       raise ValueError({
           'error-string': """destination_port must be of a type compatible with oc-pkt-match-types:port-num-range""",
           'defined-type': "oc-pkt-match-types:port-num-range",
-          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)""",
+          'generated-type': """YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)""",
         })
 
     self.__destination_port = t
@@ -2624,7 +2624,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
       self._set()
 
   def _unset_destination_port(self):
-    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)\\.\\.(6[0-5][0-5][0-3][0-5]|[0-5]?[0-9]?[0-9]?[0-9]?[0-9]?)$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
+    self.__destination_port = YANGDynClass(base=[RestrictedClassType(base_type=six.text_type, restriction_dict={u'pattern': u'^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})\\.\\.(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[0-5][0-9]{4}|[0-9]{1,4})$'}),RestrictedClassType(base_type=RestrictedClassType(base_type=int, restriction_dict={'range': ['0..65535']},int_size=16), restriction_dict={u'range': [u'0..65535']}),RestrictedClassType(base_type=six.text_type,                                     restriction_type="dict_key",                                     restriction_arg={u'ANY': {}},),], is_leaf=True, yang_name="destination-port", parent=self, path_helper=self._path_helper, extmethods=self._extmethods, register_paths=True, namespace='http://openconfig.net/yang/acl', defining_module='openconfig-acl', yang_type='oc-pkt-match-types:port-num-range', is_config=False)
 
 
   def _get_tcp_flags(self):
@@ -2634,7 +2634,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_transp
     YANG Description: List of TCP flags to match
     """
     return self.__tcp_flags
-      
+
   def _set_tcp_flags(self, v, load=False):
     """
     Setter method for tcp_flags, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/state/tcp_flags (identityref)
@@ -2728,7 +2728,7 @@ class yc_transport_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_tr
     YANG Description: Configuration data
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/config (container)
@@ -2765,7 +2765,7 @@ class yc_transport_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_tr
     YANG Description: State data
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport/state (container)
@@ -2860,7 +2860,7 @@ subinterface is required, this leaf must be specified
 to indicate the base interface.
     """
     return self.__interface
-      
+
   def _set_interface(self, v, load=False):
     """
     Setter method for interface, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface/interface_ref/config/interface (leafref)
@@ -2902,7 +2902,7 @@ this container.  If only a reference to a base interface
 is requuired, this leaf should not be set.
     """
     return self.__subinterface
-      
+
   def _set_subinterface(self, v, load=False):
     """
     Setter method for subinterface, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface/interface_ref/config/subinterface (leafref)
@@ -3000,7 +3000,7 @@ subinterface is required, this leaf must be specified
 to indicate the base interface.
     """
     return self.__interface
-      
+
   def _set_interface(self, v, load=False):
     """
     Setter method for interface, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface/interface_ref/state/interface (leafref)
@@ -3042,7 +3042,7 @@ this container.  If only a reference to a base interface
 is requuired, this leaf should not be set.
     """
     return self.__subinterface
-      
+
   def _set_subinterface(self, v, load=False):
     """
     Setter method for subinterface, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface/interface_ref/state/subinterface (leafref)
@@ -3138,7 +3138,7 @@ class yc_interface_ref_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entr
     YANG Description: Configured reference to interface / subinterface
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface/interface_ref/config (container)
@@ -3175,7 +3175,7 @@ class yc_interface_ref_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entr
     YANG Description: Operational state for interface-ref
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface/interface_ref/state (container)
@@ -3267,7 +3267,7 @@ class yc_input_interface_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_en
     YANG Description: Reference to an interface or subinterface
     """
     return self.__interface_ref
-      
+
   def _set_interface_ref(self, v, load=False):
     """
     Setter method for interface_ref, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface/interface_ref (container)
@@ -3360,7 +3360,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_actio
 must be specified for each ACL entry
     """
     return self.__forwarding_action
-      
+
   def _set_forwarding_action(self, v, load=False):
     """
     Setter method for forwarding_action, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/actions/config/forwarding_action (identityref)
@@ -3400,7 +3400,7 @@ matched packets.  The default is not to log the
 packet.
     """
     return self.__log_action
-      
+
   def _set_log_action(self, v, load=False):
     """
     Setter method for log_action, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/actions/config/log_action (identityref)
@@ -3496,7 +3496,7 @@ class yc_state_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_action
 must be specified for each ACL entry
     """
     return self.__forwarding_action
-      
+
   def _set_forwarding_action(self, v, load=False):
     """
     Setter method for forwarding_action, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/actions/state/forwarding_action (identityref)
@@ -3536,7 +3536,7 @@ matched packets.  The default is not to log the
 packet.
     """
     return self.__log_action
-      
+
   def _set_log_action(self, v, load=False):
     """
     Setter method for log_action, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/actions/state/log_action (identityref)
@@ -3632,7 +3632,7 @@ with an entry
     YANG Description: Config data for ACL actions
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/actions/config (container)
@@ -3669,7 +3669,7 @@ with an entry
     YANG Description: State information for ACL actions
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/actions/state (container)
@@ -3760,7 +3760,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_icmp_
     YANG Description: ICMP(V6) type.
     """
     return self.__type
-      
+
   def _set_type(self, v, load=False):
     """
     Setter method for type, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/icmp/config/type (icmp-type-type)
@@ -3797,7 +3797,7 @@ class yc_config_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_icmp_
     YANG Description: ICMP(V6) code.
     """
     return self.__code
-      
+
   def _set_code(self, v, load=False):
     """
     Setter method for code, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/icmp/config/code (icmp-code-type)
@@ -3885,7 +3885,7 @@ class yc_icmp_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry_icmp(Py
     Getter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/icmp/config (container)
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/icmp/config (container)
@@ -3982,7 +3982,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
     YANG Description: references the list key
     """
     return self.__sequence_id
-      
+
   def _set_sequence_id(self, v, load=False):
     """
     Setter method for sequence_id, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/sequence_id (leafref)
@@ -4024,7 +4024,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
     YANG Description: Access list entries config
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/config (container)
@@ -4061,7 +4061,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
     YANG Description: State information for ACL entries
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/state (container)
@@ -4098,7 +4098,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
     YANG Description: Ethernet header fields
     """
     return self.__l2
-      
+
   def _set_l2(self, v, load=False):
     """
     Setter method for l2, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/l2 (container)
@@ -4135,7 +4135,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
     YANG Description: Top level container
     """
     return self.__ip
-      
+
   def _set_ip(self, v, load=False):
     """
     Setter method for ip, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/ip (container)
@@ -4172,7 +4172,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
     YANG Description: Transport fields container
     """
     return self.__transport
-      
+
   def _set_transport(self, v, load=False):
     """
     Setter method for transport, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/transport (container)
@@ -4209,7 +4209,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
     YANG Description: Input interface container
     """
     return self.__input_interface
-      
+
   def _set_input_interface(self, v, load=False):
     """
     Setter method for input_interface, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/input_interface (container)
@@ -4247,7 +4247,7 @@ class yc_acl_entry_openconfig_acl__acl_acl_sets_acl_set_acl_entries_acl_entry(Py
 with an entry
     """
     return self.__actions
-      
+
   def _set_actions(self, v, load=False):
     """
     Setter method for actions, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/actions (container)
@@ -4283,7 +4283,7 @@ with an entry
     Getter method for icmp, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/icmp (container)
     """
     return self.__icmp
-      
+
   def _set_icmp(self, v, load=False):
     """
     Setter method for icmp, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry/icmp (container)
@@ -4380,7 +4380,7 @@ class yc_acl_entries_openconfig_acl__acl_acl_sets_acl_set_acl_entries(PybindBase
     YANG Description: List of ACL entries comprising an ACL set
     """
     return self.__acl_entry
-      
+
   def _set_acl_entry(self, v, load=False):
     """
     Setter method for acl_entry, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries/acl_entry (list)
@@ -4475,7 +4475,7 @@ entries
     YANG Description: Reference to the name list key
     """
     return self.__name
-      
+
   def _set_name(self, v, load=False):
     """
     Setter method for name, mapped from YANG variable /acl/acl_sets/acl_set/name (leafref)
@@ -4517,7 +4517,7 @@ entries
     YANG Description: Access list config
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/acl_sets/acl_set/config (container)
@@ -4554,7 +4554,7 @@ entries
     YANG Description: Access list state information
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/acl_sets/acl_set/state (container)
@@ -4591,7 +4591,7 @@ entries
     YANG Description: Access list entries container
     """
     return self.__acl_entries
-      
+
   def _set_acl_entries(self, v, load=False):
     """
     Setter method for acl_entries, mapped from YANG variable /acl/acl_sets/acl_set/acl_entries (container)
@@ -4686,7 +4686,7 @@ class yc_acl_sets_openconfig_acl__acl_acl_sets(PybindBase):
 entries
     """
     return self.__acl_set
-      
+
   def _set_acl_set(self, v, load=False):
     """
     Setter method for acl_set, mapped from YANG variable /acl/acl_sets/acl_set (list)
@@ -4779,7 +4779,7 @@ class yc_config_openconfig_acl__acl_interfaces_interface_config(PybindBase):
 convention could be '<if name>.<subif index>'
     """
     return self.__id
-      
+
   def _set_id(self, v, load=False):
     """
     Setter method for id, mapped from YANG variable /acl/interfaces/interface/config/id (oc-if:interface-id)
@@ -4872,7 +4872,7 @@ class yc_state_openconfig_acl__acl_interfaces_interface_state(PybindBase):
 convention could be '<if name>.<subif index>'
     """
     return self.__id
-      
+
   def _set_id(self, v, load=False):
     """
     Setter method for id, mapped from YANG variable /acl/interfaces/interface/state/id (oc-if:interface-id)
@@ -4967,7 +4967,7 @@ subinterface is required, this leaf must be specified
 to indicate the base interface.
     """
     return self.__interface
-      
+
   def _set_interface(self, v, load=False):
     """
     Setter method for interface, mapped from YANG variable /acl/interfaces/interface/interface_ref/config/interface (leafref)
@@ -5009,7 +5009,7 @@ this container.  If only a reference to a base interface
 is requuired, this leaf should not be set.
     """
     return self.__subinterface
-      
+
   def _set_subinterface(self, v, load=False):
     """
     Setter method for subinterface, mapped from YANG variable /acl/interfaces/interface/interface_ref/config/subinterface (leafref)
@@ -5107,7 +5107,7 @@ subinterface is required, this leaf must be specified
 to indicate the base interface.
     """
     return self.__interface
-      
+
   def _set_interface(self, v, load=False):
     """
     Setter method for interface, mapped from YANG variable /acl/interfaces/interface/interface_ref/state/interface (leafref)
@@ -5149,7 +5149,7 @@ this container.  If only a reference to a base interface
 is requuired, this leaf should not be set.
     """
     return self.__subinterface
-      
+
   def _set_subinterface(self, v, load=False):
     """
     Setter method for subinterface, mapped from YANG variable /acl/interfaces/interface/interface_ref/state/subinterface (leafref)
@@ -5245,7 +5245,7 @@ class yc_interface_ref_openconfig_acl__acl_interfaces_interface_interface_ref(Py
     YANG Description: Configured reference to interface / subinterface
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/interfaces/interface/interface_ref/config (container)
@@ -5282,7 +5282,7 @@ class yc_interface_ref_openconfig_acl__acl_interfaces_interface_interface_ref(Py
     YANG Description: Operational state for interface-ref
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/interfaces/interface/interface_ref/state (container)
@@ -5325,7 +5325,7 @@ class yc_config_openconfig_acl__acl_interfaces_interface_ingress_acl_sets_ingres
   the container is represented as a class variable - with a specific
   YANG type.
 
-  YANG Description: Configuration data 
+  YANG Description: Configuration data
   """
   __slots__ = ('_path_helper', '_extmethods', '__set_name',)
 
@@ -5374,7 +5374,7 @@ class yc_config_openconfig_acl__acl_interfaces_interface_ingress_acl_sets_ingres
     YANG Description: Reference to the ACL set applied on ingress
     """
     return self.__set_name
-      
+
   def _set_set_name(self, v, load=False):
     """
     Setter method for set_name, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/config/set_name (leafref)
@@ -5465,7 +5465,7 @@ class yc_state_openconfig_acl__acl_interfaces_interface_ingress_acl_sets_ingress
     YANG Description: Reference to the ACL set applied on ingress
     """
     return self.__set_name
-      
+
   def _set_set_name(self, v, load=False):
     """
     Setter method for set_name, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/state/set_name (leafref)
@@ -5559,7 +5559,7 @@ class yc_state_openconfig_acl__acl_interfaces_interface_ingress_acl_sets_ingress
 interface
     """
     return self.__sequence_id
-      
+
   def _set_sequence_id(self, v, load=False):
     """
     Setter method for sequence_id, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/acl_entries/acl_entry/state/sequence_id (leafref)
@@ -5610,7 +5610,7 @@ e.g., per entry -- the user is expected to be able implement
 the required aggregation if such a count is needed.
     """
     return self.__matched_packets
-      
+
   def _set_matched_packets(self, v, load=False):
     """
     Setter method for matched_packets, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/acl_entries/acl_entry/state/matched_packets (yang:counter64)
@@ -5673,7 +5673,7 @@ e.g., per entry -- the user is expected to be able implement
 the required aggregation if such a count is needed.
     """
     return self.__matched_octets
-      
+
   def _set_matched_octets(self, v, load=False):
     """
     Setter method for matched_octets, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/acl_entries/acl_entry/state/matched_octets (yang:counter64)
@@ -5780,7 +5780,7 @@ class yc_acl_entry_openconfig_acl__acl_interfaces_interface_ingress_acl_sets_ing
     YANG Description: Reference to per-interface acl entry key
     """
     return self.__sequence_id
-      
+
   def _set_sequence_id(self, v, load=False):
     """
     Setter method for sequence_id, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/acl_entries/acl_entry/sequence_id (leafref)
@@ -5822,7 +5822,7 @@ class yc_acl_entry_openconfig_acl__acl_interfaces_interface_ingress_acl_sets_ing
     YANG Description: Operational state data for per-interface ACL entries
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/acl_entries/acl_entry/state (container)
@@ -5914,7 +5914,7 @@ class yc_acl_entries_openconfig_acl__acl_interfaces_interface_ingress_acl_sets_i
     YANG Description: List of ACL entries assigned to an interface
     """
     return self.__acl_entry
-      
+
   def _set_acl_entry(self, v, load=False):
     """
     Setter method for acl_entry, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/acl_entries/acl_entry (list)
@@ -6008,7 +6008,7 @@ class yc_ingress_acl_set_openconfig_acl__acl_interfaces_interface_ingress_acl_se
     YANG Description: Reference to set name list key
     """
     return self.__set_name
-      
+
   def _set_set_name(self, v, load=False):
     """
     Setter method for set_name, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/set_name (leafref)
@@ -6047,10 +6047,10 @@ class yc_ingress_acl_set_openconfig_acl__acl_interfaces_interface_ingress_acl_se
     """
     Getter method for config, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/config (container)
 
-    YANG Description: Configuration data 
+    YANG Description: Configuration data
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/config (container)
@@ -6059,7 +6059,7 @@ class yc_ingress_acl_set_openconfig_acl__acl_interfaces_interface_ingress_acl_se
     method. Backends looking to populate this variable should
     do so via calling thisObj._set_config() directly.
 
-    YANG Description: Configuration data 
+    YANG Description: Configuration data
     """
     if hasattr(v, "_utype"):
       v = v._utype(v)
@@ -6087,7 +6087,7 @@ class yc_ingress_acl_set_openconfig_acl__acl_interfaces_interface_ingress_acl_se
     YANG Description: Operational state data for interface ingress ACLs
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/state (container)
@@ -6124,7 +6124,7 @@ class yc_ingress_acl_set_openconfig_acl__acl_interfaces_interface_ingress_acl_se
     YANG Description: Enclosing container for list of references to ACLs
     """
     return self.__acl_entries
-      
+
   def _set_acl_entries(self, v, load=False):
     """
     Setter method for acl_entries, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set/acl_entries (container)
@@ -6219,7 +6219,7 @@ interface
     YANG Description: List of ingress ACLs on the interface
     """
     return self.__ingress_acl_set
-      
+
   def _set_ingress_acl_set(self, v, load=False):
     """
     Setter method for ingress_acl_set, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets/ingress_acl_set (list)
@@ -6261,7 +6261,7 @@ class yc_config_openconfig_acl__acl_interfaces_interface_egress_acl_sets_egress_
   the container is represented as a class variable - with a specific
   YANG type.
 
-  YANG Description: Configuration data 
+  YANG Description: Configuration data
   """
   __slots__ = ('_path_helper', '_extmethods', '__set_name',)
 
@@ -6310,7 +6310,7 @@ class yc_config_openconfig_acl__acl_interfaces_interface_egress_acl_sets_egress_
     YANG Description: Reference to the ACL set applied on egress
     """
     return self.__set_name
-      
+
   def _set_set_name(self, v, load=False):
     """
     Setter method for set_name, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/config/set_name (leafref)
@@ -6401,7 +6401,7 @@ class yc_state_openconfig_acl__acl_interfaces_interface_egress_acl_sets_egress_a
     YANG Description: Reference to the ACL set applied on egress
     """
     return self.__set_name
-      
+
   def _set_set_name(self, v, load=False):
     """
     Setter method for set_name, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/state/set_name (leafref)
@@ -6495,7 +6495,7 @@ class yc_state_openconfig_acl__acl_interfaces_interface_egress_acl_sets_egress_a
 interface
     """
     return self.__sequence_id
-      
+
   def _set_sequence_id(self, v, load=False):
     """
     Setter method for sequence_id, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/acl_entries/acl_entry/state/sequence_id (leafref)
@@ -6546,7 +6546,7 @@ e.g., per entry -- the user is expected to be able implement
 the required aggregation if such a count is needed.
     """
     return self.__matched_packets
-      
+
   def _set_matched_packets(self, v, load=False):
     """
     Setter method for matched_packets, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/acl_entries/acl_entry/state/matched_packets (yang:counter64)
@@ -6609,7 +6609,7 @@ e.g., per entry -- the user is expected to be able implement
 the required aggregation if such a count is needed.
     """
     return self.__matched_octets
-      
+
   def _set_matched_octets(self, v, load=False):
     """
     Setter method for matched_octets, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/acl_entries/acl_entry/state/matched_octets (yang:counter64)
@@ -6716,7 +6716,7 @@ class yc_acl_entry_openconfig_acl__acl_interfaces_interface_egress_acl_sets_egre
     YANG Description: Reference to per-interface acl entry key
     """
     return self.__sequence_id
-      
+
   def _set_sequence_id(self, v, load=False):
     """
     Setter method for sequence_id, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/acl_entries/acl_entry/sequence_id (leafref)
@@ -6758,7 +6758,7 @@ class yc_acl_entry_openconfig_acl__acl_interfaces_interface_egress_acl_sets_egre
     YANG Description: Operational state data for per-interface ACL entries
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/acl_entries/acl_entry/state (container)
@@ -6850,7 +6850,7 @@ class yc_acl_entries_openconfig_acl__acl_interfaces_interface_egress_acl_sets_eg
     YANG Description: List of ACL entries assigned to an interface
     """
     return self.__acl_entry
-      
+
   def _set_acl_entry(self, v, load=False):
     """
     Setter method for acl_entry, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/acl_entries/acl_entry (list)
@@ -6944,7 +6944,7 @@ class yc_egress_acl_set_openconfig_acl__acl_interfaces_interface_egress_acl_sets
     YANG Description: Reference to set name list key
     """
     return self.__set_name
-      
+
   def _set_set_name(self, v, load=False):
     """
     Setter method for set_name, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/set_name (leafref)
@@ -6983,10 +6983,10 @@ class yc_egress_acl_set_openconfig_acl__acl_interfaces_interface_egress_acl_sets
     """
     Getter method for config, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/config (container)
 
-    YANG Description: Configuration data 
+    YANG Description: Configuration data
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/config (container)
@@ -6995,7 +6995,7 @@ class yc_egress_acl_set_openconfig_acl__acl_interfaces_interface_egress_acl_sets
     method. Backends looking to populate this variable should
     do so via calling thisObj._set_config() directly.
 
-    YANG Description: Configuration data 
+    YANG Description: Configuration data
     """
     if hasattr(v, "_utype"):
       v = v._utype(v)
@@ -7023,7 +7023,7 @@ class yc_egress_acl_set_openconfig_acl__acl_interfaces_interface_egress_acl_sets
     YANG Description: Operational state data for interface egress ACLs
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/state (container)
@@ -7060,7 +7060,7 @@ class yc_egress_acl_set_openconfig_acl__acl_interfaces_interface_egress_acl_sets
     YANG Description: Enclosing container for list of references to ACLs
     """
     return self.__acl_entries
-      
+
   def _set_acl_entries(self, v, load=False):
     """
     Setter method for acl_entries, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set/acl_entries (container)
@@ -7155,7 +7155,7 @@ interface
     YANG Description: List of egress ACLs on the interface
     """
     return self.__egress_acl_set
-      
+
   def _set_egress_acl_set(self, v, load=False):
     """
     Setter method for egress_acl_set, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets/egress_acl_set (list)
@@ -7251,7 +7251,7 @@ class yc_interface_openconfig_acl__acl_interfaces_interface(PybindBase):
     YANG Description: Reference to the interface id list key
     """
     return self.__id
-      
+
   def _set_id(self, v, load=False):
     """
     Setter method for id, mapped from YANG variable /acl/interfaces/interface/id (leafref)
@@ -7293,7 +7293,7 @@ class yc_interface_openconfig_acl__acl_interfaces_interface(PybindBase):
     YANG Description: Configuration for ACL per-interface data
     """
     return self.__config
-      
+
   def _set_config(self, v, load=False):
     """
     Setter method for config, mapped from YANG variable /acl/interfaces/interface/config (container)
@@ -7330,7 +7330,7 @@ class yc_interface_openconfig_acl__acl_interfaces_interface(PybindBase):
     YANG Description: Operational state for ACL per-interface data
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/interfaces/interface/state (container)
@@ -7367,7 +7367,7 @@ class yc_interface_openconfig_acl__acl_interfaces_interface(PybindBase):
     YANG Description: Reference to an interface or subinterface
     """
     return self.__interface_ref
-      
+
   def _set_interface_ref(self, v, load=False):
     """
     Setter method for interface_ref, mapped from YANG variable /acl/interfaces/interface/interface_ref (container)
@@ -7405,7 +7405,7 @@ class yc_interface_openconfig_acl__acl_interfaces_interface(PybindBase):
 interface
     """
     return self.__ingress_acl_sets
-      
+
   def _set_ingress_acl_sets(self, v, load=False):
     """
     Setter method for ingress_acl_sets, mapped from YANG variable /acl/interfaces/interface/ingress_acl_sets (container)
@@ -7444,7 +7444,7 @@ interface
 interface
     """
     return self.__egress_acl_sets
-      
+
   def _set_egress_acl_sets(self, v, load=False):
     """
     Setter method for egress_acl_sets, mapped from YANG variable /acl/interfaces/interface/egress_acl_sets (container)
@@ -7542,7 +7542,7 @@ ACLs are set
     YANG Description: List of interfaces on which ACLs are set
     """
     return self.__interface
-      
+
   def _set_interface(self, v, load=False):
     """
     Setter method for interface, mapped from YANG variable /acl/interfaces/interface (list)
@@ -7636,7 +7636,7 @@ and operational state data
     YANG Description: Global operational state data for ACLs
     """
     return self.__state
-      
+
   def _set_state(self, v, load=False):
     """
     Setter method for state, mapped from YANG variable /acl/state (container)
@@ -7673,7 +7673,7 @@ and operational state data
     YANG Description: Access list entries variables enclosing container
     """
     return self.__acl_sets
-      
+
   def _set_acl_sets(self, v, load=False):
     """
     Setter method for acl_sets, mapped from YANG variable /acl/acl_sets (container)
@@ -7711,7 +7711,7 @@ and operational state data
 ACLs are set
     """
     return self.__interfaces
-      
+
   def _set_interfaces(self, v, load=False):
     """
     Setter method for interfaces, mapped from YANG variable /acl/interfaces (container)
@@ -7819,7 +7819,7 @@ layer matches.
 and operational state data
     """
     return self.__acl
-      
+
   def _set_acl(self, v, load=False):
     """
     Setter method for acl, mapped from YANG variable /acl (container)

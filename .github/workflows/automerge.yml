@@ -9,7 +9,8 @@ on:
 
 jobs:
   automerge:
-    if: github.event.check_suite.app.name == 'Azure Pipelines' &&  github.event.check_suite.conclusion == 'success'
+    # Disable workflow. Use automerge_scan instead to have the same behaviour.
+    if: github.event.check_suite.app.name == 'Azure Pipelines' &&  github.event.check_suite.conclusion == 'success' && false
     runs-on: ubuntu-latest
     steps:
     - name: automerge

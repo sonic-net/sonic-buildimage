@@ -7,6 +7,12 @@ module sonic-system-aaa {
         prefix stypes;
     }
 
+    import sonic-system-tacacs{
+        prefix tacacs;
+    }
+
+    description "Authentication, Authorization, and Accounting (AAA) YANG module for SONiC OS.";
+
     revision 2021-10-12 {
         description "Add AAA authorization/accounting support.";
     }
@@ -17,8 +23,10 @@ module sonic-system-aaa {
 
     container sonic-system-aaa {
         container AAA {
+            description "AAA configuration for local and remote user authentication methods.";
             list AAA_LIST {
                 key "type";
+                description "AAA method configuration entry keyed by function type.";
 
                 leaf type {
                     type enumeration {
@@ -26,40 +34,44 @@ module sonic-system-aaa {
                         enum authorization;
                         enum accounting;
                     }
-                    description "AAA type authentication/authorization/accounting";
+                    description "AAA function type: authentication, authorization, or accounting.";
                 }
 
                 leaf login {
                     type string {
-                        pattern '((tacacs\+|local|radius|default),)*(tacacs\+|local|radius|default)' {
+                        pattern '((ldap|tacacs\+|local|radius|default),)*(ldap|tacacs\+|local|radius|default)' {
                             error-message "Invalid login choice";
                         }
                     }
-                    description "AAA authentication/authorization/accounting methods - radius/tacacs+/local/default";
+                    description "Ordered list of authentication methods to attempt (radius, tacacs+, ldap, local, or default).";
                     default "local";
+                }
+
+                must 'not(./type = "authentication" and contains(./login, "tacacs+") and not(/tacacs:sonic-system-tacacs/tacacs:TACPLUS/tacacs:global/tacacs:passkey))' {
+                    error-message "Authentication with 'tacacs+' is not allowed when passkey not exists.";
                 }
 
                 leaf failthrough {
                     type stypes:boolean_type;
-                    description "When set to true, authentication is attempted on next configured server/local in the list upon failure.";
+                    description "When true, authentication continues to the next method in the list upon failure.";
                     default False;
                 }
 
                 leaf fallback {
                     type stypes:boolean_type;
-                    description "Allow AAA fallback";
+                    description "When true, falls back to local authentication if all remote methods fail.";
                     default False;
                 }
-                
+
                 leaf debug {
                     type stypes:boolean_type;
-                    description "Enable/disable AAA debugging";
+                    description "Enable or disable verbose AAA debug logging.";
                     default False;
                 }
 
                 leaf trace {
                     type stypes:boolean_type;
-                    description "AAA packet trace";
+                    description "Enable or disable AAA protocol packet tracing.";
                     default False;
                 }
             }

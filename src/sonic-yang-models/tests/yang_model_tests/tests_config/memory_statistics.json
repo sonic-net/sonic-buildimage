@@ -1,0 +1,47 @@
+{
+    "MEMORY_STATISTICS_VALID_CONFIG": {
+        "sonic-memory-statistics:sonic-memory-statistics": {          
+            "sonic-memory-statistics:MEMORY_STATISTICS": {
+                "memory_statistics":{
+                    "enabled": "false",
+                    "sampling_interval": "5",
+                    "retention_period": "15"
+                }
+            }
+        }
+    },
+    "MEMORY_STATISTICS_WITH_INVALID_SAMPLING_INTERVAL": {
+        "sonic-memory-statistics:sonic-memory-statistics": {
+            "sonic-memory-statistics:MEMORY_STATISTICS": {
+                "memory_statistics":{
+                    "enabled": "true",
+                    "sampling_interval": "45",
+                    "retention_period": "20"
+                }    
+            }
+        }
+    },
+    "MEMORY_STATISTICS_WITH_INVALID_RETENTION_PERIOD": {
+        "sonic-memory-statistics:sonic-memory-statistics": {
+            "sonic-memory-statistics:MEMORY_STATISTICS": {
+                "memory_statistics":{
+                    "enabled": "true",
+                    "sampling_interval": "5",
+                    "retention_period": "45"
+                }    
+            }
+        }
+    },
+    "MEMORY_STATISTICS_WITH_ENABLE_FEATURE": {
+        "sonic-memory-statistics:sonic-memory-statistics": {
+            "sonic-memory-statistics:MEMORY_STATISTICS": {
+                "memory_statistics":{
+                    "enabled": "true",
+                    "sampling_interval": "5",
+                    "retention_period": "30"
+                }    
+           }
+        }
+    }   
+
+}

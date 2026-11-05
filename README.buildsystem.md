@@ -42,7 +42,7 @@ You can find a make rule for every target that is defined in recipe there.
 *Makefile* is a wrapper over sonic-slave docker image.  
 
 Every part of build is executed in a docker container called sonic-slave, specifically crafted for this environment.
-If build is started for the first time on a particular host, a new sonic-slave image will be built form *sonic-slave/Dockerfile* on the machine.
+If build is started for the first time on a particular host, a new sonic-slave image will be built from *sonic-slave/Dockerfile* on the machine.
 It might take some time, so be patient.
 After that all subsequent make commands will be executed inside this container.
 *Makefile* takes every target that is passed to make command and delegates it as an entry point to a container,
@@ -119,7 +119,7 @@ SONIC_PYTHON_STDEB_DEBS += $(SOME_NEW_DEB) # add package to this target group
 
 **SONIC_MAKE_DEBS**  
 This is a bit more flexible case.
-If you have to do some specific type of build or apply paths prior to build, just define your own Makefile and add it to buildimage.
+If you have to do some specific type of build or apply patches prior to build, just define your own Makefile and add it to buildimage.
 Define:
 ```make
 SOME_NEW_DEB = some_new_deb.deb # name of your package
@@ -188,6 +188,51 @@ $(SOME_DOCKER)_PYTHON_WHEELS += $(SOME_WHL1) $(SOME_WHL2) # python wheels to ins
 $(SOME_DOCKER)_LOAD_DOCKERS += $(SOME_OTHER_DOCkER) # docker image from which this one is built
 SONIC_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this group
 ```
+
+**SONIC_BAZEL_DOCKER_IMAGES**
+Target group for docker images that can be built with [Bazel](https://bazel.build/) instead of the legacy Make-based flow.
+
+Each component can opt-into this mechanism by joining the group, and specifying how Bazel-ready it is:
+
+```make
+$(SOME_DOCKER)_BAZEL_READINESS = experimental # If consumers can try out the Bazel build, but shouldn't trust it fully.
+$(SOME_DOCKER)_BAZEL_READINESS = stable # If consumers should use the Bazel build as the canonical, and only fall back if really necessary.
+SONIC_BAZEL_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this target group
+```
+
+A docker outside the group is never built with Bazel. A docker in it must declare a readiness level, and a readiness level declared outside it is a build error.
+
+For now, the readiness level is a maintainer's judgement.
+
+- `experimental` means a maintainer has opened the Bazel build for the community to try, but still considers the Make-based build the canonical one.
+- `stable` means a maintainer vouches for the image in production terms, and considers the Bazel build canonical for that component. It deliberately does **not** mean the Bazel image is byte-identical to the Make-built one: a Bazel image may legitimately differ and still be the better artifact.
+
+The image is still registered in `SONIC_DOCKER_IMAGES` / `SONIC_INSTALL_DOCKER_IMAGES`, and still carries `_PATH`, `_VERSION` and `_PACKAGE_NAME`, so it is installed and listed in the sonic-package-manager catalog exactly as a Make-built one. Irrelevant attributes such as `_DEPENDS` and `_LOAD_DOCKERS` are declared unconditionally too, and are simply left unread whenever the Bazel path is selected.
+
+Debug images inherit their parent's readiness.
+
+To make a target build with Bazel, define its readiness, as well as a the base image it should have:
+
+```make
+SOME_DOCKER = some_docker.gz # name of your docker (must match dockers/<name>/BUILD.bazel)
+$(SOME_DOCKER)_BAZEL_BASE += $(SOME_BASE_DOCKER) # base docker(s) the Bazel build depends on
+$(SOME_DOCKER)_BAZEL_READINESS = experimental # how ready the Bazel build is
+SONIC_BAZEL_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this target group
+```
+
+When building, you can use the `BAZEL_MIN_READINESS` configuration knob (defined in **rules/config**):
+
+| `BAZEL_MIN_READINESS` | Components built with Bazel |
+| --- | --- |
+| `bazel_disabled` | none |
+| `experimental` | those declaring `experimental` or `stable` |
+| `stable` | those declaring `stable` |
+
+## Build caching and the PR cache-key gate
+
+See [DPKG build caching and cache-key validation](README.dpkg-cache.md) for
+cache dependency declarations, troubleshooting the PR completeness gate, and
+using an AI assistant to help fix findings.
 
 ## Tips & Tricks
 Although every target is built inside a sonic-slave container, which exits at the end of build, you can enter bash of sonic-slave using this command:
@@ -267,7 +312,7 @@ _Recommend: Rename image built using INSTALL_DEBUG_TOOLS=y to mark it explicit. 
         * start process under dbg
         * attach gdb to running process
     * Set required source dir from under /src as needed
-    * May use /debug to record all geb logs or any spew from debug session.
+    * May use /debug to record all gdb logs or any spew from debug session.
     
   ### To enhance debug dockers
   * Add to `<docker name>_DBG_IMAGE_PACKAGES`, additional debug tools that will be pre-installed during build.

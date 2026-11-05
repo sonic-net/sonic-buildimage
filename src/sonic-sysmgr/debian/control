@@ -1,0 +1,18 @@
+Source: sonic
+Maintainer: Runming Wu <runmingwu@google.com>
+Section: net
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 9), autotools-dev
+Standards-Version: 1.0.0
+
+Package: sysmgr
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains sysmgr service.
+
+Package: sysmgr-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: sysmgr (=${binary:Version})
+Description: debugging symbols for sysmgr

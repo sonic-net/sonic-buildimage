@@ -1,0 +1,14 @@
+# postinst script for SSE-T7132S
+
+# Enable SuperMicro SSE-T7132S
+depmod -a
+modprobe -r iTCO_wdt
+modprobe -r t7132s
+modprobe t7132s
+systemctl enable platform-modules-sse-t7132s.service
+systemctl start platform-modules-sse-t7132s.service
+systemctl enable sysled.service
+
+
+#DEBHELPER#
+

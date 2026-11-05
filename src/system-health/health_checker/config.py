@@ -4,6 +4,18 @@ import os
 from sonic_py_common import device_info
 
 
+def sanitize_optional_containers(optional_containers):
+    if not isinstance(optional_containers, dict):
+        return {}
+
+    return {
+        container_name: image_name
+        for container_name, image_name in optional_containers.items()
+        if isinstance(container_name, str) and container_name
+        and isinstance(image_name, str) and image_name
+    }
+
+
 class Config(object):
     """
     Manage configuration of system health.
@@ -44,7 +56,8 @@ class Config(object):
         self.ignore_services = None
         self.ignore_devices = None
         self.user_defined_checkers = None
-
+        self.include_devices = None
+        self.optional_containers = {}
     def config_file_exists(self):
         return os.path.exists(self._config_file)
 
@@ -72,6 +85,10 @@ class Config(object):
                 self.ignore_services = self._get_list_data('services_to_ignore')
                 self.ignore_devices = self._get_list_data('devices_to_ignore')
                 self.user_defined_checkers = self._get_list_data('user_defined_checkers')
+                self.include_devices = self._get_list_data('include_devices')
+                self.optional_containers = sanitize_optional_containers(
+                    self.config_data.get('optional_containers', {})
+                )
             except Exception as e:
                 self._reset()
 
@@ -86,6 +103,8 @@ class Config(object):
         self.ignore_services = None
         self.ignore_devices = None
         self.user_defined_checkers = None
+        self.include_devices = None
+        self.optional_containers = {}
 
     def get_led_color(self, status):
         """

@@ -20,8 +20,9 @@ if [ "$INSTALL" == y ]; then
     [ "$lock_result" == y ] && release_apt_installation_lock
     exit $command_result
 else
-    if [[ " $@ " == *" purge "* || " $@ " == *" remove "* ]]; then
-      # When running the purge command, collect the debian versions
+    if [[ " $@ " == *" purge "* || " $@ " == *" remove "* || " $@ " == *" autoremove "* ]]; then
+      # When running purge/remove/autoremove, collect the debian versions
+      # so intermediate packages are captured for reproducible builds
       dpkg-query -W -f '${Package}==${Version}\n' >> $POST_VERSION_PATH/purge-versions-deb
       chmod a+wr $POST_VERSION_PATH/purge-versions-deb
     fi

@@ -10,6 +10,11 @@ then
     ${CTR_SCRIPT} -f dhcp_relay -o ${RUNTIME_OWNER} -v ${IMAGE_VERSION}
 fi
 
+keys=$(sonic-db-cli COUNTERS_DB keys "DHCPV4_COUNTER_TABLE:*")
+for key in $keys; do
+    sonic-db-cli COUNTERS_DB del "$key"
+done
+
 # If our supervisor config has entries in the "dhcp-relay" group...
 if [ $(supervisorctl status | grep -c "^dhcp-relay:") -gt 0 ]; then
     # Wait for all interfaces to come up and be assigned IPv4 addresses before

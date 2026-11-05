@@ -1,0 +1,103 @@
+From 99ff134e88ee698623ac5c09cbcd0e88e0fdfa40 Mon Sep 17 00:00:00 2001
+From: Eric Seifert <seiferteric@gmail.com>
+Date: Mon, 26 Jun 2023 09:18:44 -0700
+Subject: [PATCH] Replace popen shell execution with safer execle
+
+---
+ nss_tacplus.c | 54 ++++++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 47 insertions(+), 7 deletions(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 50e560d..33e3e8c 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -34,6 +34,8 @@
+ #include <netdb.h>
+ #include <nss.h>
+ #include <limits.h>
++#include <unistd.h>
++#include <sys/wait.h>
+ 
+ #include <libtac/libtac.h>
+ 
+@@ -439,6 +441,39 @@ static int delete_conf_line(const char *name)
+     return 0;
+ }
+ 
++int user_mod_add(const char* cmd, const char* name, char* gid, char* sec_grp, char* gecos, char* home, char* shell) {
++
++    pid_t pid;
++    int wstatus;
++
++    pid = fork();
++
++    if(pid > 0) {
++        do {
++            if (waitpid(pid, &wstatus, WUNTRACED | WCONTINUED) == -1) {
++                int errsv = errno;
++                char serr[256] = {0};
++                strerror_r(errsv, serr, 256);
++                syslog(LOG_ERR, "%s: exec of %s failed with error %d: %s", nssname, cmd, errsv, serr);
++                return -1;
++            }
++        } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
++        if WIFEXITED(wstatus)
++            return WEXITSTATUS(wstatus);
++        else
++            return -1;
++    // Child
++    } else if(pid == 0) {
++        execl(cmd, cmd, "-G", sec_grp, name, "-g", gid, "-c", gecos, "-d", home, "-m", "-s", shell, NULL);
++        syslog(LOG_ERR, "%s: exec of %s failed with errno=%d", nssname, cmd, errno);
++        exit(EXIT_FAILURE);
++    // Error
++    } else {
++        syslog(LOG_ERR, "%s: error forking the child\n", nssname);
++        return -1;
++    }
++}
++
+ /*
+  * If not found in local, look up in tacacs user conf. If user name is not in
+  * conf, it will be written in conf and created by command 'useradd'. When
+@@ -454,6 +489,11 @@ static int create_or_modify_local_user(const char *name, int level, bool existin
+     bool found = false;
+     const char* command = existing_user ? "/usr/sbin/usermod": "/usr/sbin/useradd";
+ 
++    if(strlen(name) > 32) {
++        syslog(LOG_ERR, "%s: Username too long", nssname);
++        return -1;
++    }
++
+     fp = fopen(user_conf, "ab+");
+     if(!fp) {
+         syslog(LOG_ERR, "%s: %s fopen failed", nssname, user_conf);
+@@ -495,18 +535,18 @@ static int create_or_modify_local_user(const char *name, int level, bool existin
+     while(lvl >= MIN_TACACS_USER_PRIV) {
+         user = &useradd_grp_list[lvl];
+         if(user->info && user->secondary_grp && user->shell) {
+-            snprintf(buf, len, "%s -G %s \"%s\" -g %d -c \"%s\" -d /home/%s -m -s %s",
+-                command, user->secondary_grp, name, user->gid, user->info, name, user->shell);
+-            if(debug) syslog(LOG_DEBUG, "%s", buf);
+-            fp = popen(buf, "r");
+-            if(!fp || -1 == pclose(fp)) {
+-                syslog(LOG_ERR, "%s: %s popen failed errno=%d %s",
+-                        nssname, command, errno, strerror(errno));
++            char sgid[10] = {0};
++            char home[64] = {0};
++            snprintf(sgid, 10, "%d", user->gid);
++            snprintf(home, 63, "/home/%s", name);
++            if(0 != user_mod_add(command, name, sgid, user->secondary_grp, user->info, home, user->shell)) {
++                syslog(LOG_ERR, "%s: %s %s failed", nssname, command, name);
+                 delete_conf_line(name);
+                 return -1;
+             }
+             if(debug)
+                 syslog(LOG_DEBUG, "%s: %s %s success", nssname, command, name);
++
+             delete_conf_line(name);
+             return 0;
+         }
+-- 
+2.39.3
+

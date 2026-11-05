@@ -2,14 +2,14 @@
 # ssd_health
 #
 
-from sonic_platform_base.sonic_ssd.ssd_base import SsdBase
+from sonic_platform_base.sonic_storage.storage_base import StorageBase
 from subprocess import Popen, PIPE
 from re import findall
 from os.path import exists
 
 NOT_AVAILABLE = "N/A"
 
-class SsdUtil(SsdBase):
+class SsdUtil(StorageBase):
 
     def __init__(self, diskdev):
         """

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x 
+[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
 RET=$1
 BLDENV=$2

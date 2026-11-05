@@ -1,0 +1,316 @@
+{
+	"GLOBAL_MEDIA_SETTINGS":{
+		"0-63":{
+			"OSFP-8X-active_cable_media_interface":{
+				"pre3": {
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"pre2": {
+					"lane0": "0xffffffff",
+					"lane1": "0xffffffff",
+					"lane2": "0xffffffff",
+					"lane3": "0xffffffff",
+					"lane4": "0xffffffff",
+					"lane5": "0xffffffff",
+					"lane6": "0xffffffff",
+					"lane7": "0xffffffff"
+				},
+				"pre1":{
+					"lane0": "0xfffffffc",
+					"lane1": "0xfffffffc",
+					"lane2": "0xfffffffc",
+					"lane3": "0xfffffffc",
+					"lane4": "0xfffffffc",
+					"lane5": "0xfffffffc",
+					"lane6": "0xfffffffc",
+					"lane7": "0xfffffffc"
+				},
+				"main": {
+					"lane0": "0x00000034",
+					"lane1": "0x00000034",
+					"lane2": "0x00000034",
+					"lane3": "0x00000034",
+					"lane4": "0x00000034",
+					"lane5": "0x00000034",
+					"lane6": "0x00000034",
+					"lane7": "0x00000034"
+				},
+				"post1":{
+					"lane0": "0xfffffffc",
+					"lane1": "0xfffffffc",
+					"lane2": "0xfffffffc",
+					"lane3": "0xfffffffc",
+					"lane4": "0xfffffffc",
+					"lane5": "0xfffffffc",
+					"lane6": "0xfffffffc",
+					"lane7": "0xfffffffc"
+				},
+				"post2":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				}
+			},
+			"QSFP-DD-active_cable_media_interface":{
+				"pre3": {
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"pre2": {
+					"lane0": "0xffffffff",
+					"lane1": "0xffffffff",
+					"lane2": "0xffffffff",
+					"lane3": "0xffffffff",
+					"lane4": "0xffffffff",
+					"lane5": "0xffffffff",
+					"lane6": "0xffffffff",
+					"lane7": "0xffffffff"
+				},
+				"pre1":{
+					"lane0": "0xfffffffc",
+					"lane1": "0xfffffffc",
+					"lane2": "0xfffffffc",
+					"lane3": "0xfffffffc",
+					"lane4": "0xfffffffc",
+					"lane5": "0xfffffffc",
+					"lane6": "0xfffffffc",
+					"lane7": "0xfffffffc"
+				},
+				"main": {
+					"lane0": "0x00000034",
+					"lane1": "0x00000034",
+					"lane2": "0x00000034",
+					"lane3": "0x00000034",
+					"lane4": "0x00000034",
+					"lane5": "0x00000034",
+					"lane6": "0x00000034",
+					"lane7": "0x00000034"
+				},
+				"post1":{
+					"lane0": "0xfffffffc",
+					"lane1": "0xfffffffc",
+					"lane2": "0xfffffffc",
+					"lane3": "0xfffffffc",
+					"lane4": "0xfffffffc",
+					"lane5": "0xfffffffc",
+					"lane6": "0xfffffffc",
+					"lane7": "0xfffffffc"
+				},
+				"post2":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				}
+			},
+			"OSFP-8X-passive_copper_media_interface":{
+				"pre3": {
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"pre2": {
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"pre1":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"main": {
+					"lane0": "0x0000003f",
+					"lane1": "0x0000003f",
+					"lane2": "0x0000003f",
+					"lane3": "0x0000003f",
+					"lane4": "0x0000003f",
+					"lane5": "0x0000003f",
+					"lane6": "0x0000003f",
+					"lane7": "0x0000003f"
+				},
+				"post1":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"post2":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				}
+			},
+			"QSFP-DD-passive_copper_media_interface":{
+				"pre3": {
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"pre2": {
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"pre1":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"main": {
+					"lane0": "0x0000003f",
+					"lane1": "0x0000003f",
+					"lane2": "0x0000003f",
+					"lane3": "0x0000003f",
+					"lane4": "0x0000003f",
+					"lane5": "0x0000003f",
+					"lane6": "0x0000003f",
+					"lane7": "0x0000003f"
+				},
+				"post1":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"post2":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				}
+			},
+			"Default":{
+				"pre3": {
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				},
+				"pre2": {
+					"lane0": "0xffffffff",
+					"lane1": "0xffffffff",
+					"lane2": "0xffffffff",
+					"lane3": "0xffffffff",
+					"lane4": "0xffffffff",
+					"lane5": "0xffffffff",
+					"lane6": "0xffffffff",
+					"lane7": "0xffffffff"
+				},
+				"pre1":{
+					"lane0": "0xfffffffc",
+					"lane1": "0xfffffffc",
+					"lane2": "0xfffffffc",
+					"lane3": "0xfffffffc",
+					"lane4": "0xfffffffc",
+					"lane5": "0xfffffffc",
+					"lane6": "0xfffffffc",
+					"lane7": "0xfffffffc"
+				},
+				"main": {
+					"lane0": "0x00000034",
+					"lane1": "0x00000034",
+					"lane2": "0x00000034",
+					"lane3": "0x00000034",
+					"lane4": "0x00000034",
+					"lane5": "0x00000034",
+					"lane6": "0x00000034",
+					"lane7": "0x00000034"
+				},
+				"post1":{
+					"lane0": "0xfffffffc",
+					"lane1": "0xfffffffc",
+					"lane2": "0xfffffffc",
+					"lane3": "0xfffffffc",
+					"lane4": "0xfffffffc",
+					"lane5": "0xfffffffc",
+					"lane6": "0xfffffffc",
+					"lane7": "0xfffffffc"
+				},
+				"post2":{
+					"lane0": "0x0",
+					"lane1": "0x0",
+					"lane2": "0x0",
+					"lane3": "0x0",
+					"lane4": "0x0",
+					"lane5": "0x0",
+					"lane6": "0x0",
+					"lane7": "0x0"
+				}
+			}
+		}
+	}
+}

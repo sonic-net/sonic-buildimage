@@ -8,6 +8,20 @@ else
     export platform=vs
 fi
 
+# Force orchagent to run with the given ASIC.
+if [ "$ASIC_TYPE" == "broadcom-dnx" ]; then
+    export platform="broadcom"
+    export sub_platform="broadcom-dnx"
+fi
+
+# Allow test to override PfcDlrInitEnable for VS switch so that
+# we can test PfcWdAclHandler, instead of PfcWdDlrHandler.
+if [ "$PFC_DLR_INIT_ENABLE" == "1" ]; then
+    export pfcDlrInitEnable="1"
+elif [ "$PFC_DLR_INIT_ENABLE" == "0" ]; then
+    export pfcDlrInitEnable="0"
+fi
+
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
@@ -23,13 +37,43 @@ fi
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 
-# Set orchagent pop batch size to 8192
-ORCHAGENT_ARGS+="-b 8192 "
+SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
 
-# Set synchronous mode if it is enabled in CONFIG_DB
+if [ "$SWITCH_TYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-b 65536 "
+else
+    # Set orchagent pop batch size to 8192
+    ORCHAGENT_ARGS+="-b 8192 "
+fi
+
+# Set zmq mode by default for DPU vs
+# Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-if [ "$SYNC_MODE" == "enable" ]; then
+SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.swss_zmq')
+
+if [ "$SWITCH_TYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync -k 65536 "
+elif [ "$SOUTHBOUND_ZMQ" == "true" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
+elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
+fi
+
+# Enable async swss recorder when explicitly configured
+ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "SYSTEM_DEFAULTS|async_rec" "status")
+if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-A "
+fi
+
+# Enable ring buffer
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+="-R "
+fi
+
+SUPPRESS_FIB_CONFIG=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending"`
+if [ "$SUPPRESS_FIB_CONFIG" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-F "
 fi
 
 # Set mac address

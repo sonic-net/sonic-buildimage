@@ -21,7 +21,7 @@
 #define __PDDF_FAN_DEFS_H__
 
 
-#define MAX_NUM_FAN 6
+#define MAX_NUM_FAN 12
 #define MAX_FAN_ATTRS 128
 #define ATTR_NAME_LEN 32
 #define STR_ATTR_SIZE 32
@@ -43,9 +43,7 @@ typedef struct FAN_DATA_ATTR
     int mult;                       // Multiplication factor to get the actual data
     uint8_t is_divisor;                     // Check if the value is a divisor and mult is dividend
     void *access_data;
-
 }FAN_DATA_ATTR;
-
 
 typedef struct FAN_SYSFS_ATTR_DATA
 {
@@ -75,7 +73,7 @@ typedef struct FAN_DATA
     int num_fantrays;                    // num of fans controlled by this fan client
     FAN_DATA_ATTR fan_attr;
     int len;             // no of valid attributes for this fan client
-    FAN_DATA_ATTR fan_attrs[MAX_FAN_ATTRS]; 
+    FAN_DATA_ATTR fan_attrs[MAX_FAN_ATTRS];
 }FAN_DATA;
 
 typedef struct FAN_PDATA
@@ -85,7 +83,16 @@ typedef struct FAN_PDATA
     FAN_DATA_ATTR *fan_attrs; 
 }FAN_PDATA;
 
+struct pddf_fan_ops_t
+{
+    /*Fan duty cycle conversion ops*/
+    uint32_t (*duty_cycle_to_reg_value)(uint32_t dc);
+    uint32_t (*reg_value_to_duty_cycle)(uint32_t reg_val);
+};
+
 extern int board_i2c_cpld_read(unsigned short cpld_addr, u8 reg);
 extern int board_i2c_cpld_write(unsigned short cpld_addr, u8 reg, u8 value);
 
+extern int board_i2c_fpga_read(unsigned short cpld_addr, u8 reg);
+extern int board_i2c_fpga_write(unsigned short cpld_addr, u8 reg, u8 value);
 #endif

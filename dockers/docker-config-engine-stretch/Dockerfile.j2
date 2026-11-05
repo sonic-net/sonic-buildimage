@@ -10,6 +10,9 @@ RUN apt-get update         && \
         build-essential       \
         python-dev
 
+# Install python-redis
+RUN pip install redis>=3.5.3
+
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
 RUN apt-get install -y        \
         libxslt-dev           \

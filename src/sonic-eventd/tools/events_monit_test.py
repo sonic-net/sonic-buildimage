@@ -74,7 +74,7 @@ def test_receiver(event_obj, cnt):
     while cnt_done < cnt:
         p = event_receive_op_t()
         rc = event_receive(sh, p)
-        
+
         if rc > 0 and publish_cnt < 2:
             # ignore timeout as test code has not yet published an event yet
             continue

@@ -9,6 +9,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 #define STRING_TO_DEC_VALUE		10
 #define STRING_TO_HEX_VALUE		16
@@ -119,11 +120,18 @@ static const struct attribute_group as7716_32xb_thermal_group = {
     .attrs = as7716_32xb_thermal_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32xb_thermal_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as7716_32xb_thermal_probe(struct i2c_client *client)
+#endif
 {
     struct as7716_32xb_thermal_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     data = kzalloc(sizeof(struct as7716_32xb_thermal_data), GFP_KERNEL);
     if (!data) {
@@ -162,7 +170,7 @@ exit:
     return status;
 }
 
-static int as7716_32xb_thermal_remove(struct i2c_client *client)
+static void as7716_32xb_thermal_remove(struct i2c_client *client)
 {
     struct as7716_32xb_thermal_data *data = i2c_get_clientdata(client);
 
@@ -170,7 +178,6 @@ static int as7716_32xb_thermal_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &as7716_32xb_thermal_group);
     kfree(data);
     
-    return 0;
 }
 
 

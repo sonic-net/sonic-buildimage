@@ -111,7 +111,7 @@ class SfpUtil(SfpUtilBase):
             content = val_file.readline().rstrip()
             val_file.close()
         except IOError as e:
-            print "Error: unable to access file: %s" % str(e)
+            print("Error: unable to access file: %s" % str(e))
             return False
 
         if content == "1":
@@ -145,13 +145,13 @@ class SfpUtil(SfpUtilBase):
         elif timeout > 0:
             timeout = timeout / float(1000) # Convert to secs
         else:
-            print "get_transceiver_change_event:Invalid timeout value", timeout
+            print("get_transceiver_change_event:Invalid timeout value", timeout)
             return False, {}
 
         end_time = start_time + timeout
         if start_time > end_time:
-            print 'get_transceiver_change_event:' \
-                       'time wrap / invalid timeout value', timeout
+            print('get_transceiver_change_event:' \
+                       'time wrap / invalid timeout value', timeout)
 
             return False, {} # Time wrap or possibly incorrect timeout
 
@@ -182,5 +182,5 @@ class SfpUtil(SfpUtilBase):
                     if timeout > 0:
                         time.sleep(timeout)
                     return True, {}
-        print "get_evt_change_event: Should not reach here."
+        print("get_evt_change_event: Should not reach here.")
         return False, {}

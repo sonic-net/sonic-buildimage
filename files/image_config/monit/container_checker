@@ -25,6 +25,18 @@ from swsscommon import swsscommon
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "event-down-ctr"
 
+def check_docker_image(image_name):
+    """
+    @summary: This function will check if docker image exists.
+    @return:  True if the image exists, otherwise False.
+    """
+    try:
+        DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        DOCKER_CLIENT.images.get(image_name)
+        return True
+    except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
+        return False
+
 def get_expected_running_containers():
     """
     @summary: This function will get the expected running & always-enabled containers by following the rule:
@@ -55,12 +67,32 @@ def get_expected_running_containers():
     # it will be removed from exception list.
     run_all_instance_list = ['database', 'bgp']
 
+    container_list = []
     for container_name in feature_table.keys():
+        # skip frr_bmp since it's not container just bmp option used by bgpd
+        if container_name == "frr_bmp":
+            continue
+        # slim image does not have telemetry container and corresponding docker image
+        if container_name == "telemetry":
+            ret = check_docker_image("docker-sonic-telemetry")
+            if not ret:
+                # If telemetry container image is not present, check gnmi container image
+                # If gnmi container image is not present, ignore telemetry container check
+                # if gnmi container image is present, check gnmi container instead of telemetry
+                ret = check_docker_image("docker-sonic-gnmi")
+                if not ret:
+                    print("Ignoring telemetry container check on image which has no corresponding telemetry or gnmi docker image")
+                else:
+                    container_list.append("gnmi")
+                continue
+        container_list.append(container_name)
+
+    for container_name in container_list:
         if feature_table[container_name]["state"] not in ["disabled", "always_disabled"]:
             if multi_asic.is_multi_asic():
-                if feature_table[container_name]["has_global_scope"] == "True":
+                if feature_table[container_name].get("has_global_scope", "True") == "True":
                     expected_running_containers.add(container_name)
-                if feature_table[container_name]["has_per_asic_scope"] == "True":
+                if feature_table[container_name].get("has_per_asic_scope", "False") == "True":
                     num_asics = multi_asic.get_num_asics()
                     for asic_id in range(num_asics):
                         if asic_id in asics_id_presence or container_name in run_all_instance_list:
@@ -69,9 +101,9 @@ def get_expected_running_containers():
                 expected_running_containers.add(container_name)
         if feature_table[container_name]["state"] == 'always_enabled':
             if multi_asic.is_multi_asic():
-                if feature_table[container_name]["has_global_scope"] == "True":
+                if feature_table[container_name].get("has_global_scope", "True") == "True":
                     always_running_containers.add(container_name)
-                if feature_table[container_name]["has_per_asic_scope"] == "True":
+                if feature_table[container_name].get("has_per_asic_scope", "False") == "True":
                     num_asics = multi_asic.get_num_asics()
                     for asic_id in range(num_asics):
                         if asic_id in asics_id_presence or container_name in run_all_instance_list:
@@ -79,8 +111,15 @@ def get_expected_running_containers():
             else:
                 always_running_containers.add(container_name)
 
-    if device_info.is_supervisor():
+    if device_info.is_supervisor() or device_info.is_disaggregated_chassis() or device_info.is_smartswitch():
         always_running_containers.add("database-chassis")
+
+    if device_info.is_smartswitch():
+        raw_dpustable = config_db.get_table("DPUS")
+        for dpu_name in raw_dpustable:
+            container_name = f"databasedpu{dpu_name.replace('dpu', '')}"
+            always_running_containers.add(container_name)
+
     return expected_running_containers, always_running_containers
 
 def get_current_running_from_DB(always_running_containers):
@@ -119,26 +158,38 @@ def get_current_running_from_DB(always_running_containers):
 
     return running_containers
 
-
 def get_current_running_from_dockers():
     """
     @summary: This function will get all running containers from
               the list of docker containers in running state.
+              If namespace == 'sonic': it's rollout-ed via kubernetes so add io.kubernetes.container.name
+              If namespace is missing/empty: it's image native container, add ctr.name directly
     @return:  A set which contains containers that are
               in running state.
     """
     DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
     running_containers = set()
-    ctrs = DOCKER_CLIENT.containers
+
     try:
-        lst = ctrs.list(filters={"status": "running"})
-        for ctr in lst:
-            running_containers.add(ctr.name)
+        for ctr in DOCKER_CLIENT.containers.list(filters={"status": "running"}):
+            labels = ctr.labels or {}
+            ns = labels.get("io.kubernetes.pod.namespace")
+            dtype = labels.get("io.kubernetes.docker.type")
+            kname = labels.get("io.kubernetes.container.name")
+
+            if ns == "sonic":
+                if dtype == "container" and kname and kname not in ("<no value>", "POD"):
+                    running_containers.add(kname)
+            elif not ns:
+                running_containers.add(ctr.name)
+
     except docker.errors.APIError as err:
-        print("Failed to retrieve the running container list. Error: '{}'".format(err))
+        print(f"Failed to retrieve the running container list. Error: '{err}'")
+        pass
+    except docker.errors.DockerException as err:
+        print(f"Docker client error: '{err}'")
         pass
     return running_containers
-
 
 def get_current_running_containers(always_running_containers):
     """
@@ -179,11 +230,6 @@ def main():
         publish_events(not_running_containers)
         print("Expected containers not running: " + ", ".join(not_running_containers))
         sys.exit(3)
-
-    unexpected_running_containers = current_running_containers.difference(expected_running_containers)
-    if unexpected_running_containers:
-        print("Unexpected running containers: " + ", ".join(unexpected_running_containers))
-        sys.exit(4)
 
 
 if __name__ == "__main__":

@@ -1,28 +1,40 @@
-SHELL = /bin/bash
 .ONESHELL:
+SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-MAIN_TARGET = iproute2_$(IPROUTE2_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+MAIN_TARGET = $(IPROUTE2)
+DERIVED_TARGETS = $(IPROUTE2_DBG)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	# Remove any stale files
-	rm -rf iproute2-$(IPROUTE2_VERSION)
+	# Build from Debian source packaging, using the distro-specific iproute2 version.
+	rm -rf ./iproute2-$(IPROUTE2_VERSION_BASE)
+	dget -u https://deb.debian.org/debian/pool/main/i/iproute2/iproute2_$(IPROUTE2_DEBIAN_VERSION).dsc
+	pushd ./iproute2-$(IPROUTE2_VERSION_BASE)
 
-	wget -O iproute2_$(IPROUTE2_VERSION).orig.tar.xz http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_$(IPROUTE2_VERSION).orig.tar.xz
-	wget -O iproute2_$(IPROUTE2_VERSION_FULL).dsc http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_$(IPROUTE2_VERSION_FULL).dsc
-	wget -O iproute2_$(IPROUTE2_VERSION_FULL).debian.tar.xz http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_$(IPROUTE2_VERSION_FULL).debian.tar.xz
-	dpkg-source -x iproute2_$(IPROUTE2_VERSION_FULL).dsc
+	# Create a git repository here for stg to apply patches.
+	git init
+	git add -f *
+	git commit -qm "initial commit"
 
-	pushd iproute2-$(IPROUTE2_VERSION)
+	# Apply SONiC patches in explicit series order.
+	if grep -q '[^[:space:]]' ../patch/series; then
+		stg init
+		stg import -s ../patch/series
+	fi
 
-	patch -p1 < ../patch/0001-patch-macsec-xpn-support.patch
+	# Bump the Debian package version so the locally-built package wins over distro iproute2.
+	sed -i "1s/($(IPROUTE2_DEBIAN_VERSION))/($(IPROUTE2_VERSION_FULL))/" debian/changelog
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
-	patch -p1 < ../patch/cross-compile-changes.patch
-	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
-	dpkg-buildpackage -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
 	popd
 
 	mv $* $(DEST)/
+	for deb in $(DERIVED_TARGETS); do \
+		[ ! -f "$$deb" ] || mv "$$deb" $(DEST)/; \
+	done
+
+$(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)

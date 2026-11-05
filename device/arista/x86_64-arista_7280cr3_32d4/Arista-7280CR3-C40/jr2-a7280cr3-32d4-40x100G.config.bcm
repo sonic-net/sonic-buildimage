@@ -1,5 +1,6 @@
 soc_family.BCM8869X=BCM8869X
 
+dpp_db_path=/usr/share/bcm/db
 custom_feature_ucode_path=u_code_db2pem.txt
 system_headers_mode=1
 suppress_unknown_prop_warnings=1
@@ -767,3 +768,4 @@ dma_desc_aggregator_buff_size_kb.BCM8869X=100
 dma_desc_aggregator_timeout_usec.BCM8869X=1000
 dma_desc_aggregator_enable_specific_MDB_LPM.BCM8869X=1
 dma_desc_aggregator_enable_specific_MDB_FEC.BCM8869X=1
+sai_ecmp_group_members_increment=8

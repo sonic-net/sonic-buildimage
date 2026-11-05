@@ -1,0 +1,596 @@
+#!/bin/bash
+
+debug_flag=0
+port_map=('00' '10' '11' '12' '13' '14' '15' '16' '17' '18' '19' '1a' '1b' '1c' '1d' '1e' '1f' '20' '21' '22' '23' '24' '25' '26' '27' '28' '29' '2a' '2b' '2c' '2d' '2e' '2f')
+
+port_init=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+
+port_sfp_type=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+
+board_ver=$(ipmitool raw 0x30 0x25 0x1 0xe0 0x1 0x0 1>/dev/null 2>/dev/null; echo $?) #error will get 1 means EVT, otherwise DVT
+
+
+byte_hex_test()
+{
+	if ! [[ $1  =~ ^[0-9A-Fa-f]{2}$ ]] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+pmon_status_check()
+{
+	output=$( docker inspect -f '{{.State.Status}}' pmon 2>/dev/null)
+	if [ $? -eq 0 ]; then
+		if [ $output == 'running' ]; then
+			return 1
+		else
+			return 0
+		fi
+	else
+		return 0
+	fi
+}
+
+#$1=mux $2=channel $3=dev_addr, $4=reg, $5=val
+bmc_write()
+{
+	if [ $board_ver == 1 ]; then
+		addr_8b=$(echo $(($3)) | awk '{printf $1}')
+		addr_8b=`expr $addr_8b \\* 2`
+		ipmitool raw 0x30 0x85 $1 $2 $addr_8b 2 $4 $5 1>>/dev/null 2>>/dev/null
+		sleep 1
+		ipmitool raw 0x30 0x87 1>>/dev/null 2>>/dev/null
+	else
+		pmon_status_check
+		if [ $? -eq 1 ]; then
+			while [ $(docker exec pmon bash -c 'if [ -e /tmp/pause_eeprom_polling ]; then echo 1; else echo 0; fi') == '1' ]; do
+				sleep 0.1;
+			done
+		fi
+		mux_addr=$(((0x70 + $1 - 2) * 2))
+		chan=$((1 << $2))
+		addr_8b=$(echo $(($3)) | awk '{printf $1}')
+		addr_8b=`expr $addr_8b \\* 2`
+		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 $chan  1>>/dev/null 2>>/dev/null
+		ipmitool raw 0x30 0x25 0x1 $addr_8b 0x0 $4 $5  1>>/dev/null 2>>/dev/null
+		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
+	fi
+}
+
+#$1=mux $2=channel $3=dev_addr, $4=reg, $5=len
+bmc_read()
+{
+	if [ $board_ver == 1 ]; then
+		addr_8b=$(echo $(($3)) | awk '{printf $1}')
+		addr_8b=`expr $addr_8b \\* 2`
+		ipmitool raw 0x30 0x86 $1 $2 $addr_8b $5 $4 1>>/dev/null 2>>/dev/null
+		sleep 1
+		val=$(ipmitool raw 0x30 0x87 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$val
+			return 1
+		else
+			return 0
+		fi
+	else
+		mux_addr=$(((0x70 + $1 - 2) * 2))
+		chan=$((1 << $2))
+		addr_8b=$(echo $(($3)) | awk '{printf $1}')
+		addr_8b=`expr $addr_8b \\* 2`
+		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 $chan  1>>/dev/null 2>>/dev/null
+		val=$(ipmitool raw 0x30 0x25 0x1 $addr_8b $5 $4 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$val
+			ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
+			return 1
+		else
+			ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
+			return 0
+		fi
+	fi
+}
+
+
+bmc_dump()
+{
+	err=0
+	mux_addr=$(((0x70 + $1 - 2) * 2))
+	chan=$((1 << $2))
+	ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 $chan  1>>/dev/null 2>>/dev/null
+
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x0  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x0 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result1=$val
+	else
+		err=1
+	fi
+
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result2=$val
+	else
+		err=1
+	fi
+
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x1  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result3=$val
+	else
+		err=1
+	fi
+
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x2  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result4=$val
+	else
+		err=1
+	fi
+
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x3  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result5=$val
+	else
+		err=1
+	fi
+
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x10  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result6=$val
+	else
+		err=1
+	fi
+
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x11  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result7=$val
+	else
+		err=1
+	fi
+
+
+	ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
+
+	if [ $err -eq 0 ];then
+		return 1
+	else
+		return 0
+	fi
+}
+
+bmc_update_dynamic()
+{
+	local port=$1
+	i2cmux_dev=0
+	i2cmux_dev=`expr $port / 8`
+	i2cmux_dev=`expr $i2cmux_dev + 2`
+	ch=`expr $port % 8`
+
+	if [ ${port_sfp_type[$port]} -eq 17 ]; then
+		err=0
+		mux_addr=$(((0x70 + $i2cmux_dev - 2) * 2))
+		chan=$((1 << $ch))
+		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 $chan  1>>/dev/null 2>>/dev/null
+
+		ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x0  1>>/dev/null 2>>/dev/null
+
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 0x3 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$(echo $val | awk '{printf $1}')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/rx_los"
+			result=$( printf "%d" 0x$result )
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 0x4 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$(echo $val | awk '{printf $1}')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/tx_fault"
+			result=$( printf "%d" 0x$result )
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 0x56 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$(echo $val | awk '{printf $1}')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/disable"
+			result=$( printf "%d" 0x$result )
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x24 0x16 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$val
+			result=$(echo $result | sed 's/[[:space:]]//g')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/qsfp_dom_bulk"
+			result=$(echo $result | sed -e 's/ //g')
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
+
+		if [ $err -eq 0 ];then
+			return 1
+		else
+			return 0
+		fi
+
+	elif [ ${port_sfp_type[$port]} -eq 24 ]; then
+		err=0
+		mux_addr=$(((0x70 + $i2cmux_dev - 2) * 2))
+		chan=$((1 << $ch))
+		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 $chan  1>>/dev/null 2>>/dev/null
+
+		ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x0  1>>/dev/null 2>>/dev/null
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x2 0xe 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$val
+			result=$(echo $result | sed 's/[[:space:]]//g')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/tempe"
+			result=$(echo $result | sed -e 's/ //g')
+			echo $result > $result_path
+		else
+			err=1
+		fi
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x2 0x10 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$val
+			result=$(echo $result | sed 's/[[:space:]]//g')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/volte"
+			result=$(echo $result | sed -e 's/ //g')
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x10  1>>/dev/null 2>>/dev/null
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 0x82 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$(echo $val | awk '{printf $1}')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/disable"
+			result=$( printf "%d" 0x$result )
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x11  1>>/dev/null 2>>/dev/null
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 0x87 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$(echo $val | awk '{printf $1}')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/tx_fault"
+			result=$( printf "%d" 0x$result )
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 0x93 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$(echo $val | awk '{printf $1}')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/rx_los"
+			result=$( printf "%d" 0x$result )
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x30 0x9a 2>>/dev/null)
+		if [ $? -eq 0 ];then
+			result=$val
+			result=$(echo $result | sed 's/[[:space:]]//g')
+			result_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/qsfp_dd_chan_mon"
+			result=$(echo $result | sed -e 's/ //g')
+			echo $result > $result_path
+		else
+			err=1
+		fi
+
+		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
+
+		if [ $err -eq 0 ];then
+			return 1
+		else
+			return 0
+		fi
+	fi
+}
+
+#$1=port_no
+bmc_qsfp_eeprom_read()
+{
+	local port=$1
+	local eeprom_part1
+	local eeprom_part2
+	local eeprom_part3
+	local eeprom_part4
+	local eeprom_part5
+	local eeprom_part6
+	local eeprom_part7
+	local eeprom1_full
+	local eeprom2_full
+	local eeprom3_full
+
+	port=`expr $port - 1`
+	i2cmux_dev=0
+	i2cmux_dev=`expr $port / 8`
+	i2cmux_dev=`expr $i2cmux_dev + 2`
+	ch=`expr $port % 8`
+	if [ ${port_init[$port]} -eq 0 ]; then
+		if [ $board_ver == 1 ]; then
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x00
+			bmc_read $i2cmux_dev $ch 0x50 0 128
+			if [ $? -eq 1 ];then
+				eeprom_part1=$result
+			else
+				return 1
+			fi
+
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part2=$result
+			else
+				return 1
+			fi
+
+			#QSFP-DD page1
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x01
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part3=$result
+			else
+				return 1
+			fi
+
+			#QSFP-DD page2
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x2
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part4=$result
+			else
+				return 1
+			fi
+
+			#QSFP-DD page3
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x3
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part5=$result
+			else
+				return 1
+			fi
+
+			#QSFP-DD page10
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x10
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part6=$result
+			else
+				return 1
+			fi
+
+			#QSFP-DD page11
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x11
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part7=$result
+			else
+				return 1
+			fi
+		else
+			#pmon_status_check
+			#if [ $? -eq 1 ]; then
+			#	while [ $(docker exec pmon bash -c 'if [ -e /tmp/pause_eeprom_polling ]; then echo 1; else echo 0; fi') == '1' ]; do
+			#		sleep 0.1;
+			#	done
+			#fi
+
+			bmc_dump $i2cmux_dev $ch
+			if [ $? -eq 1 ];then
+				eeprom_part1=$result1
+				eeprom_part2=$result2
+				eeprom_part3=$result3
+				eeprom_part4=$result4
+				eeprom_part5=$result5
+				eeprom_part6=$result6
+				eeprom_part7=$result7
+			else
+				return 1
+			fi
+		fi
+	fi
+
+	if [ ${port_init[$port]} -eq 1 ]; then
+
+		eeprom1_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom1"
+		check=$(od -An -tx1 -w1 -v $eeprom1_path | head -n 1)
+		if [ $check != '00' ] && [ $check != 'ff' ] ; then
+			if [ -e /tmp/plugin_module_event ]; then
+				return
+			fi
+
+			bmc_update_dynamic $port
+			if [ $? -eq 0 ];then
+				return 1
+			fi
+		else
+			port_init[$port]=0
+		fi
+	fi
+
+
+	if [ ${port_init[$port]} -eq 0 ]; then
+		sfp_type=$(echo $eeprom_part1 | awk '{printf $1}')
+		byte_hex_test $sfp_type
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		sfp_type=$( printf "%d" 0x$sfp_type )
+		port_sfp_type[$((i - 1))]=$sfp_type
+		#get temperature
+		if [ $sfp_type -eq 24 ];then
+			temp=$(echo $eeprom_part1 | awk '{printf $15}')
+			if [ $temp != "" ];then
+				temp=$( printf "%d" 0x$temp )
+				temp_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/temp"
+				echo $temp > $temp_path
+			fi
+		elif [ $sfp_type -eq 17 ];then
+			temp=$(echo $eeprom_part1 | awk '{printf $23}')
+			if [ $temp != "" ];then
+				temp=$( printf "%d" 0x$temp )
+				temp_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/temp"
+				echo $temp > $temp_path
+			fi
+		fi
+
+		#get lp_mode
+		lpmod_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/lp_mode"
+		if [ $sfp_type -eq 24 ];then
+			lpmod=$(echo $eeprom_part1 | awk '{printf $27}')
+			if [ $lpmod != "" ];then
+				state=$((lpmod&0x10))
+				if [ $state -eq 16 ];then
+					echo 1 > $lpmod_path
+				else
+					echo 0 > $lpmod_path
+				fi
+			fi
+		elif [ $sfp_type -eq 17 ];then
+			lpmod=$(echo $eeprom_part1 | awk '{printf $93}')
+			if [ $lpmod != "" ];then
+				state=$((lpmod&0x02))
+				if [ $state -eq 2 ];then
+					echo 1 > $lpmod_path
+				else
+					echo 0 > $lpmod_path
+				fi
+			fi
+		else
+			lpmod=""
+		fi
+
+		eeprom1_full=$eeprom_part1$eeprom_part2
+		eeprom1_full=$(echo $eeprom1_full | sed 's/[[:space:]]//g')
+		eeprom2_full=$eeprom_part3$eeprom_part4
+		eeprom2_full=$(echo $eeprom2_full | sed 's/[[:space:]]//g')
+		eeprom3_full=$eeprom_part5$eeprom_part6$eeprom_part7
+		eeprom3_full=$(echo $eeprom3_full | sed 's/[[:space:]]//g')
+
+		if [ $debug_flag -eq 0 ];then
+			eeprom1_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom1"
+			eeprom1_full=$(echo $eeprom1_full | sed -e 's/ //g')
+			echo $eeprom1_full > $eeprom1_path
+			eeprom2_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom2"
+			eeprom2_full=$(echo $eeprom2_full | sed -e 's/ //g')
+			echo $eeprom2_full > $eeprom2_path
+			eeprom3_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom3"
+			eeprom3_full=$(echo $eeprom3_full | sed -e 's/ //g')
+			echo $eeprom3_full > $eeprom3_path
+		else
+			printf "\nPort %d EEPROM:" $1
+			printf "\n-----------------------------------------------\n"
+			for i in $(seq 1 256);
+			do
+				printf "%s " ${eeprom1_full:0:2}
+				eeprom1_full=$(echo $eeprom1_full | sed 's/^..//')
+
+				val=`expr $i % 16`
+				if [ $val -eq 0 ];then
+					printf "\n"
+				fi
+			done
+			printf "\n-----------------------------------------------\n"
+		fi
+
+		if [ $board_ver == 0 ]; then
+			port_init[$port]=1
+			if [ $port -lt 16 ];then
+				cpld_path="/sys/bus/i2c/devices/0-0006/"
+			else
+				cpld_path="/sys/bus/i2c/devices/0-0007/"
+			fi
+			echo 1 > $cpld_path"port"$((port + 1))"_data_rdy"
+		fi
+	fi
+
+	return 0
+}
+
+TRANSCEIVER_DATA_READ()
+{
+	first_detect=0
+	loop_after_plugin=0
+
+	while true
+	do
+		if [ -e /sys/bus/i2c/devices/0-0006/port1_present ] && [ -e /sys/bus/i2c/devices/0-0007/port32_present ] && [ -e /sys/bus/i2c/devices/0-002f/eeprom1 ];then
+			if [ $first_detect == 0 ]; then
+				ipmitool raw 0x30 0x25 0x1 0xe0 0x0 0x0  1>>/dev/null 2>>/dev/null
+				ipmitool raw 0x30 0x25 0x1 0xe2 0x0 0x0  1>>/dev/null 2>>/dev/null
+				ipmitool raw 0x30 0x25 0x1 0xe4 0x0 0x0  1>>/dev/null 2>>/dev/null
+				ipmitool raw 0x30 0x25 0x1 0xe6 0x0 0x0  1>>/dev/null 2>>/dev/null
+			fi
+			for i in $(seq 1 32);
+			do
+				if [ $i -le 16 ];then
+					cpld_path="/sys/bus/i2c/devices/0-0006/"
+				else
+					cpld_path="/sys/bus/i2c/devices/0-0007/"
+				fi
+
+				pre=$(cat $cpld_path"port"$i"_present")
+				if [ $pre == 1 ]; then
+					bmc_qsfp_eeprom_read $i
+					if [ $first_detect == 0 ]; then
+						first_detect=1
+					fi
+				else
+					port_init[$((i - 1))]=0
+					port_sfp_type[$((i - 1))]=0
+				fi
+			done
+
+			if [ $first_detect == 1 ]; then
+				touch /tmp/eeprom_init_done
+			fi
+
+			if [ -e /tmp/plugin_module_event ]; then
+				loop_after_plugin=$((loop_after_plugin + 1))
+
+				if [ $loop_after_plugin -gt 2 ]; then
+					rm /tmp/plugin_module_event
+					loop_after_plugin=0
+				fi
+			fi
+
+			pmon_status_check
+			if [ $? -eq 1 ]; then
+				if [ $first_detect == 1 ]; then
+					docker exec pmon bash -c 'echo "" > /tmp/eeprom_init_done'
+				fi
+			else
+				first_detect=0
+			fi
+
+			sleep 1;
+		fi
+	done
+}
+
+TRANSCEIVER_DATA_READ

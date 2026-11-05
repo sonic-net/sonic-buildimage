@@ -1935,10 +1935,10 @@ int linux_dal_pcie_probe(struct pci_dev* pdev, const struct pci_device_id* id)
                pdev->vendor, pdev->device);
     }
 
-    ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(64));
+    ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
     if (ret)
     {
-        ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(32));
+    	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
         if (ret)
         {
             printk("Could not set PCI DMA Mask\n");

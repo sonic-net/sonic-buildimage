@@ -35,7 +35,9 @@ class InterfaceMgr(Manager):
             data["interface"] = interface_name
             data["prefixlen"] = str(network.prefixlen)
             ip = str(network.ip)
-            self.directory.put("LOCAL", "local_addresses", ip, data)
+            # Use interface_name|ip as composite key to avoid collisions
+            # when the same IP exists on different interfaces in different VRFs
+            self.directory.put("LOCAL", "local_addresses", interface_name + "|" + ip, data)
         self.directory.put(self.db_name, self.table_name, key, data)
         self.directory.put("LOCAL", "interfaces", key, data)
         return True
@@ -51,6 +53,6 @@ class InterfaceMgr(Manager):
                 log_warn("Subnet '%s' format is wrong for interface '%s'" % (network, interface))
                 return
             ip = str(network.ip)
-            self.directory.remove("LOCAL", "local_addresses", ip)
+            self.directory.remove("LOCAL", "local_addresses", interface + "|" + ip)
         self.directory.remove(self.db_name, self.table_name, key)
         self.directory.remove("LOCAL", "interfaces", key)

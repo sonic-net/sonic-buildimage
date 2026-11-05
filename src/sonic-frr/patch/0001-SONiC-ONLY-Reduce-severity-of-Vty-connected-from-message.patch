@@ -1,0 +1,26 @@
+From 24cfb3affffd3390acec3bd4d1eacdffea1ba004 Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Mon, 16 Nov 2020 18:11:47 -0800
+Subject: [PATCH] lib: reduce VTY connection log severity
+
+Keep routine management connections out of informational logs in SONiC.
+
+Original-SONiC-Patch: 0001-SONiC-ONLY-Reduce-severity-of-Vty-connected-from-message.patch
+Original-Commit: 15274a197e4d3b7ac0f11ca63a5274f1168739f5
+---
+ lib/vty.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/vty.c b/lib/vty.c
+index 7b4d04efd2..3932f35a2a 100644
+--- a/lib/vty.c
++++ b/lib/vty.c
+@@ -1926,7 +1926,7 @@ static void vty_accept(struct event *event)
+ 		zlog_info("can't set sockopt to vty_sock : %s",
+ 			  safe_strerror(errno));
+ 
+-	zlog_info("Vty connection from %pSU", &su);
++	zlog_debug("Vty connection from %pSU", &su);
+ 
+ 	vty_create(vty_sock, &su);
+ }

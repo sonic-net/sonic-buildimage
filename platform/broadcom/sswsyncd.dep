@@ -1,0 +1,8 @@
+#DPKG FRK
+DPATH       := $(PLATFORM_PATH)/sswsyncd
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/sswsyncd.mk
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(SSWSYNCD)_CACHE_MODE  := GIT_CONTENT_SHA
+$(SSWSYNCD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SSWSYNCD)_DEP_FILES   := $(DEP_FILES)

@@ -1,7 +1,8 @@
 {
     "constants": {
         "bgp": {
-            "traffic_shift_community": "12345:555"
+            "traffic_shift_community": "12345:555",
+            "internal_community_match_tag": "1002"
         }
     },
     "route_map_name": "test_rm_name",

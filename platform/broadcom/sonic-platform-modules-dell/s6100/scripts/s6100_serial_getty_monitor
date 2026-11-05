@@ -1,4 +1,5 @@
 #Dell S6100 serial getty monitor
-check process serial-getty matching "ttyS"
+check program serial-getty with path /usr/local/bin/check-getty.sh
 start program = "/bin/systemctl start serial-getty@ttyS1.service"
 stop program = "/bin/systemctl stop serial-getty@ttyS1.service"
+if status != 0 then restart

@@ -5,10 +5,6 @@ module sonic-device_neighbor_metadata {
     namespace "http://github.com/sonic-net/sonic-device_neighbor_metadata";
     prefix device_neighbor_metadata;
 
-    import ietf-yang-types {
-        prefix yang;
-    }
-
     import ietf-inet-types {
         prefix inet;
     }
@@ -27,7 +23,7 @@ module sonic-device_neighbor_metadata {
 
         container DEVICE_NEIGHBOR_METADATA {
 
-            description "DEVICE_NEIGHBOR_METADATA part of config_db.json";
+            description "Metadata about neighbor devices including HWSKU, type, and management addresses";
 
             list DEVICE_NEIGHBOR_METADATA_LIST {
 
@@ -40,7 +36,13 @@ module sonic-device_neighbor_metadata {
                     }
                 }
 
+                leaf cluster {
+                    description "The switch is a member of this cluster";
+                    type string;
+                }
+
                 leaf hwsku {
+                    description "Hardware SKU of the neighbor device";
                     type stypes:hwsku;
                 }
 
@@ -82,14 +84,24 @@ module sonic-device_neighbor_metadata {
 
                 leaf type {
                     description "Network element type";
-                    type string {
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|Asic|Supervior|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|Server|MiniPower|SmartCable|Ixia|not-provisioned";
-                    }
+                    type string;
                 }
 
                 leaf deployment_id {
+                    description "Deployment identifier for the neighbor device";
                     type uint32;
                 }
+
+                leaf slice_type {
+                    description "Metadata tag for the device.";
+                    type string;
+                }
+
+                leaf resource_type {
+                    description "Resource type of the neighbor device (e.g., Storage, Compute).";
+                    type string;
+                }
+
             }
             /* end of list DEVICE_NEIGHBOR_METADATA_LIST */
         }

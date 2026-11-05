@@ -1,0 +1,48 @@
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for i in range(0, 12) %}
+        {%- for j in range(0, 8) %}
+            {%- if PORT_ALL.append("Ethernet%d" % (i * 8 + j)) %}{%- endif %}
+        {%- endfor %}
+    {%- endfor %}
+
+    {%- if PORT_ALL.append("Ethernet96") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet100") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet104") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet108") %}{%- endif %}
+
+    {%- for j in range(0, 8) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (14 * 8 + j)) %}{%- endif %}
+    {%- endfor %}
+
+    {%- if PORT_ALL.append("Ethernet128") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet132") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet136") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet140") %}{%- endif %}
+
+    {%- for i in range(18, 44) %}
+        {%- for j in range(0, 8) %}
+            {%- if PORT_ALL.append("Ethernet%d" % (i * 8 + j)) %}{%- endif %}
+        {%- endfor %}
+    {%- endfor %}
+
+    {%- if PORT_ALL.append("Ethernet352") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet356") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet360") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet364") %}{%- endif %}
+
+    {%- for j in range(0, 8) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (46 * 8 + j)) %}{%- endif %}
+    {%- endfor %}
+
+    {%- if PORT_ALL.append("Ethernet384") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet388") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet392") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet396") %}{%- endif %}
+
+    {%- for i in range(50, 64) %}
+        {%- for j in range(0, 8) %}
+            {%- if PORT_ALL.append("Ethernet%d" % (i * 8 + j)) %}{%- endif %}
+        {%- endfor %}
+    {%- endfor %}
+{%- endmacro %}

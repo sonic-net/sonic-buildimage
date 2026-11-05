@@ -1,0 +1,9 @@
+{
+    "constants": {
+        "bgp": {
+            "traffic_shift_community": "12345:555",
+            "internal_community_match_tag": "1002"
+        }
+    },
+    "isolation_status": "isolated_no_export"
+}

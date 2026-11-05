@@ -1,0 +1,63 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "sonic-host",
+            "subtype": "SmartSwitch"
+        }
+    },
+    "MID_PLANE_BRIDGE": {
+        "GLOBAL": {
+            "bridge": "bridge-midplane",
+            "ip_prefix": "169.254.200.254/24"
+        }
+    },
+    "DHCP_SERVER_IPV4": {
+        "bridge-midplane": {
+            "customized_options": [
+                "option60",
+                "option223"
+            ],
+            "gateway": "169.254.200.254",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
+        }
+    },
+    "DHCP_SERVER_IPV4_PORT": {
+        "bridge-midplane|dpu0": {
+            "ips": [
+                "169.254.200.1"
+            ]
+        },
+        "bridge-midplane|dpu1": {
+            "ips": [
+                "169.254.200.2"
+            ]
+        },
+        "bridge-midplane|dpu2": {
+            "ips": [
+                "169.254.200.3"
+            ]
+        },
+        "bridge-midplane|dpu3": {
+            "ips": [
+                "169.254.200.4"
+            ]
+        }
+    },
+    "DPUS": {
+        "dpu0": {
+            "midplane_interface": "dpu0"
+        },
+        "dpu1": {
+            "midplane_interface": "dpu1"
+        },
+        "dpu2": {
+            "midplane_interface": "dpu2"
+        },
+        "dpu3": {
+            "midplane_interface": "dpu3"
+        }
+    }
+}

@@ -12,9 +12,11 @@ $(SONIC_UTILITIES_PY3)_DEPENDS += $(SONIC_PY_COMMON_PY3) \
                                   $(SONIC_PLATFORM_COMMON_PY3) \
                                   $(SONIC_YANG_MGMT_PY3) \
                                   $(SONIC_YANG_MODELS_PY3)
-$(SONIC_UTILITIES_PY3)_DEBS_DEPENDS = $(LIBYANG) \
-                                      $(LIBYANG_CPP) \
-                                      $(LIBYANG_PY3) \
+$(SONIC_UTILITIES_PY3)_DEBS_DEPENDS = $(LIBYANG3) \
+                                      $(LIBYANG3_PY3) \
                                       $(LIBSWSSCOMMON) \
                                       $(PYTHON3_SWSSCOMMON)
+ifeq ($(CONFIGURED_PLATFORM),nvidia-bluefield)
+$(SONIC_UTILITIES_PY3)_DEBS_DEPENDS += $(LIB_SONIC_DASH_API)
+endif
 SONIC_PYTHON_WHEELS += $(SONIC_UTILITIES_PY3)

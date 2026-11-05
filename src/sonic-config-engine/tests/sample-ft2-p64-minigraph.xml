@@ -1,0 +1,4426 @@
+<DeviceMiniGraph xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <CpgDec>
+    <IsisRouters xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    <PeeringSessions>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.0</StartPeer>
+        <EndRouter>ARISTA01LT2</EndRouter>
+        <EndPeer>10.0.0.1</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::1</StartPeer>
+        <EndRouter>ARISTA01LT2</EndRouter>
+        <EndPeer>FC00::2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.2</StartPeer>
+        <EndRouter>ARISTA02LT2</EndRouter>
+        <EndPeer>10.0.0.3</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::5</StartPeer>
+        <EndRouter>ARISTA02LT2</EndRouter>
+        <EndPeer>FC00::6</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.4</StartPeer>
+        <EndRouter>ARISTA03LT2</EndRouter>
+        <EndPeer>10.0.0.5</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::9</StartPeer>
+        <EndRouter>ARISTA03LT2</EndRouter>
+        <EndPeer>FC00::A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.6</StartPeer>
+        <EndRouter>ARISTA04LT2</EndRouter>
+        <EndPeer>10.0.0.7</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::D</StartPeer>
+        <EndRouter>ARISTA04LT2</EndRouter>
+        <EndPeer>FC00::E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.8</StartPeer>
+        <EndRouter>ARISTA05LT2</EndRouter>
+        <EndPeer>10.0.0.9</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::11</StartPeer>
+        <EndRouter>ARISTA05LT2</EndRouter>
+        <EndPeer>FC00::12</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.10</StartPeer>
+        <EndRouter>ARISTA06LT2</EndRouter>
+        <EndPeer>10.0.0.11</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::15</StartPeer>
+        <EndRouter>ARISTA06LT2</EndRouter>
+        <EndPeer>FC00::16</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.12</StartPeer>
+        <EndRouter>ARISTA07LT2</EndRouter>
+        <EndPeer>10.0.0.13</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::19</StartPeer>
+        <EndRouter>ARISTA07LT2</EndRouter>
+        <EndPeer>FC00::1A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.14</StartPeer>
+        <EndRouter>ARISTA08LT2</EndRouter>
+        <EndPeer>10.0.0.15</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::1D</StartPeer>
+        <EndRouter>ARISTA08LT2</EndRouter>
+        <EndPeer>FC00::1E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.16</StartPeer>
+        <EndRouter>ARISTA09LT2</EndRouter>
+        <EndPeer>10.0.0.17</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::21</StartPeer>
+        <EndRouter>ARISTA09LT2</EndRouter>
+        <EndPeer>FC00::22</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.18</StartPeer>
+        <EndRouter>ARISTA10LT2</EndRouter>
+        <EndPeer>10.0.0.19</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::25</StartPeer>
+        <EndRouter>ARISTA10LT2</EndRouter>
+        <EndPeer>FC00::26</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.20</StartPeer>
+        <EndRouter>ARISTA11LT2</EndRouter>
+        <EndPeer>10.0.0.21</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::29</StartPeer>
+        <EndRouter>ARISTA11LT2</EndRouter>
+        <EndPeer>FC00::2A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.22</StartPeer>
+        <EndRouter>ARISTA12LT2</EndRouter>
+        <EndPeer>10.0.0.23</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::2D</StartPeer>
+        <EndRouter>ARISTA12LT2</EndRouter>
+        <EndPeer>FC00::2E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.24</StartPeer>
+        <EndRouter>ARISTA13LT2</EndRouter>
+        <EndPeer>10.0.0.25</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::31</StartPeer>
+        <EndRouter>ARISTA13LT2</EndRouter>
+        <EndPeer>FC00::32</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.26</StartPeer>
+        <EndRouter>ARISTA14LT2</EndRouter>
+        <EndPeer>10.0.0.27</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::35</StartPeer>
+        <EndRouter>ARISTA14LT2</EndRouter>
+        <EndPeer>FC00::36</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.28</StartPeer>
+        <EndRouter>ARISTA15LT2</EndRouter>
+        <EndPeer>10.0.0.29</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::39</StartPeer>
+        <EndRouter>ARISTA15LT2</EndRouter>
+        <EndPeer>FC00::3A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.30</StartPeer>
+        <EndRouter>ARISTA16LT2</EndRouter>
+        <EndPeer>10.0.0.31</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::3D</StartPeer>
+        <EndRouter>ARISTA16LT2</EndRouter>
+        <EndPeer>FC00::3E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.32</StartPeer>
+        <EndRouter>ARISTA17LT2</EndRouter>
+        <EndPeer>10.0.0.33</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::41</StartPeer>
+        <EndRouter>ARISTA17LT2</EndRouter>
+        <EndPeer>FC00::42</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.34</StartPeer>
+        <EndRouter>ARISTA18LT2</EndRouter>
+        <EndPeer>10.0.0.35</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::45</StartPeer>
+        <EndRouter>ARISTA18LT2</EndRouter>
+        <EndPeer>FC00::46</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.36</StartPeer>
+        <EndRouter>ARISTA19LT2</EndRouter>
+        <EndPeer>10.0.0.37</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::49</StartPeer>
+        <EndRouter>ARISTA19LT2</EndRouter>
+        <EndPeer>FC00::4A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.38</StartPeer>
+        <EndRouter>ARISTA20LT2</EndRouter>
+        <EndPeer>10.0.0.39</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::4D</StartPeer>
+        <EndRouter>ARISTA20LT2</EndRouter>
+        <EndPeer>FC00::4E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.40</StartPeer>
+        <EndRouter>ARISTA21LT2</EndRouter>
+        <EndPeer>10.0.0.41</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::51</StartPeer>
+        <EndRouter>ARISTA21LT2</EndRouter>
+        <EndPeer>FC00::52</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.42</StartPeer>
+        <EndRouter>ARISTA22LT2</EndRouter>
+        <EndPeer>10.0.0.43</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::55</StartPeer>
+        <EndRouter>ARISTA22LT2</EndRouter>
+        <EndPeer>FC00::56</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.44</StartPeer>
+        <EndRouter>ARISTA23LT2</EndRouter>
+        <EndPeer>10.0.0.45</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::59</StartPeer>
+        <EndRouter>ARISTA23LT2</EndRouter>
+        <EndPeer>FC00::5A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.46</StartPeer>
+        <EndRouter>ARISTA24LT2</EndRouter>
+        <EndPeer>10.0.0.47</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::5D</StartPeer>
+        <EndRouter>ARISTA24LT2</EndRouter>
+        <EndPeer>FC00::5E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.48</StartPeer>
+        <EndRouter>ARISTA25LT2</EndRouter>
+        <EndPeer>10.0.0.49</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::61</StartPeer>
+        <EndRouter>ARISTA25LT2</EndRouter>
+        <EndPeer>FC00::62</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.50</StartPeer>
+        <EndRouter>ARISTA26LT2</EndRouter>
+        <EndPeer>10.0.0.51</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::65</StartPeer>
+        <EndRouter>ARISTA26LT2</EndRouter>
+        <EndPeer>FC00::66</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.52</StartPeer>
+        <EndRouter>ARISTA27LT2</EndRouter>
+        <EndPeer>10.0.0.53</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::69</StartPeer>
+        <EndRouter>ARISTA27LT2</EndRouter>
+        <EndPeer>FC00::6A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.54</StartPeer>
+        <EndRouter>ARISTA28LT2</EndRouter>
+        <EndPeer>10.0.0.55</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::6D</StartPeer>
+        <EndRouter>ARISTA28LT2</EndRouter>
+        <EndPeer>FC00::6E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.56</StartPeer>
+        <EndRouter>ARISTA29LT2</EndRouter>
+        <EndPeer>10.0.0.57</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::71</StartPeer>
+        <EndRouter>ARISTA29LT2</EndRouter>
+        <EndPeer>FC00::72</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.58</StartPeer>
+        <EndRouter>ARISTA30LT2</EndRouter>
+        <EndPeer>10.0.0.59</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::75</StartPeer>
+        <EndRouter>ARISTA30LT2</EndRouter>
+        <EndPeer>FC00::76</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.60</StartPeer>
+        <EndRouter>ARISTA31LT2</EndRouter>
+        <EndPeer>10.0.0.61</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::79</StartPeer>
+        <EndRouter>ARISTA31LT2</EndRouter>
+        <EndPeer>FC00::7A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.62</StartPeer>
+        <EndRouter>ARISTA32LT2</EndRouter>
+        <EndPeer>10.0.0.63</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::7D</StartPeer>
+        <EndRouter>ARISTA32LT2</EndRouter>
+        <EndPeer>FC00::7E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.64</StartPeer>
+        <EndRouter>ARISTA33LT2</EndRouter>
+        <EndPeer>10.0.0.65</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::81</StartPeer>
+        <EndRouter>ARISTA33LT2</EndRouter>
+        <EndPeer>FC00::82</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.66</StartPeer>
+        <EndRouter>ARISTA34LT2</EndRouter>
+        <EndPeer>10.0.0.67</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::85</StartPeer>
+        <EndRouter>ARISTA34LT2</EndRouter>
+        <EndPeer>FC00::86</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.68</StartPeer>
+        <EndRouter>ARISTA35LT2</EndRouter>
+        <EndPeer>10.0.0.69</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::89</StartPeer>
+        <EndRouter>ARISTA35LT2</EndRouter>
+        <EndPeer>FC00::8A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.70</StartPeer>
+        <EndRouter>ARISTA36LT2</EndRouter>
+        <EndPeer>10.0.0.71</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::8D</StartPeer>
+        <EndRouter>ARISTA36LT2</EndRouter>
+        <EndPeer>FC00::8E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.72</StartPeer>
+        <EndRouter>ARISTA37LT2</EndRouter>
+        <EndPeer>10.0.0.73</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::91</StartPeer>
+        <EndRouter>ARISTA37LT2</EndRouter>
+        <EndPeer>FC00::92</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.74</StartPeer>
+        <EndRouter>ARISTA38LT2</EndRouter>
+        <EndPeer>10.0.0.75</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::95</StartPeer>
+        <EndRouter>ARISTA38LT2</EndRouter>
+        <EndPeer>FC00::96</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.76</StartPeer>
+        <EndRouter>ARISTA39LT2</EndRouter>
+        <EndPeer>10.0.0.77</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::99</StartPeer>
+        <EndRouter>ARISTA39LT2</EndRouter>
+        <EndPeer>FC00::9A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.78</StartPeer>
+        <EndRouter>ARISTA40LT2</EndRouter>
+        <EndPeer>10.0.0.79</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::9D</StartPeer>
+        <EndRouter>ARISTA40LT2</EndRouter>
+        <EndPeer>FC00::9E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.80</StartPeer>
+        <EndRouter>ARISTA41LT2</EndRouter>
+        <EndPeer>10.0.0.81</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::A1</StartPeer>
+        <EndRouter>ARISTA41LT2</EndRouter>
+        <EndPeer>FC00::A2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.82</StartPeer>
+        <EndRouter>ARISTA42LT2</EndRouter>
+        <EndPeer>10.0.0.83</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::A5</StartPeer>
+        <EndRouter>ARISTA42LT2</EndRouter>
+        <EndPeer>FC00::A6</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.84</StartPeer>
+        <EndRouter>ARISTA43LT2</EndRouter>
+        <EndPeer>10.0.0.85</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::A9</StartPeer>
+        <EndRouter>ARISTA43LT2</EndRouter>
+        <EndPeer>FC00::AA</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.86</StartPeer>
+        <EndRouter>ARISTA44LT2</EndRouter>
+        <EndPeer>10.0.0.87</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::AD</StartPeer>
+        <EndRouter>ARISTA44LT2</EndRouter>
+        <EndPeer>FC00::AE</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.88</StartPeer>
+        <EndRouter>ARISTA45LT2</EndRouter>
+        <EndPeer>10.0.0.89</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::B1</StartPeer>
+        <EndRouter>ARISTA45LT2</EndRouter>
+        <EndPeer>FC00::B2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.90</StartPeer>
+        <EndRouter>ARISTA46LT2</EndRouter>
+        <EndPeer>10.0.0.91</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::B5</StartPeer>
+        <EndRouter>ARISTA46LT2</EndRouter>
+        <EndPeer>FC00::B6</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.92</StartPeer>
+        <EndRouter>ARISTA47LT2</EndRouter>
+        <EndPeer>10.0.0.93</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::B9</StartPeer>
+        <EndRouter>ARISTA47LT2</EndRouter>
+        <EndPeer>FC00::BA</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.94</StartPeer>
+        <EndRouter>ARISTA48LT2</EndRouter>
+        <EndPeer>10.0.0.95</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::BD</StartPeer>
+        <EndRouter>ARISTA48LT2</EndRouter>
+        <EndPeer>FC00::BE</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.96</StartPeer>
+        <EndRouter>ARISTA49LT2</EndRouter>
+        <EndPeer>10.0.0.97</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::C1</StartPeer>
+        <EndRouter>ARISTA49LT2</EndRouter>
+        <EndPeer>FC00::C2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.98</StartPeer>
+        <EndRouter>ARISTA50LT2</EndRouter>
+        <EndPeer>10.0.0.99</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::C5</StartPeer>
+        <EndRouter>ARISTA50LT2</EndRouter>
+        <EndPeer>FC00::C6</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.100</StartPeer>
+        <EndRouter>ARISTA51LT2</EndRouter>
+        <EndPeer>10.0.0.101</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::C9</StartPeer>
+        <EndRouter>ARISTA51LT2</EndRouter>
+        <EndPeer>FC00::CA</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.102</StartPeer>
+        <EndRouter>ARISTA52LT2</EndRouter>
+        <EndPeer>10.0.0.103</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::CD</StartPeer>
+        <EndRouter>ARISTA52LT2</EndRouter>
+        <EndPeer>FC00::CE</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.104</StartPeer>
+        <EndRouter>ARISTA53LT2</EndRouter>
+        <EndPeer>10.0.0.105</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::D1</StartPeer>
+        <EndRouter>ARISTA53LT2</EndRouter>
+        <EndPeer>FC00::D2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.106</StartPeer>
+        <EndRouter>ARISTA54LT2</EndRouter>
+        <EndPeer>10.0.0.107</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::D5</StartPeer>
+        <EndRouter>ARISTA54LT2</EndRouter>
+        <EndPeer>FC00::D6</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.108</StartPeer>
+        <EndRouter>ARISTA55LT2</EndRouter>
+        <EndPeer>10.0.0.109</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::D9</StartPeer>
+        <EndRouter>ARISTA55LT2</EndRouter>
+        <EndPeer>FC00::DA</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.110</StartPeer>
+        <EndRouter>ARISTA56LT2</EndRouter>
+        <EndPeer>10.0.0.111</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::DD</StartPeer>
+        <EndRouter>ARISTA56LT2</EndRouter>
+        <EndPeer>FC00::DE</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.112</StartPeer>
+        <EndRouter>ARISTA57LT2</EndRouter>
+        <EndPeer>10.0.0.113</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::E1</StartPeer>
+        <EndRouter>ARISTA57LT2</EndRouter>
+        <EndPeer>FC00::E2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.114</StartPeer>
+        <EndRouter>ARISTA58LT2</EndRouter>
+        <EndPeer>10.0.0.115</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::E5</StartPeer>
+        <EndRouter>ARISTA58LT2</EndRouter>
+        <EndPeer>FC00::E6</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.116</StartPeer>
+        <EndRouter>ARISTA59LT2</EndRouter>
+        <EndPeer>10.0.0.117</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::E9</StartPeer>
+        <EndRouter>ARISTA59LT2</EndRouter>
+        <EndPeer>FC00::EA</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.118</StartPeer>
+        <EndRouter>ARISTA60LT2</EndRouter>
+        <EndPeer>10.0.0.119</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::ED</StartPeer>
+        <EndRouter>ARISTA60LT2</EndRouter>
+        <EndPeer>FC00::EE</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.120</StartPeer>
+        <EndRouter>ARISTA61LT2</EndRouter>
+        <EndPeer>10.0.0.121</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::F1</StartPeer>
+        <EndRouter>ARISTA61LT2</EndRouter>
+        <EndPeer>FC00::F2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.122</StartPeer>
+        <EndRouter>ARISTA62LT2</EndRouter>
+        <EndPeer>10.0.0.123</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::F5</StartPeer>
+        <EndRouter>ARISTA62LT2</EndRouter>
+        <EndPeer>FC00::F6</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>10.0.0.124</StartPeer>
+        <EndRouter>ARISTA63LT2</EndRouter>
+        <EndPeer>10.0.0.125</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>str4-7060x6-512-4</StartRouter>
+        <StartPeer>FC00::F9</StartPeer>
+        <EndRouter>ARISTA63LT2</EndRouter>
+        <EndPeer>FC00::FA</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+    </PeeringSessions>
+    <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>str4-7060x6-512-4</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <Address>10.0.0.1</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.3</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.5</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.7</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.9</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.11</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.13</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.15</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.17</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.19</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.21</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.23</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.25</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.27</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.29</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.31</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.33</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.35</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.37</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.39</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.41</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.43</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.45</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.47</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.49</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.51</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.53</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.55</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.57</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.59</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.61</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.63</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.65</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.67</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.69</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.71</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.73</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.75</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.77</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.79</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.81</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.83</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.85</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.87</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.89</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.91</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.93</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.95</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.97</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.99</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.101</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.103</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.105</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.107</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.109</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.111</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.113</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.115</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.117</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.119</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.121</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.123</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.125</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA01LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA02LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA03LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA04LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA05LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA06LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA07LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA08LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA09LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA10LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA11LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA12LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA13LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA14LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA15LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA16LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA17LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA18LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA19LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA20LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA21LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA22LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA23LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA24LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA25LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA26LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA27LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA28LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA29LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA30LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA31LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA32LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA33LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA34LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA35LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA36LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA37LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA38LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA39LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA40LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA41LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA42LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA43LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA44LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA45LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA46LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA47LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA48LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA49LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA50LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA51LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA52LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA53LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA54LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA55LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA56LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA57LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA58LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA59LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA60LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA61LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA62LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>4200100000</a:ASN>
+        <a:Hostname>ARISTA63LT2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+    </Routers>
+  </CpgDec>  <DpgDec>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.1.0.32/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.1.0.32/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>HostIP1</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>FC00:1::32/128</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>FC00:1::32/128</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:ManagementIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>100.164.247.163/23</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>100.164.247.163/23</a:PrefixStr>
+        </a:ManagementIPInterface>
+        <a:ManagementIPInterface>
+          <Name>V6HostIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>2aaa:111:e210:b000::a40:f7a3/64</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>2aaa:111:e210:b000::a40:f7a3/64</a:PrefixStr>
+        </a:ManagementIPInterface>
+      </ManagementIPInterfaces>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>str4-7060x6-512-4</Hostname>
+      <PortChannelInterfaces>
+      </PortChannelInterfaces>
+      <VlanInterfaces>
+      </VlanInterfaces>
+      <IPInterfaces>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp1</AttachTo>
+          <Prefix>10.0.0.0/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp1</AttachTo>
+          <Prefix>FC00::1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp2</AttachTo>
+          <Prefix>10.0.0.2/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp2</AttachTo>
+          <Prefix>FC00::5/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp3</AttachTo>
+          <Prefix>10.0.0.4/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp3</AttachTo>
+          <Prefix>FC00::9/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp4</AttachTo>
+          <Prefix>10.0.0.6/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp4</AttachTo>
+          <Prefix>FC00::D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp5</AttachTo>
+          <Prefix>10.0.0.8/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp5</AttachTo>
+          <Prefix>FC00::11/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp6</AttachTo>
+          <Prefix>10.0.0.10/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp6</AttachTo>
+          <Prefix>FC00::15/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp7</AttachTo>
+          <Prefix>10.0.0.12/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp7</AttachTo>
+          <Prefix>FC00::19/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp8</AttachTo>
+          <Prefix>10.0.0.14/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp8</AttachTo>
+          <Prefix>FC00::1D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp9</AttachTo>
+          <Prefix>10.0.0.16/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp9</AttachTo>
+          <Prefix>FC00::21/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp10</AttachTo>
+          <Prefix>10.0.0.18/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp10</AttachTo>
+          <Prefix>FC00::25/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp11</AttachTo>
+          <Prefix>10.0.0.20/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp11</AttachTo>
+          <Prefix>FC00::29/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp12</AttachTo>
+          <Prefix>10.0.0.22/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp12</AttachTo>
+          <Prefix>FC00::2D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp13</AttachTo>
+          <Prefix>10.0.0.24/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp13</AttachTo>
+          <Prefix>FC00::31/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp14</AttachTo>
+          <Prefix>10.0.0.26/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp14</AttachTo>
+          <Prefix>FC00::35/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp15</AttachTo>
+          <Prefix>10.0.0.28/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp15</AttachTo>
+          <Prefix>FC00::39/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp16</AttachTo>
+          <Prefix>10.0.0.30/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp16</AttachTo>
+          <Prefix>FC00::3D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp17</AttachTo>
+          <Prefix>10.0.0.32/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp17</AttachTo>
+          <Prefix>FC00::41/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp18</AttachTo>
+          <Prefix>10.0.0.34/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp18</AttachTo>
+          <Prefix>FC00::45/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp19</AttachTo>
+          <Prefix>10.0.0.36/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp19</AttachTo>
+          <Prefix>FC00::49/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp20</AttachTo>
+          <Prefix>10.0.0.38/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp20</AttachTo>
+          <Prefix>FC00::4D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp21</AttachTo>
+          <Prefix>10.0.0.40/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp21</AttachTo>
+          <Prefix>FC00::51/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp22</AttachTo>
+          <Prefix>10.0.0.42/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp22</AttachTo>
+          <Prefix>FC00::55/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp23</AttachTo>
+          <Prefix>10.0.0.44/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp23</AttachTo>
+          <Prefix>FC00::59/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp24</AttachTo>
+          <Prefix>10.0.0.46/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp24</AttachTo>
+          <Prefix>FC00::5D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp25</AttachTo>
+          <Prefix>10.0.0.48/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp25</AttachTo>
+          <Prefix>FC00::61/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp26</AttachTo>
+          <Prefix>10.0.0.50/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp26</AttachTo>
+          <Prefix>FC00::65/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp27</AttachTo>
+          <Prefix>10.0.0.52/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp27</AttachTo>
+          <Prefix>FC00::69/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp28</AttachTo>
+          <Prefix>10.0.0.54/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp28</AttachTo>
+          <Prefix>FC00::6D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp29</AttachTo>
+          <Prefix>10.0.0.56/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp29</AttachTo>
+          <Prefix>FC00::71/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp30</AttachTo>
+          <Prefix>10.0.0.58/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp30</AttachTo>
+          <Prefix>FC00::75/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp31</AttachTo>
+          <Prefix>10.0.0.60/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp31</AttachTo>
+          <Prefix>FC00::79/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp32</AttachTo>
+          <Prefix>10.0.0.62/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp32</AttachTo>
+          <Prefix>FC00::7D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp33</AttachTo>
+          <Prefix>10.0.0.64/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp33</AttachTo>
+          <Prefix>FC00::81/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp34</AttachTo>
+          <Prefix>10.0.0.66/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp34</AttachTo>
+          <Prefix>FC00::85/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp35</AttachTo>
+          <Prefix>10.0.0.68/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp35</AttachTo>
+          <Prefix>FC00::89/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp36</AttachTo>
+          <Prefix>10.0.0.70/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp36</AttachTo>
+          <Prefix>FC00::8D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp37</AttachTo>
+          <Prefix>10.0.0.72/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp37</AttachTo>
+          <Prefix>FC00::91/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp38</AttachTo>
+          <Prefix>10.0.0.74/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp38</AttachTo>
+          <Prefix>FC00::95/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp39</AttachTo>
+          <Prefix>10.0.0.76/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp39</AttachTo>
+          <Prefix>FC00::99/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp40</AttachTo>
+          <Prefix>10.0.0.78/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp40</AttachTo>
+          <Prefix>FC00::9D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp41</AttachTo>
+          <Prefix>10.0.0.80/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp41</AttachTo>
+          <Prefix>FC00::A1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp42</AttachTo>
+          <Prefix>10.0.0.82/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp42</AttachTo>
+          <Prefix>FC00::A5/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp43</AttachTo>
+          <Prefix>10.0.0.84/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp43</AttachTo>
+          <Prefix>FC00::A9/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp44</AttachTo>
+          <Prefix>10.0.0.86/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp44</AttachTo>
+          <Prefix>FC00::AD/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp45</AttachTo>
+          <Prefix>10.0.0.88/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp45</AttachTo>
+          <Prefix>FC00::B1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp46</AttachTo>
+          <Prefix>10.0.0.90/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp46</AttachTo>
+          <Prefix>FC00::B5/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp47</AttachTo>
+          <Prefix>10.0.0.92/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp47</AttachTo>
+          <Prefix>FC00::B9/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp48</AttachTo>
+          <Prefix>10.0.0.94/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp48</AttachTo>
+          <Prefix>FC00::BD/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp49</AttachTo>
+          <Prefix>10.0.0.96/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp49</AttachTo>
+          <Prefix>FC00::C1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp50</AttachTo>
+          <Prefix>10.0.0.98/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp50</AttachTo>
+          <Prefix>FC00::C5/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp51</AttachTo>
+          <Prefix>10.0.0.100/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp51</AttachTo>
+          <Prefix>FC00::C9/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp52</AttachTo>
+          <Prefix>10.0.0.102/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp52</AttachTo>
+          <Prefix>FC00::CD/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp53</AttachTo>
+          <Prefix>10.0.0.104/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp53</AttachTo>
+          <Prefix>FC00::D1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp54</AttachTo>
+          <Prefix>10.0.0.106/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp54</AttachTo>
+          <Prefix>FC00::D5/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp55</AttachTo>
+          <Prefix>10.0.0.108/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp55</AttachTo>
+          <Prefix>FC00::D9/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp56</AttachTo>
+          <Prefix>10.0.0.110/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp56</AttachTo>
+          <Prefix>FC00::DD/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp57</AttachTo>
+          <Prefix>10.0.0.112/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp57</AttachTo>
+          <Prefix>FC00::E1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp58</AttachTo>
+          <Prefix>10.0.0.114/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp58</AttachTo>
+          <Prefix>FC00::E5/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp59</AttachTo>
+          <Prefix>10.0.0.116/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp59</AttachTo>
+          <Prefix>FC00::E9/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp60</AttachTo>
+          <Prefix>10.0.0.118/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp60</AttachTo>
+          <Prefix>FC00::ED/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp61</AttachTo>
+          <Prefix>10.0.0.120/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp61</AttachTo>
+          <Prefix>FC00::F1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp62</AttachTo>
+          <Prefix>10.0.0.122/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp62</AttachTo>
+          <Prefix>FC00::F5/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>etp63</AttachTo>
+          <Prefix>10.0.0.124/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>etp63</AttachTo>
+          <Prefix>FC00::F9/126</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <AclInterfaces>
+        <AclInterface>
+          <InAcl>NTP_ACL</InAcl>
+          <AttachTo>NTP</AttachTo>
+          <Type>NTP</Type>
+        </AclInterface>
+        <AclInterface>
+          <InAcl>SNMP_ACL</InAcl>
+          <AttachTo>SNMP</AttachTo>
+          <Type>SNMP</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>VTY_LINE</AttachTo>
+          <InAcl>ssh-only</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>ERSPAN</AttachTo>
+          <InAcl>Everflow</InAcl>
+          <Type>Everflow</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>ERSPANV6</AttachTo>
+          <InAcl>EverflowV6</InAcl>
+          <Type>EverflowV6</Type>
+        </AclInterface>
+<AclInterface>
+          <AttachTo>etp1;etp2;etp3;etp4;etp5;etp6;etp7;etp8;etp9;etp10;etp11;etp12;etp13;etp14;etp15;etp16;etp17;etp18;etp19;etp20;etp21;etp22;etp23;etp24;etp25;etp26;etp27;etp28;etp29;etp30;etp31;etp32;etp33;etp34;etp35;etp36;etp37;etp38;etp39;etp40;etp41;etp42;etp43;etp44;etp45;etp46;etp47;etp48;etp49;etp50;etp51;etp52;etp53;etp54;etp55;etp56;etp57;etp58;etp59;etp60;etp61;etp62;etp63</AttachTo>
+          <InAcl>DataAcl</InAcl>
+          <Type>DataPlane</Type>
+        </AclInterface>
+      </AclInterfaces>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+  </DpgDec>  <PngDec>
+    <DeviceInterfaceLinks>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA01LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp1</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA02LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp2</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA03LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp3</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA04LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp4</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA05LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp5</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA06LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp6</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA07LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp7</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA08LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp8</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA09LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp9</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA10LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp10</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA11LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp11</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA12LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp12</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA13LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp13</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA14LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp14</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA15LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp15</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA16LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp16</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA17LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp17</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA18LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp18</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA19LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp19</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA20LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp20</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA21LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp21</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA22LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp22</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA23LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp23</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA24LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp24</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA25LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp25</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA26LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp26</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA27LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp27</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA28LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp28</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA29LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp29</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA30LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp30</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA31LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp31</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA32LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp32</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA33LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp33</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA34LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp34</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA35LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp35</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA36LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp36</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA37LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp37</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA38LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp38</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA39LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp39</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA40LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp40</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA41LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp41</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA42LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp42</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA43LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp43</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA44LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp44</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA45LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp45</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA46LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp46</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA47LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp47</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA48LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp48</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA49LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp49</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA50LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp50</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA51LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp51</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA52LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp52</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA53LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp53</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA54LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp54</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA55LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp55</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA56LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp56</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA57LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp57</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA58LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp58</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA59LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp59</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA60LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp60</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA61LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp61</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA62LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp62</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA63LT2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>str4-7060x6-512-4</StartDevice>
+        <StartPort>etp63</StartPort>
+        <Bandwidth>800000</Bandwidth>
+      </DeviceLinkBase>
+    </DeviceInterfaceLinks>
+    <Devices>
+      <Device i:type="FabricSpineRouter">
+        <Hostname>str4-7060x6-512-4</Hostname>
+        <HwSku>Arista-7060X6-64PE-P64</HwSku>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>100.164.247.163</a:IPPrefix>
+        </ManagementAddress>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA01LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.57</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA02LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.58</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA03LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.59</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA04LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.60</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA05LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.61</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA06LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.62</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA07LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.63</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA08LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.64</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA09LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.65</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA10LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.66</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA11LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.67</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA12LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.68</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA13LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.69</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA14LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.70</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA15LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.71</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA16LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.72</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA17LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.73</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA18LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.74</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA19LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.75</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA20LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.76</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA21LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.77</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA22LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.78</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA23LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.79</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA24LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.80</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA25LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.81</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA26LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.82</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA27LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.83</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA28LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.84</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA29LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.85</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA30LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.86</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA31LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.87</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA32LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.88</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA33LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.89</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA34LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.90</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA35LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.91</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA36LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.92</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA37LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.93</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA38LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.94</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA39LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.95</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA40LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.96</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA41LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.97</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA42LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.98</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA43LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.99</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA44LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.100</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA45LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.101</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA46LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.102</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA47LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.103</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA48LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.104</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA49LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.105</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA50LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.106</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA51LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.107</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA52LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.108</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA53LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.109</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA54LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.110</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA55LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.111</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA56LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.112</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA57LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.113</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA58LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.114</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA59LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.115</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA60LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.116</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA61LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.117</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA62LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.118</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LowerSpineRouter">
+         <Hostname>ARISTA63LT2</Hostname>
+         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+           <a:IPPrefix>172.16.165.119</a:IPPrefix>
+         </ManagementAddress>
+         <HwSku>Arista-VM</HwSku>
+      </Device>
+    </Devices>
+  </PngDec>  <DeviceInfos>
+    <DeviceInfo>
+      <EthernetInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp1</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp2</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp3</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp4</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp5</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp6</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp7</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp8</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp9</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp10</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp11</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp12</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp13</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp14</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp15</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp16</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp17</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp18</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp19</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp20</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp21</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp22</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp23</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp24</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp25</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp26</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp27</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp28</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp29</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp30</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp31</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp32</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp33</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp34</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp35</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp36</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp37</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp38</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp39</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp40</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp41</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp42</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp43</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp44</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp45</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp46</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp47</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp48</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp49</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp50</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp51</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp52</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp53</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp54</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp55</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp56</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp57</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp58</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp59</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp60</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp61</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp62</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp63</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>etp64</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>800000</Speed>
+        </a:EthernetInterface>
+      </EthernetInterfaces>
+      <FlowControl>true</FlowControl>
+      <Height>0</Height>
+      <HwSku>Arista-7060X6-64PE-P64</HwSku>
+      <ManagementInterfaces/>
+    </DeviceInfo>
+  </DeviceInfos>  <MetadataDeclaration>
+    <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:DeviceMetadata>
+        <a:Name>str4-7060x6-512-4</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>CloudType</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Public</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>QosProfile</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Profile0</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>MacSecEnabled</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+        </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DhcpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>192.0.0.1;192.0.0.2;192.0.0.3;192.0.0.4;192.0.0.5;192.0.0.6;192.0.0.7;192.0.0.8;192.0.0.9;192.0.0.10;192.0.0.11;192.0.0.12;192.0.0.13;192.0.0.14;192.0.0.15;192.0.0.16;192.0.0.17;192.0.0.18;192.0.0.19;192.0.0.20;192.0.0.21;192.0.0.22;192.0.0.23;192.0.0.24;192.0.0.25;192.0.0.26;192.0.0.27;192.0.0.28;192.0.0.29;192.0.0.30;192.0.0.31;192.0.0.32;192.0.0.33;192.0.0.34;192.0.0.35;192.0.0.36;192.0.0.37;192.0.0.38;192.0.0.39;192.0.0.40;192.0.0.41;192.0.0.42;192.0.0.43;192.0.0.44;192.0.0.45;192.0.0.46;192.0.0.47;192.0.0.48</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>NtpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>10.20.8.129;10.20.8.130</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SnmpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>10.3.145.98</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SyslogResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>100.164.246.95</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>TacacsGroup</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Starlab</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>TacacsServer</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>100.164.247.129</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ForcedMgmtRoutes</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>10.3.145.98/31;10.3.145.8;100.127.20.16/28;10.3.149.170/31;40.122.216.24;13.91.48.226;100.164.246.0/23;10.3.146.0/24;100.164.5.5;10.201.148.32/28;2603:10b0:11d:1::400/118;2603:10b0:b17:18::400/118;2aaa:111:e210:b000::1/64;2aaa:111:e210:3000::1/64</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ErspanDestinationIpv4</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>10.20.6.16</a:Value>
+         </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+    </Devices>
+    <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+  </MetadataDeclaration>  <Hostname>str4-7060x6-512-4</Hostname>
+  <HwSku>Arista-7060X6-64PE-P64</HwSku>
+</DeviceMiniGraph>

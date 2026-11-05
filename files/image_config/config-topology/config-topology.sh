@@ -4,7 +4,7 @@
 # which could be used for platform specific topology configuration
 #
 start() {
-    PLATFORM=`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`
+    PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
     #Path to platform topology script
     TOPOLOGY_SCRIPT="/usr/share/sonic/device/$PLATFORM/plugins/config-topology.sh"
     #if topology script file not present, do nothing and return 0
@@ -13,7 +13,7 @@ start() {
 }
 
 stop() {
-    PLATFORM=`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`
+    PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
     #Path to platform topology script
     TOPOLOGY_SCRIPT="/usr/share/sonic/device/$PLATFORM/plugins/config-topology.sh"
     #if topology script file not present, do nothing and return 0

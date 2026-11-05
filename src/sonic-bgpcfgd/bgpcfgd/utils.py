@@ -26,7 +26,7 @@ def run_command(command, shell=False, hide_errors=False):
 def read_constants():
     """ Read file with constants values from /etc/sonic/constants.yml """
     with open('/etc/sonic/constants.yml') as fp:
-        content = yaml.load(fp) # FIXME: , Loader=yaml.FullLoader)
+        content = yaml.safe_load(fp)
         if "constants" not in content:
             log_crit("/etc/sonic/constants.yml doesn't have 'constants' key")
             raise Exception("/etc/sonic/constants.yml doesn't have 'constants' key")

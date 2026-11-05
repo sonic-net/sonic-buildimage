@@ -164,11 +164,11 @@
     <Devices>
       <Device i:type="SpineChassisFrontendRouter">
         <Hostname>SpineFront01</Hostname>
-        <HwSku>Force10-S6000</HwSku> 
+        <HwSku>Force10-S6000</HwSku>
       </Device>
       <Device i:type="SpineChassisFrontendRouter">
         <Hostname>SpineFront02</Hostname>
-        <HwSku>Force10-S6000</HwSku> 
+        <HwSku>Force10-S6000</HwSku>
       </Device>
       <Device i:type="LeafRouter">
         <Hostname>Leaf01</Hostname>
@@ -574,9 +574,9 @@
       </EthernetInterfaces>
       <FlowControl>false</FlowControl>
       <Height>0</Height>
-      <HwSku>Force10-S6000</HwSku> 
+      <HwSku>Force10-S6000</HwSku>
       <ManagementInterfaces/>
-    </DeviceInfo> 
+    </DeviceInfo>
   </DeviceInfos>
   <MetadataDeclaration>
     <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">

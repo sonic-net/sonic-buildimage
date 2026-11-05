@@ -22,6 +22,5 @@ $(DOCKER_SYNCD_NEPHOS_RPC)_VERSION = 1.0.0+rpc
 $(DOCKER_SYNCD_NEPHOS_RPC)_PACKAGE_NAME = syncd
 $(DOCKER_SYNCD_NEPHOS_RPC)_RUN_OPT += --privileged -t
 $(DOCKER_SYNCD_NEPHOS_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
-$(DOCKER_SYNCD_NEPHOS_RPC)_RUN_OPT += -v /host/warmboot:/var/warmboot
 $(DOCKER_SYNCD_NEPHOS_RPC)_RUN_OPT += -v /var/run/docker-syncd:/var/run/sswsyncd
 $(DOCKER_SYNCD_NEPHOS_RPC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro

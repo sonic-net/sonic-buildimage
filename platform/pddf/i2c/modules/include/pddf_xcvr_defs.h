@@ -24,7 +24,6 @@
 #define MAX_NUM_XCVR 5
 #define MAX_XCVR_ATTRS 20
 
-
 typedef struct XCVR_ATTR
 {
     char aname[32];                    // attr name, taken from enum xcvr_sysfs_attributes
@@ -48,7 +47,7 @@ typedef struct XCVR_DATA
     int idx;                    // xcvr index
     XCVR_ATTR xcvr_attr;
     int len;             // no of valid attributes for this xcvr client
-    XCVR_ATTR xcvr_attrs[MAX_XCVR_ATTRS]; 
+    XCVR_ATTR xcvr_attrs[MAX_XCVR_ATTRS];
 }XCVR_DATA;
 
 typedef struct XCVR_PDATA
@@ -78,6 +77,10 @@ typedef enum xcvr_port_type_e {
 struct xcvr_data {
     struct device       *xdev;
     struct mutex        update_lock;
+    /* this client's sysfs attributes: ports differ (QSFP vs SFP), so the
+     * list and group must be per client, not shared across probes */
+    struct attribute    *attributes[MAX_XCVR_ATTRS];
+    struct attribute_group attribute_group;
     char                valid;           /* !=0 if registers are valid */
     unsigned long       last_updated;    /* In jiffies */
     int                 index;           /* port index */

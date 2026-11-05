@@ -34,6 +34,8 @@
 
 #define DWAPB_MAX_PORTS		2
 
+static DEFINE_SPINLOCK(ctcgpio_lock);
+
 struct ctcapb_gpio;
 
 static u32 soc_v;
@@ -118,9 +120,9 @@ static void ctcapb_irq_enable(struct irq_data *d)
 	struct gpio_chip *gc = &port->gc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&gc->bgpio_lock, flags);
+	spin_lock_irqsave(&ctcgpio_lock, flags);
 	clrsetbits(&port->regs->GpioIntrEn, 0, BIT(d->hwirq));
-	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
+	spin_unlock_irqrestore(&ctcgpio_lock, flags);
 }
 
 extern void irq_gc_mask_clr_bit(struct irq_data *d);
@@ -139,9 +141,9 @@ static void ctcapb_irq_disable(struct irq_data *d)
 	struct gpio_chip *gc = &port->gc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&gc->bgpio_lock, flags);
+	spin_lock_irqsave(&ctcgpio_lock, flags);
 	clrsetbits(&port->regs->GpioIntrEn, ~BIT(d->hwirq), 0);
-	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
+	spin_unlock_irqrestore(&ctcgpio_lock, flags);
 }
 #endif
 
@@ -180,7 +182,7 @@ static int ctcapb_irq_set_type(struct irq_data *d, u32 type)
 		     IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_LEVEL_LOW))
 		return -EINVAL;
 
-	spin_lock_irqsave(&gc->bgpio_lock, flags);
+	spin_lock_irqsave(&ctcgpio_lock, flags);
 	level = readl(&port->regs->GpioIntrLevel);
 	polarity = readl(&port->regs->GpioIntrPolarity);
 
@@ -226,7 +228,7 @@ static int ctcapb_irq_set_type(struct irq_data *d, u32 type)
 
 	writel(level, &port->regs->GpioIntrLevel);
 	writel(polarity, &port->regs->GpioIntrPolarity);
-	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
+	spin_unlock_irqrestore(&ctcgpio_lock, flags);
 
 	return 0;
 }
@@ -238,7 +240,7 @@ static int ctcapb_gpio_set_debounce(struct gpio_chip *gc,
 	unsigned long flags, val_deb;
 	unsigned long mask = BIT(offset);
 
-	spin_lock_irqsave(&gc->bgpio_lock, flags);
+	spin_lock_irqsave(&ctcgpio_lock, flags);
 
 	val_deb = readl(&port->regs->GpioDebCtl);
 	if (debounce)
@@ -246,7 +248,7 @@ static int ctcapb_gpio_set_debounce(struct gpio_chip *gc,
 	else
 		writel(val_deb & ~mask, &port->regs->GpioDebCtl);
 
-	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
+	spin_unlock_irqrestore(&ctcgpio_lock, flags);
 
 	return 0;
 }

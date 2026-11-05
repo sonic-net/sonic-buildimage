@@ -1,0 +1,36 @@
+{
+    "chassis": {
+        "name": "Nvidia-9009d3b600CVAA",
+        "components": [],
+        "fans": [],
+        "fan_drawers": [],
+        "psus": [],
+        "thermals": [],
+        "sfps": [
+            {
+                "name": "Ethernet0"
+            },
+            {
+                "name": "Ethernet4"
+            }
+        ]
+    },
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1,1,1,1",
+            "lanes": "0,1,2,3",
+            "breakout_modes": {
+                "1x100G": ["etp1"],
+                "1x200G": ["etp1"]
+            }
+        },
+        "Ethernet4": {
+            "index": "2,2,2,2",
+            "lanes": "4,5,6,7",
+            "breakout_modes": {
+                "1x100G": ["etp2"],
+                "1x200G": ["etp2"]
+            }
+        }
+    }
+}

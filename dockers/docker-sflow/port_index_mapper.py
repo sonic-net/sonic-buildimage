@@ -24,7 +24,7 @@ class PortIndexMapper(object):
                    swsscommon.STATE_VLAN_TABLE_NAME]
         self.appl_db = swsscommon.DBConnector("STATE_DB",
                                               REDIS_TIMEOUT_MS,
-                                              True)
+                                              False)
 
         self.state_db = swsscommon.SonicV2Connector(host='127.0.0.1', decode_responses=True)
         self.state_db.connect(self.state_db.STATE_DB, False)
@@ -45,7 +45,15 @@ class PortIndexMapper(object):
         index = port_util.get_index_from_str(ifname)
         if op == 'SET' and index is None:
             return
-        ifindex = if_nametoindex(ifname)
+
+        # catch system error and log as warning level instead of
+        # error level in case interface was already deleted
+        ifindex = None
+        try:
+            ifindex = if_nametoindex(ifname)
+        except OSError as e:
+            logger.log_warning("%s" % str(e))
+
         if op == 'SET' and ifindex is None:
             return
 

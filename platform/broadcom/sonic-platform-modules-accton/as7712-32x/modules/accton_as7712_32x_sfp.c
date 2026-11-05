@@ -1079,9 +1079,9 @@ exit:
 	return status;	
 }
 
-static int sfp_device_probe(struct i2c_client *client,
-			const struct i2c_device_id *dev_id)
+static int sfp_device_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 	struct sfp_port_data *data = NULL;
 
 	data = kzalloc(sizeof(struct sfp_port_data), GFP_KERNEL);
@@ -1126,20 +1126,19 @@ static int qfp_remove(struct i2c_client *client, struct qsfp_data *data)
 	return 0;
 }
 
-static int sfp_device_remove(struct i2c_client *client)
+static void sfp_device_remove(struct i2c_client *client)
 {
 	struct sfp_port_data *data = i2c_get_clientdata(client);
 
 	switch (data->driver_type) {
 		case DRIVER_TYPE_SFP_MSA:
-			return sfp_msa_remove(client, data->msa);
+			sfp_msa_remove(client, data->msa);
 		case DRIVER_TYPE_SFP_DDM:
-			return sfp_ddm_remove(client, data->ddm);
+			sfp_ddm_remove(client, data->ddm);
 		case DRIVER_TYPE_QSFP:
-			return qfp_remove(client, data->qsfp);
+			qfp_remove(client, data->qsfp);
    	}
 
-	return 0;
 }
 
 static struct i2c_driver sfp_driver = {

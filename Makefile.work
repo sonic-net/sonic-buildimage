@@ -5,8 +5,6 @@
 #
 #  * PLATFORM: Specific platform we wish to build images for.
 #  * BUILD_NUMBER: Desired version-number to pass to the building-system.
-#  * ENABLE_DHCP_GRAPH_SERVICE: Enables get-graph service to fetch minigraph files
-#    through http.
 #  * ENABLE_ZTP: Enables zero touch provisioning.
 #  * SHUTDOWN_BGP_ON_START: Sets admin-down state for all bgp peerings after restart.
 #  * INCLUDE_KUBERNETES: Allows including Kubernetes
@@ -40,8 +38,15 @@
 #  * ENABLE_NATIVE_WRITE: Enable native write/config operations via the gNMI interface.
 #  *                 Default: unset
 #  *                 Values: y
-#  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none or cache
+#  * ENABLE_DIALOUT: Enable dialout client in telemetry.
+#  *                 Default: unset
+#  *                 Values: y
+#  * GNMI_REDIS_POOL_SIZE: Set the Redis connection pool size for gNMI services.
+#  *                 Default: unset
+#  *                 Values: positive integer
+#  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none, cache, rcache, wcache, rwcache
 #  * SONIC_DPKG_CACHE_SOURCE: Debian package cache location when cache enabled for debian packages
+#  * SONIC_DPKG_CACHE_METHOD_OVERRIDE: Specifying whether to override the method used by SONIC_DPKG_CACHE_METHOD: none, rcache, wcache, rwcache
 #  * BUILD_LOG_TIMESTAMP: Set timestamp in the build log (simple/none)
 #  * DOCKER_EXTRA_OPTS: Extra command line arguments for dockerd running in slave container.
 #  * ENABLE_AUTO_TECH_SUPPORT: Enable the configuration for event-driven techsupport & coredump mgmt feature
@@ -53,18 +58,44 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
-#  * GZ_COMPRESS_PROGRAM: Select pigz to reduce build time
-#  *                 Default: gzip
-#  *                 Values: pigz,gzip
-#
+#  * UNATTENDED: Don't wait for interactive input from terminal, setting this
+#  *             value to anything will enable it
+#  *             Default: unset
+#  *             Value: y
+#  * SONIC_PTF_ENV_PY_VER: Python version for PTF image
+#  *                       Default: mixed
+#  *                       Values: mixed,py3
+#  * ENABLE_MULTIDB: Enable multiple redis database instances.
+#  *                 Default: unset
+#  *                 Values: y
+#  * ENABLE_VRF_STRICT: Enable VRF strict mode.
+#  *                 Default: unset
+#  *                 Values: y
+#  * SONIC_SLAVE_REUSE_<release>_IMAGE / SONIC_SLAVE_REUSE_<release>_TAG (optional): Use
+#  *                 an existing local sonic-slave **base** image instead of building when
+#  *                 the computed base tag changes. Supported keys for this tree: TRIXIE and
+#  *                 BOOKWORM only (other BLDENV values do not use reuse variables here).
+#  *                 Set both for the current BLDENV from `make showtag` before the change.
+#  *                 Skips slave-base docker build; fails if the image is missing. Must match
+#  *                 BLDENV/arch; reuse at own risk if stale vs. current slave Dockerfiles.
+#  *                 With DPKG cache write modes, a reused tag that differs from the computed
+#  *                 base tag is rejected.
+#  * BAZEL_MIN_READINESS: Lowest readiness a component must declare, via
+#  *                 $(COMPONENT_FOO)_BAZEL_READINESS, for it to be built with Bazel.
+#  *                 Components below the bar fall back to the normal Make build.
+#  *                 For instance, if set to "stable", components that
+#  *                 self-label as "experimental" won't be built with Bazel.
+#  *                 Default: bazel_disabled
+#  *                 Values: bazel_disabled,experimental,stable
 ###############################################################################
 
 SHELL = /bin/bash
 
 USER := $(shell id -un)
-PWD := $(shell pwd)
+PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
-DOCKER_MACHINE := $(shell docker run --rm debian:buster uname -m)
+DOCKER_MACHINE := $(shell docker info | grep Architecture: | awk '{print $$2}')
+HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
 comma := ,
 
@@ -81,10 +112,10 @@ ifeq ($(USER), root)
 $(error Add your user account to docker group and use your user account to make. root or sudo are not supported!)
 endif
 
-# Check for j2cli availability
-J2_VER := $(shell j2 --version 2>&1 | grep j2cli | awk '{printf $$2}')
+# Check for j2 availability (https://github.com/kpfleming/jinjanator)
+J2_VER := $(shell j2 --version 2>&1 | grep j2 | awk '{printf $$2}')
 ifeq ($(J2_VER),)
-$(error Please install j2cli (sudo pip install j2cli))
+$(error Please install j2 (sudo pip install jinjanator))
 endif
 
 # Check for minimum Docker version on build host
@@ -117,7 +148,11 @@ else
 TARGET_BOOTLOADER = uboot
 endif
 
-ifeq ($(BLDENV), bullseye)
+ifeq ($(BLDENV), trixie)
+SLAVE_DIR = sonic-slave-trixie
+else ifeq ($(BLDENV), bookworm)
+SLAVE_DIR = sonic-slave-bookworm
+else ifeq ($(BLDENV), bullseye)
 SLAVE_DIR = sonic-slave-bullseye
 else ifeq ($(BLDENV), buster)
 SLAVE_DIR = sonic-slave-buster
@@ -127,13 +162,16 @@ else
 SLAVE_DIR = sonic-slave-jessie
 endif
 
-# Define a do-nothing target for rules/config.user so that when
-# the file is missing, make won't try to rebuld everything.
-rules/config.user:
+# Define a do-nothing target for rules/config.organization and
+# rules/config.user so that when the files are missing, make won't
+# try to rebuild everything.
+rules/config.organization rules/config.user:
 	$(Q)echo -n ""
 
 include rules/config
+-include rules/config.organization
 -include rules/config.user
+include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
 override DEFAULT_CONTAINER_REGISTRY := $(DEFAULT_CONTAINER_REGISTRY)/
@@ -141,10 +179,6 @@ endif
 
 ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
-endif
-
-ifneq ($(GZ_COMPRESS_PROGRAM), pigz)
-override GZ_COMPRESS_PROGRAM = gzip
 endif
 
 ifeq ($(CONFIGURED_ARCH),amd64)
@@ -168,17 +202,43 @@ endif
 endif
 endif
 SLAVE_IMAGE = $(SLAVE_BASE_IMAGE)-$(USER_LC)
-DOCKER_ROOT = $(PWD)/fsroot.docker.$(BLDENV)
 
-# Support FIPS feature, armhf not supported yet
-ifeq ($(PLATFORM_ARCH),armhf)
-ENABLE_FIPS_FEATURE := n
-ENABLE_FIPS := n
+# Optional per-BLDENV reuse of an existing sonic-slave-base image (see header comment).
+SONIC_SLAVE_REUSE_SLAVE :=
+SONIC_SLAVE_REUSE_KIND :=
+SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE :=
+SONIC_SLAVE_REUSE_EFFECTIVE_TAG :=
+ifeq ($(BLDENV),trixie)
+SONIC_SLAVE_REUSE_KIND := TRIXIE
+SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE := $(strip $(SONIC_SLAVE_REUSE_TRIXIE_IMAGE))
+SONIC_SLAVE_REUSE_EFFECTIVE_TAG := $(strip $(SONIC_SLAVE_REUSE_TRIXIE_TAG))
+else ifeq ($(BLDENV),bookworm)
+SONIC_SLAVE_REUSE_KIND := BOOKWORM
+SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE := $(strip $(SONIC_SLAVE_REUSE_BOOKWORM_IMAGE))
+SONIC_SLAVE_REUSE_EFFECTIVE_TAG := $(strip $(SONIC_SLAVE_REUSE_BOOKWORM_TAG))
 endif
 
-ifeq ($(ENABLE_FIPS_FEATURE), n)
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)),)
+ifeq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG)),)
+$(error SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_TAG must be set when SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_IMAGE is set)
+endif
+endif
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG)),)
+ifeq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)),)
+$(error SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_IMAGE must be set when SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_TAG is set)
+endif
+endif
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)),)
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG)),)
+SONIC_SLAVE_REUSE_SLAVE = y
+endif
+endif
+
+DOCKER_ROOT = $(PWD)/fsroot.docker.$(BLDENV)
+
+ifeq ($(INCLUDE_FIPS), n)
 ifeq ($(ENABLE_FIPS), y)
-    $(error Cannot set fips config ENABLE_FIPS=y when ENABLE_FIPS_FEATURE=n)
+    $(error Cannot set fips config ENABLE_FIPS=y when INCLUDE_FIPS=n)
 endif
 endif
 
@@ -189,37 +249,58 @@ export SONIC_VERSION_CACHE SONIC_VERSION_CACHE_SOURCE
 $(shell test -d $(SONIC_VERSION_CACHE_SOURCE) || \
     mkdir -p $(SONIC_VERSION_CACHE_SOURCE) && chmod -f 777 $(SONIC_VERSION_CACHE_SOURCE) 2>/dev/null )
 
+$(shell test -d $(SONIC_BAZEL_CACHE_SOURCE) || \
+    { mkdir -p $(SONIC_BAZEL_CACHE_SOURCE) && chmod -f 1777 $(SONIC_BAZEL_CACHE_SOURCE); } 2>/dev/null )
+
+# A per-user cache. If a user creates this directory, and another user tries to write to it, we may have errors.
+SONIC_BAZEL_USER_CACHE_SOURCE := $(SONIC_BAZEL_CACHE_SOURCE)/$(USER)
+$(shell test -d $(SONIC_BAZEL_USER_CACHE_SOURCE) || \
+    mkdir -m 0700 $(SONIC_BAZEL_USER_CACHE_SOURCE) 2>/dev/null )
+
 # Generate the version control build info
 $(shell \
 	SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
 	TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
-	PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
+	BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 	DISTRO=$(BLDENV) \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 	SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE) \
 	DBGOPT='$(DBGOPT)' \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
+	BUILD_PUBLIC_URL=$(BUILD_PUBLIC_URL) \
+	BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) \
+	PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
 	scripts/generate_buildinfo_config.sh)
 
 # Generate the slave Dockerfile, and prepare build info for it
 $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
 	CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
-	ENABLE_FIPS_FEATURE=$(ENABLE_FIPS_FEATURE) \
+	INCLUDE_FIPS=$(INCLUDE_FIPS) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
-	GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
+	BUILD_PUBLIC_URL=$(BUILD_PUBLIC_URL) \
+	BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) \
+	FIPS_VERSION=$(FIPS_VERSION) \
+	FIPS_GOLANG_MAIN_VERSION=$(FIPS_GOLANG_MAIN_VERSION) \
+	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
-$(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
-	MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
-	CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
-	j2 $(SLAVE_DIR)/Dockerfile.user.j2 > $(SLAVE_DIR)/Dockerfile.user)
+ifeq ($(CROSS_BUILD_ENVIRON), y)
+$(shell SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) scripts/build_mirror_config.sh $(SLAVE_DIR) amd64 $(BLDENV))
+endif
+$(shell SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) scripts/build_mirror_config.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV))
 
 PREPARE_DOCKER=BUILD_SLAVE=y \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 	DBGOPT='$(DBGOPT)' \
+	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
+	BUILD_PUBLIC_URL=$(BUILD_PUBLIC_URL) \
+	BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) \
+	ENABLE_SBOM=$(ENABLE_SBOM) \
 	scripts/prepare_docker_buildinfo.sh \
 		$(SLAVE_BASE_IMAGE) \
 		$(SLAVE_DIR)/Dockerfile \
@@ -230,19 +311,26 @@ PREPARE_DOCKER=BUILD_SLAVE=y \
 $(shell $(PREPARE_DOCKER) )
 
 # Add the versions in the tag, if the version change, need to rebuild the slave
-SLAVE_BASE_TAG = $(shell \
+SLAVE_BASE_TAG_COMPUTED := $(shell \
 	cat $(SLAVE_DIR)/Dockerfile \
 		$(SLAVE_DIR)/sources.list.* \
 		$(SLAVE_DIR)/buildinfo/versions/versions-* 2>/dev/null \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
-# Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_PLATFORM) to get unique SHA ID
+ifeq ($(SONIC_SLAVE_REUSE_SLAVE),y)
+override SLAVE_BASE_IMAGE := $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)
+override SLAVE_BASE_TAG := $(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG))
+else
+SLAVE_BASE_TAG := $(SLAVE_BASE_TAG_COMPUTED)
+endif
+
+# Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_ARCH) to get unique SHA ID
 SLAVE_TAG = $(shell \
-	(cat $(SLAVE_DIR)/Dockerfile.user \
-		 $(SLAVE_DIR)/Dockerfile \
+	(cat $(SLAVE_DIR)/Dockerfile \
+		 $(SLAVE_DIR)/sources.list.* \
 		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
-	&& echo $(USER)/$(PWD)/$(CONFIGURED_PLATFORM)) \
+	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
@@ -264,6 +352,17 @@ OVERLAY_MODULE_CHECK := \
 
 BUILD_TIMESTAMP := $(shell date +%Y%m%d\.%H%M%S)
 
+# SOURCE_DATE_EPOCH is the reproducible-build convention for stamping
+# generated artifacts (SBOMs, in-toto attestations, etc.) with a
+# deterministic time. Default to the timestamp of the HEAD git commit
+# so two builds of the same source produce byte-identical SBOMs; can
+# be overridden by passing SOURCE_DATE_EPOCH= explicitly from the
+# environment, which is what reproducible-build CI typically does.
+ifeq ($(SOURCE_DATE_EPOCH),)
+SOURCE_DATE_EPOCH := $(shell git -C $(SOURCE_TREE) log -1 --format=%ct HEAD 2>/dev/null || date +%s)
+endif
+export SOURCE_DATE_EPOCH
+
 # Create separate Docker lockfiles for saving vs. loading an image.
 ifeq ($(DOCKER_LOCKDIR),)
 override DOCKER_LOCKDIR := /tmp/docklock
@@ -271,8 +370,8 @@ endif
 DOCKER_LOCKFILE_SAVE := $(DOCKER_LOCKDIR)/docker_save.lock
 $(shell mkdir -m 0777 -p $(DOCKER_LOCKDIR))
 $(shell [ -f $(DOCKER_LOCKFILE_SAVE) ] || (touch $(DOCKER_LOCKFILE_SAVE) && chmod 0777 $(DOCKER_LOCKFILE_SAVE)))
-$(docker run --rm -v $(DOCKER_ROOT)\:/mount alpine sh -c 'rm -rf /mount/')
-$(mkdir -p $(DOCKER_ROOT))
+$(shell [ -d $(DOCKER_ROOT) ] && docker run --rm -v $(DOCKER_ROOT):/mount $(DEFAULT_CONTAINER_REGISTRY)debian:bookworm sh -c 'rm -rf /mount/*')
+$(shell mkdir -p $(DOCKER_ROOT))
 
 ifeq ($(DOCKER_BUILDER_MOUNT),)
 override DOCKER_BUILDER_MOUNT := "$(PWD):/sonic"
@@ -282,15 +381,89 @@ ifeq ($(DOCKER_BUILDER_WORKDIR),)
 override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
 
-DOCKER_RUN := docker run --rm=true --privileged --init \
+# Empty by default; only set when building from a git worktree (see below). For
+# a normal clone it expands to nothing.
+SONIC_WT_GITDIR_FIXUP :=
+
+# Support building from a git worktree.
+#
+# In a normal clone, $(PWD)/.git is a real directory mounted into the container
+# as part of $(PWD):/sonic, so in-container git (including submodule git used by
+# e.g. src/sonic-frr) works. In a git worktree, $(PWD)/.git is a *file* pointing
+# into the parent repo's git dir, and each submodule's .git pointer plus its
+# core.worktree back-reference resolve to paths OUTSIDE the $(PWD):/sonic mount,
+# so in-container git fails with "fatal: not a git repository" (Error 128).
+#
+# To make worktree builds work, additionally bind-mount the parent repo's common
+# git dir at the same absolute path the worktree's .git pointers reference inside
+# the container. Additionally, fix up the git directory path and unset the
+# worktree for each of the submodules.
+#
+# Note: these helper variables are deliberately NOT named GIT_DIR / GIT_COMMON_DIR
+# because those are environment variable names git itself honors; reusing them
+# here would leak into child git invocations and break them.
+SONIC_WT_GIT_DIR := $(shell git -C $(PWD) rev-parse --git-dir 2>/dev/null)
+SONIC_WT_GIT_COMMON_DIR := $(shell git -C $(PWD) rev-parse --git-common-dir 2>/dev/null)
+ifneq ($(SONIC_WT_GIT_DIR),$(SONIC_WT_GIT_COMMON_DIR))
+ifneq ($(SONIC_WT_GIT_COMMON_DIR),)
+# Absolute path to the parent repo's common git dir (e.g. /data/foo/.git).
+SONIC_WT_GIT_COMMON_DIR_ABS := $(shell cd $(PWD) && realpath $(SONIC_WT_GIT_COMMON_DIR) 2>/dev/null)
+ifneq ($(SONIC_WT_GIT_COMMON_DIR_ABS),)
+override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):$(SONIC_WT_GIT_COMMON_DIR_ABS):rw
+# Yes, this makes the path in the .git file in submodules an absolute path, and the
+# exact opposite of what the init target does. But when using a worktree, the path
+# here points to a directory outside of the root of the sonic-buildimage worktree,
+# and having an absolute path here is a bit better for portability.
+#
+# Maybe the init target could also be changed to use absolute paths, or maybe just
+# not do anything there w.r.t. the .git file (the default seems to be a relative
+# directory anyways), but for now, don't touch that code.
+override SONIC_WT_GITDIR_FIXUP := git submodule foreach --quiet --recursive 'git config --unset core.worktree || true; [ -f .git ] && echo "gitdir: $$(realpath $$(cut -d" " -f2 .git))" > .git'
+endif
+endif
+endif
+
+# Consider removing the --ulimit flag once nothing older
+# than Bullseye is being used as a slave container.
+# Build container memory limit (set SONIC_BUILD_MEMORY=none to disable).
+# Constrains OOM kills to the container instead of the kernel silently
+# killing unrelated host processes.
+SONIC_BUILD_MEMORY_FLAGS =
+ifneq ($(SONIC_BUILD_MEMORY),)
+ifneq ($(SONIC_BUILD_MEMORY),none)
+    SONIC_BUILD_MEMORY_FLAGS += --memory=$(SONIC_BUILD_MEMORY)
+    ifneq ($(SONIC_BUILD_MEMORY_SWAP),)
+        SONIC_BUILD_MEMORY_FLAGS += --memory-swap=$(SONIC_BUILD_MEMORY_SWAP)
+    endif
+endif
+endif
+
+# When using native dockerd (DooD), we don't need --privileged for Docker-in-Docker.
+# Use specific capabilities instead for better security.
+# When using DinD (default), --privileged is required for the nested dockerd.
+ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
+DOCKER_PRIVMODE := --cap-add SYS_ADMIN --cap-add SYS_CHROOT --cap-add NET_ADMIN \
+    --cap-add MKNOD --cap-add DAC_OVERRIDE \
+    --security-opt apparmor=unconfined --security-opt seccomp=unconfined
+else
+DOCKER_PRIVMODE := --privileged
+endif
+
+DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -v $(DOCKER_BUILDER_MOUNT) \
+    $(GIT_WORKTREE_MOUNTS) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
     -w $(DOCKER_BUILDER_WORKDIR) \
+    $(SONIC_BUILD_MEMORY_FLAGS) \
     -e "http_proxy=$(http_proxy)" \
     -e "https_proxy=$(https_proxy)" \
     -e "no_proxy=$(no_proxy)" \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
+    --ulimit nofile=524288:524288 \
     $(SONIC_BUILDER_EXTRA_CMDLINE)
+
+export PASSWORD
+DOCKER_RUN += -e PASSWORD
 
 # Mount the $(DOCKER_ROOT) to /var/lib/docker in the slave container, the overlay fs is not supported as dockerd root folder.
 ifneq ($(filter $(SONIC_SLAVE_DOCKER_DRIVER),overlay overlay2),)
@@ -305,6 +478,27 @@ ifdef SONIC_BUILD_QUIETER
 	DOCKER_RUN += -e "SONIC_BUILD_QUIETER=$(SONIC_BUILD_QUIETER)"
 endif
 
+# Mount the Signing key and Certificate in the slave container
+ifneq ($(SECURE_UPGRADE_DEV_SIGNING_KEY),)
+    DOCKER_RUN += -v $(SECURE_UPGRADE_DEV_SIGNING_KEY):$(SECURE_UPGRADE_DEV_SIGNING_KEY):ro
+endif
+ifneq ($(SECURE_UPGRADE_SIGNING_CERT),)
+    DOCKER_RUN += -v $(SECURE_UPGRADE_SIGNING_CERT):$(SECURE_UPGRADE_SIGNING_CERT):ro
+endif
+ifneq ($(SECURE_UPGRADE_KERNEL_CAFILE),)
+    DOCKER_RUN += -v $(SECURE_UPGRADE_KERNEL_CAFILE):$(SECURE_UPGRADE_KERNEL_CAFILE):ro
+endif
+# Mount the Signing prod tool in the slave container
+$(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
+ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
+	DOCKER_RUN += -v $(SECURE_UPGRADE_PROD_SIGNING_TOOL):/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL)):ro
+endif
+
+# Pass the Signing prod tool arguments as environment variable to avoid make command-line parsing issues
+ifneq ($(SECURE_UPGRADE_PROD_TOOL_ARGS),)
+	DOCKER_RUN += -e "SECURE_UPGRADE_PROD_TOOL_ARGS=$(SECURE_UPGRADE_PROD_TOOL_ARGS)"
+endif
+
 ifneq ($(SONIC_DPKG_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_DPKG_CACHE_SOURCE):/dpkg_cache:rw"
 endif
@@ -313,15 +507,21 @@ ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
 endif
 
-ifeq ($(SONIC_ENABLE_SECUREBOOT_SIGNATURE), y)
-ifneq ($(SIGNING_KEY),)
-	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_KEY))
-	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
-endif
-ifneq ($(SIGNING_CERT),)
-	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_CERT))
-	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
-endif
+# Create a volume to store Bazel caches into
+# See the documentation in rules/config for more information
+#
+# Only mount it if the host directory actually exists:
+# SONIC_BAZEL_USER_CACHE_SOURCE can be non-empty even when the mkdir silently failed
+# (e.g. an unwritable parent on some CI agents), and passing that to Docker has unintended consequences.
+ifeq ($(shell test -d $(SONIC_BAZEL_USER_CACHE_SOURCE) -a -w $(SONIC_BAZEL_USER_CACHE_SOURCE) && echo y),y)
+	DOCKER_RUN += -v "$(SONIC_BAZEL_USER_CACHE_SOURCE):/bazel_cache:rw"
+	# Persist bazelisk downloads in the cache
+	DOCKER_RUN += -e "BAZELISK_HOME=/bazel_cache/bazelisk"
+	# Apply the slave Bazel cache config as a system RC file, which Bazel reads regardless of cwd.
+	# Ref: https://bazel.build/run/bazelrc#bazelrc-file-locations
+	DOCKER_RUN += -v "$(PWD)/tools/bazel/slave.bazelrc:/etc/bazel.bazelrc:ro"
+else
+$(warning Bazel cache directory $(SONIC_BAZEL_USER_CACHE_SOURCE) is missing or not writable; building with caches local to the slave container)
 endif
 
 # User name and tag for "docker-*" images created by native dockerd mode.
@@ -395,35 +595,48 @@ endif
 
 endif
 
-SPLIT_LOG = | tee
+SPLIT_LOG = 2>&1 | tee
 
 DOCKER_BASE_LOG = $(SLAVE_DIR)/$(SLAVE_BASE_IMAGE)_$(SLAVE_BASE_TAG).log
 DOCKER_LOG = $(SLAVE_DIR)/$(SLAVE_IMAGE)_$(SLAVE_TAG).log
 
+# When SONIC_CONFIG_USE_DOCKER_CACHE is enabled, allow Docker layer caching
+# by omitting --no-cache. This speeds up incremental builds significantly.
+ifneq ($(strip $(SONIC_CONFIG_USE_DOCKER_CACHE)),y)
+DOCKER_NO_CACHE_FLAG = --no-cache
+endif
 
-DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
+DOCKER_SLAVE_BASE_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
 		    -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
 		    --build-arg http_proxy=$(http_proxy) \
 		    --build-arg https_proxy=$(https_proxy) \
 		    --build-arg no_proxy=$(no_proxy) \
 		    --build-arg SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		    --build-arg SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+		    --build-arg ENABLE_SBOM=$(ENABLE_SBOM) \
 		    $(SLAVE_DIR) \
 		    $(SPLIT_LOG) $(DOCKER_BASE_LOG)
 
 DOCKER_BASE_PULL = docker pull \
-			$(REGISTRY_SERVER):$(REGISTRY_PORT)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
+			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
-DOCKER_USER_BUILD = docker build --no-cache \
-	       --build-arg user=$(USER) \
-	       --build-arg uid=$(shell id -u) \
-	       --build-arg guid=$(shell id -g) \
-	       --build-arg hostname=$(shell echo $$HOSTNAME) \
-               --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
-	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
-	       -f $(SLAVE_DIR)/Dockerfile.user \
-	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
+DOCKER_USER_COMMANDS = \
+	groupadd -f -r -g $(shell id -g) g$(USER) && \
+	useradd $(USER) -l -u $(shell id -u) -g $(shell id -g) -d /var/$(USER) -m -s /bin/bash && \
+	gpasswd -a $(USER) docker && \
+	su $(USER) -c 'git config --global user.name $(USER)' && \
+	su $(USER) -c 'git config --global user.email $(USER)@contoso.com' && \
+	echo '$(USER) ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
+ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
+ifneq ($(MULTIARCH_QEMU_ENVIRON), y)
+# This weird logic is to handle the case where the host docker GID is the same
+# as a already-assigned GID in the slave container.
+DOCKER_USER_COMMANDS += \
+	&& { groupadd -f -o -g $(HOST_DOCKERD_GID) hostdocker || true; } \
+	&& usermod -aG \$$(getent group $(HOST_DOCKERD_GID) | cut -d: -f 1) $(USER)
+endif
+endif
 
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
@@ -438,10 +651,29 @@ DOCKER_SLAVE_BASE_PULL_REGISTRY = \
 		$(DOCKER_BASE_PULL); \
 	} && \
 	{ \
-		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) && \
+		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) && \
 		$(COLLECT_DOCKER); \
 	}\
 
+ifeq ($(SONIC_SLAVE_REUSE_SLAVE),y)
+SONIC_SLAVE_BASE_BUILD = \
+	{ \
+		echo Checking sonic-slave-base image \(reuse\): $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG); \
+		docker inspect --type image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) &> /dev/null; \
+	} || \
+	{ \
+		echo "ERROR: Slave base image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) not found. Build once without SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_* (e.g. make sonic-slave-build), or set SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_IMAGE and SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_TAG for this BLDENV from output of make showtag."; \
+		exit 1; \
+	}; \
+	if [ "$(SLAVE_BASE_TAG)" != "$(SLAVE_BASE_TAG_COMPUTED)" ]; then \
+		if [ -n "$(filter cache wcache rwcache,$(SONIC_DPKG_CACHE_METHOD) $(SONIC_DPKG_CACHE_METHOD_OVERRIDE))" ]; then \
+			echo "ERROR: Reused slave base image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) differs from the computed slave base tag $(SLAVE_BASE_TAG_COMPUTED). Refusing to use a stale image while DPKG cache writes are enabled."; \
+			exit 1; \
+		else \
+			echo "WARNING: Reused slave base image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) differs from the computed slave base tag $(SLAVE_BASE_TAG_COMPUTED)."; \
+		fi; \
+	fi
+else
 SONIC_SLAVE_BASE_BUILD = \
 	{ \
 		$(DOCKER_SLAVE_BASE_INSPECT); \
@@ -450,24 +682,13 @@ SONIC_SLAVE_BASE_BUILD = \
 		$(DOCKER_SLAVE_BASE_PULL_REGISTRY); \
 	} || \
 	{ \
+		set -o pipefail ; \
 		echo Image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) not found. Building... ; \
 		$(PREPARE_DOCKER) ; \
 		$(DOCKER_SLAVE_BASE_BUILD) ; \
 		$(COLLECT_DOCKER) ; \
 	}
-
-DOCKER_SLAVE_USER_INSPECT = \
-	{ \
-		echo Checking sonic-slave-user image: $(SLAVE_IMAGE):$(SLAVE_TAG); \
-		docker inspect --type image $(SLAVE_IMAGE):$(SLAVE_TAG) &> /dev/null; \
-	}
-
-SONIC_SLAVE_USER_BUILD = \
-	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
-	{ \
-		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
-		$(DOCKER_USER_BUILD) ; \
-	}
+endif
 
 SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            -f slave.mk \
@@ -480,12 +701,14 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) \
                            SONIC_IMAGE_VERSION=$(SONIC_IMAGE_VERSION) \
                            SLAVE_TAG=$(SLAVE_TAG) \
-                           ENABLE_DHCP_GRAPH_SERVICE=$(ENABLE_DHCP_GRAPH_SERVICE) \
+                           SLAVE_BASE_TAG=$(SLAVE_BASE_TAG) \
                            ENABLE_ZTP=$(ENABLE_ZTP) \
                            INCLUDE_PDE=$(INCLUDE_PDE) \
                            SHUTDOWN_BGP_ON_START=$(SHUTDOWN_BGP_ON_START) \
                            INCLUDE_KUBERNETES=$(INCLUDE_KUBERNETES) \
                            KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
+                           KUBERNETES_CNI_VERSION=$(KUBERNETES_CNI_VERSION) \
+                           KUBERNETES_CRI_TOOLS_VERSION=$(KUBERNETES_CRI_TOOLS_VERSION) \
                            K8s_GCR_IO_PAUSE_VERSION=$(K8s_GCR_IO_PAUSE_VERSION) \
                            INCLUDE_KUBERNETES_MASTER=$(INCLUDE_KUBERNETES_MASTER) \
                            SONIC_ENABLE_PFCWD_ON_START=$(ENABLE_PFCWD_ON_START) \
@@ -493,14 +716,14 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INSTALL_DEBUG_TOOLS=$(INSTALL_DEBUG_TOOLS) \
                            SONIC_SAITHRIFT_V2=$(SAITHRIFT_V2) \
                            MDEBUG=$(MDEBUG) \
-                           PASSWORD=$(PASSWORD) \
                            USERNAME=$(USERNAME) \
+			   CHANGE_DEFAULT_PASSWORD=$(CHANGE_DEFAULT_PASSWORD) \
                            SONIC_BUILD_JOBS=$(SONIC_BUILD_JOBS) \
-                           SONIC_USE_DOCKER_BUILDKIT=$(SONIC_USE_DOCKER_BUILDKIT) \
                            VS_PREPARE_MEM=$(VS_PREPARE_MEM) \
                            KERNEL_PROCURE_METHOD=$(KERNEL_PROCURE_METHOD) \
                            SONIC_DPKG_CACHE_METHOD=$(SONIC_DPKG_CACHE_METHOD) \
                            SONIC_DPKG_CACHE_SOURCE=$(SONIC_DPKG_CACHE_SOURCE) \
+                           SONIC_DPKG_CACHE_METHOD_OVERRIDE=$(SONIC_DPKG_CACHE_METHOD_OVERRIDE) \
                            HTTP_PROXY=$(http_proxy) \
                            HTTPS_PROXY=$(https_proxy) \
                            NO_PROXY=$(no_proxy) \
@@ -509,35 +732,70 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            DOCKER_LOCKDIR=$(DOCKER_LOCKDIR) \
                            DOCKER_LOCKFILE_SAVE=$(DOCKER_LOCKFILE_SAVE) \
                            SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) \
+                           SONIC_CONFIG_USE_DOCKER_CACHE=$(SONIC_CONFIG_USE_DOCKER_CACHE) \
                            SONIC_INCLUDE_SYSTEM_TELEMETRY=$(INCLUDE_SYSTEM_TELEMETRY) \
+                           SONIC_INCLUDE_SYSTEM_GNMI=$(INCLUDE_SYSTEM_GNMI) \
+                           SONIC_INCLUDE_SYSTEM_BMP=$(INCLUDE_SYSTEM_BMP) \
+                           SONIC_INCLUDE_SYSTEM_EVENTD=$(INCLUDE_SYSTEM_EVENTD) \
+                           SONIC_INCLUDE_SYSTEM_OTEL=$(INCLUDE_SYSTEM_OTEL) \
+                           INCLUDE_HFT=$(INCLUDE_HFT) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
+                           INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
+                           INCLUDE_STP=$(INCLUDE_STP) \
+                           INCLUDE_ICCPD=$(INCLUDE_ICCPD) \
                            SONIC_INCLUDE_RESTAPI=$(INCLUDE_RESTAPI) \
                            SONIC_INCLUDE_MUX=$(INCLUDE_MUX) \
                            ENABLE_TRANSLIB_WRITE=$(ENABLE_TRANSLIB_WRITE) \
                            ENABLE_NATIVE_WRITE=$(ENABLE_NATIVE_WRITE) \
+                           ENABLE_DIALOUT=$(ENABLE_DIALOUT) \
+                           GNMI_REDIS_POOL_SIZE=$(GNMI_REDIS_POOL_SIZE) \
                            EXTRA_DOCKER_TARGETS=$(EXTRA_DOCKER_TARGETS) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
-                           SONIC_ENABLE_SECUREBOOT_SIGNATURE=$(SONIC_ENABLE_SECUREBOOT_SIGNATURE) \
+                           SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
+                           SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
+                           SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
+                           SECURE_UPGRADE_KERNEL_CAFILE=$(SECURE_UPGRADE_KERNEL_CAFILE) \
+                           SECURE_UPGRADE_PROD_SIGNING_TOOL=$(SECURE_UPGRADE_PROD_SIGNING_TOOL) \
                            SONIC_DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
                            ENABLE_HOST_SERVICE_ON_START=$(ENABLE_HOST_SERVICE_ON_START) \
                            SLAVE_DIR=$(SLAVE_DIR) \
                            ENABLE_AUTO_TECH_SUPPORT=$(ENABLE_AUTO_TECH_SUPPORT) \
                            BUILD_MULTIASIC_KVM=$(BUILD_MULTIASIC_KVM) \
                            ENABLE_ASAN=$(ENABLE_ASAN) \
+                           ENABLE_GCOV=$(ENABLE_GCOV) \
                            SONIC_INCLUDE_BOOTCHART=$(INCLUDE_BOOTCHART) \
                            SONIC_ENABLE_BOOTCHART=$(ENABLE_BOOTCHART) \
-                           ENABLE_FIPS_FEATURE=$(ENABLE_FIPS_FEATURE) \
+                           INCLUDE_FIPS=$(INCLUDE_FIPS) \
                            ENABLE_FIPS=$(ENABLE_FIPS) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \
                            MIRROR_URLS=$(MIRROR_URLS) \
                            MIRROR_SECURITY_URLS=$(MIRROR_SECURITY_URLS) \
-                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
+                           BUILD_PUBLIC_URL=$(BUILD_PUBLIC_URL) \
+                           BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) \
+                           SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+                           ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+                           SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
+                           PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+                           BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
+                           BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
+                           SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
+						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
+						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
+						   ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \
+						   ENABLE_SBOM=$(ENABLE_SBOM) \
+						   ENABLE_SOURCE_ARCHIVE=$(ENABLE_SOURCE_ARCHIVE) \
+						   SBOM_FORMAT=$(SBOM_FORMAT) \
+						   SBOM_SCAN_TOOL=$(SBOM_SCAN_TOOL) \
+						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
+						   SBOM_STRICT=$(SBOM_STRICT) \
+						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+						   BAZEL_MIN_READINESS=$(BAZEL_MIN_READINESS) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
-.PHONY: sonic-slave-build sonic-slave-bash init reset
+.PHONY: sonic-slave-build sonic-slave-bash sonic-slave-run init reset
 
 
 COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
@@ -555,7 +813,12 @@ endif
 
 export MIRROR_URLS
 export MIRROR_SECURITY_URLS
+export MIRROR_SNAPSHOT
+export BUILD_PUBLIC_URL
+export BUILD_SNAPSHOT_URL
 export SONIC_VERSION_CONTROL_COMPONENTS
+export PIP_HTTP_TIMEOUT
+export SECURE_UPGRADE_PROD_TOOL_ARGS
 
 %:: | sonic-build-hooks
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
@@ -567,11 +830,12 @@ endif
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
-	$(Q)$(SONIC_SLAVE_USER_BUILD)
+
+	$(Q)$(SONIC_WT_GITDIR_FIXUP)
 
 	$(Q)$(DOCKER_RUN) \
-		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)" 
+		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
+		bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; export BUILD_HOSTNAME=$(shell hostname); $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)'"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
@@ -582,27 +846,21 @@ sonic-build-hooks:
 	$(Q)pushd src/sonic-build-hooks; TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) $(MAKE) all; popd
 	$(Q)mkdir -p $(SLAVE_DIR)/buildinfo
 	$(Q)cp src/sonic-build-hooks/buildinfo/sonic-build-hooks* $(SLAVE_DIR)/buildinfo
-	$(Q)if [ "$(MULTIARCH_QEMU_ENVIRON)" == y ]; then scripts/build_mirror_config.sh $(SLAVE_DIR) amd64 $(BLDENV); fi
-	$(Q)scripts/build_mirror_config.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV)
 
-sonic-slave-base-build : | sonic-build-hooks
+sonic-slave-build : | sonic-build-hooks
 ifeq ($(MULTIARCH_QEMU_ENVIRON), y)
 	$(Q)$(DOCKER_MULTIARCH_CHECK)
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 
-sonic-slave-build : sonic-slave-base-build
-	$(Q)$(SONIC_SLAVE_USER_BUILD)
-
 sonic-slave-bash : sonic-slave-build
-	$(Q)$(DOCKER_RUN) -t $(SLAVE_IMAGE):$(SLAVE_TAG) bash
+	$(Q)$(DOCKER_RUN) -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(DOCKER_USER_COMMANDS) && su $(USER)"
 
 sonic-slave-run : sonic-slave-build
-	$(Q)$(DOCKER_RUN) $(SLAVE_IMAGE):$(SLAVE_TAG) bash -c "$(SONIC_RUN_CMDS)"
+	$(Q)$(DOCKER_RUN) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; $(SONIC_RUN_CMDS)'"
 
 showtag:
-	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
 	$(Q)echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
 init :
@@ -611,23 +869,28 @@ init :
 
 .ONESHELL : reset
 reset :
-	$(Q)echo && echo -n "Warning! All local changes will be lost. Proceed? [y/N]: "
-	$(Q)read ans && (
-	    if [ $$ans == y ]; then
-	        echo "Resetting local repository. Please wait...";
-	        sudo rm -rf fsroot*;
-	        if [ "$(MULTIARCH_QEMU_ENVIRON)" == y ] && [[ "$(CONFIGURED_ARCH)" == "armhf" || "$(CONFIGURED_ARCH)" ==  "arm64" ]]; then
-	            echo "Stopping march $(CONFIGURED_ARCH) docker"
-	            sudo kill -9 `sudo cat /var/run/march/docker.pid` || true
-	            sudo rm -f /var/run/march/docker.pid || true
-	        fi
-	        git clean -xfdf;
-	        git reset --hard;
-	        git submodule foreach --recursive 'git clean -xfdf || true';
-	        git submodule foreach --recursive 'git reset --hard || true';
-	        git submodule foreach --recursive 'git remote update || true';
-	        git submodule update --init --recursive;
-	        echo "Reset complete!";
-	    else
-	        echo "Reset aborted";
-	    fi )
+	$(Q)echo && (
+	if [ -z "$(UNATTENDED)" ]; then
+	   echo -n "Warning! All local changes will be lost. Proceed? [y/N]: "
+	   @read ans
+	else
+	   ans=y
+	fi
+	if [ $$ans == y ]; then
+	    echo "Resetting local repository. Please wait...";
+	    sudo rm -rf fsroot*;
+	    if [ "$(MULTIARCH_QEMU_ENVIRON)" == y ] && [[ "$(CONFIGURED_ARCH)" == "armhf" || "$(CONFIGURED_ARCH)" ==  "arm64" ]]; then
+	        echo "Stopping march $(CONFIGURED_ARCH) docker"
+	        sudo kill -9 `sudo cat /var/run/march/docker.pid` || true
+	        sudo rm -f /var/run/march/docker.pid || true
+	    fi
+	    git clean -xfdf;
+	    git reset --hard;
+	    git submodule foreach --recursive 'git clean -xfdf || true';
+	    git submodule foreach --recursive 'git reset --hard || true';
+	    git submodule foreach --recursive 'git remote update || true';
+	    git submodule update --init --recursive;
+	    echo "Reset complete!";
+	else
+	    echo "Reset aborted";
+	fi )

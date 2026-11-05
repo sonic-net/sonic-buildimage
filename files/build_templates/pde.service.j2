@@ -5,7 +5,7 @@ Requires=opennsl-modules.service
 ConditionPathExists=!/usr/bin/swss.sh
 {% endif %}
 
-After=updategraph.service
+After=config-setup.service
 {% if sonic_asic_platform == 'broadcom' %}
 After=opennsl-modules.service
 {% endif %}

@@ -14,6 +14,18 @@
         "eStrKey" : "Mandatory",
         "eStr": ["ACL_RULE", "PRIORITY"]
     },
+    "ACL_RULE_WITH_VALID_IN_PORTS": {
+        "desc": "Configure ACL_RULE with valid IN_PORTS."
+    },
+    "ACL_RULE_WITH_VALID_OUT_PORTS": {
+        "desc": "Configure ACL_RULE with valid OUT_PORTS."
+    },
+    "ACL_RULE_WITH_VALID_ICMPV4_CODE": {
+        "desc": "Configure ACL_RULE with valid ICMPV4 type and code."
+    },
+    "ACL_RULE_WITH_VALID_ICMPV6_CODE": {
+        "desc": "Configure ACL_RULE with valid ICMPV6 type and code."
+    },
     "ACL_TABLE_EMPTY_PORTS": {
         "desc": "Configure ACL_TABLE with empty ports."
     },
@@ -26,15 +38,30 @@
         "desc": "Configure non-existing ACL_TABLE in ACL_RULE.",
         "eStrKey" : "LeafRef"
     },
+    "ACL_RULE_IP_TYPE_SRC_IPV6ANY": {
+        "desc": "Configure IP_TYPE as ipv6any and SRC_IPV6 in ACL_RULE."
+    },
+    "ACL_RULE_IP_TYPE_DST_IPV4ANY": {
+        "desc": "Configure IP_TYPE as ipv4any and DST_IP in ACL_RULE."
+    },
     "ACL_RULE_IP_TYPE_SRC_IPV6_MISMATCH": {
         "desc": "Configure IP_TYPE as ipv4any and SRC_IPV6 in ACL_RULE.",
         "eStrKey" : "When",
         "eStr": ["IP_TYPE"]
     },
+    "ACL_RULE_WITHOUT_IP_TYPE": {
+        "desc": "Configure ACL_RULE without IP_TYPE."
+    },
     "ACL_RULE_ARP_TYPE_DST_IPV6_MISMATCH": {
         "desc": "Configure IP_TYPE as ARP and DST_IPV6 in ACL_RULE.",
         "eStrKey" : "When",
         "eStr": ["IP_TYPE"]
+    },
+    "ACL_RULE_VALID_L4_SRC_PORT_RANGE": {
+        "desc": "Configure l4_src_port_range as 1024-65535 in ACL_RULE"
+    },
+    "ACL_RULE_VALID_L4_DST_PORT_RANGE": {
+        "desc": "Configure l4_src_port_range as 0-65535 in ACL_RULE"
     },
     "ACL_RULE_WRONG_L4_SRC_PORT_RANGE": {
         "desc": "Configure l4_src_port_range as 99999-99999 in ACL_RULE",
@@ -89,13 +116,17 @@
         "eStrKey": "MinElements"
     },
     "ACL_TABLE_CUSTOM_TABLE_TYPE_NO_ACTIONS": {
-        "desc": "ACL_TABLE LOAD TABLE TYPE SUCCESSFULLY WITH NO ACTIONS.",
+        "desc": "ACL_TABLE LOAD TABLE TYPE WITH NO ACTIONS.",
         "eStrKey" : "Verify",
         "verify": {
             "xpath": "/sonic-acl:sonic-acl/ACL_TABLE_TYPE/ACL_TABLE_TYPE_LIST[ACL_TABLE_TYPE_NAME='CUSTOM_L3']/ACL_TABLE_TYPE_NAME",
-            "key": "sonic-acl:actions",
+            "key": "sonic-acl:ACTIONS",
             "value": [""]
         }
+    },
+    "ACL_TABLE_CUSTOM_TABLE_TYPE_LOWERCASE_KEY": {
+        "desc": "ACL_TABLE LOAD TABLE TYPE WITH KEY ACTIONS/BIND_POINTS/MATCHES WRITTEN IN LOWERCASE.",
+        "eStrKey": "UnknownElement"
     },
     "ACL_TABLE_L2_ACL_FIELDS": {
         "desc": "Configure L2 ACL with proper rule fields"
@@ -133,6 +164,14 @@
     "ACL_RULE_VALID_TCP_FLAGS": {
         "desc": "Configure ACL_RULE with valid TCP_FLAGS."
     },
+    "ACL_RULE_TCP_FLAGS_UNSUPPORTED_TABLE": {
+        "desc": "Configure ACL_RULE with TCP_FLAGS in a table type that does not support it (should trigger must error).",
+        "eStrKey": "Must",
+        "eStr": ["TCP_FLAGS"]
+    },
+    "ACL_RULE_TCP_FLAGS_SUPPORTED_TABLE": {
+        "desc": "Configure ACL_RULE with TCP_FLAGS in a table type that supports it."
+    },
     "ACL_RULE_WRONG_BTH_OPCODE": {
         "desc": "Configure invalid BTH_OPCODE in decimal format.",
         "eStrKey" : "Pattern"
@@ -140,5 +179,110 @@
     "ACL_RULE_WRONG_AETH_SYNDROME": {
         "desc": "Configure invalid AETH_SYNDROME in decimal format.",
         "eStrKey" : "Pattern"
+    },
+    "ACL_TABLE_L3V4V6_TABLE_TYPE": {
+        "desc": "ACL_TABLE Validate type L3V4V6."
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION_WRONG_TYPE": {
+        "desc": "ACL Rule with Tunnel Termination",
+        "eStrKey" : "InvalidValue"
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION": {
+        "desc": "ACL Rule with Tunnel Termination"
+    },
+    "ACL_TABLE_INNERSRCMACREWRITE_TABLE": {
+        "desc": "ACL_TABLE Validate type INNERSRCMACREWRITE."
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_INNER_SRC_MAC_REWRITE_ACTION": {
+        "desc": "Configure INNERSRCMACREWRITE ACL TABLE with invalid rewrite action",
+        "eStrKey" : "Pattern"
+    },
+    "ACL_INNER_SRC_MAC_REWRITE_ACTION_INVALID_MAC": {
+        "desc": "Configure INNERSRCMACREWRITE ACL TABLE with invalid MAC address format",
+        "eStrKey": "Pattern"
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_TUNNEL_VNI": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with invalid VNI ID",
+        "eStrKey": "Range"
+    },
+    "ACL_RULE_WITH_TUNNEL_VNI":{
+        "desc": "Configure a ACL rule with VNI ID"
+    },
+    "ACL_INNERSRCMACREWRITE_NO_INNERSRCIP": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with no inner src IP"
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV4_SRC_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv4 SRC mask (SRC_IP + SRC_IP_MASK)."
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV4_DST_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv4 DST mask (DST_IP + DST_IP_MASK)."
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV6_SRC_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv6 SRC mask (SRC_IPV6 + SRC_IPV6_MASK)."
+    },
+    "ACL_RULE_WITH_ARBITRARY_IPV6_DST_MASK": {
+        "desc": "Configure ACL_RULE with non-contiguous IPv6 DST mask (DST_IPV6 + DST_IPV6_MASK)."
+    },
+    "ACL_RULE_WITH_INVALID_IPV4_MASK": {
+        "desc": "Configure ACL_RULE with invalid SRC_IP_MASK address format.",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "SRC_IP_MASK"
+        ]
+    },
+    "ACL_RULE_WITH_INVALID_IPV6_MASK": {
+        "desc": "Configure ACL_RULE with invalid SRC_IPV6_MASK address format.",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "SRC_IPV6_MASK"
+        ]
+    },
+    "ACL_RULE_SRC_MASK_WITHOUT_IP": {
+        "desc": "SRC_IP_MASK without a paired SRC_IP must fail YANG validation.",
+        "eStr": [
+            "SRC_IP_MASK requires SRC_IP to be present"
+        ]
+    },
+    "ACL_RULE_SRC_MASK_WITH_CIDR_IP": {
+        "desc": "SRC_IP_MASK paired with a CIDR-notation SRC_IP must fail YANG validation.",
+        "eStr": [
+            "SRC_IP must be a plain host address"
+        ]
+    },
+    "ACL_RULE_DST_MASK_WITHOUT_IP": {
+        "desc": "DST_IP_MASK without a paired DST_IP must fail YANG validation.",
+        "eStr": [
+            "DST_IP_MASK requires DST_IP to be present"
+        ]
+    },
+    "ACL_RULE_DST_MASK_WITH_CIDR_IP": {
+        "desc": "DST_IP_MASK paired with a CIDR-notation DST_IP must fail YANG validation.",
+        "eStr": [
+            "DST_IP must be a plain host address"
+        ]
+    },
+    "ACL_RULE_IPV6_SRC_MASK_WITHOUT_IP": {
+        "desc": "SRC_IPV6_MASK without a paired SRC_IPV6 must fail YANG validation.",
+        "eStr": [
+            "SRC_IPV6_MASK requires SRC_IPV6 to be present"
+        ]
+    },
+    "ACL_RULE_IPV6_SRC_MASK_WITH_CIDR_IP": {
+        "desc": "SRC_IPV6_MASK paired with a prefix-notation SRC_IPV6 must fail YANG validation.",
+        "eStr": [
+            "SRC_IPV6 must be a plain host address"
+        ]
+    },
+    "ACL_RULE_IPV6_DST_MASK_WITHOUT_IP": {
+        "desc": "DST_IPV6_MASK without a paired DST_IPV6 must fail YANG validation.",
+        "eStr": [
+            "DST_IPV6_MASK requires DST_IPV6 to be present"
+        ]
+    },
+    "ACL_RULE_IPV6_DST_MASK_WITH_CIDR_IP": {
+        "desc": "DST_IPV6_MASK paired with a prefix-notation DST_IPV6 must fail YANG validation.",
+        "eStr": [
+            "DST_IPV6 must be a plain host address"
+        ]
     }
 }

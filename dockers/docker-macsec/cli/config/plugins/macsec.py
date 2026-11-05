@@ -84,10 +84,11 @@ def del_port(port):
     if len(port_entry) == 0:
         ctx.fail("port {} doesn't exist".format(port))
 
-    del port_entry['macsec']
-
-    config_db.set_entry("PORT", port, port_entry)
-
+    if 'macsec' in port_entry:
+        del port_entry['macsec']
+        config_db.set_entry("PORT", port, port_entry)
+    else:
+        click.echo("port {} has no configured macsec profile".format(port))
 
 #
 # 'profile' group ('config macsec profile ...')
@@ -137,11 +138,11 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn, polic
     profile_table["cipher_suite"] = cipher_suite
 
     if "128" in cipher_suite:
-        if len(primary_cak) != 32:
-            ctx.fail("Expect the length of CAK is 32, but got {}".format(len(primary_cak)))
+        if len(primary_cak) != 66:
+            ctx.fail("Expect the length of CAK is 66, but got {}".format(len(primary_cak)))
     elif "256" in cipher_suite:
-        if len(primary_cak) != 64:
-            ctx.fail("Expect the length of CAK is 64, but got {}".format(len(primary_cak)))
+        if len(primary_cak) != 130:
+            ctx.fail("Expect the length of CAK is 130, but got {}".format(len(primary_cak)))
     if not is_hexstring(primary_cak):
         ctx.fail("Expect the primary_cak is valid hex string")
     if not is_hexstring(primary_ckn):

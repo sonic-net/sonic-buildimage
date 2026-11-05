@@ -1,0 +1,16 @@
+{
+    "chassis": {
+        "M2-W6520-24DC8QC": {
+            "component": {
+                "CPU_CPLD": { },
+                "CONNECT_CPLD": { },
+                "FAN_CPLD": { },
+                "MAC_CPLDA": { },
+                "MAC_CPLDB": { },
+                "FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+

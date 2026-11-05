@@ -6,10 +6,19 @@ BAZEL_TARGET_PATH = p4rt_app
 BAZEL_BUILD_TARGETS = //p4rt_app:p4rt_deb //p4rt_app:p4rt_dbg_deb
 
 # Enable debug symbols for remote debugging (generate a .dwp).
-BAZEL_BUILD_OPTS += --fission=yes --features=per_object_debug_info
+BAZEL_BUILD_OPTS += --copt=-gsplit-dwarf
 
 # Override sonic_swss_common to use the version specific to this buildimage.
 BAZEL_BUILD_OPTS += --override_repository=sonic_swss_common=/sonic/src/sonic-swss-common
+
+# Newer version of gcc has spurious warnings in boringssl package.
+BAZEL_BUILD_OPTS += --copt=-Wno-array-bounds
+BAZEL_BUILD_OPTS += --copt=-Wno-stringop-overflow
+
+BAZEL_BUILD_OPTS += --jobs=auto
+BAZEL_BUILD_OPTS += --local_ram_resources=HOST_RAM*0.5
+BAZEL_BUILD_OPTS += --local_cpu_resources=HOST_CPUS*0.5
+BAZEL_BUILD_OPTS += --local_test_jobs=1
 
 # Build optimized, stripped binaries.
 BAZEL_BUILD_OPTS += -c opt
@@ -33,9 +42,19 @@ DERIVED_TARGETS = $(SONIC_P4RT_DBG)
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	function cleanup {
 		# Note: make seems to hang if Bazel is still running
-		cd $(CURDIR)/sonic-pins && bazel $(BAZEL_OPTS) shutdown
+		cd $(CURDIR)/sonic-pins && (bazel $(BAZEL_OPTS) shutdown; rm -rf bazel-*)
 	}
 	trap cleanup EXIT
+
+	# TODO: Remove this Makefile workaround
+	# once Bazel natively supports generating cfg_schema.h.
+	if [[ ! -f /sonic/src/sonic-swss-common/common/cfg_schema.h && -f /usr/include/swss/cfg_schema.h ]]; then \
+		if [ ! -d /sonic/src/sonic-swss-common/common ]; then \
+			mkdir -p /sonic/src/sonic-swss-common/common; \
+		fi; \
+		cp /usr/include/swss/cfg_schema.h /sonic/src/sonic-swss-common/common/cfg_schema.h; \
+	fi
+
 	pushd ./sonic-pins
 	bazel $(BAZEL_OPTS) build $(BAZEL_BUILD_OPTS) $(BAZEL_BUILD_TARGETS)
 	bazel $(BAZEL_OPTS) test $(BAZEL_BUILD_OPTS) //$(BAZEL_TARGET_PATH)/...

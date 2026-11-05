@@ -1,0 +1,7 @@
+l2_mem_entries=229376
+l3_mem_entries=16384
+l3_alpm_enable=0
+fpem_mem_entries=32768
+sai_tunnel_support=1
+use_all_splithorizon_groups=1
+flow_init_mode=1

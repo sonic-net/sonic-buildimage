@@ -6,33 +6,27 @@ KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
 KBUILD_OUTPUT=$(KERNEL_SRC)/build
 
-LIB_DIR = usr/lib/python3.7/dist-packages
+LIB_DIR = usr/lib/python3/dist-packages
 CUSTOM_RULES_DIR := $(shell pwd)/debian
 
-PLATFORM_PREFIX = "x86_64-ragile"
-PLATFORM_VER = "r0"
-BDIST_DIR = "dist"
-BDIST_TARGET = "bdist_t"
+export  INSTALL_MOD_DIR top_srcdir KVERSION  KERNEL_SRC CC  KBUILD_OUTPUT CUSTOM_RULES_DIR
 
-export  INSTALL_MOD_DIR top_srcdir KVERSION  KERNEL_SRC CC  KBUILD_OUTPUT
+include $(CUSTOM_RULES_DIR)/rule.mk
 
-include $(CUSTOM_RULES_DIR)/rule-ragile.mk
-
-#all products need common
+#all product need common
 COMPILE_DIRS = $(MODULE_DIRS)
 
 clean_dirs = $(MODULE_DIRS)
 clean_dirs += common
 
-custom_clean_dirs := $(addprefix _clean_,$(clean_dirs) )
-
+complie_clean_dirs := $(addprefix _clean_,$(clean_dirs) )
 
 %:
 	dh $@
-build: $(COMPILE_DIRS)
+build: COMPILE_WHL
 	@echo "build success"
 
-$(custom_clean_dirs):
+$(complie_clean_dirs):
 	$(MAKE) -C $(patsubst _clean_%,%,$@) clean
 
 common_build :
@@ -42,29 +36,32 @@ $(COMPILE_DIRS): common_build
 	$(MAKE) -C  $(MOD_SRC_DIR)/$@
 	dh_testdir
 	dh_installdirs
-	#
-	# wheel pcakage
-	@cp -r \
-		$(MOD_SRC_DIR)/common/lib/rgutil \
-		$(MOD_SRC_DIR)/common/lib/eepromutil \
-		$(MOD_SRC_DIR)/$@/; \
-	cd $(MOD_SRC_DIR)/$@; \
-	python3 setup.py bdist_wheel --bdist-dir $(BDIST_DIR) -d $(BDIST_TARGET); \
-	mkdir -p build/usr/share/sonic/device/$(PLATFORM_PREFIX)_$@-$(PLATFORM_VER); \
-	mkdir -p build/usr/share/sonic/device/$(PLATFORM_PREFIX)_$@-$(PLATFORM_VER)/pddf; \
-	cp $(BDIST_TARGET)/*.whl build/usr/share/sonic/device/$(PLATFORM_PREFIX)_$@-$(PLATFORM_VER); \
-	cp $(BDIST_TARGET)/*.whl build/usr/share/sonic/device/$(PLATFORM_PREFIX)_$@-$(PLATFORM_VER)/pddf/; \
-	cd $(MOD_SRC_DIR); \
-	rm -rf \
-		$(MOD_SRC_DIR)/$@/rgutil \
-		$(MOD_SRC_DIR)/$@/eepromutil \
-		$(MOD_SRC_DIR)/$@/$(BDIST_TARGET)
+	cp -r $(MOD_SRC_DIR)/common/build/*  debian/platform-modules-ragile-$@/; \
+	cp -r $(MOD_SRC_DIR)/$@/build/*  debian/platform-modules-ragile-$@/; \
 
-	cp -r $(MOD_SRC_DIR)/common/build/*  debian/platform-modules-ragile-$@/
-	cp -r $(MOD_SRC_DIR)/$@/build/*  debian/platform-modules-ragile-$@/
+COMPILE_WHL: $(COMPILE_DIRS)
+	@(for mod in $(MODULE_DIRS); do \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		cp -r $(MOD_SRC_DIR)/common/lib/plat_hal $(MOD_SRC_DIR)/$${mod}/; \
+		cp -r $(MOD_SRC_DIR)/common/lib/wbutil $(MOD_SRC_DIR)/$${mod}/; \
+		cp -r $(MOD_SRC_DIR)/common/lib/eepromutil $(MOD_SRC_DIR)/$${mod}/; \
+		cp -r $(MOD_SRC_DIR)/common/sonic_platform $(MOD_SRC_DIR)/$${mod}/; \
+		cp $(MOD_SRC_DIR)/common/script/hal_pltfm.py $(MOD_SRC_DIR)/$${mod}/hal_pltfm.py; \
+		cp $(MOD_SRC_DIR)/common/script/platform_util.py $(MOD_SRC_DIR)/$${mod}/platform_util.py; \
+		cp $(MOD_SRC_DIR)/common/script/platform_intf.py $(MOD_SRC_DIR)/$${mod}/platform_intf.py; \
+		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/plat_hal; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/wbutil; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/eepromutil; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/sonic_platform; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/hal_pltfm.py; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/platform_intf.py; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/platform_util.py; \
+		cd $(MOD_SRC_DIR); \
+	done)
 
 binary: binary-indep
-	@echo "======================================================"
+	@echo "======================================================="
 
 binary-indep:
 	# Resuming debhelper scripts
@@ -87,7 +84,7 @@ override_dh_usrlocal:
 
 override_dh_pysupport:
 
-clean: $(custom_clean_dirs)
+clean:  $(complie_clean_dirs)
 	dh_testdir
 	dh_testroot
 	dh_clean

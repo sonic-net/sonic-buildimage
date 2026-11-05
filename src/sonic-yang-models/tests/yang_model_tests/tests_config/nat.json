@@ -27,11 +27,11 @@
                         "local_ip": "12.0.0.1",
                         "local_port": "200",
                         "nat_type": "dnat",
-                        "twice_nat_id": "100" 
-                    } 
-                ] 
-            } 
-        } 
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
     },
     "STATIC_NAPT_ENTRY_WRONG_IP_PROTOCOL": {
         "sonic-nat:sonic-nat": {
@@ -62,10 +62,10 @@
                         "local_port": "200",
                         "nat_type": "dnat",
                         "twice_nat_id": "100"
-                    } 
-                ] 
-            } 
-        } 
+                    }
+                ]
+            }
+        }
     },
     "STATIC_NAPT_ENTRY_WITHOUT_LOCAL_IP": {
         "sonic-nat:sonic-nat": {
@@ -139,7 +139,7 @@
                         "local_ip": "12.0.0.1",
                         "nat_type": "dnat",
                         "twice_nat_id": "100"
-                    } 
+                    }
                 ]
             }
         }

@@ -1,2 +1,5 @@
-0001-mpls-encap-accessors.patch
-0002-mpls-remove-nl_addr_valid.patch
+0003-Adding-support-for-RTA_NH_ID-attribute.patch
+switch-to-debhelper.patch
+keep-symbol-versions-in-libraries.patch
+update-changelog.patch
+skip-tests-when-having-no-private-netns.patch

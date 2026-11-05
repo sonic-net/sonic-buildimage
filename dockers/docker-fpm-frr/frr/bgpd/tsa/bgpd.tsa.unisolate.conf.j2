@@ -1,3 +1,10 @@
+{%- if internal_route_map == '1' -%}
 no route-map {{ route_map_name }} permit 20
-no route-map {{ route_map_name }} deny 30
+{# #}
+{%- else -%}
+no route-map {{ route_map_name }} permit 20
+no route-map {{ route_map_name }} permit 30
+no route-map {{ route_map_name }} deny 40
+{# #}
+{%- endif -%}
 !

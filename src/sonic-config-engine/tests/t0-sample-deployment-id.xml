@@ -109,7 +109,7 @@
             <Vrf i:nil="true"/>
           </BGPPeer>
           <BGPPeer>
-            <Address>10.1.0.32</Address>  
+            <Address>10.1.0.32</Address>
             <a:Name>BGPSLBPassive</a:Name>
             <a:PeersRange>10.10.10.10/26;100.100.100.100/26</a:PeersRange>
           </BGPPeer>
@@ -730,6 +730,11 @@
             <a:Name>ErspanDestinationIpv4</a:Name>
             <a:Reference i:nil="true"/>
             <a:Value>2.2.2.2</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ResourceType</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>HaAppliance</a:Value>
           </a:DeviceProperty>
         </a:Properties>
       </a:DeviceMetadata>

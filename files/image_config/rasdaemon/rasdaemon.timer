@@ -1,0 +1,10 @@
+[Unit]
+Description=Delays rasdaemon until SONiC has started
+
+[Timer]
+OnUnitActiveSec=0 sec
+OnBootSec=1min 30 sec
+Unit=rasdaemon.service
+
+[Install]
+WantedBy=multi-user.target

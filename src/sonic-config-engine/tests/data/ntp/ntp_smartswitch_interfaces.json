@@ -1,0 +1,60 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "type": "LeafRouter",
+            "subtype": "SmartSwitch"
+        }
+    },
+    "NTP": {
+        "global": {
+            "src_intf": "eth0",
+            "vrf": "default",
+            "authentication": "enabled",
+            "dhcp": "disabled",
+            "server_role": "enabled",
+            "admin_state": "enabled"
+        }
+    },
+    "NTP_SERVER": {
+        "my_ntp_server": {
+            "association_type": "server",
+            "iburst": "off",
+            "admin_state": "disabled",
+            "version": 3,
+            "resolve_as": "10.20.30.40"
+        },
+        "server2": {
+            "association_type": "server",
+            "iburst": "off",
+            "admin_state": "enabled",
+            "version": 3,
+            "resolve_as": "10.20.30.50",
+            "key": 42,
+            "trusted": "no"
+        },
+        "pool.ntp.org": {
+            "association_type": "pool",
+            "iburst": "on",
+            "admin_state": "enabled",
+            "version": 3,
+            "resolve_as": "pool.ntp.org"
+        }
+    },
+    "NTP_KEY": {
+        "1": {
+            "type": "md5",
+            "trusted": "no",
+            "value": "blabla"
+        },
+        "42": {
+            "type": "sha1",
+            "trusted": "yes",
+            "value": "the_answer"
+        }
+    },
+    "INTERFACE": {
+        "Ethernet0": {},
+        "Ethernet0|10.0.0.0/31": {},
+        "Ethernet0|192.168.0.122/24": {}
+    }
+}

@@ -12,9 +12,20 @@
 
 #### Why I did it
 
+##### Work item tracking
+- Microsoft ADO **(number only)**:
+
 #### How I did it
 
 #### How to verify it
+
+<!--
+If PR needs to be backported, then the PR must be tested against the base branch and the earliest backport release branch and provide tested image version on these two branches. For example, if the PR is requested for master, 202211 and 202012, then the requester needs to provide test results on master and 202012.
+
+If you request a backport/cherry-pick, provide both:
+1. A GitHub issue or Microsoft ADO work item tracking the change.
+2. Test evidence from the target branch(es) requested below.
+-->
 
 #### Which release branch to backport (provide reason below if selected)
 
@@ -25,14 +36,47 @@
 - [x] 202006
 -->
 
-- [ ] 201811
-- [ ] 201911
-- [ ] 202006
-- [ ] 202012
-- [ ] 202106
-- [ ] 202111
-- [ ] 202205
-- [ ] 202211
+- [ ] 202305
+- [ ] 202311
+- [ ] 202405
+- [ ] 202411
+- [ ] 202505
+- [ ] 202511
+- [ ] 202512
+- [ ] 202605
+- [ ] 202608
+
+Tracking issue/work item for backport/cherry-pick request (GitHub issue or Microsoft ADO):
+Failure type: <!-- day-one issue / regression / other -->
+
+#### Tested branch
+
+<!--
+- Select each branch where the change was tested.
+- If you request a backport/cherry-pick, select the base branch and the tested
+  target release branch(es).
+-->
+
+- [ ] master
+- [ ] 202305
+- [ ] 202311
+- [ ] 202405
+- [ ] 202411
+- [ ] 202505
+- [ ] 202511
+- [ ] 202512
+- [ ] 202605
+- [ ] 202608
+- [ ] N/A
+
+#### Test result
+
+<!--
+- Provide the tested image version and test evidence for each selected branch.
+- e.g.
+- master: 20260716.01 - <test result or link>
+- 202605: 20260531.42 - <test result or link>
+-->
 
 #### Description for the changelog
 <!--
@@ -40,7 +84,9 @@ Write a short (one line) summary that describes the changes in this
 pull request for inclusion in the changelog:
 -->
 
-#### Ensure to add label/tag for the feature raised. example - PR#2174 under sonic-utilities repo. where, Generic Config and Update feature has been labelled as GCU.
+<!--
+ Ensure to add label/tag for the feature raised. example - PR#2174 under sonic-utilities repo. where, Generic Config and Update feature has been labelled as GCU.
+-->
 
 #### Link to config_db schema for YANG module changes
 <!--
@@ -50,4 +96,3 @@ Link should point to correct section on https://github.com/Azure/sonic-buildimag
 -->
 
 #### A picture of a cute animal (not mandatory but encouraged)
-

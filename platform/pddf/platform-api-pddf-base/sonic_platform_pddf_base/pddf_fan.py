@@ -14,6 +14,7 @@
 
 try:
     from sonic_platform_base.fan_base import FanBase
+    from .pddf_fan_conversion import build_fan_conversion
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -33,6 +34,13 @@ class PddfFan(FanBase):
         self.pddf_obj = pddf_data
         self.plugin_data = pddf_plugin_data
         self.platform = self.pddf_obj.get_platform()
+        fan_plugin_data = self.plugin_data.get('FAN', {})
+        self._pwm_to_duty_cycle = build_fan_conversion(
+            fan_plugin_data, 'pwm_to_duty_cycle'
+        )
+        self._duty_cycle_to_pwm = build_fan_conversion(
+            fan_plugin_data, 'duty_cycle_to_pwm'
+        )
 
         if tray_idx < 0 or tray_idx >= self.platform['num_fantrays']:
             print("Invalid fantray index %d\n" % tray_idx)
@@ -85,8 +93,8 @@ class PddfFan(FanBase):
 
     def get_status(self):
         speed = self.get_speed()
-        status = True if (speed != 0) else False
-        return status
+        fault = self.get_fault()
+        return (speed != 0 and not fault)
 
     def get_direction(self):
         """
@@ -132,6 +140,36 @@ class PddfFan(FanBase):
 
         return direction
 
+    def get_fault(self):
+        """
+        Retrieves the fault status of fan
+
+        Returns:
+            A boolean, True if fault is reported, False if not
+        """
+        if self.is_psu_fan:
+            # Usually no fault reported for PSU fans
+            return False
+        else:
+            idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index
+            attr = "fan{}_fault".format(idx)
+            output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
+
+            if not output:
+                return False
+
+            mode = output['mode']
+            val = output['status'].rstrip()
+
+            vmap = self.plugin_data['FAN']['fault'][mode]['valmap']
+
+            if val in vmap:
+                fault = vmap[val]
+            else:
+                # Cannot convert fault status to boolean, assume no fault
+                fault = False
+            return fault
+
     def get_speed(self):
         """
         Retrieves the speed of fan as a percentage of full speed
@@ -153,7 +191,26 @@ class PddfFan(FanBase):
             else:
                 speed = int(float(output['status']))
 
-            max_speed = int(self.plugin_data['PSU']['PSU_FAN_MAX_SPEED'])
+            psu_plugin_data = self.plugin_data['PSU']
+            if 'PSU_FAN_MAX_SPEED_MAP' in psu_plugin_data:
+                psu_fan_max_speed_map = psu_plugin_data['PSU_FAN_MAX_SPEED_MAP']
+
+                max_speed = None
+                output = self.pddf_obj.get_attr_name_output(device, "psu_model_name")
+                if output and 'status' in output:
+                    model = output['status']
+                    model = model.rstrip()
+
+                    if model in psu_fan_max_speed_map:
+                        max_speed = int(psu_fan_max_speed_map[model])
+
+                # Fall back to default if not able to get model name or model
+                # not listed
+                if max_speed is None:
+                    max_speed = int(psu_fan_max_speed_map['default'])
+            else:
+                max_speed = int(psu_plugin_data['PSU_FAN_MAX_SPEED'])
+
             speed_percentage = round((speed*100)/max_speed)
             return speed_percentage
         else:
@@ -171,8 +228,7 @@ class PddfFan(FanBase):
             else:
                 fpwm = int(float(output['status']))
 
-            pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-            speed_percentage = int(round(pwm_to_dc(fpwm)))
+            speed_percentage = int(round(self._pwm_to_duty_cycle.convert(fpwm)))
 
             return speed_percentage
 
@@ -241,8 +297,7 @@ class PddfFan(FanBase):
             else:
                 fpwm = int(float(output['status']))
 
-            pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-            speed_percentage = int(round(pwm_to_dc(fpwm)))
+            speed_percentage = int(round(self._pwm_to_duty_cycle.convert(fpwm)))
             target_speed = speed_percentage
 
         return target_speed
@@ -282,8 +337,7 @@ class PddfFan(FanBase):
                 print("Setting fan speed is not allowed !")
                 return False
             else:
-                duty_cycle_to_pwm = eval(self.plugin_data['FAN']['duty_cycle_to_pwm'])
-                pwm = int(round(duty_cycle_to_pwm(speed)))
+                pwm = int(round(self._duty_cycle_to_pwm.convert(speed)))
 
                 status = False
                 idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index

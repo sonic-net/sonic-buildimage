@@ -1,0 +1,12 @@
+[Unit]
+Description=Enable backend acl on storage backend ToRs
+After=swss.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/backend_acl.py
+
+[Install]
+WantedBy=sonic.target

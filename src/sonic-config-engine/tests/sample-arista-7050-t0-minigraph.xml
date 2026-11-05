@@ -910,9 +910,9 @@
       </EthernetInterfaces>
       <FlowControl>true</FlowControl>
       <Height>0</Height>
-      <HwSku>Arista-7050-QX-32S</HwSku> 
+      <HwSku>Arista-7050-QX-32S</HwSku>
       <ManagementInterfaces/>
-    </DeviceInfo> 
+    </DeviceInfo>
   </DeviceInfos>
   <MetadataDeclaration>
     <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">

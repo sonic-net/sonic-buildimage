@@ -1,6 +1,7 @@
 ##
-## Copyright (c) 2016-2021 NVIDIA CORPORATION & AFFILIATES.
-## Apache-2.0
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -14,8 +15,11 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 
@@ -26,18 +30,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y \
-        libxml2     \
-        python3-pip  \
-        python3-dev \
-        python-is-python3 \
-        python3-jsonschema \
 {%- if ENABLE_ASAN == "y" %}
-        libasan6 \
+        libasan8 \
 {%- endif %}
-        python3-setuptools
-
-RUN pip3 install --upgrade pip
-RUN apt-get purge -y python-pip
+        libxml2 \
+        python3-pip \
+        python3-dev \
+        python3-jsonschema \
+        python-is-python3 \
+        pciutils \
+        linuxptp \
+        # Used by the SDK CLI's tab completion at runtime:
+        bash-completion
 
 {% if docker_syncd_mlnx_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -55,16 +59,60 @@ RUN apt-get purge -y python-pip
 {{ install_debian_packages(docker_syncd_mlnx_pydebs.split(' ')) }}
 {% endif %}
 
+# sys-sdk's post-install script extracts the packaged SDK CLI venv. Give it a
+# version-independent path, /opt/sdkcli/venv, which everything below and the
+# files copied in here refer to. sdkcli is reached through a wrapper, which
+# saves callers from activating the venv and fixes the options "sdkcli start"
+# runs the daemon with. nvued is started only by "sdkcli start" and is not put
+# on PATH.
+#
+# Everything the wrapper and /etc/sdkcli/bashrc.sh rely on is asserted here, so
+# a reorganised SDK bundle fails the build rather than silently shipping a
+# container where the CLI is broken or has no tab completion.
+#
+# The venv's directory is named after the wheel, which drops the dash from a
+# patch drop's SDK version (4.10.2026-001 installs sdkcli-4.10.2026001-wheel).
+RUN venv=/opt/sdkcli/sdkcli-{{MLNX_SDK_VERSION | replace('-', '')}}-wheel/nv-sx-sdk-cli-venv \
+ && if [ ! -d "$venv" ]; then \
+        echo "Error: the SDK CLI venv is not at $venv." >&2; \
+        echo "Found instead: $(ls -d /opt/sdkcli/*/ 2>/dev/null)" >&2; \
+        exit 1; \
+    fi \
+ && ln -s "$venv" /opt/sdkcli/venv \
+ && test -x /opt/sdkcli/venv/bin/sdkcli \
+ && test -x /opt/sdkcli/venv/bin/nvued \
+ && test -r /opt/sdkcli/venv/bin/activate \
+ && test -r /opt/sdkcli/venv/bin/sdkcli_env_setup.sh \
+ && test -r /usr/share/bash-completion/bash_completion
+COPY ["sdkcli-wrapper.sh", "/usr/local/bin/sdkcli"]
+RUN chmod +x /usr/local/bin/sdkcli
+
+# The SDK CLI's tab completion and "?" help binding have to be set up per
+# shell. /etc/bash.bashrc is the hook that fires: `docker exec -it syncd bash`
+# starts an interactive *non-login* shell, which reads /etc/bash.bashrc and
+# ~/.bashrc but never /etc/profile or /etc/profile.d. Appending also places the
+# setup after that file's `[ -z "${PS1-}" ] && return` guard, so the readline
+# key binding is never attempted in a non-interactive shell.
+COPY ["sdkcli-bashrc.sh", "/etc/sdkcli/bashrc.sh"]
+RUN printf '\n%s\n%s\n' \
+      '# SDK CLI: tab completion and "?" contextual help, interactive shells only.' \
+      '. /etc/sdkcli/bashrc.sh' >> /etc/bash.bashrc
+
 ## Clean up
-RUN apt-get clean -y && \
-    apt-get autoclean -y && \
-    apt-get autoremove -y && \
-    rm -rf /debs
+RUN apt-get purge -y         \
+        python3-dev          \
+        python3-pip
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
+COPY ["phcsync.sh", "/usr/bin/"]
+
+COPY ["files/rdb-cli", "/usr/bin/"]
+RUN chmod +x /usr/bin/rdb-cli
+
+RUN mkdir -p /etc/mlnx/
+COPY sai-*.profile /etc/mlnx/
 
 RUN mkdir -p /etc/supervisor/conf.d/
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
@@ -76,4 +124,9 @@ COPY ["ecmp_calculator/ecmp_calc_sdk.py", "/usr/lib/ecmp_calc"]
 COPY ["ecmp_calculator/packet_scheme.py", "/usr/lib/ecmp_calc"]
 COPY ["lib/port_utils.py", "/usr/lib"]
 
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

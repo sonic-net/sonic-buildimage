@@ -1,0 +1,20 @@
+[Unit]
+Description=DHCP server container
+Requires=swss.service
+After=swss.service
+After=syncd.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+User={{ sonicadmin_user }}
+ExecStartPre=/usr/bin/{{ docker_container_name }}.sh start
+ExecStart=/usr/bin/{{ docker_container_name }}.sh wait
+ExecStop=/usr/bin/{{ docker_container_name }}.sh stop
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

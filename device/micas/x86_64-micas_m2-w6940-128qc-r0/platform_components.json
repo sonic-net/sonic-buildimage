@@ -1,0 +1,20 @@
+{
+    "chassis": {
+        "M2-W6940-128QC": {
+            "component": {
+                "BASE_CPLD": { },
+                "FAN_CPLD": { },
+                "CPU_CPLD": { },
+                "MISC_CPLD": { },
+                "MAC_CPLDA": { },
+                "MAC_CPLDB": { },
+                "LC_CPLD": { },
+                "MAC FPGA": { },
+                "BIOS": { },
+                "BMC": { },
+                "ALTBMC": { }
+            }
+        }
+    }
+}
+

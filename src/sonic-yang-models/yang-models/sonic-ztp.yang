@@ -1,0 +1,71 @@
+module sonic-ztp {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-ztp";
+    prefix ztp;
+
+    description "Zero Touch Provisioning (ZTP) configuration YANG module for SONiC OS.";
+
+    revision 2025-04-03 {
+        description "First Revision";
+    }
+
+    container sonic-ztp {
+
+        container ZTP {
+
+            description "Transient ZTP state used during initial device provisioning.";
+
+            container mode {
+                description "ZTP operational mode and provisioning constraints.";
+
+                leaf profile {
+                    type enumeration {
+                        enum active;
+                    }
+                    description "ZTP activation state; 'active' enables provisioning.";
+                }
+
+                leaf inband {
+                    type boolean;
+                    default true;
+                    description "Allow in-band (front-panel) ports for ZTP provisioning.";
+                }
+
+                leaf out-of-band {
+                    type boolean;
+                    default true;
+                    description "Allow out-of-band (management) ports for ZTP provisioning.";
+                }
+
+                leaf ipv4 {
+                    type boolean;
+                    default true;
+                    description "Allow IPv4 DHCP discovery and provisioning for ZTP.";
+                }
+
+                leaf ipv6 {
+                    type boolean;
+                    default true;
+                    description "Allow IPv6 DHCP discovery and provisioning for ZTP.";
+                }
+
+                leaf product-name {
+                    type string;
+                    description "Switch product name from EEPROM, used in ZTP HTTP headers.";
+                }
+
+                leaf serial-no {
+                    type string;
+                    description "Switch serial number from EEPROM, used in ZTP HTTP headers.";
+                }
+
+            }
+            /* end of container mode */
+        }
+        /* end of container ZTP */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-ztp */

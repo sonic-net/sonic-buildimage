@@ -63,7 +63,7 @@ THERMAL_INFO = {
     }
 }
 NULL_VAL = "N/A"
-I2C_ADAPTER_PATH = "/sys/class/i2c-adapter"
+I2C_ADAPTER_PATH = "/sys/bus/i2c/devices"
 
 
 class Thermal(ThermalBase):

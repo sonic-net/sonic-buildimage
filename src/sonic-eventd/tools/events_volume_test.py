@@ -30,7 +30,7 @@ def run_test(process, file, count, duplicate):
     # log messages to see if events have been received
     tool_proc = start_tool(file)
 
-    time.sleep(2) # buffer for events_tool to startup 
+    time.sleep(2) # buffer for events_tool to startup
     logging.info("Generating logger messages\n")
     sub_cmd = ["logger", "-p", "local0.notice", "-t", process, "test", "message"]
     for i in range(count):

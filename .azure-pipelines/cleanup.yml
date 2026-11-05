@@ -1,5 +1,11 @@
 steps:
 - script: |
+    set -x
+    # kill daemon process
+    ps $(cat /tmp/azp_daemon_kill_docker_pid)
+    sudo kill $(cat /tmp/azp_daemon_kill_docker_pid)
+    rm /tmp/azp_daemon_kill_docker_pid
+
     if sudo [ -f /var/run/march/docker.pid ] ; then
         pid=`sudo cat /var/run/march/docker.pid` ; sudo kill $pid
     fi
@@ -11,4 +17,5 @@ steps:
         pid=`sudo cat dockerfs/var/run/docker.pid` ; sudo kill $pid
     fi
     sudo rm -rf $(ls -A1)
+  condition: always()
   displayName: "Clean Workspace"

@@ -89,6 +89,16 @@ static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da
 }
 
 /*PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*)&pddf_attr, (void*)NULL);*/
+static void xcvr_free_pdata(void *pdata)
+{
+    XCVR_PDATA *d = pdata;
+    if (d)
+    {
+        kfree(d->xcvr_attrs);
+        kfree(d);
+    }
+}
+
 static ssize_t do_device_operation(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
 {
     int i = 0;
@@ -109,6 +119,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             XCVR_PDATA *xcvr_platform_data;
             
             adapter = i2c_get_adapter(cdata->parent_bus);
+            if (!adapter) {
+                printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+                goto clear_data;
+            }
             /* Allocate the xcvr_platform_data */
             xcvr_platform_data = (XCVR_PDATA *)kzalloc(sizeof(XCVR_PDATA), GFP_KERNEL);
             xcvr_platform_data->xcvr_attrs = (XCVR_ATTR *)kzalloc(num*sizeof(XCVR_ATTR), GFP_KERNEL);
@@ -133,7 +147,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             if (!IS_ERR(client_ptr)) {
                 i2c_put_adapter(adapter);
                 pddf_dbg(XCVR, KERN_ERR "Created a %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
-                add_device_table(cdata->i2c_name, (void*)client_ptr);
+                add_device_table_owned(cdata->i2c_name, (void*)client_ptr, xcvr_free_pdata, THIS_MODULE);
             }
             else
             {
@@ -141,10 +155,16 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
                 goto free_data;
             }
         }
-        else if((strcmp(cdata->dev_type, "optoe1")==0) || (strcmp(cdata->dev_type, "optoe2")==0)) 
+        else if((strcmp(cdata->dev_type, "optoe1")==0) ||
+                (strcmp(cdata->dev_type, "optoe2")==0) ||
+                (strcmp(cdata->dev_type, "optoe3")==0))
         {
 
             adapter = i2c_get_adapter(cdata->parent_bus);
+            if (!adapter) {
+                printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+                goto clear_data;
+            }
             board_info = (struct i2c_board_info) {
                 .platform_data = (void *)NULL,
             };

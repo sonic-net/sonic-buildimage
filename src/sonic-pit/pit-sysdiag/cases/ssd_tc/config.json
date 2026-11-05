@@ -1,0 +1,6 @@
+{
+    "name": "ssd-test",
+    "description": "Check SSD capacity",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "power"]
+}

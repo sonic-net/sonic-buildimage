@@ -26,41 +26,77 @@ resources:
     ref: master
     endpoint: sonic-net
 
-pool: sonicbld
+pool: sonicso1ES-amd64
 
 parameters:
 - name: 'jobFilters'
   type: object
   default:
   - vs
-  - barefoot
+  - vpp
+  - alpinevs
   - broadcom
-  - centec
-  - centec-arm64
-  - generic
-  - marvell-armhf
+  - marvell-prestera-armhf
+  - marvell-prestera-arm64
   - mellanox
+  - nvidia-bluefield
+  - aspeed-arm64
 
 stages:
+- stage: Prepare
+  jobs:
+  - job: Prepare
+    steps:
+    - script: |
+        DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
+        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian/latest)
+        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian-security/latest)
+        echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_TIMESTAMP;isOutput=true]$DEBIAN_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_SECURITY_TIMESTAMP;isOutput=true]$DEBIAN_SECURITY_TIMESTAMP"
+      name: SetVersions
+      displayName: 'Set snapshot versions'
 - stage: Build
+  dependsOn: Prepare
   variables:
     - name: CACHE_MODE
       value: none
     - name: VERSION_CONTROL_OPTIONS
       value: 'SONIC_VERSION_CONTROL_COMPONENTS='
+    - name: SKIP_CHECKOUT
+      value: true
+    - name: DEBIAN_TIMESTAMP
+      value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_TIMESTAMP'] ]
+    - name: DEBIAN_SECURITY_TIMESTAMP
+      value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_SECURITY_TIMESTAMP'] ]
     - template: .azure-pipelines/template-variables.yml@buildimage
   jobs:
   - template: azure-pipelines-build.yml
     parameters:
       jobFilters: ${{ parameters.jobFilters }}
-      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y'
+      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y NOBUSTER=1 NOBULLSEYE=1'
       preSteps:
       - template: .azure-pipelines/template-clean-sonic-slave.yml@buildimage
+      - checkout: self
+        submodules: recursive
+        fetchDepth: 0
+        path: s
+        displayName: 'Checkout code'
+      - script: |
+          echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+          if [ "$MIRROR_SNAPSHOT" == y ]; then
+            mkdir -p target/versions/default/
+            echo "debian==$DEBIAN_TIMESTAMP" > target/versions/default/versions-mirror
+            echo "debian-security==$DEBIAN_SECURITY_TIMESTAMP" >> target/versions/default/versions-mirror
+            cat target/versions/default/versions-mirror
+          fi
+        displayName: 'Set snapshot versions'
+
 - stage: UpgradeVersions
   jobs:
   - job: UpgradeVersions
     pool:
-      vmImage: 'ubuntu-20.04'
+      vmImage: 'ubuntu-22.04'
     steps:
     - script: |
         if [ -z "$(which gh)" ]; then
@@ -77,28 +113,47 @@ stages:
     - script: |
         mkdir -p target
         default_platform=broadcom
-        artifacts=$(find $(Pipeline.Workspace) -maxdepth 1 -type d -name 'sonic-buildimage.*' | grep -v "sonic-buildimage.${default_platform}")
+        all_artifacts=$(find $(Pipeline.Workspace) -maxdepth 1 -type d -name 'sonic-buildimage.*')
+        artifacts=$(echo "$all_artifacts" | grep -v "sonic-buildimage.${default_platform}")
         echo "artifacts$artifacts"
         cp -r $(Pipeline.Workspace)/sonic-buildimage.${default_platform}/target/versions target/
         make freeze FREEZE_VERSION_OPTIONS=-r
-        find files/build/versions 
-        ordered_artifacts=$(echo "$artifacts" | grep -v -E "arm64|armhf" && echo "$artifacts" | grep -E "arm64|armhf")
+        find -L files/build/versions
+        ordered_artifacts=$(echo "$artifacts" | grep -v -E "arm64|armhf|nvidia-bluefield" && echo "$artifacts" | grep -E "arm64|armhf|nvidia-bluefield")
         for artifact in $ordered_artifacts
         do
           rm -rf target/versions
           cp -r $artifact/target/versions target/
           OPTIONS="-a -d"
-          [[ "$artifact" == *arm64* || "$artifact" == *armhf* ]] && OPTIONS="-d"
+          [[ "$artifact" == *arm64* || "$artifact" == *armhf* || "$artifact" == *nvidia-bluefield* ]] && OPTIONS="-d"
           make freeze FREEZE_VERSION_OPTIONS="$OPTIONS"
         done
-        git diff files/build/versions
+        if [[ "$(Build.Reason)" != "Schedule" ]]
+        then
+          echo "Skipping stale Docker version module cleanup for a non-scheduled build."
+        else
+          CHECK_VERSION_OPTIONS=()
+          for artifact in $all_artifacts
+          do
+            CHECK_VERSION_OPTIONS+=("--target_path" "$artifact/target")
+          done
+          if ! scripts/versions_manager.py check \
+            --source_version_path files/build/versions-public \
+            --remove_uncovered \
+            "${CHECK_VERSION_OPTIONS[@]}"
+          then
+            echo "Failed to clean up stale Docker version modules."
+            exit 1
+          fi
+        fi
+        git diff files/build/versions-public
       displayName: 'Freeze Versions'
     - script: |
         if [ -z "$GIT_USER" ]; then
           echo "Skipped to send the pull request, GIT_USER not set."
           exit 0
         fi
-        GIT_STATUS=$(git status  --porcelain files/build/versions)
+        GIT_STATUS=$(git status  --porcelain files/build/versions-public)
         if [ -z "$GIT_STATUS" ]; then
           echo "Skipped to send the pull request, no version change in files/build/versions"
           exit 0
@@ -118,16 +173,16 @@ stages:
 
         git config user.name $GIT_USER
         git config credential.https://github.com.username $GIT_USER
-        git add files/build/versions
-        git commit -m "[ci/build]: Upgrade SONiC package versions"
+        git add files/build/versions-public
+        git commit -s -m "[ci/build]: Upgrade SONiC package versions"
         git checkout -b $BRANCH_NAME
         git remote add remote https://github.com/$GIT_USER/$GIT_REPO
         git push remote HEAD:refs/heads/$BRANCH_NAME -f
         git branch -u remote/$BRANCH_NAME
 
         echo $GIT_PASSWORD | gh auth login --with-token
-        TITLE="Upgrade SONiC Versions"
-        BODY="Upgrade SONiC Versions"
+        TITLE="[${SOURCE_BRANCH#refs/heads/}] Upgrade SONiC package Versions"
+        BODY=$TITLE
         RET=0
         if ! gh pr create -t "$TITLE" -b "$BODY" -B $(Build.SourceBranch) -R $(Build.Repository.Name) > pr.log 2>&1; then
           if ! grep -q "already exists" pr.log; then
@@ -143,4 +198,3 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/files/build/versions
       artifact: 'sonic-buildimage.versions'
       displayName: 'Archive SONiC versions'
-    

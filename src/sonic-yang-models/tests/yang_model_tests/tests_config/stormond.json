@@ -1,0 +1,79 @@
+{
+    "STORMOND_CONFIG_TABLE": {
+        "sonic-stormond-config:sonic-stormond-config": {
+            "sonic-stormond-config:STORMOND_CONFIG": {
+                "INTERVALS":{
+                    "daemon_polling_interval" : "3600",
+                    "fsstats_sync_interval"   : "86400"
+
+                }
+            }
+        }
+    },
+    "STORMOND_INVALID_POLLING_INTERVAL": {
+        "sonic-stormond-config:sonic-stormond-config": {
+            "sonic-stormond-config:STORMOND_CONFIG": {
+                "INTERVALS":{
+                    "daemon_polling_interval" : "-1",
+                    "fsstats_sync_interval"   : "86400"
+
+                }
+            }
+        }
+    },
+    "STORMOND_INVALID_SYNC_INTERVAL": {
+        "sonic-stormond-config:sonic-stormond-config": {
+            "sonic-stormond-config:STORMOND_CONFIG": {
+                "INTERVALS":{
+                    "daemon_polling_interval" : "3600",
+                    "fsstats_sync_interval"   : "five_thousand_two_hundred_seconds"
+
+                }
+            }
+        }
+    },
+    "STORMOND_POLLING_INTVL_BAD_LEN_MAX": {
+        "sonic-stormond-config:sonic-stormond-config": {
+            "sonic-stormond-config:STORMOND_CONFIG": {
+                "INTERVALS":{
+                    "daemon_polling_interval" : "360036003600360036003600360036003",
+                    "fsstats_sync_interval"   : "86400"
+
+                }
+            }
+        }
+    },
+    "STORMOND_SYNC_INTVL_BAD_LEN_MAX": {
+        "sonic-stormond-config:sonic-stormond-config": {
+            "sonic-stormond-config:STORMOND_CONFIG": {
+                "INTERVALS":{
+                    "daemon_polling_interval" : "3600",
+                    "fsstats_sync_interval"   : "864008640086400864008640086400864"
+
+                }
+            }
+        }
+    },
+    "STORMOND_SYNC_INTVL_EMPTY_VALUE": {
+        "sonic-stormond-config:sonic-stormond-config": {
+            "sonic-stormond-config:STORMOND_CONFIG": {
+                "INTERVALS":{
+                    "daemon_polling_interval" : "3600",
+                    "fsstats_sync_interval"   : ""
+
+                }
+            }
+        }
+    },
+    "STORMOND_POLLING_INTVL_EMPTY_VALUE": {
+        "sonic-stormond-config:sonic-stormond-config": {
+            "sonic-stormond-config:STORMOND_CONFIG": {
+                "INTERVALS":{
+                    "daemon_polling_interval" : "",
+                    "fsstats_sync_interval"   : "86400"
+
+                }
+            }
+        }
+    }
+}

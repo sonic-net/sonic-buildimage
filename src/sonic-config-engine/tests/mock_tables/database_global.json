@@ -18,6 +18,10 @@
         {
             "namespace" : "asic3",
             "include" : "./asic3/database_config.json"
+        },
+        {
+            "namespace" : "asic4",
+            "include" : "./asic4/database_config.json"
         }
     ],
     "VERSION" : "1.0"

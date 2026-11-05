@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+  Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
   Apache-2.0
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <root>
     <platform_info type="2201">
 
@@ -28,14 +27,19 @@
         <!-- Number of ports in the following port list -->
         <number-of-physical-ports>52</number-of-physical-ports>
 
+        <!-- Global port late create -->
+        <late-create-all-ports>1</late-create-all-ports>
+
         <!-- List of ports in the device -->
         <ports-list>
             <port-info>
                 <local-port>61</local-port>
                 <width>1</width>
                 <module>0</module>
+
                 <!-- 0 none, 1=2, 2=4, 3=2,4 -->
                 <breakout-modes>0</breakout-modes>
+
                 <!-- (BITMASK) 3 - 1Gb, 28700 - 10Gb , 939524096 - 25Gb , 98368 - 40Gb , 3221225472 - 50Gb , 11534336 - 100Gb, 1024 - 10MB_T, 2048 - 100MB_TX, 131072 - 1000MB_T  -->
                 <port-speed>131072</port-speed>
             </port-info>
@@ -399,4 +403,3 @@
         </ports-list>
     </platform_info>
 </root>
-

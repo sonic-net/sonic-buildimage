@@ -19,12 +19,88 @@
         }
     },
 
+    "VRF_TEST_INVALID_LONG__NAME": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "VrfNameTooLong!!!"
+                }]
+            }
+        }
+    },
+
     "VRF_TEST_WITH_FALLBACK": {
         "sonic-vrf:sonic-vrf": {
             "sonic-vrf:VRF": {
                 "VRF_LIST": [{
                         "name": "Vrf_blue",
                         "fallback": true
+                }]
+            }
+        }
+    },
+
+    "VRF_TEST_WITH_VNI": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "Vrf_blue",
+                        "vni": "100"
+                }]
+            }
+        }
+    },
+
+    "VRF_TEST_DEFAULT_WITH_VNI": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "default",
+                        "vni": "100"
+                }]
+            }
+        }
+    },
+
+    "VRF_TEST_DEFAULT_WITH_MAX_VNI": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "default",
+                        "vni": "16777215"
+                }]
+            }
+        }
+    },
+
+    "VRF_TEST_DEFAULT_WRONG_CASE": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "Default",
+                        "vni": "100"
+                }]
+            }
+        }
+    },
+
+    "VRF_TEST_DEFAULT_WITH_SUFFIX": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "default1",
+                        "vni": "100"
+                }]
+            }
+        }
+    },
+
+    "VRF_TEST_WITH_VNI_OOR": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "Vrf_blue",
+                        "vni": "16777216"
                 }]
             }
         }

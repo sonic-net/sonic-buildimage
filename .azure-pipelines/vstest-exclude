@@ -1,4 +1,3 @@
 ^platform
 ^.azure-pipelines
-^files/build/versions
 ^sonic-slave-

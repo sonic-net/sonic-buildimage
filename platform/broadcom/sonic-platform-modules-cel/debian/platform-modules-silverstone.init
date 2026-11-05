@@ -11,23 +11,72 @@
 # Short-Description: Setup SilverStone board.
 ### END INIT INFO
 
-
 case "$1" in
 start)
         echo -n "Setting up board... "
 
-        modprobe i2c-dev
-        modprobe baseboard-lpc
-        modprobe switchboard
-        modprobe mc24lc64t
+        modprobe i2c-i801
+        modprobe i2c-isch
+        modprobe i2c-ismt
+        modprobe i2c-mux
+        modprobe i2c-smbus
+        modprobe coretemp
         modprobe ipmi_devintf
+        modprobe ipmi_si
 
-        # Instantiate TLV EEPROM device on I801 bus 
+        modprobe i2c-dev
+        modprobe ipmi_devintf
+        modprobe baseboard-lpc
+        modprobe cls-i2c-mux-pca954x
+        modprobe cls-switchboard
+        modprobe xcvr-cls
+        modprobe switch_cpld
+
+        sleep 1
+
+	for i in {0..3}
+        do
+                echo -2 > /sys/devices/pci0000:00/0000:00:1c.0/0000:09:00.0/ocores-i2c.3/i2c-3/3-007$i/idle_state
+        done
+
+        # Instantiate TLV EEPROM device on I801 bus
         devname=`cat /sys/bus/i2c/devices/i2c-0/name`
         if [[ $devname == 'SMBus I801 adapter at '* ]]; then
                 echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
         fi
+
+        # Clear system cache
         decode-syseeprom --init 2> /dev/null &
+
+        sleep 1
+
+        # Attach switchboard CPLD i2c device
+        echo switch_cpld 0x30 > /sys/bus/i2c/devices/i2c-4/new_device
+
+        # Attach optical Module EEPROM
+        # use optoe2 for SFP+.
+        for i in {1..2}
+        do
+                echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-$i/new_device
+        done
+
+        # use optoe3 for QSFP-DD.
+        for i in {10..41}
+        do
+                echo optoe3 0x50 > /sys/bus/i2c/devices/i2c-$i/new_device
+        done
+
+        # SONiC LED control policy
+        ## Disable BMC LED control
+        ipmitool raw 0x3a 0x09 0x02 0x00
+        ## Set status led to green blinking 1Hz to indicate NOS take control
+        ipmitool raw 0x3a 0x03 0x00 0x02 0x62 0xdd
+        ## Set Alarm LED off
+        ipmitool raw 0x3a 0x03 0x00 0x02 0x63 0xff
+        ## Set PSU HW control
+        ipmitool raw 0x3a 0x03 0x00 0x02 0x61 0x10
+        ## Set FAN HW control
+        ipmitool raw 0x3a 0x03 0x00 0x02 0x65 0x10
 
         /bin/sh /usr/local/bin/platform_api_mgnt.sh init
 
@@ -35,6 +84,32 @@ start)
         ;;
 
 stop)
+        #TLV eeprom
+        if [ -d /sys/bus/i2c/devices/i2c-0/0-0056 ]; then
+                echo 0x56 > /sys/bus/i2c/devices/i2c-0/delete_device
+        fi
+
+        #switchcpld i2c
+        if [ -d /sys/bus/i2c/devices/i2c-4/4-0030 ]; then
+                echo 0x30 > /sys/bus/i2c/devices/i2c-4/delete_device
+        fi
+
+        #sfp+ module
+        for i in {1..2}
+        do
+                if [ -d /sys/bus/i2c/devices/i2c-$i/$i-0050 ]; then
+                      echo 0x50 > /sys/bus/i2c/devices/i2c-$i/delete_device
+                fi
+        done
+
+        #qsfp-DD
+        for i in {10..41}
+        do
+                if [ -d /sys/bus/i2c/devices/i2c-$i/$i-0050 ]; then
+                        echo 0x50 > /sys/bus/i2c/devices/i2c-$i/delete_device
+                fi
+        done
+
         echo "done."
         ;;
 

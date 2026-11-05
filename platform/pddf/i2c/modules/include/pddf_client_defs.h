@@ -31,9 +31,12 @@
 #define FPGAI2C "PDDF_FPGAI2C"
 #define MUX "PDDF_MUX"
 #define GPIO "PDDF_GPIO"
+#define SPI "PDDF_SPI"
 #define SYSSTATUS "PDDF_SYSSTATUS"
 #define XCVR "PDDF_XCVR"
 #define FPGA "PDDF_FPGAPCI"
+#define MULTIFPGA "PDDF_MULTIFPGAPCI"
+#define I2C_XIIC "PDDF_I2C_XIIC"
 
 
 #define PDDF_DEBUG
@@ -129,10 +132,16 @@ typedef struct PDEVICE
     struct hlist_node node;
     char name[GEN_NAME_SIZE];
     void *data;
-
+    /* frees data->dev.platform_data when the client goes away; NULL if
+     * the client carries no platform data of ours */
+    void (*free_pdata)(void *pdata);
+    /* module that owns free_pdata and the client; held while the client
+     * exists so neither can go away underneath it */
+    struct module *owner;
 }PDEVICE;
 
 void add_device_table(char *name, void *ptr);
+void add_device_table_owned(char *name, void *ptr, void (*free_pdata)(void *pdata), struct module *owner);
 
 
 #endif

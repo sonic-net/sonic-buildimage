@@ -1,0 +1,139 @@
+{
+    "chassis": {
+        "name": "7215 IXS-C1",
+        "components": [
+            {
+                "name": "System-CPLD"
+            },
+            {
+                "name": "U-Boot"
+            },
+            {
+                "name": "FPGA"
+            }
+        ],
+        "fans": [
+            {
+                "name": "Fan1",
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "Fan2",
+                "status_led": {
+                    "controllable": false
+                }
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "drawer1",
+                "status_led": {
+                    "controllable": false
+                },
+                "max_consumed_power": false,
+                "fans": [
+                    {
+                        "name": "Fan1",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "drawer2",
+                "status_led": {
+                    "controllable": false
+                },
+                "max_consumed_power": false,
+                "fans": [
+                    {
+                        "name": "Fan2",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false
+            },
+            {
+                "name": "PSU2",
+                "status_led": {
+                    "controllable": false
+                },
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false
+            }
+        ],
+        "thermals": [
+            {
+                "name": "PCB BACK",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "PCB FRONT",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "PCB MID",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "FPGA",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "CPU CORE",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "SFP0"
+            },
+            {
+                "name": "SFP1"
+            },
+            {
+                "name": "COPPER2"
+            }
+       	]
+    },
+    "interfaces": {},
+    "asic_sensors": {
+        "poll_interval": "10",
+        "poll_admin_status": "enable"
+    }
+}

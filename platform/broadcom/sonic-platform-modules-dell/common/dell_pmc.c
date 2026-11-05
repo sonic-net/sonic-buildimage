@@ -2234,13 +2234,12 @@ static int smf_probe(struct platform_device *pdev)
 }
 
 
-static int smf_remove(struct platform_device *pdev)
+static void smf_remove(struct platform_device *pdev)
 {
         struct resource *res;
 
         res = platform_get_resource(pdev, IORESOURCE_IO, 0);
         release_region(res->start, IOREGION_LENGTH);
-        return 0;
 }
 
 

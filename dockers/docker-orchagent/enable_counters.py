@@ -10,20 +10,9 @@ DEFAULT_SMOOTH_INTERVAL = '10'
 DEFAULT_ALPHA = '0.18'
 
 
-def enable_counter_group(db, name):
-    entry_info = db.get_entry("FLEX_COUNTER_TABLE", name)
-
-    if not entry_info:
-        info = {}
-        info['FLEX_COUNTER_STATUS'] = 'enable'
-        db.mod_entry("FLEX_COUNTER_TABLE", name, info)
-    else:
-        entry_info.update({"FLEX_COUNTER_DELAY_STATUS":"false"})
-        db.mod_entry("FLEX_COUNTER_TABLE", name, entry_info)
-
 def enable_rates():
     # set the default interval for rates
-    counters_db = swsscommon.SonicV2Connector()
+    counters_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
     counters_db.connect('COUNTERS_DB')
     counters_db.set('COUNTERS_DB', 'RATES:PORT', 'PORT_SMOOTH_INTERVAL', DEFAULT_SMOOTH_INTERVAL)
     counters_db.set('COUNTERS_DB', 'RATES:PORT', 'PORT_ALPHA', DEFAULT_ALPHA)
@@ -33,23 +22,11 @@ def enable_rates():
     counters_db.set('COUNTERS_DB', 'RATES:TRAP', 'TRAP_ALPHA', DEFAULT_ALPHA)
     counters_db.set('COUNTERS_DB', 'RATES:TUNNEL', 'TUNNEL_SMOOTH_INTERVAL', DEFAULT_SMOOTH_INTERVAL)
     counters_db.set('COUNTERS_DB', 'RATES:TUNNEL', 'TUNNEL_ALPHA', DEFAULT_ALPHA)
+    counters_db.set('COUNTERS_DB', 'RATES:QUEUE', 'QUEUE_SMOOTH_INTERVAL', DEFAULT_SMOOTH_INTERVAL)
+    counters_db.set('COUNTERS_DB', 'RATES:QUEUE', 'QUEUE_ALPHA', DEFAULT_ALPHA)
 
 
 def enable_counters():
-    db = swsscommon.ConfigDBConnector()
-    db.connect()
-    default_enabled_counters = ['PORT', 'RIF', 'QUEUE', 'PFCWD', 'PG_WATERMARK', 'PG_DROP', 
-                                'QUEUE_WATERMARK', 'BUFFER_POOL_WATERMARK', 'PORT_BUFFER_DROP', 'ACL']
-    
-    # Enable those default counters
-    for key in default_enabled_counters:
-        enable_counter_group(db, key)
-
-    # Set FLEX_COUNTER_DELAY_STATUS to false for those non-default counters
-    keys = db.get_keys('FLEX_COUNTER_TABLE')
-    for key in keys:
-        if key not in default_enabled_counters:
-            enable_counter_group(db, key)
     enable_rates()
 
 

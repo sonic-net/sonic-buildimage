@@ -31,6 +31,7 @@
 #include <linux/dmi.h>
 #include <linux/fs.h>
 #include <asm/uaccess.h>
+#include <linux/version.h>
 
 #define DRVNAME "as9716_32d_fan"
 
@@ -406,8 +407,12 @@ static struct as9716_32d_fan_data *as9716_32d_fan_update_device(struct device *d
     return data;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as9716_32d_fan_probe(struct i2c_client *client,
                                 const struct i2c_device_id *dev_id)
+#else
+static int as9716_32d_fan_probe(struct i2c_client *client)
+#endif
 {
     struct as9716_32d_fan_data *data;
     int status;
@@ -455,13 +460,12 @@ exit:
     return status;
 }
 
-static int as9716_32d_fan_remove(struct i2c_client *client)
+static void as9716_32d_fan_remove(struct i2c_client *client)
 {
     struct as9716_32d_fan_data *data = i2c_get_clientdata(client);
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &as9716_32d_fan_group);
 
-    return 0;
 }
 
 /* Addresses to scan */

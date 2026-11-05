@@ -2138,24 +2138,30 @@ check_transvr_obj_one(char *dev_name){
     return -1;
 }
 
+#ifdef DEBUG_SWPS
 static int
 check_transvr_obj_one_with_measuring(char *dev_name){
-    struct timespec64 begin, end;
-    unsigned long val;
     int err_code;
-    const int WARNING_TIME_MS = 100;
+
+    s64 WARNING_TIME_MS = 500000;
+    struct timespec64 begin, end, val;
+    unsigned long nsval;
 
     ktime_get_real_ts64(&begin);
+
     err_code = check_transvr_obj_one(dev_name);
+
     ktime_get_real_ts64(&end);
-    val = (end.tv_sec - begin.tv_sec) * 1000;
-    val += ((end.tv_nsec - begin.tv_nsec) / 1000);
-    if (val > WARNING_TIME_MS) {
-            SWPS_INFO("%s takes %lums\n", dev_name, val);
+    val = timespec64_sub(end, begin);
+    nsval = timespec64_to_ns(&val);
+
+    if (nsval > WARNING_TIME_MS) {
+            SWPS_INFO("%s takes %luns\n", dev_name, nsval);
     }
 
     return err_code;
 }
+#endif
 
 static int
 check_transvr_objs(void){
@@ -2170,8 +2176,12 @@ check_transvr_objs(void){
         memset(dev_name, 0, sizeof(dev_name));
         snprintf(dev_name, sizeof(dev_name), "%s%d", SWP_DEV_PORT, port_id);
         /* Handle current status */
+#ifdef DEBUG_SWPS
         err_code = check_transvr_obj_one_with_measuring(dev_name);
-        switch (err_code) {
+#else
+        err_code = check_transvr_obj_one(dev_name);
+#endif
+	switch (err_code) {
             case  0:
             case -1:
                 break;

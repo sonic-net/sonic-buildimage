@@ -129,35 +129,87 @@ def test_match_prefix():
     assert(pfx.min_len is None)
     assert(pfx.max_len == 128)
     assert(pfx.action == 'permit')
+    pfx = MatchPrefix(socket.AF_INET6, '10:10::10:10/64', '70..100', 'permit', 555)
+    assert(pfx.ip_prefix == '10:10::/64')
+    assert(pfx.min_len == 70)
+    assert(pfx.max_len == 100)
+    assert(pfx.action == 'permit')
+    assert(pfx.sequence_number == 555)
 
 def test_match_prefix_list():
-    ipv4_pfx_attrs = [('10.1.1.1/16', '18..24', 'permit'),
-                      ('20.2.2.2/24', None, 'deny'),
-                      ('30.3.3.3/8', '10..32', 'permit'),
-                      ('40.4.4.4/28', '20..30', 'deny')]
-    ipv6_pfx_attrs = [('1000:1::1/64', '80..120', 'permit'),
-                      ('2000:2::2/96', None, 'deny'),
-                      ('3000:3::3/32', '40..128', 'permit'),
-                      ('4000:4::4/80', '60..100', 'deny')]
+    ipv4_pfx_attrs = [
+                       {
+                         "args": ('10.1.1.1/16', '18..24', 'permit'),
+                         "expect": "permit 10.1.0.0/16 ge 18 le 24",
+                       },
+                       {
+                         "args": ('20.2.2.2/24', None, 'deny'),
+                         "expect": "deny 20.2.2.0/24",
+                       },
+                       {
+                         "args": ('30.3.3.3/8', '10..32', 'permit'),
+                         "expect": "permit 30.0.0.0/8 ge 10",
+                       },
+                       {
+                         "args": ('40.4.4.4/28', '20..30', 'deny'),
+                         "expect": "deny 40.4.4.0/28 le 30",
+                       },
+                       {
+                         "args": ('1.2.3.0/28', '20..30', 'deny', 555),
+                         "expect": "seq 555 deny 1.2.3.0/28 le 30",
+                       },
+                       {
+                         "args": ('4.3.2.0/28', None, 'permit', 566),
+                         "expect": "seq 566 permit 4.3.2.0/28",
+                       },
+                     ]
+    ipv6_pfx_attrs = [
+                       {
+                         "args": ('1000:1::1/64', '80..120', 'permit'),
+                         "expect": "permit 1000:1::/64 ge 80 le 120",
+                       },
+                       {
+                         "args": ('2000:2::2/96', None, 'deny'),
+                         "expect": "deny 2000:2::/96",
+                       },
+                       {
+                         "args": ('3000:3::3/32', '40..128', 'permit'),
+                         "expect": "permit 3000:3::/32 ge 40",
+                       },
+                       {
+                         "args": ('4000:4::4/80', '60..100', 'deny'),
+                         "expect": "deny 4000:4::/80 le 100",
+                       },
+                       {
+                         "args": ('5000:5::5/80', '60..100', 'deny', 1234),
+                         "expect": "seq 1234 deny 5000:5::/80 le 100",
+                       },
+                       {
+                         "args": ('6000:6::6/80', None, 'permit', 4321),
+                         "expect": "seq 4321 permit 6000:6::/80",
+                       },
+                     ]
 
     pfx_list = MatchPrefixList()
     for attr in ipv4_pfx_attrs:
-        pfx_list.add_prefix(*attr)
+        pfx_list.add_prefix(*attr['args'])
     assert(pfx_list.af == socket.AF_INET)
     assert(len(pfx_list) == len(ipv4_pfx_attrs))
     chk_pfx_list = []
     for attr in ipv4_pfx_attrs:
-        chk_pfx_list.append(MatchPrefix(socket.AF_INET, *attr))
+        chk_pfx_list.append(MatchPrefix(socket.AF_INET, *attr['args']))
+        assert(attr['expect'] == str(chk_pfx_list[-1]))
     assert(all([x == y for x, y in zip(chk_pfx_list, pfx_list)]))
 
     pfx_list = MatchPrefixList()
     for attr in ipv6_pfx_attrs:
-        pfx_list.add_prefix(*attr)
+        pfx_list.add_prefix(*attr['args'])
     assert(pfx_list.af == socket.AF_INET6)
     assert(len(pfx_list) == len(ipv6_pfx_attrs))
     chk_pfx_list = []
     for attr in ipv6_pfx_attrs:
-        chk_pfx_list.append(MatchPrefix(socket.AF_INET6, *attr))
+        chk_pfx_list.append(MatchPrefix(socket.AF_INET6, *attr['args']))
+        assert(attr['expect'] == str(chk_pfx_list[-1]))
     assert(all([x == y for x, y in zip(chk_pfx_list, pfx_list)]))
 
 def test_match_prefix_list_fail():

@@ -1,0 +1,13 @@
+[Unit]
+Description=Setup k8s master services
+Requires=rc-local.service
+After=rc-local.service
+Before=sonic.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/kubernetes_master_entrance.sh
+
+[Install]
+WantedBy=multi-user.target

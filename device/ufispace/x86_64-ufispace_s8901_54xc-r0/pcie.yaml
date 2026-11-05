@@ -1,0 +1,172 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '1980'
+  name: 'Host bridge: Intel Corporation Atom Processor C3000 Series System Agent (rev
+    11)'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: 19a1
+  name: 'Host bridge: Intel Corporation Atom Processor C3000 Series Error Registers
+    (rev 11)'
+- bus: '00'
+  dev: '05'
+  fn: '0'
+  id: 19a2
+  name: 'Generic system peripheral [0807]: Intel Corporation Atom Processor C3000
+    Series Root Complex Event Collector (rev 11)'
+- bus: '00'
+  dev: '06'
+  fn: '0'
+  id: 19a3
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series Integrated QAT
+    Root Port (rev 11)'
+- bus: '00'
+  dev: 09
+  fn: '0'
+  id: 19a4
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series PCI Express Root
+    Port #0 (rev 11)'
+- bus: '00'
+  dev: 0a
+  fn: '0'
+  id: 19a5
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series PCI Express Root
+    Port #1 (rev 11)'
+- bus: '00'
+  dev: 0b
+  fn: '0'
+  id: 19a6
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series PCI Express Root
+    Port #2 (rev 11)'
+- bus: '00'
+  dev: 0e
+  fn: '0'
+  id: 19a8
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series PCI Express Root
+    Port #4 (rev 11)'
+- bus: '00'
+  dev: 0f
+  fn: '0'
+  id: 19a9
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series PCI Express Root
+    Port #5 (rev 11)'
+- bus: '00'
+  dev: '10'
+  fn: '0'
+  id: 19aa
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series PCI Express Root
+    Port #6 (rev 11)'
+- bus: '00'
+  dev: '11'
+  fn: '0'
+  id: 19ab
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series PCI Express Root
+    Port #7 (rev 11)'
+- bus: '00'
+  dev: '12'
+  fn: '0'
+  id: 19ac
+  name: 'System peripheral: Intel Corporation Atom Processor C3000 Series SMBus Contoller
+    - Host (rev 11)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 19c2
+  name: 'SATA controller: Intel Corporation Atom Processor C3000 Series SATA Controller
+    1 (rev 11)'
+- bus: '00'
+  dev: '15'
+  fn: '0'
+  id: 19d0
+  name: 'USB controller: Intel Corporation Atom Processor C3000 Series USB 3.0 xHCI
+    Controller (rev 11)'
+- bus: '00'
+  dev: '16'
+  fn: '0'
+  id: 19d1
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series Integrated LAN
+    Root Port #0 (rev 11)'
+- bus: '00'
+  dev: '17'
+  fn: '0'
+  id: 19d2
+  name: 'PCI bridge: Intel Corporation Atom Processor C3000 Series Integrated LAN
+    Root Port #1 (rev 11)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: 19d3
+  name: 'Communication controller: Intel Corporation Atom Processor C3000 Series ME
+    HECI 1 (rev 11)'
+- bus: '00'
+  dev: 1c
+  fn: '0'
+  id: 19db
+  name: 'SD Host controller: Intel Corporation Device 19db (rev 11)'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: 19dc
+  name: 'ISA bridge: Intel Corporation Atom Processor C3000 Series LPC or eSPI (rev
+    11)'
+- bus: '00'
+  dev: 1f
+  fn: '2'
+  id: 19de
+  name: 'Memory controller: Intel Corporation Atom Processor C3000 Series Power Management
+    Controller (rev 11)'
+- bus: '00'
+  dev: 1f
+  fn: '4'
+  id: 19df
+  name: 'SMBus: Intel Corporation Atom Processor C3000 Series SMBus controller (rev
+    11)'
+- bus: '00'
+  dev: 1f
+  fn: '5'
+  id: 19e0
+  name: 'Serial bus controller [0c80]: Intel Corporation Atom Processor C3000 Series
+    SPI Controller (rev 11)'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: 19e2
+  name: 'Co-processor: Intel Corporation Atom Processor C3000 Series QuickAssist Technology
+    (rev 11)'
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: b770
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries Device b770 (rev 01)'
+- bus: '06'
+  dev: '00'
+  fn: '0'
+  id: '1533'
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
+    03)'
+- bus: 09
+  dev: '00'
+  fn: '0'
+  id: 15c3
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X553 Backplane
+    (rev 11)'
+- bus: 09
+  dev: '00'
+  fn: '1'
+  id: 15c3
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X553 Backplane
+    (rev 11)'
+- bus: 0a
+  dev: '00'
+  fn: '0'
+  id: 15c3
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X553 Backplane
+    (rev 11)'
+- bus: 0a
+  dev: '00'
+  fn: '1'
+  id: 15c3
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X553 Backplane
+    (rev 11)'

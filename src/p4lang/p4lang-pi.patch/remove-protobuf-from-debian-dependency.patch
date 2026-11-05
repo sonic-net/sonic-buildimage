@@ -1,0 +1,22 @@
+Don't depend on Debian's version of the Python 3 protobuf package. Instead,
+have it use the version that we install with pip. This is so that there's a
+single copy of the protobuf package present in the slave container and the
+installed environment.
+
+Index: p4lang-pi-0.1.0/debian/control
+===================================================================
+--- p4lang-pi-0.1.0.orig/debian/control
++++ p4lang-pi-0.1.0/debian/control
+@@ -43,11 +43,9 @@ Depends:
+     libprotobuf-dev,
+     libprotoc-dev,
+     protobuf-compiler,
+-    python3-protobuf,
+     libgrpc++-dev,
+     libgrpc-dev,
+-    protobuf-compiler-grpc,
+-    python3-grpcio
++    protobuf-compiler-grpc
+ Description: Implementation framework of a P4Runtime server
+  Protocol Independent API (PI or P4 Runtime) defines a set of APIs that allow
+  interacting with entities defined in a P4 program.

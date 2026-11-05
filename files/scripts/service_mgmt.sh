@@ -3,7 +3,6 @@
 function debug()
 {
     /usr/bin/logger $1
-    /bin/echo `date` "- $1" >> ${DEBUGLOG}
 }
 
 function check_warm_boot()
@@ -19,7 +18,8 @@ function check_warm_boot()
 
 function check_fast_boot ()
 {
-    if [[ $($SONIC_DB_CLI STATE_DB GET "FAST_REBOOT|system") == "1" ]]; then
+    SYSTEM_FAST_REBOOT=`$SONIC_DB_CLI STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    if [[ x"${SYSTEM_FAST_REBOOT}" == x"true" ]]; then
         FAST_BOOT="true"
     else
         FAST_BOOT="false"
@@ -46,12 +46,32 @@ function check_redundant_type()
     debug "DEVICE_SUBTYPE: ${DEVICE_SUBTYPE}, CONFIG_KNOB: ${CONFIG_KNOB}"
 }
 
+function handle_interrupted_start() {
+    # If this wrapper is killed (e.g. `systemctl stop sonic.target` during a
+    # `config reload`) while still inside start(), the unit never reaches "active"
+    # and systemd will not run ExecStop - so stop() below is skipped even though
+    # `/usr/bin/${SERVICE}.sh start` may have already left the container running.
+    # Stop it here instead of leaving an orphaned, unmanaged container (and its
+    # main process) running.
+    debug "Start of ${SERVICE}$DEV interrupted by signal, checking for an orphaned container..."
+    if [ -n "$(docker ps -q --filter "name=^/${SERVICE}${DEV}$" --filter "status=running")" ]; then
+        debug "${SERVICE}$DEV container is running after interrupted start, stopping it..."
+        stop
+    fi
+    # Conventional shell exit code for death-by-signal: 128 + signal number.
+    exit $((128 + $(kill -l TERM)))
+}
+
 start() {
     debug "Starting ${SERVICE}$DEV service..."
+
+    trap handle_interrupted_start TERM
 
     # start service docker
     /usr/bin/${SERVICE}.sh start $DEV
     debug "Started ${SERVICE}$DEV service..."
+
+    trap - TERM
 }
 
 wait() {
@@ -86,9 +106,8 @@ DEV=$2
 
 SCRIPT_NAME=$(basename -- "$0")
 SERVICE="${SCRIPT_NAME%.*}"
-DEBUGLOG="/tmp/$SERVICE-debug$DEV.log"
 NAMESPACE_PREFIX="asic"
-if [ "$DEV" ]; then
+if [[ "$DEV" && "$DEV" != *"dpu"* ]]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
     SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
 else

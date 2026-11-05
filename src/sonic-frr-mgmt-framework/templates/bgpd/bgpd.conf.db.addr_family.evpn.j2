@@ -1,6 +1,9 @@
 {% if 'advertise-all-vni' in af_val and af_val['advertise-all-vni'] == 'true' %}
   advertise-all-vni
 {% endif %}
+{% if 'advertise-svi-ip' in af_val and af_val['advertise-svi-ip'] == 'true' %}
+  advertise-svi-ip
+{% endif %}
 {% if 'autort' in af_val %}
   autort {{af_val['autort']}}
 {% endif %}
@@ -41,7 +44,7 @@
 {% if BGP_GLOBALS_EVPN_RT is defined and BGP_GLOBALS_EVPN_RT|length > 0 %}
 {% for evpn_rt_key, evpn_rt_val in BGP_GLOBALS_EVPN_RT.items() %}
 {% if vrf == evpn_rt_key[0] %}
-  route-target {{evpn_rt_val['route-target-type']}} {{evpn_rt_key[2]}} 
+  route-target {{evpn_rt_val['route-target-type']}} {{evpn_rt_key[2]}}
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -65,7 +68,7 @@
 {% if BGP_GLOBALS_EVPN_VNI_RT is defined and BGP_GLOBALS_EVPN_VNI_RT|length > 0 %}
 {% for vni_rt_key, vni_rt_val in BGP_GLOBALS_EVPN_VNI_RT.items() %}
 {% if vrf == vni_rt_key[0] and vni_key[2] == vni_rt_key[2] %}
-    route-target {{vni_rt_val['route-target-type']}} {{vni_rt_key[3]}} 
+    route-target {{vni_rt_val['route-target-type']}} {{vni_rt_key[3]}}
 {% endif %}
 {% endfor %}
 {% endif %}

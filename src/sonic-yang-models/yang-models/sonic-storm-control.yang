@@ -8,33 +8,39 @@ module sonic-storm-control {
         prefix prt;
     }
 
-    organization 
+    organization
         "SONiC";
 
-    contact 
+    contact
         "SONiC";
 
     description
         "This module defines configuration and operational state
-        data for broadcast, unknown-unicast and unknown-multicast (BUM) storm-control.  
-        storm-control can be enabled on ethernet interfaces. 
-        Rate is defined in bits-per-second. All three types of storm-control can be 
+        data for broadcast, unknown-unicast and unknown-multicast (BUM) storm-control.
+        storm-control can be enabled on ethernet interfaces.
+        Rate is defined in bits-per-second. All three types of storm-control can be
         enabled on an interface.";
 
     revision 2021-12-13 {
-        description 
+        description
             "Initial revision";
     }
 
     container sonic-storm-control {
         container PORT_STORM_CONTROL {
+
+            description "Configures BUM storm control rate limits per port.";
+
             list PORT_STORM_CONTROL_LIST {
                 key "ifname storm_type";
-                /*scommon:key-pattern "PORT_STORM_CONTROL|{ifname}|{storm_type}";*/
+
+                description "Storm control entry for a specific port and traffic type.";
+
                 leaf ifname {
                     type leafref {
-                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name"; 
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
                     }
+                    description "Physical port on which storm control is applied.";
                 }
                 leaf storm_type {
                     type enumeration{
@@ -42,6 +48,7 @@ module sonic-storm-control {
                         enum unknown-unicast;
                         enum unknown-multicast;
                     }
+                    description "Type of BUM traffic to rate-limit.";
                 }
                 leaf kbps {
                     type uint64 {
@@ -49,6 +56,7 @@ module sonic-storm-control {
                             error-message "kbps value out of range";
                         }
                     }
+                    description "Rate limit in kilobits per second (0-100000000 Kbps).";
                 }
             }
         }

@@ -41,7 +41,7 @@ stages:
     CACHE_MODE: wcache
     SKIP_CHECKOUT: true
     TERM: ''
-    PACKAGE_URL: "https://sonicstorage.blob.core.windows.net/packages"
+    PACKAGE_URL: "https://packages.trafficmanager.net/public"
 
   jobs:
   - template: azure-pipelines-build.yml

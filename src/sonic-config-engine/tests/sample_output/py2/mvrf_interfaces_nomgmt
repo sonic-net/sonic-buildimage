@@ -5,7 +5,7 @@
 #
 auto mgmt
 iface mgmt
-    vrf-table 5000
+    vrf-table 6000
 # The loopback network interface for mgmt VRF that is required for applications like NTP
     up ip link add lo-m type dummy
     up ip link set dev lo-m master mgmt
@@ -19,6 +19,7 @@ iface lo inet loopback
    netmask 255.255.0.0
    scope host
    post-up ip addr del 127.0.0.1/8 dev lo
+   pre-down ip addr add 127.0.0.1/8 dev lo
 
 # The management network interface
 auto eth0

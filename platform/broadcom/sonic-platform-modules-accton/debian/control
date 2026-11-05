@@ -2,85 +2,106 @@ Source: sonic-accton-platform-modules
 Section: main
 Priority: extra
 Maintainer: Accton network <roy_lee@accton.com>, Accton Network <polly_hsu@accton.com>, Accton Network <jostar_yang@accton.com>, Accton Network <brandon_chuang@accton.com>
-Build-Depends: debhelper (>= 9), bzip2
+Build-Depends: debhelper-compat (= 13), python3
+Rules-Requires-Root: no
 Standards-Version: 3.9.3
 
 Package: sonic-platform-accton-as7712-32x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as5712-54x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7816-64x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7716-32x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7716-32xb
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7312-54x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7326-56x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as6712-32x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7726-32x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as4630-54pe
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as4630-54te
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-minipack
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as5812-54x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as5812-54t
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as5835-54x
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as9716-32d
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as9726-32d
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as5835-54t
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7312-54xs
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-accton-as7315-27xb
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp

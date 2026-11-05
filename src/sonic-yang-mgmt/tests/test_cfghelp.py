@@ -1,30 +1,13 @@
-import json
 import subprocess
 import os
 from unittest import TestCase
 
-output1="""\
-Error: Table or all option is required
-usage: sonic-cfg-help [-h] [-t TABLE] [-f FIELD] [-p PRINT_FORMAT] [-a]
-
-Description of table name
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -t TABLE, --table TABLE
-                        Table name
-  -f FIELD, --field FIELD
-                        Field
-  -p PRINT_FORMAT, --print_format PRINT_FORMAT
-                        Print format
-  -a, --all             Print all tables
-"""
-
 techsupport_table_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
+key - GLOBAL
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
 | Field                   | Description                                        | Mandatory   | Default   | Reference   |
 +=========================+====================================================+=============+===========+=============+
@@ -60,8 +43,9 @@ Description: AUTO_TECHSUPPORT part of config_db.json
 techsupport_table_field_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
+key - GLOBAL
 +---------+--------------------------------------------------+-------------+-----------+-------------+
 | Field   | Description                                      | Mandatory   | Default   | Reference   |
 +=========+==================================================+=============+===========+=============+
@@ -71,34 +55,37 @@ Description: AUTO_TECHSUPPORT part of config_db.json
 
 """
 
-portchannel_table_field_output="""\
+vlan_table_field_output="""\
 
-PORTCHANNEL
-Description: PORTCHANNEL part of config_db.json
+VLAN
+Description: IEEE 802.1Q VLAN definitions
 
 key - name
-+---------+-------------------------------------------+-------------+-----------+-------------+
-| Field   | Description                               | Mandatory   | Default   | Reference   |
-+=========+===========================================+=============+===========+=============+
-| members | The field contains list of unique members |             |           | PORT:name   |
-+---------+-------------------------------------------+-------------+-----------+-------------+
++--------------+-------------------------------------------+-------------+-----------+-------------+
+| Field        | Description                               | Mandatory   | Default   | Reference   |
++==============+===========================================+=============+===========+=============+
+| dhcp_servers | The field contains list of unique members |             |           |             |
+|              | Configure the dhcp v4 servers             |             |           |             |
++--------------+-------------------------------------------+-------------+-----------+-------------+
 
 """
 
 dscp_to_tc_table_field_output="""\
 
 DSCP_TO_TC_MAP
-Description: DSCP_TO_TC_MAP part of config_db.json
+Description: Maps DSCP values (0-63) to traffic class for ingress QoS classification.
 
 key - name
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | Field   | Description                                          | Mandatory   | Default   | Reference   |
 +=========+======================================================+=============+===========+=============+
-| name    |                                                      |             |           |             |
+| name    | Name of the DSCP to TC map.                          |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | dscp    | This field is for storing mapping between two fields |             |           |             |
+|         | DSCP value (0-63).                                   |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | tc      | This field is for storing mapping between two fields |             |           |             |
+|         | Target traffic class.                                |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 
 """
@@ -106,15 +93,36 @@ key - name
 acl_rule_table_field_output="""\
 
 ACL_RULE
-Description: ACL_RULE part of config_db.json
+Description: Defines packet matching criteria and actions for ACL filtering rules
 
 key - ACL_TABLE_NAME:RULE_NAME
-+-----------+-----------------------------------------+-------------+-----------+-------------+
-| Field     | Description                             | Mandatory   | Default   | Reference   |
-+===========+=========================================+=============+===========+=============+
-| ICMP_TYPE | Mutually exclusive in group icmp        |             |           |             |
-|           | when IP_TYPE in ANY,IP,IPV4,IPv4ANY,ARP |             |           |             |
-+-----------+-----------------------------------------+-------------+-----------+-------------+
++-----------+-------------------------------------------------+-------------+-----------+-------------+
+| Field     | Description                                     | Mandatory   | Default   | Reference   |
++===========+=================================================+=============+===========+=============+
+| ICMP_TYPE | Mutually exclusive in group icmp                |             |           |             |
+|           | when IP_TYPE in ANY,IP,IPV4,IPv4ANY,IPV4ANY,ARP |             |           |             |
+|           | ICMPv4 type value to match                      |             |           |             |
++-----------+-------------------------------------------------+-------------+-----------+-------------+
+
+"""
+
+snmp_table_output="""\
+
+SNMP
+Description: SNMP system information (contact and location).
+
+key - CONTACT
++---------+----------------------+-------------+-----------+-------------+
+| Field   | Description          | Mandatory   | Default   | Reference   |
++=========+======================+=============+===========+=============+
+| Contact | SNMP System Contact. |             |           |             |
++---------+----------------------+-------------+-----------+-------------+
+key - LOCATION
++----------+-----------------------+-------------+-----------+-------------+
+| Field    | Description           | Mandatory   | Default   | Reference   |
++==========+=======================+=============+===========+=============+
+| Location | SNMP System Location. |             |           |             |
++----------+-----------------------+-------------+-----------+-------------+
 
 """
 
@@ -140,7 +148,18 @@ class TestCfgHelp(TestCase):
     def test_dummy_run(self):
         argument = []
         output = self.run_script(argument)
-        self.assertEqual(output, output1)
+
+        options = []
+        options.append(("-t", "--table", "Table name"))
+        options.append(("-f", "--field", "Field"))
+        options.append(("-p", "--print_format", "Print format"))
+        options.append(("-a", "--all", "Print all tables"))
+
+        for option in options:
+            with self.subTest(option=option):
+                self.assertRegex(output, f"(?s:.)*[^\\w]{option[0]}(?s:.)*")
+                self.assertRegex(output, f"(?s:.)*[^\\w]{option[1]}(?s:.)*")
+                self.assertRegex(output, f"(?s:.)*\\b{option[2]}(?s:.)*")
 
     def test_single_table(self):
         argument = ['-t', 'AUTO_TECHSUPPORT']
@@ -153,9 +172,9 @@ class TestCfgHelp(TestCase):
         self.assertEqual(output, techsupport_table_field_output)
 
     def test_leaf_list(self):
-        argument = ['-t', 'PORTCHANNEL', '-f', 'members']
+        argument = ['-t', 'VLAN', '-f', 'dhcp_servers']
         output = self.run_script(argument)
-        self.assertEqual(output, portchannel_table_field_output)
+        self.assertEqual(output, vlan_table_field_output)
 
     def test_leaf_list_map(self):
         argument = ['-t', 'DSCP_TO_TC_MAP']
@@ -166,4 +185,10 @@ class TestCfgHelp(TestCase):
     def test_when_condition(self):
         argument = ['-t', 'ACL_RULE', '-f', 'ICMP_TYPE']
         output = self.run_script(argument)
+        self.maxDiff = None
         self.assertEqual(output, acl_rule_table_field_output)
+
+    def test_nested_container(self):
+        argument = ['-t', 'SNMP']
+        output = self.run_script(argument)
+        self.assertEqual(output, snmp_table_output)

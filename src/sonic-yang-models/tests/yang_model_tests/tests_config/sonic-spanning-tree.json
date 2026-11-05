@@ -1,0 +1,34 @@
+{
+	"PVST_GLOBAL_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "pvst",
+						"rootguard_timeout": "30",
+						"forward_delay": "15",
+						"hello_time": "2",
+						"max_age": "20",
+						"priority": "32768"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{
+						"ifname": "Ethernet0",
+						"enabled": "true",
+						"root_guard": "false",
+						"bpdu_guard": "false",
+						"bpdu_guard_do_disable": "false",
+						"uplink_fast": "false",
+						"portfast": "false",
+						"path_cost": "200",
+						"priority": "128"
+					}
+				]
+			}
+		}
+	}
+}

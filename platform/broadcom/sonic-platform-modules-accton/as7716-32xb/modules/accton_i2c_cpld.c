@@ -31,6 +31,7 @@
 #include <linux/hwmon-sysfs.h>
 #include <linux/err.h>
 #include <linux/mutex.h>
+#include <linux/version.h>
 
 #define CPLD_VERSION_REG    0x1
 
@@ -126,8 +127,12 @@ static void accton_i2c_cpld_remove_client(struct i2c_client *client)
 	mutex_unlock(&list_lock);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int accton_i2c_cpld_probe(struct i2c_client *client,
 			const struct i2c_device_id *dev_id)
+#else
+static int accton_i2c_cpld_probe(struct i2c_client *client)
+#endif
 {
 	int status;
 	
@@ -151,12 +156,11 @@ exit:
 	return status;
 }
 
-static int accton_i2c_cpld_remove(struct i2c_client *client)
+static void accton_i2c_cpld_remove(struct i2c_client *client)
 {
     sysfs_remove_group(&client->dev.kobj, &as5712_54x_cpld_group);    
   
 	accton_i2c_cpld_remove_client(client);	
-	return 0;
 }
 
 static const struct i2c_device_id accton_i2c_cpld_id[] = {
@@ -234,23 +238,7 @@ static void __exit accton_i2c_cpld_exit(void)
 {
 	i2c_del_driver(&accton_i2c_cpld_driver);
 }
-/*	
-static struct dmi_system_id as7712_dmi_table[] = {
-	{
-		.ident = "Accton AS7712",
-		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Accton"),
-			DMI_MATCH(DMI_PRODUCT_NAME, "AS7712"),
-		},
-	}
-};
 
-int platform_accton_as7712_32x(void)
-{
-	return dmi_check_system(as7712_dmi_table);
-}
-EXPORT_SYMBOL(platform_accton_as7712_32x);
-*/
 MODULE_AUTHOR("Brandon Chuang <brandon_chuang@accton.com.tw>");
 MODULE_DESCRIPTION("accton_i2c_cpld driver");
 MODULE_LICENSE("GPL");

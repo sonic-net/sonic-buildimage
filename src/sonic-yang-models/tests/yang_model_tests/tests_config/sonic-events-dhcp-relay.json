@@ -1,63 +1,13 @@
 {
     "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISCARD_INCORRECT_IFNAME": {
-        "sonic-port:sonic-port": {
-            "sonic-port:PORT": {
-                "PORT_LIST": [
-                    {
-                        "admin_status": "up",
-                        "alias": "eth0",
-                        "description": "Ethernet0",
-                        "lanes": 65,
-                        "mtu": 9000,
-                        "name": "Ethernet0",
-                        "speed": 25000
-                    }
-                ]
-            }
-        },
-        "sonic-portchannel:sonic-portchannel": {
-            "sonic-portchannel:PORTCHANNEL": {
-                "PORTCHANNEL_LIST": [
-                    {
-                        "admin_status": "up",
-                        "name": "PortChannel10"
-                    }
-                ]
-            }
-        },
         "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
             "sonic-events-dhcp-relay:dhcp-relay-discard": {
-                "ifname": "Eth",
+                "ifname": "@@@!!!",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
-        }    
+        }
     },
     "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISCARD_INCORRECT_TIMESTAMP": {
-        "sonic-port:sonic-port": {
-            "sonic-port:PORT": {
-                "PORT_LIST": [
-                    {
-                        "admin_status": "up",
-                        "alias": "eth0",
-                        "description": "Ethernet0",
-                        "lanes": 65,
-                        "mtu": 9000,
-                        "name": "Ethernet0",
-                        "speed": 25000
-                    }
-                ]
-            }
-        },
-        "sonic-portchannel:sonic-portchannel": {
-            "sonic-portchannel:PORTCHANNEL": {
-                "PORTCHANNEL_LIST": [
-                    {
-                        "admin_status": "up",
-                        "name": "PortChannel10"
-                    }
-                ]
-            }
-        },
         "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
             "sonic-events-dhcp-relay:dhcp-relay-discard": {
                 "ifname": "Ethernet0",
@@ -66,31 +16,6 @@
         }
     },
     "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISCARD_VALID": {
-        "sonic-port:sonic-port": {
-            "sonic-port:PORT": {
-                "PORT_LIST": [
-                    {
-                        "admin_status": "up",
-                        "alias": "eth0",
-                        "description": "Ethernet0",
-                        "lanes": 65,
-                        "mtu": 9000,
-                        "name": "Ethernet0",
-                        "speed": 25000
-                    }
-                ]
-            }
-        },
-        "sonic-portchannel:sonic-portchannel": {
-            "sonic-portchannel:PORTCHANNEL": {
-                "PORTCHANNEL_LIST": [
-                    {
-                        "admin_status": "up",
-                        "name": "PortChannel10"
-                    }
-                ]
-            }
-        },
         "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
             "sonic-events-dhcp-relay:dhcp-relay-discard": {
                 "ifname": "Ethernet0",

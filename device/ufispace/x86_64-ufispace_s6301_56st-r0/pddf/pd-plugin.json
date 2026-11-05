@@ -1,0 +1,75 @@
+{
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP+": {"0":true, "1":false }
+           }
+
+        },
+        "plug_status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+    "PSU":
+    {
+        "psu_present":
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            }
+        },
+        
+        "psu_support_list":
+        [
+            {"Manufacturer": "ASPOWER","Name": "U1A-K10150-DRB-13", "MaxSpd": "PSU_AC_FAN_MAX_SPEED", "Dir": "EXHAUST", "Type": "AC" },
+            {"Manufacturer": "ASPOWER","Name": "U1A-K0150-B-13", "MaxSpd": "PSU_AC_FAN_MAX_SPEED", "Dir": "INTAKE", "Type": "AC"},
+            {"Manufacturer": "ASPOWER","Name": "U1D-K0150-A-13", "MaxSpd": "PSU_DC_FAN_MAX_SPEED", "Dir": "EXHAUST", "Type": "DC"},
+            {"Manufacturer": "ASPOWER","Name": "U1D-K0150-B-13", "MaxSpd": "PSU_DC_FAN_MAX_SPEED", "Dir": "INTAKE", "Type": "DC"}
+        ],
+        "valmap": {"PSU_FAN_MAX_SPEED": "13000", "PSU_AC_FAN_MAX_SPEED": "13000", "PSU_DC_FAN_MAX_SPEED":"13000", "DEFAULT_TYPE": "AC"}
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "i2c":
+            {
+                "valmap": {"0":"INTAKE", "1":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            }
+        },
+
+        "FAN_MAX_SPEED":"25000"
+    },
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}

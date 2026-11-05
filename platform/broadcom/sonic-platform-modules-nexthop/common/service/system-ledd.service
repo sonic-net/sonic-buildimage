@@ -1,0 +1,12 @@
+[Unit]
+Description=System Led Service
+After=pddf-platform-init.service
+
+[Service]
+ExecStart=/usr/local/bin/system_ledd.py
+Restart=on-failure
+RestartSec=10s
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

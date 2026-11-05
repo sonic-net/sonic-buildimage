@@ -1,0 +1,40 @@
+# Telemetry is discarded by default. For debug output, replace `nop: {}` under
+# exporters with `debug: {verbosity: detailed}`, then replace `[nop]` with
+# `[debug]` in the desired pipelines. Verbosity may be basic, normal, or detailed.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "127.0.0.1:4317"
+      http:
+        endpoint: "127.0.0.1:4318"
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1000
+
+exporters:
+  nop: {}
+  
+service:
+  telemetry:
+    logs:
+      level: "info"
+
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [nop]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [nop]
+
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [nop]

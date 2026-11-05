@@ -4,10 +4,13 @@
 #include <regex>
 #include <ctime>
 #include <unordered_map>
+#include <atomic>
 #include "rsyslog_plugin.h"
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
+
+std::atomic<bool> RsyslogPlugin::g_running;
 
 bool RsyslogPlugin::onMessage(string msg, lua_State* luaState) {
     string tag;
@@ -28,20 +31,20 @@ bool RsyslogPlugin::onMessage(string msg, lua_State* luaState) {
 void parseParams(vector<string> params, vector<EventParam>& eventParams) {
     for(long unsigned int i = 0; i < params.size(); i++) {
         if(params[i].empty()) {
-            SWSS_LOG_ERROR("Empty param provided in regex file\n");	
+            SWSS_LOG_ERROR("Empty param provided in regex file\n");
             continue;
-       	}
+        }
         EventParam ep = EventParam();
         auto delimPos = params[i].find(':');
         if(delimPos == string::npos) { // no lua code
             ep.paramName = params[i];
         } else {
             ep.paramName = params[i].substr(0, delimPos);
-	    ep.luaCode = params[i].substr(delimPos + 1);
+            ep.luaCode = params[i].substr(delimPos + 1);
             if(ep.luaCode.empty()) {
                 SWSS_LOG_ERROR("Lua code missing after :\n");
             }
-	}
+        }
         eventParams.push_back(ep);
     }
 }
@@ -56,13 +59,13 @@ bool RsyslogPlugin::createRegexList() {
     }
     try {
         regexFile >> jsonList;
-    } catch (invalid_argument& iaException) {
+    } catch (nlohmann::detail::parse_error& iaException) {
         SWSS_LOG_ERROR("Invalid JSON file: %s, throws exception: %s\n", m_regexPath.c_str(), iaException.what());
         return false;
     }
 
     string regexString;
-    string timestampRegex = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*"; 
+    string timestampRegex = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*";
     regex expression;
     vector<RegexStruct> regexList;
 
@@ -71,11 +74,11 @@ bool RsyslogPlugin::createRegexList() {
         vector<EventParam> eventParams;
         try {
             string eventRegex = jsonList[i]["regex"];
-	    regexString = timestampRegex + eventRegex; 
+            regexString = timestampRegex + eventRegex;
             string tag = jsonList[i]["tag"];
             vector<string> params = jsonList[i]["params"];
-	    vector<string> timestampParams = { "month", "day", "time" };
-	    params.insert(params.begin(), timestampParams.begin(), timestampParams.end());
+            vector<string> timestampParams = { "month", "day", "time" };
+            params.insert(params.begin(), timestampParams.begin(), timestampParams.end());
             regex expr(regexString);
             expression = expr;
             parseParams(params, eventParams);
@@ -83,13 +86,13 @@ bool RsyslogPlugin::createRegexList() {
             rs.tag = tag;
             rs.regexExpression = expression;
             regexList.push_back(rs);
-	} catch (domain_error& deException) {
+        } catch (nlohmann::detail::type_error& deException) {
             SWSS_LOG_ERROR("Missing required key, throws exception: %s\n", deException.what());
             return false;
         } catch (regex_error& reException) {
             SWSS_LOG_ERROR("Invalid regex, throws exception: %s\n", reException.what());
-	    return false;
-	}
+            return false;
+        }
     }
 
     if(regexList.empty()) {
@@ -104,11 +107,11 @@ bool RsyslogPlugin::createRegexList() {
 }
 
 void RsyslogPlugin::run() {
+    signal(SIGTERM, RsyslogPlugin::signalHandler);
     lua_State* luaState = luaL_newstate();
     luaL_openlibs(luaState);
-    while(true) {
-        string line;
-        getline(cin, line);
+    string line;
+    while(RsyslogPlugin::g_running && getline(cin, line)) {
         if(line.empty()) {
             continue;
         }
@@ -132,4 +135,5 @@ RsyslogPlugin::RsyslogPlugin(string moduleName, string regexPath) {
     m_parser = unique_ptr<SyslogParser>(new SyslogParser());
     m_moduleName = moduleName;
     m_regexPath = regexPath;
+    RsyslogPlugin::g_running = true;
 }

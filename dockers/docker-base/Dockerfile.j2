@@ -38,6 +38,7 @@ COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 COPY ["sources.list", "/etc/apt/sources.list"]
 {% endif %}
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
 RUN apt-get update
 
 # Pre-install fundamental packages
@@ -49,6 +50,7 @@ RUN apt-get -y install \
     rsyslog            \
     less
 
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
@@ -67,7 +69,6 @@ RUN mkdir -p /etc/supervisor/conf.d
 RUN mkdir -p /var/log/supervisor
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
-COPY ["etc/supervisor/containercfgd.conf", "/etc/supervisor/conf.d/"]
 
 RUN apt-get -y purge   \
     exim4              \

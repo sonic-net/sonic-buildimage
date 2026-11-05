@@ -211,8 +211,7 @@ static void board_i2c_cpld_remove_client(struct i2c_client *client)
 	mutex_unlock(&list_lock);
 }
 
-static int board_i2c_cpld_probe(struct i2c_client *client,
-			const struct i2c_device_id *dev_id)
+static int board_i2c_cpld_probe(struct i2c_client *client)
 {
 	int status;
 
@@ -237,18 +236,11 @@ exit:
 	return status;
 }
 
-static int board_i2c_cpld_remove(struct i2c_client *client)
+static void board_i2c_cpld_remove(struct i2c_client *client)
 {
-	/* Platform data is just a char string */
-	char *platdata = (char *)client->dev.platform_data;
 	sysfs_remove_group(&client->dev.kobj, &cpld_attribute_group);
 	board_i2c_cpld_remove_client(client);
-	if (platdata)
-	{
-	    kfree(platdata);
-	}
-	
-	return 0;
+
 }
 
 static const struct i2c_device_id board_i2c_cpld_id[] = {

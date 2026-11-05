@@ -8,4 +8,4 @@ if [ -t 1 ] ; then
 fi
 
 docker exec -$DOCKER_EXEC_FLAGS pmon sensors "$@"
-docker exec -$DOCKER_EXEC_FLAGS pmon platform_sensors.py "$@"
+docker exec -$DOCKER_EXEC_FLAGS pmon python3 /usr/bin/platform_sensors.py "$@"

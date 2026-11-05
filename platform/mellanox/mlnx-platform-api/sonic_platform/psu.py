@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@
 
 try:
     import os
+    import subprocess
     import time
     from sonic_platform_base.psu_base import PsuBase
     from sonic_py_common.logger import Logger
@@ -39,6 +41,9 @@ except ImportError as e:
 logger = Logger()
 
 PSU_PATH = '/var/run/hw-management/'
+PLATFORM_SENSORS_CONF = '/usr/share/sonic/platform/sensors.conf'
+ETC_SENSORS_CONF = '/etc/sensors.d/sensors.conf'
+PSU_SENSORS_CONF_UPDATER = '/usr/share/sonic/platform/psu_sensors_conf_updater'
 
 
 class FixedPsu(PsuBase):
@@ -46,6 +51,7 @@ class FixedPsu(PsuBase):
         super(FixedPsu, self).__init__()
         self.index = psu_index + 1
         self._name = "PSU {}".format(self.index)
+        self.model = 'N/A'
         self.psu_oper_status = os.path.join(PSU_PATH, "thermal/psu{}_pwr_status".format(self.index))
         self._led = None
 
@@ -242,8 +248,8 @@ class Psu(FixedPsu):
 
         self.psu_power_max_capacity = os.path.join(PSU_PATH, "config/psu{}_power_capacity".format(self.index))
 
-        self.psu_temp = os.path.join(PSU_PATH, 'thermal/psu{}_temp'.format(self.index))
-        self.psu_temp_threshold = os.path.join(PSU_PATH, 'thermal/psu{}_temp_max'.format(self.index))
+        self.psu_temp = os.path.join(PSU_PATH, 'thermal/psu{}_temp1'.format(self.index))
+        self.psu_temp_threshold = os.path.join(PSU_PATH, 'thermal/psu{}_temp1_max'.format(self.index))
 
         self.psu_power_slope = os.path.join(PSU_PATH, self.PSU_POWER_SLOPE.format(self.index))
 
@@ -255,6 +261,9 @@ class Psu(FixedPsu):
         # initialize thermal for PSU
         from .thermal import initialize_psu_thermal
         self._thermal_list = initialize_psu_thermal(psu_index, self.get_power_available_status)
+
+        # initialize psu model
+        self.model = self.vpd_parser.get_model()
 
     @property
     def psu_voltage(self):
@@ -304,7 +313,35 @@ class Psu(FixedPsu):
         Returns:
             string: Model/part number of device
         """
-        return self.vpd_parser.get_model()
+        current_model = self.vpd_parser.get_model()
+        if current_model != self.model and os.path.exists(PSU_SENSORS_CONF_UPDATER):
+            # Rebuild from platform sensors.conf (source of truth), not from
+            # /etc/sensors.d/sensors.conf which may already be incomplete.
+            # Updater uses flock to serialize concurrent updates.
+            # On failure leave self.model unchanged so the next call can retry.
+            src = PLATFORM_SENSORS_CONF if os.path.isfile(PLATFORM_SENSORS_CONF) else ETC_SENSORS_CONF
+            if not os.path.isfile(src):
+                self.model = current_model
+                return current_model
+
+            try:
+                subprocess.check_call([
+                    'bash', '-c',
+                    f'source "{PSU_SENSORS_CONF_UPDATER}" && '
+                    f'update_psu_sensors_configuration "{src}" "{ETC_SENSORS_CONF}"'
+                ])
+                subprocess.check_call(['service', 'sensord', 'restart'])
+            except subprocess.CalledProcessError as ce:
+                logger.log_error(
+                    'Failed to update PSU sensors configuration, return code={}, cmd={}'.format(
+                        ce.returncode, ce.cmd))
+                return current_model
+            except Exception as e:
+                logger.log_error('Failed to update PSU sensors configuration - {}'.format(e))
+                return current_model
+
+        self.model = current_model
+        return current_model
 
     def get_serial(self):
         """
@@ -440,7 +477,8 @@ class Psu(FixedPsu):
             The thresholds of voltage are not supported on all platforms.
             So we have to check capability first.
         """
-        if self.psu_voltage_capability and self.psu_voltage_max and self.get_powergood_status():
+        if self.psu_voltage_capability and os.path.exists(self.psu_voltage_capability) and \
+           self.psu_voltage_max and os.path.exists(self.psu_voltage_max) and self.get_powergood_status():
             capability = utils.read_str_from_file(self.psu_voltage_capability)
             if 'max' in capability:
                 max_voltage = utils.read_int_from_file(self.psu_voltage_max, log_func=logger.log_info)
@@ -463,7 +501,8 @@ class Psu(FixedPsu):
             The thresholds of voltage are not supported on all platforms.
             So we have to check capability first.
         """
-        if self.psu_voltage_capability and self.psu_voltage_min and self.get_powergood_status():
+        if self.psu_voltage_capability and os.path.exists(self.psu_voltage_capability) and \
+           self.psu_voltage_min and os.path.exists(self.psu_voltage_min) and self.get_powergood_status():
             capability = utils.read_str_from_file(self.psu_voltage_capability)
             if 'min' in capability:
                 min_voltage = utils.read_int_from_file(self.psu_voltage_min, log_func=logger.log_info)
@@ -512,54 +551,74 @@ class Psu(FixedPsu):
             return float(amperes) / 1000
         return None
 
-    def _get_psu_power_threshold(self, temp_threshold_path):
-        """
-        Calculate power threshold for a PSU according to the maximum power capacity and ambient temperature
-            amb_temp = min(port_amb, fan_amb)
-            If amb_temp < ambient_temp_threshold
-                threshold = max capacity
-            else
-                threshold = max capacity - slope*(amb_temp - ambient_temp_threshold)
-        """
-        if self.get_powergood_status():
-            if os.path.exists(self.psu_power_max_capacity):
-                power_max_capacity = utils.read_int_from_file(self.psu_power_max_capacity)
-                temp_threshold = utils.read_int_from_file(temp_threshold_path)
-                fan_ambient_temp = utils.read_int_from_file(Psu.FAN_AMBIENT_TEMP)
-                port_ambient_temp = utils.read_int_from_file(Psu.PORT_AMBIENT_TEMP)
-                ambient_temp = min(fan_ambient_temp, port_ambient_temp)
-                if ambient_temp < temp_threshold:
-                    power_threshold = power_max_capacity
-                else:
-                    slope = utils.read_int_from_file(self.psu_power_slope)
-                    power_threshold = power_max_capacity - (ambient_temp - temp_threshold) * slope
-                if power_threshold <= 0:
-                    logger.log_warning('Got negative PSU power threshold {} for {}'.format(power_threshold, self.get_name()))
-                    power_threshold = 0
-                return float(power_threshold) / 1000000
-
-        return None
-
     def get_psu_power_warning_suppress_threshold(self):
         """
         Retrieve the warning suppress threshold of the power on this PSU
         The value can be volatile, so the caller should call the API each time it is used.
         On Mellanox platform, it is translated from the `warning threshold`
 
+        The formula to calculate power warning threshold for a PSU
+            amb_temp = min(port_amb, fan_amb)
+            If amb_temp < ambient_temp_warning_threshold
+                threshold = max capacity - slope
+            else
+                threshold = max capacity - slope * (1 + amb_temp - ambient_temp_threshold)
+
         Returns:
             A float number, the warning suppress threshold of the PSU in watts.
         """
-        return self._get_psu_power_threshold(Psu.AMBIENT_TEMP_WARNING_THRESHOLD)
+        if self.get_powergood_status():
+            if os.path.exists(self.psu_power_max_capacity):
+                power_max_capacity = utils.read_int_from_file(self.psu_power_max_capacity)
+                temp_warning_threshold = utils.read_int_from_file(Psu.AMBIENT_TEMP_WARNING_THRESHOLD)
+                fan_ambient_temp = utils.read_int_from_file(Psu.FAN_AMBIENT_TEMP)
+                port_ambient_temp = utils.read_int_from_file(Psu.PORT_AMBIENT_TEMP)
+                ambient_temp = min(fan_ambient_temp, port_ambient_temp)
+                slope = utils.read_int_from_file(self.psu_power_slope) * 1000
+                if ambient_temp < temp_warning_threshold:
+                    power_warning_threshold = power_max_capacity - slope * 1000
+                else:
+                    power_warning_threshold = power_max_capacity - (1000 + ambient_temp - temp_warning_threshold) * slope
+                if power_warning_threshold <= 0:
+                    logger.log_warning('Got negative PSU power threshold {} for {}'.format(power_warning_threshold, self.get_name()))
+                    power_warning_threshold = 0
+                return float(power_warning_threshold) / 1000000
+
+        return None
 
     def get_psu_power_critical_threshold(self):
         """
         Retrieve the critical threshold of the power on this PSU
         The value can be volatile, so the caller should call the API each time it is used.
 
+        The formula to calculate power critical threshold for a PSU
+            amb_temp = min(port_amb, fan_amb)
+            If amb_temp < ambient_temp_critical_threshold
+                threshold = max capacity
+            else
+                threshold = max capacity - slope*(amb_temp - ambient_temp_critical_threshold)
+
         Returns:
             A float number, the critical threshold of the PSU in watts.
         """
-        return self._get_psu_power_threshold(Psu.AMBIENT_TEMP_CRITICAL_THRESHOLD)
+        if self.get_powergood_status():
+            if os.path.exists(self.psu_power_max_capacity):
+                power_max_capacity = utils.read_int_from_file(self.psu_power_max_capacity)
+                temp_critical_threshold = utils.read_int_from_file(Psu.AMBIENT_TEMP_CRITICAL_THRESHOLD)
+                fan_ambient_temp = utils.read_int_from_file(Psu.FAN_AMBIENT_TEMP)
+                port_ambient_temp = utils.read_int_from_file(Psu.PORT_AMBIENT_TEMP)
+                ambient_temp = min(fan_ambient_temp, port_ambient_temp)
+                if ambient_temp < temp_critical_threshold:
+                    power_critical_threshold = power_max_capacity
+                else:
+                    slope = utils.read_int_from_file(self.psu_power_slope) * 1000
+                    power_critical_threshold = power_max_capacity - (ambient_temp - temp_critical_threshold) * slope
+                if power_critical_threshold <= 0:
+                    logger.log_warning('Got negative PSU power threshold {} for {}'.format(power_critical_threshold, self.get_name()))
+                    power_critical_threshold = 0
+                return float(power_critical_threshold) / 1000000
+
+        return None
 
 
 class InvalidPsuVolWA:

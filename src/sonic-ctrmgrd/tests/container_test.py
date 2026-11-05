@@ -244,11 +244,6 @@ stop_test_data = {
                         "container_id": "",
                         "container_version": "20201230.1.15"
                     }
-                },
-                common_test.KUBE_LABEL_TABLE: {
-                    "SET": {
-                        "snmp_enabled": "false"
-                    }
                 }
             }
         },
@@ -260,11 +255,11 @@ stop_test_data = {
 
 
 # container_kill test cases
-# test case 0 -- container kill local 
-#   -- no change in state-db 
+# test case 0 -- container kill local
+#   -- no change in state-db
 #   -- no label update
 # test case 1 -- container kill kube -- set label
-#   -- no change in state-db 
+#   -- no change in state-db
 #   -- label update
 #
 kill_test_data = {
@@ -356,7 +351,7 @@ kill_test_data = {
 
 # container_kill test cases
 # test case 0 -- container kill local disabled container
-#   -- no change in state-db 
+#   -- no change in state-db
 #   -- no label update
 #
 invalid_kill_test_data = {
@@ -380,11 +375,11 @@ invalid_kill_test_data = {
 
 
 # container_wait test cases
-# test case 0 -- container wait local 
-#   -- no change in state-db 
+# test case 0 -- container wait local
+#   -- no change in state-db
 #   -- no label update
 # test case 1 -- container wait kube with fallback
-#   -- change in state-db 
+#   -- change in state-db
 #   -- no label update
 #
 wait_test_data = {
@@ -416,7 +411,8 @@ wait_test_data = {
                         "remote_state": "none",
                         "system_state": "up",
                         "current_owner": "local",
-                        "container_id": "snmp"
+                        "container_id": "snmp",
+                        "container_stable_version": "20201231.11"
                     }
                 }
             }
@@ -467,7 +463,7 @@ wait_test_data = {
 class TestContainer(object):
 
     def init(self):
-        container.CTR_STATE_SCR_PATH = __file__
+        container.CTRMGRD_SERVICE_PATH = __file__
         container.SONIC_CTR_CONFIG = (
                 common_test.create_remote_ctr_config_json())
 
@@ -557,7 +553,9 @@ class TestContainer(object):
         for (i, ct_data) in wait_test_data.items():
             common_test.do_start_test("container_test:container_wait", i, ct_data)
 
-            ret = container.container_wait("snmp")
+            with patch("os.execv", new=common_test.mock_os_execv):
+                ret = container.container_wait("snmp")
+                assert ret == 0
 
             ret = common_test.check_tables_returned()
             assert ret == 0
@@ -580,5 +578,5 @@ class TestContainer(object):
                 ("id", wait_test_data)]:
             common_test.do_start_test("container_main:{}".format(k), 0, v[0])
 
-            with patch('sys.argv', ['container', k, 'snmp']):
+            with patch('sys.argv', ['container', k, 'snmp']), patch("os.execv", new=common_test.mock_os_execv):
                 container.main()

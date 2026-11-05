@@ -1,0 +1,3 @@
+# Nexthop B27 BMC: Map host CPU console /dev/ttyS1 to common alias /dev/ttySwitchCpu0
+SUBSYSTEM=="tty", KERNEL=="ttyS1", SYMLINK+="ttySwitchCpu0", MODE="0666"
+

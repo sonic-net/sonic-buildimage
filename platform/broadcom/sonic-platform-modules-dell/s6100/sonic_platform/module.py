@@ -66,8 +66,8 @@ class Module(ModuleBase):
                               i2c_line=self.port_i2c_line, dependency=self)
         self._component_list.append(component)
 
-        eeprom_base = "/sys/class/i2c-adapter/i2c-{0}/i2c-{1}/{1}-0050/eeprom"
-        sfp_ctrl_base = "/sys/class/i2c-adapter/i2c-{0}/{0}-003e/"
+        eeprom_base = "/sys/bus/i2c/devices/i2c-{0}/i2c-{1}/{1}-0050/eeprom"
+        sfp_ctrl_base = "/sys/bus/i2c/devices/i2c-{0}/{0}-003e/"
 
         # sfp.py will read eeprom contents and retrive the eeprom data.
         # It will also provide support sfp controls like reset and setting
@@ -139,7 +139,7 @@ class Module(ModuleBase):
         Returns:
             string: Serial number of module
         """
-        return self._eeprom.serial_str()
+        return self._eeprom.serial_number_str()
 
     def get_status(self):
         """

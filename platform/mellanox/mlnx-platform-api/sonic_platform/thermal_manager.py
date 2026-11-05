@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,81 +16,53 @@
 # limitations under the License.
 #
 from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
-from .cpu_thermal_control import CPUThermalControl
+from . import thermal_updater
+from . import smartswitch_thermal_updater
 from .device_data import DeviceDataManager
-from .thermal_actions import *
-from .thermal_conditions import *
-from .thermal_infos import *
-from .thermal import logger, MAX_COOLING_LEVEL, Thermal
+from .liquid_cooling import LiquidCooling
+from sonic_py_common import logger
+
+SYSLOG_IDENTIFIER = 'thermal_manager'
+log = logger.Logger(SYSLOG_IDENTIFIER)
 
 
 class ThermalManager(ThermalManagerBase):
-    cpu_thermal_control = None
-
-    @classmethod
-    def start_thermal_control_algorithm(cls):
-        """
-        Start thermal control algorithm
-
-        Returns:
-            bool: True if set success, False if fail.
-        """
-        Thermal.set_thermal_algorithm_status(True)
-
-    @classmethod
-    def stop_thermal_control_algorithm(cls):
-        """
-        Stop thermal control algorithm
-
-        Returns:
-            bool: True if set success, False if fail.
-        """
-        Thermal.set_thermal_algorithm_status(False)
-
-    @classmethod
-    def start_cpu_thermal_control_algoritm(cls):
-        if cls.cpu_thermal_control:
-            return
-
-        if not DeviceDataManager.is_cpu_thermal_control_supported():
-            return
-
-        cls.cpu_thermal_control = CPUThermalControl()
-        cls.cpu_thermal_control.task_run()
-        
-    @classmethod
-    def stop_cpu_thermal_control_algoritm(cls):
-        if cls.cpu_thermal_control:
-            cls.cpu_thermal_control.task_stop()
-            cls.cpu_thermal_control = None
+    thermal_updater_task = None
 
     @classmethod
     def run_policy(cls, chassis):
-        if cls._running:
-            cls.start_cpu_thermal_control_algoritm()
+        pass
+
+    @classmethod
+    def initialize(cls):
+        """
+        Initialize thermal manager, including register thermal condition types and thermal action types
+        and any other vendor specific initialization.
+        :return:
+        """
+        if LiquidCooling().get_num_leak_sensors() > 0:
+            log.log_notice('Liquid cooling platform detected, thermal updater is disabled')
+            cls.thermal_updater_task = None
+            return
+
+        dpus_present = DeviceDataManager.get_platform_dpus_data()
+        if not dpus_present:
+            # Non smart switch behaviour has highest priority
+            from .chassis import Chassis
+            cls.thermal_updater_task = thermal_updater.ThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps())
         else:
-            cls.stop_cpu_thermal_control_algoritm()
+            from .chassis import Chassis
+            dpus = Chassis.chassis_instance.get_all_modules()
+            cls.thermal_updater_task = smartswitch_thermal_updater.SmartswitchThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps(),
+                                                                                             dpu_list=dpus)
+        cls.thermal_updater_task.start()
 
-        if not cls._policy_dict:
-            return
-
-        try:
-            cls._collect_thermal_information(chassis)
-        except Exception as e:
-            logger.log_error('Failed to collect thermal information {}'.format(repr(e)))
-            Thermal.set_expect_cooling_level(MAX_COOLING_LEVEL)
-            Thermal.commit_cooling_level(cls._thermal_info_dict)
-            return
-
-        for policy in cls._policy_dict.values():
-            if not cls._running:
-                return
-            try:
-                if policy.is_match(cls._thermal_info_dict):
-                    policy.do_action(cls._thermal_info_dict)
-            except Exception as e:
-                logger.log_error('Failed to run thermal policy {} - {}'.format(policy.name, repr(e)))
-                # In case there is an exception, we put cooling level to max value
-                Thermal.set_expect_cooling_level(MAX_COOLING_LEVEL)
-
-        Thermal.commit_cooling_level(cls._thermal_info_dict)
+    @classmethod
+    def deinitialize(cls):
+        """
+        Destroy thermal manager, including any vendor specific cleanup. The default behavior of this function
+        is a no-op.
+        :return:
+        """
+        if cls.thermal_updater_task:
+            cls.thermal_updater_task.stop()

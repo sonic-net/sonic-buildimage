@@ -31,7 +31,7 @@ case "$1" in
           echo /etc/gobgp/gobgpd.conf not found
         fi
         ;;
-        
+
     stop)
         kill -9 $(echo /var/run/gobgpd.pid)
         ;;

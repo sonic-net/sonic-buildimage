@@ -8,7 +8,8 @@ RUN apt-get update         && \
     apt-get install -y        \
         apt-utils             \
         build-essential       \
-        python3-dev
+        python3-dev           \
+        python3-cffi
 
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
 RUN apt-get install -y        \
@@ -22,6 +23,9 @@ RUN apt-get install -y        \
 # https://github.com/robshakir/pyangbind/issues/232
 RUN pip3 install pyangbind==0.8.1
 RUN pip3 uninstall -y enum34
+
+# Install python-redis
+RUN pip3 install redis==4.5.4
 
 {% if docker_config_engine_buster_debs.strip() %}
 # Copy locally-built Debian package dependencies
@@ -41,6 +45,8 @@ RUN pip3 uninstall -y enum34
 
 # Copy files
 COPY ["files/swss_vars.j2", "/usr/share/sonic/templates/"]
+COPY ["files/readiness_probe.sh", "/usr/bin/"]
+COPY ["files/container_startup.py", "/usr/share/sonic/scripts/"]
 
 ## Clean up
 RUN apt-get purge -y               \

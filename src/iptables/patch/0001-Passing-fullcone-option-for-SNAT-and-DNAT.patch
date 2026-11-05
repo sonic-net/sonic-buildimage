@@ -1,41 +1,54 @@
-From 386bb8378bc67b7dfc3db5d5f28a01620b4231cf Mon Sep 17 00:00:00 2001
-From: Kiran Kella <kiran.kella@broadcom.com>
-Date: Wed, 7 Aug 2019 07:22:42 -0700
-Subject: [PATCH] From 92f5aee7372748845f11b7a10d880f968769e860 Mon Sep 17
- 00:00:00 2001 Subject: [PATCH] Passing fullcone option for SNAT and DNAT
+From 1cb735fdb3d3fa165fe5d02b55aad98037de42a6 Mon Sep 17 00:00:00 2001
+From: Akhilesh Samineni <akhilesh.samineni@broadcom.com>
+Date: Sat, 27 Apr 2024 10:43:10 -0700
+Subject: [PATCH] Passing fullcone option for SNAT and DNAT
 
 ---
- extensions/libipt_DNAT.c       | 37 ++++++++++++++++++++++++++++++++--
- extensions/libipt_MASQUERADE.c | 22 +++++++++++++++++++-
- extensions/libipt_SNAT.c       | 22 +++++++++++++++++++-
- 3 files changed, 77 insertions(+), 4 deletions(-)
+ extensions/libxt_NAT.c | 26 ++++++++++++++++++++++----
+ 1 file changed, 22 insertions(+), 4 deletions(-)
 
-diff --git a/extensions/libipt_DNAT.c b/extensions/libipt_DNAT.c
-index 4907a2e..95e3446 100644
---- a/extensions/libipt_DNAT.c
-+++ b/extensions/libipt_DNAT.c
-@@ -8,14 +8,20 @@
- #include <linux/netfilter_ipv4/ip_tables.h>
+diff --git a/extensions/libxt_NAT.c b/extensions/libxt_NAT.c
+index da9f220..cfcc1ff 100644
+--- a/extensions/libxt_NAT.c
++++ b/extensions/libxt_NAT.c
+@@ -17,6 +17,8 @@
+ #include <linux/netfilter_ipv6/ip6_tables.h>
  #include <linux/netfilter/nf_nat.h>
  
-+/* Temporarily defining here, need to be picked up from the
-+ * new kernel header linux/netfilter/nf_nat.h */
 +#define NF_NAT_RANGE_FULLCONE  (1 << 10)
 +
- enum {
- 	O_TO_DEST = 0,
+ #define TO_IPV4_MRC(ptr) ((const struct nf_nat_ipv4_multi_range_compat *)(ptr))
+ #define RANGE2_INIT_FROM_IPV4_MRC(ptr) {			\
+ 	.flags		= TO_IPV4_MRC(ptr)->range[0].flags,	\
+@@ -41,6 +43,7 @@ enum {
  	O_RANDOM,
+ 	O_RANDOM_FULLY,
  	O_PERSISTENT,
- 	O_X_TO_DEST, /* hidden flag */
 +	O_FULLCONE,
- 	F_TO_DEST   = 1 << O_TO_DEST,
- 	F_RANDOM    = 1 << O_RANDOM,
- 	F_X_TO_DEST = 1 << O_X_TO_DEST,
-+	F_FULLCONE  = 1 << O_FULLCONE
  };
  
- /* Dest NAT data consists of a multi-range, indicating where to map
-@@ -32,7 +38,7 @@ static void DNAT_help(void)
+ static void SNAT_help(void)
+@@ -49,7 +52,7 @@ static void SNAT_help(void)
+ "SNAT target options:\n"
+ " --to-source [<ipaddr>[-<ipaddr>]][:port[-port]]\n"
+ "				Address to map source to.\n"
+-"[--random] [--random-fully] [--persistent]\n");
++"[--random] [--random-fully] [--persistent] [--fullcone]\n");
+ }
+ 
+ static void MASQUERADE_help(void)
+@@ -61,7 +64,9 @@ static void MASQUERADE_help(void)
+ " --random\n"
+ "				Randomize source port.\n"
+ " --random-fully\n"
+-"				Fully randomize source port.\n");
++"                              Fully randomize source port.\n"
++" --fullcone\n"
++"                              Do fullcone NAT mapping.\n");
+ }
+ 
+ static void DNAT_help(void)
+@@ -70,7 +75,7 @@ static void DNAT_help(void)
  "DNAT target options:\n"
  " --to-destination [<ipaddr>[-<ipaddr>]][:port[-port]]\n"
  "				Address to map destination to.\n"
@@ -44,7 +57,7 @@ index 4907a2e..95e3446 100644
  }
  
  static void DNAT_help_v2(void)
-@@ -41,7 +47,7 @@ static void DNAT_help_v2(void)
+@@ -79,7 +84,7 @@ static void DNAT_help_v2(void)
  "DNAT target options:\n"
  " --to-destination [<ipaddr>[-<ipaddr>]][:port[-port[/port]]]\n"
  "				Address to map destination to.\n"
@@ -52,136 +65,16 @@ index 4907a2e..95e3446 100644
 +"[--random] [--persistent] [--fullcone]\n");
  }
  
- static const struct xt_option_entry DNAT_opts[] = {
-@@ -49,6 +55,7 @@ static const struct xt_option_entry DNAT_opts[] = {
- 	 .flags = XTOPT_MAND | XTOPT_MULTI},
+ static void REDIRECT_help(void)
+@@ -97,6 +102,7 @@ static const struct xt_option_entry SNAT_opts[] = {
  	{.name = "random", .id = O_RANDOM, .type = XTTYPE_NONE},
+ 	{.name = "random-fully", .id = O_RANDOM_FULLY, .type = XTTYPE_NONE},
  	{.name = "persistent", .id = O_PERSISTENT, .type = XTTYPE_NONE},
 +	{.name = "fullcone", .id = O_FULLCONE, .type = XTTYPE_NONE},
  	XTOPT_TABLEEND,
  };
  
-@@ -194,10 +201,14 @@ static void DNAT_parse(struct xt_option_call *cb)
- static void DNAT_fcheck(struct xt_fcheck_call *cb)
- {
- 	static const unsigned int f = F_TO_DEST | F_RANDOM;
-+	static const unsigned int c = F_FULLCONE;
- 	struct nf_nat_ipv4_multi_range_compat *mr = cb->data;
- 
- 	if ((cb->xflags & f) == f)
- 		mr->range[0].flags |= NF_NAT_RANGE_PROTO_RANDOM;
-+
-+	if ((cb->xflags & c) == c)
-+		mr->range[0].flags |= NF_NAT_RANGE_FULLCONE;
- }
- 
- static void print_range(const struct nf_nat_ipv4_range *r)
-@@ -233,6 +244,8 @@ static void DNAT_print(const void *ip, const struct xt_entry_target *target,
- 			printf(" random");
- 		if (info->mr.range[i].flags & NF_NAT_RANGE_PERSISTENT)
- 			printf(" persistent");
-+		if (info->mr.range[i].flags & NF_NAT_RANGE_FULLCONE)
-+			printf(" fullcone");
- 	}
- }
- 
-@@ -248,6 +261,8 @@ static void DNAT_save(const void *ip, const struct xt_entry_target *target)
- 			printf(" --random");
- 		if (info->mr.range[i].flags & NF_NAT_RANGE_PERSISTENT)
- 			printf(" --persistent");
-+		if (info->mr.range[i].flags & NF_NAT_RANGE_FULLCONE)
-+			printf(" --fullcone");
- 	}
- }
- 
-@@ -291,6 +306,11 @@ static int DNAT_xlate(struct xt_xlate *xl,
- 				sep = ",";
- 			xt_xlate_add(xl, "%spersistent", sep);
- 		}
-+		if (info->mr.range[i].flags & NF_NAT_RANGE_FULLCONE) {
-+			if (sep_need)
-+				sep = ",";
-+			xt_xlate_add(xl, "%sfullcone", sep);
-+		}
- 	}
- 
- 	return 1;
-@@ -426,10 +446,14 @@ static void DNAT_parse_v2(struct xt_option_call *cb)
- static void DNAT_fcheck_v2(struct xt_fcheck_call *cb)
- {
- 	static const unsigned int f = F_TO_DEST | F_RANDOM;
-+	static const unsigned int c = F_FULLCONE;
- 	struct nf_nat_range2 *range = cb->data;
- 
- 	if ((cb->xflags & f) == f)
- 		range->flags |= NF_NAT_RANGE_PROTO_RANDOM;
-+
-+	if ((cb->xflags & c) == c)
-+		range->flags |= NF_NAT_RANGE_FULLCONE;
- }
- 
- static void print_range_v2(const struct nf_nat_range2 *range)
-@@ -461,6 +485,8 @@ static void DNAT_print_v2(const void *ip, const struct xt_entry_target *target,
- 		printf(" random");
- 	if (range->flags & NF_NAT_RANGE_PERSISTENT)
- 		printf(" persistent");
-+	if (range->flags & NF_NAT_RANGE_FULLCONE)
-+		printf(" fullcone");
- }
- 
- static void DNAT_save_v2(const void *ip, const struct xt_entry_target *target)
-@@ -473,6 +499,8 @@ static void DNAT_save_v2(const void *ip, const struct xt_entry_target *target)
- 		printf(" --random");
- 	if (range->flags & NF_NAT_RANGE_PERSISTENT)
- 		printf(" --persistent");
-+	if (range->flags & NF_NAT_RANGE_FULLCONE)
-+		printf(" --fullcone");
- }
- 
- static void print_range_xlate_v2(const struct nf_nat_range2 *range,
-@@ -512,6 +540,11 @@ static int DNAT_xlate_v2(struct xt_xlate *xl,
- 			sep = ",";
- 		xt_xlate_add(xl, "%spersistent", sep);
- 	}
-+	if (range->flags & NF_NAT_RANGE_FULLCONE) {
-+		if (sep_need)
-+			sep = ",";
-+		xt_xlate_add(xl, "%sfullcone", sep);
-+	}
- 
- 	return 1;
- }
-diff --git a/extensions/libipt_MASQUERADE.c b/extensions/libipt_MASQUERADE.c
-index 90bf606..b3ed1e6 100644
---- a/extensions/libipt_MASQUERADE.c
-+++ b/extensions/libipt_MASQUERADE.c
-@@ -8,10 +8,15 @@
- #include <linux/netfilter_ipv4/ip_tables.h>
- #include <linux/netfilter/nf_nat.h>
- 
-+/* Temporarily defining here, need to be picked up from the
-+ * new kernel header linux/netfilter/nf_nat.h */
-+#define NF_NAT_RANGE_FULLCONE  (1 << 10)
-+
- enum {
- 	O_TO_PORTS = 0,
- 	O_RANDOM,
- 	O_RANDOM_FULLY,
-+	O_FULLCONE
- };
- 
- static void MASQUERADE_help(void)
-@@ -23,13 +28,16 @@ static void MASQUERADE_help(void)
- " --random\n"
- "				Randomize source port.\n"
- " --random-fully\n"
--"				Fully randomize source port.\n");
-+"				Fully randomize source port.\n"
-+" --fullcone\n"
-+"				Do fullcone NAT mapping.\n");
- }
- 
- static const struct xt_option_entry MASQUERADE_opts[] = {
+@@ -104,6 +110,7 @@ static const struct xt_option_entry MASQUERADE_opts[] = {
  	{.name = "to-ports", .id = O_TO_PORTS, .type = XTTYPE_STRING},
  	{.name = "random", .id = O_RANDOM, .type = XTTYPE_NONE},
  	{.name = "random-fully", .id = O_RANDOM_FULLY, .type = XTTYPE_NONE},
@@ -189,137 +82,52 @@ index 90bf606..b3ed1e6 100644
  	XTOPT_TABLEEND,
  };
  
-@@ -104,6 +112,9 @@ static void MASQUERADE_parse(struct xt_option_call *cb)
- 	case O_RANDOM_FULLY:
- 		mr->range[0].flags |=  NF_NAT_RANGE_PROTO_RANDOM_FULLY;
- 		break;
-+	case O_FULLCONE:
-+		mr->range[0].flags |=  NF_NAT_RANGE_FULLCONE;
-+		break;
- 	}
- }
- 
-@@ -126,6 +137,9 @@ MASQUERADE_print(const void *ip, const struct xt_entry_target *target,
- 
- 	if (r->flags & NF_NAT_RANGE_PROTO_RANDOM_FULLY)
- 		printf(" random-fully");
-+
-+	if (r->flags & NF_NAT_RANGE_FULLCONE)
-+		printf(" fullcone");
- }
- 
- static void
-@@ -145,6 +159,9 @@ MASQUERADE_save(const void *ip, const struct xt_entry_target *target)
- 
- 	if (r->flags & NF_NAT_RANGE_PROTO_RANDOM_FULLY)
- 		printf(" --random-fully");
-+
-+	if (r->flags & NF_NAT_RANGE_FULLCONE)
-+		printf(" --fullcone");
- }
- 
- static int MASQUERADE_xlate(struct xt_xlate *xl,
-@@ -166,6 +183,9 @@ static int MASQUERADE_xlate(struct xt_xlate *xl,
- 	if (r->flags & NF_NAT_RANGE_PROTO_RANDOM)
- 		xt_xlate_add(xl, "random ");
- 
-+	if (r->flags & NF_NAT_RANGE_FULLCONE)
-+		xt_xlate_add(xl, "fullcone ");
-+
- 	return 1;
- }
- 
-diff --git a/extensions/libipt_SNAT.c b/extensions/libipt_SNAT.c
-index e92d811..8704004 100644
---- a/extensions/libipt_SNAT.c
-+++ b/extensions/libipt_SNAT.c
-@@ -8,16 +8,22 @@
- #include <linux/netfilter_ipv4/ip_tables.h>
- #include <linux/netfilter/nf_nat.h>
- 
-+/* Temporarily defining here, need to be picked up from the
-+ * new kernel header linux/netfilter/nf_nat.h */
-+#define NF_NAT_RANGE_FULLCONE  (1 << 10)
-+
- enum {
- 	O_TO_SRC = 0,
- 	O_RANDOM,
- 	O_RANDOM_FULLY,
- 	O_PERSISTENT,
- 	O_X_TO_SRC,
-+	O_FULLCONE,
- 	F_TO_SRC       = 1 << O_TO_SRC,
- 	F_RANDOM       = 1 << O_RANDOM,
- 	F_RANDOM_FULLY = 1 << O_RANDOM_FULLY,
- 	F_X_TO_SRC     = 1 << O_X_TO_SRC,
-+	F_FULLCONE     = 1 << O_FULLCONE
- };
- 
- /* Source NAT data consists of a multi-range, indicating where to map
-@@ -34,7 +40,7 @@ static void SNAT_help(void)
- "SNAT target options:\n"
- " --to-source [<ipaddr>[-<ipaddr>]][:port[-port]]\n"
- "				Address to map source to.\n"
--"[--random] [--random-fully] [--persistent]\n");
-+"[--random] [--random-fully] [--persistent] [--fullcone]\n");
- }
- 
- static const struct xt_option_entry SNAT_opts[] = {
-@@ -43,6 +49,7 @@ static const struct xt_option_entry SNAT_opts[] = {
+@@ -112,6 +119,7 @@ static const struct xt_option_entry DNAT_opts[] = {
+ 	 .flags = XTOPT_MAND},
  	{.name = "random", .id = O_RANDOM, .type = XTTYPE_NONE},
- 	{.name = "random-fully", .id = O_RANDOM_FULLY, .type = XTTYPE_NONE},
  	{.name = "persistent", .id = O_PERSISTENT, .type = XTTYPE_NONE},
 +	{.name = "fullcone", .id = O_FULLCONE, .type = XTTYPE_NONE},
  	XTOPT_TABLEEND,
  };
  
-@@ -189,12 +196,15 @@ static void SNAT_fcheck(struct xt_fcheck_call *cb)
- {
- 	static const unsigned int f = F_TO_SRC | F_RANDOM;
- 	static const unsigned int r = F_TO_SRC | F_RANDOM_FULLY;
-+	static const unsigned int c = F_TO_SRC | F_FULLCONE;
- 	struct nf_nat_ipv4_multi_range_compat *mr = cb->data;
- 
- 	if ((cb->xflags & f) == f)
- 		mr->range[0].flags |= NF_NAT_RANGE_PROTO_RANDOM;
- 	if ((cb->xflags & r) == r)
- 		mr->range[0].flags |= NF_NAT_RANGE_PROTO_RANDOM_FULLY;
-+	if ((cb->xflags & c) == c)
-+		mr->range[0].flags |= NF_NAT_RANGE_FULLCONE;
- }
- 
- static void print_range(const struct nf_nat_ipv4_range *r)
-@@ -232,6 +242,8 @@ static void SNAT_print(const void *ip, const struct xt_entry_target *target,
- 			printf(" random-fully");
- 		if (info->mr.range[i].flags & NF_NAT_RANGE_PERSISTENT)
- 			printf(" persistent");
-+		if (info->mr.range[i].flags & NF_NAT_RANGE_FULLCONE)
-+			printf(" fullcone");
+@@ -280,6 +288,9 @@ static void __NAT_parse(struct xt_option_call *cb, __u16 proto,
+ 	case O_RANDOM_FULLY:
+ 		range->flags |= NF_NAT_RANGE_PROTO_RANDOM_FULLY;
+ 		break;
++	case O_FULLCONE:
++		range->flags |= NF_NAT_RANGE_FULLCONE;
++		break;
  	}
  }
  
-@@ -249,6 +261,8 @@ static void SNAT_save(const void *ip, const struct xt_entry_target *target)
- 			printf(" --random-fully");
- 		if (info->mr.range[i].flags & NF_NAT_RANGE_PERSISTENT)
- 			printf(" --persistent");
-+		if (info->mr.range[i].flags & NF_NAT_RANGE_FULLCONE)
-+			printf(" --fullcone");
+@@ -304,6 +315,7 @@ static void NAT_parse(struct xt_option_call *cb)
+ 	case O_PERSISTENT:
+ 	case O_RANDOM:
+ 	case O_RANDOM_FULLY:
++	case O_FULLCONE:
+ 		mr->range->flags |= range.flags;
+ 		break;
  	}
+@@ -411,6 +423,8 @@ static void __NAT_print(const struct nf_nat_range2 *r, int family,
+ 		printf(" %srandom-fully", flag_pfx);
+ 	if (r->flags & NF_NAT_RANGE_PERSISTENT)
+ 		printf(" %spersistent", flag_pfx);
++	if (r->flags & NF_NAT_RANGE_FULLCONE)
++		printf(" %sfullcone", flag_pfx);
  }
  
-@@ -299,6 +313,12 @@ static int SNAT_xlate(struct xt_xlate *xl,
- 				sep = ",";
- 			xt_xlate_add(xl, "%spersistent", sep);
- 		}
-+		if (info->mr.range[i].flags & NF_NAT_RANGE_FULLCONE) {
-+			if (sep_need)
-+				sep = ",";
-+			xt_xlate_add(xl, "%sfullcone", sep);
-+			sep_need = true;
-+		}
+ static int
+@@ -439,6 +453,10 @@ __NAT_xlate(struct xt_xlate *xl, const struct nf_nat_range2 *r,
+ 		xt_xlate_add(xl, "%spersistent", sep);
+ 		sep = ",";
  	}
- 
++	if (r->flags & NF_NAT_RANGE_FULLCONE) {
++		xt_xlate_add(xl, "%sfullcone", sep);
++		sep = ",";
++	}
  	return 1;
+ }
+ 
 -- 
-2.27.0
+2.18.0
 

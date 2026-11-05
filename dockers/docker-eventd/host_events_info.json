@@ -1,0 +1,29 @@
+{
+    "yang_module": "sonic-events-host",
+    "proclist": [
+        {
+            "name": "monit",
+            "parse_json": "monit_regex.json"
+        },
+        {
+            "name": "systemd",
+            "parse_json": "systemd_regex.json"
+        },
+        {
+            "name": "kernel",
+            "parse_json": "kernel_regex.json"
+        },
+        {
+            "name": "dockerd",
+            "parse_json": "dockerd_regex.json"
+        },
+        {
+            "name": "arista",
+            "parse_json": "seu_regex.json"
+        },
+        {
+            "name": "python3",
+            "parse_json": "seu_regex.json"
+        }
+    ]
+}

@@ -22,7 +22,8 @@ try:
 
     from sonic_py_common import daemon_base
     from swsscommon import swsscommon
-    from sonic_py_common.interface import inband_prefix, recirc_prefix
+    from sonic_py_common.interface import inband_prefix, recirc_prefix, backplane_prefix
+    from sonic_py_common import device_info
 except ImportError as err:
     raise ImportError("%s - required module not found" % str(err))
 
@@ -67,7 +68,7 @@ class LldpManager(daemon_base.DaemonBase):
                                               False)
         
         self.pending_cmds = {}
-        self.hostname = "None"
+        self.hostname = None
         self.mgmt_ip = "None"
 
         self.device_table = swsscommon.Table(self.config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
@@ -80,6 +81,9 @@ class LldpManager(daemon_base.DaemonBase):
         self.port_init_done = False
 
     def update_hostname(self, hostname):
+        if not hostname:
+            self.log_warning("Ignoring invalid hostname: '{}'".format(hostname))
+            return
         cmd = ["lldpcli", "configure", "system", "hostname", hostname]
         self.log_debug("Running command: '{}'".format(cmd))
 
@@ -136,9 +140,8 @@ class LldpManager(daemon_base.DaemonBase):
         """
         port_desc = None
 
-        # Skip recirc and inband interface prefixes. These are recycle ports exposed in PORT_TABLE for
-        # asic-to-asic communication in VOQ based chassis system. We do not configure LLDP on these.
-        if port_name.startswith(inband_prefix()) or port_name.startswith(recirc_prefix()):
+        # Skip special (recirc/inband) and backplane interfaces as we don't enable lldp on those interfaaces.
+        if any([port_name.startswith(inband_prefix()),port_name.startswith(recirc_prefix()),port_name.startswith(backplane_prefix())]):
             return
  
         # Get the port alias. If None or empty string, use port name instead
@@ -244,9 +247,11 @@ class LldpManager(daemon_base.DaemonBase):
     def lldp_process_device_table_event(self, op, device_dict, key):
         if not op in ["SET", "DEL"]:
             return
+        if key != "localhost":
+            return
         self.log_info("Device Config Opcode: {} Dict {} Key {}".format(op, device_dict, key))
-        hostname = device_dict.get("hostname")
-        if not self.hostname == hostname:
+        hostname = device_dict.get("chassis_hostname") or device_dict.get("hostname")
+        if hostname and not self.hostname == hostname:
             self.log_info("Hostname changed old {0}, new {1}".format(self.hostname, hostname))
             self.update_hostname(hostname)
 
@@ -260,7 +265,7 @@ class LldpManager(daemon_base.DaemonBase):
                         self.pending_cmds.pop(key, None)
             elif op == "DEL":
                 self.pending_cmds.pop(key, None)
-            else:
+            elif op:
                 self.log_error("unknown operation '{}'".format(op))
         elif key == "PortInitDone":
             self.port_init_done = True
@@ -306,7 +311,7 @@ class LldpManager(daemon_base.DaemonBase):
 
         # Listen for changes to the PORT table in the CONFIG_DB and APP_DB
         while True:
-            (state, selectableObj) = sel.select(SELECT_TIMEOUT_MS)
+            (state, selectableObj) = sel.select(SELECT_TIMEOUT_MS, interrupt_on_signal=True)
 
             if state == swsscommon.Select.OBJECT:
                 if selectableObj.getFd() == sst_mgmt_ip_confdb.getFd():
@@ -357,7 +362,8 @@ def run_cmd(self, cmd):
 
 def check_timeout(self, start_time):
     if time.time() - start_time > PORT_INIT_TIMEOUT:
-        self.log_error("Port init timeout reached ({} seconds), resuming lldpd...".format(PORT_INIT_TIMEOUT))
+        if device_info.is_frontend_port_present_in_host():
+            self.log_error("Port init timeout reached ({} seconds), resuming lldpd...".format(PORT_INIT_TIMEOUT))
         return True
     return False
 

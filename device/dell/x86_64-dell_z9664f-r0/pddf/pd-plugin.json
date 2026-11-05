@@ -1,0 +1,68 @@
+{
+    "PSU":
+    {
+        "psu_present": 
+        {
+            "i2c": 
+            {
+                "valmap": { "1":true, "0":false }
+            },
+            "bmc": 
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+
+        "psu_power_good": 
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0": true, "2":false }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "i2c":
+            {
+                "valmap": { "F2B":"intake", "B2F":"exhaust" }
+            },
+            "bmc":
+            {
+                "valmap": { "0":"exhaust", "1":"intake" }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED":"25500"
+    },
+
+    "FAN":
+    {
+        "present":
+        {
+            "i2c":
+            {
+               "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+               "valmap": {"1":true, "0":false}
+            }
+        },
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": { "0":"exhaust", "1":"intake" }
+            }
+        },
+        
+        "pwm_to_duty_cycle": {"input_offset": 0, "multiplier": 100, "pre_divide_offset": 0, "divisor": 18000, "output_offset": 0, "divide_before_multiply": true, "force_float": false}
+
+    }
+
+}

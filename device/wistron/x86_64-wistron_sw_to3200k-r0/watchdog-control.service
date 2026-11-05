@@ -1,0 +1,10 @@
+[Unit]
+Description=watchdog control service
+After=swss.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sw_to3200k_watchdog.sh
+
+[Install]
+WantedBy=multi-user.target

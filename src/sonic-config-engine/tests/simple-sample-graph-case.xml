@@ -138,11 +138,12 @@
           <VlanID>1000</VlanID>
           <Tag>1000</Tag>
           <Subnets>192.168.0.0/27</Subnets>
+          <SecondarySubnets>192.168.1.0/27</SecondarySubnets>
           <MacAddress>00:aa:bb:cc:dd:ee</MacAddress>
         </VlanInterface>
         <VlanInterface>
           <Name>ab2</Name>
-          <AttachTo>fortyGigE0/4</AttachTo>
+          <AttachTo>PortChannel01</AttachTo>
           <DhcpRelays>192.0.0.1</DhcpRelays>
           <Dhcpv6Relays>fc02:2000::3;fc02:2000::4</Dhcpv6Relays>
           <VlanID>2000</VlanID>
@@ -175,6 +176,11 @@
           <Name i:nil="true"/>
           <AttachTo>ab1</AttachTo>
           <Prefix>192.168.0.1/27</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>ab1</AttachTo>
+          <Prefix>192.168.1.1/27</Prefix>
         </IPInterface>
       </IPInterfaces>
       <DataAcls/>
@@ -348,6 +354,7 @@
           <a:IPPrefix>10.7.0.196/26</a:IPPrefix>
         </ManagementAddress>
         <Hostname>switch2-t0</Hostname>
+        <ClusterName>DB5PrdApp11</ClusterName>
         <HwSku>Force10-S6000</HwSku>
       </Device>
       <Device i:type="LeafRouter">
@@ -359,7 +366,8 @@
         <DeviceLocation i:nil="true"/>
         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
           <a:IPPrefix>10.7.0.196/26</a:IPPrefix>
-        </ManagementAddress> 
+        </ManagementAddress>
+        <ClusterName>DB5PrdApp11</ClusterName>
         <HwSku>Force10-S6000</HwSku>
       </Device>
       <Device i:type="SmartCable">
@@ -528,6 +536,11 @@
      <a:Value>10.10.10.10</a:Value>
     </a:DeviceProperty>
     <a:DeviceProperty>
+     <a:Name>KubernetesServerPort</a:Name>
+     <a:Reference i:nil="true"/>
+     <a:Value>18443</a:Value>
+    </a:DeviceProperty>
+    <a:DeviceProperty>
      <a:Name>ResourceType</a:Name>
      <a:Reference i:nil="true"/>
      <a:Value>Storage</a:Value>
@@ -537,6 +550,11 @@
       <a:Reference i:nil="true"/>
       <a:Value>Mixed</a:Value>
      </a:DeviceProperty>
+    <a:DeviceProperty>
+      <a:Name>RackMgmtMap</a:Name>
+      <a:Reference i:nil="true"/>
+      <a:Value>dummy_value</a:Value>
+    </a:DeviceProperty>
   </a:Properties>
   </a:DeviceMetadata>
  </Devices>

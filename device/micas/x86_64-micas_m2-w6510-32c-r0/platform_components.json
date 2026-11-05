@@ -1,0 +1,16 @@
+{
+    "chassis": {
+        "M2-W6510-32C": {
+            "component": {
+                "CPU_CPLD": { },
+                "CONNECT_CPLD": { },
+                "CONNECT_CPLD-FAN": { },
+                "MAC_CPLD1": { },
+                "MAC_CPLD2": { },
+                "FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+

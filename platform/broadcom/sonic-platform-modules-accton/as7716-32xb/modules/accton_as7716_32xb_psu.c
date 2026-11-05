@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 #define MAX_MODEL_NAME          16
 #define DC12V_FAN_DIR_OFFSET    0x34
@@ -96,25 +97,19 @@ static ssize_t psu_info_show(struct device *dev, struct device_attribute *da,
     struct i2c_client *client = to_i2c_client(dev);
     struct as7716_32xb_psu_data *data = i2c_get_clientdata(client);
     int status = -EINVAL;
-    //printk("psu_info_show\n");
-   // printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
         case PSU_PRESENT:
-            //printk("data->present=%d\n",data->present);
             status = snprintf(buf, PAGE_SIZE - 1, "%d\r\n", data->present);
             break;
         case PSU_MODEL_NAME:
-            //printk("data->model_name=%s\n",data->model_name);
             status = snprintf(buf, PAGE_SIZE - 1, "%s\r\n", data->model_name);
             break;
         case PSU_POWER_GOOD:
-           // printk("data->present=%d\n",data->power_good);
             status = snprintf(buf, PAGE_SIZE - 1, "%d\r\n", data->power_good);
             break;
         case PSU_FAN_DIR:
-            //printk("data->fan_dir=%s\n",data->fan_dir);
             status = snprintf(buf, PAGE_SIZE - 1, "%s\r\n", data->fan_dir);
             break;             
         default :
@@ -132,8 +127,6 @@ static ssize_t psu_info_store(struct device *dev, struct device_attribute *da,
     struct as7716_32xb_psu_data *data = i2c_get_clientdata(client);
     long keyin = 0;
     int status = -EINVAL;
-    //printk("psu_info_store\n");
-    //printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
@@ -174,11 +167,18 @@ static const struct attribute_group as7716_32xb_psu_group = {
     .attrs = as7716_32xb_psu_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32xb_psu_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as7716_32xb_psu_probe(struct i2c_client *client)
+#endif
 {
     struct as7716_32xb_psu_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     data = kzalloc(sizeof(struct as7716_32xb_psu_data), GFP_KERNEL);
     if (!data) {
@@ -219,15 +219,14 @@ exit:
     return status;
 }
 
-static int as7716_32xb_psu_remove(struct i2c_client *client)
+static void as7716_32xb_psu_remove(struct i2c_client *client)
 {
     struct as7716_32xb_psu_data *data = i2c_get_clientdata(client);
 
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &as7716_32xb_psu_group);
     kfree(data);
-    
-    return 0;
+
 }
 
 enum psu_index 

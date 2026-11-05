@@ -1,0 +1,142 @@
+{
+  "PASSED": {
+    "sonic-telemetry_client:sonic-telemetry_client": {
+      "sonic-telemetry_client:TELEMETRY_CLIENT": {
+        "Global": {
+          "encoding": "JSON_IETF",
+          "retry_interval": "30",
+          "src_ip": "30.57.185.38",
+          "unidirectional": "true"
+        },
+        "TELEMETRY_CLIENT_LIST": [
+          {
+            "prefix": "DestinationGroup",
+            "name": "HS",
+            "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
+          },
+          {
+            "prefix": "Subscription",
+            "name": "HS_RDMA",
+            "dst_group": "HS",
+            "path_target": "COUNTERS_DB",
+            "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+            "report_interval": "5000",
+            "report_type": "periodic"
+          }
+        ]
+      }
+    }
+  },
+  "INCORRECT_DST_GROUP": {
+    "sonic-telemetry_client:sonic-telemetry_client": {
+      "sonic-telemetry_client:TELEMETRY_CLIENT": {
+        "Global": {
+          "encoding": "JSON_IETF",
+          "retry_interval": "30",
+          "src_ip": "30.57.185.38",
+          "unidirectional": "true"
+        },
+        "TELEMETRY_CLIENT_LIST": [
+          {
+            "prefix": "DestinationGroup",
+            "name": "HS",
+            "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
+          },
+          {
+            "prefix": "Subscription",
+            "name": "HS_RDMA",
+            "dst_group": "FS",
+            "path_target": "COUNTERS_DB",
+            "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+            "report_interval": "5000",
+            "report_type": "periodic"
+          }
+        ]
+      }
+    }
+  },
+  "SRC_IP_INCORRECT_FORMAT": {
+    "sonic-telemetry_client:sonic-telemetry_client": {
+      "sonic-telemetry_client:TELEMETRY_CLIENT": {
+        "Global": {
+          "encoding": "JSON_IETF",
+          "retry_interval": "30",
+          "src_ip": "30.57.185.388",
+          "unidirectional": "true"
+        },
+        "TELEMETRY_CLIENT_LIST": [
+          {
+            "prefix": "DestinationGroup",
+            "name": "HS",
+            "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
+          },
+          {
+            "prefix": "Subscription",
+            "name": "HS_RDMA",
+            "dst_group": "HS",
+            "path_target": "COUNTERS_DB",
+            "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+            "report_interval": "5000",
+            "report_type": "periodic"
+          }
+        ]
+      }
+    }
+  },
+  "ENCODING_WRONG_VALUE": {
+    "sonic-telemetry_client:sonic-telemetry_client": {
+      "sonic-telemetry_client:TELEMETRY_CLIENT": {
+        "Global": {
+          "encoding": "Unicode",
+          "retry_interval": "30",
+          "src_ip": "30.57.185.38",
+          "unidirectional": "true"
+        },
+        "TELEMETRY_CLIENT_LIST": [
+          {
+            "prefix": "DestinationGroup",
+            "name": "HS",
+            "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
+          },
+          {
+            "prefix": "Subscription",
+            "name": "HS_RDMA",
+            "dst_group": "HS",
+            "path_target": "COUNTERS_DB",
+            "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+            "report_interval": "5000",
+            "report_type": "periodic"
+          }
+        ]
+      }
+    }
+  },
+  "DST_ADDR_INCORRECT_FORMAT": {
+    "sonic-telemetry_client:sonic-telemetry_client": {
+      "sonic-telemetry_client:TELEMETRY_CLIENT": {
+        "Global": {
+          "encoding": "JSON_IETF",
+          "retry_interval": "30",
+          "src_ip": "30.57.185.38",
+          "unidirectional": "true"
+        },
+        "TELEMETRY_CLIENT_LIST": [
+          {
+            "prefix": "DestinationGroup",
+            "name": "HS",
+            "dst_addr": "30.57.186.214:80819,30.57.185.39:8081"
+          },
+          {
+            "prefix": "Subscription",
+            "name": "HS_RDMA",
+            "dst_group": "HS",
+            "path_target": "COUNTERS_DB",
+            "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+            "report_interval": "5000",
+            "report_type": "periodic"
+          }
+        ]
+      }
+    }
+  }
+}

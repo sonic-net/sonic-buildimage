@@ -1,7 +1,0 @@
-belgite/systemd/pddf-platform-init.service etc/systemd/system
-belgite/service/belgite-pddf-platform-monitor.service lib/systemd/system
-belgite/scripts/pddf_pre_driver_install.sh usr/local/bin
-belgite/scripts/pddf_post_device_create.sh usr/local/bin
-belgite/utils/belgite_pddf_monitor.py usr/local/bin
-belgite/pddf/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_belgite-r0/pddf
-services/platform_api/platform_api_mgnt.sh usr/local/bin

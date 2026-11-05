@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell E3224F Platform mux ctrl
+Before=pmon.service
+After=platform-modules-e3224f.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mux_controller.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

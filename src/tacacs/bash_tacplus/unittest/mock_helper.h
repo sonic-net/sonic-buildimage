@@ -24,11 +24,27 @@
 /* Mock syslog buffer */
 extern char mock_syslog_message_buffer[1024];
 
-#define TEST_SCEANRIO_CONNECTION_ALL_FAILED				1
-#define TEST_SCEANRIO_CONNECTION_SEND_FAILED_RESULT			2
-#define TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_READ_FAILED			3
-#define TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT			4
-#define TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT			5
+/* Mock TraceId TACACS+ attribute state */
+extern char mock_tac_trace_id_attr_value[256];
+extern char mock_tac_trace_id_attr_separator;
+extern int mock_tac_trace_id_attr_count;
+
+/* Mock tac_add_attrib_pair state */
+extern int mock_attrib_pair_count;
+extern char mock_attrib_pair_name[128];
+extern char mock_attrib_pair_separator;
+extern char mock_attrib_pair_value[128];
+
+#define TEST_SCEANRIO_CONNECTION_ALL_FAILED                 1
+#define TEST_SCEANRIO_CONNECTION_SEND_FAILED_RESULT         2
+#define TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_READ_FAILED   3
+#define TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT        4
+#define TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT        5
+#define TEST_SCEANRIO_LOAD_CHANGED_TACACS_CONFIG            6
+#define TEST_SCEANRIO_IS_LOCAL_USER_UNKNOWN                 7
+#define TEST_SCEANRIO_IS_LOCAL_USER_NOT_FOUND               8
+#define TEST_SCEANRIO_IS_LOCAL_USER_ROOT                    9
+#define TEST_SCEANRIO_IS_LOCAL_USER_REMOTE                  10
 
 /* Set test scenario for test*/
 void set_test_scenario(int scenario);
@@ -42,5 +58,10 @@ void set_memory_allocate_count(int count);
 /* Get memory allocate count for test*/
 int get_memory_allocate_count();
 
+/* Reset mocked TACACS+ attribute state */
+void reset_mock_tac_attrs();
+
+/* Reset the captured tac_add_attrib_pair state. */
+void reset_mock_attrib_pair();
 
 #endif /* _MOCK_HELPER_H_ */

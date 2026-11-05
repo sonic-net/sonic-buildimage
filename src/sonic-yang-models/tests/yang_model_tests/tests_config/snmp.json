@@ -29,6 +29,15 @@
             }
         }
     },
+    "SNMP_SYSTEM_LOCATION_NEWLINE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP": {
+                "LOCATION": {
+                        "Location": "DataCenter1\nextend test /bin/sh"
+                }
+            }
+        }
+    },
 
     "SNMP_COMMUNITY_TEST": {
         "sonic-snmp:sonic-snmp": {
@@ -79,5 +88,801 @@
                 ]
             }
         }
+    },
+    "SNMP_COMMUNITY_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_COMMUNITY": {
+                "SNMP_COMMUNITY_LIST": [
+                    {
+                        "name": "safe\nrwcommunity\tevil",
+                        "TYPE": "RO"
+                    }
+                ]
+            }
+        }
+    },
+    "SNMP_COMMUNITY_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_COMMUNITY": {
+                "SNMP_COMMUNITY_LIST": [
+                    {
+                        "name": "safe\rrwcommunity\tevil",
+                        "TYPE": "RO"
+                    }
+                ]
+            }
+        }
+    },
+    "SNMP_COMMUNITY_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_COMMUNITY": {
+                "SNMP_COMMUNITY_LIST": [
+                    {
+                        "name": "safe\r\nrwcommunity\tevil",
+                        "TYPE": "RO"
+                    }
+                ]
+            }
+        }
+    },
+    "SNMP_COMMUNITY_TAB_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_COMMUNITY": {
+                "SNMP_COMMUNITY_LIST": [
+                    {
+                        "name": "safe\tevil",
+                        "TYPE": "RO"
+                    }
+                ]
+            }
+        }
+    },
+    "SNMP_RO_USER_NAME_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                        "name": "testuser",
+                        "SNMP_USER_TYPE": "noAuthNoPriv",
+                        "SNMP_USER_PERMISSION": "RO",
+                        "SNMP_USER_AUTH_TYPE": "",
+                        "SNMP_USER_AUTH_PASSWORD": "",
+                        "SNMP_USER_ENCRYPTION_TYPE": "",
+                        "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_RW_USER_NAME_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                        "name": "testuser",
+                        "SNMP_USER_TYPE": "noAuthNoPriv",
+                        "SNMP_USER_PERMISSION": "RW",
+                        "SNMP_USER_AUTH_TYPE": "",
+                        "SNMP_USER_AUTH_PASSWORD": "",
+                        "SNMP_USER_ENCRYPTION_TYPE": "",
+                        "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_MIN_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "tes",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_INVALID_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "test@user",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_INVALID_NEG_TEST_2": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "test:user",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser\nrocommunity\tevil",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser\rrocommunity\tevil",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser\r\nrocommunity\tevil",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_TAB_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser\tevil",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NO_USER_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_INVALID_USER_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "randomUserType",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NO_USER_PERM_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_INVALID_USER_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "WR",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_NO_PRIV_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_NO_PRIV_TEST_2": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "MD5",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_NO_PRIV_TEST_3": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "HMAC-SHA-2",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NO_AUTH_NO_PRIV_AUTH_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+		       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_NO_PRIV_NO_AUTH_PASS_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+		       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_NO_PRIV_NO_AUTH_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_NO_PRIV_INVALID_AUTH_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SAH",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_NO_PRIV_INVALID_AUTH_PASS_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth:pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_PASSWORD_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "authpass\nrocommunity\tevil",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_PASSWORD_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "authpass\rrocommunity\tevil",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_PASSWORD_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "authpass\r\nrocommunity\tevil",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_PASSWORD_TAB_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "authpass\tevil",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encry_pass"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_TEST_2": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "DES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encry_pass"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_NO_ENCRYPT_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encry_pass",
+                       "SNMP_USER_ENCRYPTION_TYPE": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_INVALID_ENCRYPT_TYPE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "DSE",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encry_pass"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_NO_ENCRYPT_PASS_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_INVALID_ENCRYPT_PASS_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encry@pass"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encrypass\nrocommunity\tevil"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encrypass\rrocommunity\tevil"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encrypass\r\nrocommunity\tevil"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_TAB_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encrypass\tevil"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_SHORT_ENCRYPT_PASS_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "en"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_PRIV_LONG_ENCRYPT_PASS_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encryption_password_longer_than_64_characters_is_not_a_valid_password"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_IPV6": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "fd00::1",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_EMPTY_PORT_NUMBER": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "",
+                       "vrf_name": "mgmt"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_MGMT_VRF": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": "mgmt"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_NO_VRF": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_PORT": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+		       "port": "65536",
+                       "vrf_name": "mgmt"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_DUPLICATE_IP_PORT": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": "mgmt"
+                    },
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": ""
+                    } 
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV4_ADDRESS": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "340.1.1.10",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV6_ADDRESS": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_CONFIG_LIST": [
+                    {
+                       "agent_ip": "2001:aa:aa:aa",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
     }
 }

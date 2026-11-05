@@ -11,7 +11,6 @@ $(DOCKER_SONIC_SDK_BUILDENV)_DEPENDS += $(LIBSAIVS) \
                                         $(LIBSAIREDIS_DEV) \
                                         $(LIBSAIMETADATA_DEV) \
                                         $(LIBSWSSCOMMON_DEV) \
-                                        $(LIBHIREDIS_DEV) \
                                         $(LIBNL3_DEV) \
                                         $(LIBNL_GENL3_DEV) \
                                         $(LIBNL_ROUTE3_DEV) \

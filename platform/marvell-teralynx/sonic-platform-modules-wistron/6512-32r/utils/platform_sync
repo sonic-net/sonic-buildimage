@@ -1,0 +1,9 @@
+#!/bin/bash
+/usr/local/bin/sonic-fanthrml-monitor &
+/usr/local/bin/sonic-led-monitor &
+/usr/local/bin/sonic-qsfp-monitor &
+/usr/local/bin/sonic-psu-monitor &
+/usr/local/bin/sonic-qsfp-eeprom-monitor &
+/usr/local/bin/sonic-send-temp-to-bmc &
+exit 0
+

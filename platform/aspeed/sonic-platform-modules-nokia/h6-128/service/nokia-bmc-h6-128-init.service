@@ -1,0 +1,12 @@
+[Unit]
+Description=Nokia-BMC-H6-128 Platform Service
+After=sysinit.target
+Before=database.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nokia-bmc-h6-128-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

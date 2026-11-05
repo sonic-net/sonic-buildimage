@@ -57,7 +57,7 @@ module sonic-nat {
 
         container STATIC_NAPT {
 
-            description "STATIC_NAPT table part of config_db.json";
+            description "Static NAPT entries mapping global IP/port to local IP/port";
 
             list STATIC_NAPT_LIST {
                 key "global_ip ip_protocol global_l4_port";
@@ -66,26 +66,26 @@ module sonic-nat {
                     description "Global ip for the Static NAPT entry.";
 
                     type inet:ipv4-address;
-                }   
-                
+                }
+
                 leaf ip_protocol {
                     description "IP Protocol (tcp or udp) for the Static NAPT entry.";
 
                     type stypes:ip-protocol-type;
-                }   
-                
+                }
+
                 leaf global_l4_port {
                     description "Global L4 port for the Static NAPT entry.";
 
                     type inet:port-number;
-                }   
+                }
 
                 leaf local_ip {
                     description "Local ip for the Static NAPT entry.";
 
                     mandatory true;
                     type inet:ipv4-address;
-                }   
+                }
 
                 leaf local_port {
                     description "Local port for the Static NAPT entry.";
@@ -93,30 +93,30 @@ module sonic-nat {
                     mandatory true;
                     type inet:port-number ;
                 }
-                
+
                 leaf nat_type {
                     description "Nat type for the static napt entry - snat or dnat";
 
                     type nat-type;
                     default dnat;
-                }   
-                
+                }
+
                 leaf twice_nat_id {
                     description "Twice nat id for the static napt to achieve the twice napt";
 
-                    type uint16 { 
+                    type uint16 {
                         range "1..9999" {
                             error-message "Invalid twice nat id for the static NAPT.";
                             error-app-tag twice-nat-id-invalid;
-                        }   
-                    }   
+                        }
+                    }
                 }
             }
         }
 
         container STATIC_NAT {
 
-            description "STATIC_NAT table part of config_db.json";
+            description "Static NAT entries mapping global IP to local IP";
 
             list STATIC_NAT_LIST {
                 key "global_ip";
@@ -144,21 +144,22 @@ module sonic-nat {
                 leaf twice_nat_id {
                     description "Twice nat id for the static nat to achieve the twice nat";
 
-                    type uint16 { 
+                    type uint16 {
                         range "1..9999" {
                             error-message "Invalid twice nat id for the static NAT.";
-                            error-app-tag twice-nat-id-invalid; 
-                        }   
-                    }   
+                            error-app-tag twice-nat-id-invalid;
+                        }
+                    }
                 }
             }
         }
 
         container NAT_GLOBAL {
 
-            description "NAT_GLOBAL table part of config_db.json";
+            description "Global NAT settings including admin mode and timeouts";
 
             container Values {
+                description "Global NAT parameter values";
 
                 leaf admin_mode {
                     description "Admin mode of the NAT feature.";
@@ -205,7 +206,7 @@ module sonic-nat {
 
         container NAT_POOL {
 
-            description "NAT_POOL table part of config_db.json";
+            description "NAT address pools defining IP and port ranges for dynamic NAT";
 
             list NAT_POOL_LIST {
                 key "name";
@@ -243,7 +244,7 @@ module sonic-nat {
 
         container NAT_BINDINGS {
 
-            description "NAT_BINDINGS table part of config_db.json";
+            description "NAT bindings associating ACLs with NAT pools for dynamic translation";
 
             list NAT_BINDINGS_LIST {
                 key "name";

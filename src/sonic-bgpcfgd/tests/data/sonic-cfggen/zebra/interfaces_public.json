@@ -1,0 +1,15 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "cloudtype": "Public"
+        }
+    },
+    "INTERFACE": {
+        "Ethernet0|10.20.30.40/24": {},
+        "Ethernet4|20.20.30.40/24": {}
+    },
+    "PORTCHANNEL": {
+        "PortChannel10": {},
+        "PortChannel20": {}
+    }
+}

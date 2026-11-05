@@ -1,0 +1,5 @@
+address,hwaddr,client_id,valid_lifetime,expire,subnet_id,fqdn_fwd,fqdn_rev,hostname,state,user_context
+169.254.200.4,aa:bb:cc:dd:ff:04,,900,1718053209,10000,0,0,sonic,0,
+169.254.200.1,aa:bb:cc:dd:ff:01,,900,1718053209,10000,0,0,sonic,0,
+169.254.200.3,aa:bb:cc:dd:ff:03,,900,1718053210,10000,0,0,sonic,0,
+169.254.200.2,aa:bb:cc:dd:ff:02,,900,1718053210,10000,0,0,sonic,0,

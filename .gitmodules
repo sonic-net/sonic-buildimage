@@ -45,8 +45,7 @@
 	url = https://github.com/sonic-net/sonic-platform-pdk-pde
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
-	url = https://github.com/sonic-net/sonic-frr.git
-	branch = frr/8.2
+	url = https://github.com/FRRouting/frr.git
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
@@ -65,15 +64,9 @@
 [submodule "src/scapy"]
 	path = src/scapy
 	url = https://github.com/secdev/scapy.git
-[submodule "platform/mellanox/mlnx-sai/SAI-Implementation"]
-	path = platform/mellanox/mlnx-sai/SAI-Implementation
-	url = https://github.com/Mellanox/SAI-Implementation
 [submodule "src/sonic-mgmt-framework"]
 	path = src/sonic-mgmt-framework
 	url = https://github.com/sonic-net/sonic-mgmt-framework
-[submodule "Switch-SDK-drivers"]
-	path = platform/mellanox/sdk-src/sx-kernel/Switch-SDK-drivers
-	url = https://github.com/Mellanox/Switch-SDK-drivers
 [submodule "src/sonic-ztp"]
 	path = src/sonic-ztp
 	url = https://github.com/sonic-net/sonic-ztp
@@ -90,7 +83,7 @@
 [submodule "platform/broadcom/saibcm-modules-dnx"]
 	path = platform/broadcom/saibcm-modules-dnx
 	url = https://github.com/sonic-net/saibcm-modules.git
-	branch =  sdk-6.5.22-gpl-dnx
+	branch = sdk-6.5.35-dnx
 [submodule "platform/broadcom/sonic-platform-modules-nokia"]
 	path = platform/broadcom/sonic-platform-modules-nokia
 	url = https://github.com/nokia/sonic-platform.git
@@ -112,6 +105,56 @@
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
 	url = https://github.com/sonic-net/sonic-gnmi.git
+[submodule "src/sonic-bmp"]
+	path = src/sonic-bmp
+	url = https://github.com/sonic-net/sonic-bmp.git
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet
+[submodule "src/dhcpmon"]
+	path = src/dhcpmon
+	url = https://github.com/sonic-net/sonic-dhcpmon.git
+[submodule "src/sonic-dash-api"]
+	path = src/sonic-dash-api
+	url = https://github.com/sonic-net/sonic-dash-api.git
+[submodule "src/sonic-dash-ha"]
+	path = src/sonic-dash-ha
+	url = https://github.com/sonic-net/sonic-dash-ha
+[submodule "src/sonic-stp"]
+	path = src/sonic-stp
+	url = https://github.com/sonic-net/sonic-stp
+[submodule "platform/marvell-teralynx/sonic-platform-marvell-teralynx"]
+	path = platform/marvell-teralynx/sonic-platform-marvell-teralynx
+	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
+[submodule "platform/vpp"]
+	path = platform/vpp
+	url = https://github.com/sonic-net/sonic-platform-vpp.git
+[submodule "platform/marvell-prestera/mrvl-prestera"]
+	path = platform/marvell-prestera/mrvl-prestera
+	url = https://github.com/Marvell-switching/mrvl-prestera.git
+[submodule "platform/marvell-prestera/sonic-platform-marvell"]
+	path = platform/marvell-prestera/sonic-platform-marvell
+	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
+[submodule "src/sonic-sysmgr/gnoi"]
+	path = src/sonic-sysmgr/gnoi
+	url = https://github.com/openconfig/gnoi
+[submodule "platform/marvell-teralynx/mrvl-teralynx"]
+	path = platform/marvell-teralynx/mrvl-teralynx
+	url = https://github.com/Marvell-switching/mrvl-teralynx.git
+[submodule "src/supervisor"]
+	path = src/supervisor
+	url = https://github.com/Supervisor/supervisor
+[submodule "platform/alpinevs"]
+	path = platform/alpinevs
+	url = https://github.com/sonic-net/sonic-alpine/
+[submodule "src/sonic-redfish"]
+	path = src/sonic-redfish
+	url = https://github.com/sonic-net/sonic-redfish
+[submodule "platform/aspeed/sonic-platform-modules-arista"]
+	path = platform/aspeed/sonic-platform-modules-arista
+	url = https://github.com/aristanetworks/sonic
+
+[submodule "platform/broadcom/saibcm-modules"]
+	path = platform/broadcom/saibcm-modules
+	url = https://github.com/sonic-net/saibcm-modules.git
+	branch = sdk-6.5.35-xgs

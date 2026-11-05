@@ -2,30 +2,100 @@
 
 . /usr/local/bin/syncd_common.sh
 
+function remove_ethernet_interfaces() {
+    debug "remove_ethernet_interfaces: Removing all Ethernet interfaces (NET_NS: $NET_NS)..."
+
+    local start_time=$(date +%s)
+    local ethernet_interfaces
+    if [[ -n "$NET_NS" ]]; then
+        ethernet_interfaces=$(ip netns exec "$NET_NS" ip link show | grep -o 'Ethernet[0-9]*' | sort -u)
+    else
+        ethernet_interfaces=$(ip link show | grep -o 'Ethernet[0-9]*' | sort -u)
+    fi
+
+    if [[ -n "$ethernet_interfaces" ]]; then
+        local interface_count=$(echo "$ethernet_interfaces" | wc -w)
+        debug "remove_ethernet_interfaces: Found $interface_count Ethernet interfaces to remove"
+
+        for interface in $ethernet_interfaces; do
+            if [[ -n "$NET_NS" ]]; then
+                ip netns exec "$NET_NS" ip link del "$interface" 2>/dev/null || debug "Failed to remove interface: $interface"
+            else
+                ip link del "$interface" 2>/dev/null || debug "Failed to remove interface: $interface"
+            fi
+        done
+        debug "remove_ethernet_interfaces: Finished removing $interface_count Ethernet interfaces"
+    else
+        debug "remove_ethernet_interfaces: No Ethernet interfaces found to remove"
+    fi
+
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+    debug "remove_ethernet_interfaces: Execution time: ${duration}s (NET_NS: $NET_NS)"
+}
+
+function get_mellanox_dev()
+{
+    local mlx_dev="/proc/mlx_sx/sx_core"
+    if [[ $DEV != "" ]]; then
+        mlx_dev="/proc/mlx_sx/asic$DEV/sx_core"
+    fi
+    echo $mlx_dev
+}
+
+function reset_mellanox_drivers() {
+    local mlx_dev=$(get_mellanox_dev)
+
+    if [[ -f /var/run/mlx_sx_core_restart_required$DEV ]]; then
+        debug "Restarting Mellanox drivers for ASIC $DEV"
+        echo "pcidrv_restart" > $mlx_dev
+        rm -f /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null || debug "Warning: Could not remove restart flag"
+        debug "Mellanox drivers restarted for ASIC $DEV"
+    fi
+
+    remove_ethernet_interfaces
+}
+
 function startplatform() {
 
     # platform specific tasks
 
-    # start mellanox drivers regardless of
-    # boot type
     if [[ x"$sonic_asic_platform" == x"mellanox" ]]; then
         BOOT_TYPE=`getBootType`
         if [[ x"$WARM_BOOT" == x"true" || x"$BOOT_TYPE" == x"fast" ]]; then
             export FAST_BOOT=1
         fi
 
-        if [[ x"$WARM_BOOT" != x"true" ]]; then
-            if [[ x"$(/bin/systemctl is-active pmon)" == x"active" ]]; then
-                /bin/systemctl stop pmon
-                debug "pmon is active while syncd starting, stop it first"
+        # Clear container's temporary directory before starting
+        rm -rf /tmp/nv-syncd-shared/$DEV/* 2>/dev/null
+
+        local fw_upgrade_args="--status=all"
+        if [[ $DEV != "" ]]; then
+            fw_upgrade_args="--status=$DEV"
+        fi
+        mlnx-fw-manager $fw_upgrade_args
+        if [[ $? != "0" ]]; then
+            debug "ASIC$DEV firmware upgrade status check failed. Please check the firmware upgrade status manually."
+            exit 1
+        fi
+
+        # If BOOT_TYPE from /proc/cmdline is "fastfast" but warm boot flag for this namespace is not enabled,
+        # this indicates ASIC$DEV failed to enter warm boot mode, likely due to shutdown issues and requires cold booting.
+        # Create a restart flag so ASIC$DEV will be properly reset on this boot.
+        if [[ x"$BOOT_TYPE" == x"fastfast" ]]; then
+            if [[ x"$WARM_BOOT" != x"true" ]]; then
+                debug "Boot type is fastfast but warm boot is not enabled for syncd$DEV, will reset ASIC$DEV"
+                if ! echo "mlx_sx_core_restart_required" > /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null; then
+                    debug "Warning: Could not create restart flag file"
+                fi
             fi
         fi
 
-        debug "Starting Firmware update procedure"
-        /usr/bin/mst start --with_i2cdev
-        /usr/bin/mlnx-fw-upgrade.sh
-        /etc/init.d/sxdkernel restart
-        debug "Firmware update procedure ended"
+        reset_mellanox_drivers
+
+        if ! echo "mlx_sx_core_restart_required" > /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null; then
+            debug "Warning: Could not create restart flag file"
+        fi
     fi
 
     if [[ x"$sonic_asic_platform" == x"broadcom" ]]; then
@@ -35,10 +105,10 @@ function startplatform() {
                 platform=$aboot_platform
             elif [ -n "$onie_platform" ]; then
                 platform=$onie_platform
-            else 
+            else
                 platform="unknown"
             fi
-            if [[ x"$platform" == x"x86_64-arista_720dt_48s" ]]; then
+            if [[ x"$platform" =~ x"x86_64-arista_720dt_48s" ]]; then
                 is_bcm0=$(ls /sys/class/net | grep bcm0)
                 if [[ "$is_bcm0" == "bcm0" ]]; then
                     debug "stop SDK opennsl-modules ..."
@@ -59,9 +129,11 @@ function startplatform() {
         fi
     fi
 
-    if [[ x"$WARM_BOOT" != x"true" ]]; then
-        if [ x$sonic_asic_platform == x'cavium' ]; then
-            /etc/init.d/xpnet.sh start
+    if [[ x"$sonic_asic_platform" == x"nvidia-bluefield" ]]; then
+        /usr/bin/bfnet.sh start
+        if [[ $? != "0" ]]; then
+            debug "Failed to start Nvidia Bluefield"
+            exit 1
         fi
     fi
 }
@@ -70,41 +142,26 @@ function waitplatform() {
 
     BOOT_TYPE=`getBootType`
     if [[ x"$sonic_asic_platform" == x"mellanox" ]]; then
-        if [[ x"$BOOT_TYPE" = @(x"fast"|x"warm"|x"fastfast") ]]; then
-            PMON_TIMER_STATUS=$(systemctl is-active pmon.timer)
-            if [[ x"$PMON_TIMER_STATUS" = x"inactive" ]]; then
-                systemctl start pmon.timer
-            else
-                debug "PMON service is delayed by a timer for better fast/warm boot performance"
-            fi
+        PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
+        PMON_IMMEDIATE_START="/usr/share/sonic/device/$PLATFORM/pmon_immediate_start"
+        if [[ x"$BOOT_TYPE" = @(x"fast"|x"warm"|x"fastfast") ]] && [[ ! -f $PMON_IMMEDIATE_START ]]; then
+            debug "PMON service is delayed by for better fast/warm boot performance"
         else
             debug "Starting pmon service..."
             /bin/systemctl start pmon
             debug "Started pmon service"
         fi
     fi
-    if [[ x"$BOOT_TYPE" = @(x"fast"|x"warm"|x"fastfast") ]]; then
-        debug "LLDP service is delayed by a timer for better fast/warm boot performance"
-    else
-        lldp_state=$(systemctl is-enabled lldp.timer)
-        if [[ $lldp_state == "enabled" ]]
-        then
-            debug "Starting lldp service..."
-            /bin/systemctl start lldp
-            debug "Started lldp service"
-        fi
-    fi
 }
 
 function stopplatform1() {
-
-    if [[ x$sonic_asic_platform == x"mellanox" ]] && [[ x$TYPE == x"cold" ]]; then
-        debug "Stopping pmon service ahead of syncd..."
-        /bin/systemctl stop pmon
-        debug "Stopped pmon service"
-    fi
-
     if [[ x$sonic_asic_platform != x"mellanox" ]] || [[ x$TYPE != x"cold" ]]; then
+        # Invoke platform specific pre shutdown routine.
+        PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
+        PLATFORM_PRE_SHUTDOWN="/usr/share/sonic/device/$PLATFORM/plugins/syncd_request_pre_shutdown"
+        [ -f $PLATFORM_PRE_SHUTDOWN ] && \
+            /usr/bin/docker exec -i syncd$DEV /usr/share/sonic/platform/plugins/syncd_request_pre_shutdown --${TYPE}
+
         debug "${TYPE} shutdown syncd process ..."
         /usr/bin/docker exec -i syncd$DEV /usr/bin/syncd_request_shutdown --${TYPE}
 
@@ -131,15 +188,11 @@ function stopplatform1() {
 function stopplatform2() {
     # platform specific tasks
 
-    if [[ x"$WARM_BOOT" != x"true" ]]; then
-        if [ x$sonic_asic_platform == x'mellanox' ]; then
-            /etc/init.d/sxdkernel stop
-            /usr/bin/mst stop
-        elif [ x$sonic_asic_platform == x'cavium' ]; then
-            /etc/init.d/xpnet.sh stop
-            /etc/init.d/xpnet.sh start
-        fi
-    fi
+     if [[ x"$WARM_BOOT" != x"true" ]]; then
+         if [ x"$sonic_asic_platform" == x"nvidia-bluefield" ]; then
+             /usr/bin/bfnet.sh stop
+         fi
+     fi
 }
 
 OP=$1

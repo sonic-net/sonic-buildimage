@@ -79,6 +79,25 @@
             }
         }
     },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_IPV6_SRC_AND_DST_IP": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "1001::1",
+                        "src_ip": "2002::2",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "ttl": "64",
+                        "queue": "0",
+                        "direction": "RX"
+                    }
+                ]
+            }
+        }
+    },
     "MIRROR_ERSPAN_ENTRY_WRONG_TYPE": {
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {
@@ -266,7 +285,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "ttl": "65"
+                        "ttl": "256"
                     }
                 ]
             }
@@ -283,7 +302,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "ttl": "63"
+                        "ttl": "255"
                     }
                 ]
             }
@@ -315,10 +334,8 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "ttl": "63",
-                        "src_port": [
-                            "Ethernet0"
-                        ]
+                        "ttl": "255",
+                        "src_port": "Ethernet0"
                     }
                 ]
             }
@@ -345,30 +362,8 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "ttl": "63",
-                        "src_port": [
-                            "PortChannel5"
-                        ]
-                    }
-                ]
-            }
-        }
-    },
-    "MIRROR_ERSPAN_ENTRY_INVALID_SRC_PORT": {
-        "sonic-mirror-session:sonic-mirror-session": {
-            "MIRROR_SESSION": {
-                "MIRROR_SESSION_LIST": [
-                    {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
-                        "ttl": "63",
-                        "src_port": [
-                            "Ethernet0"
-                        ]
+                        "ttl": "255",
+                        "src_port": "PortChannel5"
                     }
                 ]
             }
@@ -415,10 +410,7 @@
                         "name": "span",
                         "type": "SPAN",
                         "dst_port": "Ethernet0",
-                        "src_port": [
-                            "Ethernet4",
-                            "Ethernet8"
-                        ],
+                        "src_port": "Ethernet4,Ethernet8",
                         "direction": "RX"
                     }
                 ]
@@ -474,37 +466,6 @@
                         "name": "span",
                         "type": "SPAN",
                         "dst_port": "CPU"
-                    }
-                ]
-            }
-        }
-    },
-    "MIRROR_SPAN_ENTRY_INVALID_SRC_PORT": {
-        "sonic-port:sonic-port": {
-            "sonic-port:PORT": {
-                "PORT_LIST": [
-                    {
-                        "admin_status": "up",
-                        "alias": "eth0",
-                        "description": "Ethernet0",
-                        "lanes": "1",
-                        "mtu": 9000,
-                        "name": "Ethernet0",
-                        "speed": 25000
-                    }
-                ]
-            }
-        },
-        "sonic-mirror-session:sonic-mirror-session": {
-            "MIRROR_SESSION": {
-                "MIRROR_SESSION_LIST": [
-                    {
-                        "name": "span",
-                        "type": "SPAN",
-                        "dst_port": "Ethernet0",
-                        "src_port": [
-                            "Ethernet4"
-                        ]
                     }
                 ]
             }
@@ -585,6 +546,186 @@
                         "gre_type": "0x1234",
                         "dscp": "10",
                         "policer": "erspan_policer2"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "sample_rate": "50000"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_MIN": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "sample_rate": "2"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "truncate_size": "128"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MIN": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "truncate_size": "64"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MAX": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "truncate_size": "9216"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_AND_TRUNCATE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "sample_rate": "50000",
+                        "truncate_size": "128"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TOO_LOW": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "sample_rate": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_LOW": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "truncate_size": "32"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_HIGH": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "truncate_size": "9217"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TYPE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "span",
+                        "type": "SPAN",
+                        "sample_rate": "50000"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "span",
+                        "type": "SPAN",
+                        "truncate_size": "128"
                     }
                 ]
             }

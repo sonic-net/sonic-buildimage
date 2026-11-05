@@ -1,0 +1,8 @@
+# Defaults for smartmontools initscript (/etc/init.d/smartmontools)
+# This is a POSIX shell fragment
+
+# List of devices you want to explicitly enable S.M.A.R.T. for
+# Not needed (and not recommended) if the device is monitored by smartd
+#enable_smart="/dev/hda /dev/hdb"
+
+smartd_opts="-q nodev0"

@@ -98,7 +98,7 @@ static ssize_t version_show(struct device *dev, struct device_attribute *attr, c
     mutex_lock(&cpld_data->cpld_lock);
     version = inb(VERSION_ADDR);
     mutex_unlock(&cpld_data->cpld_lock);
-    return sprintf(buf, "%d.%d\n", version >> 4, version & 0x0F);
+    return sprintf(buf, "%x.%x\n", version >> 4, version & 0x0F);
 }
 static DEVICE_ATTR_RO(version);
 
@@ -394,10 +394,9 @@ static int cpld_b_drv_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int cpld_b_drv_remove(struct platform_device *pdev)
+static void cpld_b_drv_remove(struct platform_device *pdev)
 {
     sysfs_remove_group(&pdev->dev.kobj, &cpld_b_attrs_grp);
-    return 0;
 }
 
 static struct platform_driver cpld_b_drv = {

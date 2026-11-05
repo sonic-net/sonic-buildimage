@@ -1,7 +1,8 @@
+#!/bin/bash
+
 # This script is for reproducible build.
 # Reproducible build for docker enabled: Before build docker image, this script will change image:tag to image:sha256 in DOCKERFILE.
 # And record image sha256 to a target file.
-#!/bin/bash
 
 IMAGENAME=$1
 DOCKERFILE=$2
@@ -15,7 +16,10 @@ mkdir -p target/versions/default
 
 . src/sonic-build-hooks/buildinfo/config/buildinfo.config
 
-image_tag=`grep "^FROM " $DOCKERFILE | awk '{print$2}'`
+image_tag=`grep "^ARG BASE=" $DOCKERFILE | cut -d= -f 2`
+if [ -z $image_tag ]; then
+	image_tag=`grep "^FROM " $DOCKERFILE | awk '{print$2}'`
+fi
 image_tag_noprefix=$image_tag
 [ -n "$DEFAULT_CONTAINER_REGISTRY" ] && image_tag_noprefix=$(echo $image_tag | sed "s#$DEFAULT_CONTAINER_REGISTRY##")
 image=`echo $image_tag | cut -f1 -d:`
@@ -23,7 +27,7 @@ tag=`echo $image_tag | cut -f2 -d:`
 
 if [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,all,* ]] || [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,docker,* ]]; then
     # if docker image not in white list, exit
-    if [[ "$image_tag" != */debian:* ]] && [[ "$image_tag" != debian:* ]] && [[ "$image_tag" != multiarch/debian-debootstrap:* ]];then
+    if [[ "$image_tag" != */debian:* ]] && [[ "$image_tag" != debian:* ]] && [[ "$image_tag" != multiarch/debian-debootstrap:* ]] && [[ "$image_tag" != *p4lang/behavioral-model:* ]];then
         exit 0
     fi
     if [ -f $version_file ];then

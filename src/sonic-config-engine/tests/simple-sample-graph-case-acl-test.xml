@@ -379,7 +379,7 @@
         <DeviceLocation i:nil="true"/>
         <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
           <a:IPPrefix>10.7.0.196/26</a:IPPrefix>
-        </ManagementAddress> 
+        </ManagementAddress>
         <HwSku>Force10-S6000</HwSku>
       </Device>
       <Device i:type="SmartCable">

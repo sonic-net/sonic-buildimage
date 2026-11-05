@@ -31,6 +31,7 @@
 #include <linux/mutex.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define BIT_INDEX(i) (1UL << (i))
 #define I2C_ADDR_CPLD1	0x60
@@ -137,7 +138,6 @@ static ssize_t show_present(struct device *dev, struct device_attribute *da,
 		struct as7716_32x_sfp_data *data = as7716_32x_sfp_update_device(dev);
 
 		if (!data->valid) {
-		    printk("return -EIO\n");
 			return -EIO;
 		}
 	
@@ -167,11 +167,18 @@ static const struct attribute_group as7716_32x_sfp_group = {
 	.attrs = as7716_32x_sfp_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32x_sfp_probe(struct i2c_client *client,
 			const struct i2c_device_id *dev_id)
+#else
+static int as7716_32x_sfp_probe(struct i2c_client *client)
+#endif
 {
 	struct as7716_32x_sfp_data *data;
 	int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+	const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_I2C_BLOCK)) {
 		status = -EIO;
@@ -216,7 +223,7 @@ exit:
 	return status;
 }
 
-static int as7716_32x_sfp_remove(struct i2c_client *client)
+static void as7716_32x_sfp_remove(struct i2c_client *client)
 {
 	struct as7716_32x_sfp_data *data = i2c_get_clientdata(client);
 
@@ -224,7 +231,6 @@ static int as7716_32x_sfp_remove(struct i2c_client *client)
 	sysfs_remove_group(&client->dev.kobj, &as7716_32x_sfp_group);
 	kfree(data);
 
-	return 0;
 }
 
 enum port_numbers {
@@ -313,7 +319,6 @@ static struct as7716_32x_sfp_data *as7716_32x_sfp_update_device(struct device *d
 		}
 
 		data->is_present = (status & (1 << (data->port % 8))) ? 0 : 1;
-        printk("data->is_present=%d, data->port=%d, status=0x%x\n",data->is_present, data->port, status);
 		/* Read eeprom data based on port number */
 		memset(data->eeprom, 0, sizeof(data->eeprom));
 
@@ -325,7 +330,6 @@ static struct as7716_32x_sfp_data *as7716_32x_sfp_update_device(struct device *d
 												   data->eeprom+(i*I2C_SMBUS_BLOCK_MAX),
 												   I2C_SMBUS_BLOCK_MAX);
 				if (status < 0) {
-				    printk("unable to read eeprom from port(%d)\n", data->port);
 					dev_dbg(&client->dev, "unable to read eeprom from port(%d)\n", data->port);
 					goto exit;
 				}
@@ -344,10 +348,6 @@ exit:
 
 static int __init as7716_32x_sfp_init(void)
 {
-	//extern int platform_accton_as7716_32x(void);
-	//if (!platform_accton_as7716_32x()) {
-//		return -ENODEV;
-	//}
 
 	return i2c_add_driver(&as7716_32x_sfp_driver);
 }

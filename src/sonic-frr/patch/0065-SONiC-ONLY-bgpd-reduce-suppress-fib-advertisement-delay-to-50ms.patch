@@ -1,0 +1,36 @@
+From b7fda91895fc26c0e4fdfa45365cd95ba0679d62 Mon Sep 17 00:00:00 2001
+From: Deepak Singhal <deepsinghal@microsoft.com>
+Date: Mon, 30 Mar 2026 06:39:34 +0000
+Subject: [PATCH] bgpd: reduce suppress-fib advertisement delay to 50ms
+
+FRR 10.7.1 provides the suppress-fib advertisement-delay knob and uses its
+default through bgp_suppress_fib_get_adv_delay(). Preserve the SONiC interim
+latency behavior by realigning the carried patch to set that default to 50 ms.
+
+Original SONiC patch commit: 711020251cd0f6ab069a57cfeca91a376f899751
+SONiC issue: https://github.com/sonic-net/sonic-buildimage/issues/26345
+FRR issue: https://github.com/FRRouting/frr/issues/21298
+FRR configurable-knob PR: https://github.com/FRRouting/frr/pull/21384
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+---
+ bgpd/bgpd.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 1a497497fd..f0b02b4e72 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -2509,7 +2509,7 @@ struct bgp_nlri {
+ #define BGP_DEFAULT_SELECT_DEFERRAL_TIME       120
+ #define BGP_DEFAULT_RIB_STALE_TIME             500
+ #define BGP_DEFAULT_UPDATE_ADVERTISEMENT_TIME  1
+-#define BGP_DEFAULT_SUPPRESS_FIB_ADV_DELAY     1000 /* ms */
++#define BGP_DEFAULT_SUPPRESS_FIB_ADV_DELAY     50 /* ms */
+ 
+ /* BGP Long-lived Graceful Restart */
+ #define BGP_DEFAULT_LLGR_STALE_TIME 0
+-- 
+2.34.1
+

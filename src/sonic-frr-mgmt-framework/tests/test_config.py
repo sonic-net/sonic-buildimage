@@ -2,7 +2,17 @@ import copy
 import re
 from unittest.mock import MagicMock, NonCallableMagicMock, patch
 
-swsscommon_module_mock = MagicMock(ConfigDBConnector = NonCallableMagicMock)
+def mock_is_vrf_name_valid(name):
+    return (isinstance(name, str) and name not in ('.', '..') and
+            re.fullmatch(r'[A-Za-z0-9_.][A-Za-z0-9_.-]{0,14}', name) is not None)
+
+def mock_is_interface_name_valid(name):
+    return isinstance(name, str) and 0 < len(name) < 16
+
+swsscommon_module_mock = MagicMock(
+    ConfigDBConnector=NonCallableMagicMock,
+    isInterfaceNameValid=mock_is_interface_name_valid,
+    isVrfNameValid=mock_is_vrf_name_valid)
 # because can’t use dotted names directly in a call, have to create a dictionary and unpack it using **:
 mockmapping = {'swsscommon.swsscommon': swsscommon_module_mock}
 
@@ -14,10 +24,169 @@ def test_contructor():
     for table, hdlr in daemon.table_handler_list:
         daemon.config_db.subscribe.assert_any_call(table, hdlr)
     daemon.config_db.pubsub.psubscribe.assert_called_once()
+    assert(daemon.config_db.sub_thread.is_alive() == True)
     daemon.stop()
-    daemon.config_db.sub_thread.stop.assert_called()
-    daemon.config_db.sub_thread.is_alive.assert_called_once()
-    daemon.config_db.sub_thread.join.assert_called_once()
+    daemon.config_db.pubsub.punsubscribe.assert_called_once()
+    assert(daemon.config_db.sub_thread.is_alive() == False)
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_key_and_asn_validation(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    normalize_key = daemon._BGPConfigDaemon__normalize_bgp_table_key
+    asn_is_valid = daemon._BGPConfigDaemon__bgp_asn_is_valid
+    validate_input = daemon._BGPConfigDaemon__validate_bgp_table_input
+
+    assert normalize_key('BGP_NEIGHBOR', 'default|FC00:10::1') == 'default|fc00:10::1'
+    assert normalize_key('BGP_NEIGHBOR', 'default|1234') == 'default|1234'
+    assert normalize_key('BGP_NEIGHBOR', 'default|Ethernet0') == 'default|Ethernet0'
+    assert normalize_key('BGP_PEER_GROUP', 'Vrf-RED_1|PG_V4-1') == 'Vrf-RED_1|PG_V4-1'
+    assert normalize_key('BGP_NEIGHBOR_AF', 'default|10.0.0.1|ipv4_unicast') == \
+        'default|10.0.0.1|ipv4_unicast'
+    assert normalize_key('BGP_GLOBALS_AF', 'default|l2vpn_evpn') == \
+        'default|l2vpn_evpn'
+    assert normalize_key('ROUTE_REDISTRIBUTE', 'default|static|bgp|ipv6') == \
+        'default|static|bgp|ipv6'
+
+    for table, key in (
+            ('BGP_NEIGHBOR', None),
+            ('BGP_NEIGHBOR', 'vrf name|10.0.0.1'),
+            ('BGP_NEIGHBOR', 'default|peer name'),
+            ('BGP_PEER_GROUP', 'default|peer' + chr(39) + 'name'),
+            ('BGP_NEIGHBOR_AF', 'default|10.0.0.1'),
+            ('BGP_GLOBALS', 'default|extra'),
+            ('BGP_GLOBALS_AF', 'default|ipv4_unicast' + chr(39) + '-c-bad'),
+            ('BGP_NEIGHBOR_AF', 'default|10.0.0.1|ipv4_multicast'),
+            ('ROUTE_REDISTRIBUTE', 'default|static|bgp|l2vpn')):
+        assert normalize_key(table, key) is None
+
+    for value in (1, '4294967295'):
+        assert asn_is_valid(value)
+    for value in (True, 0, '4294967296', '65000x', '9' * 5000):
+        assert not asn_is_valid(value)
+
+    assert validate_input('BGP_NEIGHBOR', 'default|10.0.0.1',
+                          {'name': 'Edge peer "A"',
+                           'shutdown_message': 'planned maintenance'}) == \
+        'default|10.0.0.1'
+
+    daemon.metadata_asn = '65000'
+    daemon.metadata_handler('DEVICE_METADATA', 'localhost',
+                            {'bgp_asn': "65000' -c 'bad"})
+    assert daemon.metadata_asn == '65000'
+
+    daemon.bgp_global_handler('BGP_GLOBALS', 'vrf name', {'local_asn': '65000'})
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'local_asn': '0'})
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'confed_id': '0'})
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default',
+                              {'confed_peers': ['65001', "65002' -c 'bad"]})
+    daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|peer name', {'asn': '65001'})
+    daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1', {'asn': '65001x'})
+    daemon.bgp_neighbor_handler('BGP_PEER_GROUP', 'default|PG1', {'local_asn': '0'})
+    daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1',
+                                {'peer_group_name': "PG1' -c 'bad"})
+    daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1',
+                                {'name': 'edge peer\nexit'})
+    daemon.bgp_neighbor_handler('BGP_PEER_GROUP', 'default|PG1',
+                                {'auth_password': 'secret\nexit'})
+    daemon.bgp_table_handler_common('BGP_GLOBALS_LISTEN_PREFIX', 'default|10.0.0.0/24',
+                                    {'peer_group': 'PG1\nbad'})
+    run_cmd.assert_not_called()
+    assert daemon.bgp_message.empty()
+    assert not daemon.table_data_cache
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_empty_confed_peers_runtime_update_is_normalized(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    update_bgp = MagicMock()
+    daemon._BGPConfigDaemon__update_bgp = update_bgp
+
+    daemon.bgp_global_handler(
+        'BGP_GLOBALS', 'default',
+        {'local_asn': '65000', 'confed_peers': ['']})
+
+    key, del_table, table, data = daemon.bgp_message.get_nowait()
+    assert (key, del_table, table) == ('default', False, 'BGP_GLOBALS')
+    assert data['local_asn'].data == '65000'
+    assert data['confed_peers'].data == []
+    update_bgp.assert_called_once()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_unified_replay_validates_bgp_keys_and_asns(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.config_db.serialize_key.side_effect = (
+        lambda key: '|'.join(key) if isinstance(key, tuple) else key)
+    replay_entry = daemon._BGPConfigDaemon__replay_table_entry
+
+    for table, key, data in (
+            ('BGP_NEIGHBOR', ('vrf name', '10.0.0.1'), {'asn': '65001'}),
+            ('BGP_NEIGHBOR', ('default', 'peer name'), {'asn': '65001'}),
+            ('BGP_NEIGHBOR', ('default', '10.0.0.1'), {'asn': "65001' -c 'bad"}),
+            ('BGP_NEIGHBOR', ('default', '10.0.0.1'),
+             {'peer_group_name': "PG1' -c 'bad"}),
+            ('BGP_NEIGHBOR', ('default', '10.0.0.1'),
+             {'name': 'edge peer\nexit'}),
+            ('BGP_GLOBALS_LISTEN_PREFIX', ('default', '10.0.0.0/24'),
+             {'peer_group': 'PG1\nbad'}),
+            ('BGP_GLOBALS', 'default', {'local_asn': '0'})):
+        replay_entry(table, key, data)
+
+    run_cmd.assert_not_called()
+    assert daemon.bgp_message.empty()
+    assert not daemon.table_data_cache
+
+    update_bgp = MagicMock()
+    daemon._BGPConfigDaemon__update_bgp = update_bgp
+    replay_entry('BGP_NEIGHBOR', ('default', 'FC00:10::1'), {'asn': '65001'})
+    key, del_table, table, data = daemon.bgp_message.get_nowait()
+    assert (key, del_table, table) == ('default|fc00:10::1', False, 'BGP_NEIGHBOR')
+    assert data['asn'].data == '65001'
+    assert data['asn'].op == 1
+    update_bgp.assert_called_once()
+
+    update_bgp.reset_mock()
+    replay_entry('BGP_GLOBALS', 'default',
+                 {'local_asn': '65000', 'confed_peers': ['']})
+    key, del_table, table, data = daemon.bgp_message.get_nowait()
+    assert (key, del_table, table) == ('default', False, 'BGP_GLOBALS')
+    assert data['local_asn'].data == '65000'
+    assert data['confed_peers'].data == []
+    update_bgp.assert_called_once()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_dequeue_revalidates_dependent_bgp_updates(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon, CachedDataWithOp
+    daemon = BGPConfigDaemon()
+    daemon.config_db.serialize_key.side_effect = (
+        lambda key: '|'.join(key) if isinstance(key, tuple) else key)
+    daemon.config_db.get_table.return_value = {
+        ('default', '10.0.0.0/24\nexit'): {'peer_group': 'PG1'},
+    }
+    apply_dep = daemon._BGPConfigDaemon__apply_dep_vrf_table
+    update_bgp = daemon._BGPConfigDaemon__update_bgp
+
+    apply_dep('default', 'BGP_GLOBALS_LISTEN_PREFIX',
+              match=lambda data: data.get('peer_group') == 'PG1')
+    changed = []
+    update_bgp(changed)
+    assert changed == []
+
+    daemon.bgp_message.put((
+        'default|10.0.0.1', False, 'BGP_NEIGHBOR',
+        {'name': CachedDataWithOp('edge peer\nexit',
+                                  CachedDataWithOp.OP_ADD)}))
+    update_bgp(changed)
+    assert changed == []
+    run_cmd.assert_not_called()
 
 class CmdMapTestInfo:
     data_buf = {}
@@ -53,11 +222,11 @@ class CmdMapTestInfo:
         return copy.deepcopy(cls.data_buf[test.table_name][test.key])
     @staticmethod
     def compose_vtysh_cmd(cmd_list, negtive = False):
-        cmdline = 'vtysh'
+        result = ['vtysh']
         for cmd in cmd_list:
             cmd = cmd.format('no ' if negtive else '')
-            cmdline += " -c '%s'" % cmd
-        return cmdline
+            result += ['-c', cmd]
+        return result
     def check_running_cmd(self, mock, is_del):
         if is_del:
             vtysh_cmd = self.vtysh_cmd if self.vtysh_neg_cmd is None else self.vtysh_neg_cmd
@@ -82,7 +251,9 @@ def hdl_confed_peers_cmd(is_del, cmd_list, chk_data):
     if is_del:
         chk_data = list(reversed(chk_data))
     for idx, cmd in enumerate(cmd_list):
-        last_cmd = re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
+        # cmd is now a list: ['vtysh', '-c', ..., '-c', last_cmd]
+        # Extract last -c value
+        last_cmd = cmd[-1] if isinstance(cmd, list) else re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
         neg_cmd = False
         if last_cmd.startswith('no '):
             neg_cmd = True
@@ -99,7 +270,7 @@ conf_cmd = 'configure terminal'
 conf_bgp_cmd = lambda vrf, asn: [conf_cmd, 'router bgp %d vrf %s' % (asn, vrf)]
 conf_no_bgp_cmd = lambda vrf, asn: [conf_cmd, 'no router bgp %d%s' % (asn, '' if vrf == 'default' else ' vrf %s' % vrf)]
 conf_bgp_dft_cmd = lambda vrf, asn: conf_bgp_cmd(vrf, asn) + ['no bgp default ipv4-unicast']
-conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s unicast' % af]
+conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s %s' % (af, 'evpn' if af == 'l2vpn' else 'unicast')]
 
 bgp_globals_data = [
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'local_asn': 100},
@@ -129,8 +300,12 @@ bgp_globals_data = [
                                                                   'ibgp_route_distance': '115',
                                                                   'local_route_distance': '238'},
                        conf_bgp_af_cmd('default', 100, 'ipv4') + ['{}distance bgp 100 115 238']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'autort': 'rfc8365-compatible'},
+                       conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}autort rfc8365-compatible']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-all-vni': 'true'},
                        conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-all-vni']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-svi-ip': 'true'},
+                       conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-svi-ip']),
         CmdMapTestInfo('BGP_GLOBALS', 'Vrf_red', {'local_asn': 200},
                        conf_bgp_dft_cmd('Vrf_red', 200), False, conf_no_bgp_cmd('Vrf_red', 200), None, None, None),
         CmdMapTestInfo('BGP_GLOBALS', 'Vrf_red', {'med_confed': 'true'},
@@ -149,9 +324,76 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['{}import vrf route-map test_map']),
 ]
 
+# Add admin status test cases for BGP_NEIGHBOR_AF and BGP_PEER_GROUP_AF
+address_families = ['ipv4', 'ipv6', 'l2vpn']
+admin_states = [
+    ('true', '{}neighbor {} activate'),
+    ('false', '{}no neighbor {} activate'),
+    ('up', '{}neighbor {} activate'),
+    ('down', '{}no neighbor {} activate')
+]
+
+def create_af_test_data(table_name):
+    # Start with BGP globals setup
+    test_data = [
+        CmdMapTestInfo('BGP_GLOBALS', 'default',
+                      {'local_asn': '100'},
+                      conf_bgp_dft_cmd('default', 100),
+                      ignore_tail=None)
+    ]
+    for af in address_families:
+        af_key = f"{af}_{'evpn' if af == 'l2vpn' else 'unicast'}"
+        if af == 'ipv4':
+            entries = [('PG_IPV4_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('10.0.0.1', 'default')]
+        elif af == 'ipv6':
+            entries = [('PG_IPV6_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('2001:db8::1', 'default')]
+        else:  # l2vpn case
+            entries = [('PG_EVPN_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('10.0.0.1', 'default')]
+
+        for entry, vrf in entries:
+            for status, cmd_template in admin_states:
+                test_data.append(
+                    CmdMapTestInfo(
+                        table_name,
+                        f'{vrf}|{entry}|{af_key}',
+                        {'admin_status': status},
+                        conf_bgp_af_cmd(vrf, 100, af) + [cmd_template.format('', entry)]
+                    )
+                )
+    return test_data
+
+# Create test data for both neighbor and peer group AF
+neighbor_af_data = create_af_test_data('BGP_NEIGHBOR_AF')
+peer_group_af_data = create_af_test_data('BGP_PEER_GROUP_AF')
+
+# Create test data for neighbor shutdown
+neighbor_shutdown_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  ignore_tail=None),
+    # Then add neighbor shutdown configuration
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.1',
+                  {'admin_status': 'down', 'shutdown_message': 'maintenance'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.1 shutdown message maintenance']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.2',
+                  {'admin_status': 'false', 'shutdown_message': 'planned outage'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.2 shutdown message planned outage']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.4',
+                  {'admin_status': 'up'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.4 shutdown']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.5',
+                  {'admin_status': 'true'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def data_set_del_test(test_data, run_cmd):
+def data_set_del_test(test_data, run_cmd, skip_del=False):
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()
     data_buf = {}
@@ -163,6 +405,10 @@ def data_set_del_test(test_data, run_cmd):
         CmdMapTestInfo.add_test_data(test)
         hdlr[0](test.table_name, test.key, CmdMapTestInfo.get_test_data(test))
         test.check_running_cmd(run_cmd, False)
+
+    if skip_del:
+        return
+
     # delete data in reverse direction
     for test in reversed(test_data):
         if test.no_del:
@@ -176,3 +422,110 @@ def data_set_del_test(test_data, run_cmd):
 
 def test_bgp_globals():
     data_set_del_test(bgp_globals_data)
+
+def test_bgp_neighbor_af():
+    # The neighbor AF test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(neighbor_af_data, skip_del=True)
+
+def test_bgp_peer_group_af():
+    # The peer group AF test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(peer_group_af_data, skip_del=True)
+
+def test_bgp_neighbor_shutdown():
+    # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(neighbor_shutdown_data, skip_del=True)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_neighbor_description_injection(run_cmd):
+    """Regression test: shell metacharacters in BGP_NEIGHBOR description must be
+    passed as a literal vtysh argument, not interpreted by a shell."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+
+    # Seed BGP_GLOBALS to set local ASN (reuse existing test data)
+    globals_seed = bgp_globals_data[0]  # local_asn = 100
+    CmdMapTestInfo.add_test_data(globals_seed)
+    bgp_globals_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_GLOBALS'][0]
+    bgp_globals_hdlr('BGP_GLOBALS', globals_seed.key, CmdMapTestInfo.get_test_data(globals_seed))
+
+    # Now test BGP_NEIGHBOR description with injection payload
+    injection_payload = "'; id #"
+    run_cmd.reset_mock()
+    nbr_test = CmdMapTestInfo(
+        'BGP_NEIGHBOR', 'default|10.0.0.1',
+        {'name': injection_payload},
+        conf_bgp_cmd('default', 100) + [
+            'neighbor 10.0.0.1 description {}'.format(injection_payload)
+        ]
+    )
+    CmdMapTestInfo.add_test_data(nbr_test)
+    nbr_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_NEIGHBOR'][0]
+    nbr_hdlr('BGP_NEIGHBOR', nbr_test.key, CmdMapTestInfo.get_test_data(nbr_test))
+
+    # Verify g_run_command was called with a list (shell=False path)
+    assert run_cmd.called, "g_run_command was not called for BGP_NEIGHBOR description"
+    for call in run_cmd.call_args_list:
+        cmd = call[0][1]
+        assert isinstance(cmd, list), \
+            "command must be a list (shell=False), got string: {}".format(cmd)
+        if any('description' in arg for arg in cmd):
+            assert any(injection_payload in arg for arg in cmd), \
+                "injection payload not found as literal arg: {}".format(cmd)
+
+
+def test_bgp_confederation_template():
+    """Verify bgpd.conf.db.j2 renders 'bgp confederation identifier/peers'
+    from BGP_GLOBALS, and emits nothing when confed is not configured."""
+    from jinja2 import Environment, FileSystemLoader
+    import os
+
+    template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates', 'bgpd')
+    env = Environment(loader=FileSystemLoader(template_dir))
+    env.filters['ipv4'] = lambda v: False
+    env.filters['ipv6'] = lambda v: False
+
+    template = env.get_template('bgpd.conf.db.j2')
+
+    # Confederation in the default VRF and a non-default VRF. confed is a
+    # per-instance knob (FRR installs it under BGP_NODE, which is shared by
+    # 'router bgp <asn>' and 'router bgp <asn> vrf <vrf>'), and frrcfgd applies
+    # it per VRF, so the template must render it for non-default VRFs too.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100',
+                                 'confed_id': '100',
+                                 'confed_peers': ['65101', '65102']},
+                     'Vrf_red': {'local_asn': '65200',
+                                 'confed_id': '200',
+                                 'confed_peers': ['65201']}}
+    )
+    assert 'router bgp 65100' in result
+    assert 'bgp confederation identifier 100' in result
+    assert 'bgp confederation peers 65101 65102' in result
+    # The non-default VRF confed lines are emitted under its own instance.
+    vrf_section = result[result.index('router bgp 65200 vrf Vrf_red'):]
+    assert 'bgp confederation identifier 200' in vrf_section
+    assert 'bgp confederation peers 65201' in vrf_section
+
+    # confed_id only, no peers -> identifier renders, no stray peers line.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100', 'confed_id': '100'}}
+    )
+    assert 'bgp confederation identifier 100' in result
+    assert 'bgp confederation peers' not in result
+
+    # Empty confed_peers list -> the |length > 0 guard suppresses the line.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100', 'confed_peers': []}}
+    )
+    assert 'bgp confederation peers' not in result
+
+    # No confederation config -> no confederation lines emitted.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100'}}
+    )
+    assert 'bgp confederation' not in result

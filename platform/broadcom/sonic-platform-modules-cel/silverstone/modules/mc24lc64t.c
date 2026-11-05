@@ -121,8 +121,7 @@ static struct bin_attribute mc24lc64t_bit_attr = {
         .write = mc24lc64t_write,
 };
 
-static int mc24lc64t_probe(struct i2c_client *client,
-                         const struct i2c_device_id *id)
+static int mc24lc64t_probe(struct i2c_client *client)
 {
         struct i2c_adapter *adapter = client->adapter;
         struct mc24lc64t_data *drvdata;
@@ -143,12 +142,9 @@ static int mc24lc64t_probe(struct i2c_client *client,
         return err;
 }
 
-static int mc24lc64t_remove(struct i2c_client *client)
+static void mc24lc64t_remove(struct i2c_client *client)
 {
-        struct mc24lc64t_data *drvdata = i2c_get_clientdata(client);
         sysfs_remove_bin_file(&client->dev.kobj, &mc24lc64t_bit_attr);
-
-        return 0;
 }
 
 static const struct i2c_device_id mc24lc64t_id[] = {

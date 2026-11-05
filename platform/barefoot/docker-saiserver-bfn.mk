@@ -36,4 +36,3 @@ $(DOCKER_SAISERVER_BFN)_RUN_OPT += --privileged -t
 $(DOCKER_SAISERVER_BFN)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SAISERVER_BFN)_RUN_OPT += -v /var/run/docker-saiserver:/var/run/sswsyncd
 $(DOCKER_SAISERVER_BFN)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SAISERVER_BFN)_RUN_OPT += -v /host/warmboot:/var/warmboot

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 CFGGEN_PARAMS=" \
     -d \
+    -a "{\"namespace_id\":\"$NAMESPACE_ID\"}" \
     -t /usr/share/sonic/templates/lldpd.conf.j2 \
     -y /etc/sonic/sonic_version.yml \
     -t /usr/share/sonic/templates/lldpdSysDescr.conf.j2 \

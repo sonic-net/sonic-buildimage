@@ -469,7 +469,13 @@
             },
             {
                 "name": "QSFP+ or later"
-            }
+            },
+            {
+                "name": "SFP/SFP+/SFP28"
+            },
+            {
+                "name": "SFP/SFP+/SFP28"
+	    }
         ]
     },
     "interfaces": {}

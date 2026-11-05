@@ -1,0 +1,3371 @@
+{
+    "PLATFORM":
+    {
+        "num_ports":66,
+        "num_psus":2,
+        "num_fantrays":4,
+        "num_fans_pertray":2,
+        "num_temps":8,
+        "pddf_dev_types":
+        {
+            "description":"x86_64-marvell_d64p512t-r0 - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
+            "CPLD":
+            [
+                "i2c_cpld"
+            ],
+            "PSU":
+            [
+                "psu_eeprom",
+                "psu_pmbus"
+            ],
+            "FAN":
+            [
+                "fan_eeprom"
+            ],
+            "PORT_MODULE":
+            [
+                "pddf_xcvr"
+            ]
+        },
+        "std_kos":
+        [
+            "i2c_smbus",
+            "i2c-i801",
+            "i2c_dev",
+            "i2c_mux_pca954x",
+            "at24",
+            "ipmi_devintf",
+            "ipmi_si",
+            "d64p512t_fpga",
+            "optoe"
+        ],
+        "pddf_kos":
+        [
+            "pddf_client_module",
+            "pddf_cpld_module",
+            "pddf_cpld_driver",
+            "pddf_mux_module",
+            "pddf_psu_driver_module",
+            "pddf_xcvr_module",
+            "pddf_xcvr_driver_module"
+        ],
+        "custom_kos":
+        [
+            "pddf_custom_sysstatus_module"
+        ]
+    },
+
+    "SYSTEM":
+    {
+        "dev_info": {"device_type":"CPU", "device_name":"ROOT_COMPLEX", "device_parent":null},
+        "i2c":
+        {
+            "CONTROLLERS":
+            [
+                { "dev_name":"i2c-0", "dev":"SMBUS0" },
+                { "dev_name":"i2c-1", "dev":"FPGA_PORT_PLD" },
+                { "dev_name":"i2c-2", "dev":"FPGA_SMBUS_MON" },
+                { "dev_name":"i2c-3", "dev":"FPGA_SMBUS_PORT0" },
+                { "dev_name":"i2c-4", "dev":"FPGA_SMBUS_PORT1" },
+                { "dev_name":"i2c-5", "dev":"FPGA_SMBUS_PORT2" },
+                { "dev_name":"i2c-6", "dev":"FPGA_SMBUS_PORT3" },
+                { "dev_name":"i2c-7", "dev":"FPGA_SMBUS_PORT4" },
+                { "dev_name":"i2c-8", "dev":"FPGA_SMBUS_PORT5" },
+                { "dev_name":"i2c-9", "dev":"FPGA_SMBUS_PORT6" },
+                { "dev_name":"i2c-10", "dev":"FPGA_SMBUS_PORT7" }
+            ]
+        }
+    },
+
+    "SMBUS0": 
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "SMBUS0", "device_parent": "SYSTEM"},
+        "i2c": 
+        {
+            "topo_info": {"dev_addr": "0x0"},
+            "DEVICES": 
+            [
+                {"dev": "EEPROM1"},
+                {"dev": "EEPROM2"},
+                {"dev": "EEPROM3"},
+                {"dev": "EEPROM4"},
+                {"dev": "CPU_CPLD"}
+            ]
+        }
+    },
+
+    "FPGA_PORT_PLD":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_PORT_PLD", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x1"},
+            "DEVICES":
+            [
+                {"dev": "PPLD-A"},
+                {"dev": "PPLD-B"}
+            ]
+        }
+    },
+
+    "FPGA_SMBUS_MON":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_MON", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x2"},
+            "DEVICES":
+            [
+                {"dev": "MUX1"},
+                {"dev": "MUX2"}
+            ]
+        }
+    },
+
+    "FPGA_SMBUS_PORT0":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT0", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x3"},
+            "DEVICES":
+            [
+                {"dev": "MUX3"}
+            ]
+        }
+    },
+    "FPGA_SMBUS_PORT1":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT1", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x4"},
+            "DEVICES":
+            [
+                {"dev": "MUX4"}
+            ]
+        }
+    },
+    "FPGA_SMBUS_PORT2":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT2", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x5"},
+            "DEVICES":
+            [
+                {"dev": "MUX5"}
+            ]
+        }
+    },
+    "FPGA_SMBUS_PORT3":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT3", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x6"},
+            "DEVICES":
+            [
+                {"dev": "MUX6"}
+            ]
+        }
+    },
+    "FPGA_SMBUS_PORT4":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT4", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x7"},
+            "DEVICES":
+            [
+                {"dev": "MUX7"}
+            ]
+        }
+    },
+    "FPGA_SMBUS_PORT5":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT5", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x8"},
+            "DEVICES":
+            [
+                {"dev": "MUX8"}
+            ]
+        }
+    },
+    "FPGA_SMBUS_PORT6":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT6", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x9"},
+            "DEVICES":
+            [
+                {"dev": "MUX9"}
+            ]
+        }
+    },
+    "FPGA_SMBUS_PORT7":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "FPGA_SMBUS_PORT7", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0xa"},
+            "DEVICES":
+            [
+                {"dev": "MUX10"}
+            ]
+        }
+    },
+
+    "EEPROM1": 
+    {
+        "dev_info": {"device_type": "EEPROM", "device_name": "EEPROM1", "device_parent": "SMBUS0"},
+        "i2c": 
+        {
+            "topo_info": {"parent_bus": "0x0", "dev_addr": "0x50", "dev_type": "24c02"},
+            "dev_attr": {"access_mode": "BLOCK"},
+            "attr_list": [
+                {"attr_name": "eeprom"}
+            ]
+        }
+    },
+
+    "EEPROM2":
+    {
+        "dev_info": {"device_type": "EEPROM", "device_name": "EEPROM2", "device_parent": "SMBUS0"},
+        "i2c":
+        {
+            "topo_info": {"parent_bus": "0x0", "dev_addr": "0x51", "dev_type": "24c02"},
+            "dev_attr": {"access_mode": "BLOCK"},
+            "attr_list": [
+                {"attr_name": "eeprom"}
+            ]
+        }
+    },
+
+    "EEPROM3": 
+    {
+        "dev_info": {"device_type": "EEPROM", "device_name": "EEPROM3", "device_parent": "SMBUS0"},
+        "i2c": 
+        {
+            "topo_info": {"parent_bus": "0x0", "dev_addr": "0x52", "dev_type": "24c02"},
+            "dev_attr": {"access_mode": "BLOCK"},
+            "attr_list": [
+                {"attr_name": "eeprom"}
+            ]
+        }
+    },
+
+    "EEPROM4": 
+    {
+        "dev_info": {"device_type": "EEPROM", "device_name": "EEPROM4", "device_parent": "SMBUS0"},
+        "i2c": 
+        {
+            "topo_info": {"parent_bus": "0x0", "dev_addr": "0x53", "dev_type": "24c02"},
+            "dev_attr": {"access_mode": "BLOCK"},
+            "attr_list": [
+                {"attr_name": "eeprom"}
+            ]
+        }
+    },
+    "CPU_CPLD":
+    {
+        "dev_info": {"device_type":"CPLD", "device_name":"CPU_CPLD", "device_parent":"SMBUS0"},
+        "i2c":
+        {
+            "topo_info": {"parent_bus":"0x0", "dev_addr":"0x3d", "dev_type":"i2c_cpld"},
+            "dev_attr":{}
+        }
+    },
+
+    "PPLD-A":
+    {
+        "dev_info": {"device_type":"CPLD", "device_name":"PPLD-A", "device_parent":"FPGA_PORT_PLD"},
+        "i2c":
+        {
+            "topo_info": {"parent_bus":"0x1", "dev_addr":"0x41", "dev_type":"i2c_cpld"},
+            "dev_attr":{}
+        }
+    },
+    "PPLD-B":
+    {
+        "dev_info": {"device_type":"CPLD", "device_name":"PPLD-B", "device_parent":"FPGA_PORT_PLD"},
+        "i2c":
+        {
+            "topo_info": {"parent_bus":"0x1", "dev_addr":"0x45", "dev_type":"i2c_cpld"},
+            "dev_attr":{}
+        }
+    },
+    "SYSSTATUS":
+    {
+        "dev_info":{ "device_type":"SYSSTAT", "device_name":"SYSSTATUS"},
+        "dev_attr":{ },
+        "attr_list":
+        [
+            { "attr_name":"cpu_cpld_version","attr_devaddr":"0x3d", "attr_offset":"0x01","attr_mask":"0xff","attr_len":"0x1"},
+            { "attr_name":"cpu_cpld_board_info","attr_devaddr":"0x3d", "attr_offset":"0x02","attr_mask":"0x0f","attr_len":"0x1"},
+            { "attr_name":"cpld_a_version","attr_devaddr":"0x41", "attr_offset":"0x01","attr_mask":"0xff","attr_len":"0x1"},
+            { "attr_name":"cpld_a_board_info","attr_devaddr":"0x41", "attr_offset":"0x02","attr_mask":"0x07","attr_len":"0x1"},
+            { "attr_name":"cpld_b_version","attr_devaddr":"0x45", "attr_offset":"0x01","attr_mask":"0xff","attr_len":"0x1"},
+            { "attr_name":"cpld_b_board_info","attr_devaddr":"0x45", "attr_offset":"0x02","attr_mask":"0x07","attr_len":"0x1"},
+            { "attr_name":"power_status1","attr_devaddr":"0x3d", "attr_offset":"0x0d","attr_mask":"0xff","attr_len":"0x1"},
+            { "attr_name":"power_status2","attr_devaddr":"0x3d", "attr_offset":"0x0e","attr_mask":"0xff","attr_len":"0x1"},
+            { "attr_name":"watchdog_timeout","attr_devaddr":"0x3d", "attr_offset":"0x07","attr_mask":"0x70","attr_len":"0x1"},
+            { "attr_name":"watchdog_enable","attr_devaddr":"0x3d", "attr_offset":"0x07","attr_mask":"0x08","attr_len":"0x1"},
+            { "attr_name":"watchdog_clear","attr_devaddr":"0x3d", "attr_offset":"0x07","attr_mask":"0x01","attr_len":"0x1"},
+            { "attr_name":"reset_cause","attr_devaddr":"0x3d", "attr_offset":"0x28","attr_mask":"0xff","attr_len":"0x1"}
+        ]
+    },
+
+    "MUX1":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX1", "device_parent":"FPGA_SMBUS_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0xe", "idle_state":"-2"},
+            "channel":
+            [
+            ]
+        }
+    },
+    "MUX2":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX2", "device_parent":"FPGA_SMBUS_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2", "dev_addr":"0x71", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x16", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT65" },
+                { "chn":"1", "dev":"PORT66" }
+            ]
+        }
+    },
+    "MUX3":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX3", "device_parent":"FPGA_SMBUS_PORT0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x1e", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT1" },
+                { "chn":"1", "dev":"PORT2" },
+                { "chn":"2", "dev":"PORT3" },
+                { "chn":"3", "dev":"PORT4" },
+                { "chn":"4", "dev":"PORT5" },
+                { "chn":"5", "dev":"PORT6" },
+                { "chn":"6", "dev":"PORT7" },
+                { "chn":"7", "dev":"PORT8" }
+            ]
+        }
+    },
+    "MUX4":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX4", "device_parent":"FPGA_SMBUS_PORT1"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x26", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT9" },
+                { "chn":"1", "dev":"PORT10" },
+                { "chn":"2", "dev":"PORT11" },
+                { "chn":"3", "dev":"PORT12" },
+                { "chn":"4", "dev":"PORT13" },
+                { "chn":"5", "dev":"PORT14" },
+                { "chn":"6", "dev":"PORT15" },
+                { "chn":"7", "dev":"PORT16" }
+            ]
+        }
+    },
+    "MUX5":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX5", "device_parent":"FPGA_SMBUS_PORT2"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x2e", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT17" },
+                { "chn":"1", "dev":"PORT18" },
+                { "chn":"2", "dev":"PORT19" },
+                { "chn":"3", "dev":"PORT20" },
+                { "chn":"4", "dev":"PORT21" },
+                { "chn":"5", "dev":"PORT22" },
+                { "chn":"6", "dev":"PORT23" },
+                { "chn":"7", "dev":"PORT24" }
+            ]
+        }
+    },
+    "MUX6":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX6", "device_parent":"FPGA_SMBUS_PORT3"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x6", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x36", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT25" },
+                { "chn":"1", "dev":"PORT26" },
+                { "chn":"2", "dev":"PORT27" },
+                { "chn":"3", "dev":"PORT28" },
+                { "chn":"4", "dev":"PORT29" },
+                { "chn":"5", "dev":"PORT30" },
+                { "chn":"6", "dev":"PORT31" },
+                { "chn":"7", "dev":"PORT32" }
+            ]
+        }
+    },
+    "MUX7":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX7", "device_parent":"FPGA_SMBUS_PORT4"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x7", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x3e", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT33" },
+                { "chn":"1", "dev":"PORT34" },
+                { "chn":"2", "dev":"PORT35" },
+                { "chn":"3", "dev":"PORT36" },
+                { "chn":"4", "dev":"PORT37" },
+                { "chn":"5", "dev":"PORT38" },
+                { "chn":"6", "dev":"PORT39" },
+                { "chn":"7", "dev":"PORT40" }
+            ]
+        }
+    },
+    "MUX8":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX8", "device_parent":"FPGA_SMBUS_PORT5"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x8", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x46", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT41" },
+                { "chn":"1", "dev":"PORT42" },
+                { "chn":"2", "dev":"PORT43" },
+                { "chn":"3", "dev":"PORT44" },
+                { "chn":"4", "dev":"PORT45" },
+                { "chn":"5", "dev":"PORT46" },
+                { "chn":"6", "dev":"PORT47" },
+                { "chn":"7", "dev":"PORT48" }
+            ]
+        }
+    },
+    "MUX9":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX9", "device_parent":"FPGA_SMBUS_PORT6"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x9", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x4e", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT49" },
+                { "chn":"1", "dev":"PORT50" },
+                { "chn":"2", "dev":"PORT51" },
+                { "chn":"3", "dev":"PORT52" },
+                { "chn":"4", "dev":"PORT53" },
+                { "chn":"5", "dev":"PORT54" },
+                { "chn":"6", "dev":"PORT55" },
+                { "chn":"7", "dev":"PORT56" }
+            ]
+        }
+    },
+    "MUX10":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX10", "device_parent":"FPGA_SMBUS_PORT7"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xa", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x56", "idle_state":"-2"},
+            "channel":
+            [
+                { "chn":"0", "dev":"PORT57" },
+                { "chn":"1", "dev":"PORT58" },
+                { "chn":"2", "dev":"PORT59" },
+                { "chn":"3", "dev":"PORT60" },
+                { "chn":"4", "dev":"PORT61" },
+                { "chn":"5", "dev":"PORT62" },
+                { "chn":"6", "dev":"PORT63" },
+                { "chn":"7", "dev":"PORT64" }
+            ]
+        }
+    },
+    "PORT1":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT1", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"1"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT1-EEPROM" },
+                { "itf":"control", "dev":"PORT1-CTRL" }
+            ]
+        }
+    },
+    "PORT1-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT1-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT1"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1e", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT1-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT1-CTRL", "device_parent":"MUX3", "virt_parent":"PORT1"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1e", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT2":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT2", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"2"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT2-EEPROM" },
+                { "itf":"control", "dev":"PORT2-CTRL" }
+            ]
+        }
+    },
+    "PORT2-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT2-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT2"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1f", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT2-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT2-CTRL", "device_parent":"MUX3", "virt_parent":"PORT2"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1f", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT3":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT3", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"3"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT3-EEPROM" },
+                { "itf":"control", "dev":"PORT3-CTRL" }
+            ]
+        }
+    },
+    "PORT3-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT3-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT3"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x20", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT3-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT3-CTRL", "device_parent":"MUX3", "virt_parent":"PORT3"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x20", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT4":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT4", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"4"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT4-EEPROM" },
+                { "itf":"control", "dev":"PORT4-CTRL" }
+            ]
+        }
+    },
+    "PORT4-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT4-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT4"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x21", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT4-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT4-CTRL", "device_parent":"MUX3", "virt_parent":"PORT4"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x21", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT5":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT5", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"5"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT5-EEPROM" },
+                { "itf":"control", "dev":"PORT5-CTRL" }
+            ]
+        }
+    },
+    "PORT5-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT5-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT5"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x22", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT5-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT5-CTRL", "device_parent":"MUX3", "virt_parent":"PORT5"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x22", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT6":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT6", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"6"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT6-EEPROM" },
+                { "itf":"control", "dev":"PORT6-CTRL" }
+            ]
+        }
+    },
+    "PORT6-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT6-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT6"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x23", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT6-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT6-CTRL", "device_parent":"MUX3", "virt_parent":"PORT6"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x23", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT7":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT7", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"7"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT7-EEPROM" },
+                { "itf":"control", "dev":"PORT7-CTRL" }
+            ]
+        }
+    },
+    "PORT7-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT7-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT7"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x24", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT7-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT7-CTRL", "device_parent":"MUX3", "virt_parent":"PORT7"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x24", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT8":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT8", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"8"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT8-EEPROM" },
+                { "itf":"control", "dev":"PORT8-CTRL" }
+            ]
+        }
+    },
+    "PORT8-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT8-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT8"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT8-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT8-CTRL", "device_parent":"MUX3", "virt_parent":"PORT8"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x30", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x34", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3c", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x40", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT9":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT9", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"9"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT9-EEPROM" },
+                { "itf":"control", "dev":"PORT9-CTRL" }
+            ]
+        }
+    },
+    "PORT9-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT9-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT9"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT9-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT9-CTRL", "device_parent":"MUX4", "virt_parent":"PORT9"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT10":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT10", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"10"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT10-EEPROM" },
+                { "itf":"control", "dev":"PORT10-CTRL" }
+            ]
+        }
+    },
+    "PORT10-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT10-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT10"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT10-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT10-CTRL", "device_parent":"MUX4", "virt_parent":"PORT10"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT11":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT11", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"11"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT11-EEPROM" },
+                { "itf":"control", "dev":"PORT11-CTRL" }
+            ]
+        }
+    },
+    "PORT11-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT11-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT11"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT11-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT11-CTRL", "device_parent":"MUX4", "virt_parent":"PORT11"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT12":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT12", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"12"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT12-EEPROM" },
+                { "itf":"control", "dev":"PORT12-CTRL" }
+            ]
+        }
+    },
+    "PORT12-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT12-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT12"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT12-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT12-CTRL", "device_parent":"MUX4", "virt_parent":"PORT12"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT13":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT13", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"13"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT13-EEPROM" },
+                { "itf":"control", "dev":"PORT13-CTRL" }
+            ]
+        }
+    },
+    "PORT13-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT13-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT13"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT13-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT13-CTRL", "device_parent":"MUX4", "virt_parent":"PORT13"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT14":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT14", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"14"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT14-EEPROM" },
+                { "itf":"control", "dev":"PORT14-CTRL" }
+            ]
+        }
+    },
+    "PORT14-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT14-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT14"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT14-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT14-CTRL", "device_parent":"MUX4", "virt_parent":"PORT14"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT15":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT15", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"15"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT15-EEPROM" },
+                { "itf":"control", "dev":"PORT15-CTRL" }
+            ]
+        }
+    },
+    "PORT15-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT15-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT15"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT15-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT15-CTRL", "device_parent":"MUX4", "virt_parent":"PORT15"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT16":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT16", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"16"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT16-EEPROM" },
+                { "itf":"control", "dev":"PORT16-CTRL" }
+            ]
+        }
+    },
+    "PORT16-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT16-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT16"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT16-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT16-CTRL", "device_parent":"MUX4", "virt_parent":"PORT16"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x31", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x35", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3d", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x41", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT17":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT17", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"17"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT17-EEPROM" },
+                { "itf":"control", "dev":"PORT17-CTRL" }
+            ]
+        }
+    },
+    "PORT17-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT17-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT17"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT17-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT17-CTRL", "device_parent":"MUX5", "virt_parent":"PORT17"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT18":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT18", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"18"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT18-EEPROM" },
+                { "itf":"control", "dev":"PORT18-CTRL" }
+            ]
+        }
+    },
+    "PORT18-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT18-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT18"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT18-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT18-CTRL", "device_parent":"MUX5", "virt_parent":"PORT18"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT19":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT19", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"19"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT19-EEPROM" },
+                { "itf":"control", "dev":"PORT19-CTRL" }
+            ]
+        }
+    },
+    "PORT19-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT19-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT19"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT19-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT19-CTRL", "device_parent":"MUX5", "virt_parent":"PORT19"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT20":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT20", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"20"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT20-EEPROM" },
+                { "itf":"control", "dev":"PORT20-CTRL" }
+            ]
+        }
+    },
+    "PORT20-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT20-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT20"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT20-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT20-CTRL", "device_parent":"MUX5", "virt_parent":"PORT20"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT21":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT21", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"21"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT21-EEPROM" },
+                { "itf":"control", "dev":"PORT21-CTRL" }
+            ]
+        }
+    },
+    "PORT21-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT21-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT21"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT21-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT21-CTRL", "device_parent":"MUX5", "virt_parent":"PORT21"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT22":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT22", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"22"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT22-EEPROM" },
+                { "itf":"control", "dev":"PORT22-CTRL" }
+            ]
+        }
+    },
+    "PORT22-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT22-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT22"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT22-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT22-CTRL", "device_parent":"MUX5", "virt_parent":"PORT22"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT23":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT23", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"23"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT23-EEPROM" },
+                { "itf":"control", "dev":"PORT23-CTRL" }
+            ]
+        }
+    },
+    "PORT23-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT23-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT23"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT23-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT23-CTRL", "device_parent":"MUX5", "virt_parent":"PORT23"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT24":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT24", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"24"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT24-EEPROM" },
+                { "itf":"control", "dev":"PORT24-CTRL" }
+            ]
+        }
+    },
+    "PORT24-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT24-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT24"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT24-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT24-CTRL", "device_parent":"MUX5", "virt_parent":"PORT24"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x32", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x36", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3e", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x42", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT25":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT25", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"25"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT25-EEPROM" },
+                { "itf":"control", "dev":"PORT25-CTRL" }
+            ]
+        }
+    },
+    "PORT25-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT25-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT25"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT25-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT25-CTRL", "device_parent":"MUX6", "virt_parent":"PORT25"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT26":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT26", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"26"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT26-EEPROM" },
+                { "itf":"control", "dev":"PORT26-CTRL" }
+            ]
+        }
+    },
+    "PORT26-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT26-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT26"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT26-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT26-CTRL", "device_parent":"MUX6", "virt_parent":"PORT26"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT27":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT27", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"27"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT27-EEPROM" },
+                { "itf":"control", "dev":"PORT27-CTRL" }
+            ]
+        }
+    },
+    "PORT27-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT27-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT27"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT27-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT27-CTRL", "device_parent":"MUX6", "virt_parent":"PORT27"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT28":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT28", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"28"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT28-EEPROM" },
+                { "itf":"control", "dev":"PORT28-CTRL" }
+            ]
+        }
+    },
+    "PORT28-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT28-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT28"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT28-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT28-CTRL", "device_parent":"MUX6", "virt_parent":"PORT28"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT29":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT29", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"29"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT29-EEPROM" },
+                { "itf":"control", "dev":"PORT29-CTRL" }
+            ]
+        }
+    },
+    "PORT29-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT29-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT29"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT29-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT29-CTRL", "device_parent":"MUX6", "virt_parent":"PORT29"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT30":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT30", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"30"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT30-EEPROM" },
+                { "itf":"control", "dev":"PORT30-CTRL" }
+            ]
+        }
+    },
+    "PORT30-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT30-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT30"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT30-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT30-CTRL", "device_parent":"MUX6", "virt_parent":"PORT30"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT31":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT31", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"31"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT31-EEPROM" },
+                { "itf":"control", "dev":"PORT31-CTRL" }
+            ]
+        }
+    },
+    "PORT31-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT31-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT31"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3c", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT31-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT31-CTRL", "device_parent":"MUX6", "virt_parent":"PORT31"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3c", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT32":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT32", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"32"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT32-EEPROM" },
+                { "itf":"control", "dev":"PORT32-CTRL" }
+            ]
+        }
+    },
+    "PORT32-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT32-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT32"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT32-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT32-CTRL", "device_parent":"MUX6", "virt_parent":"PORT32"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x33", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x37", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x3f", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x43", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT33":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT33", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"33"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT33-EEPROM" },
+                { "itf":"control", "dev":"PORT33-CTRL" }
+            ]
+        }
+    },
+    "PORT33-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT33-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT33"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3e", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT33-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT33-CTRL", "device_parent":"MUX7", "virt_parent":"PORT33"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3e", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT34":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT34", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"34"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT34-EEPROM" },
+                { "itf":"control", "dev":"PORT34-CTRL" }
+            ]
+        }
+    },
+    "PORT34-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT34-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT34"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT34-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT34-CTRL", "device_parent":"MUX7", "virt_parent":"PORT34"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT35":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT35", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"35"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT35-EEPROM" },
+                { "itf":"control", "dev":"PORT35-CTRL" }
+            ]
+        }
+    },
+    "PORT35-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT35-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT35"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x40", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT35-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT35-CTRL", "device_parent":"MUX7", "virt_parent":"PORT35"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x40", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT36":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT36", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"36"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT36-EEPROM" },
+                { "itf":"control", "dev":"PORT36-CTRL" }
+            ]
+        }
+    },
+    "PORT36-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT36-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT36"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x41", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT36-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT36-CTRL", "device_parent":"MUX7", "virt_parent":"PORT36"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x41", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT37":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT37", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"37"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT37-EEPROM" },
+                { "itf":"control", "dev":"PORT37-CTRL" }
+            ]
+        }
+    },
+    "PORT37-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT37-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT37"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x42", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT37-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT37-CTRL", "device_parent":"MUX7", "virt_parent":"PORT37"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x42", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT38":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT38", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"38"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT38-EEPROM" },
+                { "itf":"control", "dev":"PORT38-CTRL" }
+            ]
+        }
+    },
+    "PORT38-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT38-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT38"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x43", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT38-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT38-CTRL", "device_parent":"MUX7", "virt_parent":"PORT38"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x43", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT39":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT39", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"39"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT39-EEPROM" },
+                { "itf":"control", "dev":"PORT39-CTRL" }
+            ]
+        }
+    },
+    "PORT39-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT39-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT39"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x44", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT39-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT39-CTRL", "device_parent":"MUX7", "virt_parent":"PORT39"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x44", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT40":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT40", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"40"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT40-EEPROM" },
+                { "itf":"control", "dev":"PORT40-CTRL" }
+            ]
+        }
+    },
+    "PORT40-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT40-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT40"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x45", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT40-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT40-CTRL", "device_parent":"MUX7", "virt_parent":"PORT40"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x45", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x30", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x34", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3c", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x40", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT41":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT41", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"41"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT41-EEPROM" },
+                { "itf":"control", "dev":"PORT41-CTRL" }
+            ]
+        }
+    },
+    "PORT41-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT41-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT41"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x46", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT41-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT41-CTRL", "device_parent":"MUX8", "virt_parent":"PORT41"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x46", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT42":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT42", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"42"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT42-EEPROM" },
+                { "itf":"control", "dev":"PORT42-CTRL" }
+            ]
+        }
+    },
+    "PORT42-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT42-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT42"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x47", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT42-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT42-CTRL", "device_parent":"MUX8", "virt_parent":"PORT42"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x47", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT43":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT43", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"43"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT43-EEPROM" },
+                { "itf":"control", "dev":"PORT43-CTRL" }
+            ]
+        }
+    },
+    "PORT43-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT43-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT43"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x48", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT43-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT43-CTRL", "device_parent":"MUX8", "virt_parent":"PORT43"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x48", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT44":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT44", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"44"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT44-EEPROM" },
+                { "itf":"control", "dev":"PORT44-CTRL" }
+            ]
+        }
+    },
+    "PORT44-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT44-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT44"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x49", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT44-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT44-CTRL", "device_parent":"MUX8", "virt_parent":"PORT44"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x49", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT45":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT45", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"45"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT45-EEPROM" },
+                { "itf":"control", "dev":"PORT45-CTRL" }
+            ]
+        }
+    },
+    "PORT45-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT45-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT45"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4a", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT45-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT45-CTRL", "device_parent":"MUX8", "virt_parent":"PORT45"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4a", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT46":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT46", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"46"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT46-EEPROM" },
+                { "itf":"control", "dev":"PORT46-CTRL" }
+            ]
+        }
+    },
+    "PORT46-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT46-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT46"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4b", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT46-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT46-CTRL", "device_parent":"MUX8", "virt_parent":"PORT46"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4b", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT47":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT47", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"47"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT47-EEPROM" },
+                { "itf":"control", "dev":"PORT47-CTRL" }
+            ]
+        }
+    },
+    "PORT47-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT47-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT47"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4c", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT47-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT47-CTRL", "device_parent":"MUX8", "virt_parent":"PORT47"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4c", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT48":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT48", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"48"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT48-EEPROM" },
+                { "itf":"control", "dev":"PORT48-CTRL" }
+            ]
+        }
+    },
+    "PORT48-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT48-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT48"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4d", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT48-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT48-CTRL", "device_parent":"MUX8", "virt_parent":"PORT48"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4d", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x31", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x35", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3d", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x41", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT49":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT49", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"49"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT49-EEPROM" },
+                { "itf":"control", "dev":"PORT49-CTRL" }
+            ]
+        }
+    },
+    "PORT49-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT49-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT49"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4e", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT49-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT49-CTRL", "device_parent":"MUX9", "virt_parent":"PORT49"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4e", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT50":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT50", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"50"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT50-EEPROM" },
+                { "itf":"control", "dev":"PORT50-CTRL" }
+            ]
+        }
+    },
+    "PORT50-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT50-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT50"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4f", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT50-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT50-CTRL", "device_parent":"MUX9", "virt_parent":"PORT50"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4f", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT51":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT51", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"51"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT51-EEPROM" },
+                { "itf":"control", "dev":"PORT51-CTRL" }
+            ]
+        }
+    },
+    "PORT51-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT51-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT51"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x50", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT51-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT51-CTRL", "device_parent":"MUX9", "virt_parent":"PORT51"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x50", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT52":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT52", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"52"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT52-EEPROM" },
+                { "itf":"control", "dev":"PORT52-CTRL" }
+            ]
+        }
+    },
+    "PORT52-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT52-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT52"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x51", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT52-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT52-CTRL", "device_parent":"MUX9", "virt_parent":"PORT52"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x51", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT53":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT53", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"53"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT53-EEPROM" },
+                { "itf":"control", "dev":"PORT53-CTRL" }
+            ]
+        }
+    },
+    "PORT53-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT53-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT53"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x52", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT53-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT53-CTRL", "device_parent":"MUX9", "virt_parent":"PORT53"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x52", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT54":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT54", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"54"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT54-EEPROM" },
+                { "itf":"control", "dev":"PORT54-CTRL" }
+            ]
+        }
+    },
+    "PORT54-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT54-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT54"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x53", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT54-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT54-CTRL", "device_parent":"MUX9", "virt_parent":"PORT54"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x53", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT55":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT55", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"55"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT55-EEPROM" },
+                { "itf":"control", "dev":"PORT55-CTRL" }
+            ]
+        }
+    },
+    "PORT55-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT55-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT55"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x54", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT55-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT55-CTRL", "device_parent":"MUX9", "virt_parent":"PORT55"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x54", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT56":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT56", "device_parent":"MUX9"},
+        "dev_attr": { "dev_idx":"56"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT56-EEPROM" },
+                { "itf":"control", "dev":"PORT56-CTRL" }
+            ]
+        }
+    },
+    "PORT56-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT56-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT56"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x55", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT56-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT56-CTRL", "device_parent":"MUX9", "virt_parent":"PORT56"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x55", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x32", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x36", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3e", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x42", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT57":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT57", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"57"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT57-EEPROM" },
+                { "itf":"control", "dev":"PORT57-CTRL" }
+            ]
+        }
+    },
+    "PORT57-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT57-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT57"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x56", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT57-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT57-CTRL", "device_parent":"MUX10", "virt_parent":"PORT57"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x56", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT58":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT58", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"58"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT58-EEPROM" },
+                { "itf":"control", "dev":"PORT58-CTRL" }
+            ]
+        }
+    },
+    "PORT58-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT58-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT58"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x57", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT58-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT58-CTRL", "device_parent":"MUX10", "virt_parent":"PORT58"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x57", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x1", "attr_cmpval":"0x2", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT59":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT59", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"59"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT59-EEPROM" },
+                { "itf":"control", "dev":"PORT59-CTRL" }
+            ]
+        }
+    },
+    "PORT59-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT59-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT59"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x58", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT59-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT59-CTRL", "device_parent":"MUX10", "virt_parent":"PORT59"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x58", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x2", "attr_cmpval":"0x4", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT60":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT60", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"60"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT60-EEPROM" },
+                { "itf":"control", "dev":"PORT60-CTRL" }
+            ]
+        }
+    },
+    "PORT60-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT60-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT60"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x59", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT60-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT60-CTRL", "device_parent":"MUX10", "virt_parent":"PORT60"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x59", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x3", "attr_cmpval":"0x8", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT61":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT61", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"61"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT61-EEPROM" },
+                { "itf":"control", "dev":"PORT61-CTRL" }
+            ]
+        }
+    },
+    "PORT61-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT61-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT61"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5a", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT61-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT61-CTRL", "device_parent":"MUX10", "virt_parent":"PORT61"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5a", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x4", "attr_cmpval":"0x10", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT62":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT62", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"62"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT62-EEPROM" },
+                { "itf":"control", "dev":"PORT62-CTRL" }
+            ]
+        }
+    },
+    "PORT62-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT62-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT62"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5b", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT62-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT62-CTRL", "device_parent":"MUX10", "virt_parent":"PORT62"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5b", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x5", "attr_cmpval":"0x20", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT63":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT63", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"63"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT63-EEPROM" },
+                { "itf":"control", "dev":"PORT63-CTRL" }
+            ]
+        }
+    },
+    "PORT63-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT63-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT63"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5c", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT63-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT63-CTRL", "device_parent":"MUX10", "virt_parent":"PORT63"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5c", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+    "PORT64":
+    {
+        "dev_info": { "device_type":"OSFP", "device_name":"PORT64", "device_parent":"MUX10"},
+        "dev_attr": { "dev_idx":"64"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT64-EEPROM" },
+                { "itf":"control", "dev":"PORT64-CTRL" }
+            ]
+        }
+    },
+    "PORT64-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT64-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT64"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5d", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT64-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT64-CTRL", "device_parent":"MUX10", "virt_parent":"PORT64"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5d", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_reset", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x33", "attr_mask":"0x7", "attr_cmpval":"0x80", "attr_len":"1"},
+                {"attr_name":"xcvr_lpmode", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x37", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x3f", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_intr_status", "attr_devaddr":"0x45", "attr_devtype":"cpld", "attr_devname":"PPLD-B", "attr_offset":"0x43", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT65":
+    {
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT65", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"65"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT65-EEPROM" },
+                { "itf":"control", "dev":"PORT65-CTRL" }
+            ]
+        }
+    },
+    "PORT65-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT65-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT65"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x16", "dev_addr":"0x50", "dev_type":"optoe2"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT65-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT65-CTRL", "device_parent":"MUX2", "virt_parent":"PORT65"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x16", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x45", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_rxlos", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x45", "attr_mask":"0x1", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_txfault", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x45", "attr_mask":"0x2", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_txdisable", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x44", "attr_mask":"0x0", "attr_cmpval":"0x1", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT66":
+    {
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT66", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"66"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT66-EEPROM" },
+                { "itf":"control", "dev":"PORT66-CTRL" }
+            ]
+        }
+    },
+    "PORT66-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT66-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT66"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x17", "dev_addr":"0x50", "dev_type":"optoe2"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT66-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT66-CTRL", "device_parent":"MUX2", "virt_parent":"PORT66"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x17", "dev_addr":"0x66", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                {"attr_name":"xcvr_present", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x45", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
+                {"attr_name":"xcvr_rxlos", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x45", "attr_mask":"0x5", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_txfault", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x45", "attr_mask":"0x6", "attr_cmpval":"0x1", "attr_len":"1"},
+                {"attr_name":"xcvr_txdisable", "attr_devaddr":"0x41", "attr_devtype":"cpld", "attr_devname":"PPLD-A", "attr_offset":"0x44", "attr_mask":"0x4", "attr_cmpval":"0x1", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PSU1":
+    {
+        "dev_info": { "device_type":"PSU"},
+        "dev_attr": { "dev_idx":"1",  "num_psu_fans": "1"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list":
+                [
+                    { "attr_name":"psu_power_good", "bmc_cmd":"ipmitool sdr -c get PSU1_state", "raw": "0", "field_name":"PSU1_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"psu_present", "bmc_cmd":"ipmitool sdr -c get PSU1_state", "raw": "0", "field_name":"PSU1_state", "separator":",", "field_pos":"5"},
+                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 5", "raw": "0", "field_name":"Product Part Number", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 5", "raw": "0", "field_name":"Product Serial", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_revision", "bmc_cmd":"ipmitool fru print 5", "raw": "0", "field_name":"Product Version", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 5", "raw": "0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
+                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool sensor reading PSU1_Out_watt", "raw": "0", "field_name":"PSU1_Out_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
+                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool sensor reading PSU1_Out_volt", "raw":"0", "field_name" : "PSU1_Out_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool sensor reading PSU1_Out_amp", "raw":"0", "field_name" : "PSU1_Out_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_volt", "raw":"0", "field_name" : "PSU1_In_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_amp", "raw":"0", "field_name" : "PSU1_In_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_watt", "raw": "0", "field_name":"PSU1_In_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_Rear_temp", "raw": "0", "field_name":"PSU1_Rear_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU1_rpm", "raw":"0", "field_name" : "PSU1_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x01 0x2f 0x00 0x01 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                    { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_Rear_temp", "separator":"|", "field_pos":"9", "mult":"1000"}
+                ]
+            }
+        }
+    },
+
+    "PSU2":
+    {
+        "dev_info": { "device_type":"PSU"},
+        "dev_attr": { "dev_idx":"2",  "num_psu_fans": "1"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list":
+                [
+                    { "attr_name":"psu_power_good", "bmc_cmd":"ipmitool sdr -c get PSU2_state", "raw": "0", "field_name":"PSU2_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"psu_present", "bmc_cmd":"ipmitool sdr -c get PSU2_state", "raw": "0", "field_name":"PSU2_state", "separator":",", "field_pos":"5"},
+                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 6", "raw": "0", "field_name":"Product Part Number", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 6", "raw": "0", "field_name":"Product Serial", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 6", "raw": "0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
+                    { "attr_name":"psu_revision", "bmc_cmd":"ipmitool fru print 6", "raw": "0", "field_name":"Product Version", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool sensor reading PSU2_Out_watt", "raw": "0", "field_name":"PSU2_Out_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
+                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool sensor reading PSU2_Out_volt", "raw":"0", "field_name" : "PSU2_Out_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool sensor reading PSU2_Out_amp", "raw":"0", "field_name" : "PSU2_Out_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool sensor reading PSU2_In_volt", "raw":"0", "field_name" : "PSU2_In_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool sensor reading PSU2_In_amp", "raw":"0", "field_name" : "PSU2_In_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool sensor reading PSU2_In_watt", "raw": "0", "field_name":"PSU2_In_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_Rear_temp", "raw": "0", "field_name":"PSU2_Rear_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU2_rpm", "raw":"0", "field_name" : "PSU2_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x01 0x2f 0x00 0x01 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                    { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Rear_temp", "separator":"|", "field_pos":"9", "mult":"1000"}
+                ]
+            }
+        }
+    },
+
+    "FAN-CTRL":
+    {
+        "dev_info": { "device_type":"FAN"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list":
+                [
+                    { "attr_name":"fan1_present", "bmc_cmd":"ipmitool sdr -c get FAN1_prsnt", "raw":"0", "field_name" : "FAN1_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan2_present", "bmc_cmd":"ipmitool sdr -c get FAN1_prsnt", "raw":"0", "field_name" : "FAN1_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan3_present", "bmc_cmd":"ipmitool sdr -c get FAN2_prsnt", "raw":"0", "field_name" : "FAN2_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan4_present", "bmc_cmd":"ipmitool sdr -c get FAN2_prsnt", "raw":"0", "field_name" : "FAN2_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan5_present", "bmc_cmd":"ipmitool sdr -c get FAN3_prsnt", "raw":"0", "field_name" : "FAN3_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan6_present", "bmc_cmd":"ipmitool sdr -c get FAN3_prsnt", "raw":"0", "field_name" : "FAN3_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan7_present", "bmc_cmd":"ipmitool sdr -c get FAN4_prsnt", "raw":"0", "field_name" : "FAN4_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan8_present", "bmc_cmd":"ipmitool sdr -c get FAN4_prsnt", "raw":"0", "field_name" : "FAN4_prsnt", "separator":",", "field_pos":"5"},
+                    { "attr_name":"fan1_input", "bmc_cmd":"ipmitool sensor reading FAN1_Front_rpm", "raw":"0", "field_name" : "FAN1_Front_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan2_input", "bmc_cmd":"ipmitool sensor reading FAN1_Rear_rpm", "raw":"0", "field_name" : "FAN1_Rear_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan3_input", "bmc_cmd":"ipmitool sensor reading FAN2_Front_rpm", "raw":"0", "field_name" : "FAN2_Front_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan4_input", "bmc_cmd":"ipmitool sensor reading FAN2_Rear_rpm", "raw":"0", "field_name" : "FAN2_Rear_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan5_input", "bmc_cmd":"ipmitool sensor reading FAN3_Front_rpm", "raw":"0", "field_name" : "FAN3_Front_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan6_input", "bmc_cmd":"ipmitool sensor reading FAN3_Rear_rpm", "raw":"0", "field_name" : "FAN3_Rear_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan7_input", "bmc_cmd":"ipmitool sensor reading FAN4_Front_rpm", "raw":"0", "field_name" : "FAN4_Front_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan8_input", "bmc_cmd":"ipmitool sensor reading FAN4_Rear_rpm", "raw":"0", "field_name" : "FAN4_Rear_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"fan1_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x4c 0x30 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan2_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x4c 0x40 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan3_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x4c 0x50 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan4_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x4c 0x60 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan5_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x2d 0x30 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan6_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x2d 0x40 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan7_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x2d 0x50 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan8_pwm", "bmc_cmd":"ipmitool raw 0x38 0x2 0x2 0x2d 0x60 0x1", "raw":"1", "type":"mask", "mask":"0xff"},
+                    { "attr_name":"fan1_fault", "bmc_cmd":"ipmitool sdr -c get FAN1_Front_state", "raw":"0", "field_name" : "FAN1_Front_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"fan2_fault", "bmc_cmd":"ipmitool sdr -c get FAN1_Front_state", "raw":"0", "field_name" : "FAN1_Front_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"fan3_fault", "bmc_cmd":"ipmitool sdr -c get FAN2_Front_state", "raw":"0", "field_name" : "FAN2_Front_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"fan4_fault", "bmc_cmd":"ipmitool sdr -c get FAN2_Front_state", "raw":"0", "field_name" : "FAN2_Front_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"fan5_fault", "bmc_cmd":"ipmitool sdr -c get FAN3_Front_state", "raw":"0", "field_name" : "FAN3_Front_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"fan6_fault", "bmc_cmd":"ipmitool sdr -c get FAN3_Front_state", "raw":"0", "field_name" : "FAN3_Front_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"fan7_fault", "bmc_cmd":"ipmitool sdr -c get FAN4_Front_state", "raw":"0", "field_name" : "FAN4_Front_state", "separator":",", "field_pos":"3"},
+                    { "attr_name":"fan8_fault", "bmc_cmd":"ipmitool sdr -c get FAN4_Front_state", "raw":"0", "field_name" : "FAN4_Front_state", "separator":",", "field_pos":"3"}
+                ]
+            }
+        }
+    },
+
+    "TEMP1":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "MB_LEFT"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get MB_LEFT", "raw": "0", "field_name": "MB_LEFT", "field_pos": "2", "separator": ","},
+                    { "attr_name": "temp1_high_crit_threshold", "bmc_cmd": "ipmitool sdr -c get MB_LEFT", "raw": "0", "field_name": "MB_LEFT", "field_pos": "12", "separator": ","},
+                    { "attr_name": "temp1_high_threshold", "bmc_cmd": "ipmitool sdr -c get MB_LEFT", "raw": "0", "field_name": "MB_LEFT", "field_pos": "13", "separator": ","}
+                ]
+            }
+        }
+    },
+
+    "TEMP2":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "MB_RIGHT"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get MB_RIGHT", "raw": "0", "field_name": "MB_RIGHT", "field_pos": "2", "separator": ","},
+                    { "attr_name": "temp1_high_crit_threshold", "bmc_cmd": "ipmitool sdr -c get MB_RIGHT", "raw": "0", "field_name": "MB_RIGHT", "field_pos": "12", "separator": ","},
+                    { "attr_name": "temp1_high_threshold", "bmc_cmd": "ipmitool sdr -c get MB_RIGHT", "raw": "0", "field_name": "MB_RIGHT", "field_pos": "13", "separator": ","}
+                ]
+            }
+        }
+    },
+
+    "TEMP3":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "MB_NPU"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get MB_NPU", "raw": "0", "field_name": "MB_NPU", "field_pos": "2", "separator": ","},
+                    { "attr_name": "temp1_high_crit_threshold", "bmc_cmd": "ipmitool sdr -c get MB_NPU", "raw": "0", "field_name": "MB_NPU", "field_pos": "12", "separator": ","},
+                    { "attr_name": "temp1_high_threshold", "bmc_cmd": "ipmitool sdr -c get MB_NPU", "raw": "0", "field_name": "MB_NPU", "field_pos": "13", "separator": ","}
+                ]
+            }
+        }
+    },
+
+    "TEMP4":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "MB_QSFP"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get MB_QSFP", "raw": "0", "field_name": "MB_QSFP", "field_pos": "2", "separator": ","},
+                    { "attr_name": "temp1_high_crit_threshold", "bmc_cmd": "ipmitool sdr -c get MB_QSFP", "raw": "0", "field_name": "MB_QSFP", "field_pos": "12", "separator": ","},
+                    { "attr_name": "temp1_high_threshold", "bmc_cmd": "ipmitool sdr -c get MB_QSFP", "raw": "0", "field_name": "MB_QSFP", "field_pos": "13", "separator": ","}
+                ]
+            }
+        }
+    },
+
+    "TEMP5":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "FAN_LEFT"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get FAN_LEFT", "raw": "0", "field_name": "FAN_LEFT", "field_pos": "2", "separator": ","},
+                    { "attr_name": "temp1_high_crit_threshold", "bmc_cmd": "ipmitool sdr -c get FAN_LEFT", "raw": "0", "field_name": "FAN_LEFT", "field_pos": "12", "separator": ","},
+                    { "attr_name": "temp1_high_threshold", "bmc_cmd": "ipmitool sdr -c get FAN_LEFT", "raw": "0", "field_name": "FAN_LEFT", "field_pos": "13", "separator": ","}
+                ]
+            }
+        }
+    },
+
+    "TEMP6":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "FAN_RIGHT"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get FAN_RIGHT", "raw": "0", "field_name": "FAN_RIGHT", "field_pos": "2", "separator": ","},
+                    { "attr_name": "temp1_high_crit_threshold", "bmc_cmd": "ipmitool sdr -c get FAN_RIGHT", "raw": "0", "field_name": "FAN_RIGHT", "field_pos": "12", "separator": ","},
+                    { "attr_name": "temp1_high_threshold", "bmc_cmd": "ipmitool sdr -c get FAN_RIGHT", "raw": "0", "field_name": "FAN_RIGHT", "field_pos": "13", "separator": ","}
+                ]
+            }
+        }
+    },
+
+    "TEMP7":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "CPU"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get CPU", "raw": "0", "field_name": "CPU", "field_pos": "2", "separator": ","}
+                ]
+            }
+        }
+    },
+
+    "TEMP8":
+    {
+        "dev_info": { "device_type": "TEMP_SENSOR"},
+        "dev_attr": { "display_name": "CPU_PECI"},
+        "bmc": {
+            "ipmitool": {
+                "attr_list": [
+                    { "attr_name": "temp1_input", "bmc_cmd": "ipmitool sdr -c get CPU_PECI", "raw": "0", "field_name": "CPU_PECI", "field_pos": "2", "separator": ","},
+                    { "attr_name": "temp1_high_crit_threshold", "bmc_cmd": "ipmitool sdr -c get CPU_PECI", "raw": "0", "field_name": "CPU_PECI", "field_pos": "12", "separator": ","},
+                    { "attr_name": "temp1_high_threshold", "bmc_cmd": "ipmitool sdr -c get CPU_PECI", "raw": "0", "field_name": "CPU_PECI", "field_pos": "13", "separator": ","}
+                ]
+            }
+        }
+    }
+}
+

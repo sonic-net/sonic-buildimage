@@ -1,0 +1,30 @@
+Index: p4lang-pi-0.1.0/debian/control
+===================================================================
+--- p4lang-pi-0.1.0.orig/debian/control
++++ p4lang-pi-0.1.0/debian/control
+@@ -9,9 +9,9 @@ Build-Depends:
+     git,
+     gnupg,
+     dh-python,
+-    libboost-dev,
+-    libboost-system-dev,
+-    libboost-thread-dev,
++    libboost1.83-dev,
++    libboost-system1.83-dev,
++    libboost-thread1.83-dev,
+     libgrpc++-dev,
+     libgrpc-dev,
+     libnanomsg-dev,
+@@ -37,9 +37,9 @@ Depends:
+     ${shlibs:Depends},
+     ${misc:Depends},
+     ${python3:Depends},
+-    libboost-dev,
+-    libboost-system-dev,
+-    libboost-thread-dev,
++    libboost1.83-dev,
++    libboost-system1.83-dev,
++    libboost-thread1.83-dev,
+     libprotobuf-dev,
+     libprotoc-dev,
+     protobuf-compiler,

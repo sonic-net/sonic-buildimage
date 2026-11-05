@@ -46,5 +46,26 @@
     "PFC_WDOG_WITH_INVALID_RESTORATION_TIME": {
         "desc": "PFC_WDOG_WITH_INVALID_RESTORATION_TIME",
         "eStr": ["restoration_time must be greater than or equal to POLL_INTERVAL"]
+    },
+    "PFC_WDOG_WITH_VALID_PFC_STAT_HISTORY": {
+        "desc": "PFC_WDOG_WITH_VALID_PFC_STAT_HISTORY"
+    },
+    "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY": {
+        "desc": "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY",
+        "eStr": ["pfc_stat_history must be either enable or disable"]
+    },
+    "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH": {
+        "desc": "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH no failure."
+    },
+    "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH": {
+        "desc": "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH",
+        "eStr": ["BIG_RED_SWITCH must be either enable or disable"]
+    },
+    "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH_ENABLE": {
+        "desc": "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH_ENABLE no failure."
+    },
+    "PFC_WDOG_WITH_BIG_RED_SWITCH_ON_NON_GLOBAL": {
+        "desc": "PFC_WDOG_WITH_BIG_RED_SWITCH_ON_NON_GLOBAL must condition failure.",
+        "eStrKey": "Must"
     }
 }

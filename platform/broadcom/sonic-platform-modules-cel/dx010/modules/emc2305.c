@@ -618,7 +618,7 @@ static const struct sensor_device_attribute *emc2305_fan_attrs[] = {
  * driver interface
  */
 
-static int emc2305_remove(struct i2c_client *client)
+static void emc2305_remove(struct i2c_client *client)
 {
 	struct emc2305_data *data = i2c_get_clientdata(client);
 	int fan_idx, i;
@@ -636,7 +636,6 @@ static int emc2305_remove(struct i2c_client *client)
 				   &emc2305_attr_common[i].dev_attr);
 
 	kfree(data);
-	return 0;
 }
 
 
@@ -736,7 +735,7 @@ static void emc2305_get_config(struct i2c_client *client)
 }
 
 static int
-emc2305_probe(struct i2c_client *client, const struct i2c_device_id *id)
+emc2305_probe(struct i2c_client *client)
 {
 	struct emc2305_data *data;
 	int status;
@@ -853,16 +852,16 @@ emc2305_detect(struct i2c_client *new_client, struct i2c_board_info *info)
 
 	switch (product) {
 	case 0x34:
-		strlcpy(info->type, "emc2305", I2C_NAME_SIZE);
+		strscpy(info->type, "emc2305", I2C_NAME_SIZE);
 		break;
 	case 0x35:
-		strlcpy(info->type, "emc2303", I2C_NAME_SIZE);
+		strscpy(info->type, "emc2303", I2C_NAME_SIZE);
 		break;
 	case 0x36:
-		strlcpy(info->type, "emc2302", I2C_NAME_SIZE);
+		strscpy(info->type, "emc2302", I2C_NAME_SIZE);
 		break;
 	case 0x37:
-		strlcpy(info->type, "emc2301", I2C_NAME_SIZE);
+		strscpy(info->type, "emc2301", I2C_NAME_SIZE);
 		break;
 	default:
 		return -ENODEV;

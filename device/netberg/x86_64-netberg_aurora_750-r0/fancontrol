@@ -1,0 +1,9 @@
+INTERVAL=10
+DEVPATH=hwmon1=devices/pci0000:00/0000:00:1f.3/i2c-0/i2c-16/16-002f hwmon3=devices/pci0000:00/0000:00:1f.3/i2c-0/i2c-6/6-004c
+DEVNAME=hwmon1=w83795adg
+FCTEMPS=hwmon1/device/pwm2=hwmon3/temp1_input
+FCFANS=hwmon1/device/pwm2=hwmon1/device/fan7_input hwmon1/device/pwm2=hwmon1/device/fan5_input hwmon1/device/pwm2=hwmon1/device/fan3_input hwmon1/device/pwm2=hwmon1/device/fan1_input
+MINTEMP=hwmon1/device/pwm2=20
+MAXTEMP=hwmon1/device/pwm2=60
+MINSTART=hwmon1/device/pwm2=75
+MINSTOP=hwmon1/device/pwm2=22

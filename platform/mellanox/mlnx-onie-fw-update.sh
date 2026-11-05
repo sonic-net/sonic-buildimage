@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 
 this_script="$(basename $(realpath ${0}))"
 lock_file="/var/run/${this_script%.*}.lock"
@@ -68,8 +68,12 @@ enable_onie_fw_update_mode() {
     fi
 
     register_terminate_handler
-
-    grub-editenv ${os_boot}/grub/grubenv set onie_entry="ONIE" || return $?
+    if [ -d /sys/firmware/efi/efivars ]; then
+        onie_boot_num=$(efibootmgr | grep "ONIE:" | awk '{ print $1 }' | cut -b 5-8 )
+        efibootmgr -n $onie_boot_num
+    else
+        grub-editenv ${os_boot}/grub/grubenv set onie_entry="ONIE" || return $?
+    fi
     grub-editenv ${onie_mount}/grub/grubenv set onie_mode="update" || return $?
 
     return 0
@@ -80,7 +84,12 @@ disable_onie_fw_update_mode() {
         return 1
     fi
 
-    grub-editenv ${os_boot}/grub/grubenv unset onie_entry || return $?
+    if [ -d /sys/firmware/efi/efivars ]; then
+        sonic_boot_num=$(efibootmgr | grep "SONiC-OS" | awk '{ print $1 }' | cut -b 5-8 )
+        efibootmgr -n $sonic_boot_num
+    else
+        grub-editenv ${os_boot}/grub/grubenv unset onie_entry || return $?
+    fi
     grub-editenv ${onie_mount}/grub/grubenv set onie_mode="install" || return $?
 
     return 0
@@ -105,8 +114,16 @@ system_reboot() {
     # Give user some time to cancel the update
     sleep 5s
 
+    # The staged ONIE update is committed past this point. Clear the rollback
+    # trap so a SIGHUP/SIGTERM delivered during systemd's orderly shutdown
+    # (e.g. when serial-getty@ttyS0 is stopped) cannot race terminate_handler
+    # into running disable_onie_fw_update_mode and undoing the staging.
+    trap - SIGHUP SIGINT SIGQUIT SIGTERM
+    echo "INFO: Reboot is underway, the ONIE firmware update can no longer be cancelled"
+
     # Use SONiC reboot scenario
     /usr/local/bin/reboot
+    exit $?
 }
 
 terminate_handler() {

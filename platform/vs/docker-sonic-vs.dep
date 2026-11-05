@@ -3,8 +3,21 @@ DPATH       := $($(DOCKER_SONIC_VS)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/vs/docker-sonic-vs.mk platform/vs/docker-sonic-vs.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
+# docker-snmp sources are consumed through COPY --from=snmp, but add_docker_feature
+# does not propagate _DEP_FILES, so they are not covered by the line above. Without
+# them a change confined to dockers/docker-snmp can restore a stale docker-sonic-vs.
+# Spelled literally: an undefined variable here would expand to a bare `git ls-files`
+# and silently hash the whole tree.
+DEP_FILES   += $(shell git ls-files dockers/docker-snmp)
+# Both Dockerfile.j2 templates import dockers/dockerfile-macros.j2, but it lives
+# outside $(DPATH) and is listed by neither SONIC_COMMON_FILES_LIST (.platform,
+# rules/functions, Makefile.cache) nor SONIC_COMMON_BASE_FILES_LIST (slave
+# Dockerfile.j2 only), so a macro edit alone would not invalidate this image.
+DEP_FILES   += dockers/dockerfile-macros.j2
 
-$(DOCKER_SONIC_VS)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_SONIC_VS)_CACHE_MODE  := GIT_CONTENT_SHA
 $(DOCKER_SONIC_VS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_SONIC_VS)_DEP_FLAGS   += $(INSTALL_DEBUG_TOOLS) $(SONIC_ROUTING_STACK) $(INCLUDE_FIPS)
+$(DOCKER_SONIC_VS)_DEP_FLAGS   += $(ENABLE_ASAN) $(ENABLE_FRR_SNMP_AGENT)
 $(DOCKER_SONIC_VS)_DEP_FILES   := $(DEP_FILES)
 

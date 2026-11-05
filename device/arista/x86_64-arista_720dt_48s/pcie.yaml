@@ -90,11 +90,6 @@
   id: 15ee
   name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
     6'
-- bus: '00'
-  dev: '18'
-  fn: '7'
-  id: '0001'
-  name: 'Host bridge: Arista Networks, Inc. Device 0001'
 - bus: '01'
   dev: '00'
   fn: '0'

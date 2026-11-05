@@ -1,0 +1,8 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "SpineRouter",
+            "subtype": "UpstreamLC"
+        }
+    }
+}

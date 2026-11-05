@@ -911,7 +911,7 @@ probe_err:
 	return ret;
 }
 
-static int dell_ich_remove(struct platform_device *pdev)
+static void dell_ich_remove(struct platform_device *pdev)
 {
   struct device *dev = &pdev->dev;
   struct dell_ich_data *ich_data = dev_get_platdata(dev);
@@ -931,12 +931,9 @@ static int dell_ich_remove(struct platform_device *pdev)
     ret = acpi_remove_sci_handler(dell_ich_sci_handler);
     if(ret) {
         pr_info("dell_ich acpi_remove_sci_handler failed %d\n",ret);
-        return ret;
     }
 
     pr_info("dell_ich : dell_ich_remove done.\n");
-
-    return 0;
 }
 
 static struct platform_driver dell_ich_driver= {

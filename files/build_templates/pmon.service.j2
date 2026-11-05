@@ -1,13 +1,9 @@
 [Unit]
 Description=Platform monitor container
-Requires=database.service updategraph.service
-After=database.service updategraph.service
-{% if sonic_asic_platform == 'mellanox' %}
-After=syncd.service
-{% endif %}
+Requires=database.service config-setup.service
+After=database.service config-setup.service
 BindsTo=sonic.target
 After=sonic.target
-Before=ntp-config.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 

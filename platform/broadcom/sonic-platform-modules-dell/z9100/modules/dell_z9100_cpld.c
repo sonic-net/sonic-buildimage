@@ -424,8 +424,7 @@ static struct attribute_group i2c_cpld_attr_grp = {
     .attrs = i2c_cpld_attrs,
 };
 
-static int dell_z9100_iom_cpld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int dell_z9100_iom_cpld_probe(struct i2c_client *client)
 {
     int status;
 
@@ -449,10 +448,9 @@ exit:
     return status;
 }
 
-static int dell_z9100_iom_cpld_remove(struct i2c_client *client)
+static void dell_z9100_iom_cpld_remove(struct i2c_client *client)
 {
     dell_z9100_iom_cpld_remove_client(client);
-    return 0;
 }
 
 
