@@ -1,22 +1,37 @@
 import ast
 import json
 import os
+import shutil
 import subprocess
-import sys
 import tempfile
 import ast
 import tests.common_utils as utils
 
-from unittest import TestCase
+from contextlib import contextmanager
+from unittest import TestCase, mock
 from portconfig import get_breakout_mode, get_port_config, INTF_KEY
-
-if sys.version_info.major == 3:
-    from unittest import mock
-else:
-    import mock
 
 # Global Variable
 PLATFORM_OUTPUT_FILE = "platform_output.json"
+
+
+@contextmanager
+def port_config_env(platform_json=None, hwsku_json=None, config_db=None, db_hwsku='TestHwsku'):
+    """Isolate port-file discovery and CONFIG_DB state for reader and CLI tests."""
+    with tempfile.TemporaryDirectory() as directory, \
+            mock.patch.dict(os.environ, {'CFGGEN_UNIT_TESTING': '0'}), \
+            mock.patch('portconfig.db_connect_configdb', return_value=config_db), \
+            mock.patch('portconfig.device_info.get_localhost_info', return_value=db_hwsku), \
+            mock.patch('portconfig.device_info.get_platform', return_value='TestPlatform'), \
+            mock.patch('portconfig.device_info.get_path_to_platform_dir', return_value=directory), \
+            mock.patch('sonic_py_common.multi_asic.get_asic_conf_file_path', return_value=None), \
+            mock.patch.multiple('portconfig', HWSKU_ROOT_PATH=directory, PLATFORM_ROOT_PATH=directory,
+                                PLATFORM_ROOT_PATH_DOCKER=directory, SONIC_ROOT_PATH=directory):
+        for source, filename in ((platform_json, 'platform.json'), (hwsku_json, 'hwsku.json')):
+            if source is not None:
+                shutil.copyfile(source, os.path.join(directory, filename))
+        yield directory
+
 
 class TestCfgGenPlatformJson(TestCase):
 
@@ -45,22 +60,19 @@ class TestCfgGenPlatformJson(TestCase):
         return output
 
     def _port_config(self, platform=False, hwsku=False, config_db=None, db_hwsku='TestHwsku', **kwargs):
-        with mock.patch('portconfig.db_connect_configdb', return_value=config_db), \
-                mock.patch('portconfig.device_info.get_localhost_info', return_value=db_hwsku), \
-                mock.patch('portconfig.device_info.get_path_to_port_config_file',
-                           return_value=self.platform_json if platform else None), \
-                mock.patch('portconfig.get_hwsku_file_name',
-                           return_value=self.hwsku_json if hwsku else None):
+        with port_config_env(self.platform_json if platform else None, self.hwsku_json if hwsku else None,
+                             config_db, db_hwsku):
             return (get_port_config(hwsku='TestHwsku', **kwargs)[0],
                     get_breakout_mode(hwsku='TestHwsku', **kwargs))
 
     def _port_config_from_data(self, interfaces, selection=None):
-        files = {self.platform_json: {'interfaces': interfaces}}
-        if selection is not None:
-            files[self.hwsku_json] = {'interfaces': selection}
-        with mock.patch('portconfig.readJson', side_effect=files.__getitem__), \
+        with port_config_env() as directory, \
                 mock.patch('portconfig.device_info.get_sonic_version_info', return_value={}):
-            return self._port_config(platform=True, hwsku=selection is not None)
+            for filename, entries in (('platform.json', interfaces), ('hwsku.json', selection)):
+                if entries is not None:
+                    with open(os.path.join(directory, filename), 'w') as config:
+                        json.dump({'interfaces': entries}, config)
+            return (get_port_config(hwsku='TestHwsku')[0], get_breakout_mode(hwsku='TestHwsku'))
 
     def _config_db(self, ports, breakout=None):
         config_db = mock.Mock()
