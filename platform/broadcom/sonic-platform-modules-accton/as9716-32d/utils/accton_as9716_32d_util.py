@@ -208,7 +208,7 @@ def driver_inserted():
 kos = [
 'depmod -ae',
 'modprobe i2c_dev',
-'modprobe i2c_mux_pca954x force_deselect_on_exit=1',
+'modprobe i2c_mux_pca954x',
 'modprobe accton_i2c_psu',
 'modprobe accton_as9716_32d_cpld',
 'modprobe accton_as9716_32d_fan',
@@ -265,6 +265,14 @@ def device_install():
             print(output)
             if FORCE == 0:
                 return status
+
+    # set all pca954x idle_disconnect
+    cmd = 'echo -2 | tee /sys/bus/i2c/drivers/pca954x/*-00*/idle_state'
+    status, output = log_os_system(cmd, 1)
+    if status:
+        print(output)
+        if FORCE == 0:
+            return status
     
     ret=eeprom_check()
     if ret==0:
