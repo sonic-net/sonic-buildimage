@@ -3,9 +3,11 @@ module sonic-isis-interface {
     prefix isis-if;
     yang-version 1.1;
 
-    import sonic-types {
-        prefix stypes;
-    }
+    import sonic-port { prefix port; }
+    import sonic-portchannel { prefix lag; }
+    import sonic-vlan { prefix vlan; }
+    import sonic-loopback-interface { prefix lo; }
+    import sonic-vlan-sub-interface { prefix sub; }
 
     organization
         "SONiC";
@@ -27,8 +29,36 @@ module sonic-isis-interface {
                 key "ifname";
 
                 leaf ifname {
-                    type stypes:interface_name;
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST/vlan:name";
+                        }
+                        type leafref {
+                            path "/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST/lo:name";
+                        }
+                        type leafref {
+                            path "/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST/sub:name";
+                        }
+                    }
                     description "The physical or logical interface name enabled for IS-IS.";
+                }
+
+                leaf enabled {
+                    type boolean;
+                    default false;
+                    description "Administrative state of the IS-IS interface binding.";
+                }
+
+                leaf ipv6_enabled {
+                    type boolean;
+                    default true;
+                    description "Enable the IPv6 IS-IS interface binding.";
                 }
 
                 leaf metric {
@@ -48,7 +78,7 @@ module sonic-isis-interface {
                             description "Broadcast multi-access network link type.";
                         }
                     }
-                    default p2p;
+                    default lan;
                     description "The operational link state type of the interface circuit.";
                 }
 

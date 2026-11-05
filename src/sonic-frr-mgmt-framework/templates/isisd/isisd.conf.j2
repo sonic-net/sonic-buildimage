@@ -4,14 +4,17 @@
 {# --- ISIS Global Configuration --- #}
 {% if ISIS_GLOBALS is defined and ISIS_GLOBALS|length > 0 %}
 {% for (vrf, isis_global) in ISIS_GLOBALS.items() %}
+{% if isis_global.enabled|default("false")|string|lower == "true" %}
 !
 {% if vrf == "default" %}
 router isis default
+{% else %}
+router isis {{ vrf }} vrf {{ vrf }}
+{% endif %}
+{% if isis_global.ipv6_multi_topology|default("true")|string|lower == "true" %}
  topology ipv6-unicast
 {% else %}
-router isis {{ vrf }}
- vrf {{ vrf }}
- topology ipv6-unicast
+ no topology ipv6-unicast
 {% endif %}
 {% if isis_global.net_title is defined %}
  net {{ isis_global.net_title }}
@@ -27,9 +30,9 @@ router isis {{ vrf }}
 {% endif %}
 {% if isis_global.dynamic_hostname is defined %}
 {% if isis_global.dynamic_hostname|string|lower == "true" %}
- hostname
+ hostname dynamic
 {% elif isis_global.dynamic_hostname|string|lower == "false" %}
- no hostname
+ no hostname dynamic
 {% endif %}
 {% endif %}
 {# Include timers if present for this VRF #}
@@ -38,11 +41,21 @@ router isis {{ vrf }}
 {% if timers.lsp_mtu is defined %}
  lsp-mtu {{ timers.lsp_mtu }}
 {% endif %}
+{% if timers.lsp_lifetime|default(1200)|int >= 1200 %}
+{% if timers.lsp_lifetime is defined %}
+ max-lsp-lifetime {{ timers.lsp_lifetime }}
+{% endif %}
+{% if timers.lsp_refresh_interval is defined %}
+ lsp-refresh-interval {{ timers.lsp_refresh_interval }}
+{% endif %}
+{% else %}
 {% if timers.lsp_refresh_interval is defined %}
  lsp-refresh-interval {{ timers.lsp_refresh_interval }}
 {% endif %}
 {% if timers.lsp_lifetime is defined %}
  max-lsp-lifetime {{ timers.lsp_lifetime }}
+{% endif %}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endfor %}
@@ -63,9 +76,16 @@ interface {{ ifname }}
 {% set vrf_name = VLAN_INTERFACE[ifname].vrf_name %}
 {% elif LOOPBACK_INTERFACE is defined and LOOPBACK_INTERFACE[ifname] is defined and LOOPBACK_INTERFACE[ifname].vrf_name is defined %}
 {% set vrf_name = LOOPBACK_INTERFACE[ifname].vrf_name %}
+{% elif VLAN_SUB_INTERFACE is defined and VLAN_SUB_INTERFACE[ifname] is defined and VLAN_SUB_INTERFACE[ifname].vrf_name is defined %}
+{% set vrf_name = VLAN_SUB_INTERFACE[ifname].vrf_name %}
 {% endif %}
+{% if ISIS_GLOBALS is defined and ISIS_GLOBALS[vrf_name] is defined and
+      ISIS_GLOBALS[vrf_name].enabled|default("false")|string|lower == "true" and
+      isis_intf.enabled|default("false")|string|lower == "true" %}
  ip router isis {{ vrf_name }}
+{% if isis_intf.ipv6_enabled|default("true")|string|lower == "true" %}
  ipv6 router isis {{ vrf_name }}
+{% endif %}
 {% if isis_intf.passive is defined and isis_intf.passive|string|lower == "true" %}
  isis passive
 {% endif %}
@@ -77,6 +97,7 @@ interface {{ ifname }}
  isis network point-to-point
 {% elif isis_intf.circuit_type == "lan" %}
  no isis network point-to-point
+{% endif %}
 {% endif %}
 {% endif %}
 {% endfor %}

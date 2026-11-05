@@ -3380,7 +3380,6 @@
         },
         "ISIS_GLOBALS_TIMERS": {
             "default": {
-                "default_metric": "10",
                 "lsp_mtu": "1492",
                 "lsp_refresh_interval": "900",
                 "lsp_lifetime": "1200"
@@ -3388,6 +3387,7 @@
         },
         "ISIS_INTERFACE": {
             "Ethernet0": {
+                "enabled": "true",
                 "metric": "10",
                 "circuit_type": "p2p",
                 "passive": "false"

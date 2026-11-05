@@ -47,7 +47,7 @@ module sonic-isis-global {
 
                 leaf net_title {
                     type string {
-                        pattern '[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.[0-9a-fA-F]{2}';
+                        pattern '[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00';
                     }
                     description "Network Entity Title (NET) for this intermediate system.";
                 }
@@ -66,6 +66,12 @@ module sonic-isis-global {
                     }
                     default level-1-2;
                     description "Router topology tier level execution mode.";
+                }
+
+                leaf ipv6_multi_topology {
+                    type boolean;
+                    default true;
+                    description "Enable IPv6 multi-topology; false selects single-topology IPv6.";
                 }
 
                 leaf dynamic_hostname {
@@ -87,17 +93,9 @@ module sonic-isis-global {
                     description "Reference to base VRF instance.";
                 }
 
-                leaf default_metric {
-                    type uint32 {
-                        range "1..16777215";
-                    }
-                    default 10;
-                    description "Global default interface cost metric under Wide-Metric convention.";
-                }
-
                 leaf lsp_mtu {
                     type uint16 {
-                        range "512..1492";
+                        range "128..4352";
                     }
                     default 1492;
                     description "Maximum transmission size constraint for localized Link State PDU generation.";
@@ -105,7 +103,7 @@ module sonic-isis-global {
 
                 leaf lsp_refresh_interval {
                     type uint16 {
-                        range "1..65535";
+                        range "1..65235";
                     }
                     units "seconds";
                     default 900;
@@ -113,8 +111,9 @@ module sonic-isis-global {
                 }
 
                 leaf lsp_lifetime {
+                    must ". >= ../lsp_refresh_interval + 300";
                     type uint16 {
-                        range "1..65535";
+                        range "350..65535";
                     }
                     units "seconds";
                     default 1200;

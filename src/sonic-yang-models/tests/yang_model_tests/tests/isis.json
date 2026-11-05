@@ -1,0 +1,48 @@
+{
+    "ISIS_VALID": {
+        "desc": "ISIS VALID"
+    },
+    "ISIS_NET_SHORT": {
+        "desc": "ISIS NET SHORT",
+        "eStrKey": "Pattern"
+    },
+    "ISIS_NET_NSEL": {
+        "desc": "ISIS NET NSEL",
+        "eStrKey": "Pattern"
+    },
+    "ISIS_UNKNOWN_VRF": {
+        "desc": "ISIS UNKNOWN VRF",
+        "eStrKey": "InvalidValue"
+    },
+    "ISIS_MTU_LOW": {
+        "desc": "ISIS MTU LOW",
+        "eStrKey": "Range"
+    },
+    "ISIS_MTU_HIGH": {
+        "desc": "ISIS MTU HIGH",
+        "eStrKey": "Range"
+    },
+    "ISIS_REFRESH_HIGH": {
+        "desc": "ISIS REFRESH HIGH",
+        "eStrKey": "Range"
+    },
+    "ISIS_LIFETIME_LOW": {
+        "desc": "ISIS LIFETIME LOW",
+        "eStrKey": "Range"
+    },
+    "ISIS_TIMER_RELATION": {
+        "desc": "ISIS TIMER RELATION",
+        "eStrKey": "Must"
+    },
+    "ISIS_TIMER_ORPHAN": {
+        "desc": "ISIS TIMER ORPHAN",
+        "eStrKey": "LeafRef"
+    },
+    "ISIS_ORPHAN_INTERFACE": {
+        "desc": "ISIS ORPHAN INTERFACE",
+        "eStrKey": "InvalidValue"
+    },
+    "ISIS_VALID_VRF": {
+        "desc": "ISIS VALID VRF"
+    }
+}
