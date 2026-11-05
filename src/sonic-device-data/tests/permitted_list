@@ -84,6 +84,7 @@ parity_enable
 pbmp_oversubscribe
 pbmp_xport
 pci2eb_overrid
+pcie_hot_swap_timeout_usec
 pfc_deadlock_seq_control
 phy_84328
 phy_84752
@@ -118,6 +119,7 @@ port_flex_enable
 port_init_autoneg
 port_init_cl72
 port_init_speed
+port_oversubscribe
 port_phy_addr
 port_phy_clause
 port_phy_id0
