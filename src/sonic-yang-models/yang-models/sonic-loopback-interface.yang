@@ -13,6 +13,10 @@ module sonic-loopback-interface {
         prefix vrf;
     }
 
+    import sonic-extension {
+        prefix ext;
+    }
+
     description
         "Loopback interface configuration for virtual interfaces used as router IDs and service IPs";
 
@@ -41,10 +45,11 @@ module sonic-loopback-interface {
                 }
 
                 leaf vrf_name {
-                    description "VRF instance to which this loopback interface is bound";
                     type leafref {
                         path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
                     }
+                    ext:create-only;
+                    description "VRF instance to which this loopback interface is bound";
                 }
 
                 leaf nat_zone {
