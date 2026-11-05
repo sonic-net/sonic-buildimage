@@ -700,10 +700,10 @@ def main():
 
     if args.write_to_db:
         if args.namespace is None:
-            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, **db_kwargs)
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, authenticate=True, **db_kwargs)
         else:
             load_namespace_config()
-            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, authenticate=True, namespace=args.namespace, **db_kwargs)
 
         configdb.connect(False)
         configdb.mod_config(FormatConverter.output_to_db(data))
