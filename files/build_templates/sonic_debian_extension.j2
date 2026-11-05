@@ -310,10 +310,11 @@ install_deb_package $debs_path/sonic-host-services-data_*.deb
 install_deb_package $debs_path/sonic-ztp_*.deb
 {% if sonic_asic_platform == "aspeed" %}
 {% if enable_bmc_ztp != "y" %}
-# BMC images (aspeed) ship ZTP installed but not running unless built with
-# ENABLE_BMC_ZTP=y: a BMC must not self-provision unless an admin opts in with
+# BMC images (aspeed) built with ENABLE_BMC_ZTP=n ship ZTP installed but not
+# running: such a BMC must not self-provision unless an admin opts in with
 # 'systemctl enable --now ztp'. The unit is disabled, not masked, so it starts
-# cleanly once enabled.
+# cleanly once enabled. With the default ENABLE_BMC_ZTP=y the unit keeps the
+# enabled state set by the sonic-ztp package and ZTP runs on first boot.
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable ztp.service
 {% endif %}
 # Default ZTP configuration for BMC: no in-band discovery (a BMC is
