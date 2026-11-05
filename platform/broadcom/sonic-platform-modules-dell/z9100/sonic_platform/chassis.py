@@ -95,7 +95,8 @@ class Chassis(ChassisBase):
             sfp_node = Sfp(index, 'QSFP', eeprom_path, sfp_control,
                            self.PORT_I2C_MAPPING[index][1])
             self._sfp_list.append(sfp_node)
-
+        self._sfp_list.append(Sfp(32,'SFP',"/sys/bus/i2c/devices/i2c-11/11-0050/eeprom","",32))
+        self._sfp_list.append(Sfp(33,'SFP',"/sys/bus/i2c/devices/i2c-12/12-0050/eeprom","",33))
         # Initialize EEPROM
         self._eeprom = Eeprom()
         for i in range(MAX_Z9100_FANTRAY):
