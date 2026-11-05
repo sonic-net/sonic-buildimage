@@ -143,5 +143,45 @@
                 }]
             }
         }
+    },
+
+    "COPP_TRAP_EXCLUDE_PORTS_ALL_VALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "lanes": "65"
+                    }
+                ]
+            }
+        },
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_TRAP_EXCLUDE_PORTS": {
+                "GLOBAL": {
+                    "ports": [
+                       "Ethernet0"
+                    ]
+                }
+            }
+        }
+    },
+
+    "COPP_TRAP_EXCLUDE_PORT_INVALID_PORT": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_TRAP_EXCLUDE_PORTS": {
+                "GLOBAL": {
+                    "ports": [
+                       "Ethernet0"
+                    ]
+                }
+            }
+        }
     }
+
 }
