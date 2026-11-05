@@ -19,10 +19,11 @@ from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
 
 @pytest.fixture
 def protected_redis(monkeypatch):
-    native_root = os.environ.get('REDIS_AUTH_TEST_DIR')
-    if not native_root or os.geteuid() != 0:
-        pytest.skip('requires an isolated native auth test library and real root')
-    policy_root = Path(native_root) / 'policy'
+    if os.environ.get('SWSS_AUTH_TEST_CONTAINER') != '1':
+        pytest.skip('requires an explicitly selected disposable container')
+    assert os.geteuid() == 0 and Path('/.dockerenv').exists()
+    policy_root = Path('/run/redis-auth')
+    assert not policy_root.exists(), 'refusing to replace an installed policy'
     policy_root.mkdir(mode=0o755)
     (policy_root / 'local-system').mkdir(mode=0o755)
     with tempfile.TemporaryDirectory(prefix='sonic-dump-native-', dir='/var/tmp') as temporary:
@@ -44,7 +45,7 @@ def protected_redis(monkeypatch):
                                    '--aclfile', str(acl)], stdout=log, stderr=subprocess.STDOUT)
         writer = None
         try:
-            writer = redis.Redis(connection_pool=connection_pool(unix_socket_path=socket))
+            writer = redis.Redis(connection_pool=connection_pool(unix_socket_path=socket, authenticate=True))
             for attempt in range(200):
                 try:
                     writer.ping()
@@ -123,7 +124,7 @@ def test_native_credential_failure_never_retries_anonymous(protected_redis, miss
             secret.write_text('incorrect-password')
         with patch('sys.argv', ['sonic-db-load', '-t', 'unix_socket']), \
                 patch('sys.stdin', io.StringIO('{"unexpected":{"type":"string","value":"bad"}}')):
-            with pytest.raises(RuntimeError, match='authentication|credential'):
+            with pytest.raises(redis.AuthenticationError, match='authentication|credential'):
                 sonic_db_dump_load()
         assert writer.get('original') == b'value'
         assert writer.get('unexpected') is None
