@@ -273,6 +273,12 @@ module sonic-nat {
                     }
                 }
 
+                leaf access_list {
+                    description "Comma-separated list of ACL table names bound to this NAT binding";
+
+                    type string;
+                }
+
                 leaf nat_type {
                     description "Nat type for the binding - snat or dnat";
 
@@ -283,10 +289,15 @@ module sonic-nat {
                 leaf twice_nat_id {
                     description "Twice nat id for the binding to achieve the Dynamic twice nat";
 
-                    type uint16 {
-                        range "1..9999" {
-                            error-message "Invalid twice nat id for the binding.";
-                            error-app-tag twice-nat-id-invalid;
+                    type union {
+                        type uint16 {
+                            range "1..9999" {
+                                error-message "Invalid twice nat id for the binding.";
+                                error-app-tag twice-nat-id-invalid;
+                            }
+                        }
+                        type string {
+                            pattern "NULL";
                         }
                     }
                 }
