@@ -135,28 +135,16 @@ dependent_startup_wait_for=rsyslogd:running
 {% if not skip_xcvrd %}
 [program:xcvrd]
 {% set base_command = "python3 /usr/local/bin/xcvrd" %}
-{% set options = "" -%}
 
-{% if skip_xcvrd_cmis_mgr %}
-    {%- set options = options + " --skip_cmis_mgr" %}
-{% endif -%}
-
-{% if enable_xcvrd_sff_mgr %}
-    {%- set options = options + " --enable_sff_mgr" %}
-{% endif -%}
-
-{% if xcvrd and xcvrd.dom_temperature_poll_interval %}
-    {%- set options = options + " --dom_temperature_poll_interval " + xcvrd.dom_temperature_poll_interval|string %}
-{% endif -%}
-
-{% if xcvrd and xcvrd.dom_update_interval %}
-    {%- set options = options + " --dom_update_interval " + xcvrd.dom_update_interval|string %}
-{% endif -%}
-
+{# xcvrd no longer parses CLI flags: the manager toggles (skip_xcvrd_cmis_mgr,
+   enable_xcvrd_sff_mgr) and dom cadences (dom_temperature_poll_interval,
+   dom_update_interval) are read directly from pmon_daemon_control.json by
+   XcvrdConfig, which honors both the nested xcvrd section and the legacy flat/
+   top-level keys. See doc/pmon/pmon_daemon_config_hld.md. #}
 {% if delay_xcvrd %}
-    {%- set command = "bash -c \"sleep 30 && " ~ base_command ~ options ~ "\"" %}
+    {%- set command = "bash -c \"sleep 30 && " ~ base_command ~ "\"" %}
 {% else %}
-    {%- set command = base_command ~ options %}
+    {%- set command = base_command %}
 {% endif -%}
 command={{ command }}
 priority=6
