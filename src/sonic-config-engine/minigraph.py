@@ -1242,6 +1242,8 @@ def parse_dpg(dpg, hname, ports=None):
                     acls[aclname]['type'] = 'L3V6' if  'v6' in aclname.lower() else 'L3'
             elif any(member.strip() in skipped_pcs or member.strip() in vlans for member in aclattach):
                 print(f"Warning: ignore ACL '{aclname}' as its port channels or VLAN members are not in the port configuration", file=sys.stderr)
+            elif ports is not None and aclintf.findtext(str(QName(ns, "Type")), '').upper() in ('DATAPLANE', 'BMCDATA'):
+                print(f"Warning: ignore ACL '{aclname}' as its interfaces are not in the port configuration", file=sys.stderr)
             else:
                 # This ACL has no interfaces to attach to -- consider this a control plane ACL
                 try:
