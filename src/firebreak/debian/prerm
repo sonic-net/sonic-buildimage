@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "upgrade" ]; then
+    for f in \
+        /usr/local/lib/python3.*/dist-packages/show/plugins/firebreak.py \
+        /usr/lib/python3/dist-packages/show/plugins/firebreak.py \
+        /usr/local/lib/python3.*/dist-packages/config/plugins/firebreak.py \
+        /usr/lib/python3/dist-packages/config/plugins/firebreak.py
+    do
+        for path in $f; do
+            rm -f "$path" 2>/dev/null || true
+        done
+    done
+fi
+exit 0

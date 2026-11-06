@@ -1,0 +1,79 @@
+{
+  "container": "otel",
+  "ctl_script": "/usr/bin/otel.sh",
+  "redis_user": "otel",
+  "secret_file": "/etc/sonic/firebreak/otel.redis.secret",
+  "acl_strict_patterns": true,
+  "instances": {
+    "redis": {
+      "unix_socket": "/var/run/redis/redis.sock",
+      "tcp_port": 6379,
+      "select": [
+        0,
+        2,
+        4,
+        6,
+        7
+      ],
+      "commands": [
+        "ping",
+        "auth",
+        "hello",
+        "select",
+        "info",
+        "echo",
+        "get",
+        "mget",
+        "hget",
+        "hmget",
+        "hgetall",
+        "hexists",
+        "hlen",
+        "hkeys",
+        "hvals",
+        "scan",
+        "hscan",
+        "keys",
+        "type",
+        "strlen",
+        "exists",
+        "ttl",
+        "subscribe",
+        "psubscribe",
+        "unsubscribe",
+        "punsubscribe",
+        "pubsub",
+        "config|get",
+        "client|info",
+        "client|setname",
+        "client|getname",
+        "acl|whoami",
+        "multi",
+        "exec",
+        "discard"
+      ],
+      "read_key_patterns": [
+        "*"
+      ],
+      "write_key_patterns": [],
+      "channel_patterns": [
+        "__keyspace@4__:*"
+      ]
+    }
+  },
+  "omit_sockets": [
+    "redis_bmp.sock",
+    "redis2.sock",
+    "redis3.sock"
+  ],
+  "egress_allow_ipv4": [
+    "127.0.0.1"
+  ],
+  "egress_from_config_db": true,
+  "egress_deny_default": true,
+  "egress_approved_ipv4": [],
+  "required_processes": [
+    "otel",
+    "supervisor-proc-exit-listener"
+  ]
+}

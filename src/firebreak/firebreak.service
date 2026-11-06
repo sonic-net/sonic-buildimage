@@ -1,0 +1,16 @@
+[Unit]
+Description=FIREBREAK container Redis ACL proxy and egress gate
+After=database.service docker.service
+Wants=database.service
+# firebreakd recreates feature containers during enable/disable. Ordering this
+# unit Before those features deadlocks a stop handler that starts them again.
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/firebreak/firebreakd/firebreakd.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
