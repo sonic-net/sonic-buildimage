@@ -215,9 +215,10 @@ function restore_counters_folder()
     debug "Restoring counters folder after warmboot..."
 
     cache_counters_folder="/host/counters"
-    if [[ -d $cache_counters_folder ]]; then
-        mv $cache_counters_folder /tmp/cache
+    if [[ -d $cache_counters_folder/cache ]]; then
+        cp -rf $cache_counters_folder/cache /tmp/
         chown -R admin:admin /tmp/cache
+        rm -rf $cache_counters_folder
     fi
 }
 

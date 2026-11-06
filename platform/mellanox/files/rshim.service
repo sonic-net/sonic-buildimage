@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0 or BSD-3-Clause
+# Copyright 2019 Mellanox Technologies. All Rights Reserved.
+#
+# This file is modified from https://github.com/Mellanox/rshim-user-space/blob/rshim-2.6.6/rshim.service
+# [Install] section is intentionally omitted; sonic-bfb-installer manages its lifecycle.
+
+[Unit]
+Description=rshim driver for BlueField SoC
+Documentation=man:rshim(8)
+After=network.target
+
+[Service]
+Restart=always
+Type=forking
+ExecStart=-/usr/sbin/rshim $OPTIONS
+KillMode=control-group

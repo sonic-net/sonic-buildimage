@@ -12,7 +12,7 @@ DEFAULT_ALPHA = '0.18'
 
 def enable_rates():
     # set the default interval for rates
-    counters_db = swsscommon.SonicV2Connector()
+    counters_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
     counters_db.connect('COUNTERS_DB')
     counters_db.set('COUNTERS_DB', 'RATES:PORT', 'PORT_SMOOTH_INTERVAL', DEFAULT_SMOOTH_INTERVAL)
     counters_db.set('COUNTERS_DB', 'RATES:PORT', 'PORT_ALPHA', DEFAULT_ALPHA)

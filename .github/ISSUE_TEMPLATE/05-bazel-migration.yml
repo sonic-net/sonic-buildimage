@@ -1,0 +1,30 @@
+name: Bazel Migration
+description: Issue tracking work in the Bazel migration
+title: "Bazel: Migrate component [REPLACE WITH YOUR COMPONENT]"
+labels: ["bazel:migration"]
+body:
+  - type: input
+    id: tc-en-component
+    attributes:
+      label: Component
+      description: Component (docker image, deb archive, or other) being migrated.
+      placeholder: docker-gnmi
+    validations:
+      required: true
+
+  - type: input
+    id: tc-en-rules
+    attributes:
+      label: Make Rules
+      description: Locations of Make rules that currently build this target.
+      placeholder: rules/docker-gnmi.mk
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-en-more-context
+    attributes:
+      label: Context
+      description: Any more context that would be relevant?
+    validations:
+      required: false

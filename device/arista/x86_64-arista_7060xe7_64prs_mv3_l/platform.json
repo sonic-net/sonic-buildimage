@@ -6,13 +6,16 @@
                 "name": "Aboot()"
             },
             {
-                "name": "Scd(addr=0000:01:00.0)"
+                "name": "Scd(addr=0000:07:00.0)"
             },
             {
                 "name": "Ucd90320(addr=8-0031)"
             },
             {
-                "name": "Scd(addr=0000:04:00.0)"
+                "name": "Scd(addr=0000:09:00.0)"
+            },
+            {
+                "name": "Scd(addr=0000:08:00.0)"
             },
             {
                 "name": "Ucd90320(addr=23-0011)"
@@ -232,27 +235,67 @@
                 "controllable": false
             },
             {
-                "name": "Back center PCB",
+                "name": "Board Center",
                 "controllable": false
             },
             {
-                "name": "TH6 diode 0",
+                "name": "TH6C Remote Diode 0",
                 "controllable": false
             },
             {
-                "name": "Front left PCB",
+                "name": "Board Front Left",
                 "controllable": false
             },
             {
-                "name": "TH6 diode 1",
+                "name": "TH6C Remote Diode 1",
                 "controllable": false
             },
             {
-                "name": "Back left PCB",
+                "name": "Board Center Left",
                 "controllable": false
             },
             {
-                "name": "TH6 diode 2",
+                "name": "TH6C Remote Diode 2",
+                "controllable": false
+            },
+            {
+                "name": "Board Rear Center",
+                "controllable": false
+            },
+            {
+                "name": "Underside Front Left",
+                "controllable": false
+            },
+            {
+                "name": "Underside Center Left",
+                "controllable": false
+            },
+            {
+                "name": "Board Rear Left",
+                "controllable": false
+            },
+            {
+                "name": "Underside Rear Left",
+                "controllable": false
+            },
+            {
+                "name": "Board Rear Right",
+                "controllable": false
+            },
+            {
+                "name": "Underside Rear Center",
+                "controllable": false
+            },
+            {
+                "name": "Underside Rear Right",
+                "controllable": false
+            },
+            {
+                "name": "Underside Front Right",
+                "controllable": false
+            },
+            {
+                "name": "Underside Center",
                 "controllable": false
             },
             {

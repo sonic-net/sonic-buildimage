@@ -3734,6 +3734,54 @@
                 "1x100G": [
                     "etp129"
                 ]
+			}
+        },
+        "Ethernet1025": {
+            "index": "129",
+            "lanes": "1026",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp129"
+                ],
+                "1x25G": [
+                    "etp129"
+                ]
+            }
+        },
+        "Ethernet1026": {
+            "index": "130",
+            "lanes": "1027",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp130"
+                ],
+                "1x25G": [
+                    "etp130"
+                ]
+            }
+        },
+        "Ethernet1027": {
+            "index": "131",
+            "lanes": "1028",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp131"
+                ],
+                "1x25G": [
+                    "etp131"
+                ]
+            }
+        },
+        "Ethernet1028": {
+            "index": "132",
+            "lanes": "1029",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp132"
+                ],
+                "1x25G": [
+                    "etp132"
+                ]
             }
         }
     }

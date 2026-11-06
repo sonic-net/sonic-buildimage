@@ -1,0 +1,16 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "UpperSpineRouter"
+        }
+    },
+    "CONFIG_DB__BGP_BBR": {
+        "status": "disabled"
+    },
+    "CONFIG_DB__BGP_DEVICE_GLOBAL": {
+        "CONFED": {
+            "asn": "65100",
+            "peers": "65300"
+        }
+    }
+}

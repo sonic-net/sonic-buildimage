@@ -92,11 +92,10 @@ module sonic-scheduler {
                 }
 
                 leaf pir {
-                    must "((current()/../cir) and (current()/../cir > 0))" {
-                        error-message "pir can't be configured without cir.";
-                    }
-                    must "(current() >= current()/../cir)" {
-                        error-message "pir must be greater than or equal to cir";
+                    must "not(current()/../cir) or
+                          current() >= current()/../cir" {
+                        error-message
+                            "pir must be greater than or equal to cir when cir is configured";
                     }
                     type uint64;
                     description

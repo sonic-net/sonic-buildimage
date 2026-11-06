@@ -1257,6 +1257,78 @@
                     "lane7": "0x0"
                 }
             },
+            "OPTICAL25": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xfffffffe",
+                    "lane1": "0xfffffffe",
+                    "lane2": "0xfffffffe",
+                    "lane3": "0xfffffffe",
+                    "lane4": "0xfffffffe",
+                    "lane5": "0xfffffffe",
+                    "lane6": "0xfffffffe",
+                    "lane7": "0xfffffffe"
+                },
+                "main": {
+                    "lane0": "0x64",
+                    "lane1": "0x64",
+                    "lane2": "0x64",
+                    "lane3": "0x64",
+                    "lane4": "0x64",
+                    "lane5": "0x64",
+                    "lane6": "0x64",
+                    "lane7": "0x64"
+                },
+                "post1": {
+                    "lane0": "0xfffffffe",
+                    "lane1": "0xfffffffe",
+                    "lane2": "0xfffffffe",
+                    "lane3": "0xfffffffe",
+                    "lane4": "0xfffffffe",
+                    "lane5": "0xfffffffe",
+                    "lane6": "0xfffffffe",
+                    "lane7": "0xfffffffe"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "Default": {
                 "pre3": {
                     "lane0": "0x0",

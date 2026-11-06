@@ -17,7 +17,6 @@
 # limitations under the License.
 #
 
-# Management interface should be handled first, so it has higher priority
 declare -r udev_mgmt_file="/etc/udev/rules.d/01-mgmt-intf.rules"
 declare -r udev_midplane_file="/etc/udev/rules.d/92-midplane-intf.rules"
 
@@ -60,7 +59,14 @@ handle_mgmt_interface() {
         mgmt_interface_bus_info=$(jq -r --arg name "$mgmt_interface" '.mgmt_interfaces[$name].pci_bus_info // empty' "$platform_json")
         [ -z "$mgmt_interface_bus_info" ] || [ "$mgmt_interface_bus_info" = "null" ] && continue
 
-        echo SUBSYSTEM==\"net\", ACTION==\"add\", KERNELS==\"$mgmt_interface_bus_info\", NAME=\"$mgmt_interface\" >> "$udev_mgmt_file"
+        # Log when a DPU still holds the transient kernel name, then skip the rename.
+        echo "SUBSYSTEM==\"net\", ACTION==\"add\", KERNELS==\"$mgmt_interface_bus_info\"," \
+             "KERNEL!=\"$mgmt_interface\"," \
+             "TEST==\"/sys/class/net/$mgmt_interface\"," \
+             "RUN+=\"/bin/logger -t udev-manager 'mgmt rename to $mgmt_interface skipped: name occupied'\"" \
+             >> "$udev_mgmt_file"
+        echo "SUBSYSTEM==\"net\", ACTION==\"add\", KERNELS==\"$mgmt_interface_bus_info\"," \
+             "TEST!=\"/sys/class/net/$mgmt_interface\", NAME=\"$mgmt_interface\"" >> "$udev_mgmt_file"
     done <<< "$mgmt_interfaces"
 }
 

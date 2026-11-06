@@ -1,33 +1,35 @@
-[PATCH] [MGMTD] This error happens when we try to write to a socket or pipe
-
+From 742c21b662418dd8cc45d156ddfbe4f31a77422d Mon Sep 17 00:00:00 2001
 From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
 Date: Wed, 5 Mar 2025 00:55:58 -0800
-Subject: [PATCH] [MGMTD] This error happens when we try to write to a socket or pipe
- which is already closed by peer.  For e.g., the other side may have been
- killed during warmboot or using pkill. Hence, changing the log level to INFO
+Subject: [PATCH] lib: log management peer EOF at info severity
+
+A peer closing its socket during SONiC warm restart is expected; retain error severity for actual read failures while reporting a clean EOF at info level.
+
+Original-SONiC-Patch: 0022-SONiC-ONLY-This-error-happens-when-we-try-to-write-to-a-socket.patch
 ---
- lib/mgmt_msg.c |    4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ lib/mgmt_msg.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/lib/mgmt_msg.c b/lib/mgmt_msg.c
-index 8f22b3123..4e6964532 100644
+index 8754e7b9d9..052edec340 100644
 --- a/lib/mgmt_msg.c
 +++ b/lib/mgmt_msg.c
-@@ -28,6 +28,8 @@
+@@ -37,6 +37,9 @@ static bool trace;
  #define MGMT_MSG_ERR(ms, fmt, ...)                                             \
  	zlog_err("%s: %s: " fmt, (ms)->idtag, __func__, ##__VA_ARGS__)
  
-+#define MGMT_MSG_INFO(ms, fmt, ...)                                             \
++#define MGMT_MSG_INFO(ms, fmt, ...)                                            \
 +	zlog_info("%s: %s: " fmt, (ms)->idtag, __func__, ##__VA_ARGS__)
++
  DEFINE_MTYPE(LIB, MSG_CONN, "msg connection state");
  
  /**
-@@ -70,7 +72,7 @@ enum mgmt_msg_rsched mgmt_msg_read(struct mgmt_msg_state *ms, int fd,
- 		}
- 		if (n <= 0) {
- 			if (n == 0)
--				MGMT_MSG_ERR(ms, "got EOF/disconnect");
-+				MGMT_MSG_INFO(ms, "got EOF/disconnect");
- 			else
- 				MGMT_MSG_ERR(ms,
- 					     "got error while reading: '%s'",
+@@ -127,7 +130,7 @@ not_done:
+ 		return MSR_SCHED_STREAM;
+ 	}
+ 	if (n == 0)
+-		MGMT_MSG_ERR(ms, "got EOF/disconnect on fd %d", fd);
++		MGMT_MSG_INFO(ms, "got EOF/disconnect on fd %d", fd);
+ 	else
+ 		MGMT_MSG_ERR(ms, "got error while reading on fd %d: '%s'", fd,
+ 			     safe_strerror(errno));

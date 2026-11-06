@@ -7,6 +7,10 @@ module sonic-system-tacacs {
         prefix inet;
     }
 
+    import sonic-types {
+        prefix stypes;
+    }
+
     import sonic-port {
         prefix port;
     }
@@ -184,6 +188,12 @@ module sonic-system-tacacs {
                         }
                     }
                     description "Source interface whose IP address is used for outgoing TACACS+ packets.";
+                }
+
+                leaf traceid_authorization {
+                    type stypes:boolean_type;
+                    default false;
+                    description "Enable adding validated SSH_CLIENT_TRACEID values as the TACACS+ traceid command authorization attribute.";
                 }
             }
         }

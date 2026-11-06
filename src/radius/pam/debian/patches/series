@@ -2,3 +2,5 @@
 0002-peap-mschapv2-support.patch
 0003-nas-ip-address-config.patch
 0004-fix-blastradius.patch 
+0005-peap-validation-and-bounds.patch
+0006-bound-peap-response-wait.patch

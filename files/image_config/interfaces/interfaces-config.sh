@@ -38,6 +38,35 @@ function resolvconf_updates_restore() {
     fi
 }
 
+# Use a private, uniquely-named temp directory instead of fixed /tmp paths:
+# /tmp is world-writable, so a fixed path could be pre-created as a symlink by
+# a local attacker before this script (which runs as root) writes to it.
+# Created before any disruptive side effects below (disabling DNS updates,
+# bringing down eth0) so a mktemp failure exits cleanly without leaving the
+# system in a half-reconfigured state.
+# Scope the restrictive umask to just this directory's creation so it does not
+# affect permissions of files created later in the script (e.g. by sonic-cfggen).
+_OLD_UMASK="$(umask)"
+umask 077
+TMP_DIR=$(mktemp -d /tmp/interfaces-config.XXXXXX) || {
+    echo "interfaces-config: failed to create temporary directory" >&2
+    exit 1
+}
+umask "${_OLD_UMASK}"
+
+ZTP_PORT_DATA="${TMP_DIR}/ztp_port_data.json"
+ZTP_INPUT="${TMP_DIR}/ztp_input.json"
+
+cleanup() {
+    rm -f -- "${ZTP_PORT_DATA}" "${ZTP_INPUT}"
+    rmdir -- "${TMP_DIR}" 2>/dev/null || true
+}
+
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 # Do not run DNS configuration update during the shutdowning of the management interface. 
 # This operation is redundant as there will be an update after the start of the interface.
 resolvconf_updates_disable
@@ -50,26 +79,25 @@ fi
 # Check if ZTP DHCP policy has been installed
 if [[ -e /etc/network/ifupdown2/policy.d/ztp_dhcp.json ]]; then
     # Obtain port operational state information
-    redis-dump -d 0 -k "PORT_TABLE:Ethernet*"  -y > /tmp/ztp_port_data.json
-
-    if [[ $? -ne 0 || ! -e /tmp/ztp_port_data.json || "$(cat /tmp/ztp_port_data.json)" = "" ]]; then
-        echo "{}" > /tmp/ztp_port_data.json
+    if ! redis-dump -d 0 -k "PORT_TABLE:Ethernet*" -y > "${ZTP_PORT_DATA}" ||
+       [[ ! -s "${ZTP_PORT_DATA}" ]]; then
+        printf '{}\n' > "${ZTP_PORT_DATA}"
     fi
 
     # Create an input file with ztp input information
-    echo "{ \"PORT_DATA\" : $(cat /tmp/ztp_port_data.json) }" > \
-          /tmp/ztp_input.json
+    printf '{ "PORT_DATA" : %s }\n' "$(cat -- "${ZTP_PORT_DATA}")" > "${ZTP_INPUT}"
 else
-    echo "{ \"ZTP_DHCP_DISABLED\" : \"true\" }" > /tmp/ztp_input.json
+    printf '{ "ZTP_DHCP_DISABLED" : "true" }\n' > "${ZTP_INPUT}"
 fi
 
 # Create /e/n/i file for existing and active interfaces, dhcp6 sytcl.conf and dhclient.conf
-CFGGEN_PARAMS=" \
-    -d -j /tmp/ztp_input.json \
-    -t /usr/share/sonic/templates/interfaces.j2,/etc/network/interfaces \
-    -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf \
-    -t /usr/share/sonic/templates/dhclient.conf.j2,/etc/dhcp/dhclient.conf \
-"
+CFGGEN_PARAMS=(
+    -d
+    -j "${ZTP_INPUT}"
+    -t /usr/share/sonic/templates/interfaces.j2,/etc/network/interfaces
+    -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf
+    -t /usr/share/sonic/templates/dhclient.conf.j2,/etc/dhcp/dhclient.conf
+)
 
 # On BMC/Switch-Host platforms, pass bmc.json and the role to sonic-cfggen
 # so interfaces.j2 can render the BMC interface stanza with the correct IP.
@@ -85,13 +113,13 @@ if [[ -f "$PLATFORM_ENV_CONF" ]]; then
 fi
 if [[ $IS_SWITCH_BMC -eq 1 || $IS_SWITCH_HOST -eq 1 ]]; then
     if [[ -f "/etc/sonic/bmc.json" ]]; then
-        sonic-cfggen $CFGGEN_PARAMS -j /etc/sonic/bmc.json \
+        sonic-cfggen "${CFGGEN_PARAMS[@]}" -j /etc/sonic/bmc.json \
             -a "{\"IS_SWITCH_BMC\": $IS_SWITCH_BMC, \"IS_SWITCH_HOST\": $IS_SWITCH_HOST}"
     else
-        sonic-cfggen $CFGGEN_PARAMS
+        sonic-cfggen "${CFGGEN_PARAMS[@]}"
     fi
 else
-    sonic-cfggen $CFGGEN_PARAMS
+    sonic-cfggen "${CFGGEN_PARAMS[@]}"
 fi
 
 [[ -f /var/run/dhclient.eth0.pid ]] && kill `cat /var/run/dhclient.eth0.pid` && rm -f /var/run/dhclient.eth0.pid
@@ -125,6 +153,3 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
         sleep "${RETRY_DELAY}"
     fi
 done
-
-# Clean-up created files
-rm -f /tmp/ztp_input.json /tmp/ztp_port_data.json

@@ -1,6 +1,7 @@
 
 DPATH       := $($(DOCKER_SNMP)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-snmp.mk rules/docker-snmp.dep
+DEP_FILES   += dockers/dockerfile-macros.j2
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
 

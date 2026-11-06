@@ -3,6 +3,10 @@ FROM docker-fpm-quagga-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+# GoBGP uses Zebra's zserv Unix socket; its TCP VTY is not needed.
+RUN sed -i -E '/^zebra_options=/ s/"$/ -P 0"/' /etc/quagga/debian.conf && \
+    grep -Eq '^zebra_options=.*-P 0"$' /etc/quagga/debian.conf
+
 RUN apt-get update
 
 COPY \

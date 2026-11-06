@@ -36,6 +36,7 @@
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
   * [EVPN](#evpn)
+  * [FDB_SYNC](#fdb_sync)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
   * [FG_NHG_PREFIX](#fg_nhg_prefix)
@@ -921,8 +922,16 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ### Console
 
-CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The item default_escape_char and escape_char are optional. It can be
-set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
+CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The items `default_escape_char` and `escape_char` are optional. They can be
+set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config.
+
+CONSOLE_PORT logging attributes (all optional):
+-   logging_enabled - Enable or disable console I/O logging for the line, allowed values: yes/no, default value: no
+-   log_file - Absolute path to the console log file (e.g. `/var/log/console-1.log`)
+-   logrotate_size - Maximum log file size before rotation, allowed pattern: numeric value with optional suffix `k`, `K`, `M`, or `G` (e.g. `10M`, `100K`)
+-   logrotate_count - Number of rotated log files to retain, allowed values: 1-100
+
+When logging is enabled via CLI and `log_file`, `logrotate_size`, or `logrotate_count` are not configured, runtime defaults are applied: log file `/var/log/console-<line>.log`, logrotate size `10M`, and logrotate count `10`.
 
 ```
 {
@@ -930,7 +939,11 @@ set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
     "1": {
         "baud_rate": "115200",
         "flow_control": "0",
-        "remote_device": "host-1"
+        "remote_device": "host-1",
+        "logging_enabled": "yes",
+        "log_file": "/var/log/console-1.log",
+        "logrotate_size": "10M",
+        "logrotate_count": "10"
     },
     "2": {
         "baud_rate": "9600",
@@ -1233,7 +1246,7 @@ BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_tab
 ```
 
 ### DHCP_SERVER_IPV4
-IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT** tables.
+IPV4 DHCP Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT**, **DHCP_SERVER_IPV4_MATCH**, **DHCP_SERVER_IPV4_BINDING** tables.
 ```
 {
     "DHCP_SERVER_IPV4": {
@@ -1257,8 +1270,10 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
     },
     "DHCP_SERVER_IPV4_RANGE": {
         "range1": {
-            "ip_start": "100.1.1.3",
-            "ip_end": "100.1.1.5"
+            "range": [
+                "100.1.1.3",
+                "100.1.1.5"
+            ]
         }
     },
     "DHCP_SERVER_IPV4_PORT": {
@@ -1268,6 +1283,104 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
             ]
         },
         "Vlan100|PortChannel2": {
+            "ranges": [
+                "range1"
+            ]
+        }
+    }
+}
+```
+
+**DHCP_SERVER_IPV4_MATCH** defines named, exact-match conditions on a single field of an
+incoming DHCPv4 packet. A condition is referenced by name from **DHCP_SERVER_IPV4_BINDING**;
+defining one on its own has no effect.
+
+**Note:** This change adds the schema for **DHCP_SERVER_IPV4_MATCH** and
+**DHCP_SERVER_IPV4_BINDING** only. The `mode` leaf of **DHCP_SERVER_IPV4** does not accept
+`MATCH` yet, and the DHCP server runtime does not read these two tables yet, so entries
+configured here are validated against the schema but do not affect address assignment. The
+address-selection and Kea-generation behavior described in the rest of this section takes
+effect once `MATCH` mode and the corresponding `dhcpservd` support are added in a follow-up
+change.
+
+| Field | Description |
+| ----- | ----------- |
+| name  | Key. User-defined name of the condition. Must not start or end with whitespace or control characters. Must not contain `\|` or `,`: these are the Config DB key separator and leaf-list separator respectively, so a name containing either cannot be referenced from **DHCP_SERVER_IPV4_BINDING**. |
+| type  | Packet field to match: `circuit_id` or `option60`. |
+| value | The exact value to match. |
+
+For `type` `option60` the value is compared against the Vendor Class Identifier (RFC 2132
+option 60) sent by the client.
+
+ For `type` `circuit_id`, the configured value identifies the ingress interface used for
+ Option 82 sub-option 1 (RFC 3046). `dhcp_relay` stamps the on-wire value with the
+ hostname and ingress interface, and the runtime expands the configured port alias,
+ aliasless port name, or PortChannel name before comparing it. A value naming no
+ existing interface is rejected because it could never match a packet.
+ The value must resolve to exactly one interface across the switch. A value shared
+ by multiple port aliases, or colliding with an aliasless port name or a PortChannel
+ name, is rejected as ambiguous. This does not impose global uniqueness on port
+ aliases: duplicate aliases remain permitted when no `circuit_id` condition uses
+ the ambiguous value. This check does not apply to `option60` values.
+
+**DHCP_SERVER_IPV4_BINDING** associates one or more match conditions with the addresses to
+hand out when they all match.
+
+| Field   | Description |
+| ------- | ----------- |
+| name    | Key, first part. DHCP interface, referencing **DHCP_SERVER_IPV4**. |
+| binding | Key, second part. User-defined name of the binding. Must not start or end with whitespace or control characters, or contain `\|` (the Config DB key separator). |
+| matches | One or more **DHCP_SERVER_IPV4_MATCH** names, combined with logical AND. At most one condition per `type`. |
+| ips     | Assigned IPv4 addresses. Mutually exclusive with `ranges`. |
+| ranges  | Named **DHCP_SERVER_IPV4_RANGE** entries. Mutually exclusive with `ips`. |
+
+Each match condition tests a single-valued field of the packet, so a binding may
+reference at most one `circuit_id` condition and at most one `option60` condition.
+Two conditions of the same `type` could never both be true, so a binding referencing
+them is rejected rather than accepted as one that can never select its pool.
+
+Exactly one of `ips` or `ranges` must be configured on a binding.
+
+A client can match more than one binding. In the example below a client on `etp1`
+sending Vendor Class Identifier `MAIA-BMC` matches both `bmc_on_etp1` and
+`any_on_etp1`. The binding with more match conditions wins, so such a client is
+assigned `100.1.1.21` and only clients on `etp1` that do not send `MAIA-BMC` draw
+from `range1`. This does not depend on the order in which the bindings are
+configured: the generated Kea client classes are made mutually exclusive, so a
+client is a member of the more specific class only.
+
+Two bindings that can match the same packet and have the **same** number of match
+conditions - for example one matching only `port_etp1` and another matching only
+`vendor_bmc` - have no more-specific winner. That is rejected when the DHCP
+configuration is generated, so the bindings must be corrected; the previously
+generated configuration keeps being served in the meantime.
+
+```
+{
+    "DHCP_SERVER_IPV4_MATCH": {
+        "port_etp1": {
+            "type": "circuit_id",
+            "value": "etp1"
+        },
+        "vendor_bmc": {
+            "type": "option60",
+            "value": "MAIA-BMC"
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING": {
+        "Vlan100|bmc_on_etp1": {
+            "matches": [
+                "port_etp1",
+                "vendor_bmc"
+            ],
+            "ips": [
+                "100.1.1.21"
+            ]
+        },
+        "Vlan100|any_on_etp1": {
+            "matches": [
+                "port_etp1"
+            ],
             "ranges": [
                 "range1"
             ]
@@ -1319,6 +1432,23 @@ The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN m
             "startup_delay": "1800",
             "mac_holdtime": "1000",
             "neigh_holdtime": "600"
+        }
+    }
+}
+```
+
+### FDB_SYNC
+
+The **FDB_SYNC** table selects how MAC (FDB) state is synchronized between SONiC and FRR. It has a single `global` entry with one field, `mac_sync_mode`:
+
+- `kernel` (default): fdbsyncd synchronizes MACs through the Linux kernel bridge FDB.
+- `fpm`: fpmsyncd exchanges MACs with zebra over the FPM channel.
+
+```json
+{
+    "FDB_SYNC": {
+        "global": {
+            "mac_sync_mode": "fpm"
         }
     }
 }
@@ -2301,7 +2431,8 @@ name as object key and member list as attribute.
         "members": [
             "Ethernet54"
         ],
-        "mtu": "9100"
+        "mtu": "9100",
+        "lag_type": "LACP"
     },
     "PortChannel0004": {
         "admin_status": "up",
@@ -2312,7 +2443,8 @@ name as object key and member list as attribute.
         "mtu": "9100",
         "fallback": "false",
         "fast_rate": "true",
-        "system_mac": "aa:bb:cc:dd:ee:ff"
+        "system_mac": "aa:bb:cc:dd:ee:ff",
+        "lag_type": "LACP"
     }
   }
 }
@@ -3778,6 +3910,80 @@ The **NODE_CFG** table defines the node configuration details for platform compo
 **node-id**: Unique numeric identifier for the node.
 
 **fully-qualified-name**: Fully qualified hierarchy path for the component.
+
+### SAI_PROFILE
+
+The **SAI_PROFILE** table provides a generic, vendor-agnostic mechanism
+to inject arbitrary SAI init-config key/value pairs. Each entry is
+rendered as one `KEY=VALUE` line into a vendor's final SAI profile file
+(e.g. `/etc/sai.d/sai.profile` for Broadcom, `/tmp/sai.profile` for
+Mellanox), which is read by `syncd` at startup and passed to the
+vendor SAI implementation. This avoids needing a schema or template
+change every time a new, vendor-specific SAI tunable needs to be
+exposed.
+
+> **Scope of this PR (sonic-net/sonic-buildimage#29813):** this PR adds
+> only the `SAI_PROFILE` YANG model (`sonic-sai-profile.yang`) and the
+> shared rendering template
+> (`src/sonic-config-engine/data/sai_profile_dynamic.j2`, installed to
+> `/usr/share/sonic/templates` via `sonic-config-engine`'s packaging).
+> No hwsku `sai.profile`/`sai.profile.j2` in this repo is modified, and
+> no code in this repo actually invokes the template at `syncd`
+> startup — configuring `SAI_PROFILE` has no effect until the
+> `syncd`-side integration below merges. That integration lives in a
+> separate repo/PR, sonic-net/sonic-sairedis#2098, described next.
+
+Rendering is applied by `syncd`'s startup scripts
+(`syncd/scripts/syncd_init_common.sh` in `sonic-sairedis`, see
+sonic-net/sonic-sairedis#2098), via a
+generic, vendor-agnostic helper, `apply_sai_profile_configdb()`, that
+renders the shared `src/sonic-config-engine/data/sai_profile_dynamic.j2`
+template (installed to `/usr/share/sonic/templates` on every container
+image built from `docker-config-engine-trixie`) with `sonic-cfggen -d`
+and appends its output as the very last step before a vendor's final
+profile file is handed to `syncd` (`-p <file>`). This is a no-op when
+`SAI_PROFILE` is empty/absent, so **no per-hwsku `sai.profile`/
+`sai.profile.j2` template change is required** to support this table —
+it currently covers Broadcom (`config_syncd_bcm`) and Mellanox
+(`config_syncd_mlnx`); other vendors can adopt it with a single call to
+the same helper. `SAI_INIT_CONFIG_FILE` is reserved (it is a structural
+key selected by each platform's own template logic) and is rejected by
+both YANG validation and the renderer if set via this table.
+
+`syncd` parses the final profile file line by line, splitting each
+line on the first `=` and overwriting a `std::map` entry per key with
+no duplicate-key detection (`Syncd::loadProfileMap()` in
+`sonic-sairedis`). Because `apply_sai_profile_configdb()` appends last,
+after any vendor-specific static defaults or de-duplication, an entry
+in `SAI_PROFILE` always silently overrides a hardcoded static default
+with the same key — this is intentional, and is how tuning a key
+without an image rebuild is meant to work. Duplicate keys cannot occur
+within `SAI_PROFILE` itself, since CONFIG_DB stores it as a hash keyed
+uniquely by `name`.
+
+```json
+{
+    "SAI_PROFILE": {
+        "SAI_NUM_ECMP_MEMBERS": {
+            "value": "128"
+        },
+        "SAI_NHG_HIERARCHICAL_NEXTHOP": {
+            "value": "false"
+        }
+    }
+}
+```
+
+**name** (list key): SAI profile key name. Must exactly match the SAI
+environment variable name expected by the vendor's SAI/SDK
+implementation, e.g. `SAI_NUM_ECMP_MEMBERS`. `SAI_INIT_CONFIG_FILE` is
+reserved and not allowed.
+
+**value**: Value for this SAI profile key, rendered verbatim as a
+string. Interpretation/validation of the value is the vendor SAI/SDK
+implementation's responsibility, not this schema's. Carriage return and
+line feed characters are not allowed, since each entry is rendered as
+exactly one `KEY=VALUE` line.
 
 # For Developers
 

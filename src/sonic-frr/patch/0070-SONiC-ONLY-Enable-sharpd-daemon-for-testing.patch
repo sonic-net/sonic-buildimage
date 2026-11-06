@@ -1,3 +1,4 @@
+From b1ded9179915c8c035fbf08181f665ff75e604e0 Mon Sep 17 00:00:00 2001
 From: Kalash Nainwal <kalash@nexthop.ai>
 Date: Mon, 13 Apr 2026 00:00:00 +0000
 Subject: [PATCH] Enable sharpd daemon for testing
@@ -11,10 +12,10 @@ Signed-off-by: Kalash Nainwal <kalash@nexthop.ai>
  1 file changed, 1 insertion(+)
 
 diff --git a/debian/rules b/debian/rules
-index 74573c9a0..212c5122a 100755
+index 18a2dd95b1..5cc37f2e1a 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -63,6 +63,7 @@ override_dh_auto_configure:
+@@ -84,6 +84,7 @@ override_dh_auto_configure:
  		--enable-doc-html \
  		--enable-snmp \
  		--enable-fpm \
@@ -22,3 +23,6 @@ index 74573c9a0..212c5122a 100755
  		--disable-protobuf \
  		--disable-zeromq \
  		--enable-ospfapi \
+-- 
+2.34.1
+

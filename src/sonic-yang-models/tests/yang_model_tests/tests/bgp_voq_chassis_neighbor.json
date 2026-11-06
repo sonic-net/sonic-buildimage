@@ -13,5 +13,10 @@
     "BGP_VOQ_CHASSIS_INVALID_ASN_TEST": {
         "desc" :"Load bgp voq chassis neighbor with asn number different than local asn",
         "eStr": ["Voq chassis BGP neighbors should have same ASN as defined in device metadata"]
+    },
+    "BGP_VOQ_CHASSIS_NEG_MULTILINE_NAME": {
+        "desc": "VOQ chassis BGP neighbor description contains a newline.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
     }
 }
