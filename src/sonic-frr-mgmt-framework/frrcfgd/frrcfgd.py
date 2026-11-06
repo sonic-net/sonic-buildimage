@@ -103,6 +103,7 @@ class BgpdClientMgr(threading.Thread):
             'BGP_GLOBALS_EVPN_VNI': ['bgpd'],
             'BGP_GLOBALS_EVPN_RT': ['bgpd'],
             'BGP_GLOBALS_EVPN_VNI_RT': ['bgpd'],
+            'BRIDGE_PORT_PROTECTION': ['zebra'],
             'BFD_PEER': ['bfdd'],
             'BFD_PEER_SINGLE_HOP': ['bfdd'],
             'BFD_PEER_MULTI_HOP': ['bfdd'],
@@ -2329,6 +2330,10 @@ class BGPConfigDaemon:
 
     def __replay_table_entry(self, table, key, data):
         key = self.config_db.serialize_key(key)
+        if table == 'BRIDGE_PORT_PROTECTION':
+            self.bridge_port_protection_handler(table, key, data)
+            return
+
         key = self.__validate_bgp_table_input(table, key, data)
         if key is None:
             return
@@ -2511,6 +2516,7 @@ class BGPConfigDaemon:
             ('BGP_GLOBALS_EVPN_VNI', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
+            ('BRIDGE_PORT_PROTECTION', self.bridge_port_protection_handler),
             ('BFD_PEER', self.bfd_handler),
             ('NEIGHBOR_SET', self.bgp_table_handler_common),
             ('NEXTHOP_SET', self.bgp_table_handler_common),
@@ -2570,6 +2576,19 @@ class BGPConfigDaemon:
         else:
             syslog.syslog(syslog.LOG_ERR, 'Ignore invalid DEVICE_METADATA bgp_asn: {!r}'.format(
                 data['bgp_asn']))
+
+    def bridge_port_protection_handler(self, table, key, data):
+        if not isinstance(key, str) or re.fullmatch(r'PortChannel[0-9]{1,4}', key) is None:
+            syslog.syslog(syslog.LOG_ERR, 'bridge-port protection requires a PortChannel: {!r}'.format(key))
+            return
+
+        # An empty policy can use schema defaults. The connector sends None on deletion.
+        prefix = 'no ' if data is None else ''
+        command = [
+            'vtysh', '-c', 'configure terminal', '-c', 'interface {}'.format(key),
+            '-c', '{}evpn mh bridge-port-protection'.format(prefix)
+        ]
+        self.__run_command(table, command, ['zebra'])
 
     def bfd_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](bfd) value for {} changed to {}'.format(key, data))

@@ -29,6 +29,74 @@ def test_contructor():
     daemon.config_db.pubsub.punsubscribe.assert_called_once()
     assert(daemon.config_db.sub_thread.is_alive() == False)
 
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_bridge_port_protection_runtime_updates(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    table = 'BRIDGE_PORT_PROTECTION'
+    command = ['vtysh', '-c', 'configure terminal', '-c', 'interface PortChannel10']
+
+    handler = dict(daemon.table_handler_list)[table]
+    daemon.subscribe_all()
+    daemon.config_db.subscribe.assert_any_call(table, handler)
+
+    for data in (
+            {},
+            {'protection_mode': 'SOFTWARE', 'admin_mode': 'AUTO'},
+            {'protection_mode': 'SOFTWARE', 'admin_mode': 'PRIMARY'}):
+        run_cmd.reset_mock()
+        handler(table, 'PortChannel10', data)
+        run_cmd.assert_called_once_with(
+            table, command + ['-c', 'evpn mh bridge-port-protection'], True, ['zebra'])
+
+    run_cmd.reset_mock()
+    handler(table, 'PortChannel10', None)
+    run_cmd.assert_called_once_with(
+        table, command + ['-c', 'no evpn mh bridge-port-protection'], True, ['zebra'])
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_bridge_port_protection_rejects_invalid_input(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    table = 'BRIDGE_PORT_PROTECTION'
+    handler = dict(daemon.table_handler_list)[table]
+
+    for key in ("PortChannel10' -c 'exit", 'Ethernet0', 'PortChannel10.100', None):
+        for data in ({'protection_mode': 'SOFTWARE'}, None):
+            handler(table, key, data)
+
+    run_cmd.assert_not_called()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_bridge_port_protection_replays_without_templates(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    table = 'BRIDGE_PORT_PROTECTION'
+    db = MagicMock()
+    db.get_entry.return_value = {
+        'docker_routing_config_mode': 'unified',
+        'use_template_render_for_restore': 'false',
+    }
+    db.get_table.side_effect = lambda name: {
+        table: {'PortChannel10': {'protection_mode': 'SOFTWARE'}},
+    }.get(name, {})
+    db.serialize_key.side_effect = lambda key: key
+
+    with patch('frrcfgd.frrcfgd.ExtConfigDBConnector', return_value=db):
+        BGPConfigDaemon()
+
+    run_cmd.assert_called_once_with(
+        table,
+        ['vtysh', '-c', 'configure terminal', '-c', 'interface PortChannel10',
+         '-c', 'evpn mh bridge-port-protection'],
+        True, ['zebra'])
+
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bgp_key_and_asn_validation(run_cmd):
