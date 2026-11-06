@@ -1,0 +1,118 @@
+From 3ffe7fe1df461b330fab6bde2a0cbb742095e7ef Mon Sep 17 00:00:00 2001
+From: Yash Pandit <ypandit@cisco.com>
+Date: Tue, 15 Sep 2026 16:18:06 -0700
+Subject: [PATCH] libteam: Add configurable LACP fallback timeout
+
+Allow a configurable EXPIRED-to-DEFAULTED timeout when LACP fallback is
+enabled, instead of always using the short forced-fast timeout.
+
+Signed-off-by: Yash Pandit <ypandit@cisco.com>
+---
+ teamd/teamd_runner_lacp.c | 56 ++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 55 insertions(+), 1 deletion(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 42ea2aa..b447ad6 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -203,6 +203,8 @@ struct lacp {
+ #define		LACP_CFG_DFLT_FAST_RATE false
+ 		bool fallback;
+ #define		LACP_CFG_DFLT_FALLBACK false
++		uint16_t fallback_timeout;
++#define		LACP_CFG_DFLT_FALLBACK_TIMEOUT 90
+ 		int min_ports;
+ #define		LACP_CFG_DFLT_MIN_PORTS 1
+ #define		LACP_CFG_DFLT_MIN_PORTS_MAX 1024
+@@ -551,6 +553,22 @@ static int lacp_load_config(struct teamd_context *ctx, struct lacp *lacp)
+ 		lacp->cfg.fallback = LACP_CFG_DFLT_FALLBACK;
+ 	teamd_log_dbg(ctx, "Using fallback \"%d\".", lacp->cfg.fallback);
+ 
++
++	if (!lacp->cfg.fallback) {
++		lacp->cfg.fallback_timeout = 0;
++	} else {
++		err = teamd_config_int_get(ctx, &tmp, "$.runner.fallback_timeout");
++		if (err) {
++			lacp->cfg.fallback_timeout = LACP_CFG_DFLT_FALLBACK_TIMEOUT;
++		} else if (tmp < 1 || tmp > 300) {
++			teamd_log_err("\"fallback_timeout\" value is out of its limits (1-300s).");
++			return -EINVAL;
++		} else {
++			lacp->cfg.fallback_timeout = (uint16_t) tmp;
++		}
++	}
++	teamd_log_dbg(ctx, "Using fallback_timeout \"%u\" s.", lacp->cfg.fallback_timeout);
++
+ 	err = teamd_config_int_get(ctx, &tmp, "$.runner.min_ports");
+ 	if (err) {
+ 		lacp->cfg.min_ports = LACP_CFG_DFLT_MIN_PORTS;
+@@ -1251,6 +1269,23 @@ static int lacp_port_timeout_set(struct lacp_port *lacp_port, bool fast_forced)
+ 	return 0;
+ }
+ 
++static int lacp_port_expired_timeout_set(struct lacp_port *lacp_port, uint32_t ms)
++{
++	int err;
++	struct timespec ts;
++
++	ms_to_timespec(&ts, ms);
++	err = teamd_loop_callback_timer_set(lacp_port->ctx,
++					    LACP_TIMEOUT_CB_NAME,
++					    lacp_port, NULL, &ts);
++	if (err) {
++		teamd_log_err("Failed to set fallback timeout timer: %s",
++			      strerror(-err));
++		return err;
++	}
++	return 0;
++}
++
+ static int lacp_port_periodic_set(struct lacp_port *lacp_port)
+ {
+ 	int err;
+@@ -1413,7 +1448,12 @@ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 		lacp_port->last_received_lacpdu_version = 0x01;
+ 		teamd_loop_callback_disable(lacp_port->ctx,
+ 					    LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp_port->lacp);
+-		lacp_port_timeout_set(lacp_port, true);
++
++		if (lacp_port->lacp->cfg.fallback && lacp_port->lacp->cfg.fallback_timeout)
++			lacp_port_expired_timeout_set(lacp_port,
++						      (uint32_t) lacp_port->lacp->cfg.fallback_timeout * 1000);
++		else
++			lacp_port_timeout_set(lacp_port, true);
+ 		teamd_loop_callback_enable(lacp_port->ctx,
+ 					   LACP_TIMEOUT_CB_NAME, lacp_port);
+ 		break;
+@@ -2188,6 +2228,16 @@ static int lacp_state_fallback_get(struct teamd_context *ctx,
+ 	return 0;
+ }
+ 
++static int lacp_state_fallback_timeout_get(struct teamd_context *ctx,
++				   struct team_state_gsc *gsc,
++				   void *priv)
++{
++	struct lacp *lacp = priv;
++
++	gsc->data.int_val = lacp->cfg.fallback_timeout;
++	return 0;
++}
++
+ static int lacp_state_select_policy_get(struct teamd_context *ctx,
+ 					struct team_state_gsc *gsc,
+ 					void *priv)
+@@ -2379,6 +2429,11 @@ static const struct teamd_state_val lacp_state_vals[] = {
+ 		.type = TEAMD_STATE_ITEM_TYPE_BOOL,
+ 		.getter = lacp_state_fallback_get,
+ 	},
++	{
++		.subpath = "fallback_timeout",
++		.type = TEAMD_STATE_ITEM_TYPE_INT,
++		.getter = lacp_state_fallback_timeout_get,
++	},
+ 	{
+ 		.subpath = "select_policy",
+ 		.type = TEAMD_STATE_ITEM_TYPE_STRING,
+-- 
+2.34.1
