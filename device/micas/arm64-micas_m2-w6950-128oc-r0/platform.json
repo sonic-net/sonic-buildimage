@@ -1,0 +1,20 @@
+{
+    "chassis": {
+        "name": "M2-W6950-128OC-BMC",
+        "thermal_manager": false,
+        "status_led": {
+            "controllable": true,
+            "colors": ["green", "amber", "off"]
+        },
+        "components": [
+            {
+                "name": "BIOS"
+            }
+        ],
+        "fans": [],
+        "psus": [],
+        "thermals": [],
+        "sfps": []
+    },
+    "interfaces": {}
+}
