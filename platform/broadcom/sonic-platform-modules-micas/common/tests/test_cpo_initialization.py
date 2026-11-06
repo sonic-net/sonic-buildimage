@@ -113,9 +113,10 @@ class TestCpoInitialization(unittest.TestCase):
         data = json.loads(path.read_text(encoding="utf-8"))
         for device in data["devices"].values():
             device["i2c_path"] = str(self.directory)
-        for els in data["platform_data"]["devices"].values():
-            els["els_presence"]["presence_file"] = str(self.presence)
-            els["els_presence"]["presence_offset"] = "0x0"
+        for device in data["devices"].values():
+            if device["device_type"] == "external_laser_source":
+                device["els_presence"]["presence_file"] = str(self.presence)
+                device["els_presence"]["presence_offset"] = "0x0"
         return data
 
     def make_chassis(self, data):
@@ -160,7 +161,23 @@ class TestCpoInitialization(unittest.TestCase):
             self.assertEqual(cpo.get_name(), name)
             self.assertEqual(cpo.oe.bank, config["associated_devices"][0]["bank"])
             self.assertEqual(cpo.hardware_id.oe_id, OeId.BROADCOM_BAILLY)
-            self.assertEqual(cpo.oe.base_page, data["platform_data"]["devices"][config["associated_devices"][1]["device_id"]]["base_page"])
+            self.assertEqual(cpo.oe.base_page, data["devices"][config["associated_devices"][1]["device_id"]]["base_page"])
+
+    def test_els_addressing_and_presence_are_loaded_from_device(self):
+        data = self.topology()
+        self.assertNotIn("devices", data["platform_data"])
+        chassis = self.make_chassis(data)
+        self.assertTrue(chassis._cpo_initialized)
+        for name, config in data["interfaces"].items():
+            index = int(self.device_info.get_platform_json_data.return_value[
+                "interfaces"][name]["index"].split(",")[0])
+            cpo = chassis.get_cpo(index)
+            els_name = config["associated_devices"][1]["device_id"]
+            els_config = data["devices"][els_name]
+            self.assertEqual(cpo.elsfp.base_page, els_config["base_page"])
+            self.assertEqual(cpo.oe.base_page, els_config["base_page"])
+            self.assertEqual(cpo.elsfp._presence_config, els_config["els_presence"])
+            self.assertTrue(cpo.elsfp.get_presence())
 
     def test_hook_initializes_before_board_hal_without_double_construction(self):
         data = self.topology()

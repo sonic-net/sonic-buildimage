@@ -667,8 +667,6 @@ class Chassis(ChassisBase):
     def _init_port_mappings(self):
         """Construct platform objects from HLD associations and physical port data."""
         platform_interfaces = (device_info.get_platform_json_data() or {}).get("interfaces", {})
-        extensions = self._cpo_platform_data.get("devices", {})
-        extensions = {name.lower(): value for name, value in extensions.items()}
         port_extensions = self._cpo_platform_data.get("interfaces", {})
         ports = {}
         for name, config in self._ports_config.items():
@@ -735,7 +733,7 @@ class Chassis(ChassisBase):
                 els_name, els_bank = associations["external_laser_source"]
                 oe_config = self._cpo_devices[oe_name]
                 hardware_info = self._cpo_hardware_info
-                els_config = dict(self._cpo_devices[els_name], **extensions.get(els_name, {}))
+                els_config = self._cpo_devices[els_name]
                 oe = Oe(int(oe_name[2:]), oe_config, hardware_info, bank=oe_bank,
                              base_page=els_config.get("base_page", 0))
                 oe_devices.setdefault(oe_name, oe)

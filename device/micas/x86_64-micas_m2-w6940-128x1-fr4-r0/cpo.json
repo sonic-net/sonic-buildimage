@@ -54,112 +54,240 @@
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-24/24-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-24/24-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "8"
+            }
         },
         "ELS1": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-24/24-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-24/24-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "9"
+            }
         },
         "ELS2": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-25/25-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-25/25-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "10"
+            }
         },
         "ELS3": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-25/25-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-25/25-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "11"
+            }
         },
         "ELS4": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-26/26-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-26/26-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "12"
+            }
         },
         "ELS5": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-26/26-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-26/26-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "13"
+            }
         },
         "ELS6": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-27/27-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-27/27-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "14"
+            }
         },
         "ELS7": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-27/27-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-27/27-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "15"
+            }
         },
         "ELS8": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-28/28-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-28/28-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "24"
+            }
         },
         "ELS9": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-28/28-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-28/28-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "25"
+            }
         },
         "ELS10": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-29/29-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-29/29-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "26"
+            }
         },
         "ELS11": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-29/29-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-29/29-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "27"
+            }
         },
         "ELS12": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-30/30-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-30/30-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "28"
+            }
         },
         "ELS13": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-30/30-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-30/30-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "29"
+            }
         },
         "ELS14": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-31/31-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-31/31-0050",
+            "base_page": 0,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "30"
+            }
         },
         "ELS15": {
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
             "laser_to_asic_lane_mapping": {},
-            "i2c_path": "/sys/bus/i2c/devices/i2c-31/31-0050"
+            "i2c_path": "/sys/bus/i2c/devices/i2c-31/31-0050",
+            "base_page": 4,
+            "els_presence": {
+                "presence_file": "/dev/fpga1",
+                "presence_offset": "0x64",
+                "presence_len": "4",
+                "presence_value": "0",
+                "presence_bit": "31"
+            }
         }
     },
     "interfaces": {
@@ -934,168 +1062,6 @@
     },
     "platform_data": {
         "cpo_eeprom_mode": "joint",
-        "devices": {
-            "ELS0": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "8"
-                }
-            },
-            "ELS1": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "9"
-                }
-            },
-            "ELS2": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "10"
-                }
-            },
-            "ELS3": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "11"
-                }
-            },
-            "ELS4": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "12"
-                }
-            },
-            "ELS5": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "13"
-                }
-            },
-            "ELS6": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "14"
-                }
-            },
-            "ELS7": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "15"
-                }
-            },
-            "ELS8": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "24"
-                }
-            },
-            "ELS9": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "25"
-                }
-            },
-            "ELS10": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "26"
-                }
-            },
-            "ELS11": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "27"
-                }
-            },
-            "ELS12": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "28"
-                }
-            },
-            "ELS13": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "29"
-                }
-            },
-            "ELS14": {
-                "base_page": 0,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "30"
-                }
-            },
-            "ELS15": {
-                "base_page": 4,
-                "els_presence": {
-                    "presence_file": "/dev/fpga1",
-                    "presence_offset": "0x64",
-                    "presence_len": "4",
-                    "presence_value": "0",
-                    "presence_bit": "31"
-                }
-            }
-        },
         "interfaces": {
             "Ethernet0": {
                 "laser_ids": [
