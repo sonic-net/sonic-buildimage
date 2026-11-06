@@ -1,0 +1,101 @@
+{
+    "version": "1.0",
+    "sonic_version": "master",
+    "description": "Common SONiC alarm catalog — PSU_INFO and FAN_INFO checks. Per-platform files declare additional tables/checks in alarm_tables and are merged on top of this baseline.",
+    "alarm_tables": [
+        {
+            "type": "statedb",
+            "table_name": "PSU_INFO",
+            "object_key_pattern": "PSU_INFO|*",
+            "checks": [
+                {
+                    "check_name": "psu_presence",
+                    "alarm_id": "PSU_MISSING",
+                    "severity": "Critical",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Absent",
+                    "condition": {"field": "presence", "operator": "==", "value": "false"}
+                },
+                {
+                    "check_name": "power_status",
+                    "alarm_id": "PSU_POWER_BAD",
+                    "severity": "Critical",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Power Not OK",
+                    "condition": {"field": "status", "operator": "==", "value": "false"}
+                },
+                {
+                    "check_name": "voltage_out_of_range",
+                    "alarm_id": "PSU_VOLTAGE_OOR",
+                    "severity": "Major",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Voltage Out of Range",
+                    "condition": {"field": "voltage_out_of_range", "operator": "==", "value": "True"}
+                },
+                {
+                    "check_name": "current_out_of_range",
+                    "alarm_id": "PSU_CURRENT_OOR",
+                    "severity": "Major",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Current Out of Range",
+                    "condition": {"field": "current_out_of_range", "operator": "==", "value": "True"}
+                },
+                {
+                    "check_name": "fan_fault",
+                    "alarm_id": "PSU_FAN_FAULT",
+                    "severity": "Major",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Fan Fault",
+                    "condition": {"field": "fan_fault", "operator": "==", "value": "True"}
+                },
+                {
+                    "check_name": "temperature_fault",
+                    "alarm_id": "PSU_TEMP_FAULT",
+                    "severity": "Major",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Temperature Fault",
+                    "condition": {"field": "temp_fault", "operator": "==", "value": "True"}
+                }
+            ]
+        },
+        {
+            "type": "statedb",
+            "table_name": "FAN_INFO",
+            "object_key_pattern": "FAN_INFO|*",
+            "checks": [
+                {
+                    "check_name": "fan_presence",
+                    "alarm_id": "FAN_MISSING",
+                    "severity": "Major",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Absent",
+                    "condition": {"field": "presence", "operator": "==", "value": "false"}
+                },
+                {
+                    "check_name": "fan_status",
+                    "alarm_id": "FAN_FAULT",
+                    "severity": "Major",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Fault",
+                    "condition": {"field": "status", "operator": "==", "value": "false"}
+                },
+                {
+                    "check_name": "fan_under_speed",
+                    "alarm_id": "FAN_UNDER_SPEED",
+                    "severity": "Minor",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Under Speed",
+                    "condition": {"field": "is_under_speed", "operator": "==", "value": "True"}
+                },
+                {
+                    "check_name": "fan_over_speed",
+                    "alarm_id": "FAN_OVER_SPEED",
+                    "severity": "Minor",
+                    "category": "Hardware",
+                    "description_template": "{object_name} Over Speed",
+                    "condition": {"field": "is_over_speed", "operator": "==", "value": "True"}
+                }
+            ]
+        }
+    ]
+}
