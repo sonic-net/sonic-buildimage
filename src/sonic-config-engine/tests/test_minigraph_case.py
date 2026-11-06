@@ -717,7 +717,8 @@ class TestMinigraphPortSources(TestCase):
                 ('db-result', True, None, {'Ethernet20'}, saved_breakout),
                 ('selection', True, {'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}},
                  {'Ethernet20'}, saved_breakout),
-                ('breakout-selection', True, {'Ethernet0': {'default_brkout_mode': '2x50G'}},
+                ('breakout-selection', True, {'Ethernet0': {'default_brkout_mode': '2x50G'},
+                                            'Ethernet2': {'fec': 'rs'}},
                  {'Ethernet0', 'Ethernet2'}, {'Ethernet0': {'brkout_mode': '2x50G'}}),
                 ('breakout-selection-explicit-platform', True,
                  {'Ethernet0': {'default_brkout_mode': '2x50G'}},
@@ -747,6 +748,8 @@ class TestMinigraphPortSources(TestCase):
                 self.assertEqual(set(result['PORT']), expected_ports)
                 self.assertEqual(result.get('BREAKOUT_CFG'), expected_breakout)
                 self.assertEqual('BREAKOUT_CFG' in result, expected_breakout is not None)
+                if source == 'breakout-selection':
+                    self.assertEqual(result['PORT']['Ethernet2']['fec'], 'rs')
                 self.assertEqual(set(result['DEVICE_NEIGHBOR']), {'Ethernet0'} & expected_ports)
                 members = {'PortChannel01|Ethernet20'} if 'Ethernet20' in expected_ports else set()
                 if source == 'no-config':

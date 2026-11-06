@@ -195,8 +195,7 @@ def get_port_config_source(hwsku=None, platform=None, port_config_file=None, hws
     return None, port_config_file, hwsku_json_file
 
 
-def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None,
-                    allow_minimum_breakout=True):
+def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
     ports, port_config_file, hwsku_json_file = get_port_config_source(
         hwsku, platform, port_config_file, hwsku_config_file, asic_name)
     if ports:
@@ -210,9 +209,6 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
 
     # Read from 'platform.json' file
     if port_config_file.endswith('.json'):
-        if not hwsku_json_file and not allow_minimum_breakout:
-            return ({}, {}, {})
-
         return parse_platform_json_file(hwsku_json_file, port_config_file,
                                         validate_interface_names=hwsku_config_file is not None)
 
@@ -642,6 +638,8 @@ def parse_breakout_mode(hwsku_json_file):
         raise Exception("INTF_KEY is not present in hwsku_dict")
 
     for intf in hwsku_dict[INTF_KEY]:
+        if BRKOUT_MODE not in hwsku_dict[INTF_KEY][intf]:
+            continue
         brkout_table[intf] = {}
         brkout_table[intf][CUR_BRKOUT_MODE] = hwsku_dict[INTF_KEY][intf][BRKOUT_MODE]
     return brkout_table

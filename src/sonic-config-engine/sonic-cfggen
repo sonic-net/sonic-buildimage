@@ -557,7 +557,7 @@ def main():
         if args.port_config is None:
             args.port_config = device_info.get_path_to_port_config_file(hwsku, asic_id)
         load_namespace_config()
-        (ports, _, _) = get_port_config(hwsku, platform, args.port_config, hwsku_config_file=args.hwsku_config, asic_name=asic_name, allow_minimum_breakout=True)
+        (ports, _, _) = get_port_config(hwsku, platform, args.port_config, hwsku_config_file=args.hwsku_config, asic_name=asic_name)
         if ports is None:
             print('Failed to get port config', file=sys.stderr)
             sys.exit(1)
@@ -582,15 +582,9 @@ def main():
             sys.exit(1)
 
     if args.minigraph is not None:
-        minigraph = args.minigraph
         load_namespace_config()
-        if platform:
-            if args.port_config is not None:
-                deep_update(data, parse_xml(minigraph, platform, args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
-            else:
-                deep_update(data, parse_xml(minigraph, platform, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
-        else:
-            deep_update(data, parse_xml(minigraph, port_config_file=args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
+        deep_update(data, parse_xml(args.minigraph, platform, args.port_config,
+                                    asic_name=asic_name, hwsku_config_file=args.hwsku_config))
 
     if args.device_description is not None:
         deep_update(data, parse_device_desc_xml(args.device_description))

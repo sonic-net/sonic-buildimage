@@ -381,8 +381,6 @@ class TestCfgGenPlatformJson(TestCase):
 
     def test_minimum_breakout_is_shared_by_default(self):
         with port_config_env(self.platform_json):
-            self.assertEqual(
-                get_port_config(hwsku='TestHwsku', allow_minimum_breakout=False), ({}, {}, {}))
             ports, _, _ = get_port_config(hwsku='TestHwsku')
             self.assertEqual(len(ports), 37)
             self.assertEqual(ports['Ethernet0'], {
@@ -437,10 +435,12 @@ class TestCfgGenPlatformJson(TestCase):
             selection = os.path.join(directory, 'selection.json')
             with open(selection, 'w') as config:
                 json.dump({'interfaces': {
-                    'Ethernet4': {'default_brkout_mode': '2x50G', 'autoneg': 'off'}}}, config)
+                    'Ethernet4': {'default_brkout_mode': '2x50G', 'autoneg': 'off'},
+                    'Ethernet6': {'fec': 'rs'}}}, config)
             ports, _, _ = get_port_config(hwsku='TestHwsku', hwsku_config_file=selection)
             self.assertEqual(set(ports), {'Ethernet4', 'Ethernet6'})
             self.assertTrue(all(port['autoneg'] == 'off' for port in ports.values()))
+            self.assertEqual(ports['Ethernet6']['fec'], 'rs')
             self.assertEqual(get_breakout_mode(hwsku='TestHwsku', hwsku_config_file=selection),
                              {'Ethernet4': {'brkout_mode': '2x50G'}})
 

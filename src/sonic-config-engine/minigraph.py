@@ -2069,13 +2069,17 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         hwsku_dir = os.path.join(HOST_DEVICE_PATH, platform, hwsku)
         base_hwsku_dir = os.path.join(HOST_DEVICE_PATH, platform, hwsku.rsplit('-', 1)[0])
         if not os.path.lexists(hwsku_dir) and os.path.isdir(base_hwsku_dir):
-            os.symlink(base_hwsku_dir, hwsku_dir)
+            try:
+                os.symlink(base_hwsku_dir, hwsku_dir)
+            except OSError as error:
+                print("Warning: cannot create HWSKU symlink '{}' -> '{}': {}; continuing without it".format(
+                    hwsku_dir, base_hwsku_dir, error), file=sys.stderr)
 
     db_ports, port_file, hwsku_file = get_port_config_source(hwsku, platform, port_config_file, hwsku_config_file, asic_name)
     preserve_port_layout = (
         not db_ports and port_file is not None and port_file.endswith('.json')
         and (hwsku_file is None or hwsku_config_file is not None))
-    (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file, allow_minimum_breakout=True)
+    (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
     has_port_config = bool(ports) or port_config_file is not None or hwsku_config_file is not None
     if not has_port_config:
         asic_id = None if asic_name is None else str(get_asic_id_from_name(asic_name))

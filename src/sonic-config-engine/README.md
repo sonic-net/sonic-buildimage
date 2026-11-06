@@ -50,10 +50,9 @@ Passing `-S` uses that selection instead of saved `PORT` rows. Other callers of
 the shared reader can still reuse CONFIG_DB data when no file paths are supplied
 and the HWSKU matches, or no HWSKU was requested.
 
-Minimum generation is enabled by default for all `get_port_config()` callers,
+Minimum generation is enabled for all `get_port_config()` callers,
 including cfggen, minigraph, and runtime/library consumers. Eligible CONFIG_DB
-data and explicit or installed selections retain precedence. Callers can pass
-`allow_minimum_breakout=False` to retain the empty result when no selection is found.
+data and explicit or installed selections retain precedence.
 Consumers that use an empty result to retry another port-config source now receive
 generated mappings instead; their source precedence may need a separate update.
 
@@ -74,3 +73,4 @@ XML overrides. References between configuration tables are not fully checked.
 Minigraph links a missing HWSKU directory to the
 shipped base SKU directory, named without the final hyphen-separated suffix,
 when that base directory exists. Existing paths are left untouched.
+If creating the link fails, minigraph warns and continues parsing.
