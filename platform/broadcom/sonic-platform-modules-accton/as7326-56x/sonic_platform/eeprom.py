@@ -12,3 +12,4 @@ class Eeprom(PddfEeprom):
         PddfEeprom.__init__(self, pddf_data, pddf_plugin_data)
 
     # Provide the functions/variables below for which implementation is to be overwritten
+
