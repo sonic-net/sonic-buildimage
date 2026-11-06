@@ -120,11 +120,13 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
     {% set options = options ~ ' Device="' ~ device ~ '"'-%}
 {% endif -%}
 
+{% if port >= 1 and port <= 65535 -%}
 {% if filter %}
 :msg, {{ fmodifier }}ereregex, "{{ regex | replace('\n', '') | replace('\r', '') | replace('"', '\\"') }}"
 {% endif %}
 *.{{ severity }}
 action(type="omfwd" Target="{{ server | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000"{{ options }})
+{% endif -%}
 {% endfor %}
 
 {% if syslog_counter and syslog_counter == "true" %}
