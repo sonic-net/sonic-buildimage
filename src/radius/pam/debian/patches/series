@@ -4,3 +4,4 @@
 0004-fix-blastradius.patch 
 0005-peap-validation-and-bounds.patch
 0006-bound-peap-response-wait.patch
+0007-mschapv2-md4-error-handling.patch
