@@ -1,0 +1,92 @@
+{
+    "interval": 2,
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "True",
+        "fan_speed_when_suspend": "50"
+    },
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "psu_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "any fantray absence",
+            "conditions": [
+                {
+                    "type": "fantray.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "more than one fan rotor failed",
+            "conditions": [
+                {
+                    "type": "fan.rotor.more_than_one.failed"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any psu absence",
+            "conditions": [
+                {
+                    "type": "psu.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "thermal control algorithm",
+            "conditions": [
+                {
+                    "type": "psu.all.presence"
+                },
+                {
+                    "type": "fantray.all.presence"
+                },
+                {
+                    "type": "fan.rotor.less_than_two.failed"
+                },
+                {
+                    "type": "thermal.all.below.high_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "thermal_log_level": 5,
+                    "type": "thermal.temp_check_and_fsc_algo_control",
+                    "cpu_pid_params": [96, 1.5, 0.2, 0.5],
+                    "switch_pid_params": [100, 3.5, 0.3, 0.5],
+                    "f2b_linear_params": [43, 50, 3, 50, 100],
+                    "b2f_linear_params": [27, 40, 3, 60, 100]
+                }
+            ]
+        }
+    ]
+}

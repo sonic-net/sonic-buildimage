@@ -1,0 +1,15 @@
+{
+    "chassis": {
+            "DS5001": {
+                    "component": {
+                        "BIOS": {},
+                        "ONIE": {},
+                        "FPGA": {},
+                        "CPLD COMe": {},
+                        "CPLD SYS": {},
+                        "CPLD FAN": {},
+                        "SSD": {}
+                    }
+            }
+    }
+  }
