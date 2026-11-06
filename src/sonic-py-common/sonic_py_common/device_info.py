@@ -603,7 +603,9 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
     """
 
     # Preserve legacy INI profiles unless an installed JSON selection takes priority.
-    if os.path.isfile(hwsku_json_file) or not os.path.isfile(port_config_file):
+    # Multi-ASIC INI files are per ASIC, so only single-ASIC devices fall back when one is missing.
+    if (os.path.isfile(hwsku_json_file)
+            or (not is_multi_npu() and not os.path.isfile(port_config_file))):
         if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
             json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
             platform_data = json.loads(open(json_file).read())

@@ -88,13 +88,14 @@ class TestDeviceInfo(object):
         with mock.patch.dict(os.environ, {}, clear=True):
             yield
 
-    @pytest.mark.parametrize("files,expected_file,asic", [
-        ([], None, None),
-        (["hwsku.json"], None, None),
-        (["platform.json"], "platform.json", None),
-        (["hwsku.json", "platform.json"], "platform.json", None),
-        (["platform.json", "port_config.ini"], "port_config.ini", "0"),
-        (["hwsku.json", "platform.json", "port_config.ini"], "platform.json", "0"),
+    @pytest.mark.parametrize("files,expected_file,asic,multi_npu", [
+        ([], None, None, False),
+        (["hwsku.json"], None, None, False),
+        (["platform.json"], "platform.json", None, False),
+        (["platform.json"], None, None, True),
+        (["hwsku.json", "platform.json"], "platform.json", None, False),
+        (["platform.json", "port_config.ini"], "port_config.ini", "0", False),
+        (["hwsku.json", "platform.json", "port_config.ini"], "platform.json", "0", False),
     ])
     @mock.patch("sonic_py_common.device_info.get_platform", return_value="test-platform")
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir", return_value="platform")
@@ -103,7 +104,7 @@ class TestDeviceInfo(object):
                 read_data='{"interfaces": {"Ethernet0": {}}}')
     def test_port_config_file_selection(
             self, mock_open, mock_isfile, mock_platform_dir, mock_platform,
-            files, expected_file, asic):
+            files, expected_file, asic, multi_npu):
         hwsku_dir = os.path.join("platform", "TestHwsku")
         ini_dir = os.path.join(hwsku_dir, asic) if asic else hwsku_dir
         paths = {
@@ -114,7 +115,8 @@ class TestDeviceInfo(object):
         }
         mock_isfile.side_effect = {paths[filename] for filename in files}.__contains__
 
-        assert device_info.get_path_to_port_config_file("TestHwsku", asic) == paths[expected_file]
+        with mock.patch.object(device_info, "is_multi_npu", return_value=multi_npu):
+            assert device_info.get_path_to_port_config_file("TestHwsku", asic) == paths[expected_file]
 
     def test_get_machine_info(self):
         with mock.patch("os.path.isfile") as mock_isfile:

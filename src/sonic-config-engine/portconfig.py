@@ -199,14 +199,16 @@ def get_port_config_source(hwsku=None, platform=None, port_config_file=None, hws
     return None, port_config_file, hwsku_json_file
 
 
-def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
-    ports, port_config_file, hwsku_json_file = get_port_config_source(
+def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None, source=None):
+    ports, port_config_file, hwsku_json_file = source or get_port_config_source(
         hwsku, platform, port_config_file, hwsku_config_file, asic_name)
     if ports:
+        ports = ast.literal_eval(json.dumps(ports))
         port_alias_map = {}
         port_alias_asic_map = {}
-        for intf_name, port in ports.items():
-            _add_port_aliases(intf_name, port, port_alias_map, port_alias_asic_map)
+        for intf_name in ports.keys():
+            if "alias" in ports[intf_name]:
+                port_alias_map[ports[intf_name]["alias"]] = intf_name
         return (ports, port_alias_map, port_alias_asic_map)
     if not port_config_file:
         return ({}, {}, {})
@@ -255,15 +257,6 @@ def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_confi
 
     return system_ports
 
-def _add_port_aliases(name, port, port_alias_map, port_alias_asic_map):
-    alias = port.get('alias', name)
-    port_alias_map[alias] = name
-    if 'asic_port_name' in port:
-        if port['asic_port_name'] != name:
-            port_alias_map[port['asic_port_name']] = name
-        port_alias_asic_map[alias] = port['asic_port_name'].strip()
-
-
 def parse_port_config_file(port_config_file):
     ports = {}
     port_alias_map = {}
@@ -288,7 +281,15 @@ def parse_port_config_file(port_config_file):
                 data[titles[i]] = item
             data.setdefault('alias', name)
             ports[name] = data
-            _add_port_aliases(name, data, port_alias_map, port_alias_asic_map)
+            port_alias_map[data['alias']] = name
+            # asic_port_name to sonic_name mapping also included in
+            # port_alias_map
+            if (('asic_port_name' in data) and
+                (data['asic_port_name'] != name)):
+                port_alias_map[data['asic_port_name']] = name
+            # alias to asic_port_name mapping
+            if 'asic_port_name' in data:
+                port_alias_asic_map[data['alias']] = data['asic_port_name'].strip()
     return (ports, port_alias_map, port_alias_asic_map)
 
 # Columns a system port config file must provide for VOQ SYSTEM_PORT
@@ -587,7 +588,8 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
             continue
 
         # take default_brkout_mode from hwsku.json
-        brkout_mode = hwsku_dict[INTF_KEY][intf].get(BRKOUT_MODE)
+        entry = hwsku_dict[INTF_KEY][intf]
+        brkout_mode = entry.get(BRKOUT_MODE) if isinstance(entry, dict) else None
 
         child_ports = get_child_ports(intf, brkout_mode, platform_json_file,
                                      select_minimum=not hwsku_json_file)
@@ -616,15 +618,14 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
     return (ports, port_alias_map, port_alias_asic_map)
 
 
-def get_breakout_mode(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
-    db_ports, port_config_file, hwsku_json_file = get_port_config_source(
-        hwsku, platform, port_config_file, hwsku_config_file, asic_name)
-    if db_ports:
-        # Do not reconstruct a mode from files when PORT is already realized.
-        return db_connect_configdb(asic_name).get_table("BREAKOUT_CFG") or None
+def get_breakout_mode(hwsku=None, platform=None, port_config_file=None):
     if not port_config_file:
-        return None
+        port_config_file = device_info.get_path_to_port_config_file(hwsku)
+        if not port_config_file:
+            return None
     if port_config_file.endswith('.json'):
+        hwsku_json_file = get_hwsku_file_name(hwsku, platform)
+        # Minimum generation has no installed hwsku.json and writes PORT only.
         if not hwsku_json_file:
             return None
 

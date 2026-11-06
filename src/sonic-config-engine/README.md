@@ -41,8 +41,8 @@ not just `-p` and `-S`.
 
 When using JSON, `-S` takes priority over installed `hwsku.json`; without either,
 cfggen generates the minimum layout. Without `-p`, cfggen chooses `platform.json`
-with a nonempty `interfaces` section if installed HWSKU JSON exists or no matching
-`port_config.ini` exists. Otherwise it uses the INI file. `-S` does not affect
+with a nonempty `interfaces` section if installed HWSKU JSON exists, or if no matching
+`port_config.ini` exists on a single-ASIC device. Otherwise it uses the INI file. `-S` does not affect
 INI files; pass `-p` to choose JSON instead.
 
 With `-k`, cfggen looks for a port configuration file before checking CONFIG_DB.
@@ -62,16 +62,16 @@ last alphabetically. A cage without a supported one-port mode causes an error,
 even if multi-port modes exist. This requires a `platform.json` with breakout modes.
 Supply an explicit selection for cages without a supported one-port mode.
 
-Fallback generates `PORT` but does not create `BREAKOUT_CFG`. Consequently,
-`config interface breakout` is unavailable on devices configured from fallback
-output. External and installed selections provide their `BREAKOUT_CFG` entries
-in both direct and minigraph-only generation.
+Minigraph, `-S` selections, and minimum generation write `PORT` only, never
+`BREAKOUT_CFG`. Only direct `-k` generation from an installed `hwsku.json`
+without `-S` keeps writing `BREAKOUT_CFG`. Consequently, `config interface breakout`
+is unavailable on devices configured from other output.
 
 Minigraph preserves speeds, lanes, and supplied FEC/autonegotiation settings from
 minimum generation and explicit JSON selections. Installed profiles, INI files,
 and DB-backed ports retain their existing XML overrides.
 When a port configuration is available, local checks skip unavailable interface
-parents, channel/VLAN bindings, neighbors, and fine-grained ECMP members;
+parents, channel/VLAN/ACL bindings, neighbors, and fine-grained ECMP members;
 VLAN definitions are retained.
 These checks do not infer replacement topology or replace full schema validation.
 Minigraph links a missing HWSKU directory to the

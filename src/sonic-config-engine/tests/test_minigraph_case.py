@@ -724,6 +724,7 @@ class TestMinigraphPortSources(TestCase):
                 self.assertEqual(len(pcs), channels)
                 self.assertLessEqual({member for _, member in pc_members}, ports.keys())
                 self.assertLessEqual({member for _, member in members}, ports.keys() | pcs.keys())
+                self.assertEqual('DATAACL' in acls, bool(pcs))
                 self.assertEqual(acls.get('DATAACL', {}).get('ports', []), list(pcs))
                 self.assertEqual(acls['SNMP_ACL']['type'], 'CTRLPLANE')
                 for version, content in ecmp.items():
@@ -738,7 +739,6 @@ class TestMinigraphPortSources(TestCase):
         test_dir = os.path.dirname(os.path.realpath(__file__))
         platform_json = os.path.join(test_dir, 'sample_platform.json')
         saved = {'Ethernet20': {'alias': 'saved', 'lanes': '80,81,82,83', 'speed': '100000'}}
-        saved_breakout = {'Ethernet20': {'brkout_mode': '1x100G[40G]'}}
         with open(platform_json) as config:
             minimum_ports = set(json.load(config)['interfaces'])
         selection_data = {'Ethernet0': {'default_brkout_mode': '2x50G', 'fec': 'rs', 'autoneg': 'off'},
@@ -753,25 +753,22 @@ class TestMinigraphPortSources(TestCase):
                 dpg.remove(existing)
             dpg.append(topology.find(f'.//{{{minigraph.ns}}}{section}'))
         ET.SubElement(graph.getroot(), QName(minigraph.ns, 'LinkMetadataDeclaration'))
-        for source, platform, selection, expected_ports, expected_breakout in (
-                ('platform', True, None, minimum_ports, None),
-                ('empty-db', True, None, minimum_ports, None),
-                ('db-mismatch', True, None, minimum_ports, None),
-                ('db-result', True, None, {'Ethernet20'}, saved_breakout),
-                ('selection', True, {'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}},
-                 {'Ethernet20'}, saved_breakout),
-                ('breakout-selection', True, selection_data,
-                 {'Ethernet0', 'Ethernet2'}, {'Ethernet0': {'brkout_mode': '2x50G'}}),
+        for source, platform, selection, expected_ports in (
+                ('platform', True, None, minimum_ports),
+                ('empty-db', True, None, minimum_ports),
+                ('db-mismatch', True, None, minimum_ports),
+                ('db-result', True, None, {'Ethernet20'}),
+                ('selection', True, {'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}}, {'Ethernet20'}),
+                ('breakout-selection', True, selection_data, {'Ethernet0', 'Ethernet2'}),
                 ('breakout-selection-explicit-platform', True,
-                 {'Ethernet0': {'default_brkout_mode': '2x50G'}},
-                 {'Ethernet0', 'Ethernet2'}, {'Ethernet0': {'brkout_mode': '2x50G'}}),
-                ('empty-selection', True, {}, set(), {}),
-                ('empty-installed', True, {}, set(), {}),
-                ('no-config', False, None, {'Ethernet0'}, None)):
+                 {'Ethernet0': {'default_brkout_mode': '2x50G'}}, {'Ethernet0', 'Ethernet2'}),
+                ('empty-selection', True, {}, set()),
+                ('empty-installed', True, {}, set()),
+                ('no-config', False, None, {'Ethernet0'})):
             config_db = mock.Mock()
             config_db.get_table.side_effect = {
                 'PORT': {} if source == 'empty-db' else saved,
-                'BREAKOUT_CFG': saved_breakout, 'FABRIC_MONITOR': {}, 'FABRIC_PORT': {}}.__getitem__
+                'FABRIC_MONITOR': {}, 'FABRIC_PORT': {}}.__getitem__
             with self.subTest(source=source), \
                     port_config_env(platform_json if platform else None,
                                     os.path.join(test_dir, 'sample_hwsku.json') if selection else None,
@@ -793,8 +790,7 @@ class TestMinigraphPortSources(TestCase):
                         args += ['-S', selection_file]
                 result = _run_cfggen_cli_json(args)
                 self.assertEqual(set(result['PORT']), expected_ports)
-                self.assertEqual(result.get('BREAKOUT_CFG'), expected_breakout)
-                self.assertEqual('BREAKOUT_CFG' in result, expected_breakout is not None)
+                self.assertNotIn('BREAKOUT_CFG', result)
                 if source == 'breakout-selection':
                     self.assertEqual(result['PORT']['Ethernet2']['fec'], 'rs')
                     self.assertEqual(result['PORT']['Ethernet0']['fec'], 'rs')
@@ -815,7 +811,7 @@ class TestMinigraphPortSources(TestCase):
                         direct = _run_cfggen_cli_json(['-k', 'Force10-S6000'] + args[2:])
                         for name, port in direct['PORT'].items():
                             self.assertLessEqual(port.items(), result['PORT'][name].items())
-                        self.assertEqual(direct.get('BREAKOUT_CFG'), expected_breakout)
+                        self.assertFalse(direct.get('BREAKOUT_CFG'))
                 if source.startswith('breakout-selection'):
                     self.assertEqual(
                         {name: (port['speed'], port['lanes']) for name, port in result['PORT'].items()},
