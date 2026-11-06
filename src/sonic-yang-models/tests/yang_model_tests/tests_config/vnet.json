@@ -43,7 +43,9 @@
                         "vni": "10011",
                         "peer_list": "",
                         "advertise_prefix": "true",
-                        "overlay_dmac": "22:33:44:55:66:77"
+                        "overlay_dmac": "22:33:44:55:66:77",
+                        "evpn_enabled": "true",
+                        "decap_tunnel_list": "vtep1"
                     }
                 ]
              }

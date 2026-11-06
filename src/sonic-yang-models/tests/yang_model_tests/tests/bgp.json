@@ -29,6 +29,13 @@
         "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to an invalid value",
         "eStr": "Invalid value \"invalid value\" in \"advertise-svi-ip\" element."
     },
+    "BGP_NEIGHBOR_EVPN_AF_VALID": {
+        "desc": "Configure BGP neighbor with address_family evpn."
+    },
+    "BGP_NEIGHBOR_NEG_INVALID_AF": {
+        "desc": "Configure BGP neighbor with invalid address_family.",
+        "eStrKey": "Pattern"
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
     },
