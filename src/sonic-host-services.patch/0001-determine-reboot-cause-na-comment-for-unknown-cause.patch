@@ -1,0 +1,53 @@
+Subject: [PATCH] determine-reboot-cause: report N/A (not "Unknown") comment
+
+find_software_reboot_cause() reads the reboot cause from a file, so an
+"Unknown" cause is a different string object than the REBOOT_CAUSE_UNKNOWN
+module constant. The identity comparison ("is not") is therefore always
+true for a file-sourced "Unknown", leaking "Unknown" into the reboot-cause
+history "Comment" column instead of leaving it as "N/A". Use a value
+comparison ("!=") so an unknown software cause yields an N/A comment.
+
+diff --git a/scripts/determine-reboot-cause b/scripts/determine-reboot-cause
+index 608b3e7..d1f1d97 100755
+--- a/scripts/determine-reboot-cause
++++ b/scripts/determine-reboot-cause
+@@ -204,12 +204,12 @@ def determine_reboot_cause():
+         REBOOT_CAUSE_NON_HARDWARE not in hardware_reboot_cause):
+         previous_reboot_cause = hardware_reboot_cause
+         # Check if any software reboot was issued before this hardware reboot happened
+-        if software_reboot_cause is not REBOOT_CAUSE_UNKNOWN:
++        if software_reboot_cause != REBOOT_CAUSE_UNKNOWN:
+             additional_reboot_info = software_reboot_cause
+         elif proc_cmdline_reboot_cause is not None:
+             additional_reboot_info = proc_cmdline_reboot_cause
+     elif proc_cmdline_reboot_cause is not None:
+-        if software_reboot_cause is not REBOOT_CAUSE_UNKNOWN:
++        if software_reboot_cause != REBOOT_CAUSE_UNKNOWN:
+             # Get the reboot cause from REBOOT_CAUSE_FILE
+             previous_reboot_cause = software_reboot_cause
+         else:
+diff --git a/tests/determine-reboot-cause_test.py b/tests/determine-reboot-cause_test.py
+index a46aff2..c87fee1 100644
+--- a/tests/determine-reboot-cause_test.py
++++ b/tests/determine-reboot-cause_test.py
+@@ -179,6 +179,20 @@ class TestDetermineRebootCause(object):
+                     assert previous_reboot_cause == EXPECTED_HARDWARE_REBOOT_CAUSE
+                     assert additional_reboot_info == "N/A"
+ 
++    def test_determine_reboot_cause_hardware_unknown_software_from_file(self):
++        # Regression: find_software_reboot_cause() reads the cause from a file,
++        # so an "Unknown" cause is a DIFFERENT string object than the module
++        # constant.  An identity ("is not") check leaks "Unknown" into the
++        # comment; a value ("!=") check must leave the comment as "N/A".
++        unknown_from_file = "".join(list(REBOOT_CAUSE_UNKNOWN))
++        assert unknown_from_file is not REBOOT_CAUSE_UNKNOWN
++        with mock.patch("determine_reboot_cause.find_proc_cmdline_reboot_cause", return_value=None):
++            with mock.patch("determine_reboot_cause.find_software_reboot_cause", return_value=unknown_from_file):
++                with mock.patch("determine_reboot_cause.find_hardware_reboot_cause", return_value=EXPECTED_HARDWARE_REBOOT_CAUSE):
++                    previous_reboot_cause, additional_reboot_info = determine_reboot_cause.determine_reboot_cause()
++                    assert previous_reboot_cause == EXPECTED_HARDWARE_REBOOT_CAUSE
++                    assert additional_reboot_info == "N/A"
++
+     def test_determine_reboot_cause_software(self):
+         with mock.patch("determine_reboot_cause.find_proc_cmdline_reboot_cause", return_value=None):
+             with mock.patch("determine_reboot_cause.find_software_reboot_cause", return_value=EXPECTED_FIND_SOFTWARE_REBOOT_CAUSE_USER):
