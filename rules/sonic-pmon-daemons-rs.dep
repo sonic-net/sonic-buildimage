@@ -26,12 +26,11 @@ SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files | grep 
 # wrong directory.  DEP_FILES has no such `cd` (Makefile.cache:684) and takes
 # paths from the buildimage root, which is what these are.
 #
-# Only the two directories the daemons compile or import: `sonic_platform_api`
-# is the facade and its stub, `crates` is the trait, the PyO3 bridge and the
-# provider.  The Python daemons' own sources live beside them and are not a
-# dependency of the Rust build.
+# Cargo generates the Rust API from the declarations, generator/templates and
+# Python base classes. Hash those inputs too: generated Rust lives in OUT_DIR
+# and is not available to git ls-files when the cache key is computed.
 CPATH       := $(SRC_PATH)/sonic-platform-common
-DEP_FILES   += $(addprefix $(CPATH)/,$(shell cd $(CPATH) && git ls-files sonic_platform_api crates))
+DEP_FILES   += $(addprefix $(CPATH)/,$(shell cd $(CPATH) && git ls-files sonic_platform_api sonic_platform_base generator crates))
 
 $(SONIC_THERMALCTLD_RS)_CACHE_MODE  := GIT_CONTENT_SHA
 $(SONIC_THERMALCTLD_RS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
