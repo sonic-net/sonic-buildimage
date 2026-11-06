@@ -24,7 +24,14 @@
 {% endif %}
 {% endif %}
 
-module(load="imuxsock" SysSock.RateLimit.Interval="{{ rate_limit_interval|default('300') }}" SysSock.RateLimit.Burst="{{ rate_limit_burst|default('20000') }}") # provides support for local system logging
+{% set interval_text = rate_limit_interval | default('300') | string | trim %}
+{% set interval = interval_text | int(300) if (interval_text | length) <= 10 and interval_text.isdigit() and interval_text == interval_text.encode('ascii', 'ignore').decode('ascii') else 300 %}
+{% set interval = interval if interval <= 2147483647 else 300 %}
+{% set burst_text = rate_limit_burst | default('20000') | string | trim %}
+{% set burst = burst_text | int(20000) if (burst_text | length) <= 10 and burst_text.isdigit() and burst_text == burst_text.encode('ascii', 'ignore').decode('ascii') else 20000 %}
+{% set burst = burst if burst <= 2147483647 else 20000 %}
+
+module(load="imuxsock" SysSock.RateLimit.Interval="{{ interval }}" SysSock.RateLimit.Burst="{{ burst }}") # provides support for local system logging
 #module(load="imklog")   # provides kernel logging support
 #module(load="immark")  # provides --MARK-- message capability
 
