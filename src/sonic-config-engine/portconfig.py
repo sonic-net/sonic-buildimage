@@ -1,4 +1,5 @@
 try:
+    import ast
     import json
     import os
     import re
@@ -126,7 +127,8 @@ def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=No
     if config_db is not None and fabric_port_config_file is None:
        port_data = config_db.get_table("FABRIC_PORT")
        if bool(port_data):
-          return port_data
+          ports = ast.literal_eval(json.dumps(port_data))
+          return ports
 
     if asic_name is not None:
         asic_id = str(get_asic_id_from_name(asic_name))
@@ -172,7 +174,9 @@ def get_port_config_source(hwsku=None, platform=None, port_config_file=None, hws
     
     config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
     # If available, Read from CONFIG DB first
-    if (config_db is not None and port_config_file is None and hwsku_config_file is None
+    if (config_db is not None
+            and port_config_file is None
+            and hwsku_config_file is None
             and (hwsku is None or config_db_hwsku == hwsku)):
         port_data = config_db.get_table("PORT")
         if bool(port_data):
@@ -225,10 +229,12 @@ def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_confi
     if config_db is not None and port_config_file is None and (hwsku is None or config_db_hwsku == hwsku):
         port_data = config_db.get_table("SYSTEM_PORT")
         if bool(port_data):
-            return {
+            port_data_str_keys = {
                 f"{k[0]}|{k[1]}|{k[2]}" if isinstance(k, tuple) else k: v
                 for k, v in port_data.items()
             }
+            sys_ports = ast.literal_eval(json.dumps(port_data_str_keys))
+            return sys_ports
 
     asic_id = None
     if asic_name is not None:
@@ -420,34 +426,40 @@ class BreakoutCfg(object):
         self._properties = properties
         self._lanes = properties ['lanes'].split(',')
         self._indexes = properties ['index'].split(',')
-        self._breakout_mode_entry = [] if select_minimum else self._str_to_entries(bmode)
+        self._breakout_mode_entry = None
         self._breakout_capabilities = None
-        minimum = [None, ([], None)]
-
-        # Find specified breakout mode in port breakout mode capabilities
-        for supported_mode in self._properties['breakout_modes']:
-            entries = self._str_to_entries(supported_mode)
-            aliases = self._properties['breakout_modes'][supported_mode]
-            if isinstance(aliases, str):
-                aliases = [aliases]
-            if select_minimum and (
-                    len(entries) != 1 or entries[0].num_ports != 1 or len(aliases) != 1):
-                continue
-            key = (entries[0].default_speed, supported_mode)
-            if minimum[0] is None or key > minimum[0]:
-                minimum = [key, (entries, aliases)]
-            if not select_minimum and self._breakout_mode_entry == entries:
-                self._breakout_capabilities = aliases
-                break
+        modes = self._properties['breakout_modes']
 
         if select_minimum:
-            self._breakout_mode_entry, self._breakout_capabilities = minimum[1]
+            # Choose the fastest single-port mode; ties go to the greater mode name.
+            best_key = None
+            for supported_mode, aliases in modes.items():
+                entries = self._str_to_entries(supported_mode)
+                if isinstance(aliases, str):
+                    aliases = [aliases]
+                if len(entries) != 1 or entries[0].num_ports != 1 or len(aliases) != 1:
+                    continue
+
+                key = (entries[0].default_speed, supported_mode)
+                if best_key is None or key > best_key:
+                    best_key = key
+                    self._breakout_mode_entry = entries
+                    self._breakout_capabilities = aliases
+            reason = "No single-port breakout mode; an explicit selection is required"
+        else:
+            self._breakout_mode_entry = self._str_to_entries(bmode)
+            # Find specified breakout mode in port breakout mode capabilities
+            for supported_mode, aliases in modes.items():
+                if self._breakout_mode_entry == self._str_to_entries(supported_mode):
+                    if isinstance(aliases, str):
+                        aliases = [aliases]
+                    self._breakout_capabilities = aliases
+                    break
+            reason = f"Unsupported breakout mode {bmode!r}"
 
         if not self._breakout_capabilities:
-            reason = ("No single-port breakout mode; an explicit selection is required"
-                      if select_minimum else f"Unsupported breakout mode {bmode!r}")
             raise RuntimeError(f"{reason} for interface '{name}'. "
-                               f"Supported modes: {', '.join(self._properties['breakout_modes'])}")
+                               f"Supported modes: {', '.join(modes)}")
 
     def _re_group_to_entry(self, group):
         if len(group) != BRKOUT_PATTERN_GROUPS:
@@ -559,12 +571,11 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
     if port_dict is None:
         raise Exception("port_dict is none")
 
-    hwsku_dict = readJson(hwsku_json_file) if hwsku_json_file else {
-        INTF_KEY: {
-            intf: {BRKOUT_MODE: None}
-            for intf in port_dict.get(INTF_KEY, {})
-        }
-    }
+    if hwsku_json_file:
+        hwsku_dict = readJson(hwsku_json_file)
+    else:
+        # Minimum fallback: every platform interface, with no selected mode.
+        hwsku_dict = {INTF_KEY: {intf: {BRKOUT_MODE: None} for intf in port_dict.get(INTF_KEY, {})}}
     if hwsku_dict is None:
         raise Exception("hwsku_dict is none")
 
@@ -576,8 +587,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
             continue
 
         # take default_brkout_mode from hwsku.json
-        entry = hwsku_dict[INTF_KEY][intf]
-        brkout_mode = entry.get(BRKOUT_MODE) if isinstance(entry, dict) else None
+        brkout_mode = hwsku_dict[INTF_KEY][intf].get(BRKOUT_MODE)
 
         child_ports = get_child_ports(intf, brkout_mode, platform_json_file,
                                      select_minimum=not hwsku_json_file)
@@ -607,21 +617,14 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
 
 
 def get_breakout_mode(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
-    if port_config_file is None and hwsku_config_file is None:
-        config_db = db_connect_configdb(asic_name)
-        if config_db is not None:
-            config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
-            if (hwsku is None or config_db_hwsku == hwsku) and config_db.get_table("PORT"):
-                # Do not reconstruct a mode from files when PORT is already realized.
-                return config_db.get_table("BREAKOUT_CFG") or None
-
+    db_ports, port_config_file, hwsku_json_file = get_port_config_source(
+        hwsku, platform, port_config_file, hwsku_config_file, asic_name)
+    if db_ports:
+        # Do not reconstruct a mode from files when PORT is already realized.
+        return db_connect_configdb(asic_name).get_table("BREAKOUT_CFG") or None
     if not port_config_file:
-        asic_id = None if asic_name is None else str(get_asic_id_from_name(asic_name))
-        port_config_file = device_info.get_path_to_port_config_file(hwsku, asic_id)
-        if not port_config_file:
-            return None
+        return None
     if port_config_file.endswith('.json'):
-        hwsku_json_file = hwsku_config_file or get_hwsku_file_name(hwsku, platform)
         if not hwsku_json_file:
             return None
 

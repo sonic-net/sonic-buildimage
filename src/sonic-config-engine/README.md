@@ -67,9 +67,13 @@ Fallback generates `PORT` but does not create `BREAKOUT_CFG`. Consequently,
 output. External and installed selections provide their `BREAKOUT_CFG` entries
 in both direct and minigraph-only generation.
 
-Minigraph preserves speeds and lanes from minimum generation and explicit JSON
-selections. Installed profiles, INI files, and DB-backed ports retain their existing
-XML overrides. References between configuration tables are not fully checked.
+Minigraph preserves speeds, lanes, and supplied FEC/autonegotiation settings from
+minimum generation and explicit JSON selections. Installed profiles, INI files,
+and DB-backed ports retain their existing XML overrides.
+When a port configuration is available, local checks skip unavailable interface
+parents, channel/VLAN bindings, neighbors, and fine-grained ECMP members;
+VLAN definitions are retained.
+These checks do not infer replacement topology or replace full schema validation.
 Minigraph links a missing HWSKU directory to the
 shipped base SKU directory, named without the final hyphen-separated suffix,
 when that base directory exists. Existing paths are left untouched.

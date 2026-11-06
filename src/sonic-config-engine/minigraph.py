@@ -16,7 +16,7 @@ from lxml.etree import QName
 from natsort import natsorted, ns as natsortns
 
 from portconfig import get_port_config, get_port_config_source, get_breakout_mode, get_fabric_port_config, get_fabric_monitor_config
-from sonic_py_common.device_info import HOST_DEVICE_PATH, get_path_to_port_config_file
+from sonic_py_common.device_info import HOST_DEVICE_PATH
 from sonic_py_common.interface import backplane_prefix
 from sonic_py_common.multi_asic import is_multi_asic, get_asic_id_from_name
 
@@ -839,7 +839,7 @@ def parse_loopback_intf(child):
     return lo_intfs
 
 
-def parse_dpg(dpg, hname):
+def parse_dpg(dpg, hname, ports=None):
     aclintfs = {}
     mgmtintfs = {}
     subintfs = None
@@ -961,6 +961,9 @@ def parse_dpg(dpg, hname):
             pcintfname = pcintf.find(str(QName(ns, "Name"))).text
             pcintfmbr = pcintf.find(str(QName(ns, "AttachTo"))).text
             pcmbr_list = pcintfmbr.split(';')
+            if ports is not None and any(port_alias_map.get(member, member) not in ports for member in pcmbr_list):
+                print(f"Warning: ignore '{pcintfname}' as a member interface is not in the port configuration", file=sys.stderr)
+                continue
             pc_intfs.append(pcintfname)
             for i, member in enumerate(pcmbr_list):
                 pcmbr_list[i] = port_alias_map.get(member, member)
@@ -981,6 +984,9 @@ def parse_dpg(dpg, hname):
             for ipnh in ipnhs.findall(str(QName(ns, "IPNextHop"))):
                 if ipnh.find(str(QName(ns, "Type"))).text == 'FineGrainedECMPGroupMember':
                     ipnhfmbr = ipnh.find(str(QName(ns, "AttachTo"))).text
+                    if ports is not None and port_alias_map.get(ipnhfmbr, ipnhfmbr) not in ports:
+                        print(f"Warning: ignore FG ECMP member '{ipnhfmbr}' as it is not in the port configuration", file=sys.stderr)
+                        continue
                     ipnhaddr = ipnh.find(str(QName(ns, "Address"))).text
                     nhportlist.append(ipnhfmbr)
                     if "." in ipnhaddr:
@@ -1051,6 +1057,9 @@ def parse_dpg(dpg, hname):
             for i, member in enumerate(vmbr_list):
                 vmbr_list[i] = port_alias_map.get(member, member)
                 sonic_vlan_member_name = "Vlan%s" % (vlanid)
+                if ports is not None and vmbr_list[i] not in ports and vmbr_list[i] not in pcs:
+                    print(f"Warning: ignore VLAN member '{member}' on '{sonic_vlan_member_name}' as it is not in the port configuration", file=sys.stderr)
+                    continue
                 if vlantype_name == "Tagged":
                     vlan_members[(sonic_vlan_member_name, vmbr_list[i])] = {'tagging_mode': 'tagged'}
                 elif len(untagged_vlan_mbr[member]) > 1:
@@ -1097,7 +1106,8 @@ def parse_dpg(dpg, hname):
             if sonic_vlan_name != vintfname:
                 vlan_attributes['alias'] = vintfname
             vlans[sonic_vlan_name] = vlan_attributes
-            vlan_member_list[sonic_vlan_name] = vmbr_list
+            vlan_member_list[sonic_vlan_name] = [
+                member for member in vmbr_list if (sonic_vlan_name, member) in vlan_members]
 
         for aclintf in aclintfs:
             if aclintf.find(str(QName(ns, "InAcl"))) is not None:
@@ -2072,18 +2082,17 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             try:
                 os.symlink(base_hwsku_dir, hwsku_dir)
             except OSError as error:
-                print("Warning: cannot create HWSKU symlink '{}' -> '{}': {}; continuing without it".format(
-                    hwsku_dir, base_hwsku_dir, error), file=sys.stderr)
+                print(f"Warning: cannot create HWSKU symlink '{hwsku_dir}' -> '{base_hwsku_dir}': {error}; continuing without it",
+                      file=sys.stderr)
 
     db_ports, port_file, hwsku_file = get_port_config_source(hwsku, platform, port_config_file, hwsku_config_file, asic_name)
-    preserve_port_layout = (
-        not db_ports and port_file is not None and port_file.endswith('.json')
-        and (hwsku_file is None or hwsku_config_file is not None))
+    # JSON layouts from -S or the minimum fallback keep their speeds and lanes;
+    # installed hwsku.json profiles keep the legacy XML overrides.
+    preserve_port_layout = (port_file is not None
+                            and port_file.endswith('.json')
+                            and hwsku_file == hwsku_config_file)
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
-    has_port_config = bool(ports) or port_config_file is not None or hwsku_config_file is not None
-    if not has_port_config:
-        asic_id = None if asic_name is None else str(get_asic_id_from_name(asic_name))
-        has_port_config = get_path_to_port_config_file(hwsku, asic_id) is not None
+    has_port_config = bool(ports) or port_file is not None
 
     asic_hostname = get_asic_hostname_from_asic_name(chassis_type, asic_name, hostname)
 
@@ -2105,7 +2114,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     for child in root:
         if asic_hostname is None:
             if child.tag == str(QName(ns, "DpgDec")):
-                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, hostname)
+                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, hostname, ports=ports if has_port_config else None)
             elif child.tag == str(QName(ns, "CpgDec")):
                 (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions) = parse_cpg(child, hostname)
             elif child.tag == str(QName(ns, "PngDec")):
@@ -2120,7 +2129,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 (port_speeds_default, port_descriptions, sys_ports) = parse_deviceinfo(child, hwsku)
         else:
             if child.tag == str(QName(ns, "DpgDec")):
-                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, asic_hostname)
+                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, asic_hostname, ports=ports if has_port_config else None)
                 host_lo_intfs = parse_host_loopback(child, hostname)
             elif child.tag == str(QName(ns, "CpgDec")):
                 (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions) = parse_cpg(child, asic_hostname, local_devices)
@@ -2339,6 +2348,14 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     vlan_sub_intfs = {}
 
     for intf in intfs:
+        parent = intf[0].split(VLAN_SUB_INTERFACE_SEPARATOR)[0]
+        if (has_port_config
+                and parent not in ports
+                and parent not in pcs
+                and parent not in vlans
+                and parent not in vlan_invert_mapping):
+            print(f"Warning: ignore interface '{intf[0]}' as its parent is not in the port configuration", file=sys.stderr)
+            continue
         if intf[0][0:4] == 'Vlan':
             vlan_intfs[intf] = {}
 
@@ -2386,7 +2403,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         for port in ports.keys():
             # Try first to get Chassis port alias based on port bandwidth/configured speed and if exception use port default speed. 
             try:
-                ports[port]['alias'] = chassis_port_alias.get(slot_index, {})[(port, port_speed_png[port])]
+                speed = ports[port]['speed'] if preserve_port_layout else port_speed_png[port]
+                ports[port]['alias'] = chassis_port_alias.get(slot_index, {})[(port, speed)]
             except KeyError:
                 ports[port]['alias'] = chassis_port_alias.get(slot_index, {}).get((port, ports[port]['speed']), ports[port]['alias'])
 
@@ -2439,13 +2457,15 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         # generate default 100G FEC only if FECDisabled is not true and 'fec' is not defined in port_config.ini
         # Note: FECDisabled only be effective on 100G port right now
         if linkmetas.get(alias, {}).get('FECDisabled', '').lower() == 'true':
-            port['fec'] = 'none'
+            # FEC supplied by a preserved JSON layout takes precedence.
+            if not preserve_port_layout or 'fec' not in port:
+                port['fec'] = 'none'
         elif not port.get('fec') and port.get('speed') == '100000':
             port['fec'] = 'rs'
 
         # If AutoNegotiation is available in the minigraph, we override any value we may have received from port_config.ini
         autoneg = linkmetas.get(alias, {}).get('AutoNegotiation')
-        if autoneg:
+        if autoneg and (not preserve_port_layout or 'autoneg' not in port):
             port['autoneg'] = 'on' if autoneg.lower() == 'true' else 'off'
 
         # If macsec is enabled on interface, and profile is valid, add the profile to port
@@ -2540,17 +2560,6 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     fabric_ports = get_fabric_port_config(hwsku=hwsku, platform=platform, fabric_port_config_file=fabric_port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
     if bool( fabric_ports ):
         results['FABRIC_PORT'] = fabric_ports
-
-    if has_port_config:
-        port_set = set(ports.keys())
-        for (pc_name, pc_member) in list(pc_members.keys()):
-            # Remove portchannels containing ports omitted from the port configuration.
-            if (pc_name, pc_member) in pc_members and pc_member not in port_set:
-                print("Warning: ignore '%s' as at least one of its member interfaces ('%s') is not in the port configuration" % (pc_name, pc_member), file=sys.stderr)
-                del pcs[pc_name]
-                pc_mbr_del_keys = [f for f in list(pc_members.keys()) if f[0] == pc_name]
-                for pc_mbr_del_key in pc_mbr_del_keys:
-                    del pc_members[pc_mbr_del_key]
 
     # set default port channel MTU as 9100 and admin status up and default TPID 0x8100
     for pc in pcs.values():
