@@ -1139,7 +1139,7 @@ def parse_dpg(dpg, hname, ports=None):
             for member in aclattach:
                 member = member.strip()
                 if member in pcs or \
-                    member in skipped_pcs or \
+                    (member not in port_alias_map and member not in port_names_map) or \
                     member in vlans or \
                     member.lower().startswith('erspan') or \
                     member.lower().startswith('egress_erspan') or \
@@ -1240,8 +1240,8 @@ def parse_dpg(dpg, hname, ports=None):
                     acls[aclname]['type'] = 'BMCDATAV6'
                 else:
                     acls[aclname]['type'] = 'L3V6' if  'v6' in aclname.lower() else 'L3'
-            elif any(member.strip() in skipped_pcs for member in aclattach):
-                print(f"Warning: ignore ACL '{aclname}' as its port channels are not in the port configuration", file=sys.stderr)
+            elif any(member.strip() in skipped_pcs or member.strip() in vlans for member in aclattach):
+                print(f"Warning: ignore ACL '{aclname}' as its port channels or VLAN members are not in the port configuration", file=sys.stderr)
             else:
                 # This ACL has no interfaces to attach to -- consider this a control plane ACL
                 try:
