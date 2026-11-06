@@ -29,12 +29,13 @@ DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES += $(MLNX_PLATFORM_API_RS_FILES)
 
 # The sonic-platform-common crates the tests compile against through those
-# links, and the stubs they are generated from: without them a platform-base
+# links, and their declarations, generator/templates and Python base classes:
+# Cargo generates Rust into OUT_DIR, so those inputs must be hashed. A platform-base
 # change would be served the cached receipt, tests not run.  Through DEP_FILES,
 # as rules/sonic-pmon-daemons-rs.dep takes the same directories, and under a
 # name of its own, as .dep files share make's namespace.
 MLNX_PLATFORM_API_RS_PC := $(SRC_PATH)/sonic-platform-common
-DEP_FILES += $(addprefix $(MLNX_PLATFORM_API_RS_PC)/,$(shell cd $(MLNX_PLATFORM_API_RS_PC) && git ls-files sonic_platform_api crates))
+DEP_FILES += $(addprefix $(MLNX_PLATFORM_API_RS_PC)/,$(shell cd $(MLNX_PLATFORM_API_RS_PC) && git ls-files sonic_platform_api sonic_platform_base generator crates))
 
 $(MLNX_PLATFORM_API_RS)_CACHE_MODE := GIT_CONTENT_SHA
 $(MLNX_PLATFORM_API_RS)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)
