@@ -1731,7 +1731,7 @@ check_untracked_source_tree() {
 # stale reuse is actually possible). This mechanically resolves the "non-cached
 # platforms can't serve stale" question: a platform .mk that declares a moving URL
 # is only a gap when its sibling .dep enables caching (marvell-prestera/clounix SAI
-# — cached), NOT when there is no caching sibling (nephos/barefoot/centec/teralynx).
+# — cached), NOT when there is no caching sibling (nephos/centec/teralynx).
 moving_ref_is_cached() {
     local f="$1" rel="${1#"$REPO_ROOT"/}" sib
     case "$rel" in
