@@ -717,6 +717,7 @@ define docker-image-load
     docker load -i $(TARGET_PATH)/$(1).gz $(LOG)
     @echo "Tagging docker image $(1):$(call docker-get-tag,$(1)) as $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG)" $(LOG)
     docker tag $(1):$(call docker-get-tag,$(1)) $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(LOG)
+    $(if $(filter y,$(2)),python3 scripts/check_sai_api_version.py --header "$(SRC_PATH)/sonic-sairedis/SAI/inc/saiversion.h" --image "$(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG)" $(LOG))
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):latest" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
@@ -1691,6 +1692,22 @@ $(DOCKER_LOAD_TARGETS) :$(TARGET_PATH)/%.gz-load : .platform docker-start $$(TAR
 	$(HEADER)
 	$(call docker-image-load,$*)
 	$(FOOTER)
+
+SAI_API_CHECK_IMAGES := $(filter docker-syncd-brcm%.gz,$(notdir $(wildcard $(TARGET_PATH)/docker-syncd-*.gz)))
+SAI_API_CHECK_TARGETS := $(addsuffix -sai-api-check,$(addprefix $(TARGET_PATH)/,$(SAI_API_CHECK_IMAGES)))
+
+.PHONY: $(TARGET_PATH)/sai-api-version-check $(SAI_API_CHECK_TARGETS)
+$(TARGET_PATH)/sai-api-version-check: $(SAI_API_CHECK_TARGETS)
+	$(foreach image,docker-syncd-brcm.gz docker-syncd-brcm-dnx.gz docker-syncd-brcm-legacy-th.gz, \
+		test -s "$(TARGET_PATH)/$(image)" || { echo "Missing required SAI artifact: $(image)" >&2; exit 1; };)
+
+# Load existing archives directly so this gate cannot silently rebuild a bad cached artifact.
+$(SAI_API_CHECK_TARGETS): $(TARGET_PATH)/%.gz-sai-api-check: docker-start
+	$(HEADER)
+	$(call docker-image-load,$*,y)
+	$(FOOTER)
+
+SONIC_TARGET_LIST += $(TARGET_PATH)/sai-api-version-check
 
 ###############################################################################
 ## Installers
