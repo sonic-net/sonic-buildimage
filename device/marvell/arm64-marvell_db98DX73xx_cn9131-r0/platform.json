@@ -1,0 +1,112 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1",
+            "lanes": "0",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE0"
+                ]
+            }
+        },
+        "Ethernet8": {
+            "index": "2",
+            "lanes": "8",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE8"
+                ]
+            }
+        },
+        "Ethernet16": {
+            "index": "3",
+            "lanes": "16",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE16"
+                ]
+            }
+        },
+        "Ethernet24": {
+            "index": "4",
+            "lanes": "24",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE24"
+                ]
+            }
+        },
+        "Ethernet32": {
+            "index": "5",
+            "lanes": "32",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE32"
+                ]
+            }
+        },
+        "Ethernet40": {
+            "index": "6",
+            "lanes": "40",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE40"
+                ]
+            }
+        },
+        "Ethernet48": {
+            "index": "7",
+            "lanes": "48",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE48"
+                ]
+            }
+        },
+        "Ethernet49": {
+            "index": "8",
+            "lanes": "49",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE49"
+                ]
+            }
+        },
+        "Ethernet50": {
+            "index": "9",
+            "lanes": "50",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE50"
+                ]
+            }
+        },
+        "Ethernet51": {
+            "index": "10",
+            "lanes": "51",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE51"
+                ]
+            }
+        },
+        "Ethernet52": {
+            "index": "11",
+            "lanes": "52",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE52"
+                ]
+            }
+        },
+        "Ethernet53": {
+            "index": "12",
+            "lanes": "53",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE53"
+                ]
+            }
+        }
+    }
+}
