@@ -15,8 +15,8 @@ from lxml.etree import QName
 
 from natsort import natsorted, ns as natsortns
 
-from portconfig import get_port_config, get_breakout_mode, get_fabric_port_config, get_fabric_monitor_config
-from sonic_py_common.device_info import get_path_to_port_config_file
+from portconfig import get_port_config, get_port_config_source, get_breakout_mode, get_fabric_port_config, get_fabric_monitor_config
+from sonic_py_common.device_info import HOST_DEVICE_PATH, get_path_to_port_config_file
 from sonic_py_common.interface import backplane_prefix
 from sonic_py_common.multi_asic import is_multi_asic, get_asic_id_from_name
 
@@ -2065,6 +2065,16 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname = parse_global_info(root)
     macsec_enabled = is_chassis_lc_macsec_enabled(root, hostname)
 
+    if platform and hwsku:
+        hwsku_dir = os.path.join(HOST_DEVICE_PATH, platform, hwsku)
+        base_hwsku_dir = os.path.join(HOST_DEVICE_PATH, platform, hwsku.rsplit('-', 1)[0])
+        if not os.path.lexists(hwsku_dir) and os.path.isdir(base_hwsku_dir):
+            os.symlink(base_hwsku_dir, hwsku_dir)
+
+    db_ports, port_file, hwsku_file = get_port_config_source(hwsku, platform, port_config_file, hwsku_config_file, asic_name)
+    preserve_port_layout = (
+        not db_ports and port_file is not None and port_file.endswith('.json')
+        and (hwsku_file is None or hwsku_config_file is not None))
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file, allow_minimum_breakout=True)
     has_port_config = bool(ports) or port_config_file is not None or hwsku_config_file is not None
     if not has_port_config:
@@ -2378,7 +2388,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     for port_name in port_speeds_default:
         # ignore port not in port_config.ini
-        if port_name not in ports:
+        if preserve_port_layout or port_name not in ports:
             continue
 
         ports.setdefault(port_name, {})['speed'] = port_speeds_default[port_name]
@@ -2392,6 +2402,9 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
         # skip management ports
         if port_name in mgmt_alias_reverse_mapping.keys():
+            continue
+
+        if preserve_port_layout:
             continue
 
         # Get the port_default_speed based on chassis_type/switch_type is non None

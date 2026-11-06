@@ -335,9 +335,15 @@ class TestCfgGenPlatformJson(TestCase):
                 subport_lane_offset = max(int(port["subport"]) - 1, 0) * len(lanes)
                 self.assertEqual(subport_lane_offset, lanes[0] - 192)
 
-        minimum = get_child_ports("Ethernet192", None, "test_platform.json", select_minimum=True)
-        self.assertEqual(minimum["Ethernet192"]["alias"], "etp25")
-        self.assertEqual(minimum["Ethernet192"]["speed"], "100000")
+        modes = test_platform_json["interfaces"]["Ethernet192"]["breakout_modes"]
+        for entries in (list(modes.items()), list(reversed(list(modes.items())))):
+            with mock.patch.dict(modes, dict(entries), clear=True):
+                minimum = get_child_ports("Ethernet192", None, "test_platform.json", select_minimum=True)
+                self.assertEqual(minimum["Ethernet192"]["alias"], "etp25a")
+                self.assertEqual(minimum["Ethernet192"]["speed"], "100000")
+        with mock.patch.dict(modes, {"1x100G": "etp25"}, clear=True):
+            minimum = get_child_ports("Ethernet192", None, "test_platform.json", select_minimum=True)
+            self.assertEqual(minimum["Ethernet192"]["alias"], "etp25")
         with mock.patch.dict(test_platform_json["interfaces"]["Ethernet192"]["breakout_modes"],
                              {"2x100G": ["etp25a", "etp25b"]}, clear=True):
             with self.assertRaisesRegex(RuntimeError, r"explicit selection.*Ethernet192.*2x100G"):
@@ -373,10 +379,11 @@ class TestCfgGenPlatformJson(TestCase):
                     if 'Ethernet999' in interfaces:
                         self.assertEqual(set(get_port_config(hwsku='TestHwsku')[0]), {'Ethernet20'})
 
-    def test_minimum_breakout_is_opt_in(self):
+    def test_minimum_breakout_is_shared_by_default(self):
         with port_config_env(self.platform_json):
-            self.assertEqual(get_port_config(hwsku='TestHwsku'), ({}, {}, {}))
-            ports, _, _ = get_port_config(hwsku='TestHwsku', allow_minimum_breakout=True)
+            self.assertEqual(
+                get_port_config(hwsku='TestHwsku', allow_minimum_breakout=False), ({}, {}, {}))
+            ports, _, _ = get_port_config(hwsku='TestHwsku')
             self.assertEqual(len(ports), 37)
             self.assertEqual(ports['Ethernet0'], {
                 'alias': 'Eth1', 'lanes': '0,1,2,3', 'speed': '100000', 'index': '1', 'subport': '0',
@@ -416,9 +423,9 @@ class TestCfgGenPlatformJson(TestCase):
             kwargs = {'hwsku': 'TestHwsku', 'port_config_file': port_file}
             with self.subTest(hwsku_file=hwsku_file, db_hwsku=db_hwsku, port_file=port_file), \
                     port_config_env(None if port_file else self.platform_json, hwsku_file, config_db, db_hwsku):
-                result = (get_port_config(allow_minimum_breakout=True, **kwargs)[0], get_breakout_mode(**kwargs))
+                result = (get_port_config(**kwargs)[0], get_breakout_mode(**kwargs))
                 with mock.patch('portconfig.db_connect_configdb', return_value=None):
-                    expected = (get_port_config(allow_minimum_breakout=True, **kwargs)[0],
+                    expected = (get_port_config(**kwargs)[0],
                                 get_breakout_mode(**kwargs))
                 self.assertEqual(result, expected)
                 if port_file or db_hwsku != 'TestHwsku':

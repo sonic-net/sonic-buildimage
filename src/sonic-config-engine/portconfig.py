@@ -1,5 +1,4 @@
 try:
-    import ast
     import json
     import os
     import re
@@ -127,8 +126,7 @@ def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=No
     if config_db is not None and fabric_port_config_file is None:
        port_data = config_db.get_table("FABRIC_PORT")
        if bool(port_data):
-          ports = ast.literal_eval(json.dumps(port_data))
-          return ports
+          return port_data
 
     if asic_name is not None:
         asic_id = str(get_asic_id_from_name(asic_name))
@@ -168,8 +166,8 @@ def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=No
             ports[name] = data
     return ports
 
-def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None,
-                    allow_minimum_breakout=False):
+def get_port_config_source(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
+    """Return reusable DB PORT data or the resolved port and HWSKU file paths."""
     config_db = db_connect_configdb(asic_name)
     
     config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
@@ -178,12 +176,7 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
             and (hwsku is None or config_db_hwsku == hwsku)):
         port_data = config_db.get_table("PORT")
         if bool(port_data):
-            ports = ast.literal_eval(json.dumps(port_data))
-            port_alias_map = {}
-            port_alias_asic_map = {}
-            for intf_name, port in ports.items():
-                _add_port_aliases(intf_name, port, port_alias_map, port_alias_asic_map)
-            return (ports, port_alias_map, port_alias_asic_map)
+            return port_data, None, None
 
     if asic_name is not None:
         asic_id = str(get_asic_id_from_name(asic_name))
@@ -194,12 +187,29 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
         port_config_file = device_info.get_path_to_port_config_file(hwsku, asic_id)
 
         if not port_config_file:
-            return ({}, {}, {})
+            return None, None, None
 
+    hwsku_json_file = None
+    if port_config_file.endswith('.json'):
+        hwsku_json_file = hwsku_config_file or get_hwsku_file_name(hwsku, platform)
+    return None, port_config_file, hwsku_json_file
+
+
+def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None,
+                    allow_minimum_breakout=True):
+    ports, port_config_file, hwsku_json_file = get_port_config_source(
+        hwsku, platform, port_config_file, hwsku_config_file, asic_name)
+    if ports:
+        port_alias_map = {}
+        port_alias_asic_map = {}
+        for intf_name, port in ports.items():
+            _add_port_aliases(intf_name, port, port_alias_map, port_alias_asic_map)
+        return (ports, port_alias_map, port_alias_asic_map)
+    if not port_config_file:
+        return ({}, {}, {})
 
     # Read from 'platform.json' file
     if port_config_file.endswith('.json'):
-        hwsku_json_file = hwsku_config_file or get_hwsku_file_name(hwsku, platform)
         if not hwsku_json_file and not allow_minimum_breakout:
             return ({}, {}, {})
 
@@ -219,12 +229,10 @@ def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_confi
     if config_db is not None and port_config_file is None and (hwsku is None or config_db_hwsku == hwsku):
         port_data = config_db.get_table("SYSTEM_PORT")
         if bool(port_data):
-            port_data_str_keys = {
+            return {
                 f"{k[0]}|{k[1]}|{k[2]}" if isinstance(k, tuple) else k: v
                 for k, v in port_data.items()
             }
-            sys_ports = ast.literal_eval(json.dumps(port_data_str_keys))
-            return sys_ports
 
     asic_id = None
     if asic_name is not None:
@@ -429,8 +437,8 @@ class BreakoutCfg(object):
             if select_minimum and (
                     len(entries) != 1 or entries[0].num_ports != 1 or len(aliases) != 1):
                 continue
-            key = (-entries[0].default_speed, supported_mode)
-            if minimum[0] is None or key < minimum[0]:
+            key = (entries[0].default_speed, supported_mode)
+            if minimum[0] is None or key > minimum[0]:
                 minimum = [key, (entries, aliases)]
             if not select_minimum and self._breakout_mode_entry == entries:
                 self._breakout_capabilities = aliases

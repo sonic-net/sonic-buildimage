@@ -717,6 +717,11 @@ class TestMinigraphPortSources(TestCase):
                 ('db-result', True, None, {'Ethernet20'}, saved_breakout),
                 ('selection', True, {'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}},
                  {'Ethernet20'}, saved_breakout),
+                ('breakout-selection', True, {'Ethernet0': {'default_brkout_mode': '2x50G'}},
+                 {'Ethernet0', 'Ethernet2'}, {'Ethernet0': {'brkout_mode': '2x50G'}}),
+                ('breakout-selection-explicit-platform', True,
+                 {'Ethernet0': {'default_brkout_mode': '2x50G'}},
+                 {'Ethernet0', 'Ethernet2'}, {'Ethernet0': {'brkout_mode': '2x50G'}}),
                 ('empty-selection', True, {}, set(), {}),
                 ('empty-installed', True, {}, set(), {}),
                 ('no-config', False, None, {'Ethernet0'}, None)):
@@ -729,6 +734,8 @@ class TestMinigraphPortSources(TestCase):
                                     db_hwsku='Force10-S6000') as directory, \
                     mock.patch.multiple(minigraph, port_names_map={}, port_alias_map={}, port_alias_asic_map={}):
                 args = ['-m', os.path.join(test_dir, 'platform-sample-graph.xml')]
+                if source == 'breakout-selection-explicit-platform':
+                    args += ['-p', platform_json]
                 if selection is not None:
                     selection_file = os.path.join(
                         directory, 'hwsku.json' if source == 'empty-installed' else 'selection.json')
@@ -741,11 +748,16 @@ class TestMinigraphPortSources(TestCase):
                 self.assertEqual(result.get('BREAKOUT_CFG'), expected_breakout)
                 self.assertEqual('BREAKOUT_CFG' in result, expected_breakout is not None)
                 self.assertEqual(set(result['DEVICE_NEIGHBOR']), {'Ethernet0'} & expected_ports)
-                members = {'PortChannel01|Ethernet20'} if expected_ports else set()
+                members = {'PortChannel01|Ethernet20'} if 'Ethernet20' in expected_ports else set()
                 if source == 'no-config':
-                    members.update({'PortChannel1001|Ethernet4', 'PortChannel1001|Ethernet6'})
+                    members.update({'PortChannel01|Ethernet20',
+                                    'PortChannel1001|Ethernet4', 'PortChannel1001|Ethernet6'})
                 self.assertEqual(set(result['PORTCHANNEL_MEMBER']), members)
                 self.assertEqual(set(result['PORTCHANNEL']), {member.split('|')[0] for member in members})
-                if 'Ethernet20' in expected_ports:
+                if source.startswith('breakout-selection'):
+                    self.assertEqual(
+                        {name: (port['speed'], port['lanes']) for name, port in result['PORT'].items()},
+                        {'Ethernet0': ('50000', '0,1'), 'Ethernet2': ('50000', '2,3')})
+                elif 'Ethernet20' in expected_ports:
                     self.assertEqual(result['PORT']['Ethernet20']['lanes'],
                                      '80,81,82,83' if source == 'db-result' else '20,21,22,23')

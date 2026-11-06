@@ -50,13 +50,16 @@ Passing `-S` uses that selection instead of saved `PORT` rows. Other callers of
 the shared reader can still reuse CONFIG_DB data when no file paths are supplied
 and the HWSKU matches, or no HWSKU was requested.
 
-Minimum generation is enabled by cfggen and minigraph provisioning. Other
-`get_port_config()` callers retain the empty result when no selection is found,
-unless they explicitly pass `allow_minimum_breakout=True`.
+Minimum generation is enabled by default for all `get_port_config()` callers,
+including cfggen, minigraph, and runtime/library consumers. Eligible CONFIG_DB
+data and explicit or installed selections retain precedence. Callers can pass
+`allow_minimum_breakout=False` to retain the empty result when no selection is found.
+Consumers that use an empty result to retry another port-config source now receive
+generated mappings instead; their source precedence may need a separate update.
 
 **Minimum means one logical port per cage at the highest supported default
 speed**, not the lowest speed. Equal-speed ties use the mode name that comes
-first alphabetically. A cage without a supported one-port mode causes an error,
+last alphabetically. A cage without a supported one-port mode causes an error,
 even if multi-port modes exist. This requires a `platform.json` with breakout modes.
 Supply an explicit selection for cages without a supported one-port mode.
 
@@ -65,6 +68,9 @@ Fallback generates `PORT` but does not create `BREAKOUT_CFG`. Consequently,
 output. External and installed selections provide their `BREAKOUT_CFG` entries
 in both direct and minigraph-only generation.
 
-Minigraph speed and lane handling is unchanged; references between configuration
-tables are not fully checked. Missing HWSKU directories and Generic symlinks
-are not created automatically.
+Minigraph preserves speeds and lanes from minimum generation and explicit JSON
+selections. Installed profiles, INI files, and DB-backed ports retain their existing
+XML overrides. References between configuration tables are not fully checked.
+Minigraph links a missing HWSKU directory to the
+shipped base SKU directory, named without the final hyphen-separated suffix,
+when that base directory exists. Existing paths are left untouched.
