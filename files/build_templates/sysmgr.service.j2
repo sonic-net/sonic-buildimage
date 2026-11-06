@@ -1,7 +1,7 @@
 [Unit]
 Description=Sysmgr Container
 Requires=database.service
-After=database.service swss.service
+After=database.service mega.service
 BindsTo=sonic.target
 After=sonic.target
 Before=ntp-config.service

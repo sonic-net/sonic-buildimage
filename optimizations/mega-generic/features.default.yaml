@@ -1,0 +1,23 @@
+# Default feature list for the mega-container generator.
+#
+# Stand-in for the future `rules/config MEGA_CONTAINER_FEATURES` build knob.
+# Overridden entirely by `--features a,b,c` on the CLI; this file is only
+# read when `--features` is omitted.
+#
+# `syncd` is never a candidate here -- it is always hard-excluded by
+# mega_gen.auto_registry (see plan section 1).
+
+mega_container_enable: y
+
+features:
+  - database
+  - swss
+  - bgp
+  - teamd
+  - lldp
+  - snmp
+  - gnmi
+  - radv
+  - eventd
+  - sysmgr
+  # pmon intentionally omitted (default = everything but pmon and syncd)
