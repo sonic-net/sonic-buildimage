@@ -12,6 +12,8 @@ all:
 test:
 	# run unit test, if UT failed, build will break
 	./plugin_test
+	bash test_enable_dynamic_builtins.sh
+	bash test_authorized_expanded_args.sh
 
 clean:
 	rm *.o

@@ -21,6 +21,9 @@ char mock_itrace_message_buffer[1024];
 /* bash run command buffer */
 char mock_onshell_execve_command_buffer[1024];
 
+/* A later change to SHLVL must not change the level passed to the plugin. */
+int shell_level = 1;
+
 /* plugin handles. */
 void* mock_plugin_handle = (void*)TEST_MOCK_PLUGIN_HANDLE;
 void* mock_plugin_default_function_handle = (void*)0x2234;
@@ -178,7 +181,7 @@ char *dlerror(void)
 /* MOCK get_string_value*/
 char *get_string_value(const char * str)
 {
-	return "1";
+	return "999";
 }
 
 /* MOCK absolute_program*/
