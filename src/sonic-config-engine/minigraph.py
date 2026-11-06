@@ -1139,6 +1139,7 @@ def parse_dpg(dpg, hname, ports=None):
             for member in aclattach:
                 member = member.strip()
                 if member in pcs or \
+                    member in skipped_pcs or \
                     member in vlans or \
                     member.lower().startswith('erspan') or \
                     member.lower().startswith('egress_erspan') or \
