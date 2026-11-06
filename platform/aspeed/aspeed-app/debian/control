@@ -1,0 +1,19 @@
+Source: aspeed-app
+Section: utils
+Priority: optional
+Maintainer: SONiC Team <sonic-dev@lists.sonic-net.org>
+Build-Depends: debhelper-compat (= 13),
+               meson (>= 0.59),
+               ninja-build,
+               pkg-config,
+               libssl-dev,
+Standards-Version: 4.6.0
+Rules-Requires-Root: no
+
+Package: aspeed-app
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Aspeed AST2700 application tools
+ Userspace utilities for Aspeed AST2700 SoC, including OTP (One-Time
+ Programmable) fuse programming and other platform tools.
+ Built from https://github.com/AspeedTech-BMC/aspeed_app
