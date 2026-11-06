@@ -3356,6 +3356,11 @@
                 "type": "TYPE_0_OPERATOR_CONFIGURED",
                 "esi": "00:01:02:03:04:05:06:07:08:FF",
                 "df_pref": "12012"
+            },
+            "PortChannel2": {
+                "type": "TYPE_3_MAC_BASED",
+                "esi": "AUTO",
+                "bridge_port_protection": "true"
             }
         },
         "EVPN_MH_GLOBAL": {

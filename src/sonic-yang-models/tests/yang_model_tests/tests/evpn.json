@@ -5,6 +5,10 @@
     "EVPN_PORTCHANNEL_VALID_TEST": {
         "desc": "Valid EVPN Ethernet Segment Configuration with PortChannel interfaces"
     },
+    "EVPN_INVALID_BRIDGE_PORT_PROTECTION_PHYSICAL_PORT": {
+        "desc": "Bridge-port protection enabled on a physical-port Ethernet Segment",
+        "eStr": "Bridge-port protection can only be enabled on a PortChannel Ethernet Segment"
+    },
     "EVPN_INVALID_AUTO_W_ESI_0": {
         "desc": "Invalid Type 0 ES Configuration w/ AUTO ESI",
         "eStr": "Invalid ESI/type combination: Type 0 requires manual '00:' ESI; non-Type 0 requires AUTO ESI"
