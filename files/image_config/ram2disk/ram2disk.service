@@ -1,0 +1,11 @@
+[Unit]
+Description=Ram2disk periodic sync of /var/log (tmpfs) to /var/log.disk
+After=logrotate.service
+RequiresMountsFor=/var/log
+# Skip cleanly (condition not met) when /var/log is not on tmpfs, i.e. when
+# /var/log.disk is not mounted. Avoids failed units on non-tmpfs boots.
+ConditionPathIsMountPoint=/var/log.disk
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ram2disk.sh sync

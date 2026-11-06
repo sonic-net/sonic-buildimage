@@ -55,6 +55,7 @@ onie_recovery_kvm_6asic_image	consumed only by build_image.sh; installer-stage r
 kversion	shell alias exporting $(KVERSION) verbatim (slave.mk:1437); the content signal is KVERSION, which is tracked in SONIC_COMMON_FLAGS_LIST
 sonic_asic_platform	derived from $(CONFIGURED_PLATFORM)/$(CONFIGURED_ARCH) (slave.mk:1440), both already in the cache key; alias carries no independent signal
 enable_organization_extensions	shell alias exporting $(ENABLE_ORGANIZATION_EXTENSIONS) verbatim (slave.mk:1551); the content signal is that make var, tracked in SONIC_COMMON_FLAGS_LIST
+enable_ram2disk	shell alias exporting $(ENABLE_RAM2DISK) and passes the Make flag's value unchanged to the shell; ENABLE_RAM2DISK is already included in every rootfs target's DEP_FLAGS through RFS_INLINE_ENV_FLAGS, so the lowercase name does not need separate cache tracking
 sonic_su_prod_signing_tool	basename of $(SECURE_UPGRADE_PROD_SIGNING_TOOL) (slave.mk:1559); the content signal is that make var, tracked in SONIC_COMMON_FLAGS_LIST
 RFS_SPLIT_FIRST_STAGE	literal y/n recipe constant (slave.mk:1441/1704) selecting the RFS split stage; value can only change if slave.mk changes, which is itself hashed
 RFS_SPLIT_LAST_STAGE	literal y/n recipe constant (slave.mk:1442/1705) selecting the RFS split stage; value can only change if slave.mk changes, which is itself hashed
