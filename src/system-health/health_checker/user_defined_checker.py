@@ -1,3 +1,4 @@
+import shlex
 from .health_checker import HealthChecker
 from . import utils
 
@@ -44,7 +45,8 @@ class UserDefinedChecker(HealthChecker):
         """
         self.reset()
 
-        output = utils.run_command(self._cmd)
+        tokenized_cmd = shlex.split(self._cmd)
+        output = utils.run_command(tokenized_cmd)
         if not output:
             self.set_object_not_ok('UserDefine', str(self), 'Failed to get output of command \"{}\"'.format(self._cmd))
             return
