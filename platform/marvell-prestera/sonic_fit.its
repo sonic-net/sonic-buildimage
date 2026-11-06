@@ -7,7 +7,7 @@
     images {
         kernel_ac5x {
             description = "Linux Kernel for AC5x";
-            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
+            data = /incbin/("/boot/vmlinuz-6.12.94+deb13-sonic-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -20,7 +20,7 @@
         };
         kernel_cn9131 {
             description = "Linux Kernel - cn9131";
-            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
+            data = /incbin/("/boot/vmlinuz-6.12.94+deb13-sonic-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -33,7 +33,7 @@
         };
         kernel_7215_a1 {
             description = "Linux Kernel - 7215_a1/Nokia";
-            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
+            data = /incbin/("/boot/vmlinuz-6.12.94+deb13-sonic-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -47,7 +47,7 @@
 
         ramdisk_ac5x {
             description = "ramdisk for AC5x";
-            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
+            data = /incbin/("/boot/initrd.img-6.12.94+deb13-sonic-arm64");
             type = "ramdisk";
             arch = "arm64";
             os = "linux";
@@ -60,7 +60,7 @@
         };
         ramdisk_cn9131 {
             description = "ramdisk - cn9131";
-            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
+            data = /incbin/("/boot/initrd.img-6.12.94+deb13-sonic-arm64");
             type = "ramdisk";
             arch = "arm64";
             os = "linux";
@@ -73,7 +73,7 @@
         };
         ramdisk_7215_a1 {
             description = "ramdisk - 7215_a1/Nokia";
-            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
+            data = /incbin/("/boot/initrd.img-6.12.94+deb13-sonic-arm64");
             type = "ramdisk";
             arch = "arm64";
             os = "linux";
@@ -88,7 +88,7 @@
         /* Take care to sync sync with platform_arm64.conf */
         fdt_ac5x {
             description = "Flattened Device Tree blob for AC5x";
-            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/ac5-98dx35xx-rd.dtb");
+            data = /incbin/("/usr/lib/linux-image-6.12.94+deb13-sonic-arm64/marvell/ac5-98dx35xx-rd.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
@@ -99,7 +99,7 @@
         };
         fdt_7215_a1 {
             description = "Flattened Device Tree blob for 7215_IXS_A1";
-            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/7215-ixs-a1.dtb");
+            data = /incbin/("/usr/lib/linux-image-6.12.94+deb13-sonic-arm64/marvell/7215-ixs-a1.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
@@ -110,7 +110,7 @@
         };
         fdt_cn9131 {
             description = "Flattened Device Tree blob for cn9131";
-            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/cn9131-db-comexpress.dtb");
+            data = /incbin/("/usr/lib/linux-image-6.12.94+deb13-sonic-arm64/marvell/cn9131-db-comexpress.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
