@@ -11,12 +11,19 @@ logging the causes to a history file.
 import datetime
 import os
 import re
+import traceback
 
 from dateutil import parser
 from typing import Any
 from sonic_platform.adm1266 import Adm1266
 from sonic_platform.dpm_logger import DpmLogger
-from sonic_platform.dpm_base import DpmBase, DpmPowerUpEntry, RebootCause, UNKNOWN_TIMESTAMP
+from sonic_platform.dpm_base import (
+    DpmBase,
+    DpmPowerUpEntry,
+    RebootCause,
+    UNKNOWN_TIMESTAMP,
+    pick_power_fault_cause,
+)
 from sonic_py_common import syslogger
 
 
@@ -139,7 +146,8 @@ def squash_dpms_powerups_to_cause_per_reboot(
         does not have the capability to detect the cause, or the DPM did not log anything.
 
     To determine the reboot cause for each powerup, we look at each column from top to bottom,
-    and arbitrarily take the first known fault cause that we encounter. This works because HWs
+    and arbitrarily take the first known fault cause that we encounter. A fallback cause is
+    taken only when no DPM reports a non-fallback cause for that powerup. This works because HWs
     are generally designed to not log the same cause across DPMs. Except for CPUCARD-driven
     event where the SWITCHCARD also logs a record (as exampled in DPM2's fault_4).
     To handle this case, we place the CPUCARD's DPM before the SWITCHCARD's DPM in `pd-plugin.json`.
@@ -164,13 +172,10 @@ def squash_dpms_powerups_to_cause_per_reboot(
     # Second, for each powerup (`p`), pick the first-seen DPM that reports a power fault.
     results = []
     for p in range(num_power_cycles):
-        picked = next(
-            (
-                powerup.power_fault_cause
-                for powerups in dpm_to_all_previous_powerups.values()
-                if (powerup := powerups[p]) and powerup.power_fault_cause
-            ),
-            None,
+        picked = pick_power_fault_cause(
+            powerup.power_fault_cause
+            for powerups in dpm_to_all_previous_powerups.values()
+            if (powerup := powerups[p])
         )
         if picked:
             results.append(picked)
@@ -330,14 +335,26 @@ class RebootCauseManager:
         """Returns a list of reboot causes, one per reboot.
 
         Reboot causes are derived from the knowledge of DPM records (HW)
-        and the reboot cause file (SW).
+        and the reboot cause file (SW). If the DPM records cannot be decoded
+        with the pd-plugin.json fault rules, no HW cause is reported and no DPM
+        is cleared, so a fixed config can still decode them together.
         """
-        hw_reboot_causes, dpm_to_powerups = self.read_hw_reboot_causes()
+        try:
+            hw_reboot_causes, dpm_to_powerups = self.read_hw_reboot_causes()
+            decoded = True
+        except (KeyError, ValueError) as e:
+            logger.log_error(
+                "Keeping all DPM records: failed to decode them with the pd-plugin.json fault rules: "
+                + "".join(traceback.format_exception(e))
+            )
+            hw_reboot_causes, dpm_to_powerups = [], {}
+            decoded = False
         sw_reboot_cause = self._read_sw_reboot_cause()
         ret_causes = merge_sw_and_hw_causes(sw_reboot_cause, hw_reboot_causes)
 
         # Save all records to history.
         DpmLogger().save(ret_causes, dpm_to_powerups)
 
-        self._clear_records_on_all_dpms()
+        if decoded:
+            self._clear_records_on_all_dpms()
         return squash_sw_and_hw_causes(ret_causes)
