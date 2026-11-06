@@ -28,7 +28,7 @@ resources:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
-    ref: master
+    ref: refs/pull/29006/head
     endpoint: sonic-net
   - repository: buildimage
     type: github
@@ -266,6 +266,8 @@ stages:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
       PTF_MODIFIED: $(PTF_MODIFIED)
       PTF_IMAGE_TAG: $(PTF_IMAGE_TAG)
+      MGMT_COMMIT_HASH: "bd68041d1054aa37ba5d3c7712eefd235f48e384"
+      INCLUDE_JOBS: "t0_vpp_job,t1_lag_vpp_job"
 
 # Unified SBOM-based vulnerability scan — informational, runs after
 # both build stages so every CycloneDX SBOM produced is in scope.
