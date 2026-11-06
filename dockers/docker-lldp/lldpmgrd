@@ -15,6 +15,7 @@
 
 
 try:
+    import ipaddress
     import os
     import subprocess
     import sys
@@ -34,17 +35,27 @@ PORT_INIT_TIMEOUT = 300
 FAILED_CMD_TIMEOUT = 6
 RETRY_LIMIT = 5
 
+# LLDP|GLOBAL defaults, matching sonic-lldp.yang and lldpd's built-in defaults.
+LLDP_DEFAULT_TX_INTERVAL = 30  # hello_time, seconds
+LLDP_DEFAULT_TX_HOLD = 4       # multiplier
+LLDP_DEFAULT_STATUS = "rx-and-tx"
+# supp_*_tlv default false => TLV advertised (lldpd's default).
+LLDP_DEFAULT_SUPP_MGMT_ADDR_TLV = False
+LLDP_DEFAULT_SUPP_SYS_CAP_TLV = False
+
+# Rendered lldpd config; carries the SONiC default 'configure system description'.
+LLDPD_CONF_PATH = "/etc/lldpd.conf"
+
 
 class LldpManager(daemon_base.DaemonBase):
     """
-    Class which subscribes to notifications of changes in the PORT table of
-    the Redis State database and updates LLDP configuration accordingly for
-    that port by calling lldpcli.
+    Class which subscribes to port, device, management-interface, and LLDP
+    configuration changes and updates lldpd by calling lldpcli.
     Attributes:
         state_db: Handle to Redis State database via swsscommon lib
         config_db: Handle to Redis Config database via swsscommon lib
-        pending_cmds: Dictionary where key is port name, value is pending
-                      LLDP configuration command to run 
+        pending_cmds: Dictionary where key is port name, value is the list of
+                      pending LLDP configuration commands to run
                       and the last timestamp that this command was failed (used for retry mechanism)
     """
     REDIS_TIMEOUT_MS = 0
@@ -70,12 +81,26 @@ class LldpManager(daemon_base.DaemonBase):
         self.pending_cmds = {}
         self.hostname = None
         self.mgmt_ip = "None"
+        self.mgmt_addr_interface = None
+        self.global_status = LLDP_DEFAULT_STATUS
+        self.lldp_sys_name = None
+        self.supp_mgmt_address_tlv = LLDP_DEFAULT_SUPP_MGMT_ADDR_TLV
+        self.supp_system_capabilities_tlv = LLDP_DEFAULT_SUPP_SYS_CAP_TLV
 
         self.device_table = swsscommon.Table(self.config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
         self.port_table = swsscommon.Table(self.config_db, swsscommon.CFG_PORT_TABLE_NAME)
+        self.lldp_port_table = swsscommon.Table(self.config_db, swsscommon.CFG_LLDP_PORT_TABLE_NAME)
         self.mgmt_table = swsscommon.Table(self.config_db, swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME)
         self.app_port_table = swsscommon.Table(self.appl_db, swsscommon.APP_PORT_TABLE_NAME)
         self.state_port_table = swsscommon.Table(self.state_db, swsscommon.STATE_PORT_TABLE_NAME)
+
+        # L3 interface tables scanned to resolve mgmt_addr_interface to an IP.
+        self.intf_tables = {name: swsscommon.Table(self.config_db, name) for name in (
+            swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME,
+            swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME,
+            swsscommon.CFG_INTERFACE_TABLE_NAME,
+            swsscommon.CFG_VLAN_INTERFACE_TABLE_NAME,
+            swsscommon.CFG_PORTCHANNEL_INTERFACE_TABLE_NAME)}
 
         self.port_config_done = False
         self.port_init_done = False
@@ -161,16 +186,27 @@ class LldpManager(daemon_base.DaemonBase):
         else:
             self.log_info("Unable to retrieve description for port '{}'. Not adding port description".format(port_name))
 
-        # Add the command to our dictionary of pending commands, overwriting any
+        cmds = [lldpcli_cmd]
+
+        # If this port has an LLDP_PORT override, re-apply its admin status too.
+        # lldpd defaults a freshly registered port to rx-and-tx, so the override
+        # must be re-pushed once the port is up (queued here to retry with the
+        # portid command until lldpd knows the port).
+        exists, fvp = self.lldp_port_table.get(port_name)
+        if exists:
+            status = self._lldp_status_from_cfg(dict(fvp) if fvp else {})
+            cmds.append(["lldpcli", "configure", "ports", port_name, "lldp", "status", status])
+
+        # Add the commands to our dictionary of pending commands, overwriting any
         # previous pending command for this port
-        self.pending_cmds[port_name] = { 'cmd': lldpcli_cmd, 'failed_count': 0}
+        self.pending_cmds[port_name] = { 'cmds': cmds, 'failed_count': 0}
 
     def process_pending_cmds(self):
         # List of port names (keys of elements) to delete from self.pending_cmds
         to_delete = []
 
         for (port_name, port_item) in self.pending_cmds.items():
-            cmd = port_item['cmd']
+            cmds = port_item['cmds']
 
             # check if linux port is up
             if not self.is_port_up(port_name):
@@ -180,8 +216,15 @@ class LldpManager(daemon_base.DaemonBase):
             if 'failed_timestamp' in port_item and time.time()-port_item['failed_timestamp']<FAILED_CMD_TIMEOUT:
                 continue
 
-            self.log_debug("Running command: '{}'".format(cmd))
-            rc, stderr = run_cmd(self, cmd)
+            # Run every pending command for the port; the entry is only cleared
+            # once all of them succeed.
+            rc = 0
+            stderr = ""
+            for cmd in cmds:
+                self.log_debug("Running command: '{}'".format(cmd))
+                rc, stderr = run_cmd(self, cmd)
+                if rc != 0:
+                    break
             # If the command succeeds, add the port name to our to_delete list.
             # We will delete this command from self.pending_cmds below.
             # If the command fails, log a message, but don't delete the command
@@ -204,19 +247,24 @@ class LldpManager(daemon_base.DaemonBase):
             self.pending_cmds.pop(port_name, None)
 
     def lldp_get_mgmt_ip(self):
-        mgmt_intf_keys = self.mgmt_table.getKeys()
+        # Configured management IP (first IPv4, else IPv6). The deleted key is
+        # already gone from CONFIG_DB when a DEL event is processed.
         ipv4_addr = "None"
         ipv6_addr = "None"
-        for key in mgmt_intf_keys:
-            if '|' in key:
-                key = key.split('|', 1)
-                if '/' in key[1]:
-                    ip = key[1].split('/', 1)
-                    if self.mgmt_ip != ip[0]:
-                        if '.' in ip[0]:
-                            ipv4_addr = ip[0]
-                        else:
-                            ipv6_addr = ip[0]
+        for key in self.mgmt_table.getKeys():
+            if '|' not in key:
+                continue
+            addr = key.split('|', 1)[1]
+            try:
+                parsed = ipaddress.ip_interface(addr).ip
+            except ValueError:
+                self.log_warning("Ignoring malformed management address '{}'".format(addr))
+                continue
+            ip = str(parsed)
+            if parsed.version == 4:
+                ipv4_addr = ip
+            else:
+                ipv6_addr = ip
 
         if ipv4_addr != "None":
             return ipv4_addr
@@ -225,24 +273,69 @@ class LldpManager(daemon_base.DaemonBase):
         else:
             return "None"
 
+    def resolve_intf_ip(self, intf_name):
+        v4 = v6 = v6_link_local = None
+        for table in self.intf_tables.values():
+            for key in table.getKeys():
+                if '|' not in key:
+                    continue
+                name, addr = key.split('|', 1)
+                if name != intf_name:
+                    continue
+                try:
+                    parsed = ipaddress.ip_interface(addr).ip
+                except ValueError:
+                    self.log_warning("Ignoring malformed address '{}' on {}".format(addr, intf_name))
+                    continue
+                ip = str(parsed)
+                if parsed.version == 4:
+                    v4 = v4 or ip
+                elif parsed.is_link_local:
+                    v6_link_local = v6_link_local or ip
+                else:
+                    v6 = v6 or ip
+        return [ip for ip in (v4, v6 or v6_link_local) if ip]
+
+    def apply_mgmt_addr_interface(self):
+        # Advertise the override interface's IPs (one v4 + one v6), or set a
+        # match-nothing pattern (!*) to suppress the TLV when it has none.
+        ips = self.resolve_intf_ip(self.mgmt_addr_interface)
+        self.update_mgmt_addr(",".join(ips) if ips else "!*")
+
+    def lldp_process_intf_ip_event(self, key, op):
+        # Re-resolve when the override interface's IP changes.
+        if self.mgmt_addr_interface and key.split('|', 1)[0] == self.mgmt_addr_interface:
+            self.apply_mgmt_addr_interface()
+
+    def _mgmt_ip_is_v4(self):
+        try:
+            return ipaddress.ip_address(self.mgmt_ip).version == 4
+        except ValueError:
+            return False
+
     def lldp_process_mgmt_info_change(self, op, mgmt_dict, key):
         if not op in ["SET", "DEL"]:
             return
+        # Override active: address is driven solely by the chosen interface.
+        if self.mgmt_addr_interface:
+            self.lldp_process_intf_ip_event(key, op)
+            return
         self.log_info("Mgmt Config Opcode: {} Dict {} Key {} Curr {}".format(op, mgmt_dict, key, self.mgmt_ip))
-        if '|' in key:
-            key = key.split('|', 1)
-            if '/' in key[1]:
-                ip = key[1].split('/', 1)
-                if op == "DEL":
-                    if self.mgmt_ip == ip[0]:
-                        ip_addr = self.lldp_get_mgmt_ip()
-                        self.update_mgmt_addr(ip_addr)
-                else:
-                    if not self.mgmt_ip == ip[0]:
-                        if '.' in ip[0]:
-                            self.update_mgmt_addr(ip[0])
-                        elif '.' not in self.mgmt_ip:
-                            self.update_mgmt_addr(ip[0])
+        if '|' not in key:
+            return
+        addr = key.split('|', 1)[1]
+        try:
+            parsed = ipaddress.ip_interface(addr).ip
+        except ValueError:
+            self.log_warning("Ignoring malformed management address '{}'".format(addr))
+            return
+        ip = str(parsed)
+        if op == "DEL":
+            if self.mgmt_ip == ip:
+                self.update_mgmt_addr(self.lldp_get_mgmt_ip())
+        elif self.mgmt_ip != ip:
+            if parsed.version == 4 or not self._mgmt_ip_is_v4():
+                self.update_mgmt_addr(ip)
 
     def lldp_process_device_table_event(self, op, device_dict, key):
         if not op in ["SET", "DEL"]:
@@ -253,7 +346,11 @@ class LldpManager(daemon_base.DaemonBase):
         hostname = device_dict.get("chassis_hostname") or device_dict.get("hostname")
         if hostname and not self.hostname == hostname:
             self.log_info("Hostname changed old {0}, new {1}".format(self.hostname, hostname))
-            self.update_hostname(hostname)
+            if self.lldp_sys_name:
+                # Override active: record hostname but keep advertising override.
+                self.hostname = hostname
+            else:
+                self.update_hostname(hostname)
 
     def lldp_process_port_table_event(self, key, op, fvp):
         if (key != "PortInitDone") and (key != "PortConfigDone"):
@@ -272,13 +369,155 @@ class LldpManager(daemon_base.DaemonBase):
         elif key == "PortConfigDone":
             self.port_config_done = True
 
+    def _lldp_status_from_cfg(self, fvp_dict):
+        """
+        Map an LLDP enabled/mode config to an 'lldpcli ... lldp status' value.
+        enabled=false -> disabled; otherwise mode RECEIVE -> rx-only,
+        TRANSMIT -> tx-only, else rx-and-tx. A bare mode implies enabled.
+        """
+        enabled = str(fvp_dict.get("enabled", "true")).lower() != "false"
+        mode = (fvp_dict.get("mode") or "").upper()
+        if not enabled:
+            return "disabled"
+        if mode == "RECEIVE":
+            return "rx-only"
+        if mode == "TRANSMIT":
+            return "tx-only"
+        return LLDP_DEFAULT_STATUS
+
+    def default_sys_descr_cmd(self):
+        # Revert system description to the SONiC default rendered in lldpd.conf
+        # (lldpcli 'unconfigure' would drop to lldpd's built-in kernel string).
+        try:
+            with open(LLDPD_CONF_PATH) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("configure system description"):
+                        descr = line[len("configure system description"):].strip().strip('"')
+                        if descr:
+                            return ["lldpcli", "configure", "system", "description", descr]
+        except OSError as e:
+            self.log_warning("Unable to read {}: {}".format(LLDPD_CONF_PATH, e))
+        return ["lldpcli", "unconfigure", "system", "description"]
+
+    def reconcile_lldp_port_status(self):
+        # A global 'configure lldp status' resets every port to that value, so
+        # re-apply the per-port LLDP_PORT overrides afterwards. Per-port config
+        # takes precedence over the global setting.
+        for key in self.lldp_port_table.getKeys():
+            status, fvp = self.lldp_port_table.get(key)
+            if status:
+                self.lldp_process_lldp_port_event(key, "SET", fvp)
+
+    def lldp_process_lldp_port_event(self, key, op, fvp):
+        """
+        Handle CONFIG_DB LLDP_PORT|<ifname> updates and push them to lldpd
+        via 'lldpcli configure ports <ifname> lldp status <value>'.
+        """
+        if not key:
+            return
+        port_name = key
+        if op == "DEL":
+            status = self.global_status  # inherit current global admin status
+        elif op == "SET":
+            status = self._lldp_status_from_cfg(dict(fvp) if fvp else {})
+        else:
+            self.log_error("LLDP_PORT unknown op '{}'".format(op))
+            return
+        cmd = ["lldpcli", "configure", "ports", port_name,
+               "lldp", "status", status]
+        self.log_info("LLDP_PORT {} -> {}".format(port_name, status))
+        rc, stderr = run_cmd(self, cmd)
+        if rc != 0:
+            self.log_warning("Command failed '{}': {}".format(cmd, stderr))
+
+    def lldp_process_lldp_global_event(self, key, op, fvp):
+        """
+        Handle CONFIG_DB LLDP|GLOBAL updates. The leaves that map onto lldpcli
+        are pushed live; supp_*_tlv toggles drive lldpd's TLV advertisements.
+        """
+        if key != "GLOBAL":
+            return
+        # Whole key deleted: revert all leaves to defaults.
+        if op == "DEL":
+            self.global_status = LLDP_DEFAULT_STATUS
+            self.lldp_sys_name = None
+            self.supp_system_capabilities_tlv = LLDP_DEFAULT_SUPP_SYS_CAP_TLV
+            self.supp_mgmt_address_tlv = LLDP_DEFAULT_SUPP_MGMT_ADDR_TLV
+            cmds = [["lldpcli", "configure", "lldp", "tx-interval", str(LLDP_DEFAULT_TX_INTERVAL)],
+                    ["lldpcli", "configure", "lldp", "tx-hold", str(LLDP_DEFAULT_TX_HOLD)],
+                    ["lldpcli", "configure", "lldp", "status", LLDP_DEFAULT_STATUS],
+                    ["lldpcli", "configure", "lldp", "capabilities-advertisements"],
+                    ["lldpcli", "configure", "lldp", "management-addresses-advertisements"],
+                    self.default_sys_descr_cmd()]
+            cmds.append(["lldpcli", "configure", "system", "hostname", self.hostname]
+                        if self.hostname else
+                        ["lldpcli", "unconfigure", "system", "hostname"])
+            for cmd in cmds:
+                self.log_info("LLDP|GLOBAL deleted, reverting: {}".format(cmd))
+                rc, stderr = run_cmd(self, cmd)
+                if rc != 0:
+                    self.log_warning("Command failed '{}': {}".format(cmd, stderr))
+            # Global status reset above clobbers per-port overrides; re-apply them.
+            self.reconcile_lldp_port_status()
+            self.mgmt_addr_interface = None
+            self.update_mgmt_addr(self.lldp_get_mgmt_ip())
+            return
+        if op != "SET" or not fvp:
+            return
+        d = dict(fvp)
+        cmds = []
+        # A SET carries the full hash, so an absent leaf means it was removed:
+        # always re-apply every leaf, reverting to its default when absent.
+        cmds.append(["lldpcli", "configure", "lldp", "tx-interval", str(d.get("hello_time", LLDP_DEFAULT_TX_INTERVAL))])
+        cmds.append(["lldpcli", "configure", "lldp", "tx-hold", str(d.get("multiplier", LLDP_DEFAULT_TX_HOLD))])
+        if "system_description" in d:
+            cmds.append(["lldpcli", "configure", "system", "description", d["system_description"]])
+        else:
+            cmds.append(self.default_sys_descr_cmd())
+        if "system_name" in d:
+            self.lldp_sys_name = d["system_name"]
+            cmds.append(["lldpcli", "configure", "system", "hostname", d["system_name"]])
+        else:
+            self.lldp_sys_name = None
+            if self.hostname:
+                cmds.append(["lldpcli", "configure", "system", "hostname", self.hostname])
+            else:
+                cmds.append(["lldpcli", "unconfigure", "system", "hostname"])
+        # Status default is enabled, rx-and-tx when enabled/mode are absent.
+        status = self._lldp_status_from_cfg(d)
+        self.global_status = status
+        cmds.append(["lldpcli", "configure", "lldp", "status", status])
+        # Suppress toggles: unconfigure suppresses, configure (default) advertises.
+        self.supp_system_capabilities_tlv = str(d.get("supp_system_capabilities_tlv")).lower() == "true"
+        cmds.append(["lldpcli", "unconfigure" if self.supp_system_capabilities_tlv else "configure",
+                     "lldp", "capabilities-advertisements"])
+        self.supp_mgmt_address_tlv = str(d.get("supp_mgmt_address_tlv")).lower() == "true"
+        cmds.append(["lldpcli", "unconfigure" if self.supp_mgmt_address_tlv else "configure",
+                     "lldp", "management-addresses-advertisements"])
+        for cmd in cmds:
+            self.log_info("LLDP|GLOBAL applying: {}".format(cmd))
+            rc, stderr = run_cmd(self, cmd)
+            if rc != 0:
+                self.log_warning("Command failed '{}': {}".format(cmd, stderr))
+        # The global status command above resets every port to that value, so
+        # re-apply the per-port LLDP_PORT overrides to preserve them.
+        self.reconcile_lldp_port_status()
+        # Management Address TLV source interface; skip when the TLV is
+        # suppressed. Absent value reverts to the default mgmt address.
+        if not self.supp_mgmt_address_tlv:
+            intf = d.get("mgmt_addr_interface") or None
+            if intf != self.mgmt_addr_interface:
+                self.mgmt_addr_interface = intf
+                if intf:
+                    self.apply_mgmt_addr_interface()
+                else:
+                    self.update_mgmt_addr(self.lldp_get_mgmt_ip())
+
     def run(self):
         """
-        Subscribes to notifications of changes in the PORT table
-        of the Redis Config/Application database.
-        Subscribe to APP_DB - get port oper status
-        Subscribe to CONFIG_DB - get notified of port config changes
-        Update LLDP configuration accordingly.
+        Subscribe to APP_DB port updates and CONFIG_DB device, management,
+        interface, and LLDP configuration updates, then apply them to lldpd.
         """
         self.log_info("Starting up...")
 
@@ -309,7 +548,26 @@ class LldpManager(daemon_base.DaemonBase):
         sst_device_confdb = swsscommon.SubscriberStateTable(self.config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
         sel.addSelectable(sst_device_confdb)
 
-        # Listen for changes to the PORT table in the CONFIG_DB and APP_DB
+        # Subscribe to per-port LLDP table (LLDP_PORT) in the Config DB
+        sst_lldp_port_confdb = swsscommon.SubscriberStateTable(
+            self.config_db, swsscommon.CFG_LLDP_PORT_TABLE_NAME)
+        sel.addSelectable(sst_lldp_port_confdb)
+
+        # Subscribe to global LLDP table (LLDP|GLOBAL) in the Config DB
+        sst_lldp_global_confdb = swsscommon.SubscriberStateTable(
+            self.config_db, swsscommon.CFG_LLDP_TABLE_NAME)
+        sel.addSelectable(sst_lldp_global_confdb)
+
+        # Refresh Management Address TLV when the override interface's IP changes.
+        sst_intf_confdb = {}
+        for name in self.intf_tables:
+            if name == swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME:
+                continue  # already covered by sst_mgmt_ip_confdb
+            sst = swsscommon.SubscriberStateTable(self.config_db, name)
+            sel.addSelectable(sst)
+            sst_intf_confdb[sst.getFd()] = sst
+
+        # Process notifications from the APP_DB and CONFIG_DB subscriptions.
         while True:
             (state, selectableObj) = sel.select(SELECT_TIMEOUT_MS, interrupt_on_signal=True)
 
@@ -323,6 +581,15 @@ class LldpManager(daemon_base.DaemonBase):
                 elif selectableObj.getFd() == sst_appdb.getFd():
                     (key, op, fvp) = sst_appdb.pop()
                     self.lldp_process_port_table_event(key, op, fvp)
+                elif selectableObj.getFd() == sst_lldp_port_confdb.getFd():
+                    (key, op, fvp) = sst_lldp_port_confdb.pop()
+                    self.lldp_process_lldp_port_event(key, op, fvp)
+                elif selectableObj.getFd() == sst_lldp_global_confdb.getFd():
+                    (key, op, fvp) = sst_lldp_global_confdb.pop()
+                    self.lldp_process_lldp_global_event(key, op, fvp)
+                elif selectableObj.getFd() in sst_intf_confdb:
+                    (key, op, fvp) = sst_intf_confdb[selectableObj.getFd()].pop()
+                    self.lldp_process_intf_ip_event(key, op)
                 else:
                     self.log_error("Got unexpected selectable object")
 
