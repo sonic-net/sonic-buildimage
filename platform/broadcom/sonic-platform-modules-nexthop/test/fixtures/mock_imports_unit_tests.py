@@ -90,10 +90,14 @@ def mock_syslog_modules():
     syslog.SYSLOG_IDENTIFIER_THERMAL = "nh_thermal"
     syslog.NhLoggerMixin = MockSysLogger
 
+    pddf_logger = MagicMock()
+    pddf_logger.PddfLogger = MockSysLogger
+
     return {
         "sonic_py_common.syslogger": syslogger,
         "sonic_py_common.logger": logger,
         "sonic_platform.syslog": syslog,
+        "sonic_platform_pddf_base.pddf_logger": pddf_logger,
     }
 
 
