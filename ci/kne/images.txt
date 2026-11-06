@@ -1,0 +1,2 @@
+# Object keys in the MinIO bucket sonic-vs. One per line.
+sonic-vs-azure.img
