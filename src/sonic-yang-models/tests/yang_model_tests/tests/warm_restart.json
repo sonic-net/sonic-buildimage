@@ -2,6 +2,9 @@
     "WARM_RESTART_TEST": {
         "desc": "Configure an entry in WARM_RESTART table."
     },
+    "WARM_RESTART_TEST_NON_BGP_MODULE": {
+        "desc": "Configure Warm restart for a non-bgp module. Guards against a bgp-only leaf setting a value."
+    },
     "WARM_RESTART_WITH_MUST_CONDITION_FAILURE_TEST_FOR_BGP_EOIU": {
         "desc": "Configuration of bgp eoiu with incorrect module name.",
         "eStr" : ["bgp_eoiu is only supported for module bgp"]
@@ -18,6 +21,10 @@
         "desc": "Configuration of neighsyncd timer with incorrect module name.",
         "eStr" : ["neighsyncd_timer is only supported for module swss"]
     },
+    "WARM_RESTART_WITH_MUST_CONDITION_FAILURE_TEST_FOR_EOIU_HOLD_TIMER": {
+        "desc": "Configuration of eoiu hold timer with incorrect module name.",
+        "eStr" : ["eoiu_hold_timer is only supported for module bgp"]
+    },
     "WARM_RESTART_TEST_WITH_INCORRECT_BGP_TIMER": {
         "desc": "Configure Warm restart for bgp module with an out of range bgp timer.",
         "eStr": ["Timer must be 1..3600"]
@@ -29,5 +36,9 @@
     "WARM_RESTART_TEST_WITH_INCORRECT_NEIGHSYNCD_TIMER": {
         "desc": "Configure Warm restart for neighsyncd module with an out of range neighsyncd timer.",
         "eStr": ["Timer must be 1..9999"]
+    },
+    "WARM_RESTART_TEST_WITH_INCORRECT_EOIU_HOLD_TIMER": {
+        "desc": "Configure Warm restart for bgp module with an out of range eoiu hold timer.",
+        "eStr": ["Timer must be 1..3600"]
     }
 }
