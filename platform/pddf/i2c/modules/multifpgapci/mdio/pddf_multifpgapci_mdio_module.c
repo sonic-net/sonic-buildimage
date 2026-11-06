@@ -46,9 +46,18 @@ static ssize_t mdio_access_store(struct device *dev,
 {
 	struct mii_bus *bus = to_mii_bus(dev);
 	struct fpga_mdio_priv *priv = bus->priv;
+	// Local snapshot: the exported pointer can be NULLed concurrently by
+	// the algorithm module's exit handler.
+	struct mdio_fpga_ops *ops = mdio_fpga_algo_ops;
 	char op[10];
 	int phy_addr, reg_num, val;
 	int ret = -EINVAL;
+
+	if (!ops || !ops->read || !ops->write) {
+		pddf_dbg(MULTIFPGA, KERN_ERR
+			 "MDIO FPGA algorithm module not loaded or incomplete\n");
+		return -ENODEV;
+	}
 
 	int num_args =
 		sscanf(buf, "%9s %i %i %i", op, &phy_addr, &reg_num, &val);
@@ -66,7 +75,7 @@ static ssize_t mdio_access_store(struct device *dev,
 				"Invalid MDIO write access format. Expected 'write <phy_addr> <reg_num> <value>'\n");
 			return -EINVAL;
 		}
-		ret = mdio_fpga_algo_ops->write(bus, phy_addr, reg_num, val);
+		ret = ops->write(bus, phy_addr, reg_num, val);
 		if (ret == 0) {
 			return count;
 		} else {
@@ -84,7 +93,7 @@ static ssize_t mdio_access_store(struct device *dev,
 				"Invalid MDIO read access format. Expected 'read <phy_addr> <reg_num>'\n");
 			return -EINVAL;
 		}
-		ret = mdio_fpga_algo_ops->read(bus, phy_addr, reg_num);
+		ret = ops->read(bus, phy_addr, reg_num);
 		if (ret >= 0) {
 			priv->last_read_value = ret;
 			return count;
@@ -189,18 +198,30 @@ ssize_t new_mdio_bus(struct device *dev, struct device_attribute *da,
 	new_bus->name = "pci-mdio-bus";
 	snprintf(new_bus->id, MII_BUS_ID_SIZE, "pci-mdio-%d", index);
 
-	if (!mdio_fpga_algo_ops || !mdio_fpga_algo_ops->read ||
-	    !mdio_fpga_algo_ops->write) {
+	struct mdio_fpga_ops *ops = mdio_fpga_algo_ops;
+	if (!ops || !ops->read || !ops->write) {
 		pddf_dbg(
 			MULTIFPGA,
 			KERN_ERR
 			"[%s] MDIO FPGA algorithm module not loaded or incomplete!\n",
 			__FUNCTION__);
+		err = -ENODEV;
 		goto err_cleanup;
 	}
 
-	new_bus->read = mdio_fpga_algo_ops->read;
-	new_bus->write = mdio_fpga_algo_ops->write;
+	/*
+	 * Pin the module providing the ops while this bus can call into it,
+	 * so unloading it is refused instead of leaving the bus with
+	 * dangling callbacks.
+	 */
+	if (!try_module_get(ops->owner)) {
+		err = -ENODEV;
+		goto err_cleanup;
+	}
+	algo_priv->algo_owner = ops->owner;
+
+	new_bus->read = ops->read;
+	new_bus->write = ops->write;
 	new_bus->owner = THIS_MODULE;
 	new_bus->parent = &pci_dev->dev;
 
@@ -208,7 +229,7 @@ ssize_t new_mdio_bus(struct device *dev, struct device_attribute *da,
 	if (err != 0) {
 		pddf_dbg(MULTIFPGA, KERN_ERR "Could not register MDIO bus %d\n",
 			 index);
-		goto err_cleanup;
+		goto err_cleanup_pinned;
 	}
 	mdio_privdata->mdio_bus_registered[index] = true;
 
@@ -229,6 +250,9 @@ ssize_t new_mdio_bus(struct device *dev, struct device_attribute *da,
 
 err_cleanup_registered:
 	mdiobus_unregister(new_bus);
+
+err_cleanup_pinned:
+	module_put(algo_priv->algo_owner);
 
 err_cleanup:
 	if (new_bus) {
@@ -290,6 +314,9 @@ ssize_t del_mdio_bus(struct device *dev, struct device_attribute *da,
 		 KERN_INFO "[%s] Attempting to unregister MDIO bus: %d\n",
 		 __FUNCTION__, index);
 
+	struct fpga_mdio_priv *algo_priv = bus_to_unregister->priv;
+	struct module *algo_owner = algo_priv ? algo_priv->algo_owner : NULL;
+
 	// Remove the custom sysfs file
 	device_remove_file(&bus_to_unregister->dev, &dev_attr_mdio_access);
 
@@ -298,6 +325,9 @@ ssize_t del_mdio_bus(struct device *dev, struct device_attribute *da,
 
 	mdio_privdata->mdio_bus_registered[index] = false;
 	mdio_privdata->mdio_buses[index] = NULL;
+
+	// Nothing can call into the ops provider any more. Must stay last.
+	module_put(algo_owner);
 
 	return count;
 }
@@ -409,11 +439,18 @@ static void pddf_multifpgapci_mdio_detach(struct pci_dev *pci_dev,
 
 	for (i = 0; i < MDIO_MAX_BUS; i++) {
 		if (mdio_privdata->mdio_bus_registered[i]) {
+			struct mii_bus *bus = mdio_privdata->mdio_buses[i];
+			struct fpga_mdio_priv *algo_priv = bus->priv;
+			struct module *algo_owner =
+				algo_priv ? algo_priv->algo_owner : NULL;
+
 			pddf_dbg(MULTIFPGA,
 				 KERN_INFO "[%s] unregistering MDIO bus: %s\n",
-				 __FUNCTION__,
-				 mdio_privdata->mdio_buses[i]->name);
-			mdiobus_unregister(mdio_privdata->mdio_buses[i]);
+				 __FUNCTION__, bus->name);
+			mdiobus_unregister(bus);
+			mdio_privdata->mdio_bus_registered[i] = false;
+			// The bus can no longer call into the ops provider.
+			module_put(algo_owner);
 		}
 	}
 	if (mdio_privdata->mdio_kobj) {
