@@ -2008,10 +2008,22 @@ static bool nexthops_have_evpn(const struct nexthop *nexthop)
 	return false;
 }
 
+/* One of the nexthops, or a nexthop one of them resolves to, is EVPN. */
+static bool nexthops_resolve_to_evpn(const struct nexthop *nexthop)
+{
+	for (; nexthop; nexthop = nexthop->next)
+		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN) ||
+		    nexthops_resolve_to_evpn(nexthop->resolved))
+			return true;
+
+	return false;
+}
+
 /*
  * A route is judged by the entry it names. On a single recursive nexthop that
  * is the entry the nexthop resolves to (zebra_nhg_resolve()), whose top-level
- * nexthops are the resolved ones.
+ * nexthops are the resolved ones. A group is sent with each member resolved
+ * (zebra_nhg_nhe2grp()), so the nexthops those resolve to count too.
  */
 static bool route_has_evpn_nexthop(struct zebra_dplane_ctx *ctx)
 {
@@ -2022,7 +2034,7 @@ static bool route_has_evpn_nexthop(struct zebra_dplane_ctx *ctx)
 		       CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
 			nexthop = nexthop->resolved;
 
-	return nexthops_have_evpn(nexthop);
+	return nexthops_resolve_to_evpn(nexthop);
 }
 
 /*
