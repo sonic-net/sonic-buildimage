@@ -13,9 +13,9 @@
 # Usage (on the BMC host, or anywhere sonic_platform is importable):
 #   leak_injection_sim.py list
 #   leak_injection_sim.py status [--json]
-#   leak_injection_sim.py inject leakage1 [--severity MINOR|CRITICAL]
+#   leak_injection_sim.py inject coldplate_leak [--severity MINOR|CRITICAL]
 #   leak_injection_sim.py inject all --severity CRITICAL
-#   leak_injection_sim.py clear leakage1
+#   leak_injection_sim.py clear coldplate_leak
 #   leak_injection_sim.py clear all
 #
 # --leak-test-dir DIR redirects the marker directory (default
@@ -88,6 +88,14 @@ def _bind_source_tree():
         py_common.syslogger = syslogger
         sys.modules["sonic_py_common"] = py_common
         sys.modules["sonic_py_common.syslogger"] = syslogger
+
+    # liquid_cooling.py imports sonic_platform.leak_detect; bind the package
+    # to the source directory without running its __init__.py.
+    platform = sys.modules.get("sonic_platform")
+    if platform is None:
+        platform = types.ModuleType("sonic_platform")
+        sys.modules["sonic_platform"] = platform
+    platform.__path__ = [os.path.dirname(module_path)]
 
     spec = importlib.util.spec_from_file_location("nexthop_liquid_cooling",
                                                   module_path)
