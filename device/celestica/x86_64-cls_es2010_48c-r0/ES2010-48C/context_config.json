@@ -1,0 +1,234 @@
+{
+    "CONTEXTS": [
+        {
+            "guid" : 0,
+            "name" : "asic0",
+            "dbAsic" : "ASIC_DB",
+            "dbCounters" : "COUNTERS_DB",
+            "dbFlex": "FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable" : false,
+            "zmq_endpoint": "tcp://127.0.0.1:5555",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5556",
+            "switches": [
+                {
+                    "index" : 0,
+                    "hwinfo" : ""
+                }
+            ]
+        },
+        {
+            "guid" : 1,
+            "name" : "phys",
+            "dbAsic" : "GB_ASIC_DB",
+            "dbCounters" : "GB_COUNTERS_DB",
+            "dbFlex": "GB_FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable" : false,
+            "zmq_endpoint": "tcp://127.0.0.1:5565",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5566",
+            "switches": [
+                {
+                    "index" : 1,
+                    "hwinfo" : "0x00"
+                },
+                {
+                    "index" : 2,
+                    "hwinfo" : "0x01"
+                },
+                {
+                    "index" : 3,
+                    "hwinfo" : "0x02"
+                },
+                {
+                    "index" : 4,
+                    "hwinfo" : "0x03"
+                },
+                {
+                    "index" : 5,
+                    "hwinfo" : "0x04"
+                },
+                {
+                    "index" : 6,
+                    "hwinfo" : "0x05"
+                },
+                {
+                    "index" : 7,
+                    "hwinfo" : "0x06"
+                },
+                {
+                    "index" : 8,
+                    "hwinfo" : "0x07"
+                },
+                {
+                    "index" : 9,
+                    "hwinfo" : "0x200020"
+                },
+                {
+                    "index" : 10,
+                    "hwinfo" : "0x200021"
+                },
+                {
+                    "index" : 11,
+                    "hwinfo" : "0x200022"
+                },
+                {
+                    "index" : 12,
+                    "hwinfo" : "0x200023"
+                },
+                {
+                    "index" : 13,
+                    "hwinfo" : "0x200024"
+                },
+                {
+                    "index" : 14,
+                    "hwinfo" : "0x200025"
+                },
+                {
+                    "index" : 15,
+                    "hwinfo" : "0x200026"
+                },
+                {
+                    "index" : 16,
+                    "hwinfo" : "0x200027"
+                },
+                {
+                    "index" : 17,
+                    "hwinfo" : "0x400040"
+                },
+                {
+                    "index" : 18,
+                    "hwinfo" : "0x400041"
+                },
+                {
+                    "index" : 19,
+                    "hwinfo" : "0x400042"
+                },
+                {
+                    "index" : 20,
+                    "hwinfo" : "0x400043"
+                },
+                {
+                    "index" : 21,
+                    "hwinfo" : "0x400044"
+                },
+                {
+                    "index" : 22,
+                    "hwinfo" : "0x400045"
+                },
+                {
+                    "index" : 23,
+                    "hwinfo" : "0x400046"
+                },
+                {
+                    "index" : 24,
+                    "hwinfo" : "0x400047"
+                },
+                {
+                    "index" : 25,
+                    "hwinfo" : "0x600060"
+                },
+                {
+                    "index" : 26,
+                    "hwinfo" : "0x600061"
+                },
+                {
+                    "index" : 27,
+                    "hwinfo" : "0x600062"
+                },
+                {
+                    "index" : 28,
+                    "hwinfo" : "0x600063"
+                },
+                {
+                    "index" : 29,
+                    "hwinfo" : "0x600064"
+                },
+                {
+                    "index" : 30,
+                    "hwinfo" : "0x600065"
+                },
+                {
+                    "index" : 31,
+                    "hwinfo" : "0x600066"
+                },
+                {
+                    "index" : 32,
+                    "hwinfo" : "0x600067"
+                },
+                {
+                    "index" : 33,
+                    "hwinfo" : "0x1000100"
+                },
+                {
+                    "index" : 34,
+                    "hwinfo" : "0x1000101"
+                },
+                {
+                    "index" : 35,
+                    "hwinfo" : "0x1000102"
+                },
+                {
+                    "index" : 36,
+                    "hwinfo" : "0x1000103"
+                },
+                {
+                    "index" : 37,
+                    "hwinfo" : "0x1000104"
+                },
+                {
+                    "index" : 38,
+                    "hwinfo" : "0x1000105"
+                },
+                {
+                    "index" : 39,
+                    "hwinfo" : "0x1000106"
+                },
+                {
+                    "index" : 40,
+                    "hwinfo" : "0x1000107"
+                },
+                {
+                    "index" : 41,
+                    "hwinfo" : "0x1200120"
+                },
+                {
+                    "index" : 42,
+                    "hwinfo" : "0x1200121"
+                },
+                {
+                    "index" : 43,
+                    "hwinfo" : "0x1200122"
+                },
+                {
+                    "index" : 44,
+                    "hwinfo" : "0x1200123"
+                },
+                {
+                    "index" : 45,
+                    "hwinfo" : "0x1200124"
+                },
+                {
+                    "index" : 46,
+                    "hwinfo" : "0x1200125"
+                },
+                {
+                    "index" : 47,
+                    "hwinfo" : "0x1200126"
+                },
+                {
+                    "index" : 48,
+                    "hwinfo" : "0x1200127"
+                },
+                {
+                    "index" : 51,
+                    "hwinfo" : "0x150"
+                },
+                {
+                    "index" : 53,
+                    "hwinfo" : "0x178"
+                }
+            ]
+        }
+   ]
+}
