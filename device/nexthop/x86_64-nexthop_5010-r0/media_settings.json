@@ -12327,7 +12327,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12365,7 +12365,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12443,7 +12443,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12481,7 +12481,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12559,7 +12559,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12597,7 +12597,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12675,7 +12675,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12713,7 +12713,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12791,7 +12791,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12829,7 +12829,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12907,7 +12907,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -12945,7 +12945,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13023,7 +13023,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13061,7 +13061,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13139,7 +13139,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13177,7 +13177,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13255,7 +13255,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13293,7 +13293,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13371,7 +13371,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13409,7 +13409,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13487,7 +13487,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13525,7 +13525,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13603,7 +13603,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13641,7 +13641,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13719,7 +13719,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13757,7 +13757,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13835,7 +13835,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13873,7 +13873,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13951,7 +13951,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -13989,7 +13989,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14067,7 +14067,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14105,7 +14105,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14183,7 +14183,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14221,7 +14221,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14299,7 +14299,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14337,7 +14337,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14415,7 +14415,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14453,7 +14453,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14531,7 +14531,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14569,7 +14569,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14647,7 +14647,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14685,7 +14685,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14763,7 +14763,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14801,7 +14801,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14879,7 +14879,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14917,7 +14917,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -14995,7 +14995,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15033,7 +15033,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15111,7 +15111,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15149,7 +15149,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15227,7 +15227,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15265,7 +15265,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15343,7 +15343,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15381,7 +15381,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15459,7 +15459,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15497,7 +15497,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15575,7 +15575,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15613,7 +15613,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15691,7 +15691,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15729,7 +15729,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15807,7 +15807,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15845,7 +15845,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15923,7 +15923,7 @@
           "lane3": "0x0"
         }
       },
-      "PINEWAVE-L-OSG4CNS.*-NMT": {
+      ".*L-OSG4CNS.*-NMT": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
@@ -15961,7 +15961,7 @@
           "lane3": "0x0"
         }
       },
-      "EOPTOLINK-EO138HGPCT.*CSL1": {
+      ".*E[OQ]138HGPCT.*CSL1": {
         "pre3": {
           "lane0": "0x0",
           "lane1": "0x0",
