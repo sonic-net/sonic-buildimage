@@ -17,14 +17,15 @@ Added DHCP relay destination addresses ['192.0.0.100'] to Vlan1000
 Restarting DHCP relay service...
 """
 
+# dhcp6relay applies DHCP_RELAY (dhcpv6_servers) changes at runtime, so the IPv6
+# path does not restart the dhcp_relay container: no "Restarting..." line and no
+# systemctl calls.
 config_vlan_add_dhcpv6_relay_output="""\
 Added DHCP relay destination addresses ['fc02:2000::1'] to Vlan1000
-Restarting DHCP relay service...
 """
 
 config_vlan_add_multiple_dhcpv6_relay_output="""\
 Added DHCP relay destination addresses ['fc02:2000::1', 'fc02:2000::2', 'fc02:2000::3'] to Vlan1000
-Restarting DHCP relay service...
 """
 
 config_vlan_del_dhcp_relay_output="""\
@@ -34,12 +35,10 @@ Restarting DHCP relay service...
 
 config_vlan_del_dhcpv6_relay_output="""\
 Removed DHCP relay destination addresses ('fc02:2000::1',) from Vlan1000
-Restarting DHCP relay service...
 """
 
 config_vlan_del_multiple_dhcpv6_relay_output="""\
 Removed DHCP relay destination addresses ('fc02:2000::1', 'fc02:2000::2', 'fc02:2000::3') from Vlan1000
-Restarting DHCP relay service...
 """
 
 @pytest.fixture(scope="module", params=["isc", "new"])
@@ -199,7 +198,7 @@ class TestConfigVlanDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             assert result.output == config_vlan_add_dhcpv6_relay_output
-            assert mock_run_command.call_count == 3
+            assert mock_run_command.call_count == 0
             db.cfgdb.set_entry.assert_called_once_with('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1'], 'dhcpv6_servers': ['fc02:2000::1']})
 
         db.cfgdb.set_entry.reset_mock()
@@ -212,7 +211,7 @@ class TestConfigVlanDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             assert result.output == config_vlan_del_dhcpv6_relay_output
-            assert mock_run_command.call_count == 3
+            assert mock_run_command.call_count == 0
             db.cfgdb.set_entry.assert_called_once_with('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1']})
 
     def test_config_vlan_add_del_multiple_dhcpv6_relay_dest(self, mock_cfgdb):
@@ -228,7 +227,7 @@ class TestConfigVlanDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             assert result.output == config_vlan_add_multiple_dhcpv6_relay_output
-            assert mock_run_command.call_count == 3
+            assert mock_run_command.call_count == 0
             db.cfgdb.set_entry.assert_called_once_with('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1'], 'dhcpv6_servers': ['fc02:2000::1', 'fc02:2000::2', 'fc02:2000::3']})
 
         db.cfgdb.set_entry.reset_mock()
@@ -241,7 +240,7 @@ class TestConfigVlanDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             assert result.output == config_vlan_del_multiple_dhcpv6_relay_output
-            assert mock_run_command.call_count == 3
+            assert mock_run_command.call_count == 0
             db.cfgdb.set_entry.assert_called_once_with('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1']})
 
     def test_config_vlan_remove_nonexist_dhcp_relay_dest(self, mock_cfgdb):
