@@ -62,6 +62,7 @@ PATH	prepends a cross-Python venv bin dir to the existing ${PATH} (slave.mk:1051
 docker_container_name	docker build-arg set to $($*.gz_CONTAINER_NAME) (slave.mk:1125/1295/1363); a fixed per-image name, constant for a given cached docker target, so it cannot change independently and cause a stale hit
 sonic_version	set from $(SONIC_GET_VERSION) (platform/alpinevs/sonic-version.mk:3) and written into the volatile sonic_version.yml build-stamp metadata alongside commit_id/build_date/build_number; same class as BUILD_TIMESTAMP - keying it would defeat caching
 KERNEL_SRC	filesystem path to the kernel build tree, default /lib/modules/$(KVERSION)/build (platform/aspeed/sonic-platform-modules-arista/Makefile:11); kernel identity is KVERSION (tracked in the cache key) and the path itself is relocation-only
+PLATFORM_PATH	derived from CONFIGURED_PLATFORM (Makefile/slave.mk: platform/$(CONFIGURED_PLATFORM)); CONFIGURED_PLATFORM is already in SONIC_COMMON_FLAGS_LIST, so the path string is not an independent content input
 RFS_SQUASHFS_NAME	equals $* (the RFS target stem <installer>__<machine>__rfs.squashfs); it IS the cached artifact's own squashfs filename, so it cannot cause a stale cross-key reuse (Check 21)
 TARGET_MACHINE	equals $($*_MACHINE), a deterministic function of the RFS target stem $* which already encodes the machine in the artifact filename identity; not an independent content input (Check 21)
 TARGET_PATH	output directory path (target/) where build_debian.sh writes results; relocation only, does not alter rootfs content (Check 21)

@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2024 Xsightlabs Ltd.
+
+fname=$(basename $0)
+
+lsmod | grep xpci > /dev/null
+if [ $? -eq 0 ]; then
+	echo "$fname: Unload xpci module" | tee /dev/kmsg
+	rmmod xpci
+	if [ $? -eq 1 ]; then
+		echo "$fname: Cannot reset X2 while xpci is loaded" | tee /dev/kmsg
+		exit 1
+	fi
+fi
+
+/opt/xplt/utils/es9618x_reset_x2.sh
+rc=$?
+if [ "$rc" -ne 0 ]; then
+	echo "$fname: Failed to reset X2" | tee /dev/kmsg
+	exit $rc
+fi
