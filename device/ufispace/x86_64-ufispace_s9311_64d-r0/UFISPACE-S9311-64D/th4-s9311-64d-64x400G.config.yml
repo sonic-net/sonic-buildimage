@@ -17,6 +17,17 @@ bcm_device:
             sai_optimized_mmu: 1
             sai_port_pmap_phy_lanes: 1
             stat_custom_receive0_management_mode: 1
+
+            # vxlan
+            l3_alpm_template: 1
+            riot_enable: 1
+            riot_overlay_l3_egress_mem_size: 16384
+            riot_overlay_l3_intf_mem_size: 4096
+            l3_ecmp_member_first_lkup_mem_size: 12288
+            bcm_tunnel_term_compatible_mode: 1
+            sai_tunnel_support: 10
+            sai_tunnel_underlay_route_mode: 2
+            sai_tunnel_ecmp_sharing_mode: 0 # change to 2 if SAI_NEXT_HOP_GROUP_ATTR_LEVEL_1 used
 ...
 ---
 device:
@@ -547,7 +558,7 @@ device:
                 RX_POLARITY_FLIP_AUTO: 0
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x53764021
-                TX_LANE_MAP: 0x17260531
+                TX_LANE_MAP: 0x17260534
                 RX_POLARITY_FLIP: 0xf0
                 TX_POLARITY_FLIP: 0x88
             ?

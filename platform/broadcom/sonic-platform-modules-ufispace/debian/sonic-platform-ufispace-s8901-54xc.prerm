@@ -1,2 +1,4 @@
+systemctl stop ufispace-asic-thermal.service
+systemctl disable ufispace-asic-thermal.service
 systemctl stop pddf-platform-init.service
 systemctl disable pddf-platform-init.service
