@@ -10,8 +10,9 @@ deletes the MAC. It sees zebra's MAC writes after the kernel has made
 them.
 
 When the kernel has no entry for the MAC, it answers zebra's delete with
-ENOENT and the dataplane request fails. A failed request goes back to
-zebra without passing the dataplane providers after the kernel
+ENOENT. zebra's dataplane (zebra_dplane.c) hands each request to its
+providers in turn, the kernel first and then dplane_fpm_sonic, and
+returns a request the kernel fails to zebra at once
 (dplane_thread_loop()), so dplane_fpm_sonic never sees the delete: the
 ASIC keeps the static entry, and every FPM reconnect installs it again.
 zebra is the only writer of these kernel entries, but in this mode it

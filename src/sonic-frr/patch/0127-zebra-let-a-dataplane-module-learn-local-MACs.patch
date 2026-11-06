@@ -5,18 +5,22 @@ Subject: [PATCH] zebra: let a dataplane module learn local MACs
 In SONiC's FPM MAC sync mode (FDB_SYNC mac_sync_mode fpm), zebra runs
 with --kernel-mac-ext-learn and loads dplane_fpm_sonic, the dataplane
 plugin that talks FPM to fpmsyncd. The ASIC learns local MACs, fpmsyncd
-reports them over the FPM channel, and dplane_fpm_sonic hands them to
-zebra and writes their kernel bridge FDB entries. So in this mode zebra
-must not learn local MACs from the kernel. The MACs zebra creates for
-ARP/ND entries (auto MACs) are not affected.
+reports them over the FPM channel, and dplane_fpm_sonic keeps them,
+hands them to zebra and writes their kernel bridge FDB entries. So in
+this mode the kernel is not a source of local MACs, and zebra must not
+learn them from it. zebra still creates a MAC for an ARP/ND entry (an
+auto MAC); when dplane_fpm_sonic reports the MAC, it becomes a local
+MAC, as it does on a kernel learn.
 
-Learning them from the kernel goes wrong because zebra reads back its
-own writes. For a host the Ethernet Segment peer advertises but this
-switch has not seen, zebra holds the MAC local-inactive and writes its
-kernel entry. The kernel reports that write back as RTM_NEWNEIGH. In
-mac-ext-learn mode zebra drops its own writes by NDA_PROTOCOL, but the
-kernel keeps no protocol for bridge FDB entries, so zebra takes the
-report for a local learn: the MAC turns active, is advertised as learnt
+The local MACs the kernel reports are zebra's own writes. Patch 0033
+drops them by NDA_PROTOCOL, which works while the kernel keeps a
+protocol for bridge FDB entries: SONiC's kernel patch
+0002-net-bridge-vxlan-Protocol-field-in-bridge-fdb.patch adds it, and
+sonic-net/sonic-linux-kernel#619 removes that patch, as nothing needs
+protocol-scoped FDB entries once MACs are synced over FPM. Without it,
+the bridge reports zebra's write with no protocol, and zebra takes it
+for a local learn: for a host the Ethernet Segment peer advertises but
+this switch has not seen, the MAC turns active, is advertised as learnt
 here, and stays after the peer withdraws it.
 
 This patch adds zebra_neigh_set_dplane_mac_learning(), which
@@ -25,32 +29,35 @@ is set:
 
 - zebra ignores the kernel's bridge FDB messages (RTM_NEWNEIGH and
   RTM_DELNEIGH, AF_BRIDGE) for local ports, adds and deletes alike.
-  Entries on the VXLAN device are still processed.
+  Those for the VXLAN device concern remote MACs and are processed as
+  before.
 
-- zebra also reads the kernel bridge FDB when an L2VNI is added or comes
-  up, and when BGP enables advertise-all-vni. The entries it reads come
-  through the same path and are ignored as well, which would leave zebra
-  without the MACs the ASIC learnt before the read: fpmsyncd does not
-  report them again until they move or age out. After each such read
-  zebra now calls the new zebra_dplane_mac_read hook, and
-  dplane_fpm_sonic answers with the MACs fpmsyncd reported.
+- zebra drops a local MAC for a VLAN with no L2VNI, and gets the local
+  MACs of a VLAN again from a read of the kernel bridge FDB when an
+  L2VNI is added or comes up, and when BGP enables advertise-all-vni.
+  The read's local entries are ignored as above, so after it zebra now
+  calls the new zebra_dplane_mac_read hook, and dplane_fpm_sonic hands
+  zebra the MACs it keeps.
 
 - When the peer-active hold timer of a MAC expires, mac-ext-learn mode
-  flushes the MAC even if it is active locally. In this mode the ASIC
-  ages local MACs, and fpmsyncd reports when it does, so flushing an
-  active MAC only withdraws the route of a host that is still behind
-  this switch, until dplane_fpm_sonic gives the MAC back. zebra now
-  flushes only a local-inactive MAC at expiry; an active one just loses
-  peer-active, as without mac-ext-learn.
+  flushes the MAC, as no dynamic learn happens while it is static
+  (patch 0034). That stays for a local-inactive MAC. An active MAC is
+  one the ASIC learnt itself, for instance from a host whose traffic
+  reached this switch before the peer advertised it: the ASIC ages it,
+  and fpmsyncd reports when it does, so flushing it only withdraws the
+  route of a host still behind this switch, until dplane_fpm_sonic
+  gives the MAC back. Such a MAC now just loses peer-active, as without
+  mac-ext-learn.
 
-- dplane_fpm_sonic installs a sync MAC (a host the Ethernet Segment peer
-  advertises) in the ASIC as a static entry when zebra writes the MAC as
-  static, and removes that entry when zebra writes the MAC again as a
-  normal entry. mac-ext-learn mode writes a local MAC only while it is
-  local-inactive, so a MAC that is active when it stops being static, at
-  hold timer expiry or when its last synced neighbour is deleted, got no
-  write, and its static entry stayed in the ASIC. zebra now writes such
-  a MAC once more as a normal entry.
+- dplane_fpm_sonic installs a sync MAC (a host the Ethernet Segment
+  peer advertises) in the ASIC as a static entry when zebra writes the
+  MAC as static, and removes it when zebra writes the MAC as a normal
+  entry or deletes it. mac-ext-learn mode writes a local MAC only while
+  it is local-inactive, so when an active MAC with such an entry stopped
+  being static, at hold timer expiry or when its last synced neighbour
+  was deleted, zebra wrote nothing, and the static entry stayed in the
+  ASIC, where it does not age. zebra now writes such a MAC once more as
+  a normal entry.
 
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
