@@ -118,8 +118,8 @@ class StaticRouteBfd(object):
         self.local_db[LOCAL_INTERFACE_TABLE] = defaultdict(dict)
 
         self.config_db  = swsscommon.DBConnector(CONFIG_DB_NAME, 0, False)
-        self.appl_db = swsscommon.DBConnector(APPL_DB_NAME, 0, False)
-        self.state_db = swsscommon.DBConnector(STATE_DB_NAME, 0, False)
+        self.appl_db = swsscommon.DBConnector(APPL_DB_NAME, 0, False, "", True)
+        self.state_db = swsscommon.DBConnector(STATE_DB_NAME, 0, False, "", True)
 
         self.bfd_appl_tbl = swsscommon.ProducerStateTable(self.appl_db, BFD_SESSION_TABLE_NAME)
 
