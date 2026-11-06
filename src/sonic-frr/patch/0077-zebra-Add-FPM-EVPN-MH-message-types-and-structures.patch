@@ -7,6 +7,10 @@ Add RTM_FPM message types for EVPN Multihoming bridge port attributes
 (Split Horizon List, Designated Forwarder, ES Backup NHG) and their
 associated message structures to kernel_netlink.h.
 
+Keep protection Member/Group wire definitions, message IDs and ABI guards
+in this same header. Encoding helpers consume this contract from the SONiC
+FPM plugin without defining a second copy. The native ABI is unchanged.
+
 These message types are consumed by fpmsyncd in SONiC to populate
 EVPN_SPLIT_HORIZON_TABLE, EVPN_DF_TABLE, and EVPN_ES_BACKUP_NHG_TABLE
 in APPL_DB.
@@ -20,17 +24,25 @@ Signed-off-by: Ben Friedman <friedman@cisco.com>
 (cherry picked from commit ab89396461f57c3745d69628640b0f1cc67f37ff)
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
- zebra/kernel_netlink.h | 41 +++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 41 insertions(+)
+ zebra/kernel_netlink.h | 105 insertions(+)
+ 1 file changed, 105 insertions(+)
 
 diff --git a/zebra/kernel_netlink.h b/zebra/kernel_netlink.h
-index d920d25810..ff19d21573 100644
 --- a/zebra/kernel_netlink.h
 +++ b/zebra/kernel_netlink.h
-@@ -28,6 +28,47 @@ struct zebra_dplane_ctx;
+@@ -8,6 +8,7 @@
+
+ #ifdef HAVE_NETLINK
+
++#include <netinet/in.h>
+ #include <stddef.h>
+ #include <stdbool.h>
+ #include <stdint.h>
+@@ -27,6 +28,110 @@
+ struct zebra_dplane_ctx;
  struct zebra_dplane_info;
  struct zebra_ns;
- 
++
 +/* FPM-specific extension values, for messages and attributes */
 +typedef enum {
 +	/*
@@ -47,7 +59,12 @@ index d920d25810..ff19d21573 100644
 +	RTM_FPM_DEL_EVPN_DF,
 +	RTM_FPM_ADD_EVPN_ES_BACKUP_NHG,
 +	RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
-+	RTM_FPM_LAST = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
++	RTM_FPM_ADD_L2_NEXTHOP,
++	RTM_FPM_DEL_L2_NEXTHOP,
++	RTM_FPM_ADD_L2_NEXTHOP_GROUP,
++	RTM_FPM_DEL_L2_NEXTHOP_GROUP,
++	RTM_FPM_EVPN_MH_REPLAY_DONE,
++	RTM_FPM_LAST = RTM_FPM_EVPN_MH_REPLAY_DONE,
 +	RTM_FPM_MAX = RTM_FPM_LAST
 +} rtm_fpm_msg_types_et;
 +
@@ -67,14 +84,71 @@ index d920d25810..ff19d21573 100644
 +	uint32_t ebnm_backup_nhg_id;
 +};
 +
++/* Protection Member/Group use FPM only. Kernel L2 NH/NHG messages
++ * remain on kernel netlink; producers preserve complete tagged IDs.
++ */
++#define L2_NHG_ESI_LEN 10u
++#define L2_NHG_MEMBER_TYPE_L2 0
++#define L2_NHG_MEMBER_TYPE_L3 1
++/* Use the same native C ABI convention as the existing FPM extensions.
++ * FRR and SWSS must agree on sizes/offsets, including alignment padding.
++ */
++struct l2_nhg_member_msg {
++	uint32_t l2nm_nh_id;
++	uint8_t l2nm_type; /* L2_NHG_MEMBER_TYPE_L2 or L2_NHG_MEMBER_TYPE_L3 */
++	uint8_t l2nm_family; /* AF_INET or AF_INET6 */
++	union {
++		struct in_addr ip4;
++		struct in6_addr ip6;
++	} l2nm_remote_vtep;
++	uint8_t l2nm_router_mac[6];
++};
++struct l2_nhg_group_msg {
++	uint32_t l2ng_nhg_id;
++	uint32_t l2ng_count;
++	/* Opaque ES identity; it does not replace the Group ID as the DB key.
++	 */
++	uint8_t l2ng_esi[L2_NHG_ESI_LEN];
++	struct l2_nhg_member_msg l2ng_members[];
++};
++
++#define L2_NHG_GROUP_MSG_LEN(n)                                                \
++	(sizeof(struct l2_nhg_group_msg) +                                     \
++	 (size_t)(n) * sizeof(struct l2_nhg_member_msg))
++/*
++ * One Group ADD is FPM hdr (4) + nlmsghdr (16) + Group header (20) + n * 32.
++ * FPM_MAX_MSG_LEN is 16384, so n <= 510 (16360 bytes). 511 does not fit.
++ */
++#define L2_NHG_MAX_MEMBERS 510u
++
++#ifdef __cplusplus
++#define FPM_NHG_STATIC_ASSERT static_assert
++#else
++#define FPM_NHG_STATIC_ASSERT _Static_assert
++#endif
++
++FPM_NHG_STATIC_ASSERT(sizeof(struct l2_nhg_member_msg) == 32 &&
++		   offsetof(struct l2_nhg_member_msg, l2nm_remote_vtep) == 8 &&
++		   offsetof(struct l2_nhg_member_msg, l2nm_router_mac) == 24,
++	       "FPM Member ABI");
++FPM_NHG_STATIC_ASSERT(sizeof(struct l2_nhg_group_msg) == 20 &&
++		   offsetof(struct l2_nhg_group_msg, l2ng_members) == 20,
++	       "FPM Group ABI");
++
++FPM_NHG_STATIC_ASSERT(RTM_FPM_ADD_EVPN_ES_BACKUP_NHG == 147 &&
++               RTM_FPM_DEL_EVPN_ES_BACKUP_NHG == 148, "FPM Binding message IDs");
++FPM_NHG_STATIC_ASSERT(4 + NLMSG_LENGTH(L2_NHG_GROUP_MSG_LEN(L2_NHG_MAX_MEMBERS)) <= 16384,
++               "FPM Group frame limit");
++
++#undef FPM_NHG_STATIC_ASSERT
++
 +#define FPM_SHL_IPV4_ADDR 1
 +#define FPM_SHL_IPV6_ADDR 2
 +#define FPM_SHL_LAST FPM_SHL_IPV6_ADDR
 +#define FPM_SHL_MAX FPM_SHL_LAST
-+
+
  #define NL_RCV_PKT_BUF_SIZE     (34 * 1024)
  #define NL_PKT_BUF_SIZE         8192
- 
 -- 
 2.34.1
 

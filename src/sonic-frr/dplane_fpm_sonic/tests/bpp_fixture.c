@@ -6,8 +6,6 @@
 #include <stdint.h>
 #include <netinet/in.h>
 #define EVPN_MH_NHG_MAX_MEMBERS 510
-#define RTM_FPM_ADD_EVPN_ES_BACKUP_NHG 147
-#define RTM_FPM_DEL_EVPN_ES_BACKUP_NHG 148
 #define IS_IPADDR_V4(a) ((a)->type == AF_INET)
 #define IS_IPADDR_V6(a) ((a)->type == AF_INET6)
 struct ipaddr {

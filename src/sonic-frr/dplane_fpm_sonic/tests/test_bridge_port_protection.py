@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Run with python3 -m unittest discover -s src/sonic-frr/dplane_fpm_sonic/tests.
 
-Compiles the production adapter against getter-backed context doubles. Exact
+Compiles the production adapter against getter-backed context doubles and the
+protocol declarations from the production kernel_netlink.h patch. Exact
 wire expectations are independent Python vectors; no live FRR/DVS claim.
 """
 import ctypes as C
@@ -12,6 +13,24 @@ import struct
 import subprocess
 import tempfile
 import unittest
+
+
+def prepare_netlink_contract(build):
+    """Use production patch declarations; do not duplicate the wire contract.
+
+    This isolates the inserted protocol section from unrelated FRR APIs. Full
+    patched-FRR header/module builds are separate integration checks.
+    """
+    patch = (Path(__file__).resolve().parents[2] / 'patch' /
+             '0077-zebra-Add-FPM-EVPN-MH-message-types-and-structures.patch')
+    declarations = '\n'.join(line[1:] for line in patch.read_text().splitlines()
+                             if line.startswith('+') and not line.startswith('+++'))
+    header = build / 'zebra' / 'kernel_netlink.h'
+    header.parent.mkdir(parents=True, exist_ok=True)
+    header.write_text('#ifndef BPP_TEST_KERNEL_NETLINK_H\n'
+                      '#define BPP_TEST_KERNEL_NETLINK_H\n'
+                      '#include <stddef.h>\n#include <stdint.h>\n'
+                      '#include <linux/netlink.h>\n' + declarations + '\n#endif\n')
 
 
 class AddressUnion(C.Union):
@@ -62,10 +81,12 @@ class ProtectionEncoderTest(unittest.TestCase):
         cls.temp = None if os.environ.get("BPP_TEST_BUILD_DIR") else tempfile.TemporaryDirectory()
         build = Path(os.environ.get("BPP_TEST_BUILD_DIR") or cls.temp.name)
         build.mkdir(parents=True, exist_ok=True)
+        cls.build = build
+        prepare_netlink_contract(build)
         source = Path(__file__).with_name('bpp_fixture.c')
         library = build / 'bpp.so'
         subprocess.run([os.environ.get('CC', 'cc'), '-std=gnu11', '-Wall',
-                        '-Wextra', '-Werror', '-fPIC', '-shared',
+                        '-Wextra', '-Werror', '-fPIC', '-shared', '-I', str(build),
                         *os.environ.get('BPP_TEST_CFLAGS', '').split(),
                         str(source), '-o', str(library)], check=True)
         cls.library = C.CDLL(str(library))
@@ -93,13 +114,39 @@ class ProtectionEncoderTest(unittest.TestCase):
 
     def test_wire_header_builds_without_companion_frr_api(self):
         header = Path(__file__).resolve().parents[1] / 'bridge_port_protection.h'
-        source = ('#define RTM_FPM_ADD_EVPN_ES_BACKUP_NHG 147\n'
-                  '#define RTM_FPM_DEL_EVPN_ES_BACKUP_NHG 148\n'
-                  '#include "' + str(header) + '"\n'
+        source = ('#include "' + str(header) + '"\n'
                   'int main(void) { return 0; }\n')
         subprocess.run([os.environ.get('CC', 'cc'), '-std=c11', '-Wall',
-                        '-Wextra', '-Werror', '-fsyntax-only', '-x', 'c', '-'],
+                        '-Wextra', '-Werror', '-I', str(self.build),
+                        '-fsyntax-only', '-x', 'c', '-'],
                        input=source, text=True, check=True)
+
+    def check_netlink_consumer(self, compiler, language, assertion):
+        source = ('#include "zebra/kernel_netlink.h"\n'
+                  + assertion + '(RTM_FPM_FIRST == 140 && '
+                  'RTM_FPM_ADD_EVPN_SHL == 143 && RTM_FPM_ADD_EVPN_DF == 145 && '
+                  'RTM_FPM_ADD_EVPN_ES_BACKUP_NHG == 147 && '
+                  'RTM_FPM_DEL_EVPN_ES_BACKUP_NHG == 148, "existing IDs");\n'
+                  + assertion + '(RTM_FPM_ADD_L2_NEXTHOP == 149 && '
+                  'RTM_FPM_DEL_L2_NEXTHOP == 150 && '
+                  'RTM_FPM_ADD_L2_NEXTHOP_GROUP == 151 && '
+                  'RTM_FPM_DEL_L2_NEXTHOP_GROUP == 152 && '
+                  'RTM_FPM_EVPN_MH_REPLAY_DONE == 153 && '
+                  'RTM_FPM_MAX == 153, "protection IDs");\n'
+                  + assertion + '(sizeof(struct evpn_backup_nhg_msg) == 8 && '
+                  'sizeof(struct l2_nhg_member_msg) == 32 && '
+                  'L2_NHG_GROUP_MSG_LEN(1) == 52 && '
+                  'L2_NHG_MAX_MEMBERS == 510, "native ABI");\n')
+        subprocess.run([compiler, '-std=' + ('c++11' if language == 'c++' else 'c11'),
+                        '-Wall', '-Wextra', '-Werror', '-I', str(self.build),
+                        '-fsyntax-only', '-x', language, '-'],
+                       input=source, text=True, check=True)
+
+    def test_netlink_contract_without_plugin_helpers(self):
+        self.check_netlink_consumer(os.environ.get('CC', 'cc'), 'c', '_Static_assert')
+
+    def test_netlink_contract_cpp_consumer(self):
+        self.check_netlink_consumer(os.environ.get('CXX', 'c++'), 'c++', 'static_assert')
 
     def test_member_ipv4_ipv6_golden_bytes(self):
         for ip in ['10.0.0.2', '2001:db8::2']:

@@ -12,79 +12,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* These private message numbers are shared with SWSS fpmsyncd/fpm/fpm.h. */
-enum {
-	RTM_FPM_ADD_L2_NEXTHOP = 149,
-	RTM_FPM_DEL_L2_NEXTHOP = 150,
-	RTM_FPM_ADD_L2_NEXTHOP_GROUP = 151,
-	RTM_FPM_DEL_L2_NEXTHOP_GROUP = 152,
-	RTM_FPM_EVPN_MH_REPLAY_DONE = 153,
-};
-#define L2_NHG_ESI_LEN 10u
-#define L2_NHG_MEMBER_TYPE_L2 0
-#define L2_NHG_MEMBER_TYPE_L3 1
-/* Use the same native C ABI convention as the existing FPM extensions.
- * FRR and SWSS must agree on sizes/offsets, including alignment padding.
- */
-struct l2_nhg_member_msg {
-	uint32_t l2nm_nh_id;
-	uint8_t l2nm_type; /* L2_NHG_MEMBER_TYPE_L2 or L2_NHG_MEMBER_TYPE_L3 */
-	uint8_t l2nm_family; /* AF_INET or AF_INET6 */
-	union {
-		struct in_addr ip4;
-		struct in6_addr ip6;
-	} l2nm_remote_vtep;
-	uint8_t l2nm_router_mac[6];
-};
-struct l2_nhg_group_msg {
-	uint32_t l2ng_nhg_id;
-	uint32_t l2ng_count;
-	/* Opaque ES identity; it does not replace the Group ID as the DB key.
-	 */
-	uint8_t l2ng_esi[L2_NHG_ESI_LEN];
-	struct l2_nhg_member_msg l2ng_members[];
-};
-
-#define L2_NHG_GROUP_MSG_LEN(n)                                                \
-	(sizeof(struct l2_nhg_group_msg) +                                     \
-	 (size_t)(n) * sizeof(struct l2_nhg_member_msg))
-/*
- * One Group ADD is FPM hdr (4) + nlmsghdr (16) + Group header (20) + n * 32.
- * FPM_MAX_MSG_LEN is 16384, so n <= 510 (16360 bytes). 511 does not fit.
- */
-#define L2_NHG_MAX_MEMBERS 510u
-
-_Static_assert(sizeof(struct l2_nhg_member_msg) == 32 &&
-		   offsetof(struct l2_nhg_member_msg, l2nm_remote_vtep) == 8 &&
-		   offsetof(struct l2_nhg_member_msg, l2nm_router_mac) == 24,
-	       "FPM Member ABI");
-_Static_assert(sizeof(struct l2_nhg_group_msg) == 20 &&
-		   offsetof(struct l2_nhg_group_msg, l2ng_members) == 20,
-	       "FPM Group ABI");
-
-_Static_assert(RTM_FPM_ADD_EVPN_ES_BACKUP_NHG == 147 &&
-               RTM_FPM_DEL_EVPN_ES_BACKUP_NHG == 148, "FPM Binding message IDs");
-_Static_assert(4 + NLMSG_LENGTH(L2_NHG_GROUP_MSG_LEN(L2_NHG_MAX_MEMBERS)) <= 16384,
-               "FPM Group frame limit");
+/* Wire definitions and ABI guards live with the existing SONiC FPM
+ * extensions in zebra/kernel_netlink.h. Only encoding helpers live here. */
+#include "zebra/kernel_netlink.h"
 
 /* Per-port Binding ABI: signed interface index, complete unsigned Group ID. */
 static inline ssize_t sonic_bpp_binding(uint32_t ifindex, uint32_t group_id,
 					bool deleting, uint8_t *buffer,
 					size_t capacity)
 {
-	struct {
-		int32_t ifindex;
-		uint32_t group_id;
-	} binding;
+	struct evpn_backup_nhg_msg binding = {0};
 	struct nlmsghdr header = {0};
 	size_t length = NLMSG_LENGTH(sizeof(binding));
 	if (!ifindex || ifindex > INT_MAX || capacity < length)
 		return -1;
-	binding.ifindex = ifindex;
-	binding.group_id = deleting ? 0 : group_id;
+	binding.ebnm_ifindex = ifindex;
+	binding.ebnm_backup_nhg_id = deleting ? 0 : group_id;
 	header.nlmsg_len = length;
-	header.nlmsg_type = binding.group_id ? RTM_FPM_ADD_EVPN_ES_BACKUP_NHG
-					     : RTM_FPM_DEL_EVPN_ES_BACKUP_NHG;
+	header.nlmsg_type = binding.ebnm_backup_nhg_id
+				? RTM_FPM_ADD_EVPN_ES_BACKUP_NHG
+				: RTM_FPM_DEL_EVPN_ES_BACKUP_NHG;
 	header.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 	memset(buffer, 0, length);
 	memcpy(buffer, &header, sizeof(header));
