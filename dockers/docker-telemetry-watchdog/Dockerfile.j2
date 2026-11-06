@@ -19,7 +19,7 @@ WORKDIR /watchdog
 COPY watchdog/ ./
 
 # Build from within /watchdog
-RUN cargo build --release
+RUN cargo build --release --locked
 
 FROM $BASE AS base
 
