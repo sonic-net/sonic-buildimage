@@ -8,6 +8,19 @@
 
 
 {%- if docker_container_name == "database" %}
+set_redis_socket_permissions() {
+    local socket="$1" mode=0760 selected
+    if [ "${REDIS_AUTH_MODE:-legacy}" == "enforce" ]; then
+        selected=$(jq -r --arg socket "$socket" \
+            'any(.[]; .unix_socket == $socket)' /run/redis-auth/local.json) || exit 1
+        if [ "$selected" == "true" ]; then
+            # Redis ACLs preserve reads and authenticate writes on this socket.
+            mode=0766
+        fi
+    fi
+    chgrp -f redis "$socket" && chmod -f "$mode" "$socket"
+}
+
 link_namespace() {
     # Makes namespace of a docker container available in
     # /var/run/netns so it can be managed with iproute2
@@ -402,9 +415,9 @@ function postStartAction()
            fi
         fi
 
-        # Add redis UDS to the redis group and give read/write access to the group
-        REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
-        chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
+        # Preserve local reader admission on explicitly protected sockets.
+        REDIS_BMP_SOCK="/var/run/redis${DEV}/redis_bmp.sock"
+        set_redis_socket_permissions "$REDIS_BMP_SOCK"
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
         until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
@@ -416,7 +429,7 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
-    chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+    set_redis_socket_permissions "$REDIS_SOCK"
     # Binding the midplane ip to the redisdb
     if [[ -n "$midplane_ip" ]]; then
         IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
@@ -499,6 +512,28 @@ start() {
     PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
+    fi
+
+    # Mount the boot-owned parent directory so restarts use current files.
+    REDIS_AUTH_MNT=()
+    if [ "$EUID" -eq 0 ]; then
+        REDIS_AUTH_MODE=$(/usr/bin/redis_auth_startup.py --check) || exit 1
+    else
+        REDIS_AUTH_MODE=$(sudo -n /usr/bin/redis_auth_startup.py --check) || exit 1
+    fi
+    if [ "$REDIS_AUTH_MODE" == "enforce" ]; then
+        {%- if docker_container_name == "database" %}
+        if [ -n "$DATABASE_TYPE" ] || [ "${NUM_DPU:-0}" -gt 0 ]; then
+            echo "Redis protection requires the qualified local database container" >&2
+            exit 1
+        fi
+        {%- endif %}
+        REDIS_AUTH_MNT=(-v /run/redis-auth:/run/redis-auth:ro --env REDIS_AUTH_REQUIRED=1)
+        # Container units can run as the existing administrator account.
+        if [ "$EUID" -ne 0 ]; then
+            SONIC_DB_CLI="sudo -n $SONIC_DB_CLI"
+            SONIC_CFGGEN="sudo -n $SONIC_CFGGEN"
+        fi
     fi
 
     {%- if sonic_asic_platform == "broadcom" %}
@@ -589,6 +624,15 @@ start() {
         {%- else %}
         DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
+        if [ "$REDIS_AUTH_MODE" == "enforce" ] && ! jq -e \
+            '.[0] | any(.Mounts[]; .Source == "/run/redis-auth" and .Destination == "/run/redis-auth" and .RW == false) and any(.Config.Env[]; . == "REDIS_AUTH_REQUIRED=1")' \
+            <<< "$DOCKERCHECK" >/dev/null; then
+            DOCKERMOUNT="redis-auth-delivery-missing"
+        elif [ "$REDIS_AUTH_MODE" == "legacy" ] && jq -e \
+            '.[0] | any(.Mounts[]?; .Destination == "/run/redis-auth") or any(.Config.Env[]?; . == "REDIS_AUTH_REQUIRED=1")' \
+            <<< "$DOCKERCHECK" >/dev/null; then
+            DOCKERMOUNT="redis-auth-delivery-obsolete"
+        fi
         if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
             CONTAINER_EXISTS="yes"
             preStartAction
@@ -828,6 +872,7 @@ start() {
     done < <(get_pmon_device_cgroup_rules)
 {%- endif %}
     docker create {{docker_image_run_opt}} \
+        "${REDIS_AUTH_MNT[@]}" \
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
