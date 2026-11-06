@@ -1462,6 +1462,35 @@ static void fpm_hw_macs_give_back(struct event *t)
 			  given);
 }
 
+/*
+ * A bridge port left its bridge or is going away. The kernel flushed its FDB
+ * entries, static ones included, and none of zebra's writes for them reach
+ * this module: zebra deletes nothing the flush removed, and the static entries
+ * it writes again for synced MACs fail while the port is out of the bridge.
+ * End the port's pins, so that SONiC removes their static entries too. A MAC
+ * is pinned again when zebra next writes it static.
+ */
+static int fpm_dplane_mac_port_flush(struct interface *ifp)
+{
+	struct fpm_pin *p;
+	uint32_t ended = 0;
+
+	frr_each (fpm_mac_pins, &mac_pins, p) {
+		if (p->unpinned || p->pin.ifindex != ifp->ifindex)
+			continue;
+		p->unpinned = true;
+		fpm_pin_work_move(p, &pins_unwritten);
+		ended++;
+	}
+
+	if (ended) {
+		zlog_info("%s: the FDB of %s was flushed, ending %u MAC pin(s)",
+			  __func__, ifp->name, ended);
+		fpm_pin_flush(gfnc);
+	}
+	return 0;
+}
+
 /* Runs inside zebra's VNI processing, so the MACs follow once it is done. One
  * pass serves a burst of reads, such as one per L2VNI.
  */
@@ -4558,6 +4587,7 @@ static int fpm_nl_new(struct event_loop *tm)
 		zlog_debug("%s register status: %d", prov_name, rv);
 
 	hook_register(zebra_dplane_mac_read, fpm_dplane_mac_read);
+	hook_register(zebra_dplane_mac_port_flush, fpm_dplane_mac_port_flush);
 
 	install_node(&fpm_node);
 	install_element(ENABLE_NODE, &fpm_show_status_cmd);
