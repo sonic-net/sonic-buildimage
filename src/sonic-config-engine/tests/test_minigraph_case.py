@@ -1,7 +1,5 @@
-import io
 import json
 import os
-import runpy
 import subprocess
 import ipaddress
 import tests.common_utils as utils
@@ -10,7 +8,7 @@ import minigraph
 from lxml import etree as ET
 from lxml.etree import QName
 from unittest import TestCase, mock
-from tests.test_cfggen_platformJson import port_config_env
+from tests.test_cfggen_platformJson import _run_cfggen_cli_json, port_config_env
 
 TOR_ROUTER = 'ToRRouter'
 BACKEND_TOR_ROUTER = 'BackEndToRRouter'
@@ -709,38 +707,39 @@ class TestParseChassisHwsku(TestCase):
 class TestMinigraphPortSources(TestCase):
     def test_minigraph_cli_port_sources(self):
         test_dir = os.path.dirname(os.path.realpath(__file__))
-        script = os.path.join(test_dir, '..', 'sonic-cfggen')
         platform_json = os.path.join(test_dir, 'sample_platform.json')
         saved = {'Ethernet20': {'alias': 'saved', 'lanes': '80,81,82,83', 'speed': '100000'}}
+        saved_breakout = {'Ethernet20': {'brkout_mode': '1x100G[40G]'}}
         with open(platform_json) as config:
             minimum_ports = set(json.load(config)['interfaces'])
-        for source, platform, selection, expected_ports in (
-                ('platform', True, None, minimum_ports),
-                ('db-result', True, None, {'Ethernet20'}),
-                ('selection', True, {'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}}, {'Ethernet20'}),
-                ('empty-selection', True, {}, set()),
-                ('no-config', False, None, {'Ethernet0'})):
+        for source, platform, selection, expected_ports, expected_breakout in (
+                ('platform', True, None, minimum_ports, None),
+                ('db-result', True, None, {'Ethernet20'}, saved_breakout),
+                ('selection', True, {'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}},
+                 {'Ethernet20'}, saved_breakout),
+                ('empty-selection', True, {}, set(), {}),
+                ('empty-installed', True, {}, set(), {}),
+                ('no-config', False, None, {'Ethernet0'}, None)):
+            config_db = mock.Mock()
+            config_db.get_table.side_effect = {
+                'PORT': saved, 'BREAKOUT_CFG': saved_breakout, 'FABRIC_MONITOR': {}, 'FABRIC_PORT': {}}.__getitem__
             with self.subTest(source=source), \
-                    port_config_env(platform_json if platform else None) as directory, \
-                    mock.patch('swsscommon.swsscommon.SonicDBConfig.isInit', return_value=True), \
-                    mock.patch.dict(minigraph.port_names_map, {}, clear=True), \
-                    mock.patch.dict(minigraph.port_alias_map, {}, clear=True), \
-                    mock.patch.dict(minigraph.port_alias_asic_map, {}, clear=True), \
-                    mock.patch('minigraph.get_port_config', wraps=minigraph.get_port_config) as read_ports, \
-                    mock.patch('sys.stdout', new_callable=io.StringIO) as output:
-                if source == 'db-result':
-                    # Reader tests cover DB retrieval; exercise its result through minigraph here.
-                    read_ports.return_value = (saved, {'saved': 'Ethernet20'}, {})
-                args = [script, '-m', os.path.join(test_dir, 'platform-sample-graph.xml'), '--print-data']
+                    port_config_env(platform_json if platform else None,
+                                    config_db=config_db if source == 'db-result' else None,
+                                    db_hwsku='Force10-S6000') as directory, \
+                    mock.patch.multiple(minigraph, port_names_map={}, port_alias_map={}, port_alias_asic_map={}):
+                args = ['-m', os.path.join(test_dir, 'platform-sample-graph.xml')]
                 if selection is not None:
-                    selection_file = os.path.join(directory, 'selection.json')
+                    selection_file = os.path.join(
+                        directory, 'hwsku.json' if source == 'empty-installed' else 'selection.json')
                     with open(selection_file, 'w') as config:
                         json.dump({'interfaces': selection}, config)
-                    args += ['-S', selection_file]
-                with mock.patch('sys.argv', args):
-                    runpy.run_path(script, run_name='__main__')
-                result = json.loads(output.getvalue())
+                    if source != 'empty-installed':
+                        args += ['-S', selection_file]
+                result = _run_cfggen_cli_json(args)
                 self.assertEqual(set(result['PORT']), expected_ports)
+                self.assertEqual(result.get('BREAKOUT_CFG'), expected_breakout)
+                self.assertEqual('BREAKOUT_CFG' in result, expected_breakout is not None)
                 self.assertEqual(set(result['DEVICE_NEIGHBOR']), {'Ethernet0'} & expected_ports)
                 members = {'PortChannel01|Ethernet20'} if expected_ports else set()
                 if source == 'no-config':

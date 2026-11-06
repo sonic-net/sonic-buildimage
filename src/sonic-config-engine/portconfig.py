@@ -168,7 +168,8 @@ def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=No
             ports[name] = data
     return ports
 
-def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
+def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None,
+                    allow_minimum_breakout=False):
     config_db = db_connect_configdb(asic_name)
     
     config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
@@ -199,8 +200,11 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
     # Read from 'platform.json' file
     if port_config_file.endswith('.json'):
         hwsku_json_file = hwsku_config_file or get_hwsku_file_name(hwsku, platform)
+        if not hwsku_json_file and not allow_minimum_breakout:
+            return ({}, {}, {})
 
-        return parse_platform_json_file(hwsku_json_file, port_config_file)
+        return parse_platform_json_file(hwsku_json_file, port_config_file,
+                                        validate_interface_names=hwsku_config_file is not None)
 
     # If 'platform.json' file is not available, read from 'port_config.ini'
     else:
@@ -436,7 +440,9 @@ class BreakoutCfg(object):
             self._breakout_mode_entry, self._breakout_capabilities = minimum[1]
 
         if not self._breakout_capabilities:
-            raise RuntimeError(f"Unsupported breakout mode {bmode!r} for interface '{name}'. "
+            reason = ("No single-port breakout mode; an explicit selection is required"
+                      if select_minimum else f"Unsupported breakout mode {bmode!r}")
+            raise RuntimeError(f"{reason} for interface '{name}'. "
                                f"Supported modes: {', '.join(self._properties['breakout_modes'])}")
 
     def _re_group_to_entry(self, group):
@@ -466,10 +472,10 @@ class BreakoutCfg(object):
                 r'(\(\d{1,6}\))((?:\[[^\[\]]+\])+)', r'\2\1', bmode)
             normalized = normalized.replace('][', ',')
             groups_list = [re.fullmatch(BRKOUT_PATTERN, i).groups() for i in normalized.split("+")]
-        except Exception:
-            raise RuntimeError('Breakout mode "{}" validation failed!'.format(bmode))
-
-        return [self._re_group_to_entry(group) for group in groups_list]
+            return [self._re_group_to_entry(group) for group in groups_list]
+        except (AttributeError, TypeError, RuntimeError):
+            raise RuntimeError(f"Invalid breakout mode {bmode!r} for interface '{PORT_STR}{self._interface_base_id}'. "
+                               f"Supported modes: {', '.join(self._properties['breakout_modes'])}")
 
     def get_config(self):
         # Ensure that we have corret number of configured lanes
@@ -531,14 +537,16 @@ select_minimum chooses the highest-speed single-port layout instead.
 """
 def get_child_ports(interface, breakout_mode, platform_json_file, select_minimum=False):
     port_dict = readJson(platform_json_file)
+    properties = port_dict[INTF_KEY][interface]
+    try:
+        mode_handler = BreakoutCfg(interface, breakout_mode, properties, select_minimum=select_minimum)
+        return mode_handler.get_config()
+    except (KeyError, ValueError) as error:
+        raise RuntimeError(f"Invalid platform data for interface '{interface}': {error}. "
+                           f"Supported modes: {', '.join(properties.get('breakout_modes', {}))}")
 
-    mode_handler = BreakoutCfg(interface, breakout_mode, port_dict[INTF_KEY][interface],
-                               select_minimum=select_minimum)
 
-    return mode_handler.get_config()
-
-
-def parse_platform_json_file(hwsku_json_file, platform_json_file):
+def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_interface_names=False):
     ports = {}
     port_alias_map = {}
     port_alias_asic_map = {}
@@ -564,7 +572,8 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
             continue
 
         # take default_brkout_mode from hwsku.json
-        brkout_mode = hwsku_dict[INTF_KEY][intf][BRKOUT_MODE]
+        entry = hwsku_dict[INTF_KEY][intf]
+        brkout_mode = entry.get(BRKOUT_MODE) if isinstance(entry, dict) else None
 
         child_ports = get_child_ports(intf, brkout_mode, platform_json_file,
                                      select_minimum=not hwsku_json_file)
@@ -579,6 +588,11 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
                             child_ports.get(child)[key] = item
 
         ports.update(child_ports)
+
+    if validate_interface_names:
+        unknown_interfaces = set(hwsku_dict[INTF_KEY]) - set(port_dict[INTF_KEY]) - set(ports)
+        if unknown_interfaces:
+            raise RuntimeError(f"Unknown interfaces in '{hwsku_json_file}': {', '.join(sorted(unknown_interfaces))}")
 
     if ports is None:
         raise Exception("Ports dictionary is None")

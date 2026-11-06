@@ -15,7 +15,8 @@ from lxml.etree import QName
 
 from natsort import natsorted, ns as natsortns
 
-from portconfig import get_port_config, get_fabric_port_config, get_fabric_monitor_config
+from portconfig import get_port_config, get_breakout_mode, get_fabric_port_config, get_fabric_monitor_config
+from sonic_py_common.device_info import get_path_to_port_config_file
 from sonic_py_common.interface import backplane_prefix
 from sonic_py_common.multi_asic import is_multi_asic, get_asic_id_from_name
 
@@ -2064,8 +2065,11 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname = parse_global_info(root)
     macsec_enabled = is_chassis_lc_macsec_enabled(root, hostname)
 
-    (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
+    (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file, allow_minimum_breakout=True)
     has_port_config = bool(ports) or port_config_file is not None or hwsku_config_file is not None
+    if not has_port_config:
+        asic_id = None if asic_name is None else str(get_asic_id_from_name(asic_name))
+        has_port_config = get_path_to_port_config_file(hwsku, asic_id) is not None
 
     asic_hostname = get_asic_hostname_from_asic_name(chassis_type, asic_name, hostname)
 
@@ -2503,6 +2507,11 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             results['INTERFACE'].update({port : {}})
 
     results['PORT'] = ports
+    if has_port_config:
+        breakout = get_breakout_mode(hwsku, platform, port_config_file,
+                                    hwsku_config_file=hwsku_config_file, asic_name=asic_name)
+        if breakout is not None:
+            results['BREAKOUT_CFG'] = breakout
     results['CONSOLE_PORT'] = console_ports
 
     # Get the global fabric monitoring data

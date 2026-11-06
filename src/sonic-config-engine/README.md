@@ -17,7 +17,9 @@ The selection file can be stored anywhere and uses the existing `hwsku.json` for
 For each selected physical port (cage), cfggen creates logical ports with aliases,
 lanes, speeds, indices, subports, and FEC where needed. Optional `fec`, `autoneg`,
 and `role` settings are also supported. Cages left out of the selection are not
-configured. Unreadable files and unsupported modes cause an error, not fallback.
+configured. Unreadable files and invalid selections cause an error, not fallback.
+Names in explicit `-S` selections must identify platform cages or generated child
+ports. Installed profiles retain legacy handling of unmatched names.
 
 Generate ports directly or through a matching minigraph:
 
@@ -48,13 +50,20 @@ Passing `-S` uses that selection instead of saved `PORT` rows. Other callers of
 the shared reader can still reuse CONFIG_DB data when no file paths are supplied
 and the HWSKU matches, or no HWSKU was requested.
 
+Minimum generation is enabled by cfggen and minigraph provisioning. Other
+`get_port_config()` callers retain the empty result when no selection is found,
+unless they explicitly pass `allow_minimum_breakout=True`.
+
 **Minimum means one logical port per cage at the highest supported default
 speed**, not the lowest speed. Equal-speed ties use the mode name that comes
 first alphabetically. A cage without a supported one-port mode causes an error,
 even if multi-port modes exist. This requires a `platform.json` with breakout modes.
+Supply an explicit selection for cages without a supported one-port mode.
 
-Fallback generates `PORT` but does not create `BREAKOUT_CFG`. External and
-installed selections still provide their `BREAKOUT_CFG` entries.
+Fallback generates `PORT` but does not create `BREAKOUT_CFG`. Consequently,
+`config interface breakout` is unavailable on devices configured from fallback
+output. External and installed selections provide their `BREAKOUT_CFG` entries
+in both direct and minigraph-only generation.
 
 Minigraph speed and lane handling is unchanged; references between configuration
 tables are not fully checked. Missing HWSKU directories and Generic symlinks
