@@ -60,6 +60,7 @@
 #include "zebra/debug.h"
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
+#include "fpm/fpm_bpp.h"
 #include "lib/srv6.h"
 #include "lib/vrf.h"
 #include <nexthopgroup/c-api/nexthopgroup_capi.h>
@@ -2552,37 +2553,18 @@ static ssize_t
 dplane_fpm_nl_send_br_port_backup_nhg(const struct zebra_dplane_ctx *ctx,
 				      uint8_t *nl_buf, size_t nl_buf_len)
 {
-	struct {
-		struct nlmsghdr n;
-		struct evpn_backup_nhg_msg e;
-		char buf[0];
-	} *req = (void *)nl_buf;
+	uint32_t backup_nhg_id;
+	uint16_t message_type;
 
-	if (nl_buf_len < sizeof(*req))
-		return -1;
-
-	/*
-	 * There is currently only a backup NHG per-port, so
-	 * only send it on VLAN 0, which represents the entire port.
-	 */
 	if (dplane_ctx_get_br_port_vlan_id(ctx) != 0)
 		return 0;
 
-	memset(req, 0, sizeof(*req));
-
-	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct evpn_backup_nhg_msg));
-	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
-
-	req->e.ebnm_ifindex = dplane_ctx_get_ifindex(ctx);
-	req->e.ebnm_backup_nhg_id = dplane_ctx_get_br_port_backup_nhg_id(ctx);
-
-	if (req->e.ebnm_backup_nhg_id > 0) {
-		req->n.nlmsg_type = RTM_FPM_ADD_EVPN_ES_BACKUP_NHG;
-	} else {
-		req->n.nlmsg_type = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG;
-	}
-
-	return NLMSG_ALIGN(req->n.nlmsg_len);
+	backup_nhg_id = dplane_ctx_get_br_port_backup_nhg_id(ctx);
+	message_type = backup_nhg_id ? FPM_BPP_MSG_BINDING_ADD
+				     : FPM_BPP_MSG_BINDING_DEL;
+	return fpm_bpp_encode_binding(message_type,
+				      dplane_ctx_get_ifindex(ctx),
+				      backup_nhg_id, nl_buf, nl_buf_len);
 }
 
 static ssize_t
@@ -2624,6 +2606,73 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 	buf_used += rv;
 
 	return buf_used;
+}
+
+static int
+dplane_fpm_nl_bpp_member(const struct dplane_evpn_mh_member *member,
+			 struct fpm_bpp_member *wire)
+{
+	memset(wire, 0, sizeof(*wire));
+	wire->nh_id = member->nh_id;
+	wire->type = member->type;
+	if (IS_IPADDR_V4(&member->vtep)) {
+		wire->family = AF_INET;
+		wire->vtep.ip4 = member->vtep.ipaddr_v4;
+	} else if (IS_IPADDR_V6(&member->vtep)) {
+		wire->family = AF_INET6;
+		wire->vtep.ip6 = member->vtep.ipaddr_v6;
+	} else {
+		return -1;
+	}
+	memcpy(wire->rmac, &member->rmac, sizeof(wire->rmac));
+	return 0;
+}
+
+static ssize_t
+dplane_fpm_nl_bpp_nh_encode(const struct zebra_dplane_ctx *ctx,
+			    uint8_t *nl_buf, size_t nl_buf_len)
+{
+	struct dplane_evpn_mh_member member = {
+		.nh_id = dplane_ctx_get_evpn_mh_nh_id(ctx),
+		.type = dplane_ctx_get_evpn_mh_nh_type(ctx),
+		.vtep = *dplane_ctx_get_evpn_mh_vtep(ctx),
+		.rmac = *dplane_ctx_get_evpn_mh_rmac(ctx),
+	};
+	struct fpm_bpp_member wire;
+	bool is_delete = dplane_ctx_get_evpn_mh_is_del(ctx);
+
+	if (dplane_fpm_nl_bpp_member(&member, &wire) < 0)
+		return -1;
+	return fpm_bpp_encode_member(is_delete ? FPM_BPP_MSG_MEMBER_DEL
+					       : FPM_BPP_MSG_MEMBER_ADD,
+				     is_delete, &wire, nl_buf, nl_buf_len);
+}
+
+static ssize_t
+dplane_fpm_nl_bpp_nhg_encode(const struct zebra_dplane_ctx *ctx,
+			     uint8_t *nl_buf, size_t nl_buf_len)
+{
+	struct fpm_bpp_member members[FPM_BPP_MAX_MEMBERS];
+	const struct dplane_evpn_mh_member *dplane_members;
+	const esi_t *esi = dplane_ctx_get_evpn_mh_esi(ctx);
+	uint32_t count = dplane_ctx_get_evpn_mh_member_count(ctx);
+	bool is_delete = dplane_ctx_get_evpn_mh_is_del(ctx);
+	uint32_t i;
+
+	if (count > array_size(members))
+		return -1;
+	dplane_members = dplane_ctx_get_evpn_mh_members(ctx);
+	for (i = 0; i < count; i++)
+		if (dplane_fpm_nl_bpp_member(&dplane_members[i],
+					    &members[i]) < 0)
+			return -1;
+
+	return fpm_bpp_encode_group(is_delete ? FPM_BPP_MSG_GROUP_DEL
+					      : FPM_BPP_MSG_GROUP_ADD,
+				    is_delete,
+				    dplane_ctx_get_evpn_mh_nhg_id(ctx),
+				    esi ? esi->val : NULL, members, count,
+				    nl_buf, nl_buf_len);
 }
 
 #define DPLANE_FPM_NL_BUF_SIZE 65536
@@ -2870,6 +2919,36 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		}
 
 		nl_buf_len += (size_t)rv;
+		break;
+	case DPLANE_OP_EVPN_MH_NH_UPDATE:
+		rv = dplane_fpm_nl_bpp_nh_encode(ctx, nl_buf,
+						 sizeof(nl_buf));
+		if (rv <= 0) {
+			dplane_ctx_set_status(ctx,
+					     ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+		nl_buf_len = (size_t)rv;
+		break;
+	case DPLANE_OP_EVPN_MH_NHG_UPDATE:
+		rv = dplane_fpm_nl_bpp_nhg_encode(ctx, nl_buf,
+						  sizeof(nl_buf));
+		if (rv <= 0) {
+			dplane_ctx_set_status(ctx,
+					     ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+		nl_buf_len = (size_t)rv;
+		break;
+	case DPLANE_OP_EVPN_MH_REPLAY_DONE:
+		rv = fpm_bpp_encode_replay_done(FPM_BPP_MSG_REPLAY_DONE,
+						 nl_buf, sizeof(nl_buf));
+		if (rv <= 0) {
+			dplane_ctx_set_status(ctx,
+					     ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+		nl_buf_len = (size_t)rv;
 		break;
 
 	/* Un-handled by FPM at this time. */
