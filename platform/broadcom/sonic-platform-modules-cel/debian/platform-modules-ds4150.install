@@ -1,0 +1,8 @@
+ds4150/systemd/pddf-platform-init.service etc/systemd/system
+build-ds4150/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_ds4150-r0/pddf
+ds4150/scripts/pre_pddf_init.sh usr/local/bin
+ds4150/scripts/sensors usr/bin
+ds4150/scripts/platform_sensors.py usr/local/bin
+ds4150/scripts/ds4150_platform_shutdown.sh usr/local/bin
+ds4150/scripts/pddf_pre_driver_install.sh usr/local/bin
+ds4150/scripts/pddf_post_device_create.sh usr/local/bin
