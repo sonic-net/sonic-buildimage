@@ -7,7 +7,8 @@ import minigraph
 
 from lxml import etree as ET
 from lxml.etree import QName
-from unittest import TestCase
+from unittest import TestCase, mock
+from tests.test_cfggen_platformJson import _run_cfggen_cli_json, port_config_env
 
 TOR_ROUTER = 'ToRRouter'
 BACKEND_TOR_ROUTER = 'BackEndToRRouter'
@@ -701,3 +702,120 @@ class TestParseChassisHwsku(TestCase):
         # parse_chassis_hwsku must return None instead of raising AttributeError.
         root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
         self.assertIsNone(minigraph.parse_chassis_hwsku(root, None))
+
+
+class TestMinigraphPortSources(TestCase):
+    def test_minigraph_skips_invalid_channel_and_vlan_members(self):
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        with port_config_env():
+            all_ports, aliases, _ = minigraph.get_port_config(
+                port_config_file=os.path.join(test_dir, 'mellanox-sample-port-config.ini'))
+        for ports, channels, fg_members in ((all_ports, 4, 10), ({'Ethernet36': all_ports['Ethernet36']}, 0, 1), ({}, 0, 0)):
+            graph = ET.parse(os.path.join(test_dir, 'fg-ecmp-sample-minigraph.xml'))
+            dpg = graph.find(str(QName(minigraph.ns, 'DpgDec')))
+            vlan_members = dpg.find(f'.//{{{minigraph.ns}}}VlanInterface/{{{minigraph.ns}}}AttachTo')
+            vlan_members.text += ';PortChannel0001'
+            selected_aliases = {alias: name for alias, name in aliases.items() if name in ports}
+            with self.subTest(ports=list(ports)), mock.patch.multiple(
+                    minigraph, port_names_map=ports, port_alias_map=selected_aliases):
+                (_, _, _, _, _, vlans, members, _, pcs, pc_members, acls,
+                 _, _, _, ecmp, _, _) = minigraph.parse_dpg(dpg, 'str2-sn3800-azd', ports=ports)
+                self.assertEqual(set(vlans), {'Vlan1000', 'Vlan31'})
+                self.assertEqual(len(pcs), channels)
+                self.assertLessEqual({member for _, member in pc_members}, ports.keys())
+                self.assertLessEqual({member for _, member in members}, ports.keys() | pcs.keys())
+                self.assertEqual('DATAACL' in acls, bool(pcs))
+                self.assertEqual(acls.get('DATAACL', {}).get('ports', []), list(pcs))
+                self.assertEqual(acls['SNMP_ACL']['type'], 'CTRLPLANE')
+                for version, content in ecmp.items():
+                    fg = minigraph.formulate_fine_grained_ecmp(
+                        version, content, dict.fromkeys(aliases.keys() | all_ports.keys(), 'peer'), selected_aliases)
+                    self.assertEqual(len(fg['FG_NHG_MEMBER']), fg_members)
+                    self.assertLessEqual({entry['link'] for entry in fg['FG_NHG_MEMBER'].values()}, ports.keys())
+                if not ports:
+                    self.assertEqual(ecmp, {})
+
+    def test_minigraph_cli_port_sources(self):
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        platform_json = os.path.join(test_dir, 'sample_platform.json')
+        saved = {'Ethernet20': {'alias': 'saved', 'lanes': '80,81,82,83', 'speed': '100000'}}
+        with open(platform_json) as config:
+            minimum_ports = set(json.load(config)['interfaces'])
+        selection_data = {'Ethernet0': {'default_brkout_mode': '2x50G', 'fec': 'rs', 'autoneg': 'off'},
+                          'Ethernet2': {'fec': 'rs'}}
+        graph = ET.parse(os.path.join(test_dir, 'platform-sample-graph.xml'))
+        dpg = graph.find(f'.//{{{minigraph.ns}}}DeviceDataPlaneInfo')
+        topology = ET.parse(os.path.join(test_dir, 'sample-graph-subintf.xml'))
+        for section in ('IPInterfaces', 'SubInterfaces', 'VlanInterfaces', 'AclInterfaces',
+                        'LoopbackIPInterfaces', 'ManagementIPInterfaces'):
+            existing = dpg.find(str(QName(minigraph.ns, section)))
+            if existing is not None:
+                dpg.remove(existing)
+            dpg.append(topology.find(f'.//{{{minigraph.ns}}}{section}'))
+        ET.SubElement(graph.getroot(), QName(minigraph.ns, 'LinkMetadataDeclaration'))
+        for source, platform, selection, expected_ports in (
+                ('platform', True, None, minimum_ports),
+                ('empty-db', True, None, minimum_ports),
+                ('db-mismatch', True, None, minimum_ports),
+                ('db-result', True, None, {'Ethernet20'}),
+                ('selection', True, {'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}}, {'Ethernet20'}),
+                ('breakout-selection', True, selection_data, {'Ethernet0', 'Ethernet2'}),
+                ('breakout-selection-explicit-platform', True,
+                 {'Ethernet0': {'default_brkout_mode': '2x50G'}}, {'Ethernet0', 'Ethernet2'}),
+                ('empty-selection', True, {}, set()),
+                ('empty-installed', True, {}, set()),
+                ('no-config', False, None, {'Ethernet0'})):
+            config_db = mock.Mock()
+            config_db.get_table.side_effect = {
+                'PORT': {} if source == 'empty-db' else saved,
+                'FABRIC_MONITOR': {}, 'FABRIC_PORT': {}}.__getitem__
+            with self.subTest(source=source), \
+                    port_config_env(platform_json if platform else None,
+                                    os.path.join(test_dir, 'sample_hwsku.json') if selection else None,
+                                    config_db=None if source in ('platform', 'empty-installed') else config_db,
+                                    db_hwsku='OtherHwsku' if source in ('db-mismatch', 'no-config') else 'Force10-S6000') as directory, \
+                    mock.patch.multiple(minigraph, port_names_map={}, port_alias_map={}, port_alias_asic_map={}), \
+                    mock.patch.object(minigraph.ET, 'parse', return_value=graph), \
+                    mock.patch.object(minigraph, 'parse_linkmeta', return_value={
+                        'Eth1/1': {'FECDisabled': 'true', 'AutoNegotiation': 'true'}}):
+                args = ['-m', os.path.join(test_dir, 'platform-sample-graph.xml')]
+                if source == 'breakout-selection-explicit-platform':
+                    args += ['-p', platform_json]
+                if selection is not None:
+                    selection_file = os.path.join(
+                        directory, 'hwsku.json' if source == 'empty-installed' else 'selection.json')
+                    with open(selection_file, 'w') as config:
+                        json.dump({'interfaces': selection}, config)
+                    if source != 'empty-installed':
+                        args += ['-S', selection_file]
+                result = _run_cfggen_cli_json(args)
+                self.assertEqual(set(result['PORT']), expected_ports)
+                self.assertNotIn('BREAKOUT_CFG', result)
+                if source == 'breakout-selection':
+                    self.assertEqual(result['PORT']['Ethernet2']['fec'], 'rs')
+                    self.assertEqual(result['PORT']['Ethernet0']['fec'], 'rs')
+                    self.assertEqual(result['PORT']['Ethernet0']['autoneg'], 'off')
+                self.assertEqual(set(result['DEVICE_NEIGHBOR']), {'Ethernet0'} & expected_ports)
+                members = {'PortChannel01|Ethernet20'} if 'Ethernet20' in expected_ports else set()
+                if source == 'no-config':
+                    members.update({'PortChannel01|Ethernet20',
+                                    'PortChannel1001|Ethernet4', 'PortChannel1001|Ethernet6'})
+                self.assertEqual(set(result['PORTCHANNEL_MEMBER']), members)
+                self.assertEqual(set(result['PORTCHANNEL']), {member.split('|')[0] for member in members})
+                if source != 'no-config':
+                    available = expected_ports | set(result['PORTCHANNEL']) | set(result['VLAN'])
+                    for table in ('INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE', 'VLAN_SUB_INTERFACE'):
+                        for key in result.get(table, {}):
+                            self.assertIn(key.split('|')[0].split('.')[0], available)
+                    if source != 'db-result':
+                        direct = _run_cfggen_cli_json(['-k', 'Force10-S6000'] + args[2:])
+                        for name, port in direct['PORT'].items():
+                            self.assertLessEqual(port.items(), result['PORT'][name].items())
+                        self.assertFalse(direct.get('BREAKOUT_CFG'))
+                if source.startswith('breakout-selection'):
+                    self.assertEqual(
+                        {name: (port['speed'], port['lanes']) for name, port in result['PORT'].items()},
+                        {'Ethernet0': ('50000', '0,1'), 'Ethernet2': ('50000', '2,3')})
+                elif 'Ethernet20' in expected_ports:
+                    self.assertEqual(result['PORT']['Ethernet20']['lanes'],
+                                     '80,81,82,83' if source == 'db-result' else '20,21,22,23')

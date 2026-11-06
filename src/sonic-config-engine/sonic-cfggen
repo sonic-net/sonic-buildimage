@@ -563,9 +563,11 @@ def main():
             sys.exit(1)
         deep_update(data, {'PORT': ports})
 
-        brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
-        if  brkout_table is not None:
-            deep_update(data, {'BREAKOUT_CFG': brkout_table})
+        # -S selections write PORT only; installed hwsku.json keeps its BREAKOUT_CFG.
+        if args.hwsku_config is None:
+            brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
+            if brkout_table is not None:
+                deep_update(data, {'BREAKOUT_CFG': brkout_table})
 
     _process_json(args, data)
 
@@ -581,15 +583,9 @@ def main():
             sys.exit(1)
 
     if args.minigraph is not None:
-        minigraph = args.minigraph
         load_namespace_config()
-        if platform:
-            if args.port_config is not None:
-                deep_update(data, parse_xml(minigraph, platform, args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
-            else:
-                deep_update(data, parse_xml(minigraph, platform, asic_name=asic_name))
-        else:
-            deep_update(data, parse_xml(minigraph, port_config_file=args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
+        deep_update(data, parse_xml(args.minigraph, platform, args.port_config,
+                                    asic_name=asic_name, hwsku_config_file=args.hwsku_config))
 
     if args.device_description is not None:
         deep_update(data, parse_device_desc_xml(args.device_description))

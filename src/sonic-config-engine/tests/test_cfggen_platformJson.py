@@ -1,21 +1,48 @@
 import ast
+import io
 import json
 import os
+import runpy
+import shutil
 import subprocess
-import sys
+import tempfile
 import ast
 import tests.common_utils as utils
 
-from unittest import TestCase
+from contextlib import contextmanager
+from unittest import TestCase, mock
 from portconfig import get_port_config, INTF_KEY
-
-if sys.version_info.major == 3:
-    from unittest import mock
-else:
-    import mock
 
 # Global Variable
 PLATFORM_OUTPUT_FILE = "platform_output.json"
+
+
+@contextmanager
+def port_config_env(platform_json=None, hwsku_json=None, config_db=None, db_hwsku='TestHwsku'):
+    """Isolate port-file discovery and CONFIG_DB state for reader and CLI tests."""
+    with tempfile.TemporaryDirectory() as directory, \
+            mock.patch.dict(os.environ, {'CFGGEN_UNIT_TESTING': '0'}), \
+            mock.patch('portconfig.db_connect_configdb', return_value=config_db), \
+            mock.patch('portconfig.device_info.get_localhost_info', return_value=db_hwsku), \
+            mock.patch('portconfig.device_info.get_platform', return_value='TestPlatform'), \
+            mock.patch('portconfig.device_info.get_path_to_platform_dir', return_value=directory), \
+            mock.patch('sonic_py_common.multi_asic.get_asic_conf_file_path', return_value=None), \
+            mock.patch.multiple('portconfig', HWSKU_ROOT_PATH=directory, PLATFORM_ROOT_PATH=directory,
+                                PLATFORM_ROOT_PATH_DOCKER=directory, SONIC_ROOT_PATH=directory):
+        for source, filename in ((platform_json, 'platform.json'), (hwsku_json, 'hwsku.json')):
+            if source is not None:
+                shutil.copyfile(source, os.path.join(directory, filename))
+        yield directory
+
+
+def _run_cfggen_cli_json(args):
+    script = os.path.join(os.path.dirname(__file__), '..', 'sonic-cfggen')
+    with mock.patch('sys.argv', [script] + args + ['--print-data']), \
+            mock.patch('swsscommon.swsscommon.SonicDBConfig.isInit', return_value=True), \
+            mock.patch('sys.stdout', new_callable=io.StringIO) as output:
+        runpy.run_path(script, run_name='__main__')
+    return json.loads(output.getvalue())
+
 
 class TestCfgGenPlatformJson(TestCase):
 
@@ -261,6 +288,10 @@ class TestCfgGenPlatformJson(TestCase):
                             "etp25a", "etp25b", "etp25c", "etp25d",
                             "etp25e", "etp25f", "etp25g", "etp25h"
                         ],
+                        "1x50G(2)": ["etp25a"],
+                        "1x100G[40G]": ["etp25a"],
+                        "1x100G": "etp25",
+                        "4x25G(4)[10G,1G]": ["etp25a", "etp25b", "etp25c", "etp25d"],
                         "4x100G[50G](4)+1x400G[200G](4)": [
                             "etp25a", "etp25b", "etp25c", "etp25d", "etp25e"
                         ],
@@ -280,6 +311,8 @@ class TestCfgGenPlatformJson(TestCase):
 
         expected_subports = {
             "8x100G[50G]": ["1", "2", "3", "4", "5", "6", "7", "8"],
+            "1x100G": ["0"],
+            "4x25G(4)[10G,1G]": ["1", "2", "3", "4"],
             "4x100G[50G](4)+1x400G[200G](4)": ["1", "2", "3", "4", "2"],
             "1x400G[200G](4)+4x100G[50G](4)": ["1", "5", "6", "7", "8"],
             # Exact mode from issue #29427 (Mellanox-SN6600)
@@ -294,10 +327,54 @@ class TestCfgGenPlatformJson(TestCase):
                 [port["subport"] for port in port_configs],
                 expected
             )
+            self.assertEqual(sum(len(port["lanes"].split(",")) for port in port_configs),
+                             4 if breakout_mode == "4x25G(4)[10G,1G]" else 8)
 
             for port in port_configs:
                 lanes = [int(lane) for lane in port["lanes"].split(",")]
-                subport_lane_offset = (
-                    (int(port["subport"]) - 1) * len(lanes)
-                )
+                subport_lane_offset = max(int(port["subport"]) - 1, 0) * len(lanes)
                 self.assertEqual(subport_lane_offset, lanes[0] - 192)
+
+        modes = test_platform_json["interfaces"]["Ethernet192"]["breakout_modes"]
+        for entries in (list(modes.items()), list(reversed(list(modes.items())))):
+            with mock.patch.dict(modes, dict(entries), clear=True):
+                minimum = get_child_ports("Ethernet192", None, "test_platform.json", select_minimum=True)
+                self.assertEqual(minimum["Ethernet192"]["alias"], "etp25a")
+                self.assertEqual(minimum["Ethernet192"]["speed"], "100000")
+        with mock.patch.dict(modes, {"1x100G": "etp25"}, clear=True):
+            minimum = get_child_ports("Ethernet192", None, "test_platform.json", select_minimum=True)
+            self.assertEqual(minimum["Ethernet192"]["alias"], "etp25")
+        with mock.patch.dict(test_platform_json["interfaces"]["Ethernet192"]["breakout_modes"],
+                             {"2x100G": ["etp25a", "etp25b"]}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, r"explicit selection.*Ethernet192.*2x100G"):
+                get_child_ports("Ethernet192", None, "test_platform.json", select_minimum=True)
+
+        for field, interface in (("lanes", "Ethernet192"), ("index", "Ethernet192"), (None, "Port192")):
+            properties = {key: value for key, value in test_platform_json["interfaces"]["Ethernet192"].items()
+                          if key != field}
+            with self.subTest(field=field, interface=interface), \
+                    mock.patch.dict(test_platform_json["interfaces"], {interface: properties}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, rf"{interface}.*Supported modes:.*1x100G"):
+                    get_child_ports(interface, "1x100G", "test_platform.json")
+
+    def test_invalid_selection(self):
+        mode_error = r"Ethernet20.*Supported modes:"
+        with port_config_env(self.platform_json) as directory:
+            selection = os.path.join(directory, 'hwsku.json')
+            for interfaces, error in (
+                    ({'Ethernet20': {}}, mode_error),
+                    ({'Ethernet20': None}, mode_error),
+                    ({'Ethernet20': {'default_brkout_mode': None}}, mode_error),
+                    ({'Ethernet20': {'default_brkout_mode': 42}}, mode_error),
+                    ({'Ethernet20': {'default_brkout_mode': 'invalid'}}, mode_error),
+                    ({'Ethernet20': {'default_brkout_mode': '1xG[40G]'}}, mode_error),
+                    ({'Ethernet20': {'default_brkout_mode': '3x25G'}}, mode_error),
+                    ({'Ethernet20': {'default_brkout_mode': '1x100G[40G]'},
+                      'Ethernet999': {'default_brkout_mode': '1x100G'}}, r"Unknown interfaces.*Ethernet999")):
+                with self.subTest(interfaces=interfaces):
+                    with open(selection, 'w') as config:
+                        json.dump({'interfaces': interfaces}, config)
+                    with self.assertRaisesRegex(RuntimeError, error):
+                        get_port_config(hwsku='TestHwsku', hwsku_config_file=selection)
+                    if 'Ethernet999' in interfaces:
+                        self.assertEqual(set(get_port_config(hwsku='TestHwsku')[0]), {'Ethernet20'})
