@@ -64,7 +64,7 @@ index d920d25810..ff19d21573 100644
 +
 +struct evpn_backup_nhg_msg {
 +	int ebnm_ifindex;
-+	int ebnm_backup_nhg_id;
++	uint32_t ebnm_backup_nhg_id;
 +};
 +
 +#define FPM_SHL_IPV4_ADDR 1
