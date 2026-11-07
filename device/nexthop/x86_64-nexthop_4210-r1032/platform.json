@@ -4279,11 +4279,6 @@
                 "low-crit-threshold": false
             },
             {
-                "name": "DCDC0",
-                "low-threshold": false,
-                "low-crit-threshold": false
-            },
-            {
                 "name": "DCDC1",
                 "low-threshold": false,
                 "low-crit-threshold": false
@@ -4334,14 +4329,56 @@
                 "low-crit-threshold": false
             },
             {
-                "name": "DCDC0_MEZZ0",
+                "name": "MEZZ0_DCDC0",
                 "low-threshold": false,
                 "low-crit-threshold": false
             },
             {
-                "name": "DCDC0_MEZZ1",
+                "name": "MEZZ1_DCDC0",
                 "low-threshold": false,
                 "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC12",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC13",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC15",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC16",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC17",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC18",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC19",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC Min",
@@ -4439,7 +4476,7 @@
                 "name": "DCDC11"
             },
             {
-                "name": "DCDC12"
+                "name": "DCDC20"
             }
         ],
         "fans": [
