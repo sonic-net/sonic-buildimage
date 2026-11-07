@@ -42,6 +42,7 @@
 #include "lib/json.h"
 #include "lib/libfrr.h"
 #include "lib/frratomic.h"
+#include "lib/jhash.h"
 #include "lib/command.h"
 #include "lib/memory.h"
 #include "lib/network.h"
@@ -54,6 +55,7 @@
 #include "zebra/zebra_dplane.h"
 #include "zebra/zebra_mpls.h"
 #include "zebra/zebra_router.h"
+#include "zebra/zebra_ns.h"
 #include "zebra/zebra_vxlan_private.h"
 #include "zebra/kernel_netlink.h"
 #include "zebra/rt_netlink.h"
@@ -190,6 +192,8 @@ struct fpm_nl_ctx {
 	struct stream *ibuf;
 	struct stream *obuf;
 	pthread_mutex_t obuf_mutex;
+	/* Bumped under obuf_mutex each time fpm_reconnect() drops obuf. */
+	uint32_t obuf_session;
 
 	/*
 	 * data plane context queue:
@@ -219,6 +223,7 @@ struct fpm_nl_ctx {
 	struct event *t_ribwalk;
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
+	struct event *t_brportwalk;	/* see fpm_br_port_replay() */
 
 	/* Statistic counters. */
 	struct {
@@ -662,6 +667,7 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_ribwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_brportwalk, NULL);
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -677,6 +683,7 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 
 	stream_reset(fnc->ibuf);
 	stream_reset(fnc->obuf);
+	fnc->obuf_session++;
 	event_cancel(&fnc->t_read);
 	event_cancel(&fnc->t_write);
 
@@ -2626,6 +2633,216 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 	return buf_used;
 }
 
+/*
+ * The last bridge port messages (split horizon, DF and backup NHG) zebra wrote
+ * for each port and VLAN, as encoded. zebra writes them only on a change, so
+ * they are sent again after every router MAC walk, which runs on each connect:
+ * a change made while the session was down is otherwise lost, and a
+ * warm-restart reconcile in fpmsyncd withdraws rows that are not sent again.
+ * A delete is kept until a replay has sent it and the output buffer has
+ * drained in that session. Taken before obuf_mutex.
+ */
+DEFINE_MTYPE_STATIC(ZEBRA, FPM_BR_PORT, "FPM bridge port messages");
+
+PREDECL_HASH(fpm_br_ports);
+
+struct fpm_br_port {
+	struct fpm_br_ports_item item;
+	ifindex_t ifindex;
+	uint16_t vid;
+	ns_id_t ns_id;
+	bool del;
+	bool written;		/* the replay wrote it, in obuf_session session */
+	uint32_t session;
+	uint32_t gen;		/* the replay that sent it, see fpm_br_port_gen */
+	uint16_t len;
+	uint8_t msg[];
+};
+
+static int fpm_br_port_cmp(const struct fpm_br_port *a,
+			   const struct fpm_br_port *b)
+{
+	if (a->ifindex != b->ifindex)
+		return a->ifindex < b->ifindex ? -1 : 1;
+
+	return numcmp(a->vid, b->vid);
+}
+
+static uint32_t fpm_br_port_hash(const struct fpm_br_port *e)
+{
+	return jhash_2words((uint32_t)e->ifindex, e->vid, 0x5d1f);
+}
+
+DECLARE_HASH(fpm_br_ports, struct fpm_br_port, item, fpm_br_port_cmp,
+	     fpm_br_port_hash);
+
+static struct fpm_br_ports_head br_ports = INIT_HASH(br_ports);
+static pthread_mutex_t fpm_br_port_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* Bumped by every replay; 0 marks a message no replay has sent. */
+static uint32_t fpm_br_port_gen;
+
+/* Dataplane thread: records a bridge port write. live: the queue sends it. */
+static void fpm_br_port_record(const struct zebra_dplane_ctx *ctx, bool live)
+{
+	uint8_t buf[1024];
+	struct fpm_br_port key = {};
+	struct fpm_br_port *e;
+	bool del = dplane_ctx_get_op(ctx) == DPLANE_OP_BR_PORT_DELETE;
+	ssize_t len;
+
+	key.ifindex = dplane_ctx_get_ifindex(ctx);
+	key.vid = dplane_ctx_get_br_port_vlan_id(ctx);
+	len = dplane_fpm_nl_handle_br_port_update(ctx, buf, sizeof(buf));
+
+	frr_with_mutex (&fpm_br_port_mutex) {
+		e = fpm_br_ports_find(&br_ports, &key);
+		if (e) {
+			fpm_br_ports_del(&br_ports, e);
+			XFREE(MTYPE_FPM_BR_PORT, e);
+		}
+
+		if (len <= 0)
+			break;
+
+		e = XCALLOC(MTYPE_FPM_BR_PORT, sizeof(*e) + len);
+		e->ifindex = key.ifindex;
+		e->vid = key.vid;
+		e->ns_id = dplane_ctx_get_ns_id(ctx);
+		e->del = del;
+		e->gen = live ? fpm_br_port_gen : 0;
+		e->len = (uint16_t)len;
+		memcpy(e->msg, buf, len);
+		fpm_br_ports_add(&br_ports, e);
+	}
+}
+
+/*
+ * False when there is no session or the output buffer has no room for it.
+ * Otherwise *session is the session it went out in.
+ */
+static bool fpm_br_port_write(struct fpm_nl_ctx *fnc, const uint8_t *buf,
+			      size_t nl_len, uint32_t *session)
+{
+	uint64_t obytes, obytes_peak;
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	/* fpm_reconnect() closes the socket under obuf_mutex. */
+	if (fnc->socket == -1 || fnc->connecting)
+		return false;
+
+	if (STREAM_WRITEABLE(fnc->obuf) < (nl_len + FPM_HEADER_SIZE)) {
+		atomic_fetch_add_explicit(&fnc->counters.buffer_full, 1,
+					  memory_order_relaxed);
+		return false;
+	}
+
+	stream_putc(fnc->obuf, 1);
+	stream_putc(fnc->obuf, 1);
+	stream_putw(fnc->obuf, (uint16_t)(nl_len + FPM_HEADER_SIZE));
+	stream_write(fnc->obuf, buf, nl_len);
+	*session = fnc->obuf_session;
+
+	/* As fpm_nl_enqueue() does: fpm_write() subtracts every byte it sends. */
+	atomic_fetch_add_explicit(&fnc->counters.obuf_bytes,
+				  nl_len + FPM_HEADER_SIZE, memory_order_relaxed);
+	obytes = atomic_load_explicit(&fnc->counters.obuf_bytes,
+				      memory_order_relaxed);
+	obytes_peak = atomic_load_explicit(&fnc->counters.obuf_peak,
+					   memory_order_relaxed);
+	if (obytes_peak < obytes)
+		atomic_store_explicit(&fnc->counters.obuf_peak, obytes,
+				      memory_order_relaxed);
+
+	event_add_write(fnc->fthread->master, fpm_write, fnc, fnc->socket,
+			&fnc->t_write);
+	return true;
+}
+
+/* True when the session has written all it queued to the socket. */
+static bool fpm_br_port_obuf_drained(struct fpm_nl_ctx *fnc, uint32_t *session)
+{
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	*session = fnc->obuf_session;
+	return STREAM_READABLE(fnc->obuf) == 0;
+}
+
+static void fpm_br_port_forget(struct fpm_br_port *e)
+{
+	fpm_br_ports_del(&br_ports, e);
+	XFREE(MTYPE_FPM_BR_PORT, e);
+}
+
+/*
+ * Main thread. Writes every message this replay has not sent yet, and forgets
+ * a delete once it has left the output buffer in the session that wrote it:
+ * fpm_reconnect() drops the buffer, and the next replay writes it again. An
+ * entry for an interface that is gone is forgotten unsent: zebra does not
+ * always delete one, and fpmsyncd cannot name the port any more. When the
+ * buffer is full, or a delete is still in it, it tries again a second later.
+ */
+static void fpm_br_port_replay(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+	struct fpm_br_port *e;
+	struct zebra_ns *zns;
+	bool complete = true, waiting = false, drained;
+	uint32_t sent = 0, session;
+
+	if (fnc->socket == -1 || fnc->connecting)
+		return;
+
+	drained = fpm_br_port_obuf_drained(fnc, &session);
+
+	frr_with_mutex (&fpm_br_port_mutex) {
+		frr_each_safe (fpm_br_ports, &br_ports, e) {
+			zns = zebra_ns_lookup(e->ns_id);
+			if (!zns || !if_lookup_by_index_per_ns(zns, e->ifindex)) {
+				fpm_br_port_forget(e);
+				continue;
+			}
+			if (e->gen == fpm_br_port_gen) {
+				if (!e->del || !e->written)
+					continue;
+				if (drained && e->session == session)
+					fpm_br_port_forget(e);
+				else
+					waiting = true;
+				continue;
+			}
+			if (!fpm_br_port_write(fnc, e->msg, e->len,
+					       &e->session)) {
+				complete = false;
+				break;
+			}
+			sent++;
+			e->gen = fpm_br_port_gen;
+			e->written = true;
+			if (e->del)
+				waiting = true;
+		}
+	}
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: sent %u bridge port updates again%s", __func__,
+			   sent, complete ? "" : ", buffer full");
+
+	/* A closed session stops at the socket check; its next connect replays. */
+	if (!complete || waiting)
+		event_add_timer(zrouter.master, fpm_br_port_replay, fnc, 1,
+				&fnc->t_brportwalk);
+}
+
+static void fpm_br_port_replay_start(struct event *t)
+{
+	frr_with_mutex (&fpm_br_port_mutex) {
+		if (++fpm_br_port_gen == 0)
+			fpm_br_port_gen = 1;
+	}
+	fpm_br_port_replay(t);
+}
+
 #define DPLANE_FPM_NL_BUF_SIZE 65536
 /**
  * Encode data plane operation context into netlink and enqueue it in the FPM
@@ -3216,8 +3433,13 @@ static void fpm_rmac_send(struct event *t)
 	dplane_ctx_fini(&fra.ctx);
 
 	/* RMAC walk completed. */
-	if (fra.complete)
+	if (fra.complete) {
 		WALK_FINISH(fra.fnc, FNE_RMAC_FINISHED);
+		/* A retry left from before must not stand in for the replay. */
+		event_cancel(&fra.fnc->t_brportwalk);
+		event_add_event(zrouter.master, fpm_br_port_replay_start,
+				fra.fnc, 0, &fra.fnc->t_brportwalk);
+	}
 }
 
 /*
@@ -3507,6 +3729,7 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_ribwalk);
 	event_cancel(&fnc->t_rmacreset);
 	event_cancel(&fnc->t_rmacwalk);
+	event_cancel(&fnc->t_brportwalk);
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
@@ -3529,6 +3752,8 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 
 static int fpm_nl_finish_late(struct fpm_nl_ctx *fnc)
 {
+	struct fpm_br_port *bp;
+
 	/* Stop the running thread. */
 	frr_pthread_stop(fnc->fthread, NULL);
 
@@ -3539,6 +3764,10 @@ static int fpm_nl_finish_late(struct fpm_nl_ctx *fnc)
 	stream_free(fnc->obuf);
 	free(gfnc);
 	gfnc = NULL;
+
+	while ((bp = fpm_br_ports_pop(&br_ports)))
+		XFREE(MTYPE_FPM_BR_PORT, bp);
+	fpm_br_ports_fini(&br_ports);
 
 	return 0;
 }
@@ -3586,6 +3815,11 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 		ctx = dplane_provider_dequeue_in_ctx(prov);
 		if (ctx == NULL)
 			break;
+
+		if (dplane_ctx_get_op(ctx) == DPLANE_OP_BR_PORT_UPDATE ||
+		    dplane_ctx_get_op(ctx) == DPLANE_OP_BR_PORT_DELETE)
+			fpm_br_port_record(ctx, fnc->socket != -1 &&
+						!fnc->connecting);
 
 		/*
 		 * Skip all notifications if not connected, we'll walk the RIB
