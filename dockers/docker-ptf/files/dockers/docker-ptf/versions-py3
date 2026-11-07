@@ -2,7 +2,7 @@ asttokens==3.0.2
 bcrypt==5.0.0
 blinker==1.9.0
 cffi==2.1.1
-click==8.5.0
+click==8.5.1
 cryptography==50.0.2
 cython==3.3.1
 dpkt==1.9.8
