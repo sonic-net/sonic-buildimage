@@ -29,6 +29,1074 @@
 					}
 				]
 			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"PVST_GLOBAL_PRIORITY_NOT_MULTIPLE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst", "priority": "100" }
+				]
+			}
+		}
+	},
+
+	"PVST_VLAN_PRIORITY_NOT_MULTIPLE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN": {
+				"STP_VLAN_LIST": [
+					{ "name": "Vlan120", "vlanid": "120", "enabled": "true", "priority": "4097" }
+				]
+			}
+		}
+	},
+
+	"PVST_VLAN_PRIORITY_MAX_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN": {
+				"STP_VLAN_LIST": [
+					{ "name": "Vlan120", "vlanid": "120", "enabled": "true", "priority": "61440" }
+				]
+			}
+		}
+	},
+
+	"PVST_GLOBAL_PRIORITY_MULTIPLE_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst", "priority": "4096" }
+				]
+			}
+		}
+	},
+
+	"MSTP_INSTANCE_BRIDGE_PRIORITY_MAX_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "1", "bridge_priority": "61440" }
+				]
+			}
+		}
+	},
+
+	"MSTP_INSTANCE_BRIDGE_PRIORITY_NOT_MULTIPLE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "1", "bridge_priority": "4097" }
+				]
+			}
+		}
+	},
+
+	"MSTP_GLOBAL_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "mst",
+						"forward_delay": "15",
+						"hello_time": "2",
+						"max_age": "20",
+						"priority": "32768"
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_REGION_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST": {
+				"STP_MST_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"name": "region1",
+						"revision": "1",
+						"max_hops": "20",
+						"max_age": "20",
+						"hello_time": "2",
+						"forward_delay": "15",
+						"hold_count": "6"
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_INSTANCE_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{
+						"instance": "1",
+						"vlan": ["10", "20", "30"],
+						"bridge_priority": "32768"
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_PORT_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "0", "bridge_priority": "32768" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_PORT": {
+				"STP_MST_PORT_LIST": [
+					{
+						"inst_id": "0",
+						"ifname": "Ethernet0",
+						"path_cost": "200",
+						"priority": "128"
+					}
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_STP_PORT_MST_ATTRS_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{
+						"ifname": "Ethernet0",
+						"enabled": "true",
+						"root_guard": "true",
+						"bpdu_guard": "true",
+						"bpdu_guard_do_disable": "true",
+						"edge_port": "true",
+						"link_type": "auto",
+						"path_cost": "200",
+						"priority": "128"
+					}
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_ROOTGUARD_TIMEOUT_IN_MST_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "mst",
+						"rootguard_timeout": "30"
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_REGION_WITH_STP_DISABLED": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP_MST": {
+				"STP_MST_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"name": "region1",
+						"revision": "1",
+						"max_hops": "20"
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_REGION_IN_PVST": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST": {
+				"STP_MST_LIST": [
+					{ "keyleaf": "GLOBAL", "name": "region1", "revision": "1" }
+				]
+			}
+		}
+	},
+
+	"MSTP_EDGE_PORT_IN_PVST": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true", "edge_port": "true" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_LINK_TYPE_IN_PVST": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true", "link_type": "auto" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_PORTFAST_IN_MST": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true", "portfast": "true" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_INSTANCE_BRIDGE_PRIORITY_RANGE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "1", "bridge_priority": "61441" }
+				]
+			}
+		}
+	},
+
+	"MSTP_GLOBAL_FWD_DELAY_RANGE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst", "forward_delay": "31" }
+				]
+			}
+		}
+	},
+
+	"MSTP_PORT_PRIORITY_RANGE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "0" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_PORT": {
+				"STP_MST_PORT_LIST": [
+					{ "inst_id": "0", "ifname": "Ethernet0", "priority": "241" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"PVST_PORT_PRIORITY_NOT_MULTIPLE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true", "priority": "17" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"PVST_PORT_PRIORITY_MAX_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true", "priority": "240" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"PVST_VLAN_PORT_PRIORITY_NOT_MULTIPLE": {
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		},
+		"sonic-vlan:sonic-vlan": {
+			"sonic-vlan:VLAN": {
+				"VLAN_LIST": [
+					{ "name": "Vlan100" }
+				]
+			}
+		},
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "pvst" }
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN": {
+				"STP_VLAN_LIST": [
+					{ "name": "Vlan100", "vlanid": 100, "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN_PORT": {
+				"STP_VLAN_PORT_LIST": [
+					{ "vlan-name": "Vlan100", "ifname": "Ethernet0", "priority": "100" }
+				]
+			}
+		}
+	},
+
+	"MSTP_PORT_PRIORITY_NOT_MULTIPLE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "0" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_PORT": {
+				"STP_MST_PORT_LIST": [
+					{ "inst_id": "0", "ifname": "Ethernet0", "priority": "17" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_PORT_PRIORITY_MULTIPLE_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "0" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_PORT": {
+				"STP_MST_PORT_LIST": [
+					{ "inst_id": "0", "ifname": "Ethernet0", "priority": "16" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_PORT_INVALID_IFNAME": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "0" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_PORT": {
+				"STP_MST_PORT_LIST": [
+					{ "inst_id": "0", "ifname": "Ethernet99" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_PORT_INVALID_INSTANCE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "enabled": "true" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{ "instance": "0" }
+				]
+			},
+			"sonic-spanning-tree:STP_MST_PORT": {
+				"STP_MST_PORT_LIST": [
+					{ "inst_id": "5", "ifname": "Ethernet0" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_STP_PORT_MISSING_ENABLED": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "mode": "mst" }
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{ "ifname": "Ethernet0", "path_cost": "200" }
+				]
+			}
+		},
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+
+	"MSTP_GLOBAL_MISSING_MODE": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{ "keyleaf": "GLOBAL", "forward_delay": "15" }
+				]
+			}
+		}
+	},
+	"MSTP_DISABLED_KEEPS_INSTANCE_AND_PORT_ROWS": {
+	 "sonic-spanning-tree:sonic-spanning-tree": {
+	  "sonic-spanning-tree:STP_PORT": {
+	   "STP_PORT_LIST": [
+		{
+		 "ifname": "Ethernet0",
+		 "enabled": "true"
+		}
+	   ]
+	  },
+	  "sonic-spanning-tree:STP_MST": {
+	   "STP_MST_LIST": [
+		{
+		 "keyleaf": "GLOBAL",
+		 "name": "region1",
+		 "revision": "1",
+		 "max_hops": "20"
+		}
+	   ]
+	  },
+	  "sonic-spanning-tree:STP_MST_INST": {
+	   "STP_MST_INST_LIST": [
+		{
+		 "instance": "0",
+		 "bridge_priority": "32768"
+		}
+	   ]
+	  },
+	  "sonic-spanning-tree:STP_MST_PORT": {
+	   "STP_MST_PORT_LIST": [
+		{
+		 "inst_id": "0",
+		 "ifname": "Ethernet0",
+		 "path_cost": "200",
+		 "priority": "128"
+		}
+	   ]
+	  }
+	 },
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+	"MSTP_LINK_TYPE_WITH_STP_DISABLED": {
+	 "sonic-spanning-tree:sonic-spanning-tree": {
+	  "sonic-spanning-tree:STP_PORT": {
+	   "STP_PORT_LIST": [
+		{
+		 "ifname": "Ethernet0",
+		 "enabled": "true",
+		 "link_type": "auto"
+		}
+	   ]
+	  },
+	  "sonic-spanning-tree:STP_MST": {
+	   "STP_MST_LIST": [
+		{
+		 "keyleaf": "GLOBAL",
+		 "name": "region1",
+		 "revision": "1",
+		 "max_hops": "20"
+		}
+	   ]
+	  }
+	 },
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		}
+	},
+	"STP_PORT_IFNAME_NOT_A_PORT": {
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		},
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "pvst"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{
+						"ifname": "Ethernet99",
+						"enabled": "true"
+					}
+				]
+			}
+		}
+	},
+	"STP_PORT_ON_PORTCHANNEL_VALID": {
+		"sonic-portchannel:sonic-portchannel": {
+			"sonic-portchannel:PORTCHANNEL": {
+				"PORTCHANNEL_LIST": [
+					{
+						"name": "PortChannel0001",
+						"admin_status": "up",
+						"mtu": 9100,
+						"min_links": 1,
+						"lacp_key": "auto"
+					}
+				]
+			}
+		},
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "pvst"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{
+						"ifname": "PortChannel0001",
+						"enabled": "true"
+					}
+				]
+			}
+		}
+	},
+	"STP_VLAN_PORT_WITHOUT_STP_PORT": {
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		},
+		"sonic-vlan:sonic-vlan": {
+			"sonic-vlan:VLAN": {
+				"VLAN_LIST": [
+					{
+						"name": "Vlan100"
+					}
+				]
+			}
+		},
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "pvst"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN": {
+				"STP_VLAN_LIST": [
+					{
+						"name": "Vlan100",
+						"vlanid": 100,
+						"enabled": "true"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN_PORT": {
+				"STP_VLAN_PORT_LIST": [
+					{
+						"vlan-name": "Vlan100",
+						"ifname": "Ethernet0",
+						"path_cost": 200
+					}
+				]
+			}
+		}
+	},
+	"STP_VLAN_PORT_VALID": {
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		},
+		"sonic-vlan:sonic-vlan": {
+			"sonic-vlan:VLAN": {
+				"VLAN_LIST": [
+					{
+						"name": "Vlan100"
+					}
+				]
+			}
+		},
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "pvst"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN": {
+				"STP_VLAN_LIST": [
+					{
+						"name": "Vlan100",
+						"vlanid": 100,
+						"enabled": "true"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_PORT": {
+				"STP_PORT_LIST": [
+					{
+						"ifname": "Ethernet0",
+						"enabled": "true"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN_PORT": {
+				"STP_VLAN_PORT_LIST": [
+					{
+						"vlan-name": "Vlan100",
+						"ifname": "Ethernet0",
+						"path_cost": 200
+					}
+				]
+			}
+		}
+	},
+	"STP_MST_PORT_WITHOUT_STP_PORT": {
+		"sonic-port:sonic-port": {
+			"sonic-port:PORT": {
+				"PORT_LIST": [
+					{
+						"admin_status": "up",
+						"alias": "eth0",
+						"description": "Ethernet0",
+						"lanes": "65",
+						"mtu": 9000,
+						"name": "Ethernet0",
+						"speed": 25000
+					}
+				]
+			}
+		},
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "mst"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_MST_INST": {
+				"STP_MST_INST_LIST": [
+					{
+						"instance": "0",
+						"bridge_priority": "32768"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_MST_PORT": {
+				"STP_MST_PORT_LIST": [
+					{
+						"inst_id": "0",
+						"ifname": "Ethernet0",
+						"path_cost": "200",
+						"priority": "128"
+					}
+				]
+			}
 		}
 	}
 }
