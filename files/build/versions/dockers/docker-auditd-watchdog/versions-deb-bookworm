@@ -1,4 +1,4 @@
-apt-utils==2.6.1
+apt-utils==2.6.2
 icu-devtools==72.1-3+deb12u1
 libboost-serialization1.83.0==1.83.0-4.2~bpo12+1
 libc-dev-bin==2.36-9+deb12u14
