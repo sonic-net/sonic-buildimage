@@ -430,6 +430,12 @@
             },
             {
                 "name": "NVMe"
+            },
+            {
+                "name": "PSU1"
+            },
+            {
+                "name": "PSU2"
             }
         ],
         "fans": [
