@@ -1,0 +1,119 @@
+From 9edc758041a8be56c96eb2c92973f539860a78d1 Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Mon, 2 Nov 2026 08:58:02 -0800
+Subject: [PATCH] zebra: let a dataplane module mark the local MACs it writes
+
+In SONiC's FPM MAC sync mode a local MAC has two sources: the data
+plane, when the ASIC learnt it, and the control plane, when the Ethernet
+Segment peer advertises it (a sync MAC). The kernel bridge FDB holds the
+MAC while either source has it, and two parts of zebra write the
+entries. zebra's EVPN code writes them for the control plane: a sync MAC
+as static while this switch has it only from the peer (local-inactive),
+then as a normal entry when it stops being static, or a delete when
+zebra flushes it. dplane_fpm_sonic, the dataplane plugin that talks FPM
+to fpmsyncd, writes them for the data plane: a normal entry while the
+ASIC has the MAC and, once the ASIC loses it, the removal of that entry,
+or on a VLAN with no L2VNI the sync MAC's static entry put back. In
+kernel mode fdbsyncd wrote the data-plane entries; in this mode it does
+not, and zebra's EVPN code writes only local-inactive MACs in
+mac-ext-learn mode and keeps no MACs for a VLAN with no L2VNI.
+
+dplane_fpm_sonic also installs each sync MAC in the ASIC as a static
+entry, and removes it, following zebra's writes as they pass through the
+dataplane: a static write installs the entry, and a normal write, or a
+delete on the same port, removes it. dplane_fpm_sonic's own writes pass
+there too and look like zebra's, so it cannot tell which writes install
+or end a static entry. zebra's MAC state does not settle it: when zebra
+removes an L2VNI, it writes a normal entry for each static MAC and then
+deletes the EVPN with its MACs.
+
+Add dplane_local_mac_learnt() and dplane_local_mac_learnt_del() for
+dplane_fpm_sonic's writes. They write the same kernel entries as
+dplane_local_mac_add() and dplane_local_mac_del() and mark the request
+DPLANE_MAC_LEARNT. The kernel write does not look at the flag;
+dplane_fpm_sonic's own writes then neither install nor remove a static
+entry in the ASIC.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ zebra/zebra_dplane.c | 31 +++++++++++++++++++++++++++++++
+ zebra/zebra_dplane.h | 17 +++++++++++++++++
+ 2 files changed, 48 insertions(+)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 191e66eda9..3b1070e39e 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -5934,6 +5934,37 @@ enum zebra_dplane_result dplane_local_mac_add(const struct interface *ifp,
+ 	return result;
+ }
+ 
++/*
++ * Enqueue the entry of a local mac a dataplane module learnt
++ */
++enum zebra_dplane_result dplane_local_mac_learnt(const struct interface *ifp,
++						 const struct interface *bridge_ifp,
++						 vlanid_t vid, const struct ethaddr *mac,
++						 bool sticky, bool set_static)
++{
++	struct ipaddr vtep_ip = { .ipa_type = IPADDR_NONE };
++	uint32_t update_flags = DPLANE_MAC_LEARNT;
++
++	if (set_static)
++		update_flags |= DPLANE_MAC_SET_STATIC;
++
++	return mac_update_common(DPLANE_OP_MAC_INSTALL, ifp, bridge_ifp, vid, mac, 0, &vtep_ip,
++				 sticky, 0, update_flags);
++}
++
++/*
++ * Enqueue the removal of the entry of a local mac a dataplane module learnt
++ */
++enum zebra_dplane_result dplane_local_mac_learnt_del(const struct interface *ifp,
++						     const struct interface *bridge_ifp,
++						     vlanid_t vid, const struct ethaddr *mac)
++{
++	struct ipaddr vtep_ip = { .ipa_type = IPADDR_NONE };
++
++	return mac_update_common(DPLANE_OP_MAC_DELETE, ifp, bridge_ifp, vid, mac, 0, &vtep_ip,
++				 false, 0, DPLANE_MAC_LEARNT);
++}
++
+ /*
+  * Enqueue local mac del
+  */
+diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
+index 787d4c5670..af3d0bcc16 100644
+--- a/zebra/zebra_dplane.h
++++ b/zebra/zebra_dplane.h
+@@ -271,6 +271,8 @@ enum dplane_op_e {
+ #define DPLANE_MAC_WAS_STATIC   (1 << 1)
+ #define DPLANE_MAC_SET_STATIC   (1 << 2)
+ #define DPLANE_MAC_SET_INACTIVE (1 << 3)
++/* A dataplane module's own write, see dplane_local_mac_learnt() */
++#define DPLANE_MAC_LEARNT       (1 << 4)
+ 
+ /* Neigh update flags - dplane_neigh_info.update_flags */
+ #define DPLANE_NEIGH_REMOTE       (1 << 0)
+@@ -1100,6 +1102,21 @@ enum zebra_dplane_result dplane_local_mac_add(const struct interface *ifp,
+ 					uint32_t set_static,
+ 					uint32_t set_inactive);
+ 
++/*
++ * The kernel entry of a local MAC that a dataplane module learnt, which it
++ * writes and removes itself: the plain entry dplane_local_mac_add() writes, or
++ * with set_static the static entry zebra wrote that the plain one replaced,
++ * marked DPLANE_MAC_LEARNT so that the module can tell them from zebra's writes.
++ */
++enum zebra_dplane_result dplane_local_mac_learnt(const struct interface *ifp,
++						 const struct interface *bridge_ifp,
++						 vlanid_t vid, const struct ethaddr *mac,
++						 bool sticky, bool set_static);
++
++enum zebra_dplane_result dplane_local_mac_learnt_del(const struct interface *ifp,
++						     const struct interface *bridge_ifp,
++						     vlanid_t vid, const struct ethaddr *mac);
++
+ enum zebra_dplane_result
+ dplane_local_mac_del(const struct interface *ifp,
+ 		     const struct interface *bridge_ifp, vlanid_t vid,

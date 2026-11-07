@@ -1,0 +1,33 @@
+diff --git a/debian/control b/debian/control
+index 40f820ae44..b30ac15e3d 100644
+--- a/debian/control
++++ b/debian/control
+@@ -39,7 +39,8 @@ Build-Depends: bison,
+ 	       protobuf-compiler (>=3.6.1) <pkg.frr.grpc>,
+ 	       protobuf-compiler-grpc (>=1.16.1) <pkg.frr.grpc>,
+                libprotobuf-dev (>=3.6.1) <pkg.frr.grpc>,
+-               libgoogle-perftools-dev <pkg.frr.tcmalloc>
++               libgoogle-perftools-dev <pkg.frr.tcmalloc>,
++               libcunit1-dev <!nocheck>
+ Standards-Version: 4.5.0.3
+ Homepage: https://www.frrouting.org/
+ Vcs-Browser: https://github.com/FRRouting/frr/tree/debian/master
+diff --git a/debian/rules b/debian/rules
+index 9d4f4047cb..ee28688003 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -140,6 +140,14 @@ override_dh_missing:
+ ifneq ($(filter nocheck,$(DEB_BUILD_PROFILES) $(DEB_BUILD_OPTIONS)),)
+ override_dh_auto_test:
+ 	true
++else
++# dh_auto_test runs "make test", which only builds the pceplib helpers and
++# runs nothing, so no unit test ever executed. tests/tests.xml builds every
++# check program and runs the suite. A plain "make check" is not usable here:
++# pceplib's *_valgrind.sh wrappers reference a relative path that does not
++# resolve in an out-of-tree build and always fail with exit 127.
++override_dh_auto_test:
++	$(MAKE) -C build tests/tests.xml
+ endif
+ 
+ override_dh_auto_clean:
