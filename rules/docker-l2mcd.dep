@@ -1,0 +1,11 @@
+
+DPATH       := $($(DOCKER_L2MCD)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-l2mcd.mk rules/docker-l2mcd.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_L2MCD)_CACHE_MODE  := GIT_COMMIT_SHA
+$(DOCKER_L2MCD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_L2MCD)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_L2MCD),$(DOCKER_L2MCD_DBG)))
