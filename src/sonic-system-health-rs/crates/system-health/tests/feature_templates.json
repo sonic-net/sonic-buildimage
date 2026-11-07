@@ -1,0 +1,396 @@
+{
+ "contexts": {
+  "tor": {
+   "DEVICE_METADATA": {
+    "localhost": {
+     "type": "ToRRouter",
+     "hwsku": "x"
+    }
+   },
+   "DEVICE_RUNTIME_METADATA": {
+    "ETHERNET_PORTS_PRESENT": true,
+    "MACSEC_SUPPORTED": false
+   }
+  },
+  "spine_sup": {
+   "DEVICE_METADATA": {
+    "localhost": {
+     "type": "SpineRouter"
+    }
+   },
+   "DEVICE_RUNTIME_METADATA": {
+    "CHASSIS_METADATA": {
+     "module_type": "supervisor",
+     "chassis_type": "voq"
+    },
+    "ETHERNET_PORTS_PRESENT": false,
+    "MACSEC_SUPPORTED": true
+   }
+  },
+  "spine_lc": {
+   "DEVICE_METADATA": {
+    "localhost": {
+     "type": "SpineRouter"
+    }
+   },
+   "DEVICE_RUNTIME_METADATA": {
+    "CHASSIS_METADATA": {
+     "module_type": "linecard",
+     "chassis_type": "voq"
+    },
+    "ETHERNET_PORTS_PRESENT": true,
+    "MACSEC_SUPPORTED": true
+   }
+  },
+  "dualtor": {
+   "DEVICE_METADATA": {
+    "localhost": {
+     "type": "LeafRouter",
+     "subtype": "DualToR"
+    }
+   },
+   "DEVICE_RUNTIME_METADATA": {
+    "ETHERNET_PORTS_PRESENT": true,
+    "MACSEC_SUPPORTED": false
+   }
+  },
+  "no_type": {
+   "DEVICE_METADATA": {
+    "localhost": {
+     "hostname": "a"
+    }
+   },
+   "DEVICE_RUNTIME_METADATA": {
+    "ETHERNET_PORTS_PRESENT": true,
+    "MACSEC_SUPPORTED": false
+   }
+  }
+ },
+ "cases": [
+  {
+   "template": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}",
+   "context": "tor",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}",
+   "context": "spine_sup",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}",
+   "context": "spine_lc",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}",
+   "context": "dualtor",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}",
+   "context": "no_type",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}",
+   "context": "tor",
+   "expected": "True"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}",
+   "context": "spine_sup",
+   "expected": "False"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}",
+   "context": "spine_lc",
+   "expected": "False"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}",
+   "context": "dualtor",
+   "expected": "True"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}",
+   "context": "no_type",
+   "expected": "True"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}",
+   "context": "tor",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}",
+   "context": "spine_sup",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}",
+   "context": "spine_lc",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}",
+   "context": "dualtor",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}",
+   "context": "no_type",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}",
+   "context": "tor",
+   "expected": "True"
+  },
+  {
+   "template": "{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}",
+   "context": "spine_sup",
+   "expected": "True"
+  },
+  {
+   "template": "{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}",
+   "context": "spine_lc",
+   "expected": "False"
+  },
+  {
+   "template": "{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}",
+   "context": "dualtor",
+   "expected": "True"
+  },
+  {
+   "template": "{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}",
+   "context": "no_type",
+   "expected": "True"
+  },
+  {
+   "template": "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "tor",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "spine_sup",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "spine_lc",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "dualtor",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "no_type",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "tor",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "spine_sup",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "spine_lc",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "dualtor",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}",
+   "context": "no_type",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}",
+   "context": "tor",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}",
+   "context": "spine_sup",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}",
+   "context": "spine_lc",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}",
+   "context": "dualtor",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}",
+   "context": "no_type",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+   "context": "tor",
+   "expected": "True"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+   "context": "spine_sup",
+   "expected": "False"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+   "context": "spine_lc",
+   "expected": "True"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+   "context": "dualtor",
+   "expected": "True"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+   "context": "no_type",
+   "expected": "True"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}",
+   "context": "tor",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}",
+   "context": "spine_sup",
+   "expected": "disabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}",
+   "context": "spine_lc",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}",
+   "context": "dualtor",
+   "expected": "enabled"
+  },
+  {
+   "template": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}",
+   "context": "no_type",
+   "expected": "enabled"
+  },
+  {
+   "template": "enabled",
+   "context": "tor",
+   "expected": "enabled"
+  },
+  {
+   "template": "enabled",
+   "context": "spine_sup",
+   "expected": "enabled"
+  },
+  {
+   "template": "enabled",
+   "context": "spine_lc",
+   "expected": "enabled"
+  },
+  {
+   "template": "enabled",
+   "context": "dualtor",
+   "expected": "enabled"
+  },
+  {
+   "template": "enabled",
+   "context": "no_type",
+   "expected": "enabled"
+  },
+  {
+   "template": "disabled",
+   "context": "tor",
+   "expected": "disabled"
+  },
+  {
+   "template": "disabled",
+   "context": "spine_sup",
+   "expected": "disabled"
+  },
+  {
+   "template": "disabled",
+   "context": "spine_lc",
+   "expected": "disabled"
+  },
+  {
+   "template": "disabled",
+   "context": "dualtor",
+   "expected": "disabled"
+  },
+  {
+   "template": "disabled",
+   "context": "no_type",
+   "expected": "disabled"
+  },
+  {
+   "template": "always_enabled",
+   "context": "tor",
+   "expected": "always_enabled"
+  },
+  {
+   "template": "always_enabled",
+   "context": "spine_sup",
+   "expected": "always_enabled"
+  },
+  {
+   "template": "always_enabled",
+   "context": "spine_lc",
+   "expected": "always_enabled"
+  },
+  {
+   "template": "always_enabled",
+   "context": "dualtor",
+   "expected": "always_enabled"
+  },
+  {
+   "template": "always_enabled",
+   "context": "no_type",
+   "expected": "always_enabled"
+  },
+  {
+   "template": "always_disabled",
+   "context": "tor",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "always_disabled",
+   "context": "spine_sup",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "always_disabled",
+   "context": "spine_lc",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "always_disabled",
+   "context": "dualtor",
+   "expected": "always_disabled"
+  },
+  {
+   "template": "always_disabled",
+   "context": "no_type",
+   "expected": "always_disabled"
+  }
+ ]
+}

@@ -1,0 +1,1479 @@
+[
+ {
+  "platforms": [
+   "accton/x86_64-accton_as4630_54pe-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.voltage\",\n        \"psu.temperature\",\n        \"PSU1_FAN1.speed\",\n        \"PSU2_FAN1.speed\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"STATUS_LED_COLOR_AMBER\",\n        \"normal\": \"STATUS_LED_COLOR_GREEN\",\n        \"booting\": \"STATUS_LED_COLOR_GREEN_BLINK\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1_FAN1.speed",
+    "PSU2_FAN1.speed",
+    "asic",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "STATUS_LED_COLOR_GREEN",
+    "booting": "STATUS_LED_COLOR_GREEN_BLINK",
+    "fault": "STATUS_LED_COLOR_AMBER"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "accton/x86_64-accton_as4630_54te-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\"\n\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"STATUS_LED_COLOR_AMBER\",\n        \"normal\": \"STATUS_LED_COLOR_GREEN\",\n        \"booting\": \"STATUS_LED_COLOR_GREEN_BLINK\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "STATUS_LED_COLOR_GREEN",
+    "booting": "STATUS_LED_COLOR_GREEN_BLINK",
+    "fault": "STATUS_LED_COLOR_AMBER"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "accton/x86_64-accton_as5835_54x-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n\t    \"psu.temperature\"\n\t    \n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"STATUS_LED_COLOR_AMBER\",\n        \"normal\": \"STATUS_LED_COLOR_GREEN\",\n        \"booting\": \"STATUS_LED_COLOR_GREEN\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "STATUS_LED_COLOR_GREEN",
+    "booting": "STATUS_LED_COLOR_GREEN",
+    "fault": "STATUS_LED_COLOR_AMBER"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "accton/x86_64-accton_as7326_56x-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\"\n\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"STATUS_LED_COLOR_RED\",\n        \"normal\": \"STATUS_LED_COLOR_GREEN\",\n        \"booting\": \"STATUS_LED_COLOR_GREEN_BLINK\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "STATUS_LED_COLOR_GREEN",
+    "booting": "STATUS_LED_COLOR_GREEN_BLINK",
+    "fault": "STATUS_LED_COLOR_RED"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "accton/x86_64-accton_as7816_64x-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n\t    \"psu.temperature\"\n\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"STATUS_LED_COLOR_RED\",\n        \"normal\": \"STATUS_LED_COLOR_GREEN\",\n        \"booting\": \"STATUS_LED_COLOR_GREEN\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "STATUS_LED_COLOR_GREEN",
+    "booting": "STATUS_LED_COLOR_GREEN",
+    "fault": "STATUS_LED_COLOR_RED"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "alliedtelesis/x86_64-alliedtelesis_x980_32cq-r0",
+   "alliedtelesis/x86_64-alliedtelesis_x980_32dq-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\"\n    ],\n    \"user_defined_checkers\": []\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "alphanetworks/x86_64-alphanetworks_bes2348t-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"psu.voltage\",\n        \"PSU1_FAN1.speed\",\n        \"PSU2_FAN1.speed\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"STATUS_LED_COLOR_AMBER\",\n        \"normal\": \"STATUS_LED_COLOR_GREEN\",\n        \"booting\": \"STATUS_LED_COLOR_AMBER\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1_FAN1.speed",
+    "PSU2_FAN1.speed",
+    "asic",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "STATUS_LED_COLOR_GREEN",
+    "booting": "STATUS_LED_COLOR_AMBER",
+    "fault": "STATUS_LED_COLOR_AMBER"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "alphanetworks/x86_64-alphanetworks_snj60d0_320f-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"psu.voltage\",\n        \"PSU1-FAN1\",\n        \"PSU2-FAN1\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber_blink\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1-FAN1",
+    "PSU2-FAN1",
+    "asic",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber_blink"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "arista/arm64-arista_goldfinch-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\", \"fan\", \"asic\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 300\n}\n\n",
+  "python": {
+   "interval": 300,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "arista/x86_64-arista_7050_qx32",
+   "arista/x86_64-arista_7050_qx32s",
+   "arista/x86_64-arista_7050cx3_32c",
+   "arista/x86_64-arista_7050cx3_32s",
+   "arista/x86_64-arista_7050dx4_32s",
+   "arista/x86_64-arista_7050px4_32s",
+   "arista/x86_64-arista_7050sx3_48c8",
+   "arista/x86_64-arista_7050sx3_48yc8",
+   "arista/x86_64-arista_7050sx3_48yc8c",
+   "arista/x86_64-arista_7060_cx32s",
+   "arista/x86_64-arista_7060cx2_32s",
+   "arista/x86_64-arista_7060dx4_32",
+   "arista/x86_64-arista_7060dx5_32",
+   "arista/x86_64-arista_7060dx5_64s",
+   "arista/x86_64-arista_7060px4_32",
+   "arista/x86_64-arista_7060px5_64s",
+   "arista/x86_64-arista_7060x6_16pe_384c",
+   "arista/x86_64-arista_7060x6_16pe_384c_b",
+   "arista/x86_64-arista_7060x6_32pe",
+   "arista/x86_64-arista_7060x6_64de",
+   "arista/x86_64-arista_7060x6_64pe",
+   "arista/x86_64-arista_7060x6_64pe_b",
+   "arista/x86_64-arista_7060xe7_64prs_mv3_l",
+   "arista/x86_64-arista_7170_32c",
+   "arista/x86_64-arista_7170_32cd",
+   "arista/x86_64-arista_7170_64c",
+   "arista/x86_64-arista_7170b_64c",
+   "arista/x86_64-arista_720dt_48s",
+   "arista/x86_64-arista_720dt_48s_mgx",
+   "arista/x86_64-arista_7260cx3_64",
+   "arista/x86_64-arista_7280cr3_32d4",
+   "arista/x86_64-arista_7280cr3_32p4",
+   "arista/x86_64-arista_7280cr3mk_32d4",
+   "arista/x86_64-arista_7280cr3mk_32p4",
+   "arista/x86_64-arista_7280dr3a_36",
+   "arista/x86_64-arista_7280dr3ak_36",
+   "arista/x86_64-arista_7280dr3ak_36s",
+   "arista/x86_64-arista_7280dr3am_36",
+   "arista/x86_64-arista_7280r4_32qf_32df",
+   "arista/x86_64-arista_7280r4k_32qf_32df",
+   "arista/x86_64-arista_7800_sup",
+   "arista/x86_64-arista_common"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"psu.voltage\",\n        \"PSU2 Fan\",\n        \"PSU1 Fan\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1 Fan",
+    "PSU2 Fan",
+    "asic",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "arista/x86_64-arista_7800r3_48cq2_lc",
+   "arista/x86_64-arista_7800r3_48cqm2_lc",
+   "arista/x86_64-arista_7800r3a_36d2_lc",
+   "arista/x86_64-arista_7800r3a_36d_lc",
+   "arista/x86_64-arista_7800r3a_36dm2_lc",
+   "arista/x86_64-arista_7800r3a_36p_lc",
+   "arista/x86_64-arista_7800r3ak_36d2_lc",
+   "arista/x86_64-arista_7800r3ak_36dm2_lc"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"fan\",\n        \"psu\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "aspeed/arm64-aspeed_ast2700_evb-r0",
+   "nexthop/arm64-nexthop_b27-r0",
+   "nokia/arm64-nokia_bmc_h6_128-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\", \"fan\", \"asic\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 300,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n\n",
+  "python": {
+   "interval": 300,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "aspeed/arm64-aspeed_nvidia_ast2700_bmc-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\", \"pdb\", \"fan\", \"asic\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 300,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 300,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "pdb",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "barefoot/x86_64-accton_as9516_32d-r0",
+   "barefoot/x86_64-accton_wedge100bf_32x-r0",
+   "barefoot/x86_64-accton_wedge100bf_65x-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"orange_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "orange_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "celestica/x86_64-cel_ds1000-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"PSU 1 Fan 1\",\n        \"PSU 2 Fan 1\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"orange_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU 1 Fan 1",
+    "PSU 2 Fan 1",
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "orange_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "celestica/x86_64-cel_ds2000-r0",
+   "celestica/x86_64-cel_ds3000-r0",
+   "celestica/x86_64-cel_silverstone_v2-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"PSU 1 Fan 1\",\n        \"PSU 2 Fan 1\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"alternate_blink_4hz\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU 1 Fan 1",
+    "PSU 2 Fan 1",
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "alternate_blink_4hz",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "celestica/x86_64-cel_e1031-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"PSU2 Fan\",\n        \"PSU1 Fan\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"orange\",\n        \"normal\": \"green\",\n        \"booting\": \"orange_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1 Fan",
+    "PSU2 Fan",
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "orange_blink",
+    "fault": "orange"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "celestica/x86_64-cel_questone_2-r0",
+   "celestica/x86_64-cel_seastone_2-r0",
+   "celestica/x86_64-cel_silverstone-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"psu.temperature\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink_1hz\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink_1hz",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "celestica/x86_64-cel_seastone-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"PSU-1 FAN-1\",\n        \"PSU-2 FAN-1\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"orange\",\n        \"normal\": \"green\",\n        \"booting\": \"orange_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU-1 FAN-1",
+    "PSU-2 FAN-1"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "orange_blink",
+    "fault": "orange"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "dell/x86_64-dell_e3224f-r0",
+   "dell/x86_64-dell_s3248t-r0",
+   "dell/x86_64-dell_z9664f-r0",
+   "dell/x86_64-dellemc_n3248te_c3338-r0",
+   "dell/x86_64-dellemc_z9432f_c3758-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"fan.speed\",\"psu.temperature\",\"psu.voltage\",\"asic\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\"  : \"blink_yellow\",\n        \"normal\" : \"green\",\n        \"booting\": \"blink_green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan.speed",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blink_green",
+    "fault": "blink_yellow"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "dell/x86_64-dell_s6000_s1220-r0",
+   "dell/x86_64-dell_s6100_c2538-r0"
+  ],
+  "config": "{\n\t\"services_to_ignore\": [],\n\t\"devices_to_ignore\": [],\n\t\"user_defined_checkers\": [],\n\t\"polling_interval\": 60,\n\t\"led_color\": {\n\t\t\"fault\": \"amber\",\n\t\t\"normal\": \"green\",\n\t\t\"booting\": \"blinking green\"\n\t}\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blinking green",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "dell/x86_64-dellemc_s5212f_c3538-r0",
+   "dell/x86_64-dellemc_s5224f_c3538-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"fan.speed\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"blinking_green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan.speed"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blinking_green",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "dell/x86_64-dellemc_s5232f_c3538-r0",
+   "dell/x86_64-dellemc_s5248f_c3538-r0",
+   "dell/x86_64-dellemc_s5296f_c3538-r0",
+   "dell/x86_64-dellemc_s5448f-r0",
+   "dell/x86_64-dellemc_z9264f_c3538-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"fan.speed\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\"  : \"amber\",\n        \"normal\" : \"green\",\n        \"booting\": \"blinking_green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan.speed"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blinking_green",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "dell/x86_64-dellemc_z9332f_d1508-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"asic\",\"fan.speed\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"yellow\",\n        \"normal\": \"green\",\n        \"booting\": \"flashing green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan.speed"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "flashing green",
+    "fault": "yellow"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "marvell/arm64-marvell_rd98DX35xx-r0",
+   "marvell/arm64-marvell_rd98DX35xx_cn9131-r0",
+   "marvell/arm64-marvell_rd98DX45xx_cn9131-r0",
+   "marvell/x86_64-marvell_db98cx8514_10cc-r0",
+   "marvell/x86_64-marvell_db98cx8522_10cc-r0",
+   "marvell/x86_64-marvell_db98cx8540_16cd-r0",
+   "marvell/x86_64-marvell_db98cx8580_32cd-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"fan\",\n        \"psu\"\n    ],\n    \"user_defined_checkers\": []\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "marvell/x86_64-marvell_d64p512t-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"flashing green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "flashing green",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "marvell/x86_64-marvell_dbmvtx9180-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n\t\"psu.temperature\",\n\t\"psu.voltage\",\n\t\"psu.power_threshold\",\n\t\"psu\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "psu",
+    "psu.power_threshold",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-mlnx_lssn2700-r0",
+   "mellanox/x86_64-mlnx_msn2410-r0",
+   "mellanox/x86_64-mlnx_msn2700-r0",
+   "mellanox/x86_64-mlnx_msn2700a1-r0",
+   "mellanox/x86_64-mlnx_msn2740-r0",
+   "mellanox/x86_64-mlnx_msn3700-r0",
+   "mellanox/x86_64-mlnx_msn3700c-r0",
+   "mellanox/x86_64-mlnx_msn3800-r0",
+   "mellanox/x86_64-nvidia_sn4800-r0",
+   "mellanox/x86_64-nvidia_sn5400-r0",
+   "mellanox/x86_64-nvidia_sn5400_simx-r0",
+   "mellanox/x86_64-nvidia_sn5610n-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu.voltage\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"red_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red_blink",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-mlnx_msn2010-r0",
+   "mellanox/x86_64-mlnx_msn2100-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu.voltage\", \"psu.temperature\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"orange\",\n        \"normal\": \"green\",\n        \"booting\": \"orange_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "orange_blink",
+    "fault": "orange"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-mlnx_msn2700_simx-r0",
+   "mellanox/x86_64-mlnx_msn3700_simx-r0",
+   "mellanox/x86_64-nvidia_sn4800_simx-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\",\"asic\",\"fan\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"red_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red_blink",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-mlnx_msn3420-r0",
+   "mellanox/x86_64-mlnx_msn4600c-r0",
+   "mellanox/x86_64-nvidia_sn2201-r0",
+   "mellanox/x86_64-nvidia_sn4280-r0",
+   "mellanox/x86_64-nvidia_sn5600-r0",
+   "mellanox/x86_64-nvidia_sn5640-r0",
+   "mellanox/x86_64-nvidia_sn5640_simx-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu.voltage\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-mlnx_msn4410-r0",
+   "mellanox/x86_64-mlnx_msn4600-r0",
+   "mellanox/x86_64-mlnx_msn4700-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-mlnx_msn4700_simx-r0",
+   "mellanox/x86_64-nvidia_sn4280_simx-r0",
+   "mellanox/x86_64-nvidia_sn5600_simx-r0",
+   "mellanox/x86_64-nvidia_sn6600_simx-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\",\"asic\",\"fan\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-nvidia_sn6600_ld-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\",\"fan\"],\n    \"user_defined_checkers\": [],\n    \"include_devices\": [\"liquid_cooling\"],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": [
+    "liquid_cooling"
+   ],
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-nvidia_sn6600_ld_simx-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\",\"asic\",\"fan\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"orange\",\n        \"normal\": \"green\",\n        \"booting\": \"orange_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "orange_blink",
+    "fault": "orange"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "mellanox/x86_64-nvidia_sn6810_ld-r0",
+   "mellanox/x86_64-nvidia_sn6810_ld_simx-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\", \"fan\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"include_devices\": [\"liquid_cooling\"],\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": [
+    "liquid_cooling"
+   ],
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "micas/arm64-micas_m2-w6010-48gt4x-fa-r0",
+   "micas/arm64-micas_m2-w6010-48gt4x-ra-r0",
+   "micas/x86_64-micas_m2-w6510-32c-r0",
+   "micas/x86_64-micas_m2-w6510-48v8c-r0",
+   "micas/x86_64-micas_m2-w6520-24dc8qc-r0",
+   "micas/x86_64-micas_m2-w6520-48c8qc-r0",
+   "micas/x86_64-micas_m2-w6920-32qc2x-r0",
+   "micas/x86_64-micas_m2-w6930-64qc-r0",
+   "micas/x86_64-micas_m2-w6940-128qc-r0",
+   "micas/x86_64-micas_m2-w6940-128x1-fr4-pure-pd-r0",
+   "micas/x86_64-micas_m2-w6940-64oc-r0",
+   "micas/x86_64-micas_m2-w6950-128oc-r0",
+   "micas/x86_64-micas_m2-w6951-64hc-cp-r0",
+   "ragile/x86_64-ragile_ra-b6510-48v8c-r0"
+  ],
+  "config": "",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": null,
+   "devices_to_ignore": null,
+   "user_defined_checkers": null,
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "micas/x86_64-micas_m2-w5000-48con2sfp-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "micas/x86_64-micas_m2-w6510-48gt4v-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"PSU2_FAN1\",\"PSU1_FAN1\",\"psu.power_threshold\",\"psu.temperature\",\"psu.voltage\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\"  : \"blink_yellow\",\n        \"normal\" : \"green\",\n        \"booting\": \"blink_green\"\n    }\n}",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1_FAN1",
+    "PSU2_FAN1",
+    "psu.power_threshold",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blink_green",
+    "fault": "blink_yellow"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "micas/x86_64-micas_m2-w6940-128x1-fr4-r0"
+  ],
+  "config": "{}",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": null,
+   "devices_to_ignore": null,
+   "user_defined_checkers": null,
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nexthop/common",
+   "nexthop/x86_64-nexthop_4010-r0",
+   "nexthop/x86_64-nexthop_4010-r1",
+   "nexthop/x86_64-nexthop_4020-r0",
+   "nexthop/x86_64-nexthop_4220-r0",
+   "nexthop/x86_64-nexthop_5010-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"PSU1_FAN1.speed\",\n        \"PSU2_FAN1.speed\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1_FAN1.speed",
+    "PSU2_FAN1.speed"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nexthop/x86_64-nexthop_4210-r0021",
+   "nexthop/x86_64-nexthop_4210-r1032"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"PSU1_FAN1.speed\",\n        \"PSU2_FAN1.speed\",\n        \"PSU3_FAN1.speed\",\n        \"PSU4_FAN1.speed\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "PSU1_FAN1.speed",
+    "PSU2_FAN1.speed",
+    "PSU3_FAN1.speed",
+    "PSU4_FAN1.speed"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nokia/arm64-nokia_ixs7215_52xb-r0",
+   "nokia/arm64-nokia_ixs7215_c1xa-r0",
+   "nokia/x86_64-nokia_ixr7220_h4-r0",
+   "nokia/x86_64-nokia_ixr7220_h4_32d-r0",
+   "nokia/x86_64-nokia_ixr7220_h5_32d-r0",
+   "nokia/x86_64-nokia_ixr7220_h5_64d-r0",
+   "nokia/x86_64-nokia_ixr7220_h5_64o-r0",
+   "nokia/x86_64-nokia_ixr7220_h6_128-r0",
+   "nokia/x86_64-nokia_ixr7220_h6_64-r0",
+   "nokia/x86_64-nokia_ixr7250_x1b-r0",
+   "nokia/x86_64-nokia_ixr7250_x3b-r0",
+   "nokia/x86_64-nokia_ixr7250_x4-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"blinking green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blinking green",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nokia/armhf-nokia_ixs7215_52x-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"blinking green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blinking green",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nokia/x86_64-nokia_ixr7220_d4-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"blue\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blue",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nokia/x86_64-nokia_ixr7220_h3-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu.temperature\",\n        \"fan\",\n        \"psu\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"blinking green\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blinking green",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nokia/x86_64-nokia_ixr7250e_36x400g-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"fan\",\n        \"psu\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"amber\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nokia/x86_64-nokia_ixr7250e_sup-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"amber\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nvidia-bluefield/arm64-nvda_bf-9009d3b600cvaa",
+   "nvidia-bluefield/arm64-nvda_bf-9009d3b600svaa"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\", \"fan\"],\n    \"user_defined_checkers\": [\"python3 -m sonic_platform.throttling_checks.cpu_check\", \"python3 -m sonic_platform.throttling_checks.ddr_check\"],\n    \"polling_interval\": 60\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [
+    "python3 -m sonic_platform.throttling_checks.cpu_check",
+    "python3 -m sonic_platform.throttling_checks.ddr_check"
+   ],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "nvidia-bluefield/arm64-nvda_bf-bf3comdpu"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\", \"fan\", \"pdb\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan",
+    "pdb",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "red",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "pensando/arm64-elba-asic-flash128-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [\"vlanmgrd\", \"vxlanmgrd\"],\n    \"devices_to_ignore\": [\"psu\",\"fan\"],\n    \"user_defined_checkers\": [\"fetch_dpu_status\"],\n    \"polling_interval\": 20,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 20,
+   "services_to_ignore": [
+    "vlanmgrd",
+    "vxlanmgrd"
+   ],
+   "devices_to_ignore": [
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [
+    "fetch_dpu_status"
+   ],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "pensando/arm64-elba-asic-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"psu\",\"fan\"],\n    \"user_defined_checkers\": [\"fetch_dpu_status\"],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"amber\",\n        \"normal\": \"green\",\n        \"booting\": \"amber_blink\"\n    }\n}",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [
+    "fetch_dpu_status"
+   ],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "amber_blink",
+    "fault": "amber"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "supermicro/x86_64-supermicro_sse_t7132s-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"asic\", \"psu.temperature\"],\n    \"user_defined_checkers\": [\"python3 /usr/local/bin/health_checker_thermal.py\"],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "psu.temperature"
+   ],
+   "user_defined_checkers": [
+    "python3 /usr/local/bin/health_checker_thermal.py"
+   ],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "supermicro/x86_64-supermicro_sse_t8164-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"asic\", \"fan.speed\", \"psu.temperature\",\"psu.voltage\"],\n    \"user_defined_checkers\": [\"python3 /usr/local/bin/health_checker_thermal.py\"],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"yellow\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink\"\n    }\n}\n\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan.speed",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [
+    "python3 /usr/local/bin/health_checker_thermal.py"
+   ],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink",
+    "fault": "yellow"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "supermicro/x86_64-supermicro_sse_t8196-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"asic\", \"fan.speed\", \"psu.temperature\",\"psu.voltage\"],\n    \"user_defined_checkers\": [\"python3 /usr/local/bin/health_checker_thermal.py\"],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink\"\n    }\n}\n\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan.speed",
+    "psu.temperature",
+    "psu.voltage"
+   ],
+   "user_defined_checkers": [
+    "python3 /usr/local/bin/health_checker_thermal.py"
+   ],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink",
+    "fault": "red"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "ufispace/x86_64-ufispace_s6301_56st-r0",
+   "ufispace/x86_64-ufispace_s9110_32x-r0",
+   "ufispace/x86_64-ufispace_s9311_64d-r0",
+   "ufispace/x86_64-ufispace_s9321_64e-r0",
+   "ufispace/x86_64-ufispace_s9321_64eo-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu\",\n        \"fan\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"yellow_blink\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink\"\n    }\n}",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink",
+    "fault": "yellow_blink"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "ufispace/x86_64-ufispace_s7801_54xs-r0",
+   "ufispace/x86_64-ufispace_s8901_54xc-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu\",\n        \"fan\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"yellow\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blink\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blink",
+    "fault": "yellow"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "ufispace/x86_64-ufispace_s9300_32d-r0",
+   "ufispace/x86_64-ufispace_s9301_32d-r0",
+   "ufispace/x86_64-ufispace_s9301_32db-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\n        \"asic\",\n        \"psu\",\n        \"fan\"\n    ],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"yellow\",\n        \"normal\": \"green\",\n        \"booting\": \"blinking_green\"\n    }\n}",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic",
+    "fan",
+    "psu"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "blinking_green",
+    "fault": "yellow"
+   }
+  }
+ },
+ {
+  "platforms": [
+   "wistron/x86_64-wistron_6512_32r-r0",
+   "wistron/x86_64-wistron_sw_to3200k-r0"
+  ],
+  "config": "{\n    \"services_to_ignore\": [],\n    \"devices_to_ignore\": [\"asic\"],\n    \"user_defined_checkers\": [],\n    \"polling_interval\": 60,\n    \"led_color\": {\n        \"fault\": \"red\",\n        \"normal\": \"green\",\n        \"booting\": \"green_blinking\"\n    }\n}\n",
+  "python": {
+   "interval": 60,
+   "services_to_ignore": [],
+   "devices_to_ignore": [
+    "asic"
+   ],
+   "user_defined_checkers": [],
+   "include_devices": null,
+   "optional_containers": {},
+   "led_color": {
+    "normal": "green",
+    "booting": "green_blinking",
+    "fault": "red"
+   }
+  }
+ }
+]

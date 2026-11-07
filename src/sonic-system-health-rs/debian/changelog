@@ -1,0 +1,5 @@
+sonic-system-health (1.0.0) stable; urgency=medium
+
+  * Rust healthd and healthcheck, replacing the Python system-health package.
+
+ -- SONiC Team <sonic-dev@lists.sonicfoundation.dev>  Fri, 16 Oct 2026 00:00:00 +0000

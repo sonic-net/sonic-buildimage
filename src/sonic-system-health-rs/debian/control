@@ -1,0 +1,14 @@
+Source: sonic-system-health
+Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
+Section: net
+Priority: optional
+Build-Depends: debhelper-compat (= 13), python3-dev
+Standards-Version: 1.0.0
+
+Package: sonic-system-health
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: SONiC system health monitor
+ healthd checks services and hardware every polling interval, drives the
+ system status LED, publishes SYSTEM_HEALTH_INFO and tracks system ready.
+ healthcheck runs one check cycle for "show system-health".
