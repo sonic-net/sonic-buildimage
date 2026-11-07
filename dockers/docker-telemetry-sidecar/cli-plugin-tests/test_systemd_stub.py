@@ -131,6 +131,11 @@ def ss(tmp_path, monkeypatch):
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
 
+    # Enable both health-checker sync gates so the shared sync tests exercise the
+    # branch-specific container_checker and service_checker (module defaults off).
+    monkeypatch.setenv("CONTAINER_CHECKER_SYNC_ENABLED", "true")
+    monkeypatch.setenv("SERVICE_CHECKER_SYNC_ENABLED", "true")
+
     # Fake host filesystem and command recorder
     host_fs = {}
     commands = []
@@ -1262,3 +1267,189 @@ def test_reconcile_enabled_uses_apply_patch_command(ss):
     # Verify the end state
     assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
     assert config_db.get("GNMI_CLIENT_CERT|test.example.com", {}).get("role") == ["admin"]
+
+
+# ─────────────────────────── Health-checker sync gates ───────────────────────────
+# The container_checker (monit) and service_checker.py (system-health) syncs are
+# each gated behind their own env flag. Both default off; only the gnmi DaemonSet
+# flips them on at runtime, so this sidecar ships identical code but is a no-op
+# syncer for the two checkers unless explicitly enabled. These tests prove the
+# two gates are independent.
+
+def test_checker_sync_env_defaults_off(monkeypatch):
+    """Both health-checker sync gates default to False when unset."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.delenv("CONTAINER_CHECKER_SYNC_ENABLED", raising=False)
+    monkeypatch.delenv("SERVICE_CHECKER_SYNC_ENABLED", raising=False)
+    ss = importlib.import_module("systemd_stub")
+    assert ss.CONTAINER_CHECKER_SYNC_ENABLED is False
+    assert ss.SERVICE_CHECKER_SYNC_ENABLED is False
+
+
+def test_container_checker_sync_env_true(monkeypatch):
+    """CONTAINER_CHECKER_SYNC_ENABLED reads true from the environment."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.setenv("CONTAINER_CHECKER_SYNC_ENABLED", "true")
+    ss = importlib.import_module("systemd_stub")
+    assert ss.CONTAINER_CHECKER_SYNC_ENABLED is True
+
+
+def test_service_checker_sync_env_true(monkeypatch):
+    """SERVICE_CHECKER_SYNC_ENABLED reads true from the environment."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.setenv("SERVICE_CHECKER_SYNC_ENABLED", "true")
+    ss = importlib.import_module("systemd_stub")
+    assert ss.SERVICE_CHECKER_SYNC_ENABLED is True
+
+
+def test_both_checkers_synced_when_both_enabled(ss):
+    """With both gates on (fixture default), ensure_sync writes both checkers."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    ss_mod._get_branch_name = lambda: "202412"
+    ss_mod.SYNC_ITEMS[:] = []
+
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"CHECKER"
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"SERVICE-CHECKER"
+    host_fs["/bin/container_checker"] = b"OLD"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"OLD"
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"CHECKER"
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"SERVICE-CHECKER"
+
+
+def test_only_container_checker_synced_when_service_gate_off(ss, monkeypatch):
+    """Container gate on, service gate off -> only /bin/container_checker is written."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "CONTAINER_CHECKER_SYNC_ENABLED", True)
+    monkeypatch.setattr(ss_mod, "SERVICE_CHECKER_SYNC_ENABLED", False)
+    ss_mod._get_branch_name = lambda: "202412"
+    ss_mod.SYNC_ITEMS[:] = []
+
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"CHECKER"
+    host_fs["/bin/container_checker"] = b"OLD"
+    host_fs.pop(ss_mod.HOST_SERVICE_CHECKER, None)
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"CHECKER"
+    assert ss_mod.HOST_SERVICE_CHECKER not in host_fs
+
+
+def test_only_service_checker_synced_when_container_gate_off(ss, monkeypatch):
+    """Service gate on, container gate off -> only service_checker.py is written."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "CONTAINER_CHECKER_SYNC_ENABLED", False)
+    monkeypatch.setattr(ss_mod, "SERVICE_CHECKER_SYNC_ENABLED", True)
+    ss_mod._get_branch_name = lambda: "202412"
+    ss_mod.SYNC_ITEMS[:] = []
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"SERVICE-CHECKER"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"OLD"
+    host_fs.pop("/bin/container_checker", None)
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"SERVICE-CHECKER"
+    assert "/bin/container_checker" not in host_fs
+
+
+def test_neither_checker_synced_when_both_gates_off(ss, monkeypatch):
+    """Both gates off (production default) -> neither checker is written."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "CONTAINER_CHECKER_SYNC_ENABLED", False)
+    monkeypatch.setattr(ss_mod, "SERVICE_CHECKER_SYNC_ENABLED", False)
+    ss_mod._get_branch_name = lambda: "202412"
+    ss_mod.SYNC_ITEMS[:] = []
+    host_fs.pop("/bin/container_checker", None)
+    host_fs.pop(ss_mod.HOST_SERVICE_CHECKER, None)
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert "/bin/container_checker" not in host_fs
+    assert ss_mod.HOST_SERVICE_CHECKER not in host_fs
+
+
+def test_both_gates_off_skips_branch_check(ss, monkeypatch):
+    """With both gates off, an unsupported branch does NOT abort the base sync
+    (the branch only matters when a checker is actually synced)."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "CONTAINER_CHECKER_SYNC_ENABLED", False)
+    monkeypatch.setattr(ss_mod, "SERVICE_CHECKER_SYNC_ENABLED", False)
+    ss_mod._get_branch_name = lambda: "master"
+
+    item = ss_mod.SyncItem("/container/telemetry.sh", "/usr/local/bin/telemetry.sh", 0o755)
+    container_fs[item.src_in_container] = b"NEW"
+    host_fs[item.dst_on_host] = b"OLD"
+    ss_mod.SYNC_ITEMS[:] = [item]
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[item.dst_on_host] == b"NEW"
+
+
+def test_enabled_gate_aborts_for_unsupported_branch(ss, monkeypatch):
+    """With a gate on, an unsupported branch aborts the sync to trigger rollback."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "CONTAINER_CHECKER_SYNC_ENABLED", True)
+    monkeypatch.setattr(ss_mod, "SERVICE_CHECKER_SYNC_ENABLED", False)
+    ss_mod._get_branch_name = lambda: "master"
+
+    item = ss_mod.SyncItem("/container/telemetry.sh", "/usr/local/bin/telemetry.sh", 0o755)
+    container_fs[item.src_in_container] = b"NEW"
+    host_fs[item.dst_on_host] = b"OLD"
+    ss_mod.SYNC_ITEMS[:] = [item]
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+    # Nothing is synced when the sync aborts early.
+    assert host_fs[item.dst_on_host] == b"OLD"
+
+
+def test_service_checker_post_copy_uses_try_restart(ss, monkeypatch):
+    """When service_checker.py changes, the post-copy action is
+    'systemctl try-restart system-health' (never a plain restart)."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "CONTAINER_CHECKER_SYNC_ENABLED", False)
+    monkeypatch.setattr(ss_mod, "SERVICE_CHECKER_SYNC_ENABLED", True)
+    ss_mod._get_branch_name = lambda: "202412"
+    ss_mod.SYNC_ITEMS[:] = []
+    # POST_COPY_ACTIONS must be non-empty for the dynamic try-restart to be added
+    # (mirrors the --no-post-actions guard). Seed an unrelated entry.
+    ss_mod.POST_COPY_ACTIONS["/unrelated"] = [["sudo", "true"]]
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"NEW-SERVICE-CHECKER"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"OLD"
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "systemctl", "try-restart", "system-health") in post_cmds
+    assert ("sudo", "systemctl", "restart", "system-health") not in post_cmds
+
+
+def test_service_checker_no_post_action_when_post_actions_disabled(ss, monkeypatch):
+    """Under --no-post-actions (POST_COPY_ACTIONS cleared), the service_checker sync
+    still happens but no try-restart is issued."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "CONTAINER_CHECKER_SYNC_ENABLED", False)
+    monkeypatch.setattr(ss_mod, "SERVICE_CHECKER_SYNC_ENABLED", True)
+    ss_mod._get_branch_name = lambda: "202412"
+    ss_mod.SYNC_ITEMS[:] = []
+    # The fixture already cleared POST_COPY_ACTIONS to {} (like --no-post-actions).
+    assert ss_mod.POST_COPY_ACTIONS == {}
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"NEW-SERVICE-CHECKER"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"OLD"
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    # File is still synced...
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"NEW-SERVICE-CHECKER"
+    # ...but no try-restart fired.
+    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "systemctl", "try-restart", "system-health") not in post_cmds
