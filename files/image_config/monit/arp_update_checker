@@ -4,7 +4,7 @@
 arp_update_checker
 
 This script is intended to be run by Monit. It will write an alerting message into
-syslog if it finds arp_update script stuck on ping command.
+syslog if it finds arp_update script stuck on ping/ndisc6 command.
 Then it will attempt to restart arp_update script.
 
 The following is an example in Monit configuration file to show how Monit will run
@@ -30,26 +30,50 @@ def log_error(message):
     syslog.syslog(syslog.LOG_ERR, message)
 
 def is_process_running(process_name):
-    """Check if there is any running process that contains the given name."""
+    """Return (True, pid) if a process with the given comm name is running, else (False, None)."""
     try:
-        # Use pgrep to check if the process is running
-        output = subprocess.check_output(["pgrep", "-f", process_name])
-        return bool(output.strip())
+        output = subprocess.check_output(["ps", "-C", process_name, "-o", "pid="])
+        pids = output.strip().decode('utf-8').split()
+        if not pids:
+            return False, None
+        return True, pids[0]
     except subprocess.CalledProcessError:
-        return False
+        return False, None
 
-def is_arp_update_stuck(timeout=TIMEOUT):
-    """Check if arp_update is stuck by looking for a ping command running longer than the specified timeout. (Default 1sec)"""
+def is_arp_update_stuck(arp_update_pid, timeout=TIMEOUT):
+    """Check if arp_update is stuck by looking for a ping/arping/ndisc6 command running longer than the specified timeout. (Default 5sec)"""
     try:
-        arp_update_pid = subprocess.check_output(["pgrep", "-x", "arp_update"]).strip().decode('utf-8')
-        child_pids = subprocess.check_output(["pgrep", "-P", arp_update_pid]).strip().decode('utf-8').split()
-        for pid in child_pids:
-            (cmd, elapsed_time)=subprocess.check_output(["ps", "-p", "1550527", "-o", "comm=,etimes="]).strip().decode('utf-8').split()
+        children = subprocess.check_output(
+            ["ps", "-o", "pid=,etimes=", "--ppid", arp_update_pid]
+        ).strip().decode('utf-8').splitlines()
 
-            if "ping" in cmd:
-                # Check if the elapsed time is greater than the timeout
-                if elapsed_time > timeout:
-                    return True
+        slow_child_pids = []
+        for child in children:
+            pid, elapsed_time = child.split()
+            if float(elapsed_time) > timeout:
+                slow_child_pids.append(pid)
+
+        if not slow_child_pids:
+            return False
+
+        # No -c: COMMAND column is comm, not full cmdline (unlike ps -o comm= on some hosts).
+        top_cmd = ["top", "-b", "-n", "1"]
+        for pid in slow_child_pids:
+            top_cmd.extend(["-p", pid])
+        try:
+            top_output = subprocess.check_output(top_cmd).decode('utf-8', errors='replace')
+        except subprocess.CalledProcessError:
+            # All targeted children may have exited before top ran.
+            return False
+
+        slow_child_pids_set = set(slow_child_pids)
+        for line in top_output.splitlines():
+            fields = line.split()
+            if len(fields) < 2 or not fields[0].isdigit():
+                continue
+            pid, command = fields[0], fields[-1]
+            if pid in slow_child_pids_set and ("ping" in command or "ndisc6" in command):
+                return True
         return False
     except subprocess.CalledProcessError:
         return False
@@ -71,8 +95,9 @@ def main():
     """
     This function will check if arp_update script is stuck and restart the script if needed.
     """
-    if is_process_running("arp_update"):
-        if is_arp_update_stuck():
+    running, arp_update_pid = is_process_running("arp_update")
+    if running:
+        if is_arp_update_stuck(arp_update_pid):
             log_warning("arp_update process is stuck. Restarting...")
             restart_arp_update()
             sys.exit(1)
