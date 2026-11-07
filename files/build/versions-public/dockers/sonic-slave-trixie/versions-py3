@@ -157,7 +157,7 @@ scipy==1.15.3
 scour==0.38.2
 scp==0.15.0
 service-identity==24.2.0
-setuptools==78.1.1
+setuptools==84.1.0
 setuptools-scm==8.2.1
 six==1.17.0
 snowballstemmer==2.2.0
