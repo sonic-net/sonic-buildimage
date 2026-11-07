@@ -7,6 +7,8 @@ from swsscommon import swsscommon
 DEFAULT_SELECT_TIMEOUT = 5000  # millisecond
 DHCP_SERVER_IPV4 = "DHCP_SERVER_IPV4"
 DHCP_SERVER_IPV4_PORT = "DHCP_SERVER_IPV4_PORT"
+DHCP_SERVER_IPV4_MATCH = "DHCP_SERVER_IPV4_MATCH"
+DHCP_SERVER_IPV4_BINDING = "DHCP_SERVER_IPV4_BINDING"
 DHCP_SERVER_IPV4_RANGE = "DHCP_SERVER_IPV4_RANGE"
 DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS = "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS"
 VLAN = "VLAN"
@@ -225,12 +227,53 @@ class DhcpPortTableEventChecker(ConfigDbEventChecker):
         ConfigDbEventChecker.__init__(self, sel, db)
 
     def _get_parameter(self, db_snapshot):
-        return ConfigDbEventChecker.get_parameter_by_name(db_snapshot, "enabled_dhcp_interfaces")
+        return ConfigDbEventChecker.get_parameter_by_name(db_snapshot, "enabled_port_interfaces")
 
-    def _process_check(self, key, op, entry, enabled_dhcp_interfaces):
+    def _process_check(self, key, op, entry, enabled_port_interfaces):
         dhcp_interface = key.split("|")[0]
         # If dhcp interface is enabled, need to generate new configuration
-        if dhcp_interface in enabled_dhcp_interfaces:
+        if dhcp_interface in enabled_port_interfaces:
+            self.clear_event()
+            return True
+        return False
+
+
+class DhcpMatchTableEventChecker(ConfigDbEventChecker):
+    """
+    This event checker is interested in active DHCP_SERVER_IPV4_MATCH entries.
+    """
+    table_name = DHCP_SERVER_IPV4_MATCH
+
+    def __init__(self, sel, db):
+        self.table_name = DHCP_SERVER_IPV4_MATCH
+        ConfigDbEventChecker.__init__(self, sel, db)
+
+    def _get_parameter(self, db_snapshot):
+        return ConfigDbEventChecker.get_parameter_by_name(db_snapshot, "used_matches")
+
+    def _process_check(self, key, op, entry, used_matches):
+        if key in used_matches:
+            self.clear_event()
+            return True
+        return False
+
+
+class DhcpBindingTableEventChecker(ConfigDbEventChecker):
+    """
+    This event checker is interested in bindings on enabled MATCH interfaces.
+    """
+    table_name = DHCP_SERVER_IPV4_BINDING
+
+    def __init__(self, sel, db):
+        self.table_name = DHCP_SERVER_IPV4_BINDING
+        ConfigDbEventChecker.__init__(self, sel, db)
+
+    def _get_parameter(self, db_snapshot):
+        return ConfigDbEventChecker.get_parameter_by_name(db_snapshot, "enabled_match_interfaces")
+
+    def _process_check(self, key, op, entry, enabled_match_interfaces):
+        dhcp_interface = key.split("|")[0]
+        if dhcp_interface in enabled_match_interfaces:
             self.clear_event()
             return True
         return False
@@ -523,6 +566,13 @@ class DhcpServdDbMonitor(object):
         state, _ = self.sel.select(self.select_timeout)
         if state == swsscommon.Select.TIMEOUT or state != swsscommon.Select.OBJECT:
             return False
+        if not db_snapshot:
+            # Recovery mode treats the next event from any subscribed table as
+            # actionable and drains it before retrying generation.
+            for checker in self.checker_dict.values():
+                if checker.is_enabled():
+                    checker.clear_event()
+            return True
         need_refresh = False
         for checker in self.checker_dict.values():
             if not checker.is_enabled():
