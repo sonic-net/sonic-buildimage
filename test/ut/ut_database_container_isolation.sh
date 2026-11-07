@@ -276,10 +276,10 @@ grep -q '^exec .*pgrep' "$LOG" && fail 'startup continued after sysctl applicati
 pass 'sysctl application failure stops startup'
 
 # Optional: feed the normalized input to a real sysctl (e.g. bookworm procps) in an unprivileged user+net namespace.
-if [[ -n "${MIGSOFTWAR_47503_SYSCTL:-}" ]]; then
+if [[ -n "${DATABASE_ISOLATION_SYSCTL:-}" ]]; then
     run_post "$SHIPPED"
     { cat "$WORK/sysctl-in"; echo 'net.ipv4.no_such_key=1'; } | \
-        unshare -Urn bash -c "$MIGSOFTWAR_47503_SYSCTL -e -p - > /dev/null" || \
+        unshare -Urn bash -c "$DATABASE_ISOLATION_SYSCTL -e -p - > /dev/null" || \
         fail 'real sysctl rejected the normalized shipped settings or a missing key'
     pass 'real sysctl applies the normalized shipped settings and ignores missing keys'
 fi
@@ -410,14 +410,14 @@ run_consumer "$WORK/pmon.sh" "" present host dbcurrent
 pass 'host-network containers keep HWSKU-based reuse with no provider lookup'
 
 # Optional: reproduce the Docker behavior that requires this.
-if [[ -n "${MIGSOFTWAR_47503_LIVE_IMAGE:-}" ]]; then
+if [[ -n "${DATABASE_ISOLATION_LIVE_IMAGE:-}" ]]; then
     P=ut-47503-ns-$$
-    docker create --name "$P-db" --entrypoint sleep "$MIGSOFTWAR_47503_LIVE_IMAGE" 60 > /dev/null
-    docker create --name "$P-c" --net="container:$P-db" --entrypoint sleep "$MIGSOFTWAR_47503_LIVE_IMAGE" 60 > /dev/null
+    docker create --name "$P-db" --entrypoint sleep "$DATABASE_ISOLATION_LIVE_IMAGE" 60 > /dev/null
+    docker create --name "$P-c" --net="container:$P-db" --entrypoint sleep "$DATABASE_ISOLATION_LIVE_IMAGE" 60 > /dev/null
     old=$(docker inspect -f '{{.Id}}' "$P-db")
     mode=$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$P-c")
     docker rm -f "$P-db" > /dev/null
-    docker create --name "$P-db" --entrypoint sleep "$MIGSOFTWAR_47503_LIVE_IMAGE" 60 > /dev/null
+    docker create --name "$P-db" --entrypoint sleep "$DATABASE_ISOLATION_LIVE_IMAGE" 60 > /dev/null
     live=$(docker ps -a -q --no-trunc --filter "id=${mode#container:}")
     docker rm -f "$P-db" "$P-c" > /dev/null
     [[ "$mode" == "container:$old" ]] || fail "live Docker: NetworkMode '$mode' is not pinned to the provider ID"
@@ -426,11 +426,11 @@ if [[ -n "${MIGSOFTWAR_47503_LIVE_IMAGE:-}" ]]; then
 fi
 
 # Optional: validate the rendered options against a real Docker daemon (no container is started).
-if [[ -n "${MIGSOFTWAR_47503_LIVE_IMAGE:-}" ]]; then
+if [[ -n "${DATABASE_ISOLATION_LIVE_IMAGE:-}" ]]; then
     for dev in "" 0 dpu0; do
         run_start absent "$dev"
         mapfile -t live_args < <(create_args | tr ' ' '\n' | sed '/^$/d;$d' | sed "s/^--name=.*/--name=ut-47503-$$-${dev:-host}/")
-        cid=$(docker create "${live_args[@]}" "$MIGSOFTWAR_47503_LIVE_IMAGE" true)
+        cid=$(docker create "${live_args[@]}" "$DATABASE_ISOLATION_LIVE_IMAGE" true)
         hc=$(docker inspect -f '{{.HostConfig.Privileged}}|{{len .HostConfig.Devices}}|{{.HostConfig.CapAdd}}' "$cid")
         docker rm "$cid" > /dev/null
         [[ "$hc" == "false|0|[]" ]] || fail "live Docker DEV='$dev': HostConfig is '$hc', expected 'false|0|[]'"
