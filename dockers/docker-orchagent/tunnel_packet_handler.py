@@ -80,6 +80,7 @@ class TunnelPacketHandler(object):
         self._portchannel_intfs = None
         self.up_portchannels = None
         self.netlink_api = IPRoute()
+        self.netlink_lock = Lock()
         self.sniffer = None
         self.self_ip = ''
         self.packet_filter = ''
@@ -127,6 +128,57 @@ class TunnelPacketHandler(object):
 
         return ''
 
+    def get_egress_intf(self, dst_ip):
+        """
+        Gets the egress interface for a destination IP
+
+        Returns:
+            (str) The interface name, or the empty string if no interface
+                  name was found
+        """
+        try:
+            with self.netlink_lock:
+                routes = self.netlink_api.route("get", dst=dst_ip)
+                if not routes:
+                    logger.log_warning(
+                        "Could not find a route to {}".format(dst_ip)
+                    )
+                    return ''
+
+                intf_index = routes[0].get_attr('RTA_OIF')
+                if intf_index is None:
+                    logger.log_warning(
+                        "Route to {} has no egress interface".format(dst_ip)
+                    )
+                    return ''
+
+                links = self.netlink_api.link("get", index=intf_index)
+        except NetlinkError as error:
+            logger.log_warning(
+                "Could not get egress interface for {}: {}".format(
+                    dst_ip, error
+                )
+            )
+            return ''
+
+        if not links:
+            logger.log_warning(
+                "Could not find interface index {} for {}".format(
+                    intf_index, dst_ip
+                )
+            )
+            return ''
+
+        intf = self.get_intf_name(links[0])
+        if not intf:
+            logger.log_warning(
+                "Interface index {} for {} has no name".format(
+                    intf_index, dst_ip
+                )
+            )
+
+        return intf
+
     def get_up_portchannels(self):
         """
         Returns the portchannels which are operationally up
@@ -138,7 +190,8 @@ class TunnelPacketHandler(object):
         link_statuses = []
         for intf in portchannel_intf_names:
             try:
-                status = self.netlink_api.link("get", ifname=intf)
+                with self.netlink_lock:
+                    status = self.netlink_api.link("get", ifname=intf)
             except NetlinkError:
                 # Continue if we find a non-existent interface since we don't
                 # need to listen on it while it's down/not created. Once it comes up,
@@ -315,19 +368,20 @@ class TunnelPacketHandler(object):
 
     def write_count_to_db(self):
         while True:
-            # use a set to automatically deduplicate destination IPs
+            # Use a set to automatically deduplicate command sequences.
             to_run = set()
 
-            to_run.add(tuple(self.pending_cmds.get()))
+            to_run.add(tuple(tuple(cmd) for cmd in self.pending_cmds.get()))
             pkt_count = 1
             while not self.pending_cmds.empty() and len(to_run) < 100:
-                to_run.add(tuple(self.pending_cmds.get()))
-                # we should always count each packet, but only ping for each unique IP
+                to_run.add(tuple(tuple(cmd) for cmd in self.pending_cmds.get()))
+                # Count every packet, but run commands only for each unique sequence.
                 pkt_count += 1
 
-            for cmds in to_run:
-                logger.log_info("Running command '{}'".format(' '.join(cmds)))
-                subprocess.run(cmds, stdout=subprocess.DEVNULL)
+            for command_sequence in to_run:
+                for cmd in command_sequence:
+                    logger.log_info("Running command '{}'".format(' '.join(cmd)))
+                    subprocess.run(cmd, stdout=subprocess.DEVNULL)
             try:
                 curr_count = int(self.counters_db.get(COUNTERS_DB, self.tunnel_counter_table, COUNTER_KEY))
             except TypeError:
@@ -343,13 +397,21 @@ class TunnelPacketHandler(object):
         """
         inner_packet_type = self.get_inner_pkt_type(packet)
         if inner_packet_type and packet[IP].dst == self.self_ip:
-            cmds = ['timeout', '0.2', 'ping', '-c1',
-                    '-W1', '-i0', '-n', '-q']
+            ping_cmd = ['timeout', '0.2', 'ping', '-c1',
+                        '-W1', '-i0', '-n', '-q']
             if inner_packet_type == IPv6:
-                cmds.append('-6')
+                ping_cmd.append('-6')
             dst_ip = packet[IP].payload[inner_packet_type].dst
-            cmds.append(dst_ip)
-            self.pending_cmds.put(cmds)
+            ping_cmd.append(dst_ip)
+            command_sequence = [ping_cmd]
+            if inner_packet_type == IPv6:
+                egress_intf = self.get_egress_intf(dst_ip)
+                if egress_intf:
+                    command_sequence.append(
+                        ['ndisc6', '-q', '-r', '1', '-w', '0',
+                         dst_ip, egress_intf]
+                    )
+            self.pending_cmds.put(command_sequence)
 
     def listen_for_tunnel_pkts(self):
         """
