@@ -11,6 +11,7 @@ RestartWaiter.waitAdvancedBootDone()
 import signal
 import threading
 import time
+from datetime import datetime, timezone
 
 from sonic_py_common.daemon_base import DaemonBase
 from swsscommon.swsscommon import SonicV2Connector
@@ -46,7 +47,7 @@ class HealthDaemon(DaemonBase):
         self._clear_system_health_table()
 
     def _clear_system_health_table(self):
-        self._db.delete_all_by_pattern(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME)
+        self._db.delete_all_by_pattern(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME + '|*')
 
     # Signal handler
     def signal_handler(self, sig, frame):
@@ -109,11 +110,20 @@ class HealthDaemon(DaemonBase):
         self._clear_system_health_table()
         for category, info in stat.items():
             for obj_name, obj_data in info.items():
-                if obj_data[HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK:
-                    self._db.set(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, obj_name,
-                                 obj_data[HealthChecker.INFO_FIELD_OBJECT_MSG])
+                key = '{}|{}|{}'.format(HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, category, obj_name)
+                self._db.hmset(self._db.STATE_DB, key, {
+                    'category': category,
+                    'type': obj_data[HealthChecker.INFO_FIELD_OBJECT_TYPE],
+                    'status': obj_data[HealthChecker.INFO_FIELD_OBJECT_STATUS],
+                    'message': obj_data[HealthChecker.INFO_FIELD_OBJECT_MSG],
+                })
 
-        self._db.set(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, 'summary', HealthChecker.summary)
+        meta_key = '{}|_meta'.format(HealthDaemon.SYSTEM_HEALTH_TABLE_NAME)
+        self._db.hmset(self._db.STATE_DB, meta_key, {
+            'last_updated': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'summary': HealthChecker.summary,
+            'polling_interval': str(config.interval),
+        })
 
 
 #
