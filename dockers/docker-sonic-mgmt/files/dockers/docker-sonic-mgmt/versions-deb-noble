@@ -3,8 +3,9 @@ adwaita-icon-theme==46.0-1
 alsa-topology-conf==1.2.5.1-2
 alsa-ucm-conf==1.2.10-1ubuntu5.15
 appstream==1.0.2-1build6
-apt-transport-https==2.8.3
-apt-utils==2.8.3
+apt==2.8.4ubuntu0.1
+apt-transport-https==2.8.4ubuntu0.1
+apt-utils==2.8.4ubuntu0.1
 at-spi2-common==2.52.0-1build1
 at-spi2-core==2.52.0-1build1
 azure-cli==2.92.0-1~jammy
@@ -14,8 +15,8 @@ binutils-common==2.42-4ubuntu2.10
 binutils-x86-64-linux-gnu==2.42-4ubuntu2.10
 build-essential==12.10ubuntu1
 bzip2==1.0.8-5.1ubuntu0.1
-ca-certificates==20260816ubuntu0.24.04.1
-ca-certificates-java==20240118
+ca-certificates==20260816ubuntu0.24.04.2
+ca-certificates-java==20240118ubuntu0.24.04.1
 cmake==3.28.3-1build7
 cmake-data==3.28.3-1build7
 conserver-client==8.2.7-2build2
@@ -94,6 +95,7 @@ libalgorithm-merge-perl==0.08-5
 libaom3==3.8.2-2ubuntu0.2
 libapparmor1==4.0.1really4.0.1-0ubuntu0.24.04.9
 libappstream5==1.0.2-1build6
+libapt-pkg6.0t64==2.8.4ubuntu0.1
 libarchive13t64==3.7.2-2ubuntu0.9
 libargon2-1==0~20190702+dfsg-4build1
 libasan8==14.2.0-4ubuntu2~24.04.1
@@ -270,10 +272,10 @@ libsensors5==1:3.6.0-9build1
 libsframe1==2.42-4ubuntu2.10
 libsharpyuv0==1.3.2-0.4build3
 libsm6==2:1.2.3-1build3
-libsnmp-base==5.9.4+dfsg-1.1ubuntu3.2
-libsnmp40t64==5.9.4+dfsg-1.1ubuntu3.2
+libsnmp-base==5.9.4+dfsg-1.1ubuntu3.3
+libsnmp40t64==5.9.4+dfsg-1.1ubuntu3.3
 libsodium23==1.0.18-1ubuntu0.24.04.1
-libsqlite3-0==3.45.1-1ubuntu2.8
+libsqlite3-0==3.45.1-1ubuntu2.9
 libssh-4==0.10.6-2ubuntu0.5
 libssl-dev==3.0.13-0ubuntu3.16
 libstdc++-13-dev==13.3.0-6ubuntu2~24.04.1
@@ -336,7 +338,7 @@ libxv1==2:1.0.11-1.1build1
 libxxf86dga1==2:1.1.5-1build1
 libxxf86vm1==1:1.1.4-1build4
 libyaml-0-2==0.2.5-1build1
-linux-libc-dev==6.8.0-147.147
+linux-libc-dev==6.8.0-149.149
 logrotate==3.21.0-2build1
 lsb-release==12.0-2
 lto-disabled-list==47
@@ -401,7 +403,7 @@ session-migration==0.3.9build1
 sgml-base==1.31
 shared-mime-info==2.4-4
 shellcheck==0.9.0-1
-snmp==5.9.4+dfsg-1.1ubuntu3.2
+snmp==5.9.4+dfsg-1.1ubuntu3.3
 software-properties-common==0.99.49.4
 sonic-device-data==1.0-1
 ssh-import-id==5.11-0ubuntu2.24.04.1
