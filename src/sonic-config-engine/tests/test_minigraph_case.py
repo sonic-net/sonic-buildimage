@@ -191,10 +191,10 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.assertEqual(output.strip(), '')
 
         try:
-            # For DHCP server enabled device type
+            # BmcMgmtToRRouter no longer selects the legacy DHCP server.
             output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (TOR_ROUTER, BMC_MGMT_TOR_ROUTER), self.sample_graph])
             output = self.run_script(argument)
-            self.assertEqual(output.strip(), 'enabled')
+            self.assertEqual(output.strip(), '')
         finally:
             output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (BMC_MGMT_TOR_ROUTER, TOR_ROUTER), self.sample_graph])
 
