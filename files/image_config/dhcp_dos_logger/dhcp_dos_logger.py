@@ -86,7 +86,7 @@ def wait_for_port_init_done():
         None (blocks until PortInitDone is received or timeout occurs)
     """
     MAX_WAIT_SECONDS = 300
-    appl_db = daemon_base.db_connect("APPL_DB")
+    appl_db = daemon_base.db_connect("APPL_DB", use_tcp=False)
 
     sel = swsscommon.Select()
     sst = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
