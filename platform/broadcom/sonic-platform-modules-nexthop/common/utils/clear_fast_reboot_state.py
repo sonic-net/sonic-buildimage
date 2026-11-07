@@ -50,9 +50,14 @@ def main() -> None:
 
     # Clear FAST last so an earlier failure leaves cleanup pending for retry.
     db("STATE_DB", "hset", "WARM_RESTART_ENABLE_TABLE|system", "enable", "false")
-    db("STATE_DB", "del", "WARM_RESTART_TABLE|orchagent", "WARM_RESTART_TABLE|syncd")
+    # The ASIC was reset, so every app must start cold. An app warm starts when its docker
+    # keeps warm restart enabled (bgp does on every boot) and its restore_count row exists.
+    warm_rows = db("STATE_DB", "keys", "WARM_RESTART_TABLE|*").splitlines()
+    if warm_rows:
+        db("STATE_DB", "del", *warm_rows)
     db("STATE_DB", "hset", "FAST_RESTART_ENABLE_TABLE|system", "enable", "false")
-    syslog.syslog("fast-reboot post-kexec: cleared FAST/WARM restart flags so swss/syncd cold-init")
+    syslog.syslog("fast-reboot post-kexec: cleared FAST/WARM restart state so every app "
+                  "cold-inits")
 
 
 if __name__ == "__main__":
