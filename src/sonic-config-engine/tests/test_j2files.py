@@ -1708,6 +1708,24 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
+    def test_ntp_conf_empty_src_intf(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces_empty_src_intf.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_conf_with_mgmt_interface(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces_with_mgmt_interface.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_with_mgmt_interface.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
     def test_ntp_keys(self):
         conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
