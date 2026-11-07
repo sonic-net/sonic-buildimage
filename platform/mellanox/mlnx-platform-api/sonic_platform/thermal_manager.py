@@ -49,11 +49,11 @@ class ThermalManager(ThermalManagerBase):
         if not dpus_present:
             # Non smart switch behaviour has highest priority
             from .chassis import Chassis
-            cls.thermal_updater_task = thermal_updater.ThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps())
+            cls.thermal_updater_task = thermal_updater.ThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_ports())
         else:
             from .chassis import Chassis
             dpus = Chassis.chassis_instance.get_all_modules()
-            cls.thermal_updater_task = smartswitch_thermal_updater.SmartswitchThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps(),
+            cls.thermal_updater_task = smartswitch_thermal_updater.SmartswitchThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_ports(),
                                                                                              dpu_list=dpus)
         cls.thermal_updater_task.start()
 

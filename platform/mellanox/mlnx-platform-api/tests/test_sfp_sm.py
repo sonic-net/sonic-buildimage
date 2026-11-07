@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +29,7 @@ sys.path.insert(0, modules_path)
 
 from sonic_platform import sfp
 from sonic_platform import utils
+from sonic_platform.module_detection_flow import ModuleDetectionFlow
 
 origin_read = utils.read_from_file
 origin_write = utils.write_file
@@ -66,14 +68,14 @@ class TestSfpStateMachine:
     def test_warm_reboot_from_fw_control(self):
         self.mock_value('control', 0)
         s = sfp.SFP(0)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_FW_CONTROL
         
     def test_no_hw_present(self):
         self.mock_value('control', 1)
         self.mock_value('hw_present', 0)
         s = sfp.SFP(0)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_NOT_PRESENT
         
     def test_not_powered(self):
@@ -81,12 +83,12 @@ class TestSfpStateMachine:
         self.mock_value('hw_present', 1)
         self.mock_value('power_on', 0)
         s = sfp.SFP(0)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_RESETTING
         assert self.get_value('power_on') == 1
         assert self.get_value('hw_reset') == 1
-        assert 0 in sfp.SFP.get_wait_ready_task()._wait_dict
-        sfp.SFP.get_wait_ready_task()._wait_dict.pop(0)
+        assert 0 in ModuleDetectionFlow.get_wait_ready_task()._wait_dict
+        ModuleDetectionFlow.get_wait_ready_task()._wait_dict.pop(0)
         
     def test_in_reset_state(self):
         self.mock_value('control', 1)
@@ -94,13 +96,13 @@ class TestSfpStateMachine:
         self.mock_value('power_on', 1)
         self.mock_value('hw_reset', 0)
         s = sfp.SFP(0)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_RESETTING
         assert self.get_value('hw_reset') == 1
-        assert 0 in sfp.SFP.get_wait_ready_task()._wait_dict
-        s.on_event(sfp.EVENT_NOT_PRESENT)
+        assert 0 in ModuleDetectionFlow.get_wait_ready_task()._wait_dict
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_NOT_PRESENT)
         assert s.get_state() == sfp.STATE_NOT_PRESENT
-        assert 0 not in sfp.SFP.get_wait_ready_task()._wait_dict
+        assert 0 not in ModuleDetectionFlow.get_wait_ready_task()._wait_dict
         
     def test_reset_done(self):
         self.mock_value('control', 1)
@@ -110,9 +112,9 @@ class TestSfpStateMachine:
         self.mock_value('power_good', 1)
         s = sfp.SFP(0)
         s.determine_control_type = mock.MagicMock(return_value=sfp.SFP_FW_CONTROL)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_RESETTING
-        s.on_event(sfp.EVENT_RESET_DONE)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_RESET_DONE)
         assert s.get_state() == sfp.STATE_FW_CONTROL
         
     def test_no_power_good(self):
@@ -122,9 +124,9 @@ class TestSfpStateMachine:
         self.mock_value('hw_reset', 1)
         self.mock_value('power_good', 0)
         s = sfp.SFP(0)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_POWER_BAD
-        s.on_event(sfp.EVENT_NOT_PRESENT)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_NOT_PRESENT)
         assert s.get_state() == sfp.STATE_NOT_PRESENT
 
     def test_fw_control(self):
@@ -135,7 +137,7 @@ class TestSfpStateMachine:
         self.mock_value('power_good', 1)
         s = sfp.SFP(0)
         s.determine_control_type = mock.MagicMock(return_value=sfp.SFP_FW_CONTROL)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_FW_CONTROL
         assert self.get_value('control') == sfp.SFP_FW_CONTROL
         
@@ -148,11 +150,11 @@ class TestSfpStateMachine:
         s = sfp.SFP(0)
         s.determine_control_type = mock.MagicMock(return_value=sfp.SFP_SW_CONTROL)
         s.check_power_capability = mock.MagicMock(return_value=False)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_POWER_LIMIT_ERROR
         assert self.get_value('power_on') == 0
         assert self.get_value('hw_reset') == 0
-        s.on_event(sfp.EVENT_NOT_PRESENT)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_NOT_PRESENT)
         assert s.get_state() == sfp.STATE_NOT_PRESENT
         
     def test_sw_control(self):
@@ -166,18 +168,18 @@ class TestSfpStateMachine:
         s.check_power_capability = mock.MagicMock(return_value=True)
         s.update_i2c_frequency = mock.MagicMock()
         s.disable_tx_for_sff_optics = mock.MagicMock()
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_SW_CONTROL
         
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_always_fw_control_ports', mock.MagicMock(return_value=[0]))
     def test_fcp_state(self):
         self.mock_value('present', 1)
         s = sfp.SFP(0)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_FCP_PRESENT
         
         self.mock_value('present', 0)
         s = sfp.SFP(0)
-        s.on_event(sfp.EVENT_START)
+        ModuleDetectionFlow.on_event(s, sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_FCP_NOT_PRESENT
         
