@@ -87,12 +87,13 @@ dependent_startup_wait_for=zebra:running
 {% endif %}
 
 [program:bgpd]
+{# BGPD_GRACEFUL_RESTART_ARG is exported by docker_init.sh before supervisord starts. #}
 {% if FEATURE is defined and
       ((FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
        (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled")) %}
-command=/usr/lib/frr/bgpd -P 0{{ ' -M snmp' if _snmp else '' }} -M bmp
+command=/usr/lib/frr/bgpd -P 0 %(ENV_BGPD_GRACEFUL_RESTART_ARG)s{{ ' -M snmp' if _snmp else '' }} -M bmp
 {% else %}
-command=/usr/lib/frr/bgpd -P 0{{ ' -M snmp' if _snmp else '' }}
+command=/usr/lib/frr/bgpd -P 0 %(ENV_BGPD_GRACEFUL_RESTART_ARG)s{{ ' -M snmp' if _snmp else '' }}
 {% endif %}
 priority={{ _pbase + 1 }}
 stopsignal=KILL
