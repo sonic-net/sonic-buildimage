@@ -210,6 +210,25 @@ function stop_control_plane_assistant()
     fi
 }
 
+function restore_counters_permissions()
+{
+    local cache_root=$1
+    local cache_entry
+    local cache_uid
+
+    chmod 0777 "$cache_root"
+    find "$cache_root" -mindepth 1 -maxdepth 1 -type d -exec chmod 0777 {} +
+
+    # UserCache names each per-user entry <uid> or <uid>-<tag>.
+    while IFS= read -r -d '' cache_entry; do
+        cache_uid=$(basename "$cache_entry")
+        cache_uid=${cache_uid%%-*}
+        if [[ "$cache_uid" =~ ^[0-9]+$ ]]; then
+            chown -R "$cache_uid" "$cache_entry"
+        fi
+    done < <(find "$cache_root" -mindepth 2 -maxdepth 2 -print0)
+}
+
 function restore_counters_folder()
 {
     debug "Restoring counters folder after warmboot..."
@@ -218,6 +237,7 @@ function restore_counters_folder()
     if [[ -d $cache_counters_folder/cache ]]; then
         cp -rf $cache_counters_folder/cache /tmp/
         chown -R admin:admin /tmp/cache
+        restore_counters_permissions /tmp/cache
         rm -rf $cache_counters_folder
     fi
 }
