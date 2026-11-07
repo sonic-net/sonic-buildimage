@@ -103,6 +103,7 @@ class BgpdClientMgr(threading.Thread):
             'BGP_GLOBALS_EVPN_VNI': ['bgpd'],
             'BGP_GLOBALS_EVPN_RT': ['bgpd'],
             'BGP_GLOBALS_EVPN_VNI_RT': ['bgpd'],
+            'EVPN_ETHERNET_SEGMENT': ['zebra'],
             'BFD_PEER': ['bfdd'],
             'BFD_PEER_SINGLE_HOP': ['bfdd'],
             'BFD_PEER_MULTI_HOP': ['bfdd'],
@@ -2511,6 +2512,7 @@ class BGPConfigDaemon:
             ('BGP_GLOBALS_EVPN_VNI', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
+            ('EVPN_ETHERNET_SEGMENT', self.evpn_ethernet_segment_handler),
             ('BFD_PEER', self.bfd_handler),
             ('NEIGHBOR_SET', self.bgp_table_handler_common),
             ('NEXTHOP_SET', self.bgp_table_handler_common),
@@ -2570,6 +2572,29 @@ class BGPConfigDaemon:
         else:
             syslog.syslog(syslog.LOG_ERR, 'Ignore invalid DEVICE_METADATA bgp_asn: {!r}'.format(
                 data['bgp_asn']))
+
+    def evpn_ethernet_segment_handler(self, table, key, data):
+        if (not isinstance(key, str) or not isInterfaceNameValid(key) or
+                re.fullmatch(r'[A-Za-z][A-Za-z0-9_.-]{0,14}', key) is None):
+            syslog.syslog(syslog.LOG_ERR, 'invalid interface key for table {}: {!r}'.format(table, key))
+            return
+
+        enabled = 'false'
+        if data and 'bridge_port_protection' in data:
+            enabled = data['bridge_port_protection']
+        if enabled not in ('true', 'false'):
+            syslog.syslog(syslog.LOG_ERR, 'invalid bridge_port_protection for table {} key {!r}: {!r}'.format(
+                table, key, enabled))
+            return
+        if enabled == 'true' and re.fullmatch(r'PortChannel[0-9]{1,4}', key) is None:
+            syslog.syslog(syslog.LOG_ERR, 'bridge-port protection requires a PortChannel: {!r}'.format(key))
+            return
+
+        command = [
+            'vtysh', '-c', 'configure terminal', '-c', 'interface {}'.format(key),
+            '-c', '{}evpn mh bridge-port-protection'.format('' if enabled == 'true' else 'no ')
+        ]
+        self.__run_command(table, command, ['zebra'])
 
     def bfd_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](bfd) value for {} changed to {}'.format(key, data))

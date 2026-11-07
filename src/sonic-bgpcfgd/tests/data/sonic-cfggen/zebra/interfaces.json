@@ -6,5 +6,13 @@
     "PORTCHANNEL": {
         "PortChannel10": {},
         "PortChannel20": {}
+    },
+    "EVPN_ETHERNET_SEGMENT": {
+        "PortChannel10": {
+            "bridge_port_protection": "true"
+        },
+        "PortChannel20": {
+            "bridge_port_protection": "false"
+        }
     }
 }
