@@ -227,6 +227,11 @@ jobs:
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi
         displayName: "Build sonic image"
+      - bash: |
+          set -e
+          make $BUILD_OPTIONS target/sai-api-version-check
+        condition: and(succeeded(), eq(variables['GROUP_NAME'], 'broadcom'))
+        displayName: "Check final SAI API versions"
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
       - task: ManifestGeneratorTask@0
         condition: ne(variables.SKIP_MG, 'y')
