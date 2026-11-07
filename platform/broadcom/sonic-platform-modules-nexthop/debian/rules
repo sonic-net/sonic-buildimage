@@ -21,6 +21,10 @@ MODULE_DIRS += nh-4220
 MODULE_DIRS += nh-4220-r0
 MODULE_DIRS += nh-5010
 
+# Userspace MDIO access library for gearbox PHYs
+MDIO_DIR := nh-5010/agera2_mdio
+MDIO_LIB := libgbsyncdaccess.so
+
 SERVICE_DIR := service
 SYSTEM_DIR := etc/systemd
 UTILS_DIR := utils
@@ -45,6 +49,7 @@ override_dh_auto_build:
 			$(MAKE) -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
 		fi; \
 	done)
+	$(MAKE) -C $(MOD_SRC_DIR)/$(MDIO_DIR)
 	python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)
 	echo "Finished making sonic_platform whl package"
 
@@ -113,6 +118,12 @@ override_dh_auto_install:
 				debian/$${pkg_name}/etc/modules-load.d/; \
 		fi; \
 	done)
+	# Gearbox MDIO access library. Installed into the 5010 device directory,
+	# which the gbsyncd container already mounts at /usr/share/sonic/platform.
+	dh_installdirs -p$(PACKAGE_PRE_NAME)-5010-r0 \
+		usr/share/sonic/device/x86_64-nexthop_5010-r0
+	cp $(MOD_SRC_DIR)/$(MDIO_DIR)/$(MDIO_LIB) \
+		debian/$(PACKAGE_PRE_NAME)-5010-r0/usr/share/sonic/device/x86_64-nexthop_5010-r0/
 	python3 setup.py install \
 		--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
 		--install-layout=deb
@@ -151,6 +162,7 @@ override_dh_install:
 override_dh_clean:
 	set -e
 	dh_clean
+	$(MAKE) -C $(MOD_SRC_DIR)/$(MDIO_DIR) clean
 	(for mod in $(MODULE_DIRS); do \
 		set -e; \
 		if [ -d "$(KERNEL_BUILD)" ] && [ -f "$(MOD_SRC_DIR)/$${mod}/modules/Makefile" ]; then \
