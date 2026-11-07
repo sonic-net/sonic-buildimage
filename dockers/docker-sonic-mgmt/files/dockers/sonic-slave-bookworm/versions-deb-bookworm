@@ -6,8 +6,8 @@ ant-optional==1.10.13-1
 apparmor==3.0.8-3
 appstream==0.16.1-2+b1
 apt-file==3.3
-apt-transport-https==2.6.1
-apt-utils==2.6.1
+apt-transport-https==2.6.2
+apt-utils==2.6.2
 arch-test==0.20-1
 asciidoctor==2.0.18-2
 aspell==0.60.8-4+b1
