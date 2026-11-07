@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 import ctypes
+import errno
 import os
 import pytest
 import shutil
@@ -288,11 +289,11 @@ class TestSfp:
         mock_read_int.reset_mock()
         mock_is_sw_control.return_value = False
         mock_read_int.side_effect = [1, 1]  # config file ready=1, present=1
-        mock_read_eeprom.return_value = 0  # EEPROM readable -> present
+        mock_read_eeprom.return_value = (0, None)  # EEPROM readable -> present
         assert sfp.get_presence()
         mock_read_int.reset_mock()
         mock_read_int.side_effect = [1, 1]  # config file ready=1, present=1
-        mock_read_eeprom.return_value = None  # EEPROM not readable -> not present
+        mock_read_eeprom.return_value = (None, errno.EIO)  # EEPROM not readable -> not present
         assert not sfp.get_presence()
         # Verify the presence file path was checked with present (not hw_present)
         assert mock_read_int.call_args_list[-1] == mock.call('/sys/module/sx_core/asic0/module0/present', log_func=None)
@@ -319,7 +320,7 @@ class TestSfp:
         mock_read_eeprom.reset_mock()
         mock_exists.return_value = True
         mock_read_int.side_effect = [1, 0]
-        mock_read_eeprom.return_value = 0
+        mock_read_eeprom.return_value = (0, None)
         assert not cpo.get_presence()
         mock_read_eeprom.assert_not_called()
 
@@ -333,22 +334,22 @@ class TestSfp:
 
         # Absent: treat as ready without reading EEPROM
         mock_read_int.return_value = 0
-        mock_read.return_value = None
+        mock_read.return_value = (None, errno.EIO)
         assert sfp.check_eeprom_ready_if_present()
         mock_read.assert_not_called()
 
         # Present (sysfs 1): ready only when EEPROM is readable
         mock_read_int.return_value = 1
-        mock_read.return_value = None
+        mock_read.return_value = (None, errno.EIO)
         assert not sfp.check_eeprom_ready_if_present()
-        mock_read.return_value = 0
+        mock_read.return_value = (0, None)
         assert sfp.check_eeprom_ready_if_present()
 
         # Non-zero/non-one sysfs: still check EEPROM readiness
         mock_read_int.return_value = 2
-        mock_read.return_value = None
+        mock_read.return_value = (None, errno.EIO)
         assert not sfp.check_eeprom_ready_if_present()
-        mock_read.return_value = 0
+        mock_read.return_value = (0, None)
         assert sfp.check_eeprom_ready_if_present()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
