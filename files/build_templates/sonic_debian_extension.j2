@@ -153,9 +153,6 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/cache/sonic/
 sudo install -d -m 0700 -o root -g root $FILESYSTEM_ROOT/var/cache/sonic/system-health/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_FIRMWARE/
-# This is needed for Stretch and might not be needed for Buster where Linux create this directory by default.
-# Keeping it generic. It should not harm anyways.
-sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 
 # Install sonic-nettools
 install_deb_package $debs_path/sonic-nettools_*.deb

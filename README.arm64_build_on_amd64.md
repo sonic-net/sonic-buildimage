@@ -110,19 +110,19 @@ make init
 
 ### **Step 6: Configure for the Build**
 ```
-NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 BLDENV=bookworm DOCKER_BUILDKIT=0 KEEP_SLAVE_ON=yes SONIC_BUILD_JOBS=4 make configure PLATFORM=marvell PLATFORM_ARCH=arm64
+NOBULLSEYE=1 BLDENV=bookworm DOCKER_BUILDKIT=0 KEEP_SLAVE_ON=yes SONIC_BUILD_JOBS=4 make configure PLATFORM=marvell PLATFORM_ARCH=arm64
 ```
 
 ### **Step 7: Build the ARM64 Image**
 ```
 Execute Arm64 build using QEMU emulator environment.  
-NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 BLDENV=bookworm MULTIARCH_QEMU_ENVIRON=y make SONIC_BUILD_JOBS=4 target/sonic-marvell-arm64.bin
+NOBULLSEYE=1 BLDENV=bookworm MULTIARCH_QEMU_ENVIRON=y make SONIC_BUILD_JOBS=4 target/sonic-marvell-arm64.bin
 ```
 ## **Expected Errors and Workarounds**
 
 ### **Error at \`libnl\`**
 ```
-$ NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=4 /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target_arm64.log
+$ NOBULLSEYE=1 SONIC_BUILD_JOBS=4 /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target_arm64.log
 .....
 libtool: link: gcc -g -O2 -ffile-prefix-map=/sonic/src/libnl3/libnl3-3.7.0=. -fstack-protector-strong -Wformat -Werror=format-security -Wl,-z -Wl,relro -o tests/check-direct tests/check_direct-check-direct.o li
 b/.libs/libnl-3.a lib/.libs/libnl-nf-3.a lib/.libs/libnl-genl-3.a lib/.libs/libnl-route-3.a tests/.libs/libnl-test-util.a /sonic/src/libnl3/libnl3-3.7.0/lib/.libs/libnl-nf-3.a /sonic/src/libnl3/libnl3-3.7.0/lib/
@@ -221,49 +221,9 @@ dist-shar dist-tarZ dist-xz dist-zip dist-zstd distcheck \
 
 The external repo's **libnl** and **iptables** are being pulled by the sonic build system during the make target. As per [https://github.com/thom311/libnl/issues/361](https://github.com/thom311/libnl/issues/361), this seems to be a known issue. This test suite needs a network namespace with required permissions to run otherwise it was suggested to skip the tests to gracefully handle the error as these unit tests are for developers of this library itself.
 
-### **Error at \`docker-base-bookworm.gz\`**
-```
-[ FAIL LOG START ] [ target/docker-base-bookworm.gz ]
-Build start time: Tue Dec 10 20:28:24 UTC 2024
-[ REASON ] : target/docker-base-bookworm.gz does not exist NON-EXISTENT PREREQUISITES: docker-start
-[ FLAGS FILE ] : []
-[ FLAGS DEPENDS ] : []
-[ FLAGS DIFF ] : []
-Unable to find image 'cat:latest' locally
-docker: Error response from daemon: pull access denied for cat, repository does not exist or may require 'docker login': denied: requested access to the resource is denied.
-........
----> Running in 0e3e004683bd
-WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
-Ign:1 http://debian-archive.trafficmanager.net/debian jessie InRelease
-Ign:2 http://debian-archive.trafficmanager.net/debian jessie-updates InRelease
-….
-E: The repository 'http://debian-archive.trafficmanager.net/debian jessie-backports Release' does not have a Release file.
-[ FAIL LOG END ] [ target/docker-base-bookworm.gz ]
-make: *** [slave.mk:1136: target/docker-base-bookworm.gz] Error 1
-```
-**Workaround**
-Edit \`scripts/prepare\_docker\_buildinfo.sh\` to set the correct \`DISTRO\`.
-```
-$~/arm-testing/sonic-buildimage_bookworm$ git diff scripts/prepare_docker_buildinfo.sh
-diff --git a/scripts/prepare_docker_buildinfo.sh b/scripts/prepare_docker_buildinfo.sh
-index 6dfd63bdd..50de56caf 100755
---- a/scripts/prepare_docker_buildinfo.sh
-+++ b/scripts/prepare_docker_buildinfo.sh
-
-@@ -35,8 +34,13 @@ if [ -z "$DISTRO" ]; then
-DOCKER_BASE_IMAGE=$(grep "^FROM" $DOCKERFILE | head -n 1 | awk '{print $2}')
-DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/os-release | grep VERSION_CODENAME | cut -d= -f2)
-if [ -z "$DISTRO" ]; then
-DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/apt/sources.list | grep deb.debian.org | awk '{print $3}')
-[ -z "$DISTRO" ] && DISTRO=jessie
-+ DISTRO=bookworm
-fi
-fi
-```
-
 ## **Console Output**
 ```
-$~/arm-testing/sonic-buildimage_bookworm$ NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 BLDENV=bookworm SONIC_BUILD_JOBS=4 MULTIARCH_QEMU_ENVIRON=y /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target.log
+$~/arm-testing/sonic-buildimage_bookworm$ NOBULLSEYE=1 BLDENV=bookworm SONIC_BUILD_JOBS=4 MULTIARCH_QEMU_ENVIRON=y /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target.log
 ....
 [ 01 ] [ target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb ]
 [ 02 ] [ target/debs/bookworm/syncd_1.0.0_arm64.deb ]
