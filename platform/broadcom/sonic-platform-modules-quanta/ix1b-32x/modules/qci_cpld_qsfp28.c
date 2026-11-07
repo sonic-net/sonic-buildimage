@@ -48,7 +48,7 @@ static struct class *cpld_class = NULL;
 
 struct sfp_data {
 	struct i2c_client *cpld_client;
-	char name[8];
+	char name[16];
 	u8 port_id;
 	u8 cpld_port;
 };
@@ -329,10 +329,25 @@ static int cpld_probe(struct i2c_client *client,
 	for (i = 0; i < 16; i++)
 	{
 		port_nr = ida_simple_get(&cpld_ida, 1, 99, GFP_KERNEL);
-		if (port_nr < 0)
-			return ERR_PTR(port_nr);
+		if (port_nr < 0) {
+			err = port_nr;
+			goto err_unregister_ports;
+		}
 
 		port_data = kzalloc(sizeof(struct sfp_data), GFP_KERNEL);
+		if (!port_data) {
+			ida_simple_remove(&cpld_ida, port_nr);
+			err = -ENOMEM;
+			goto err_unregister_ports;
+		}
+		err = snprintf(port_data->name, sizeof(port_data->name),
+			       "port-%d", port_nr);
+		if (err < 0 || (size_t)err >= sizeof(port_data->name)) {
+			kfree(port_data);
+			ida_simple_remove(&cpld_ida, port_nr);
+			err = -ENAMETOOLONG;
+			goto err_unregister_ports;
+		}
 
 		port_dev = device_create(cpld_class, &client->dev, MKDEV(0,0), port_data, CPLD_ID_FORMAT, port_nr);
 		if (IS_ERR(port_dev)) {
@@ -348,7 +363,6 @@ static int cpld_probe(struct i2c_client *client,
 		/* FIXME: implement Logical/Physical port remapping */
 	 	//port_data->cpld_port = i;
 		port_data->cpld_port = port_remapping(i);
-		sprintf(port_data->name, "port-%d", port_nr);
 		port_data->port_id = port_nr;
 		dev_set_drvdata(port_dev, port_data);
 		port_dev->init_name = port_data->name;
@@ -365,6 +379,18 @@ static int cpld_probe(struct i2c_client *client,
 
 
 	return 0;
+
+err_unregister_ports:
+	while (--i >= 0) {
+		device_unregister(data->port_dev[i]);
+		ida_simple_remove(&cpld_ida, data->port_data[i]->port_id);
+		kfree(data->port_data[i]);
+	}
+	if (ida_is_empty(&cpld_ida)) {
+		class_destroy(cpld_class);
+		cpld_class = NULL;
+	}
+	return err;
 
 //FIXME: implement error check
 exit_remove:
