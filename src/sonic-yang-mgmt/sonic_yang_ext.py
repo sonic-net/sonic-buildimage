@@ -232,6 +232,17 @@ class SonicYangExtMixin(SonicYangPathMixin):
         leaf = leafDict[key]
         is_leaf_list = isinstance(leaf, ly.SLeafList)
 
+        if (self.elementPath[0], self.elementPath[-1]) == ('VNET', 'vxlan_tunnel_list'):
+            if not isinstance(value, str):
+                raise ValueError(
+                    "{} must be a comma-separated string".format('/'.join(self.elementPath)))
+            if value != "":
+                names = [name.strip() for name in value.split(',')]
+                if any(not name for name in names):
+                    raise ValueError(
+                        "{} must not contain empty tunnel names".format('/'.join(self.elementPath)))
+                value = ','.join(names)
+
         # convert config DB string to yang Type
         def _yangConvert(val):
             # Convert everything to string

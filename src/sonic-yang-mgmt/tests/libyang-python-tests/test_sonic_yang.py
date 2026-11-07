@@ -174,6 +174,98 @@ class Test_SonicYang_UsesResolution(object):
         assert 'extra' in child_names
 
 
+class Test_VnetTunnelReferences(object):
+
+    @pytest.fixture
+    def vnet_yang(self):
+        yang_dir = os.path.abspath(os.path.join(
+            test_path, "../../../sonic-yang-models/yang-models"))
+        yang_s = sy.SonicYang(yang_dir)
+        yang_s.loadYangModel()
+        return yang_s
+
+    @pytest.fixture
+    def vnet_config(self):
+        return {
+            "VXLAN_TUNNEL": {
+                "vtep1": {"src_ip": "192.0.2.1"},
+                "vtep10": {"src_ip": "2001:db8::1"},
+            },
+            "VNET": {
+                "Vnet1": {"vxlan_tunnel_list": "vtep1,vtep10", "vni": "10011"},
+            },
+        }
+
+    @pytest.mark.parametrize("tunnel_list,expected", [
+        ("vtep1", "vtep1"),
+        ("vtep10", "vtep10"),
+        ("vtep1,vtep10", "vtep1,vtep10"),
+        ("vtep10,vtep1", "vtep10,vtep1"),
+        (" vtep1 , vtep10 ", "vtep1,vtep10"),
+    ])
+    def test_string_round_trip_and_dependencies(self, vnet_yang, vnet_config, tunnel_list, expected):
+        vnet_config["VNET"]["Vnet1"]["vxlan_tunnel_list"] = tunnel_list
+        vnet_yang.loadData(vnet_config)
+        vnet_yang.validate_data_tree()
+        schema_path = "/sonic-vnet:sonic-vnet/VNET/VNET_LIST/vxlan_tunnel_list"
+        data_path = "/sonic-vnet:sonic-vnet/VNET/VNET_LIST[name='Vnet1']/vxlan_tunnel_list"
+        assert vnet_yang._get_data_type(schema_path) == "string"
+        assert vnet_yang._find_data_node_value(data_path) == expected
+        assert vnet_yang.getData()["VNET"]["Vnet1"]["vxlan_tunnel_list"] == expected
+
+        for tunnel in vnet_config["VXLAN_TUNNEL"]:
+            target = (
+                "/sonic-vxlan:sonic-vxlan/VXLAN_TUNNEL/"
+                "VXLAN_TUNNEL_LIST[name='{}']".format(tunnel))
+            references = [data_path] if tunnel in expected.split(",") else []
+            assert vnet_yang.find_data_dependencies(target) == references
+            assert vnet_yang.find_data_dependencies(target + "/name") == references
+        assert vnet_yang.find_data_dependencies("/") == [data_path]
+        assert schema_path in vnet_yang.find_schema_dependencies(
+            "/sonic-vxlan:sonic-vxlan/VXLAN_TUNNEL/VXLAN_TUNNEL_LIST/name")
+        vnet_yang._set_data_node_value(data_path, "vtep10")
+        assert vnet_yang.find_data_dependencies(
+            "/sonic-vxlan:sonic-vxlan/VXLAN_TUNNEL/VXLAN_TUNNEL_LIST[name='vtep1']") == []
+
+    @pytest.mark.parametrize("tunnel_list,error", [
+        ([], "must be a comma-separated string"),
+        (["vtep1", "vtep10"], "must be a comma-separated string"),
+        (None, "must be a comma-separated string"),
+        (",vtep1", "must not contain empty tunnel names"),
+        ("vtep1,", "must not contain empty tunnel names"),
+        ("vtep1,,vtep10", "must not contain empty tunnel names"),
+        ("vtep1, ", "must not contain empty tunnel names"),
+        (" ", "must not contain empty tunnel names"),
+    ])
+    @pytest.mark.parametrize("fallback", [False, True])
+    def test_invalid_configdb_input(self, vnet_yang, vnet_config, tunnel_list, error, fallback):
+        vnet = vnet_config["VNET"]["Vnet1"]
+        vnet["vxlan_tunnel_list"] = tunnel_list
+        if fallback:
+            vnet["vxlan_tunnel"] = "vtep1"
+        with pytest.raises(sy.SonicYangException, match=error):
+            vnet_yang.loadData(vnet_config)
+
+    @pytest.mark.parametrize("fallback", [False, True])
+    def test_empty_string_fallback(self, vnet_yang, vnet_config, fallback):
+        vnet = vnet_config["VNET"]["Vnet1"]
+        vnet["vxlan_tunnel_list"] = ""
+        if fallback:
+            vnet["vxlan_tunnel"] = "vtep1"
+            vnet_yang.loadData(vnet_config)
+            result = vnet_yang.getData()["VNET"]["Vnet1"]
+            assert result["vxlan_tunnel"] == "vtep1"
+            assert result["vxlan_tunnel_list"] == ""
+            target = "/sonic-vxlan:sonic-vxlan/VXLAN_TUNNEL/VXLAN_TUNNEL_LIST[name='vtep1']"
+            assert vnet_yang.find_data_dependencies(target) == [
+                "/sonic-vnet:sonic-vnet/VNET/VNET_LIST[name='Vnet1']/vxlan_tunnel"]
+        else:
+            with pytest.raises(
+                    sy.SonicYangException,
+                    match="At least one of vxlan_tunnel or vxlan_tunnel_list"):
+                vnet_yang.loadData(vnet_config)
+
+
 class Test_SonicYang(object):
     """Tests that query or manipulate an already-loaded data tree.
 

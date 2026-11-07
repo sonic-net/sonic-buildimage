@@ -227,5 +227,34 @@
         "desc": "VNET route tunnel configuration with invalid IPv6 endpoint value in VNET_ROUTE_TUNNEL_LIST table.",
         "eStrKey": "InvalidValue",
         "eStr": ["endpoint"]
+    },
+
+    "VNET_VALID_VXLAN_TUNNEL_LIST": {
+        "desc": "Valid comma-separated IPv4 and IPv6 tunnel names in either order, with or without vxlan_tunnel."
+    },
+
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_IPV4": {
+        "desc": "VNET list with two IPv4 tunnels is rejected.",
+        "eStr": ["vxlan_tunnel_list must not contain more than one IPv4 tunnel."]
+    },
+
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_IPV6": {
+        "desc": "VNET list with two IPv6 tunnels is rejected.",
+        "eStr": ["vxlan_tunnel_list must not contain more than one IPv6 tunnel."]
+    },
+
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_DUPLICATE": {
+        "desc": "VNET tunnel string with a repeated tunnel name is rejected.",
+        "eStr": ["vxlan_tunnel_list must not contain duplicate tunnels."]
+    },
+
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_TOO_MANY": {
+        "desc": "VNET tunnel string with three names is rejected, even when only two distinct tunnels exist.",
+        "eStr": ["vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names."]
+    },
+
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_VTEP": {
+        "desc": "VNET configuration with vxlan_tunnel_list referencing a non-existent VXLAN tunnel.",
+        "eStr": ["vxlan_tunnel_list must reference existing VXLAN tunnels."]
     }
 }
