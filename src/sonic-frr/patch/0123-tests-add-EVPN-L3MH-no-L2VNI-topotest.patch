@@ -1,4 +1,4 @@
-From 267998b9095b4d1d6b9c226c09c02fc4f174d5ec Mon Sep 17 00:00:00 2001
+From 4af5bee14f7239b5e7b416916636f4c86b2ee4c8 Mon Sep 17 00:00:00 2001
 From: Patrice Brissette <pbrisset@cisco.com>
 Date: Tue, 20 Oct 2026 08:29:15 -0400
 Subject: [PATCH 123/123] tests: add EVPN L3MH (no-L2VNI) topotest
@@ -19,8 +19,8 @@ Co-authored-by: Cursor <cursoragent@cursor.com>
  tests/topotests/bgp_evpn_l3mh/leaf3/frr.conf  |   47 +
  tests/topotests/bgp_evpn_l3mh/spine1/frr.conf |   37 +
  tests/topotests/bgp_evpn_l3mh/spine2/frr.conf |   37 +
- .../topotests/bgp_evpn_l3mh/test_evpn_l3mh.py | 4958 +++++++++++++++++
- 7 files changed, 5384 insertions(+)
+ .../topotests/bgp_evpn_l3mh/test_evpn_l3mh.py | 5029 +++++++++++++++++
+ 7 files changed, 5455 insertions(+)
  create mode 100644 tests/topotests/bgp_evpn_l3mh/evpn_rawpeer.py
  create mode 100644 tests/topotests/bgp_evpn_l3mh/leaf1/frr.conf
  create mode 100644 tests/topotests/bgp_evpn_l3mh/leaf2/frr.conf
@@ -493,10 +493,10 @@ index 0000000000..2872fc933c
 +!
 diff --git a/tests/topotests/bgp_evpn_l3mh/test_evpn_l3mh.py b/tests/topotests/bgp_evpn_l3mh/test_evpn_l3mh.py
 new file mode 100644
-index 0000000000..1e479a7e09
+index 0000000000..93a55489e9
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_l3mh/test_evpn_l3mh.py
-@@ -0,0 +1,4958 @@
+@@ -0,0 +1,5029 @@
 +#!/usr/bin/env python
 +# SPDX-License-Identifier: ISC
 +
@@ -2116,6 +2116,77 @@ index 0000000000..1e479a7e09
 +            lambda: _synced(HOST3_IP, svi),
 +            "host3 not synced on leaf2 after VRF-move cleanup",
 +        )
++
++
++def test_pure_l3_svi_vrf_move_falls_back_to_peer():
++    """
++    A LOCAL host with ES_PEER_ACTIVE must fall back to the peer copy when its
++    SVI leaves the L3VNI's VRF. bgpd does not re-send the peer RT-2, so after
++    the SVI returns the held remote must reinstall without a knob bounce.
++    """
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    leaf2 = tgen.gears["leaf2"]
++    svi = "vlan%d" % HOST_VID
++    ip = HOST_IP["host1"]
++    mac = _host_bond_mac(tgen.gears["host1"])
++    _ping(tgen.gears["host1"], ANYCAST_GW)
++
++    def _zebra_neigh():
++        out = leaf2.vtysh_cmd("show evpn arp-cache vni %d ip %s json" % (L3VNI, ip))
++        try:
++            return json.loads(out)
++        except Exception:  # pragma: no cover - defensive
++            return {}
++
++    def _expect(fn, msg):
++        _, result = topotest.run_and_expect(
++            lambda: None if fn() else msg, None, count=WAIT_COUNT, wait=WAIT_STEP
++        )
++        assert result is None, result
++
++    _expect(
++        lambda: _host1_synced(leaf2) or _host1_local(leaf2), "host1 missing on leaf2"
++    )
++    leaf2.run("ip neigh replace %s lladdr %s dev %s nud reachable" % (ip, mac, svi))
++    _expect(
++        lambda: _host1_local(leaf2) and _pure_l3_rt2_path(leaf2, 65012) is not None,
++        "leaf2 did not take host1 as local before the VRF move",
++    )
++    _expect(
++        lambda: _pure_l3_rt2_path(tgen.gears["leaf1"], 65011) is not None,
++        "leaf1 is not advertising host1 (no peer copy to fall back to)",
++    )
++
++    leaf2.run("ip link add vrf2 type vrf table 1002")
++    leaf2.run("ip link set dev vrf2 up")
++    try:
++        leaf2.run("ip link set dev %s master vrf2" % svi)
++        _assert_settled(
++            lambda: _host1_local(leaf2) or _zebra_neigh().get("type") == "local",
++            lambda: "leaf2 still holds a LOCAL host1 after VRF move: %s"
++            % _zebra_neigh(),
++        )
++        leaf2.run("ip link set dev %s master %s" % (svi, VRF))
++        _expect(
++            lambda: _host1_synced(leaf2) and _mac_static_pinned(leaf2, mac, HOST_VID),
++            "host1 not restored from the peer copy once %s is back in %s: %s"
++            % (svi, VRF, leaf2.run("ip neigh show dev %s" % svi)),
++        )
++    finally:
++        leaf2.run("ip link set dev %s master %s" % (svi, VRF))
++        leaf2.run("ip link del vrf2")
++        if not _host1_synced(leaf2) and not _host1_local(leaf2):
++            _l3mh_knob(leaf2, 65012, False)
++            _l3mh_knob(leaf2, 65012, True)
++
++    _ping(tgen.gears["host1"], ANYCAST_GW)
++    _expect(
++        lambda: _host1_synced(leaf2) or _host1_local(leaf2),
++        "host1 missing on leaf2 after VRF-move peer-fallback cleanup",
++    )
 +
 +
 +@pytest.mark.parametrize("late", ["svi", "bd_then_svi", "svi_then_bd"])
