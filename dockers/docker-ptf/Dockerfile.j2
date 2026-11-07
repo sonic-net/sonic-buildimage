@@ -103,30 +103,25 @@ RUN apt-get update          \
         quilt               \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the latest stable Go toolchain for building grpcurl, gnmic and gobgp. The
-# hooked metadata and archive downloads are recorded in versions-web, allowing
-# version-controlled builds to reproduce the selected release.
-RUN GO_ARCH=amd64 \
-    && curl --fail --show-error --location -o /tmp/go-downloads.json "https://go.dev/dl/?mode=json" \
-    && GO_FILE_INFO=$(python3 -c 'import json, sys; release = next(item for item in json.load(open(sys.argv[1])) if item["stable"]); archive = next(item for item in release["files"] if item["os"] == "linux" and item["arch"] == sys.argv[2] and item["kind"] == "archive"); print(archive["filename"], archive["sha256"])' /tmp/go-downloads.json "${GO_ARCH}") \
-    && GO_FILENAME=${GO_FILE_INFO%% *} \
-    && GO_SHA256=${GO_FILE_INFO##* } \
-    && curl --fail --show-error --location -o /tmp/go.tar.gz "https://go.dev/dl/${GO_FILENAME}" \
+# Pin the patched Go toolchain so cached release metadata cannot select an older
+# standard library when rebuilding grpcurl, gnmic and gobgp.
+RUN GO_VERSION=1.27.3 \
+    && GO_SHA256=65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40 \
+    && curl --fail --show-error --location -o /tmp/go.tar.gz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
     && echo "${GO_SHA256}  /tmp/go.tar.gz" | sha256sum -c - \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
-    && rm /tmp/go.tar.gz /tmp/go-downloads.json
+    && rm /tmp/go.tar.gz
 
 ENV PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"
 
-# Build grpcurl from source with patched Go and golang.org/x/* deps
-# upgraded to latest to address current and future golang.org/x/* CVEs.
+# Build grpcurl from source with patched Go and golang.org/x/* dependencies.
 RUN curl --fail --show-error --location -o /tmp/grpcurl-release.json "https://api.github.com/repos/fullstorydev/grpcurl/releases/latest" \
     && GRPCURL_VERSION=$(python3 -c 'import json; print(json.load(open("/tmp/grpcurl-release.json"))["tag_name"])') \
     && git clone --depth 1 --branch "${GRPCURL_VERSION}" https://github.com/fullstorydev/grpcurl.git /tmp/grpcurl \
     && cd /tmp/grpcurl \
     && go get google.golang.org/grpc@v1.83.2 \
     && go get github.com/go-jose/go-jose/v4@latest \
-    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
+    && go get golang.org/x/crypto@latest golang.org/x/net@v0.62.0 golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
     && go mod tidy \
     && go build -o /usr/local/bin/grpcurl ./cmd/grpcurl \
     && chmod +x /usr/local/bin/grpcurl \
@@ -457,7 +452,8 @@ RUN GNMIC_REV=653dc5dd4ddcd3bd4197317875a10c1ce8b06653 \
     && git checkout "${GNMIC_REV}" \
     && go get google.golang.org/grpc@v1.83.2 \
     && go get github.com/go-openapi/swag/jsonutils@v0.27.1 \
-    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
+    && go get github.com/klauspost/compress@v1.18.7 \
+    && go get golang.org/x/crypto@latest golang.org/x/net@v0.62.0 golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
     && go mod tidy \
     && go build -o /usr/local/bin/gnmic . \
     && chmod +x /usr/local/bin/gnmic \
@@ -478,7 +474,7 @@ RUN curl --fail --show-error --location -o /tmp/gobgp-release.json "https://api.
     && git clone --branch "${GOBGP_VERSION}" https://github.com/osrg/gobgp.git /tmp/gobgp \
     && cd /tmp/gobgp \
     && echo "gobgp $(git describe --tags --always) $(git rev-parse HEAD)" \
-    && go get google.golang.org/grpc@v1.83.2 golang.org/x/net@v0.58.0 golang.org/x/text@v0.41.0 \
+    && go get google.golang.org/grpc@v1.83.2 golang.org/x/net@v0.62.0 golang.org/x/text@v0.43.0 \
     && go mod tidy \
     && go build -o /usr/local/bin/gobgpd ./cmd/gobgpd \
     && go build -o /usr/local/bin/gobgp ./cmd/gobgp \
