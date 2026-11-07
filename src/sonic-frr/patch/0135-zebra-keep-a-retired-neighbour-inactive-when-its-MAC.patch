@@ -1,0 +1,93 @@
+From: Brad House <bhouse@nexthop.ai>
+Date: Wed, 21 Oct 2026 00:00:00 +0000
+Subject: [PATCH] zebra: keep a retired neighbour inactive when its MAC is re-sent
+
+zebra_evpn_process_neigh_on_local_mac_change() re-sends every local
+neighbour of a MAC when the MAC's sequence number or ES changes, and clears
+ZEBRA_NEIGH_LOCAL_INACTIVE on each. It runs for a sync MAC update from an ES
+peer that carries a new sequence number, and for a neighbour that is
+relinked to the MAC or moves to it from remote, which bumps the MAC's
+sequence number. If the MAC has already left the local dataplane, neither
+is evidence that the host is back, yet every neighbour the inactive walker
+retired is advertised as a non-proxy MAC-IP route again. With reachable-only
+advertisement disabled nothing marks them inactive afterwards, so the peers'
+hold timers stay cancelled and the MAC is never withdrawn.
+
+Apply the rule the neighbour update paths use: with reachable-only
+advertisement disabled, a neighbour of a locally inactive MAC keeps its
+inactive state. It is re-sent with the new sequence number only while it is
+ready for BGP, which makes it a proxy route when a peer still reports it
+active, and is left withdrawn otherwise. Reachable-only mode and the
+neighbours of an active MAC are unchanged.
+
+Signed-off-by: Brad House <bhouse@nexthop.ai>
+---
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index c807ce5aa5..c5076b9840 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -980,6 +980,10 @@ void zebra_evpn_process_neigh_on_local_mac_change(struct zebra_evpn *zevpn,
+ 	struct zebra_neigh *n = NULL;
+ 	struct listnode *node = NULL;
+ 	struct zebra_vrf *zvrf = NULL;
++	bool keep_retired;
++	bool frozen;
++	bool old_bgp_ready;
++	bool new_bgp_ready;
+ 
+ 	zvrf = zevpn->vxlan_if->vrf->info;
+ 
+@@ -988,6 +992,16 @@ void zebra_evpn_process_neigh_on_local_mac_change(struct zebra_evpn *zevpn,
+ 			   &zmac->macaddr, seq_change ? "CHANGE" : "ADD",
+ 			   zevpn->vni);
+ 
++	/* A sequence or ES change on a MAC that has left the local dataplane
++	 * is no evidence the host is back, so a retired neighbour stays
++	 * retired and is re-sent only if a peer still reports it active.
++	 */
++	keep_retired = zebra_evpn_neigh_local_inactive_next(
++		true /* cur_inactive */, false /* new_to_mac */,
++		false /* local_inactive */,
++		zebra_evpn_mh_do_adv_reachable_neigh_only(),
++		!!CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL_INACTIVE));
++
+ 	/* Walk all neighbors and mark any inactive local neighbors as
+ 	 * active and/or update sequence number upon a move, and inform BGP.
+ 	 * The action for remote neighbors is TBD.
+@@ -998,14 +1012,32 @@ void zebra_evpn_process_neigh_on_local_mac_change(struct zebra_evpn *zevpn,
+ 		if (CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL)) {
+ 			if (IS_ZEBRA_NEIGH_INACTIVE(n) || seq_change
+ 			    || es_change) {
++				frozen = zebra_evpn_do_dup_addr_detect(zvrf) &&
++					 zvrf->dad_freeze &&
++					 CHECK_FLAG(n->flags,
++						    ZEBRA_NEIGH_DUPLICATE);
++
++				if (keep_retired &&
++				    CHECK_FLAG(n->flags,
++					       ZEBRA_NEIGH_LOCAL_INACTIVE)) {
++					old_bgp_ready =
++						zebra_evpn_neigh_is_ready_for_bgp(n);
++					ZEBRA_NEIGH_SET_ACTIVE(n);
++					n->loc_seq = zmac->loc_seq;
++					new_bgp_ready =
++						zebra_evpn_neigh_is_ready_for_bgp(n);
++					if (!frozen)
++						zebra_evpn_neigh_send_add_del_to_client(
++							n, old_bgp_ready,
++							new_bgp_ready);
++					continue;
++				}
++
+ 				ZEBRA_NEIGH_SET_ACTIVE(n);
+ 				UNSET_FLAG(n->flags,
+ 					   ZEBRA_NEIGH_LOCAL_INACTIVE);
+ 				n->loc_seq = zmac->loc_seq;
+-				if (!(zebra_evpn_do_dup_addr_detect(zvrf)
+-				      && zvrf->dad_freeze
+-				      && !!CHECK_FLAG(n->flags,
+-						      ZEBRA_NEIGH_DUPLICATE)))
++				if (!frozen)
+ 					zebra_evpn_neigh_send_add_to_client(
+ 						zevpn->vni, &n->ip, &n->emac,
+ 						n->mac, n->flags, n->loc_seq);
