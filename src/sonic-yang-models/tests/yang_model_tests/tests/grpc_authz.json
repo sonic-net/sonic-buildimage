@@ -1,0 +1,63 @@
+{
+    "GRPC_AUTHZ_POLICY_WITH_VALID_CONFIG": {
+        "desc": "Shared method and Pathz policy with valid configuration."
+    },
+    "GRPC_AUTHZ_PRINCIPAL_WITH_MISSING_ROLES": {
+        "desc": "gRPC authorization principal without roles fails.",
+        "eStrKey": "MinElements"
+    },
+    "GRPC_AUTHZ_RULE_WITH_UNKNOWN_ROLE": {
+        "desc": "gRPC method rule with an unknown role fails.",
+        "eStrKey": "LeafRef"
+    },
+    "GRPC_AUTHZ_RULE_WITH_INVALID_RPC": {
+        "desc": "gRPC method rule with an invalid method name fails.",
+        "eStrKey": "Pattern"
+    },
+    "GRPC_AUTHZ_RULE_WITH_PRIORITY": {
+        "desc": "gRPC method rule cannot override A43 conflict handling.",
+        "eStrKey": "UnknownElement"
+    },
+    "GNMI_PATHZ_RULE_WITH_UNKNOWN_ROLE": {
+        "desc": "gNMI Pathz rule with an unknown role fails.",
+        "eStrKey": "LeafRef"
+    },
+    "GNMI_PATHZ_RULE_WITH_UNKNOWN_PRINCIPAL": {
+        "desc": "gNMI Pathz rule with an unknown principal fails.",
+        "eStrKey": "LeafRef"
+    },
+    "GNMI_PATHZ_RULE_WITH_INVALID_PATH": {
+        "desc": "gNMI Pathz rule with a non-canonical path fails.",
+        "eStrKey": "Pattern"
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_MODE": {
+        "desc": "gNMI Pathz rule without an access mode fails.",
+        "eStrKey": "Mandatory"
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_PATH": {
+        "desc": "gNMI Pathz rule without a resource path fails.",
+        "eStrKey": "Mandatory"
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_SUBJECT": {
+        "desc": "gNMI Pathz rule without a principal or role fails.",
+        "eStr": [
+            "Mandatory choice",
+            "subject"
+        ]
+    },
+    "GNMI_PATHZ_RULE_WITH_MULTIPLE_SUBJECTS": {
+        "desc": "gNMI Pathz rule cannot select both a principal and a role.",
+        "eStr": [
+            "Data for",
+            "principal"
+        ]
+    },
+    "GRPC_AUTHZ_RULE_WITH_PATH_FIELD": {
+        "desc": "gRPC method rule cannot contain a Pathz field.",
+        "eStrKey": "UnknownElement"
+    },
+    "GNMI_PATHZ_RULE_WITH_RPC_FIELD": {
+        "desc": "gNMI Pathz rule cannot contain a gRPC method field.",
+        "eStrKey": "UnknownElement"
+    }
+}
