@@ -33,7 +33,7 @@ CHASSIS_FABRIC_ASIC_INFO_TABLE='CHASSIS_FABRIC_ASIC_TABLE'
 # to prevent duplicate connections from being opened
 config_db_handle = {}
 
-def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     """
     The function connects to the config DB for a given namespace and
     returns the handle
@@ -45,12 +45,13 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
     Returns:
       handle to the config_db for a namespace
     """
-    config_db = swsscommon.ConfigDBConnector(namespace=namespace)
+    options = {"use_unix_socket_path": True, "authenticate": True} if authenticate else {}
+    config_db = swsscommon.ConfigDBConnector(namespace=namespace, **options)
     config_db.connect()
     return config_db
 
 
-def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     """
     The function connects to the DBs for a given namespace and
     returns the handle
@@ -67,7 +68,8 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
     Returns:
         handle to all the dbs for a namespaces
     """
-    db = swsscommon.SonicV2Connector(namespace=namespace)
+    options = {"use_unix_socket_path": True, "authenticate": True} if authenticate else {}
+    db = swsscommon.SonicV2Connector(namespace=namespace, **options)
     db_list = list(db.get_db_list())
     if not is_supervisor():
         try:
