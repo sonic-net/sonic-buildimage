@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	make all
+
+override_dh_auto_clean:
+	make clean
+
+# Live patches are matched against the target binary by build id, and
+# kpatch_strip needs the symbol tables of the shipped tools intact, so the
+# debug symbols are kept in place.
+override_dh_strip:

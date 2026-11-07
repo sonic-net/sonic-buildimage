@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Reapply persisted function hotpatches after a SONiC reboot."""
+
+import logging
+import math
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+try:
+    from swsscommon.swsscommon import SonicV2Connector
+except ImportError:  # Unit tests run outside a SONiC host image.
+    SonicV2Connector = None
+
+HOTPATCH_INSTALL_PATH = Path("/usr/share/sonic/hotpatches")
+PORT_INIT_DONE_KEY = "PORT_TABLE:PortInitDone"
+DEFAULT_PORT_INIT_TIMEOUT = 300
+DEFAULT_POLL_INTERVAL = 1
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="hotpatches-auto-install: %(levelname)s: %(message)s",
+)
+LOGGER = logging.getLogger("hotpatches-auto-install")
+
+
+def _patch_sort_key(path):
+    match = re.search(r"(?:sub-)?Hotfix(\d+)", path.name, re.IGNORECASE)
+    return (int(match.group(1)) if match else float("inf"), path.name)
+
+
+def list_patches(directory=HOTPATCH_INSTALL_PATH):
+    directory = Path(directory)
+    if not directory.is_dir():
+        return []
+    return sorted(
+        (path for path in directory.iterdir()
+         if path.is_file() and path.name.endswith(".tar.gz")),
+        key=_patch_sort_key,
+    )
+
+
+def wait_for_port_init_done(connector=None, timeout=DEFAULT_PORT_INIT_TIMEOUT,
+                            interval=DEFAULT_POLL_INTERVAL, sleep=time.sleep):
+    if connector is None:
+        if SonicV2Connector is None:
+            raise RuntimeError("python3-swsscommon is not installed")
+        connector = SonicV2Connector(use_unix_socket_path=True)
+
+    attempts = max(1, int(math.ceil(float(timeout) / interval)))
+    connector.connect(connector.APPL_DB, False)
+    try:
+        for attempt in range(attempts):
+            if connector.exists(connector.APPL_DB, PORT_INIT_DONE_KEY):
+                return True
+            if attempt + 1 < attempts:
+                sleep(interval)
+        return False
+    finally:
+        connector.close(connector.APPL_DB)
+
+
+def apply_patches(patches, runner=subprocess.run):
+    failed = []
+    for patch in patches:
+        command = [
+            "sonic-installer",
+            "hotpatch-install-single",
+            str(patch),
+            "-y",
+        ]
+        LOGGER.info("Applying persisted hotpatch %s", patch)
+        result = runner(
+            command,
+            shell=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if result.returncode:
+            LOGGER.error(
+                "Failed to apply %s (rc=%s): %s%s",
+                patch,
+                result.returncode,
+                result.stdout,
+                result.stderr,
+            )
+            failed.append(patch)
+        else:
+            LOGGER.info("Successfully applied %s", patch)
+    return failed
+
+
+def main():
+    patches = list_patches()
+    if not patches:
+        LOGGER.info("No persisted hotpatches found in %s", HOTPATCH_INSTALL_PATH)
+        return 0
+
+    if shutil.which("sonic-installer") is None:
+        LOGGER.error("sonic-installer is unavailable; persisted hotpatches were not applied")
+        return 1
+
+    try:
+        timeout = int(os.environ.get(
+            "HOTPATCH_PORT_INIT_TIMEOUT", DEFAULT_PORT_INIT_TIMEOUT
+        ))
+        if not wait_for_port_init_done(timeout=timeout):
+            LOGGER.error("PortInitDone was not observed within %s seconds", timeout)
+            return 1
+    except Exception as error:
+        LOGGER.error("Unable to wait for PortInitDone: %s", error)
+        return 1
+
+    failed = apply_patches(patches)
+    if failed:
+        LOGGER.error("%d of %d persisted hotpatches failed", len(failed), len(patches))
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
