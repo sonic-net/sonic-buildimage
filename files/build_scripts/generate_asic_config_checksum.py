@@ -13,6 +13,7 @@ CONFIG_FILES = {
 }
 
 OUTPUT_FILE = os.path.abspath('./asic_config_checksum')
+SHA256_OUTPUT_FILE = os.path.abspath('./asic_config_checksum.sha256')
 
 
 def log_info(msg):
@@ -38,35 +39,52 @@ def get_config_files(config_file_map):
     return config_files
 
 
-def generate_checksum(checksum_files):
+def generate_checksums(checksum_files):
     '''
-    Generates a checksum for a given list of files. Returns None if an error
+    Generates legacy SHA-1 and SHA-256 checksums for a given list of files.
+    Returns None if an error
     occurs while reading the files.
 
-    NOTE: The checksum is performed in the order provided. This function does 
+    NOTE: The checksums are performed in the order provided. This function does
     NOT do any re-ordering of the files before creating the checksum.
     '''
-    checksum = hashlib.sha1()
+    # Existing images compare this value during fast reboot, so retain it until
+    # all supported images can read the SHA-256 sidecar.
+    # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+    legacy_checksum = hashlib.sha1()  # lgtm[py/weak-hashes]
+    sha256_checksum = hashlib.sha256()
     for checksum_file in checksum_files:
         try:
             with open(checksum_file, 'rb') as f:
                 for chunk in iter(lambda: f.read(CHUNK_SIZE), b""):
-                    checksum.update(chunk)
+                    legacy_checksum.update(chunk)
+                    sha256_checksum.update(chunk)
         except IOError as e:
             log_error('Error processing ASIC config file ' + checksum_file + ':' + e.strerror)
             return None
 
-    return checksum.hexdigest()
+    return legacy_checksum.hexdigest(), sha256_checksum.hexdigest()
+
+
+def generate_checksum(checksum_files):
+    '''
+    Generates the SHA-256 checksum for callers that only need the strong digest.
+    '''
+    checksums = generate_checksums(checksum_files)
+    return checksums[1] if checksums is not None else None
 
 
 def main():
     config_files = sorted(get_config_files(CONFIG_FILES))
-    checksum = generate_checksum(config_files)
-    if checksum is None:
+    checksums = generate_checksums(config_files)
+    if checksums is None:
         exit(1)
 
+    legacy_checksum, sha256_checksum = checksums
     with open(OUTPUT_FILE, 'w') as output:
-        output.write(checksum + '\n')
+        output.write(legacy_checksum + '\n')
+    with open(SHA256_OUTPUT_FILE, 'w') as output:
+        output.write(sha256_checksum + '\n')
 
 
 if __name__ == '__main__':
