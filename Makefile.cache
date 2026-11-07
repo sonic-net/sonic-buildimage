@@ -108,7 +108,9 @@ endif
 # It includes common files like .platform, rules/functions, Makefile.cache etc.
 # NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
 SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
-SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
+SONIC_DEVICE_SUBMODULES := $(shell git ls-files -s device | awk '$$1 == "160000" {print $$4}')
+SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | awk '$$1 ~ /^100/ {print $$4}')
+SONIC_DEVICE_FILES_LIST += $(foreach submodule,$(SONIC_DEVICE_SUBMODULES),$(addprefix $(submodule)/,$(shell git -C $(submodule) ls-files -s | awk '$$1 ~ /^100/ {print $$4}')))
 # NOTE: DOCKER_DEFAULT_PLATFORM changes the architecture recorded in every docker
 # image produced, so images cached under a different value must not be reused.
 # NOTE: SLAVE_BASE_TAG identifies the build-slave container image (hash of the slave
@@ -278,8 +280,10 @@ endef
 define GET_MODIFIED_FILES
 	$(eval $(1)_FILES_MODIFIED := $(foreach dfile,$($(1)_MOD_DEP_PKGS),$(if $($(dfile)_FILES_MODIFIED),$(dfile))) \
                                   $(if $($(1)_DEP_FILES), $(shell cat $($(1)_MOD_DEP_FILE) | xargs git status -s)) \
-                                  $(if $($(1)_SMDEP_PATHS), $(foreach path,$($(1)_SMDEP_PATHS), \
-                                        $(shell cd $(path) &&  git status --ignore-submodules=all -s -uno .))) )
+					    $(foreach path,$(sort $($(1)_SMDEP_PATHS) \
+						    $(foreach submodule,$(SONIC_DEVICE_SUBMODULES), \
+							    $(if $(filter $(submodule)/%,$($(1)_DEP_FILES)),$(submodule)))), \
+						    $(shell cd $(path) && git status --ignore-submodules=all -s -uno .)) )
 
 endef
 
