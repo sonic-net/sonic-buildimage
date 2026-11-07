@@ -98,5 +98,26 @@
         "desc": "Configure invalid chassis_tsa_supported in BGP_DEVICE_GLOBAL.",
         "eStrKey": "InvalidValue",
         "eStr": ["chassis_tsa_supported"]
+    },
+    "BGP_DEVICE_GLOBAL_AF_INSTALL_BACKUP_PATH_DISABLED": {
+        "desc": "BGP_DEVICE_GLOBAL_AF with install_backup_path set to disabled (explicit default) for ipv4_unicast"
+    },
+    "BGP_DEVICE_GLOBAL_AF_INSTALL_BACKUP_PATH_PIC": {
+        "desc": "BGP_DEVICE_GLOBAL_AF with install_backup_path set to pic (single backup path) for ipv4_unicast"
+    },
+    "BGP_DEVICE_GLOBAL_AF_INSTALL_BACKUP_PATH_PIC_ECMP": {
+        "desc": "BGP_DEVICE_GLOBAL_AF with install_backup_path set to pic-ecmp (ECMP backup paths) for ipv4_unicast"
+    },
+    "BGP_DEVICE_GLOBAL_AF_INSTALL_BACKUP_PATH_MULTIPLE_AFI_SAFI": {
+        "desc": "install_backup_path can be set independently per address family: pic on ipv4_unicast, pic-ecmp on ipv6_unicast"
+    },
+    "BGP_DEVICE_GLOBAL_AF_INSTALL_BACKUP_PATH_INVALID": {
+        "desc": "BGP_DEVICE_GLOBAL_AF with install_backup_path set to an invalid enum value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["install_backup_path"]
+    },
+    "BGP_DEVICE_GLOBAL_AF_INSTALL_BACKUP_PATH_NON_UNICAST_INVALID": {
+        "desc": "install_backup_path pic on a non-unicast AFI (l2vpn_evpn) must be rejected by the must constraint",
+        "eStr": ["unicast address families"]
     }
 }

@@ -249,6 +249,137 @@
             }
         }
     },
+    "BGP_GLOBALS_AF_INSTALL_BACKUP_PATH_DISABLED": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "ipv4_unicast",
+                    "install_backup_path": "disabled"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_AF_INSTALL_BACKUP_PATH_PIC": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "ipv4_unicast",
+                    "install_backup_path": "pic"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_AF_INSTALL_BACKUP_PATH_PIC_ECMP": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "ipv4_unicast",
+                    "install_backup_path": "pic-ecmp"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_AF_INSTALL_BACKUP_PATH_DIFFERENT_PER_AFI_SAFI": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "ipv4_unicast",
+                    "install_backup_path": "pic"
+                },
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "ipv6_unicast",
+                    "install_backup_path": "pic-ecmp"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_AF_INSTALL_BACKUP_PATH_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "ipv4_unicast",
+                    "install_backup_path": "backup"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_AF_INSTALL_BACKUP_PATH_NON_UNICAST_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "l2vpn_evpn",
+                    "install_backup_path": "pic"
+                }
+                ]
+            }
+        }
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {

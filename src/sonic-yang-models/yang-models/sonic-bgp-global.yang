@@ -28,6 +28,12 @@ module sonic-bgp-global {
     description
         "SONIC BGP Global YANG";
 
+    revision 2026-10-06 {
+        description
+            "Add install_backup_path enum (disabled/pic/pic-ecmp) to BGP_GLOBALS_AF
+             for BGP PIC Local, restricted to unicast address families.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -462,6 +468,36 @@ module sonic-bgp-global {
                 leaf advertise-svi-ip {
                     type boolean;
                     description "L2VPN advertise the local SVI IP address so that it can be accessible from remote VTEPs";
+                }
+
+                leaf install_backup_path {
+                    must "current() = 'disabled' or
+                          contains(current()/../afi_safi, '_unicast')" {
+                        error-message "install_backup_path is supported only for unicast address families (ipv4_unicast, ipv6_unicast)!";
+                    }
+                    type enumeration {
+                        enum disabled {
+                            description "Backup path feature is off. No backup paths are computed or
+                                         programmed. This is the default.";
+                        }
+                        enum pic {
+                            description "Prefix Independent Convergence: BGP computes a single backup
+                                         path per prefix and programs it to the forwarding plane. On
+                                         primary path failure the dataplane switches immediately without
+                                         waiting for BGP re-convergence. Maps to 'install backup-path'
+                                         under the address-family in FRR.";
+                        }
+                        enum pic-ecmp {
+                            description "PIC with ECMP backup paths: like 'pic' but allows multiple
+                                         equal-cost backup paths to be installed. Maps to
+                                         'install backup-path ecmp' under the address-family in FRR.";
+                        }
+                    }
+                    default disabled;
+                    description "Controls BGP Prefix Independent Convergence (PIC) backup path
+                                 installation for this address family. Supported only for
+                                 ipv4_unicast and ipv6_unicast; must remain 'disabled' for
+                                 multicast and l2vpn_evpn address families.";
                 }
             }
         }
