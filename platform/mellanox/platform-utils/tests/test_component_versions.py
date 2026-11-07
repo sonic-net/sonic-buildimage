@@ -30,7 +30,7 @@ from mellanox_component_versions.main import (
     parse_compiled_components_file,
     get_platform_component_versions,
     get_current_version,
-    get_component_rules
+    get_component_rules,
 )
 
 
@@ -251,3 +251,63 @@ class TestBmcPlatform:
 
         output = "\n".join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
         assert "Root privileges are required" in output
+
+
+class TestOeFw:
+
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=False)
+    def test_no_row_on_non_cpo(self, _cpo, _asic):
+        get_component_rules.cache_clear()
+        try:
+            assert "OE_FW" not in get_component_rules()
+        finally:
+            get_component_rules.cache_clear()
+
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('mellanox_fw_manager.vmod.get_image_version', return_value="95.10.0762")
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    def test_compiled_is_the_mfa_version(self, _cpo, _asic, _image, _exists):
+        get_component_rules.cache_clear()
+        try:
+            assert parse_compiled_components_file()["OE_FW"] == "95.10.0762"
+        finally:
+            get_component_rules.cache_clear()
+
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('mellanox_fw_manager.vmod.get_image_version', side_effect=OSError("flint not found"))
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    def test_compiled_is_na_when_the_read_raises(self, _cpo, _asic, _image, _exists):
+        get_component_rules.cache_clear()
+        try:
+            assert parse_compiled_components_file()["OE_FW"] == "N/A"
+        finally:
+            get_component_rules.cache_clear()
+
+    @mock.patch('mellanox_component_versions.main.get_device_data_manager',
+                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1)))
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    @mock.patch('mellanox_fw_manager.vmod.get_running_versions', return_value=["95.10.0762"])
+    @mock.patch('mellanox_component_versions.main.subprocess.run')
+    def test_actual_is_the_running_version(self, mock_run, _running, _cpo, _asic, _count):
+        get_component_rules.cache_clear()
+        try:
+            assert get_current_version("OE_FW") == (True, "95.10.0762")
+        finally:
+            get_component_rules.cache_clear()
+        mock_run.assert_not_called()
+
+    @mock.patch('mellanox_component_versions.main.get_device_data_manager',
+                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1)))
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    @mock.patch('mellanox_fw_manager.vmod.get_running_versions', return_value=[])
+    def test_actual_is_na_without_asics(self, _running, _cpo, _asic, _count):
+        get_component_rules.cache_clear()
+        try:
+            assert get_current_version("OE_FW") == (True, "N/A")
+        finally:
+            get_component_rules.cache_clear()
