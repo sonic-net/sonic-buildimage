@@ -71,6 +71,11 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
  set as-path prepend{{ns.as_str}}
 {% endif %}
 {# ---------------set as-path prepend - End ------------------- #}
+{# ---------------set as-path replace - Start ----------------- #}
+{% if 'set_as_path_replace' in rm_val %}
+ set as-path replace {{rm_val['set_as_path_replace']}}
+{% endif %}
+{# ---------------set as-path replace - End ------------------- #}
 {# ---------------set community - Start------------------------ #}
 {% if 'set_community_inline' in rm_val %}
 {% set ns = namespace(comms = '') %}
