@@ -1,7 +1,7 @@
 {
   "PLATFORM": {
     "num_psus": 4,
-    "num_temps": 19,
+    "num_temps": 18,
     "num_asic_temps": 0,
     "num_nexthop_fpga_asic_temp_sensors": 2,
     "num_voltage_sensors": 70,
@@ -1833,7 +1833,7 @@
         {
           "chan": "1",
           "dev": [
-            "DCDC12"
+            "DCDC20"
           ],
           "cpld_offset": "0x14",
           "cpld_sel": "0x1"
@@ -24978,7 +24978,7 @@
       "virt_parent": "DCDC0"
     },
     "dev_attr": {
-      "display_name": "POS0V8_VDDC"
+      "display_name": "DCDC0_POS0V8_VDDC"
     },
     "i2c": {
       "attr_list": [
@@ -25013,7 +25013,7 @@
       "virt_parent": "DCDC0"
     },
     "dev_attr": {
-      "display_name": "POS0V8_VDDC"
+      "display_name": "DCDC0_POS0V8_VDDC"
     },
     "i2c": {
       "attr_list": [
@@ -25028,35 +25028,6 @@
         {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
-        }
-      ]
-    }
-  },
-  "TEMP7": {
-    "dev_info": {
-      "device_type": "TEMP_SENSOR",
-      "device_name": "DCDC0-RAIL1-CH1",
-      "device_parent": "MULTIFPGAPCIE2",
-      "virt_parent": "DCDC0",
-      "nexthop_thermal_pid_domain": "main",
-      "nexthop_thermal_setpoint_override": 95.0
-    },
-    "dev_attr": {
-      "display_name": "DCDC0"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "temp1_input",
-          "drv_attr_name": "temp1_input"
-        },
-        {
-          "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
-        },
-        {
-          "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
         }
       ]
     }
@@ -25113,7 +25084,7 @@
       "virt_parent": "DCDC1"
     },
     "dev_attr": {
-      "display_name": "POS0V9_WEST"
+      "display_name": "DCDC1_POS0V9_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -25148,7 +25119,7 @@
       "virt_parent": "DCDC1"
     },
     "dev_attr": {
-      "display_name": "POS0V75_WEST"
+      "display_name": "DCDC1_POS0V75_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -25183,7 +25154,7 @@
       "virt_parent": "DCDC1"
     },
     "dev_attr": {
-      "display_name": "POS0V9_WEST"
+      "display_name": "DCDC1_POS0V9_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -25210,7 +25181,7 @@
       "virt_parent": "DCDC1"
     },
     "dev_attr": {
-      "display_name": "POS0V75_WEST"
+      "display_name": "DCDC1_POS0V75_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -25229,7 +25200,7 @@
       ]
     }
   },
-  "TEMP8": {
+  "TEMP7": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC1-RAIL1",
@@ -25310,7 +25281,7 @@
       "virt_parent": "DCDC2"
     },
     "dev_attr": {
-      "display_name": "POS0V9_EAST"
+      "display_name": "DCDC2_POS0V9_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -25345,7 +25316,7 @@
       "virt_parent": "DCDC2"
     },
     "dev_attr": {
-      "display_name": "POS0V75_EAST"
+      "display_name": "DCDC2_POS0V75_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -25380,7 +25351,7 @@
       "virt_parent": "DCDC2"
     },
     "dev_attr": {
-      "display_name": "POS0V9_EAST"
+      "display_name": "DCDC2_POS0V9_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -25407,7 +25378,7 @@
       "virt_parent": "DCDC2"
     },
     "dev_attr": {
-      "display_name": "POS0V75_EAST"
+      "display_name": "DCDC2_POS0V75_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -25426,7 +25397,7 @@
       ]
     }
   },
-  "TEMP9": {
+  "TEMP8": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC2-RAIL1",
@@ -25507,7 +25478,7 @@
       "virt_parent": "DCDC3"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_0"
+      "display_name": "DCDC3_POS0V8_PT_0"
     },
     "i2c": {
       "attr_list": [
@@ -25542,7 +25513,7 @@
       "virt_parent": "DCDC3"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_1"
+      "display_name": "DCDC3_POS0V8_PT_1"
     },
     "i2c": {
       "attr_list": [
@@ -25577,7 +25548,7 @@
       "virt_parent": "DCDC3"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_0"
+      "display_name": "DCDC3_POS0V8_PT_0"
     },
     "i2c": {
       "attr_list": [
@@ -25604,7 +25575,7 @@
       "virt_parent": "DCDC3"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_1"
+      "display_name": "DCDC3_POS0V8_PT_1"
     },
     "i2c": {
       "attr_list": [
@@ -25623,7 +25594,7 @@
       ]
     }
   },
-  "TEMP10": {
+  "TEMP9": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC3-RAIL1",
@@ -25704,7 +25675,7 @@
       "virt_parent": "DCDC4"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_2"
+      "display_name": "DCDC4_POS0V8_PT_2"
     },
     "i2c": {
       "attr_list": [
@@ -25739,7 +25710,7 @@
       "virt_parent": "DCDC4"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_3"
+      "display_name": "DCDC4_POS0V8_PT_3"
     },
     "i2c": {
       "attr_list": [
@@ -25774,7 +25745,7 @@
       "virt_parent": "DCDC4"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_2"
+      "display_name": "DCDC4_POS0V8_PT_2"
     },
     "i2c": {
       "attr_list": [
@@ -25801,7 +25772,7 @@
       "virt_parent": "DCDC4"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_3"
+      "display_name": "DCDC4_POS0V8_PT_3"
     },
     "i2c": {
       "attr_list": [
@@ -25820,7 +25791,7 @@
       ]
     }
   },
-  "TEMP11": {
+  "TEMP10": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC4-RAIL1",
@@ -25901,7 +25872,7 @@
       "virt_parent": "DCDC5"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_4"
+      "display_name": "DCDC5_POS0V8_PT_4"
     },
     "i2c": {
       "attr_list": [
@@ -25936,7 +25907,7 @@
       "virt_parent": "DCDC5"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_5"
+      "display_name": "DCDC5_POS0V8_PT_5"
     },
     "i2c": {
       "attr_list": [
@@ -25971,7 +25942,7 @@
       "virt_parent": "DCDC5"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_4"
+      "display_name": "DCDC5_POS0V8_PT_4"
     },
     "i2c": {
       "attr_list": [
@@ -25998,7 +25969,7 @@
       "virt_parent": "DCDC5"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_5"
+      "display_name": "DCDC5_POS0V8_PT_5"
     },
     "i2c": {
       "attr_list": [
@@ -26017,7 +25988,7 @@
       ]
     }
   },
-  "TEMP12": {
+  "TEMP11": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC5-RAIL1",
@@ -26098,7 +26069,7 @@
       "virt_parent": "DCDC6"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_6"
+      "display_name": "DCDC6_POS0V8_PT_6"
     },
     "i2c": {
       "attr_list": [
@@ -26133,7 +26104,7 @@
       "virt_parent": "DCDC6"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_7"
+      "display_name": "DCDC6_POS0V8_PT_7"
     },
     "i2c": {
       "attr_list": [
@@ -26168,7 +26139,7 @@
       "virt_parent": "DCDC6"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_6"
+      "display_name": "DCDC6_POS0V8_PT_6"
     },
     "i2c": {
       "attr_list": [
@@ -26195,7 +26166,7 @@
       "virt_parent": "DCDC6"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PT_7"
+      "display_name": "DCDC6_POS0V8_PT_7"
     },
     "i2c": {
       "attr_list": [
@@ -26214,7 +26185,7 @@
       ]
     }
   },
-  "TEMP13": {
+  "TEMP12": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC6-RAIL1",
@@ -26295,7 +26266,7 @@
       "virt_parent": "DCDC7"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_0"
+      "display_name": "DCDC7_POS0V8_PB_0"
     },
     "i2c": {
       "attr_list": [
@@ -26330,7 +26301,7 @@
       "virt_parent": "DCDC7"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_1"
+      "display_name": "DCDC7_POS0V8_PB_1"
     },
     "i2c": {
       "attr_list": [
@@ -26365,7 +26336,7 @@
       "virt_parent": "DCDC7"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_0"
+      "display_name": "DCDC7_POS0V8_PB_0"
     },
     "i2c": {
       "attr_list": [
@@ -26392,7 +26363,7 @@
       "virt_parent": "DCDC7"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_1"
+      "display_name": "DCDC7_POS0V8_PB_1"
     },
     "i2c": {
       "attr_list": [
@@ -26411,7 +26382,7 @@
       ]
     }
   },
-  "TEMP14": {
+  "TEMP13": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC7-RAIL1",
@@ -26492,7 +26463,7 @@
       "virt_parent": "DCDC8"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_2"
+      "display_name": "DCDC8_POS0V8_PB_2"
     },
     "i2c": {
       "attr_list": [
@@ -26527,7 +26498,7 @@
       "virt_parent": "DCDC8"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_3"
+      "display_name": "DCDC8_POS0V8_PB_3"
     },
     "i2c": {
       "attr_list": [
@@ -26562,7 +26533,7 @@
       "virt_parent": "DCDC8"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_2"
+      "display_name": "DCDC8_POS0V8_PB_2"
     },
     "i2c": {
       "attr_list": [
@@ -26589,7 +26560,7 @@
       "virt_parent": "DCDC8"
     },
     "dev_attr": {
-      "display_name": "POS0V8_PB_3"
+      "display_name": "DCDC8_POS0V8_PB_3"
     },
     "i2c": {
       "attr_list": [
@@ -26608,7 +26579,7 @@
       ]
     }
   },
-  "TEMP15": {
+  "TEMP14": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC8-RAIL1",
@@ -26689,7 +26660,7 @@
       "virt_parent": "DCDC9"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST",
+      "display_name": "DCDC9_POS3V3_WEST",
       "scaling_factor": 1.2
     },
     "i2c": {
@@ -26725,7 +26696,7 @@
       "virt_parent": "DCDC9"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST"
+      "display_name": "DCDC9_POS3V3_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -26744,7 +26715,7 @@
       ]
     }
   },
-  "TEMP16": {
+  "TEMP15": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC9-RAIL1",
@@ -26825,7 +26796,7 @@
       "virt_parent": "DCDC10"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST",
+      "display_name": "DCDC10_POS3V3_EAST",
       "scaling_factor": 1.2
     },
     "i2c": {
@@ -26861,7 +26832,7 @@
       "virt_parent": "DCDC10"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST"
+      "display_name": "DCDC10_POS3V3_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -26880,7 +26851,7 @@
       ]
     }
   },
-  "TEMP17": {
+  "TEMP16": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC10-RAIL1",
@@ -26961,7 +26932,7 @@
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ0",
+      "display_name": "MEZZ0_DCDC0_POS3V3_WEST",
       "scaling_factor": 1.2
     },
     "i2c": {
@@ -26997,7 +26968,7 @@
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ0",
+      "display_name": "MEZZ0_DCDC0_POS3V3_EAST",
       "scaling_factor": 1.2
     },
     "i2c": {
@@ -27033,7 +27004,7 @@
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ0"
+      "display_name": "MEZZ0_DCDC0_POS3V3_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -27060,7 +27031,7 @@
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ0"
+      "display_name": "MEZZ0_DCDC0_POS3V3_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -27079,7 +27050,7 @@
       ]
     }
   },
-  "TEMP18": {
+  "TEMP17": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC11-RAIL1",
@@ -27089,7 +27060,7 @@
       "nexthop_thermal_setpoint_override": 95.0
     },
     "dev_attr": {
-      "display_name": "DCDC0_MEZZ0"
+      "display_name": "MEZZ0_DCDC0"
     },
     "i2c": {
       "attr_list": [
@@ -27108,10 +27079,10 @@
       ]
     }
   },
-  "DCDC12": {
+  "DCDC20": {
     "dev_info": {
       "device_type": "DCDC",
-      "device_name": "DCDC12",
+      "device_name": "DCDC20",
       "device_parent": "CPLDMUX3"
     },
     "i2c": {
@@ -27124,7 +27095,7 @@
   },
   "COMPONENT28": {
     "comp_attr": {
-      "name": "DCDC12",
+      "name": "DCDC20",
       "type": "dcdc",
       "description": "DCDC voltage regulator",
       "boot_type": "none"
@@ -27148,19 +27119,19 @@
       },
       {
         "attr_name": "update",
-        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC12 {}"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC20 {}"
       }
     ]
   },
   "VOLTAGE69": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DCDC12-RAIL1",
+      "device_name": "DCDC20-RAIL1",
       "device_parent": "CPLDMUX3",
-      "virt_parent": "DCDC12"
+      "virt_parent": "DCDC20"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ1",
+      "display_name": "MEZZ1_DCDC0_POS3V3_WEST",
       "scaling_factor": 1.2
     },
     "i2c": {
@@ -27191,12 +27162,12 @@
   "VOLTAGE70": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DCDC12-RAIL2",
+      "device_name": "DCDC20-RAIL2",
       "device_parent": "CPLDMUX3",
-      "virt_parent": "DCDC12"
+      "virt_parent": "DCDC20"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ1",
+      "display_name": "MEZZ1_DCDC0_POS3V3_EAST",
       "scaling_factor": 1.2
     },
     "i2c": {
@@ -27227,12 +27198,12 @@
   "CURRENT22": {
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
-      "device_name": "DCDC12-RAIL1",
+      "device_name": "DCDC20-RAIL1",
       "device_parent": "CPLDMUX3",
-      "virt_parent": "DCDC12"
+      "virt_parent": "DCDC20"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ1"
+      "display_name": "MEZZ1_DCDC0_POS3V3_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -27254,12 +27225,12 @@
   "CURRENT23": {
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
-      "device_name": "DCDC12-RAIL2",
+      "device_name": "DCDC20-RAIL2",
       "device_parent": "CPLDMUX3",
-      "virt_parent": "DCDC12"
+      "virt_parent": "DCDC20"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ1"
+      "display_name": "MEZZ1_DCDC0_POS3V3_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -27278,17 +27249,17 @@
       ]
     }
   },
-  "TEMP19": {
+  "TEMP18": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
-      "device_name": "DCDC12-RAIL1",
+      "device_name": "DCDC20-RAIL1",
       "device_parent": "CPLDMUX3",
-      "virt_parent": "DCDC12",
+      "virt_parent": "DCDC20",
       "nexthop_thermal_pid_domain": "main",
       "nexthop_thermal_setpoint_override": 95.0
     },
     "dev_attr": {
-      "display_name": "DCDC0_MEZZ1"
+      "display_name": "MEZZ1_DCDC0"
     },
     "i2c": {
       "attr_list": [
