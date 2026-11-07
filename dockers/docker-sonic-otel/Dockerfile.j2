@@ -48,7 +48,7 @@ RUN wget -v -O /tmp/otelcol-contrib.deb \
     (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
     ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
     rm /tmp/otelcol-contrib.deb
-{% else %}
+{% elif CONFIGURED_ARCH == "amd64" %}
 RUN wget -v -O /tmp/otelcol-contrib.deb \
         "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_amd64.deb" && \
     echo "e83278a763b9c7779f9facf3ac2356b7add8975a5f14d4606a625605f50eee94  /tmp/otelcol-contrib.deb" | sha256sum -c - && \
@@ -56,6 +56,8 @@ RUN wget -v -O /tmp/otelcol-contrib.deb \
     (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
     ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
     rm /tmp/otelcol-contrib.deb
+{% else %}
+RUN echo "Unsupported OpenTelemetry Collector architecture" >&2; exit 1
 {% endif %}
 
 COPY ["start.sh", "otel.sh", "/usr/bin/"]

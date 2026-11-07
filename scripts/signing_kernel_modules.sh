@@ -1,6 +1,10 @@
 #!/bin/bash
 # This script is signing kernel modules by using sign-file tool
 
+set +x
+set -e -o pipefail
+umask 077
+
 usage() {
     cat <<EOF
 $0: # Display Help
@@ -36,87 +40,93 @@ while getopts 'l:c:p:k:s:e:hv' flag; do
 done
 if [ $OPTIND -eq 1 ]; then echo "no options were pass"; usage; exit 1 ;fi
 
-if [ -z ${LINUX_KERNEL_VERSION} ]; then
+if [ -z "${LINUX_KERNEL_VERSION}" ]; then
     echo "ERROR: LINUX_KERNEL_VERSION arg1 is empty"
     usage
     exit 1
 fi
 
-if [ ! -f ${PEM_CERT} ]; then
+if [ ! -f "${PEM_CERT}" ]; then
     echo "ERROR: arg2 PEM_CERT=${PEM_CERT} file does not exist"
     usage
     exit 1
 fi
 
-if [ ! -f ${PEM_PRIVATE_KEY} ]; then
+if [ ! -f "${PEM_PRIVATE_KEY}" ]; then
     echo "ERROR: arg3 PEM_PRIVATE_KEY=${PEM_PRIVATE_KEY} file does not exist"
     usage
     exit 1
 fi
 
-if [ -z ${LOCAL_SIGN_FILE} ]; then
+if [ -z "${LOCAL_SIGN_FILE}" ]; then
     LOCAL_SIGN_FILE="/usr/lib/linux-kbuild-${LINUX_KERNEL_VERSION}/scripts/sign-file"
 fi
 
-if [ ! -f ${LOCAL_SIGN_FILE} ]; then
+if [ ! -f "${LOCAL_SIGN_FILE}" ]; then
     echo "ERROR: LOCAL_SIGN_FILE=${LOCAL_SIGN_FILE} file does not exist"
     usage
     exit 1
 fi
 
-if [ -z ${LOCAL_EXTRACT_CERT} ]; then
+if [ -z "${LOCAL_EXTRACT_CERT}" ]; then
     LOCAL_EXTRACT_CERT="/usr/lib/linux-kbuild-${LINUX_KERNEL_VERSION}/certs/extract-cert"
 fi
 
-if [ ! -f ${LOCAL_EXTRACT_CERT} ]; then
+if [ ! -f "${LOCAL_EXTRACT_CERT}" ]; then
     echo "ERROR: LOCAL_EXTRACT_CERT=${LOCAL_EXTRACT_CERT} file does not exist"
     usage
     exit 1
 fi
 
-if [ ! -d "$KERNEL_MODULES_DIR" ]; then
+if [ -z "$KERNEL_MODULES_DIR" ]; then
     # If the user do not provide a KERNEL_MODULES_DIR, the script is going to search in the script call path for Kernel modules.
     KERNEL_MODULES_DIR="./"
     echo "KERNEL_MODULES_DIR set to default path: $KERNEL_MODULES_DIR"
 fi
 
-# find all the kernel modules.
-modules_list=$(find ${KERNEL_MODULES_DIR} -name "*.ko")
-
-dev_certs_tmp_folder="/tmp/dev_kmod_sign"
-
-# clean env
-if [ -d ${dev_certs_tmp_folder} ]; then
-    rm -r ${dev_certs_tmp_folder}
+if [ ! -d "$KERNEL_MODULES_DIR" ]; then
+    echo "ERROR: KERNEL_MODULES_DIR does not exist: $KERNEL_MODULES_DIR" >&2
+    exit 1
 fi
 
-mkdir -p ${dev_certs_tmp_folder}
-local_sign_key="${dev_certs_tmp_folder}/$(basename $PEM_PRIVATE_KEY)"
-local_sign_cert="${dev_certs_tmp_folder}/$(basename $PEM_CERT)"
+dev_certs_tmp_folder=$(mktemp -d "${TMPDIR:-/tmp}/sonic-kmod-sign.XXXXXXXX")
+cleanup_module_signing() {
+    local status=$?
+    trap - EXIT
+    if ! rm -rf -- "$dev_certs_tmp_folder"; then
+        echo "Failed to remove temporary module signing material" >&2
+        (( status != 0 )) || status=1
+    fi
+    exit "$status"
+}
+trap cleanup_module_signing EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+local_sign_key="${dev_certs_tmp_folder}/signing-key.pem"
+local_sign_cert="${dev_certs_tmp_folder}/signing-cert.x509"
 
 # Combine cert for module signing
-echo "keys concat: cat ${PEM_PRIVATE_KEY} ${PEM_CERT} > ${local_sign_key}"
-cat ${PEM_PRIVATE_KEY} ${PEM_CERT} > ${local_sign_key}
+cat -- "${PEM_PRIVATE_KEY}" "${PEM_CERT}" > "${local_sign_key}"
 
 # Extract x509 cert in corect format
-echo "create x509 cert: ${LOCAL_EXTRACT_CERT} ${local_sign_key} ${local_sign_cert}"
-${LOCAL_EXTRACT_CERT} ${local_sign_key} ${local_sign_cert}
+"${LOCAL_EXTRACT_CERT}" "${local_sign_key}" "${local_sign_cert}"
 
 # Do sign for each found module
+find "${KERNEL_MODULES_DIR}" -name "*.ko" -print0 > "${dev_certs_tmp_folder}/modules"
 kernel_modules_cnt=0
-for mod in $modules_list
+while IFS= read -r -d '' mod
 do
     echo "signing module named: ${mod} .."
-    echo "${LOCAL_SIGN_FILE} sha512 ${local_sign_key} ${local_sign_cert} ${mod}"
     kernel_modules_cnt=$((kernel_modules_cnt+1))
-    ${LOCAL_SIGN_FILE} sha512 ${local_sign_key} ${local_sign_cert} ${mod}
+    "${LOCAL_SIGN_FILE}" sha512 "${local_sign_key}" "${local_sign_cert}" "${mod}"
 
     # check Kernel module is signed.
     if ! grep -q "~Module signature appended~" "${mod}"; then
         echo "Error: Kernel module=${mod} have no signature appened."
         exit 1
     fi
-done
+done < "${dev_certs_tmp_folder}/modules"
 
 echo "Num of kernel modules signed: kernel_modules_cnt=$kernel_modules_cnt"
 echo "$0: All Kernel Modules SIGNED OK."
