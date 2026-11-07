@@ -3996,3 +3996,31 @@ To be added.
 Detail instruction to be added. A sample could be found in this
 [PR](https://github.com/Azure/sonic-buildimage/pull/861) that
 implemented dynamic configuration for BGP.
+
+
+## IS-IS
+
+Keys are `ISIS_GLOBALS|<vrf_name>`, `ISIS_GLOBALS_TIMERS|<vrf_name>`, and
+`ISIS_INTERFACE|<ifname>`. The timer key references an existing global row. Interface
+keys reference PORT, PORTCHANNEL, VLAN_INTERFACE, LOOPBACK_INTERFACE or
+VLAN_SUB_INTERFACE entries. Global VRFs reference VRF, except `default`.
+ConfigDB stores scalar values as strings; YANG validates the following types.
+
+| Table | Field | YANG type / range | Default |
+| --- | --- | --- | --- |
+| ISIS_GLOBALS | enabled | boolean | false |
+| ISIS_GLOBALS | net_title | string matching `[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00` | absent |
+| ISIS_GLOBALS | level | level-1, level-2, level-1-2 | level-1-2 |
+| ISIS_GLOBALS | dynamic_hostname | boolean | true |
+| ISIS_GLOBALS | ipv6_multi_topology | boolean | true |
+| ISIS_GLOBALS_TIMERS | lsp_mtu | uint16, 128–4352 | 1492 |
+| ISIS_GLOBALS_TIMERS | lsp_refresh_interval | uint16, 1–65235 seconds | 900 |
+| ISIS_GLOBALS_TIMERS | lsp_lifetime | uint16, 350–65535 seconds | 1200 |
+| ISIS_INTERFACE | enabled | boolean | false |
+| ISIS_INTERFACE | ipv6_enabled | boolean | true |
+| ISIS_INTERFACE | metric | uint32, 1–16777215 | 10 |
+| ISIS_INTERFACE | circuit_type | p2p, lan | lan |
+| ISIS_INTERFACE | passive | boolean | absent (not passive) |
+
+Lifetime must be at least refresh interval + 300 seconds, including when either
+field is omitted and its default applies. CLI reset operations enforce this too.
