@@ -4,6 +4,11 @@
     "skip_xcvrd_cmis_mgr": false,
     "xcvrd": {
         "dom_temperature_poll_interval": 20
-    }
+    },
+    "use_rust_thermalctld": true,
+    "use_rust_psud": true,
+    "use_rust_syseepromd": true,
+    "use_rust_pcied": true,
+    "use_rust_stormond": true,
+    "use_rust_chassisd": true
 }
-
