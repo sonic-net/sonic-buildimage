@@ -13,7 +13,7 @@
 #   3. HFT_COUNTERSYNCD_ARGS: raw countersyncd arguments separated by
 #      whitespace, set in the environment or in the settings file.
 #   4. The arguments given to the container itself (Docker CMD / Kubernetes
-#      "args"), which docker_init.sh saves in HFT_CONTAINER_ARGS_FILE.
+#      "args"), which supervisord passes to this script, see docker_init.sh.
 #
 # Sources 1 and 2 are COUNTERSYNCD_<NAME> variables; one set in the environment
 # wins over the settings file. Each variable is turned into the countersyncd
@@ -46,13 +46,15 @@
 # the environment:
 #   HFT_CONFIG_FILE          settings file (default: /etc/sonic/hft/hft.env)
 #   HFT_COUNTERSYNCD_BIN     countersyncd binary (default: /usr/bin/countersyncd)
-#   HFT_CONTAINER_ARGS_FILE  file where docker_init.sh saves the container arguments
 #
 # Everything is evaluated each time countersyncd starts, so a change of the
 # settings file takes effect after "supervisorctl restart countersyncd" in the
 # container or a restart of the hft service.
 
 DEFAULT_HFT_CONFIG_FILE=/etc/sonic/hft/hft.env
+
+# The container arguments
+container_args=("$@")
 
 # Sources of countersyncd arguments, by increasing precedence
 SOURCE_VARIABLES=1
@@ -363,7 +365,6 @@ elif [[ -n "${HFT_CONFIG_FILE}" ]]; then
 fi
 
 HFT_COUNTERSYNCD_BIN=${HFT_COUNTERSYNCD_BIN:-/usr/bin/countersyncd}
-HFT_CONTAINER_ARGS_FILE=${HFT_CONTAINER_ARGS_FILE:-/var/run/hft/container_args}
 
 if [[ ! -x "${HFT_COUNTERSYNCD_BIN}" ]]; then
     log "${HFT_COUNTERSYNCD_BIN} is not executable"
@@ -377,8 +378,7 @@ if [[ -n "${HFT_COUNTERSYNCD_ARGS}" ]]; then
     read -r -d '' -a extra_args <<< "${HFT_COUNTERSYNCD_ARGS}"
     add_raw_args "${SOURCE_HFT_COUNTERSYNCD_ARGS}" "${extra_args[@]}"
 fi
-if [[ -s "${HFT_CONTAINER_ARGS_FILE}" ]]; then
-    mapfile -d '' -t container_args < "${HFT_CONTAINER_ARGS_FILE}"
+if (( ${#container_args[@]} )); then
     add_raw_args "${SOURCE_CONTAINER_ARGS}" "${container_args[@]}"
 fi
 
