@@ -495,6 +495,30 @@ extern const struct regulator_ops pmbus_regulator_ops;
 
 #define PMBUS_REGULATOR(_name, _id)	PMBUS_REGULATOR_STEP(_name, _id, 0, 0)
 
+#define PMBUS_DEV_NAME_SIZE      (256)
+
+typedef struct {
+    char        device_name[I2C_NAME_SIZE];
+    char        chip_name[I2C_NAME_SIZE];
+    uint8_t     device_id[PMBUS_DEV_NAME_SIZE];
+    uint32_t    dev_id_len;
+} pmbus_dev_info_t;
+
+pmbus_dev_info_t pmbus_dev_infos[] = {
+    {.device_name = "xdpe12284", .chip_name = "XDPE12284C", .device_id = {0x79, 0x00}, .dev_id_len = 2},
+    {.device_name = "xdpe12284", .chip_name = "XDPE12284C", .device_id = {0x79, 0x01}, .dev_id_len = 2},
+    {.device_name = "xdpe12284", .chip_name = "XDPE12284C", .device_id = {0x79, 0x02}, .dev_id_len = 2},
+    {.device_name = "wb_xdpe132g5c_pmbus", .chip_name = "XDPE132G5C", .device_id = {0x76}, .dev_id_len = 1},
+    {.device_name = "wb_xdpe132g5c_pmbus", .chip_name = "XDPE132G5D", .device_id = {0x7c}, .dev_id_len = 1},
+    {.device_name = "wb_xdpe1a2g5b_pmbus", .chip_name = "XDPE1A2G5B", .device_id = {0x01, 0x9e}, .dev_id_len = 2},
+    /* The driver does not support RAA228248, using RAA228228 instead.  */
+    {.device_name = "raa228228", .chip_name = "RAA228248", .device_id = {0x00, 0xbc, 0xd2, 0x49}, .dev_id_len = 4},
+    {.device_name = "raa228228", .chip_name = "RAA22962048", .device_id = {0x00, 0x9B, 0xD2, 0x49}, .dev_id_len = 4},
+    /* The old manual ID is 0x49d26e00, and the new manual ID is 0x49d28100. */
+    {.device_name = "isl69260", .chip_name = "ISL69260", .device_id = {0x00, 0x81, 0xd2, 0x49}, .dev_id_len = 4},
+    {.device_name = "isl69260", .chip_name = "ISL69260", .device_id = {0x00, 0x6e, 0xd2, 0x49}, .dev_id_len = 4},
+};
+
 /* Function declarations */
 
 void pmbus_clear_cache(struct i2c_client *client);

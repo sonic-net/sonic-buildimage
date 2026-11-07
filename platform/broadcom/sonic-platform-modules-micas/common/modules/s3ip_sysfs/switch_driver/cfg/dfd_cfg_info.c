@@ -61,6 +61,7 @@ char *g_info_ctrl_mem_str[INFO_CTRL_MEM_END] = {
     ".len",
     ".bit_offset",
     ".str_cons",
+    ".val_type",
     ".int_extra1",
     ".int_extra2",
     ".int_extra3",
@@ -82,6 +83,7 @@ char *g_info_src_str[INFO_SRC_END] = {
     "fpga",
     "other_i2c",
     "file",
+    "logic_file",
 };
 
 /* info_frmt_t enumeration string */
@@ -101,6 +103,57 @@ char *g_info_pola_str[INFO_POLA_END] = {
     "positive",
     "negative",
 };
+
+/* info_val_type_t enumeration string */
+char *g_info_val_type_str[INFO_VAL_TYPE_END] = {
+    "normal",
+    "fixed_key",
+    "nega_key",
+};
+
+static void dfd_val_type_handle(info_ctrl_t *info_ctrl, uint8_t *val, uint8_t is_write)
+{
+    uint8_t ori_val;
+
+    if (info_ctrl == NULL || val == NULL) {
+        DBG_DEBUG(DBG_ERROR, "input arguments error.\n");
+        return;
+    }
+
+    if (!is_write) {
+        switch (info_ctrl->val_type) {
+        case INFO_VAL_TYPE_NORMAL:
+            break;
+        case INFO_VAL_TYPE_FIXED_KEY:
+        case INFO_VAL_TYPE_NEGA_KEY:
+            ori_val = *val;
+            if (info_ctrl->pola == INFO_POLA_NEGA) {
+                ori_val = ~ori_val;
+            }
+            *val = ori_val & 0x01;
+            break;
+        default:
+            DBG_DEBUG(DBG_ERROR, "info ctrl val_type[%d] invalid.\n", info_ctrl->val_type);
+            break;
+        }
+    } else {
+        switch (info_ctrl->val_type) {
+        case INFO_VAL_TYPE_NORMAL:
+        case INFO_VAL_TYPE_FIXED_KEY:
+            break;
+        case INFO_VAL_TYPE_NEGA_KEY:
+            ori_val = *val;
+            if (info_ctrl->pola == INFO_POLA_NEGA) {
+                ori_val = ~ori_val;
+            }
+            *val = (~info_ctrl->addr & 0xfe) | (ori_val & 0x01);
+            break;
+        default:
+            DBG_DEBUG(DBG_ERROR, "info ctrl val_type[%d] invalid.\n", info_ctrl->val_type);
+            break;
+        }
+    }
+}
 
 /* Read information from the cpld */
 static int dfd_read_info_from_cpld(int32_t addr, int read_bytes, uint8_t *val)
@@ -168,6 +221,7 @@ static int dfd_read_info(info_src_t src, char *fpath, int32_t addr, int read_byt
     case INFO_SRC_OTHER_I2C:
         rv = dfd_read_info_from_other_i2c(addr, read_bytes, val);
         break;
+    case INFO_SRC_LOGIC_FILE:
     case INFO_SRC_FILE:
         rv = dfd_ko_read_file(fpath, addr, val, read_bytes);
         break;
@@ -198,6 +252,7 @@ static int dfd_write_info(info_src_t src, char *fpath, int32_t addr, int write_b
         rv = -1;
         DBG_DEBUG(DBG_ERROR, "not support write info to other i2c\n");
         break;
+    case INFO_SRC_LOGIC_FILE:
     case INFO_SRC_FILE:
         rv = dfd_ko_write_file(fpath, addr, val, write_bytes);
         break;
@@ -276,6 +331,9 @@ static int dfd_get_info_value(info_ctrl_t *info_ctrl, int *ret, info_num_buf_to_
             if (i != (info_ctrl->len - 1)) {
                 int_tmp <<= 8;
             }
+        }
+        if (info_ctrl->frmt == INFO_FRMT_BYTE) {
+            dfd_val_type_handle(info_ctrl, (uint8_t *)&int_tmp, 0);
         }
     } else if (IS_INFO_FRMT_NUM_STR(info_ctrl->frmt)) {
         val[readed_bytes] = '\0';
@@ -542,6 +600,9 @@ int dfd_info_set_int(uint64_t key, int val)
 
         /* Write data value conversion  */
         byte_tmp = (uint8_t)(val & 0xff);
+        if (info_ctrl->frmt == INFO_FRMT_BYTE) {
+            dfd_val_type_handle(info_ctrl, &byte_tmp, 1);
+        }
 
         /* Information valid mask */
         bit_mask = 0xff;
@@ -665,6 +726,21 @@ static long dfd_info_reg2data_mac_th5(uint64_t key, int data)
     return val;
 }
 
+static int dfd_info_reg2data_mac_th6(uint64_t key, int data)
+{
+    int tmp_val;
+    int val;
+
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th6, data=%d\n", data);
+
+    tmp_val = (data >> 4) | (data & 0xf);
+    val = 378850 - (((tmp_val - 2) * 259680) / 2000);
+
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th6, val=%d\n", val);
+
+    return val;
+}
+
 static long dfd_info_reg2data_mac_th4(uint64_t key, int data)
 {
     int tmp_val;
@@ -766,6 +842,9 @@ static int dfd_info_get_cpld_temperature(uint64_t key, int *value)
     case MAC_TH4:
         val = dfd_info_reg2data_mac_th4(key, temp_reg);
         break;
+    case MAC_TH6:
+        val = dfd_info_reg2data_mac_th6(key, temp_reg);
+        break;
     default:
         val = temp_reg;
         break;
@@ -795,7 +874,8 @@ static int dfd_info_get_sensor_value(uint64_t key, uint8_t *buf, int buf_len, in
         return -DFD_RV_DEV_NOTSUPPORT;
     }
 
-    if (DFD_CFG_ITEM_ID(key) == DFD_CFG_ITEM_HWMON_IN && info_ctrl->src == INFO_SRC_CPLD) {
+    if (DFD_CFG_ITEM_ID(key) == DFD_CFG_ITEM_HWMON_IN
+        && (info_ctrl->src == INFO_SRC_CPLD || info_ctrl->src == INFO_SRC_LOGIC_FILE)) {
         rv = dfd_info_get_cpld_voltage(key, &value);
         if (rv < 0) {
             DBG_DEBUG(DBG_ERROR, "get cpld voltage failed.key=0x%08llx, rv:%d\n", key, rv);
@@ -821,7 +901,8 @@ static int dfd_info_get_sensor_value(uint64_t key, uint8_t *buf, int buf_len, in
             memcpy(buf, buf_tmp, buf_real_len);
         }
         return buf_real_len;
-    } else if (DFD_CFG_ITEM_ID(key) == DFD_CFG_ITEM_HWMON_TEMP && info_ctrl->src == INFO_SRC_CPLD) {
+    } else if (DFD_CFG_ITEM_ID(key) == DFD_CFG_ITEM_HWMON_TEMP
+        && (info_ctrl->src == INFO_SRC_CPLD || info_ctrl->src == INFO_SRC_LOGIC_FILE)) {
         rv = dfd_info_get_cpld_temperature(key, &temp_value);
         if (rv < 0) {
             DBG_DEBUG(DBG_ERROR, "get cpld temperature failed.key=0x%08llx, rv:%d\n", key, rv);

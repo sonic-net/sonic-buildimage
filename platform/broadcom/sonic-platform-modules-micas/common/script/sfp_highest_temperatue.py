@@ -22,7 +22,7 @@ import syslog
 import subprocess
 import fcntl
 
-sfp_temperature_file = "/tmp/highest_sff_temp"
+sfp_temperature_file = "/etc/sonic/highest_sff_temp"
 
 SFP_TEMP_DEBUG_FILE = "/etc/.sfp_temp_debug_flag"
 SFP_TEMP_RECORD_DEBUG = 1
