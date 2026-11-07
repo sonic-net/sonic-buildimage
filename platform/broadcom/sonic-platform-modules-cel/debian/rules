@@ -34,6 +34,8 @@ override_dh_auto_build:
 		$(MAKE) $(MAKE_FLAGS) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
 		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
 			PYBUILD_NAME=$${mod} pybuild --build -d $${mod}; \
+			(cd $(MOD_SRC_DIR)/$${mod} && python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/build-$${mod}); \
+			echo "Finished making sonic_platform whl package for $$mod"; \
 		fi; \
 		if [ -f $(MOD_SRC_DIR)/$${mod}/pddf/setup.py ]; then \
 			python3 -m build --no-isolation --wheel --outdir $(MOD_SRC_DIR)/build-$${mod} $(MOD_SRC_DIR)/$${mod}/pddf; \
