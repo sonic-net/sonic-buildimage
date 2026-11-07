@@ -173,7 +173,7 @@
         {"chn": "5", "dev": "DPM2"},
         {"chn": "5", "dev": "DPM3"},
         {"chn": "6", "dev": "EEPROM1"},
-        {"chn": "6", "dev": "TMP464"}
+        {"chn": "6", "dev": "TMP464-1"}
       ],
       "channel_irq": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}[
         {"msi_domain": 0, "hw_irq": 8},
@@ -447,8 +447,8 @@
       ]
     }
   },
-  "TMP464": {
-    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464", "device_parent": "MULTIFPGAPCIE0"},
+  "TMP464-1": {
+    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-1", "device_parent": "MULTIFPGAPCIE0"},
     "i2c": {
       "topo_info": {"parent_bus": "0xa", "dev_addr": "0x48", "dev_type": "nh_tmp464"},
       "attr_list": [
@@ -459,7 +459,7 @@
     }
   },
   "TEMP1": {
-    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-CH1", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464", "nexthop_thermal_pid_domain": "None"},
+    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-1-CH1", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464-1", "nexthop_thermal_pid_domain": "None"},
     "dev_attr": {"display_name": "Switch Card Lower Rear"},
     "i2c": {
       "attr_list": [
@@ -470,7 +470,7 @@
     }
   },
   "TEMP2": {
-    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-CH2", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464", "nexthop_thermal_pid_domain": "None"},
+    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-1-CH2", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464-1", "nexthop_thermal_pid_domain": "None"},
     "dev_attr": {"display_name": "PSU 2 Intake"},
     "i2c": {
       "attr_list": [
@@ -481,7 +481,7 @@
     }
   },
   "TEMP3": {
-    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-CH3", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464", "nexthop_thermal_pid_domain": "asic"},
+    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-1-CH3", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464-1", "nexthop_thermal_pid_domain": "asic"},
     "dev_attr": {"display_name": "ASIC Diode 0"},
     "i2c": {
       "attr_list": [
@@ -492,7 +492,7 @@
     }
   },
   "TEMP4": {
-    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-CH4", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464", "nexthop_thermal_pid_domain": "asic"},
+    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-1-CH4", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464-1", "nexthop_thermal_pid_domain": "asic"},
     "dev_attr": {"display_name": "ASIC Diode 1"},
     "i2c": {
       "attr_list": [
@@ -503,7 +503,7 @@
     }
   },
   "TEMP5": {
-    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-CH5", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464", "nexthop_thermal_pid_domain": "asic"},
+    "dev_info": {"device_type": "TEMP_SENSOR", "device_name": "TMP464-1-CH5", "device_parent": "MULTIFPGAPCIE0", "virt_parent": "TMP464-1", "nexthop_thermal_pid_domain": "asic"},
     "dev_attr": {"display_name": "ASIC Diode 2"},
     "i2c": {
       "attr_list": [
