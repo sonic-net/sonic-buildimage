@@ -1,8 +1,10 @@
 """Source rendering after the real managed-snapshot validation gate."""
 import copy
 from pathlib import Path
+import runpy
+from unittest.mock import patch
 
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from jinja2 import Environment, FileSystemLoader, StrictUndefined, nodes
 import pytest
 
 from frrcfgd.isis_config import validate_srv6_config
@@ -155,3 +157,15 @@ def test_srv6_target_function_limit_is_not_a_master_schema_default():
     assert 'func-bits 21' in render(config)
     with pytest.raises(ValueError, match='20'):
         render(config, frr_version=(10, 5, 4))
+
+
+def test_srv6_canonical_template_is_packaged_and_included_once():
+    with patch('setuptools.setup') as setup:
+        runpy.run_path(str(FRAMEWORK / 'setup.py'), run_name='srv6_setup_metadata')
+    files = [name for _, names in setup.call_args.kwargs['data_files'] for name in names]
+    assert files.count('templates/srv6/srv6.conf.j2') == 1
+    environment = Environment()
+    parsed = environment.parse((FRAMEWORK / 'templates/frr/frr.conf.j2').read_text())
+    includes = [node.template.value for node in parsed.find_all(nodes.Include)]
+    assert includes.count('srv6.conf.j2') == 1
+    assert includes.index('isisd.conf.j2') < includes.index('srv6.conf.j2')
