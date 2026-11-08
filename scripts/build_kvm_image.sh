@@ -41,7 +41,7 @@ create_disk()
 
 prepare_installer_disk()
 {
-    fallocate -l 5120M $INSTALLER_DISK
+    fallocate -l 6144M $INSTALLER_DISK
 
     mkfs.ext2 $INSTALLER_DISK
 

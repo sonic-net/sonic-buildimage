@@ -11,6 +11,18 @@ endif
 
 PACKAGE_NAME = sys_sdk
 
+# The SDK CLI assets are published next to SOURCES/, so their base URL is the
+# source URL without that suffix. If the source URL does not end in /SOURCES,
+# set MLNX_SDK_RELEASE_BASE_URL on the make command line.
+MLNX_SDK_RELEASE_BASE_URL ?= $(patsubst %/SOURCES,%,$(MLNX_SDK_SOURCE_BASE_URL))
+
+# Patch drops name the wheel without the dash in the SDK version, so
+# 4.10.2026-001 ships sdkcli-4.10.2026001-wheel.tar.gz. Drops before
+# 4.10.1984-002 do not reliably publish all of SDKCLI_ASSETS.
+SDKCLI_WHEEL = sdkcli-$(subst -,,$(MLNX_SDK_VERSION))-wheel.tar.gz
+SDKCLI_ASSETS = $(SDKCLI_WHEEL) $(SDKCLI_WHEEL).sha256sum install.py uninstall_sdkcli.sh
+SDKCLI_BUNDLE_DIR = $(CURDIR)/builds/sdk_cli
+
 # slave.mk exports DEB_BUILD_OPTIONS when SONIC_PROFILING_ON=y (nostrip noopt)
 # or SONIC_DEBUGGING_ON=y (nostrip). CPack is not debhelper, so honor the same
 # flags here. CMAKE_BUILD_TYPE is a configure-time compile setting.
@@ -23,7 +35,11 @@ SDK_CMAKE_ARGS := \
 	-DSKIP_DEPMOD_IN_INSTALL_PHASE=on \
 	-DUSE_API_TESTER=OFF \
 	-DUSE_KERNEL=OFF \
-	-DCMAKE_PROJECT_VERSION=$(MLNX_SDK_DEB_VERSION)
+	-DCMAKE_PROJECT_VERSION=$(MLNX_SDK_DEB_VERSION) \
+	-DUSE_PYTHON_SDK_API=ON \
+	-DSDKCLI_INSTALL_MODE=venv \
+	-DSDKCLI_BUNDLE_DIR=$(SDKCLI_BUNDLE_DIR) \
+	-DSDKCLI_PYTHON=python3
 # CPack leaves the -dev control file without a Depends on the runtime package.
 # The component ids come from CMakeLists.txt: cpack_add_component(dev) and
 # CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "main". CPack resolves them to the
@@ -54,17 +70,43 @@ SDK_CPACK_ARGS += -D CPACK_DEBIAN_DEBUGINFO_PACKAGE=OFF
 endif
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	# get sources
+	set -eo pipefail
+
+	# Get SDK sources and the published CLI wheel bundle.
 	rm -rf $(PACKAGE_NAME)-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION)
+	rm -rf $(SDKCLI_BUNDLE_DIR)
+
+	# The SDK CLI assets are published next to SOURCES/. The release URL is derived
+	# by dropping that suffix, which does nothing for a source URL not ending in it.
+	if [ -z "$(MLNX_SDK_RELEASE_BASE_URL)" ] || [ "$(MLNX_SDK_RELEASE_BASE_URL)" = "$(MLNX_SDK_SOURCE_BASE_URL)" ]; then
+		echo "Error: cannot derive the SDK release URL from MLNX_SDK_SOURCE_BASE_URL='$(MLNX_SDK_SOURCE_BASE_URL)'." >&2
+		echo "It must end in /SOURCES, or MLNX_SDK_RELEASE_BASE_URL must be set on the make command line." >&2
+		exit 1
+	fi
+
+	@echo  'wget -c $(MLNX_SDK_SOURCE_BASE_URL)/$(PACKAGE_NAME)-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz'
+
 	wget -c $(MLNX_SDK_SOURCE_BASE_URL)/$(PACKAGE_NAME)-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz -O - | tar -xz
 
-	# build
+	mkdir -p $(SDKCLI_BUNDLE_DIR)
+	for asset in $(SDKCLI_ASSETS); do
+		url="$(MLNX_SDK_RELEASE_BASE_URL)/sdk_cli/$$asset"
+		if ! wget -c "$$url" -O "$(SDKCLI_BUNDLE_DIR)/$$asset"; then
+			echo "Error: cannot download the SDK CLI asset $$url" >&2
+			echo "SDK $(MLNX_SDK_VERSION) may not publish it, or the release layout or file naming may have changed." >&2
+			echo "The expected names and location are set by SDKCLI_ASSETS in $(CURDIR)/Makefile." >&2
+			exit 1
+		fi
+	done
+	(cd "$(SDKCLI_BUNDLE_DIR)" && sha256sum --check "$(SDKCLI_WHEEL).sha256sum")
+
+	# Build the SDK
 	rm -rf builds/cmake
 
-	KVERSION=$$(ls -t /lib/modules 2>/dev/null | head -1)
+	KVERSION=$$(ls -t /lib/modules 2>/dev/null | head -1 || true)
 
 	# Debian Trixie build containers might not have /lib/modules entries/kernel headers.
-	# Skip optional WJH eBPF build in such cases sonic doesn't use this feature.
+	# Skip optional WJH eBPF build in such cases; SONiC does not use this feature.
 	if [ -z "$$KVERSION" ] || [ ! -f "/lib/modules/$$KVERSION/source/include/linux/kconfig.h" ]; then
 		if [ -f "wjh_libs/CMakeLists.txt" ]; then
 			echo "Kernel headers are unavailable (KVERSION='$$KVERSION'), disabling WJH eBPF build"

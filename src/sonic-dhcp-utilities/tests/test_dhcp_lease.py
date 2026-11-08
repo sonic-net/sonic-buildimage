@@ -1,3 +1,6 @@
+import pytest
+from pathlib import Path
+
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler, LeaseHanlder
 from freezegun import freeze_time
@@ -34,20 +37,60 @@ expected_lease = {
 }
 
 
-def test_read_kea_lease_with_file_not_found(mock_swsscommon_dbconnector_init):
-    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
-        db_connector = DhcpDbConnector()
-        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector)
-        try:
-            kea_lease_handler._read()
-        except FileNotFoundError:
-            pass
+@pytest.mark.parametrize("initially_exists", [False, True])
+def test_read_kea_lease_retries_then_succeeds(
+        mock_swsscommon_dbconnector_init, tmp_path, initially_exists):
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_data = Path("tests/test_data/kea-lease.csv").read_bytes()
+    if initially_exists:
+        lease_file.write_bytes(lease_data)
+
+    def complete_lease_file(_):
+        lease_file.write_bytes(lease_data + b"\n")
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.time.sleep",
+               side_effect=complete_lease_file) as mock_sleep:
+        handler = KeaDhcp4LeaseHandler(DhcpDbConnector(), lease_file=lease_file)
+
+        assert handler._read() == expected_lease
+        mock_sleep.assert_called_once_with(0.05)
+        assert "attempt 1/3" in mock_syslog.call_args.args[1]
 
 
-def test_read_kea_lease(mock_swsscommon_dbconnector_init):
+@pytest.mark.parametrize(("initially_exists", "error_type"), [
+    (False, FileNotFoundError),
+    (True, ValueError),
+])
+def test_read_kea_lease_raises_after_retry_exhaustion(
+        mock_swsscommon_dbconnector_init, tmp_path, initially_exists, error_type):
+    lease_file = tmp_path / "kea-lease.csv"
+    if initially_exists:
+        lease_file.write_bytes(Path("tests/test_data/kea-lease.csv").read_bytes())
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch.object(swsscommon.DBConnector, "hget", return_value=None), \
+         patch.object(DhcpDbConnector, "get_state_db_table") as mock_get_state_db_table, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog, \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.time.sleep") as mock_sleep:
+        handler = KeaDhcp4LeaseHandler(DhcpDbConnector(), lease_file=lease_file)
+
+        with pytest.raises(error_type):
+            handler.update_lease()
+        assert not handler.lock.locked()
+        mock_get_state_db_table.assert_not_called()
+        assert mock_sleep.call_args_list == [call(0.05), call(0.05)]
+        assert [f"attempt {attempt}/3" in item.args[1]
+                for attempt, item in enumerate(mock_syslog.call_args_list, 1)] == [True] * 3
+
+
+def test_read_kea_lease(mock_swsscommon_dbconnector_init, tmp_path):
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_bytes(Path("tests/test_data/kea-lease.csv").read_bytes() + b"\n")
     with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
         db_connector = DhcpDbConnector()
-        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file="tests/test_data/kea-lease.csv")
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
         # Verify whether lease information read is as expected
         lease = kea_lease_handler._read()
         assert lease == expected_lease
@@ -162,6 +205,7 @@ def test_update_kea_lease(mock_swsscommon_dbconnector_init, mock_swsscommon_tabl
         "Vlan1000|10:70:fd:b6:13:18": {}
     }
     with patch.object(swsscommon.Table, "getKeys"), \
+         patch.object(swsscommon.DBConnector, "hget", return_value=None), \
          patch.object(swsscommon.DBConnector, "hset") as mock_hset, \
          patch.object(KeaDhcp4LeaseHandler, "_read", MagicMock(return_value=tested_lease)), \
          patch.object(DhcpDbConnector, "get_state_db_table",
@@ -186,6 +230,34 @@ def test_update_kea_lease(mock_swsscommon_dbconnector_init, mock_swsscommon_tabl
         ])
         kea_lease_handler.update_lease()
         mock_sleep.assert_called_once_with(2)
+
+
+def test_update_kea_lease_acknowledges_request_read_before_lease_file(
+        mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
+    order = []
+    with patch.object(swsscommon.Table, "getKeys"), \
+         patch.object(swsscommon.DBConnector, "hget", side_effect=lambda *args: order.append("request") or "R1"), \
+         patch.object(swsscommon.DBConnector, "hset") as mock_hset, \
+         patch.object(swsscommon.DBConnector, "delete"), \
+         patch.object(KeaDhcp4LeaseHandler, "_read", side_effect=lambda: order.append("read") or {}), \
+         patch.object(DhcpDbConnector, "get_state_db_table", return_value={"Vlan1000|aa:bb:cc:dd:ee:ff": {}}):
+        kea_lease_handler = KeaDhcp4LeaseHandler(DhcpDbConnector())
+        kea_lease_handler.update_lease()
+    assert order == ["request", "read"]
+    assert mock_hset.call_args_list == [call("DHCP_SERVER_IPV4_LEASE_SYNC|GLOBAL", "completed_id", "R1")]
+
+
+def test_update_kea_lease_failure_releases_lock_without_acknowledgement(
+        mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
+    with patch.object(swsscommon.Table, "getKeys"), \
+         patch.object(swsscommon.DBConnector, "hget", return_value="R1"), \
+         patch.object(swsscommon.DBConnector, "hset") as mock_hset, \
+         patch.object(KeaDhcp4LeaseHandler, "_read", side_effect=FileNotFoundError):
+        kea_lease_handler = KeaDhcp4LeaseHandler(DhcpDbConnector())
+        with pytest.raises(FileNotFoundError):
+            kea_lease_handler.update_lease()
+    assert not kea_lease_handler.lock.locked()
+    mock_hset.assert_not_called()
 
 
 def test_no_implement(mock_swsscommon_dbconnector_init):
