@@ -2930,48 +2930,10 @@ class BGPConfigDaemon:
                         self.bgp_confed_peers[vrf] = copy.copy(self.upd_confed_peers)
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
-            elif table == 'SRV6_MY_LOCATORS':
-                if not del_table:
-                    locator_name = prefix
-                    prefix = data['prefix']
-                    cmd = ['vtysh', '-c', 'configure terminal',
-                           '-c', 'segment-routing', '-c', 'srv6', '-c', 'locators',
-                           '-c', 'locator {}'.format(locator_name),
-                           '-c', 'prefix {} block-len {} node-len {} func-bits {}'.format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)]
-                    if not self.__run_command(table, cmd):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATORS config command')
-                        continue
-                    self.__apply_config_op_success(data)
-            elif table == 'SRV6_MY_SOURCE':
-                source = data['source-address']
-                cmd = ['vtysh', '-c', 'configure terminal',
-                       '-c', 'segment-routing', '-c', 'srv6', '-c', 'encapsulation',
-                       '-c', 'source-address {}'.format(source.data)]
-                if not self.__run_command(table, cmd):
-                    syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 encap config command {}'.format(cmd))
+            elif table in ('SRV6_MY_LOCATORS', 'SRV6_MY_SOURCE', 'SRV6_MY_SIDS'):
+                if not self._apply_srv6(table, prefix, key, del_table, data):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running {} config command'.format(table))
                     continue
-                if not del_table:
-                    self.__apply_config_op_success(data)
-            elif table == 'SRV6_MY_SIDS':
-                if key is None:
-                    syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_SIDS table')
-                    continue
-                if not del_table:
-                    cmd = ['vtysh', '-c', 'configure terminal',
-                           '-c', 'segment-routing', '-c', 'srv6',
-                           '-c', 'static-sids']
-                    uDTAction = ["uDT46", "uDT4", "uDT6"]
-                    if data['action'].data in uDTAction:
-                        cmd += ['-c', 'sid {} locator {} behavior {} vrf {}'.format(key, prefix, data['action'].data, data['decap_vrf'].data)]
-                    elif data['action'].data == 'uN':
-                        cmd += ['-c', 'sid {} locator {} behavior {} '.format(key, prefix, data['action'].data)]
-                    else:
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command, not support action %s'.format(data['action'].data))
-                        continue
-                    if not self.__run_command(table, cmd):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 SRV6_MY_SIDS config command')
-                        continue
-                    self.__apply_config_op_success(data)
 
             elif table == 'BGP_GLOBALS_AF':
                 af, ip_type = key.lower().split('_')
@@ -4091,6 +4053,74 @@ class BGPConfigDaemon:
                 # if one key doesn't exist, clean the whole key set
                 for key in key_set:
                     data.pop(key, None)
+
+    def _apply_srv6(self, table, prefix, key, deleted, data):
+        """Apply existing SRv6 rows without interpreting policy-only rows as SIDs."""
+        current = {name: value.data for name, value in data.items()
+                   if value.op != CachedDataWithOp.OP_DELETE}
+        row_key = prefix if key is None else prefix + '|' + key
+        old = self.table_data_cache.get(ExtConfigDBConnector.get_table_key(table, row_key), {})
+        commands = ['configure terminal', 'segment-routing', 'srv6']
+        try:
+            if table == 'SRV6_MY_LOCATORS':
+                commands.append('locators')
+                if deleted:
+                    commands.append('no locator ' + prefix)
+                else:
+                    block = int(current.get('block_len', 32))
+                    node = int(current.get('node_len', 16))
+                    function = int(current.get('func_len', 16))
+                    # The existing native locator command has neither VRF nor
+                    # argument-length configuration. Do not acknowledge a value
+                    # that cannot be represented by the command we send.
+                    if current.get('vrf', 'default') != 'default' or int(current.get('arg_len', 0)):
+                        raise ValueError('unsupported locator VRF or argument length')
+                    if not (16 <= block <= 64 and 0 <= node <= 64 and 0 <= function <= 64):
+                        raise ValueError('unsupported locator geometry')
+                    value = current['prefix']
+                    network = ipaddress.IPv6Network(
+                        value if '/' in value else value + '/' + str(block + node), strict=False)
+                    if network.prefixlen != block + node or network.prefixlen + function > 128:
+                        raise ValueError('locator prefix length does not match geometry')
+                    commands.extend(['locator ' + prefix,
+                                     'prefix {} block-len {} node-len {} func-bits {}'.format(
+                                         network, block, node, function)])
+            elif table == 'SRV6_MY_SOURCE':
+                commands.append('encapsulation')
+                if deleted or 'source-address' not in current:
+                    commands.append('no source-address')
+                else:
+                    commands.append('source-address ' + str(ipaddress.IPv6Address(current['source-address'])))
+            else:
+                if key is None:
+                    raise ValueError('missing static SID prefix')
+                action = current.get('action')
+                owns_old_sid = old.get('action') in ('uN', 'uDT46', 'uDT4', 'uDT6')
+                if deleted or action is None:
+                    # Policy-only rows belong to the existing decapsulation
+                    # policy consumer. Only a known action-bearing row owns a
+                    # native static SID which this event can withdraw.
+                    if owns_old_sid:
+                        commands.extend(['static-sids', 'no sid ' + key])
+                elif action in ('uDT46', 'uDT4', 'uDT6'):
+                    commands.extend(['static-sids',
+                                     'sid {} locator {} behavior {} vrf {}'.format(
+                                         key, prefix, action, current.get('decap_vrf', 'default'))])
+                elif action == 'uN':
+                    commands.extend(['static-sids', 'sid {} locator {} behavior uN'.format(key, prefix)])
+                else:
+                    raise ValueError('unsupported static SID action')
+        except (KeyError, TypeError, ValueError) as error:
+            syslog.syslog(syslog.LOG_ERR, 'invalid {} configuration: {}'.format(table, error))
+            return False
+        if len(commands) > 3:
+            command = ['vtysh']
+            for item in commands:
+                command.extend(['-c', item])
+            if not self.__run_command(table, command):
+                return False
+        self.__apply_config_op_success(data)
+        return True
 
     def __update_cache_data(self, table_key, data):
         cached_data = self.table_data_cache.setdefault(table_key, {})
