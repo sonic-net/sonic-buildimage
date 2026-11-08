@@ -190,3 +190,93 @@ def test_srv6_failed_set_does_not_ack_applied_cache(srv6_daemon, table, key, row
     daemon.bgp_table_handler_common(table, key, copy.deepcopy(row))
     run.assert_called_once()
     assert cache_key(table, key) not in daemon.table_data_cache
+
+
+def apply_sid_operation(daemon, operation):
+    rows = {'set': {'action': 'uN', 'decap_dscp_mode': 'pipe'},
+            'delete': None, 'policy': {'decap_dscp_mode': 'pipe'}}
+    daemon.bgp_table_handler_common(SID[0], SID[1], rows[operation])
+
+
+@pytest.mark.parametrize('operation', ['set', 'delete', 'policy'])
+@pytest.mark.parametrize('location', ['desired', 'cache'])
+@pytest.mark.parametrize('other_action', ['uN', 'uA'])
+def test_srv6_native_sid_admission_blocks_other_actions(
+        srv6_daemon, operation, location, other_action):
+    daemon, run, cache_key = srv6_daemon
+    table, key = SID[:2]
+    daemon.table_data_cache[cache_key(table, key)] = {
+        'action': 'uN', 'decap_dscp_mode': 'uniform'}
+    foreign_key = 'LOC2|2001:db8:100:a::/128'
+    foreign = {'action': other_action}
+    if location == 'desired':
+        daemon.config_db.get_table.return_value = {foreign_key: foreign}
+    else:
+        daemon.table_data_cache[cache_key(table, foreign_key)] = foreign
+    before = copy.deepcopy(daemon.table_data_cache)
+    apply_sid_operation(daemon, operation)
+    run.assert_not_called()
+    assert daemon.table_data_cache == before
+
+
+@pytest.mark.parametrize('operation', ['set', 'delete', 'policy'])
+@pytest.mark.parametrize('location', ['desired', 'cache'])
+def test_srv6_native_sid_admission_allows_policy_only_shared_prefix(
+        srv6_daemon, operation, location):
+    daemon, run, cache_key = srv6_daemon
+    table, key = SID[:2]
+    daemon.table_data_cache[cache_key(table, key)] = {
+        'action': 'uN', 'decap_dscp_mode': 'uniform'}
+    foreign_key = 'LOC2|2001:db8:100:a::/128'
+    foreign = {'decap_dscp_mode': 'pipe'}
+    if location == 'desired':
+        daemon.config_db.get_table.return_value = {foreign_key: foreign.copy()}
+    else:
+        daemon.table_data_cache[cache_key(table, foreign_key)] = foreign.copy()
+    apply_sid_operation(daemon, operation)
+    run.assert_called_once()
+    if operation == 'delete':
+        assert cache_key(table, key) not in daemon.table_data_cache
+    elif operation == 'policy':
+        assert daemon.table_data_cache[cache_key(table, key)] == {'decap_dscp_mode': 'pipe'}
+    else:
+        assert daemon.table_data_cache[cache_key(table, key)] == {
+            'action': 'uN', 'decap_dscp_mode': 'pipe'}
+    if location == 'cache':
+        assert daemon.table_data_cache[cache_key(table, foreign_key)] == foreign
+
+
+@pytest.mark.parametrize('operation', ['set', 'delete', 'policy'])
+@pytest.mark.parametrize('location', ['desired-tuple', 'cache'])
+def test_srv6_native_sid_admission_normalizes_ipv6_prefix_aliases(
+        srv6_daemon, operation, location):
+    daemon, run, cache_key = srv6_daemon
+    table, key = SID[:2]
+    daemon.table_data_cache[cache_key(table, key)] = {'action': 'uN'}
+    alias = '2001:0DB8:0100:000A:0:0:0:0/128'
+    if location == 'desired-tuple':
+        daemon.config_db.get_table.return_value = {('LOC2', alias): {'action': 'uN'}}
+    else:
+        daemon.table_data_cache[cache_key(table, 'LOC2|' + alias)] = {'action': 'uN'}
+    before = copy.deepcopy(daemon.table_data_cache)
+    apply_sid_operation(daemon, operation)
+    run.assert_not_called()
+    assert daemon.table_data_cache == before
+
+
+@pytest.mark.parametrize('snapshot', [
+    None, [], {'malformed-key': {'action': 'uN'}},
+    {'LOC2|2001:db8:100:a::/128': None}, RuntimeError('snapshot unavailable'),
+])
+def test_srv6_native_sid_admission_snapshot_failure_is_closed(srv6_daemon, snapshot):
+    daemon, run, cache_key = srv6_daemon
+    table, key = SID[:2]
+    daemon.table_data_cache[cache_key(table, key)] = {'action': 'uN'}
+    if isinstance(snapshot, Exception):
+        daemon.config_db.get_table.side_effect = snapshot
+    else:
+        daemon.config_db.get_table.return_value = snapshot
+    before = copy.deepcopy(daemon.table_data_cache)
+    apply_sid_operation(daemon, 'delete')
+    run.assert_not_called()
+    assert daemon.table_data_cache == before

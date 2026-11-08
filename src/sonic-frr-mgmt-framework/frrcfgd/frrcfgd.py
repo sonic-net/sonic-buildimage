@@ -4216,6 +4216,45 @@ class BGPConfigDaemon:
                 for key in key_set:
                     data.pop(key, None)
 
+    def _srv6_static_sid_is_unambiguous(self, row_key):
+        """Protect native SID-prefix identity across ConfigDB locator keys."""
+        def identity(serialized_key):
+            if not isinstance(serialized_key, str) or '|' not in serialized_key:
+                raise ValueError('invalid static SID row key')
+            locator, sid_prefix = serialized_key.split('|', 1)
+            if not locator or '/' not in sid_prefix:
+                raise ValueError('invalid static SID row key')
+            return ipaddress.IPv6Network(sid_prefix, strict=False)
+
+        try:
+            target = identity(row_key)
+            desired = self.config_db.get_table('SRV6_MY_SIDS')
+            if not isinstance(desired, dict):
+                raise ValueError('invalid static SID desired snapshot')
+            # ConfigDB returns compound keys as tuples; applied-cache keys are
+            # already serialized. Match the existing get_table_data pattern.
+            rows = [(self.config_db.serialize_key(key), row) for key, row in desired.items()]
+            table_prefix = ExtConfigDBConnector.get_table_key('SRV6_MY_SIDS', '')
+            rows.extend((key[len(table_prefix):], row)
+                        for key, row in self.table_data_cache.items()
+                        if isinstance(key, str) and key.startswith(table_prefix))
+            for other_key, row in rows:
+                if not isinstance(row, dict):
+                    raise ValueError('invalid static SID row data')
+                other_identity = identity(other_key)
+                # An unrecognized action can still be owned by another
+                # consumer. Only an absent action is a policy-only row.
+                if other_key != row_key and 'action' in row and other_identity == target:
+                    syslog.syslog(syslog.LOG_ERR, 'conflicting static SID prefix {}: {} and {}'.format(
+                        target, row_key, other_key))
+                    return False
+        except Exception as error:
+            # A failed or malformed admission read is not evidence that no
+            # conflicting native SID exists.
+            syslog.syslog(syslog.LOG_ERR, 'cannot check static SID identity: {}'.format(error))
+            return False
+        return True
+
     def _apply_srv6(self, table, prefix, key, deleted, data):
         """Apply existing SRv6 rows without interpreting policy-only rows as SIDs."""
         current = {name: value.data for name, value in data.items()
@@ -4257,7 +4296,12 @@ class BGPConfigDaemon:
                 if key is None:
                     raise ValueError('missing static SID prefix')
                 action = current.get('action')
+                withdraw = deleted or action is None
                 owns_old_sid = old.get('action') in ('uN', 'uDT46', 'uDT4', 'uDT6')
+                if ((withdraw and owns_old_sid) or
+                        (not withdraw and action in ('uN', 'uDT46', 'uDT4', 'uDT6'))):
+                    if not self._srv6_static_sid_is_unambiguous(row_key):
+                        return False
                 if deleted or action is None:
                     # Policy-only rows belong to the existing decapsulation
                     # policy consumer. Only a known action-bearing row owns a
