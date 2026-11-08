@@ -29,6 +29,16 @@ enough for those checks and for sonic-mgmt / containercfgd / monit:
                       "X: stopped" / "X: updated process group" (supervisor's wording). Removed
                       groups, and changed groups with a critical program, stay notice-only:
                       stderr "X: changed|removed; restart the container to apply".
+  signal <SIG> <names>  send a signal to the supervised pid (os.kill of the pid s6-svstat reports):
+                      "X: signalled"; stock errors "X: ERROR (no such process|bad signal name|
+                      not running)" (rc 1 / 1 / 3).  SIG is a name with or without the SIG prefix,
+                      any case, or a number.  `group:*` and `all` signal only running processes.
+  pid [name|all]      the pid of one program ("0" and rc 3 when it is not running, "No such process
+                      X" and rc 1 for an unknown name), of every program, or (no argument) of the
+                      supervisor itself (s6-svscan).
+  reload, tail, maintail, avail, and any other subcommand: not implemented.  They used to succeed
+                      silently, which hid the problem from the caller; they now print a notice on
+                      stderr and still exit 0 so that probes that only look at the exit code keep working.
 
 The s6 state is read with `s6-svstat -o up,wantedup,pid,updownfor,exitcode,signum`
 (machine-readable); the legacy human-readable format is only a fallback for an s6
@@ -44,6 +54,7 @@ import io
 import os
 import re
 import shutil
+import signal
 import sys
 import subprocess
 import time
@@ -791,6 +802,145 @@ def cmd_update(args):
     return rc
 
 
+# ---------------------------------------------------------------- signal / pid
+
+# supervisor's SIGNALLABLE_STATES (STOPPING does not exist here: a stop is synchronous)
+SIGNALLABLE = ("RUNNING", "STARTING")
+SIGNAL_HELP = (
+    "signal <signal name> <name>\t\tSignal a process",
+    "signal <signal name> <gname>:*\t\tSignal all processes in a group",
+    "signal <signal name> <name> <name>\tSignal multiple processes or groups",
+    "signal <signal name> all\t\tSignal all processes",
+)
+
+
+def _signal_number(value):
+    """supervisor.datatypes.signal_number: a signal name (any case, "SIG" prefix optional) or a number
+    -> int, or None when it is not a signal."""
+    try:
+        num = int(value)
+    except (TypeError, ValueError):
+        name = str(value).strip().upper()
+        if not name.startswith("SIG"):
+            name = "SIG" + name
+        try:
+            return signal.Signals[name].value
+        except KeyError:
+            return None
+    return num if num in {s.value for s in signal.Signals} else None
+
+
+def _live_pid(svc, path):
+    """-> (state, pid): pid is the supervised process (0 when it is not up)."""
+    state, _, st = proc_state(svc, path)
+    return state, (st["pid"] if st is not None and st["up"] and st["pid"] > 0 else 0)
+
+
+def signal_one(name, svc, path, sig):
+    """supervisor's signalProcess for one process; prints supervisor's line.  -> exit code."""
+    num = _signal_number(sig)
+    if num is None:                                  # supervisor checks the signal before the state
+        print("%s: ERROR (bad signal name)" % name)
+        return RC_FAILED
+    state, pid = _live_pid(svc, path)
+    if state not in SIGNALLABLE or not pid:
+        print("%s: ERROR (not running)" % name)
+        return RC_NOT_RUNNING
+    try:
+        os.kill(pid, num)
+    except ProcessLookupError:                       # exited just now on its own: supervisor reports success too
+        pass
+    except OSError as e:
+        print("%s: ERROR (unknown problem sending sig %s (%d): %s)" % (name, sig, pid, e))
+        return RC_FAILED
+    print("%s: signalled" % name)
+    return RC_OK
+
+
+def cmd_signal(args):
+    """supervisorctl signal <signal> <name|group:*|all> [...]  (see the module docstring)."""
+    if len(args) < 2:
+        print("Error: signal requires a signal name and a process name")
+        for line in SIGNAL_HELP:
+            print(line)
+        return RC_FAILED
+    sig, names = args[0], args[1:]
+    svcs = _services()
+    running = lambda s: proc_state(s[1], s[2])[0] in SIGNALLABLE        # noqa: E731
+    rc = RC_OK
+    if "all" in names:
+        for name, svc, path in [s for s in svcs if running(s)]:
+            rc = max(rc, signal_one(name, svc, path, sig))
+        return rc
+    for tok in names:
+        hit = _match(tok, svcs)
+        if not hit:
+            print("%s: ERROR (%s)" % (tok, "no such group" if tok.endswith(":*") or tok.endswith(":")
+                                  else "no such process"))
+            rc = max(rc, RC_FAILED)
+            continue
+        if tok.endswith(":*") or tok.endswith(":"):       # a group only signals what is running
+            hit = [s for s in hit if running(s)]
+        for name, svc, path in hit:
+            rc = max(rc, signal_one(name, svc, path, sig))
+    return rc
+
+
+def _supervisor_pid():
+    """supervisor's `pid` with no argument = the supervisor process: here s6-svscan (PID 1 under s6-overlay)."""
+    try:
+        with open("/proc/1/comm") as f:
+            if f.read().strip().startswith("s6"):
+                return 1
+    except OSError:
+        pass
+    found = []
+    try:
+        for d in os.listdir("/proc"):
+            if d.isdigit():
+                try:
+                    with open("/proc/%s/comm" % d) as f:
+                        if f.read().strip() == "s6-svscan":
+                            found.append(int(d))
+                except OSError:
+                    continue
+    except OSError:
+        pass
+    return min(found) if found else 1
+
+
+def cmd_pid(args):
+    """supervisorctl pid [name ...|all]: no argument = the supervisor, `all` = every program (0 for a down
+    one), else each name: its pid ("0" + rc 3 when not running, "No such process X" + rc 1 when unknown)."""
+    if not args:
+        print(_supervisor_pid())
+        return RC_OK
+    svcs = _services()
+    if "all" in args:
+        for _, svc, path in svcs:
+            print(_live_pid(svc, path)[1])
+        return RC_OK
+    rc = RC_OK
+    for tok in args:
+        hit = [s for s in svcs if tok in (s[0], s[1])]     # exact program, no wildcards (getProcessInfo)
+        if not hit:
+            print("No such process %s" % tok)
+            rc = max(rc, RC_FAILED)
+            continue
+        pid = _live_pid(hit[0][1], hit[0][2])[1]
+        print(pid)
+        if pid == 0:
+            rc = max(rc, RC_NOT_RUNNING)
+    return rc
+
+
+def cmd_unsupported(cmd):
+    """reload / tail / maintail / avail / anything else: not implemented.  Say so on stderr (it used to be a silent
+    success that hid the gap from the caller) but keep rc 0 so probes that only look at the exit code still work."""
+    sys.stderr.write("supervisorctl: '%s' is not supported by the s6 shim; ignored (no-op, rc 0)\n" % cmd)
+    return RC_OK
+
+
 REAL_SUPERVISORCTL = ("/usr/local/bin/supervisorctl.real", "/usr/bin/supervisorctl.real")
 
 
@@ -819,9 +969,12 @@ def main(argv):
         return cmd_reread(argv[1:])
     if argv[0] == "update":
         return cmd_update(argv[1:])
-    # Unknown subcommands (e.g. tail): no-op success so callers
-    # that probe supervisorctl don't error out.
-    return 0
+    if argv[0] == "signal":
+        return cmd_signal(argv[1:])
+    if argv[0] == "pid":
+        return cmd_pid(argv[1:])
+    # reload, tail, maintail, avail and anything else: loud no-op (stderr notice, rc 0)
+    return cmd_unsupported(argv[0])
 
 
 if __name__ == "__main__":
