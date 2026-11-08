@@ -9,6 +9,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'call_route_map' in rm_val %}
  call {{rm_val['call_route_map']}}
 {% endif %}
+{# ON_MATCH_GOTO without a set_on_match_goto target is rejected by the YANG 'must' on          #}
+{# set_on_match_action, so it cannot reach here from a validated config; render nothing rather #}
+{# than an incomplete 'on-match goto' clause that FRR would reject.                            #}
 {% if 'set_on_match_action' in rm_val %}
 {% if rm_val['set_on_match_action'] == 'ON_MATCH_NEXT' %}
  on-match next
