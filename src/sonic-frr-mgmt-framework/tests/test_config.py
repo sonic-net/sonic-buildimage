@@ -590,6 +590,189 @@ def test_peer_group_rerender_after_delete(run_cmd):
         'update-source dropped on peer-group re-create (cache not evicted on delete)'
 
 
+def _fake_config_db(daemon, db):
+    """Back the daemon's CONFIG_DB reads with ``{table: {key_tuple: row}}``."""
+    daemon.config_db.serialize_key = lambda key_tuple: '|'.join(key_tuple)
+    daemon.config_db.get_table = lambda table: copy.deepcopy(db.get(table, {}))
+    daemon.config_db.get_entry = lambda table, key: copy.deepcopy(db.get(table, {}).get(key, {}))
+
+
+class _FakeBgpd:
+    """Fails 'neighbor <peer> peer-group <pg>' as bgpd does when <pg> does not exist,
+    or when neither the peer nor the group has a remote-as."""
+    def __init__(self):
+        self.groups = set()
+        self.remote_as = set()
+
+    def __call__(self, table, argv, *args, **kwargs):
+        cmd = argv[-1].strip() if isinstance(argv, list) else ''
+        words = cmd.split()
+        if len(words) == 3 and words[0] == 'neighbor' and words[2] == 'peer-group':
+            self.groups.add(words[1])
+        elif len(words) == 4 and words[0] == 'neighbor' and words[2] == 'peer-group':
+            return words[3] in self.groups and bool({words[1], words[3]} & self.remote_as)
+        elif len(words) == 4 and words[0] == 'neighbor' and words[2] == 'remote-as':
+            self.remote_as.add(words[1])
+        return True
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_neighbor_af_cache_cleared_on_delete(run_cmd):
+    """Deleting a neighbor must evict every BGP_NEIGHBOR_AF cache row, l2vpn_evpn included."""
+    daemon = _make_daemon()
+    _fake_config_db(daemon, {})
+    _seed_bgp_asn(daemon, '100')
+    nbr_hdlr = _handler(daemon, 'BGP_NEIGHBOR')
+    af_hdlr = _handler(daemon, 'BGP_NEIGHBOR_AF')
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'asn': '200'})
+    af_hdlr('BGP_NEIGHBOR_AF', 'default|10.0.0.1|l2vpn_evpn', {'admin_status': 'true'})
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', None)
+    assert not [k for k in daemon.table_data_cache if '10.0.0.1' in k], daemon.table_data_cache
+
+    run_cmd.reset_mock()
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'asn': '200'})
+    af_hdlr('BGP_NEIGHBOR_AF', 'default|10.0.0.1|l2vpn_evpn', {'admin_status': 'true'})
+    assert 'neighbor 10.0.0.1 activate' in _collect_vtysh_lines(run_cmd)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_type_readd_reapplies_neighbor_af(run_cmd):
+    """A neighbor re-created via peer_type (no asn) must re-apply its BGP_NEIGHBOR_AF rows."""
+    daemon = _make_daemon()
+    _fake_config_db(daemon, {'BGP_NEIGHBOR_AF': {
+        ('default', '10.0.0.1', 'ipv4_unicast'): {'admin_status': 'true'}}})
+    _seed_bgp_asn(daemon, '100')
+    nbr_hdlr = _handler(daemon, 'BGP_NEIGHBOR')
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_type': 'external'})
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', None)
+
+    run_cmd.reset_mock()
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_type': 'external'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'neighbor 10.0.0.1 remote-as external' in lines, lines
+    assert 'neighbor 10.0.0.1 activate' in lines, lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_remote_as_swap_recreates(run_cmd):
+    """Swapping asn/peer_type/peer_group_name makes bgpd drop and re-create the peer, so the
+    whole row and its BGP_NEIGHBOR_AF rows must be rendered again."""
+    for old, new in [({'peer_type': 'external'}, {'peer_group_name': 'PG1'}),
+                     ({'asn': '300'}, {'peer_group_name': 'PG1'}),
+                     ({'asn': '300'}, {'peer_type': 'external'})]:
+        run_cmd.reset_mock()
+        daemon = _make_daemon()
+        old_row, new_row = dict(old, local_addr='1.1.1.1'), dict(new, local_addr='1.1.1.1')
+        db = {'BGP_NEIGHBOR': {('default', '10.0.0.1'): old_row},
+              'BGP_NEIGHBOR_AF': {('default', '10.0.0.1', 'ipv4_unicast'): {'admin_status': 'true'}}}
+        _fake_config_db(daemon, db)
+        _seed_bgp_asn(daemon, '100')
+        _handler(daemon, 'BGP_PEER_GROUP')('BGP_PEER_GROUP', 'default|PG1', {'asn': '200'})
+        nbr_hdlr = _handler(daemon, 'BGP_NEIGHBOR')
+        nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', dict(old_row))
+
+        run_cmd.reset_mock()
+        db['BGP_NEIGHBOR'][('default', '10.0.0.1')] = new_row
+        nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', dict(new_row))
+        lines = _collect_vtysh_lines(run_cmd)
+        if 'peer_type' in new:
+            assert 'neighbor 10.0.0.1 remote-as external' in lines, (old, lines)
+        else:
+            assert 'neighbor 10.0.0.1 peer-group PG1' in lines, (old, lines)
+            assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs, old
+        assert 'neighbor 10.0.0.1 update-source 1.1.1.1' in lines, (old, lines)
+        assert 'neighbor 10.0.0.1 activate' in lines, (old, lines)
+        assert daemon.table_data_cache['BGP_NEIGHBOR&&default|10.0.0.1'] == new_row, old
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_remote_as_swap_recreates(run_cmd):
+    """A peer-group swapping asn for peer_type is re-rendered, with its members."""
+    daemon = _make_daemon()
+    db = {'BGP_PEER_GROUP': {('default', 'PG1'): {'asn': '200', 'local_addr': '1.1.1.1'}},
+          'BGP_NEIGHBOR': {('default', '10.0.0.1'): {'peer_group_name': 'PG1'}}}
+    _fake_config_db(daemon, db)
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'asn': '200', 'local_addr': '1.1.1.1'})
+
+    run_cmd.reset_mock()
+    db['BGP_PEER_GROUP'][('default', 'PG1')] = {'peer_type': 'external', 'local_addr': '1.1.1.1'}
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'peer_type': 'external', 'local_addr': '1.1.1.1'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'neighbor PG1 remote-as external' in lines, lines
+    assert 'neighbor PG1 update-source 1.1.1.1' in lines, lines
+    assert 'neighbor 10.0.0.1 peer-group PG1' in lines, lines
+    assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_peer_type_update_reapplies_neighbors(run_cmd):
+    """Giving an existing peer-group a peer_type must re-bind neighbors bgpd rejected
+    while the group had no remote-as."""
+    run_cmd.side_effect = _FakeBgpd()
+    daemon = _make_daemon()
+    db = {'BGP_NEIGHBOR': {('default', '10.0.0.1'): {'peer_group_name': 'PG1'}}}
+    _fake_config_db(daemon, db)
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'local_addr': '1.1.1.1'})
+    _handler(daemon, 'BGP_NEIGHBOR')('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_group_name': 'PG1'})
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'local_addr': '1.1.1.1', 'peer_type': 'external'})
+    assert 'neighbor 10.0.0.1 peer-group PG1' in _collect_vtysh_lines(run_cmd)
+    assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_readd_reapplies_af(run_cmd):
+    """Re-adding a peer-group must re-apply its BGP_PEER_GROUP_AF rows still in CONFIG_DB."""
+    daemon = _make_daemon()
+    _fake_config_db(daemon, {'BGP_PEER_GROUP_AF': {
+        ('default', 'PG1', 'ipv4_unicast'): {'admin_status': 'true'}}})
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    af_hdlr = _handler(daemon, 'BGP_PEER_GROUP_AF')
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'asn': '200'})
+    af_hdlr('BGP_PEER_GROUP_AF', 'default|PG1|ipv4_unicast', {'admin_status': 'true'})
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', None)
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'asn': '200'})
+    assert 'neighbor PG1 activate' in _collect_vtysh_lines(run_cmd)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_neighbor_before_peer_group(run_cmd):
+    """``config load`` delivers BGP_NEIGHBOR before BGP_PEER_GROUP. A neighbor bgpd rejected
+    because its group did not exist yet must be bound once the group is created, whether the
+    group carries asn, peer_type, or no remote-as at all."""
+    for pg_data, nbr_data in [({'asn': '200'}, {'peer_group_name': 'PG1'}),
+                              ({'peer_type': 'external'}, {'peer_group_name': 'PG1'}),
+                              ({'local_addr': '1.1.1.1'}, {'asn': '200', 'peer_group_name': 'PG1'})]:
+        run_cmd.reset_mock()
+        run_cmd.side_effect = _FakeBgpd()
+        daemon = _make_daemon()
+        db = {'BGP_NEIGHBOR': {('default', '10.0.0.1'): nbr_data},
+              'BGP_NEIGHBOR_AF': {('default', '10.0.0.1', 'ipv4_unicast'): {'admin_status': 'true'}}}
+        _fake_config_db(daemon, db)
+        _seed_bgp_asn(daemon, '100')
+        _handler(daemon, 'BGP_NEIGHBOR')('BGP_NEIGHBOR', 'default|10.0.0.1', dict(nbr_data))
+        _handler(daemon, 'BGP_PEER_GROUP')('BGP_PEER_GROUP', 'default|PG1', dict(pg_data))
+        lines = _collect_vtysh_lines(run_cmd)
+        assert lines.count('neighbor 10.0.0.1 peer-group PG1') == 2, (pg_data, lines)
+        assert 'neighbor 10.0.0.1 activate' in lines, (pg_data, lines)
+        assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs, pg_data
+
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_device_metadata_zebra_knobs(run_cmd):

@@ -2742,27 +2742,13 @@ class BGPConfigDaemon:
         return True
 
     def __cleanup_nbr_cache(self, vrf, nbr, is_peer_grp=False):
-        # A peer-group's cached rows live under BGP_PEER_GROUP / BGP_PEER_GROUP_AF, a
-        # neighbor's under BGP_NEIGHBOR / BGP_NEIGHBOR_AF. When a peer-group is deleted we must
-        # evict the BGP_PEER_GROUP rows -- previously this always popped the BGP_NEIGHBOR keys,
-        # so the peer-group cache row was orphaned. On a later re-create (e.g. a listen-range /
-        # SLB reconfiguration deletes then re-adds the peer-group) the incremental diff compared
-        # the incoming row against that stale cache row, resolved every field to OP_NONE, and
-        # silently dropped the peer-group's attributes (update-source, remote-as, ...) from the
-        # FRR render even though CONFIG_DB still carried them. See sonic-buildimage#28482.
-        if is_peer_grp:
-            base_tbl, af_tbl = 'BGP_PEER_GROUP', 'BGP_PEER_GROUP_AF'
-            af_list = ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']
-        else:
-            base_tbl, af_tbl = 'BGP_NEIGHBOR', 'BGP_NEIGHBOR_AF'
-            af_list = ['ipv4_unicast', 'ipv6_unicast']
-        nbr_key = ExtConfigDBConnector.get_table_key(base_tbl,
-                                            self.config_db.serialize_key((vrf, nbr)))
-        self.table_data_cache.pop(nbr_key, None)
-        for af in af_list:
-            nbr_af_key = ExtConfigDBConnector.get_table_key(af_tbl,
-                                                self.config_db.serialize_key((vrf, nbr, af)))
-            self.table_data_cache.pop(nbr_af_key, None)
+        # Evict the row and every address-family row, so a re-create renders in full.
+        base_tbl = 'BGP_PEER_GROUP' if is_peer_grp else 'BGP_NEIGHBOR'
+        nbr_key = self.config_db.serialize_key((vrf, nbr))
+        self.table_data_cache.pop(ExtConfigDBConnector.get_table_key(base_tbl, nbr_key), None)
+        af_key_pfx = ExtConfigDBConnector.get_table_key(base_tbl + '_AF', nbr_key) + '|'
+        for cache_key in [k for k in self.table_data_cache if k.startswith(af_key_pfx)]:
+            del self.table_data_cache[cache_key]
 
     def __delete_vrf_neighbor(self, vrf, peer, data, is_peer_grp):
         if is_peer_grp:
@@ -2834,18 +2820,16 @@ class BGPConfigDaemon:
     @staticmethod
     def __nbr_impl_action(data, peer, is_pg):
         if is_pg:
-            chk_attrs = ['asn']
+            chk_attrs = ['asn', 'peer_type']
         elif BGPConfigDaemon.__peer_is_ip(peer):
-            chk_attrs = ['asn', 'peer_group_name']
+            chk_attrs = ['asn', 'peer_type', 'peer_group_name']
         else:
             chk_attrs = ['peer_group_name']
-        for attr in chk_attrs:
-            val = data.get(attr, None)
-            if val is not None:
-                if val.op == CachedDataWithOp.OP_ADD:
-                    return 'apply'
-                elif val.op == CachedDataWithOp.OP_DELETE:
-                    return 'delete'
+        ops = {data[attr].op for attr in chk_attrs if attr in data}
+        if CachedDataWithOp.OP_DELETE in ops:
+            return 'recreate' if CachedDataWithOp.OP_ADD in ops else 'delete'
+        if CachedDataWithOp.OP_ADD in ops:
+            return 'apply'
         return None
 
     def __apply_config_op_success(self, data, cfg_data={}):
@@ -3079,6 +3063,7 @@ class BGPConfigDaemon:
             elif table == 'BGP_NEIGHBOR' or table == 'BGP_PEER_GROUP':
                 is_peer_group = table == 'BGP_PEER_GROUP'
                 if not del_table:
+                    pg_created = False
                     if is_peer_group:
                         # if peer group is not created, create it before setting other attributes
                         if key not in self.bgp_peer_group.setdefault(vrf, {}):
@@ -3089,6 +3074,7 @@ class BGPConfigDaemon:
                                 syslog.syslog(syslog.LOG_ERR, 'failed to create peer-group %s for VRF %s' % (key, vrf))
                                 continue
                             self.bgp_peer_group[vrf][key] = BGPPeerGroup(vrf)
+                            pg_created = True
                     elif not self.__peer_is_ip(key):
                         if key not in self.bgp_intf_nbr.setdefault(vrf, set()):
                             command = ['vtysh', '-c', 'configure terminal',
@@ -3122,6 +3108,9 @@ class BGPConfigDaemon:
                         else:
                             peer_grp.ref_nbrs.discard(key)
                     nbr_action = self.__nbr_impl_action(data, key, is_peer_group)
+                    if pg_created:
+                        # neighbors may have been rejected before the group existed
+                        nbr_action = 'apply'
                     if nbr_action == 'delete':
                         if not is_peer_group and self.__peer_is_ip(key):
                             # delete asn or peer_group will delete all neighbor
@@ -3129,6 +3118,12 @@ class BGPConfigDaemon:
                         elif is_peer_group:
                             # clear associated neighbor list in cache
                             self.__delete_pg_neighbors(vrf, key)
+                    elif nbr_action == 'recreate':
+                        # bgpd dropped the peer with its old remote-as: render the row again
+                        if is_peer_group:
+                            self.__delete_pg_neighbors(vrf, key)
+                        self.__delete_vrf_neighbor(vrf, key, data, is_peer_group)
+                        self.__apply_dep_vrf_table(vrf, table, key)
                     elif nbr_action == 'apply':
                         if is_peer_group:
                             syslog.syslog(syslog.LOG_DEBUG, 'apply attributes to FRR for vrf %s peer_group %s' % (vrf, key))
@@ -3136,10 +3131,9 @@ class BGPConfigDaemon:
                             self.__apply_dep_vrf_table(vrf, 'BGP_GLOBALS_LISTEN_PREFIX', match = match_pg)
                             match_nbr = lambda data: data.get('peer_group_name', None) == key
                             self.__apply_dep_vrf_table(vrf, 'BGP_NEIGHBOR', match = match_nbr)
-                        else:
-                            for af in ['ipv4_unicast', 'ipv6_unicast']:
-                                syslog.syslog(syslog.LOG_DEBUG, 'apply attributes to FRR for vrf %s neighbor %s af %s' % (vrf, key, af))
-                                self.__apply_dep_vrf_table(vrf, 'BGP_NEIGHBOR_AF', key, af)
+                        for af in sorted(self.bgp_afi_safi_values):
+                            syslog.syslog(syslog.LOG_DEBUG, 'apply attributes to FRR for vrf %s %s %s af %s' % (vrf, table, key, af))
+                            self.__apply_dep_vrf_table(vrf, table + '_AF', key, af)
                 else:
                     # Neighbor is deleted
                     if is_peer_group:
