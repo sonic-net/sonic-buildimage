@@ -902,3 +902,28 @@ def test_bgp_confederation_template():
         BGP_GLOBALS={'default': {'local_asn': '65100'}}
     )
     assert 'bgp confederation' not in result
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_srv6_ua_sid(run_cmd):
+    """uA SIDs render like bgpcfgd: interface is required, adj becomes the nexthop."""
+    daemon = _make_daemon()
+    sid_hdlr = _handler(daemon, 'SRV6_MY_SIDS')
+    sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe01::/64',
+             {'action': 'uA', 'interface': 'Ethernet0', 'adj': '2001:db8::1'})
+    sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe02::/64',
+             {'action': 'uA', 'interface': 'Ethernet4'})
+    lines = [line.strip() for line in _collect_vtysh_lines(run_cmd)]
+    assert ('sid fcbb:bbbb:1:fe01::/64 locator loc1 behavior uA interface Ethernet0 '
+            'nexthop 2001:db8::1') in lines, lines
+    assert 'sid fcbb:bbbb:1:fe02::/64 locator loc1 behavior uA interface Ethernet4' in lines, lines
+
+    run_cmd.reset_mock()
+    with patch('frrcfgd.frrcfgd.syslog.syslog') as log:
+        sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe03::/64', {'action': 'uA'})
+        sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe04::/64', {'action': 'uB'})
+    assert not _collect_vtysh_lines(run_cmd)
+    errors = [c[0][1] for c in log.call_args_list if c[0][0] == 3]
+    assert any('interface' in msg and 'fe03' in msg for msg in errors), errors
+    assert any('uB' in msg for msg in errors), errors

@@ -3034,8 +3034,16 @@ class BGPConfigDaemon:
                         cmd += ['-c', 'sid {} locator {} behavior {} vrf {}'.format(key, prefix, data['action'].data, data['decap_vrf'].data)]
                     elif data['action'].data == 'uN':
                         cmd += ['-c', 'sid {} locator {} behavior {} '.format(key, prefix, data['action'].data)]
+                    elif data['action'].data == 'uA':
+                        if 'interface' not in data:
+                            syslog.syslog(syslog.LOG_ERR, 'SRV6_MY_SIDS {}|{}: uA requires interface'.format(prefix, key))
+                            continue
+                        sid_cmd = 'sid {} locator {} behavior uA interface {}'.format(key, prefix, data['interface'].data)
+                        if 'adj' in data:
+                            sid_cmd += ' nexthop {}'.format(data['adj'].data)
+                        cmd += ['-c', sid_cmd]
                     else:
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command, not support action %s'.format(data['action'].data))
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command, not support action {}'.format(data['action'].data))
                         continue
                     if not self.__run_command(table, cmd):
                         syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 SRV6_MY_SIDS config command')
