@@ -3995,7 +3995,7 @@ ConfigDB stores scalar values as strings; YANG validates the following types.
 | ISIS_GLOBALS | level | level-1, level-2, level-1-2 | level-1-2 |
 | ISIS_GLOBALS | dynamic_hostname | boolean | true |
 | ISIS_GLOBALS | ipv6_multi_topology | boolean | true |
-| ISIS_GLOBALS_TIMERS | lsp_mtu | uint16, 128–4352 | 1492 |
+| ISIS_GLOBALS_TIMERS | lsp_mtu | uint16, 128–4352 | 1497 |
 | ISIS_GLOBALS_TIMERS | lsp_refresh_interval | uint16, 1–65235 seconds | 900 |
 | ISIS_GLOBALS_TIMERS | lsp_lifetime | uint16, 350–65535 seconds | 1200 |
 | ISIS_INTERFACE | enabled | boolean | false |
@@ -4012,3 +4012,5 @@ IPv4 and IPv6 bindings can be enabled independently. Both flags default to true
 to preserve existing dual-stack configurations. Set ipv4_enabled to false for an
 IPv6-only interface. With both flags false, the row is retained without an IS-IS
 circuit; interface attributes are applied when an address family is enabled again.
+Resetting lsp_mtu restores the native FRR default of 1497; explicitly configured
+valid values are preserved.

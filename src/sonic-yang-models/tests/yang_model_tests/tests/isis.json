@@ -58,6 +58,24 @@
             "ipv4_enabled"
         ]
     },
+    "ISIS_MTU_EXPLICIT_1492": {
+        "desc": "Preserve an explicitly configured IS-IS LSP MTU of 1492.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_GLOBALS_TIMERS/ISIS_GLOBALS_TIMERS_LIST[vrf_name='default']/vrf_name",
+            "key": "sonic-isis-global:lsp_mtu",
+            "value": 1492
+        }
+    },
+    "ISIS_MTU_IMPLICIT_DEFAULT": {
+        "desc": "Verify the implicit native-aligned IS-IS LSP MTU default is 1497.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_GLOBALS_TIMERS/ISIS_GLOBALS_TIMERS_LIST[vrf_name='default']/vrf_name",
+            "key": "sonic-isis-global:lsp_mtu",
+            "value": 1497
+        }
+    },
     "ISIS_IPV4_IMPLICIT_DEFAULT": {
         "desc": "Verify omitted IS-IS IPv4 binding defaults to true for compatibility.",
         "eStrKey": "Verify",

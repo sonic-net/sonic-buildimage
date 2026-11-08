@@ -97,7 +97,7 @@ module sonic-isis-global {
                     type uint16 {
                         range "128..4352";
                     }
-                    default 1492;
+                    default 1497;
                     description "Maximum transmission size constraint for localized Link State PDU generation.";
                 }
 
