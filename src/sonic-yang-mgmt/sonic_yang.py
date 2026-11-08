@@ -9,6 +9,12 @@ from typing import Optional, Dict, List, Tuple, Set, Any, cast
 from sonic_yang_ext import SonicYangExtMixin, SonicYangException
 from sonic_yang_path import SonicYangPathMixin
 
+# String-valued references are not included in libyang's leafref backlinks.
+_STRING_REFERENCE_TARGETS = {
+    "/sonic-vnet:sonic-vnet/VNET/VNET_LIST/vxlan_tunnel_list":
+        "/sonic-vxlan:sonic-vxlan/VXLAN_TUNNEL/VXLAN_TUNNEL_LIST/name",
+}
+
 """
 Yang schema and data tree python APIs based on libyang python
 Here, sonic_yang_ext_mixin extends funtionality of sonic_yang,
@@ -635,6 +641,12 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
                     self.backlinkMap[target] = list()
                 self.backlinkMap[target].append(path)
 
+        modules = {module.name() for module in self.ctx}
+        for source, target in _STRING_REFERENCE_TARGETS.items():
+            module_name = source.split(':', 1)[0].lstrip('/')
+            if module_name in modules and next(self.ctx.find_path(source), None) is not None:
+                self.backlinkMap.setdefault(target, []).append(source)
+
     """
     find_schema_dependencies():  find the schema dependencies from schema xpath
     input:    schema_xpath     of the schema node
@@ -816,6 +828,15 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         if self.root is None:
             return
         for lref in lreflist:
+            if lref in _STRING_REFERENCE_TARGETS:
+                for dnode in self.root.find_all(lref):
+                    if required_value is not None and required_value not in dnode.value().split(','):
+                        continue
+                    path = dnode.path()
+                    if path not in ref_set:
+                        ref_set.add(path)
+                        ref_list.append(path)
+                continue
             try:
                 for dnode in self.root.find_all(lref):
                     if required_value is not None:
