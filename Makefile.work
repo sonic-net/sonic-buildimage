@@ -58,6 +58,9 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
+#  * ENABLE_RAM2DISK: Enable persistence of in-memory /var/log contents to disk
+#  *                 Default: y
+#  *                 Values: y,n
 #  * UNATTENDED: Don't wait for interactive input from terminal, setting this
 #  *             value to anything will enable it
 #  *             Default: unset
@@ -703,6 +706,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SLAVE_TAG=$(SLAVE_TAG) \
                            SLAVE_BASE_TAG=$(SLAVE_BASE_TAG) \
                            ENABLE_ZTP=$(ENABLE_ZTP) \
+                           ENABLE_RAM2DISK=$(ENABLE_RAM2DISK) \
                            INCLUDE_PDE=$(INCLUDE_PDE) \
                            SHUTDOWN_BGP_ON_START=$(SHUTDOWN_BGP_ON_START) \
                            INCLUDE_KUBERNETES=$(INCLUDE_KUBERNETES) \
