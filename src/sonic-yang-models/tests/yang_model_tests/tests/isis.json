@@ -44,5 +44,27 @@
     },
     "ISIS_VALID_VRF": {
         "desc": "ISIS VALID VRF"
+    },
+    "ISIS_IPV6_ONLY": {
+        "desc": "Load an IPv6-only IS-IS interface without enabling IPv4."
+    },
+    "ISIS_BOTH_AF_DISABLED": {
+        "desc": "Accept a retained IS-IS interface row with both address families disabled."
+    },
+    "ISIS_IPV4_INVALID_BOOL": {
+        "desc": "Reject an invalid IS-IS IPv4 binding boolean.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "ipv4_enabled"
+        ]
+    },
+    "ISIS_IPV4_IMPLICIT_DEFAULT": {
+        "desc": "Verify omitted IS-IS IPv4 binding defaults to true for compatibility.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-interface:sonic-isis-interface/ISIS_INTERFACE/ISIS_INTERFACE_LIST[ifname='Loopback0']/ifname",
+            "key": "sonic-isis-interface:ipv4_enabled",
+            "value": true
+        }
     }
 }

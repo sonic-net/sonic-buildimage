@@ -55,6 +55,12 @@ module sonic-isis-interface {
                     description "Administrative state of the IS-IS interface binding.";
                 }
 
+                leaf ipv4_enabled {
+                    type boolean;
+                    default true;
+                    description "Enable the IPv4 IS-IS interface binding.";
+                }
+
                 leaf ipv6_enabled {
                     type boolean;
                     default true;

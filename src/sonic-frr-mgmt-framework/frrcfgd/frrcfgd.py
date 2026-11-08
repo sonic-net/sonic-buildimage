@@ -2510,6 +2510,8 @@ class BGPConfigDaemon:
             for name, entry in self.config_db.get_table('ISIS_INTERFACE').items():
                 vrf = self.isis_interface_vrfs.get(name, 'default')
                 if (entry.get('enabled') == 'true' and
+                        (str(entry.get('ipv4_enabled', 'true')).lower() == 'true' or
+                         str(entry.get('ipv6_enabled', 'true')).lower() == 'true') and
                         self.config_db.get_entry('ISIS_GLOBALS', vrf).get('enabled') == 'true'):
                     self.isis_interface_bindings[name] = vrf
 
@@ -4141,7 +4143,10 @@ class BGPConfigDaemon:
             bound_vrf = self.isis_interface_bindings.get(key)
             pending_vrfs = self.isis_pending_bindings.get(key, set())
             commands.append('interface ' + key)
+            ipv4 = str(current.get('ipv4_enabled', 'true')).lower() == 'true'
+            ipv6 = str(current.get('ipv6_enabled', 'true')).lower() == 'true'
             enabled = (not deleted and vrf is not None and
+                       (ipv4 or ipv6) and
                        str(current.get('enabled', 'false')).lower() == 'true' and
                        self.config_db.get_entry('ISIS_GLOBALS', vrf).get('enabled') == 'true')
             remove_vrfs = set(pending_vrfs)
@@ -4154,8 +4159,7 @@ class BGPConfigDaemon:
             if vrf is None:
                 vrf = bound_vrf or 'default'
             if enabled:
-                commands.append('ip router isis ' + vrf)
-                ipv6 = str(current.get('ipv6_enabled', 'true')).lower() == 'true'
+                commands.append(('' if ipv4 else 'no ') + 'ip router isis ' + vrf)
                 commands.append(('' if ipv6 else 'no ') + 'ipv6 router isis ' + vrf)
                 commands.append(('' if str(current.get('passive', 'false')).lower() == 'true'
                                  else 'no ') + 'isis passive')

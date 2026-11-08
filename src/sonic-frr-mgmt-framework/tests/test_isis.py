@@ -3,6 +3,7 @@ import copy
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from jinja2 import Environment, FileSystemLoader
 
 from .test_config import mockmapping
@@ -273,3 +274,93 @@ def test_isis_parent_reenable_restores_retained_timers():
     commands = run.call_args[0][1]
     assert commands.index('lsp-refresh-interval 100') < commands.index('max-lsp-lifetime 500')
     assert 'lsp-mtu 1400' in commands
+
+
+@pytest.mark.parametrize('ipv4,ipv6', [(True, True), (False, True), (True, False), (False, False)])
+@patch.dict('sys.modules', **mockmapping)
+def test_isis_independent_address_family_bindings(ipv4, ipv6):
+    """Changing either AF must remove its old binding and preserve the other."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, CachedDataWithOp
+    daemon = object.__new__(BGPConfigDaemon)
+    daemon.isis_interface_vrfs = {'Ethernet0': 'default'}
+    daemon.isis_interface_bindings = {'Ethernet0': 'default'}
+    daemon.isis_pending_bindings = {}
+    daemon.table_data_cache = {}
+    daemon.config_db = MagicMock()
+    daemon.config_db.get_entry.return_value = {'enabled': 'true'}
+    run = MagicMock(return_value=True)
+    daemon._BGPConfigDaemon__run_command = run
+    row = {'enabled': 'true', 'ipv4_enabled': str(ipv4).lower(),
+           'ipv6_enabled': str(ipv6).lower(), 'metric': '30',
+           'passive': 'true', 'circuit_type': 'p2p'}
+    data = {name: CachedDataWithOp(value, CachedDataWithOp.OP_UPDATE)
+            for name, value in row.items()}
+    assert daemon._apply_isis('ISIS_INTERFACE', 'Ethernet0', False, data)
+    commands = run.call_args[0][1][2::2]
+    for enabled, command in ((ipv4, 'ip router isis default'),
+                             (ipv6, 'ipv6 router isis default')):
+        assert (command if enabled else 'no ' + command) in commands
+        assert ('no ' + command if enabled else command) not in commands
+    if ipv4 or ipv6:
+        assert daemon.isis_interface_bindings == {'Ethernet0': 'default'}
+        assert 'isis metric 30' in commands
+    else:
+        assert not daemon.isis_interface_bindings
+        assert not any(command.startswith(('isis ', 'no isis ')) for command in commands)
+    assert all(item.status == CachedDataWithOp.STAT_SUCC for item in data.values())
+
+
+@pytest.mark.parametrize('ipv4,ipv6', [(True, True), (False, True), (True, False), (False, False)])
+def test_isis_template_independent_address_families(ipv4, ipv6):
+    templates = Path(__file__).resolve().parents[1] / 'templates' / 'isisd'
+    template = Environment(loader=FileSystemLoader(str(templates))).get_template('isisd.conf.j2')
+    row = {'enabled': 'true', 'ipv4_enabled': str(ipv4).lower(),
+           'ipv6_enabled': str(ipv6).lower(), 'passive': 'true',
+           'metric': '30', 'circuit_type': 'p2p'}
+    output = template.render(ISIS_GLOBALS={'default': {'enabled': 'true'}},
+                             ISIS_INTERFACE={'Ethernet0': row})
+    commands = [line.strip() for line in output.splitlines()]
+    assert ('ip router isis default' in commands) == ipv4
+    assert ('ipv6 router isis default' in commands) == ipv6
+    assert ('isis metric 30' in commands) == (ipv4 or ipv6)
+    assert ('isis passive' in commands) == (ipv4 or ipv6)
+    assert ('isis network point-to-point' in commands) == (ipv4 or ipv6)
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_isis_address_family_reset_restores_legacy_defaults():
+    from frrcfgd.frrcfgd import BGPConfigDaemon, CachedDataWithOp
+    daemon = object.__new__(BGPConfigDaemon)
+    daemon.isis_interface_vrfs = {}
+    daemon.isis_interface_bindings = {}
+    daemon.isis_pending_bindings = {}
+    daemon.table_data_cache = {}
+    daemon.config_db = MagicMock()
+    daemon.config_db.get_entry.return_value = {'enabled': 'true'}
+    run = MagicMock(return_value=True)
+    daemon._BGPConfigDaemon__run_command = run
+    data = {'enabled': CachedDataWithOp('true', CachedDataWithOp.OP_UPDATE),
+            'ipv4_enabled': CachedDataWithOp('false', CachedDataWithOp.OP_DELETE),
+            'ipv6_enabled': CachedDataWithOp('false', CachedDataWithOp.OP_DELETE)}
+    assert daemon._apply_isis('ISIS_INTERFACE', 'Ethernet0', False, data)
+    commands = run.call_args[0][1][2::2]
+    assert 'ip router isis default' in commands
+    assert 'ipv6 router isis default' in commands
+    assert daemon.isis_interface_bindings == {'Ethernet0': 'default'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_isis_startup_does_not_record_disabled_address_families():
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    tables = {'ISIS_GLOBALS': {'default': {'enabled': 'true'}},
+              'ISIS_INTERFACE': {
+                  'Ethernet0': {'enabled': 'true', 'ipv4_enabled': 'false', 'ipv6_enabled': 'false'},
+                  'Ethernet4': {'enabled': 'true', 'ipv4_enabled': 'false', 'ipv6_enabled': 'true'},
+                  'Ethernet8': {'enabled': 'true'}}}
+    db = MagicMock()
+    db.get_table.side_effect = lambda table: copy.deepcopy(tables.get(table, {}))
+    db.get_entry.side_effect = lambda table, key: copy.deepcopy(tables.get(table, {}).get(key, {}))
+    db.get_table_data.return_value = {}
+    with patch('frrcfgd.frrcfgd.ExtConfigDBConnector', return_value=db):
+        daemon = BGPConfigDaemon()
+    assert daemon.isis_interface_bindings == {'Ethernet4': 'default', 'Ethernet8': 'default'}

@@ -82,8 +82,13 @@ interface {{ ifname }}
 {% if ISIS_GLOBALS is defined and ISIS_GLOBALS[vrf_name] is defined and
       ISIS_GLOBALS[vrf_name].enabled|default("false")|string|lower == "true" and
       isis_intf.enabled|default("false")|string|lower == "true" %}
+{% set ipv4_enabled = isis_intf.ipv4_enabled|default("true")|string|lower == "true" %}
+{% set ipv6_enabled = isis_intf.ipv6_enabled|default("true")|string|lower == "true" %}
+{% if ipv4_enabled or ipv6_enabled %}
+{% if ipv4_enabled %}
  ip router isis {{ vrf_name }}
-{% if isis_intf.ipv6_enabled|default("true")|string|lower == "true" %}
+{% endif %}
+{% if ipv6_enabled %}
  ipv6 router isis {{ vrf_name }}
 {% endif %}
 {% if isis_intf.passive is defined and isis_intf.passive|string|lower == "true" %}
@@ -97,6 +102,7 @@ interface {{ ifname }}
  isis network point-to-point
 {% elif isis_intf.circuit_type == "lan" %}
  no isis network point-to-point
+{% endif %}
 {% endif %}
 {% endif %}
 {% endif %}

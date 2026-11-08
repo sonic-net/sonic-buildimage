@@ -3999,6 +3999,7 @@ ConfigDB stores scalar values as strings; YANG validates the following types.
 | ISIS_GLOBALS_TIMERS | lsp_refresh_interval | uint16, 1–65235 seconds | 900 |
 | ISIS_GLOBALS_TIMERS | lsp_lifetime | uint16, 350–65535 seconds | 1200 |
 | ISIS_INTERFACE | enabled | boolean | false |
+| ISIS_INTERFACE | ipv4_enabled | boolean | true |
 | ISIS_INTERFACE | ipv6_enabled | boolean | true |
 | ISIS_INTERFACE | metric | uint32, 1–16777215 | 10 |
 | ISIS_INTERFACE | circuit_type | p2p, lan | lan |
@@ -4006,3 +4007,8 @@ ConfigDB stores scalar values as strings; YANG validates the following types.
 
 Lifetime must be at least refresh interval + 300 seconds, including when either
 field is omitted and its default applies. CLI reset operations enforce this too.
+
+IPv4 and IPv6 bindings can be enabled independently. Both flags default to true
+to preserve existing dual-stack configurations. Set ipv4_enabled to false for an
+IPv6-only interface. With both flags false, the row is retained without an IS-IS
+circuit; interface attributes are applied when an address family is enabled again.
