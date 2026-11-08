@@ -27,6 +27,11 @@ actually do:
     or a non-zero startsecs -> longrun, startsecs=0 -> oneshot (a daemon must
     never become a oneshot or s6-rc bring-up would block forever);
   * user=<u> -> s6-setuidgid <u>;
+  * the container's EMPTY environment variables (SONiC's docker_image_ctl passes `-e NAMESPACE_ID=`
+    on a single-ASIC box) are re-created for every program: `with-contenv` loads
+    /run/s6/container_environment with s6-envdir, which REMOVES a variable whose file is empty,
+    while supervisord's children inherit it as set-but-empty (containercfgd does
+    `os.environ['NAMESPACE_ID']` and dies with a KeyError otherwise; see empty_container_env);
   * startsecs/startretries (supervisord defaults 1 / 3): every longrun gets a `supervisor-meta`
     file for the supervisorctl shim (like `supervisor-name`, under data/ because that is all
     s6-rc-compile copies into the live servicedir; see _write_shim_file); a non-critical longrun with startsecs > 0 also stamps its
@@ -553,6 +558,39 @@ def critical_finish_script(name, listener, mode, codes):
 
 
 
+# Where s6-overlay keeps the container environment `with-contenv` loads (one file per variable).
+CONTAINER_ENV_DIR = "/run/s6/container_environment"
+_ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def empty_container_env(environ=None, envdir=CONTAINER_ENV_DIR):
+    """Sorted names of the container environment variables that are set to the EMPTY string.
+
+    `with-contenv` is `emptyenv -p s6-envdir -Lfn /run/s6/container_environment`, and s6-envdir
+    removes a variable whose file is empty (https://skarnet.org/software/s6/s6-envdir.html), so a
+    program started through it never sees such a variable, where supervisord's children inherit it
+    set-but-empty.  SONiC relies on the difference: docker_image_ctl.j2 starts every container with
+    `-e NAMESPACE_ID=` (empty on a single-ASIC box) and `containercfgd` reads
+    `os.environ['NAMESPACE_ID']`, so under s6 it died with `KeyError: 'NAMESPACE_ID'` within
+    milliseconds and `supervisorctl start containercfgd` answered "ERROR (abnormal termination)"
+    (`config syslog rate-limit-feature enable` therefore never worked on an s6 container).
+
+    The names come from the zero-byte files of `envdir` when it exists (that is exactly what
+    with-contenv drops: used after boot, e.g. by `supervisorctl update`), else from the empty
+    entries of `environ` (the PID 1 conversion runs before /init has written the directory)."""
+    environ = os.environ if environ is None else environ
+    if envdir and os.path.isdir(envdir):
+        try:
+            names = [n for n in os.listdir(envdir)
+                     if os.path.isfile(os.path.join(envdir, n))
+                     and os.path.getsize(os.path.join(envdir, n)) == 0]
+        except OSError:
+            names = []
+    else:
+        names = [n for n, v in environ.items() if v == ""]
+    return sorted(n for n in names if _ENV_NAME_RE.match(n))
+
+
 def _command_line(argv, user, env_pairs=None, syslog_tag=None):
     parts = ["with-contenv"]
     if syslog_tag:
@@ -602,9 +640,12 @@ def _write_shim_file(sd, fname, text, longrun=True):
         _write(os.path.join(sd, SHIM_DATA_DIR, fname), text)
 
 
-def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of=None, listener=None):
-    """Write the s6-rc source tree. `listener` = listener_options(sections) (None: no auto_restart gate)."""
+def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_of=None, listener=None,
+             empty_env=None):
+    """Write the s6-rc source tree. `listener` = listener_options(sections) (None: no auto_restart gate).
+    `empty_env` = names of empty container variables to re-create (None: empty_container_env())."""
     group_of = group_of or {}
+    empty_env = empty_container_env() if empty_env is None else empty_env
     os.makedirs(outdir, exist_ok=True)
     # Only remove service directories this converter created on a previous
     # run (tracked via MANAGED_MARKER); leave every s6-overlay-owned service
@@ -634,6 +675,9 @@ def generate(progs, prog_order, deps, types, critical, outdir, bundledir, group_
         argv = shlex.split(expand_supervisor(progs[pname]["command"], names))
         user = progs[pname].get("user")
         env_pairs = parse_environment(progs[pname].get("environment", ""), names)
+        # empty container variables first, so an explicit environment= entry of the same name wins
+        explicit = {k for k, _ in env_pairs}
+        env_pairs = [(k, "") for k in empty_env if k not in explicit] + env_pairs
         syslog_tag = pname if _truthy(progs[pname].get("stdout_syslog", "false")) else None
         cmd = _command_line(argv, user, env_pairs, syslog_tag)
         if t == "longrun":
