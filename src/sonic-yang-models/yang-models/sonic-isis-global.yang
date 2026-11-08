@@ -7,6 +7,13 @@ module sonic-isis-global {
         prefix vrf;
     }
 
+    import sonic-srv6 { prefix srv6; }
+    import sonic-port { prefix port; }
+    import sonic-portchannel { prefix lag; }
+    import sonic-vlan { prefix vlan; }
+    import sonic-loopback-interface { prefix lo; }
+    import sonic-vlan-sub-interface { prefix sub; }
+
     organization
         "SONiC";
 
@@ -78,6 +85,38 @@ module sonic-isis-global {
                     type boolean;
                     default true;
                     description "Enable Dynamic Hostname exchange via TLV 137 in link-state packets.";
+                }
+
+                leaf srv6_locator {
+                    type leafref {
+                        path "/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST/srv6:locator_name";
+                    }
+                    description "SRv6 locator bound to this IS-IS process; absence means no SRv6 binding.";
+                }
+
+                leaf srv6_interface {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST/vlan:name";
+                        }
+                        type leafref {
+                            path "/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST/lo:name";
+                        }
+                        type leafref {
+                            path "/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST/sub:name";
+                        }
+                    }
+                    description "Existing interface used for the bound IS-IS SRv6 SIDs.";
+                }
+
+                must "(not(srv6_locator) and not(srv6_interface)) or (srv6_locator and srv6_interface and vrf_name = 'default')" {
+                    error-message "IS-IS SRv6 requires locator and interface in the default VRF";
                 }
             }
         }
