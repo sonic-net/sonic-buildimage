@@ -8,6 +8,7 @@ After=interfaces-config.service
 After=swss{% if use_instance_deps %}@%i{% endif %}.service
 BindsTo=sonic.target
 After=sonic.target
+ConditionPathExists=!/run/sonic/shutdown-in-progress
 
 [Service]
 User=root

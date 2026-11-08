@@ -7,6 +7,7 @@ Requires=config-setup.service
 After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
+ConditionPathExists=!/run/sonic/shutdown-in-progress
 After=swss{% if use_instance_deps %}@%i{% endif %}.service
 After=interfaces-config.service
 StartLimitIntervalSec=1200
