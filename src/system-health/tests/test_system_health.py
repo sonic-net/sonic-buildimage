@@ -252,10 +252,14 @@ def test_optional_containers(mock_check_docker_image):
     assert expected == {'configured'}
 
 
+@pytest.mark.parametrize('active_state', ['active', 'reloading', 'refreshing'])
 @patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
 @patch('health_checker.service_checker.subprocess.run')
-def test_host_feature_services(mock_run):
-    mock_run.side_effect = [Mock(returncode=0), Mock(returncode=3)]
+def test_host_feature_services(mock_run, active_state):
+    mock_run.side_effect = [
+        Mock(returncode=0, stdout='ActiveState={}\n'.format(active_state)),
+        Mock(returncode=0, stdout='ActiveState=failed\nResult=exit-code\n'),
+    ]
     checker = ServiceChecker()
     checker.check_host_services({
         'dldd': {'state': 'enabled', 'runtime_type': 'host'},
@@ -270,16 +274,57 @@ def test_host_feature_services(mock_run):
     assert 'container' not in checker._info
     assert mock_run.call_args_list == [
         call(
-            ['systemctl', 'is-active', '--quiet', 'dldd.service'],
+            ['systemctl', 'show', 'dldd.service',
+             '--property=ActiveState,Result,ExecMainCode,ExecMainStatus,SuccessExitStatus'],
+            capture_output=True,
+            text=True,
             timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
             check=False,
         ),
         call(
-            ['systemctl', 'is-active', '--quiet', 'failed-host.service'],
+            ['systemctl', 'show', 'failed-host.service',
+             '--property=ActiveState,Result,ExecMainCode,ExecMainStatus,SuccessExitStatus'],
+            capture_output=True,
+            text=True,
             timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
             check=False,
         ),
     ]
+    HealthChecker.summary = HealthChecker.STATUS_OK
+
+
+@pytest.mark.parametrize('overrides,expected', [
+    ({}, HealthChecker.STATUS_OK),
+    # Configured service stopped normally by an administrator.
+    ({'ExecMainStatus': '0'}, HealthChecker.STATUS_NOT_OK),
+    # Genuine failure or signal must not inherit the no-configuration result.
+    ({'Result': 'exit-code', 'ExecMainStatus': '1'}, HealthChecker.STATUS_NOT_OK),
+    ({'ExecMainCode': '2'}, HealthChecker.STATUS_NOT_OK),
+    # A nonzero result is accepted only when the unit declares it successful.
+    ({'SuccessExitStatus': ''}, HealthChecker.STATUS_NOT_OK),
+    ({'ActiveState': 'failed'}, HealthChecker.STATUS_NOT_OK),
+    ({'ExecMainCode': '0', 'ExecMainStatus': '0'}, HealthChecker.STATUS_NOT_OK),
+])
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.subprocess.run')
+def test_host_feature_explicit_successful_exit(mock_run, overrides, expected):
+    properties = {
+        'ActiveState': 'inactive', 'Result': 'success',
+        'ExecMainCode': '1', 'ExecMainStatus': '3', 'SuccessExitStatus': '3',
+    }
+    properties.update(overrides)
+    mock_run.return_value = Mock(
+        returncode=0,
+        stdout='\n'.join('{}={}'.format(key, value) for key, value in properties.items()),
+    )
+    checker = ServiceChecker()
+
+    checker.check_host_services({
+        'diagnostic': {'state': 'enabled', 'runtime_type': 'host'},
+    }, Config())
+
+    assert checker._info['diagnostic'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == expected
+    mock_run.assert_called_once()
     HealthChecker.summary = HealthChecker.STATUS_OK
 
 

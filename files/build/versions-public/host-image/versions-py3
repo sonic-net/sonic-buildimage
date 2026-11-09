@@ -74,7 +74,7 @@ python-apt==3.0.0
 python-dateutil==2.9.0.post0
 pyyaml==6.0.2
 redis==3.5.3
-regex==2026.9.3
+regex==2024.11.6
 requests==2.34.2
 scapy==2.6.1
 scp==0.14.5

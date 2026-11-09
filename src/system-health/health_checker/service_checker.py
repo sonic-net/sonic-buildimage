@@ -175,6 +175,19 @@ class ServiceChecker(HealthChecker):
             container_feature_dict["database-chassis"] = "database"
         return expected_running_containers, container_feature_dict
 
+    @staticmethod
+    def _successful_inactive_service(properties):
+        """Recognize an explicit successful nonzero process outcome."""
+        try:
+            status = int(properties.get('ExecMainStatus', ''))
+        except ValueError:
+            return False
+        return (properties.get('ActiveState') == 'inactive'
+                and properties.get('Result') == 'success'
+                and properties.get('ExecMainCode') == '1'  # CLD_EXITED
+                and status > 0
+                and str(status) in properties.get('SuccessExitStatus', '').split())
+
     def check_host_services(self, feature_table, config):
         """Check enabled FEATURE entries that run directly under systemd."""
         ignored = set(config.ignore_services or ()) if config else set()
@@ -186,11 +199,21 @@ class ServiceChecker(HealthChecker):
 
             unit = "{}.service".format(service_name)
             try:
-                active = subprocess.run(
-                    ["systemctl", "is-active", "--quiet", unit],
+                result = subprocess.run(
+                    ["systemctl", "show", unit,
+                     "--property=ActiveState,Result,ExecMainCode,ExecMainStatus,SuccessExitStatus"],
+                    capture_output=True,
+                    text=True,
                     timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
                     check=False,
-                ).returncode == 0
+                )
+                properties = dict(
+                    line.split('=', 1) for line in result.stdout.splitlines() if '=' in line
+                )
+                active = result.returncode == 0 and (
+                    properties.get('ActiveState') in ('active', 'reloading', 'refreshing')
+                    or self._successful_inactive_service(properties)
+                )
             except (OSError, subprocess.SubprocessError):
                 active = False
 
