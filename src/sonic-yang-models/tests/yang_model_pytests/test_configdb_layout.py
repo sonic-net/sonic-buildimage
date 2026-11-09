@@ -61,7 +61,6 @@ _TYPE_1_MAP_LISTS = frozenset({
     'CABLE_LENGTH_LIST',
     'MPLS_TC_TO_TC_MAP_LIST',
     'TC_TO_DSCP_MAP_LIST',
-    'TC_TO_DOT1P_MAP_LIST',
 })
 
 # A table container carrying both a `list` row layer and a singleton `container`
