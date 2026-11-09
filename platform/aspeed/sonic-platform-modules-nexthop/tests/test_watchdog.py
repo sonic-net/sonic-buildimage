@@ -452,89 +452,155 @@ def test_cleanup_normal_stop_keeps_stage_marker(tmp_path, monkeypatch):
 
 
 # ------------------------------------------------- boot-stage attribution
-STAGE_REG = 0x14c3704c
+MARKER_CMD = "/usr/local/bin/watchdog-stage-marker.sh"
 
 
-def _devmem_capture(monkeypatch, fail_on=None):
-    """Capture busybox devmem invocations from _write_stage_marker.
-
-    `fail_on` is the 0-based index of the call that should raise, to exercise
-    the early-return path.
-    """
+def _marker_cmd_capture(monkeypatch, fail=False, executable=True, stderr=b""):
+    """Capture the subprocess invocations made by _write_stage_marker."""
     calls = []
 
     def fake_run(argv, **kwargs):
         calls.append(argv)
-        if fail_on is not None and len(calls) - 1 == fail_on:
+        if fail:
             raise wdtd.subprocess.CalledProcessError(1, argv)
-        return None
+        return wdtd.subprocess.CompletedProcess(argv, 0, stdout=b"",
+                                                stderr=stderr)
 
     monkeypatch.setattr(wdtd.subprocess, "run", fake_run)
+    monkeypatch.setattr(wdtd.os, "access", lambda path, mode: executable)
     return calls
 
 
-def test_write_stage_marker_clears_then_sets(monkeypatch):
-    # WDT4C scratch is write-1-to-set, so the marker must be preceded by the
-    # magic clear and both go to the configured register as 32-bit writes.
+def _policy_log_capture(monkeypatch, daemon):
+    logged = []
+    monkeypatch.setattr(daemon, "log", lambda msg, *a, **k: logged.append(msg))
+    return logged
+
+
+def test_write_stage_marker_runs_platform_command(monkeypatch):
+    # The daemon delegates the register write to the platform's command, so
+    # the address, the write protocol and the monotonic rule live in one place.
     daemon = wdtd.WatchdogManager()
-    daemon.stage_scratch_reg = STAGE_REG
-    calls = _devmem_capture(monkeypatch)
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch)
     daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
-    addr = "0x%08x" % STAGE_REG
-    assert calls == [
-        ["busybox", "devmem", addr, "32",
-         "0x%08x" % wdtd.STAGE_SCRATCH_MAGIC_CLEAR],
-        ["busybox", "devmem", addr, "32",
-         "0x%02x" % wdtd.STAGE_MARKER_DAEMON_ARMED],
-    ]
+    assert calls == [[MARKER_CMD, "0x24"]]
 
 
-def test_write_stage_marker_noop_without_register(monkeypatch):
-    # Platforms without stage_scratch_reg in platform.json never touch devmem.
+def test_write_stage_marker_noop_without_command(monkeypatch):
+    # Platforms without stage_marker_cmd in platform.json never run anything.
     daemon = wdtd.WatchdogManager()
-    assert daemon.stage_scratch_reg is None
-    calls = _devmem_capture(monkeypatch)
+    assert daemon.stage_marker_cmd is None
+    calls = _marker_cmd_capture(monkeypatch)
     daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
     assert calls == []
 
 
-def test_write_stage_marker_stops_after_failed_clear(monkeypatch):
-    # If the magic clear fails, the marker write is skipped (a set on top of a
-    # stale value would corrupt the marker) and the error is swallowed so
-    # attribution never affects petting.
+def test_write_stage_marker_skips_missing_command(monkeypatch):
+    # The command ships in a lazily installed platform package, so it may not
+    # exist yet on the first boot: skip with a warning, never raise.
     daemon = wdtd.WatchdogManager()
-    daemon.stage_scratch_reg = STAGE_REG
-    calls = _devmem_capture(monkeypatch, fail_on=0)
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch, executable=False)
+    logged = _policy_log_capture(monkeypatch, daemon)
     daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
-    assert len(calls) == 1
+    assert calls == []
+    assert any("not executable" in m for m in logged)
 
 
-def test_load_platform_config_stage_scratch_reg_hex_string(monkeypatch):
-    # platform.json carries the register as a hex string (b27 style).
+def test_write_stage_marker_failure_is_swallowed(monkeypatch):
+    # A failing command is logged; attribution never affects petting.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch, fail=True)
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_SHUTDOWN)
+    assert calls == [[MARKER_CMD, "0x25"]]
+    assert any("failed" in m for m in logged)
+
+
+def test_write_stage_marker_reports_stderr(monkeypatch):
+    # The marker script exits 0 even when the register write fails and only
+    # reports it on stderr, so that text must reach the log instead of the
+    # "wrote marker" success line.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(
+        monkeypatch, stderr=b"watchdog-stage-marker: failed to clear\n")
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == [[MARKER_CMD, "0x24"]]
+    assert any("failed to clear" in m for m in logged)
+    assert not any("wrote marker" in m for m in logged)
+
+
+def test_load_platform_config_stage_marker_cmd(monkeypatch):
     daemon = wdtd.WatchdogManager()
     monkeypatch.setattr(
         wdtd, "get_platform_json_data",
-        lambda: {"watchdog": {"stage_scratch_reg": "0x14c3704c"}})
+        lambda: {"watchdog": {"stage_marker_cmd": MARKER_CMD}})
     daemon._load_platform_config()
-    assert daemon.stage_scratch_reg == STAGE_REG
+    assert daemon.stage_marker_cmd == MARKER_CMD
 
 
-def test_load_platform_config_stage_scratch_reg_integer(monkeypatch):
-    # An integer value is accepted as-is.
-    daemon = wdtd.WatchdogManager()
-    monkeypatch.setattr(
-        wdtd, "get_platform_json_data",
-        lambda: {"watchdog": {"stage_scratch_reg": STAGE_REG}})
-    daemon._load_platform_config()
-    assert daemon.stage_scratch_reg == STAGE_REG
-
-
-def test_load_platform_config_stage_scratch_reg_absent(monkeypatch):
+def test_load_platform_config_stage_marker_cmd_absent(monkeypatch):
     # Absent key -> attribution disabled, even if a stale value was set.
     daemon = wdtd.WatchdogManager()
-    daemon.stage_scratch_reg = STAGE_REG
+    daemon.stage_marker_cmd = MARKER_CMD
     monkeypatch.setattr(
         wdtd, "get_platform_json_data",
         lambda: {"watchdog": {"boot_arm": True}})
     daemon._load_platform_config()
-    assert daemon.stage_scratch_reg is None
+    assert daemon.stage_marker_cmd is None
+
+
+@pytest.mark.parametrize("bad", [
+    "watchdog-stage-marker.sh",            # relative
+    "/usr/local/bin/marker.sh 0x99",       # embedded argument
+    "",
+    42,
+    ["/usr/local/bin/marker.sh"],
+])
+def test_load_platform_config_stage_marker_cmd_rejects_invalid(monkeypatch, bad):
+    # The command runs as root: anything but a bare absolute path disables
+    # attribution and is logged, and the "Loaded watchdog policy" line is
+    # still emitted.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_marker_cmd": bad}})
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+    assert any("ignoring watchdog.stage_marker_cmd" in m for m in logged)
+    assert any(m.startswith("Loaded watchdog policy") and
+               "stage_marker_cmd=none" in m for m in logged)
+
+
+def test_load_platform_config_stage_marker_cmd_keeps_other_policy(monkeypatch):
+    # A bad command must not discard boot_arm / shutdown_protect parsed
+    # alongside it.
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": False, "shutdown_protect": False,
+                              "stage_marker_cmd": "relative"}})
+    _policy_log_capture(monkeypatch, daemon)
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+    assert daemon.boot_arm is False
+    assert daemon.shutdown_protect is False
+
+
+def test_b27_platform_json_names_the_marker_script():
+    # The b27 opts in by pointing the daemon at watchdog-stage-marker.sh; the
+    # install path must match where debian/rules puts common/scripts.
+    import json
+    pj = os.path.join(REPO_ROOT, "device", "nexthop", "arm64-nexthop_b27-r0",
+                      "platform.json")
+    with open(pj) as f:
+        cmd = json.load(f)["watchdog"]["stage_marker_cmd"]
+    assert cmd == MARKER_CMD
+    assert os.path.exists(os.path.join(
+        NEXTHOP_DIR, "common", "scripts", os.path.basename(cmd)))
