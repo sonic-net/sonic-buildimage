@@ -1,5 +1,31 @@
 #!/usr/bin/env python3
-"""Compare Git snapshots for frozen parser edits and new static dependencies."""
+"""Check Git snapshots for minigraph-retirement policy violations.
+
+Reject changes to minigraph.py, minigraph_ext.py, and minigraph_custom.py
+under src/sonic-config-engine. For other changed files, compare dependency
+counts per file and reference: increases violate the policy; existing
+recognized references and removals are not violations.
+
+Recognize supported parser imports, legacy configuration commands,
+minigraph XML access, and shipped minigraph.xml artifacts. Analyze supported
+Python, shell, YAML, and Jinja forms without executing source commands or
+rendering templates. This is bounded static analysis, not proof of
+minigraph-free runtime behavior.
+
+Run from the repository root:
+    python3 scripts/check_minigraph_freeze.py --base BASE_REV --head HEAD_REV
+
+The CI workflow runs this guard for PRs targeting master, supplying the
+verified test merge as HEAD_REV and its first parent as BASE_REV.
+
+Exit codes:
+    0: No frozen-file changes or new recognized dependencies detected.
+    1: Policy violations detected.
+    2: Invalid arguments, analysis failure, or Git comparison failure.
+
+See the "Minigraph retirement gate" section of .github/workflows/README.md
+for detailed coverage, limitations, and contributor guidance.
+"""
 
 import argparse
 import ast
