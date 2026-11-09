@@ -70,7 +70,7 @@ RUN eatmydata apt-get install -y python3-minimal:$arch python3.11:$arch python3:
 RUN apt-get download python3-distutils && eatmydata dpkg --force-all -i python3-distutils*
 RUN apt-get download python3-pip && eatmydata dpkg --force-all -i python3-pip*
 RUN which pip3 && pip3 install enum34
-RUN pip3 install virtualenv
+RUN pip3 install --ignore-installed virtualenv
 
 # Create target arm python3 virtual environments with all required packages installed
 RUN mkdir /python_virtualenv
@@ -553,7 +553,11 @@ RUN eatmydata apt-get install -y golang-go \
  && ln -sf /usr/lib/go-1.19 /usr/local/go
 {%- endif %}
 
-RUN pip3 install --upgrade pip==26.2
+RUN set -- \
+ && case ",${SONIC_VERSION_CONTROL_COMPONENTS}," in \
+        *,all,*|*,py3,*) set -- --constraint /usr/local/share/buildinfo/versions/versions-py3 ;; \
+    esac \
+ && pip3 install --upgrade "$@" 'pip>=26.2'
 RUN apt-get purge -y python3-pip
 
 {%- if CONFIGURED_ARCH == "armhf" %}
