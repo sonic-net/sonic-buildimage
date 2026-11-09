@@ -12,10 +12,12 @@
                 ]
             },
             "sonic-dns:DNS_OPTIONS": {
-                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-                "ndots": 0,
-                "timeout": 1,
-                "attempts": 1
+                "GLOBAL": {
+                    "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                    "ndots": 0,
+                    "timeout": 1,
+                    "attempts": 1
+                }
             }
         }
     },
@@ -53,10 +55,12 @@
     "DNS_OPTIONS_NO_NAMESERVER": {
         "sonic-dns:sonic-dns": {
             "sonic-dns:DNS_OPTIONS": {
-                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-                "ndots": 0,
-                "timeout": 1,
-                "attempts": 1
+                "GLOBAL": {
+                    "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                    "ndots": 0,
+                    "timeout": 1,
+                    "attempts": 1
+                }
             }
         }
     },
@@ -70,7 +74,9 @@
                 ]
             },
             "sonic-dns:DNS_OPTIONS": {
-                "search": [ "d1*.example.com" ]
+                "GLOBAL": {
+                    "search": [ "d1*.example.com" ]
+                }
             }
         }
     },
@@ -84,7 +90,9 @@
                 ]
             },
             "sonic-dns:DNS_OPTIONS": {
-                "ndots": 100
+                "GLOBAL": {
+                    "ndots": 100
+                }
             }
         }
     },
@@ -98,7 +106,9 @@
                 ]
             },
             "sonic-dns:DNS_OPTIONS": {
-                "timeout": 0
+                "GLOBAL": {
+                    "timeout": 0
+                }
             }
         }
     },
@@ -112,7 +122,9 @@
                 ]
             },
             "sonic-dns:DNS_OPTIONS": {
-                "attempts": 10
+                "GLOBAL": {
+                    "attempts": 10
+                }
             }
         }
     }

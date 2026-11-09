@@ -45,7 +45,7 @@ class BgpStateGet:
         self.new_peer_l = set()
         self.new_peer_state = {}
         self.cached_timestamp = 0
-        self.db = swsscommon.SonicV2Connector()
+        self.db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
         self.db.connect(self.db.STATE_DB, False)
         self.pipe = swsscommon.RedisPipeline(self.db.get_redis_client(self.db.STATE_DB))
         self.db.delete_all_by_pattern(self.db.STATE_DB, "NEIGH_STATE_TABLE|*" )
@@ -84,7 +84,10 @@ class BgpStateGet:
             try:
                 rc, output = getstatusoutput_noshell(cmd)
                 if rc:
-                    syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
+                    if os.system('pgrep -x bgpd > /dev/null 2>&1') != 0 or os.system('pgrep -x zebra > /dev/null 2>&1') != 0:
+                        syslog.syslog(syslog.LOG_WARNING, "vtysh failed (rc={}) when execute: {} Output: {} bgpd or zebra not running — container may be shutting down".format(rc, cmd, output[:200] if output else ""))
+                    else:
+                        syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
                     return
                 if len(output) == 0:
                     syslog.syslog(syslog.LOG_WARNING, "*WARNING* output none when execute: {}".format(cmd))

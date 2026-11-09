@@ -1,0 +1,26 @@
+{# supervisord.conf.common.j2 — shared sflow supervisord programs
+   Used by docker-sonic-vs via _INCLUDE_DOCKER.
+   Variables:
+     sflow_priority_base   — base priority for sflow programs (default 2)
+     use_dependent_startup — enable dependent_startup (default false)
+     sflow_wait_for        — what to wait for before starting (default "rsyslogd:running")
+   Note: Only sflowmgrd is included here. hsflowd and port_index_mapper
+   require the sflow deb and are not available in docker-sonic-vs.
+#}
+{% set sflow_priority_base = sflow_priority_base | default(2) %}
+{% set use_dependent_startup = use_dependent_startup | default(false) %}
+{% set sflow_wait_for = sflow_wait_for | default("rsyslogd:running") %}
+
+[program:sflowmgrd]
+command=/usr/bin/sflowmgrd
+priority={{ sflow_priority_base }}
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if use_dependent_startup %}
+dependent_startup=true
+dependent_startup_wait_for={{ sflow_wait_for }}
+{% endif %}

@@ -12,7 +12,7 @@ diff --git a/scapy/__init__.py b/scapy/__init__.py
 index f920151e..2adbea19 100644
 --- a/scapy/__init__.py
 +++ b/scapy/__init__.py
-@@ -42,9 +42,6 @@ def _version_from_git_describe():
+@@ -104,9 +104,6 @@ def _version_from_git_describe():
      :raises CalledProcessError: if git is unavailable
      :return: Scapy's latest tag
      """

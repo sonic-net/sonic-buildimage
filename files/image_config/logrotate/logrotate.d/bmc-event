@@ -1,0 +1,13 @@
+# BMC persistent event log: leak events, Switch-Host power state changes,
+# and Rack Manager interactions.  Lives on /host (eMMC) so it survives
+# reboots and tmpfs-mounted /var/log.
+/host/bmc/event.log {
+    missingok
+    notifempty
+    size 10M
+    rotate 5
+    compress
+    delaycompress
+    copytruncate
+    create 0640 root root
+}

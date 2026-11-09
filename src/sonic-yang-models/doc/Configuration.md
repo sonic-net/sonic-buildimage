@@ -35,12 +35,15 @@
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
+  * [EVPN](#evpn)
+  * [FDB_SYNC](#fdb_sync)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
   * [FG_NHG_PREFIX](#fg_nhg_prefix)
   * [FABRIC_MONITOR](#fabric-monitor)
   * [FABRIC_PORT](#fabric-port)
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
+  * [GNMI](#gnmi)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
@@ -64,6 +67,7 @@
   * [Port](#port)
   * [Port Channel](#port-channel)
   * [Portchannel member](#portchannel-member)
+  * [SAG](#sag)
   * [Scheduler](#scheduler)
   * [Port QoS Map](#port-qos-map)
   * [Queue](#queue)
@@ -98,13 +102,14 @@
   * [SYSTEM_DEFAULTS table](#systemdefaults-table)
   * [RADIUS](#radius)
   * [Static DNS](#static-dns)
-  * [ASIC_SENSORS](#asic_sensors)  
+  * [ASIC_SENSORS](#asic_sensors)
   * [SRv6](#srv6)
   * [DPU](#dpu-configuration)
   * [REMOTE_DPU](#remote_dpu-configuration)
   * [VDPU](#vdpu-configuration)
   * [DASH HA Global Configuration](#dash-ha-global-configuration)
   * [Prefix List](#prefix-list)
+  * [NODE_CFG](#node_cfg)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -461,7 +466,7 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 ### BGP Device Global
 
 The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
-It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
+It has a **STATE** object containing device state such as **tsa_enabled**, **chassis_tsa_supported**, **wcmp_enabled**, and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
 
@@ -470,6 +475,22 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 "BGP_DEVICE_GLOBAL": {
     "STATE": {
         "tsa_enabled": "true"
+    }
+}
+```
+
+**chassis_tsa_supported** selects how chassis-wide Traffic-Shift-Away is coordinated on chassis systems:
+
+- When **true**, the supervisor uses **CHASSIS_APP_DB** to publish **`tsa_enabled`** to line cards.
+- When **false**, that **CHASSIS_APP_DB** synchronization is not used; TSA/TSB is applied on each line card (for example via **rexec** on the supervisor).
+
+YANG defines a default for this leaf; for the exact value, see **sonic-bgp-device-global** (`BGP_DEVICE_GLOBAL/STATE/chassis_tsa_supported`).
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "chassis_tsa_supported": "false"
     }
 }
 ```
@@ -497,8 +518,8 @@ The IDF isolation state **idf_isolation_state** could be one of isolated_no_expo
 }
 ```
 
-The **CONFED** object contains BGP confederation configuration for disaggregated T2 devices (LowerSpineRouter, UpperSpineRouter, FabricSpineRouter).  
-**asn** is the confederation identifier (the ASN visible to external peers).  
+The **CONFED** object contains BGP confederation configuration for disaggregated T2 devices (LowerSpineRouter, UpperSpineRouter, FabricSpineRouter).
+**asn** is the confederation identifier (the ASN visible to external peers).
 **peers** is a semicolon-separated list of sub-AS numbers that are members of the confederation.
 
 ```json
@@ -520,6 +541,11 @@ attributes include remote AS number, neighbor router name, and local
 peering address. Dynamic neighbor is also supported by defining peer
 group name and IP ranges in **BGP_PEER_RANGE** table.
 
+The table key can be a plain neighbor IP (e.g. `BGP_NEIGHBOR|10.0.0.61`) or a
+`vrf_name|neighbor` pair (e.g. `BGP_NEIGHBOR|default|10.0.0.61`). In the second
+form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
+(e.g. `Vnet1`) for overlay BGP neighbors.
+
 ```
 {
 "BGP_NEIGHBOR": {
@@ -534,7 +560,7 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
                 "name": "ARISTA09T0"
         },
 
-        "10.0.0.63": {
+        "default|10.0.0.63": {
                 "rrclient": "0",
 				"name": "ARISTA04T1",
 				"local_addr": "10.0.0.62",
@@ -542,8 +568,15 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
 				"holdtime": "10",
 				"asn": "64600",
 				"keepalive": "3"
-        }
+        },
 
+        "Vnet1|10.0.0.0": {
+                "asn": 65100,
+                "name": "overlay-peer",
+                "admin_status": "up"
+        }
+    }
+}
 "BGP_PEER_RANGE": {
     "BGPSLBPassive": {
         "name": "BGPSLBPassive",
@@ -889,8 +922,16 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ### Console
 
-CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The item default_escape_char and escape_char are optional. It can be
-set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
+CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The items `default_escape_char` and `escape_char` are optional. They can be
+set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config.
+
+CONSOLE_PORT logging attributes (all optional):
+-   logging_enabled - Enable or disable console I/O logging for the line, allowed values: yes/no, default value: no
+-   log_file - Absolute path to the console log file (e.g. `/var/log/console-1.log`)
+-   logrotate_size - Maximum log file size before rotation, allowed pattern: numeric value with optional suffix `k`, `K`, `M`, or `G` (e.g. `10M`, `100K`)
+-   logrotate_count - Number of rotated log files to retain, allowed values: 1-100
+
+When logging is enabled via CLI and `log_file`, `logrotate_size`, or `logrotate_count` are not configured, runtime defaults are applied: log file `/var/log/console-<line>.log`, logrotate size `10M`, and logrotate count `10`.
 
 ```
 {
@@ -898,7 +939,11 @@ set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
     "1": {
         "baud_rate": "115200",
         "flow_control": "0",
-        "remote_device": "host-1"
+        "remote_device": "host-1",
+        "logging_enabled": "yes",
+        "log_file": "/var/log/console-1.log",
+        "logrotate_size": "10M",
+        "logrotate_count": "10"
     },
     "2": {
         "baud_rate": "9600",
@@ -1099,6 +1144,7 @@ instance is supported in SONiC.
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
+        "enable_per_port_counter_discovery": "false",
         "hostname": "sonic-s6100-01",
         "platform": "x86_64-dell_s6100_c2538-r0",
         "mac": "4c:76:25:f4:70:82",
@@ -1111,7 +1157,9 @@ instance is supported in SONiC.
         "yang_config_validation": "disable",
         "rack_mgmt_map": "dummy_value",
         "timezome": "Europe/Kiev",
-        "bgp_router_id": "8.8.8.8"
+        "bgp_router_id": "8.8.8.8",
+        "use_template_render_for_restore": "true",
+        "dpu_auto_recovery": "enable"
     }
   }
 }
@@ -1198,7 +1246,7 @@ BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_tab
 ```
 
 ### DHCP_SERVER_IPV4
-IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT** tables.
+IPV4 DHCP Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT**, **DHCP_SERVER_IPV4_MATCH**, **DHCP_SERVER_IPV4_BINDING** tables.
 ```
 {
     "DHCP_SERVER_IPV4": {
@@ -1222,8 +1270,10 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
     },
     "DHCP_SERVER_IPV4_RANGE": {
         "range1": {
-            "ip_start": "100.1.1.3",
-            "ip_end": "100.1.1.5"
+            "range": [
+                "100.1.1.3",
+                "100.1.1.5"
+            ]
         }
     },
     "DHCP_SERVER_IPV4_PORT": {
@@ -1233,6 +1283,104 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
             ]
         },
         "Vlan100|PortChannel2": {
+            "ranges": [
+                "range1"
+            ]
+        }
+    }
+}
+```
+
+**DHCP_SERVER_IPV4_MATCH** defines named, exact-match conditions on a single field of an
+incoming DHCPv4 packet. A condition is referenced by name from **DHCP_SERVER_IPV4_BINDING**;
+defining one on its own has no effect.
+
+**Note:** This change adds the schema for **DHCP_SERVER_IPV4_MATCH** and
+**DHCP_SERVER_IPV4_BINDING** only. The `mode` leaf of **DHCP_SERVER_IPV4** does not accept
+`MATCH` yet, and the DHCP server runtime does not read these two tables yet, so entries
+configured here are validated against the schema but do not affect address assignment. The
+address-selection and Kea-generation behavior described in the rest of this section takes
+effect once `MATCH` mode and the corresponding `dhcpservd` support are added in a follow-up
+change.
+
+| Field | Description |
+| ----- | ----------- |
+| name  | Key. User-defined name of the condition. Must not start or end with whitespace or control characters. Must not contain `\|` or `,`: these are the Config DB key separator and leaf-list separator respectively, so a name containing either cannot be referenced from **DHCP_SERVER_IPV4_BINDING**. |
+| type  | Packet field to match: `circuit_id` or `option60`. |
+| value | The exact value to match. |
+
+For `type` `option60` the value is compared against the Vendor Class Identifier (RFC 2132
+option 60) sent by the client.
+
+ For `type` `circuit_id`, the configured value identifies the ingress interface used for
+ Option 82 sub-option 1 (RFC 3046). `dhcp_relay` stamps the on-wire value with the
+ hostname and ingress interface, and the runtime expands the configured port alias,
+ aliasless port name, or PortChannel name before comparing it. A value naming no
+ existing interface is rejected because it could never match a packet.
+ The value must resolve to exactly one interface across the switch. A value shared
+ by multiple port aliases, or colliding with an aliasless port name or a PortChannel
+ name, is rejected as ambiguous. This does not impose global uniqueness on port
+ aliases: duplicate aliases remain permitted when no `circuit_id` condition uses
+ the ambiguous value. This check does not apply to `option60` values.
+
+**DHCP_SERVER_IPV4_BINDING** associates one or more match conditions with the addresses to
+hand out when they all match.
+
+| Field   | Description |
+| ------- | ----------- |
+| name    | Key, first part. DHCP interface, referencing **DHCP_SERVER_IPV4**. |
+| binding | Key, second part. User-defined name of the binding. Must not start or end with whitespace or control characters, or contain `\|` (the Config DB key separator). |
+| matches | One or more **DHCP_SERVER_IPV4_MATCH** names, combined with logical AND. At most one condition per `type`. |
+| ips     | Assigned IPv4 addresses. Mutually exclusive with `ranges`. |
+| ranges  | Named **DHCP_SERVER_IPV4_RANGE** entries. Mutually exclusive with `ips`. |
+
+Each match condition tests a single-valued field of the packet, so a binding may
+reference at most one `circuit_id` condition and at most one `option60` condition.
+Two conditions of the same `type` could never both be true, so a binding referencing
+them is rejected rather than accepted as one that can never select its pool.
+
+Exactly one of `ips` or `ranges` must be configured on a binding.
+
+A client can match more than one binding. In the example below a client on `etp1`
+sending Vendor Class Identifier `MAIA-BMC` matches both `bmc_on_etp1` and
+`any_on_etp1`. The binding with more match conditions wins, so such a client is
+assigned `100.1.1.21` and only clients on `etp1` that do not send `MAIA-BMC` draw
+from `range1`. This does not depend on the order in which the bindings are
+configured: the generated Kea client classes are made mutually exclusive, so a
+client is a member of the more specific class only.
+
+Two bindings that can match the same packet and have the **same** number of match
+conditions - for example one matching only `port_etp1` and another matching only
+`vendor_bmc` - have no more-specific winner. That is rejected when the DHCP
+configuration is generated, so the bindings must be corrected; the previously
+generated configuration keeps being served in the meantime.
+
+```
+{
+    "DHCP_SERVER_IPV4_MATCH": {
+        "port_etp1": {
+            "type": "circuit_id",
+            "value": "etp1"
+        },
+        "vendor_bmc": {
+            "type": "option60",
+            "value": "MAIA-BMC"
+        }
+    },
+    "DHCP_SERVER_IPV4_BINDING": {
+        "Vlan100|bmc_on_etp1": {
+            "matches": [
+                "port_etp1",
+                "vendor_bmc"
+            ],
+            "ips": [
+                "100.1.1.21"
+            ]
+        },
+        "Vlan100|any_on_etp1": {
+            "matches": [
+                "port_etp1"
+            ],
             "ranges": [
                 "range1"
             ]
@@ -1262,6 +1410,50 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ```
 
+### EVPN
+
+The EVPN tables configure Ethernet Segment entries and global EVPN multihoming timers.
+
+The **EVPN_ETHERNET_SEGMENT** table is keyed by a physical port or PortChannel name. Each entry defines the ESI type, the ESI value, and an optional DF preference. Type 0 entries require an operator-configured ESI in canonical ten-octet hexadecimal format, while non-Type 0 entries use `AUTO`.
+
+The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN multihoming timers, including `startup_delay`, `mac_holdtime`, and `neigh_holdtime`.
+
+```json
+{
+    "EVPN_ETHERNET_SEGMENT": {
+        "Ethernet120": {
+            "type": "TYPE_0_OPERATOR_CONFIGURED",
+            "esi": "00:01:02:03:04:05:06:07:08:FF",
+            "df_pref": "12012"
+        }
+    },
+    "EVPN_MH_GLOBAL": {
+        "default": {
+            "startup_delay": "1800",
+            "mac_holdtime": "1000",
+            "neigh_holdtime": "600"
+        }
+    }
+}
+```
+
+### FDB_SYNC
+
+The **FDB_SYNC** table selects how MAC (FDB) state is synchronized between SONiC and FRR. It has a single `global` entry with one field, `mac_sync_mode`:
+
+- `kernel` (default): fdbsyncd synchronizes MACs through the Linux kernel bridge FDB.
+- `fpm`: fpmsyncd exchanges MACs with zebra over the FPM channel.
+
+```json
+{
+    "FDB_SYNC": {
+        "global": {
+            "mac_sync_mode": "fpm"
+        }
+    }
+}
+```
+
 ### FG_NHG
 
 The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
@@ -1285,7 +1477,7 @@ The FG_NHG table provides information on Next Hop Groups, including a specified 
         "bucket_size": "120",
         "match_mode": "prefix-based",
         "max_next_hops": "6"
-    }    
+    }
 }
 ```
 
@@ -1325,7 +1517,7 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
     },
     "fd:06::/128": {
         "FG_NHG": "dynamic_fgnhg_v6"
-	}    
+	}
 }
 ```
 
@@ -1388,6 +1580,8 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ### FLEX_COUNTER_TABLE
 
+`ICMP_SESSION` controls ICMP echo session counter polling. `POLL_INTERVAL` for `ICMP_SESSION` is in milliseconds with allowed range `1000..30000`.
+
 ```
 {
 	"FLEX_COUNTER_TABLE": {
@@ -1415,6 +1609,10 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
 		},
+		"ICMP_SESSION": {
+			"FLEX_COUNTER_STATUS": "enable",
+			"POLL_INTERVAL": "10000"
+		},
 		"SWITCH": {
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
@@ -1422,6 +1620,37 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 	}
 }
 
+```
+
+### GNMI
+
+GNMI (gRPC Network Management Interface) related configuration is defined in the **GNMI** table. The GNMI table contains server configuration including certificates, authentication settings, and service parameters. The GNMI_CLIENT_CERT table manages client certificate authentication.
+
+```
+{
+    "GNMI": {
+        "certs": {
+            "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+            "server_crt": "/etc/sonic/credentials/server.cer",
+            "server_key": "/etc/sonic/credentials/server.key"
+        },
+        "gnmi": {
+            "client_auth": "true",
+            "log_level": "2",
+            "port": "8080",
+            "save_on_set": "false",
+            "enable_crl": "true",
+            "crl_expire_duration": "86400",
+            "user_auth": "password",
+            "vrf": "mgmt"
+        }
+    },
+    "GNMI_CLIENT_CERT": {
+        "client.sonic.net": {
+            "role": ["admin", "operator"]
+        }
+    }
+}
 ```
 
 ### Hash
@@ -1589,6 +1818,8 @@ These tables have a number of shared attributes as described below:
  * `mac_addr`: Assign administrator-provided MAC address to Interface.  If not specified will use the system MAC (same for all interfaces). Not applicable to `VLAN_SUB_INTERFACE` as it will use the parent interface's mac address.
  * `loopback_action`: Packet action when a packet ingress and gets routed on the same IP interface. `drop` or `forward`.
 
+`VLAN_INTERFACE` entries also support `static_anycast_gateway`, which enables or disables use of the global SAG MAC on the VLAN interface. Valid values are `true` and `false`; the default is `false`.
+
 
 ```json
 
@@ -1605,7 +1836,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_INTERFACE": {
         "Vlan201": {
             "vrf_name": "red",
-            "mac_addr": "AB:CD:EF:12:34:56"
+            "mac_addr": "AB:CD:EF:12:34:56",
+            "static_anycast_gateway": "true"
         }
     },
     "PORTCHANNEL_INTERFACE": {
@@ -1616,7 +1848,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_SUB_INTERFACE": {
         "Ethernet0.555": {
             "vrf_name": "Blue",
-            "vlan": "555"
+            "vlan": "555",
+            "ipv6_use_link_local_only": "enable"
         }
     }
 }
@@ -1694,7 +1927,7 @@ lossless traffic for dynamic buffer calculation
 ```
 
 ### Memory Statistics
-The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained. 
+The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained.
 
 ```
 {
@@ -2198,7 +2431,8 @@ name as object key and member list as attribute.
         "members": [
             "Ethernet54"
         ],
-        "mtu": "9100"
+        "mtu": "9100",
+        "lag_type": "LACP"
     },
     "PortChannel0004": {
         "admin_status": "up",
@@ -2208,11 +2442,15 @@ name as object key and member list as attribute.
         ],
         "mtu": "9100",
         "fallback": "false",
-        "fast_rate": "true"
+        "fast_rate": "true",
+        "system_mac": "aa:bb:cc:dd:ee:ff",
+        "lag_type": "LACP"
     }
   }
 }
 ```
+
+The optional **system_mac** field overrides the LACP actor system MAC for the PortChannel. When unset, the device system MAC is used. EVPN multihoming deployments can set this field when peer devices must advertise a shared LACP system identifier.
 
 
 ### Portchannel member
@@ -2228,6 +2466,20 @@ name as object key and member list as attribute.
 }
 
 ```
+
+### SAG
+The SAG table defines the global MAC address configuration for static-anycast-gateway.
+```
+{
+
+"SAG": {
+    "GLOBAL": {
+        "gateway_mac": "00:11:22:33:44:55"
+    }
+  }
+}
+```
+
 ### Scheduler
 
 ```
@@ -2589,7 +2841,8 @@ and is listed in this table.
             "client_auth": "true",
             "log_level": "2",
             "port": "50051",
-            "save_on_set": "false"
+            "save_on_set": "false",
+            "vrf": "mgmt"
         }
     }
 }
@@ -2675,15 +2928,32 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
 }
 ```
 
+An example for general tunnel config not related to dualtor (note that `src_ip` and `dst_ip` must belong to the same address family):
+```
+{
+    "TUNNEL": {
+        "MyTunnel": {
+            "dscp_mode": "uniform",
+            "src_ip": "fc00::71",
+            "dst_ip": "fc00::72",
+            "ecn_mode": "copy_from_outer",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "pipe",
+            "tunnel_type": "IPINIP"
+        }
+    }
+}
+```
+
 ### Trimming
 
 When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
 
-When a packet is lost, it can be recovered through fast retransmission or by using timeouts.  
+When a packet is lost, it can be recovered through fast retransmission or by using timeouts.
 Retransmission triggered by timeouts typically incurs significant latency.
 
-To help the host recover data more quickly and accurately, packet trimming is introduced.  
-This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,  
+To help the host recover data more quickly and accurately, packet trimming is introduced.
+This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,
 and try sending it on a different queue to deliver a packet drop notification to an end host.
 
 ***TRIMMING***
@@ -2812,8 +3082,8 @@ monitoring sessions for the vnet routes and is optional.
 
 ### VNET_ROUTE
 
-VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
-- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the nexthops of the vnet route.
 - IFNAME: The interface names (mandatory), such as "Ethernet1". It identifies the outgoing interfaces for the vnet route.
 
 ```
@@ -2826,6 +3096,10 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
     "Vnet_3000|100.100.4.0/24": {
         "nexthop": "100.100.4.1",
         "ifname": "Ethernet2"
+    },
+    "Vnet_4000|fc00::/64": {
+        "nexthop": "2001:db8::1,2001:db8::2",
+        "ifname": "Ethernet3,Ethernet4"
     }
   }
 }
@@ -2833,8 +3107,8 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
 
 ### VNET_ROUTE_TUNNEL
 
-VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). They are used to identify the endpoints of the tunnel.
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the endpoints of the tunnel.
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
@@ -2842,7 +3116,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
-        "Vnet_1000|100.200.1.1/32": {
+    "Vnet_1000|100.200.1.1/32": {
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
@@ -2856,6 +3130,11 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.168.1.2",
         "mac_address": "f8:22:83:99:22:a2",
         "vni": "10012"
+    },
+    "Vnetv6_v6-0|fc00::/64": {
+        "endpoint": "2001:db8::1,2001:db8::2",
+        "mac_address": "f8:22:83:99:22:a3,f8:22:83:99:22:a4",
+        "vni": "10013,10014"
     }
   }
 }
@@ -3208,22 +3487,35 @@ The **SUBNET_DECAP** table is used for subnet decap configuration.
 ### SYSTEM_DEFAULTS table
 To have a better management of the features in SONiC, a new table `SYSTEM_DEFAULTS` is introduced.
 
-```
+```json
 "SYSTEM_DEFAULTS": {
         "tunnel_qos_remap": {
             "status": "enabled"
-        }
+        },
         "default_bgp_status": {
             "status": "down"
-        }
+        },
         "synchronous_mode": {
             "status": "enable"
-        }
+        },
         "dhcp_server": {
-            "status": "enable"
+            "status": "enabled"
+        },
+        "swss_zmq": {
+            "status": "enabled"
+        },
+        "async_rec": {
+            "status": "enabled"
         }
     }
 ```
+
+The `swss_zmq` and `async_rec` entries control route-performance optimizations:
+- `swss_zmq`: When set to `"enabled"`, enables ZMQ-based communication between orchagent, syncd, and fpmsyncd (both southbound SAI operations and northbound route programming).
+- `async_rec`: When set to `"enabled"`, enables asynchronous APPL_STATE_DB recording (swss.rec) for improved route programming throughput.
+
+Both entries default to disabled when not present.
+
 The default value of flags in `SYSTEM_DEFAULTS` table can be set in `init_cfg.json` and loaded into db at system startup. These flags are usually set at image being build, and are unlikely to change at runtime.
 
 If the values in `config_db.json` is changed by user, it will not be rewritten back by `init_cfg.json` as `config_db.json` is loaded after `init_cfg.json` in [docker_image_ctl.j2](https://github.com/Azure/sonic-buildimage/blob/master/files/build_templates/docker_image_ctl.j2)
@@ -3268,10 +3560,12 @@ DNS configuration options can also be set when nameservers are defined:
 ```json
 {
     "DNS_OPTIONS": {
-        "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-        "ndots": 0,
-        "timeout": 1,
-        "attempts": 2
+        "GLOBAL": {
+            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+            "ndots": 0,
+            "timeout": 1,
+            "attempts": 2
+        }
     }
 }
 ```
@@ -3301,13 +3595,42 @@ An example is as follows:
 ```
 
 ### Prefix List
-Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
 
-An example is as follows:
+The following optional fields are supported for dynamic prefix list configuration:
+ Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
+ Note: `prefix_type` must match `[A-Za-z0-9_.:\-]+` (no whitespace) to pass YANG validation.
+
+| Field   | Type   | Description                                                                 |
+|---------|--------|-----------------------------------------------------------------------------|
+| action  | string | Permit or deny action for this prefix entry (`permit` or `deny`)            |
+| seq     | uint32 | Sequence number (1–4294967295) for ordering prefix list entries             |
+| ge      | uint8  | Minimum prefix length to match, greater-than-or-equal (0–128)              |
+| le      | uint8  | Maximum prefix length to match, less-than-or-equal (0–128)                 |
+
+Note: `seq`, `ge`, and `le` are modeled as numeric YANG types, but in CONFIG_DB JSON they are stored as strings, as shown in the examples below.
+
+Examples:
 ```json
 {
     "PREFIX_LIST": {
-        "ANCHOR_PREFIX|fc00::/48": {}
+        "ANCHOR_PREFIX|fc00::/48": {},
+        "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+            "action": "permit",
+            "seq": "200",
+            "ge": "16",
+            "le": "24"
+        },
+        "BGP_ALLOWED_IPV6|2001:db8::/32": {
+            "action": "permit",
+            "seq": "30",
+            "ge": "48",
+            "le": "64"
+        },
+        "BGP_DENIED_IPV4|10.255.0.0/16": {
+            "action": "deny",
+            "seq": "30"
+        }
     }
 }
 ```
@@ -3517,7 +3840,7 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
 The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
 Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
 
-`vnet_name` will be deprecated with the introduction of `dpu_vnet`. 
+`vnet_name` will be deprecated with the introduction of `dpu_vnet`.
 
 ```json
 {
@@ -3560,6 +3883,107 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 **dpu_bfd_probe_interval_in_ms**: Interval in milliseconds for DPU BFD probe.
 
 **dpu_bfd_probe_multiplier**: Number of DPU BFD probe failures before considering the probe as down.
+
+### NODE_CFG
+
+The **NODE_CFG** table defines the node configuration details for platform components (such as Integrated Circuits).
+
+```json
+{
+    "NODE_CFG": {
+        "integrated_circuit0": {
+            "name": "integrated_circuit0",
+            "node-id": "1",
+            "fully-qualified-name": "chassis/integrated_circuit0"
+        },
+        "integrated_circuit1": {
+            "name": "integrated_circuit1",
+            "node-id": "101",
+            "fully-qualified-name": "chassis/integrated_circuit1"
+        }
+    }
+}
+```
+
+**name**: Name of the platform component.
+
+**node-id**: Unique numeric identifier for the node.
+
+**fully-qualified-name**: Fully qualified hierarchy path for the component.
+
+### SAI_PROFILE
+
+The **SAI_PROFILE** table provides a generic, vendor-agnostic mechanism
+to inject arbitrary SAI init-config key/value pairs. Each entry is
+rendered as one `KEY=VALUE` line into a vendor's final SAI profile file
+(e.g. `/etc/sai.d/sai.profile` for Broadcom, `/tmp/sai.profile` for
+Mellanox), which is read by `syncd` at startup and passed to the
+vendor SAI implementation. This avoids needing a schema or template
+change every time a new, vendor-specific SAI tunable needs to be
+exposed.
+
+> **Scope of this PR (sonic-net/sonic-buildimage#29813):** this PR adds
+> only the `SAI_PROFILE` YANG model (`sonic-sai-profile.yang`) and the
+> shared rendering template
+> (`src/sonic-config-engine/data/sai_profile_dynamic.j2`, installed to
+> `/usr/share/sonic/templates` via `sonic-config-engine`'s packaging).
+> No hwsku `sai.profile`/`sai.profile.j2` in this repo is modified, and
+> no code in this repo actually invokes the template at `syncd`
+> startup — configuring `SAI_PROFILE` has no effect until the
+> `syncd`-side integration below merges. That integration lives in a
+> separate repo/PR, sonic-net/sonic-sairedis#2098, described next.
+
+Rendering is applied by `syncd`'s startup scripts
+(`syncd/scripts/syncd_init_common.sh` in `sonic-sairedis`, see
+sonic-net/sonic-sairedis#2098), via a
+generic, vendor-agnostic helper, `apply_sai_profile_configdb()`, that
+renders the shared `src/sonic-config-engine/data/sai_profile_dynamic.j2`
+template (installed to `/usr/share/sonic/templates` on every container
+image built from `docker-config-engine-trixie`) with `sonic-cfggen -d`
+and appends its output as the very last step before a vendor's final
+profile file is handed to `syncd` (`-p <file>`). This is a no-op when
+`SAI_PROFILE` is empty/absent, so **no per-hwsku `sai.profile`/
+`sai.profile.j2` template change is required** to support this table —
+it currently covers Broadcom (`config_syncd_bcm`) and Mellanox
+(`config_syncd_mlnx`); other vendors can adopt it with a single call to
+the same helper. `SAI_INIT_CONFIG_FILE` is reserved (it is a structural
+key selected by each platform's own template logic) and is rejected by
+both YANG validation and the renderer if set via this table.
+
+`syncd` parses the final profile file line by line, splitting each
+line on the first `=` and overwriting a `std::map` entry per key with
+no duplicate-key detection (`Syncd::loadProfileMap()` in
+`sonic-sairedis`). Because `apply_sai_profile_configdb()` appends last,
+after any vendor-specific static defaults or de-duplication, an entry
+in `SAI_PROFILE` always silently overrides a hardcoded static default
+with the same key — this is intentional, and is how tuning a key
+without an image rebuild is meant to work. Duplicate keys cannot occur
+within `SAI_PROFILE` itself, since CONFIG_DB stores it as a hash keyed
+uniquely by `name`.
+
+```json
+{
+    "SAI_PROFILE": {
+        "SAI_NUM_ECMP_MEMBERS": {
+            "value": "128"
+        },
+        "SAI_NHG_HIERARCHICAL_NEXTHOP": {
+            "value": "false"
+        }
+    }
+}
+```
+
+**name** (list key): SAI profile key name. Must exactly match the SAI
+environment variable name expected by the vendor's SAI/SDK
+implementation, e.g. `SAI_NUM_ECMP_MEMBERS`. `SAI_INIT_CONFIG_FILE` is
+reserved and not allowed.
+
+**value**: Value for this SAI profile key, rendered verbatim as a
+string. Interpretation/validation of the value is the vendor SAI/SDK
+implementation's responsibility, not this schema's. Carriage return and
+line feed characters are not allowed, since each entry is rendered as
+exactly one `KEY=VALUE` line.
 
 # For Developers
 

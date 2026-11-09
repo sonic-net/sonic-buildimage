@@ -12,6 +12,11 @@ fsroot/
 fsroot-*/
 fs.*
 target/
+
+# Auto-extracted OpenVEX statements (regenerated from src/*/patches/
+# during the build by scripts/sbom_extract_vex_from_patches.py).
+# Manually-authored VEX statements live in vex/manual/ and ARE tracked.
+vex/auto/
 *.deb
 *.udeb
 *.changes
@@ -83,6 +88,8 @@ platform/**/debian/*
 !platform/**/debian/compat
 !platform/**/debian/*.postinst
 !platform/**/debian/*.install
+!platform/**/debian/*.service
+!platform/**/debian/*.conf
 platform/**/build
 platform/**/*.ko
 platform/**/*.mod.c
@@ -90,6 +97,8 @@ platform/**/*.mod.o
 platform/**/*.o
 platform/**/*.d
 !platform/**/etc/systemd/system/*.d
+!platform/**/etc/systemd/system.conf.d
+!platform/**/etc/modules-load.d
 platform/**/*.cmd
 platform/**/*.order
 platform/broadcom/sonic-platform-modules-dell/s5232f/sonic_platform/ipmihelper.py
@@ -124,3 +133,8 @@ sources.list.*
 
 # Generated mirror configs
 apt-retries-count
+
+# dpkg cache-validation script outputs
+poc-results/
+cache-validation-out/
+poc-run.log

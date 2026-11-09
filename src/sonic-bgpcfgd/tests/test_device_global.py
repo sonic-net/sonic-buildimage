@@ -64,6 +64,36 @@ def constructor(check_internal=False):
     cfg_mgr.update()
     return mgr
 
+
+@patch('bgpcfgd.managers_device_global.swsscommon.ConfigDBConnector')
+def test_confed_config_read_uses_unix_socket(mock_config_db):
+    mock_config_db.return_value.get_table.return_value = {}
+    mgr = bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.__new__(
+        bgpcfgd.managers_device_global.DeviceGlobalCfgMgr
+    )
+    mgr.table_name = "BGP_DEVICE_GLOBAL"
+    mgr.directory = MagicMock()
+
+    mgr.prime_confed_from_config_db()
+
+    mock_config_db.assert_called_once_with(use_unix_socket_path=True)
+    mock_config_db.return_value.connect.assert_called_once_with()
+
+
+@patch('bgpcfgd.managers_device_global.device_info.is_chassis', return_value=True)
+@patch('bgpcfgd.managers_device_global.swsscommon.SonicV2Connector')
+def test_chassis_tsa_status_keeps_chassis_app_db_on_tcp(mock_connector, mock_is_chassis):
+    connector = mock_connector.return_value
+    connector.CHASSIS_APP_DB = "CHASSIS_APP_DB"
+    connector.get.return_value = "true"
+    mgr = bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.__new__(
+        bgpcfgd.managers_device_global.DeviceGlobalCfgMgr
+    )
+
+    assert mgr.get_chassis_tsa_status() == "true"
+    mock_connector.assert_called_once_with(use_unix_socket_path=False)
+    connector.connect.assert_called_once_with("CHASSIS_APP_DB", False)
+
 #
 # TSA -----------------------------------------------------------------------------------------------------------------
 #
@@ -180,6 +210,41 @@ def test_get_tsa_routemaps():
     res = m.get_ts_routemaps(m.cfg_mgr.get_text(), m.tsa_template)
     expected_res = get_string_from_file("/result_isolate.conf")
     assert res == expected_res
+
+
+def test_get_tsa_routemaps_for_unnumbered_peers():
+    m = constructor()
+    tf = TemplateFabric(TEMPLATE_PATH)
+    metadata = {
+        'localhost': {
+            'bgp_asn': '65100',
+            'sub_role': 'FrontEnd',
+            'switch_type': 'chassis-packet',
+            'type': 'LeafRouter',
+        }
+    }
+    rendered_peer_groups = [
+        tf.from_file('bgpd/templates/general/peer-group.conf.j2').render(
+            CONFIG_DB__DEVICE_METADATA=metadata,
+            CONFIG_DB__BGP_BBR={'status': 'disabled'},
+        ),
+        tf.from_file('bgpd/templates/internal/peer-group.conf.j2').render(
+            CONFIG_DB__DEVICE_METADATA=metadata
+        ),
+        tf.from_file('bgpd/templates/voq_chassis/peer-group.conf.j2').render(
+            CONFIG_DB__DEVICE_METADATA=metadata
+        ),
+    ]
+
+    res = m.get_ts_routemaps('\n'.join(rendered_peer_groups).splitlines(), m.tsa_template)
+
+    assert 'route-map TO_BGP_PEER_UNNUMBERED_V4 permit 20\n  match ip address prefix-list PL_LoopbackV4' in res
+    assert 'route-map TO_BGP_PEER_UNNUMBERED_V6 permit 20\n  match ipv6 address prefix-list PL_LoopbackV6' in res
+    assert 'route-map TO_BGP_INTERNAL_PEER_UNNUMBERED_V4 permit 20\n  set community no-export additive' in res
+    assert 'route-map TO_BGP_INTERNAL_PEER_UNNUMBERED_V6 permit 20\n  set community no-export additive' in res
+    assert 'route-map TO_VOQ_CHASSIS_PEER_UNNUMBERED_V4 permit 20\n  set community no-export additive' in res
+    assert 'route-map TO_VOQ_CHASSIS_PEER_UNNUMBERED_V6 permit 20\n  set community no-export additive' in res
+
 
 def test_get_tsb_routemaps():
     m = constructor()
@@ -312,3 +377,75 @@ def test_idf_neg(mocked_log_err, value):
     res = m.set_handler("STATE", {"idf_isolation_state": value})
     assert res, "Expect True return value for set_handler"
     mocked_log_err.assert_called_with("IDF: invalid value({}) is provided".format(value))
+
+#
+# CONFED -----------------------------------------------------------------------------------------------------------
+#
+
+def test_confed_set_handler_stores_in_directory():
+    m = constructor()
+    confed = {"asn": "65100", "peers": "65300"}
+    res = m.set_handler("CONFED", confed)
+    assert res, "Expect True return value for set_handler"
+    slot = m.directory.get_slot(m.db_name, m.table_name)
+    assert slot["CONFED"] == confed, "CONFED must be cached in the Directory for the peer templates"
+
+def test_confed_set_handler_does_not_run_tsa():
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("CONFED", {"asn": "65100", "peers": "65300"})
+    assert res, "Expect True return value for set_handler"
+    # CONFED carries no TSA/W-ECMP/IDF fields, so no FRR config must be pushed
+    assert m.cfg_mgr.get_config() == ""
+
+def test_confed_del_handler_removes_from_directory():
+    m = constructor()
+    m.set_handler("CONFED", {"asn": "65100", "peers": "65300"})
+    assert m.directory.path_exist(m.db_name, m.table_name, "CONFED")
+    m.cfg_mgr.changes = ""
+    res = m.del_handler("CONFED")
+    assert res, "Expect True return value for del_handler"
+    assert not m.directory.path_exist(m.db_name, m.table_name, "CONFED")
+    # CONFED removal must not push any FRR config either
+    assert m.cfg_mgr.get_config() == ""
+
+def test_prime_confed_from_config_db_success():
+    m = constructor()
+    # constructor() does not prime because the swsscommon test double has no
+    # ConfigDBConnector; start from a clean slate to exercise the success path.
+    if m.directory.path_exist(m.db_name, m.table_name, "CONFED"):
+        m.directory.remove(m.db_name, m.table_name, "CONFED")
+    confed = {"asn": "65100", "peers": "65300"}
+    fake_conn = MagicMock()
+    fake_conn.get_table.return_value = {"CONFED": confed}
+    with patch.object(bgpcfgd.managers_device_global.swsscommon,
+                      "ConfigDBConnector", create=True, return_value=fake_conn):
+        m.prime_confed_from_config_db()
+    fake_conn.connect.assert_called_once()
+    fake_conn.get_table.assert_called_once_with(m.table_name)
+    slot = m.directory.get_slot(m.db_name, m.table_name)
+    assert slot["CONFED"] == confed, "primed CONFED must be cached in the Directory"
+
+def test_prime_confed_from_config_db_none_table():
+    m = constructor()
+    if m.directory.path_exist(m.db_name, m.table_name, "CONFED"):
+        m.directory.remove(m.db_name, m.table_name, "CONFED")
+    fake_conn = MagicMock()
+    # get_table() may return None (missing table / transient read); priming must
+    # coalesce to {} and neither raise nor store a CONFED entry.
+    fake_conn.get_table.return_value = None
+    with patch.object(bgpcfgd.managers_device_global.swsscommon,
+                      "ConfigDBConnector", create=True, return_value=fake_conn):
+        m.prime_confed_from_config_db()
+    assert not m.directory.path_exist(m.db_name, m.table_name, "CONFED")
+
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.configure_tsa')
+def test_set_handler_unknown_key_does_not_run_tsa(mock_configure_tsa):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("SOME_UNKNOWN_KEY", {"foo": "bar"})
+    assert res, "Expect True return value for set_handler"
+    # Only the STATE key drives TSA/W-ECMP/IDF; any other (unknown) key must
+    # never fall through to configure_tsa() (regression guard for #28515).
+    mock_configure_tsa.assert_not_called()
+    assert m.cfg_mgr.get_config() == ""

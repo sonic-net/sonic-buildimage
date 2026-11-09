@@ -292,6 +292,7 @@
 	"DEVICE_METADATA": {
 		"localhost": {
 			"bgp_asn": "65100",
+			"dpu_auto_recovery": "enable",
 			"hostname": "sonic",
 			"hwsku": "SSwitch-32x1000Gb",
 			"subtype": "SmartSwitch",

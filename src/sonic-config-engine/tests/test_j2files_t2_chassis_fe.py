@@ -43,7 +43,7 @@ class TestJ2FilesT2ChassisFe(TestCase):
     def run_case(self, minigraph, template, target):
         template_dir = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-fpm-frr', "frr")
         conf_template = os.path.join(template_dir, template)
-        constants = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'constants', 'constants.yml')
+        constants = os.path.join(self.test_dir, 'data', 'constants.yml')
         cmd = ["-m", minigraph, "-p", self.t2_chassis_fe_port_config, "-y", constants, "-t", conf_template, "-T", template_dir]
         self.run_script(cmd, output_file=self.output_file)
 

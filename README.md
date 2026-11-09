@@ -8,6 +8,16 @@
 [![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=master&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=master)
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=master&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=master)
 
+*202605 builds*:
+
+[![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202605&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202605)
+[![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=202605&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=202605)
+[![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.marvell-teralynx?branchName=202605&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=2432&branchName=202605)
+[![Marvell-Prestera(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-armhf?branchName=202605&label=Marvell-Prestera-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=202605)
+[![Marvell-Prestera(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-arm64?branchName=202605&label=Marvell-Prestera-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202605)
+[![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=202605&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=202605)
+[![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202605&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202605)
+
 *202511 builds*:
 
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202511&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202511)
@@ -344,11 +354,33 @@ For details refer to [SONiC Buildimage Guide](https://github.com/sonic-net/sonic
 Please refer to [SONiC roadmap](https://github.com/sonic-net/SONiC/wiki/Sonic-Roadmap-Planning)
 on the SAI version for each SONiC release.
 
+## Software Bill of Materials (SBOM) and vulnerability scanning
+
+Opt-in SBOM generation and SBOM-based vulnerability scanning are
+supported via `ENABLE_SBOM=y` at build time. The default build path
+is unchanged; enabling SBOM adds CycloneDX 1.6 + SPDX 2.3 + SLSA
+v1.0 in-toto provenance sidecars per built artifact, along with
+standalone CycloneDX scanner output for vulnerability reports.
+
+See [README.sbom.md](README.sbom.md) for the full design, build
+flag reference, vulnerability-report quick start, VEX workflow,
+reproducibility notes, and known limitations.
+
 ## Notes
 
 * If you are running make for the first time, a sonic-slave-${USER} docker image
   will be built automatically.
   This may take a while, but it is a one-time action, so please be patient.
+* If the slave base image tag changes (e.g. edits under `sonic-slave-*`) but you
+  want to keep using a base image you already built, run
+  `BLDENV=<release> make showtag` (per release and per arch, as in real builds) to
+  record `sonic-slave-<release>:<tag>`, then pass the matching **per-release**
+  pair, e.g. `SONIC_SLAVE_REUSE_BOOKWORM_IMAGE` / `SONIC_SLAVE_REUSE_BOOKWORM_TAG`
+  for `BLDENV=bookworm` and
+  `SONIC_SLAVE_REUSE_TRIXIE_IMAGE` / `SONIC_SLAVE_REUSE_TRIXIE_TAG` for
+  `BLDENV=trixie`, on later make invocations to skip rebuilding the slave. You
+  can export several pairs in your environment when switching between releases.
+  See `Makefile.work` for details.
 * The root user account is disabled. However, the created user can `sudo`.
 * The target directory is `./target`, containing the NOS installer image
   and docker images.

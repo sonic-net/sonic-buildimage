@@ -1,0 +1,399 @@
+From 87bacc1fd956785124fc970c14d5eb7635fa3faa Mon Sep 17 00:00:00 2001
+From: Brian Carr <brcarr@nvidia.com>
+Date: Tue, 2 Jun 2026 23:03:33 +0300
+Subject: [PATCH 6/6] pldm-fw: add Force Update support for UpdateComponent
+
+Implement DSP0267 Force Update (option flag bit 0) for the update path.
+The UA previously always sent zero flags on UpdateComponent and aborted
+on PassComponentTable IdenticalVersion/DowngradeVersion responses.
+
+- Add UPDATE_COMPONENT_FLAG_FORCE_UPDATE in pldm-fw.
+- Thread force_update through pass_component_table, update_component*,
+  and update_components*; set the UpdateComponent flags field when
+  requested.
+- With --force-update, continue past PCT response codes IdenticalVersion
+  (0x01) and DowngradeVersion (0x02) so same-image reinstall and
+  downgrade testing can reach UpdateComponent.
+- Add --force-update to pldm-fw update.
+
+Signed-off-by: Brian Carr <brcarr@nvidia.com>
+---
+
+index 0c1d20a..beeb88e 100644
+--- a/pldm-fw-cli/src/bin/pldm-fw.rs
++++ b/pldm-fw-cli/src/bin/pldm-fw.rs
+@@ -212,6 +212,10 @@ struct UpdateCommand {
+     #[argh(switch)]
+     self_contained_activation: bool,
+ 
++    /// set Force Update in UpdateComponent (DSP0267 option flag bit 0)
++    #[argh(switch)]
++    force_update: bool,
++
+     /// don't require confirmation to update
+     #[argh(switch, short = 'y')]
+     confirm: bool,
+@@ -427,11 +431,12 @@ fn main() -> anyhow::Result<()> {
+             }
+ 
+             let _ = pldm_fw::ua::request_update(ep, &update)?;
+-            pldm_fw::ua::pass_component_table(ep, &update)?;
++            pldm_fw::ua::pass_component_table(ep, &update, u.force_update)?;
+             let component_results = pldm_fw::ua::update_components_progress(
+                 ep,
+                 &mut listener,
+                 &mut update,
++                u.force_update,
+                 progress,
+             )?;
+ 
+diff --git a/pldm-fw/src/lib.rs b/pldm-fw/src/lib.rs
+index 7cb3f8f..109827b 100644
+--- a/pldm-fw/src/lib.rs
++++ b/pldm-fw/src/lib.rs
+@@ -1089,6 +1089,9 @@ pub struct UpdateComponent {
+     pub flags: Option<u32>,
+ }
+ 
++/// UpdateComponent option flag: Force Update (DSP0267, bit 0).
++pub const UPDATE_COMPONENT_FLAG_FORCE_UPDATE: u32 = 0x0000_0001;
++
+ impl UpdateComponent {
+     pub fn parse_pass_component(buf: &[u8]) -> VResult<&[u8], Self> {
+         let (
+diff --git a/pldm-fw/src/ua.rs b/pldm-fw/src/ua.rs
+index 4757c28..f075182 100644
+--- a/pldm-fw/src/ua.rs
++++ b/pldm-fw/src/ua.rs
+@@ -24,8 +24,8 @@ use pldm::PldmError;
+ 
+ use crate::pkg;
+ use crate::{
+-    ActivationMethods, ApplyResult, DeviceIdentifiers, FirmwareParameters,
+-    FwCode, GetStatusResponse, PldmFDState, RequestUpdateResponse,
++    ActivationMethods, ApplyResult, ComponentResponseCode, DeviceIdentifiers,
++    FirmwareParameters, FwCode, GetStatusResponse, PldmFDState, RequestUpdateResponse,
+     UpdateComponentResponse, UpdateTransferProgress, VerifyResult, PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
+ };
+ 
+@@ -218,13 +218,23 @@ pub fn update_component(
+     package: &pkg::Package,
+     component: &pkg::PackageComponent,
+     index: u8,
++    force_update: bool,
+ ) -> Result<Option<ActivationMethods>> {
+-    update_component_progress(comm, listener, package, component, index, |_| ())
++    update_component_progress(
++        comm,
++        listener,
++        package,
++        component,
++        index,
++        force_update,
++        |_| (),
++    )
+ }
+ 
+ pub fn pass_component_table(
+     comm: &mut impl mctp::ReqChannel,
+     update: &Update,
++    force_update: bool,
+ ) -> Result<()> {
+     let components = &update.components;
+     let len = components.len();
+@@ -260,12 +270,32 @@ pub fn pass_component_table(
+         }
+ 
+         if rsp.data[0] != 0 {
+-            match rsp.data[1] {
++            let code = rsp.data[1];
++            match code {
+                 0x00 => (),
+-                0x06 => {
++                x if x == ComponentResponseCode::IdenticalVersion as u8
++                    || x == ComponentResponseCode::DowngradeVersion as u8 =>
++                {
++                    if force_update {
++                        info!(
++                            "PassComponentTable: component response code \
++                             0x{code:02x}; continuing with --force-update"
++                        );
++                    } else {
++                        let detail = match code {
++                            x if x == ComponentResponseCode::IdenticalVersion as u8 => {
++                                "component version identical to installed image"
++                            }
++                            _ => "component version downgrade blocked",
++                        };
++                        return Err(PldmUpdateError::new_update(format!(
++                            "{detail}; use --force-update to override"
++                        )));
++                    }
++                }
++                x if x == ComponentResponseCode::NotSupported as u8 => {
+                     return Err(PldmUpdateError::new_update(format!(
+-                        "unsupported component {}",
+-                        rsp.data[1]
++                        "unsupported component {x:02x}"
+                     )))
+                 }
+                 x => {
+@@ -300,6 +330,7 @@ pub fn update_component_progress<F>(
+     package: &pkg::Package,
+     component: &pkg::PackageComponent,
+     index: u8,
++    force_update: bool,
+     mut progress: F,
+ ) -> Result<Option<ActivationMethods>>
+ where
+@@ -320,8 +351,12 @@ where
+     let mut sz_done: u32 = 0;
+     data.extend_from_slice(&sz.to_le_bytes());
+ 
+-    // todo: flags: request forced update?
+-    data.extend_from_slice(&0u32.to_le_bytes());
++    let flags = if force_update {
++        crate::UPDATE_COMPONENT_FLAG_FORCE_UPDATE
++    } else {
++        0
++    };
++    data.extend_from_slice(&flags.to_le_bytes());
+ 
+     component.version.write_utf8_bytes(&mut data);
+ 
+@@ -643,14 +678,16 @@ pub fn update_components(
+     comm: &mut impl mctp::ReqChannel,
+     listener: &mut impl mctp::Listener,
+     update: &mut Update,
++    force_update: bool,
+ ) -> Result<Vec<ComponentActivationUpdate>> {
+-    update_components_progress(comm, listener, update, |_| ())
++    update_components_progress(comm, listener, update, force_update, |_| ())
+ }
+ 
+ pub fn update_components_progress<F>(
+     comm: &mut impl mctp::ReqChannel,
+     listener: &mut impl mctp::Listener,
+     update: &mut Update,
++    force_update: bool,
+     mut progress: F,
+ ) -> Result<Vec<ComponentActivationUpdate>>
+ where
+@@ -667,6 +704,7 @@ where
+             &update.package,
+             component,
+             update.index,
++            force_update,
+             &mut progress,
+         )?;
+         results.push(ComponentActivationUpdate {
+@@ -735,9 +773,10 @@ mod tests {
+         update_component, PldmUpdateError, Update,
+     };
+     use crate::{
+-        ActivationMethod, ActivationMethods, DeviceCapabilities, Descriptor,
+-        DescriptorString, DeviceIdentifiers, FirmwareParameters, FwCode,
+-        GetStatusResponse, PldmFDState, PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
++        ActivationMethod, ActivationMethods, ComponentResponseCode,
++        DeviceCapabilities, Descriptor, DescriptorString, DeviceIdentifiers,
++        FirmwareParameters, FwCode, GetStatusResponse, PldmFDState,
++        PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW, UPDATE_COMPONENT_FLAG_FORCE_UPDATE,
+     };
+     use mctp::{
+         Eid, Listener, MsgIC, MsgType, ReqChannel, RespChannel,
+@@ -1010,7 +1049,47 @@ mod tests {
+             resp_frame(0x13, 0, &[0, 0]),
+         ]);
+ 
+-        pass_component_table(&mut comm, &update).unwrap();
++        pass_component_table(&mut comm, &update, false).unwrap();
++    }
++
++    #[test]
++    fn pass_component_table_rejects_identical_version_without_force() {
++        let img: &[u8] = &[0u8; 64];
++        let cases = [
++            (ComponentResponseCode::IdenticalVersion, "identical"),
++            (ComponentResponseCode::DowngradeVersion, "downgrade blocked"),
++        ];
++
++        for (code, needle) in cases {
++            let update = make_update(0xabcd, &[img]);
++            let mut comm = MockComm::new(vec![
++                resp_frame(0x1b, 0, &status_data(PldmFDState::LearnComponents)),
++                resp_frame(0x13, 0, &[1, code as u8]),
++            ]);
++
++            let err = pass_component_table(&mut comm, &update, false).unwrap_err();
++            assert!(
++                matches!(err, PldmUpdateError::Update(ref msg) if msg.contains(needle)),
++                "expected Update containing {needle:?}, got {err:?}"
++            );
++        }
++    }
++
++    #[test]
++    fn pass_component_table_continues_identical_version_with_force() {
++        let img: &[u8] = &[0u8; 64];
++        for code in [
++            ComponentResponseCode::IdenticalVersion,
++            ComponentResponseCode::DowngradeVersion,
++        ] {
++            let update = make_update(0xabcd, &[img]);
++            let mut comm = MockComm::new(vec![
++                resp_frame(0x1b, 0, &status_data(PldmFDState::LearnComponents)),
++                resp_frame(0x13, 0, &[1, code as u8]),
++            ]);
++
++            pass_component_table(&mut comm, &update, true).unwrap();
++        }
+     }
+ 
+     #[test]
+@@ -1024,7 +1103,7 @@ mod tests {
+             resp_frame(0x13, 0, &[1, 0x06]),
+         ]);
+ 
+-        let err = pass_component_table(&mut comm, &update).unwrap_err();
++        let err = pass_component_table(&mut comm, &update, false).unwrap_err();
+         assert!(matches!(err, PldmUpdateError::Update(_)));
+     }
+ 
+@@ -1060,6 +1139,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+@@ -1072,6 +1152,46 @@ mod tests {
+         assert_eq!(&reply[4..], &img[..]);
+     }
+ 
++    #[test]
++    fn update_component_encodes_force_update_flag() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &[0]),
++        ]);
++
++        update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++            true,
++        )
++        .unwrap();
++
++        let sent = comm.sent();
++        assert_eq!(sent.len(), 3); // GetStatus, UpdateComponent, GetStatus
++        let uc = &sent[1];
++        assert_eq!(uc[2], 0x14);
++        let data = &uc[3..];
++        // classification(2) + identifier(2) + index(1) + stamp(4) + size(4)
++        const FLAGS_OFF: usize = 13;
++        let flags = u32::from_le_bytes([
++            data[FLAGS_OFF],
++            data[FLAGS_OFF + 1],
++            data[FLAGS_OFF + 2],
++            data[FLAGS_OFF + 3],
++        ]);
++        assert_eq!(flags, UPDATE_COMPONENT_FLAG_FORCE_UPDATE);
++    }
++
+     #[test]
+     fn update_component_pads_past_image_end() {
+         let img: Vec<u8> = (0..40u8).collect();
+@@ -1093,6 +1213,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+@@ -1127,6 +1248,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+@@ -1157,6 +1279,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+@@ -1186,6 +1309,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+@@ -1213,6 +1337,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap_err();
+         assert!(matches!(err, PldmUpdateError::Update(_)));
+@@ -1247,6 +1372,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+@@ -1277,6 +1403,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap_err();
+ 
+@@ -1313,6 +1440,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap_err();
+ 
+@@ -1348,6 +1476,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+@@ -1375,6 +1504,7 @@ mod tests {
+             &update.package,
+             component,
+             update.index,
++            false,
+         )
+         .unwrap();
+ 
+
+--
+2.49.0

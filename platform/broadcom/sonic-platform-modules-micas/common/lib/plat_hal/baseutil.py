@@ -28,6 +28,7 @@ SYSLOG_IDENTIFIER = "HAL"
 CONFIG_DB_PATH = "/etc/sonic/config_db.json"
 BOARD_ID_PATH = "/sys/module/platform_common/parameters/dfd_my_type"
 BOARD_AIRFLOW_PATH = "/etc/sonic/.airflow"
+SUB_VERSION_FILE = "/etc/sonic/.subversion"
 
 
 def getonieplatform(path):
@@ -61,6 +62,14 @@ def getboardairflow():
     return airflow
 
 
+def get_sub_version():
+    if not os.path.exists(SUB_VERSION_FILE):
+        return "NA"
+    with open(SUB_VERSION_FILE) as fd:
+        sub_ver = fd.read().strip()
+    return sub_ver
+
+
 def getplatform_config_db():
     if not os.path.isfile(CONFIG_DB_PATH):
         return ""
@@ -81,6 +90,7 @@ def getplatform_name():
 platform = (getplatform_name()).replace("-", "_")
 boardid = getboardid()
 boardairflow = getboardairflow()
+sub_ver = (get_sub_version()).replace("-", "_")
 
 
 CONFIG_FILE_PATH_LIST = [
@@ -90,6 +100,8 @@ CONFIG_FILE_PATH_LIST = [
 
 
 DEVICE_CONFIG_FILE_LIST = [
+    platform + "_" + boardid + "_" + sub_ver + "_" + boardairflow + "_device.py",
+    platform + "_" + boardid + "_" + sub_ver + "_device.py",
     platform + "_" + boardid + "_" + boardairflow + "_device.py",
     platform + "_" + boardid + "_device.py",
     platform + "_" + boardairflow + "_device.py",
@@ -98,6 +110,8 @@ DEVICE_CONFIG_FILE_LIST = [
 
 
 MONITOR_CONFIG_FILE_LIST = [
+    platform + "_" + boardid + "_" + sub_ver + "_" + boardairflow + "_monitor.py",
+    platform + "_" + boardid + "_" + sub_ver + "_monitor.py",
     platform + "_" + boardid + "_" + boardairflow + "_monitor.py",
     platform + "_" + boardid + "_monitor.py",
     platform + "_" + boardairflow + "_monitor.py",

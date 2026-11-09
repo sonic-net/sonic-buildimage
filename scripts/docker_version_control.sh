@@ -27,7 +27,7 @@ tag=`echo $image_tag | cut -f2 -d:`
 
 if [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,all,* ]] || [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,docker,* ]]; then
     # if docker image not in white list, exit
-    if [[ "$image_tag" != */debian:* ]] && [[ "$image_tag" != debian:* ]] && [[ "$image_tag" != multiarch/debian-debootstrap:* ]];then
+    if [[ "$image_tag" != */debian:* ]] && [[ "$image_tag" != debian:* ]] && [[ "$image_tag" != multiarch/debian-debootstrap:* ]] && [[ "$image_tag" != *p4lang/behavioral-model:* ]];then
         exit 0
     fi
     if [ -f $version_file ];then

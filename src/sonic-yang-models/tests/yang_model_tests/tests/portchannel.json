@@ -93,5 +93,22 @@
     "PORTCHANNEL_INTERFACE_INVALID_MAC_ADDR": {
         "desc": "Set invalid interface mac address.",
         "eStrKey": "Pattern"
+    },
+    "PORTCHANNEL_SYSTEM_MAC_VALID": {
+        "desc": "Configure valid LACP system MAC address."
+    },
+    "PORTCHANNEL_SYSTEM_MAC_UPPERCASE": {
+        "desc": "Configure LACP system MAC address with uppercase characters."
+    },
+    "PORTCHANNEL_SYSTEM_MAC_INVALID": {
+        "desc": "Configure invalid LACP system MAC address.",
+        "eStrKey": "Pattern"
+    },
+    "PORTCHANNEL_VALID_CONFIG_AND_MEMBERS": {
+        "desc": "Verify valid PortChannel config with lag_type and members leaf-list."
+    },
+    "PORTCHANNEL_INVALID_LAG_TYPE": {
+        "desc": "Verify rejection of invalid lag_type enumeration.",
+        "eStrKey": "InvalidValue"
     }
 }

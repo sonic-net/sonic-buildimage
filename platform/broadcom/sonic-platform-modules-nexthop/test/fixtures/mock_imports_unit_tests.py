@@ -54,6 +54,16 @@ MOCK_MODULES = [
 ]
 
 
+def mock_smbus2():
+    """Set up mock for smbus2 module.
+
+    smbus2 is a hardware (I2C) dependency not available in test environments.
+    """
+    return {
+        "smbus2": MagicMock(),
+    }
+
+
 def mock_syslog_modules():
     """Set up mocks for syslogger."""
 
@@ -65,6 +75,7 @@ def mock_syslog_modules():
         log_warning = Mock()
         log_debug = Mock()
         log = Mock()
+        logger = Mock()
 
         def __init__(self, *args, **kwargs):
             pass
@@ -147,6 +158,7 @@ def dependencies_dict() -> dict[str, types.ModuleType]:
     results = {}
     for module in MOCK_MODULES:
         results[module] = Mock()
+    results.update(mock_smbus2())
     results.update(mock_syslog_modules())
     results.update(fake_some_base_modules())
     results.update(fake_swsscommon_modules())

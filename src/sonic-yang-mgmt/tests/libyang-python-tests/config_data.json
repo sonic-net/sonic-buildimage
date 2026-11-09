@@ -267,7 +267,7 @@
 						"fc02:2000::2"
 					],
 					"container-in-list-test": {
-						"leaf-1": true,
+						"leaf-1": "up",
 						"leaf-2": "test1",
 						"mc-case-leaf-1": 55,
 						"mc-case-leaf-3": 1234
@@ -281,7 +281,7 @@
 						"2002:2001::2"
 					],
 					"container-in-list-test": {
-						"leaf-1": false,
+						"leaf-1": "down",
 						"leaf-2": "test2",
 						"mc-case-leaf-2": 77,
 						"mc-case-leaf-3": 4321

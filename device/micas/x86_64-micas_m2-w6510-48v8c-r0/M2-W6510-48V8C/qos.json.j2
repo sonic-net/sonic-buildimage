@@ -1,0 +1,15 @@
+{%- macro generate_tc_to_pg_map_per_sku() %}
+    "TC_TO_PRIORITY_GROUP_MAP": {
+        "AZURE": {
+            "0": "7",
+            "1": "7",
+            "2": "7",
+            "3": "3",
+            "4": "4",
+            "5": "7",
+            "6": "7",
+            "7": "7"
+        }
+    },
+{%- endmacro %}
+{%- include 'qos_config.j2' %}

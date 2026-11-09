@@ -41,6 +41,8 @@ si_param_list = [
     "regn_bfm1n",
     "unreliable_los",
     "rxpolarity",
+    "tx_precoding",
+    "rx_precoding",
     "interface_type",
     "media_type"
 ]

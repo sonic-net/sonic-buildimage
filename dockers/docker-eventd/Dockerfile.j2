@@ -27,6 +27,7 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["*.json", "/etc/rsyslog.d/rsyslog_plugin_conf/"]
 COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/rsyslog_plugin_conf/"]
+COPY ["eventdb_wrapper.sh", "/usr/bin"]
 
 RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2 /etc/rsyslog.d/rsyslog_plugin_conf/host_events_info.json > /etc/rsyslog.d/rsyslog_plugin_conf/host_events.conf
 RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2 /etc/rsyslog.d/rsyslog_plugin_conf/bgp_events_info.json > /etc/rsyslog.d/rsyslog_plugin_conf/bgp_events.conf

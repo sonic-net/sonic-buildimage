@@ -34,6 +34,13 @@ popd
 
 [ -d /etc/sonic ] || mkdir -p /etc/sonic
 
+# Populate runtime fields in sonic_version.yml that are not available at build time
+if [ -f /etc/sonic/sonic_version.yml ]; then
+    if ! grep -q "^kernel_version:" /etc/sonic/sonic_version.yml; then
+        echo "kernel_version: '$(uname -r)'" >> /etc/sonic/sonic_version.yml
+    fi
+fi
+
 # Note: libswsscommon requires a dabase_config file in /var/run/redis/sonic-db/
 # Prepare this file before any dependent application, such as sonic-cfggen
 mkdir -p /var/run/redis/sonic-db
@@ -45,6 +52,11 @@ sonic-cfggen -t /usr/share/sonic/templates/init_cfg.json.j2 -a "{\"system_mac\":
 if [[ -f /usr/share/sonic/virtual_chassis/default_config.json ]]; then
     sonic-cfggen -j /etc/sonic/init_cfg.json -j /usr/share/sonic/virtual_chassis/default_config.json --print-data > /tmp/init_cfg.json
     mv /tmp/init_cfg.json /etc/sonic/init_cfg.json
+fi
+
+# If a config_db.json is provided on the persistent volume, use it
+if [ -f /var/sonic/config_db.json ]; then
+    cp /var/sonic/config_db.json /etc/sonic/config_db.json
 fi
 
 if [ -f /etc/sonic/config_db.json ]; then
@@ -76,6 +88,9 @@ elif [ "$HWSKU" == "DPU-2P" ]; then
 fi
 
 mkdir -p /etc/swss/config.d/
+
+# Ensure hostname resolves (sudo hangs without this)
+grep -qw "$(hostname)" /etc/hosts 2>/dev/null || echo "127.0.0.1 $(hostname)" >> /etc/hosts
 
 rm -f /var/run/rsyslogd.pid
 
@@ -144,12 +159,6 @@ supervisorctl start neighsyncd
 
 supervisorctl start fdbsyncd
 
-supervisorctl start teamsyncd
-
-supervisorctl start fpmsyncd
-
-supervisorctl start teammgrd
-
 supervisorctl start vrfmgrd
 
 supervisorctl start portmgrd
@@ -158,27 +167,19 @@ supervisorctl start intfmgrd
 
 supervisorctl start vlanmgrd
 
-supervisorctl start zebra
-
-supervisorctl start mgmtd
-
-supervisorctl start staticd
-
 supervisorctl start buffermgrd
 
 supervisorctl start nbrmgrd
 
 supervisorctl start vxlanmgrd
 
-supervisorctl start sflowmgrd
-
-supervisorctl start natmgrd
-
-supervisorctl start natsyncd
-
 supervisorctl start tunnelmgrd
 
 supervisorctl start fabricmgrd
+
+# Start LLDP (uses docker-lldp's start.sh)
+/usr/bin/start-lldp.sh
+/usr/bin/start-teamd.sh
 
 supervisorctl start rebootbackend
 

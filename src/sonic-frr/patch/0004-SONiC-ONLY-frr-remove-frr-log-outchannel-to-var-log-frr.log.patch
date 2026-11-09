@@ -1,17 +1,19 @@
-[PATCH] From 0417036a3aece862c95111d4646ca7508a028165 Mon Sep 17
-
+From 5ed33f830410f37506e6cf0242ec86d1a56448e6 Mon Sep 17 00:00:00 2001
 From: Ying Xie <ying.xie@microsoft.com>
 Date: Wed, 25 Nov 2020 22:28:43 +0000
- 00:00:00 2001 Subject: [PATCH] [PATCH 6/8] [frr] remove frr log outchannel to
- /var/log/frr.log SONiC runs frr inside a docker and the logs are sent to base
- image via rsyslog and recorded already. There is no need to keep the frr.log
- inside the docker. It will grow and take all harddrive space eventually.
+Subject: [PATCH] frr: remove duplicate file log outchannel
+
+SONiC runs FRR inside a container and forwards daemon logs through rsyslog.
+Remove the duplicate /var/log/frr/frr.log outchannel to avoid unbounded
+container-local log growth.
+
+Original-patch-commit: 0417036a3aece862c95111d4646ca7508a028165
 ---
- tools/etc/rsyslog.d/45-frr.conf |   24 ------------------------
+ tools/etc/rsyslog.d/45-frr.conf | 24 ------------------------
  1 file changed, 24 deletions(-)
 
 diff --git a/tools/etc/rsyslog.d/45-frr.conf b/tools/etc/rsyslog.d/45-frr.conf
-index ef37d66d8..2e8e1e12d 100644
+index ef37d66d82..2e8e1e12d1 100644
 --- a/tools/etc/rsyslog.d/45-frr.conf
 +++ b/tools/etc/rsyslog.d/45-frr.conf
 @@ -2,30 +2,6 @@
@@ -45,3 +47,6 @@ index ef37d66d8..2e8e1e12d 100644
  if  $programname == 'babeld' or
      $programname == 'bgpd' or
      $programname == 'bfdd' or
+-- 
+2.34.1
+

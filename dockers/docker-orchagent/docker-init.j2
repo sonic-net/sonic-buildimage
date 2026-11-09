@@ -8,9 +8,10 @@ mkdir -p /dev/shm/supervisor/
 CFGGEN_PARAMS=" \
     -d \
 {% if ENABLE_ASAN == "y" %}
-     -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" \
-{% endif %}
+    -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\",\"ASIC_VENDOR\":\"${ASIC_VENDOR:-unknown}\"}" \
+{% else %}
     -a "{\"ASIC_VENDOR\":\"${ASIC_VENDOR:-unknown}\"}" \
+{% endif %}
     -y /etc/sonic/constants.yml \
     -t /usr/share/sonic/templates/orch_zmq_tables.conf.j2,/etc/swss/orch_zmq_tables.conf \
     -t /usr/share/sonic/templates/switch.json.j2,/etc/swss/config.d/switch.json \
@@ -64,7 +65,7 @@ if [ -f "$IS_SUPERVISOR" ]; then
             else
                 # Update asic_id in CONFIG_DB, which is used by orchagent and fed to syncd
                 if [[ $PCI_ID == ????:??:??.? ]]; then
-                    sonic-db-cli CONFIG_DB HSET 'DEVICE_METADATA|localhost' 'asic_id' ${PCI_ID#*:}
+                    sonic-db-cli -s CONFIG_DB HSET 'DEVICE_METADATA|localhost' 'asic_id' ${PCI_ID#*:}
                     break
                 fi
             fi

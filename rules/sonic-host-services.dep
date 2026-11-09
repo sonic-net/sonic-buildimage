@@ -1,6 +1,7 @@
 SPATH       := $($(SONIC_HOST_SERVICES_PY3)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-host-services.mk rules/sonic-host-services.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH).patch/)
 SMDEP_FILES := $(addprefix $(SPATH)/,$(shell git -C $(SPATH) ls-files | grep -v ^data))
 
 $(SONIC_HOST_SERVICES_PY3)_CACHE_MODE  := GIT_CONTENT_SHA

@@ -7,6 +7,7 @@
 
 
 try:
+    import glob
     import os
     from sonic_platform_base.thermal_base import ThermalBase
     from swsscommon.swsscommon import SonicV2Connector
@@ -16,6 +17,17 @@ except ImportError as e:
 
 sonic_logger = logger.Logger('thermal')
 FPGA_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
+
+CN9130_THERMAL_MISC_DIR = "/sys/devices/virtual/misc/cn9130_thermal/"
+
+
+def _resolve_cn9130_thermal_dir():
+    matches = sorted(glob.glob(CN9130_THERMAL_MISC_DIR + "hwmon*/"))
+    if matches:
+        return matches[0]
+    return None
+
+
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
 
@@ -23,8 +35,6 @@ class Thermal(ThermalBase):
     I2C_DEV_MAPPING = (['0-0048/hwmon/', 1],
                        ['0-0049/hwmon/', 1],
                        ['0-004a/hwmon/', 1])
-
-    CN9130_THERMAL_DIR = "/sys/class/hwmon/hwmon1/"
 
 
     THERMAL_NAME = ("PCB BACK", "PCB FRONT", "PCB MID", "FPGA", "CPU CORE")
@@ -55,11 +65,14 @@ class Thermal(ThermalBase):
             self.SENSOR_DIR = None
 
         elif self.index == 5:
-            dev_path = self.CN9130_THERMAL_DIR
             sensor_index = 1
             sensor_high_suffix = "crit"
             sensor_high_crit_suffix = "max"
-            self.SENSOR_DIR = dev_path
+            self.SENSOR_DIR = _resolve_cn9130_thermal_dir()
+            if self.SENSOR_DIR is None:
+                sonic_logger.log_warning(
+                    "cn9130_thermal hwmon node not found under {}".format(
+                        CN9130_THERMAL_MISC_DIR))
 
         if self.SENSOR_DIR:
             self.thermal_temperature_file = self.SENSOR_DIR \

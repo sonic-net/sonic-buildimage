@@ -16,7 +16,7 @@ except ImportError as e:
 
 FAN_DRAWERS = 8
 FANS_PER_DRAWER = 2
-CPLD_DIR = "/sys/bus/i2c/devices/134-0071/"
+CPLD_DIR = "/sys/bus/i2c/devices/135-0071/"
 
 def DBG_PRINT(str):
     syslog.openlog("nokia-led")

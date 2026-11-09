@@ -132,5 +132,31 @@
                 }
             }
         }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_CHASSIS_TSA_SUPPORTED_DEFAULT_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_CHASSIS_TSA_SUPPORTED_TRUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "chassis_tsa_supported": "true"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_CHASSIS_TSA_SUPPORTED_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "chassis_tsa_supported": "invalid_value"
+                }
+            }
+        }
     }
 }

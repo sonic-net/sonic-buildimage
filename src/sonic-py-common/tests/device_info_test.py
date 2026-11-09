@@ -123,8 +123,10 @@ class TestDeviceInfo(object):
 
     @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
     @mock.patch("sonic_py_common.device_info.get_platform_info")
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
     @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis")
-    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_platform_info, mock_is_chassis_config_absent):
+    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+        mock_localhost_info.return_value = "npu"
         mock_platform_info.return_value = {"switch_type": "npu"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -132,6 +134,7 @@ class TestDeviceInfo(object):
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -139,6 +142,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == True
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = True
         mock_is_chassis_config_absent.return_value = False
@@ -146,6 +150,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = True
@@ -153,6 +158,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+        mock_localhost_info.return_value = "chassis-packet"
         mock_platform_info.return_value = {"switch_type": "chassis-packet"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -160,8 +166,14 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == True
         assert device_info.is_chassis() == True
 
-        mock_platform_info.return_value = {"switch_type": "dummy-sup",
-                                           "asic_type": "vs"}
+        mock_localhost_info.return_value = "SpineRouter"
+        mock_platform_info.return_value = {}
+        mock_is_disaggregated_chassis.return_value = False
+        mock_is_chassis_config_absent.return_value = False
+        assert device_info.is_chassis() == True
+
+        mock_localhost_info.return_value = "dummy-sup"
+        mock_platform_info.return_value = {"switch_type": "dummy-sup", "asic_type": "vs"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
@@ -169,12 +181,62 @@ class TestDeviceInfo(object):
         assert device_info.is_virtual_chassis() == True
         assert device_info.is_chassis() == True
 
+        mock_localhost_info.return_value = None
         mock_platform_info.return_value = {}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
+
+    @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
+    @mock.patch("sonic_py_common.device_info.get_platform_info")
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_is_virtual_chassis_single_node(self, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+        # A single-node vlab has no chassisdb.conf, so it is not a virtual
+        # chassis regardless of its switch_type
+        mock_platform_info.return_value = {"asic_type": "vs"}
+        mock_is_chassis_config_absent.return_value = True
+        for switch_type in ["dummy-sup", "voq", "chassis-packet"]:
+            mock_localhost_info.return_value = switch_type
+            assert device_info.is_virtual_chassis() == False
+
+        # Same setup with chassisdb.conf present is a virtual chassis
+        mock_is_chassis_config_absent.return_value = False
+        for switch_type in ["dummy-sup", "voq", "chassis-packet"]:
+            mock_localhost_info.return_value = switch_type
+            assert device_info.is_virtual_chassis() == True
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_get_hwsku_is_cached(self, mock_localhost_info):
+        """A valid HwSKU is read from CONFIG_DB once and reused afterwards."""
+        device_info.hwsku_info = None
+        try:
+            mock_localhost_info.return_value = "Mellanox-SN2700"
+            for _ in range(5):
+                assert device_info.get_hwsku() == "Mellanox-SN2700"
+            mock_localhost_info.assert_called_once_with("hwsku")
+        finally:
+            device_info.hwsku_info = None
+
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_get_hwsku_does_not_cache_failure(self, mock_localhost_info):
+        """A failed lookup must be retried, not cached, so a transient CONFIG_DB
+           error does not pin an empty HwSKU for the lifetime of the process."""
+        device_info.hwsku_info = None
+        try:
+            mock_localhost_info.return_value = None
+            assert device_info.get_hwsku() is None
+            assert device_info.get_hwsku() is None
+            assert mock_localhost_info.call_count == 2
+
+            mock_localhost_info.return_value = "Mellanox-SN2700"
+            assert device_info.get_hwsku() == "Mellanox-SN2700"
+            assert mock_localhost_info.call_count == 3
+            # Now that a valid value is known, no further reads happen.
+            assert device_info.get_hwsku() == "Mellanox-SN2700"
+            assert mock_localhost_info.call_count == 3
+        finally:
+            device_info.hwsku_info = None
 
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
@@ -241,6 +303,105 @@ class TestDeviceInfo(object):
         mock_open.side_effect = open_mocked
         result = device_info.get_platform_json_data()
         assert result is None
+
+        # Test case where the platform directory cannot be located
+        mock_get_path_to_platform_dir.side_effect = OSError("Failed to locate platform directory")
+        result = device_info.get_platform_json_data()
+        assert result is None
+        mock_get_path_to_platform_dir.side_effect = None
+
+    @mock.patch("os.path.isfile")
+    @mock.patch("{}.open".format(BUILTINS))
+    @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_get_cpo_data(self, mock_get_platform, mock_get_platform_dir, mock_open, mock_isfile):
+        mock_get_platform.return_value = "x86_64-vendor_cpo-r0"
+        mock_get_platform_dir.return_value = "/usr/share/sonic/device/x86_64-vendor_cpo-r0"
+
+        cpo_data = {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "max_banks": 2,
+                    "asic_lanes": "41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56",
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "lasers": 4,
+                    "max_banks": 1,
+                    "laser_to_asic_lane_mapping": {
+                        "1": "41,42,43,44",
+                        "2": "45,46,47,48",
+                        "3": "49,50,51,52",
+                        "4": "53,54,55,56"
+                    },
+                    # example vendor-specific field; must pass through verbatim.
+                    "elsfp_sysfs_path": "/sys/bus/i2c/devices/33-0051"
+                }
+            },
+            "interfaces": {
+                "Ethernet0": {
+                    "associated_devices": [
+                        {"device_id": "OE1", "bank": 0},
+                        {"device_id": "ELS1", "bank": 0}
+                    ]
+                },
+                "Ethernet8": {
+                    "associated_devices": [
+                        {"device_id": "OE1", "bank": 1},
+                        {"device_id": "ELS1", "bank": 0}
+                    ]
+                }
+            }
+        }
+
+        # Happy path: lane strings normalized, vendor field untouched.
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data=json.dumps(cpo_data))
+        mock_open.side_effect = open_mocked
+        result = device_info.get_cpo_data()
+        assert result["devices"]["OE1"]["asic_lanes"] == [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56]
+        assert result["devices"]["ELS1"]["laser_to_asic_lane_mapping"] == {
+            1: [41, 42, 43, 44],
+            2: [45, 46, 47, 48],
+            3: [49, 50, 51, 52],
+            4: [53, 54, 55, 56],
+        }
+        assert result["devices"]["ELS1"]["elsfp_sysfs_path"] == "/sys/bus/i2c/devices/33-0051"
+        assert result["interfaces"]["Ethernet0"]["associated_devices"] == [
+            {"device_id": "OE1", "bank": 0},
+            {"device_id": "ELS1", "bank": 0},
+        ]
+        assert result["interfaces"]["Ethernet8"]["associated_devices"] == [
+            {"device_id": "OE1", "bank": 1},
+            {"device_id": "ELS1", "bank": 0},
+        ]
+
+        # The file is read from the platform directory.
+        opened_path = mock_open.call_args[0][0]
+        assert opened_path == "/usr/share/sonic/device/x86_64-vendor_cpo-r0/cpo.json"
+
+        # Returns None when the file does not exist.
+        mock_isfile.return_value = False
+        assert device_info.get_cpo_data() is None
+
+        # Returns None when the platform directory cannot be located.
+        mock_isfile.return_value = True
+        mock_get_platform_dir.side_effect = OSError("Failed to locate platform directory")
+        assert device_info.get_cpo_data() is None
+        mock_get_platform_dir.side_effect = None
+
+        # Returns None when platform is not set.
+        mock_isfile.return_value = True
+        mock_open.side_effect = mock.mock_open(read_data=json.dumps(cpo_data))
+        mock_get_platform.return_value = None
+        assert device_info.get_cpo_data() is None
+
+        # Returns None when the JSON is invalid.
+        mock_get_platform.return_value = "x86_64-vendor_cpo-r0"
+        mock_open.side_effect = mock.mock_open(read_data="invalid json")
+        assert device_info.get_cpo_data() is None
 
     @mock.patch("sonic_py_common.device_info.get_platform_json_data")
     @mock.patch("sonic_py_common.device_info.get_platform")
@@ -367,6 +528,191 @@ class TestDeviceInfo(object):
         # Test case where platform.json data contains DPUs
         mock_get_platform_json_data.return_value = {"DPUS": {"dpu0": {}, "dpu1": {}}}
         assert device_info.get_dpu_list() == ["dpu0", "dpu1"]
+
+    @mock.patch("os.path.isfile")
+    def test_get_chassis_db_address(self, mock_isfile):
+        # File does not exist — should return None
+        mock_isfile.return_value = False
+        assert device_info.get_chassis_db_address() is None
+
+        # File exists with a valid chassis_db_address entry
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="chassis_db_address=10.1.0.1\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() == "10.1.0.1"
+
+        # File exists but contains no chassis_db_address key
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="some_other_key=value\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() is None
+
+        # Key is present but value should be stripped of whitespace
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="chassis_db_address=10.1.0.2  \n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() == "10.1.0.2"
+
+    @mock.patch("os.path.isfile")
+    def test_get_smartswitch_midplane_ip(self, mock_isfile):
+        # File does not exist — should return None
+        mock_isfile.return_value = False
+        assert device_info.get_smartswitch_midplane_ip() is None
+
+        # File exists with a valid Address entry
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nAddress=169.254.200.254/24\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() == "169.254.200.254"
+
+        # File exists but contains no Address key
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nLinkLocalAddressing=no\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() is None
+
+        # Address entry without prefix length
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nAddress=169.254.200.254\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() == "169.254.200.254"
+
+    # ------------------------------------------------------------------
+    # Tests for BMC platform detection APIs
+    # ------------------------------------------------------------------
+
+    PLATFORM_ENV_BMC_CONTENTS = """\
+switch_bmc=1
+liquid_cooled=true
+"""
+
+    PLATFORM_ENV_HOST_CONTENTS = """\
+switch_host=1
+liquid_cooled=true
+"""
+
+    @mock.patch("sonic_py_common.device_info.get_platform_env_conf_file_path")
+    def test_is_switch_bmc(self, mock_get_env_path):
+        # platform_env.conf not found
+        mock_get_env_path.return_value = None
+        assert device_info.is_switch_bmc() is False
+
+        open_bmc = mock.mock_open(read_data=self.PLATFORM_ENV_BMC_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_bmc):
+            mock_get_env_path.return_value = "/usr/share/sonic/platform/platform_env.conf"
+            assert device_info.is_switch_bmc() is True
+
+        open_host = mock.mock_open(read_data=self.PLATFORM_ENV_HOST_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_host):
+            assert device_info.is_switch_bmc() is False
+
+    @mock.patch("sonic_py_common.device_info.get_platform_env_conf_file_path")
+    def test_is_switch_host(self, mock_get_env_path):
+        # platform_env.conf not found
+        mock_get_env_path.return_value = None
+        assert device_info.is_switch_host() is False
+
+        open_host = mock.mock_open(read_data=self.PLATFORM_ENV_HOST_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_host):
+            mock_get_env_path.return_value = "/usr/share/sonic/platform/platform_env.conf"
+            assert device_info.is_switch_host() is True
+
+        open_bmc = mock.mock_open(read_data=self.PLATFORM_ENV_BMC_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_bmc):
+            assert device_info.is_switch_host() is False
+
+    @mock.patch("os.path.exists")
+    def test_get_bmc_data(self, mock_exists):
+        BMC_GLOBAL = '{"bmc_if_name": "bmc0", "bmc_if_addr": "169.254.100.2", ' \
+                     '"bmc_addr": "169.254.100.1", "bmc_net_mask": "255.255.255.252"}'
+
+        # /etc/sonic/bmc.json present – data is returned
+        mock_exists.side_effect = lambda path: path == device_info.GLOBAL_BMC_DATA_FILE
+        with mock.patch("{}.open".format(BUILTINS),
+                        mock.mock_open(read_data=BMC_GLOBAL)):
+            result = device_info.get_bmc_data()
+        assert result is not None
+        assert result["bmc_addr"] == "169.254.100.1"
+        assert result["bmc_if_name"] == "bmc0"
+
+        # /etc/sonic/bmc.json absent – None is returned
+        mock_exists.side_effect = lambda p: False
+        result = device_info.get_bmc_data()
+        assert result is None
+
+    @mock.patch("sonic_py_common.device_info.get_bmc_data")
+    def test_get_bmc_address(self, mock_bmc_data):
+        BMC_DATA = {
+            "bmc_if_name": "bmc0",
+            "bmc_if_addr": "169.254.100.2",
+            "bmc_addr": "169.254.100.1",
+            "bmc_net_mask": "255.255.255.252"
+        }
+
+        mock_bmc_data.return_value = None
+        assert device_info.get_bmc_address() is None
+
+        mock_bmc_data.return_value = BMC_DATA
+        assert device_info.get_bmc_address() == "169.254.100.1"
+
+    @mock.patch("sonic_py_common.device_info.get_bmc_data")
+    def test_get_switch_host_address(self, mock_bmc_data):
+        BMC_DATA = {
+            "bmc_if_name": "bmc0",
+            "bmc_if_addr": "169.254.100.2",
+            "bmc_addr": "169.254.100.1",
+            "bmc_net_mask": "255.255.255.252"
+        }
+
+        mock_bmc_data.return_value = None
+        assert device_info.get_switch_host_address() is None
+
+        mock_bmc_data.return_value = BMC_DATA
+        assert device_info.get_switch_host_address() == "169.254.100.2"
+
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_no_file(self, mock_path):
+        # No file path resolved -> early return [] (does not import/parse yaml).
+        mock_path.return_value = None
+        assert device_info.get_expected_asic_list() == []
+
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_missing_file(self, mock_path, mock_exists):
+        # Path resolved but file absent -> early return [].
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = False
+        assert device_info.get_expected_asic_list() == []
+
+    @mock.patch("{}.open".format(BUILTINS), new_callable=mock.mock_open, read_data="[0, 1, 4, 5]")
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_valid(self, mock_path, mock_exists, mock_open):
+        # A valid YAML list is returned as-is.
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = True
+        assert device_info.get_expected_asic_list() == [0, 1, 4, 5]
+        mock_open.assert_called_once_with("/x/expected_asic_list")
+
+    @mock.patch("{}.open".format(BUILTINS), new_callable=mock.mock_open, read_data="")
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_empty_file(self, mock_path, mock_exists, mock_open):
+        # Empty file -> yaml.safe_load returns None -> normalized to [].
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = True
+        assert device_info.get_expected_asic_list() == []
+        mock_open.assert_called_once_with("/x/expected_asic_list")
+
+    @mock.patch("{}.open".format(BUILTINS), new_callable=mock.mock_open, read_data="not_a_list: true")
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_non_list(self, mock_path, mock_exists, mock_open):
+        # Non-list YAML content -> normalized to [].
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = True
+        assert device_info.get_expected_asic_list() == []
+        mock_open.assert_called_once_with("/x/expected_asic_list")
 
     @classmethod
     def teardown_class(cls):

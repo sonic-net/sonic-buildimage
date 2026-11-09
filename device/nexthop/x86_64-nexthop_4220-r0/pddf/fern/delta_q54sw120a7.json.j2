@@ -1,0 +1,124 @@
+{
+  "platform_counts": {
+    "num_voltage_sensors": 1,
+    "num_current_sensors": 1,
+    "num_temps": 1
+  },
+  "platform_thermals": [
+    {
+      "name": "IBV_DCDC{{ slot }}",
+      "low-threshold": false,
+      "low-crit-threshold": false
+    }
+  ],
+  "devices": {
+    "IBV_DCDC{{ slot }}": {
+      "dev_info": {
+        "device_type": "DCDC",
+        "device_name": "IBV_DCDC{{ slot }}",
+        "device_parent": "{{ parent }}",
+        "vendor": "DELTA",
+        "model": "Q54SW120A7"
+      },
+      "i2c": {
+        "topo_info": {
+          "parent_bus": "{{ parent_bus }}",
+          "dev_addr": "{{ dev_addr }}",
+          "dev_type": "nh_ibv"
+        }
+      }
+    },
+    "VOLTAGE1": {
+      "dev_info": {
+        "device_type": "VOLTAGE_SENSOR",
+        "device_name": "IBV_DCDC{{ slot }}",
+        "device_parent": "{{ parent }}",
+        "virt_parent": "IBV_DCDC{{ slot }}"
+      },
+      "dev_attr": {
+        "display_name": "IBV_DCDC{{ slot }}_OUTPUT"
+      },
+      "i2c": {
+        "attr_list": [
+          {
+            "attr_name": "volt1_input",
+            "drv_attr_name": "in2_input"
+          },
+          {
+            "attr_name": "volt1_high_threshold",
+            "drv_attr_name": "in2_max"
+          },
+          {
+            "attr_name": "volt1_low_threshold",
+            "drv_attr_name": "in2_min"
+          },
+          {
+            "attr_name": "volt1_crit_high_threshold",
+            "drv_attr_name": "in2_crit"
+          },
+          {
+            "attr_name": "volt1_crit_low_threshold",
+            "drv_attr_name": "in2_lcrit"
+          }
+        ]
+      }
+    },
+    "CURRENT1": {
+      "dev_info": {
+        "device_type": "CURRENT_SENSOR",
+        "device_name": "IBV_DCDC{{ slot }}",
+        "device_parent": "{{ parent }}",
+        "virt_parent": "IBV_DCDC{{ slot }}"
+      },
+      "dev_attr": {
+        "display_name": "IBV_DCDC{{ slot }}_OUTPUT"
+      },
+      "i2c": {
+        "attr_list": [
+          {
+            "attr_name": "current1_input",
+            "drv_attr_name": "curr1_input"
+          },
+          {
+            "attr_name": "current1_high_threshold",
+            "drv_attr_name": "curr1_max"
+          },
+          {
+            "attr_name": "current1_crit_high_threshold",
+            "drv_attr_name": "curr1_crit"
+          }
+        ]
+      }
+    },
+    "TEMP1": {
+      "dev_info": {
+        "device_type": "TEMP_SENSOR",
+        "device_name": "IBV_DCDC{{ slot }}_TEMP",
+        "device_parent": "{{ parent }}",
+        "virt_parent": "IBV_DCDC{{ slot }}",
+        "nexthop_thermal_pid_domain": "main",
+        "nexthop_thermal_setpoint_override": 100.0,
+        "nexthop_thermal_sw_reboot_threshold": 130.0
+      },
+      "dev_attr": {
+        "display_name": "IBV_DCDC{{ slot }}"
+      },
+      "i2c": {
+        "attr_list": [
+          {
+            "attr_name": "temp1_input",
+            "drv_attr_name": "temp1_input"
+          },
+          {
+            "attr_name": "temp1_high_threshold",
+            "drv_attr_name": "temp1_max"
+          },
+          {
+            "attr_name": "temp1_high_crit_threshold",
+            "drv_attr_name": "temp1_crit"
+          }
+        ]
+      }
+    }
+  }
+}

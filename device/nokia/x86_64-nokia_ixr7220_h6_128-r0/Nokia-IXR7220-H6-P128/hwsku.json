@@ -385,10 +385,7 @@
             "default_brkout_mode": "1x800G"
         },
         "Ethernet1024": {
-            "default_brkout_mode": "1x25G"
-        },
-        "Ethernet1025": {
-            "default_brkout_mode": "1x25G"
+            "default_brkout_mode": "1x100G"
         }
     }
 }

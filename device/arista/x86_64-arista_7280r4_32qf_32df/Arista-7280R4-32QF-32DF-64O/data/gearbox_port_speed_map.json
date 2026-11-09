@@ -1,0 +1,418 @@
+{
+  "Ethernet0": {
+    "phy_id": 1,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet4": {
+    "phy_id": 1,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet8": {
+    "phy_id": 2,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet12": {
+    "phy_id": 2,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet16": {
+    "phy_id": 3,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet20": {
+    "phy_id": 3,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet24": {
+    "phy_id": 4,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet28": {
+    "phy_id": 4,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet32": {
+    "phy_id": 5,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet36": {
+    "phy_id": 5,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet40": {
+    "phy_id": 7,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet44": {
+    "phy_id": 7,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet48": {
+    "phy_id": 6,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet52": {
+    "phy_id": 6,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet56": {
+    "phy_id": 8,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet60": {
+    "phy_id": 8,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet192": {
+    "phy_id": 9,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet196": {
+    "phy_id": 9,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet200": {
+    "phy_id": 11,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet204": {
+    "phy_id": 11,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet208": {
+    "phy_id": 14,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet212": {
+    "phy_id": 14,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet216": {
+    "phy_id": 10,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet220": {
+    "phy_id": 10,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet224": {
+    "phy_id": 12,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet228": {
+    "phy_id": 12,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet232": {
+    "phy_id": 13,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet236": {
+    "phy_id": 13,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet240": {
+    "phy_id": 15,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  },
+  "Ethernet244": {
+    "phy_id": 15,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet248": {
+    "phy_id": 16,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [0, 2, 4, 6],
+        "line_lanes": [16, 17, 18, 19]
+      },
+      "400G": {
+        "system_lanes": [0, 2, 12, 14],
+        "line_lanes": [16, 17, 18, 19, 28, 29, 30, 31]
+      }
+    }
+  },
+  "Ethernet252": {
+    "phy_id": 16,
+    "speed_lane_map": {
+      "100G": {
+        "system_lanes": [8, 10, 12, 14],
+        "line_lanes": [24, 25, 26, 27]
+      },
+      "400G": {
+        "system_lanes": [4, 6, 8, 10],
+        "line_lanes": [24, 25, 26, 27, 20, 21, 22, 23]
+      }
+    }
+  }
+}

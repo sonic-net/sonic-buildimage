@@ -1,0 +1,49 @@
+From 391081b17a4ca50cca8e4f01e756eb128a0a780e Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Tue, 2 Jun 2026 15:18:15 -0700
+Subject: [PATCH] bgpd: guard EVPN MH path handling dereferences
+
+Retain the two null-dereference protections from the original SONiC crash
+hardening patch that remain absent from FRR 10.7.1: guard the teardown debug
+path before dereferencing pi->net and skip null path entries during local ES
+MAC updates.
+
+The target already contains the VNI flood-mode guard. The original claimed
+dangling-else change is not carried because the pre-patch source does not
+support that rationale.
+
+Original SONiC patch commit: 944964d6fe1a5c2f4ac5128af8abd0db474c7876
+
+Signed-off-by: Barry Friedman <friedman@cisco.com>
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+---
+ bgpd/bgp_evpn_mh.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index cde8297df0..c09a16e046 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -1747,7 +1747,7 @@ static void bgp_evpn_path_es_unlink(struct bgp_path_es_info *es_info)
+ 		return;
+ 
+ 	pi = es_info->pi;
+-	if (BGP_DEBUG(evpn_mh, EVPN_MH_RT))
++	if (BGP_DEBUG(evpn_mh, EVPN_MH_RT) && pi && pi->net)
+ 		zlog_debug("vni %u path %pFX unlinked from es %s", es_info->vni,
+ 			   &pi->net->rn->p, es->esi_str);
+ 
+@@ -2313,6 +2313,9 @@ static void bgp_evpn_mac_update_on_es_local_chg(struct bgp_evpn_es *es,
+ 	for (ALL_LIST_ELEMENTS_RO(es->macip_global_path_list, node, es_info)) {
+ 		pi = es_info->pi;
+ 
++		if (!pi)
++			continue;
++
+ 		/* Consider "valid" remote routes */
+ 		if (!bgp_evpn_is_valid_bgp_path(pi))
+ 			continue;
+-- 
+2.34.1
+

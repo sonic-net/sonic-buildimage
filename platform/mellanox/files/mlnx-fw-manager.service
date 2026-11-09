@@ -22,9 +22,8 @@ Description=Mellanox Firmware Manager Service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStartPre=/usr/bin/mst start --with_i2cdev
+ExecCondition=/bin/bash -c '! grep -qE "(^|[[:space:]])SONIC_BOOT_TYPE=(fastfast|warm)([[:space:]]|$)" /proc/cmdline'
 ExecStart=/usr/local/bin/mlnx-fw-manager --clear-semaphore --verbose
-ExecStop=/usr/bin/mst stop
 TimeoutSec=300
 User=root
 

@@ -38,18 +38,33 @@ cat > "${MOCK_DIR}/docker" <<'MOCK_DOCKER'
 subcmd="$1"; shift
 case "$subcmd" in
   ps)
-    quiet=false; all=false; filter=""; format=""
+    quiet=false; all=false; format=""
+    container_name=""; pod_namespace=""
     while (( $# > 0 )); do
       case "$1" in
         -q) quiet=true; shift ;;
         -a) all=true; shift ;;
-        --filter) filter="$2"; shift 2 ;;
+        --filter)
+          case "$2" in
+            label=io.kubernetes.container.name=*)
+              container_name="${2#label=io.kubernetes.container.name=}"
+              ;;
+            label=io.kubernetes.pod.namespace=*)
+              pod_namespace="${2#label=io.kubernetes.pod.namespace=}"
+              ;;
+          esac
+          shift 2
+          ;;
         --format) format="$2"; shift 2 ;;
         *) shift ;;
       esac
     done
-    case "$filter" in
-      "name=k8s_telemetry_")
+    # Only respond when namespace is sonic (matches script's NS).
+    if [[ "$pod_namespace" != "sonic" ]]; then
+      exit 0
+    fi
+    case "$container_name" in
+      "telemetry")
         if $quiet; then
           echo "abc123def456"
         elif [[ "$format" == *".State"* ]]; then
@@ -58,7 +73,7 @@ case "$subcmd" in
           echo "ds-leafrouter-telemetry-zgmsl"
         fi
         ;;
-      "name=k8s_multi_")
+      "multi")
         if $quiet; then
           printf '%s\n' "aaa111" "bbb222"
         elif [[ "$format" == *".State"* ]]; then
@@ -67,7 +82,7 @@ case "$subcmd" in
           printf '%s\n' "pod-multi-1" "pod-multi-2"
         fi
         ;;
-      "name=k8s_nonexistent_")
+      "nonexistent")
         ;;  # no output
     esac
     ;;
@@ -104,10 +119,20 @@ export SERVICE_NAME="telemetry"
 source "$SOURCE_SCRIPT"
 
 # ── Test suite ────────────────────────────────────────────────────────
-echo "=== DOCKER_FILTER ==="
+echo "=== DOCKER_FILTERS ==="
 
-assert_eq "DOCKER_FILTER for telemetry" \
-  "name=k8s_telemetry_" "$DOCKER_FILTER"
+assert_eq "DOCKER_FILTERS contains container.name filter for telemetry" \
+  "label=io.kubernetes.container.name=telemetry" "${DOCKER_FILTERS[1]}"
+assert_eq "DOCKER_FILTERS contains pod.namespace filter" \
+  "label=io.kubernetes.pod.namespace=sonic" "${DOCKER_FILTERS[3]}"
+
+# Helper to rebuild DOCKER_FILTERS for a different SERVICE_NAME (mirrors script)
+set_filters_for() {
+  DOCKER_FILTERS=(
+    --filter "label=io.kubernetes.container.name=$1"
+    --filter "label=io.kubernetes.pod.namespace=${NS}"
+  )
+}
 
 echo ""
 echo "=== container_ids_on_node ==="
@@ -116,64 +141,47 @@ result="$(container_ids_on_node)"
 assert_eq "returns container ID for telemetry" "abc123def456" "$result"
 
 # Switch to multi-container service
-DOCKER_FILTER="name=k8s_multi_"
+set_filters_for "multi"
 result="$(container_ids_on_node)"
 line_count=$(printf '%s\n' "$result" | grep -c .)
 assert_eq "returns multiple container IDs" "2" "$line_count"
 
 # No match
-DOCKER_FILTER="name=k8s_nonexistent_"
+set_filters_for "nonexistent"
 result="$(container_ids_on_node)"
 assert_eq "no match returns empty" "" "$result"
 
 echo ""
 echo "=== pods_on_node ==="
 
-DOCKER_FILTER="name=k8s_telemetry_"
+set_filters_for "telemetry"
 result="$(pods_on_node)"
 assert_eq "returns pod name and state" \
   "ds-leafrouter-telemetry-zgmsl running" "$result"
 
-DOCKER_FILTER="name=k8s_multi_"
+set_filters_for "multi"
 result="$(pods_on_node)"
 line_count=$(printf '%s\n' "$result" | grep -c .)
 assert_eq "returns multiple pods" "2" "$line_count"
 
-DOCKER_FILTER="name=k8s_nonexistent_"
+set_filters_for "nonexistent"
 result="$(pods_on_node)"
-assert_eq "no match returns empty" "" "$result"
-
-echo ""
-echo "=== pod_names_on_node ==="
-
-DOCKER_FILTER="name=k8s_telemetry_"
-result="$(pod_names_on_node)"
-assert_eq "returns pod name only" \
-  "ds-leafrouter-telemetry-zgmsl" "$result"
-
-DOCKER_FILTER="name=k8s_multi_"
-result="$(pod_names_on_node)"
-line_count=$(printf '%s\n' "$result" | grep -c .)
-assert_eq "returns multiple pod names" "2" "$line_count"
-
-DOCKER_FILTER="name=k8s_nonexistent_"
-result="$(pod_names_on_node)"
 assert_eq "no match returns empty" "" "$result"
 
 echo ""
 echo "=== restart_containers ==="
 
-DOCKER_FILTER="name=k8s_telemetry_"
+set_filters_for "telemetry"
 SERVICE_NAME="telemetry"
 restart_containers; rc=$?
 assert_eq "restart single container succeeds" "0" "$rc"
 
-DOCKER_FILTER="name=k8s_multi_"
+set_filters_for "multi"
 SERVICE_NAME="multi"
 restart_containers; rc=$?
 assert_eq "restart multiple containers succeeds" "0" "$rc"
 
-DOCKER_FILTER="name=k8s_nonexistent_"
+set_filters_for "nonexistent"
 SERVICE_NAME="nonexistent"
 restart_containers; rc=$?
 assert_eq "restart with no containers is no-op" "0" "$rc"

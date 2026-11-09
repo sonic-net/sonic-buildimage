@@ -1,0 +1,54 @@
+From 7d61f7aeda1eb3473c8f756bb45702ba5ae882dd Mon Sep 17 00:00:00 2001
+From: Paul Tobias <github@tobias.pt>
+Date: Fri, 3 Jul 2026 11:41:14 +0700
+Subject: [PATCH] bgpd: Fix flags used by use-underlays-nexthop-weight command
+
+The use-underlays-nexthop-weight command handler and the config
+writer use BGP_WECMP_BEHAVIOR_USE_RECURSIVE_VALUE, an enum value of
+3, as a bgp->flags bitmask.  Bits 0 and 1 of bgp->flags are
+BGP_FLAG_ALWAYS_COMPARE_MED and BGP_FLAG_DETERMINISTIC_MED, so:
+
+- `show running-config` emits ` use-underlays-nexthop-weight`
+  whenever always-compare-med or deterministic-med is set, even if
+  the command was never entered.  Since `frr defaults datacenter`
+  enables deterministic-med, the line appears on datacenter profile
+  routers upgraded to 10.6, while `bgp deterministic-med` itself
+  stays hidden as a profile default.
+- `no use-underlays-nexthop-weight` clears the two MED flags,
+  silently changing bestpath selection, and does not clear
+  BGP_FLAG_USE_RECURSIVE_WEIGHT.
+
+Use BGP_FLAG_USE_RECURSIVE_WEIGHT in both places, matching what the
+positive form of the command sets.
+
+LLM assistance was used.
+
+Fixes: 83706fe188fb ("bgpd: Add `use-underlays-nexthop-weight` command")
+Signed-off-by: Paul Tobias <github@tobias.pt>
+(cherry picked from commit 0f11ff3d6334d0f3d3b4be15820996dc4522d229)
+---
+ bgpd/bgp_vty.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index a0c0907779af..1986eb67eaef 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -2844,7 +2844,7 @@ DEFPY (bgp_use_underlying_nexthop_weight,
+ 	VTY_DECLVAR_CONTEXT(bgp, bgp);
+ 
+ 	if (no)
+-		UNSET_FLAG(bgp->flags, BGP_WECMP_BEHAVIOR_USE_RECURSIVE_VALUE);
++		UNSET_FLAG(bgp->flags, BGP_FLAG_USE_RECURSIVE_WEIGHT);
+ 	else
+ 		SET_FLAG(bgp->flags, BGP_FLAG_USE_RECURSIVE_WEIGHT);
+ 
+@@ -22451,7 +22451,7 @@ int bgp_config_write(struct vty *vty)
+ 		if (bgp->allow_martian)
+ 			vty_out(vty, " bgp allow-martian-nexthop\n");
+ 
+-		if (CHECK_FLAG(bgp->flags, BGP_WECMP_BEHAVIOR_USE_RECURSIVE_VALUE))
++		if (CHECK_FLAG(bgp->flags, BGP_FLAG_USE_RECURSIVE_WEIGHT))
+ 			vty_out(vty, " use-underlays-nexthop-weight\n");
+ 
+ 		if (bgp->fast_convergence)
