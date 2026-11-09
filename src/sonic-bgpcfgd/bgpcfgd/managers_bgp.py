@@ -194,6 +194,7 @@ class BGPPeerMgrBase(Manager):
             deps,
             db_name,
             table_name,
+            batch_deps=True,
         )
 
         self.peers = self.load_peers()
@@ -240,6 +241,8 @@ class BGPPeerMgrBase(Manager):
     def handler(self, key, op, data):
         # Permanently invalid SETs must not wait in the dependency queue.
         if op == swsscommon.SET_COMMAND and not self.validate_peer_name(key, data):
+            # Nor apply a SET still queued for the key later; a configured peer is left as it is
+            self._discard_pending_set(key)
             return
         if op != swsscommon.SET_COMMAND and self._has_invalid_dynamic_peer_key(key):
             log_err("BGP_PEER_RANGE key must not contain line breaks")
@@ -352,6 +355,7 @@ class BGPPeerMgrBase(Manager):
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
             'CONFIG_DB__BGP_BBR': self.directory.get_slot('CONFIG_DB', 'BGP_BBR'),
             'CONFIG_DB__BGP_DEVICE_GLOBAL': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
+            'allow_list_default_action': self.get_allow_list_default_action(),
             'constants': self.constants,
             'bgp_asn': bgp_asn,
             'vrf': vrf,
@@ -671,6 +675,20 @@ class BGPPeerMgrBase(Manager):
             cmd = ('router bgp %s vrf %s\n %s\n' % (bgp_asn, vrf, enable_bgp_suppress_fib_pending_cmd)) + cmd + "\nexit"
         self.cfg_mgr.push(cmd)
         return True
+
+    ALLOW_LIST_DEFAULT_ROUTE_MAP = "ALLOW_LIST_DEPLOYMENT_ID_0_V4"  # the route-map general/policies.conf.j2 renders a default rule for
+
+    def get_allow_list_default_action(self):
+        """
+        Default action of the allow-list route-map the policy template renders a rule for, as
+        BGPAllowListMgr last set it (the rule FRR held when the manager started, until a row is
+        applied), so a peer render repeats it; 'permit' is the template's initial value, used when
+        nothing is recorded
+        :return: 'deny' or 'permit'
+        """
+        if self.directory.path_exist("LOCAL", "allow_list_default_action", self.ALLOW_LIST_DEFAULT_ROUTE_MAP):
+            return self.directory.get("LOCAL", "allow_list_default_action", self.ALLOW_LIST_DEFAULT_ROUTE_MAP)
+        return "permit"
 
     def get_lo_ipv4(self, loopback_str):
         """
