@@ -61,16 +61,6 @@ fi
 [ -z "$MIRROR_URLS" ] && MIRROR_URLS=$DEFAULT_MIRROR_URLS
 [ -z "$MIRROR_SECURITY_URLS" ] && MIRROR_SECURITY_URLS=$DEFAULT_MIRROR_SECURITY_URLS
 
-if [ "$MIRROR_SNAPSHOT" == y ] && [ "$DISTRIBUTION" == trixie ] && [ "$4" == sonic-slave-trixie ]; then
-    # Generated target mirrors may only contain the default snapshot keys.
-    TRIXIE_SECURITY_TIMESTAMP=$(grep "^debian-security-trixie==" files/build/versions/default/versions-mirror | tail -n 1 | sed 's/.*==//')
-    if [ -z "$TRIXIE_SECURITY_TIMESTAMP" ]; then
-        echo "Missing frozen Trixie security snapshot" >&2
-        exit 1
-    fi
-    MIRROR_SECURITY_URLS="${MIRROR_SECURITY_URLS},${BUILD_SNAPSHOT_URL}/debian-security/${TRIXIE_SECURITY_TIMESTAMP}/"
-fi
-
 TEMPLATE=files/apt/sources.list.j2
 [ -f files/apt/sources.list.$ARCHITECTURE.j2 ] && TEMPLATE=files/apt/sources.list.$ARCHITECTURE.j2
 [ -f $CONFIG_PATH/sources.list.j2 ] && TEMPLATE=$CONFIG_PATH/sources.list.j2

@@ -44,7 +44,7 @@ if [ -z "$DISTRO" ]; then
 fi
 
 if [[ "$IMAGENAME" == sonic-slave-* ]] || [[ "$IMAGENAME" == docker-base-* ]] || [[ "$IMAGENAME" == docker-ptf ]]; then
-    scripts/build_mirror_config.sh ${DOCKERFILE_PATH} $ARCH $DISTRO "$IMAGENAME"
+    scripts/build_mirror_config.sh ${DOCKERFILE_PATH} $ARCH $DISTRO
 	mkdir -p "${DOCKERFILE_PATH}/files/apt/apt.conf.d"
 	cp -f files/apt/apt.conf.d/* "${DOCKERFILE_PATH}/files/apt/apt.conf.d/"
 fi
@@ -186,3 +186,4 @@ else
 	# Delete the cache file if version cache is disabled.
 	rm -f ${DOCKER_PATH}/vcache/cache.tgz
 fi
+
