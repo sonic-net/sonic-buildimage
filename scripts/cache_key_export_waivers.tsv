@@ -46,6 +46,7 @@ vs_build_prepare_mem	KVM build VM memory sizing; build resource only, no content
 BUILD_TIMESTAMP	volatile per-build timestamp; intentionally excluded from the key (keying it would defeat caching)
 DEFAULT_CONTAINER_REGISTRY	registry prefix stripped from an image tag; registry location, not image content
 DOCKER_USERNAME	strips a username suffix from an image name; image naming only, not content
+DOCKER_USERTAG	temporary local Docker tag used by load/probe/save; docker-image-save replaces it with docker-get-tag before serializing the cached archive (slave.mk), so it is not an artifact content input
 SONIC_VERSION_CACHE	controls the version-cache mechanism itself; not an input to any cached artifact
 ENABLE_FIPS	consumed only by build_image.sh (SONIC_INSTALLERS stage), which is not in the cache framework and is always rebuilt
 BUILD_MULTIASIC_KVM	consumed only by build_image.sh (non-cached installer stage); no cached artifact depends on it

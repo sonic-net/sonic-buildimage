@@ -131,6 +131,12 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
             {"FINDING:P2:scripts/prepare_docker_buildinfo.sh"},
         )
 
+    def test_read_only_sai_probe_does_not_hide_build_script_findings(self):
+        self.assertEqual(
+            self.findings(["scripts/check_sai_api_version.py", "scripts/prepare_docker_buildinfo.sh"]),
+            {"FINDING:P2:scripts/prepare_docker_buildinfo.sh"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
