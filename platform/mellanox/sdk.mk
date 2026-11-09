@@ -49,9 +49,14 @@ $(SYSSDK)_RDEPENDS += $(LIBNL3) $(LIBNL_GENL3)
 SYSSDK_DEV = sys-sdk_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH)-dev.deb
 SYSSDK_DBGSYM = sys-sdk_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH)-dbgsym.ddeb
 
+
+#packages that are required for runtime only
+
 SX_KERNEL = sx-kernel_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
 $(SX_KERNEL)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
 $(SX_KERNEL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/sx-kernel
+SX_KERNEL_DEV = sx-kernel-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(SX_KERNEL),$(SX_KERNEL_DEV)))
 
 define make_url
 	$(1)_URL = $(MLNX_SDK_ASSETS_URL)/$(1)
@@ -89,7 +94,7 @@ SONIC_MAKE_DEBS += $(SX_KERNEL)
 # DBG_DEPENDS; it stays empty when no dbgsym package exists.
 ifeq ($(SDK_FROM_SRC), y)
 $(SYSSDK)_DEPENDS += $(LIBNL3_DEV) $(LIBNL_GENL3_DEV)
-SONIC_MAKE_DEBS += $(MLNX_SDK_RDEBS)
+SONIC_MAKE_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
 $(eval $(call add_derived_package,$(SYSSDK),$(SYSSDK_DEV)))
 ifeq ($(SPLIT_DBGSYM),y)
 $(eval $(call add_derived_package,$(SYSSDK),$(SYSSDK_DBGSYM)))
@@ -97,12 +102,12 @@ MLNX_SDK_DBG_DEBS += $(SYSSDK_DBGSYM)
 endif
 else
 $(SYSSDK)_DEPENDS += $(LIBNL3) $(LIBNL_GENL3)
-SONIC_ONLINE_DEBS += $(MLNX_SDK_RDEBS) $(SYSSDK_DEV) $(SYSSDK_DBGSYM)
+SONIC_ONLINE_DEBS += $(MLNX_SDK_RDEBS) $(SYSSDK_DEV) $(SYSSDK_DBGSYM) $(PYTHON_SDK_API)
 $(SYSSDK_DEV)_DEPENDS += $(SYSSDK)
-$(eval $(foreach deb,$(MLNX_SDK_RDEBS) $(SYSSDK_DEV) $(SYSSDK_DBGSYM),$(call make_url,$(deb))))
+$(eval $(foreach deb,$(MLNX_SDK_RDEBS) $(SYSSDK_DEV) $(SYSSDK_DBGSYM) $(PYTHON_SDK_API),$(call make_url,$(deb))))
 MLNX_SDK_DBG_DEBS += $(SYSSDK_DBGSYM)
 endif
 
-mlnx-sdk-packages: $(addprefix $(DEBS_PATH)/, $(MLNX_SDK_RDEBS) $(SX_KERNEL))
+mlnx-sdk-packages: $(addprefix $(DEBS_PATH)/, $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API) $(SX_KERNEL))
 
 SONIC_PHONY_TARGETS += mlnx-sdk-packages
