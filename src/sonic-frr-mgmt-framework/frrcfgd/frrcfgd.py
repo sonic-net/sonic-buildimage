@@ -89,8 +89,10 @@ class BgpdClientMgr(threading.Thread):
             # has no route-map or prefix-list commands, so a line sent to it is
             # refused while bgpd's success hides that. mgmtd pushes them down
             # to zebra as a backend client.
-            'ROUTE_MAP': ['mgmtd', 'bgpd', 'ospfd'],
-            'PREFIX': ['mgmtd', 'bgpd', 'ospfd', 'pimd'],
+            # mgmtd goes last: a failed send stops the daemon loop, and mgmtd
+            # can restart on its own, so it must not block bgpd and ospfd.
+            'ROUTE_MAP': ['bgpd', 'ospfd', 'mgmtd'],
+            'PREFIX': ['bgpd', 'ospfd', 'pimd', 'mgmtd'],
             'BGP_PEER_GROUP': ['bgpd'],
             'BGP_NEIGHBOR': ['bgpd'],
             'BGP_PEER_GROUP_AF': ['bgpd'],
@@ -1936,7 +1938,7 @@ class BGPConfigDaemon:
                          ('match_prefix_set|ipv6',          '{no:no-prefix}match ipv6 address prefix-list {}'),
                          ('match_neighbor',                 '[bgpd]{no:no-prefix}match peer {:peer-ip}'),
                          ('match_tag',                      '{no:no-prefix}match tag {}'),
-                         ('match_protocol',                 '[mgmtd]{no:no-prefix}match source-protocol {:src-proto}'),
+                         ('match_protocol',                 '[bgpd,mgmtd]{no:no-prefix}match source-protocol {:src-proto}'),
                          ('match_next_hop_set|ipv4',        '{no:no-prefix}match ip next-hop prefix-list {}'),
                          ('match_next_hop_set|ipv6',        '{no:no-prefix}match ip next-hop prefix-list {}'), #match ipv6 next-hop prefix-list not suppported by frr
                          ('match_med',                      '{no:no-prefix}match metric {}'),
@@ -2503,6 +2505,9 @@ class BGPConfigDaemon:
         # -> currently applied route_map name. Used to emit `no ip protocol ...
         # route-map <NAME>` on delete, and to short-circuit idempotent sets.
         self.protocol_route_map_state = {}
+        # Bindings held back until frrcfgd has pushed their route-map:
+        # "<vrf>|<afi>|<proto>" key -> route_map name.
+        self.protocol_route_map_pending = {}
         prm_table = self.config_db.get_table('PROTOCOL_ROUTE_MAP')
         for key, entry in prm_table.items():
             prm_key = '|'.join(key) if isinstance(key, tuple) else str(key)
@@ -3355,6 +3360,7 @@ class BGPConfigDaemon:
                     if not key_map.run_command(self, table, data, cmd_prefix):
                         syslog.syslog(syslog.LOG_ERR, 'failed running route-map config command')
                         continue
+                    self.__apply_pending_protocol_route_maps(map_name)
                 else:
                     if map_name not in self.route_map or seq_no not in self.route_map[map_name]:
                         syslog.syslog(syslog.LOG_ERR, 'route-map {} seq {} not found for delete'.format(map_name, seq_no))
@@ -4173,6 +4179,13 @@ class BGPConfigDaemon:
     def bfd_mhop_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'remote-address', 'vrf', 'local-address'}])
 
+    # 'ip|ipv6 protocol' keywords zebra accepts, per addr_family. Same set as
+    # the protocol enum in sonic-protocol-route-map.yang.
+    PROTOCOL_ROUTE_MAP_PROTOCOLS = {
+        'IPv4': {'any', 'bgp', 'eigrp', 'isis', 'nhrp', 'ospf', 'rip', 'sharp', 'static'},
+        'IPv6': {'any', 'bgp', 'isis', 'nhrp', 'ospf6', 'ripng', 'sharp', 'static'},
+    }
+
     def protocol_route_map_handler(self, table, key, data):
         """
         Translate PROTOCOL_ROUTE_MAP rows to zebra commands.
@@ -4186,6 +4199,10 @@ class BGPConfigDaemon:
         Per-key state (self.protocol_route_map_state) lets deletes emit
         'no ... route-map <NAME>' using the last-applied name, and lets
         idempotent sets short-circuit.
+
+        zebra treats a bound route-map it does not have as deny-all, so a
+        binding whose route-map frrcfgd has not pushed yet is held in
+        self.protocol_route_map_pending and applied once the route-map is.
         """
         syslog.syslog(syslog.LOG_INFO,
                       '[bgp cfgd](protocol_route_map) table={} key={} data={}'.format(table, key, data))
@@ -4206,8 +4223,19 @@ class BGPConfigDaemon:
             syslog.syslog(syslog.LOG_ERR,
                           'PROTOCOL_ROUTE_MAP: unsupported addr_family {} in key {}'.format(afi, prm_key))
             return
+        # A raw CONFIG_DB write skips YANG, so check the key here too.
+        if entry_vrf != self.DEFAULT_VRF and not isVrfNameValid(entry_vrf):
+            syslog.syslog(syslog.LOG_ERR,
+                          'PROTOCOL_ROUTE_MAP: invalid VRF name {} in key {}'.format(entry_vrf, prm_key))
+            return
+        if protocol not in self.PROTOCOL_ROUTE_MAP_PROTOCOLS[afi]:
+            syslog.syslog(syslog.LOG_ERR,
+                          'PROTOCOL_ROUTE_MAP: unsupported protocol {} for {} in key {}'.format(protocol, afi, prm_key))
+            return
 
         prev_rm = self.protocol_route_map_state.get(prm_key)
+        # Any newer event for this key replaces a binding still waiting.
+        self.protocol_route_map_pending.pop(prm_key, None)
 
         # Decide what command to push, but DON'T mutate state yet — state must
         # only reflect what FRR has actually accepted. Mutating before the
@@ -4224,13 +4252,20 @@ class BGPConfigDaemon:
             new_rm = None
         else:
             route_map = data.get('route_map') if isinstance(data, dict) else None
-            if not route_map:
+            if not route_map or len(route_map.split()) != 1:
                 syslog.syslog(syslog.LOG_ERR,
-                              'PROTOCOL_ROUTE_MAP: missing route_map for key {}'.format(prm_key))
+                              'PROTOCOL_ROUTE_MAP: missing or invalid route_map {} for key {}'.format(
+                                  route_map, prm_key))
                 return
             if prev_rm == route_map:
                 syslog.syslog(syslog.LOG_DEBUG,
                               'PROTOCOL_ROUTE_MAP: {} already bound to {}; skipping vtysh'.format(prm_key, route_map))
+                return
+            if not self.route_map.get(route_map):
+                syslog.syslog(syslog.LOG_INFO,
+                              'PROTOCOL_ROUTE_MAP: route-map {} not configured yet; holding {} until it is'.format(
+                                  route_map, prm_key))
+                self.protocol_route_map_pending[prm_key] = route_map
                 return
             # FRR's `ip|ipv6 protocol X route-map Y` is upsert-style: emitting
             # the new binding replaces any prior route-map for the same
@@ -4238,17 +4273,11 @@ class BGPConfigDaemon:
             inner = '{} protocol {} route-map {}'.format(ip_kw, protocol, route_map)
             new_rm = route_map
 
-        # entry_vrf is the union type (literal "default" or a leafref into
-        # VRF_LIST) and route_map is a leafref into ROUTE_MAP_SET, both
-        # validated by YANG against ^[A-Za-z0-9_][A-Za-z0-9_-]*$-ish
-        # identifiers, so inserting them into the vtysh command string carries
-        # no shell-injection risk. If the schema is ever loosened, this
-        # assumption needs revisiting.
+        command = ['vtysh', '-c', 'configure terminal']
         if entry_vrf == self.DEFAULT_VRF:
-            command = "vtysh -c 'configure terminal' -c '{}'".format(inner)
+            command += ['-c', inner]
         else:
-            command = ("vtysh -c 'configure terminal' "
-                       "-c 'vrf {}' -c '{}' -c 'exit-vrf'".format(entry_vrf, inner))
+            command += ['-c', 'vrf {}'.format(entry_vrf), '-c', inner, '-c', 'exit-vrf']
 
         if not self.__run_command(table, command):
             syslog.syslog(syslog.LOG_ERR,
@@ -4260,6 +4289,12 @@ class BGPConfigDaemon:
             self.protocol_route_map_state.pop(prm_key, None)
         else:
             self.protocol_route_map_state[prm_key] = new_rm
+
+    def __apply_pending_protocol_route_maps(self, map_name):
+        """Apply the PROTOCOL_ROUTE_MAP bindings held back for route-map map_name."""
+        for prm_key, route_map in list(self.protocol_route_map_pending.items()):
+            if route_map == map_name:
+                self.protocol_route_map_handler('PROTOCOL_ROUTE_MAP', prm_key, {'route_map': route_map})
 
     def start(self):
         self.subscribe_all()

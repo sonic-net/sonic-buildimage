@@ -1,5 +1,9 @@
 import copy
+import os
 import re
+
+import pytest
+from jinja2 import Environment, FileSystemLoader
 from unittest.mock import MagicMock, NonCallableMagicMock, patch
 
 def mock_is_vrf_name_valid(name):
@@ -531,7 +535,10 @@ def test_bgp_confederation_template():
     assert 'bgp confederation' not in result
 
 
-def _make_prm_daemon(run_cmd, initial_table=None):
+PRM_ROUTE_MAPS = ('RM', 'RM_A', 'RM_B', 'RM_FROM_BGP', 'RM_STATIC', 'RM_V6')
+
+
+def _make_prm_daemon(run_cmd, initial_table=None, route_maps=PRM_ROUTE_MAPS):
     """Helper: build a BGPConfigDaemon and seed protocol_route_map_state
     from initial_table (a dict of key -> {'route_map': ...}), then reset
     run_cmd so the caller sees only the vtysh it triggers.
@@ -539,6 +546,7 @@ def _make_prm_daemon(run_cmd, initial_table=None):
     The daemon's own __init__ runs against a mocked config_db that returns
     empty tables, so the state dict starts empty; we reseed it afterwards
     to simulate pre-existing rows without touching the init path.
+    route_maps are the route-maps frrcfgd has already pushed to FRR.
     """
     from frrcfgd.frrcfgd import BGPConfigDaemon
     run_cmd.return_value = True
@@ -551,8 +559,17 @@ def _make_prm_daemon(run_cmd, initial_table=None):
         rm = v.get('route_map') if isinstance(v, dict) else None
         if rm:
             daemon.protocol_route_map_state[norm_key] = rm
+    daemon.route_map = {name: {'10': 'permit'} for name in route_maps}
     run_cmd.reset_mock()
     return daemon
+
+
+def _prm_cmd(line, vrf=None):
+    """The exact argv protocol_route_map_handler sends for one binding line."""
+    cmd = ['vtysh', '-c', 'configure terminal']
+    if vrf is None:
+        return cmd + ['-c', line]
+    return cmd + ['-c', 'vrf {}'.format(vrf), '-c', line, '-c', 'exit-vrf']
 
 
 @patch.dict('sys.modules', **mockmapping)
@@ -562,11 +579,8 @@ def test_prm_set_default_vrf_ipv4(run_cmd):
     daemon = _make_prm_daemon(run_cmd)
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM_FROM_BGP'})
-    assert run_cmd.call_count == 1
-    cmd = run_cmd.call_args[0][1]
-    assert "configure terminal" in cmd
-    assert "ip protocol bgp route-map RM_FROM_BGP" in cmd
-    assert "vrf " not in cmd  # default VRF: no 'vrf …' wrapping in the vtysh
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP', _prm_cmd('ip protocol bgp route-map RM_FROM_BGP'), True, None)
     assert daemon.protocol_route_map_state['default|IPv4|bgp'] == 'RM_FROM_BGP'
 
 
@@ -577,9 +591,8 @@ def test_prm_set_default_vrf_ipv6_ospf6(run_cmd):
     daemon = _make_prm_daemon(run_cmd)
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'default|IPv6|ospf6', {'route_map': 'RM_V6'})
-    cmd = run_cmd.call_args[0][1]
-    assert "ipv6 protocol ospf6 route-map RM_V6" in cmd
-    assert "ip protocol" not in cmd  # should NOT emit ipv4 form
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP', _prm_cmd('ipv6 protocol ospf6 route-map RM_V6'), True, None)
     assert daemon.protocol_route_map_state['default|IPv6|ospf6'] == 'RM_V6'
 
 
@@ -590,10 +603,9 @@ def test_prm_set_named_vrf_wraps_in_vrf_block(run_cmd):
     daemon = _make_prm_daemon(run_cmd)
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'Vrf_red|IPv4|static', {'route_map': 'RM_STATIC'})
-    cmd = run_cmd.call_args[0][1]
-    assert "vrf Vrf_red" in cmd
-    assert "ip protocol static route-map RM_STATIC" in cmd
-    assert "exit-vrf" in cmd
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP',
+        _prm_cmd('ip protocol static route-map RM_STATIC', vrf='Vrf_red'), True, None)
 
 
 @patch.dict('sys.modules', **mockmapping)
@@ -602,11 +614,11 @@ def test_prm_set_with_tuple_key(run_cmd):
     """swsscommon may deliver compound keys as tuples; handler must accept both."""
     daemon = _make_prm_daemon(run_cmd)
     daemon.protocol_route_map_handler(
-        'PROTOCOL_ROUTE_MAP', ('default', 'IPv4', 'connected'),
-        {'route_map': 'RM_CONN'})
-    cmd = run_cmd.call_args[0][1]
-    assert "ip protocol connected route-map RM_CONN" in cmd
-    assert daemon.protocol_route_map_state['default|IPv4|connected'] == 'RM_CONN'
+        'PROTOCOL_ROUTE_MAP', ('default', 'IPv4', 'static'),
+        {'route_map': 'RM_STATIC'})
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP', _prm_cmd('ip protocol static route-map RM_STATIC'), True, None)
+    assert daemon.protocol_route_map_state['default|IPv4|static'] == 'RM_STATIC'
 
 
 @patch.dict('sys.modules', **mockmapping)
@@ -633,10 +645,8 @@ def test_prm_update_route_map(run_cmd):
     run_cmd.reset_mock()
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM_B'})
-    assert run_cmd.call_count == 1
-    cmd = run_cmd.call_args[0][1]
-    assert "ip protocol bgp route-map RM_B" in cmd
-    assert "RM_A" not in cmd
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP', _prm_cmd('ip protocol bgp route-map RM_B'), True, None)
     assert daemon.protocol_route_map_state['default|IPv4|bgp'] == 'RM_B'
 
 
@@ -650,9 +660,8 @@ def test_prm_delete_emits_no_form(run_cmd):
     )
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', None)
-    assert run_cmd.call_count == 1
-    cmd = run_cmd.call_args[0][1]
-    assert "no ip protocol bgp route-map RM_FROM_BGP" in cmd
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP', _prm_cmd('no ip protocol bgp route-map RM_FROM_BGP'), True, None)
     assert 'default|IPv4|bgp' not in daemon.protocol_route_map_state
 
 
@@ -666,10 +675,9 @@ def test_prm_delete_named_vrf(run_cmd):
     )
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'Vrf_red|IPv4|static', None)
-    cmd = run_cmd.call_args[0][1]
-    assert "vrf Vrf_red" in cmd
-    assert "no ip protocol static route-map RM_STATIC" in cmd
-    assert "exit-vrf" in cmd
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP',
+        _prm_cmd('no ip protocol static route-map RM_STATIC', vrf='Vrf_red'), True, None)
 
 
 @patch.dict('sys.modules', **mockmapping)
@@ -702,6 +710,35 @@ def test_prm_unsupported_afi_is_ignored(run_cmd):
     assert run_cmd.call_count == 0
 
 
+@pytest.mark.parametrize('key', [
+    'default|IPv4|connected',   # not an 'ip protocol' keyword in FRR
+    'default|IPv4|kernel',
+    'default|IPv6|table',
+    'default|IPv4|ospf6',       # wrong addr_family for the protocol
+    'default|IPv6|rip',
+    'default|IPv6|eigrp',
+])
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_prm_unsupported_protocol_is_ignored(run_cmd, key):
+    """A raw CONFIG_DB write skips YANG, so the handler checks the protocol
+    against what zebra accepts for the addr_family."""
+    daemon = _make_prm_daemon(run_cmd)
+    daemon.protocol_route_map_handler('PROTOCOL_ROUTE_MAP', key, {'route_map': 'RM'})
+    assert run_cmd.call_count == 0
+    assert key not in daemon.protocol_route_map_state
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_prm_invalid_vrf_is_ignored(run_cmd):
+    """An invalid VRF name in the key is rejected without a push."""
+    daemon = _make_prm_daemon(run_cmd)
+    daemon.protocol_route_map_handler(
+        'PROTOCOL_ROUTE_MAP', 'Vrf red|IPv4|bgp', {'route_map': 'RM'})
+    assert run_cmd.call_count == 0
+
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_prm_missing_route_map_is_ignored(run_cmd):
@@ -710,6 +747,16 @@ def test_prm_missing_route_map_is_ignored(run_cmd):
     daemon = _make_prm_daemon(run_cmd)
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {})
+    assert run_cmd.call_count == 0
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_prm_route_map_with_whitespace_is_ignored(run_cmd):
+    """A route_map value that would split into several vtysh words is rejected."""
+    daemon = _make_prm_daemon(run_cmd, route_maps=('RM extra',))
+    daemon.protocol_route_map_handler(
+        'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM extra'})
     assert run_cmd.call_count == 0
 
 
@@ -791,3 +838,107 @@ def test_prm_update_failure_preserves_prior_route_map(run_cmd):
     daemon.protocol_route_map_handler(
         'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM_B'})
     assert daemon.protocol_route_map_state['default|IPv4|bgp'] == 'RM_A'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_prm_binding_held_until_route_map_is_configured(run_cmd):
+    """zebra treats a bound route-map it does not have as deny-all, so a
+    binding that arrives before its ROUTE_MAP row is held, and pushed once
+    the route-map has been configured."""
+    daemon = _make_prm_daemon(run_cmd, route_maps=())
+    daemon.protocol_route_map_handler(
+        'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM_LATE'})
+    assert run_cmd.call_count == 0
+    assert daemon.protocol_route_map_pending == {'default|IPv4|bgp': 'RM_LATE'}
+    assert 'default|IPv4|bgp' not in daemon.protocol_route_map_state
+
+    rm_hdlr = dict(daemon.table_handler_list)['ROUTE_MAP']
+    rm_hdlr('ROUTE_MAP', 'RM_LATE|10', {'route_operation': 'permit', 'match_tag': '100'})
+    sent = [c[0][1] for c in run_cmd.call_args_list]
+    binding = _prm_cmd('ip protocol bgp route-map RM_LATE')
+    assert binding in sent
+    # The binding goes out after the route-map's own lines.
+    assert sent[-1] == binding
+    assert daemon.protocol_route_map_state['default|IPv4|bgp'] == 'RM_LATE'
+    assert daemon.protocol_route_map_pending == {}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_prm_held_binding_dropped_on_delete(run_cmd):
+    """Deleting a row whose binding is still held sends nothing, and the
+    route-map arriving later does not bind it."""
+    daemon = _make_prm_daemon(run_cmd, route_maps=())
+    daemon.protocol_route_map_handler(
+        'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM_LATE'})
+    daemon.protocol_route_map_handler('PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', None)
+    assert daemon.protocol_route_map_pending == {}
+
+    rm_hdlr = dict(daemon.table_handler_list)['ROUTE_MAP']
+    rm_hdlr('ROUTE_MAP', 'RM_LATE|10', {'route_operation': 'permit'})
+    assert not [c for c in run_cmd.call_args_list if c[0][0] == 'PROTOCOL_ROUTE_MAP']
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_prm_held_binding_replaced_by_update(run_cmd):
+    """An update to a route-map that exists replaces a held binding."""
+    daemon = _make_prm_daemon(run_cmd, route_maps=('RM_A',))
+    daemon.protocol_route_map_handler(
+        'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM_LATE'})
+    daemon.protocol_route_map_handler(
+        'PROTOCOL_ROUTE_MAP', 'default|IPv4|bgp', {'route_map': 'RM_A'})
+    run_cmd.assert_called_once_with(
+        'PROTOCOL_ROUTE_MAP', _prm_cmd('ip protocol bgp route-map RM_A'), True, None)
+    assert daemon.protocol_route_map_pending == {}
+
+
+def _render_protocol_route_map(table):
+    template_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',
+                                'dockers', 'docker-fpm-frr', 'frr')
+    env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True)
+    return env.get_template('zebra/zebra.protocol_route_map.conf.j2').render(PROTOCOL_ROUTE_MAP=table)
+
+
+def test_protocol_route_map_template():
+    """The boot render groups bindings by VRF, and takes both string and
+    tuple keys."""
+    out = _render_protocol_route_map({
+        'default|IPv4|bgp': {'route_map': 'RM_BGP'},
+        ('default', 'IPv6', 'static'): {'route_map': 'RM_STATIC6'},
+        'Vrf_red|IPv4|static': {'route_map': 'RM_RED'},
+        ('Vrf_red', 'IPv6', 'bgp'): {'route_map': 'RM_RED6'},
+    })
+    lines = [l for l in out.splitlines() if l.strip()]
+    assert lines == [
+        'ip protocol bgp route-map RM_BGP',
+        'ipv6 protocol static route-map RM_STATIC6',
+        '!',
+        'vrf Vrf_red',
+        ' ip protocol static route-map RM_RED',
+        ' ipv6 protocol bgp route-map RM_RED6',
+        'exit-vrf',
+        '!',
+    ], out
+
+
+def test_protocol_route_map_template_skips_bad_rows():
+    """Rows with a bad key or no route_map render nothing."""
+    out = _render_protocol_route_map({
+        'default|IPv4': {'route_map': 'RM'},
+        'default|IPvX|bgp': {'route_map': 'RM'},
+        'default|IPv4|static': {},
+    })
+    assert out.strip() == ''
+
+
+def test_protocol_route_map_template_empty():
+    assert _render_protocol_route_map({}).strip() == ''
+
+
+def test_frr_conf_includes_protocol_route_map():
+    """Only the frrcfgd frr.conf.j2 renders PROTOCOL_ROUTE_MAP at boot."""
+    frr_conf = os.path.join(os.path.dirname(__file__), '..', 'templates', 'frr', 'frr.conf.j2')
+    with open(frr_conf) as f:
+        assert '{% include "zebra/zebra.protocol_route_map.conf.j2" %}' in f.read()

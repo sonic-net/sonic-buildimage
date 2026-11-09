@@ -29,10 +29,8 @@ module sonic-protocol-route-map {
         type enumeration {
             enum any;
             enum bgp;
-            enum connected;
             enum eigrp;
             enum isis;
-            enum kernel;
             enum nhrp;
             enum ospf;
             enum ospf6;
@@ -40,10 +38,11 @@ module sonic-protocol-route-map {
             enum ripng;
             enum sharp;
             enum static;
-            enum table;
         }
         description
             "Source protocol whose routes are filtered through the route-map.
+             These are the 'ip|ipv6 protocol' keywords FRR accepts; it does
+             not offer kernel, connected, local or table there.
              AFI/protocol compatibility is enforced by a 'must' expression on
              the enclosing list (e.g. ospf6/ripng are IPv6-only, ospf/rip are
              IPv4-only).";

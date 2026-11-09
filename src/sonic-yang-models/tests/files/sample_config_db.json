@@ -2047,7 +2047,8 @@
         },
         "ROUTE_MAP": {
             "map1|1": {
-                "match_med" : "100"
+                "match_med" : "100",
+                "set_src" : "10.1.0.32"
             }
         },
         "ROUTE_REDISTRIBUTE": {
@@ -2056,6 +2057,9 @@
         },
         "PROTOCOL_ROUTE_MAP": {
             "default|IPv4|bgp": {
+                "route_map": "map1"
+            },
+            "Vrf_blue|IPv6|static": {
                 "route_map": "map1"
             }
         },

@@ -260,5 +260,26 @@
                 ]
             }
         }
+    },
+    "PROTOCOL_ROUTE_MAP_CONNECTED_REJECTED": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-protocol-route-map:sonic-protocol-route-map": {
+            "sonic-protocol-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "connected",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
     }
 }

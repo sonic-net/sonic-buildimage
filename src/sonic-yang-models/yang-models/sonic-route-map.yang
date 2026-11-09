@@ -309,7 +309,7 @@ module sonic-route-map {
                 }
 
                 leaf set_src {
-                    type inet:ip-address;
+                    type inet:ip-address-no-zone;
                     description
                         "Set the source IP address (IPv4 or IPv6) that zebra uses when
                          installing matched routes into the kernel FIB. The address must
