@@ -30,6 +30,18 @@ parameters:
   type: string
   default: ' '
 
+- name: SOURCE_REPOSITORY
+  type: string
+  default: ''
+
+- name: SOURCE_REF
+  type: string
+  default: ''
+
+- name: SOURCE_COMMIT
+  type: string
+  default: ''
+
 stages:
 - stage: BuildSecureBootVS
   pool: sonicso1ES-amd64
@@ -46,6 +58,21 @@ stages:
         fetchDepth: 0
         path: s
         displayName: Checkout code
+      - ${{ if ne(parameters.SOURCE_REPOSITORY, '') }}:
+        - bash: |
+            set -euo pipefail
+            test -n "$SOURCE_REF"
+            test -n "$SOURCE_COMMIT"
+            git fetch --no-tags -- "$SOURCE_REPOSITORY" "$SOURCE_REF"
+            test "$(git rev-parse FETCH_HEAD)" = "$SOURCE_COMMIT"
+            git checkout --detach "$SOURCE_COMMIT"
+            git submodule sync --recursive
+            git submodule update --init --recursive
+          displayName: Checkout triggering PR revision
+          env:
+            SOURCE_REPOSITORY: ${{ parameters.SOURCE_REPOSITORY }}
+            SOURCE_REF: ${{ parameters.SOURCE_REF }}
+            SOURCE_COMMIT: ${{ parameters.SOURCE_COMMIT }}
       - bash: |
           set -euo pipefail
           sudo apt-get update
@@ -81,4 +108,7 @@ stages:
           secure_boot_image: yes
           secure_boot_vars_file: $(Build.SourcesDirectory)/.secureboot-ci/sonic-vs_vars.fd
       SUBMODULE: ${{ parameters.SUBMODULE }}
-      COMMIT_ID: ${{ parameters.COMMIT_ID }}
+      ${{ if ne(parameters.SOURCE_REPOSITORY, '') }}:
+        COMMIT_ID: ''
+      ${{ else }}:
+        COMMIT_ID: ${{ parameters.COMMIT_ID }}
