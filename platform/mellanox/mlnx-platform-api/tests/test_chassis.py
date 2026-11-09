@@ -37,7 +37,9 @@ import sonic_platform.chassis
 from sonic_platform_base.sfp_base import SfpBase
 from sonic_platform.chassis import Chassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
+from sonic_platform import module_detection_flow as mdf
 from sonic_platform.module_detection_flow import ModuleDetectionFlow
+from sonic_platform.module_sysfs import SFP_SYSFS_INTERRUPT
 
 sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
 sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=None)
@@ -891,7 +893,7 @@ class TestElsfpChangeEvent:
     def _poll_once(self, chassis, fds_for_poling, fire, after_registration=None):
         """Register, then fire the nodes fire() picks once and go quiet."""
         with mock.patch('sonic_platform.chassis.select.poll') as mock_poll, \
-                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling', side_effect=fds_for_poling):
+                mock.patch.object(ModuleDetectionFlow, 'get_presence_fds_for_polling', side_effect=fds_for_poling):
             poll_obj = mock_poll.return_value
             assert chassis._register_els_fds() is True
             fired = fire(chassis.els_registered_fds)
@@ -913,7 +915,7 @@ class TestElsfpChangeEvent:
         chassis = self._make_chassis([None] + ports)
 
         with mock.patch('sonic_platform.chassis.select.poll') as mock_poll, \
-                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling',
+                mock.patch.object(ModuleDetectionFlow, 'get_presence_fds_for_polling',
                                   side_effect=self._sw_control_fds()) as get_fds:
             assert chassis._register_els_fds() is True
 
@@ -923,6 +925,22 @@ class TestElsfpChangeEvent:
         assert sorted((entry[0].index, entry[2]) for entry in chassis.els_registered_fds.values()) == \
             [(1, 'hw_present'), (1, 'power_good'), (5, 'hw_present'), (5, 'power_good')]
 
+    def test_the_cpo_fault_interrupt_node_is_never_opened(self):
+        """get_change_event owns the interrupt node and a read clears it, so a
+        second reader would steal faults and report them as plug events."""
+        ports = self._make_oe_ports(1)
+        for port in ports:
+            port.state = mdf.STATE_SW_CONTROL
+            port.extra_poll_types = (SFP_SYSFS_INTERRUPT,)
+            port.get_fd.side_effect = lambda name: self._make_fd('1')
+        chassis = self._make_chassis(ports)
+
+        with mock.patch('sonic_platform.chassis.select.poll'):
+            assert chassis._register_els_fds() is True
+
+        assert sorted(entry[2] for entry in chassis.els_registered_fds.values()) == ['hw_present', 'power_good']
+        assert SFP_SYSFS_INTERRUPT not in [call.args[0] for call in ports[0].get_fd.call_args_list]
+
     def test_it_does_not_touch_the_shared_poll_object(self):
         """Sharing get_change_event's poll object is what made two state tasks
         collide inside poll(), so this must leave it alone."""
@@ -931,7 +949,7 @@ class TestElsfpChangeEvent:
         chassis.registered_fds = None
 
         with mock.patch('sonic_platform.chassis.select.poll'), \
-                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling',
+                mock.patch.object(ModuleDetectionFlow, 'get_presence_fds_for_polling',
                                   side_effect=self._sw_control_fds()):
             chassis._register_els_fds()
 
@@ -953,7 +971,7 @@ class TestElsfpChangeEvent:
             return fds
 
         with mock.patch('sonic_platform.chassis.select.poll'), \
-                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling', side_effect=fds_for_poling):
+                mock.patch.object(ModuleDetectionFlow, 'get_presence_fds_for_polling', side_effect=fds_for_poling):
             assert chassis._register_els_fds() is False
 
         assert chassis.els_poll_obj is None

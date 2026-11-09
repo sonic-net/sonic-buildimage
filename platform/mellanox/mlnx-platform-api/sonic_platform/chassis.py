@@ -40,12 +40,14 @@ try:
     from . import utils
     from .device_data import DeviceDataManager
     from .module_detection_flow import ModuleDetectionFlow
+    from .module_sysfs import SFP_SYSFS_INTERRUPT
     from .sed_mgmt import SedMgmt
     import re
     import select
     import sys
     import threading
     import time
+    from datetime import datetime
     from pathlib import Path
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -165,6 +167,10 @@ class Chassis(ChassisBase):
         self.els_poll_obj = None
         self.els_registered_fds = None
         self.els_states_before_first_poll = None
+
+        # Constructed once the CPO interrupt nodes are registered for
+        # polling. None until then; a FaultIndicationTask thread after.
+        self._fault_indication_task = None
 
         self._bmc = None
         self._bmc_data = None
@@ -885,6 +891,30 @@ class Chassis(ChassisBase):
             out.append(sfp_object)
         return out
 
+    def _ensure_fault_indication_task(self):
+        """Start FaultIndicationTask unless it is already running.
+
+        Starting it must not wait for an interrupt: the task's lane-code
+        sweep is what reports a fault whose interrupt went missing, and a
+        vModule whose very first interrupt is the one lost would otherwise
+        have nothing running to notice it.
+        """
+        if self._fault_indication_task is None:
+            from . import fault_indication_task
+            self._fault_indication_task = fault_indication_task.FaultIndicationTask(self)
+            self._fault_indication_task.start()
+
+    def _enqueue_cpo_fault_interrupt(self, cpo_port, arrival_time):
+        """Hand a CPO fault-interrupt assertion off to FaultIndicationTask.
+
+        Args:
+            cpo_port: the CpoPort whose interrupt fd fired.
+            arrival_time: datetime.datetime (UTC) captured at the moment
+                chassis observed the fault.
+        """
+        self._ensure_fault_indication_task()
+        self._fault_indication_task.enqueue_interrupt(cpo_port, arrival_time)
+
     def get_change_event_for_module_host_management_mode(self, timeout):
         """Get SFP change event when module host management mode is enabled.
 
@@ -935,6 +965,13 @@ class Chassis(ChassisBase):
                     self.registered_fds[fd.fileno()] = (s, fd, fd_type)
 
             logger.log_debug(f'Registered SFP file descriptors for polling: {self.registered_fds}')
+
+            # An interrupt node among the fds means this is a CPO platform and
+            # fault reporting is now our responsibility, whether or not any
+            # fault ever raises an interrupt we actually receive.
+            if any(fd_type == SFP_SYSFS_INTERRUPT
+                   for _, _, fd_type in self.registered_fds.values()):
+                self._ensure_fault_indication_task()
                     
         from . import sfp
         
@@ -967,6 +1004,19 @@ class Chassis(ChassisBase):
                 except (OSError, IOError, ValueError) as e:
                     logger.log_warning(f'Failed to read value from file {fd_type} for SFP {s.sdk_index}: {e}')
                     has_read_error = True
+                    continue
+
+                if fd_type == SFP_SYSFS_INTERRUPT:
+                    # CPO fault interrupt, already acked by the read above.
+                    # Zero is the kernel's first-poll wake-up, not a fault.
+                    if fd_value != 0:
+                        self._enqueue_cpo_fault_interrupt(s, datetime.utcnow())
+                    else:
+                        # Also reached when a second fault on this vModule was
+                        # consumed by the read that serviced the first, which
+                        # drops it. FaultIndicationTask's lane-code sweep is
+                        # what recovers it; log so that path is visible.
+                        logger.log_debug(f'CPO fault interrupt for SFP {s.sdk_index} read back 0, nothing enqueued')
                     continue
 
                 # Detecting dummy event
@@ -1180,6 +1230,10 @@ class Chassis(ChassisBase):
         its bank 0 port, and their events reported for all of its banks;
         registering per port would put each node in the poll object four times
         and hand back four copies of every event.
+
+        Only the presence nodes are taken. The CPO fault interrupt node belongs
+        to get_change_event; a read clears it, so a second reader would both
+        race that one for the fault and report it as a plug event.
         """
         self.els_poll_obj = select.poll()
         self.els_registered_fds = {}
@@ -1188,7 +1242,7 @@ class Chassis(ChassisBase):
         self.els_states_before_first_poll = {}
 
         for port in self._cpo_vmodule_ports():
-            fds = ModuleDetectionFlow.get_fds_for_poling(port)
+            fds = ModuleDetectionFlow.get_presence_fds_for_polling(port)
             if any(fd is None for fd in fds.values()):
                 for fd in fds.values():
                     if fd is not None:

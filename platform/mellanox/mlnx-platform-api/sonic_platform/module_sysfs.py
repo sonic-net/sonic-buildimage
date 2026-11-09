@@ -47,6 +47,7 @@ SFP_SYSFS_POWER_MODE_POLICY = 'power_mode_policy'
 SFP_SYSFS_POWER_ON = 'power_on'
 SFP_SYSFS_POWER_GOOD = 'power_good'
 SFP_SYSFS_POWER_LIMIT = 'power_limit'
+SFP_SYSFS_INTERRUPT = 'interrupt'
 SFP_SYSFS_CONTROL = 'control'
 SFP_SYSFS_FREQUENCY = 'frequency'
 SFP_SYSFS_FREQUENCY_SUPPORT = 'frequency_support'
@@ -121,6 +122,10 @@ class ModuleSysfsMixin(ABC):
     Declare this mixin before the community bases, or `SfpOptoeBase.set_power`
     wins over the module-side method of the same name.
     """
+
+    # Sysfs file names to poll in addition to the plug-event ones. Most ports
+    # want none; CpoPort overrides this to also poll 'interrupt'.
+    extra_poll_types = ()
 
     SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE = 'Long range for non-Mellanox cable or module'
     SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST = 'Enforce part number list'

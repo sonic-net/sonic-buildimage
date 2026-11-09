@@ -37,7 +37,12 @@ from .module_detection_flow import (
     STATE_POWER_LIMIT_ERROR,
     STATE_SW_CONTROL,
 )
-from .module_sysfs import ModuleSysfsMixin, SFP_STATUS_INSERTED, SFP_STATUS_REMOVED
+from .module_sysfs import (
+    ModuleSysfsMixin,
+    SFP_STATUS_INSERTED,
+    SFP_STATUS_REMOVED,
+    SFP_SYSFS_INTERRUPT,
+)
 from .module_xcvr import ModuleXcvrMixin
 
 CPO_TYPE = "CPO"
@@ -60,6 +65,9 @@ class CpoPort(ModuleXcvrMixin, ModuleSysfsMixin, CpoBase):
     # The laser source has 8 lasers in one bank; only bank 0 of its pages
     # 1Ah/1Bh holds data, whichever OE bank the port is on.
     ELSFP_BANK = 0
+
+    # The bank that polls the vModule's fault interrupt. See extra_poll_types.
+    INTERRUPT_POLL_BANK = 0
 
     def __init__(self, sfp_index, bank_id, oe_id, els_id, asic_id='asic0'):
         hardware_id = CpoHardwareInfo(oe_id=OeId.NVIDIA_SPC6_CPO, elsfp_id=None)
@@ -100,6 +108,17 @@ class CpoPort(ModuleXcvrMixin, ModuleSysfsMixin, CpoBase):
     @property
     def bank_id(self):
         return self.oe.bank
+
+    @property
+    def extra_poll_types(self):
+        """The fault interrupt the SDK raises for this port's vModule.
+
+        Polled alongside the plug-event nodes and dispatched to
+        FaultIndicationTask. All four banks of an OE share the one interrupt
+        node and a read clears it, so only bank 0 asks for it: a second bank
+        polling the same node takes faults away from the first.
+        """
+        return (SFP_SYSFS_INTERRUPT,) if self.bank_id == self.INTERRUPT_POLL_BANK else ()
 
     def read_eeprom(self, offset, num_bytes):
         return self.oe.read_eeprom(offset, num_bytes)
