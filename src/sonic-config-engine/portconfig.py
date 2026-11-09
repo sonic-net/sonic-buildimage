@@ -168,6 +168,25 @@ def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=No
             ports[name] = data
     return ports
 
+
+def normalize_legacy_autoneg(port):
+    """
+    Convert a legacy 1/0 autoneg value from port_config.ini to on/off.
+
+    Neither the sonic-port YANG model nor orchagent accepts 1/0 any more.
+    Translate it the same way db_migrator migrates an existing CONFIG_DB:
+    autoneg 1 used to advertise only the configured speed, so keep that
+    speed as adv_speeds.
+    """
+    autoneg = port.get('autoneg')
+    if autoneg == '1':
+        port['autoneg'] = 'on'
+        if 'speed' in port:
+            port.setdefault('adv_speeds', port['speed'])
+    elif autoneg == '0':
+        port['autoneg'] = 'off'
+
+
 def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
     config_db = db_connect_configdb(asic_name)
     
@@ -269,6 +288,7 @@ def parse_port_config_file(port_config_file):
                     continue
                 data[titles[i]] = item
             data.setdefault('alias', name)
+            normalize_legacy_autoneg(data)
             ports[name] = data
             port_alias_map[data['alias']] = name
             # asic_port_name to sonic_name mapping also included in
