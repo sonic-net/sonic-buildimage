@@ -26,7 +26,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
     # build kernel-only package for host installation
 	rm -rf builds/cmake
 
-	cmake -B builds/cmake -DCMAKE_SYSTEM_VERSION=$(shell ls -t /lib/modules | head -1) -DSKIP_DEPMOD_IN_INSTALL_PHASE=on -DSKIP_UNINSTALL_INSTALL_DEPENDENCY=on -DKERNEL_ONLY=ON
+	cmake -B builds/cmake -DCMAKE_SYSTEM_VERSION=$(shell ls -t /lib/modules | head -1) -DSKIP_DEPMOD_IN_INSTALL_PHASE=on -DKERNEL_ONLY=ON
 
 	cmake --build builds/cmake -j$(SONIC_CONFIG_MAKE_JOBS)
 
