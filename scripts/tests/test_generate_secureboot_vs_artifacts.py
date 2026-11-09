@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import pytest
+import yaml
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "generate_secureboot_vs_artifacts.py"
@@ -227,3 +228,45 @@ def test_canonical_and_legacy_commands_preserve_help_and_forward_arguments(tmp_p
     ], capture_output=True, text=True, timeout=10)
     assert result.returncode == 1
     assert str(missing) in result.stderr
+
+
+@pytest.mark.parametrize("mismatched_commit", [False, True])
+def test_pipeline_fetches_and_verifies_triggering_pr_before_signing(tmp_path, mismatched_commit):
+    """Fetch PR code from a different repository and reject a moved ref before checkout."""
+    pipeline = yaml.safe_load(
+        (SCRIPT.parents[1] / ".azure-pipelines/azure-pipelines-build-secureboot-vs.yml").read_text()
+    )
+    steps = pipeline["stages"][0]["jobs"][0]["parameters"]["preSteps"]
+    source_step = next(
+        step for group in steps for value in group.values() if isinstance(value, list)
+        for step in value if step.get("displayName") == "Checkout triggering PR revision"
+    )
+
+    def git(directory, *args):
+        return subprocess.run(
+            ["git", "-C", str(directory), *args], check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+    source = tmp_path / "source repo"
+    target = tmp_path / "pipeline repo"
+    for directory, contents in ((source, "PR code"), (target, "pipeline code")):
+        directory.mkdir()
+        git(directory, "init", "-b", "main")
+        (directory / "marker").write_text(contents)
+        git(directory, "add", "marker")
+        git(directory, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "fixture")
+    source_commit = git(source, "rev-parse", "HEAD")
+    original_commit = git(target, "rev-parse", "HEAD")
+    env = dict(os.environ, SOURCE_REPOSITORY=str(source), SOURCE_REF="refs/heads/main",
+               SOURCE_COMMIT=original_commit if mismatched_commit else source_commit)
+    result = subprocess.run(
+        ["bash", "-c", source_step["bash"]], cwd=target, env=env, capture_output=True, text=True, timeout=30
+    )
+    if mismatched_commit:
+        assert result.returncode != 0
+        assert git(target, "rev-parse", "HEAD") == original_commit
+        assert (target / "marker").read_text() == "pipeline code"
+    else:
+        assert result.returncode == 0, result.stderr
+        assert git(target, "rev-parse", "HEAD") == source_commit
+        assert (target / "marker").read_text() == "PR code"
