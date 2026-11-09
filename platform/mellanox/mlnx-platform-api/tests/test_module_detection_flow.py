@@ -43,6 +43,7 @@ from sonic_platform import module_detection_flow as mdf
 from sonic_platform.module_detection_flow import ModuleDetectionFlow
 from sonic_platform.module_sysfs import (
     SFP_SYSFS_HW_PRESENT,
+    SFP_SYSFS_INTERRUPT,
     SFP_SYSFS_POWER_GOOD,
     SFP_SYSFS_PRESENT,
 )
@@ -56,16 +57,20 @@ FW_OWNED_STATES = (mdf.STATE_FW_CONTROL, mdf.STATE_FCP_NOT_PRESENT, mdf.STATE_FC
 class _Port:
     """A port with nothing but what the flow reaches for."""
 
-    def __init__(self, sdk_index=0, asic_index=0):
-        self._sdk_index = sdk_index
+    #: As on ModuleSysfsMixin: no extra nodes unless a subclass asks.
+    extra_poll_types = ()
+
+    def __init__(self, sdk_index=0, asic_index=0, control_type=mdf.SFP_FW_CONTROL):
+        # A plain attribute, as on the real ports: the flow logs sfp.sdk_index.
+        self.sdk_index = sdk_index
         self._asic_index = asic_index
         self.index = sdk_index + 1
 
     def get_sdk_index(self):
-        return self._sdk_index
+        return self.sdk_index
 
     def _module_attr_path(self, name):
-        return f'/sys/module/sx_core/asic{self._asic_index}/module{self._sdk_index}/{name}'
+        return f'/sys/module/sx_core/asic{self._asic_index}/module{self.sdk_index}/{name}'
 
 
 class TestAttachment:
@@ -174,6 +179,139 @@ class TestPolling:
             assert ModuleDetectionFlow.in_stable_state(port)
         port.state = mdf.STATE_RESETTING
         assert not ModuleDetectionFlow.in_stable_state(port)
+
+
+class TestExtraPollTypes:
+    """A port adds sysfs nodes of its own to the set the flow derives from
+    its state. This is how a CPO port gets its fault interrupt into the main
+    poll object - the flow cannot name the port classes itself without an
+    import cycle, so the port declares them instead.
+
+    The node is an ordinary one: opened, registered and closed like any
+    other. All that is special is which ports ask for it.
+    """
+
+    @staticmethod
+    def _port(state=mdf.STATE_SW_CONTROL, extra=(SFP_SYSFS_INTERRUPT,), fds=None):
+        port = _Port()
+        port.state = state
+        port.extra_poll_types = extra
+        port.get_fd = mock.MagicMock(
+            side_effect=lambda name: (fds or {}).get(name, f'fd:{name}'))
+        return port
+
+    def test_an_extra_node_is_polled_alongside_the_state_driven_ones(self):
+        assert ModuleDetectionFlow.get_fds_for_poling(self._port()) == {
+            SFP_SYSFS_HW_PRESENT: f'fd:{SFP_SYSFS_HW_PRESENT}',
+            SFP_SYSFS_POWER_GOOD: f'fd:{SFP_SYSFS_POWER_GOOD}',
+            SFP_SYSFS_INTERRUPT:  f'fd:{SFP_SYSFS_INTERRUPT}',
+        }
+
+    def test_a_port_that_declares_none_polls_only_the_state_driven_ones(self):
+        # Every other port class keeps the set it had: the interrupt is opened
+        # for the one class that asked for it and nothing else.
+        assert ModuleDetectionFlow.get_fds_for_poling(self._port(extra=())) == {
+            SFP_SYSFS_HW_PRESENT: f'fd:{SFP_SYSFS_HW_PRESENT}',
+            SFP_SYSFS_POWER_GOOD: f'fd:{SFP_SYSFS_POWER_GOOD}',
+        }
+
+    def test_a_missing_extra_node_leaves_the_state_driven_ones_alone(self):
+        # The chassis tears down the whole poll object when an fd comes back
+        # None, so an interrupt node that is not there must be left out rather
+        # than handed up and taken for an unready module.
+        assert ModuleDetectionFlow.get_fds_for_poling(
+            self._port(fds={SFP_SYSFS_INTERRUPT: None})) == {
+            SFP_SYSFS_HW_PRESENT: f'fd:{SFP_SYSFS_HW_PRESENT}',
+            SFP_SYSFS_POWER_GOOD: f'fd:{SFP_SYSFS_POWER_GOOD}',
+        }
+
+    @pytest.mark.parametrize('state', [mdf.STATE_SW_CONTROL] + list(FW_OWNED_STATES))
+    def test_the_presence_fds_leave_the_extra_nodes_out(self, state):
+        # The laser source poller follows plug state only; the interrupt
+        # stays with get_change_event, whose read clears it.
+        port = self._port(state=state)
+        assert set(ModuleDetectionFlow.get_presence_fds_for_polling(port)) == \
+            set(ModuleDetectionFlow.get_fds_for_poling(port)) - {SFP_SYSFS_INTERRUPT}
+
+    @pytest.mark.parametrize('state', FW_OWNED_STATES)
+    def test_an_extra_node_survives_the_firmware_branch(self, state):
+        # The interrupt is the SDK's, not the host's, so it stays whichever
+        # side owns the module.
+        assert SFP_SYSFS_INTERRUPT in ModuleDetectionFlow.get_fds_for_poling(
+            self._port(state=state))
+
+    def test_an_extra_node_is_kept_across_a_control_type_transition(self):
+        # refresh_poll_obj closes whatever it does not recognize as wanted.
+        # Deriving both the initial set and the refresh from the same helper
+        # is what stops it reading the interrupt as a leftover.
+        port = self._port(state=mdf.STATE_FW_CONTROL)
+        intr_fd = mock.MagicMock(name='interrupt_fd')
+        intr_fd.fileno.return_value = 3
+        present_fd = mock.MagicMock(name='present_fd')
+        present_fd.fileno.return_value = 1
+        port.get_fd = mock.MagicMock(side_effect=lambda name: {
+            SFP_SYSFS_PRESENT: present_fd, SFP_SYSFS_INTERRUPT: intr_fd}[name])
+
+        all_registered_fds = {
+            1: (port, present_fd, SFP_SYSFS_PRESENT),
+            3: (port, intr_fd, SFP_SYSFS_INTERRUPT),
+        }
+        poll_obj = mock.MagicMock()
+
+        ModuleDetectionFlow.refresh_poll_obj(port, poll_obj, all_registered_fds)
+
+        assert all_registered_fds[3] == (port, intr_fd, SFP_SYSFS_INTERRUPT)
+        poll_obj.unregister.assert_not_called()
+        intr_fd.close.assert_not_called()
+
+    def test_a_node_not_yet_registered_is_picked_up_on_a_refresh(self):
+        # The refresh reconciles against the same target set, so a node the
+        # poll object does not hold yet gets registered rather than ignored.
+        port = self._port()
+        intr_fd = mock.MagicMock(name='interrupt_fd')
+        intr_fd.fileno.return_value = 3
+        hw_fd = mock.MagicMock(name='hw_present_fd')
+        hw_fd.fileno.return_value = 1
+        power_fd = mock.MagicMock(name='power_good_fd')
+        power_fd.fileno.return_value = 2
+        port.get_fd = mock.MagicMock(side_effect=lambda name: {
+            SFP_SYSFS_HW_PRESENT: hw_fd, SFP_SYSFS_POWER_GOOD: power_fd,
+            SFP_SYSFS_INTERRUPT: intr_fd}[name])
+
+        all_registered_fds = {
+            1: (port, hw_fd, SFP_SYSFS_HW_PRESENT),
+            2: (port, power_fd, SFP_SYSFS_POWER_GOOD),
+        }
+        poll_obj = mock.MagicMock()
+
+        ModuleDetectionFlow.refresh_poll_obj(port, poll_obj, all_registered_fds)
+
+        assert all_registered_fds[3] == (port, intr_fd, SFP_SYSFS_INTERRUPT)
+        poll_obj.register.assert_called_once()
+        assert poll_obj.register.call_args[0][0] is intr_fd
+
+    def test_a_node_a_port_stopped_asking_for_is_closed_like_any_other(self):
+        # Nothing about the interrupt is exempt from the reconciliation: a
+        # port that no longer declares it has it deregistered and closed.
+        port = self._port(extra=())
+        hw_fd = mock.MagicMock(); hw_fd.fileno.return_value = 1
+        power_fd = mock.MagicMock(); power_fd.fileno.return_value = 2
+        intr_fd = mock.MagicMock(); intr_fd.fileno.return_value = 3
+        port.get_fd = mock.MagicMock(side_effect=lambda name: {
+            SFP_SYSFS_HW_PRESENT: hw_fd, SFP_SYSFS_POWER_GOOD: power_fd}[name])
+
+        all_registered_fds = {
+            1: (port, hw_fd, SFP_SYSFS_HW_PRESENT),
+            2: (port, power_fd, SFP_SYSFS_POWER_GOOD),
+            3: (port, intr_fd, SFP_SYSFS_INTERRUPT),
+        }
+        poll_obj = mock.MagicMock()
+
+        ModuleDetectionFlow.refresh_poll_obj(port, poll_obj, all_registered_fds)
+
+        poll_obj.unregister.assert_called_once_with(intr_fd)
+        intr_fd.close.assert_called_once_with()
+        assert set(all_registered_fds) == {1, 2}
 
 
 class TestChangeEvent:

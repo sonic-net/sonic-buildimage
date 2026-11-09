@@ -205,3 +205,96 @@ class TestXcvrBehaviour:
             assert not sfp.check_media_interface_technology(mock_api.return_value)
         with mock.patch.object(sfp, 'read_eeprom', return_value=bytearray([0x01])):
             assert sfp.check_media_interface_technology(mock_api.return_value)
+
+
+class TestPortMapping:
+    """A physical index to the logical ports on it.
+
+    `port_mapping` answers with one name per index, which is all a caller
+    that just needs "a" port for the index wants. `port_mapping_all_splits`
+    answers with every name, which is what a write meant for the whole
+    physical port has to fan out over - on a broken-out port the other
+    splits are real ports that would otherwise never hear about it.
+    """
+
+    @pytest.fixture(autouse=True)
+    def clean_port_mapping(self):
+        # Both maps are class attributes, so state leaks across tests
+        # unless reset. Clean slate before and after each one.
+        ModuleXcvrMixin.port_mapping = {}
+        ModuleXcvrMixin.port_mapping_all_splits = {}
+        yield
+        ModuleXcvrMixin.port_mapping = {}
+        ModuleXcvrMixin.port_mapping_all_splits = {}
+
+    @staticmethod
+    def _build(mock_cfg_db_ctor, port_table):
+        mock_db = mock.MagicMock()
+        mock_db.get_table.return_value = port_table
+        mock_cfg_db_ctor.return_value = mock_db
+        SFP.build_port_mapping('')
+
+    def test_both_maps_are_shared_by_every_port_class(self):
+        # One build serves a pluggable port and a CPO port alike; the CPO
+        # fault fan-out reads the same dict xcvrd's port lookup filled.
+        assert SFP.port_mapping is ModuleXcvrMixin.port_mapping
+        assert CpoPort.port_mapping is ModuleXcvrMixin.port_mapping
+        assert SFP.port_mapping_all_splits is ModuleXcvrMixin.port_mapping_all_splits
+        assert CpoPort.port_mapping_all_splits is ModuleXcvrMixin.port_mapping_all_splits
+
+    @mock.patch('sonic_platform.module_xcvr.ConfigDBConnector')
+    def test_an_unbroken_port_maps_to_a_single_split(self, mock_cfg_db_ctor):
+        self._build(mock_cfg_db_ctor, {
+            'Ethernet0': {'index': '1'},
+            'Ethernet8': {'index': '9'},
+        })
+
+        assert SFP.port_mapping == {1: 'Ethernet0', 9: 'Ethernet8'}
+        assert SFP.port_mapping_all_splits == {1: ['Ethernet0'], 9: ['Ethernet8']}
+
+    @mock.patch('sonic_platform.module_xcvr.ConfigDBConnector')
+    def test_a_broken_out_port_keeps_every_split(self, mock_cfg_db_ctor):
+        # port_mapping keeps only the first split of each index, which is
+        # exactly what the fan-out map exists to make up for.
+        self._build(mock_cfg_db_ctor, {
+            'Ethernet0':  {'index': '1'},
+            'Ethernet4':  {'index': '1'},
+            'Ethernet8':  {'index': '9'},
+            'Ethernet12': {'index': '9'},
+        })
+
+        assert SFP.port_mapping == {1: 'Ethernet0', 9: 'Ethernet8'}
+        assert SFP.port_mapping_all_splits == {
+            1: ['Ethernet0', 'Ethernet4'],
+            9: ['Ethernet8', 'Ethernet12'],
+        }
+
+    @mock.patch('sonic_platform.module_xcvr.ConfigDBConnector')
+    def test_splits_are_ordered_numerically_not_lexically(self, mock_cfg_db_ctor):
+        # natsort must yield Ethernet4 before Ethernet32. Lex-sorted
+        # iteration would also pick the wrong first split for port_mapping.
+        self._build(mock_cfg_db_ctor, {
+            'Ethernet32': {'index': '1'},   # lex-first, numeric-later
+            'Ethernet0':  {'index': '1'},
+            'Ethernet4':  {'index': '1'},
+        })
+
+        assert SFP.port_mapping == {1: 'Ethernet0'}
+        assert SFP.port_mapping_all_splits == {
+            1: ['Ethernet0', 'Ethernet4', 'Ethernet32'],
+        }
+
+    @mock.patch('sonic_platform.module_xcvr.ConfigDBConnector')
+    def test_rebuilding_does_not_duplicate_splits(self, mock_cfg_db_ctor):
+        # get_logical_port rebuilds whenever an index is missing, and an
+        # index with no CONFIG_DB PORT entry misses on every call - so this
+        # runs many times over a process lifetime. Appending unconditionally
+        # would grow the lists without bound and duplicate every fan-out
+        # write.
+        self._build(mock_cfg_db_ctor, {
+            'Ethernet0': {'index': '1'},
+            'Ethernet4': {'index': '1'},
+        })
+        SFP.build_port_mapping('')
+
+        assert SFP.port_mapping_all_splits == {1: ['Ethernet0', 'Ethernet4']}

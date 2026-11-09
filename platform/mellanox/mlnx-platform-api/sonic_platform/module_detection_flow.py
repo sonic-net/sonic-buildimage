@@ -309,16 +309,63 @@ class ModuleDetectionFlow:
         return sfp.state in STABLE_STATES
 
     @staticmethod
-    def get_fds_for_poling(sfp):
+    def _presence_poll_types(sfp):
+        """The presence nodes that tell this module's plug state in its current state.
+
+        Args:
+            sfp (object): the module to answer for
+
+        Returns:
+            list: poll types
+        """
         if sfp.state == STATE_FW_CONTROL or sfp.state == STATE_FCP_NOT_PRESENT or sfp.state == STATE_FCP_PRESENT:
-            return {
-                SFP_SYSFS_PRESENT: sfp.get_fd(SFP_SYSFS_PRESENT)
-            }
-        else:
-            return {
-                SFP_SYSFS_HW_PRESENT: sfp.get_fd(SFP_SYSFS_HW_PRESENT),
-                SFP_SYSFS_POWER_GOOD: sfp.get_fd(SFP_SYSFS_POWER_GOOD)
-            }
+            return [SFP_SYSFS_PRESENT]
+        return [SFP_SYSFS_HW_PRESENT, SFP_SYSFS_POWER_GOOD]
+
+    @staticmethod
+    def _target_poll_types(sfp):
+        """The sysfs nodes this module should be polling in its current state.
+
+        Both the initial registration and every later refresh derive their fd
+        set from here, so a node a module adds cannot be mistaken for a
+        leftover of a state it has left.
+
+        Args:
+            sfp (object): the module to answer for
+
+        Returns:
+            list: poll types, the state-dependent ones first
+        """
+        return ModuleDetectionFlow._presence_poll_types(sfp) + list(sfp.extra_poll_types)
+
+    @staticmethod
+    def get_fds_for_poling(sfp):
+        """Open the nodes this module polls in its current state.
+
+        A presence node that is not there yet means the module itself is not
+        ready, so it is handed back as None for the caller to back off on. An
+        extra node is optional - a port whose interrupt node is missing still
+        has plug events worth polling - so it is left out rather than failing
+        the whole registration.
+        """
+        fds = {poll_type: sfp.get_fd(poll_type)
+               for poll_type in ModuleDetectionFlow._presence_poll_types(sfp)}
+        for poll_type in sfp.extra_poll_types:
+            fd = sfp.get_fd(poll_type)
+            if fd is not None:
+                fds[poll_type] = fd
+        return fds
+
+    @staticmethod
+    def get_presence_fds_for_polling(sfp):
+        """Open the presence nodes only, leaving out the module's extra poll types.
+
+        For a reader that only follows plug state. The extra nodes belong to
+        get_change_event; a CPO port's interrupt is cleared by a read, so a
+        second reader would take faults away from it.
+        """
+        return {poll_type: sfp.get_fd(poll_type)
+                for poll_type in ModuleDetectionFlow._presence_poll_types(sfp)}
 
     @staticmethod
     def refresh_poll_obj(sfp, poll_obj, all_registered_fds):
@@ -335,16 +382,18 @@ class ModuleDetectionFlow:
         # find fds registered by this SFP
         current_registered_fds = {item[2]: (fileno, item[1]) for fileno, item in all_registered_fds.items() if item[0] is sfp}
         logger.log_debug(f'SFP {sfp.sdk_index} registered fds are: {current_registered_fds}')
-        if sfp.state == STATE_FW_CONTROL or sfp.state == STATE_FCP_NOT_PRESENT or sfp.state == STATE_FCP_PRESENT:
-            target_poll_types = [SFP_SYSFS_PRESENT]
-        else:
-            target_poll_types = [SFP_SYSFS_HW_PRESENT, SFP_SYSFS_POWER_GOOD]
+        target_poll_types = ModuleDetectionFlow._target_poll_types(sfp)
 
         for target_poll_type in target_poll_types:
             if target_poll_type not in current_registered_fds:
                 # need add new fd for polling
                 logger.log_debug(f'SFP {sfp.sdk_index} is registering file descriptor: {target_poll_type}')
                 fd = sfp.get_fd(target_poll_type)
+                if fd is None:
+                    # Not there yet. Leave it unregistered so the next refresh
+                    # picks it up, rather than tearing down the whole poll set.
+                    logger.log_debug(f'SFP {sfp.sdk_index} has no node for: {target_poll_type}')
+                    continue
                 poll_obj.register(fd, select.POLLERR | select.POLLPRI)
                 all_registered_fds[fd.fileno()] = (sfp, fd, target_poll_type)
             else:

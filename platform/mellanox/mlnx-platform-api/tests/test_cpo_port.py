@@ -514,3 +514,18 @@ class TestDetectionFlow:
         cpo.fill_change_event(port_dict)
         assert port_dict == {i: mdf.SFP_STATUS_INSERTED
                              for i in range(cpo.index, cpo.index + CpoPort.NUMBER_OF_BANKS)}
+
+    def test_only_bank_0_asks_the_flow_to_poll_the_fault_interrupt(self, cpo):
+        # The one thing a CPO port polls that a pluggable one does not.
+        # Declared here rather than in module_detection_flow, which cannot
+        # import the port classes without a cycle.
+        from sonic_platform.module_sysfs import SFP_SYSFS_INTERRUPT
+
+        assert CpoPort(8, 0, 3, 1).extra_poll_types == (SFP_SYSFS_INTERRUPT,)
+        # The four banks of an OE share the one node and a read clears it, so
+        # the banks behind bank 0 must not open it a second time.
+        assert cpo.bank_id == 2
+        assert cpo.extra_poll_types == ()
+        # A pluggable port never asks for it, so it is only ever opened for
+        # the class that declared it.
+        assert SFP.extra_poll_types == ()

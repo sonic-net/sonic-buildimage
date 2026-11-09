@@ -144,6 +144,10 @@ class ModuleXcvrMixin:
     #: index to logical port, built once from CONFIG_DB and shared by every port.
     port_mapping = {}
 
+    # index to all its logical ports, natsorted. port_mapping holds only the
+    # first split; use this one to write to every split of a physical port.
+    port_mapping_all_splits = {}
+
     def reinit(self):
         """
         Re-initialize this SFP object when a new SFP inserted
@@ -924,6 +928,9 @@ class ModuleXcvrMixin:
             index = int(value.get('index'))
             if index not in cls.port_mapping:
                 cls.port_mapping[index] = logical_port
+            splits = cls.port_mapping_all_splits.setdefault(index, [])
+            if logical_port not in splits:
+                splits.append(logical_port)
 
     def get_logical_port(self):
         logical_port = self.port_mapping.get(self.index)
