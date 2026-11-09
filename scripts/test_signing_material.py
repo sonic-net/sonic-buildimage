@@ -121,6 +121,31 @@ def certificate(tmp_path, synthetic_pfx):
     return run, env, temporary
 
 
+def test_job_cleanup_loads_from_current_repository_revision(certificate, tmp_path):
+    image_template = ROOT / ".azure-pipelines/azure-pipelines-image-template.yml"
+    image = yaml.safe_load(image_template.read_text())
+    reference = image["jobs"][0]["parameters"]["postSteps"][0]["template"]
+    name, _, repository = reference.partition("@")
+    repositories = {"": ROOT, "self": ROOT, "buildimage": tmp_path / "old-buildimage"}
+    base = repositories[repository] if repository or name.startswith("/") else image_template.parent
+    cleanup_template = yaml.safe_load((base / name.lstrip("/")).read_text())
+    cleanup = next(
+        step["script"] for step in cleanup_template["steps"]
+        if step.get("displayName") == "Remove signing material"
+    )
+    run, env, _ = certificate
+    result, variables = run()
+    assert result.returncode == 0, result.stderr
+    directory = Path(variables["SONIC_SIGNING_DIR"])
+    result = subprocess.run(
+        ["bash", "-c", cleanup], env={**env, "SIGNING_MATERIAL_DIR": str(directory)},
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert not directory.exists()
+    assert Path(variables["SIGNING_CERT"]).is_file()
+
+
 def test_certificate_is_valid_private_and_job_owned(certificate):
     run, env, temporary = certificate
     result, variables = run()
