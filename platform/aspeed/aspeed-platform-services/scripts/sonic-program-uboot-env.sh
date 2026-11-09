@@ -9,7 +9,8 @@
 #   UBOOT_ENV_DISK_INTERFACE  mmc | scsi
 #   UBOOT_ENV_IMAGE_DIR       e.g. image-<version>
 # Optional:
-#   UBOOT_ENV_INSTALLER_CONF  if set and exists, sourced before applying defaults
+#   UBOOT_ENV_INSTALLER_CONF  if set and exists, sourced before applying defaults; its
+#                             directory may hold the platform's vendor hook
 #   SONIC_UBOOT_ENV_LOG_FILE  append timestamped lines (same style as other SONiC logs)
 
 sonic_uboot_env_log() {
@@ -203,30 +204,38 @@ fw_setenv boot_next "run sonic_image_1" || sonic_uboot_env_log "ERROR: Failed to
 # vendor hook below to insert a board-specific check (e.g. a reboot-storm guard
 # command). Keeping the payload here in one place -- and having the vendor override
 # only boot_guard -- avoids duplicating the boot logic in the hook. boot_guard MUST
-# stay defined: an unset var makes 'run boot_guard' fail and the board never boots.
-fw_setenv boot_guard "test 1 = 1" || sonic_uboot_env_log "ERROR: Failed to set boot_guard"
-fw_setenv bootcmd "run print_menu; if run boot_guard; then test -n \"\$boot_once\" && setenv do_boot_once \"\$boot_once\" && setenv boot_once \"\" && saveenv && run do_boot_once; run boot_next; fi" || sonic_uboot_env_log "ERROR: Failed to set bootcmd"
+# stay defined: an unset var makes 'run boot_guard' fail and the board never boots,
+# so if boot_guard cannot be written the payload is programmed unguarded instead.
+BOOT_PAYLOAD="test -n \"\$boot_once\" && setenv do_boot_once \"\$boot_once\" && setenv boot_once \"\" && saveenv && run do_boot_once; run boot_next"
+if fw_setenv boot_guard "test 1 = 1"; then
+    fw_setenv bootcmd "run print_menu; if run boot_guard; then ${BOOT_PAYLOAD}; fi" || sonic_uboot_env_log "ERROR: Failed to set bootcmd"
+else
+    sonic_uboot_env_log "ERROR: Failed to set boot_guard; programming bootcmd without the guard"
+    fw_setenv bootcmd "run print_menu; ${BOOT_PAYLOAD}" || sonic_uboot_env_log "ERROR: Failed to set bootcmd"
+fi
 
 fw_setenv loadaddr "0x432000000" || sonic_uboot_env_log "ERROR: Failed to set loadaddr"
 fw_setenv kernel_addr "0x403000000" || sonic_uboot_env_log "ERROR: Failed to set kernel_addr"
 fw_setenv fdt_addr "0x44C000000" || sonic_uboot_env_log "ERROR: Failed to set fdt_addr"
 fw_setenv initrd_addr "0x440000000" || sonic_uboot_env_log "ERROR: Failed to set initrd_addr"
 
-# Optional vendor hook: let a platform package adjust the U-Boot environment
-# (e.g. add a board-specific bootcmd guard) after the vendor-neutral defaults
-# above are programmed. Platforms that do not ship a hook are unaffected. The
-# hook runs with fw_setenv/fw_printenv available and inherits
+# Optional vendor hook: let a platform adjust the U-Boot environment (e.g. add a
+# board-specific bootcmd guard) after the vendor-neutral defaults above are
+# programmed. Only the detected platform's hook runs -- an executable
+# sonic-uboot-env-vendor-hook in its device directory, next to installer.conf --
+# because the TFTP installer ramdisk is shared by every Aspeed board. The hook
+# runs with fw_setenv/fw_printenv available and inherits
 # SONIC_UBOOT_ENV_LOG_FILE so it can log in the same style.
-for sonic_uboot_hook in \
-    /usr/bin/sonic-uboot-env-vendor-hook \
-    /usr/local/bin/sonic-uboot-env-vendor-hook \
-    /sbin/sonic-uboot-env-vendor-hook; do
+# See platform/aspeed/README.uboot-env-vendor-hook.md.
+if [ -n "${UBOOT_ENV_INSTALLER_CONF:-}" ]; then
+    sonic_uboot_hook="$(dirname "$UBOOT_ENV_INSTALLER_CONF")/sonic-uboot-env-vendor-hook"
     if [ -x "$sonic_uboot_hook" ]; then
         sonic_uboot_env_log "Running vendor U-Boot env hook: $sonic_uboot_hook"
         "$sonic_uboot_hook" || sonic_uboot_env_log "WARNING: vendor U-Boot env hook $sonic_uboot_hook failed"
-        break
+    elif [ -e "$sonic_uboot_hook" ]; then
+        sonic_uboot_env_log "WARNING: vendor U-Boot env hook $sonic_uboot_hook is not executable; skipping"
     fi
-done
+fi
 
 # Non-console failures are logged but non-fatal, so a cosmetic one does not strand
 # the installer. The console-critical writes above exit 1 instead.

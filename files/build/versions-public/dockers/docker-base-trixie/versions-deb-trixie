@@ -96,5 +96,5 @@ rsyslog==8.2504.0-1+deb13u2
 rsyslog-relp==8.2504.0-1+deb13u2
 socat==1.8.0.3-1+deb13u1
 symcrypt-openssl==1.11.0
-vim-common==2:9.1.1230-2
-vim-tiny==2:9.1.1230-2
+vim-common==2:9.1.1230-2+deb13u1
+vim-tiny==2:9.1.1230-2+deb13u1

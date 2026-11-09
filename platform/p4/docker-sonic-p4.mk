@@ -15,14 +15,6 @@ $(DOCKER_SONIC_P4)_DEPENDS += $(SWSS) \
                               $(SONIC_UTILITIES_PY3) \
                               $(IPROUTE2)
 
-# ifeq ($(ROUTING_STACK), quagga)
-$(DOCKER_SONIC_P4)_DEPENDS += $(QUAGGA)
-# else ifeq ($(ROUTING_STACK), frr)
-# $(DOCKER_SONIC_P4)_DEPENDS += $(FRR)
-# else
-# $(DOCKER_SONIC_P4)_DEPENDS += $(GOBGP)
-# endif
-
 $(DOCKER_SONIC_P4)_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                             $(ARP_UPDATE_SCRIPT) \
                             $(ARP_UPDATE_VARS_TEMPLATE)

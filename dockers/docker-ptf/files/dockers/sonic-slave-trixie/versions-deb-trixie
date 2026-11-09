@@ -7,8 +7,8 @@ ant-optional==1.10.15-1
 apparmor==4.1.0-1
 appstream==1.0.5-1
 apt-file==3.3
-apt-transport-https==3.0.3
-apt-utils==3.0.3
+apt-transport-https==3.0.4
+apt-utils==3.0.4
 arch-test==0.22-1
 asciidoctor==2.0.23-1
 aspell==0.60.8.1-4
@@ -115,7 +115,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.9.2-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.9.3-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -233,9 +233,9 @@ hwdata==0.394-1
 i965-va-driver==2.4.1+dfsg1-2
 ibverbs-providers==56.1-1
 icu-devtools==76.1-4
-imagemagick==8:7.1.1.43+dfsg1-1+deb13u13
-imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u13
-imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u13
+imagemagick==8:7.1.1.43+dfsg1-1+deb13u14
+imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u14
+imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u14
 inetutils-telnet==2:2.6-3+deb13u3
 inkscape==1.4-6
 install-info==7.1.1-1+b1
@@ -573,7 +573,7 @@ libdate-calc-xs-perl==6.4-2+b4
 libdate-manip-perl==6.98-1
 libdatetime-locale-perl==1:1.41-1
 libdatetime-perl==2:1.65-1+b2
-libdatetime-timezone-perl==1:2.65-1+2026e
+libdatetime-timezone-perl==1:2.65-1+2026f
 libdatrie-dev==0.2.13-3+b1
 libdatrie1==0.2.13-3+b1
 libdav1d7==1.5.1-1
@@ -882,8 +882,8 @@ libidn2-dev==2.3.8-2
 libiec61883-0==1.2.0-7
 libigdgmm12==22.7.2+ds1-1
 libijs-0.35==0.35-15.2
-libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u13
-libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u13
+libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u14
+libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u14
 libimagequant0==2.18.0-1+b2
 libimath-3-1-29t64==3.1.12-1+b3
 libimport-into-perl==1.002005-2
@@ -1010,9 +1010,9 @@ liblzo2-2==2.10-3+b1
 liblzo2-dev==2.10-3+b1
 libmagic-mgc==1:5.46-5
 libmagic1t64==1:5.46-5
-libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u13
-libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u13
-libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u13
+libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u14
+libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u14
+libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u14
 libmail-sendmail-perl==0.80-3
 libmailtools-perl==2.22-1
 libmariadb-dev==1:11.8.6-0+deb13u1
@@ -1328,7 +1328,7 @@ librtmp-dev==2.4+20151223.gitfa8646d.1-2+b5
 librtmp1==2.4+20151223.gitfa8646d.1-2+b5
 librubberband2==3.3.0+dfsg-2+b3
 libruby==1:3.3+b1
-libruby3.3==3.3.8-2
+libruby3.3==3.3.13-0+deb13u1
 libsamplerate0==0.2.2-4+b2
 libsasl2-2==2.1.28+dfsg1-9
 libsasl2-dev==2.1.28+dfsg1-9
@@ -1702,7 +1702,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.113-1
+linux-libc-dev==6.12.115-2
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
@@ -2042,9 +2042,9 @@ ruby-sdbm==1.0.0-5+b7
 ruby-test-unit==3.6.2-1
 ruby-webrick==1.9.1-1
 ruby-xmlrpc==0.3.3-2
-ruby3.3==3.3.8-2
-ruby3.3-dev==3.3.8-2
-ruby3.3-doc==3.3.8-2
+ruby3.3==3.3.13-0+deb13u1
+ruby3.3-dev==3.3.13-0+deb13u1
+ruby3.3-doc==3.3.13-0+deb13u1
 rubygems-integration==1.19
 runit-helper==2.16.4
 sbsigntool==0.9.4-3.2+deb13u1
@@ -2147,6 +2147,7 @@ zip==3.0-15+deb13u1
 zipcmp==1.11.3-2
 zipmerge==1.11.3-2
 ziptool==1.11.3-2
-zlib1g-dev==1:1.3.dfsg+really1.3.1-1+b1
+zlib1g==1:1.3.dfsg+really1.3.1-1+deb13u1
+zlib1g-dev==1:1.3.dfsg+really1.3.1-1+deb13u1
 zstd==1.5.7+dfsg-1
 zutty==0.16.2.20241020+dfsg1-1
