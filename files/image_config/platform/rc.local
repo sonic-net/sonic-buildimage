@@ -323,8 +323,10 @@ if [ -f $FIRST_BOOT_FILE ]; then
     # Try to take old configuration saved during installation
     # and create a flag in /tmp/
     if [ -d /host/old_config ]; then
-        mv -f /host/old_config /etc/sonic/
+        mv -f /host/old_config /etc/sonic/ || exit 1
         rm -rf /etc/sonic/old_config/old_config
+    fi
+    if [ -d /etc/sonic/old_config ]; then
         touch /etc/sonic/pending_config_migration
     elif [ -f /host/minigraph.xml ]; then
         mkdir -p /etc/sonic/old_config
