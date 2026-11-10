@@ -225,7 +225,7 @@ config_syncd()
     set_start_type
 
     if [ ${ENABLE_SAITHRIFT} == 1 ]; then
-        CMD_ARGS+=" -r -m $HWSKU_DIR/port_config.ini"
+        CMD_ARGS+=" -r -m /var/run/redis/port_config.ini"
     fi
 
     [ -r $PLATFORM_DIR/syncd.conf ] && . $PLATFORM_DIR/syncd.conf

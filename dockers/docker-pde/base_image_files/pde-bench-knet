@@ -1,7 +1,5 @@
 #!/bin/bash
 
-PLATF_DIR=/usr/share/sonic/platform
-HWSKU_DIR=/usr/share/sonic/hwsku
 PORT=Ethernet0
 LANE=1
 SPEED=0
@@ -39,20 +37,6 @@ if [ $(docker ps | grep -c swss) -eq 0 ]; then
     exit 1
 fi
 
-# Find out the PLATFORM and HWSKU
-if [ ! -d ${PLATF_DIR} ]; then
-    name=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
-    PLATF_DIR=/usr/share/sonic/device/${name}
-fi
-
-if [ ! -d ${HWSKU_DIR} ]; then
-    name=$(head -1 ${PLATF_DIR}/default_sku | awk '{print $1}')
-    HWSKU_DIR=${PLATF_DIR}/${name}
-fi
-
-echo "PLATFORM='${PLATF_DIR}'"
-echo "HWSKU='${HWSKU_DIR}'"
-
 # Determine the target port for KNET benchmark
 while IFS= read -r line; do
     line=$(echo ${line} | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
@@ -61,7 +45,7 @@ while IFS= read -r line; do
     fi
     port=$(echo ${line} | awk '{print $1}')
     lane=$(echo ${line} | awk '{print $2}' | cut -d ',' -f 1)
-    speed=$(echo ${line} | awk '{print $5}')
+    speed=$(echo ${line} | awk '{print $NF}')
     if [ -z "${speed}" ]; then
         continue
     fi
@@ -70,7 +54,7 @@ while IFS= read -r line; do
         LANE=${lane}
         SPEED=${speed}
     fi
-done < ${HWSKU_DIR}/port_config.ini
+done < /var/run/redis/port_config.ini
 
 echo "PORT=${PORT}"
 echo "LANE=${LANE}"

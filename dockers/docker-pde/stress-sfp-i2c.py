@@ -8,7 +8,7 @@ try:
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
 
-HWSKU_PATH = "/usr/share/sonic/hwsku"
+PORT_CONFIG_FILE = "/var/run/redis/port_config.ini"
 PLATFORM_PATH = "/usr/share/sonic/platform"
 
 PLATFORM_SPECIFIC_MODULE_NAME = 'sfputil'
@@ -59,10 +59,13 @@ def load_platform_portdict():
     if port_dict is not None:
         return
 
-    port_dict = {}
     idx = 0
-    file = open(HWSKU_PATH + "/port_config.ini", "r")
+    file = open(PORT_CONFIG_FILE, "r")
     line = file.readline()
+    if line.split() != ["#", "name", "lanes", "alias", "index", "speed"]:
+        file.close()
+        raise RuntimeError("SFP I2C stress requires port indices in %s" % PORT_CONFIG_FILE)
+    port_dict = {}
     while line is not None and len(line) > 0:
         line = line.strip()
         if line.startswith("#"):

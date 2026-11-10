@@ -50,7 +50,7 @@ usage()
  Usage:  config-setup < backup | boot | factory >
 
          backup  - Take a backup copy of SONiC configuration.
-         boot    - Initialize/migrate SONiC configuration during system boot.
+         boot    - Initialize/migrate SONiC configuration and generate port maps.
          factory - Create factory default SONiC configuration and save it to
                    to ${CONFIG_DB_JSON}.
 EOF
@@ -742,6 +742,16 @@ fi
 # Process switch bootup event
 if [ "$CMD" = "boot" ]; then
     boot_config
+    for ((asic_num = 0; asic_num < ${NUM_ASIC:-1}; asic_num++)); do
+        namespace_args=()
+        port_config=/var/run/redis/port_config.ini
+        if [[ ${NUM_ASIC:-1} -gt 1 ]]; then
+            namespace_args=(-n "asic$asic_num")
+            port_config="/var/run/redis$asic_num/port_config.ini"
+        fi
+        # Keep the indexless fallback (rc 3) for readers that do not need indices.
+        generate_port_config.sh -fi "${namespace_args[@]}" "$port_config" || [[ $? -eq 3 ]] || rm -f -- "$port_config" || continue
+    done
 fi
 
 # Process factory default configuration creation request
