@@ -23,37 +23,20 @@ def run(command, workdir, **kwargs):
 
 
 def generate_key_material(workdir, build_id):
-    """Create PK -> KEK -> DB certificates and their authenticated EFI updates."""
-    run(["openssl", "genrsa", "-out", "PK.key", "4096"], workdir)
-    run([
-        "openssl", "req", "-new", "-x509", "-sha256", "-days", "3650",
-        "-key", "PK.key", "-out", "PK.crt", "-subj", f"/CN=SONiC CI PK build {build_id}/",
-        "-addext", "basicConstraints=critical,CA:TRUE",
-        "-addext", "keyUsage=critical,keyCertSign,cRLSign",
-        "-addext", "subjectKeyIdentifier=hash",
-    ], workdir)
-
-    for name, issuer, days, section, constraints, usage, authority in (
-        ("KEK", "PK", "3650", "v3_ca", "CA:TRUE,pathlen:0", "keyCertSign,cRLSign", "keyid:always,issuer"),
-        ("DB", "KEK", "365", "v3_db", "CA:FALSE", "digitalSignature", "keyid,issuer"),
+    """Create self-signed certificates and PK -> KEK -> db authenticated updates."""
+    for name, days, constraints, usage in (
+        ("PK", "3650", "CA:TRUE", "keyCertSign,cRLSign"),
+        ("KEK", "3650", "CA:TRUE,pathlen:0", "keyCertSign,cRLSign"),
+        ("DB", "365", "CA:FALSE", "digitalSignature"),
     ):
-        run(["openssl", "genrsa", "-out", f"{name}.key", "4096"], workdir)
-        (workdir / f"{name}.cnf").write_text(
-            f"[ req ]\nprompt = no\ndistinguished_name = dn\n"
-            f"[ dn ]\nCN = SONiC CI {name} build {build_id}\n"
-            f"[ {section} ]\nbasicConstraints = critical,{constraints}\n"
-            f"keyUsage = critical,{usage}\nsubjectKeyIdentifier = hash\n"
-            f"authorityKeyIdentifier = {authority}\n",
-            encoding="utf-8",
-        )
         run([
-            "openssl", "req", "-new", "-sha256", "-key", f"{name}.key",
-            "-out", f"{name}.csr", "-config", f"{name}.cnf",
-        ], workdir)
-        run([
-            "openssl", "x509", "-req", "-sha256", "-days", days, "-in", f"{name}.csr",
-            "-CA", f"{issuer}.crt", "-CAkey", f"{issuer}.key", "-CAcreateserial",
-            "-out", f"{name}.crt", "-extfile", f"{name}.cnf", "-extensions", section,
+            "openssl", "req", "-new", "-x509", "-newkey", "rsa:4096",
+            "-nodes", "-sha256", "-days", days,
+            "-subj", f"/CN=SONiC CI {name} build {build_id}/",
+            "-keyout", f"{name}.key", "-out", f"{name}.crt",
+            "-addext", f"basicConstraints=critical,{constraints}",
+            "-addext", f"keyUsage=critical,{usage}",
+            "-addext", "subjectKeyIdentifier=hash",
         ], workdir)
 
     for name, variable, issuer in (("PK", "PK", "PK"), ("KEK", "KEK", "PK"), ("DB", "db", "KEK")):
@@ -101,8 +84,10 @@ def generate_artifacts(workdir, output_vars, *, ovmf_vars=DEFAULT_OVMF_VARS,
         else:
             generate_key_material(workdir, build_id)
 
-        run(["openssl", "verify", "-CAfile", "PK.crt", "KEK.crt"], workdir)
-        run(["openssl", "verify", "-CAfile", "PK.crt", "-untrusted", "KEK.crt", "DB.crt"], workdir)
+        for name in CERTIFICATE_NAMES:
+            run([
+                "openssl", "verify", "-check_ss_sig", "-CAfile", f"{name}.crt", f"{name}.crt",
+            ], workdir)
         provision_variables(workdir, ovmf_vars, output_vars, build_id, owner_guid)
 
         if not reuse_keys:

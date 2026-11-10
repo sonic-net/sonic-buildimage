@@ -106,7 +106,7 @@ stages:
       - name: vs
         variables:
           secure_boot_image: yes
-          secure_boot_vars_file: $(Build.SourcesDirectory)/.secureboot-ci/sonic-vs_vars.fd
+          secure_boot_workdir: $(Build.SourcesDirectory)/.secureboot-ci
       SUBMODULE: ${{ parameters.SUBMODULE }}
       ${{ if ne(parameters.SOURCE_REPOSITORY, '') }}:
         COMMIT_ID: ''

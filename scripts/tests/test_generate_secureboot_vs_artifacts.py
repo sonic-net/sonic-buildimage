@@ -41,6 +41,8 @@ def env(tmp_path, monkeypatch):
             return real_run(command, **kwargs)
         if command[0] == "openssl" and "-out" in command:
             (workdir / command[command.index("-out") + 1]).write_bytes(b"generated")
+            if "-keyout" in command:
+                (workdir / command[command.index("-keyout") + 1]).write_bytes(b"generated key")
         elif command[0] in ("cert-to-efi-sig-list", "sign-efi-sig-list"):
             (workdir / command[-1]).write_bytes(b"generated")
         elif command[0] == "virt-fw-vars" and "--output" in command:
@@ -64,18 +66,17 @@ def test_generation_preserves_hierarchy_updates_and_permissions(env, capsys):
     assert Path.cwd() == cwd
     calls = env["calls"]
     for name in ("PK", "KEK", "DB"):
-        assert ["openssl", "genrsa", "-out", f"{name}.key", "4096"] in calls
         assert ["cert-to-efi-sig-list", f"{name}.crt", f"{name}.esl"] in calls
+        assert [
+            "openssl", "verify", "-check_ss_sig", "-CAfile", f"{name}.crt", f"{name}.crt",
+        ] in calls
         assert stat.S_IMODE((env["workdir"] / f"{name}.key").stat().st_mode) == 0o600
         for suffix in ("crt", "auth"):
             assert stat.S_IMODE((env["workdir"] / f"{name}.{suffix}").stat().st_mode) == 0o644
-    assert stat.S_IMODE((env["workdir"] / "DB.cnf").stat().st_mode) == 0o600
     assert stat.S_IMODE(env["output"].stat().st_mode) == 0o644
     assert ["sign-efi-sig-list", "-k", "PK.key", "-c", "PK.crt", "PK", "PK.esl", "PK.auth"] in calls
     assert ["sign-efi-sig-list", "-k", "PK.key", "-c", "PK.crt", "KEK", "KEK.esl", "KEK.auth"] in calls
     assert ["sign-efi-sig-list", "-k", "KEK.key", "-c", "KEK.crt", "db", "DB.esl", "DB.auth"] in calls
-    assert ["openssl", "verify", "-CAfile", "PK.crt", "KEK.crt"] in calls
-    assert ["openssl", "verify", "-CAfile", "PK.crt", "-untrusted", "KEK.crt", "DB.crt"] in calls
     assert calls[-2] == [
         "virt-fw-vars", "--input", str(env["template"]),
         "--set-pk", artifacts.DEFAULT_OWNER_GUID, "PK.crt",
@@ -87,7 +88,7 @@ def test_generation_preserves_hierarchy_updates_and_permissions(env, capsys):
     assert "Secure Boot build inputs generated" in capsys.readouterr().out
 
 
-def test_real_openssl_certificates_form_the_expected_chain(env):
+def test_real_openssl_certificates_are_self_signed_without_intermediate_files(env):
     env["real_openssl"] = True
     assert artifacts.main(env["argv"]) == 0
     for name, constraint, usage in (
@@ -102,6 +103,19 @@ def test_real_openssl_certificates_form_the_expected_chain(env):
         assert "Public-Key: (4096 bit)" in result.stdout
         assert constraint in result.stdout
         assert usage in result.stdout
+        identity = artifacts.run([
+            "openssl", "x509", "-in", f"{name}.crt", "-noout", "-subject", "-issuer",
+        ], env["workdir"], capture_output=True, text=True).stdout.splitlines()
+        assert identity[0].removeprefix("subject=") == identity[1].removeprefix("issuer=")
+        certificate_key = artifacts.run([
+            "openssl", "x509", "-in", f"{name}.crt", "-noout", "-pubkey",
+        ], env["workdir"], capture_output=True, text=True).stdout
+        private_key = artifacts.run([
+            "openssl", "pkey", "-in", f"{name}.key", "-pubout",
+        ], env["workdir"], capture_output=True, text=True).stdout
+        assert certificate_key == private_key
+    for suffix in ("csr", "cnf", "srl"):
+        assert not list(env["workdir"].glob(f"*.{suffix}"))
 
 
 def test_reuse_does_not_require_or_replace_private_keys_or_auth_files(env, capsys):
@@ -109,7 +123,7 @@ def test_reuse_does_not_require_or_replace_private_keys_or_auth_files(env, capsy
     for name in ("PK", "KEK", "DB"):
         (env["workdir"] / f"{name}.crt").write_bytes(b"existing certificate")
     assert artifacts.main(env["argv"] + ["--reuse-keys"]) == 0
-    assert len(env["calls"]) == 4
+    assert len(env["calls"]) == 5
     for name in ("PK", "KEK", "DB"):
         assert (env["workdir"] / f"{name}.crt").read_bytes() == b"existing certificate"
         assert not (env["workdir"] / f"{name}.key").exists()
@@ -194,7 +208,7 @@ def test_build_id_defaults_match_the_shell_command(env, monkeypatch, build_id):
         monkeypatch.setenv("BUILD_BUILDID", build_id)
     env["build_id"] = build_id or "local"
     assert artifacts.main(env["argv"][:-2]) == 0
-    assert f"/CN=SONiC CI PK build {env['build_id']}/" in env["calls"][1]
+    assert f"/CN=SONiC CI PK build {env['build_id']}/" in env["calls"][0]
 
 
 def test_owner_guid_override_is_passed_to_every_firmware_variable(env):
@@ -270,3 +284,37 @@ def test_pipeline_fetches_and_verifies_triggering_pr_before_signing(tmp_path, mi
         assert result.returncode == 0, result.stderr
         assert git(target, "rev-parse", "HEAD") == source_commit
         assert (target / "marker").read_text() == "PR code"
+
+
+def test_pipeline_reuses_workdir_without_preliminary_vars_file(tmp_path):
+    pipeline_dir = SCRIPT.parents[1] / ".azure-pipelines"
+    pipeline = yaml.safe_load(
+        (pipeline_dir / "azure-pipelines-build-secureboot-vs.yml").read_text()
+    )
+    variables = pipeline["stages"][0]["jobs"][0]["parameters"]["jobGroups"][0]["variables"]
+    workdir = variables["secure_boot_workdir"].replace("$(Build.SourcesDirectory)", str(tmp_path))
+    Path(workdir).mkdir()
+    (tmp_path / "target").mkdir()
+    (tmp_path / "target/sonic-vs.img-uefi_vars.fd").touch()
+    shared = yaml.safe_load((pipeline_dir / "azure-pipelines-build.yml").read_text())
+    steps = shared["jobs"][0]["parameters"]["buildSteps"]
+    script = next(step["bash"] for step in steps if "bash" in step)
+    for name, value in {
+        "GROUP_NAME": "vs", "PLATFORM_ARCH": "amd64", "dbg_image": "no",
+        "asan_image": "no", "K8S_MASTER_CHANGED": "NO", "secure_boot_image": "yes",
+        "secure_boot_workdir": workdir, "Build.BuildId": "test-build",
+        "Build.Reason": "PullRequest",
+    }.items():
+        script = script.replace(f"$({name})", value)
+    result = subprocess.run(
+        ["bash", "-c", 'make() { :; }\npython3() { printf "%s\\n" "$@" > invocation; }\n' + script],
+        cwd=tmp_path, env=dict(os.environ, BUILD_OPTIONS=""), capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "invocation").read_text().splitlines() == [
+        "scripts/generate_secureboot_vs_artifacts.py",
+        "--workdir", workdir,
+        "--ovmf-vars", "target/sonic-vs.img-uefi_vars.fd",
+        "--output-vars", "target/sonic-vs_vars.fd",
+        "--build-id", "test-build", "--reuse-keys",
+    ]
