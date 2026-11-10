@@ -5,7 +5,13 @@ program:fpmsyncd
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 program:bfdd
 program:ospfd
+{# The default unified profile has independent IS-IS recovery in frrcfgd. #}
+{% set independent_isis = DEVICE_METADATA.localhost.docker_routing_config_mode | default('') == 'unified'
+    and not (frr_has_namespace | default(true))
+    and not (ISIS_GLOBALS | default({}) | reject('equalto', 'default') | list) %}
+{% if not independent_isis %}
 program:isisd
+{% endif %}
 program:pimd
 program:pathd
 program:frrcfgd

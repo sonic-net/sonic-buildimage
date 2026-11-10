@@ -13,7 +13,11 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/unisolate.j2,/usr/sbin/bgp-unisolate \
 "
 
-FRR_VARS=$(sonic-cfggen $CFGGEN_PARAMS)
+FRR_SUPERVISOR_CONTEXT='{"frr_has_namespace":false}'
+if [[ -n "${NAMESPACE_ID:-}" ]]; then
+    FRR_SUPERVISOR_CONTEXT='{"frr_has_namespace":true}'
+fi
+FRR_VARS=$(sonic-cfggen $CFGGEN_PARAMS -a "$FRR_SUPERVISOR_CONTEXT")
 CONFIG_TYPE=$(echo $FRR_VARS | jq -r '.docker_routing_config_mode')
 
 update_default_gw()
