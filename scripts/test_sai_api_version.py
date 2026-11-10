@@ -1,4 +1,4 @@
-"""Exercise strict SAI version checking against real shared libraries and cached artifacts."""
+"""Exercise Broadcom binary-only API version comparison with real ELF fixtures."""
 
 import os
 from pathlib import Path
@@ -19,19 +19,10 @@ class SaiApiVersionTest(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        self.header = self.root / "saiversion.h"
-        self.header.write_text(
-            "#define SAI_MAJOR 1\n#define SAI_MINOR 19\n#define SAI_REVISION 2\n", encoding="utf-8",
-        )
 
-    def build_runtime(self, compiled, vendor, status=0, symbol=True, directory=None):
+    def build_runtime(self, vendor, compiled=11902, status=0, symbol=True, directory=None):
         directory = directory or self.root
         directory.mkdir(parents=True, exist_ok=True)
-        metadata = directory / "metadata.c"
-        metadata.write_text(
-            f"#include <stdint.h>\nuint64_t sai_metadata_query_api_version(void) {{ return {compiled}; }}\n",
-            encoding="utf-8",
-        )
         library = directory / "vendor.c"
         library.write_text(
             "#include <stdint.h>\n"
@@ -42,66 +33,60 @@ class SaiApiVersionTest(unittest.TestCase):
         main = directory / "syncd.c"
         main.write_text("int main(void) { return 0; }\n", encoding="utf-8")
         commands = [
-            ["gcc", "-shared", "-fPIC", "-Wl,-soname,libsaimetadata.so.0", str(metadata),
-             "-o", str(directory / "libsaimetadata.so.0")],
             ["gcc", "-shared", "-fPIC", "-Wl,-soname,libsai.so.1", str(library),
              "-o", str(directory / "libsai.so.1")],
-            ["gcc", str(main), "-Wl,--no-as-needed", "-L" + str(directory),
-             "-Wl,-rpath," + str(directory), "-l:libsaimetadata.so.0", "-l:libsai.so.1",
-             "-o", str(directory / "syncd")],
         ]
+        metadata_link = []
+        if compiled is not None:
+            metadata = directory / "metadata.c"
+            metadata.write_text(
+                f"#include <stdint.h>\nuint64_t sai_metadata_query_api_version(void) {{ return {compiled}; }}\n",
+                encoding="utf-8",
+            )
+            commands.append([
+                "gcc", "-shared", "-fPIC", "-Wl,-soname,libsaimetadata.so.0", str(metadata),
+                "-o", str(directory / "libsaimetadata.so.0"),
+            ])
+            metadata_link = ["-l:libsaimetadata.so.0"]
+        commands.append([
+            "gcc", str(main), "-Wl,--no-as-needed", "-L" + str(directory),
+            "-Wl,-rpath," + str(directory), "-l:libsai.so.1",
+        ] + metadata_link + ["-o", str(directory / "syncd")])
         for command in commands:
             subprocess.run(command, check=True, capture_output=True)
         return directory / "syncd"
 
-    def run_probe(self, compiled, vendor, expected=11902, status=0, symbol=True):
-        syncd = self.build_runtime(compiled, vendor, status, symbol)
+    def run_probe(self, vendor, **kwargs):
+        syncd = self.build_runtime(vendor, **kwargs)
         return subprocess.run(
-            ["python3", str(ROOT / "scripts/check_sai_api_version.py"),
-             "--expected-version", str(expected), "--syncd", str(syncd)],
+            ["python3", str(ROOT / "scripts/check_sai_api_version.py"), "--syncd", str(syncd)],
             capture_output=True, text=True,
         )
 
-    def test_matching_versions_pass_without_switch_initialization(self):
-        result = self.run_probe(11902, 11902)
+    def test_vendor_query_does_not_compare_metadata(self):
+        result = self.run_probe(11801, compiled=11902)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("metadata=11902, vendor=11902", result.stdout)
+        self.assertEqual(result.stdout.strip(), "SAI_API_VERSION=11801")
 
-    def test_header_upgrade_with_unchanged_vendor_fails(self):
-        result = self.run_probe(11902, 11801)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("vendor=11801", result.stdout)
-        self.assertIn("must be equal", result.stderr)
-
-    def test_patch_version_difference_is_rejected(self):
-        self.assertNotEqual(self.run_probe(11800, 11801, expected=11800).returncode, 0)
-
-    def test_old_matching_cached_libraries_do_not_match_new_header(self):
-        self.assertNotEqual(self.run_probe(11801, 11801).returncode, 0)
-
-    def test_minimum_version_is_preserved(self):
-        result = self.run_probe(10800, 10800, expected=10800)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("at least 1.9.0", result.stderr)
+    def test_query_does_not_require_metadata_library(self):
+        result = self.run_probe(11801, compiled=None)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_vendor_query_error_is_rejected(self):
-        result = self.run_probe(11902, 11902, status=-1)
+        result = self.run_probe(11801, status=-1)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("status=-1", result.stderr)
 
     def test_missing_api_is_rejected(self):
-        self.assertNotEqual(self.run_probe(11902, 11902, symbol=False).returncode, 0)
+        result = self.run_probe(11801, symbol=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("sai_query_api_version", result.stderr)
 
     def test_missing_linked_library_is_rejected(self):
-        syncd = self.build_runtime(11902, 11902)
+        syncd = self.build_runtime(11801)
         (self.root / "libsai.so.1").unlink()
         with self.assertRaises(gate.VersionCheckError):
-            gate.check_runtime(11902, syncd)
-
-    def test_invalid_header_does_not_default_to_a_version(self):
-        self.header.write_text("#define SAI_MAJOR 1\n#define SAI_MINOR 19\n", encoding="utf-8")
-        with self.assertRaises(gate.VersionCheckError):
-            gate.header_version(self.header)
+            gate.query_runtime(syncd)
 
     def test_timeout_removes_only_its_probe_container(self):
         def run(command, **kwargs):
@@ -113,42 +98,59 @@ class SaiApiVersionTest(unittest.TestCase):
 
         with mock.patch.object(gate.subprocess, "run", side_effect=run) as execute:
             with self.assertRaises(subprocess.TimeoutExpired):
-                gate.check_image("test-image", 11902)
+                gate.query_image("test-image")
         run_command = execute.call_args_list[1].args[0]
         cleanup = execute.call_args_list[2].args[0]
         self.assertEqual(cleanup, ["docker", "rm", "--force", "--volumes", run_command[3]])
         self.assertIn("sha256:" + "a" * 64, run_command)
 
-    def make_gate(self, compiled, vendor, images, legacy_vendor=None, legacy_status=0, legacy_symbol=True):
-        syncd = self.build_runtime(compiled, vendor)
-        legacy = self.build_runtime(
-            compiled, vendor if legacy_vendor is None else legacy_vendor,
-            status=legacy_status, symbol=legacy_symbol, directory=self.root / "legacy",
-        )
+    def test_invalid_or_duplicate_query_output_is_rejected(self):
+        for output in ("", "SAI_API_VERSION=0\n", "SAI_API_VERSION=11801\nSAI_API_VERSION=11801\n"):
+            with self.subTest(output=output):
+                def run(command, **kwargs):
+                    if command[1] == "inspect":
+                        return subprocess.CompletedProcess(command, 0, "sha256:" + "a" * 64 + "\n")
+                    return subprocess.CompletedProcess(command, 0, output)
+
+                with mock.patch.object(gate.subprocess, "run", side_effect=run):
+                    with self.assertRaises(gate.VersionCheckError):
+                        gate.query_image("test-image")
+
+    def make_gate(self, versions=(11801, 11801, 11801), images=None, compiled=11902,
+                  legacy_status=0, legacy_symbol=True, header=True, empty=None, parallel=False):
+        runtimes = [
+            self.build_runtime(version, compiled=compiled, directory=self.root / str(index),
+                               status=legacy_status if index == 1 else 0,
+                               symbol=legacy_symbol if index == 1 else True)
+            for index, version in enumerate(versions)
+        ]
         (self.root / "target").mkdir()
-        for image in images:
-            (self.root / "target" / image).write_bytes(b"existing cached archive")
+        for image in BROADCOM_IMAGES if images is None else images:
+            (self.root / "target" / image).write_bytes(b"" if image == empty else b"existing cached archive")
         (self.root / "target/broadcom-sai-api-version-check").write_bytes(b"previous result")
         for image in BROADCOM_IMAGES:
             (self.root / "target" / (image + "-sai-api-check")).write_bytes(b"previous result")
-        source = self.root / "src/sonic-sairedis/SAI/inc"
-        source.mkdir(parents=True)
-        (source / "saiversion.h").write_text(self.header.read_text(), encoding="utf-8")
+        if header:
+            source = self.root / "src/sonic-sairedis/SAI/inc"
+            source.mkdir(parents=True)
+            (source / "saiversion.h").write_text(
+                "#define SAI_MAJOR 1\n#define SAI_MINOR 19\n#define SAI_REVISION 2\n", encoding="utf-8",
+            )
         binary = self.root / "bin"
         binary.mkdir()
         docker = binary / "docker"
         docker.write_text(
             "#!/usr/bin/env python3\n"
             "import os, subprocess, sys\n"
-            "from pathlib import Path\n"
             "with open(os.environ['DOCKER_LOG'], 'a') as log: log.write(' '.join(sys.argv[1:]) + '\\n')\n"
             "if sys.argv[1] == 'inspect':\n"
-            "    print('sha256:' + ('b' if 'legacy-th' in sys.argv[-1] else 'a') * 64)\n"
+            "    tag = sys.argv[-1]\n"
+            "    key = 'b' if 'legacy-th' in tag else 'c' if 'dnx' in tag else 'a'\n"
+            "    print('sha256:' + key * 64)\n"
             "if sys.argv[1] == 'run':\n"
-            "    args = sys.argv[sys.argv.index('--expected-version'):]\n"
             "    image = sys.argv[sys.argv.index('--entrypoint') + 2]\n"
-            "    syncd = os.environ['LEGACY_SYNCD' if image == 'sha256:' + 'b' * 64 else 'FAKE_SYNCD']\n"
-            "    sys.exit(subprocess.run(['python3', '-'] + args + ['--syncd', syncd],\n"
+            "    syncd = os.environ['FAKE_SYNCD_' + image.split(':')[1][0]]\n"
+            "    sys.exit(subprocess.run(['python3', '-', '--syncd', syncd],\n"
             "                            input=sys.stdin.read(), text=True).returncode)\n",
             encoding="utf-8",
         )
@@ -162,8 +164,7 @@ class SaiApiVersionTest(unittest.TestCase):
         check_rules = "BROADCOM_SAI_API_CHECK_IMAGES :=" + slave.split("BROADCOM_SAI_API_CHECK_IMAGES :=", 1)[1].split(
             "\n###############################################################################", 1,
         )[0]
-        makefile = self.root / "Makefile"
-        makefile.write_text(
+        (self.root / "Makefile").write_text(
             ".ONESHELL:\nSHELL := /bin/bash\n.SHELLFLAGS := -e -c\n"
             "TARGET_PATH := target\nSRC_PATH := src\nDOCKER_USERNAME := tester\nDOCKER_USERTAG := build\n"
             f"DOCKER_LOCKDIR := {self.root}\nDOCKER_LOCKFILE_SUFFIX := access\n"
@@ -177,56 +178,74 @@ class SaiApiVersionTest(unittest.TestCase):
         )
         (self.root / "scripts").symlink_to(ROOT / "scripts", target_is_directory=True)
         env = dict(os.environ, PATH=str(binary) + ":" + os.environ["PATH"],
-                   FAKE_SYNCD=str(syncd), LEGACY_SYNCD=str(legacy), DOCKER_LOG=str(self.root / "docker.log"))
-        return subprocess.run(
-            ["make", "-s", "target/broadcom-sai-api-version-check", "BUILD_SKIP_TEST=y"],
+                   DOCKER_LOG=str(self.root / "docker.log"), TMPDIR=str(self.root))
+        env.update({"FAKE_SYNCD_" + key: str(syncd) for key, syncd in zip("abc", runtimes)})
+        result = subprocess.run(
+            ["make", "-s", "-j3" if parallel else "-j1",
+             "target/broadcom-sai-api-version-check", "BUILD_SKIP_TEST=y"],
             cwd=self.root, env=env, text=True, capture_output=True,
         )
+        self.assertFalse((self.root / "UNEXPECTED_REBUILD").exists())
+        self.assertEqual(list(self.root.glob("tmp*")), [], "Probe result directory was not removed")
+        return result
+
+    def test_matching_binaries_pass_despite_different_header_and_metadata(self):
+        result = self.make_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.count("vendor=11801"), 3)
+
+    def test_no_source_header_or_metadata_is_required(self):
+        result = self.make_gate(compiled=None, header=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_cached_and_existing_targets_check_only_three_broadcom_binaries(self):
         images = BROADCOM_IMAGES + ["docker-syncd-brcm-dbg.gz", "docker-syncd-brcm-rpc.gz", "docker-syncd-mlnx.gz"]
-        result = self.make_gate(11902, 11902, images)
+        result = self.make_gate(images=images, parallel=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(result.stdout.count("metadata=11902, vendor=11902"), 3)
         loads = [line for line in (self.root / "docker.log").read_text().splitlines() if line.startswith("load ")]
-        self.assertEqual(loads, ["load -i target/" + image for image in BROADCOM_IMAGES])
-        self.assertFalse((self.root / "UNEXPECTED_REBUILD").exists())
-
-    def test_cached_bad_vendor_fails_even_with_skip_tests_enabled(self):
-        result = self.make_gate(11902, 11801, BROADCOM_IMAGES)
-        self.assertNotEqual(result.returncode, 0)
+        self.assertCountEqual(loads, ["load -i target/" + image for image in BROADCOM_IMAGES])
         self.assertEqual(result.stdout.count("vendor=11801"), 3)
-        self.assertFalse((self.root / "UNEXPECTED_REBUILD").exists())
 
-    def test_all_three_cached_libraries_matching_each_other_but_not_header_fail(self):
-        result = self.make_gate(11801, 11801, BROADCOM_IMAGES)
+    def test_xgs_mismatch_is_rejected(self):
+        result = self.make_gate(versions=(11902, 11801, 11801))
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.count("header=11902, metadata=11801, vendor=11801"), 3)
+        self.assertIn("must be equal", result.stderr)
+        self.assertEqual(result.stdout.count("vendor="), 3)
 
-    def test_one_vendor_revision_mismatch_still_checks_the_other_binaries(self):
-        result = self.make_gate(11902, 11902, BROADCOM_IMAGES, legacy_vendor=11901)
+    def test_legacy_revision_mismatch_is_rejected(self):
+        result = self.make_gate(versions=(11801, 11800, 11801))
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.count("vendor=11902"), 2)
-        self.assertEqual(result.stdout.count("vendor=11901"), 1)
+        self.assertIn("must be equal", result.stderr)
+        self.assertEqual(result.stdout.count("vendor="), 3)
 
-    def test_one_vendor_query_failure_still_checks_the_other_binaries(self):
-        result = self.make_gate(11902, 11902, BROADCOM_IMAGES, legacy_status=-1)
+    def test_dnx_mismatch_is_rejected(self):
+        result = self.make_gate(versions=(11801, 11801, 11902))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be equal", result.stderr)
+        self.assertEqual(result.stdout.count("vendor="), 3)
+
+    def test_query_failure_still_checks_the_other_binaries(self):
+        result = self.make_gate(legacy_status=-1)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("status=-1", result.stderr)
-        self.assertEqual(result.stdout.count("vendor=11902"), 2)
+        self.assertEqual(result.stdout.count("vendor=11801"), 2)
 
-    def test_one_vendor_missing_symbol_still_checks_the_other_binaries(self):
-        result = self.make_gate(11902, 11902, BROADCOM_IMAGES, legacy_symbol=False)
+    def test_missing_symbol_still_checks_the_other_binaries(self):
+        result = self.make_gate(legacy_symbol=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("sai_query_api_version", result.stderr)
-        self.assertEqual(result.stdout.count("vendor=11902"), 2)
+        self.assertEqual(result.stdout.count("vendor=11801"), 2)
 
-    def test_missing_required_variant_fails(self):
-        result = self.make_gate(11902, 11902, [BROADCOM_IMAGES[0], BROADCOM_IMAGES[2]])
+    def test_missing_required_artifact_does_not_rebuild_or_pass(self):
+        result = self.make_gate(images=[BROADCOM_IMAGES[0], BROADCOM_IMAGES[2]])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Missing required SAI artifact: docker-syncd-brcm-legacy-th.gz", result.stderr)
-        self.assertEqual(result.stdout.count("vendor=11902"), 2)
-        self.assertFalse((self.root / "UNEXPECTED_REBUILD").exists())
+        self.assertEqual(result.stdout.count("vendor=11801"), 2)
+
+    def test_empty_required_artifact_does_not_pass(self):
+        result = self.make_gate(empty=BROADCOM_IMAGES[1])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Missing required SAI artifact: docker-syncd-brcm-legacy-th.gz", result.stderr)
 
 
 if __name__ == "__main__":

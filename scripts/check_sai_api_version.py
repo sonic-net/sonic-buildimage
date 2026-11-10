@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require the selected header and final container's SAI API versions to match."""
+"""Require the three Broadcom SAI binaries to report the same OCP API version."""
 
 import argparse
 import ctypes
@@ -14,17 +14,10 @@ class VersionCheckError(Exception):
     pass
 
 
-def header_version(header):
-    text = header.read_text(encoding="utf-8")
-    parts = []
-    for name in ("MAJOR", "MINOR", "REVISION"):
-        values = re.findall(r"^\s*#\s*define\s+SAI_" + name + r"\s+(\d+)\s*$", text, re.MULTILINE)
-        if len(values) != 1:
-            raise VersionCheckError(f"Expected one literal SAI_{name} in {header}")
-        parts.append(int(values[0]))
-    if parts[1] >= 100 or parts[2] >= 100:
-        raise VersionCheckError(f"Invalid SAI version components in {header}: {parts}")
-    return parts[0] * 10000 + parts[1] * 100 + parts[2]
+def parse_version(text, source):
+    if not re.fullmatch(r"[1-9]\d*", text.strip()):
+        raise VersionCheckError(f"Invalid SAI API version from {source}: {text!r}")
+    return int(text.strip())
 
 
 def linked_library(dependencies, name):
@@ -37,29 +30,21 @@ def linked_library(dependencies, name):
     return matches[0]
 
 
-def check_runtime(expected, syncd):
+def query_runtime(syncd):
     dependencies = subprocess.run(
         ["ldd", str(syncd)], check=True, capture_output=True, text=True, timeout=15,
     ).stdout
-    metadata = ctypes.CDLL(linked_library(dependencies, "libsaimetadata"))
     vendor = ctypes.CDLL(linked_library(dependencies, "libsai"))
-    metadata.sai_metadata_query_api_version.argtypes = []
-    metadata.sai_metadata_query_api_version.restype = ctypes.c_uint64
     vendor.sai_query_api_version.argtypes = [ctypes.POINTER(ctypes.c_uint64)]
     vendor.sai_query_api_version.restype = ctypes.c_int32
-    compiled = metadata.sai_metadata_query_api_version()
     version = ctypes.c_uint64()
     status = vendor.sai_query_api_version(ctypes.byref(version))
     if status != 0:
         raise VersionCheckError(f"sai_query_api_version failed: status={status}")
-    print(f"SAI API versions: header={expected}, metadata={compiled}, vendor={version.value}", flush=True)
-    if min(expected, compiled, version.value) < 10900:
-        raise VersionCheckError("SAI API versions must be at least 1.9.0")
-    if expected != compiled or expected != version.value:
-        raise VersionCheckError("SAI header, compiled metadata and vendor API versions must be equal")
+    return parse_version(str(version.value), syncd)
 
 
-def check_image(image, expected):
+def query_image(image):
     image_id = subprocess.run(
         ["docker", "inspect", "--format", "{{.Id}}", image],
         check=True, capture_output=True, text=True, timeout=30,
@@ -69,30 +54,47 @@ def check_image(image, expected):
     name = "sai-api-check-" + uuid.uuid4().hex
     print(f"Checking {image} ({image_id})", flush=True)
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["docker", "run", "--name", name, "--network", "none", "-i",
-             "--entrypoint", "python3", image_id, "-", "--expected-version", str(expected)],
-            input=Path(__file__).read_text(encoding="utf-8"), text=True, check=True, timeout=60,
+             "--entrypoint", "python3", image_id, "-", "--syncd", "/usr/bin/syncd"],
+            input=Path(__file__).read_text(encoding="utf-8"), text=True, capture_output=True, check=True, timeout=60,
         )
     finally:
         subprocess.run(["docker", "rm", "--force", "--volumes", name], check=True, timeout=30)
+    versions = re.findall(r"^SAI_API_VERSION=(\d+)$", result.stdout, re.MULTILINE)
+    if len(versions) != 1:
+        raise VersionCheckError(f"Expected one SAI API version from {image}:\n{result.stdout}")
+    version = parse_version(versions[0], image)
+    print(f"SAI API version: {image}, vendor={version}", flush=True)
+    return version
+
+
+def compare_versions(results):
+    versions = [parse_version(path.read_text(encoding="utf-8"), path) for path in results]
+    print("Broadcom SAI API versions: " + ", ".join(
+        f"{path.name}={version}" for path, version in zip(results, versions)
+    ), flush=True)
+    if len(set(versions)) != 1:
+        raise VersionCheckError("Broadcom XGS, legacy-TH and DNX vendor API versions must be equal")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument("--header", type=Path)
-    source.add_argument("--expected-version", type=int)
-    parser.add_argument("--image")
-    parser.add_argument("--syncd", type=Path, default=Path("/usr/bin/syncd"))
+    source.add_argument("--image")
+    source.add_argument("--compare", nargs=3, type=Path)
+    source.add_argument("--syncd", type=Path)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    if bool(args.header) != bool(args.image):
-        parser.error("--header and --image must be specified together")
+    if bool(args.image) != bool(args.output):
+        parser.error("--image and --output must be specified together")
     try:
-        if args.header:
-            check_image(args.image, header_version(args.header))
+        if args.image:
+            args.output.write_text(f"{query_image(args.image)}\n", encoding="utf-8")
+        elif args.compare:
+            compare_versions(args.compare)
         else:
-            check_runtime(args.expected_version, args.syncd)
+            print(f"SAI_API_VERSION={query_runtime(args.syncd)}", flush=True)
     except (VersionCheckError, OSError, AttributeError, subprocess.SubprocessError) as error:
         print(f"SAI API version check failed: {error}", file=sys.stderr)
         if isinstance(error, subprocess.CalledProcessError) and error.stderr:
