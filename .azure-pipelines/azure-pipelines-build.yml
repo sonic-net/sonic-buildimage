@@ -47,7 +47,7 @@ jobs:
       syncd_rpc_image: no
       platform_rpc: no
       secure_boot_image: no
-      secure_boot_vars_file: ''
+      secure_boot_workdir: ''
       ${{ if parameters.qemuOrCrossBuild }}:
         SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
         CACHE_MODE: 'none'
@@ -174,11 +174,9 @@ jobs:
             make $BUILD_OPTIONS target/docker-sonic-vs.gz
             if [ "$(secure_boot_image)" == "yes" ]; then
               make $BUILD_OPTIONS BUILD_UEFI_VS=y target/sonic-vs.img.gz
-              test -f "$(secure_boot_vars_file)"
               test -f target/sonic-vs.img-uefi_vars.fd
-              secure_boot_dir="$(dirname "$(secure_boot_vars_file)")"
               python3 scripts/generate_secureboot_vs_artifacts.py \
-                --workdir "$secure_boot_dir" \
+                --workdir "$(secure_boot_workdir)" \
                 --ovmf-vars target/sonic-vs.img-uefi_vars.fd \
                 --output-vars target/sonic-vs_vars.fd \
                 --build-id "$(Build.BuildId)" \
