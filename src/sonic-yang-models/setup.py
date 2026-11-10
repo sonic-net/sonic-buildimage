@@ -164,6 +164,7 @@ yang_files = [
     'sonic-mux-linkmgr.yang',
     'sonic-nat.yang',
     'sonic-neigh.yang',
+    'sonic-nexthop-tracking.yang',
     'sonic-ntp.yang',
     'sonic-nvgre-tunnel.yang',
     'sonic-passwh.yang',
