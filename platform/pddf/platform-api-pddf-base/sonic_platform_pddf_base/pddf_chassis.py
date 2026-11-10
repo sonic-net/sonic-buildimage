@@ -8,6 +8,7 @@
 try:
     import sys
     from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_platform_pddf_base.pddf_logger import logger
     from sonic_platform.sfp import Sfp
     from sonic_platform.psu import Psu
     from sonic_platform.fan_drawer import FanDrawer
@@ -263,7 +264,7 @@ class PddfChassis(ChassisBase):
         """
         result, msg = self.pddf_obj.set_system_led_color(led_device_name, color)
         if not result and msg:
-            print(msg)
+            logger.log_error(msg, also_print_to_console=True)
         return (result)
 
     def get_system_led(self, led_device_name):

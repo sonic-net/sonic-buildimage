@@ -13,6 +13,7 @@
 
 try:
     from sonic_platform_base.thermal_base import ThermalBase
+    from sonic_platform_pddf_base.pddf_logger import logger
     from subprocess import getstatusoutput
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -152,7 +153,7 @@ class PddfThermal(ThermalBase):
         if not self.is_psu_thermal:
             node = self.pddf_obj.get_path(self.thermal_obj_name, "temp1_high_threshold")
             if node is None:
-                print("ERROR %s does not exist" % node)
+                logger.log_error(f"ERROR {self.thermal_obj_name}.temp1_high_threshold does not exist")
                 return None
 
             cmd = "echo '%d' > %s" % (temperature * 1000, node)
@@ -168,7 +169,7 @@ class PddfThermal(ThermalBase):
         if not self.is_psu_thermal:
             node = self.pddf_obj.get_path(self.thermal_obj_name, "temp1_low_threshold")
             if node is None:
-                print("ERROR %s does not exist" % node)
+                logger.log_error(f"ERROR {self.thermal_obj_name}.temp1_low_threshold does not exist")
                 return None
             cmd = "echo '%d' > %s" % (temperature * 1000, node)
             ret, _ = getstatusoutput(cmd)
