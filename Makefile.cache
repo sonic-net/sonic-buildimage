@@ -82,7 +82,7 @@
 SONIC_CACHE_RECIPE_VER := 2
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := f04dd95738b99a2e525d462457718a826ace1bd3
+SONIC_CACHE_RECIPE_VER_BASELINE := d505d3506934d569deaf9c015033292147619410
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
@@ -107,7 +107,11 @@ endif
 # SONIC_COMMON_FILES_LIST enumerates files that invalidate the cache when changed.
 # It includes common files like .platform, rules/functions, Makefile.cache etc.
 # NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
-SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
+SONIC_COMMON_FILES_LIST := $(if $(wildcard cache.skip.common),, \
+                            .platform rules/functions Makefile.cache \
+                            scripts/prepare_slave_container_buildinfo.sh \
+                            tools/bazel/generate_downloader_config.py \
+                            tools/bazel/slave.bazelrc)
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
 # NOTE: DOCKER_DEFAULT_PLATFORM changes the architecture recorded in every docker
 # image produced, so images cached under a different value must not be reused.
