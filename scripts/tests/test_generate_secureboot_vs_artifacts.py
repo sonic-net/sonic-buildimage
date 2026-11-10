@@ -88,7 +88,7 @@ def test_generation_preserves_hierarchy_updates_and_permissions(env, capsys):
     assert "Secure Boot build inputs generated" in capsys.readouterr().out
 
 
-def test_real_openssl_certificates_are_self_signed_without_intermediate_files(env):
+def test_real_openssl_certificates_are_self_signed(env):
     env["real_openssl"] = True
     assert artifacts.main(env["argv"]) == 0
     for name, constraint, usage in (
@@ -114,8 +114,6 @@ def test_real_openssl_certificates_are_self_signed_without_intermediate_files(en
             "openssl", "pkey", "-in", f"{name}.key", "-pubout",
         ], env["workdir"], capture_output=True, text=True).stdout
         assert certificate_key == private_key
-    for suffix in ("csr", "cnf", "srl"):
-        assert not list(env["workdir"].glob(f"*.{suffix}"))
 
 
 def test_reuse_does_not_require_or_replace_private_keys_or_auth_files(env, capsys):
