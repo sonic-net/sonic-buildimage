@@ -9,6 +9,7 @@ try:
     import logging
     import struct
     import syslog
+    import tempfile
     from socket import *
     from select import *
     from sonic_sfp.sfputilbase import SfpUtilBase
@@ -121,13 +122,22 @@ class SfpUtil(SfpUtilBase):
                 os.close(cache_fd)
             for x in range(1, self.port_end + 1):
                 if not self.get_presence(x):
-                    if os.path.exists(self.eeprom_mapping[x]):
+                    if os.path.lexists(self.eeprom_mapping[x]):
                         os.remove(self.eeprom_mapping[x])
                     continue
                 data = self.get_eeprom_data(x)
                 if data:
-                    with open(self.eeprom_mapping[x], 'w') as sfp_eeprom:
-                        sfp_eeprom.write(data)
+                    sfp_eeprom = tempfile.NamedTemporaryFile(
+                        mode='w', dir=cache_dir, delete=False)
+                    try:
+                        with sfp_eeprom:
+                            sfp_eeprom.write(data)
+                            os.fchmod(sfp_eeprom.fileno(), 0o644)
+                        # Replace the cache entry without following old links.
+                        os.replace(sfp_eeprom.name, self.eeprom_mapping[x])
+                    finally:
+                        if os.path.lexists(sfp_eeprom.name):
+                            os.unlink(sfp_eeprom.name)
                 else:
                     DBG_PRINT("get sfp{} eeprom data failed.".format(x))
                     break
