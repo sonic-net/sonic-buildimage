@@ -1,12 +1,17 @@
 import hashlib
+import importlib.util
+import io
 import os
 import shutil
 import subprocess
+import sys
+import tarfile
 import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import Mock, call, patch
 
 from generate_downloader_config import generate_config
 
@@ -29,6 +34,70 @@ class ConfigTests(unittest.TestCase):
             "https://mirror.example.com",
         )
         self.assertIn("https://mirror.example.com/-" + "a" * 32, config)
+
+
+class PublisherTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        script = (
+            Path(__file__).resolve().parents[2]
+            / "scripts" / "populate_file_web_server.py"
+        )
+        spec = importlib.util.spec_from_file_location(
+            "mirror_publisher", script
+        )
+        cls.publisher = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {"requests": Mock()}):
+            spec.loader.exec_module(cls.publisher)
+
+    def test_publishes_legacy_archive_and_bazel_alias(self):
+        resource = self.publisher.Resource(
+            "https://example.com/archive.tar.gz==" + "a" * 32, "versions-web"
+        )
+        legacy = resource.get_unique_name()
+        with patch.object(
+            self.publisher, "upload_resource_to_server", return_value=0
+        ) as upload:
+            result = self.publisher.publish_resource(
+                "cached-file", resource, "user", "key", "https://mirror"
+            )
+        self.assertEqual(result, 0)
+        self.assertEqual(upload.call_args_list, [
+            call("cached-file", name, "user", "key", "https://mirror",
+                 checksum=resource.hash)
+            for name in (legacy, legacy + ".tar.gz")
+        ])
+
+    def test_alias_publication_failure_is_reported(self):
+        resource = self.publisher.Resource(
+            "https://example.com/archive.tar.gz==" + "a" * 32, "versions-web"
+        )
+        failure = self.publisher.RET_CODE_HTTP_SERVER_ERROR
+        with patch.object(
+            self.publisher, "upload_resource_to_server",
+            side_effect=[0, failure],
+        ):
+            result = self.publisher.publish_resource(
+                "cached-file", resource, "user", "key", "https://mirror"
+            )
+        self.assertEqual(result, failure)
+
+    def test_alias_checksum_is_not_parsed_from_archive_extension(self):
+        response = Mock(status_code=201)
+        response.json.return_value = {"checksums": {"md5": "a" * 32}}
+        with tempfile.TemporaryDirectory() as temporary:
+            payload = Path(temporary) / "payload"
+            payload.write_bytes(b"archive")
+            with patch.object(self.publisher.requests, "put",
+                              return_value=response), patch.object(
+                                  self.publisher, "print_msg"
+                              ) as log:
+                result = self.publisher.upload_resource_to_server(
+                    str(payload), "archive-" + "a" * 32 + ".tar.gz",
+                    "user", "key", "https://mirror", checksum="a" * 32,
+                )
+        self.assertEqual(result, 0)
+        log.assert_not_called()
 
 
 class DownloadTests(unittest.TestCase):
@@ -74,14 +143,23 @@ class DownloadTests(unittest.TestCase):
         checksum = hashlib.md5(self.payload).hexdigest()
         self.upstream_path = "/upstream/payload?source=a.b"
         self.mirror_path = "/mirror/payload-" + checksum
+        self.configure_download(base, checksum)
+        self.run_number = 0
+
+    def configure_download(self, base, checksum, archive=False):
         url = base + self.upstream_path
         self.workspace = self.root / "workspace"
-        self.workspace.mkdir()
+        self.workspace.mkdir(exist_ok=True)
         (self.workspace / "BUILD.bazel").touch()
+        download_call = (
+            '    ctx.download_and_extract(url=ctx.attr.url,\n'
+            if archive else
+            '    ctx.download(url=ctx.attr.url, output="payload",\n'
+        )
         (self.workspace / "download.bzl").write_text(
             'def _download(ctx):\n'
-            '    ctx.download(url=ctx.attr.url, output="payload",\n'
-            '                 sha256=ctx.attr.sha256)\n'
+            + download_call
+            + '                 sha256=ctx.attr.sha256)\n'
             '    ctx.file("BUILD.bazel", \'exports_files(["payload"])\\n\')\n'
             'download = repository_rule(implementation=_download, attrs={\n'
             '    "url": attr.string(), "sha256": attr.string(),\n'
@@ -117,7 +195,20 @@ class DownloadTests(unittest.TestCase):
             )
             .replace("/etc/bazel-cache.bazelrc", str(self.cache_rc))
         )
-        self.run_number = 0
+
+    def configure_archive(self):
+        body = io.BytesIO()
+        with tarfile.open(fileobj=body, mode="w:gz") as archive:
+            info = tarfile.TarInfo("payload")
+            info.size = len(self.payload)
+            archive.addfile(info, io.BytesIO(self.payload))
+        self.payload = body.getvalue()
+        self.sha256 = hashlib.sha256(self.payload).hexdigest()
+        checksum = hashlib.md5(self.payload).hexdigest()
+        self.upstream_path = "/upstream/payload.tar.gz?source=a.b"
+        self.mirror_path = "/mirror/payload.tar.gz-" + checksum + ".tar.gz"
+        base = "http://127.0.0.1:{}".format(self.server.server_port)
+        self.configure_download(base, checksum, archive=True)
 
     def stop_server(self):
         self.server.shutdown()
@@ -146,6 +237,16 @@ class DownloadTests(unittest.TestCase):
         return result
 
     def test_cold_mirror_and_warm_repository_cache(self):
+        self.check_cold_mirror_and_warm_repository_cache()
+
+    def test_archive_cold_mirror_and_warm_repository_cache(self):
+        self.configure_archive()
+        self.responses[self.mirror_path.removesuffix(".tar.gz")] = (
+            200, self.payload
+        )
+        self.check_cold_mirror_and_warm_repository_cache()
+
+    def check_cold_mirror_and_warm_repository_cache(self):
         self.responses[self.mirror_path] = (200, self.payload)
         result = self.fetch()
         self.assertEqual(result.returncode, 0, result.stdout)
@@ -169,6 +270,13 @@ class DownloadTests(unittest.TestCase):
         )
 
     def test_unpublished_mirror_falls_back_to_upstream(self):
+        self.check_unpublished_mirror_falls_back_to_upstream()
+
+    def test_unpublished_archive_mirror_falls_back_to_upstream(self):
+        self.configure_archive()
+        self.check_unpublished_mirror_falls_back_to_upstream()
+
+    def check_unpublished_mirror_falls_back_to_upstream(self):
         self.cache_rc.unlink()
         self.responses[self.upstream_path] = (200, self.payload)
         result = self.fetch()

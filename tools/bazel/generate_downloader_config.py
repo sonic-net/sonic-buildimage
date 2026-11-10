@@ -6,6 +6,19 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
+def mirror_filename(filename, checksum):
+    name = "{}-{}".format(filename, checksum)
+    # Bazel infers archive type from the rewritten URL, not the original URL.
+    for extension in (
+        ".tar.gz", ".tar.xz", ".tar.zst", ".tar.bz2", ".zip", ".jar",
+        ".war", ".aar", ".nupkg", ".whl", ".tar", ".tgz", ".tzst",
+        ".tbz", ".ar", ".deb",
+    ):
+        if filename.endswith(extension):
+            return name + extension
+    return name
+
+
 def generate_config(versions, mirror):
     mirror_url = urlsplit(mirror)
     if mirror_url.scheme not in ("http", "https") or not mirror_url.netloc:
@@ -30,7 +43,9 @@ def generate_config(versions, mirror):
             )
         filename = parsed.path.rsplit("/", 1)[-1]
         pattern = re.escape(url.split("://", 1)[1])
-        target = "{}/{}-{}".format(mirror.rstrip("/"), filename, checksum)
+        target = "{}/{}".format(
+            mirror.rstrip("/"), mirror_filename(filename, checksum)
+        )
         target = target.replace("\\", "\\\\").replace("$", "\\$")
         rules.append("rewrite {} {}".format(pattern, target))
         # Match the web hook's upstream fallback for unpublished mirrors.
