@@ -4106,9 +4106,21 @@ class BGPConfigDaemon:
         if reset_timers:
             old = {}
         commands = ['configure terminal']
+        detached_names = set()
         router = 'router isis ' + key + ((' vrf ' + key) if key != 'default' else '')
         if table == 'ISIS_GLOBALS':
             if deleted or str(current.get('enabled', 'false')).lower() != 'true':
+                # Detach circuits before deleting their parent. Keep desired rows
+                # untouched so re-enable can restore all attributes. A failed
+                # detach must prevent parent removal and preserve retry state.
+                names = set(self.isis_interface_bindings) | set(self.isis_pending_bindings)
+                for name in sorted(names):
+                    if (self.isis_interface_bindings.get(name) != key and
+                            key not in self.isis_pending_bindings.get(name, set())):
+                        continue
+                    if not self._apply_isis('ISIS_INTERFACE', name, True, {}):
+                        return False
+                    detached_names.add(name)
                 commands.append('no ' + router)
             else:
                 commands.append(router)
@@ -4205,7 +4217,8 @@ class BGPConfigDaemon:
             for name in set(interfaces) | set(self.isis_interface_bindings) | set(self.isis_pending_bindings):
                 if (self.isis_interface_vrfs.get(name, 'default') != key and
                         self.isis_interface_bindings.get(name) != key and
-                        key not in self.isis_pending_bindings.get(name, set())):
+                        key not in self.isis_pending_bindings.get(name, set()) and
+                        name not in detached_names):
                     continue
                 row = interfaces.get(name, {})
                 interface_data = {field: CachedDataWithOp(value, CachedDataWithOp.OP_UPDATE)

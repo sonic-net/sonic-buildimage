@@ -364,3 +364,77 @@ def test_isis_startup_does_not_record_disabled_address_families():
     with patch('frrcfgd.frrcfgd.ExtConfigDBConnector', return_value=db):
         daemon = BGPConfigDaemon()
     assert daemon.isis_interface_bindings == {'Ethernet4': 'default', 'Ethernet8': 'default'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_parent_disable_detaches_before_removal_and_reenable_restores():
+    from frrcfgd.frrcfgd import BGPConfigDaemon, CachedDataWithOp
+    daemon = object.__new__(BGPConfigDaemon)
+    daemon.isis_interface_vrfs = {'Ethernet0': 'default'}
+    daemon.isis_interface_bindings = {'Ethernet0': 'default'}
+    daemon.isis_pending_bindings = {}
+    rows = {
+        'ISIS_GLOBALS': {'default': {'enabled': 'false', 'net_title': '49.0001.0000.0000.0001.00'}},
+        'ISIS_GLOBALS_TIMERS': {'default': {'lsp_mtu': '1492'}},
+        'ISIS_INTERFACE': {'Ethernet0': {'enabled': 'true', 'ipv4_enabled': 'false',
+                                       'ipv6_enabled': 'true', 'metric': '30',
+                                       'passive': 'true', 'circuit_type': 'p2p'}},
+    }
+    original = copy.deepcopy(rows)
+    daemon.config_db = MagicMock()
+    daemon.config_db.get_entry.side_effect = lambda table, key: rows.get(table, {}).get(key, {})
+    daemon.config_db.get_table.side_effect = lambda table: rows.get(table, {})
+    daemon.table_data_cache = {}
+    run = MagicMock(return_value=False)
+    daemon._BGPConfigDaemon__run_command = run
+
+    def update():
+        return {field: CachedDataWithOp(value, CachedDataWithOp.OP_UPDATE)
+                for field, value in rows['ISIS_GLOBALS']['default'].items()}
+
+    # A partial detach cannot remove the parent or forget the possible binding.
+    assert not daemon._apply_isis('ISIS_GLOBALS', 'default', False, update())
+    assert run.call_count == 1
+    assert 'no router isis default' not in run.call_args[0][1]
+    assert daemon.isis_pending_bindings['Ethernet0'] == {'default'}
+    run.reset_mock()
+    run.return_value = True
+    assert daemon._apply_isis('ISIS_GLOBALS', 'default', False, update())
+    calls = [call.args[1][2::2] for call in run.call_args_list]
+    assert 'no ipv6 router isis default' in calls[0]
+    assert 'no router isis default' in calls[1]
+    assert not daemon.isis_interface_bindings
+    assert rows == original
+
+    rows['ISIS_GLOBALS']['default']['enabled'] = 'true'
+    run.reset_mock()
+    assert daemon._apply_isis('ISIS_GLOBALS', 'default', False, update())
+    commands = [command for call in run.call_args_list for command in call.args[1][2::2]]
+    for command in ('router isis default', 'lsp-mtu 1492', 'no ip router isis default',
+                    'ipv6 router isis default', 'isis metric 30', 'isis passive',
+                    'isis network point-to-point'):
+        assert command in commands
+    assert daemon.isis_interface_bindings == {'Ethernet0': 'default'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+def test_disabling_old_parent_reconciles_partial_move_to_other_vrf():
+    from frrcfgd.frrcfgd import BGPConfigDaemon, CachedDataWithOp
+    daemon = object.__new__(BGPConfigDaemon)
+    daemon.isis_interface_vrfs = {'Ethernet0': 'VrfB'}
+    daemon.isis_interface_bindings = {'Ethernet0': 'VrfA'}
+    daemon.isis_pending_bindings = {'Ethernet0': {'VrfA', 'VrfB'}}
+    daemon.table_data_cache = {}
+    rows = {'Ethernet0': {'enabled': 'true', 'metric': '30'}}
+    daemon.config_db = MagicMock()
+    daemon.config_db.get_table.side_effect = lambda table: rows if table == 'ISIS_INTERFACE' else {}
+    daemon.config_db.get_entry.side_effect = lambda table, key: (
+        {'enabled': 'true'} if table == 'ISIS_GLOBALS' and key == 'VrfB' else {})
+    run = MagicMock(return_value=True)
+    daemon._BGPConfigDaemon__run_command = run
+    assert daemon._apply_isis('ISIS_GLOBALS', 'VrfA', False,
+                              {'enabled': CachedDataWithOp('false', CachedDataWithOp.OP_UPDATE)})
+    commands = [command for call in run.call_args_list for command in call.args[1][2::2]]
+    assert commands.index('no router isis VrfA vrf VrfA') < commands.index('ip router isis VrfB')
+    assert daemon.isis_interface_bindings == {'Ethernet0': 'VrfB'}
+    assert not daemon.isis_pending_bindings
