@@ -20,7 +20,7 @@ pub struct SyslogConfigUpdater {
 }
 
 impl SyslogConfigUpdater {
-    pub fn new(service_name: String) -> anyhow::Result<Self> {
+    pub fn new(service_name: &str) -> anyhow::Result<Self> {
         anyhow::ensure!(
             !service_name.contains("\""),
             "Service name {service_name} contains \", which is not allowed"
@@ -60,7 +60,7 @@ impl SyslogConfigUpdater {
         }
 
         Ok(SyslogConfigUpdater {
-            service_name,
+            service_name: service_name.to_owned(),
             rate_limit_interval,
             rate_limit_burst,
         })
@@ -72,7 +72,7 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
     /// if they have changed, regenerate rsyslog.conf, and restart rsyslogd.
     fn handle_change(
         &mut self,
-        operation: KeyOperation,
+        _operation: KeyOperation,
         entry: &str,
         field_values: &HashMap<String, CxxString>,
     ) -> anyhow::Result<()> {
@@ -81,77 +81,70 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
             return Ok(());
         }
 
-        match operation {
-            KeyOperation::Set => {
-                let mut values_changed = false;
+        let mut values_changed = false;
 
-                for (field, value) in field_values {
-                    match field.as_str() {
-                        "rate_limit_interval" => {
-                            let value = value
-                                .to_str()?
-                                .parse()
-                                .context("Unable to parse rate_limit_interval as integer")?;
-                            if self.rate_limit_interval != value {
-                                info!("Setting rate limit interval to {}", value);
-                                self.rate_limit_interval = value;
-                                values_changed = true;
-                            }
-                        }
-                        "rate_limit_burst" => {
-                            let value = value
-                                .to_str()?
-                                .parse()
-                                .context("Unable to parse rate_limit_burst as integer")?;
-                            if self.rate_limit_burst != value {
-                                info!("Setting rate limit burst to {}", value);
-                                self.rate_limit_burst = value;
-                                values_changed = true;
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-
-                if values_changed {
-                    let file = File::options()
-                        .create(true)
-                        .write(true)
-                        .truncate(true)
-                        .open("/tmp/rsyslog.conf")?;
-
-                    let json_args = format!(r#"{{"container_name": "{}"}}"#, self.service_name);
-                    let exit_code = Command::new("sonic-cfggen")
-                        .args([
-                            "-d",
-                            "-t",
-                            "/usr/share/sonic/templates/rsyslog-container.conf.j2",
-                            "-a",
-                            &json_args,
-                        ])
-                        .stdout(file)
-                        .status()?;
-                    anyhow::ensure!(
-                        exit_code.success(),
-                        "Failed to generate the updated rsyslog.conf: {exit_code}"
-                    );
-                    fs::copy("/tmp/rsyslog.conf", "/etc/rsyslog.conf").context(
-                        "Unable to replace /etc/rsyslog.conf with the updated configuration",
-                    )?;
-                    if let Err(err) = fs::remove_file("/tmp/rsyslog.conf") {
-                        warn!("Unable to remove temporary file: {}", err);
-                    }
-                    let exit_code = Command::new("supervisorctl")
-                        .args(["restart", "rsyslogd"])
-                        .status()?;
-                    anyhow::ensure!(
-                        exit_code.success(),
-                        "Failed to restart rsyslog: {exit_code}"
-                    );
-                }
-            }
-            KeyOperation::Del => debug!("Not doing anything for key deletion"),
+        let new_rate_limit_interval = match field_values.get("rate_limit_interval") {
+            Some(value) => value
+                .to_str()?
+                .parse()
+                .context("Unable to parse rate_limit_interval as integer")?,
+            None => 0,
+        };
+        if self.rate_limit_interval != new_rate_limit_interval {
+            info!("Setting rate limit interval to {}", new_rate_limit_interval);
+            self.rate_limit_interval = new_rate_limit_interval;
+            values_changed = true;
         }
+
+        let new_rate_limit_burst = match field_values.get("rate_limit_burst") {
+            Some(value) => value
+                .to_str()?
+                .parse()
+                .context("Unable to parse rate_limit_burst as integer")?,
+            None => 0,
+        };
+        if self.rate_limit_burst != new_rate_limit_burst {
+            info!("Setting rate limit burst to {}", new_rate_limit_burst);
+            self.rate_limit_burst = new_rate_limit_burst;
+            values_changed = true;
+        }
+
+        if values_changed {
+            let file = File::options()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open("/tmp/rsyslog.conf")?;
+
+            let json_args = format!(r#"{{"container_name": "{}"}}"#, self.service_name);
+            let exit_code = Command::new("sonic-cfggen")
+                .args([
+                    "-d",
+                    "-t",
+                    "/usr/share/sonic/templates/rsyslog-container.conf.j2",
+                    "-a",
+                    &json_args,
+                ])
+                .stdout(file)
+                .status()?;
+            anyhow::ensure!(
+                exit_code.success(),
+                "Failed to generate the updated rsyslog.conf: {exit_code}"
+            );
+            fs::copy("/tmp/rsyslog.conf", "/etc/rsyslog.conf")
+                .context("Unable to replace /etc/rsyslog.conf with the updated configuration")?;
+            if let Err(err) = fs::remove_file("/tmp/rsyslog.conf") {
+                warn!("Unable to remove temporary file: {}", err);
+            }
+            let exit_code = Command::new("supervisorctl")
+                .args(["restart", "rsyslogd"])
+                .status()?;
+            anyhow::ensure!(
+                exit_code.success(),
+                "Failed to restart rsyslog: {exit_code}"
+            );
+        }
+
         Ok(())
     }
 }

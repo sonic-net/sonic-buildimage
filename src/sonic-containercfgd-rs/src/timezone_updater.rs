@@ -13,7 +13,7 @@ use std::fs;
 use tests::fs;
 
 use anyhow::Context;
-use log::{debug, error, info};
+use log::{debug, info};
 use swss_common::{CxxString, KeyOperation};
 
 use crate::db_listener::SonicDatabaseChanges;
@@ -81,11 +81,10 @@ impl SonicDatabaseChanges for TimezoneUpdater {
                         &self.current_timezone
                     );
                     let timezone_path = Path::new("/usr/share/zoneinfo").join(timezone_name);
-                    if !timezone_path.exists() {
-                        error!(
-                            "Timezone file at {timezone_path:?} doesn't exist, not updating timezone"
-                        );
-                    }
+                    anyhow::ensure!(
+                        timezone_path.exists(),
+                        "Timezone file at {timezone_path:?} doesn't exist, not updating timezone"
+                    );
                     let timezone_symlink_path = Path::new("/etc/localtime");
                     if timezone_symlink_path.exists() {
                         fs::remove_file("/etc/localtime")
@@ -175,11 +174,13 @@ mod tests {
                 .ok_or(Error::from(ErrorKind::InvalidInput))?
                 == TIMEZONE_FILE
             {
-                if let Some(path) = TIMEZONE_SYMLINK_TARGET.take() {
-                    Ok(path)
-                } else {
-                    Err(Error::from(ErrorKind::NotFound))
-                }
+                TIMEZONE_SYMLINK_TARGET.with_borrow(|path| {
+                    if let Some(path) = path {
+                        Ok(path.clone())
+                    } else {
+                        Err(Error::from(ErrorKind::NotFound))
+                    }
+                })
             } else {
                 Err(Error::from(ErrorKind::NotFound))
             }
