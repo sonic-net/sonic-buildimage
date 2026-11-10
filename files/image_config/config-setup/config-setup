@@ -601,6 +601,23 @@ do_db_migration()
     fi
 }
 
+# Generate runtime compatibility maps once the boot configuration is ready.
+generate_boot_port_maps()
+{
+    local asic_num port_config
+    local -a namespace_args
+    for ((asic_num = 0; asic_num < ${NUM_ASIC:-1}; asic_num++)); do
+        namespace_args=()
+        port_config=/var/run/redis/port_config.ini
+        if [[ ${NUM_ASIC:-1} -gt 1 ]]; then
+            namespace_args=(-n "asic$asic_num")
+            port_config="/var/run/redis$asic_num/port_config.ini"
+        fi
+        # Keep the indexless fallback (rc 3) for readers that do not need indices.
+        generate_port_config.sh -fi "${namespace_args[@]}" "$port_config" || [[ $? -eq 3 ]] || rm -f -- "$port_config" || continue
+    done
+}
+
 # Perform configuration migration from backup copy.
 #  - This step is performed when a new image is installed and SONiC switch boots into it
 do_config_migration()
@@ -625,6 +642,7 @@ do_config_migration()
         load_cold_booted_namespaces
         do_db_migration
         rm -f /etc/sonic/pending_config_migration
+        generate_boot_port_maps
         exit 0
     elif check_all_config_db_present; then
         echo "Use config_db.json from old system..."
@@ -742,16 +760,7 @@ fi
 # Process switch bootup event
 if [ "$CMD" = "boot" ]; then
     boot_config
-    for ((asic_num = 0; asic_num < ${NUM_ASIC:-1}; asic_num++)); do
-        namespace_args=()
-        port_config=/var/run/redis/port_config.ini
-        if [[ ${NUM_ASIC:-1} -gt 1 ]]; then
-            namespace_args=(-n "asic$asic_num")
-            port_config="/var/run/redis$asic_num/port_config.ini"
-        fi
-        # Keep the indexless fallback (rc 3) for readers that do not need indices.
-        generate_port_config.sh -fi "${namespace_args[@]}" "$port_config" || [[ $? -eq 3 ]] || rm -f -- "$port_config" || continue
-    done
+    generate_boot_port_maps
 fi
 
 # Process factory default configuration creation request
