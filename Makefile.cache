@@ -82,7 +82,7 @@
 SONIC_CACHE_RECIPE_VER := 2
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 6d6fe618e63c3e0d6c106a4a09223e7f854318f1
+SONIC_CACHE_RECIPE_VER_BASELINE := 58fee05dca1e0014357b228a5ebbf7c10cc50d2f
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
@@ -464,7 +464,6 @@ RFS_DEP_FILES := $(wildcard \
 	$(shell git ls-files files/build/versions-public/default files/build/versions-public/host-image files/build/versions-public/host-base-image) \
 	build_debian.sh onie-image.conf)
 
-
 # Set the target path for each target.
 $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(DEBS_PATH))) \
@@ -510,11 +509,14 @@ rfs_shell_escape = $(subst $(rfs_sq),$(rfs_sq)\$(rfs_sq)$(rfs_sq),$(1))
 rfs_secret_fp = $(if $(strip $(1)),$(shell printf '%s' '$(call rfs_shell_escape,$(1))' | sha1sum | cut -c1-16))
 # IMAGE_TYPE is intentionally NOT in this static list: it is a per-installer value
 # ($($(installer)_IMAGE_TYPE), see slave.mk) and is folded per RFS target below.
+# Base64 preserves the full binary certificate and keeps paths safe in the flags file.
 RFS_INLINE_ENV_FLAGS := $(USERNAME) $(CHANGE_DEFAULT_PASSWORD) $(BMC_NOS_ACCOUNT_USERNAME) \
                         $(MASTER_KUBERNETES_VERSION) $(MASTER_CRI_DOCKERD) \
                         $(TRUSTED_GPG_URLS) $(BUILD_PACKAGES_URL) \
                         $(call rfs_secret_fp,$(PASSWORD)) \
-                        $(call rfs_secret_fp,$(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD))
+                        $(call rfs_secret_fp,$(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)) \
+                        SECURE_BOOT_DB_CERT=$(shell printf '%s' '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))' | base64 -w0) \
+                        SECURE_BOOT_DB_CERT_CONTENT=$(if $(SECURE_BOOT_DB_CERT),$(shell if [ -f '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))' ]; then base64 -w0 -- '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))'; fi))
 
 $(foreach pkg, $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
