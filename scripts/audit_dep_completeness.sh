@@ -2625,12 +2625,12 @@ check_recipe_invoked_scripts() {
     # rules/functions and Makefile.cache are in SONIC_COMMON_FILES_LIST, so edits to
     # these scripts change every affected output without moving any cache key.
     local script scripts_used
-    # Pure control-flow helpers with no effect on artifact content, and the SBOM
+    # Pure control-flow helpers and the read-only SAI probe, and the SBOM
     # tooling. The SBOM scripts write only SBOM metadata beside an artifact or
     # run in the installer recipe, which is not cached; SAVE_INTO_CACHE archives
     # the target, its _DERIVED_DEBS/_EXTRA_DEBS and its log, so no SBOM output is
     # ever part of a cached payload and editing them cannot serve a stale one.
-    local denylist=" scripts/wait_for_docker.sh \
+    local denylist=" scripts/wait_for_docker.sh scripts/check_sai_api_version.py \
 scripts/build_sbom.sh scripts/build_sbom.py scripts/install_sbom_tool.sh \
 scripts/sbom_fragment.py scripts/sbom_cve_refs.py scripts/sbom_purl.py \
 scripts/sbom_parse_lockfiles.py scripts/sbom_extract_vex_from_patches.py "
