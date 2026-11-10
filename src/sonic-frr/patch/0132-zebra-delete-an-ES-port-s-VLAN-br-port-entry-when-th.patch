@@ -1,0 +1,40 @@
+From 01e8efb09e930f7375c192a2030eb30933bb8e98 Mon Sep 17 00:00:00 2001
+From: Brad House <bhouse@nexthop.ai>
+Date: Tue, 10 Nov 2026 20:57:17 +0000
+Subject: [PATCH] zebra: delete an ES port's VLAN br-port entry when the VLAN
+ has no VNI
+
+zebra_evpn_vl_mbr_deref() deletes the br-port entry of the VLAN an ES
+port leaves only if the VLAN has a VNI. A DF or ES-VTEP change writes
+the entry for every VLAN of the port, with or without a VNI, and a VNI
+can be unmapped before the port leaves the VLAN. Either way the entry
+stays in the dataplane after the port has left the VLAN.
+
+Delete the VLAN's entry whenever an ES port leaves it.
+
+Signed-off-by: Brad House <bhouse@nexthop.ai>
+---
+ zebra/zebra_evpn_mh.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
+index 4d428823cc..e77912597e 100644
+--- a/zebra/zebra_evpn_mh.c
++++ b/zebra/zebra_evpn_mh.c
+@@ -1017,9 +1017,11 @@ void zebra_evpn_vl_mbr_deref(uint16_t vid, struct zebra_if *zif)
+ 
+ 	list_delete_node(acc_bd->mbr_zifs, node);
+ 
+-	if (acc_bd->zevpn && zif->es_info.es) {
++	if (zif->es_info.es) {
++		/* the VLAN's br-port entry is also written when it has no VNI */
+ 		dplane_br_port_delete(zif->ifp, vid);
+-		zebra_evpn_local_es_evi_del(zif->es_info.es, acc_bd->zevpn);
++		if (acc_bd->zevpn)
++			zebra_evpn_local_es_evi_del(zif->es_info.es, acc_bd->zevpn);
+ 	}
+ 
+ 	/* if there are no other references the access_bd can be freed */
+-- 
+2.43.0
+
