@@ -20,7 +20,7 @@ def prepare(snapshot, store, clock=time.time, boot_id_supplier=read_boot_id):
         record = prepare_startup_record(store.load(), state, 'isis-northbound-v1', clock(), 30,
                                         trusted_preapply=True, boot_id=boot_id_supplier())
         store.save(record)
-        if record.status != 'pending':
+        if record.status not in ('prepared', 'pending'):
             raise ValueError('Startup ownership not authorized: ' + record.reason)
     return dict(snapshot, ISIS_CONFIG_LINES=lines)
 

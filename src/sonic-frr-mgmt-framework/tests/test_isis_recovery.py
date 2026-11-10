@@ -617,14 +617,14 @@ def test_startup_registration_requires_explicit_trusted_preapply_context():
         prepare_startup_record(None, target, 'default', 100, 10)
 
 
-def test_startup_registration_is_pending_union_not_success_or_lost_ownership():
+def test_startup_registration_is_prepared_union_not_success_or_lost_ownership():
     old = desired({PROCESS: {'vrf': 'default'}})
     previous = replace(registered(old), possible=frozenset([NET_A]), status='pending', deadline=110)
     target = desired({NET_B: {'process': 'default', 'net': 'b'}})
     record = startup(previous, target, now=101)
-    assert record.status == 'pending' and record.owned == frozenset([PROCESS])
+    assert record.status == 'prepared' and record.owned == frozenset([PROCESS])
     assert record.possible == frozenset([PROCESS, NET_A, NET_B])
-    assert record.digest == target.digest and record.deadline == 111
+    assert record.digest == target.digest and record.deadline is None
 
 
 def test_startup_reentry_same_digest_preserves_deadline_across_restarts():
@@ -632,8 +632,8 @@ def test_startup_reentry_same_digest_preserves_deadline_across_restarts():
     first = startup(None, target)
     second = startup(first, target, now=105)
     third = startup(second, target, now=109)
-    assert first.deadline == second.deadline == third.deadline == 110
-    assert second.last_observed == 105 and third.last_observed == 109
+    assert first.deadline is second.deadline is third.deadline is None
+    assert second.last_observed == third.last_observed == 100
     assert third.possible == frozenset([PROCESS]) and not third.owned
 
 
@@ -645,13 +645,13 @@ def test_expired_startup_registration_forbids_emission_and_does_not_expand_autho
     assert not record.owned and not record.possible
     assert startup(record, target, now=112) == record
     retried = startup(record, target, now=113, retry=True)
-    assert retried.status == 'pending' and retried.deadline == 123
+    assert retried.status == 'prepared' and retried.deadline is None
     assert retried.possible == frozenset([PROCESS])
 
 
 def test_startup_pending_clock_rollback_is_failed_with_original_deadline():
     target = desired({PROCESS: {'vrf': 'default'}})
-    record = startup(None, target)
+    record = replace(startup(None, target), status='pending', deadline=110)
     failed = startup(record, target, now=99)
     assert failed.status == 'failed' and 'backwards' in failed.reason
     assert failed.deadline == 110 and failed.last_observed == 100
@@ -1033,3 +1033,80 @@ def test_net_canonical_identity_and_invalid_nsel():
     assert normalize_net('49.0001.0000.0000.0001.00') == '49000100000000000100'
     with pytest.raises(RecoveryError):
         normalize_net('49.0001.0000.0000.0001.01')
+
+
+@pytest.mark.parametrize("delay", [1, 300])
+def test_prepared_startup_arms_at_worker_entry_and_confirms(delay):
+    target = desired({PROCESS: {'vrf': 'default'}})
+    store = MemoryStore(startup(None, target))
+    store.record = RecoveryRecord.from_json(store.record.as_json())
+    now = 100 + delay
+    kernel = RecoveryKernel(store, clock=lambda: now)
+
+    def supply():
+        assert store.record.status == 'pending'
+        assert store.record.deadline == now + 10
+        return target
+
+    result = kernel.step(supply, lambda: target.snapshot, None, None, 10)
+    assert result.status == 'applied' and not result.mutation_attempted
+
+
+def test_prepared_startup_unavailable_desired_still_arms_once_and_expires():
+    target = desired({PROCESS: {'vrf': 'default'}})
+    store = MemoryStore(startup(None, target))
+
+    def unavailable():
+        raise OSError('ConfigDB unavailable')
+
+    kernel = RecoveryKernel(store, clock=lambda: 500)
+    assert kernel.step(unavailable, None, None, None, 10).status == 'desired_error'
+    assert store.record.deadline == 510
+    assert startup(store.record, target, now=505).deadline == 510
+    restarted = RecoveryKernel(store, clock=lambda: 511)
+    assert restarted.step(unavailable, None, None, None, 10).status == 'failed'
+    assert restarted.step(lambda: target, lambda: target.snapshot, None, None, 10).status == 'failed'
+    assert store.record.deadline == 510
+    assert restarted.step(lambda: target, lambda: target.snapshot, None, None, 10, retry=True).status == 'applied'
+
+
+def test_prepared_startup_arm_save_failure_cannot_read_or_mutate():
+    target = desired({PROCESS: {'vrf': 'default'}})
+    store = MemoryStore(startup(None, target))
+    store.fail_save = 1
+    calls = []
+    result = RecoveryKernel(store, clock=lambda: 500).step(
+        lambda: calls.append('desired'), lambda: calls.append('read'),
+        lambda *args: calls.append('plan'), lambda *args: calls.append('apply'), 10)
+    assert result.status == 'metadata_error' and not calls
+
+
+def test_prepared_startup_rejects_active_deadline_in_journal():
+    target = desired({PROCESS: {'vrf': 'default'}})
+    with pytest.raises(RecoveryError, match='active deadline'):
+        RecoveryRecord.from_json(replace(startup(None, target), deadline=110).as_json())
+
+
+def test_prepared_startup_readback_failure_cannot_postpone_deadline():
+    target = desired({PROCESS: {'vrf': 'default'}})
+    store = MemoryStore(startup(None, target))
+
+    def unavailable():
+        raise OSError('isisd not ready')
+
+    assert RecoveryKernel(store, clock=lambda: 500).step(
+        lambda: target, unavailable, None, None, 10).status == 'readback_error'
+    assert store.record.deadline == 510
+    assert RecoveryKernel(store, clock=lambda: 511).step(
+        lambda: target, lambda: target.snapshot, None, None, 10).status == 'failed'
+
+
+def test_prepared_startup_requires_registration_for_current_boot():
+    target = desired({PROCESS: {'vrf': 'default'}})
+    first_boot = '00000000-0000-0000-0000-000000000001'
+    next_boot = '00000000-0000-0000-0000-000000000002'
+    store = MemoryStore(startup(None, target, boot_id=first_boot))
+    kernel = RecoveryKernel(store, clock=lambda: 500, boot_id_supplier=lambda: next_boot)
+    assert kernel.step(lambda: target, None, None, None, 10).status == 'metadata_error'
+    store.record = startup(store.record, target, now=500, boot_id=next_boot)
+    assert kernel.step(lambda: target, lambda: target.snapshot, None, None, 10).status == 'applied'

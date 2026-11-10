@@ -169,8 +169,10 @@ def test_startup_registration_then_offline_delete_uses_durable_ownership(tmp_pat
     prepared = prepare(tables, store, clock=lambda: 1,
                        boot_id_supplier=lambda: '00000000-0000-0000-0000-000000000001')
     assert prepared['ISIS_CONFIG_LINES'] == render(tables)
+    assert store.load().status == 'prepared' and store.load().deadline is None
     observed = desired(tables).snapshot
-    kernel = RecoveryKernel(store, owner='isis-northbound-v1', clock=lambda: 2, conflict_check=conflict)
+    # Slow container initialization must not spend the worker's recovery budget.
+    kernel = RecoveryKernel(store, owner='isis-northbound-v1', clock=lambda: 302, conflict_check=conflict)
     assert kernel.step(lambda: desired(tables), lambda: observed, plan, lambda _: False, 30).status == 'applied'
     # Daemon stopped: remove all desired IS-IS rows, keep native state and journal.
     empty = copy.deepcopy(tables)
@@ -185,7 +187,7 @@ def test_startup_registration_then_offline_delete_uses_durable_ownership(tmp_pat
         observed = NativeSnapshot({})
         return True
 
-    restarted = RecoveryKernel(store, owner='isis-northbound-v1', clock=lambda: 3, conflict_check=conflict)
+    restarted = RecoveryKernel(store, owner='isis-northbound-v1', clock=lambda: 303, conflict_check=conflict)
     result = restarted.step(lambda: desired(empty), lambda: observed, plan, apply, 30)
     assert result.status == 'applied'
     assert applied[0].commands[1] == 'interface Ethernet0'

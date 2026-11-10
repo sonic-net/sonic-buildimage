@@ -195,15 +195,17 @@ class RecoveryRecord:
             raise RecoveryError('Invalid stored boot ID')
         if not isinstance(data['owner'], str) or not data['owner']:
             raise RecoveryError('Invalid ownership scope')
-        if data['status'] not in ('pending', 'applied', 'failed'):
+        if data['status'] not in ('prepared', 'pending', 'applied', 'failed'):
             raise RecoveryError('Invalid recovery phase')
+        if data['status'] == 'prepared' and data['deadline'] is not None:
+            raise RecoveryError('Prepared startup record has an active deadline')
         if data['status'] == 'applied' and (data['deadline'] is not None or data['possible']):
             raise RecoveryError('Applied record retains an unfinished attempt')
         if not isinstance(data['digest'], str) or not re.fullmatch('[0-9a-f]{64}', data['digest']):
             raise RecoveryError('Invalid desired digest')
         for field in ('last_observed', 'deadline'):
             value = data[field]
-            if value is None and field == 'deadline' and data['status'] == 'applied':
+            if value is None and field == 'deadline' and data['status'] in ('prepared', 'applied'):
                 continue
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise RecoveryError('Invalid persistent deadline')
@@ -231,11 +233,14 @@ def prepare_startup_record(
     This is NOT an adoption API for a matching live FRR configuration. The
     caller validates one coherent desired snapshot and establishes the trusted
     startup/pre-application context. Under store.guard(), it loads the previous
-    record, saves this result, checks status == 'pending', and only then emits
+    record, saves this result, checks status is prepared/pending, and only then emits
     the managed fragment. Save failure or a failed result forbids emission.
     Deadlines and failure latches belong to the boot that created them. A
     trusted startup may start one new attempt on a different Linux boot or when
     migrating a legacy record without a boot ID. It keeps both identity sets.
+    New registrations are prepared without a deadline: the worker durably arms
+    the bounded attempt before its first desired/native read. Container startup
+    is not recovery time. Existing pending/failed attempts are never rearmed.
     """
     if trusted_preapply is not True:
         raise RecoveryError('Startup registration requires trusted pre-application context')
@@ -270,6 +275,8 @@ def prepare_startup_record(
         if same_boot and previous.digest == digest and not retry:
             if previous.status == 'failed':
                 return previous
+            if previous.status == 'prepared':
+                return previous
             if previous.status == 'pending':
                 if now >= previous.deadline:
                     return replace(previous, status='failed', last_observed=now, reason='Recovery deadline expired')
@@ -286,10 +293,10 @@ def prepare_startup_record(
         owned,
         frozenset(owned | possible | set(desired.snapshot.objects)),
         digest,
-        'pending',
-        now + timeout,
+        'prepared',
+        None,
         now,
-        'Canonical startup fragment pending',
+        'Canonical startup fragment prepared',
         boot_id=boot_id,
     )
 
@@ -770,6 +777,15 @@ class RecoveryKernel:
                 return desired_supplier().digest
             except Exception as error:
                 unavailable(error)
+
+        # Arm exactly once, before even the desired read can fail. Persisting
+        # this transition prevents worker/container restarts extending the budget.
+        if record is not None and record.status == 'prepared':
+            if record.boot_id != boot_id:
+                raise RecoveryError('Startup registration belongs to another boot')
+            record = replace(record, status='pending', deadline=now + timeout,
+                             last_observed=now, reason='Startup recovery started')
+            self.store.save(record)
 
         # An unavailable renderer/factory cannot hide an expired persisted
         # attempt, and must not consume the caller's explicit retry request.
