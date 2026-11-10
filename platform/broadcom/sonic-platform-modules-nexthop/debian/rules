@@ -113,12 +113,9 @@ override_dh_auto_install:
 				debian/$${pkg_name}/etc/modprobe.d/; \
 		fi; \
 	done)
-	# Gearbox MDIO access library. Installed into the 5010 device directory,
-	# which the gbsyncd container already mounts at /usr/share/sonic/platform.
-	dh_installdirs -p$(PACKAGE_PRE_NAME)-5010-r0 \
-		usr/share/sonic/device/x86_64-nexthop_5010-r0
+	dh_installdirs -p$(PACKAGE_PRE_NAME)-gbsyncd-access usr/lib/nexthop
 	cp $(MOD_SRC_DIR)/$(MDIO_DIR)/$(MDIO_LIB) \
-		debian/$(PACKAGE_PRE_NAME)-5010-r0/usr/share/sonic/device/x86_64-nexthop_5010-r0/
+		debian/$(PACKAGE_PRE_NAME)-gbsyncd-access/usr/lib/nexthop/
 	python3 setup.py install \
 		--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
 		--install-layout=deb
