@@ -1,7 +1,6 @@
 //
 // SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 // Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 
 //! hw-management's Python modules that `sonic_platform` uses, run as they
 //! are: their logic -- the files hw-management-tc reads, the BMC account and
@@ -111,7 +109,9 @@ fn independent_mode_update(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     if let Some(i) = utils::lock(&INDEPENDENT_MODE_UPDATE).as_ref() {
         return Ok(i.module.bind(py).clone());
     }
-    let path = io::real(INDEPENDENT_MODE_UPDATE_DIR).to_string_lossy().into_owned();
+    let path = io::real(INDEPENDENT_MODE_UPDATE_DIR)
+        .to_string_lossy()
+        .into_owned();
     let module = (|| -> pyo3::PyResult<Bound<'_, PyModule>> {
         let sys_path = py.import("sys")?.getattr("path")?;
         let entries = sys_path.downcast::<PyList>()?;
@@ -123,7 +123,9 @@ fn independent_mode_update(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
         // there only later.  Only this directory's finder is dropped:
         // `importlib.invalidate_caches()` would import importlib.metadata,
         // and with it zipfile, lzma and bz2, which cost the daemon several MB.
-        py.import("sys")?.getattr("path_importer_cache")?.call_method1("pop", (&path, py.None()))?;
+        py.import("sys")?
+            .getattr("path_importer_cache")?
+            .call_method1("pop", (&path, py.None()))?;
         py.import(INDEPENDENT_MODE_UPDATE_NAME)
     })()
     .map_err(|e| from_python(py, &e))?;
@@ -157,7 +159,10 @@ fn call(function: &str, args: &[Val]) -> PyResult<()> {
     Python::with_gil(|py| {
         let module = independent_mode_update(py)?;
         (|| -> pyo3::PyResult<()> {
-            let args = args.iter().map(|a| a.to_python(py)).collect::<pyo3::PyResult<Vec<_>>>()?;
+            let args = args
+                .iter()
+                .map(|a| a.to_python(py))
+                .collect::<pyo3::PyResult<Vec<_>>>()?;
             module.getattr(function)?.call1(PyTuple::new(py, args)?)?;
             Ok(())
         })()
@@ -165,8 +170,17 @@ fn call(function: &str, args: &[Val]) -> PyResult<()> {
     })
 }
 
-pub fn thermal_data_set_asic(asic_index: i128, temperature: Val, warning: Val, critical: Val, fault: Val) -> PyResult<()> {
-    call("thermal_data_set_asic", &[Val::Int(asic_index), temperature, warning, critical, fault])
+pub fn thermal_data_set_asic(
+    asic_index: i128,
+    temperature: Val,
+    warning: Val,
+    critical: Val,
+    fault: Val,
+) -> PyResult<()> {
+    call(
+        "thermal_data_set_asic",
+        &[Val::Int(asic_index), temperature, warning, critical, fault],
+    )
 }
 
 pub fn thermal_data_set_module(
@@ -179,13 +193,24 @@ pub fn thermal_data_set_module(
 ) -> PyResult<()> {
     call(
         "thermal_data_set_module",
-        &[Val::Int(asic_index), Val::Int(module_index), temperature, warning, critical, fault],
+        &[
+            Val::Int(asic_index),
+            Val::Int(module_index),
+            temperature,
+            warning,
+            critical,
+            fault,
+        ],
     )
 }
 
 /// `vendor_data_set_module(asic_index, module_index, {...})`, the dict in
 /// the order given.
-pub fn vendor_data_set_module(asic_index: i128, module_index: i128, vendor: &[(&str, String)]) -> PyResult<()> {
+pub fn vendor_data_set_module(
+    asic_index: i128,
+    module_index: i128,
+    vendor: &[(&str, String)],
+) -> PyResult<()> {
     Python::with_gil(|py| {
         let module = independent_mode_update(py)?;
         (|| -> pyo3::PyResult<()> {
@@ -193,7 +218,9 @@ pub fn vendor_data_set_module(asic_index: i128, module_index: i128, vendor: &[(&
             for (k, v) in vendor {
                 info.set_item(k, v)?;
             }
-            module.getattr("vendor_data_set_module")?.call1((asic_index, module_index, info))?;
+            module
+                .getattr("vendor_data_set_module")?
+                .call1((asic_index, module_index, info))?;
             Ok(())
         })()
         .map_err(|e| from_python(py, &e))
@@ -205,11 +232,17 @@ pub fn thermal_data_clean_asic(asic_index: i128) -> PyResult<()> {
 }
 
 pub fn thermal_data_clean_module(asic_index: i128, module_index: i128) -> PyResult<()> {
-    call("thermal_data_clean_module", &[Val::Int(asic_index), Val::Int(module_index)])
+    call(
+        "thermal_data_clean_module",
+        &[Val::Int(asic_index), Val::Int(module_index)],
+    )
 }
 
 pub fn module_data_set_module_counter(module_counter: i128) -> PyResult<()> {
-    call("module_data_set_module_counter", &[Val::Int(module_counter)])
+    call(
+        "module_data_set_module_counter",
+        &[Val::Int(module_counter)],
+    )
 }
 
 /// `bmc.py`'s two uses of the Redfish client, so that the `with` blocks and
@@ -256,7 +289,12 @@ def login(name, path, real_path):
 );
 
 fn redfish(py: Python<'_>) -> pyo3::PyResult<Bound<'_, PyModule>> {
-    PyModule::from_code(py, REDFISH, c_str!("sonic_platform/bmc.py"), c_str!("_mlnx_bmc_redfish"))
+    PyModule::from_code(
+        py,
+        REDFISH,
+        c_str!("sonic_platform/bmc.py"),
+        c_str!("_mlnx_bmc_redfish"),
+    )
 }
 
 fn redfish_args() -> (&'static str, &'static str, String) {
@@ -271,7 +309,9 @@ fn redfish_args() -> (&'static str, &'static str, String) {
 pub fn redfish_login_password() -> PyResult<PyVal> {
     Python::with_gil(|py| {
         (|| -> pyo3::PyResult<PyVal> {
-            let pw = redfish(py)?.getattr("login_password")?.call1(redfish_args())?;
+            let pw = redfish(py)?
+                .getattr("login_password")?
+                .call1(redfish_args())?;
             Ok(PyVal::Str(pw.str()?.to_string()))
         })()
         .map_err(|e| from_python(py, &e))
@@ -279,15 +319,18 @@ pub fn redfish_login_password() -> PyResult<PyVal> {
 }
 
 /// What `BMCAccessor().login()` did: what it answered (its `str()`, and
-/// whether it is not 0) or raised, and the lines it printed.
+/// whether it is not 0) or raised. Captured output is discarded as sensitive.
 pub struct RedfishLogin {
     pub result: PyResult<(String, bool)>,
-    pub printed: Vec<String>,
 }
 
 /// What the `login` helper above answers: `(str(ret), ret != 0)`, or the
 /// exception, and the printed lines.
-type LoginAnswer<'py> = (Option<(String, bool)>, Option<Bound<'py, PyAny>>, Vec<String>);
+type LoginAnswer<'py> = (
+    Option<(String, bool)>,
+    Option<Bound<'py, PyAny>>,
+    Vec<String>,
+);
 
 /// `BMCAccessor().login()` with its stdout and stderr captured, as
 /// `_configure_nos_account()` calls it.
@@ -295,17 +338,16 @@ pub fn redfish_login() -> RedfishLogin {
     Python::with_gil(|py| {
         let r = (|| -> pyo3::PyResult<RedfishLogin> {
             let out = redfish(py)?.getattr("login")?.call1(redfish_args())?;
-            let (ret, err, printed): LoginAnswer<'_> = out.extract()?;
+            let (ret, err, _printed): LoginAnswer<'_> = out.extract()?;
             let result = match (ret, err) {
                 (Some(r), _) => Ok(r),
                 (None, Some(e)) => Err(from_python(py, &pyo3::PyErr::from_value(e))),
                 (None, None) => Err(PyErr::runtime_error("no result")),
             };
-            Ok(RedfishLogin { result, printed })
+            Ok(RedfishLogin { result })
         })();
         r.unwrap_or_else(|e| RedfishLogin {
             result: Err(from_python(py, &e)),
-            printed: Vec::new(),
         })
     })
 }
@@ -324,7 +366,9 @@ pub fn forget_imports() {
         if let Some(old) = old {
             let path = sys.getattr("path").expect("sys.path");
             let _ = path.call_method1("remove", (&old.path,));
-            let cache = sys.getattr("path_importer_cache").expect("sys.path_importer_cache");
+            let cache = sys
+                .getattr("path_importer_cache")
+                .expect("sys.path_importer_cache");
             let _ = cache.call_method1("pop", (&old.path, py.None()));
         }
     });
@@ -338,8 +382,10 @@ pub mod testing {
 
     use super::*;
 
-    pub const INDEPENDENT_MODE_UPDATE: &str = include_str!("testdata/hw_mgmt/hw_management_independent_mode_update.py");
-    pub const REDFISH_CLIENT: &str = include_str!("testdata/hw_mgmt/hw_management_redfish_client.py");
+    pub const INDEPENDENT_MODE_UPDATE: &str =
+        include_str!("testdata/hw_mgmt/hw_management_independent_mode_update.py");
+    pub const REDFISH_CLIENT: &str =
+        include_str!("testdata/hw_mgmt/hw_management_redfish_client.py");
 
     /// hw-management's helper for pmon, as `/run/hw-management/bin` has it.
     pub fn install_independent_mode_update(root: &crate::testing::Root) {
@@ -371,7 +417,11 @@ pub mod testing {
     pub fn fail(function: &str, message: &str) {
         Python::with_gil(|py| {
             let module = independent_mode_update(py).expect("hw-management's helper");
-            module.getattr("fail").expect("fail").set_item(function, message).expect("set");
+            module
+                .getattr("fail")
+                .expect("fail")
+                .set_item(function, message)
+                .expect("set");
         })
     }
 
@@ -379,9 +429,17 @@ pub mod testing {
     pub fn redfish_set(attr: &str, value: &str) {
         Python::with_gil(|py| {
             let (name, path, real) = redfish_args();
-            let module = redfish(py).and_then(|r| r.getattr("load")?.call1((name, path, real))).expect("the client");
-            let value = py.eval(&std::ffi::CString::new(value).expect("no NUL"), None, None).expect("a value");
-            module.getattr("BMCAccessor").expect("BMCAccessor").setattr(attr, value).expect("set");
+            let module = redfish(py)
+                .and_then(|r| r.getattr("load")?.call1((name, path, real)))
+                .expect("the client");
+            let value = py
+                .eval(&std::ffi::CString::new(value).expect("no NUL"), None, None)
+                .expect("a value");
+            module
+                .getattr("BMCAccessor")
+                .expect("BMCAccessor")
+                .setattr(attr, value)
+                .expect("set");
         })
     }
 }

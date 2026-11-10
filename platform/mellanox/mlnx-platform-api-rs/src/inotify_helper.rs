@@ -1,7 +1,6 @@
 //
 // SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 // Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -216,24 +215,28 @@ impl Inotify {
             let mut pfd = libc::pollfd { fd: self.fd.as_raw_fd(), events: libc::POLLIN, revents: 0 };
             // SAFETY: one valid pollfd.
             let n = unsafe { libc::poll(&mut pfd, 1, 1000) };
-            if n < 0 {
-                let e = std::io::Error::last_os_error();
-                if e.raw_os_error() != Some(libc::EINTR) {
-                    return Err(PyErr::from_io(&e, None));
+            match n.cmp(&0) {
+                std::cmp::Ordering::Less => {
+                    let e = std::io::Error::last_os_error();
+                    if e.raw_os_error() != Some(libc::EINTR) {
+                        return Err(PyErr::from_io(&e, None));
+                    }
                 }
-            } else if n > 0 {
-                debug(&format!("Events received from epoll: {}", names_repr(&event_names(pfd.revents as u32))));
-                for event in self.handle_events()? {
-                    last_hit = SystemTime::now();
-                    for name in &event.type_names {
-                        if *name == "IN_Q_OVERFLOW" || *name == "IN_UNMOUNT" {
-                            return Err(PyErr::other("TerminalEventException", *name));
+                std::cmp::Ordering::Greater => {
+                    debug(&format!("Events received from epoll: {}", names_repr(&event_names(pfd.revents as u32))));
+                    for event in self.handle_events()? {
+                        last_hit = SystemTime::now();
+                        for name in &event.type_names {
+                            if *name == "IN_Q_OVERFLOW" || *name == "IN_UNMOUNT" {
+                                return Err(PyErr::other("TerminalEventException", *name));
+                            }
+                        }
+                        if let Some(r) = on_event(&event)? {
+                            return Ok(Some(r));
                         }
                     }
-                    if let Some(r) = on_event(&event)? {
-                        return Ok(Some(r));
-                    }
                 }
+                std::cmp::Ordering::Equal => {}
             }
             if last_hit.elapsed().map(|d| d.as_secs_f64()).unwrap_or(0.0) > timeout {
                 return Ok(None);

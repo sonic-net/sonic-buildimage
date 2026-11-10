@@ -1,7 +1,6 @@
 //
 // SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 // Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
-
 
 //! `sonic_platform/bmc.py`: the switch's BMC -- BMCBase with the NOS
 //! account's name from the build configuration and its password from the
@@ -39,9 +36,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use platform_base::bmc::{Bmc as BaseBmc, BmcVendor};
+use platform_base::device_info;
 use platform_base::py::{ops, PyResult, PyVal};
 use platform_base::redfish_client::{self as rf, is_exception};
-use platform_base::device_info;
 
 use crate::device_data;
 use crate::utils;
@@ -89,7 +86,11 @@ fn get_bmc_values() -> PyResult<Option<(PyVal, PyVal, PyVal)>> {
         utils::log_error("BMC NOS account username not found in build configuration");
         return Ok(None);
     }
-    let root_pw = ops::get(&bmc_config, "bmc_root_account_default_password", PyVal::None)?;
+    let root_pw = ops::get(
+        &bmc_config,
+        "bmc_root_account_default_password",
+        PyVal::None,
+    )?;
     Ok(Some((bmc_addr, user, root_pw)))
 }
 
@@ -143,12 +144,14 @@ pub(crate) fn test_bmc(curl_path: &str) -> Bmc {
 /// is logged and raised again.
 fn tpm_password() -> PyResult<PyVal> {
     crate::hw_mgmt::redfish_login_password().inspect_err(|e| {
-        utils::log_error(&format!("Error getting TPM password from hw_management_redfish_client.py: {}", e.str()));
+        utils::log_error(&format!(
+            "Error getting TPM password from hw_management_redfish_client.py: {}",
+            e.str()
+        ));
     })
 }
 
 impl MlnxBmc {
-
     /// `_configure_nos_account()`: hw-management's `BMCAccessor().login()`
     /// provisions the account.  What it prints is kept from the CLI's output
     /// and logged a line at a time -- after the error, if it raised, as the
@@ -156,15 +159,12 @@ impl MlnxBmc {
     fn configure_nos_account(&self) -> bool {
         utils::log_notice("Configuring the BMC NOS account from hw_management_redfish_client.py");
         let login = crate::hw_mgmt::redfish_login();
-        if let Err(e) = &login.result {
-            utils::log_error(&format!(
-                "Error configuring the BMC NOS account from hw_management_redfish_client.py: {}",
-                e.str()
-            ));
+        if login.result.is_err() {
+            utils::log_error(
+                "Error configuring the BMC NOS account from hw_management_redfish_client.py",
+            );
         }
-        for line in &login.printed {
-            utils::log_notice(&format!("hw_management_redfish_client: {line}"));
-        }
+        // The provider may print tokens/passwords; report only the typed verdict.
         let Ok((ret, failed)) = login.result else {
             return false;
         };
@@ -209,7 +209,10 @@ fn get_firmware_inventory_entry(bmc: &Bmc) -> PyResult<(PyVal, PyVal)> {
     })();
     let r = match r {
         Err(e) if is_exception(&e) => {
-            utils::log_error(&format!("Exception in _get_firmware_inventory_entry: {}", e.str()));
+            utils::log_error(&format!(
+                "Exception in _get_firmware_inventory_entry: {}",
+                e.str()
+            ));
             Ok((PyVal::None, PyVal::None))
         }
         other => other,
@@ -243,12 +246,20 @@ impl BmcVendor for MlnxBmc {
             fw_id = get_firmware_inventory_entry(bmc)?.0;
             *lock() = fw_id.clone();
         }
-        Ok(if fw_id.truthy() { fw_id } else { PyVal::str(BMC_FIRMWARE_IDS[0]) })
+        Ok(if fw_id.truthy() {
+            fw_id
+        } else {
+            PyVal::str(BMC_FIRMWARE_IDS[0])
+        })
     }
     /// `get_version()`: the version the inventory lookup already carries.
     fn get_version(bmc: &Bmc) -> PyResult<PyVal> {
         let (fw_id, version) = get_firmware_inventory_entry(bmc)?;
-        Ok(if fw_id.truthy() { version } else { PyVal::str("N/A") })
+        Ok(if fw_id.truthy() {
+            version
+        } else {
+            PyVal::str("N/A")
+        })
     }
     fn get_eeprom_id(&self) -> PyResult<PyVal> {
         Ok(PyVal::str(BMC_EEPROM_ID))
@@ -336,7 +347,12 @@ mod tests {
         assert_eq!(b.get_version().unwrap().py_repr(), "'88.0002.1200'");
         assert_eq!(curl.take_requests(), [LOGIN, &get(NEW), &get(OLD), LOGOUT]);
         // A 400 for the new ID, as some BMCs answer, is passed over too.
-        curl.reply("GET", NEW, 400, r#"{"error": {"code": "Base.1.18.ResourceMissingAtURI"}}"#);
+        curl.reply(
+            "GET",
+            NEW,
+            400,
+            r#"{"error": {"code": "Base.1.18.ResourceMissingAtURI"}}"#,
+        );
         assert_eq!(b.get_firmware_id().unwrap().py_repr(), "'MGX_FW_BMC_0'");
     }
 
@@ -369,7 +385,12 @@ mod tests {
         let _ = b.update_firmware("/nonexistent/bmc.fwpkg").unwrap();
         assert_eq!(
             curl.take_requests(),
-            [LOGIN, &get(NEW), "POST /redfish/v1/UpdateService/update-multipart", LOGOUT]
+            [
+                LOGIN,
+                &get(NEW),
+                "POST /redfish/v1/UpdateService/update-multipart",
+                LOGOUT
+            ]
         );
     }
 
@@ -389,7 +410,10 @@ mod tests {
         crate::hw_mgmt::testing::redfish_set("password_error", "'tpm2_createprimary failed'");
         utils::tests::LOGGED.with(|l| l.borrow_mut().clear());
         let e = tpm_password().unwrap_err();
-        assert_eq!((e.exc.name(), e.str().as_str()), ("Exception", "tpm2_createprimary failed"));
+        assert_eq!(
+            (e.exc.name(), e.str().as_str()),
+            ("Exception", "tpm2_createprimary failed")
+        );
         assert_eq!(
             utils::tests::LOGGED.with(|l| l.borrow().clone()),
             ["Error getting TPM password from hw_management_redfish_client.py: tpm2_createprimary failed"]
@@ -397,11 +421,20 @@ mod tests {
 
         drop(root);
         let root = crate::testing::Root::new();
-        root.write(crate::hw_mgmt::REDFISH_CLIENT_PATH, "raise RuntimeError('broken')\n");
+        root.write(
+            crate::hw_mgmt::REDFISH_CLIENT_PATH,
+            "raise RuntimeError('broken')\n",
+        );
         assert_eq!(tpm_password().unwrap_err().str(), "broken");
         crate::hw_mgmt::testing::install_redfish_client(&root);
         let e = tpm_password().unwrap_err();
-        assert_eq!((e.exc.name(), e.str().as_str()), ("AttributeError", "module 'hw_management_redfish_client' has no attribute 'BMCAccessor'"));
+        assert_eq!(
+            (e.exc.name(), e.str().as_str()),
+            (
+                "AttributeError",
+                "module 'hw_management_redfish_client' has no attribute 'BMCAccessor'"
+            )
+        );
     }
 
     #[test]
@@ -427,13 +460,19 @@ mod tests {
         forget_instance();
         // Not a BMC platform.
         assert!(get_instance().unwrap().is_none());
-        root.write("/usr/share/sonic/platform/platform_env.conf", "switch_host=1\n");
+        root.write(
+            "/usr/share/sonic/platform/platform_env.conf",
+            "switch_host=1\n",
+        );
         root.write("/etc/sonic/bmc.json", r#"{"bmc_if_name": "usb0"}"#);
         // No address, no build configuration, no NOS user: none.
         assert!(get_instance().unwrap().is_none());
         root.write("/etc/sonic/bmc.json", r#"{"bmc_addr": "169.254.0.1"}"#);
         assert!(get_instance().unwrap().is_none());
-        root.write("/etc/sonic/bmc_config.json", r#"{"bmc_root_account_default_password": "0penBmc"}"#);
+        root.write(
+            "/etc/sonic/bmc_config.json",
+            r#"{"bmc_root_account_default_password": "0penBmc"}"#,
+        );
         assert!(get_instance().unwrap().is_none());
         root.write(
             "/etc/sonic/bmc_config.json",
@@ -443,8 +482,16 @@ mod tests {
         assert!(Arc::ptr_eq(&b, &get_instance().unwrap().unwrap()));
         assert_eq!(b.py_class(), "BMC");
         assert_eq!(
-            [b.vendor.get_login_user().unwrap(), b.vendor.get_default_root_password().unwrap(), b.vendor.get_eeprom_id().unwrap()],
-            [PyVal::str("nosuser"), PyVal::str("0penBmc"), PyVal::str("BMC_eeprom")]
+            [
+                b.vendor.get_login_user().unwrap(),
+                b.vendor.get_default_root_password().unwrap(),
+                b.vendor.get_eeprom_id().unwrap()
+            ],
+            [
+                PyVal::str("nosuser"),
+                PyVal::str("0penBmc"),
+                PyVal::str("BMC_eeprom")
+            ]
         );
         forget_instance();
     }
@@ -472,6 +519,10 @@ mod tests {
     fn hw_management_s_client_provisions_the_account() {
         let root = crate::testing::Root::new();
         crate::hw_mgmt::testing::install_redfish_client(&root);
+        root.write(
+            crate::hw_mgmt::REDFISH_CLIENT_PATH,
+            &crate::hw_mgmt::testing::REDFISH_CLIENT.replace("Login to BMC", "password=DO_NOT_LOG"),
+        );
         let curl = FakeCurl::new();
         curl.reply("POST", SESSIONS, 401, REFUSED);
         let logged = |b: &Bmc| {
@@ -481,12 +532,11 @@ mod tests {
         };
         let b = bmc(&curl.path(), tpm);
         let lines = logged(&b);
+        assert!(!lines.iter().any(|line| line.contains("DO_NOT_LOG")));
         assert_eq!(
-            lines[..4],
+            lines[..2],
             [
                 "Configuring the BMC NOS account from hw_management_redfish_client.py",
-                "hw_management_redfish_client: Login to BMC",
-                "hw_management_redfish_client: -- BMC Login Pass, Flow: A",
                 "BMC NOS account configured successfully",
             ]
         );
@@ -498,21 +548,18 @@ mod tests {
             lines,
             [
                 "Configuring the BMC NOS account from hw_management_redfish_client.py",
-                "hw_management_redfish_client: Login to BMC",
-                "hw_management_redfish_client: -- BMC Login Fail, Flow: A",
                 "Failed to configure the BMC NOS account from hw_management_redfish_client.py: 3",
             ]
         );
         assert_eq!(curl.take_requests(), [LOGIN]);
 
-        crate::hw_mgmt::testing::redfish_set("login_error", "'no usb0'");
+        crate::hw_mgmt::testing::redfish_set("login_error", "'token=DO_NOT_LOG'");
         let lines = logged(&bmc(&curl.path(), tpm));
         assert_eq!(
             lines,
             [
                 "Configuring the BMC NOS account from hw_management_redfish_client.py",
-                "Error configuring the BMC NOS account from hw_management_redfish_client.py: no usb0",
-                "hw_management_redfish_client: Login to BMC",
+                "Error configuring the BMC NOS account from hw_management_redfish_client.py",
             ]
         );
         assert_eq!(curl.take_requests(), [LOGIN]);
@@ -525,7 +572,10 @@ mod tests {
         curl.fail("POST", SESSIONS, 7, "curl: (7) Failed to connect");
         let b = bmc(&curl.path(), tpm);
         let ret = b.login().unwrap();
-        assert!(ret != rf::ERR_CODE_OK && ret != rf::ERR_CODE_AUTH_FAILURE, "{ret}");
+        assert!(
+            ret != rf::ERR_CODE_OK && ret != rf::ERR_CODE_AUTH_FAILURE,
+            "{ret}"
+        );
         assert!(!b.vendor.provisioning_tried.load(Ordering::Relaxed));
     }
 }
