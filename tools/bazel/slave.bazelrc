@@ -9,17 +9,8 @@
 # (e.g. bazel build --config=slave ...).
 # However, startup options cannot be gated by configuration, so we must resort to composing bazelrc files.
 
-# Caches for the slave
-#
-# Set the disk and repository caches to a mounted volume in the slave.
-#
-# Without persistent caches, every build re-downloads and re-extracts all external dependencies,
-# as well as re-build every artifact.
-#
-# /bazel_cache is expected to be bind-mounted from a host directory by
-# Makefile.work's DOCKER_RUN (alongside /dpkg_cache and /vcache).
-#
-# Please see the documentation of `SONIC_BAZEL_CACHE_SOURCE` in `rules/config` for more information.
-common --repository_cache=/bazel_cache/repository_cache
-common --disk_cache=/bazel_cache/disk_cache
+# Generated from the slave's effective versions-web, independently of cache availability.
+common --downloader_config=/usr/local/share/buildinfo/bazel-downloader.config
 
+# Makefile.work mounts this optional config alongside a writable /bazel_cache.
+try-import /etc/bazel-cache.bazelrc

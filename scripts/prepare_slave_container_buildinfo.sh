@@ -28,6 +28,16 @@ apt-get update > /dev/null 2>&1
 scripts/versions_manager.py generate -t "/usr/local/share/buildinfo/versions" -n "build-${SLAVE_DIR}" -d "$DISTRO" -a "$ARCH"
 touch ${BUILDINFO_PATH}/versions/versions-deb ${BUILDINFO_PATH}/versions/versions-web
 
+BAZEL_DOWNLOADER_CONFIG="${BUILDINFO_PATH}/bazel-downloader.config"
+rm -f "$BAZEL_DOWNLOADER_CONFIG"
+if [ "$ENABLE_VERSION_CONTROL_WEB" == "y" ]; then
+    python3 tools/bazel/generate_downloader_config.py \
+        --versions "$WEB_VERSION_FILE" --mirror "$BUILD_PACKAGES_URL" \
+        --output "$BAZEL_DOWNLOADER_CONFIG" || exit 1
+else
+    touch "$BAZEL_DOWNLOADER_CONFIG"
+fi
+
 sudo rm -f /etc/apt/preferences.d/01-versions-deb
 ([ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ -f $VERSION_DEB_PREFERENCE ]) && sudo cp -f $VERSION_DEB_PREFERENCE /etc/apt/preferences.d/
 exit 0

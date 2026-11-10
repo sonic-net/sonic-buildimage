@@ -34,11 +34,18 @@ jobs:
       - template: .azure-pipelines/cleanup.yml@buildimage
       - ${{ parameters.preSteps }}
       - script: |
+          set -e
           [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
           BUILD_OPTIONS="$(BUILD_OPTIONS) $OVERRIDE_BUILD_OPTIONS"
           if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-prestera-armhf|marvell-prestera-arm64|vpp|nvidia-bluefield|alpinevs)$"; then
             CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
             BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
+          fi
+          if [ "$(PLATFORM_AZP)" = "alpinevs" ]; then
+            BAZEL_CACHE_SOURCE="$(Agent.WorkFolder)/sonic-bazel-cache"
+            mkdir -p -m 0700 "$BAZEL_CACHE_SOURCE/$(id -un)"
+            test -w "$BAZEL_CACHE_SOURCE/$(id -un)"
+            BUILD_OPTIONS="$BUILD_OPTIONS SONIC_BAZEL_CACHE_SOURCE=$BAZEL_CACHE_SOURCE"
           fi
           echo $BUILD_OPTIONS
           echo "##vso[task.setvariable variable=BUILD_OPTIONS]$BUILD_OPTIONS"

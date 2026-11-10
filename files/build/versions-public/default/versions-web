@@ -64,6 +64,7 @@ https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-
 https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-arm64==94415d08ed2f86a49375f25a7f2f9cca
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==7773876ee1c20fefff55a42d8a43f02d
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==348478f2b7e93c2f4bd90eaebd20128e
+https://github.com/bazelbuild/rules_shell/releases/download/v0.3.0/rules_shell-v0.3.0.tar.gz==64bf4f70320855a4ea8593b8239b4627
 https://github.com/ChubbyAnt/sedutil/releases/download/1.15-5ad84d8/sedutil-cli-1.15-5ad84d8.zip==63b3ada5eade5b2d0bb79a0a2a635049
 https://github.com/CodeConstruct/mctp-rs/archive/b134e145f93d634dff7eb9f2a01559273c687365.tar.gz==3d2c024484839bc17c3f0a9319c82963
 https://github.com/CodeConstruct/mctp/archive/refs/tags/v2.5.tar.gz==d16f8f9f206b62670dfa09cde3559850
