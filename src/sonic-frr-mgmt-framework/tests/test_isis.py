@@ -288,3 +288,48 @@ def test_hup_requests_only_isis_retry():
         daemon.return_value.isis_worker.request_retry.assert_called_once_with()
         daemon.return_value.start.assert_called_once_with()
         daemon.return_value.stop.assert_called_once_with()
+
+
+AF_STATES = ((False, False), (False, True), (True, False), (True, True))
+
+
+@pytest.mark.parametrize('before_af', AF_STATES)
+@pytest.mark.parametrize('after_af', AF_STATES)
+@pytest.mark.parametrize('vrf', ['default', 'VrfA'])
+def test_every_af_transition_preserves_circuit_settings(before_af, after_af, vrf):
+    """Exercise planner transitions, including destruction when the last AF leaves.
+
+    This checks command ordering and retained policy, not native FRR execution.
+    The latter remains a separate acceptance gate.
+    """
+    tables = config(vrf)
+    row = tables['ISIS_INTERFACE']['Ethernet0']
+    row.update(ipv4_enabled=str(before_af[0]).lower(), ipv6_enabled=str(before_af[1]).lower())
+    before = desired(tables).snapshot
+    row.update(ipv4_enabled=str(after_af[0]).lower(), ipv6_enabled=str(after_af[1]).lower())
+    after = desired(tables).snapshot
+    mutation = plan(before, after, set(before.objects))
+    if before_af == after_af:
+        assert mutation is None
+        return
+    binding = Identity('isis-binding', 'Ethernet0')
+    assert mutation.identities == frozenset({binding})
+    assert len(mutation.payload) == 1
+    commands = mutation.payload[0].commands
+    expected_header = 'interface Ethernet0' + (' vrf ' + vrf if vrf != 'default' else '')
+    assert commands[1] == expected_header
+    for enabled, prefix in zip(after_af, ('ip', 'ipv6')):
+        assert (('' if enabled else 'no ') + prefix + ' router isis CORE') in commands
+    if any(after_af):
+        # FRR may recreate the circuit when switching away from the last active
+        # family. All retained policy must follow the new family binding.
+        last_bind = max(commands.index(prefix + ' router isis CORE')
+                        for enabled, prefix in zip(after_af, ('ip', 'ipv6')) if enabled)
+        for setting in ('isis passive', 'isis network point-to-point',
+                        'isis metric level-1 30', 'isis metric level-2 10'):
+            assert commands.index(setting) > last_bind
+        assert after.objects[binding]['levels']['level-1']['metric'] == '30'
+    else:
+        assert binding not in after.objects
+        assert not any(command.startswith('isis ') for command in commands)
+        assert row['passive'] == 'true' and row['instance'] == 'CORE'
