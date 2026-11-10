@@ -60,23 +60,22 @@ def load_platform_portdict():
         return
 
     idx = 0
-    file = open(PORT_CONFIG_FILE, "r")
-    line = file.readline()
-    if line.split() != ["#", "name", "lanes", "alias", "index", "speed"]:
-        file.close()
-        raise RuntimeError("SFP I2C stress requires port indices in %s" % PORT_CONFIG_FILE)
-    port_dict = {}
-    while line is not None and len(line) > 0:
-        line = line.strip()
-        if line.startswith("#"):
-            line = file.readline()
-            continue
-        list = line.split()
-        if len(list) >= 4:
-            idx = int(list[3])
-        port_dict[list[0]] = { "index": str(idx) }
-        idx += 1
+    with open(PORT_CONFIG_FILE, "r") as file:
         line = file.readline()
+        if line.split() != ["#", "name", "lanes", "alias", "index", "speed"]:
+            raise RuntimeError("SFP I2C stress requires port indices in %s" % PORT_CONFIG_FILE)
+        port_dict = {}
+        while line is not None and len(line) > 0:
+            line = line.strip()
+            if line.startswith("#"):
+                line = file.readline()
+                continue
+            list = line.split()
+            if len(list) >= 4:
+                idx = int(list[3])
+            port_dict[list[0]] = { "index": str(idx) }
+            idx += 1
+            line = file.readline()
 
     return port_dict
 
