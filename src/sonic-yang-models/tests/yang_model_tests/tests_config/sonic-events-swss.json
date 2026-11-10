@@ -35,6 +35,15 @@
             }
         }
     },
+    "SONIC_EVENTS_SWSS_IF_STATE_VALID_HIGH_PORT_INDEX": {
+        "sonic-events-swss:sonic-events-swss": {
+            "sonic-events-swss:if-state": {
+                "ifname": "Ethernet1024",
+                "status": "down",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
     "SONIC_EVENTS_SWSS_PFC_STORM_INCORRECT_IFNAME": {
         "sonic-events-swss:sonic-events-swss": {
             "sonic-events-swss:pfc-storm": {
@@ -94,6 +103,28 @@
         "sonic-events-swss:sonic-events-swss": {
             "sonic-events-swss:pfc-storm": {
                 "ifname": "Ethernet0",
+                "queue_index": 0,
+                "queue_id": 0,
+                "port_id": 0,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_SWSS_PFC_STORM_VALID_THREE_DIGIT_PORT_INDEX": {
+        "sonic-events-swss:sonic-events-swss": {
+            "sonic-events-swss:pfc-storm": {
+                "ifname": "Ethernet112",
+                "queue_index": 0,
+                "queue_id": 0,
+                "port_id": 0,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_SWSS_PFC_STORM_VALID_HIGH_PORT_INDEX": {
+        "sonic-events-swss:sonic-events-swss": {
+            "sonic-events-swss:pfc-storm": {
+                "ifname": "Ethernet1024",
                 "queue_index": 0,
                 "queue_id": 0,
                 "port_id": 0,
