@@ -93,6 +93,9 @@ command={{ command }}
 priority=3
 autostart=false
 autorestart=unexpected
+{% if use_rust_chassisd %}
+exitcodes=0
+{% endif %}
 stdout_logfile=NONE
 stdout_syslog=true
 stderr_logfile=NONE
