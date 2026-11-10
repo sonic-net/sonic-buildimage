@@ -8,6 +8,8 @@
 # successful boot must reset it for the limit to count only consecutive
 # failures.
 
+set -euo pipefail
+
 # Counter location shared with the Nexthop U-Boot 'nh_stormguard' command: a
 # word in AST2700 on-chip SRAM that survives a WDT SoC reset. Must match the
 # address compiled into U-Boot.
