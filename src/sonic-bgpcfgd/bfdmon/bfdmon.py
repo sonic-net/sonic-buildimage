@@ -69,8 +69,12 @@ class BfdFrrMon:
             try:
                 rc, output = getstatusoutput_noshell(cmd)
                 if rc:
-                    syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
-                    return False
+                    # bfdd can be running before its vty socket is ready
+                    retry_attempt += 1
+                    syslog.syslog(syslog.LOG_WARNING,
+                        "*WARNING* Failed with rc:{} when execute: {} Retry attempt: {}".format(rc, cmd, retry_attempt))
+                    time.sleep(1)
+                    continue
                 if len(output) == 0:
                     syslog.syslog(syslog.LOG_WARNING, "*WARNING* output none when execute: {}".format(cmd))
                     return False
