@@ -1,6 +1,30 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
 ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
+# Build linuxptp v4.4 from source (reuse $BASE so layers match the end image)
+FROM $BASE AS linuxptp-builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        curl autoconf automake libtool pkg-config \
+        swig \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+RUN curl -fsSL https://github.com/richardcochran/linuxptp/archive/refs/tags/v4.4.tar.gz | tar xz \
+    && cd linuxptp-4.4 \
+    && make -j"$(nproc)" \
+    && make install DESTDIR=/install prefix=/usr \
+    && cd / && rm -rf /src
+
+WORKDIR /src
+RUN curl -fsSL https://github.com/erezgeva/libptpmgmt/archive/refs/tags/2.0.tar.gz | tar xz \
+    && cd libptpmgmt-2.0 && autoconf && autoreconf --install && ./configure --disable-clkmgr && make -j"$(nproc)" \
+    && make install DESTDIR=/install prefix=/usr \
+    && cd / && rm -rf /src
+
 FROM $BASE AS base
 
 ARG docker_container_name
@@ -8,9 +32,7 @@ ARG docker_container_name
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update &&       \
-    apt-get install -f -y   \
-        linuxptp
+COPY --from=linuxptp-builder /install/ /
 
 {% if docker_ptp_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -20,8 +42,12 @@ RUN apt-get update &&       \
 {{ install_debian_packages(docker_ptp_debs.split(' ')) }}
 {%- endif %}
 
+COPY ["templates/", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["*.sh", "/usr/bin/"]
+RUN chmod a+x /usr/bin/start.sh && \
+    chmod a+x /usr/bin/telemetry.sh && \
+    chmod a+x /usr/bin/ptp.sh
 
 FROM $BASE
 
