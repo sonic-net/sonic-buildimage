@@ -313,6 +313,7 @@ $(shell $(PREPARE_DOCKER) )
 # Add the versions in the tag, if the version change, need to rebuild the slave
 SLAVE_BASE_TAG_COMPUTED := $(shell \
 	cat $(SLAVE_DIR)/Dockerfile \
+		$(wildcard $(SLAVE_DIR)/*.sh) \
 		$(SLAVE_DIR)/sources.list.* \
 		$(SLAVE_DIR)/buildinfo/versions/versions-* 2>/dev/null \
 	| sha1sum \
@@ -328,6 +329,7 @@ endif
 # Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_ARCH) to get unique SHA ID
 SLAVE_TAG = $(shell \
 	(cat $(SLAVE_DIR)/Dockerfile \
+		 $(wildcard $(SLAVE_DIR)/*.sh) \
 		 $(SLAVE_DIR)/sources.list.* \
 		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
 	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \

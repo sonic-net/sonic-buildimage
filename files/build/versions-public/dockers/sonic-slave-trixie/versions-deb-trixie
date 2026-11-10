@@ -1930,7 +1930,7 @@ python3-pil==11.1.0-5+deb13u4
 python3-pil.imagetk==11.1.0-5+deb13u4
 python3-pip==25.1.1+dfsg-1
 python3-pip-whl==25.1.1+dfsg-1
-python3-pkg-resources==78.1.1-0.1
+python3-pkg-resources==78.1.1-0.1+0sonic1
 python3-platformdirs==4.3.7-1
 python3-pluggy==1.5.0-1
 python3-ply==3.11-9
@@ -1959,9 +1959,9 @@ python3-scipy==1.15.3-1
 python3-scour==0.38.2-6
 python3-scp==0.15.0-1
 python3-service-identity==24.2.0-1
-python3-setuptools==78.1.1-0.1
+python3-setuptools==78.1.1-0.1+0sonic1
 python3-setuptools-scm==8.2.1-1
-python3-setuptools-whl==78.1.1-0.1
+python3-setuptools-whl==78.1.1-0.1+0sonic1
 python3-six==1.17.0-1
 python3-snowballstemmer==2.2.0-4
 python3-soupsieve==2.7-1
@@ -1987,7 +1987,7 @@ python3-urllib3==2.3.0-3+deb13u2
 python3-venv==3.13.5-1
 python3-wcwidth==0.2.13+dfsg1-1
 python3-webencodings==0.5.1-5
-python3-wheel==0.46.1-2
+python3-wheel==0.46.3-1
 python3-wilderness==0.1.10-1
 python3-xdg==0.28-2
 python3-yaml==6.0.2-1+b2
