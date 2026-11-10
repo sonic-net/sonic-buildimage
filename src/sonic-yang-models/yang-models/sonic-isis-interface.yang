@@ -1,33 +1,41 @@
 module sonic-isis-interface {
+    yang-version 1.1;
     namespace "http://github.com/sonic-net/sonic-isis-interface";
     prefix isis-if;
-    yang-version 1.1;
 
-    import sonic-port { prefix port; }
-    import sonic-portchannel { prefix lag; }
-    import sonic-vlan { prefix vlan; }
-    import sonic-loopback-interface { prefix lo; }
-    import sonic-vlan-sub-interface { prefix sub; }
+    import sonic-isis-global {
+        prefix isisg;
+    }
+    import sonic-port {
+        prefix port;
+    }
+    import sonic-portchannel {
+        prefix lag;
+    }
+    import sonic-vlan {
+        prefix vlan;
+    }
+    import sonic-loopback-interface {
+        prefix lo;
+    }
+    import sonic-vlan-sub-interface {
+        prefix sub;
+    }
 
     organization
         "SONiC";
-
-    contact
-        "SONiC";
-
     description
-        "SONIC IS-IS Interface YANG Module";
+        "Explicit IS-IS circuit bindings and per-level parameters.";
 
-    revision 2026-06-16 {
+    revision 2026-11-10 {
         description
-            "Initial revision for IS-IS interface level configurations.";
+            "Separate instance binding, address families, network type and levels.";
     }
 
     container sonic-isis-interface {
         container ISIS_INTERFACE {
             list ISIS_INTERFACE_LIST {
                 key "ifname";
-
                 leaf ifname {
                     type union {
                         type leafref {
@@ -46,51 +54,88 @@ module sonic-isis-interface {
                             path "/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST/sub:name";
                         }
                     }
-                    description "The physical or logical interface name enabled for IS-IS.";
+                    description
+                        "The physical or logical interface name enabled for IS-IS.";
                 }
-
+                leaf vrf {
+                    type leafref {
+                        path "/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST/isisg:vrf";
+                    }
+                    mandatory true;
+                }
+                leaf instance {
+                    type leafref {
+                        path "/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST[isisg:vrf=current()/../vrf]"
+                              + "/isisg:instance";
+                    }
+                    mandatory true;
+                }
                 leaf enabled {
                     type boolean;
-                    default false;
-                    description "Administrative state of the IS-IS interface binding.";
+                    default "false";
                 }
-
                 leaf ipv4_enabled {
                     type boolean;
-                    default true;
-                    description "Enable the IPv4 IS-IS interface binding.";
+                    default "false";
                 }
-
                 leaf ipv6_enabled {
                     type boolean;
-                    default true;
-                    description "Enable the IPv6 IS-IS interface binding.";
+                    default "false";
                 }
-
-                leaf metric {
-                    type uint32 {
-                        range "1..16777215";
-                    }
-                    default 10;
-                    description "IS-IS link cost metric assigned to this specific interface.";
-                }
-
-                leaf circuit_type {
-                    type enumeration {
-                        enum p2p {
-                            description "Point-to-Point network link type.";
-                        }
-                        enum lan {
-                            description "Broadcast multi-access network link type.";
-                        }
-                    }
-                    default lan;
-                    description "The operational link state type of the interface circuit.";
-                }
-
                 leaf passive {
                     type boolean;
-                    description "Enable passive mode on this interface for IS-IS.";
+                    default "false";
+                }
+                leaf level_type {
+                    type enumeration {
+                        enum level-1;
+                        enum level-2-only;
+                        enum level-1-2;
+                    }
+                    default "level-1-2";
+                }
+                leaf network_type {
+                    type enumeration {
+                        enum broadcast;
+                        enum point-to-point;
+                    }
+                    default "broadcast";
+                }
+            }
+        }
+        container ISIS_INTERFACE_LEVEL {
+            list ISIS_INTERFACE_LEVEL_LIST {
+                key "ifname level";
+                leaf ifname {
+                    type leafref {
+                        path "../../../ISIS_INTERFACE/ISIS_INTERFACE_LIST/ifname";
+                    }
+                    mandatory true;
+                }
+                leaf level {
+                    type enumeration {
+                        enum level-1;
+                        enum level-2;
+                    }
+                }
+                leaf metric {
+                    type uint32 {
+                        range "0..16777215";
+                    }
+                    default "10";
+                }
+                leaf hello_interval {
+                    type uint32 {
+                        range "1..600";
+                    }
+                    units "seconds";
+                    default "3";
+                }
+                leaf hello_multiplier {
+                    type uint32 {
+                        range "2..100";
+                    }
+                    default "10";
                 }
             }
         }

@@ -13,6 +13,7 @@ setuptools.setup(
     },
     install_requires = [
         'jinja2>=2.10',
+        'sonic-yang-models>=1.0',
         'netaddr==0.8.0',
         'pyyaml>=6.0.1',
     ],

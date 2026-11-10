@@ -62,7 +62,7 @@
         "desc": "Preserve an explicitly configured IS-IS LSP MTU of 1492.",
         "eStrKey": "Verify",
         "verify": {
-            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_GLOBALS_TIMERS/ISIS_GLOBALS_TIMERS_LIST[vrf_name='default']/vrf_name",
+            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_INSTANCE/ISIS_INSTANCE_LIST[vrf='default'][instance='CORE']/instance",
             "key": "sonic-isis-global:lsp_mtu",
             "value": 1492
         }
@@ -71,18 +71,88 @@
         "desc": "Verify the implicit native-aligned IS-IS LSP MTU default is 1497.",
         "eStrKey": "Verify",
         "verify": {
-            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_GLOBALS_TIMERS/ISIS_GLOBALS_TIMERS_LIST[vrf_name='default']/vrf_name",
+            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_INSTANCE/ISIS_INSTANCE_LIST[vrf='default'][instance='CORE']/instance",
             "key": "sonic-isis-global:lsp_mtu",
             "value": 1497
         }
     },
     "ISIS_IPV4_IMPLICIT_DEFAULT": {
-        "desc": "Verify omitted IS-IS IPv4 binding defaults to true for compatibility.",
+        "desc": "Omitted IPv4 routing defaults to false, matching FRR.",
         "eStrKey": "Verify",
         "verify": {
             "xpath": "/sonic-isis-interface:sonic-isis-interface/ISIS_INTERFACE/ISIS_INTERFACE_LIST[ifname='Loopback0']/ifname",
             "key": "sonic-isis-interface:ipv4_enabled",
-            "value": true
+            "value": false
         }
+    },
+    "ISIS_DISABLED_EDIT": {
+        "desc": "ISIS DISABLED EDIT"
+    },
+    "ISIS_MULTI_INSTANCE": {
+        "desc": "ISIS MULTI INSTANCE"
+    },
+    "ISIS_MISSING_BINDING_PARENT": {
+        "desc": "ISIS MISSING BINDING PARENT",
+        "eStrKey": "LeafRef"
+    },
+    "ISIS_SPF_PARTIAL": {
+        "desc": "ISIS SPF PARTIAL",
+        "eStrKey": "Must"
+    },
+    "ISIS_SPF_RELATION": {
+        "desc": "ISIS SPF RELATION",
+        "eStrKey": "Must"
+    },
+    "ISIS_OVERLOAD_RANGE": {
+        "desc": "ISIS OVERLOAD RANGE",
+        "eStrKey": "Range"
+    },
+    "ISIS_METRIC_ZERO": {
+        "desc": "ISIS METRIC ZERO"
+    },
+    "ISIS_LEVEL_ORPHAN": {
+        "desc": "ISIS LEVEL ORPHAN",
+        "eStrKey": "LeafRef"
+    },
+    "ISIS_REDISTRIBUTE": {
+        "desc": "ISIS REDISTRIBUTE"
+    },
+    "ISIS_REDISTRIBUTE_AF_MISMATCH": {
+        "desc": "ISIS REDISTRIBUTE AF MISMATCH",
+        "eStrKey": "Must"
+    },
+    "ISIS_SYSTEM_ID_MISMATCH": {
+        "desc": "ISIS SYSTEM ID MISMATCH",
+        "eStrKey": "Must"
+    },
+    "ISIS_SYSTEM_ID_CASE": {
+        "desc": "ISIS SYSTEM ID CASE"
+    },
+    "ISIS_ENABLED_WITHOUT_NET": {
+        "desc": "ISIS ENABLED WITHOUT NET",
+        "eStrKey": "Must"
+    },
+    "ISIS_NET_LIMIT": {
+        "desc": "ISIS NET LIMIT",
+        "eStrKey": "MaxElements"
+    },
+    "ISIS_GENERATION_REFRESH": {
+        "desc": "ISIS GENERATION REFRESH",
+        "eStrKey": "Must"
+    },
+    "ISIS_REDISTRIBUTE_MISSING_MAP": {
+        "desc": "ISIS redistribution missing route map",
+        "eStrKey": "LeafRef"
+    },
+    "ISIS_REDISTRIBUTE_ROUTE_MAP": {
+        "desc": "ISIS redistribution existing route map"
+    },
+    "ISIS_NET_CASE_DUPLICATE": {
+        "desc": "NET uniqueness is case-insensitive",
+        "eStrKey": "Must"
+    },
+    "ISIS_COMPOSITE_PARENT_REFERENCE": {
+        "desc": "Parent name in another VRF does not satisfy compound reference",
+        "eStrKey": "LeafRef"
     }
 }

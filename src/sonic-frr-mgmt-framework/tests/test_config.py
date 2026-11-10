@@ -17,7 +17,8 @@ swsscommon_module_mock = MagicMock(
 mockmapping = {'swsscommon.swsscommon': swsscommon_module_mock}
 
 @patch.dict('sys.modules', **mockmapping)
-def test_contructor():
+@patch('frrcfgd.isis_manager.RecoveryWorker')
+def test_contructor(worker):
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()
     daemon.start()

@@ -1,22 +1,27 @@
 {
     "ISIS_VALID": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -27,7 +32,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -44,22 +51,27 @@
     },
     "ISIS_NET_SHORT": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -70,7 +82,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -87,22 +101,27 @@
     },
     "ISIS_NET_NSEL": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.01"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.01"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -113,7 +132,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -130,22 +151,26 @@
     },
     "ISIS_UNKNOWN_VRF": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "VrfMissing",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "VrfMissing",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ]
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -156,7 +181,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "VrfMissing",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -173,22 +200,27 @@
     },
     "ISIS_MTU_LOW": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 127
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 127,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -199,7 +231,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -216,22 +250,27 @@
     },
     "ISIS_MTU_HIGH": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4353
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4353,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -242,7 +281,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -259,22 +300,27 @@
     },
     "ISIS_REFRESH_HIGH": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 65236,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -285,7 +331,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -302,22 +350,27 @@
     },
     "ISIS_LIFETIME_LOW": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 349
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 349
                     }
                 ]
             }
@@ -328,7 +381,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -345,22 +400,27 @@
     },
     "ISIS_TIMER_RELATION": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 1000,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -371,7 +431,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -388,22 +450,26 @@
     },
     "ISIS_TIMER_ORPHAN": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ]
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "VrfMissing",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "VrfMissing",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -414,7 +480,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -431,22 +499,27 @@
     },
     "ISIS_ORPHAN_INTERFACE": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -457,7 +530,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -465,22 +540,27 @@
     },
     "ISIS_VALID_VRF": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "Vrf2",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "Vrf2",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "Vrf2",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "Vrf2",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -491,7 +571,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "Vrf2",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -517,22 +599,27 @@
     },
     "ISIS_IPV6_ONLY": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -544,7 +631,9 @@
                         "ifname": "Loopback0",
                         "enabled": true,
                         "ipv6_enabled": true,
-                        "ipv4_enabled": false
+                        "ipv4_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -561,22 +650,27 @@
     },
     "ISIS_BOTH_AF_DISABLED": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -588,7 +682,9 @@
                         "ifname": "Loopback0",
                         "enabled": true,
                         "ipv6_enabled": false,
-                        "ipv4_enabled": false
+                        "ipv4_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -605,22 +701,27 @@
     },
     "ISIS_IPV4_INVALID_BOOL": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -632,7 +733,9 @@
                         "ifname": "Loopback0",
                         "enabled": true,
                         "ipv6_enabled": false,
-                        "ipv4_enabled": "invalid"
+                        "ipv4_enabled": "invalid",
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -649,22 +752,27 @@
     },
     "ISIS_MTU_EXPLICIT_1492": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 1492
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 1492,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -675,7 +783,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -692,21 +802,26 @@
     },
     "ISIS_MTU_IMPLICIT_DEFAULT": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ]
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -717,7 +832,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -734,22 +851,27 @@
     },
     "ISIS_IPV4_IMPLICIT_DEFAULT": {
         "sonic-isis-global:sonic-isis-global": {
-            "ISIS_GLOBALS": {
-                "ISIS_GLOBALS_LIST": [
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
                     {
-                        "vrf_name": "default",
                         "enabled": true,
-                        "net_title": "49.0001.1921.6800.0001.00"
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
                     }
                 ]
             },
-            "ISIS_GLOBALS_TIMERS": {
-                "ISIS_GLOBALS_TIMERS_LIST": [
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
                     {
-                        "vrf_name": "default",
-                        "lsp_mtu": 4000,
                         "lsp_refresh_interval": 900,
-                        "lsp_lifetime": 1200
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
                     }
                 ]
             }
@@ -760,7 +882,9 @@
                     {
                         "ifname": "Loopback0",
                         "enabled": true,
-                        "ipv6_enabled": false
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
                     }
                 ]
             }
@@ -770,6 +894,1083 @@
                 "LOOPBACK_INTERFACE_LIST": [
                     {
                         "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_DISABLED_EDIT": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000,
+                        "overload": true
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_MULTI_INSTANCE": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    },
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "EDGE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_MISSING_BINDING_PARENT": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "MISSING"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_SPF_PARTIAL": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000,
+                        "spf_init_delay": 1
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_SPF_RELATION": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000,
+                        "spf_init_delay": 1,
+                        "spf_short_delay": 10,
+                        "spf_long_delay": 100,
+                        "spf_hold_down": 100,
+                        "spf_time_to_learn": 100
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_OVERLOAD_RANGE": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000,
+                        "overload_on_startup": 86401
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_METRIC_ZERO": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            },
+            "ISIS_INTERFACE_LEVEL": {
+                "ISIS_INTERFACE_LEVEL_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "level": "level-1",
+                        "metric": 0
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVEL_ORPHAN": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            },
+            "ISIS_INTERFACE_LEVEL": {
+                "ISIS_INTERFACE_LEVEL_LIST": [
+                    {
+                        "ifname": "Missing",
+                        "level": "level-1",
+                        "metric": 10
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_REDISTRIBUTE": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            },
+            "ISIS_REDISTRIBUTE": {
+                "ISIS_REDISTRIBUTE_LIST": [
+                    {
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "af": "ipv4",
+                        "protocol": "connected",
+                        "level": "level-1",
+                        "metric": 20
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_REDISTRIBUTE_AF_MISMATCH": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            },
+            "ISIS_REDISTRIBUTE": {
+                "ISIS_REDISTRIBUTE_LIST": [
+                    {
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "af": "ipv6",
+                        "protocol": "ospf",
+                        "level": "level-1"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_SYSTEM_ID_MISMATCH": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    },
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "EDGE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0002.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_SYSTEM_ID_CASE": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.ABCD.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    },
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "EDGE",
+                        "net_titles": [
+                            "49.0002.abcd.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_ENABLED_WITHOUT_NET": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_NET_LIMIT": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00",
+                            "49.0002.1921.6800.0001.00",
+                            "49.0003.1921.6800.0001.00",
+                            "49.0004.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_GENERATION_REFRESH": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 30,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200,
+                        "lsp_generation_interval": 30
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_REDISTRIBUTE_MISSING_MAP": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            },
+            "ISIS_REDISTRIBUTE": {
+                "ISIS_REDISTRIBUTE_LIST": [
+                    {
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "af": "ipv4",
+                        "protocol": "connected",
+                        "level": "level-1",
+                        "metric": 20,
+                        "route_map": "EXPORT"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_REDISTRIBUTE_ROUTE_MAP": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            },
+            "ISIS_REDISTRIBUTE": {
+                "ISIS_REDISTRIBUTE_LIST": [
+                    {
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "af": "ipv4",
+                        "protocol": "connected",
+                        "level": "level-1",
+                        "metric": 20,
+                        "route_map": "EXPORT"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    {
+                        "name": "EXPORT"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_NET_CASE_DUPLICATE": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.ABCD.6800.0001.00",
+                            "49.0001.abcd.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "default",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "default",
+                        "instance": "CORE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_COMPOSITE_PARENT_REFERENCE": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_INSTANCE": {
+                "ISIS_INSTANCE_LIST": [
+                    {
+                        "enabled": true,
+                        "vrf": "Vrf2",
+                        "instance": "CORE",
+                        "net_titles": [
+                            "49.0001.1921.6800.0001.00"
+                        ],
+                        "lsp_mtu": 4000
+                    },
+                    {
+                        "vrf": "default",
+                        "instance": "EDGE",
+                        "enabled": false
+                    }
+                ]
+            },
+            "ISIS_INSTANCE_LEVEL": {
+                "ISIS_INSTANCE_LEVEL_LIST": [
+                    {
+                        "lsp_refresh_interval": 900,
+                        "vrf": "Vrf2",
+                        "instance": "CORE",
+                        "level": "level-1",
+                        "lsp_maximum_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "vrf": "Vrf2",
+                        "instance": "EDGE"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-vrf:sonic-vrf": {
+            "VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf2"
                     }
                 ]
             }

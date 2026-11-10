@@ -3982,35 +3982,95 @@ implemented dynamic configuration for BGP.
 
 ## IS-IS
 
-Keys are `ISIS_GLOBALS|<vrf_name>`, `ISIS_GLOBALS_TIMERS|<vrf_name>`, and
-`ISIS_INTERFACE|<ifname>`. The timer key references an existing global row. Interface
-keys reference PORT, PORTCHANNEL, VLAN_INTERFACE, LOOPBACK_INTERFACE or
-VLAN_SUB_INTERFACE entries. Global VRFs reference VRF, except `default`.
-ConfigDB stores scalar values as strings; YANG validates the following types.
+The implemented table names are below. Scalar columns map directly to FRR attributes;
+splitting tables follows ownership and key dimensions, not CLI command grouping.
 
-| Table | Field | YANG type / range | Default |
-| --- | --- | --- | --- |
-| ISIS_GLOBALS | enabled | boolean | false |
-| ISIS_GLOBALS | net_title | string matching `[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00` | absent |
-| ISIS_GLOBALS | level | level-1, level-2, level-1-2 | level-1-2 |
-| ISIS_GLOBALS | dynamic_hostname | boolean | true |
-| ISIS_GLOBALS | ipv6_multi_topology | boolean | true |
-| ISIS_GLOBALS_TIMERS | lsp_mtu | uint16, 128–4352 | 1497 |
-| ISIS_GLOBALS_TIMERS | lsp_refresh_interval | uint16, 1–65235 seconds | 900 |
-| ISIS_GLOBALS_TIMERS | lsp_lifetime | uint16, 350–65535 seconds | 1200 |
-| ISIS_INTERFACE | enabled | boolean | false |
-| ISIS_INTERFACE | ipv4_enabled | boolean | true |
-| ISIS_INTERFACE | ipv6_enabled | boolean | true |
-| ISIS_INTERFACE | metric | uint32, 1–16777215 | 10 |
-| ISIS_INTERFACE | circuit_type | p2p, lan | lan |
-| ISIS_INTERFACE | passive | boolean | absent (not passive) |
+| Table | Key | Fields / purpose |
+| -------------- | --- | ---------------- |
+| `ISIS_INSTANCE` | `vrf\|instance` | `enabled`, NET list, `level_type`, `dynamic_hostname`, `metric_style`, `lsp_mtu`, `overload`, `overload_on_startup`, `ipv6_multi_topology`; optional complete SPF backoff tuple |
+| `ISIS_INSTANCE_LEVEL` | `vrf\|instance\|level` | `lsp_refresh_interval`, `lsp_maximum_lifetime`, `lsp_generation_interval`, `spf_minimum_interval` |
+| `ISIS_INTERFACE` | `interface` | Parent `vrf` and `instance`, `enabled`, `ipv4_enabled`, `ipv6_enabled`, `level_type`, `network_type`, `passive` |
+| `ISIS_INTERFACE_LEVEL` | `interface\|level` | `metric`, `hello_interval`, `hello_multiplier`; other per-level interface controls only as explicitly scoped |
+| `ISIS_REDISTRIBUTE` | `vrf\|instance\|af\|protocol\|level` | Optional `metric`, `route_map`; row presence enables this policy |
 
-Lifetime must be at least refresh interval + 300 seconds, including when either
-field is omitted and its default applies. CLI reset operations enforce this too.
+There is no replacement catch-all timer table. LSP MTU belongs to the instance;
+LSP and minimum-SPF timers belong to the instance/level; hello timers belong to the
+interface/level. SPF IETF backoff is an instance-wide tuple in this FRR model.
+Redistribution is keyed by AF, source protocol and destination level, not stored
+as a single process-wide boolean.
 
-IPv4 and IPv6 bindings can be enabled independently. Both flags default to true
-to preserve existing dual-stack configurations. Set ipv4_enabled to false for an
-IPv6-only interface. With both flags false, the row is retained without an IS-IS
-circuit; interface attributes are applied when an address family is enabled again.
-Resetting lsp_mtu restores the native FRR default of 1497; explicitly configured
-valid values are preserved.
+NETs are a bounded list (FRR allows up to three), not separate instances. Schema
+encoding must preserve list semantics and reject incompatible system IDs. FRR
+shares per-VRF state between areas; different area-tags must not be advertised as
+independent system-ID namespaces.
+
+The interface key intentionally permits only one area binding per logical
+interface. A VRF/instance composite reference must validate against the parent.
+All child tables require referential validation, including configuration loads
+that bypass Click. Key strings must reject Redis delimiters and unsafe FRR command
+tokens; final length/character restrictions must be checked against existing SONiC
+VRF/interface types and pinned FRR area-tag handling.
+
+### Defaults and validation
+
+| Attribute | Effective default / constraint | Source or policy |
+| --------- | --------------------------------------- | ---------------- |
+| Instance/interface admin state | Disabled until explicitly enabled | Northbound policy |
+| Instance/interface level | `level-1-2` | Pinned FRR |
+| IPv4 / IPv6 routing | Independently false until enabled | Pinned FRR; deliberate change from current PR's dual-stack defaults |
+| Dynamic hostname | true | Pinned FRR |
+| Metric style | wide | Pinned FRR; required for MT |
+| LSP MTU | 1497; 128..4352 | Pinned FRR, not 1492 |
+| LSP refresh / maximum lifetime / generation | 900 / 1200 / 30 seconds, per level | Pinned FRR |
+| Minimum SPF interval | 1 second, per level; 1..120 | Pinned FRR |
+| IETF SPF backoff | Absent until the complete five-value tuple is supplied; each 0..60000 ms | Pinned FRR presence container |
+| Overload / overload on startup | false / 0 seconds; startup 0..86400 | Pinned FRR |
+| Interface metric | 10 per level | Pinned FRR |
+| Hello interval / multiplier | 3 seconds / 10 per level | Pinned FRR |
+| Network type / passive | broadcast / false | Pinned FRR; platform/interface applicability still validated |
+
+Validate LSP lifetime >= refresh + 300 and generation < refresh using effective
+values, including absent fields. Validate all five backoff values together and
+the RFC 8405 hold-down/time-to-learn relationship. The pinned FRR scheduler uses
+IETF backoff when configured; otherwise it uses the per-level minimum interval.
+Minimum-interval values remain configured while backoff is active and apply again
+after backoff reset. The northbound does not invent an exclusivity restriction or
+separate per-level backoff tuples.
+
+`both` is a CLI convenience that writes concrete Level-1 and Level-2 values.
+There is no persisted inherited `both` value. Resetting Level-1 deletes only its
+override; it does not copy Level-2. Validate the complete proposed operation before
+writing either row. The CLI captures the relevant graph with one Redis Lua evaluation, validates the
+candidate, then compares and commits all affected rows atomically in another
+evaluation. A concurrent graph change rejects the operation for retry. Runtime
+uses an independent atomic snapshot, rather than reconstructing transactions from
+individual keyspace notifications.
+
+ConfigDB scalar values are strings. `net_titles` is a JSON list, encoded by
+ConfigDB as the `net_titles@` Redis hash field. The NET list is optional while
+disabled, required while enabled, and contains at most three unique values.
+Parent references use both VRF and instance, never instance alone. Interface
+level rows reference the interface binding. Redistribution route maps reference
+`ROUTE_MAP_SET`. Direct Redis writes bypass schema validation; use validated
+configuration workflows. The runtime validates its complete snapshot before I/O.
+
+#### Field ranges
+
+| Table | Field | Valid values |
+| ----- | ----- | ------------ |
+| ISIS_INSTANCE | net_titles | Up to three unique NETs; same system ID within one VRF; zero NSEL |
+| ISIS_INSTANCE | spf_init_delay, spf_short_delay, spf_long_delay, spf_hold_down, spf_time_to_learn | All five together, each 0–60000 ms; hold-down > time-to-learn |
+| ISIS_INSTANCE_LEVEL | lsp_refresh_interval | 1–65235 seconds |
+| ISIS_INSTANCE_LEVEL | lsp_maximum_lifetime | 350–65535 seconds; at least refresh + 300 |
+| ISIS_INSTANCE_LEVEL | lsp_generation_interval | 1–120 seconds; less than refresh |
+| ISIS_INTERFACE_LEVEL | metric | 0–16777215 |
+| ISIS_INTERFACE_LEVEL | hello_interval | 1–600 seconds |
+| ISIS_INTERFACE_LEVEL | hello_multiplier | 2–100 |
+| ISIS_REDISTRIBUTE | metric | 0–16777215; default 0 |
+| ISIS_REDISTRIBUTE | route_map | Optional existing ROUTE_MAP_SET name |
+
+Instance names and safe command identifiers use 1–64 characters from letters,
+digits, underscore, dot and hyphen; the first character is a letter, digit or
+underscore. Existing routed-interface and VRF constraints also apply. The CLI
+uses dashed field names (for example `lsp-maximum-lifetime`); ConfigDB uses the
+underscore spellings above.

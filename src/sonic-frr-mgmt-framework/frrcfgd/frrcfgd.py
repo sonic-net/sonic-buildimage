@@ -123,9 +123,6 @@ class BgpdClientMgr(threading.Thread):
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
             'SRV6_MY_SIDS': ['mgmtd'],
-            'ISIS_GLOBALS': ['isisd'],
-            'ISIS_GLOBALS_TIMERS': ['isisd'],
-            'ISIS_INTERFACE': ['isisd'],
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -2497,23 +2494,9 @@ class BGPConfigDaemon:
                                         nh_attr('ifname'), nh_attr('tag'), nh_attr('distance'),
                                         nh_attr('nexthop-vrf'))
 
-        # Desired routed-interface VRFs and successfully applied IS-IS bindings.
-        self.isis_interface_vrfs = {}
-        self.isis_interface_bindings = {}
-        self.isis_pending_bindings = {}
-        for table in self.ISIS_ROUTED_INTERFACE_TABLES:
-            for name, entry in self.config_db.get_table(table).items():
-                if isinstance(name, str) and '|' not in name:
-                    self.isis_interface_vrfs[name] = entry.get('vrf_name', 'default')
-        if not (self.config_mode == 'unified' and self.use_template_render_for_restore == 'false'):
-            # The startup template has restored these bindings before event processing.
-            for name, entry in self.config_db.get_table('ISIS_INTERFACE').items():
-                vrf = self.isis_interface_vrfs.get(name, 'default')
-                if (entry.get('enabled') == 'true' and
-                        (str(entry.get('ipv4_enabled', 'true')).lower() == 'true' or
-                         str(entry.get('ipv6_enabled', 'true')).lower() == 'true') and
-                        self.config_db.get_entry('ISIS_GLOBALS', vrf).get('enabled') == 'true'):
-                    self.isis_interface_bindings[name] = vrf
+        # IS-IS owns an independent bounded native worker; it never uses the
+        # BGP command-manager lock or infers applied state from desired rows.
+        self.isis_worker = None
 
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
@@ -2560,9 +2543,11 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
-            ('ISIS_GLOBALS', self.bgp_table_handler_common),
-            ('ISIS_GLOBALS_TIMERS', self.bgp_table_handler_common),
-            ('ISIS_INTERFACE', self.bgp_table_handler_common),
+            ('ISIS_INSTANCE', self.isis_table_handler),
+            ('ISIS_INSTANCE_LEVEL', self.isis_table_handler),
+            ('ISIS_INTERFACE', self.isis_table_handler),
+            ('ISIS_INTERFACE_LEVEL', self.isis_table_handler),
+            ('ISIS_REDISTRIBUTE', self.isis_table_handler),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -2571,6 +2556,8 @@ class BGPConfigDaemon:
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
         if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
             for table, _ in self.table_handler_list:
+                if table.startswith('ISIS_'):
+                    continue  # The worker reads and reconciles a complete graph.
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
@@ -2579,15 +2566,15 @@ class BGPConfigDaemon:
     ISIS_ROUTED_INTERFACE_TABLES = ('INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE',
                                     'LOOPBACK_INTERFACE', 'VLAN_SUB_INTERFACE')
 
+    def isis_table_handler(self, table, key, data):
+        if self.isis_worker is not None:
+            self.isis_worker.notify()
+
     def isis_routed_interface_handler(self, table, key, data):
-        """Reconcile only the interface row, not address-prefix rows."""
-        if not isinstance(key, str) or '|' in key:
-            return
-        # Use the event payload: rereading ConfigDB can observe a later event.
-        self.isis_interface_vrfs[key] = None if data is None else data.get('vrf_name', 'default')
-        row = self.config_db.get_entry('ISIS_INTERFACE', key)
-        if row or key in self.isis_interface_bindings or key in self.isis_pending_bindings:
-            self.bgp_table_handler_common('ISIS_INTERFACE', key, row or None)
+        # Address-only events do not change instance identity. Periodic snapshots
+        # also recover events missed while this daemon was stopped.
+        if isinstance(key, str) and '|' not in key:
+            self.isis_table_handler(table, key, data)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -4093,142 +4080,6 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_ERR, 'failed running ip igmp interface config command')
                     continue
 
-            elif table in ('ISIS_GLOBALS', 'ISIS_GLOBALS_TIMERS', 'ISIS_INTERFACE'):
-                if not self._apply_isis(table, prefix, del_table, data):
-                    syslog.syslog(syslog.LOG_ERR, 'failed running {} config command'.format(table))
-                    continue
-
-    def _apply_isis(self, table, key, deleted, data, reset_timers=False):
-        """Apply lifecycle and attributes together, including enable-only rows."""
-        current = {name: value.data for name, value in data.items()
-                   if value.op != CachedDataWithOp.OP_DELETE}
-        old = self.table_data_cache.get(ExtConfigDBConnector.get_table_key(table, key), {})
-        if reset_timers:
-            old = {}
-        commands = ['configure terminal']
-        detached_names = set()
-        router = 'router isis ' + key + ((' vrf ' + key) if key != 'default' else '')
-        if table == 'ISIS_GLOBALS':
-            if deleted or str(current.get('enabled', 'false')).lower() != 'true':
-                # Detach circuits before deleting their parent. Keep desired rows
-                # untouched so re-enable can restore all attributes. A failed
-                # detach must prevent parent removal and preserve retry state.
-                names = set(self.isis_interface_bindings) | set(self.isis_pending_bindings)
-                for name in sorted(names):
-                    if (self.isis_interface_bindings.get(name) != key and
-                            key not in self.isis_pending_bindings.get(name, set())):
-                        continue
-                    if not self._apply_isis('ISIS_INTERFACE', name, True, {}):
-                        return False
-                    detached_names.add(name)
-                commands.append('no ' + router)
-            else:
-                commands.append(router)
-                commands.append(('' if str(current.get('ipv6_multi_topology', 'true')).lower() == 'true'
-                                 else 'no ') + 'topology ipv6-unicast')
-                if old.get('net_title') and old['net_title'] != current.get('net_title'):
-                    commands.append('no net ' + old['net_title'])
-                if current.get('net_title'):
-                    commands.append('net ' + current['net_title'])
-                level = current.get('level', 'level-1-2')
-                commands.append('is-type ' + ('level-2-only' if level == 'level-2' else level))
-                commands.append(('' if str(current.get('dynamic_hostname', 'true')).lower() == 'true'
-                                 else 'no ') + 'hostname dynamic')
-        elif table == 'ISIS_GLOBALS_TIMERS':
-            # A late timer deletion must not recreate a removed process.
-            if self.config_db.get_entry('ISIS_GLOBALS', key).get('enabled') == 'true':
-                commands.append(router)
-                refresh = int(current.get('lsp_refresh_interval', 900))
-                lifetime = int(current.get('lsp_lifetime', 1200))
-                refresh_cmd = ('lsp-refresh-interval ' + str(refresh) if 'lsp_refresh_interval' in current
-                               else 'no lsp-refresh-interval')
-                lifetime_cmd = ('max-lsp-lifetime ' + str(lifetime) if 'lsp_lifetime' in current
-                                else 'no max-lsp-lifetime')
-                # Preserve FRR's lifetime >= refresh + 300 invariant at each step.
-                if lifetime >= int(old.get('lsp_lifetime', 1200)):
-                    commands.extend([lifetime_cmd, refresh_cmd])
-                else:
-                    commands.extend([refresh_cmd, lifetime_cmd])
-                commands.append('lsp-mtu ' + current['lsp_mtu'] if 'lsp_mtu' in current else 'no lsp-mtu')
-        else:
-            vrf = self.isis_interface_vrfs.get(key, 'default')
-            bound_vrf = self.isis_interface_bindings.get(key)
-            pending_vrfs = self.isis_pending_bindings.get(key, set())
-            commands.append('interface ' + key)
-            ipv4 = str(current.get('ipv4_enabled', 'true')).lower() == 'true'
-            ipv6 = str(current.get('ipv6_enabled', 'true')).lower() == 'true'
-            enabled = (not deleted and vrf is not None and
-                       (ipv4 or ipv6) and
-                       str(current.get('enabled', 'false')).lower() == 'true' and
-                       self.config_db.get_entry('ISIS_GLOBALS', vrf).get('enabled') == 'true')
-            remove_vrfs = set(pending_vrfs)
-            if bound_vrf is not None and (not enabled or bound_vrf != vrf):
-                remove_vrfs.add(bound_vrf)
-            for previous_vrf in sorted(remove_vrfs):
-                commands.extend(['no ip router isis ' + previous_vrf,
-                                 'no ipv6 router isis ' + previous_vrf])
-            # A removed routed interface has no new instance to configure.
-            if vrf is None:
-                vrf = bound_vrf or 'default'
-            if enabled:
-                commands.append(('' if ipv4 else 'no ') + 'ip router isis ' + vrf)
-                commands.append(('' if ipv6 else 'no ') + 'ipv6 router isis ' + vrf)
-                commands.append(('' if str(current.get('passive', 'false')).lower() == 'true'
-                                 else 'no ') + 'isis passive')
-                commands.append('isis metric ' + current['metric'] if 'metric' in current else 'no isis metric')
-                commands.append(('' if current.get('circuit_type', 'lan') == 'p2p' else 'no ') +
-                                'isis network point-to-point')
-        if table == 'ISIS_INTERFACE' and not enabled and bound_vrf is None and not pending_vrfs:
-            commands = ['configure terminal']
-        command = ['vtysh']
-        for item in commands:
-            command.extend(['-c', item])
-        if len(commands) > 1 and not self.__run_command(table, command):
-            if table == 'ISIS_INTERFACE':
-                # vtysh can partially apply a batch. Remember every possible
-                # destination so a retry/delete also removes a partial new bind.
-                possible_vrfs = set(pending_vrfs)
-                if bound_vrf is not None:
-                    possible_vrfs.add(bound_vrf)
-                if enabled:
-                    possible_vrfs.add(vrf)
-                self.isis_pending_bindings[key] = possible_vrfs
-            return False
-        if table == 'ISIS_INTERFACE':
-            self.isis_pending_bindings.pop(key, None)
-            if enabled:
-                self.isis_interface_bindings[key] = vrf
-            else:
-                self.isis_interface_bindings.pop(key, None)
-        elif table == 'ISIS_GLOBALS':
-            # A recreated process starts with FRR defaults, even when the timer
-            # row was retained and therefore produces no new ConfigDB event.
-            if current.get('enabled') == 'true' and old.get('enabled') != 'true':
-                timers = self.config_db.get_entry('ISIS_GLOBALS_TIMERS', key)
-                if timers:
-                    timer_data = {field: CachedDataWithOp(value, CachedDataWithOp.OP_UPDATE)
-                                  for field, value in timers.items()}
-                    if not self._apply_isis('ISIS_GLOBALS_TIMERS', key, False, timer_data,
-                                            reset_timers=True):
-                        return False
-            # Target process creation may arrive after a VRF move; retry bindings
-            # then, and detach bindings when their process is disabled/deleted.
-            interfaces = self.config_db.get_table('ISIS_INTERFACE')
-            for name in set(interfaces) | set(self.isis_interface_bindings) | set(self.isis_pending_bindings):
-                if (self.isis_interface_vrfs.get(name, 'default') != key and
-                        self.isis_interface_bindings.get(name) != key and
-                        key not in self.isis_pending_bindings.get(name, set()) and
-                        name not in detached_names):
-                    continue
-                row = interfaces.get(name, {})
-                interface_data = {field: CachedDataWithOp(value, CachedDataWithOp.OP_UPDATE)
-                                  for field, value in row.items()}
-                if not self._apply_isis('ISIS_INTERFACE', name, not row, interface_data):
-                    return False
-        for value in data.values():
-            value.status = CachedDataWithOp.STAT_SUCC
-        return True
-
     def __add_op_to_data(self, table_key, data, comb_attr_list):
         cached_data = self.table_data_cache.setdefault(table_key, {})
         for key in cached_data:
@@ -4333,7 +4184,17 @@ class BGPConfigDaemon:
     def start(self):
         self.subscribe_all()
         self.config_db.listen()
+        from .isis_manager import RecoveryWorker
+        def report(result):
+            status = getattr(result, 'status', 'error')
+            reason = getattr(result, 'reason', str(result))
+            priority = syslog.LOG_INFO if status == 'applied' else syslog.LOG_ERR
+            syslog.syslog(priority, '[isis] {}: {}'.format(status, reason))
+        self.isis_worker = RecoveryWorker(report=report)
+        self.isis_worker.start()
     def stop(self):
+        if self.isis_worker is not None:
+            self.isis_worker.stop()
         self.config_db.stop_listen()
         if self.config_db.sub_thread.is_alive():
             self.config_db.sub_thread.join()
@@ -4353,6 +4214,9 @@ def main():
     bgpd_client = BgpdClientMgr()
     bgpd_client.start()
     daemon = BGPConfigDaemon()
+    # An explicit retry opens a new bounded IS-IS recovery attempt only.
+    signal.signal(signal.SIGHUP, lambda signum, frame: daemon.isis_worker.request_retry()
+                  if daemon.isis_worker is not None else None)
     daemon.start()
     while main_loop:
         signal.pause()
