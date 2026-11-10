@@ -4,6 +4,7 @@
 #
 
 try:
+    import errno
     import time
     import os
     import logging
@@ -112,7 +113,11 @@ class SfpUtil(SfpUtilBase):
 
         try:
             cache_dir = "/var/cache/sonic/sfp"
-            os.makedirs(cache_dir, mode=0o755, exist_ok=True)
+            try:
+                os.makedirs(cache_dir, mode=0o755)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
             cache_fd = os.open(cache_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
             try:
                 # Execute bits allow directory traversal; write access remains owner-only.
@@ -134,14 +139,14 @@ class SfpUtil(SfpUtilBase):
                             sfp_eeprom.write(data)
                             os.fchmod(sfp_eeprom.fileno(), 0o644)
                         # Replace the cache entry without following old links.
-                        os.replace(sfp_eeprom.name, self.eeprom_mapping[x])
+                        os.rename(sfp_eeprom.name, self.eeprom_mapping[x])
                     finally:
                         if os.path.lexists(sfp_eeprom.name):
                             os.unlink(sfp_eeprom.name)
                 else:
                     DBG_PRINT("get sfp{} eeprom data failed.".format(x))
                     break
-        except IOError as e:
+        except (IOError, OSError) as e:
             DBG_PRINT(str(e))
 
         SfpUtilBase.__init__(self)
