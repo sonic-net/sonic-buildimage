@@ -1,13 +1,11 @@
 use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::{BufRead, BufReader},
-    process::Command,
+    collections::HashMap, fs::{self, File}, io::{BufRead, BufReader}, os::{fd::AsFd, unix::fs::OpenOptionsExt}, process::Command
 };
 
 use anyhow::Context;
 use log::{debug, info, warn};
 use regex::regex;
+use rustix::fs::{linkat, AtFlags, OFlags, CWD};
 use swss_common::{CxxString, KeyOperation};
 
 use crate::db_listener::SonicDatabaseChanges;
@@ -26,36 +24,37 @@ impl SyslogConfigUpdater {
             "Service name {service_name} contains \", which is not allowed"
         );
 
-        let file = File::open("/etc/rsyslog.conf")
-            .context("Unable to open rsyslogd config file at /etc/rsyslog.conf")?;
-        let buf_reader = BufReader::new(file);
         let mut rate_limit_interval = 0;
         let mut rate_limit_burst = 0;
-        for line in buf_reader.lines() {
-            let line_content = line.context("Unable to read rsyslogd config file")?;
-            if let Some(interval_regex_capture) =
-                regex!(r#".*SysSock.RateLimit.Interval\s*=\s*"(\d+)".*"#).captures(&line_content)
-            {
-                let current_interval_str = interval_regex_capture
-                    .get(1)
-                    .context("Missing capture group for getting interval regex")?
-                    .as_str();
-                rate_limit_interval = current_interval_str
-                    .parse()
-                    .context("Unable to parse interval")
-                    .unwrap();
-            }
-            if let Some(burst_regex_capture) =
-                regex!(r#".*SysSock.RateLimit.Burst\s*=\s*"(\d+)".*"#).captures(&line_content)
-            {
-                let current_burst_str = burst_regex_capture
-                    .get(1)
-                    .context("Missing capture group for getting interval regex")?
-                    .as_str();
-                rate_limit_burst = current_burst_str
-                    .parse()
-                    .context("Unable to parse burst")
-                    .unwrap();
+
+        if let Ok(file) = File::open("/etc/rsyslog.conf") {
+            let buf_reader = BufReader::new(file);
+            for line in buf_reader.lines() {
+                let line_content = line.context("Unable to read rsyslogd config file")?;
+                if let Some(interval_regex_capture) =
+                    regex!(r#".*SysSock.RateLimit.Interval\s*=\s*"(\d+)".*"#).captures(&line_content)
+                {
+                    let current_interval_str = interval_regex_capture
+                        .get(1)
+                        .context("Missing capture group for getting interval regex")?
+                        .as_str();
+                    rate_limit_interval = current_interval_str
+                        .parse()
+                        .context("Unable to parse interval")
+                        .unwrap();
+                }
+                if let Some(burst_regex_capture) =
+                    regex!(r#".*SysSock.RateLimit.Burst\s*=\s*"(\d+)".*"#).captures(&line_content)
+                {
+                    let current_burst_str = burst_regex_capture
+                        .get(1)
+                        .context("Missing capture group for getting interval regex")?
+                        .as_str();
+                    rate_limit_burst = current_burst_str
+                        .parse()
+                        .context("Unable to parse burst")
+                        .unwrap();
+                }
             }
         }
 
@@ -92,7 +91,6 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
         };
         if self.rate_limit_interval != new_rate_limit_interval {
             info!("Setting rate limit interval to {}", new_rate_limit_interval);
-            self.rate_limit_interval = new_rate_limit_interval;
             values_changed = true;
         }
 
@@ -105,16 +103,17 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
         };
         if self.rate_limit_burst != new_rate_limit_burst {
             info!("Setting rate limit burst to {}", new_rate_limit_burst);
-            self.rate_limit_burst = new_rate_limit_burst;
             values_changed = true;
         }
 
         if values_changed {
             let file = File::options()
-                .create(true)
+                .read(true)
                 .write(true)
-                .truncate(true)
-                .open("/tmp/rsyslog.conf")?;
+                .custom_flags(OFlags::TMPFILE.bits() as i32)
+                .mode(0o644)
+                .open("/etc/")?;
+            let file_for_linkto = file.try_clone().context("Unable to clone the temp file")?;
 
             let json_args = format!(r#"{{"container_name": "{}"}}"#, self.service_name);
             let exit_code = Command::new("sonic-cfggen")
@@ -131,11 +130,12 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
                 exit_code.success(),
                 "Failed to generate the updated rsyslog.conf: {exit_code}"
             );
-            fs::copy("/tmp/rsyslog.conf", "/etc/rsyslog.conf")
-                .context("Unable to replace /etc/rsyslog.conf with the updated configuration")?;
-            if let Err(err) = fs::remove_file("/tmp/rsyslog.conf") {
-                warn!("Unable to remove temporary file: {}", err);
-            }
+            // Note: If `remove_file` succeeds, but `linkat` fails, then `/etc/rsyslog.conf` will
+            // not be present, and any restarts of rsyslogd will fail.
+            fs::remove_file("/etc/rsyslog.conf")
+                .context("Unable to remove the existing /etc/rsyslog.conf file")?;
+            linkat(file_for_linkto, "", CWD, "/etc/rsyslog.conf", AtFlags::EMPTY_PATH)
+                .context("Unable to update /etc/rsyslog.conf with the updated configuration")?;
             let exit_code = Command::new("supervisorctl")
                 .args(["restart", "rsyslogd"])
                 .status()?;
@@ -143,6 +143,9 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
                 exit_code.success(),
                 "Failed to restart rsyslog: {exit_code}"
             );
+
+            self.rate_limit_interval = new_rate_limit_interval;
+            self.rate_limit_burst = new_rate_limit_burst;
         }
 
         Ok(())

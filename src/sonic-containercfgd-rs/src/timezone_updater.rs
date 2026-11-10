@@ -85,6 +85,10 @@ impl SonicDatabaseChanges for TimezoneUpdater {
                         timezone_path.exists(),
                         "Timezone file at {timezone_path:?} doesn't exist, not updating timezone"
                     );
+                    anyhow::ensure!(
+                        timezone_path.is_file(),
+                        "{timezone_path:?} is not a timezone file, not updating timezone"
+                    );
                     let timezone_symlink_path = Path::new("/etc/localtime");
                     if timezone_symlink_path.exists() {
                         fs::remove_file("/etc/localtime")
