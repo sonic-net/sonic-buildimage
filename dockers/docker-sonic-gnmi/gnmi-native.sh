@@ -135,6 +135,9 @@ fi
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024)) -max_send_msg_size=$((32*1024*1024))"
+else
+    # Whole-table gNMI responses can exceed gRPC's default 4 MiB send limit.
+    TELEMETRY_ARGS+=" -max_send_msg_size=$((16*1024*1024))"
 fi
 
 GNMI_VRF=$(extract_field "$GNMI" '.vrf')
