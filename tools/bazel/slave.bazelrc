@@ -9,8 +9,8 @@
 # (e.g. bazel build --config=slave ...).
 # However, startup options cannot be gated by configuration, so we must resort to composing bazelrc files.
 
-# Generated from the slave's effective versions-web, independently of cache availability.
-common --downloader_config=/usr/local/share/buildinfo/bazel-downloader.config
+# Generated after slave version preparation; absent in an uninitialized shell.
+try-import /usr/local/share/buildinfo/bazel-downloader.bazelrc
 
 # Makefile.work mounts this optional config alongside a writable /bazel_cache.
 try-import /etc/bazel-cache.bazelrc

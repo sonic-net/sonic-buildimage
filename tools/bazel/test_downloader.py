@@ -97,6 +97,10 @@ class DownloadTests(unittest.TestCase):
         self.config.write_text(
             generate_config(url + "==" + checksum, base + "/mirror")
         )
+        self.downloader_rc = self.root / "downloader.bazelrc"
+        self.downloader_rc.write_text(
+            "common --downloader_config={}\n".format(self.config)
+        )
         tools = Path(__file__).resolve().parent
         self.cache_rc = self.root / "cache.bazelrc"
         self.cache_rc.write_text(
@@ -108,8 +112,8 @@ class DownloadTests(unittest.TestCase):
         self.rc.write_text(
             (tools / "slave.bazelrc").read_text()
             .replace(
-                "/usr/local/share/buildinfo/bazel-downloader.config",
-                str(self.config),
+                "/usr/local/share/buildinfo/bazel-downloader.bazelrc",
+                str(self.downloader_rc),
             )
             .replace("/etc/bazel-cache.bazelrc", str(self.cache_rc))
         )
@@ -182,6 +186,15 @@ class DownloadTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, result.stdout)
         self.assertIn(self.mirror_path, self.requests)
         self.assertIn("Checksum", result.stdout)
+
+    def test_uninitialized_slave_keeps_native_upstream_download(self):
+        self.downloader_rc.unlink()
+        self.config.unlink()
+        self.responses[self.upstream_path] = (200, self.payload)
+        result = self.fetch()
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn(self.upstream_path, self.requests)
+        self.assertNotIn(self.mirror_path, self.requests)
 
 
 if __name__ == "__main__":

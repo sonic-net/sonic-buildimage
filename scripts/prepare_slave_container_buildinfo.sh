@@ -29,7 +29,8 @@ scripts/versions_manager.py generate -t "/usr/local/share/buildinfo/versions" -n
 touch ${BUILDINFO_PATH}/versions/versions-deb ${BUILDINFO_PATH}/versions/versions-web
 
 BAZEL_DOWNLOADER_CONFIG="${BUILDINFO_PATH}/bazel-downloader.config"
-rm -f "$BAZEL_DOWNLOADER_CONFIG"
+BAZEL_DOWNLOADER_RC="${BUILDINFO_PATH}/bazel-downloader.bazelrc"
+rm -f "$BAZEL_DOWNLOADER_CONFIG" "$BAZEL_DOWNLOADER_RC"
 if [ "$ENABLE_VERSION_CONTROL_WEB" == "y" ]; then
     python3 tools/bazel/generate_downloader_config.py \
         --versions "$WEB_VERSION_FILE" --mirror "$BUILD_PACKAGES_URL" \
@@ -37,6 +38,8 @@ if [ "$ENABLE_VERSION_CONTROL_WEB" == "y" ]; then
 else
     touch "$BAZEL_DOWNLOADER_CONFIG"
 fi
+printf 'common --downloader_config=%s\n' "$BAZEL_DOWNLOADER_CONFIG" \
+    > "$BAZEL_DOWNLOADER_RC" || exit 1
 
 sudo rm -f /etc/apt/preferences.d/01-versions-deb
 ([ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ -f $VERSION_DEB_PREFERENCE ]) && sudo cp -f $VERSION_DEB_PREFERENCE /etc/apt/preferences.d/
