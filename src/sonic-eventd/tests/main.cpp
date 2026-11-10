@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "dbconnector.h"
+#include <swss/dbconnector.h>
 #include <iostream>
 #include <stdexcept>
 

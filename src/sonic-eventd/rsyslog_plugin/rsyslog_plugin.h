@@ -10,9 +10,9 @@ extern "C"
 #include <string>
 #include <memory>
 #include <csignal>
+#include <swss/logger.h>
+#include <swss/events.h>
 #include "syslog_parser.h"
-#include "events.h"
-#include "logger.h"
 
 using namespace std;
 using namespace swss;
@@ -45,4 +45,3 @@ private:
 };
 
 #endif
-

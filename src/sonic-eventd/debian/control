@@ -2,7 +2,7 @@ Source: sonic-eventd
 Section: devel
 Priority: optional
 Maintainer: Renuka Manavalan <remanava@microsoft.com>
-Build-Depends: debhelper (>= 12.0.0), libevent-dev, libboost-thread-dev | libboost-thread1.83-dev, libboost-system-dev | libboost-system1.83-dev, libswsscommon-dev, liblua5.1-0
+Build-Depends: debhelper (>= 12.0.0), libswsscommon-dev, liblua5.1-0, libzmq3-dev, libboost-serialization1.83-dev
 Standards-Version: 3.9.3
 Homepage: https://github.com/Azure/sonic-buildimage
 XS-Go-Import-Path: github.com/Azure/sonic-buildimage
