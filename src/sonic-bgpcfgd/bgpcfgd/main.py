@@ -81,7 +81,7 @@ def do_work():
         'cfg_mgr':   ConfigMgr(frr),
         'tf':        TemplateFabric(),
         'constants': read_constants(),
-        'state_db_conn': swsscommon.DBConnector("STATE_DB", 0)
+        'state_db_conn': swsscommon.DBConnector("STATE_DB", 0, False)
     }
     managers = [
         # Config DB managers
@@ -128,7 +128,7 @@ def do_work():
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
 
-    config_db = ConfigDBConnector()
+    config_db = ConfigDBConnector(use_unix_socket_path=True)
     config_db.connect()
     sys_defaults = config_db.get_table('SYSTEM_DEFAULTS')
     if 'software_bfd' in sys_defaults and 'status' in sys_defaults['software_bfd'] and sys_defaults['software_bfd']['status'] == 'enabled':

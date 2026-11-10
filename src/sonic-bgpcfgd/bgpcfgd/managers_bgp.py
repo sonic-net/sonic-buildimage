@@ -441,7 +441,7 @@ class BGPPeerMgrBase(Manager):
             key = vrf + "|" + nbr
         # Update the peer in the STATE_DB table
         try:
-            state_db = swsscommon.DBConnector("STATE_DB", 0)
+            state_db = swsscommon.DBConnector("STATE_DB", 0, False)
             state_peer_table = swsscommon.Table(state_db, swsscommon.STATE_BGP_PEER_CONFIGURED_TABLE_NAME)
             if (op == "SET"):
                 state_peer_table.set(key, list(sorted(data.items())))

@@ -5,6 +5,7 @@ obj-m += nh_isl68137.o
 obj-m += nh_pmbus_core.o
 obj-m += nh_tmp464.o
 obj-m += nh_adm1266.o
+obj-m += fs160x.o
 
 CFLAGS_pddf_custom_fpga_algo.o := -I$(M)/../../../../pddf/i2c/modules/include
 KBUILD_EXTRA_SYMBOLS := $(KERNEL_SRC)/Module.symvers.PDDF

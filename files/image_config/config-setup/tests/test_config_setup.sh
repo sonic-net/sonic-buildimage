@@ -215,7 +215,7 @@ test_cold_migration_prefers_gold()
 
     do_config_migration
     assert_status 0 $?
-    assert_log_contains "copy minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json golden_config_native_enabled"
+    assert_log_contains "copy minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json golden_config_native_enabled hft otel_config.yml"
     assert_log_contains "load_golden_config -y -n ${GOLDEN_CONFIG_DB_JSON}"
     assert_log_contains "sonic-db-cli CONFIG_DB SET CONFIG_DB_INITIALIZED 1"
     assert_log_excludes "db_migrator "
@@ -420,7 +420,7 @@ test_multi_asic_migration_fails_closed()
 
     do_config_migration
     assert_status 1 $?
-    assert_log_contains "copy minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json golden_config_native_enabled"
+    assert_log_contains "copy minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json golden_config_native_enabled hft otel_config.yml"
     assert_log_excludes "load_golden_config"
     assert_file_exists "${PENDING_CONFIG_MIGRATION}"
 )
@@ -440,6 +440,28 @@ test_multi_asic_initialization_fails_closed()
     boot_config
     assert_status 1 $?
     assert_log_excludes "load_golden_config"
+)
+
+test_multi_asic_legacy_initialization_is_preserved()
+(
+    setup_test_env
+    NUM_ASIC=2
+
+    check_system_warm_boot()
+    {
+        WARM_BOOT=false
+        return 0
+    }
+
+    do_multi_asic_config_initialization()
+    {
+        printf 'do_multi_asic_config_initialization\n' >> "${CALL_LOG}"
+        return 0
+    }
+
+    boot_config
+    assert_status 0 $?
+    assert_log_contains "do_multi_asic_config_initialization"
 )
 
 test_main_propagates_boot_failure()
@@ -471,6 +493,7 @@ tests=(
     test_steady_state_boot_does_not_revalidate_gold
     test_multi_asic_migration_fails_closed
     test_multi_asic_initialization_fails_closed
+    test_multi_asic_legacy_initialization_is_preserved
     test_main_propagates_boot_failure
 )
 

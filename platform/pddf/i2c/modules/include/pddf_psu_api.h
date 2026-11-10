@@ -26,6 +26,7 @@ extern ssize_t psu_store_default(struct device *dev, struct device_attribute *da
 
 extern int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *data);
 extern int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *data);
+extern int sonic_i2c_get_psu_block_raw(void *client, PSU_DATA_ATTR *adata, void *data);
 extern int sonic_i2c_get_psu_word_default(void *client, PSU_DATA_ATTR *adata, void *data);
 
 #endif

@@ -11,7 +11,6 @@ import sys
 import time
 import unicodedata
 from sonic_py_common import device_info
-from sonic_platform_pddf_base.pddf_fpga_utils import is_supported_fpga
 from sonic_platform_pddf_base.pddf_platform_hooks import ChildCardEepromUnprogrammed
 
 import logging
@@ -36,15 +35,6 @@ DEFAULT_FPGA_REGISTER_WIDTH_BITS = 32
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 
-
-def should_fpga_use_msi(dev) -> bool:
-    if "use_msi" in dev:
-        check_fpga_version_cmd = dev.get("dev_attr", {}).get("check_fpga_version_cmd", "")
-        min_fpga_version = dev["use_msi"].get(
-            "min_fpga_version", "0x0"
-        )
-        return is_supported_fpga(check_fpga_version_cmd, min_fpga_version)
-    return False
 
 
 # --- CHILD_CARDS support -----------------------------------
@@ -779,7 +769,7 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c".format(bdf), ops)
         if ret != 0:
             return create_ret.append(ret)
-        if "channel_irq" in dev["i2c"]:
+        if dev["i2c"].get("channel_irq"):
             ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c-xiic".format(bdf), ops)
             if ret != 0:
                 return create_ret.append(ret)
@@ -792,15 +782,8 @@ class PddfParse():
 
         # TODO: add GPIO specific data stores
 
-        try:
-            use_msi = should_fpga_use_msi(dev)
-        except (RuntimeError, ValueError) as e:
-            bdf = dev["dev_info"].get("device_bdf", "<unknown>")
-            logger.exception("FPGA version check failed for device_bdf=%s: %s", bdf, e)
-            raise type(e)(
-                "FPGA version check failed for device_bdf=%s: %s" % (bdf, e)
-            ) from e
-        num_msi_vectors = dev["use_msi"]["num_msi_vectors"] if use_msi else 0
+        # An absent or empty use_msi block means no MSI support
+        num_msi_vectors = dev.get("use_msi", {}).get("num_msi_vectors", 0)
         reg_width = dev["dev_attr"].get("reg_width", DEFAULT_FPGA_REGISTER_WIDTH_BITS)
         cmd = f"echo 'fpgapci_init {num_msi_vectors} {reg_width}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
         ret = self.runcmd(cmd)
@@ -809,18 +792,29 @@ class PddfParse():
 
         # MSI domain mapped to MSI vector
         enabled_msi_domains: set[int] = set()
-        if use_msi:
-            for msi_domain in dev["use_msi"].get("msi_domains", []):
-                msi_vector_num = msi_domain["msi_vector_num"]
-                irq_chip_name = msi_domain["irq_chip_name"]
-                irq_line_mask = msi_domain["irq_line_mask"]
-                enable_reg = msi_domain["interrupt_enable_reg"]
-                status_reg = msi_domain["interrupt_status_reg"]
-                cmd = f"echo 'register_msi_domain {msi_vector_num} {irq_chip_name} {irq_line_mask} {enable_reg} {status_reg}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
-                ret = self.runcmd(cmd)
-                if ret != 0:
-                    return create_ret + [ret]
-                enabled_msi_domains.add(msi_vector_num)
+        for msi_domain in dev.get("use_msi", {}).get("msi_domains", []):
+            msi_vector_num = msi_domain["msi_vector_num"]
+            irq_chip_name = msi_domain["irq_chip_name"]
+            irq_line_mask = msi_domain["irq_line_mask"]
+            enable_reg = msi_domain["interrupt_enable_reg"]
+            status_reg = msi_domain["interrupt_status_reg"]
+            cmd = f"echo 'register_msi_domain {msi_vector_num} {irq_chip_name} {irq_line_mask} {enable_reg} {status_reg}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret + [ret]
+            enabled_msi_domains.add(msi_vector_num)
+
+        watchdog_data = self.data.get("WATCHDOG", {})
+        watchdog_msi = watchdog_data.get("dev_attr", {}).get("use_watchdog_msi", {})
+        watchdog_parent = watchdog_data.get("dev_info", {}).get("device_parent")
+        watchdog_parent_bdf = (
+            self.data.get(watchdog_parent, {}).get("dev_info", {}).get("device_bdf")
+        )
+        if watchdog_msi and watchdog_parent_bdf == bdf:
+            cmd = f"echo 'register_watchdog_msi {watchdog_msi['msi_domain']} {watchdog_msi['hw_irq']}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret + [ret]
 
         channel_irq = dev["i2c"].get("channel_irq", [])
         for bus in range(int(dev["i2c"]["dev_attr"]["num_virt_ch"], 16)):
@@ -1132,10 +1126,34 @@ class PddfParse():
 
         bdf = dev['dev_info']['device_bdf']
 
+        # Each FPGA i2c adapter and MDIO bus holds a reference on the module that provides
+        # its algorithm, and nothing else removes them, so leaving them keeps the whole
+        # multifpgapci stack loaded through `pddf_util.py clean`. Only the ones that exist
+        # are deleted: an i2c adapter is numbered virt_bus + channel under the PCI device,
+        # an MDIO bus is pci-mdio-<channel>.
+        # Every step runs even if an earlier one fails, so as much as possible is torn down;
+        # the first failure is returned.
+        rc = 0
+        virt_bus = int(dev['i2c']['dev_attr']['virt_bus'], 16)
+        for bus in range(int(dev['i2c']['dev_attr']['num_virt_ch'], 16)):
+            if os.path.exists("/sys/bus/pci/devices/{}/i2c-{}".format(bdf, virt_bus + bus)):
+                cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/i2c/del_i2c_adapter".format(bus, bdf)
+                ret = self.runcmd(cmd)
+                rc = rc or ret
+        if 'mdio' in dev:
+            for bus in range(int(dev['mdio']['dev_attr']['num_virt_ch'], 16)):
+                if os.path.exists("/sys/bus/pci/devices/{}/mdio_bus/pci-mdio-{}".format(bdf, bus)):
+                    cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/mdio/del_mdio_bus".format(bus, bdf)
+                    ret = self.runcmd(cmd)
+                    rc = rc or ret
+
         cmd = "echo '{}' > /sys/kernel/pddf/devices/multifpgapci/{}/i2c_name".format(dev['dev_info']['device_name'], bdf)
-        self.runcmd(cmd)
+        ret = self.runcmd(cmd)
+        rc = rc or ret
         cmd = "echo 'fpgapci_deinit' > /sys/kernel/pddf/devices/multifpgapci/{}/dev_ops".format(bdf)
-        self.runcmd(cmd)
+        ret = self.runcmd(cmd)
+        rc = rc or ret
+        return rc
 
     #################################################################################################################################
     #   SHOW ATTRIBIUTES DEFS
@@ -2281,17 +2299,23 @@ class PddfParse():
 
     def multifpgapci_parse(self, dev, ops):
         val = []
-        ret = getattr(self, ops['cmd']+"_multifpgapci_device")(dev, ops)
-        if ret:
-            if str(ret[0]).isdigit():
-                if ret[0] != 0:
-                    # in case if 'create' functions
-                    logger.error("%s_multifpgapci_device() cmd failed", ops['cmd'])
-                    return ret
-            else:
-                val.extend(ret)
+        # Delete in the reverse of creation: the clients on the FPGA's buses go before the
+        # FPGA's adapters, since deleting an adapter waits for every client still on it.
+        if ops['cmd'] == 'delete':
+            channels = reversed(dev['i2c']['channel'])
+        else:
+            ret = getattr(self, ops['cmd']+"_multifpgapci_device")(dev, ops)
+            if ret:
+                if str(ret[0]).isdigit():
+                    if ret[0] != 0:
+                        # in case if 'create' functions
+                        logger.error("%s_multifpgapci_device() cmd failed", ops['cmd'])
+                        return ret
+                else:
+                    val.extend(ret)
+            channels = dev['i2c']['channel']
 
-        for bus in dev['i2c']['channel']:
+        for bus in channels:
             ret = self.dev_parse(self.data[bus['dev']], ops)
             if ret:
                  if str(ret[0]).isdigit():
@@ -2300,6 +2324,12 @@ class PddfParse():
                            return ret
                  else:
                       val.extend(ret)
+
+        if ops['cmd'] == 'delete':
+            rc = self.delete_multifpgapci_device(dev, ops)
+            if rc != 0:
+                logger.error("%s_multifpgapci_device() cmd failed", ops['cmd'])
+                return [rc]
         return val
 
     def multifpgapci_spi_controller_parse(

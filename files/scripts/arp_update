@@ -69,7 +69,7 @@ flush_unsynced_neighbors() {
         if [[ -z "$neighbor_ip" || "$dev" != "dev" || -z "$ifname" ]]; then
             continue
         fi
-        if [[ -z "$(sonic-db-cli APPL_DB hget "NEIGH_TABLE:${vlan}:${neighbor_ip}" neigh)" ]]; then
+        if [[ -z "$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${vlan}:${neighbor_ip}" neigh)" ]]; then
             flushed=0
             ip neigh flush "$neighbor_ip"
         fi
@@ -167,7 +167,7 @@ while /bin/true; do
   for neigh in $STALE_NEIGHS; do
         ip="$( cut -d ',' -f 1 <<< "$neigh" )"
         mac="$( cut -d ',' -f 2 <<< "$neigh" )"
-        if [[ -z $(sonic-db-cli ASIC_DB keys "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY*${mac}*") ]]; then
+        if [[ -z $(sonic-db-cli -s ASIC_DB keys "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY*${mac}*") ]]; then
             run_with_retry_cmd "stale neighbor ping to $ip" \
                 timeout 0.2 ping -c1 -w1 "$ip" >/dev/null 2>&1
         fi
@@ -179,7 +179,7 @@ while /bin/true; do
         ip="$( cut -d ',' -f 1 <<< "$neigh" )"
         intf="$( cut -d ',' -f 2 <<< "$neigh" )"
         kernel_mac="$( cut -d ',' -f 3 <<< "$neigh" )"
-        appl_db_mac="$(sonic-db-cli APPL_DB hget "NEIGH_TABLE:${intf}:${ip}" neigh)"
+        appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${intf}:${ip}" neigh)"
         if [[ $kernel_mac != $appl_db_mac ]]; then
             logger -p warning "MAC mismatch for ${ip} on ${intf} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
             ip neigh flush "$ip"
@@ -194,7 +194,7 @@ while /bin/true; do
   done
 
   VLAN=$(echo $ARP_UPDATE_VARS | jq -r '.vlan')
-  SUBTYPE=$(sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype' | tr '[:upper:]' '[:lower:]')
+  SUBTYPE=$(sonic-db-cli -s CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype' | tr '[:upper:]' '[:lower:]')
   for vlan in $VLAN; do
       # generate a list of arping commands:
       #   arping -q -w 0 -c 1 -i <VLAN interface> <IP 1>;
@@ -263,10 +263,10 @@ while /bin/true; do
   sleep 120
 
   # refresh neighbor entries from APP_DB in case of mismatch with kernel
-  DBNEIGH=$(sonic-db-cli APPL_DB keys NEIGH_TABLE*)
+  DBNEIGH=$(sonic-db-cli -s APPL_DB keys NEIGH_TABLE*)
 
   # resolve neighbor entries from CONFIG_DB in case of mismatch with kernel
-  DBNEIGH="$DBNEIGH $(sonic-db-cli CONFIG_DB keys NEIGH* | sed -e 's/|/:/g')"
+  DBNEIGH="$DBNEIGH $(sonic-db-cli -s CONFIG_DB keys NEIGH* | sed -e 's/|/:/g')"
 
   # Define kernel neighbors based on device type
   if [[ "$SUBTYPE" != "dualtor" ]]; then

@@ -333,6 +333,8 @@ endif
 include $(PLATFORM_PATH)/rules.mk
 endif
 
+$(foreach installer,$(SONIC_INSTALLERS),$(eval $(installer)_PYTHON_WHEELS += $(SCAPY)))
+
 ifeq ($(USERNAME),)
 override USERNAME := $(DEFAULT_USERNAME)
 else
@@ -490,11 +492,9 @@ $(info "ENABLE_PFCWD_ON_START"           : "$(ENABLE_PFCWD_ON_START)")
 $(info "SONIC_BUFFER_MODEL"              : "$(SONIC_BUFFER_MODEL)")
 $(info "INSTALL_DEBUG_TOOLS"             : "$(INSTALL_DEBUG_TOOLS)")
 $(info "ROUTING_STACK"                   : "$(SONIC_ROUTING_STACK)")
-ifeq ($(SONIC_ROUTING_STACK),frr)
 $(info "FRR_USER_UID"                    : "$(FRR_USER_UID)")
 $(info "FRR_USER_GID"                    : "$(FRR_USER_GID)")
 $(info "ENABLE_FRR_TCMALLOC"             : "$(ENABLE_FRR_TCMALLOC)")
-endif
 $(info "ENABLE_SYNCD_RPC"                : "$(ENABLE_SYNCD_RPC)")
 $(info "SAITHRIFT_V2"                    : "$(SAITHRIFT_V2)")
 $(info "ENABLE_ORGANIZATION_EXTENSIONS"  : "$(ENABLE_ORGANIZATION_EXTENSIONS)")
@@ -1888,7 +1888,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export installer_python_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(FIPS_BASEIMAGE_PYTHON_INSTALLERS))"
 	export lazy_installer_debs="$(foreach deb, $($*_LAZY_INSTALLS),$(foreach device, $($(deb)_PLATFORM),$(addprefix $(device)@, $(IMAGE_DISTRO_DEBS_PATH)/$(deb))))"
 	export lazy_build_installer_debs="$(foreach deb, $($*_LAZY_BUILD_INSTALLS), $(addprefix $($(deb)_MACHINE)|,$(deb)))"
-	export installer_python_wheels="$(addprefix $(PYTHON_WHEELS_PATH)/,$($*_PYTHON_WHEELS))"
+	export scapy_wheel="$(PYTHON_WHEELS_PATH)/$(SCAPY)"
+	export installer_python_wheels="$(addprefix $(PYTHON_WHEELS_PATH)/,$(filter-out $(SCAPY),$($*_PYTHON_WHEELS)))"
 	export installer_images="$(foreach docker, $($*_DOCKERS),\
 				$(addprefix $($(docker:-dbg.gz=.gz)_PACKAGE_NAME)|,\
 				$(addprefix $($(docker:-dbg.gz=.gz)_PATH)|,\

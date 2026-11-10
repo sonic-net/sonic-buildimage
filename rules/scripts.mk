@@ -38,6 +38,9 @@ $(RESTAPI_SYSTEMD)_PATH = files/scripts
 K8S_POD_CONTROL = k8s_pod_control.sh
 $(K8S_POD_CONTROL)_PATH = files/scripts
 
+WAIT_FOR_DEPENDENT_STARTUP_SCRIPT = wait_for_dependent_startup.sh
+$(WAIT_FOR_DEPENDENT_STARTUP_SCRIPT)_PATH = files/scripts
+
 UPDATE_CHASSISDB_CONFIG_SCRIPT = update_chassisdb_config
 $(UPDATE_CHASSISDB_CONFIG_SCRIPT)_PATH = files/scripts
 
@@ -50,8 +53,8 @@ $(COPP_CONFIG_TEMPLATE)_PATH = files/image_config/copp
 RSYSLOG_PLUGIN_CONF_J2 = rsyslog_plugin.conf.j2
 $(RSYSLOG_PLUGIN_CONF_J2)_PATH = files/build_templates
 
-GNMI_RSYSLOG_CONF = rsyslog-container-gnmi.conf
-$(GNMI_RSYSLOG_CONF)_PATH = files/image_config/rsyslog
+CONTAINER_RSYSLOG_RELP_UDP_CONF = rsyslog-container-relp-udp.conf
+$(CONTAINER_RSYSLOG_RELP_UDP_CONF)_PATH = files/image_config/rsyslog
 
 SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(ARP_UPDATE_SCRIPT) \
@@ -66,8 +69,9 @@ SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(GNMI_SYSTEMD) \
                     $(RESTAPI_SYSTEMD) \
                     $(K8S_POD_CONTROL) \
+                    $(WAIT_FOR_DEPENDENT_STARTUP_SCRIPT) \
                     $(UPDATE_CHASSISDB_CONFIG_SCRIPT) \
                     $(SWSS_VARS_TEMPLATE) \
                     $(RSYSLOG_PLUGIN_CONF_J2) \
-                    $(GNMI_RSYSLOG_CONF) \
+                    $(CONTAINER_RSYSLOG_RELP_UDP_CONF) \
                     $(COPP_CONFIG_TEMPLATE)

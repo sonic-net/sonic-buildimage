@@ -391,6 +391,15 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
         case PSU_FAN_DIR:
             return sprintf(buf, "%s\n", sysfs_attr_info->val.strval);
             break;
+        case PSU_FW_VERSION:
+        {
+            /* Raw block from sonic_i2c_get_psu_block_raw(): report it as hex */
+            int len = (unsigned char)sysfs_attr_info->val.strval[0];
+
+            *bin2hex(buf, sysfs_attr_info->val.strval + 1, len) = '\n';
+            return len * 2 + 1;
+        }
+        break;
         case PSU_V_OUT:
         case PSU_V_OUT_MIN:
         case PSU_V_OUT_MAX:
@@ -517,11 +526,15 @@ ret:
     return status;
 }
 
-int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *data)
+/*
+ * Read a block of data from the PSU, retrying on failure. For PMBus devices
+ * the leading block-length byte is stripped. On success, *payload points at
+ * the data within buf and the data length is returned; otherwise a negative
+ * error is returned.
+ */
+static int psu_i2c_read_block(struct i2c_client *client, PSU_DATA_ATTR *adata, char *buf, int size, char **payload)
 {
     int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    char buf[32]="";  //temporary placeholder for block data
     uint8_t offset = (uint8_t)adata->offset;
     int data_len = adata->len;
     bool is_pmbus = strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0;
@@ -535,22 +548,22 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
             /* For PMBus - first read 1 byte to get the data length */
             if (!read_pmbus_data_len)
             {
-                status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, 1, buf);
+                status = i2c_smbus_read_i2c_block_data(client, offset, 1, buf);
 
                 if (likely(status>=0))
                 {
                     pmbus_data_len = buf[0];
-                    if (pmbus_data_len > sizeof(buf) - 2)
-                        pmbus_data_len = sizeof(buf) - 2;
+                    if (pmbus_data_len > size - 2)
+                        pmbus_data_len = size - 2;
                     read_pmbus_data_len = true;
                 }
             }
             if (likely(read_pmbus_data_len))
-                status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, pmbus_data_len+1, buf);
+                status = i2c_smbus_read_i2c_block_data(client, offset, pmbus_data_len+1, buf);
         }
         else
         {
-            status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, buf);
+            status = i2c_smbus_read_i2c_block_data(client, offset, data_len-1, buf);
         }
 
         if (unlikely(status<0))
@@ -564,24 +577,62 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
 
     if (status < 0)
     {
-        buf[0] = '\0';
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read block of data from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else
-    {
-        if (is_pmbus)
-        {
-            buf[pmbus_data_len+1] = '\0';
-            strscpy(padata->val.strval, buf+1, sizeof(padata->val.strval));
-        }
-        else
-        {
-            buf[data_len-1] = '\0';
-            strscpy(padata->val.strval, buf, sizeof(padata->val.strval));
-        }
+        dev_dbg(&client->dev, "unable to read block of data from (0x%x)\n", client->addr);
+        return status;
     }
 
-    psu_dbg(KERN_ERR "%s: status = %d, buf block: %s\n", __FUNCTION__, status, padata->val.strval);
+    if (is_pmbus)
+    {
+        *payload = buf + 1;
+        return pmbus_data_len;
+    }
+    *payload = buf;
+    return data_len - 1;
+}
+
+int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *data)
+{
+    struct psu_attr_info *padata = (struct psu_attr_info *)data;
+    char buf[32]="";  //temporary placeholder for block data
+    char *payload = NULL;
+    int len;
+
+    len = psu_i2c_read_block((struct i2c_client *)client, adata, buf, sizeof(buf), &payload);
+    if (len >= 0)
+    {
+        payload[len] = '\0';
+        strscpy(padata->val.strval, payload, sizeof(padata->val.strval));
+    }
+
+    psu_dbg(KERN_ERR "%s: len = %d, buf block: %s\n", __FUNCTION__, len, padata->val.strval);
+    return 0;
+}
+
+/*
+ * Read a block of data from the PSU and store it unmodified, for registers
+ * holding binary data with no standard encoding (such as a manufacturer-specific
+ * firmware version): strval[0] holds the data length and the data follows, so
+ * bytes after a 0x00 are kept. A failed read stores an empty block, not a stale
+ * value. The show handler formats it.
+ */
+int sonic_i2c_get_psu_block_raw(void *client, PSU_DATA_ATTR *adata, void *data)
+{
+    struct psu_attr_info *padata = (struct psu_attr_info *)data;
+    char buf[32]="";  //temporary placeholder for block data
+    char *payload = NULL;
+    int len, max_len = sizeof(padata->val.strval) - 1;
+
+    len = psu_i2c_read_block((struct i2c_client *)client, adata, buf, sizeof(buf), &payload);
+    if (len < 0)
+        len = 0;
+    if (len > max_len)
+        len = max_len;
+
+    padata->val.strval[0] = len;
+    if (len > 0)
+        memcpy(padata->val.strval + 1, payload, len);
+
+    psu_dbg(KERN_ERR "%s: len = %d\n", __FUNCTION__, len);
     return 0;
 }
 
