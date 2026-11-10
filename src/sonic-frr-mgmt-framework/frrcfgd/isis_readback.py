@@ -1,4 +1,5 @@
 """Strict readback of the IS-IS subset supported by the pinned FRR model."""
+import json
 import re
 from sonic_isis import LEVELS, BACKOFF, effective, identifier, net
 from .isis_config import process_key
@@ -8,10 +9,46 @@ from .isis_recovery import Identity, NativeSnapshot, RecoveryError
 LEVEL_COMMANDS = ('metric', 'hello-interval', 'hello-multiplier')
 
 
-def parse(text):
+def interface_vrfs(text):
+    """Read actual interface ownership from Zebra's all-VRF JSON inventory."""
+    try:
+        rows = json.loads(text)
+        if not isinstance(rows, dict):
+            raise ValueError('Interface inventory is not an object')
+        return {identifier(name): identifier(row['vrfName']) for name, row in rows.items()}
+    except (ValueError, TypeError, KeyError) as error:
+        raise RecoveryError('Invalid native interface VRF inventory') from error
+
+
+def check_system_ids(snapshot, text):
+    """A configured NET is insufficient if FRR lost its shared runtime ID."""
+    try:
+        rows = json.loads(text)['vrfs']
+        if not isinstance(rows, list):
+            raise ValueError('VRF inventory is not an array')
+        ids = {}
+        for row in rows:
+            vrf = identifier(row['vrf'])
+            if vrf in ids:
+                raise ValueError('Duplicate VRF summary')
+            ids[vrf] = row.get('system-id')
+    except (ValueError, TypeError, KeyError) as error:
+        raise RecoveryError('Invalid native IS-IS system-ID summary') from error
+    for identity, value in snapshot.objects.items():
+        if identity.kind != 'isis-process' or not value.get('net_titles'):
+            continue
+        vrf = identity.key.split('|')[0]
+        expected = value['net_titles'][0].replace('.', '')[-14:-2]
+        actual = ids.get(vrf)
+        if (not isinstance(actual, str) or not re.fullmatch(r'[0-9a-fA-F]{4}(\.[0-9a-fA-F]{4}){2}', actual)
+                or actual.replace('.', '').lower() != expected):
+            raise RecoveryError('Native IS-IS system ID missing or inconsistent in VRF ' + vrf)
+
+
+def parse(text, observed_vrfs=None):
     if not isinstance(text, str) or not text.strip().endswith('end') or 'frr version ' not in text:
         raise RecoveryError('Incomplete native running configuration')
-    objects, circuits, unsupported = {}, {}, []
+    objects, circuits, unsupported, declared_vrfs = {}, {}, [], {}
     context, value, key = None, None, None
     for raw in text.splitlines():
         command = raw.strip()
@@ -43,6 +80,8 @@ def parse(text):
             if name in circuits:
                 raise RecoveryError('Duplicate native interface context')
             vrf = identifier(tokens[3]) if len(tokens) == 4 else 'default'
+            if len(tokens) == 4:
+                declared_vrfs[name] = vrf
             value = effective('ISIS_INTERFACE', {'vrf': vrf})
             value.pop('enabled')
             value['levels'] = {level: effective('ISIS_INTERFACE_LEVEL', {}) for level in LEVELS}
@@ -130,6 +169,17 @@ def parse(text):
                 unsupported.append('{}: {}'.format(key, command))
     for name, value in circuits.items():
         if 'instance' in value and (value['ipv4_enabled'] == 'true' or value['ipv6_enabled'] == 'true'):
+            # The pinned isisd writer omits interface VRF qualifiers, including
+            # for nondefault VRFs. Never infer actual ownership from ConfigDB or
+            # an area tag, which may be reused in several VRFs.
+            if observed_vrfs is not None:
+                if name not in observed_vrfs:
+                    raise RecoveryError('Native IS-IS interface absent from Zebra inventory: ' + name)
+                vrf = observed_vrfs[name]
+                if name in declared_vrfs and declared_vrfs[name] != vrf:
+                    raise RecoveryError('Native interface VRF observations disagree: ' + name)
+                value['vrf'] = vrf
+                value['process'] = process_key(vrf, value['instance'])
             objects[Identity('isis-binding', name)] = value
     for identity, value in objects.items():
         if identity.kind == 'isis-process':

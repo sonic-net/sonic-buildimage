@@ -52,8 +52,16 @@ def process_commands(key, value, old=None):
     # Withdraw policies before reducing the instance's supported levels.
     for policy in sorted(set(old.get('redistribute', {})) - set(value['redistribute'])):
         commands.append('no redistribute ' + policy.replace('|', ' '))
-    for address in sorted(set(old.get('net_titles', [])) - set(value['net_titles'])):
-        commands.append('no net ' + address)
+    previous, following = set(old.get('net_titles', [])), set(value['net_titles'])
+    if previous and following and not previous & following:
+        # Do not temporarily remove the final NET: pinned FRR clears the shared
+        # system ID even when sibling areas still have NETs. Keep one old NET
+        # until the first new one is installed, respecting the three-NET limit.
+        anchor = sorted(previous)[0]
+        commands += ['no net ' + address for address in sorted(previous - {anchor})]
+        commands += ['net ' + sorted(following)[0], 'no net ' + anchor]
+    else:
+        commands += ['no net ' + address for address in sorted(previous - following)]
     commands += ['net ' + address for address in value['net_titles']]
     commands += ['is-type ' + value['level_type'], 'metric-style ' + value['metric_style'],
                  'lsp-mtu ' + value['lsp_mtu'],

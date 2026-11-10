@@ -10,7 +10,7 @@ import sys
 import threading
 from .isis_config import desired, router, interface, process_commands, binding_commands
 from .isis_native import NativeClient, Operation, complete_running_config
-from .isis_readback import parse
+from .isis_readback import parse, interface_vrfs, check_system_ids
 from .isis_recovery import (AtomicJSONStore, Identity, Mutation, RecoveryKernel,
                             RecoveryError, read_boot_id)
 
@@ -53,6 +53,12 @@ def plan(native, wanted, authorized):
     reset_vrfs = _reset_vrfs(old, new)
     reset_parents = {key for key in set(old) | set(new)
                      if key.kind == 'isis-process' and key.key.split('|')[0] in reset_vrfs}
+    retiring = {key for key in old if key.kind == 'isis-process' and key in authorized and key not in new}
+    survivors = {key.key.split('|')[0] for key in old
+                 if key.kind == 'isis-process' and key not in retiring}
+    if any(key.key.split('|')[0] in survivors for key in retiring):
+        raise RecoveryError('Pinned FRR cannot safely delete/disable an area with a surviving same-VRF area; '
+                            'native mutation refused until FRR is fixed')
     # Changing a shared system ID requires removing every old area first. Never
     # acquire permission over a foreign area as a side effect of that operation.
     for key, value in old.items():
@@ -117,8 +123,15 @@ class RecoveryWorker(threading.Thread):
         return desired(self.snapshot_supplier())
 
     def readback(self):
+        before = interface_vrfs(self.client.query('zebra', 'show interface vrf all json', budget=5))
         text = self.client.query('isisd', 'write terminal', budget=5)
-        return parse(complete_running_config([('isisd', text)]))
+        snapshot = parse(complete_running_config([('isisd', text)]), before)
+        after = interface_vrfs(self.client.query('zebra', 'show interface vrf all json', budget=5))
+        for identity in snapshot.objects:
+            if identity.kind == 'isis-binding' and before.get(identity.key) != after.get(identity.key):
+                raise RecoveryError('Native interface VRF changed during readback: ' + identity.key)
+        check_system_ids(snapshot, self.client.query('isisd', 'show isis vrf all summary json', budget=5))
+        return snapshot
 
     def apply(self, operations):
         record = self.kernel.store.load()

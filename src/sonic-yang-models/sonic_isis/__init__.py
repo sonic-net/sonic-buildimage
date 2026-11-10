@@ -86,6 +86,21 @@ def normalize(tables):
     return result
 
 
+def validate_transition(before, after):
+    """Reject live area removal that corrupts sibling areas in pinned FRR.
+
+    FRR 10.7.1 clears a VRF's shared system ID when destroying an area. Keep
+    multi-area creation available, but do not silently rebuild surviving areas.
+    An explicit atomic shutdown of all old areas has no surviving sibling.
+    """
+    old = {key for key, row in normalize(before)['ISIS_INSTANCE'].items() if row.get('enabled') == 'true'}
+    new = {key for key, row in normalize(after)['ISIS_INSTANCE'].items() if row.get('enabled') == 'true'}
+    survivors = {key[0] for key in old & new}
+    if any(key[0] in survivors for key in old - new):
+        raise ValueError('Pinned FRR cannot safely delete/disable an active area while another active area '
+                         'in the same VRF survives; operation refused until FRR is fixed')
+
+
 def effective(table, row):
     return {**{k: default for k, (default, _) in FIELDS[table].items() if default is not None}, **row}
 
@@ -229,9 +244,33 @@ return 1
 '''
 
 
+def _eval(db, script, *arguments):
+    """Use the connected SDK client, preserving its namespace and credentials.
+
+    Current swsscommon returns a native DBConnector, whereas older Python SDKs
+    return redis-py. RedisCommand's argument vector preserves Lua/JSON boundaries
+    without interpolating data into a Redis command string.
+    """
+    client = db.get_redis_client(db.CONFIG_DB)
+    if callable(getattr(client, 'eval', None)):
+        return client.eval(script, 0, *arguments)
+    from swsscommon.swsscommon import RedisCommand, RedisReply
+    command = RedisCommand()
+    command.format(['EVAL', script, '0', *arguments])
+    try:
+        reply = RedisReply(client, command)
+        return RedisReply.to_string(reply)
+    except RuntimeError as error:
+        # Native errors include the entire command and candidate ConfigDB graph.
+        # Report the conflict without echoing all configuration into CLI output.
+        if 'IS-IS configuration changed; retry' in str(error):
+            raise ValueError('IS-IS configuration changed; retry') from None
+        raise RuntimeError('Atomic ConfigDB command failed') from None
+
+
 def capture(db):
     import json
-    rows = json.loads(db.get_redis_client(db.CONFIG_DB).eval(CAPTURE_LUA, 0, *SNAPSHOT_TABLES))
+    rows = json.loads(_eval(db, CAPTURE_LUA, *SNAPSHOT_TABLES))
     data = {name: {} for name in SNAPSHOT_TABLES}
     for table, key, fields in rows:
         raw = dict(zip(fields[::2], fields[1::2]))
@@ -246,6 +285,15 @@ def capture(db):
 def commit(db, before, updates):
     import json
 
+    updates = tuple(updates)
+    after = copy.deepcopy(before)
+    for table, key, row in updates:
+        if row is None:
+            after[table].pop(key, None)
+        else:
+            after[table][key] = row
+    validate_transition(before, after)
+
     def raw(row):
         return {field + '@' if isinstance(value, list) else field:
                 ','.join(value) if isinstance(value, list) else str(value)
@@ -255,4 +303,4 @@ def commit(db, before, updates):
                        for key, value in rows.items()} for name, rows in before.items()}
     writes = [{'key': table + '|' + ('|'.join(key) if isinstance(key, tuple) else key),
                'row': raw(row) if row is not None else {}} for table, key, row in updates]
-    db.get_redis_client(db.CONFIG_DB).eval(COMMIT_LUA, 0, json.dumps(expected), json.dumps(writes))
+    _eval(db, COMMIT_LUA, json.dumps(expected), json.dumps(writes))

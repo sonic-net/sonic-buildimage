@@ -333,3 +333,123 @@ def test_every_af_transition_preserves_circuit_settings(before_af, after_af, vrf
         assert binding not in after.objects
         assert not any(command.startswith('isis ') for command in commands)
         assert row['passive'] == 'true' and row['instance'] == 'CORE'
+
+
+@pytest.mark.parametrize('vrf', ['default', 'VrfBlue'])
+def test_native_writer_without_vrf_uses_zebra_observation(vrf):
+    from frrcfgd.isis_readback import interface_vrfs
+    # Actual FRR 10.7.1 isisd writer omits the interface VRF suffix.
+    text = 'frr version 10.7.1\ninterface Ethernet4\n ip router isis CORE\nexit\nend\n'
+    observed = interface_vrfs('{"Ethernet4":{"vrfName":"' + vrf + '"}}')
+    binding = parse(text, observed).objects[Identity('isis-binding', 'Ethernet4')]
+    assert binding['vrf'] == vrf
+    assert binding['process'] == vrf + '|CORE'
+
+
+@pytest.mark.parametrize('observed', [{}, {'Ethernet4': 'default'}])
+def test_missing_or_contradictory_native_interface_vrf_fails_closed(observed):
+    from frrcfgd.isis_recovery import RecoveryError
+    text = 'frr version 10.7.1\ninterface Ethernet4 vrf VrfBlue\n ip router isis CORE\nexit\nend\n'
+    with pytest.raises(RecoveryError):
+        parse(text, observed)
+
+
+@pytest.mark.parametrize('text', ['[]', '{} trailing', '{"Ethernet4":{}}', '{"Ethernet4":null}'])
+def test_invalid_native_vrf_inventory_fails_closed(text):
+    from frrcfgd.isis_readback import interface_vrfs
+    from frrcfgd.isis_recovery import RecoveryError
+    with pytest.raises(RecoveryError):
+        interface_vrfs(text)
+
+
+def test_vrf_move_during_native_readback_is_not_confirmed(tmp_path):
+    from frrcfgd.isis_manager import RecoveryWorker
+    from frrcfgd.isis_recovery import RecoveryError
+    client = MagicMock()
+    client.query.side_effect = [
+        '{"Ethernet4":{"vrfName":"default"}}',
+        'frr version 10.7.1\ninterface Ethernet4\n ip router isis CORE\nexit\n',
+        '{"Ethernet4":{"vrfName":"VrfBlue"}}',
+    ]
+    worker = RecoveryWorker(client=client, journal=str(tmp_path / 'ownership.json'))
+    with pytest.raises(RecoveryError, match='changed during readback'):
+        worker.readback()
+    assert not (tmp_path / 'ownership.json').exists()
+
+
+@pytest.mark.parametrize('action', ['delete', 'disable'])
+def test_multi_area_retirement_is_rejected_before_live_mutation(action):
+    from sonic_isis import validate_transition
+    from frrcfgd.isis_recovery import RecoveryError
+    before = config()
+    before['ISIS_INSTANCE'][('default', 'EDGE')] = {'enabled': 'true', 'net_titles': [NET]}
+    after = copy.deepcopy(before)
+    if action == 'delete':
+        del after['ISIS_INSTANCE'][('default', 'EDGE')]
+    else:
+        after['ISIS_INSTANCE'][('default', 'EDGE')]['enabled'] = 'false'
+    with pytest.raises(ValueError, match='operation refused until FRR is fixed'):
+        validate_transition(before, after)
+    old, new = desired(before).snapshot, desired(after).snapshot
+    with pytest.raises(RecoveryError, match='native mutation refused'):
+        plan(old, new, set(old.objects))
+
+
+def test_foreign_sibling_also_blocks_area_removal():
+    from frrcfgd.isis_recovery import RecoveryError
+    before = config()
+    before['ISIS_INSTANCE'][('default', 'FOREIGN')] = {'enabled': 'true', 'net_titles': [NET]}
+    old = desired(before).snapshot
+    owned = set(old.objects) - {Identity('isis-process', 'default|FOREIGN')}
+    with pytest.raises(RecoveryError, match='native mutation refused'):
+        plan(old, NativeSnapshot({}), owned)
+
+
+def test_transition_guard_allows_single_area_and_atomic_full_shutdown():
+    from sonic_isis import validate_transition
+    before = config()
+    validate_transition(before, {})
+    before['ISIS_INSTANCE'][('default', 'EDGE')] = {'enabled': 'true', 'net_titles': [NET]}
+    validate_transition(before, {})
+    after = copy.deepcopy(before)
+    after['ISIS_INSTANCE'][('VrfA', 'BLUE')] = {'enabled': 'true', 'net_titles': [NET]}
+    validate_transition(before, after)
+    validate_transition(after, before)
+
+
+def test_net_replacement_never_temporarily_removes_last_net_or_exceeds_limit():
+    from frrcfgd.isis_config import process_commands
+    before = config()
+    before['ISIS_INSTANCE'][('default', 'CORE')]['net_titles'] = [
+        '49.%04d.0000.0000.0001.00' % area for area in (1, 2, 3)]
+    after = copy.deepcopy(before)
+    after['ISIS_INSTANCE'][('default', 'CORE')]['net_titles'] = [
+        '49.%04d.0000.0000.0001.00' % area for area in (4, 5, 6)]
+    identity = Identity('isis-process', 'default|CORE')
+    old, new = desired(before).snapshot.objects[identity], desired(after).snapshot.objects[identity]
+    nets = set(old['net_titles'])
+    for command in process_commands(identity.key, new, old):
+        if command.startswith('no net '):
+            nets.remove(command.split()[-1])
+        elif command.startswith('net '):
+            nets.add(command.split()[-1])
+        assert 1 <= len(nets) <= 3
+    assert nets == set(new['net_titles'])
+
+
+@pytest.mark.parametrize('summary', [
+    '{"vrfs":[{"vrf":"default"}]}',
+    '{"vrfs":[{"vrf":"default","system-id":"0000.0000.0002"}]}',
+    '{"vrfs":[]}', '[]', '{"vrfs":{}}',
+])
+def test_configured_net_without_matching_runtime_system_id_is_not_applied(summary):
+    from frrcfgd.isis_readback import check_system_ids
+    from frrcfgd.isis_recovery import RecoveryError
+    with pytest.raises(RecoveryError):
+        check_system_ids(desired(config()).snapshot, summary)
+
+
+def test_matching_runtime_system_id_is_accepted():
+    from frrcfgd.isis_readback import check_system_ids
+    check_system_ids(desired(config()).snapshot,
+                     '{"vrfs":[{"vrf":"default","system-id":"0000.0000.0001"}]}')
