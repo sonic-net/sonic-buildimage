@@ -22,23 +22,29 @@ const TIMEZONE_FILE: &str = "/etc/localtime";
 
 #[derive(Debug)]
 pub struct TimezoneUpdater {
-    current_timezone: String,
+    current_timezone: Option<String>,
 }
 
 impl TimezoneUpdater {
     pub fn new() -> anyhow::Result<Self> {
-        let timezone_path = fs::read_link(TIMEZONE_FILE)
-            .context("Timezone file is either missing or not a symlink")?;
-        let mut timezone_path_components = timezone_path
-            .components()
-            .skip_while(|x| x.as_os_str() != OsStr::new("zoneinfo"));
-        timezone_path_components.next();
-        let current_timezone = PathBuf::from_iter(timezone_path_components)
-            .to_str()
-            .context("Invalid characters present in timezone name")?
-            .to_owned();
+        let mut current_timezone = None;
 
-        info!("Currently-configured timezone is {current_timezone}");
+        if let Ok(timezone_path) = fs::read_link(TIMEZONE_FILE) {
+            let mut timezone_path_components = timezone_path
+                .components()
+                .skip_while(|x| x.as_os_str() != OsStr::new("zoneinfo"));
+            timezone_path_components.next();
+            let current_timezone_name = PathBuf::from_iter(timezone_path_components)
+                .to_str()
+                .context("Invalid characters present in timezone name")?
+                .to_owned();
+
+            info!("Currently-configured timezone is {current_timezone_name}");
+
+            current_timezone = Some(current_timezone_name);
+        } else {
+            info!("Current timezone is unknown or not explicitly set");
+        }
 
         Ok(TimezoneUpdater { current_timezone })
     }
@@ -57,53 +63,61 @@ impl SonicDatabaseChanges for TimezoneUpdater {
             KeyOperation::Set => {
                 let mut values_changed = false;
 
-                for (field, value) in field_values {
-                    if field.as_str() == "timezone" {
-                        let value = value
-                            .to_str()
-                            .context("Unable to parse timezone as a string")?;
-                        if self.current_timezone != value {
-                            info!("Setting timezone to {}", value);
-                            self.current_timezone = value.to_owned();
+                let new_timezone = match field_values.get("timezone") {
+                    Some(value) => Some(value
+                        .to_str()
+                        .context("Unable to parse timezone as a string")?
+                        .to_owned()),
+                    None => None,
+                };
+                match new_timezone {
+                    Some(ref new_timezone_name) => {
+                        if self.current_timezone != new_timezone {
+                            info!("Setting timezone to {}", new_timezone_name);
                             values_changed = true;
                         }
-                    }
+                    },
+                    _ => {},
                 }
 
                 if values_changed {
-                    let timezone_name = Path::new(&self.current_timezone);
-                    anyhow::ensure!(
-                        !timezone_name.is_absolute()
+                    if let Some(ref new_timezone_name) = new_timezone {
+                        let timezone_name = Path::new(&new_timezone_name);
+                        anyhow::ensure!(
+                            !timezone_name.is_absolute()
                             && !timezone_name
-                                .components()
-                                .any(|component| component == std::path::Component::ParentDir),
-                        "Invalid timezone name: {}",
-                        &self.current_timezone
-                    );
-                    let timezone_path = Path::new("/usr/share/zoneinfo").join(timezone_name);
-                    anyhow::ensure!(
-                        timezone_path.exists(),
-                        "Timezone file at {timezone_path:?} doesn't exist, not updating timezone"
-                    );
-                    anyhow::ensure!(
-                        timezone_path.is_file(),
-                        "{timezone_path:?} is not a timezone file, not updating timezone"
-                    );
-                    let timezone_symlink_path = Path::new("/etc/localtime");
-                    if timezone_symlink_path.exists() {
-                        fs::remove_file("/etc/localtime")
-                            .context("Unable to remove existing /etc/localtime file")?;
+                            .components()
+                            .any(|component| component == std::path::Component::ParentDir),
+                            "Invalid timezone name: {}",
+                            &new_timezone_name
+                        );
+                        let timezone_path = Path::new("/usr/share/zoneinfo").join(timezone_name);
+                        anyhow::ensure!(
+                            timezone_path.exists(),
+                            "Timezone file at {timezone_path:?} doesn't exist, not updating timezone"
+                        );
+                        anyhow::ensure!(
+                            timezone_path.is_file(),
+                            "{timezone_path:?} is not a timezone file, not updating timezone"
+                        );
+                        let timezone_symlink_path = Path::new("/etc/localtime");
+                        if timezone_symlink_path.symlink_metadata().is_ok() {
+                            fs::remove_file("/etc/localtime")
+                                .context("Unable to remove existing /etc/localtime file")?;
+                        }
+                        symlink(timezone_path, "/etc/localtime").context(
+                            "Unable to update /etc/timezone symlink to current timezone file",
+                        )?;
+                        let exit_code = Command::new("supervisorctl")
+                            .args(["restart", "rsyslogd"])
+                            .status()?;
+                        anyhow::ensure!(
+                            exit_code.success(),
+                            "Failed to restart rsyslog after timezone update: {exit_code}"
+                        );
+
+                        self.current_timezone = new_timezone;
                     }
-                    symlink(timezone_path, "/etc/localtime").context(
-                        "Unable to update /etc/timezone symlink to current timezone file",
-                    )?;
-                    let exit_code = Command::new("supervisorctl")
-                        .args(["restart", "rsyslogd"])
-                        .status()?;
-                    anyhow::ensure!(
-                        exit_code.success(),
-                        "Failed to restart rsyslog after timezone update: {exit_code}"
-                    );
                 }
             }
             KeyOperation::Del => debug!("Not doing anything for key deletion"),
@@ -126,7 +140,7 @@ mod tests {
     fn one_level_timezone() {
         TIMEZONE_SYMLINK_TARGET.replace(Some(PathBuf::from("/usr/share/zoneinfo/UTC")));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, "UTC");
+        assert_eq!(updater.current_timezone, Some("UTC".to_owned()));
     }
 
     #[test]
@@ -135,7 +149,7 @@ mod tests {
             "/usr/share/zoneinfo/America/Los_Angeles",
         )));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, "America/Los_Angeles");
+        assert_eq!(updater.current_timezone, Some("America/Los_Angeles".to_owned()));
     }
 
     #[test]
@@ -144,7 +158,7 @@ mod tests {
             "/usr/share/zoneinfo/America/Indiana/Vevay",
         )));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, "America/Indiana/Vevay");
+        assert_eq!(updater.current_timezone, Some("America/Indiana/Vevay".to_owned()));
     }
 
     #[test]
@@ -153,14 +167,20 @@ mod tests {
             "../usr/share/zoneinfo/Australia/Darwin",
         )));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, "Australia/Darwin");
+        assert_eq!(updater.current_timezone, Some("Australia/Darwin".to_owned()));
     }
 
     #[test]
     fn shorter_relative_timezone_symlink() {
         TIMEZONE_SYMLINK_TARGET.replace(Some(PathBuf::from("../zoneinfo/Europe/Helsinki")));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, "Europe/Helsinki");
+        assert_eq!(updater.current_timezone, Some("Europe/Helsinki".to_owned()));
+    }
+
+    #[test]
+    fn missing_timezone_symlink() {
+        let updater = TimezoneUpdater::new().unwrap();
+        assert_eq!(updater.current_timezone, None);
     }
 
     pub mod fs {
