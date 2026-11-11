@@ -177,7 +177,7 @@ class DownloadTests(unittest.TestCase):
         )
         self.downloader_rc = self.root / "downloader.bazelrc"
         self.downloader_rc.write_text(
-            "common --downloader_config={}\n".format(self.config)
+            "common --experimental_downloader_config={}\n".format(self.config)
         )
         tools = Path(__file__).resolve().parent
         self.cache_rc = self.root / "cache.bazelrc"
@@ -235,6 +235,23 @@ class DownloadTests(unittest.TestCase):
             stderr=subprocess.STDOUT, timeout=120,
         )
         return result
+
+    def test_bazel_6_accepts_slave_configuration(self):
+        (self.workspace / "WORKSPACE.bazel").touch()
+        result = subprocess.run(
+            [
+                os.environ.get("BAZEL_LEGACY") or self.bazel,
+                "--batch", "--nosystem_rc", "--noworkspace_rc", "--nohome_rc",
+                "--output_user_root=" + str(self.root / "legacy-bazel"),
+                "--bazelrc=" + str(self.rc), "info", "release",
+            ],
+            cwd=self.workspace,
+            env=dict(os.environ, USE_BAZEL_VERSION="6.4.0"),
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            timeout=120,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("release 6.4.0", result.stdout)
 
     def test_cold_mirror_and_warm_repository_cache(self):
         self.check_cold_mirror_and_warm_repository_cache()

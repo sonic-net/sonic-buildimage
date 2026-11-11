@@ -38,7 +38,7 @@ if [ "$ENABLE_VERSION_CONTROL_WEB" == "y" ]; then
 else
     touch "$BAZEL_DOWNLOADER_CONFIG"
 fi
-printf 'common --downloader_config=%s\n' "$BAZEL_DOWNLOADER_CONFIG" \
+printf 'common --experimental_downloader_config=%s\n' "$BAZEL_DOWNLOADER_CONFIG" \
     > "$BAZEL_DOWNLOADER_RC" || exit 1
 
 sudo rm -f /etc/apt/preferences.d/01-versions-deb
