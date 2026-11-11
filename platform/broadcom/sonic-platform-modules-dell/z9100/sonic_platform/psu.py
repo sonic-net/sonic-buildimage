@@ -34,6 +34,8 @@ class Psu(PsuBase):
             self.psu_voltage_reg = "in30_input"
             self.psu_current_reg = "curr602_input"
             self.psu_power_reg = "power2_input"
+            self.psu_maxpower_reg = "power2_max"
+            self.psu_temperature_reg = "temp14_input"
         elif self.index == 2:
             self.psu_voltage_reg = "in32_input"
             self.psu_current_reg = "curr702_input"
@@ -126,6 +128,19 @@ class Psu(PsuBase):
 
         return psu_serialno
 
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+
+        Returns:
+            string: Revision value of device
+        """
+        serial = self.get_serial()
+        if serial != "NA" and len(serial) == 28:
+            return serial[-3:]
+        else:
+            return "NA"
+        
     def get_status(self):
         """
         Retrieves the operational status of the PSU
@@ -197,6 +212,24 @@ class Psu(PsuBase):
 
         return psu_power
 
+    def get_maximum_supplied_power(self):
+        """
+        Retrieves the maximum supplied power by PSU
+
+        Returns:
+            A float number, the maximum power output in Watts.
+            e.g. 1200.1
+        """
+        psu_maxpower = self._get_pmc_register(self.psu_maxpower_reg)
+        if (psu_maxpower != 'ERR') and self.get_presence():
+            # Converting the value returned by driver which is in
+            # microwatts to watts
+            psu_maxpower = float(psu_maxpower) / 1000000
+        else:
+            psu_maxpower = 0.0
+
+        return psu_maxpower
+
     def get_powergood_status(self):
         """
         Retrieves the powergood status of PSU
@@ -236,3 +269,87 @@ class Psu(PsuBase):
         # In Z9100, SmartFusion FPGA controls the PSU LED and the PSU
         # LED state cannot be changed from CPU.
         return False
+    
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def is_replaceable(self):
+        """
+        Indicate whether this PSU is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
+
+    def get_temperature(self):
+        """
+        Retrieves current temperature reading from PSU
+
+        Returns:
+            A float number of current temperature in Celsius up to
+            nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        temperature = 0.0
+        if self.get_presence():
+            psu_temperature = self._get_pmc_register(self.psu_temperature_reg)
+            if (psu_temperature != 'ERR'):
+                temperature = float(psu_temperature) / 1000
+
+        return temperature
+
+    def get_temperature_high_threshold(self):
+        """
+        Retrieves the high threshold temperature of PSU
+
+        Returns:
+            A float number, the high threshold temperature of PSU in
+            Celsius up to nearest thousandth of one degree Celsius,
+            e.g. 30.125
+        """
+        return 90.0
+
+    def get_voltage_high_threshold(self):
+        """
+        Retrieves the high threshold PSU voltage output
+
+        Returns:
+            A float number, the high threshold output voltage in volts,
+            e.g. 12.1
+        """
+        voltage_high_threshold = 0.0
+        if self.get_presence():
+            psu_type = self._get_pmc_register(self.psu_presence_reg)
+            if (psu_type != 'ERR'):
+                psu_type = int(psu_type, 16)
+                if (psu_type & 0b10):
+                    voltage_high_threshold = 12.6
+                else:
+                    voltage_high_threshold = 12.8
+
+        return voltage_high_threshold
+
+    def get_voltage_low_threshold(self):
+        """
+        Retrieves the low threshold PSU voltage output
+
+        Returns:
+            A float number, the low threshold output voltage in volts,
+            e.g. 12.1
+        """
+        voltage_low_threshold = 0.0
+        if self.get_presence():
+            psu_type = self._get_pmc_register(self.psu_presence_reg)
+            if (psu_type != 'ERR'):
+                psu_type = int(psu_type, 16)
+                if (psu_type & 0b10):
+                    voltage_low_threshold = 11.4
+                else:
+                    voltage_low_threshold = 11.6
+
+        return voltage_low_threshold
