@@ -31,7 +31,6 @@ struct fpm_hw_mac {
 	bool del;		/* aged out, or no longer on the port */
 	bool sticky;		/* static MAC: EVPN sticky, it may not move */
 	bool set_static;	/* zebra wrote the entry static; its writes only */
-	bool learnt;		/* this module wrote it, DPLANE_MAC_LEARNT; writes only */
 };
 
 /*
