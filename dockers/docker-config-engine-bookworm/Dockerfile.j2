@@ -62,7 +62,14 @@ RUN apt-get purge -y        \
         libz-dev
 {%- endif %}
 
-RUN apt-get purge -y        \
+RUN for d in /usr/local/lib/python3*/dist-packages /usr/lib/python3/dist-packages; do \
+        if [ -d "$d" ]; then \
+            find "$d" -name '*.so*' -type f -exec sh -c ' \
+                for f; do readelf -S "$f" 2>/dev/null | grep -q "\.symtab" && strip --strip-unneeded "$f" || true; done \
+            ' _ {} +; \
+        fi; \
+    done && \
+    apt-get purge -y        \
         python3-dev         \
         build-essential
 
