@@ -45,6 +45,7 @@ else:
 
 # Common modules for python2 and python3
 py_modules = [
+    'buffer_profiles',
     'config_samples',
     'minigraph',
     'minigraph_ext',

@@ -35,6 +35,7 @@ except ImportError:
     from pipes import quote as shell_quote
 
 from collections import OrderedDict
+from buffer_profiles import BufferProfileLookup
 from config_samples import generate_sample_config, get_available_config
 from functools import partial
 from minigraph import minigraph_encoder, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
@@ -431,6 +432,7 @@ def _get_jinja2_env(paths):
     """
     loader = jinja2.FileSystemLoader(paths)
     env = jinja2.Environment(loader=loader, trim_blocks=True)
+    env.globals['buffer_profile_available'] = BufferProfileLookup(env)
     env.filters['sort_by_port_index'] = sort_by_port_index
     env.filters['ipv4'] = is_ipv4
     env.filters['ipv6'] = is_ipv6

@@ -78,19 +78,6 @@ def
 {%- set _ = ports2cable.update(buffer_config_extensions.ports2cable) %}
 
 {%- if cable_length is not defined %}
-{%- set leaf_500m_speeds = [] %}
-{%- if switch_role | lower | replace('backend', '') == 'leafrouter' %}
-    {# Static headroom profiles are specific to both port speed and cable length. #}
-    {%- set pg_profile_lookup %}
-        {%- include 'pg_profile_lookup.ini' ignore missing %}
-    {%- endset %}
-    {%- for line in pg_profile_lookup.splitlines() %}
-        {%- set fields = line.split() %}
-        {%- if fields | length >= 2 and fields[0].isdigit() and fields[1] == '500m' %}
-            {%- set _ = leaf_500m_speeds.append(fields[0]) %}
-        {%- endif %}
-    {%- endfor %}
-{%- endif %}
 {%- macro cable_length(port_name) %}
     {%- set cable_len = [] %}
     {%- for local_port in DEVICE_NEIGHBOR %}
@@ -118,8 +105,10 @@ def
                                 else ports2cable.get(roles2) %}
                 {%- set fallback = ports2cable.get(roles1 + '_fallback') %}
                 {%- set speed = (PORT | default({})).get(port_name, {}).get('speed', '') | string %}
-                {%- if cable == '500m' and fallback and speed not in leaf_500m_speeds %}
-                    {%- set cable = fallback %}
+                {%- if cable == '500m' and fallback and buffer_profile_available(speed, cable) is sameas false %}
+                    {%- if buffer_profile_available(speed, fallback, required=true) %}
+                        {%- set cable = fallback %}
+                    {%- endif %}
                 {%- endif %}
                 {%- if cable is not none %}
                     {%- set _ = cable_len.append(cable) %}
