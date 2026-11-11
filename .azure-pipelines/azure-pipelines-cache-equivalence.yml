@@ -26,7 +26,7 @@
 #   amd64 (sonicso1ES-amd64): vs, broadcom, mellanox, vpp, alpinevs
 #   arm64 (sonicso1ES-arm64): marvell-prestera-arm64, nvidia-bluefield
 #   armhf (sonicso1ES-armhf): marvell-prestera-armhf
-# Platforms with NO populated cache (barefoot, centec, nephos, marvell-teralynx,
+# Platforms with NO populated cache (centec, nephos, marvell-teralynx,
 # plain marvell-prestera, pensando, ...) are intentionally excluded: their
 # "cached" build would just be another fresh build, so an A-vs-C comparison
 # proves nothing. Add a leg here if/when such a platform starts being cached.

@@ -118,8 +118,6 @@ if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "centec" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "barefoot" ]; then
-    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "vs" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "mellanox" ]; then
