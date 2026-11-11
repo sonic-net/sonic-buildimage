@@ -1,0 +1,61 @@
+name: Notify Baseline Pipeline Changes
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: baseline-pipeline-notification-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: github.repository_owner == 'sonic-net' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Notify about merged baseline pipeline changes
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const pull = context.payload.pull_request;
+            const params = { ...context.repo, pull_number: pull.number };
+            // API pagination avoids the 300-file workflow path-filter limit.
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...params,
+              per_page: 100,
+            });
+            const prefix = ".azure-pipelines/baseline_test/";
+            const changed = files.some(file =>
+              [file.filename, file.previous_filename].some(path => path?.startsWith(prefix))
+            );
+            if (!changed && files.length < pull.changed_files) {
+              throw new Error("Cannot inspect all changed files; notification was not evaluated.");
+            }
+            if (!changed) {
+              return;
+            }
+
+            const marker = "<!-- baseline-pipeline-merge-notification -->";
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number: pull.number,
+              per_page: 100,
+            });
+            if (comments.some(comment =>
+              comment.user?.login === "github-actions[bot]" && comment.body?.includes(marker)
+            )) {
+              return;
+            }
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: pull.number,
+              body: [
+                marker,
+                "@sakshamkhurana21 this merged PR changed baseline pipeline files under `.azure-pipelines/baseline_test/`.",
+                `[Review the changes](${pull.html_url}/files).`,
+              ].join("\n\n"),
+            });
