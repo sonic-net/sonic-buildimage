@@ -114,18 +114,15 @@ def
                          {%- set roles1 = roles1.replace('backend', '') %}
                          {%- set roles2 = roles2.replace('backend', '') %}
                 {%- endif %}
-                {%- if roles1 in ports2cable %}
-                    {%- if cable_len.append(ports2cable[roles1]) %}{% endif %}
-                {%- elif roles2 in ports2cable %}
-                    {%- if cable_len.append(ports2cable[roles2]) %}{% endif %}
+                {%- set cable = ports2cable[roles1] if roles1 in ports2cable
+                                else ports2cable.get(roles2) %}
+                {%- set fallback = ports2cable.get(roles1 + '_fallback') %}
+                {%- set speed = (PORT | default({})).get(port_name, {}).get('speed', '') | string %}
+                {%- if cable == '500m' and fallback and speed not in leaf_500m_speeds %}
+                    {%- set cable = fallback %}
                 {%- endif %}
-                {%- if roles1 == 'leafrouter_lowerspinerouter' and cable_len == ['500m'] and
-                       roles1 + '_fallback' in ports2cable %}
-                    {%- if PORT is not defined or port_name not in PORT or
-                           PORT[port_name].get('speed', '') | string not in leaf_500m_speeds %}
-                        {%- set _ = cable_len.pop() %}
-                        {%- set _ = cable_len.append(ports2cable[roles1 + '_fallback']) %}
-                    {%- endif %}
+                {%- if cable is not none %}
+                    {%- set _ = cable_len.append(cable) %}
                 {%- endif %}
             {%- endif %}
         {%- endif %}

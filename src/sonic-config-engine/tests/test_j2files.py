@@ -68,6 +68,8 @@ class TestBufferCableLength(TestCase):
             ('LowerSpineRouter', 'LeafRouter', '500m'),
             ('LeafRouter', 'SpineRouter', '300m'),
             ('LeafRouter', 'ToRRouter', '40m'),
+            ('LeafRouter', 'Asic', '5m'),
+            ('LeafRouter', 'Unknown', '300m'),
             ('LowerSpineRouter', 'FabricSpineRouter', '5m'),
             ('FabricSpineRouter', 'LowerSpineRouter', '5m'),
             ('LowerSpineRouter', 'UpperSpineRouter', '30m'),
