@@ -87,7 +87,7 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
                 .to_str()?
                 .parse()
                 .context("Unable to parse rate_limit_interval as integer")?,
-            None => 0,
+            None => 300,
         };
         if self.rate_limit_interval != Some(new_rate_limit_interval) {
             info!("Setting rate limit interval to {}", new_rate_limit_interval);
@@ -99,7 +99,7 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
                 .to_str()?
                 .parse()
                 .context("Unable to parse rate_limit_burst as integer")?,
-            None => 0,
+            None => 20000,
         };
         if self.rate_limit_burst != Some(new_rate_limit_burst) {
             info!("Setting rate limit burst to {}", new_rate_limit_burst);
