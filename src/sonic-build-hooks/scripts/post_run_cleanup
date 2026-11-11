@@ -22,6 +22,9 @@ rm -f /var/cache/apt/archives/*.deb /var/cache/apt/*.bin
 
 if [[ ! ${IMAGENAME} =~ -slave- ]]; then
 	rm -rf /var/lib/apt/lists/*
+	if [[ "${IMAGENAME}" != "host-image" ]]; then
+		rm -rf /var/log/apt/* /var/log/dpkg.log /var/cache/debconf/*-old /var/lib/dpkg/*-old
+	fi
 fi
 
 rm -rf /sonic/target /ssh
