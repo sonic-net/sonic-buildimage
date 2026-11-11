@@ -6,6 +6,8 @@
   }
 }
 #}
+{%- set dns_config = namespace(nameservers={}) %}
+{%- include 'dns_organization.j2' ignore missing %}
 {
-    "DNS_NAMESERVER": {}
+    "DNS_NAMESERVER": {{ dns_config.nameservers | tojson }}
 }

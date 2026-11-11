@@ -44,7 +44,7 @@
                 {
                     "type": "thermal.temp_check_and_set_all_fan_speed",
                     "default_speed": "46",
-                    "threshold1_speed": "60",
+                    "threshold1_speed": "66",
                     "threshold2_speed": "80",
                     "hightemp_speed": "100"
                 }

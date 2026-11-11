@@ -14,7 +14,6 @@ load_kernel_drivers() {
     modprobe i2c_mv64xxx
     modprobe i2c_dev
     modprobe i2c_mux_gpio
-    modprobe eeprom
 }
 
 load_kernel_drivers_late() {
@@ -58,12 +57,12 @@ sleep 2
 chmod 644 /sys/bus/i2c/devices/i2c-0/0-0053/eeprom
 
 # Enumerate fan eeprom devices
-echo eeprom 0x55 > /sys/bus/i2c/devices/i2c-0/new_device
-echo eeprom 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
+echo 24c02 0x55 > /sys/bus/i2c/devices/i2c-0/new_device
+echo 24c02 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
 
 # Enumerate PSU eeprom devices
-echo eeprom 0x50 > /sys/bus/i2c/devices/i2c-1/new_device
-echo eeprom 0x51 > /sys/bus/i2c/devices/i2c-1/new_device
+echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-1/new_device
+echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-1/new_device
 
 load_kernel_drivers_late
 

@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import pexpect
 import sys
 import time
 
 
-def main():
-
+def build_arg_parser():
     parser = argparse.ArgumentParser(description='test_login cmdline parser')
     parser.add_argument('-u', default="admin", help='login user name')
-    parser.add_argument('-P', default="YourPaSsWoRd", help='login password')
-    parser.add_argument('-N', default="Test@2022", help='new password')
+    parser.add_argument('-P', default=os.environ.get("SONIC_PASSWORD"), help='login password')
+    parser.add_argument('-N', help='new password')
     parser.add_argument('-p', type=int, default=9000, help='local port')
+    return parser
 
+
+def main():
+
+    parser = build_arg_parser()
     args = parser.parse_args()
+
+    if not args.P:
+        parser.error("login password required: use -P or SONIC_PASSWORD")
 
     login_prompt = 'sonic login:'
     passwd_prompt = 'Password:'
@@ -26,7 +34,8 @@ def main():
     i = 0
     while True:
         try:
-            p = pexpect.spawn("telnet 127.0.0.1 {}".format(args.p), timeout=600, logfile=sys.stdout, encoding='utf-8')
+            p = pexpect.spawn("telnet 127.0.0.1 {}".format(args.p), timeout=600, encoding='utf-8')
+            p.logfile_read = sys.stdout
             break
         except Exception as e:
             print(str(e))
@@ -53,6 +62,8 @@ def main():
             except pexpect.TIMEOUT:
                 break
             else:
+                if not args.N:
+                    parser.error("new password required: use -N")
                 # send old password for password prompt
                 p.sendline(args.P)
                 p.expect(passwd_change_prompt[1])

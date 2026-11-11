@@ -13,6 +13,20 @@
         "desc": "Out of range bulk chunk size.",
         "eStrKey": "Range"
     },
+    "FLEX_COUNTER_TABLE_WITH_VALID_ICMP_SESSION_POLL_INTERVAL_LOWER_BOUND": {
+        "desc": "ICMP_SESSION poll interval lower bound is accepted."
+    },
+    "FLEX_COUNTER_TABLE_WITH_VALID_ICMP_SESSION_POLL_INTERVAL_UPPER_BOUND": {
+        "desc": "ICMP_SESSION poll interval upper bound is accepted."
+    },
+    "FLEX_COUNTER_TABLE_WITH_INVALID_ICMP_SESSION_POLL_INTERVAL_LOWER_BOUND": {
+        "desc": "ICMP_SESSION poll interval below lower bound is rejected.",
+        "eStrKey": "Range"
+    },
+    "FLEX_COUNTER_TABLE_WITH_INVALID_ICMP_SESSION_POLL_INTERVAL_UPPER_BOUND": {
+        "desc": "ICMP_SESSION poll interval above upper bound is rejected.",
+        "eStrKey": "Range"
+    },
     "FLOW_COUNTER_ROUTE_PATTERN_TABLE_WITH_VRF": {
         "desc": "FLOW_COUNTER_ROUTE_PATTERN_TABLE_WITH_VRF no failure."
     },

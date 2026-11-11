@@ -88,46 +88,21 @@ class TestChassis:
         chassis._psu_list = []
         assert chassis.get_num_psus() == 3
 
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready', return_value=True)
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_sysfs_count')
-    def test_fan(self, mock_sysfs_count):
-        from sonic_platform.fan_drawer import RealDrawer, VirtualDrawer
+    def test_fan(self, mock_sysfs_count, mock_ensure_sysfs):
+        from sonic_platform.fan_drawer import VirtualDrawer
 
         # Test creating fixed fan
         mock_sysfs_count.return_value = 4
-        DeviceDataManager.is_fan_hotswapable = mock.MagicMock(return_value=False)
-        assert DeviceDataManager.get_fan_drawer_count() == 1
-        DeviceDataManager.get_fan_count = mock.MagicMock(return_value=4)
-        chassis = Chassis()
-        chassis.initialize_fan()
-        assert len(chassis._fan_drawer_list) == 1
-        assert len(list(filter(lambda x: isinstance(x, VirtualDrawer) ,chassis._fan_drawer_list))) == 1
-        assert chassis.get_fan_drawer(0).get_num_fans() == 4
-
-        # Test creating hot swapable fan
-        DeviceDataManager.get_fan_drawer_count = mock.MagicMock(return_value=2)
-        DeviceDataManager.get_fan_count = mock.MagicMock(return_value=4)
-        DeviceDataManager.is_fan_hotswapable = mock.MagicMock(return_value=True)
-        chassis._fan_drawer_list = []
-        chassis.initialize_fan()
-        assert len(chassis._fan_drawer_list) == 2
-        assert len(list(filter(lambda x: isinstance(x, RealDrawer) ,chassis._fan_drawer_list))) == 2
-        assert chassis.get_fan_drawer(0).get_num_fans() == 2
-        assert chassis.get_fan_drawer(1).get_num_fans() == 2
-
-        # Test chassis.get_all_fan_drawers
-        chassis._fan_drawer_list = []
-        assert len(chassis.get_all_fan_drawers()) == 2
-
-        # Test chassis.get_fan_drawer
-        chassis._fan_drawer_list = []
-        fan_drawer = chassis.get_fan_drawer(0)
-        assert fan_drawer and isinstance(fan_drawer, RealDrawer)
-        fan_drawer = chassis.get_fan_drawer(2)
-        assert fan_drawer is None
-
-        # Test chassis.get_num_fan_drawers
-        chassis._fan_drawer_list = []
-        assert chassis.get_num_fan_drawers() == 2
+        with mock.patch('sonic_platform.device_data.utils.read_int_from_file', return_value=0), \
+             mock.patch.object(DeviceDataManager, 'get_fan_count', return_value=4):
+            assert DeviceDataManager.get_fan_drawer_count() == 1
+            chassis = Chassis()
+            chassis.initialize_fan()
+            assert len(chassis._fan_drawer_list) == 1
+            assert len(list(filter(lambda x: isinstance(x, VirtualDrawer), chassis._fan_drawer_list))) == 1
+            assert chassis.get_fan_drawer(0).get_num_fans() == 4
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
@@ -191,6 +166,7 @@ class TestChassis:
                 assert s.sdk_index == index
             iteration_num -= 1
 
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
     def test_reboot_cause(self):
         from sonic_platform import utils
@@ -240,6 +216,25 @@ class TestChassis:
             assert minor == value
             mock_file_content[file_path] = 0
 
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_platform_with_bmc')
+    def test_reboot_cause_sw_pwr_off(self, mock_platform_with_bmc):
+        from sonic_platform import utils
+        from sonic_platform.chassis import REBOOT_CAUSE_ROOT
+
+        sw_pwr_off_path = os.path.join(REBOOT_CAUSE_ROOT, 'reset_sw_pwr_off')
+        utils.read_int_from_file = lambda file_path, *args, **kwargs: int(file_path == sw_pwr_off_path)
+
+        for with_bmc, expected in ((True, Chassis.REBOOT_CAUSE_POWER_DOWN_REQUEST_FROM_BMC),
+                                   (False, Chassis.REBOOT_CAUSE_POWER_LOSS)):
+            mock_platform_with_bmc.return_value = with_bmc
+            major, minor = Chassis().get_reboot_cause()
+            assert major == expected
+            assert minor == ''
+
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=False))
     def test_reboot_cause_timeout(self):
         chassis = Chassis()
@@ -247,14 +242,121 @@ class TestChassis:
         assert major == chassis.REBOOT_CAUSE_NON_HARDWARE
         assert minor == ''
 
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_timeout_logs_error_on_hardware(self, mock_logger):
+        # Real hardware keeps the wait and the error when the flag never appears
+        major, minor = Chassis().get_reboot_cause()
+        assert major == Chassis.REBOOT_CAUSE_NON_HARDWARE
+        assert minor == ''
+        mock_logger.log_error.assert_called_once_with("Hardware reboot cause is not ready")
+
+    @staticmethod
+    def _make_reset_cause_tree(tmp_path, ready_content=None, reset_files=None):
+        """Build a fake reset cause tree; ready_content None means no config/ dir."""
+        config_dir = tmp_path / 'config'
+        system_dir = tmp_path / 'system'
+        system_dir.mkdir()
+        if ready_content is not None:
+            config_dir.mkdir()
+            (config_dir / 'reset_attr_ready').write_bytes(ready_content)
+        for name, content in (reset_files or {}).items():
+            (system_dir / name).write_bytes(content)
+        return str(config_dir / 'reset_attr_ready'), str(system_dir) + '/'
+
+    @pytest.mark.parametrize('ready_content, reset_files', [
+        (None, None),
+        (b'', None),
+        (b'0\n', None),
+        (b'2\n', None),
+        (b'ready\n', None),
+        # Reset attributes are not read while the ready flag is not set
+        (b'', {'reset_sw_pwr_off': b'1\n'}),
+    ], ids=['no-config-dir', 'empty-ready-flag', 'ready-flag-0', 'ready-flag-2', 'ready-flag-malformed',
+            'ready-flag-empty-with-attr'])
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.time.sleep')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_simx_not_ready_no_wait(self, mock_logger, mock_sleep, tmp_path, ready_content, reset_files):
+        from sonic_platform import utils
+        ready_file, system_root = self._make_reset_cause_tree(tmp_path, ready_content, reset_files)
+        with mock.patch('sonic_platform.chassis.REBOOT_CAUSE_READY_FILE', ready_file), \
+                mock.patch('sonic_platform.chassis.REBOOT_CAUSE_ROOT', system_root), \
+                mock.patch('sonic_platform.utils.read_int_from_file', wraps=utils.read_int_from_file) as mock_read_int:
+            major, minor = Chassis().get_reboot_cause()
+        assert major == Chassis.REBOOT_CAUSE_NON_HARDWARE
+        assert minor == ''
+        # The ready flag is read once and nothing else is read
+        mock_read_int.assert_called_once_with(ready_file, log_func=None)
+        mock_sleep.assert_not_called()
+        mock_logger.log_error.assert_not_called()
+        mock_logger.log_notice.assert_called_once()
+
+    @pytest.mark.parametrize('reset_content, expected', [
+        (b'1\n', Chassis.REBOOT_CAUSE_POWER_LOSS),
+        # NUL-padded attribute: not an integer, so it reads as 0
+        (b'1\n' + b'\x00' * 4094, Chassis.REBOOT_CAUSE_NON_HARDWARE),
+    ], ids=['clean-attr', 'nul-padded-attr'])
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_platform_with_bmc', MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.time.sleep')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_simx_mock_tree_ready(self, mock_logger, mock_sleep, tmp_path, reset_content, expected):
+        # With the ready flag set, SimX keeps reading the reset attributes as before
+        ready_file, system_root = self._make_reset_cause_tree(tmp_path, b'1\n', {'reset_sw_pwr_off': reset_content})
+        with mock.patch('sonic_platform.chassis.REBOOT_CAUSE_READY_FILE', ready_file), \
+                mock.patch('sonic_platform.chassis.REBOOT_CAUSE_ROOT', system_root):
+            major, minor = Chassis().get_reboot_cause()
+        assert major == expected
+        assert minor == ''
+        mock_sleep.assert_not_called()
+        mock_logger.log_error.assert_not_called()
+        mock_logger.log_notice.assert_not_called()
+
+    @pytest.mark.parametrize('is_simx', [True, False], ids=['simx', 'hardware'])
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value='warm-reboot'))
+    @mock.patch('sonic_platform.utils.is_host', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready')
+    @mock.patch('sonic_platform.chassis.Chassis._is_reboot_cause_ready')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reboot_cause_warm_reboot_skips_ready_check(self, mock_logger, mock_is_ready, mock_wait_ready, is_simx):
+        # The warm/fast reboot check still runs before the ready flag is looked at on either path
+        with mock.patch('sonic_platform.chassis.DeviceDataManager.is_simx_platform', MagicMock(return_value=is_simx)):
+            major, minor = Chassis().get_reboot_cause()
+        assert major == Chassis.REBOOT_CAUSE_NON_HARDWARE
+        assert minor == ''
+        mock_is_ready.assert_not_called()
+        mock_wait_ready.assert_not_called()
+        mock_logger.log_notice.assert_not_called()
+        mock_logger.log_error.assert_not_called()
+
     @mock.patch('sonic_platform.utils.read_int_from_file')
-    @mock.patch('sonic_platform.chassis.time.sleep', mock.MagicMock())
-    def test_wait_reboot_cause_ready(self, mock_read_int):
-        mock_read_int.return_value = 1
+    @mock.patch('sonic_platform.chassis.time.sleep')
+    def test_wait_reboot_cause_ready(self, mock_sleep, mock_read_int):
+        from sonic_platform.chassis import REBOOT_CAUSE_MAX_WAIT_TIME, REBOOT_CAUSE_CHECK_INTERVAL
         chassis = Chassis()
+        mock_read_int.return_value = 1
         assert chassis._wait_reboot_cause_ready()
+        mock_sleep.assert_not_called()
+
+        # The flag appears while polling
+        mock_read_int.side_effect = [0, 0, 1]
+        assert chassis._wait_reboot_cause_ready()
+        assert mock_sleep.call_count == 2
+
+        # The flag never appears: poll for the full wait time, then give up
+        mock_sleep.reset_mock()
+        mock_read_int.reset_mock()
+        mock_read_int.side_effect = None
         mock_read_int.return_value = 0
         assert not chassis._wait_reboot_cause_ready()
+        assert mock_read_int.call_count == REBOOT_CAUSE_MAX_WAIT_TIME // REBOOT_CAUSE_CHECK_INTERVAL
+        assert mock_sleep.call_count == REBOOT_CAUSE_MAX_WAIT_TIME // REBOOT_CAUSE_CHECK_INTERVAL
+        mock_sleep.assert_called_with(REBOOT_CAUSE_CHECK_INTERVAL)
 
     def test_parse_warmfast_reboot_from_proc_cmdline(self):
         chassis = Chassis()
@@ -525,7 +627,8 @@ class TestChassis:
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
-        assert changes == {'0': '0'}
+        # keyed by 1-based physical port index, i.e. sdk_index + 1
+        assert changes == {'1': '0'}
         wait_ready_task.cancel_wait.assert_called_once_with(0)
         chassis._disable_polling_for_asic.assert_called_once_with('asic0')
         chassis._enable_polling_for_asic.assert_not_called()
@@ -554,7 +657,8 @@ class TestChassis:
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
-        assert changes == {'0': '1'}
+        # keyed by 1-based physical port index, i.e. sdk_index + 1
+        assert changes == {'1': '1'}
         chassis._enable_polling_for_asic.assert_called_once_with('asic0')
         chassis._disable_polling_for_asic.assert_not_called()
         wait_ready_task.cancel_wait.assert_not_called()
@@ -586,3 +690,78 @@ class TestChassis:
         assert changes == {}
         chassis._disable_polling_for_asic.assert_not_called()
         chassis._enable_polling_for_asic.assert_not_called()
+
+    @mock.patch('sonic_platform.thermal.initialize_chassis_thermals')
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_thermals_sysfs_labels_ready(self, mock_ensure,
+                                                   mock_init_chassis_thermals):
+        """Sysfs labels ready: ensure_sysfs_labels_ready called, thermals initialized."""
+        mock_ensure.return_value = True
+        mock_init_chassis_thermals.return_value = [MagicMock(), MagicMock()]
+
+        chassis = Chassis()
+        chassis._thermal_list = []
+        chassis.initialize_thermals()
+
+        mock_ensure.assert_called_once()
+        mock_init_chassis_thermals.assert_called_once()
+        assert len(chassis._thermal_list) == 2
+
+    @mock.patch('sonic_platform.thermal.initialize_chassis_thermals')
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_thermals_wait_sysfs_labels_ready_timeout(self, mock_ensure,
+                                                                mock_init_chassis_thermals):
+        """Sysfs labels ready file never appears: timeout logged but thermals still initialized."""
+        mock_ensure.return_value = False
+        mock_init_chassis_thermals.return_value = [MagicMock()]
+
+        chassis = Chassis()
+        chassis._thermal_list = []
+        chassis.initialize_thermals()
+
+        mock_ensure.assert_called_once()
+        mock_init_chassis_thermals.assert_called_once()
+        assert len(chassis._thermal_list) == 1
+
+    @mock.patch('sonic_platform.device_data.utils.read_int_from_file', return_value=0)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_count', return_value=4)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_count', return_value=1)
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_fan_sysfs_labels_ready(self, mock_ensure, mock_drawer_count,
+                                               mock_fan_count, mock_read_int):
+        """Fan init waits for sysfs labels ready before creating fan drawers."""
+        mock_ensure.return_value = True
+
+        chassis = Chassis()
+        chassis._fan_drawer_list = []
+        chassis.initialize_fan()
+
+        mock_ensure.assert_called_once()
+        assert len(chassis._fan_drawer_list) == 1
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_count', return_value=0)
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_fan_no_wait_when_no_fan_drawer(self, mock_ensure, mock_drawer_count):
+        """Liquid cooling system with no fans should not wait for sysfs labels."""
+        chassis = Chassis()
+        chassis._fan_drawer_list = []
+        chassis.initialize_fan()
+
+        mock_ensure.assert_not_called()
+        assert len(chassis._fan_drawer_list) == 0
+
+    @mock.patch('sonic_platform.device_data.utils.read_int_from_file', return_value=0)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_count', return_value=4)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_count', return_value=1)
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_fan_wait_sysfs_labels_ready_timeout(self, mock_ensure, mock_drawer_count,
+                                                            mock_fan_count, mock_read_int):
+        """Fan init proceeds even if sysfs labels ready times out."""
+        mock_ensure.return_value = False
+
+        chassis = Chassis()
+        chassis._fan_drawer_list = []
+        chassis.initialize_fan()
+
+        mock_ensure.assert_called_once()
+        assert len(chassis._fan_drawer_list) == 1

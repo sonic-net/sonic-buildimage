@@ -22,7 +22,9 @@ from unittest import mock
 from sonic_platform import utils
 from sonic_platform.thermal_updater import ThermalUpdater, hw_management_independent_mode_update, clean_thermal_data
 from sonic_platform.thermal_updater import ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD, \
-                                           ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
+                                           ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD, \
+                                           ASIC_TEMP_NOT_READY, \
+                                           ERROR_READ_THERMAL_DATA
 
 
 mock_tc_config = """
@@ -143,6 +145,71 @@ class TestThermalUpdater:
         assert updater.get_asic_temp_warning_threshold() == ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
         assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
+    @mock.patch('sonic_platform.thermal_updater.get_db_table_helper')
+    def test_update_asic_not_ready(self, mock_get_db_table_helper):
+        hw_management_independent_mode_update.reset_mock()
+        mock_temp_table = mock.MagicMock()
+        mock_db_table_helper = mock.MagicMock()
+        mock_db_table_helper.get_temperature_info_table.return_value = mock_temp_table
+        mock_get_db_table_helper.return_value = mock_db_table_helper
+
+        # ASIC not present in STATE_DB yet (startup not-ready window)
+        mock_temp_table.hget.return_value = (False, None)
+
+        updater = ThermalUpdater(None)
+        updater.update_asic()
+        # not-ready remaps 0 -> '' so hw-management-tc takes the recoverable
+        # SENSOR_READ_ERR path, never 0 (which would latch a false EMERGENCY).
+        hw_management_independent_mode_update.thermal_data_set_asic.assert_called_once_with(
+            0,
+            ASIC_TEMP_NOT_READY,
+            ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD,
+            ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
+            0
+        )
+
+    @mock.patch('sonic_platform.thermal_updater.get_db_table_helper')
+    def test_update_asic_read_error(self, mock_get_db_table_helper):
+        hw_management_independent_mode_update.reset_mock()
+        mock_temp_table = mock.MagicMock()
+        mock_db_table_helper = mock.MagicMock()
+        mock_db_table_helper.get_temperature_info_table.return_value = mock_temp_table
+        mock_get_db_table_helper.return_value = mock_db_table_helper
+
+        # ASIC present but the read/parse fails -> get_asic_temp() returns None
+        mock_temp_table.hget.side_effect = Exception('db read failed')
+
+        updater = ThermalUpdater(None)
+        updater.update_asic()
+        # read error -> assume hot: warn threshold temperature + fault, never 0.
+        hw_management_independent_mode_update.thermal_data_set_asic.assert_called_once_with(
+            0,
+            ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
+            ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD,
+            ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
+            ERROR_READ_THERMAL_DATA
+        )
+
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    def test_update_asic_exception_assumes_hot(self, mock_logger):
+        hw_management_independent_mode_update.reset_mock()
+        # Construct before patching get_asic_count so __init__ succeeds.
+        updater = ThermalUpdater(None)
+        # Fail inside update_asic before the loop assigns asic_index.
+        with mock.patch('sonic_platform.thermal_updater.DeviceDataManager.get_asic_count',
+                        side_effect=Exception('boom')):
+            updater.update_asic()  # must not raise UnboundLocalError
+        # assume hot: fake temperature to warn threshold, keep real thresholds
+        # (same shape as the None path), never 0.
+        hw_management_independent_mode_update.thermal_data_set_asic.assert_called_once_with(
+            0,
+            ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
+            ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD,
+            ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
+            ERROR_READ_THERMAL_DATA
+        )
+        mock_logger.log_error.assert_called()
+
     def test_update_module(self):
         from sonic_platform.sfp import SFP
         sfp = SFP(0)
@@ -198,3 +265,42 @@ class TestThermalUpdater:
         # Simulate process exit and confirm cleanup uses the bound SFP list
         exit_callback()
         mock_clean.assert_called_once_with([sfp])
+
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    @mock.patch('sonic_platform.thermal_updater.DeviceDataManager.is_spc1', return_value=True)
+    @mock.patch('sonic_platform.thermal_updater.utils.ensure_sysfs_mlxsw_ready', return_value=True)
+    @mock.patch('sonic_platform.thermal_updater.os.unlink')
+    @mock.patch('sonic_platform.thermal_updater.glob.iglob')
+    def test_unlink_hw_mgmt_thermal_files_waits_for_mlxsw_sysfs(
+            self, mock_iglob, mock_unlink, mock_ensure_mlxsw, mock_is_spc1, mock_logger):
+        mock_iglob.side_effect = [
+            ['/run/hw-management/thermal/asic'],
+            ['/run/hw-management/thermal/module1_temp_input',
+             '/run/hw-management/thermal/module2_temp_input'],
+        ]
+        with mock.patch('sonic_platform.thermal_updater.os.path.islink',
+                         side_effect=lambda f: 'module2' not in f):
+            updater = ThermalUpdater(None)
+            updater.unlink_hw_mgmt_thermal_files()
+
+        mock_ensure_mlxsw.assert_called_once()
+        mock_logger.log_notice.assert_any_call('All ASIC and modules thermal files are created')
+        unlinked = {c.args[0] for c in mock_unlink.call_args_list}
+        assert unlinked == {'/run/hw-management/thermal/asic',
+                             '/run/hw-management/thermal/module1_temp_input'}
+
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    @mock.patch('sonic_platform.thermal_updater.DeviceDataManager.is_spc1', return_value=True)
+    @mock.patch('sonic_platform.thermal_updater.utils.ensure_sysfs_mlxsw_ready', return_value=False)
+    @mock.patch('sonic_platform.thermal_updater.os.unlink')
+    @mock.patch('sonic_platform.thermal_updater.glob.iglob')
+    def test_unlink_hw_mgmt_thermal_files_mlxsw_sysfs_timeout(
+            self, mock_iglob, mock_unlink, mock_ensure_mlxsw, mock_is_spc1, mock_logger):
+        updater = ThermalUpdater(None)
+        updater.unlink_hw_mgmt_thermal_files()
+
+        mock_ensure_mlxsw.assert_called_once()
+        mock_logger.log_error.assert_called_once_with(
+            'Failed to wait for thermal files to be created')
+        mock_iglob.assert_not_called()
+        mock_unlink.assert_not_called()

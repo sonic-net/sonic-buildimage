@@ -1,2 +1,3 @@
 ^platform/vs
+^platform/vpp
 ^.azure-pipelines/run-test-template.yml

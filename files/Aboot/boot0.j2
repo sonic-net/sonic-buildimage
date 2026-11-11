@@ -408,7 +408,7 @@ extract_image() {
 extract_image_secureboot() {
     info "Extracting necessary swi content"
     # NOTE: boot/ is not used by the boot process but only extracted for kdump
-    unzip -oq "$swipath" 'boot/*' .imagehash kernel-cmdline-append -d "$image_path"
+    unzip -oq "$swipath" 'boot/*' .imagehash kernel-cmdline kernel-cmdline-append -d "$image_path"
 
     ## Extract platform.tar.gz
     info "Extracting platform.tar.gz"
@@ -695,6 +695,9 @@ write_platform_specific_cmdline() {
     if in_array "$sid" "MorandaP"; then
         aboot_machine=arista_7060x6_32pe
     fi
+    if in_array "$sid" "SteamerLaneMv3"; then
+        aboot_machine=arista_7060xe7_64prs_mv3_l
+    fi
 
     # disable cpu c-state other than C1
     local cpuvendor="$(sed -nr 's/vendor_id[\t ]*: (.*)/\1/p' /proc/cpuinfo | head -n 1)"
@@ -760,6 +763,13 @@ write_platform_specific_cmdline() {
             aboot_machine=arista_7060x6_16pe_384c
         fi
     fi
+    if in_array "$platform" "marconi"; then
+        if [ -f /tmp/.switch-prefdl ]; then
+            read_switch_eeprom
+        else
+            read_system_eeprom
+        fi
+    fi
 
     if [ $varlog_size -eq 0 ]; then
        if [ $flash_size -ge 28000 ]; then
@@ -780,6 +790,7 @@ write_platform_specific_cmdline() {
 
     cmdline_add "varlog_size=$varlog_size"
     cmdline_add "sonic.mode=$sonic_mode"
+    cmdline_add "pci=aer_clear_on_recovery_failure"
 }
 
 write_image_specific_cmdline() {
@@ -982,6 +993,26 @@ run_quirks() {
             devmem 0xa5184010 32 0x4
             sleep 1
             devmem 0xa5184010 32 0x8
+        fi
+        if in_array "$aboot_machine" "arista_7800r3a_36d2_lc" "arista_7800r3ak_36d2_lc" \
+                                     "arista_7800r3a_36dm2_lc" "arista_7800r3ak_36dm2_lc"; then
+            info "Arming watchdog for 90s"
+            setpci -s 08:00.0 COMMAND=0002
+            addr=$(( 0x$(setpci -s 08:00.0 BASE_ADDRESS_0) + 0x120 ))
+            devmem "$addr" 32 0xc0002328
+        fi
+        if in_array "$aboot_machine" "arista_7800r3_48cq2_lc" "arista_7800r3_48cqm2_lc"; then
+            info "Arming watchdog for 90s"
+            setpci -s 07:00.0 COMMAND=0002
+            addr=$(( 0x$(setpci -s 07:00.0 BASE_ADDRESS_0) + 0x120 ))
+            devmem "$addr" 32 0xc0002328
+        fi
+        if in_array "$aboot_machine" "arista_7280dr3a_36" "arista_7280dr3ak_36" \
+                                     "arista_7280dr3ak_36s" "arista_7280dr3am_36"; then
+            info "Arming watchdog for 90s"
+            setpci -s 01:00.0 COMMAND=0002
+            addr=$(( 0x$(setpci -s 01:00.0 BASE_ADDRESS_0) + 0x120 ))
+            devmem "$addr" 32 0xc0002328
         fi
     fi
 }

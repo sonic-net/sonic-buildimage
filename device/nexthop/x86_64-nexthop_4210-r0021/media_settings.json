@@ -1,6 +1,6 @@
 {
     "GLOBAL_MEDIA_SETTINGS": {
-        "34-34": {
+        "33-34,65-66": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -74,7 +74,7 @@
                 }
             }
         },
-        "36-36": {
+        "35-36,67-68": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -148,7 +148,7 @@
                 }
             }
         },
-        "38-38": {
+        "37-38,69-70": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -222,7 +222,7 @@
                 }
             }
         },
-        "40-40": {
+        "39-40,71-72": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -296,7 +296,7 @@
                 }
             }
         },
-        "42-42": {
+        "41-42,73-74": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -370,7 +370,7 @@
                 }
             }
         },
-        "44-44": {
+        "43-44,75-76": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -444,7 +444,7 @@
                 }
             }
         },
-        "46-46": {
+        "45-46,77-78": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -518,7 +518,7 @@
                 }
             }
         },
-        "48-48": {
+        "47-48,79-80": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -592,7 +592,7 @@
                 }
             }
         },
-        "50-50": {
+        "49-50,81-82": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -666,7 +666,7 @@
                 }
             }
         },
-        "52-52": {
+        "51-52,83-84": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -740,7 +740,7 @@
                 }
             }
         },
-        "54-54": {
+        "53-54,85-86": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -814,7 +814,7 @@
                 }
             }
         },
-        "56-56": {
+        "55-56,87-88": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -888,7 +888,7 @@
                 }
             }
         },
-        "58-58": {
+        "57-58,89-90": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -962,7 +962,7 @@
                 }
             }
         },
-        "60-60": {
+        "59-60,91-92": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -1036,7 +1036,7 @@
                 }
             }
         },
-        "62-62": {
+        "61-62,93-94": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -1110,7 +1110,7 @@
                 }
             }
         },
-        "64-64": {
+        "63-64,95-96": {
             ".*(-LPO|EO138HGPCT.*SL1|L-OSG8CNS\\d+-NMT|EOLO-138HG-PCT-\\d+-CSL1)": {
                 "pre3": {
                     "lane0": "0x0",
@@ -1235,6 +1235,78 @@
                     "lane5": "0xfffffff2",
                     "lane6": "0xfffffff2",
                     "lane7": "0xfffffff2"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
+            "OPTICAL25": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xfffffffe",
+                    "lane1": "0xfffffffe",
+                    "lane2": "0xfffffffe",
+                    "lane3": "0xfffffffe",
+                    "lane4": "0xfffffffe",
+                    "lane5": "0xfffffffe",
+                    "lane6": "0xfffffffe",
+                    "lane7": "0xfffffffe"
+                },
+                "main": {
+                    "lane0": "0x64",
+                    "lane1": "0x64",
+                    "lane2": "0x64",
+                    "lane3": "0x64",
+                    "lane4": "0x64",
+                    "lane5": "0x64",
+                    "lane6": "0x64",
+                    "lane7": "0x64"
+                },
+                "post1": {
+                    "lane0": "0xfffffffe",
+                    "lane1": "0xfffffffe",
+                    "lane2": "0xfffffffe",
+                    "lane3": "0xfffffffe",
+                    "lane4": "0xfffffffe",
+                    "lane5": "0xfffffffe",
+                    "lane6": "0xfffffffe",
+                    "lane7": "0xfffffffe"
                 },
                 "post2": {
                     "lane0": "0x0",

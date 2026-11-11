@@ -79,6 +79,18 @@ function startplatform() {
             exit 1
         fi
 
+        # If BOOT_TYPE from /proc/cmdline is "fastfast" but warm boot flag for this namespace is not enabled,
+        # this indicates ASIC$DEV failed to enter warm boot mode, likely due to shutdown issues and requires cold booting.
+        # Create a restart flag so ASIC$DEV will be properly reset on this boot.
+        if [[ x"$BOOT_TYPE" == x"fastfast" ]]; then
+            if [[ x"$WARM_BOOT" != x"true" ]]; then
+                debug "Boot type is fastfast but warm boot is not enabled for syncd$DEV, will reset ASIC$DEV"
+                if ! echo "mlx_sx_core_restart_required" > /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null; then
+                    debug "Warning: Could not create restart flag file"
+                fi
+            fi
+        fi
+
         reset_mellanox_drivers
 
         if ! echo "mlx_sx_core_restart_required" > /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null; then

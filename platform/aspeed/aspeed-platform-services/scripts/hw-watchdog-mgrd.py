@@ -6,7 +6,10 @@ The Linux watchdog framework allows only a single open of /dev/watchdog0 at a
 time.  This daemon is the sole owner of the device: it opens it, pets it
 periodically while armed, and exposes an IPC interface over a Unix domain socket
 so that the SONiC watchdogutil platform API (sonic_platform/watchdog.py) can
-arm, disarm and query the watchdog without contending for the device file.
+arm, disarm and query the watchdog without contending for the device file.  The
+socket lives in a dedicated directory (SOCKET_DIR) so that directory can be
+bind-mounted into the pmon container (see docker_image_ctl.j2), letting
+watchdogutil run inside pmon as well as on the host.
 
 Boot-time arming policy is driven by platform.json (the "watchdog" section).
 On a fresh boot the "boot_arm" flag decides whether the daemon arms the
@@ -51,8 +54,11 @@ WDIOS_ENABLECARD = 0x0002
 WATCHDOG_DEVICE = "/dev/watchdog0"
 WATCHDOG_SYSFS_PATH = "/sys/class/watchdog/watchdog0/"
 
-# IPC socket shared with the platform API (sonic_platform/watchdog.py).
-SOCKET_PATH = "/run/hw-watchdog-mgrd.sock"
+# IPC socket shared with the platform API.  A whole directory (not a single
+# file) is used so the pmon bind mount survives the daemon restart that unlinks
+# and recreates the socket inode.
+SOCKET_DIR = "/run/hw-watchdog-mgrd"
+SOCKET_PATH = os.path.join(SOCKET_DIR, "hw-watchdog-mgrd.sock")
 
 # Runtime arming intent.  JSON: {"armed": bool, "timeout": int}.  Written on
 # arm/disarm and read on startup.  Lives on tmpfs (/run) so it survives a daemon
@@ -80,6 +86,15 @@ MIN_TIMEOUT = 30
 MAX_TIMEOUT = 300
 KEEPALIVE_LOG_INTERVAL = 3600  # log heartbeat status hourly
 
+# Boot-stage attribution.  When platform.json's watchdog section names a
+# "stage_marker_cmd" (a platform-provided executable that records a boot-stage
+# marker somewhere that survives an SoC reset), the daemon runs it with its
+# current stage so U-Boot can attribute a WDT-caused reset to the daemon stage
+# on the next boot.  The command owns the register address, its write protocol
+# and the never-move-backwards rule; the daemon only knows its stage values.
+STAGE_MARKER_DAEMON_ARMED = 0x24     # daemon armed, steady state
+STAGE_MARKER_DAEMON_SHUTDOWN = 0x25  # system shutdown/reboot in progress
+
 
 class WatchdogManager:
     """Owns the hardware watchdog and serves watchdog requests over IPC."""
@@ -104,6 +119,10 @@ class WatchdogManager:
         # missing/unreadable config) explicitly opts out.
         self.boot_arm = True
         self.shutdown_protect = True
+        # Boot-stage attribution: absolute path of the platform's stage-marker
+        # command, or None to disable (the default; set from platform.json at
+        # startup).
+        self.stage_marker_cmd = None
         # Set by the signal handler so the teardown runs in the main loop
         # (normal context) rather than the signal handler itself.  The wakeup
         # pipe lets a signal break the select() promptly.
@@ -131,12 +150,72 @@ class WatchdogManager:
             wd = data.get("watchdog", {}) or {}
             self.boot_arm = bool(wd.get("boot_arm", True))
             self.shutdown_protect = bool(wd.get("shutdown_protect", True))
+            # Optional boot-stage attribution.  Absent -> disabled, so other
+            # platforms are unaffected.
+            cmd = wd.get("stage_marker_cmd")
         except Exception as e:  # pragma: no cover - defensive
             self.log("failed to load platform watchdog policy: %s" % e,
                      syslog.LOG_ERR)
             return
-        self.log("Loaded watchdog policy: boot_arm=%s shutdown_protect=%s"
-                 % (self.boot_arm, self.shutdown_protect))
+        self.stage_marker_cmd = self._parse_stage_marker_cmd(cmd)
+        self.log("Loaded watchdog policy: boot_arm=%s shutdown_protect=%s "
+                 "stage_marker_cmd=%s"
+                 % (self.boot_arm, self.shutdown_protect,
+                    self.stage_marker_cmd or "none"))
+
+    def _parse_stage_marker_cmd(self, cmd):
+        """Validate platform.json's watchdog.stage_marker_cmd.
+
+        The value is executed as root, so accept only an absolute path with no
+        arguments.  Anything else disables attribution (returns None) and is
+        logged; it never raises, because a bad attribution config must not stop
+        the daemon from petting.  Existence is checked at write time, not here:
+        the command ships in a platform package that may be installed later in
+        the same boot the daemon starts on.
+        """
+        if cmd is None:
+            return None
+        if not isinstance(cmd, str) or not cmd.startswith("/") \
+                or any(c.isspace() for c in cmd):
+            self.log("ignoring watchdog.stage_marker_cmd %r: must be an "
+                     "absolute path" % (cmd,), syslog.LOG_ERR)
+            return None
+        return cmd
+
+    def _write_stage_marker(self, value):
+        """Record the current boot stage for WDT reset attribution.
+
+        Runs platform.json's watchdog.stage_marker_cmd with `value` as its only
+        argument (e.g. "0x24").  The command writes it somewhere that survives
+        an SoC reset and U-Boot reads it on the next boot to attribute a
+        WDT-caused reset to the stage that was running.  The command enforces
+        the never-move-backwards rule, so a daemon restart cannot regress a
+        later marker.  Best-effort: attribution must never affect petting, so a
+        missing config or command is a no-op and any failure is logged and
+        swallowed.
+        """
+        if self.stage_marker_cmd is None:
+            return
+        if not os.access(self.stage_marker_cmd, os.X_OK):
+            self.log("stage-marker command %s not executable; skipping marker "
+                     "0x%02x" % (self.stage_marker_cmd, value),
+                     syslog.LOG_WARNING)
+            return
+        try:
+            result = subprocess.run([self.stage_marker_cmd, "0x%02x" % value],
+                                    check=True, capture_output=True, timeout=5)
+        except (OSError, subprocess.SubprocessError) as e:
+            self.log("stage-marker command %s 0x%02x failed: %s"
+                     % (self.stage_marker_cmd, value, e), syslog.LOG_WARNING)
+            return
+        stderr = result.stderr.decode(errors="replace").strip()
+        if stderr:
+            self.log("stage-marker command %s 0x%02x reported: %s"
+                     % (self.stage_marker_cmd, value, stderr),
+                     syslog.LOG_WARNING)
+            return
+        self.log("Stage attribution: wrote marker 0x%02x via %s"
+                 % (value, self.stage_marker_cmd))
 
     # ----------------------------------------------------------- device access
     def _open_device(self):
@@ -281,6 +360,11 @@ class WatchdogManager:
         return {"error": "unknown command: %s" % cmd}
 
     def _create_socket(self):
+        # Ensure the socket directory exists before binding.  It is normally
+        # created on first start, but a directory bind-mount into pmon may have
+        # (re)created it as an empty dir, and the daemon may restart after a
+        # crash; makedirs(exist_ok) covers both.
+        os.makedirs(os.path.dirname(SOCKET_PATH), exist_ok=True)
         try:
             os.unlink(SOCKET_PATH)
         except OSError:
@@ -334,10 +418,19 @@ class WatchdogManager:
 
     def cleanup(self):
         self.log("Hardware watchdog manager stopping")
+        system_stopping = self._system_is_stopping()
+        # Mark the shutdown stage ONLY when the system itself is going down, so
+        # a hang on the shutdown/reboot path is attributed to it on the next
+        # boot.  An ordinary daemon stop/restart (systemctl stop/restart for
+        # maintenance) leaves the previous marker (0x24 armed) in place:
+        # stamping 0x25 there would misattribute any WDT reset landing before
+        # the daemon comes back and re-arms, and the marker command never moves
+        # backwards, so the restarted daemon could not undo it.
+        if system_stopping:
+            self._write_stage_marker(STAGE_MARKER_DAEMON_SHUTDOWN)
         if self.fd is not None:
             try:
-                if (self.armed and self.shutdown_protect
-                        and self._system_is_stopping()):
+                if self.armed and self.shutdown_protect and system_stopping:
                     # System shutdown/reboot in progress: keep the watchdog
                     # armed so the SoC is reset if the reboot path hangs.  Pet
                     # once for a full timeout window, then close WITHOUT the
@@ -480,6 +573,9 @@ class WatchdogManager:
                             self.log("Hardware watchdog first keepalive sent "
                                      "(timeout %d s)" % self.timeout)
                             self.first_pet_pending = False
+                            # First successful pet means the daemon has reached
+                            # steady state; mark the stage.
+                            self._write_stage_marker(STAGE_MARKER_DAEMON_ARMED)
                         if keepalive_count % log_threshold == 0:
                             self.log("Hardware watchdog keepalive active (sent "
                                      "%d keepalives)" % keepalive_count)

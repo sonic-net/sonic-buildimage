@@ -1,0 +1,25 @@
+# r8168 Network Card MAC Address Setter
+
+This README provides an overview of the components and usage related to setting the MAC address for the r8168 network card.
+
+## Components
+
+1. **r8168_setmac**: 
+   - This function is used to set the MAC address for the r8168 network card.
+
+2. **pgdrv**: 
+   - This is the driver required for the `setmac` functionality of the r8168 network card.
+
+3. **rtnicpg-x86_64**: 
+   - This is the tool used to perform the `setmac` operation on the r8168 network card.
+
+4. **8168HEF.cfg**: 
+   - This configuration file contains settings related to the `setmac` operation for the r8168 network card.
+
+## Usage
+
+To set the MAC address for your r8168 network card, follow these steps:
+
+1. Ensure that the `pgdrv` driver is installed and loaded in your system.
+2. Use the `rtnicpg-x86_64` tool to execute the MAC address setting operation.
+3. Modify the `8168HEF.cfg` file as needed to configure the desired MAC address.

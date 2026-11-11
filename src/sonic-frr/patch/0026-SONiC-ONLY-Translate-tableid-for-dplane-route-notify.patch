@@ -1,19 +1,18 @@
-[PATCH] zebra: Translate tableid for dplane route notify
-
+From bc51e1615b90a527c9e9b0f8ec36863e7f69d63d Mon Sep 17 00:00:00 2001
 From: Carmine Scarpitta <cscarpit@cisco.com>
 Date: Mon, 14 Apr 2025 18:49:51 -0500
 Subject: [PATCH] zebra: Translate tableid for dplane route notify
 
 Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
 ---
- zebra/zebra_rib.c |    2 +-
+ zebra/zebra_rib.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
-index 22925a5ad..da49dc7e2 100644
+index 07a962de27..639b9c3bc3 100644
 --- a/zebra/zebra_rib.c
 +++ b/zebra/zebra_rib.c
-@@ -5108,7 +5108,7 @@ static inline void zebra_rib_translate_ctx_from_dplane(struct zebra_dplane_ctx *
+@@ -5089,7 +5089,7 @@ static inline void zebra_rib_translate_ctx_from_dplane(struct zebra_dplane_ctx *
  	if (vrfid == VRF_UNKNOWN)
  		dplane_ctx_set_vrf(ctx, zebra_vrf_lookup_by_table(tableid, nsid));
  	else if ((op == DPLANE_OP_ROUTE_INSTALL || op == DPLANE_OP_ROUTE_UPDATE ||
@@ -22,3 +21,6 @@ index 22925a5ad..da49dc7e2 100644
  		 tableid == ZEBRA_ROUTE_TABLE_UNKNOWN)
  		dplane_ctx_set_table(ctx, zebra_vrf_lookup_tableid(vrfid, nsid));
  }
+-- 
+2.34.1
+

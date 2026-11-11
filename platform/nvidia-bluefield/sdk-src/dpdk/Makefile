@@ -33,6 +33,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	pushd dpdk.org/
 	find . -type f -exec touch {} +
 
+	patch -p1 < ../0001-Remove-linux-headers-dependency.patch
+
 	# Build the package
 	# PATH variable is required for ninja to find the right version
 	DPDK_CONFIG_OPTIONS='--cross-file ../config/arm/arm64_bluefield_linux_gcc -Dpkt_mbuf_headroom=256' dpkg-buildpackage -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)

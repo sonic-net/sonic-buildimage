@@ -2,14 +2,18 @@ import json
 import os
 import subprocess
 import ipaddress
+import tempfile
 import tests.common_utils as utils
 import minigraph
 
+from lxml import etree as ET
+from lxml.etree import QName
 from unittest import TestCase
 
 TOR_ROUTER = 'ToRRouter'
 BACKEND_TOR_ROUTER = 'BackEndToRRouter'
 BMC_MGMT_TOR_ROUTER = 'BmcMgmtToRRouter'
+NETWORK_BMC = 'NetworkBmc'
 
 class TestCfgGenCaseInsensitive(TestCase):
 
@@ -176,6 +180,27 @@ class TestCfgGenCaseInsensitive(TestCase):
             utils.to_dict(output.strip()),
             utils.to_dict("{'console_mgmt': {'enabled': 'no'}}"))
 
+    def test_minigraph_console_mgmt_feature_platform_default(self):
+        # load_minigraph applies init_cfg.json first and the minigraph on top of it
+        with tempfile.NamedTemporaryFile('w', suffix='.json') as init_cfg:
+            json.dump({'CONSOLE_SWITCH': {'console_mgmt': {'enabled': 'yes'}}}, init_cfg)
+            init_cfg.flush()
+            argument = ['-j', init_cfg.name, '-m', self.sample_graph, '-p', self.port_config, '-v', 'CONSOLE_SWITCH']
+            output = self.run_script(argument)
+            self.assertEqual(
+                utils.to_dict(output.strip()),
+                utils.to_dict("{'console_mgmt': {'enabled': 'no'}}"))
+
+            try:
+                # A BMC keeps the platform default
+                output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (TOR_ROUTER, NETWORK_BMC), self.sample_graph])
+                output = self.run_script(argument)
+                self.assertEqual(
+                    utils.to_dict(output.strip()),
+                    utils.to_dict("{'console_mgmt': {'enabled': 'yes'}}"))
+            finally:
+                output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (NETWORK_BMC, TOR_ROUTER), self.sample_graph])
+
     def test_minigraph_console_port(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', 'CONSOLE_PORT']
         output = self.run_script(argument)
@@ -275,7 +300,7 @@ class TestCfgGenCaseInsensitive(TestCase):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "KUBERNETES_MASTER[\'SERVER\']"]
         output = self.run_script(argument)
         self.assertEqual(json.loads(output.strip().replace("'", "\"")),
-                json.loads('{"ip": "10.10.10.10", "disable": "True"}'))
+                json.loads('{"ip": "10.10.10.10", "disable": "True", "port": "18443"}'))
 
     def test_minigraph_mgmt_port(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "MGMT_PORT"]
@@ -331,6 +356,66 @@ class TestCfgGenCaseInsensitive(TestCase):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'storage_device\']"]
         output = self.run_script(argument)
         self.assertEqual(output.strip(), "true")
+
+    def test_minigraph_ip_decap(self):
+        backend_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-backend.xml')
+        platform_statuses = [
+            ('x86_64-mlnx_msn2700-r0', 'disabled'),
+            ('x86_64-nvidia_sn5600-r0', 'disabled'),
+            ('x86_64-arista_7060x6_64pe_b', 'enabled'),
+        ]
+        for platform, expected_status in platform_statuses:
+            with self.subTest(platform=platform):
+                result = minigraph.parse_xml(
+                    backend_graph,
+                    platform=platform,
+                    port_config_file=self.port_config
+                )
+                self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], expected_status)
+
+        result = minigraph.parse_xml(
+            self.sample_graph,
+            platform='x86_64-mlnx_msn2700-r0',
+            port_config_file=self.port_config
+        )
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
+
+        backend_storage_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-backend-storage.xml')
+        result = minigraph.parse_xml(
+            backend_storage_graph,
+            platform='x86_64-mlnx_msn2700-r0',
+            port_config_file=self.port_config
+        )
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
+
+        arista_graphs = [
+            os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-arista-7060x6-64pe-b-c512s2.xml'),
+            os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-arista-7060x6-64pe-b-c448o16.xml')
+        ]
+        for graph_file in arista_graphs:
+            with self.subTest(graph_file=graph_file):
+                result = minigraph.parse_xml(
+                    graph_file,
+                    platform='x86_64-arista_7060x6_64pe_b',
+                    port_config_file=self.port_config
+                )
+                self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'disabled')
+
+        result = minigraph.parse_xml(
+            self.sample_graph,
+            platform='x86_64-arista_7060x6_64pe_b',
+            port_config_file=self.port_config
+        )
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
+
+        dpu_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-dpu.xml')
+        result = minigraph.parse_xml(dpu_graph, port_config_file=self.port_config)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['switch_type'], 'dpu')
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'disabled')
+
+        result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
+        self.assertNotEqual(result['DEVICE_METADATA']['localhost'].get('switch_type'), 'dpu')
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
 
     def test_minigraph_storage_backend_no_resource_type(self):
         self.verify_storage_device_set(self.sample_simple_graph)
@@ -612,3 +697,30 @@ class TestCfgGenCaseInsensitive(TestCase):
         # The code picks the first key — just verify it doesn't crash
         first_peer = next(iter(peer_switch_table))
         self.assertIn(first_peer, ["switch2-t0", "switch3-t0"])
+
+
+class TestParseChassisHwsku(TestCase):
+    def build_root(self, devices):
+        ns = minigraph.ns
+        root = ET.Element(QName(ns, "root"))
+        png = ET.SubElement(root, QName(ns, "PngDec"))
+        devices_node = ET.SubElement(png, QName(ns, "Devices"))
+        for hostname, hwsku in devices:
+            device = ET.SubElement(devices_node, QName(ns, "Device"))
+            ET.SubElement(device, QName(ns, "Hostname")).text = hostname
+            ET.SubElement(device, QName(ns, "HwSku")).text = hwsku
+        return root
+
+    def test_parse_chassis_hwsku_matching_hostname(self):
+        root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
+        self.assertEqual(minigraph.parse_chassis_hwsku(root, 'str-sonic'), 'Sonic-chassis-sku')
+
+    def test_parse_chassis_hwsku_no_match(self):
+        root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
+        self.assertIsNone(minigraph.parse_chassis_hwsku(root, 'other-host'))
+
+    def test_parse_chassis_hwsku_none_hostname(self):
+        # VOQ pizzabox: chassis-type minigraph with no ParentRouter, so chassis_hostname is None.
+        # parse_chassis_hwsku must return None instead of raising AttributeError.
+        root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
+        self.assertIsNone(minigraph.parse_chassis_hwsku(root, None))

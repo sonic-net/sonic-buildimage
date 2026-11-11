@@ -47,6 +47,7 @@ $(addprefix $(DEST)/, $(P4LANG_P4C_TARGET)): $(DEST)/% :
 	patch -p1 -i ../p4lang-p4c.patch/fix-build-for-boost-1.83.patch
 	patch -p1 -i ../p4lang-p4c.patch/update-thrift-dependency.patch
 	patch -p1 -i ../p4lang-p4c.patch/remove-protobuf-from-debian-dependency.patch
+	patch -p1 -i ../p4lang-p4c.patch/remove-scapy-from-debian-dependency.patch
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else

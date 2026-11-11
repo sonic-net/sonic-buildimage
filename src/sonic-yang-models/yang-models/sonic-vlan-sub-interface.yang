@@ -28,9 +28,13 @@ module sonic-vlan-sub-interface {
 
     description "VLAN sub-interface configuration for dot1q encapsulated sub-ports on physical or PortChannel interfaces";
 
-	revision 2025-03-06 {
-		description "Add leaf vnet_name";
-	}
+    revision 2026-07-20 {
+        description "Add leaf ipv6_use_link_local_only";
+    }
+
+    revision 2025-03-06 {
+        description "Add leaf vnet_name";
+    }
     
     revision 2021-11-11 {
         description "Initial version";
@@ -90,6 +94,12 @@ module sonic-vlan-sub-interface {
                     type leafref {
                         path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
                     }   
+                }
+
+                leaf ipv6_use_link_local_only {
+                    description "Enable/Disable IPv6 link local address on vlan sub-interface";
+                    type stypes:mode-status;
+                    default disable;
                 }
 
                 leaf loopback_action {

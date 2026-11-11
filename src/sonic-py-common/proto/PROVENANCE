@@ -1,0 +1,12 @@
+Source: https://github.com/openconfig/gnoi
+Version: v0.4.0
+Commit: 6439b983b64746d444e85c4328cda4970535a0a7
+License: Apache-2.0 (see LICENSE)
+
+Included files and SHA-256 digests:
+
+f2cfcaf19623b93e1ce5c075bd745ea0b81e6b982f0752e9fb8297da2b85c12b  github.com/openconfig/gnoi/types/types.proto
+45d64bbd89fd952cee3a83ee5657a14d534f09089f1ccd3c5088bd268c457f13  github.com/openconfig/gnoi/common/common.proto
+fa5d4ff283af2178207dd94755ca5c901fd08a13ac44d28d8ae06a53cb8df30e  github.com/openconfig/gnoi/system/system.proto
+9a2c133f0b745e5400ccb4c4ce0384e97854c38cb5445cd22dcde6414c01d971  github.com/openconfig/gnoi/file/file.proto
+b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1  LICENSE

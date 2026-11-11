@@ -6,6 +6,12 @@
 override_dh_auto_build:
 	# Nothing to build
 
+override_dh_auto_test:
+	# Script unit tests (skipped with nocheck)
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	python3 -m pytest tests/
+endif
+
 override_dh_auto_install:
 	# Install scripts
 	install -d $(CURDIR)/debian/aspeed-platform-services/usr/bin
@@ -30,4 +36,5 @@ override_dh_installsystemd:
 	dh_installsystemd --name=sonic-switchcpu-console-init sonic-switchcpu-console-init.service
 	dh_installsystemd --name=sonic-uboot-env-init sonic-uboot-env-init.service
 	dh_installsystemd --name=hw-watchdog-mgrd hw-watchdog-mgrd.service
+	dh_installsystemd --name=aspeed-disable-boot-watchdog aspeed-disable-boot-watchdog.service
 

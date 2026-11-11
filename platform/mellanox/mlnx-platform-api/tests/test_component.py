@@ -561,7 +561,9 @@ class TestComponent:
         o._ONIEUpdater__trigger_update = mock.MagicMock()
         o._ONIEUpdater__is_update_staged = mock.MagicMock()
         o._ONIEUpdater__unstage_update = mock.MagicMock()
+        o._ONIEUpdater__clear_pending_updates = mock.MagicMock()
         o.update_firmware('')
+        o._ONIEUpdater__clear_pending_updates.assert_called_once()
         o._ONIEUpdater__stage_update.assert_called_once()
         o._ONIEUpdater__trigger_update.assert_called_once()
         o._ONIEUpdater__is_update_staged.assert_not_called()
@@ -575,6 +577,60 @@ class TestComponent:
         with pytest.raises(RuntimeError):
             o.update_firmware('')
             o._ONIEUpdater__unstage_update.assert_called_once()
+
+    def test_onie_updater_update_firmware_clear_pending_aborts(self):
+        # A failure clearing stale pending updates must abort before staging,
+        # so a poisoned pending dir cannot trigger the ONIE update-mode hang.
+        o = ONIEUpdater()
+        o._ONIEUpdater__clear_pending_updates = mock.MagicMock(side_effect=RuntimeError(''))
+        o._ONIEUpdater__stage_update = mock.MagicMock()
+        o._ONIEUpdater__trigger_update = mock.MagicMock()
+        o._ONIEUpdater__is_update_staged = mock.MagicMock(return_value=False)
+        o._ONIEUpdater__unstage_update = mock.MagicMock()
+        with pytest.raises(RuntimeError):
+            o.update_firmware('')
+        o._ONIEUpdater__stage_update.assert_not_called()
+        o._ONIEUpdater__trigger_update.assert_not_called()
+        o._ONIEUpdater__unstage_update.assert_not_called()
+
+        # Batched path (allow_reboot=False) must NOT clear pending.
+        o._ONIEUpdater__clear_pending_updates = mock.MagicMock()
+        o._ONIEUpdater__stage_update = mock.MagicMock()
+        o._ONIEUpdater__trigger_update = mock.MagicMock()
+        o.update_firmware('', allow_reboot=False)
+        o._ONIEUpdater__clear_pending_updates.assert_not_called()
+        o._ONIEUpdater__stage_update.assert_called_once()
+
+    @mock.patch('sonic_platform.component.subprocess.check_call')
+    @mock.patch('sonic_platform.component.subprocess.check_output')
+    def test_onie_updater_clear_pending_updates(self, mock_check_output, mock_check_call):
+        o = ONIEUpdater()
+        header = ("** Pending firmware update information:\n"
+                  "Name               | Version / Type | Attempts |Size (Bytes)  | Date\n"
+                  "===================+================+==========+==============+====\n")
+        # Empty pending -> nothing removed.
+        mock_check_output.return_value = \
+            "** Pending firmware update information:\nNo pending firmware updates present."
+        o._ONIEUpdater__clear_pending_updates()
+        mock_check_call.assert_not_called()
+
+        # Two stale entries (incl. a non-firmware sidecar) -> both removed.
+        mock_check_output.return_value = header + \
+            "0ACTV.metainfo.xml | unknown     | 0 | 11       | d\n" + \
+            "0ACTV.rom          | bios_update | 0 | 16777216 | d\n"
+        o._ONIEUpdater__clear_pending_updates()
+        assert mock_check_call.call_count == 2
+
+        # A removal failure must abort (raise), not silently proceed.
+        mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
+        with pytest.raises(RuntimeError):
+            o._ONIEUpdater__clear_pending_updates()
+
+        # A listing failure must abort (raise) too.
+        mock_check_call.side_effect = None
+        mock_check_output.side_effect = subprocess.CalledProcessError(1, None)
+        with pytest.raises(RuntimeError):
+            o._ONIEUpdater__clear_pending_updates()
 
     @mock.patch('sonic_platform.component.os.path.lexists')
     @mock.patch('sonic_platform.component.os.path.exists', mock.MagicMock(return_value=False))
@@ -656,13 +712,15 @@ class TestComponent:
         c.image_ext_name = '.txt'
         assert not c._check_file_validity(os.path.abspath(__file__))
 
-    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', 
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config',
                 mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser'}))
-    @mock.patch('sonic_py_common.device_info.get_bmc_data', 
+    @mock.patch('sonic_py_common.device_info.get_bmc_data',
                 mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_os',
+                mock.MagicMock(return_value='openbmc'))
     @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
     @mock.patch('sonic_platform.component.subprocess.check_call')
-    @mock.patch('sonic_platform.component.ComponentBMC._check_file_validity', 
+    @mock.patch('sonic_platform.component.ComponentBMC._check_file_validity',
                 mock.MagicMock(return_value=True))
     def test_bmc_update_firmware(self, mock_check_call):
         mock_check_call.return_value = None
@@ -674,3 +732,45 @@ class TestComponent:
             start_new_session=True
         )
         assert ret == True
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config',
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data',
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_os',
+                mock.MagicMock(return_value='sonic'))
+    @mock.patch('sonic_platform.component.subprocess.check_call')
+    @mock.patch('sonic_platform.component.ComponentBMC._check_file_validity')
+    def test_bmc_update_firmware_rejected_when_sonic_bmc(self, mock_check_validity,
+                                                         mock_check_call, capsys):
+        mock_check_validity.return_value = True
+        component = ComponentBMC()
+        ret = component.install_firmware('fake_image.fwpkg')
+        assert ret is False
+        mock_check_validity.assert_not_called()
+        mock_check_call.assert_not_called()
+        captured = capsys.readouterr()
+        assert 'BMC firmware install not supported when BMC OS is sonic' in captured.out
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_os', mock.MagicMock(return_value='sonic'))
+    @mock.patch('sonic_platform.bmc.BMC.get_instance')
+    def test_bmc_get_firmware_version_sonic_bmc(self, mock_get_instance):
+        mock_get_instance.return_value = mock.MagicMock()
+        component = ComponentBMC()
+        assert component.get_firmware_version() == 'N/A'
+        component.bmc.get_version.assert_not_called()
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_os', mock.MagicMock(return_value='openbmc'))
+    @mock.patch('sonic_platform.bmc.BMC.get_instance')
+    def test_bmc_get_firmware_version_openbmc(self, mock_get_instance):
+        mock_bmc = mock.MagicMock()
+        mock_bmc.get_version.return_value = '1.2.3'
+        mock_get_instance.return_value = mock_bmc
+        component = ComponentBMC()
+        assert component.get_firmware_version() == '1.2.3'
+        mock_bmc.get_version.assert_called_once()
+
+    @mock.patch('sonic_platform.bmc.BMC.get_instance', mock.MagicMock(return_value=None))
+    def test_bmc_get_firmware_version_no_bmc(self):
+        component = ComponentBMC()
+        assert component.get_firmware_version() == 'N/A'
