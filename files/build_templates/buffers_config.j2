@@ -61,7 +61,7 @@ def
             'upperspinerouter_lowerspinerouter' : '30m',
             'spinerouter_leafrouter' : '300m',
             'lowerspinerouter_leafrouter' : '500m',
-            'leafrouter_lowerspinerouter' : '500m',
+            'leafrouter_lowerspinerouter_fallback' : '300m',
             'fabricspinerouter_lowerspinerouter' : '5m',
             'fabricregionalhub_lowerregionalhub' : '5m',
             'lowerregionalhub_upperregionalhub' : '50m',
@@ -119,11 +119,12 @@ def
                 {%- elif roles2 in ports2cable %}
                     {%- if cable_len.append(ports2cable[roles2]) %}{% endif %}
                 {%- endif %}
-                {%- if roles1 == 'leafrouter_lowerspinerouter' and cable_len == ['500m'] %}
+                {%- if roles1 == 'leafrouter_lowerspinerouter' and cable_len == ['500m'] and
+                       roles1 + '_fallback' in ports2cable %}
                     {%- if PORT is not defined or port_name not in PORT or
                            PORT[port_name].get('speed', '') | string not in leaf_500m_speeds %}
                         {%- set _ = cable_len.pop() %}
-                        {%- set _ = cable_len.append('300m') %}
+                        {%- set _ = cable_len.append(ports2cable[roles1 + '_fallback']) %}
                     {%- endif %}
                 {%- endif %}
             {%- endif %}

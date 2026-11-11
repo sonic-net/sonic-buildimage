@@ -90,6 +90,19 @@ class TestBufferCableLength(TestCase):
             {'Ethernet0': '40m', 'Ethernet4': '40m'}
         )
 
+    def test_leaf_lowerspine_cable_length_fallback_override(self):
+        templates = {
+            'pg_profile_lookup.ini': '400000 500m 8636 0 1136396 0 3556\n',
+            'buffers_config_organization.j2': (
+                "{% set _ = buffer_config_extensions.ports2cable.update("
+                "{'leafrouter_lowerspinerouter_fallback': '40m'}) %}"
+            ),
+        }
+        self.assertEqual(
+            self.render_cable_lengths('LeafRouter', 'LowerSpineRouter', templates),
+            {'Ethernet0': '40m', 'Ethernet4': '500m'}
+        )
+
 
 class TestJ2Files(TestCase):
     def setUp(self):
