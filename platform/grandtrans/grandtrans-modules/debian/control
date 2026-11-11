@@ -1,0 +1,11 @@
+Source: grandtrans-modules
+Section: main
+Priority: extra
+Maintainer: support <junde.zhou@grandtrans.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: grandtrans-modules
+Architecture: any
+Description: kernel modules for grandtrans asic
+

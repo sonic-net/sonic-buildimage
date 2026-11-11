@@ -1,0 +1,11 @@
+SPATH       :=  $($(GRANDTRANS_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/grandtrans/grandtrans-modules.mk platform/grandtrans/grandtrans-modules.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+MOD_PATH    := $(SPATH)/modules
+SMDEP_FILES := $(if $(wildcard $(MOD_PATH)/Makefile),\
+                    $(addprefix $(MOD_PATH)/,$(shell cd $(MOD_PATH) && git ls-files 2>/dev/null || true)),)
+$(GRANDTRANS_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(GRANDTRANS_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(GRANDTRANS_MODULE)_DEP_FILES   := $(DEP_FILES)
+$(GRANDTRANS_MODULE)_SMDEP_FILES := $(SMDEP_FILES)
+$(GRANDTRANS_MODULE)_SMDEP_PATHS := $(MOD_PATH)
