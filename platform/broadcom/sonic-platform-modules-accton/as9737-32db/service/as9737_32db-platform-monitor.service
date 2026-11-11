@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS9737-32DB Platform Monitoring service
+Before=pmon.service
+After=as9737_32db-platform-init.service
+Requires=as9737_32db-platform-init.service
+
+[Service]
+ExecStart=/usr/local/bin/accton_as9737_32db_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
