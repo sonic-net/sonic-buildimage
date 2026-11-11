@@ -6,9 +6,89 @@ import re
 import tempfile
 
 from unittest import TestCase
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import ChoiceLoader, DictLoader, Environment, FileSystemLoader
 import tests.common_utils as utils
 from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
+
+
+class TestBufferCableLength(TestCase):
+    def render_cable_lengths(self, role, neighbor_role, templates):
+        common_dir = os.path.join(
+            os.path.dirname(__file__), '..', '..', '..', 'files', 'build_templates'
+        )
+        defaults = "{% set default_cable = '300m' %}"
+        templates = dict(templates)
+        templates.update({
+            'buffers_defaults_t1.j2': defaults,
+            'buffers_defaults_lt2.j2': defaults,
+            'buffers_defaults_ft2.j2': defaults,
+        })
+        environment = Environment(loader=ChoiceLoader([
+            DictLoader(templates), FileSystemLoader(common_dir)
+        ]))
+        context = {
+            'PORT': {'Ethernet0': {'speed': '100000'}, 'Ethernet4': {'speed': 400000}},
+            'DEVICE_METADATA': {'localhost': {'type': role}},
+            'DEVICE_NEIGHBOR': {
+                'Ethernet0': {'name': 'neighbor'},
+                'Ethernet4': {'name': 'neighbor'},
+            },
+            'DEVICE_NEIGHBOR_METADATA': {'neighbor': {'type': neighbor_role}},
+        }
+        rendered = environment.get_template('buffers_config.j2').render(**context)
+        return json.loads(rendered)['CABLE_LENGTH']['AZURE']
+
+    def test_leaf_lowerspine_cable_length_per_speed(self):
+        templates = {
+            'pg_profile_lookup.ini': (
+                '# 100000 500m is not a supported profile\n'
+                '100000 300m 1248 1248 101088 0 2496\n'
+                '400000\t500m\t8636 0 1136396 0 3556\n'
+            )
+        }
+        for role, neighbor_role in [
+            ('LeafRouter', 'LowerSpineRouter'),
+            ('BackEndLeafRouter', 'BackEndLowerSpineRouter'),
+            ('leafrouter', 'lowerspinerouter'),
+        ]:
+            with self.subTest(role=role):
+                self.assertEqual(
+                    self.render_cable_lengths(role, neighbor_role, templates),
+                    {'Ethernet0': '300m', 'Ethernet4': '500m'}
+                )
+
+    def test_leaf_lowerspine_cable_length_without_lookup(self):
+        self.assertEqual(
+            self.render_cable_lengths('LeafRouter', 'LowerSpineRouter', {}),
+            {'Ethernet0': '300m', 'Ethernet4': '300m'}
+        )
+
+    def test_other_cable_lengths_unchanged(self):
+        for role, neighbor_role, expected in [
+            ('LowerSpineRouter', 'LeafRouter', '500m'),
+            ('LeafRouter', 'SpineRouter', '300m'),
+            ('LeafRouter', 'ToRRouter', '40m'),
+            ('LowerSpineRouter', 'FabricSpineRouter', '5m'),
+            ('FabricSpineRouter', 'LowerSpineRouter', '5m'),
+            ('LowerSpineRouter', 'UpperSpineRouter', '30m'),
+        ]:
+            with self.subTest(role=role, neighbor_role=neighbor_role):
+                self.assertEqual(
+                    self.render_cable_lengths(role, neighbor_role, {}),
+                    {'Ethernet0': expected, 'Ethernet4': expected}
+                )
+
+    def test_leaf_lowerspine_cable_length_override(self):
+        templates = {
+            'buffers_config_organization.j2': (
+                "{% set _ = buffer_config_extensions.ports2cable.update("
+                "{'leafrouter_lowerspinerouter': '40m'}) %}"
+            )
+        }
+        self.assertEqual(
+            self.render_cable_lengths('LeafRouter', 'LowerSpineRouter', templates),
+            {'Ethernet0': '40m', 'Ethernet4': '40m'}
+        )
 
 
 class TestJ2Files(TestCase):

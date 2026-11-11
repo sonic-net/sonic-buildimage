@@ -61,6 +61,7 @@ def
             'upperspinerouter_lowerspinerouter' : '30m',
             'spinerouter_leafrouter' : '300m',
             'lowerspinerouter_leafrouter' : '500m',
+            'leafrouter_lowerspinerouter' : '500m',
             'fabricspinerouter_lowerspinerouter' : '5m',
             'fabricregionalhub_lowerregionalhub' : '5m',
             'lowerregionalhub_upperregionalhub' : '50m',
@@ -77,6 +78,19 @@ def
 {%- set _ = ports2cable.update(buffer_config_extensions.ports2cable) %}
 
 {%- if cable_length is not defined %}
+{%- set leaf_500m_speeds = [] %}
+{%- if switch_role | lower | replace('backend', '') == 'leafrouter' %}
+    {# Static headroom profiles are specific to both port speed and cable length. #}
+    {%- set pg_profile_lookup %}
+        {%- include 'pg_profile_lookup.ini' ignore missing %}
+    {%- endset %}
+    {%- for line in pg_profile_lookup.splitlines() %}
+        {%- set fields = line.split() %}
+        {%- if fields | length >= 2 and fields[0].isdigit() and fields[1] == '500m' %}
+            {%- set _ = leaf_500m_speeds.append(fields[0]) %}
+        {%- endif %}
+    {%- endfor %}
+{%- endif %}
 {%- macro cable_length(port_name) %}
     {%- set cable_len = [] %}
     {%- for local_port in DEVICE_NEIGHBOR %}
@@ -104,6 +118,13 @@ def
                     {%- if cable_len.append(ports2cable[roles1]) %}{% endif %}
                 {%- elif roles2 in ports2cable %}
                     {%- if cable_len.append(ports2cable[roles2]) %}{% endif %}
+                {%- endif %}
+                {%- if roles1 == 'leafrouter_lowerspinerouter' and cable_len == ['500m'] %}
+                    {%- if PORT is not defined or port_name not in PORT or
+                           PORT[port_name].get('speed', '') | string not in leaf_500m_speeds %}
+                        {%- set _ = cable_len.pop() %}
+                        {%- set _ = cable_len.append('300m') %}
+                    {%- endif %}
                 {%- endif %}
             {%- endif %}
         {%- endif %}
