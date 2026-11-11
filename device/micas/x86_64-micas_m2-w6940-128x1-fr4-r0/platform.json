@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "M2-W6940-64X1-FR4",
+        "name": "M2-W6940-128X1-FR4",
         "thermal_manager": false,
         "status_led": {
             "controllable": false,

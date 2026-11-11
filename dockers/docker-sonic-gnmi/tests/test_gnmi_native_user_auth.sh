@@ -85,8 +85,13 @@ run_launcher() {
             }
         }')"
     fi
+    run_launcher_config "${GNMI_TEST_CONFIG}" | tail -n 1
+}
+
+run_launcher_config() {
+    GNMI_TEST_CONFIG="$1"
     export GNMI_TEST_CONFIG
-    PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" | tail -n 1
+    PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" 2>&1
 }
 
 output="$(run_launcher)"
@@ -116,5 +121,57 @@ assert_contains_once "explicit password is forwarded" \
     "${output}" "--client_auth password"
 assert_not_contains "explicit password does not configure certificate lookup" \
     "${output}" "--config_table_name GNMI_CLIENT_CERT"
+
+config="$(jq -cn '{
+    gnmi: {
+        port: "50052",
+        client_auth: "false",
+        user_auth: "password",
+        vrf: "mgmt"
+    }
+}')"
+output="$(run_launcher_config "${config}")"
+args_output="$(tail -n 1 <<< "${output}")"
+assert_contains_once "certificate-free fallback remains plaintext loopback" \
+    "${args_output}" "--noTLS --bind_address 127.0.0.1"
+assert_not_contains "certificate-free fallback does not bind to management VRF" \
+    "${args_output}" "--gnmi_vrf"
+assert_contains_once "certificate-free management VRF emits warning" \
+    "${output}" "certificate-free fallback is restricted to localhost"
+
+config="$(jq -cn '{
+    gnmi: {
+        port: "50052",
+        client_auth: "false",
+        user_auth: "password",
+        vrf: "default"
+    }
+}')"
+output="$(run_launcher_config "${config}")"
+args_output="$(tail -n 1 <<< "${output}")"
+assert_contains_once "certificate-free default VRF remains supported" \
+    "${args_output}" "--gnmi_vrf default"
+assert_not_contains "certificate-free default VRF emits no warning" \
+    "${output}" "certificate-free fallback is restricted to localhost"
+
+config="$(jq -cn '{
+    certs: {
+        server_crt: "/server.crt",
+        server_key: "/server.key",
+        ca_crt: "/ca.crt"
+    },
+    gnmi: {
+        port: "50052",
+        client_auth: "false",
+        user_auth: "password",
+        vrf: "mgmt"
+    }
+}')"
+output="$(run_launcher_config "${config}")"
+args_output="$(tail -n 1 <<< "${output}")"
+assert_contains_once "TLS listener preserves management VRF" \
+    "${args_output}" "--gnmi_vrf mgmt"
+assert_not_contains "TLS listener does not use plaintext fallback" \
+    "${args_output}" "--noTLS"
 
 echo "gnmi-native user_auth launcher tests passed"

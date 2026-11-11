@@ -1,8 +1,16 @@
 {
     "SAMPLE_CONFIG_DB_JSON": {
+        "FDB_SYNC": {
+            "global": {
+                "mac_sync_mode": "fpm"
+            }
+        },
         "VRF": {
                 "Vrf_blue": {
                     "vni" : "100"
+                },
+                "default": {
+                    "vni" : "200"
                 }
         },
         "SUBNET_DECAP": {
@@ -1288,7 +1296,8 @@
                 "nat_zone": "1",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "enable",
-                "mac_addr": "12:34:56:78:90:ab"
+                "mac_addr": "12:34:56:78:90:ab",
+                "proxy_arp": "enabled"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",
@@ -2081,9 +2090,12 @@
             "policy": {
                 "system_leak_policy": "enabled",
                 "system_critical_leak_action": "power_off",
+                "system_major_leak_action": "syslog_only",
                 "system_minor_leak_action": "syslog_only",
+                "system_major_leak_num_min_sensors": "2",
                 "rack_mgr_leak_policy": "enabled",
                 "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_major_alert_action": "syslog_only",
                 "rack_mgr_minor_alert_action": "syslog_only"
             }
         },
@@ -2568,7 +2580,8 @@
                 "mac_address": "f9:22:83:99:22:a1,f9:22:83:99:22:a2",
                 "vni": "10011,10012",
                 "consistent_hashing_buckets": "10",
-                "metric": "0"
+                "metric": "0",
+                "install_on_kernel": "true"
             },
             "vnet1|fc00:1::/64" : {
                 "endpoint": "2001:db8::1",
@@ -2987,6 +3000,11 @@
             "notice": {
                 "categories": ["firmware", "asic_hw"],
                 "max_events": "1024"
+            }
+        },
+        "SAI_PROFILE": {
+            "SAI_NUM_ECMP_MEMBERS": {
+                "value": "32"
             }
         },
         "SYSTEM_DEFAULTS": {

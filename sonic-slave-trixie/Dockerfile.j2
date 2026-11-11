@@ -195,7 +195,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3-all-dev \
 #{%- endif %}
         python3-twisted \
-        phpunit \
         libbit-vector-perl \
         default-jdk \
         javahelper \
@@ -204,7 +203,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libhttpclient-java \
         libslf4j-java \
         libservlet3.1-java \
-        pkg-php-tools \
 # For mellanox sdk build
         byacc \
         flex \
@@ -260,6 +258,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         liblua5.1-0-dev \
         lua-bitop-dev  \
         lua-cjson-dev \
+# For sonic-py-common Redis authentication tests
+        redis-server \
 # For mft kernel module build
         dkms \
 # For Jenkins static analysis, unit testing and code coverage
@@ -711,9 +711,11 @@ RUN eatmydata apt-get install -y libthrift-0.19.0t64\
 RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
 
 {% if CONFIGURED_ARCH != "amd64" -%}
+{% if CONFIGURED_ARCH == "armhf" -%}
 # Install node.js for azure pipeline
 RUN eatmydata apt-get install -y nodejs
 
+{% endif -%}
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN eatmydata apt-get install -y rsync dh-python
 
@@ -799,8 +801,10 @@ RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsc
 RUN apt-get download python3.13-dev:$arch && apt-get download python3-dev:$arch && eatmydata dpkg --force-all -i python3*-dev*
 {% endif %}
 
+{% if CONFIGURED_ARCH == "armhf" -%}
 # Tell azure pipeline to use node.js in the docker
 LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
+{% endif -%}
 {% endif -%}
 
 RUN eatmydata apt install -y python-is-python3

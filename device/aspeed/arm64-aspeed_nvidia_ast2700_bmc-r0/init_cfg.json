@@ -40,5 +40,10 @@
         "pmon": {
             "delayed": "False"
         }
+    },
+    "CONSOLE_SWITCH": {
+        "console_mgmt": {
+            "enabled": "yes"
+        }
     }
 }

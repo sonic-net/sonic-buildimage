@@ -592,7 +592,9 @@ waiver_reason() {
 # rules/*.mk / Makefile.cache / platform/*.mk. This producer set mirrors the
 # make-orchestration layer scanned by cache_key_scan.py (slave.mk, Makefile,
 # Makefile.work, and every tracked *.mk). Used by --base (PR) mode to scope
-# Check 10 to what the PR actually changes.
+# Check 10 to what the PR actually changes. A changed line that only keeps an
+# existing $(VAR) still touches VAR: the diff alone cannot tell a rewrite from a
+# reference moved into a cached recipe, or from one dropped from a cache key.
 compute_diff_vars() {
     $DIFF_MODE || return 0
     local range="$DIFF_BASE"
@@ -603,8 +605,14 @@ compute_diff_vars() {
     fi
     DIFF_VARS_CACHE=$(git -C "$REPO_ROOT" diff --unified=0 "$range" -- \
             slave.mk Makefile Makefile.work 'rules/*.mk' Makefile.cache 'platform/*.mk' 2>/dev/null \
-        | grep -E '^[-+]' | grep -vE '^[-+]{3} ' \
-        | python3 -c '
+        | python3 -c "$DIFF_VARS_PY" \
+        | sort -u)
+    log_verbose "diff-mode variables touched since $DIFF_BASE: $(echo "$DIFF_VARS_CACHE" | tr '\n' ' ')"
+}
+
+# Reads a `git diff --unified=0` on stdin and prints the variables it touches
+# (see compute_diff_vars).
+DIFF_VARS_PY='
 import sys, re
 # Mirror cache_key_scan.py:exported_vars so multi-var `export A B C`, shell
 # `export A=1 B=2`, and no-space operator forms (`export A+=v`) all register as
@@ -620,8 +628,19 @@ HEAD = re.compile(r"^[A-Za-z_]\w*[ \t]*" + OP)
 SINGLE = re.compile(r"^([A-Za-z_]\w*)(?:[ \t]*" + MOP + r"|[ \t]+=)")
 STEP = re.compile(r"[ \t]*([A-Za-z_]\w*)=" + VAL)
 out = set()
-for line in sys.stdin:
-    line = line[1:] if line[:1] in "+-" else line
+in_hunk = False
+for raw in sys.stdin:
+    # Skip each file header (its ---/+++ lines included) up to the first hunk,
+    # so a changed line whose content starts with "--" or "++" is still read.
+    if raw.startswith("diff --git "):
+        in_hunk = False
+        continue
+    if raw.startswith("@@"):
+        in_hunk = True
+        continue
+    if not in_hunk or raw[:1] not in "+-":
+        continue
+    line = raw[1:]
     for m in re.finditer(r"\$[({]\s*([A-Za-z_]\w*)", line):
         out.add(m.group(1))
     me = re.match(r"\s*export\s+(.+)", line)
@@ -648,10 +667,7 @@ for line in sys.stdin:
                 out.add(t)
 for v in sorted(out):
     print(v)
-' \
-        | sort -u)
-    log_verbose "diff-mode variables touched since $DIFF_BASE: $(echo "$DIFF_VARS_CACHE" | tr '\n' ' ')"
-}
+'
 
 # True (0) if $1 is one of the variables the diff touched (see compute_diff_vars).
 diff_touches_var() {
@@ -2609,8 +2625,15 @@ check_recipe_invoked_scripts() {
     # rules/functions and Makefile.cache are in SONIC_COMMON_FILES_LIST, so edits to
     # these scripts change every affected output without moving any cache key.
     local script scripts_used
-    # Pure control-flow helpers with no effect on artifact content.
-    local denylist=" scripts/wait_for_docker.sh "
+    # Pure control-flow helpers with no effect on artifact content, and the SBOM
+    # tooling. The SBOM scripts write only SBOM metadata beside an artifact or
+    # run in the installer recipe, which is not cached; SAVE_INTO_CACHE archives
+    # the target, its _DERIVED_DEBS/_EXTRA_DEBS and its log, so no SBOM output is
+    # ever part of a cached payload and editing them cannot serve a stale one.
+    local denylist=" scripts/wait_for_docker.sh \
+scripts/build_sbom.sh scripts/build_sbom.py scripts/install_sbom_tool.sh \
+scripts/sbom_fragment.py scripts/sbom_cve_refs.py scripts/sbom_purl.py \
+scripts/sbom_parse_lockfiles.py scripts/sbom_extract_vex_from_patches.py "
     scripts_used=$(grep -hoE '(scripts|src/sonic-build-hooks)/[A-Za-z0-9_./-]+\.(sh|py)' \
         "$REPO_ROOT/slave.mk" 2>/dev/null | sort -u)
     while IFS= read -r script; do
