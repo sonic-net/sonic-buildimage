@@ -154,9 +154,9 @@ index 389cc98076..0cbcfb13f4 100644
  				do_dad = true;
  			}
  
-+			/* The MAC is no longer remote, but the kernel may still
-+			 * hold an FDB entry on the local port; remove it using
-+			 * the local interface alone.
++			/* The MAC is no longer remote: the kernel may still
++			 * hold an FDB entry on the local port, so remove it
++			 * using the local interface alone.
 +			 */
 +			dplane_rem_mac_del_no_bridge(zevpn->vxlan_if,
 +						     &mac->macaddr, &vtep_ip);
