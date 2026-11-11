@@ -282,5 +282,3 @@ def test_pipeline_fetches_and_verifies_triggering_pr_before_signing(tmp_path, mi
         assert result.returncode == 0, result.stderr
         assert git(target, "rev-parse", "HEAD") == source_commit
         assert (target / "marker").read_text() == "PR code"
-
-

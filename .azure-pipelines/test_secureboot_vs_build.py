@@ -178,6 +178,22 @@ fi
             (self.root / "rules/config.user").read_text(),
         )
 
+    def test_dedicated_pipeline_does_not_duplicate_shared_key_generation(self):
+        dedicated = yaml.load(
+            PIPELINE.with_name("azure-pipelines-build-secureboot-vs.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )["stages"][0]["jobs"][0]["parameters"]
+        shared = yaml.load(
+            PIPELINE.read_text(), Loader=yaml.BaseLoader,
+        )["jobs"][0]["parameters"]
+        steps = dedicated["preSteps"] + shared["buildSteps"]
+        steps += shared["postSteps"] + dedicated.get("postSteps", [])
+        names = [
+            step.get("displayName") for step in steps if isinstance(step, dict)
+        ]
+        self.assertEqual(names.count("Generate ephemeral Secure Boot hierarchy"), 1)
+        self.assertEqual(names.count("Remove ephemeral Secure Boot private keys"), 1)
+
     def test_unsigned_build_does_not_require_signing_inputs(self):
         self.variables["secure_boot_image"] = "no"
         result = self.run_step("Build sonic image")
