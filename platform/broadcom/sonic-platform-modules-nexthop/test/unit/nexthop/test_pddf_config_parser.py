@@ -283,6 +283,30 @@ class TestExtractXcvrList:
         assert len(names) == len(set(names)), "All transceiver names should be unique"
         assert len(buses) == len(set(buses)), "All bus numbers should be unique"
 
+    def test_extract_xcvr_list_real_4240l_config(self, pddf_config_parser_module):
+        """Test extract_xcvr_list with real NH-4240L-64R pddf-device.json configuration."""
+        platform_variant = "x86_64-nexthop_4240l_64r-r1042"
+        config_path = find_pddf_device_json(platform_variant)
+
+        with open(config_path, "r") as f:
+            config = parse_json(f.read(), {"platform": platform_variant})
+
+        # When
+        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
+
+        # Then - 64 OSFP ports plus one SFP management port
+        assert isinstance(xcvr_list, list)
+        assert len(xcvr_list) == 65
+
+        xcvr_port1 = next(xcvr for xcvr in xcvr_list if xcvr["name"] == "PORT1-CTRL")
+        assert xcvr_port1["bus"] == 21
+        assert xcvr_port1["addr"] == "0008"
+
+        names = [xcvr["name"] for xcvr in xcvr_list]
+        buses = [xcvr["bus"] for xcvr in xcvr_list]
+        assert len(names) == len(set(names)), "All transceiver names should be unique"
+        assert len(buses) == len(set(buses)), "All bus numbers should be unique"
+
     def test_extract_xcvr_list_real_5010_config(self, pddf_config_parser_module):
         """Test extract_xcvr_list with real NH-5010 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
