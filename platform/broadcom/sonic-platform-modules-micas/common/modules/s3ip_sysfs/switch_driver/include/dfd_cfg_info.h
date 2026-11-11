@@ -76,6 +76,7 @@ typedef enum info_src_e {
     INFO_SRC_FPGA,          /* FPGA equipment */
     INFO_SRC_OTHER_I2C,     /* other i2c equipment */
     INFO_SRC_FILE,          /* file */
+    INFO_SRC_LOGIC_FILE,    /* logic file */
     INFO_SRC_END
 } info_src_t;
 
@@ -86,6 +87,14 @@ typedef enum info_pola_e {
     INFO_POLA_NEGA,         /* Negative polarity bit value 0 Effective value high bytes saved in the source high address space */
     INFO_POLA_END
 } info_pola_t;
+
+/* value type of info ctrl */
+typedef enum info_val_type_e {
+    INFO_VAL_TYPE_NORMAL = 0,  /* Normal value. Keep 0 for compatibility */
+    INFO_VAL_TYPE_FIXED_KEY,   /* High 7 bits are fixed key */
+    INFO_VAL_TYPE_NEGA_KEY,    /* High 7 bits are inverse of addr high 7 bits */
+    INFO_VAL_TYPE_END
+} info_val_type_t;
 
 /* Information control structure */
 #define INFO_FPATH_MAX_LEN     (128)  /* Maximum length of the file source path */
@@ -101,6 +110,7 @@ typedef struct info_ctrl_s {
     int32_t len;                    /* Length, bit length, or byte length */
     int32_t bit_offset;             /* Offset number of bits in the address */
     char str_cons[INFO_STR_CONS_MAX_LEN]; /* String constant */
+    info_val_type_t val_type;       /* value type */
     int32_t int_extra1;             /* int type reserved */
     int32_t int_extra2;
     int32_t int_extra3;             /* cpld voltage mode */
@@ -118,6 +128,7 @@ typedef enum info_ctrl_mem_s {
     INFO_CTRL_MEM_LEN,
     INFO_CTRL_MEM_BIT_OFFSET,
     INFO_CTRL_MEM_STR_CONS,
+    INFO_CTRL_VAL_TYPE,
     INFO_CTRL_MEM_INT_EXTRA1,
     INFO_CTRL_MEM_INT_EXTRA2,
     INFO_CTRL_MEM_INT_EXTRA3,
@@ -131,6 +142,7 @@ typedef enum sensor_format_mem_s {
     TMP464   = 3,
     MAC_TH5  = 4,
     MAC_TH4  = 5,
+    MAC_TH6  = 6,
 } sensor_format_mem_t;
 
 /* hwmon data format conversion */
@@ -143,6 +155,7 @@ extern char *g_info_src_str[INFO_SRC_END];            /* info_src_t enumeration 
 extern char *g_info_frmt_str[INFO_FRMT_END];          /* info_frmt_t enumeration string */
 extern char *g_info_pola_str[INFO_POLA_END];          /* info_pola_t enumeration string */
 extern char *g_info_ctrl_mode_str[INFO_CTRL_MODE_END];/* info_ctrl_mode_t enumeration string */
+extern char *g_info_val_type_str[INFO_VAL_TYPE_END];  /* info_val_type_t enumeration string */
 
 /**
  * dfd_info_get_int - Get int type information

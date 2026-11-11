@@ -42,6 +42,7 @@ __all__ = [
     "INIT_PARAM",
     "INIT_COMMAND",
     "SET_MAC_CONF",
+    "MGMT_LED_CONFIG",
     "DRVIER_UPDATE_CONF",
     "MONITOR_TEMP_MIN",
     "MONITOR_K",
@@ -152,6 +153,9 @@ INIT_COMMAND = []
 
 # Set eth mac address parameters
 SET_MAC_CONF = []
+
+# mgmt led config parameters
+MGMT_LED_CONFIG = []
 
 # driver update config
 DRVIER_UPDATE_CONF = {}
