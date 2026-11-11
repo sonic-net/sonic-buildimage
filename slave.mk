@@ -598,6 +598,9 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS))
 # Overwrite the buildinfo in slave container
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
 $(shell DBGOPT='$(DBGOPT)' scripts/prepare_slave_container_buildinfo.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV))
+ifneq ($(.SHELLSTATUS),0)
+$(error Failed to prepare slave container build information)
+endif
 endif
 include Makefile.cache
 

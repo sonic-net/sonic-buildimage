@@ -507,6 +507,9 @@ ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
 endif
 
+# Mirror configuration also applies when persistent caches are unavailable.
+DOCKER_RUN += -v "$(PWD)/tools/bazel/slave.bazelrc:/etc/bazel.bazelrc:ro"
+
 # Create a volume to store Bazel caches into
 # See the documentation in rules/config for more information
 #
@@ -517,9 +520,7 @@ ifeq ($(shell test -d $(SONIC_BAZEL_USER_CACHE_SOURCE) -a -w $(SONIC_BAZEL_USER_
 	DOCKER_RUN += -v "$(SONIC_BAZEL_USER_CACHE_SOURCE):/bazel_cache:rw"
 	# Persist bazelisk downloads in the cache
 	DOCKER_RUN += -e "BAZELISK_HOME=/bazel_cache/bazelisk"
-	# Apply the slave Bazel cache config as a system RC file, which Bazel reads regardless of cwd.
-	# Ref: https://bazel.build/run/bazelrc#bazelrc-file-locations
-	DOCKER_RUN += -v "$(PWD)/tools/bazel/slave.bazelrc:/etc/bazel.bazelrc:ro"
+	DOCKER_RUN += -v "$(PWD)/tools/bazel/cache.bazelrc:/etc/bazel-cache.bazelrc:ro"
 else
 $(warning Bazel cache directory $(SONIC_BAZEL_USER_CACHE_SOURCE) is missing or not writable; building with caches local to the slave container)
 endif
