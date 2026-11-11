@@ -1,11 +1,15 @@
 use std::{
-    collections::HashMap, fs::{self, File}, io::{BufRead, BufReader, ErrorKind}, os::{fd::AsFd, unix::fs::OpenOptionsExt}, process::Command
+    collections::HashMap,
+    fs::{self, File},
+    io::{BufRead, BufReader, ErrorKind},
+    os::unix::fs::OpenOptionsExt,
+    process::Command,
 };
 
 use anyhow::Context;
-use log::{debug, info, warn};
+use log::{debug, info};
 use regex::regex;
-use rustix::fs::{linkat, AtFlags, OFlags, CWD};
+use rustix::fs::{AtFlags, CWD, OFlags, linkat};
 use swss_common::{CxxString, KeyOperation};
 
 use crate::db_listener::SonicDatabaseChanges;
@@ -32,16 +36,19 @@ impl SyslogConfigUpdater {
             for line in buf_reader.lines() {
                 let line_content = line.context("Unable to read rsyslogd config file")?;
                 if let Some(interval_regex_capture) =
-                    regex!(r#".*SysSock.RateLimit.Interval\s*=\s*"(\d+)".*"#).captures(&line_content)
+                    regex!(r#".*SysSock.RateLimit.Interval\s*=\s*"(\d+)".*"#)
+                        .captures(&line_content)
                 {
                     let current_interval_str = interval_regex_capture
                         .get(1)
                         .context("Missing capture group for getting interval regex")?
                         .as_str();
-                    rate_limit_interval = Some(current_interval_str
-                        .parse()
-                        .context("Unable to parse interval")
-                        .unwrap());
+                    rate_limit_interval = Some(
+                        current_interval_str
+                            .parse()
+                            .context("Unable to parse interval")
+                            .unwrap(),
+                    );
                 }
                 if let Some(burst_regex_capture) =
                     regex!(r#".*SysSock.RateLimit.Burst\s*=\s*"(\d+)".*"#).captures(&line_content)
@@ -50,10 +57,12 @@ impl SyslogConfigUpdater {
                         .get(1)
                         .context("Missing capture group for getting interval regex")?
                         .as_str();
-                    rate_limit_burst = Some(current_burst_str
-                        .parse()
-                        .context("Unable to parse burst")
-                        .unwrap());
+                    rate_limit_burst = Some(
+                        current_burst_str
+                            .parse()
+                            .context("Unable to parse burst")
+                            .unwrap(),
+                    );
                 }
             }
         }
@@ -142,8 +151,14 @@ impl SonicDatabaseChanges for SyslogConfigUpdater {
                     }
                 })
                 .context("Unable to remove the existing /etc/rsyslog.conf file")?;
-            linkat(file_for_linkto, "", CWD, "/etc/rsyslog.conf", AtFlags::EMPTY_PATH)
-                .context("Unable to update /etc/rsyslog.conf with the updated configuration")?;
+            linkat(
+                file_for_linkto,
+                "",
+                CWD,
+                "/etc/rsyslog.conf",
+                AtFlags::EMPTY_PATH,
+            )
+            .context("Unable to update /etc/rsyslog.conf with the updated configuration")?;
             let exit_code = Command::new("supervisorctl")
                 .args(["restart", "rsyslogd"])
                 .status()?;

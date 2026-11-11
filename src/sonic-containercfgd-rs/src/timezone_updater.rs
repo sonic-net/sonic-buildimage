@@ -64,20 +64,19 @@ impl SonicDatabaseChanges for TimezoneUpdater {
                 let mut values_changed = false;
 
                 let new_timezone = match field_values.get("timezone") {
-                    Some(value) => Some(value
-                        .to_str()
-                        .context("Unable to parse timezone as a string")?
-                        .to_owned()),
+                    Some(value) => Some(
+                        value
+                            .to_str()
+                            .context("Unable to parse timezone as a string")?
+                            .to_owned(),
+                    ),
                     None => None,
                 };
-                match new_timezone {
-                    Some(ref new_timezone_name) => {
-                        if self.current_timezone != new_timezone {
-                            info!("Setting timezone to {}", new_timezone_name);
-                            values_changed = true;
-                        }
-                    },
-                    _ => {},
+                if let Some(ref new_timezone_name) = new_timezone {
+                    if self.current_timezone != new_timezone {
+                        info!("Setting timezone to {}", new_timezone_name);
+                        values_changed = true;
+                    }
                 }
 
                 if values_changed {
@@ -85,9 +84,9 @@ impl SonicDatabaseChanges for TimezoneUpdater {
                         let timezone_name = Path::new(&new_timezone_name);
                         anyhow::ensure!(
                             !timezone_name.is_absolute()
-                            && !timezone_name
-                            .components()
-                            .any(|component| component == std::path::Component::ParentDir),
+                                && !timezone_name
+                                    .components()
+                                    .any(|component| component == std::path::Component::ParentDir),
                             "Invalid timezone name: {}",
                             &new_timezone_name
                         );
@@ -149,7 +148,10 @@ mod tests {
             "/usr/share/zoneinfo/America/Los_Angeles",
         )));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, Some("America/Los_Angeles".to_owned()));
+        assert_eq!(
+            updater.current_timezone,
+            Some("America/Los_Angeles".to_owned())
+        );
     }
 
     #[test]
@@ -158,7 +160,10 @@ mod tests {
             "/usr/share/zoneinfo/America/Indiana/Vevay",
         )));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, Some("America/Indiana/Vevay".to_owned()));
+        assert_eq!(
+            updater.current_timezone,
+            Some("America/Indiana/Vevay".to_owned())
+        );
     }
 
     #[test]
@@ -167,7 +172,10 @@ mod tests {
             "../usr/share/zoneinfo/Australia/Darwin",
         )));
         let updater = TimezoneUpdater::new().unwrap();
-        assert_eq!(updater.current_timezone, Some("Australia/Darwin".to_owned()));
+        assert_eq!(
+            updater.current_timezone,
+            Some("Australia/Darwin".to_owned())
+        );
     }
 
     #[test]
