@@ -16,47 +16,6 @@ class Psu(PddfPsu):
         PddfPsu.__init__(self, index, pddf_data, pddf_plugin_data)
 
     # Provide the functions/variables below for which implementation is to be overwritten
-    def get_presence(self):
-        """
-        Retrieves the presence of the device
-
-        Returns:
-            bool: True if device is present, False if not
-        """
-        status = 0
-        device = "PSU{}".format(self.psu_index)
-        output = self.pddf_obj.get_attr_name_output(device, "psu_present")
-        if not output:
-            return False
-
-        mode = output['mode']
-        status = output['status']
-
-        vmap = self.plugin_data['PSU']['psu_present'][mode]['valmap']
-
-        if status.rstrip('\n') in vmap:
-            # Gate the presence with power good to allow for an inserted PSU that is not powered up 
-            presence = vmap[status.rstrip('\n')]
-            if int(presence) > 0:
-                device = "PSU{}".format(self.psu_index)
-
-                output = self.pddf_obj.get_attr_name_output(device, "psu_power_good")
-                if not output:
-                    return False
-
-                mode = output['mode']
-                status = output['status']
-
-                vmap = self.plugin_data['PSU']['psu_power_good'][mode]['valmap']
-
-                if status.rstrip('\n') in vmap:
-                    return vmap[status.rstrip('\n')]
-                else:
-                    return False
-            return presence
-        else:
-            return False
-
     def get_all_fans(self):
         if not self.get_presence():
             return []

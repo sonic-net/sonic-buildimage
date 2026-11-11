@@ -48,6 +48,8 @@
 /* Watchdog */
 #define WATCHDOG_MAX_STAGES 3	/* total number of available watchdog stages */
 #define WATCHDOG_TIMEOUT 60
+#define WATCHDOG_MAX_TIMEOUT 90
+
 unsigned long wdt_delay = 30;	/* in seconds */
 
 enum {
@@ -327,13 +329,21 @@ static int conga_bc_wdog_trigger(struct watchdog_device *wdd)
 	struct device *dev = wdd->parent;
 	u8 cmd_buf[1] = { CGBC_CMD_WDOG_TRIGGER };
 	u8 status;
+	int ret;
 
-	return conga_gen5_command(dev, cmd_buf, sizeof(cmd_buf), NULL, 0,
+	ret = conga_gen5_command(dev, cmd_buf, sizeof(cmd_buf), NULL, 0,
 				  &status);
+	if (ret == 0)
+		last_jiffies = jiffies;
+
+	return ret;
 }
 
 static int conga_set_timeout(struct watchdog_device *wdd, unsigned int timeout)
 {
+	if (timeout > WATCHDOG_MAX_TIMEOUT)
+		return -EINVAL;
+
 	conga_bc_wdog_stop(wdd);
 	wdd->timeout = timeout;
 	return conga_bc_wdog_start(wdd);
@@ -375,6 +385,7 @@ static struct watchdog_device conga_wdt_dev = {
 	.info = &conga_wdt_info,
 	.ops = &conga_wdt_ops,
 	.timeout = WATCHDOG_TIMEOUT,
+	.max_timeout = WATCHDOG_MAX_TIMEOUT,
 };
 
 static int conga_wdt_probe(struct platform_device *pdev)

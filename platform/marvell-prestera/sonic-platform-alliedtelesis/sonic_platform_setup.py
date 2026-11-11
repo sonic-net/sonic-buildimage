@@ -9,7 +9,7 @@ setup(
     author_email='linuxnetdev@microsoft.com',
     url='https://github.com/Azure/sonic-buildimage',
     packages=['sonic_platform'],
-    package_dir={'sonic_platform': 'sonic_platform'},
+    package_dir={'sonic_platform': 'common/sonic_platform'},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Plugins',

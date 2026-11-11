@@ -217,7 +217,7 @@ class ThermalAlgorithmAction(SetFanSpeedAction):
             self.cpu_fan_controller = PIDFanController(self.cpu_pid_params[0], self.cpu_pid_params[1],
                                                        self.cpu_pid_params[2], self.cpu_pid_params[3])
         if self.linear_fan_controller == None:
-            if self.sys_airflow == 'INTAKE':
+            if self.sys_airflow == 'intake':
                 linear_params = self.b2f_linear_params
             else:
                 linear_params = self.f2b_linear_params

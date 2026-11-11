@@ -13,6 +13,7 @@ import array
 
 try:
     from sonic_platform_base.watchdog_base import WatchdogBase
+    from sonic_py_common import device_info
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -46,8 +47,14 @@ WDIOS_DISABLECARD = 0x0001
 WDIOS_ENABLECARD = 0x0002
 
 WDT_COMMON_ERROR = -1
-WD_MAIN_IDENTITY = "iTCO_wdt"
 WDT_SYSFS_PATH = "/sys/class/watchdog/"
+
+# Maps platform name -> watchdog identity string reported at
+# /sys/class/watchdog/<dev>/identity. Add new platforms here as needed.
+WD_MAIN_IDENTITY = {
+    'x86_64-alliedtelesis_x980_32cq-r0': 'wdog-conga',
+    'x86_64-alliedtelesis_x980_32dq-r0': 'iTCO_wdt',
+}
 
 
 class Watchdog(WatchdogBase):
@@ -56,6 +63,18 @@ class Watchdog(WatchdogBase):
 
         self.watchdog = None
         self.armed = False
+        self.wd_main_identity = self._get_wd_identity()
+
+    def _get_wd_identity(self):
+        """
+        Looks up the expected watchdog identity string for the
+        currently running platform
+        """
+        platform = device_info.get_platform()
+        identity = WD_MAIN_IDENTITY.get(platform)
+        if identity is None:
+            raise Exception("Unsupported platform for watchdog: %s" % platform)
+        return identity
 
     def _is_wd_main(self, dev):
         """
@@ -63,7 +82,7 @@ class Watchdog(WatchdogBase):
         """
         identity = self._read_file(
             "{}/{}/identity".format(WDT_SYSFS_PATH, dev))
-        return identity == WD_MAIN_IDENTITY
+        return identity == self.wd_main_identity
 
     def _get_wdt(self):
         """

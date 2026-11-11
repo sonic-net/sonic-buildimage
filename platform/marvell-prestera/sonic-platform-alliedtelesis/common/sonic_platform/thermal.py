@@ -20,6 +20,11 @@ class Thermal(PddfThermal):
     # Provide the functions/variables below for which implementation is to be overwritten
     def get_temperature(self):
         temperature = super().get_temperature()
+
+        # under extreme CPU load the result may be None
+        if temperature is None:
+            return None
+
         # Record maximum
         if temperature > self.maximum_thermal:
             self.maximum_thermal = temperature

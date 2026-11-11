@@ -256,8 +256,8 @@ class ThermalInfo(ThermalPolicyInfoBase):
         :param chassis: The chassis object
         :return:
         """
-        try:
-            for thermal in chassis.get_all_thermals():
+        for thermal in chassis.get_all_thermals():
+            try:
                 name = thermal.get_name()
                 temp = thermal.get_temperature()
                 if temp == None or temp == 'N/A':
@@ -295,8 +295,10 @@ class ThermalInfo(ThermalPolicyInfoBase):
                     elif temp > (low_threshold + 3) and thermal in self._low_warning_thermals:
                         self._low_warning_thermals.remove(thermal)
                         sonic_logger.log_notice("Thermal {}, restore from low threshold warning".format(name))
-        except Exception as e:
-            sonic_logger.log_warning("Catch exception: {}, File: {}, Line: {}".format(type(e).__name__, __file__, e.__traceback__.tb_lineno))
+            except Exception as e:
+                sonic_logger.log_warning("Catch exception: {}, File: {}, Line: {}".format(
+                    type(e).__name__, __file__, e.__traceback__.tb_lineno))
+                continue
 
     def is_any_warm_up_and_over_high_threshold(self):
         """

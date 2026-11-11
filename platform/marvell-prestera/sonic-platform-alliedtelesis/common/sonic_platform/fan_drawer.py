@@ -11,6 +11,13 @@ except ImportError as e:
 class FanDrawer(PddfFanDrawer):
     """PDDF Platform-Specific Fan-Drawer class"""
 
+    # Maps platform name -> fan tray EEPROM index offset.
+    # Add new platforms here as needed.
+    FAN_EEPROM_INDEX_OFFSET = {
+        'x86_64-alliedtelesis_x980_32dq-r0': 66,
+        'x86_64-alliedtelesis_x980_32cq-r0': 70,
+    }
+
     def __init__(self, tray_idx, pddf_data=None, pddf_plugin_data=None):
         # idx is 0-based 
         PddfFanDrawer.__init__(self, tray_idx, pddf_data, pddf_plugin_data)
@@ -26,7 +33,12 @@ class FanDrawer(PddfFanDrawer):
     def read_fan_eeprom(self):
         eeprom_data = []
         try:
-            index = self.fantray_index - 1 + 70
+            platform = device_info.get_platform()
+            offset = self.FAN_EEPROM_INDEX_OFFSET.get(platform)
+            if offset is None:
+                raise Exception("Unsupported platform: %s" % platform)
+
+            index = self.fantray_index - 1 + offset
             eeprom_path = "/sys/bus/i2c/devices/{}-0057/eeprom".format(index)
             with open(eeprom_path, "rb") as f:
                 eeprom_data = f.read()
