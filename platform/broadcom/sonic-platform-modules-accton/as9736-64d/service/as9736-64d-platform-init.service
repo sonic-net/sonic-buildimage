@@ -1,0 +1,18 @@
+[Unit]
+Description=Accton AS9736-64D Platform initialization service
+Before=pmon.service determine-reboot-cause.service system-health.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/accton_as9736_64d_util.py install
+ExecStop=/usr/local/bin/accton_as9736_64d_util.py clean
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+
