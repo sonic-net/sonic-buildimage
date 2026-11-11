@@ -1,0 +1,165 @@
+{%- macro set_default_topology() %}
+{%- if default_topo is defined %}
+{{ default_topo }}
+{%- else %}
+def
+{%- endif %}
+{%- endmacro -%}
+
+{# Determine device topology and filename postfix #}
+{%- if DEVICE_METADATA is defined %}
+{%-     set switch_role = DEVICE_METADATA['localhost']['type'] %}
+{%-     if switch_role.lower() == 'torrouter' %}
+{%-         set filename_postfix = 't0' %}
+{%-     elif switch_role.lower() == 'leafrouter' %}
+{%-         set filename_postfix = 't1' %}
+{%-     else %}
+{%-         set filename_postfix = set_default_topology() %}
+{%-     endif %}
+{%- else %}
+{%-     set filename_postfix = set_default_topology() %}
+{%-     set switch_role      = '' %}
+{%- endif -%}
+
+{# Import default values from device HWSKU folder #}
+{%- import 'buffers_defaults_%s.j2' % filename_postfix as defs %}
+
+{%- set default_cable = defs.default_cable -%}
+
+{# Port configuration to cable length look-up table #}
+{# Each record describes mapping of DUT (DUT port) role and neighbor role to cable length #}
+{# Roles described in the minigraph #}
+{%- if defs.ports2cable is defined %}
+    {%- set ports2cable = defs.ports2cable %}
+{%- else %}
+    {%- set ports2cable = {
+            'torrouter_server'       : '5m',
+            'leafrouter_torrouter'   : '40m',
+            'spinerouter_leafrouter' : '300m'
+            }
+    -%}
+{%- endif %}
+
+{%- macro cable_length(port_name) %}
+    {%- set cable_len = [] %}
+    {%- for local_port in DEVICE_NEIGHBOR %}
+        {%- if local_port == port_name %}
+            {%- if DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[local_port].name] %}
+                {%- set neighbor = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[local_port].name] %}
+                {%- set neighbor_role = neighbor.type %}
+                {%- set roles1 = switch_role + '_' + neighbor_role %}
+                {%- set roles2 = neighbor_role + '_' + switch_role %}
+                {%- set roles1 = roles1 | lower %}
+                {%- set roles2 = roles2 | lower %}
+                {%- if roles1 in ports2cable %}
+                    {%- if cable_len.append(ports2cable[roles1]) %}{% endif %}
+                {%- elif roles2 in ports2cable %}
+                    {%- if cable_len.append(ports2cable[roles2]) %}{% endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endif %}
+    {%- endfor %}
+    {%- if cable_len -%}
+        {{ cable_len.0 }}
+    {%- else %}
+        {%- if switch_role.lower() == 'torrouter' %}
+            {%- for local_port in VLAN_MEMBER %}
+                {%- if local_port[1] == port_name %}
+                    {%- set roles3 = switch_role + '_' + 'server' %}
+                    {%- set roles3 = roles3 | lower %}
+                    {%- if roles3 in ports2cable %}
+                        {%- if cable_len.append(ports2cable[roles3]) %}{% endif %}
+                    {%- endif %}
+                {%- endif %}
+            {%- endfor %}
+            {%- if cable_len -%}
+                {{ cable_len.0 }}
+            {%- else -%}
+                {{ default_cable }}
+            {%- endif %}
+        {%- else -%}
+            {{ default_cable }}
+        {%- endif %}
+    {%- endif %}
+{%- endmacro %}
+
+{%- set PORT_ALL  = [] %}
+
+{%- if PORT is not defined %}
+    {%- if defs.generate_port_lists(PORT_ALL) %} {% endif %}
+{%- else %}
+    {%- for port in PORT %}
+        {%- if PORT_ALL.append(port) %}{%- endif %}
+    {%- endfor %}
+{%- endif %}
+
+{%- set PORT_ACTIVE  = [] %}
+{%- if DEVICE_NEIGHBOR is not defined %}
+    {%- set PORT_ACTIVE = PORT_ALL %}
+{%- else %}
+    {%- for port in DEVICE_NEIGHBOR.keys() %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+{%- endif %}
+
+{%- set port_names_list_active  = [] %}
+{%- for port in PORT_ACTIVE %}
+    {%- if port_names_list_active.append(port) %}{%- endif %}
+{%- endfor %}
+{%- set port_names_active  = port_names_list_active  | join(',') %}
+
+{
+    "CABLE_LENGTH": {
+        "AZURE": {
+    {% for port in PORT_ALL %}
+        {%- set cable = cable_length(port) %}
+        "{{ port }}": "{{ cable }}"{%- if not loop.last %},{% endif %}
+
+    {% endfor %}
+    }
+    },
+
+{% if defs.generate_buffer_pool_and_profiles is defined %}
+{{ defs.generate_buffer_pool_and_profiles() }}
+{% endif %}
+
+{%- if defs.generate_profile_lists is defined %}
+{{ defs.generate_profile_lists(port_names_active) }},
+{% endif %}
+
+{%- if defs.generate_pg_profils is defined %}
+{{ defs.generate_pg_profils(port_names_active) }}
+{% else %}
+    "BUFFER_PG": {
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|0": {
+            "profile" : "[BUFFER_PROFILE|ingress_lossy_profile]"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+{% endif %}
+
+{% if defs.generate_queue_buffers is defined %}
+{{ defs.generate_queue_buffers(port_names_active) }}
+{% else %}
+    "BUFFER_QUEUE": {
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|3-4": {
+            "profile" : "[BUFFER_PROFILE|egress_lossless_profile]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|0-2": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|5-6": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    }
+{% endif %}
+}
