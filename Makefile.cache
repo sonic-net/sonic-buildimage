@@ -464,7 +464,11 @@ RFS_DEP_FILES := $(wildcard \
 	$(shell git ls-files files/build/versions-public/default files/build/versions-public/host-image files/build/versions-public/host-base-image) \
 	build_debian.sh onie-image.conf)
 
-RFS_DEP_FILES += $(SECURE_BOOT_DB_CERT)
+ifneq ($(SECURE_BOOT_DB_CERT),)
+# Dependency lists cannot represent spaces or shell quotes in the source path.
+SECURE_BOOT_DB_CERT_CACHE_FILE := $(TARGET_PATH)/secure-boot/DB.auth
+RFS_DEP_FILES += $(SECURE_BOOT_DB_CERT_CACHE_FILE)
+endif
 
 # Set the target path for each target.
 $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), \
@@ -764,7 +768,16 @@ $(eval $(call SHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), 
 $(eval $(call SHA_DEP_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH),dep))
 $(eval $(call SHA_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),dep))
 
+ifneq ($(SECURE_BOOT_DB_CERT),)
+# Recheck the shell-quoted source each run without changing an identical copy's mtime.
+.PHONY: secure-boot-db-cert-force
+secure-boot-db-cert-force:
 
+$(SECURE_BOOT_DB_CERT_CACHE_FILE): secure-boot-db-cert-force
+	@mkdir -p '$(@D)'
+	cmp -s -- '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))' '$@' || \
+		cp -- '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))' '$@'
+endif
 
 
 
