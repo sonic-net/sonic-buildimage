@@ -1,0 +1,122 @@
+From 795d6f1b8d46cd7313747c6b2b3353a4da1cd2a8 Mon Sep 17 00:00:00 2001
+From: "yuezhou.jk" <yuezhou.jk@alibaba-inc.com>
+Date: Sun, 13 Sep 2026 15:47:16 +0800
+Subject: [PATCH 4/5] elf: resolve all undefined FUNC/OBJECT/NOTYPE symbols
+
+Undefined symbols were routed through the jump table only when their binding
+was STB_GLOBAL. A weak undefined STT_NOTYPE symbol, such as the
+__pthread_key_create reference used by libstdc++, therefore received neither
+a jump-table slot nor runtime resolution. Its value remained zero and a later
+PC-relative relocation produced a wild pointer in the patched code.
+
+Use one type-based predicate for both jump-table sizing and symbol resolution.
+Every undefined FUNC, OBJECT or NOTYPE symbol now takes the resolution path,
+regardless of GLOBAL or WEAK binding. An absent weak symbol legitimately
+resolves to zero, so only unresolved non-weak symbols are rejected.
+
+This keeps the number of allocated jump-table slots equal to the number used
+and prevents a patch from applying successfully only to crash later when the
+bad relocation is executed.
+
+Signed-off-by: yuezhou.jk <yuezhou.jk@alibaba-inc.com>
+---
+ src/kpatch_elf.c | 50 +++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 41 insertions(+), 9 deletions(-)
+
+diff --git a/src/kpatch_elf.c b/src/kpatch_elf.c
+index 17f0915..f47ad78 100644
+--- a/src/kpatch_elf.c
++++ b/src/kpatch_elf.c
+@@ -472,6 +472,38 @@ unsigned long vaddr2addr(struct object_file *o, unsigned long vaddr)
+ 	return 0;
+ }
+ 
++/*
++ * Does this symbol need a jmptable slot allocated for it?
++ *
++ * Must stay in sync with symbol_resolve(): every symbol counted here gets a
++ * slot there, and vice versa. They used to disagree -- both keyed on
++ * STB_GLOBAL, which silently skipped undefined STT_NOTYPE symbols such as the
++ * weak __pthread_key_create reference that libstdc++ tests in
++ * __gthread_active_p(). Such a symbol kept st_value == 0 and
++ * kpatch_arch_apply_relocate_add() then computed a PC-relative displacement
++ * from 0, producing a wild pointer that faulted the target process as soon as
++ * the patched code dereferenced it.
++ *
++ * The predicate is on the symbol *type*, not its binding: for an undefined
++ * symbol the fallback `st_value += shdr[SHN_UNDEF].sh_addr` is never correct
++ * (it always yields 0), so every undefined FUNC/OBJECT/NOTYPE must be routed
++ * through resolution regardless of GLOBAL vs WEAK.
++ */
++static inline int undef_needs_jmp_entry(GElf_Sym *s)
++{
++	if (s->st_shndx != SHN_UNDEF)
++		return 0;
++
++	switch (GELF_ST_TYPE(s->st_info)) {
++	case STT_FUNC:
++	case STT_OBJECT:
++	case STT_NOTYPE:
++		return 1;
++	default:
++		return 0;
++	}
++}
++
+ struct kpatch_jmp_table *kpatch_new_jmp_table(int entries)
+ {
+ 	struct kpatch_jmp_table *jtbl;
+@@ -519,8 +551,7 @@ int kpatch_count_undefined(struct object_file *o)
+ 	for (i = 1; i < shdr[symidx].sh_size / sizeof(GElf_Sym); i++) {
+ 		GElf_Sym *s = sym + i;
+ 
+-		if (s->st_shndx == SHN_UNDEF &&
+-		    GELF_ST_BIND(s->st_info) == STB_GLOBAL) {
++		if (undef_needs_jmp_entry(s)) {
+ 			count++;
+ 			kpdebug("Undefined symbol '%s'\n",
+ 				strsym + s->st_name);
+@@ -762,21 +793,26 @@ symbol_resolve(struct object_file *o,
+ 
+ 	case STT_FUNC:
+ 	case STT_OBJECT:
++	case STT_NOTYPE:		/* e.g. the weak __pthread_key_create ref */
+ 
+ 		/* this breaks rule for overriding
+ 		 * symbols via dynamic libraries. Fix it. */
+-		if (s->st_shndx == SHN_UNDEF &&
+-		    GELF_ST_BIND(s->st_info) == STB_GLOBAL) {
++		if (undef_needs_jmp_entry(s)) {
+ 			/* This is a reference to a symbol from
+ 			 * the dynamic library. Resolve it. */
+ 
+ 			uaddr = kpatch_resolve_undefined(o, symname);
+ 
+-			if (!uaddr) {
++			if (!uaddr && GELF_ST_BIND(s->st_info) != STB_WEAK) {
+ 				kperr("Failed to resolve undefined symbol '%s'\n",
+ 				      symname);
+ 				return -1;
+ 			}
++			/*
++			 * An absent weak symbol legitimately resolves to 0; give it a
++			 * slot holding 0 so the reference reads 0 rather than having a
++			 * displacement computed from st_value == 0.
++			 */
+ 			/* OK, we overuse st_size to store original offset */
+ 			s->st_size = uaddr;
+ 			st_value = kpatch_arch_add_jmp_entry(o, uaddr);
+@@ -808,10 +844,6 @@ symbol_resolve(struct object_file *o,
+ 	case STT_TLS:
+ 		break;
+ 
+-	case STT_NOTYPE:			// for Systemtap symbol _.stapsdt.base.kpatch
+-		s->st_value += shdr[s->st_shndx].sh_addr;
+-		break;
+-
+ 	default:
+ 		kperr("Unsupported symbol type: %d\n", GELF_ST_TYPE(s->st_info));
+ 		return -1;
+-- 
+2.25.1
+

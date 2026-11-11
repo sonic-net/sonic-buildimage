@@ -1,0 +1,19 @@
+*
+!.gitignore
+!Makefile
+!debian
+!debian/*
+!patch
+!patch/*
+
+# dpkg-buildpackage artifacts left inside debian/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/*.debhelper
+debian/*.debhelper.log
+debian/libcareplus/
+debian/tmp/
+libcareplus_*.changes
+libcareplus_*.buildinfo
+debian/.debhelper/
