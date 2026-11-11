@@ -110,13 +110,13 @@ make init
 
 ### **Step 6: Configure for the Build**
 ```
-NOBULLSEYE=1 BLDENV=bookworm DOCKER_BUILDKIT=0 KEEP_SLAVE_ON=yes SONIC_BUILD_JOBS=4 make configure PLATFORM=marvell PLATFORM_ARCH=arm64
+NOBULLSEYE=1 DOCKER_BUILDKIT=0 KEEP_SLAVE_ON=yes SONIC_BUILD_JOBS=4 make configure PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
 ```
 
 ### **Step 7: Build the ARM64 Image**
 ```
 Execute Arm64 build using QEMU emulator environment.  
-NOBULLSEYE=1 BLDENV=bookworm MULTIARCH_QEMU_ENVIRON=y make SONIC_BUILD_JOBS=4 target/sonic-marvell-arm64.bin
+NOBULLSEYE=1 MULTIARCH_QEMU_ENVIRON=y make SONIC_BUILD_JOBS=4 target/sonic-marvell-prestera-arm64.bin
 ```
 ## **Expected Errors and Workarounds**
 
@@ -223,7 +223,7 @@ The external repo's **libnl** and **iptables** are being pulled by the sonic bui
 
 ## **Console Output**
 ```
-$~/arm-testing/sonic-buildimage_bookworm$ NOBULLSEYE=1 BLDENV=bookworm SONIC_BUILD_JOBS=4 MULTIARCH_QEMU_ENVIRON=y /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target.log
+$~/arm-testing/sonic-buildimage_bookworm$ NOBULLSEYE=1 SONIC_BUILD_JOBS=4 MULTIARCH_QEMU_ENVIRON=y /usr/bin/time -v make target/sonic-marvell-arm64.bin 2>&1 | tee make_target.log
 ....
 [ 01 ] [ target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb ]
 [ 02 ] [ target/debs/bookworm/syncd_1.0.0_arm64.deb ]
