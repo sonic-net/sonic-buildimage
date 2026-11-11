@@ -6,62 +6,9 @@ import re
 import tempfile
 
 from unittest import TestCase
-from unittest.mock import patch
 from jinja2 import ChoiceLoader, DictLoader, Environment, FileSystemLoader
-from buffer_profiles import BufferProfileLookup
 import tests.common_utils as utils
 from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
-
-
-class TestBufferProfileLookup(TestCase):
-    def test_profile_matching(self):
-        environment = Environment(loader=DictLoader({
-            'pg_profile_lookup.ini': (
-                ' # 100000 500m is not a profile\n'
-                '100000\t300m\t1248 1248 101088 0 2496\n'
-                '400000 500m 8636 0 1136396 0 3556 # supported\n'
-                '100000 500m\n'
-            )
-        }))
-        available = BufferProfileLookup(environment)
-        self.assertTrue(available(100000, '300m'))
-        self.assertTrue(available('400000', '500m'))
-        self.assertFalse(available('100000', '500m'))
-        self.assertFalse(available('400000', '300m'))
-
-    def test_lookup_cached_per_environment(self):
-        loader = DictLoader({
-            'pg_profile_lookup.ini': '100000 300m 1248 1248 101088 0\n'
-        })
-        environment = Environment(loader=loader)
-        available = BufferProfileLookup(environment)
-        with patch.object(loader, 'get_source', wraps=loader.get_source) as read:
-            self.assertTrue(available(100000, '300m'))
-            self.assertFalse(available(100000, '500m'))
-            self.assertEqual(read.call_count, 1)
-        loader.mapping['pg_profile_lookup.ini'] += '100000 500m 1248 1248 101088 0\n'
-        self.assertTrue(BufferProfileLookup(Environment(loader=loader))(100000, '500m'))
-
-    def test_unknown_profile_availability(self):
-        for templates in [
-            {},
-            {'pg_profile_lookup.ini': ''},
-            {'pg_profile_lookup.ini': '# No static profiles\n'},
-        ]:
-            with self.subTest(templates=templates):
-                available = BufferProfileLookup(Environment(loader=DictLoader(templates)))
-                self.assertIsNone(available(100000, '500m'))
-        available = BufferProfileLookup(Environment(loader=DictLoader({
-            'pg_profile_lookup.ini': '100000 300m 1248 1248 101088 0\n'
-        })))
-        self.assertIsNone(available('', '500m'))
-
-    def test_required_profile_missing(self):
-        available = BufferProfileLookup(Environment(loader=DictLoader({
-            'pg_profile_lookup.ini': '100000 5m 1248 1248 101088 0\n'
-        })))
-        with self.assertRaisesRegex(ValueError, 'speed 100000 and cable length 300m'):
-            available(100000, '300m', required=True)
 
 
 class TestBufferCableLength(TestCase):
@@ -79,7 +26,6 @@ class TestBufferCableLength(TestCase):
         environment = Environment(loader=ChoiceLoader([
             DictLoader(templates), FileSystemLoader(common_dir)
         ]))
-        environment.globals['buffer_profile_available'] = BufferProfileLookup(environment)
         context = {
             'PORT': {'Ethernet0': {'speed': '100000'}, 'Ethernet4': {'speed': 400000}},
             'DEVICE_METADATA': {'localhost': {'type': role}},
@@ -97,9 +43,10 @@ class TestBufferCableLength(TestCase):
     def test_leaf_lowerspine_cable_length_per_speed(self):
         templates = {
             'pg_profile_lookup.ini': (
-                '# 100000 500m is not a supported profile\n'
+                ' # 100000 500m is not a supported profile\n'
                 '100000 300m 1248 1248 101088 0 2496\n'
-                '400000\t500m\t8636 0 1136396 0 3556\n'
+                '400000\t500m\t8636 0 1136396 0 3556 # supported\n'
+                '100000 500m\n'
             )
         }
         for role, neighbor_role in [
@@ -114,10 +61,16 @@ class TestBufferCableLength(TestCase):
                 )
 
     def test_leaf_lowerspine_cable_length_without_lookup(self):
-        self.assertEqual(
-            self.render_cable_lengths('LeafRouter', 'LowerSpineRouter', {}),
-            {'Ethernet0': '500m', 'Ethernet4': '500m'}
-        )
+        for templates in [
+            {},
+            {'pg_profile_lookup.ini': ''},
+            {'pg_profile_lookup.ini': '# No static profiles\n'},
+        ]:
+            with self.subTest(templates=templates):
+                self.assertEqual(
+                    self.render_cable_lengths('LeafRouter', 'LowerSpineRouter', templates),
+                    {'Ethernet0': '500m', 'Ethernet4': '500m'}
+                )
 
     def test_leaf_lowerspine_cable_length_without_speed(self):
         self.assertEqual(
@@ -129,12 +82,14 @@ class TestBufferCableLength(TestCase):
             {'Ethernet0': '500m', 'Ethernet4': '500m'}
         )
 
-    def test_leaf_lowerspine_cable_length_without_usable_profile(self):
-        with self.assertRaisesRegex(ValueError, 'speed 100000 and cable length 300m'):
+    def test_leaf_lowerspine_cable_length_without_fallback_profile(self):
+        self.assertEqual(
             self.render_cable_lengths(
                 'LeafRouter', 'LowerSpineRouter',
                 {'pg_profile_lookup.ini': '100000 5m 1248 1248 101088 0\n'}
-            )
+            ),
+            {'Ethernet0': '500m', 'Ethernet4': '500m'}
+        )
 
     def test_other_cable_lengths_unchanged(self):
         for role, neighbor_role, expected in [
