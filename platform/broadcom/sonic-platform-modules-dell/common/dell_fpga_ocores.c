@@ -863,11 +863,12 @@ static int  i2c_pci_add_bus (struct i2c_adapter *adap)
 
 static int i2c_init_internal_data(void)
 {
-	int i, rst_cnt = 0;
+	int i;
 	uint32_t sys_srr;
 
 	for( i = 0; i < total_i2c_pci_bus; i++ )
 	{
+		int rst_cnt = 0;
 		fpgalogic_i2c[i].reg_shift = 0; /* 8 bit registers */
 		fpgalogic_i2c[i].reg_io_width = 1; /* 8 bit read/write */
 		fpgalogic_i2c[i].timeout = 500;//1000;//1ms
