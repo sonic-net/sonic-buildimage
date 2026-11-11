@@ -464,7 +464,8 @@ RFS_DEP_FILES := $(wildcard \
 	$(shell git ls-files files/build/versions-public/default files/build/versions-public/host-image files/build/versions-public/host-base-image) \
 	build_debian.sh onie-image.conf)
 
-ifneq ($(SECURE_BOOT_DB_CERT),)
+SECURE_BOOT_DB_CERT_ENABLED := $(if $(and $(filter dev prod,$(subst ",,$(SECURE_UPGRADE_MODE))),$(SECURE_BOOT_DB_CERT)),y,n)
+ifeq ($(SECURE_BOOT_DB_CERT_ENABLED),y)
 # Dependency lists cannot represent spaces or shell quotes in the source path.
 SECURE_BOOT_DB_CERT_CACHE_FILE := $(TARGET_PATH)/secure-boot/DB.auth
 RFS_DEP_FILES += $(SECURE_BOOT_DB_CERT_CACHE_FILE)
@@ -515,13 +516,13 @@ rfs_shell_escape = $(subst $(rfs_sq),$(rfs_sq)\$(rfs_sq)$(rfs_sq),$(1))
 rfs_secret_fp = $(if $(strip $(1)),$(shell printf '%s' '$(call rfs_shell_escape,$(1))' | sha1sum | cut -c1-16))
 # IMAGE_TYPE is intentionally NOT in this static list: it is a per-installer value
 # ($($(installer)_IMAGE_TYPE), see slave.mk) and is folded per RFS target below.
-# Keep certificate selection in flags to refresh dependencies even for an older file.
+# Track embedding being toggled; certificate contents are hashed through RFS_DEP_FILES.
 RFS_INLINE_ENV_FLAGS := $(USERNAME) $(CHANGE_DEFAULT_PASSWORD) $(BMC_NOS_ACCOUNT_USERNAME) \
                         $(MASTER_KUBERNETES_VERSION) $(MASTER_CRI_DOCKERD) \
                         $(TRUSTED_GPG_URLS) $(BUILD_PACKAGES_URL) \
                         $(call rfs_secret_fp,$(PASSWORD)) \
                         $(call rfs_secret_fp,$(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)) \
-                        SECURE_BOOT_DB_CERT=$(shell printf '%s' '$(subst ','"'"',$(SECURE_BOOT_DB_CERT))' | base64 -w0)
+                        SECURE_BOOT_DB_CERT_ENABLED=$(SECURE_BOOT_DB_CERT_ENABLED)
 
 $(foreach pkg, $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
@@ -768,7 +769,7 @@ $(eval $(call SHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), 
 $(eval $(call SHA_DEP_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH),dep))
 $(eval $(call SHA_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),dep))
 
-ifneq ($(SECURE_BOOT_DB_CERT),)
+ifeq ($(SECURE_BOOT_DB_CERT_ENABLED),y)
 # Recheck the shell-quoted source each run without changing an identical copy's mtime.
 .PHONY: secure-boot-db-cert-force
 secure-boot-db-cert-force:
