@@ -21,8 +21,6 @@ RUN apt-get update &&   \
         ipmitool        \
         libyaml-cpp0.8  \
         librrd8t64      \
-        librrd-dev      \
-        rrdtool         \
         python3-smbus   \
         dmidecode       \
         i2c-tools       \
@@ -56,12 +54,12 @@ RUN apt-get install -y \
 # install any dependencies required by the Arista sonic_platform package.
 # TODO: eliminate the need to install these explicitly.
 # This version MUST match what is installed in the slave container
-RUN pip3 install grpcio==1.71.0 \
-        grpcio-tools==1.71.0 --no-build-isolation && \
-    find /usr/local/lib/python3*/dist-packages/grpc* -name '*.so' -exec strip --strip-unneeded {} +
+RUN pip3 install grpcio==1.71.0 --no-build-isolation
 
+{% if sonic_asic_platform == 'barefoot' %}
 # Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
 RUN pip3 install thrift
+{% endif %}
 
 # Ragile platform vendors' sonic_platform packages import these Python libraries
 RUN pip3 install requests
@@ -107,7 +105,15 @@ RUN pip3 install smbus2
 
 
 # Clean up
-RUN apt-get purge -y           \
+RUN for d in /usr/local/lib/python3*/dist-packages /usr/lib/python3/dist-packages; do \
+        if [ -d "$d" ]; then \
+            find "$d" -name '*.so*' -type f -exec sh -c ' \
+                for f; do readelf -S "$f" 2>/dev/null | grep -q "\.symtab" && strip --strip-unneeded "$f" || true; done \
+            ' _ {} +; \
+        fi; \
+    done && \
+    rm -rf /usr/lib/udev/hwdb.bin /lib/udev/hwdb.bin /usr/lib/udev/hwdb.d /lib/udev/hwdb.d && \
+    apt-get purge -y           \
         build-essential        \
         python3-dev
 
