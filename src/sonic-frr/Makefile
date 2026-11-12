@@ -46,6 +46,7 @@ endif
 
 	# Copy the sonic dplane module source file.
 	cp ../$(DPLANE_FPM_SONIC_MODULE) zebra/
+	cp ../dplane_fpm_sonic/bridge_port_protection.h zebra/
 
 	# Clean artifacts in frr/debian directory from previous run.
 	fakeroot debian/rules clean

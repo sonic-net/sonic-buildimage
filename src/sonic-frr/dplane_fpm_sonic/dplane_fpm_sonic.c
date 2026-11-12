@@ -62,6 +62,10 @@
 #include "fpm/fpm.h"
 #include "lib/srv6.h"
 #include "lib/vrf.h"
+#include "bridge_port_protection.h"
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+#include "zebra/zebra_evpn_bpp.h"
+#endif
 #include <nexthopgroup/c-api/nexthopgroup_capi.h>
 
 #define SOUTHBOUND_DEFAULT_ADDR INADDR_LOOPBACK
@@ -219,6 +223,9 @@ struct fpm_nl_ctx {
 	struct event *t_ribwalk;
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+	struct event *t_bppreplay;
+#endif
 
 	/* Statistic counters. */
 	struct {
@@ -641,6 +648,15 @@ static struct cmd_node fpm_node = {
  */
 static void fpm_connect(struct event *t);
 
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+/* The export-table walk belongs to zebra's main thread. */
+static void fpm_bpp_replay(struct event *t)
+{
+	(void)t;
+	zebra_evpn_bpp_replay();
+}
+#endif
+
 static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 {
 	bool cleaning_p = false;
@@ -662,6 +678,9 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_ribwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+	event_cancel_async(zrouter.master, &fnc->t_bppreplay, NULL);
+#endif
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -922,6 +941,10 @@ static void fpm_write(struct event *t)
 		 */
 		event_add_timer(zrouter.master, fpm_lsp_reset, fnc, 0,
 				 &fnc->t_lspreset);
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+		event_add_event(zrouter.master, fpm_bpp_replay, fnc, 0,
+				&fnc->t_bppreplay);
+#endif
 
 		/* Permit receiving messages now. */
 		event_add_read(fnc->fthread->master, fpm_read, fnc,
@@ -1049,6 +1072,11 @@ static void fpm_connect(struct event *t)
 	if (!fnc->connecting)
 		event_add_timer(zrouter.master, fpm_lsp_reset, fnc, 0,
 				 &fnc->t_lspreset);
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+	if (!fnc->connecting)
+		event_add_event(zrouter.master, fpm_bpp_replay, fnc, 0,
+				&fnc->t_bppreplay);
+#endif
 }
 
 static struct zebra_vrf *vrf_lookup_by_table_id(uint32_t table_id)
@@ -2552,37 +2580,14 @@ static ssize_t
 dplane_fpm_nl_send_br_port_backup_nhg(const struct zebra_dplane_ctx *ctx,
 				      uint8_t *nl_buf, size_t nl_buf_len)
 {
-	struct {
-		struct nlmsghdr n;
-		struct evpn_backup_nhg_msg e;
-		char buf[0];
-	} *req = (void *)nl_buf;
-
-	if (nl_buf_len < sizeof(*req))
-		return -1;
-
-	/*
-	 * There is currently only a backup NHG per-port, so
-	 * only send it on VLAN 0, which represents the entire port.
-	 */
+	/* The whole-port binding is emitted only on VLAN 0. */
 	if (dplane_ctx_get_br_port_vlan_id(ctx) != 0)
 		return 0;
-
-	memset(req, 0, sizeof(*req));
-
-	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct evpn_backup_nhg_msg));
-	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
-
-	req->e.ebnm_ifindex = dplane_ctx_get_ifindex(ctx);
-	req->e.ebnm_backup_nhg_id = dplane_ctx_get_br_port_backup_nhg_id(ctx);
-
-	if (req->e.ebnm_backup_nhg_id > 0) {
-		req->n.nlmsg_type = RTM_FPM_ADD_EVPN_ES_BACKUP_NHG;
-	} else {
-		req->n.nlmsg_type = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG;
-	}
-
-	return NLMSG_ALIGN(req->n.nlmsg_len);
+	return sonic_bpp_binding(dplane_ctx_get_ifindex(ctx),
+				 dplane_ctx_get_br_port_backup_nhg_id(ctx),
+				 dplane_ctx_get_op(ctx) ==
+				     DPLANE_OP_BR_PORT_DELETE,
+				 nl_buf, nl_buf_len);
 }
 
 static ssize_t
@@ -2659,7 +2664,13 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	 * Ignore route from default table, because when mgmt port goes down,
 	 * zebra will remove the default route and causing ASIC to blackhole IO.
 	 */
-	if (dplane_ctx_get_table(ctx) == RT_TABLE_DEFAULT) {
+	if (
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+	    op != DPLANE_OP_EVPN_MH_NH_UPDATE &&
+	    op != DPLANE_OP_EVPN_MH_NHG_UPDATE &&
+	    op != DPLANE_OP_EVPN_MH_REPLAY_DONE &&
+#endif
+	    dplane_ctx_get_table(ctx) == RT_TABLE_DEFAULT) {
 		zlog_debug("%s: discard default table route", __func__);
 		return 0;
 	}
@@ -2871,6 +2882,23 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 		nl_buf_len += (size_t)rv;
 		break;
+
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+	case DPLANE_OP_EVPN_MH_NH_UPDATE:
+	case DPLANE_OP_EVPN_MH_NHG_UPDATE:
+	case DPLANE_OP_EVPN_MH_REPLAY_DONE:
+		rv = sonic_bpp_encode(ctx, nl_buf, sizeof(nl_buf));
+		if (rv < 0) {
+			flog_err(EC_ZEBRA_FPM_ENCODE_FAIL,
+				 "%s: protection message encode failed",
+				 __func__);
+			dplane_ctx_set_status(ctx,
+					      ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+		nl_buf_len = (size_t)rv;
+		break;
+#endif
 
 	/* Un-handled by FPM at this time. */
 	case DPLANE_OP_PW_INSTALL:
@@ -3507,6 +3535,9 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_ribwalk);
 	event_cancel(&fnc->t_rmacreset);
 	event_cancel(&fnc->t_rmacwalk);
+#ifdef EVPN_MH_NHG_MAX_MEMBERS
+	event_cancel(&fnc->t_bppreplay);
+#endif
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
