@@ -821,6 +821,7 @@ struct fpm_pin {
 	struct fpm_mac_pin pin;
 	bool unpinned;	/* zebra removed it; only its delete is left to write */
 	uint32_t session; /* fnc->pin_session of the last write */
+	vni_t vni;	/* the L2VNI zebra pinned it on, 0 for none */
 };
 
 static int fpm_pin_cmp(const struct fpm_pin *a, const struct fpm_pin *b)
@@ -1212,6 +1213,9 @@ done:
  * so a removal on the pinned port is zebra's. On a VLAN with an L2VNI zebra
  * also ends a pin with a plain write, once the segment peer no longer has the
  * MAC; the plain write fpm_hw_mac_learnt() makes leaves zebra's MAC static.
+ * zebra makes that write too as the L2VNI goes down or away, after it has
+ * unmapped the VLAN from it, so the pin keeps its L2VNI: once that is gone,
+ * nothing owns the pin.
  */
 static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 {
@@ -1235,12 +1239,18 @@ static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 		if (!pinned)
 			return;
 
-		ifp = fpm_mac_bridge_port(written->ifindex, &br_if);
-		zevpn = ifp ? zebra_evpn_map_vlan(ifp, br_if, written->vid)
-			    : NULL;
+		if (p->vni) {
+			zevpn = zebra_evpn_lookup(p->vni);
+		} else {
+			ifp = fpm_mac_bridge_port(written->ifindex, &br_if);
+			zevpn = ifp ? zebra_evpn_map_vlan(ifp, br_if,
+							  written->vid)
+				    : NULL;
+		}
 		memcpy(mac.octet, written->mac, ETH_ALEN);
-		if (zevpn &&
-		    !fpm_mac_bgp_owned(zebra_evpn_mac_lookup(zevpn, &mac)))
+		if ((p->vni && !zevpn) ||
+		    (zevpn &&
+		     !fpm_mac_bgp_owned(zebra_evpn_mac_lookup(zevpn, &mac))))
 			fpm_pin_unpin(p);
 		return;
 	}
@@ -1263,6 +1273,8 @@ static void fpm_pin_recheck(const struct fpm_hw_mac *written)
 	}
 	p->pin.ifindex = written->ifindex;
 	p->unpinned = false;
+	zevpn = zebra_evpn_map_vlan(ifp, br_if, written->vid);
+	p->vni = zevpn ? zevpn->vni : 0;
 	fpm_pin_work_move(p, &pins_unwritten);
 
 	if (IS_ZEBRA_DEBUG_FPM)
