@@ -33,21 +33,21 @@ module sonic-gnmi-client {
                     type string {
                         pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).cer';
                     }
-                    description "Local path for ca_crt; /etc/sonic/credential/gnmi_root.cer when absent.";
+                    description "Local path for ca_crt; /etc/sonic/credentials/gnmi_root.cer when absent.";
                 }
 
                 leaf client_crt {
                     type string {
                         pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).cer';
                     }
-                    description "Local path for client_crt; /etc/sonic/credential/gnmi_client.cer when absent.";
+                    description "Local path for client_crt; /etc/sonic/credentials/gnmi_client.cer when absent.";
                 }
 
                 leaf client_key {
                     type string {
                         pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).key';
                     }
-                    description "Local path for client_key; /etc/sonic/credential/gnmi_client.key when absent.";
+                    description "Local path for client_key; /etc/sonic/credentials/gnmi_client.key when absent.";
                 }
             }
         }

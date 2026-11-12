@@ -1544,9 +1544,9 @@ The **GNMI_CLIENT** table holds the credentials this device presents when it act
 {
     "GNMI_CLIENT": {
         "certs": {
-            "ca_crt": "/etc/sonic/credential/gnmi_root.cer",
-            "client_crt": "/etc/sonic/credential/gnmi_client.cer",
-            "client_key": "/etc/sonic/credential/gnmi_client.key"
+            "ca_crt": "/etc/sonic/credentials/gnmi_root.cer",
+            "client_crt": "/etc/sonic/credentials/gnmi_client.cer",
+            "client_key": "/etc/sonic/credentials/gnmi_client.key"
         }
     }
 }

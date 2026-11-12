@@ -10,9 +10,9 @@ def config(certs):
 
 
 @pytest.mark.parametrize("certs", [
-    {"ca_crt": "/etc/sonic/credential/gnmi_root.cer",
-     "client_crt": "/etc/sonic/credential/gnmi_client.cer",
-     "client_key": "/etc/sonic/credential/gnmi_client.key"},
+    {"ca_crt": "/etc/sonic/credentials/gnmi_root.cer",
+     "client_crt": "/etc/sonic/credentials/gnmi_client.cer",
+     "client_key": "/etc/sonic/credentials/gnmi_client.key"},
     {"ca_crt": "/etc/sonic/site-pki/root.cer",
      "client_crt": "/etc/sonic/bmc-client/identity.cer",
      "client_key": "/etc/sonic/bmc-client/private.key"},
