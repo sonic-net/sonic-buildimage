@@ -498,13 +498,17 @@ RUN rm -rf /usr/local/go "$(go env GOPATH 2>/dev/null || echo $HOME/go)"
 ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 {% if PTF_ENV_PY_VER == "py3" %}
-# New setuptools installs flat SAI clients instead of eggs. Keep only the clients
-# and their metadata in the private venv, retaining dynamic lookup of legacy eggs.
+# New setuptools installs flat SAI clients instead of eggs. Link only those
+# clients and their metadata into the isolated venv, keeping version collection
+# intact without exposing all system Python packages.
+# Retain dynamic egg lookup for older DUT packages built against other py3.x minors.
 RUN SITE_DIR=$(/root/env-python3/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])') \
     && for FILE in /usr/lib/python3/dist-packages/switch_sai_thrift \
-                   /usr/lib/python3/dist-packages/sai_thrift \
-                   /usr/lib/python3/dist-packages/saithrift-0.9-py3.*.egg-info; do \
-         if [ -e "$FILE" ]; then cp -a "$FILE" "$SITE_DIR/"; fi; \
+                   /usr/lib/python3/dist-packages/sai_thrift; do \
+         ln -s "$FILE" "$SITE_DIR/"; \
+       done \
+    && for FILE in /usr/lib/python3/dist-packages/saithrift-0.9-py3.*.egg-info; do \
+         if [ -e "$FILE" ]; then ln -s "$FILE" "$SITE_DIR/"; fi; \
        done \
     && echo "import glob, sys; sys.path.extend(glob.glob('/usr/lib/python3/dist-packages/saithrift-0.9-py3.*.egg'))" \
        >> "$SITE_DIR/easy-install.pth"

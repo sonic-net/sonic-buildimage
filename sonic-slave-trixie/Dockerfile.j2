@@ -76,16 +76,16 @@ RUN pip3 install --ignore-installed virtualenv
 RUN mkdir /python_virtualenv
 RUN cd /python_virtualenv && python3 -m virtualenv --copies -p /usr/bin/python3 env3
 
-# Keep only Debian's pure-Python compatibility library visible to the private venv.
+# The venv's pip bypasses the build hook; apply only the build-tool locks.
 RUN constraints=$(mktemp) \
- && printf '%s\n' 'setuptools>=84.1.0' > "$constraints" \
+ && printf '%s\n' 'setuptools>=84.1.0' 'jaraco.context>=6.1.0' 'wheel>=0.46.3' > "$constraints" \
  && case ",${SONIC_VERSION_CONTROL_COMPONENTS}," in \
-        *,all,*|*,py3,*) grep '^setuptools==' /usr/local/share/buildinfo/versions/versions-py3 >> "$constraints" ;; \
+        *,all,*|*,py3,*) grep -E '^(setuptools|jaraco[.]context|wheel)==' /usr/local/share/buildinfo/versions/versions-py3 >> "$constraints" ;; \
     esac \
- && PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --upgrade --constraint "$constraints" setuptools \
+ && PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --upgrade --constraint "$constraints" setuptools jaraco.context wheel \
  && site_packages=$(PATH=/python_virtualenv/env3/bin/:$PATH python3 -c 'import sysconfig; print(sysconfig.get_path("purelib"))') \
  && ln -s /usr/lib/python3/dist-packages/pkg_resources "$site_packages/pkg_resources" \
- && PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --constraint "$constraints" wheel==0.45.1 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==6.0.2 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx \
+ && PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --constraint "$constraints" fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==6.0.2 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx \
  && rm -f "$constraints" \
  && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3","
 RUN eatmydata apt-get --fix-broken install -y
@@ -615,15 +615,15 @@ RUN eatmydata apt-get install -y -t trixie-backports golang-go \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go
 {%- endif %}
 
-# For building sonic-utilities
-RUN pip3 install fastentrypoints mock
-# Do not uninstall files owned by Debian's separately packaged pkg_resources.
+# Keep security floors here and exact versions in the Python version lock.
 RUN set -- \
  && case ",${SONIC_VERSION_CONTROL_COMPONENTS}," in \
         *,all,*|*,py3,*) set -- --constraint /usr/local/share/buildinfo/versions/versions-py3 ;; \
     esac \
- && pip3 install --ignore-installed "$@" 'setuptools>=84.1.0'
+ && pip3 install --ignore-installed "$@" 'setuptools>=84.1.0' 'jaraco.context>=6.1.0' 'wheel>=0.46.3'
 
+# For building sonic-utilities
+RUN pip3 install fastentrypoints mock
 # For DASH BMv2
 # Exclude jsonpath_ng 1.8.0 because it causes DASH pipeline failures
 # In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
