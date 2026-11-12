@@ -17,7 +17,7 @@
 #
 # Exit codes:
 #     0  success
-#     1  aborted before erase (ramdisk load or pivot failed; syslog names the phase)
+#     1  aborted before erase (pre-pivot preparation, ramdisk load, or pivot failed)
 #     2  bad / missing args, or secrets absent from stdin
 #     3  required tool or helper library missing (rsync, sedutil-cli, nvme, tpm2_*)
 #     4  insufficient RAM (< TMPFS_MIN_AVAIL_GB available)
@@ -211,7 +211,6 @@ restart_services() {
 
 load_fs_to_ramfs() {
     log_info "Loading minimal userspace into tmpfs at /newroot (size=$TMPFS_SIZE)"
-    swapoff -a >/dev/null 2>&1 || true
     mkdir -p /newroot
     if ! mount -t tmpfs -o "size=$TMPFS_SIZE" tmpfs /newroot; then
         log_error "mount tmpfs /newroot failed (size=$TMPFS_SIZE)"
@@ -417,12 +416,18 @@ log_info "===== SSD wipe start ====="
 
 read_secrets                         || exit $?
 check_tools                          || exit $?
-check_memory                         || exit $?
 
 if ! check_sed_crypto_erase_prereqs; then
     log_error "SED crypto erase prereqs failed"
     exit 5
 fi
+
+log_info "Disabling swap before checking available RAM"
+if ! swapoff -a >/dev/null 2>&1; then
+    log_error "Failed to disable swap"
+    exit 1
+fi
+check_memory                         || exit $?
 
 stop_sonic                           || exit $?
 stop_services                        || exit $?
