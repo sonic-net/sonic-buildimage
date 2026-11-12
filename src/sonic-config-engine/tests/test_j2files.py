@@ -2057,7 +2057,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
         def rust_command(d, api='pyo3'):
             options = ' --thermal-monitor-initial-interval 5' if d == 'thermalctld' else ''
-            return '/usr/bin/{}-rs{} --platform-api {}'.format(d, options, api)
+            return '/usr/bin/{}{} --platform-api {}'.format(d, options, api)
 
         cases = [
             # No key: the daemon the platform has always run.
