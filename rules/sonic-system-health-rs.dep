@@ -1,0 +1,12 @@
+SPATH       := $($(SONIC_SYSTEM_HEALTH_RS)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-system-health-rs.mk rules/sonic-system-health-rs.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+DEP_FILES   += $(shell git ls-files $(SRC_PATH)/sonic-rs-common)
+# The platform API crates the LED goes through, and the facade their tests import (a submodule: listed from inside).
+SPC_PATH    := $(SRC_PATH)/sonic-platform-common
+DEP_FILES   += $(addprefix $(SPC_PATH)/,$(shell cd $(SPC_PATH) && git ls-files sonic_platform_api crates))
+
+$(SONIC_SYSTEM_HEALTH_RS)_CACHE_MODE  := GIT_CONTENT_SHA
+$(SONIC_SYSTEM_HEALTH_RS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SONIC_SYSTEM_HEALTH_RS)_DEP_FILES   := $(DEP_FILES)

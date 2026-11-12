@@ -1,0 +1,324 @@
+[
+ {
+  "case": "BlueField throttling checks, OK",
+  "outputs": [
+   [
+    "python3 -m sonic_platform.throttling_checks.cpu_check",
+    "Throttling\nCPU:OK\n"
+   ],
+   [
+    "python3 -m sonic_platform.throttling_checks.ddr_check",
+    "Throttling\nDDR:OK\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "Throttling",
+     [
+      [
+       "CPU",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ],
+      [
+       "DDR",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "OK"
+  }
+ },
+ {
+  "case": "BlueField throttling checks, CPU throttled",
+  "outputs": [
+   [
+    "python3 -m sonic_platform.throttling_checks.cpu_check",
+    "Throttling\nCPU:Throttled\n"
+   ],
+   [
+    "python3 -m sonic_platform.throttling_checks.ddr_check",
+    "Throttling\nDDR:OK\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "Throttling",
+     [
+      [
+       "CPU",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "Throttled"
+       }
+      ],
+      [
+       "DDR",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "Not OK"
+  }
+ },
+ {
+  "case": "Pensando fetch_dpu_status, healthy",
+  "outputs": [
+   [
+    "fetch_dpu_status",
+    "DPU Category\ndpu-pdsagent:OK\ndpu-pciemgrd:OK\ndpu-eth_Uplink0_status:OK\ndpu-eth_Uplink1_status:OK\ndpu-pcie_link:OK\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "DPU Category",
+     [
+      [
+       "dpu-pdsagent",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ],
+      [
+       "dpu-pciemgrd",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ],
+      [
+       "dpu-eth_Uplink0_status",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ],
+      [
+       "dpu-eth_Uplink1_status",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ],
+      [
+       "dpu-pcie_link",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "OK"
+  }
+ },
+ {
+  "case": "Pensando fetch_dpu_status, agent down: the PCIe link is reported twice, the last state stays",
+  "outputs": [
+   [
+    "fetch_dpu_status",
+    "DPU Category\ndpu-pdsagent:Not OK\ndpu-pciemgrd:Not OK\ndpu-eth_uplinks_status:Not OK\ndpu-pcie_link:DOWN\ndpu-pcie_link:Not OK\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "DPU Category",
+     [
+      [
+       "dpu-pdsagent",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "Not OK"
+       }
+      ],
+      [
+       "dpu-pciemgrd",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "Not OK"
+       }
+      ],
+      [
+       "dpu-eth_uplinks_status",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "Not OK"
+       }
+      ],
+      [
+       "dpu-pcie_link",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "Not OK"
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "Not OK"
+  }
+ },
+ {
+  "case": "Supermicro liquid cooling check, no leak",
+  "outputs": [
+   [
+    "python3 /usr/local/bin/health_checker_thermal.py",
+    "LCC\nLiquid Leak:OK\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "LCC",
+     [
+      [
+       "Liquid Leak",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "OK"
+  }
+ },
+ {
+  "case": "Supermicro liquid cooling check, leak",
+  "outputs": [
+   [
+    "python3 /usr/local/bin/health_checker_thermal.py",
+    "LCC\nLiquid Leak:not OK\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "LCC",
+     [
+      [
+       "Liquid Leak",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "not OK"
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "Not OK"
+  }
+ },
+ {
+  "case": "Supermicro liquid cooling check, not a liquid-cooled board: the category alone",
+  "outputs": [
+   [
+    "python3 /usr/local/bin/health_checker_thermal.py",
+    "LCC\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "LCC",
+     []
+    ]
+   ],
+   "summary": "OK"
+  }
+ },
+ {
+  "case": "Supermicro thermal check, one sensor warning",
+  "outputs": [
+   [
+    "python3 /usr/local/bin/health_checker_thermal.py",
+    "Thermal\nCPU Temp:OK\nASIC Temp:ASIC Temp status is warning about temperature 105 (threshold high 100 low 0)\n"
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "Thermal",
+     [
+      [
+       "CPU Temp",
+       {
+        "type": "UserDefine",
+        "status": "OK",
+        "message": ""
+       }
+      ],
+      [
+       "ASIC Temp",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "ASIC Temp status is warning about temperature 105 (threshold high 100 low 0)"
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "Not OK"
+  }
+ },
+ {
+  "case": "Supermicro thermal check, no sensors: no output",
+  "outputs": [
+   [
+    "python3 /usr/local/bin/health_checker_thermal.py",
+    ""
+   ]
+  ],
+  "python": {
+   "stats": [
+    [
+     "UserDefine",
+     [
+      [
+       "UserDefinedChecker - python3 /usr/local/bin/health_checker_thermal.py",
+       {
+        "type": "UserDefine",
+        "status": "Not OK",
+        "message": "Failed to get output of command \"python3 /usr/local/bin/health_checker_thermal.py\""
+       }
+      ]
+     ]
+    ]
+   ],
+   "summary": "Not OK"
+  }
+ }
+]

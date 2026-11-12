@@ -1,0 +1,20 @@
+[package]
+name = "healthd"
+description = "SONiC system health daemon"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+platform-api.workspace = true
+sonic-rs-common.workspace = true
+swss-common.workspace = true
+system-health.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true
