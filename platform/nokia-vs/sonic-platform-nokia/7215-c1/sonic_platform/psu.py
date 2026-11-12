@@ -124,8 +124,12 @@ class Psu(PsuBase):
         Returns:
             string: Part number of PSU
         """
-
-        model = 'AC-PSU'
+        ch_model=self.get_chassis_model()
+        #compare first 8 characters of chassis model string
+        if(ch_model[:8]=='3HE31074' or ch_model[:8]=='3HE31075' ):
+            model = 'DC-PSU'
+        else:
+            model = 'AC-PSU'
 
         return model
 
