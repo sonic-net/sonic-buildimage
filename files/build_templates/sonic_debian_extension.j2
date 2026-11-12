@@ -152,7 +152,6 @@ sudo cp $IMAGE_CONFIGS/environment/motd $FILESYSTEM_ROOT/etc/motd_factory_defaul
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/
 sudo mkdir -p $FILESYSTEM_ROOT/etc/modprobe.d/
 sudo mkdir -p $FILESYSTEM_ROOT/var/cache/sonic/
-sudo install -d -m 0700 -o root -g root $FILESYSTEM_ROOT/var/cache/sonic/system-health/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_FIRMWARE/
 
@@ -251,9 +250,6 @@ install_pip_package {{platform_common_py3_wheel_path}}
 # Install pddf-platform-api-base Python 3 package
 install_pip_package {{pddf_platform_api_base_py3_wheel_path}}
 {% endif %}
-
-# Install system-health Python 3 package
-install_pip_package {{system_health_py3_wheel_path}}
 
 # Install m2crypto, cryptography, cffi, and pynacl packages, used by sonic-utilities
 # Install python packages used by sonic-utilities
@@ -410,6 +406,9 @@ install_deb_package {{deb}}
 
 # Install SONiC host services Rust deb package
 install_deb_package $debs_path/sonic-host-services-rs_*.deb
+
+# Install system-health: healthd and the healthcheck backend of "show system-health"
+install_deb_package $debs_path/sonic-system-health_*.deb
 
 # Install sonic-db-cli
 install_deb_package $debs_path/sonic-db-cli_*.deb
