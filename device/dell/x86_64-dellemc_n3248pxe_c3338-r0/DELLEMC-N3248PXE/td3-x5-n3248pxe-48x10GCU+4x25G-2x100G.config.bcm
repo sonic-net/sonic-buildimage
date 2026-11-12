@@ -338,7 +338,7 @@ max_vp_lags=0
 schan_intr_enable=0
 tdma_timeout_usec=5000000
 
-stable_size=0x5500000
+stable_size=0x8000000
 
 #Default L3 profile
 l2_mem_entries=40960
