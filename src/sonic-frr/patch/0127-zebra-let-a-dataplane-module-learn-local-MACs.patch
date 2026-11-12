@@ -52,6 +52,15 @@ is set:
   calls the new zebra_dplane_mac_read hook, and dplane_fpm_sonic hands
   zebra the MACs it keeps.
 
+- dplane_fpm_sonic does not hand zebra a MAC on a port that is down, as
+  mac-ext-learn mode ignores the kernel's learns there (patch 0034).
+  SONiC flushes the port's dynamic MACs as it goes down, and the ASIC
+  learns them again once it is up, but it keeps the static ones, which
+  fpmsyncd reports only once: a static MAC configured while its port
+  was down never reached zebra. zebra now calls the new
+  zebra_dplane_mac_port_up hook when a bridge port comes up, and
+  dplane_fpm_sonic hands zebra the static MACs it held for the port.
+
 - When the peer-active hold timer of a MAC expires, mac-ext-learn mode
   flushes the MAC, as no dynamic learn happens while it is static
   (patch 0034). That stays for a local-inactive MAC. An active MAC is
@@ -75,7 +84,7 @@ is set:
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
 diff --git a/zebra/interface.c b/zebra/interface.c
-index 6e8d2b9de3..ab9ac12eb6 100644
+index 6e8d2b9de3..7a7c002b21 100644
 --- a/zebra/interface.c
 +++ b/zebra/interface.c
 @@ -37,6 +37,7 @@
@@ -86,7 +95,16 @@ index 6e8d2b9de3..ab9ac12eb6 100644
  
  DEFINE_MTYPE_STATIC(ZEBRA, ZINFO, "Zebra Interface Information");
  
-@@ -2034,6 +2035,9 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
+@@ -1042,6 +1043,8 @@ void if_up(struct interface *ifp, bool install_connected)
+ 	if (zif->flags & ZIF_FLAG_EVPN_MH_UPLINK)
+ 		zebra_evpn_mh_uplink_oper_update(zif);
+ 
++	zebra_neigh_dplane_port_up(ifp);
++
+ 	event_cancel(&zif->speed_update);
+ 	dplane_intf_speed_get(ifp);
+ 
+@@ -2034,6 +2037,9 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
  
  		frrtrace(3, frr_zebra, if_dplane_ifp_handling, name, ifindex, 0);
  
@@ -250,10 +268,10 @@ index 204cb34466..f7c2bbbf9f 100644
  		 * In the case of VxLAN, invoke the handler for EVPN.
  		 * Note that this should be done *prior*
 diff --git a/zebra/zebra_neigh.c b/zebra/zebra_neigh.c
-index b0350e2c0d..d2970e37b0 100644
+index b0350e2c0d..7f87949a2e 100644
 --- a/zebra/zebra_neigh.c
 +++ b/zebra/zebra_neigh.c
-@@ -580,6 +580,45 @@ static void zebra_neigh_ipaddr_update(struct zebra_dplane_ctx *ctx)
+@@ -580,6 +580,57 @@ static void zebra_neigh_ipaddr_update(struct zebra_dplane_ctx *ctx)
  		zebra_vxlan_handle_kernel_neigh_del(ifp, link_if, &ip);
  }
  
@@ -296,10 +314,22 @@ index b0350e2c0d..d2970e37b0 100644
 +	hook_call(zebra_dplane_mac_port_flush, ifp);
 +}
 +
++DEFINE_HOOK(zebra_dplane_mac_port_up, (struct interface *ifp), (ifp));
++
++void zebra_neigh_dplane_port_up(struct interface *ifp)
++{
++	struct zebra_if *zif = ifp->info;
++
++	if (!dplane_mac_learning || !zif || !zif->brslave_info.br_if || IS_ZEBRA_IF_VXLAN(ifp))
++		return;
++
++	hook_call(zebra_dplane_mac_port_up, ifp);
++}
++
  static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
  {
  	ns_id_t ns_id;
-@@ -653,6 +692,14 @@ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
+@@ -653,6 +704,14 @@ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
  	ndm_state = dplane_ctx_mac_get_ndm_state(ctx);
  	ndm_flags = dplane_ctx_mac_get_ndm_flags(ctx);
  
@@ -315,7 +345,7 @@ index b0350e2c0d..d2970e37b0 100644
  	 * the notification is over VxLAN, this has to be related to
  	 * multi-homing,
 diff --git a/zebra/zebra_neigh.h b/zebra/zebra_neigh.h
-index 30c9f4b644..26f8bea79f 100644
+index 30c9f4b644..fd735217a2 100644
 --- a/zebra/zebra_neigh.h
 +++ b/zebra/zebra_neigh.h
 @@ -14,12 +14,15 @@
@@ -334,7 +364,7 @@ index 30c9f4b644..26f8bea79f 100644
  struct zebra_neigh_ent {
  	ns_id_t ns_id;
  	ifindex_t ifindex;
-@@ -60,4 +63,20 @@ extern void zebra_neigh_deref(struct zebra_pbr_rule *rule);
+@@ -60,4 +63,25 @@ extern void zebra_neigh_deref(struct zebra_pbr_rule *rule);
  extern void zebra_neigh_ref(ns_id_t ns_id, int ifindex, struct ipaddr *ip,
  			    struct zebra_pbr_rule *rule);
  void zebra_neigh_dplane_update(struct zebra_dplane_ctx *ctx);
@@ -354,6 +384,11 @@ index 30c9f4b644..26f8bea79f 100644
 + */
 +DECLARE_HOOK(zebra_dplane_mac_port_flush, (struct interface *ifp), (ifp));
 +extern void zebra_neigh_dplane_port_flush(struct interface *ifp);
++/* A bridge port came up: the module gives zebra the port's MACs it held back
++ * while the port was down.
++ */
++DECLARE_HOOK(zebra_dplane_mac_port_up, (struct interface *ifp), (ifp));
++extern void zebra_neigh_dplane_port_up(struct interface *ifp);
  #endif /* _ZEBRA_NEIGH_H */
 diff --git a/zebra/zebra_vxlan.c b/zebra/zebra_vxlan.c
 index 42ed7e1ea8..8bc1fa0171 100644

@@ -735,13 +735,15 @@ DEFINE_MTYPE_STATIC(ZEBRA, FPM_MAC_PIN, "FPM MAC pin");
  * fpmsyncd reports a MAC only when it changes, but zebra can remove or
  * deactivate a local MAC the hardware still has: a flush, an Ethernet Segment
  * peer withdrawing its route, rereading the MACs of an L2VNI. This table is
- * how the module gives those back. Main thread only.
+ * how the module gives those back, and the static MACs of a port that was
+ * down, once it comes up. Main thread only.
  */
 PREDECL_HASH(fpm_hw_macs);
 
 struct fpm_hw_mac_entry {
 	struct fpm_hw_macs_item item;
 	struct fpm_hw_mac hm;
+	bool held;	/* not given to zebra, as its port was down */
 };
 
 static int fpm_hw_mac_cmp(const struct fpm_hw_mac_entry *a,
@@ -775,18 +777,19 @@ static struct fpm_hw_mac_entry *fpm_hw_mac_lookup(uint16_t vid,
 }
 
 /* Adds the MAC, or refreshes the port and stickiness of one already there. */
-static void fpm_hw_mac_add(const struct fpm_hw_mac *hm)
+static struct fpm_hw_mac_entry *fpm_hw_mac_add(const struct fpm_hw_mac *hm)
 {
 	struct fpm_hw_mac_entry *e = fpm_hw_mac_lookup(hm->vid, hm->mac);
 
 	if (e) {
 		e->hm = *hm;
-		return;
+		return e;
 	}
 
 	e = XCALLOC(MTYPE_FPM_HW_MAC, sizeof(*e));
 	e->hm = *hm;
 	fpm_hw_macs_add(&hw_macs, e);
+	return e;
 }
 
 static void fpm_hw_mac_del(uint16_t vid, const uint8_t *mac)
@@ -1147,27 +1150,29 @@ static struct interface *fpm_mac_bridge_port(int ifindex,
  * Not while the port is down: zebra skips such kernel learns in mac-ext-learn
  * mode, and in fpm mode the learns come from here, be it one fpmsyncd reported
  * before the port went down or a MAC given back from the table above. SONiC
- * flushes the port's MACs as it goes down, and the hardware learns them again
- * once it is up.
+ * flushes the port's dynamic MACs as it goes down, and the hardware learns them
+ * again once it is up. It keeps the static ones, which fpmsyncd reports only
+ * once, so fpm_hw_macs_port_up() gives those to zebra when the port comes up.
  */
 static void fpm_hw_mac_learnt(struct interface *ifp, struct interface *br_if,
-			      const struct fpm_hw_mac *hm)
+			      struct fpm_hw_mac_entry *e)
 {
 	struct ethaddr mac;
 
-	memcpy(mac.octet, hm->mac, ETH_ALEN);
+	memcpy(mac.octet, e->hm.mac, ETH_ALEN);
 
-	if (!if_is_operative(ifp)) {
+	e->held = !if_is_operative(ifp);
+	if (e->held) {
 		if (IS_ZEBRA_DEBUG_FPM)
 			zlog_debug("%s: %s is down, not learning %pEA vlan %u",
-				   __func__, ifp->name, &mac, hm->vid);
+				   __func__, ifp->name, &mac, e->hm.vid);
 		return;
 	}
 
-	dplane_local_mac_add(ifp, br_if, hm->vid, &mac, hm->sticky, 0, 0);
+	dplane_local_mac_add(ifp, br_if, e->hm.vid, &mac, e->hm.sticky, 0, 0);
 
-	zebra_vxlan_local_mac_add_update(ifp, br_if, &mac, hm->vid, hm->sticky,
-					 false, false);
+	zebra_vxlan_local_mac_add_update(ifp, br_if, &mac, e->hm.vid,
+					 e->hm.sticky, false, false);
 }
 
 /*
@@ -1195,8 +1200,7 @@ static void fpm_apply_hw_mac(struct event *t)
 		goto done;
 	}
 
-	fpm_hw_mac_add(hm);
-	fpm_hw_mac_learnt(ifp, br_if, hm);
+	fpm_hw_mac_learnt(ifp, br_if, fpm_hw_mac_add(hm));
 
 done:
 	XFREE(MTYPE_FPM_MAC_EVENT, hm);
@@ -1309,7 +1313,7 @@ static void fpm_hw_mac_recheck(struct event *t)
 	if (IS_ZEBRA_DEBUG_FPM)
 		zlog_debug("%s: giving %pEA vlan %u on %s back to zebra",
 			   __func__, &mac, e->hm.vid, ifp->name);
-	fpm_hw_mac_learnt(ifp, br_if, &e->hm);
+	fpm_hw_mac_learnt(ifp, br_if, e);
 
 done:
 	XFREE(MTYPE_FPM_MAC_EVENT, written);
@@ -1398,13 +1402,54 @@ static void fpm_hw_macs_give_back(struct event *t)
 					  ZEBRA_MAC_LOCAL_INACTIVE))))
 			continue;
 
-		given++;
-		fpm_hw_mac_learnt(ifp, br_if, &e->hm);
+		fpm_hw_mac_learnt(ifp, br_if, e);
+		if (!e->held)
+			given++;
 	}
 
 	if (given)
 		zlog_info("%s: gave zebra %u MAC(s) the hardware has", __func__,
 			  given);
+}
+
+/*
+ * A bridge port came up. Give zebra the static MACs fpmsyncd reported on it
+ * while it was down, which fpm_hw_mac_learnt() held back. The dynamic ones stay
+ * held: SONiC flushed them as the port went down, so fpmsyncd reports them
+ * gone, and the hardware learns them again.
+ */
+static void fpm_hw_macs_port_up(struct event *t)
+{
+	struct interface *br_if = NULL;
+	struct fpm_hw_mac_entry *e;
+	unsigned int given = 0;
+	struct interface *ifp;
+
+	ifp = fpm_mac_bridge_port(EVENT_VAL(t), &br_if);
+	if (!ifp || !if_is_operative(ifp))
+		return;
+
+	frr_each (fpm_hw_macs, &hw_macs, e) {
+		if (!e->held || !e->hm.sticky || e->hm.ifindex != ifp->ifindex)
+			continue;
+
+		fpm_hw_mac_learnt(ifp, br_if, e);
+		given++;
+	}
+
+	if (given)
+		zlog_info("%s: %s is up, gave zebra %u static MAC(s) held while it was down",
+			  __func__, ifp->name, given);
+}
+
+/* Called from zebra's if_up(), applied once it is done. if_up() also runs for
+ * a port that stays up, when its flags change; then nothing is held.
+ */
+static int fpm_dplane_mac_port_up(struct interface *ifp)
+{
+	event_add_event(zrouter.master, fpm_hw_macs_port_up, NULL, ifp->ifindex,
+			NULL);
+	return 0;
 }
 
 /*
@@ -4532,6 +4577,7 @@ static int fpm_nl_new(struct event_loop *tm)
 
 	hook_register(zebra_dplane_mac_read, fpm_dplane_mac_read);
 	hook_register(zebra_dplane_mac_port_flush, fpm_dplane_mac_port_flush);
+	hook_register(zebra_dplane_mac_port_up, fpm_dplane_mac_port_up);
 
 	install_node(&fpm_node);
 	install_element(ENABLE_NODE, &fpm_show_status_cmd);
