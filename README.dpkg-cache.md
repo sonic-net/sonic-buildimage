@@ -157,11 +157,13 @@ guard, a forced content-preserving staging copy, and no additional content uses
 of the source path. An enable flag alone does not track file contents.
 The enable definition must precede its flag snapshot and conditional file
 declarations. The staged path must precede its file-list addition, which must
-precede the RFS target snapshot. Parameter-expansion uses are checked too;
-inline shell conditional bodies are not recognized and retain the finding.
+precede the RFS target snapshot. Source assignments after the enable snapshot
+and local mode redefinitions retain the finding. Parameter-expansion uses are
+checked too; inline shell conditional bodies retain the finding.
 The recipe must forward the same mode explicitly or inherit it through the
 matching `Makefile.work` environment binding. Unknown or overridden modes and
-continued source-path logging retain the finding.
+continued source-path logging retain the finding, as do redirected or continued
+shell group closures that could capture earlier logging.
 Unsupported Make or shell forms remain findings rather than being auto-cleared.
 
 Changes to the analyzer or waiver file should include the before/after findings

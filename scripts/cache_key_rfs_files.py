@@ -80,6 +80,8 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe, environment=""):
         modes, mode, source = match.groups()
         modes = modes.split()
         if (not modes or assignments.get(mode) or
+                any(position > enabled_position for _, _, _, position
+                    in assignments.get(source, [])) or
                 not _same_recipe_source(recipe, source) or
                 not _same_recipe_mode(recipe, source, mode, environment) or
                 not _copy_only_consumer(consumer, source, mode, modes)):
@@ -225,19 +227,25 @@ def _copy_only_consumer(consumer, source, mode, modes):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        if line.startswith("if "):
+        # A redirected or continued group closure can capture earlier echoes.
+        if re.match(r"[})][ \t]*[^#\s]", line):
+            return False
+        if line.startswith(("if ", "elif ")):
             # Inline bodies/closures are outside the supported block syntax.
             if re.search(r"\bthen\b(?!\s*$)|\bfi\b", line):
                 return False
-            guards.append(line)
+            if line.startswith("if "):
+                guards.append(line)
+            elif guards:
+                guards[-1] = "else"
         elif line == "fi":
             if guards:
                 guards.pop()
-        elif re.match(r"fi\b", line):
-            return False
-        elif line.startswith(("else", "elif ")):
+        elif line == "else":
             if guards:
                 guards[-1] = "else"
+        elif re.match(r"(?:fi|else|elif)\b", line):
+            return False
         if re.match(
             r"(?:export )?(?:" + re.escape(source) + "|" +
             re.escape(mode) + r")=", line

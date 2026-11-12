@@ -258,6 +258,34 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
                     self.file_findings(cache.replace(old, new)),
                 )
 
+    def test_late_source_and_mode_assignments_are_reported(self):
+        enabled = "SECURE_BOOT_DB_CERT_ENABLED := " + FILE_PRESENCE + "\n"
+        for variable, value in (
+            ("SECURE_BOOT_DB_CERT", "source.auth"),
+            ("SECURE_UPGRADE_MODE", "dev"),
+        ):
+            for operator in (":=", "=", "+=", "?="):
+                for position in ("after enable", "after target snapshot"):
+                    with self.subTest(
+                        variable=variable, operator=operator, position=position,
+                    ):
+                        cache = self.file_cache()
+                        assignment = f"{variable} {operator} {value}\n"
+                        if position == "after enable":
+                            cache = cache.replace(enabled, enabled + assignment)
+                        else:
+                            cache += "\n" + assignment
+                        self.assertIn(
+                            "FINDING:P1:SECURE_BOOT_DB_CERT",
+                            self.file_findings(cache),
+                        )
+        self.assertNotIn(
+            "FINDING:P1:SECURE_BOOT_DB_CERT",
+            self.file_findings(self.file_cache().replace(
+                enabled, "SECURE_BOOT_DB_CERT := source.auth\n" + enabled,
+            )),
+        )
+
     def test_extra_or_differently_gated_content_uses_are_reported(self):
         for consumer in [
             FILE_CONSUMER + 'printf "%s" "$SECURE_BOOT_DB_CERT" > rootfs/path\n',
@@ -331,6 +359,25 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
                     ),
                 )
 
+    def test_inline_alternate_branches_do_not_leak_mode_guards(self):
+        mode = FILE_CONSUMER.splitlines()[2]
+        for branch in ("else :; fi", "elif false; then :; fi"):
+            with self.subTest(branch=branch):
+                consumer = (
+                    mode + "\n"
+                    "    if true; then\n"
+                    "        :\n"
+                    "    " + branch + "\n"
+                    "fi\n"
+                    'if [ -n "$SECURE_BOOT_DB_CERT" ]; then\n'
+                    '    sudo cp "$SECURE_BOOT_DB_CERT" "$FILESYSTEM_ROOT/boot/DB.auth"\n'
+                    "fi\n"
+                )
+                self.assertIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(self.file_cache(), consumer),
+                )
+
     def test_explicit_and_inherited_matching_recipe_modes_are_recognized(self):
         for mode_env, environment in (
             (FILE_MODE_ENV, ""),
@@ -361,6 +408,30 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
                     "FINDING:P1:SECURE_BOOT_DB_CERT",
                     self.file_findings(self.file_cache(), consumer),
                 )
+
+    def test_enclosing_output_redirections_are_not_auto_cleared(self):
+        for opening, closing in (("{", "}"), ("(", ")")):
+            logging = opening + '\n    echo "$SECURE_BOOT_DB_CERT"\n' + closing
+            with self.subTest(opening=opening, redirection=None):
+                self.assertNotIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(
+                        self.file_cache(), FILE_CONSUMER + logging + "\n",
+                    ),
+                )
+            for redirection in (
+                '> "$FILESYSTEM_ROOT/boot/cert-path"',
+                '| tee "$FILESYSTEM_ROOT/boot/cert-path"',
+                '\\\n    > "$FILESYSTEM_ROOT/boot/cert-path"',
+            ):
+                with self.subTest(opening=opening, redirection=redirection):
+                    consumer = (
+                        FILE_CONSUMER + logging + " " + redirection + "\n"
+                    )
+                    self.assertIn(
+                        "FINDING:P1:SECURE_BOOT_DB_CERT",
+                        self.file_findings(self.file_cache(), consumer),
+                    )
 
     def test_recognition_is_not_tied_to_certificate_variable_names(self):
         cache = self.file_cache().replace("SECURE_BOOT_DB_CERT", "ROOTFS_DATA")
