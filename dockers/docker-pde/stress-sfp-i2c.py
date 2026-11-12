@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 try:
+    import os
     import sys
     import time
     import imp
@@ -8,7 +9,9 @@ try:
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
 
-PORT_CONFIG_FILE = "/var/run/redis/port_config.ini"
+PORT_CONFIG_FILE = os.path.join(
+    "/etc/sonic", "asic" + os.environ["NAMESPACE_ID"] if os.environ.get("NAMESPACE_ID") else "", "port_config.ini"
+)
 PLATFORM_PATH = "/usr/share/sonic/platform"
 
 PLATFORM_SPECIFIC_MODULE_NAME = 'sfputil'

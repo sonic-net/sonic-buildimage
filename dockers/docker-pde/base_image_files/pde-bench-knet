@@ -54,7 +54,7 @@ while IFS= read -r line; do
         LANE=${lane}
         SPEED=${speed}
     fi
-done < /var/run/redis/port_config.ini
+done < "/etc/sonic/${NAMESPACE_ID:+asic$NAMESPACE_ID/}port_config.ini"
 
 echo "PORT=${PORT}"
 echo "LANE=${LANE}"
