@@ -154,11 +154,8 @@ def _same_recipe_source(recipe, source):
     values = re.findall(
         r"^[ \t]*" + re.escape(source) + r"=(.*?)\s*\\$", recipe, re.M
     )
-    allowed = {
-        f'"$({source})"',
-        """'$(subst ','"'"',$(%s))'""" % source,
-    }
-    return bool(values) and all(value in allowed for value in values)
+    quoted_source = """'$(subst ','"'"',$(%s))'""" % source
+    return bool(values) and all(value == quoted_source for value in values)
 
 
 def _same_recipe_mode(recipe, source, mode, environment):
@@ -201,6 +198,11 @@ def _same_recipe_mode(recipe, source, mode, environment):
             start -= 1
         while end + 1 < len(lines) and binding.fullmatch(lines[end + 1]):
             end += 1
+        if end + 1 == len(lines) or not re.fullmatch(
+            r"[ \t]*\./build_debian\.sh(?:[ \t]+\$\(LOG\))?[ \t]*",
+            lines[end + 1],
+        ):
+            return False
         explicit = any(
             binding.fullmatch(line)[1] == mode for line in lines[start:end + 1]
         )
@@ -221,10 +223,17 @@ def _copy_only_consumer(consumer, source, mode, modes):
     mode_guard = re.compile(
         r"if \[\[ (" + mode_test + r"(?: \|\| " + mode_test + r")*) \]\]; then"
     )
+    declared_input = re.compile(
+        r"(?:export|readonly|declare|typeset|local)\b.*\b(?:"
+        + re.escape(source) + "|" + re.escape(mode) + r")\b"
+    )
     guards = []
     copies = 0
+    continued = False
     for raw in consumer.splitlines():
         line = raw.strip()
+        follows_continuation = continued
+        continued = raw.rstrip().endswith("\\")
         if not line or line.startswith("#"):
             continue
         # A redirected or continued group closure can capture earlier echoes.
@@ -246,6 +255,8 @@ def _copy_only_consumer(consumer, source, mode, modes):
                 guards[-1] = "else"
         elif re.match(r"(?:fi|else|elif)\b", line):
             return False
+        if declared_input.match(line):
+            return False
         if re.match(
             r"(?:export )?(?:" + re.escape(source) + "|" +
             re.escape(mode) + r")=", line
@@ -253,6 +264,8 @@ def _copy_only_consumer(consumer, source, mode, modes):
             return False
         if not reference.search(line):
             continue
+        if follows_continuation:
+            return False
         if line in (nonempty, exists):
             continue
         if (line.startswith("echo ") and not line.endswith("\\") and

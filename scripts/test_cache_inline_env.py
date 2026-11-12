@@ -51,11 +51,14 @@ fi
 
 FILE_MODE_ENV = '\tSECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \\\n'
 FILE_BUILD_ENV = 'SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \\\n'
+FILE_SOURCE_ENV = (
+    '\tSECURE_BOOT_DB_CERT=\'$(subst \',\'"\'"\',$(SECURE_BOOT_DB_CERT))\' \\\n'
+)
 
 
 class InlineEnvironmentAuditTest(unittest.TestCase):
     def run_audit(self, cache, extra_consumer="", extra_env="",
-                  environment=FILE_BUILD_ENV):
+                  environment=FILE_BUILD_ENV, invocation="./build_debian.sh"):
         source = (ROOT / "scripts/audit_dep_completeness.sh").read_text(encoding="utf-8")
         function = source.split("check_inline_recipe_env_vars() {", 1)[1]
         function = "check_inline_recipe_env_vars() {" + function.split("\n}\n", 1)[0] + "\n}\n"
@@ -71,7 +74,7 @@ class InlineEnvironmentAuditTest(unittest.TestCase):
                 '\tIMAGE_TYPE=$($(installer)_IMAGE_TYPE) \\\n'
                 '\tUNKEYED="$(UNKEYED)" \\\n'
                 + extra_env +
-                '\t\t./build_debian.sh\n'
+                '\t\t' + invocation + '\n'
                 '\t$(call SAVE_CACHE,$*,$@)\n',
                 encoding="utf-8", newline="\n",
             )
@@ -144,11 +147,10 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
         )
 
     def file_findings(self, cache, consumer=FILE_CONSUMER,
-                      mode_env="", environment=FILE_BUILD_ENV):
+                      mode_env="", environment=FILE_BUILD_ENV,
+                      invocation="./build_debian.sh"):
         return self.run_audit(
-            cache, consumer,
-            '\tSECURE_BOOT_DB_CERT=\'$(subst \',\'"\'"\',$(SECURE_BOOT_DB_CERT))\' \\\n'
-            + mode_env, environment,
+            cache, consumer, FILE_SOURCE_ENV + mode_env, environment, invocation,
         )
 
     def test_file_bytes_and_enable_state_cover_the_source_path(self):
@@ -343,10 +345,9 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
             ('\tSECURE_UPGRADE_MODE="prod" \\\n', inherited),
             ('\tSECURE_UPGRADE_MODE="$(OTHER_MODE)" \\\n', inherited),
             (FILE_MODE_ENV + '\tSECURE_UPGRADE_MODE="prod" \\\n', inherited),
-            (FILE_MODE_ENV + '\ttrue\n'
-             '\tSECURE_BOOT_DB_CERT="$(SECURE_BOOT_DB_CERT)" \\\n', ""),
+            (FILE_MODE_ENV + '\ttrue\n' + FILE_SOURCE_ENV, ""),
             ('\ttrue\n\texport SECURE_UPGRADE_MODE="prod"\n'
-             '\tSECURE_BOOT_DB_CERT="$(SECURE_BOOT_DB_CERT)" \\\n', inherited),
+             + FILE_SOURCE_ENV, inherited),
             ("", ""),
             ("", 'SECURE_UPGRADE_MODE="prod" \\\n'),
         ):
@@ -433,11 +434,107 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
                         self.file_findings(self.file_cache(), consumer),
                     )
 
+    def test_source_forwarding_preserves_shell_active_paths(self):
+        unsafe = '"$(SECURE_BOOT_DB_CERT)"'
+        safe = """'$(subst ','"'"',$(SECURE_BOOT_DB_CERT))'"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, content in (("$ALT_DIR", "staged"), ("expanded", "different")):
+                (root / name).mkdir()
+                (root / name / "DB.auth").write_text(content, encoding="utf-8")
+            for forwarding, expected in ((unsafe, "different"), (safe, "staged")):
+                with self.subTest(forwarding=forwarding):
+                    makefile = (
+                        f"SECURE_BOOT_DB_CERT := {root}/$$ALT_DIR/DB.auth\n"
+                        "print-source:\n"
+                        f"\t@SOURCE={forwarding} python3 -c "
+                        "'import os; from pathlib import Path; "
+                        'print(Path(os.environ["SOURCE"]).read_text())\'\n'
+                    )
+                    result = subprocess.run(
+                        ["make", "--no-print-directory", "-rR", "-f", "-"],
+                        input=makefile, cwd=root, text=True, capture_output=True,
+                        env={**os.environ, "ALT_DIR": "expanded"}, check=True,
+                    )
+                    self.assertEqual(result.stdout.strip(), expected)
+                    findings = self.run_audit(
+                        self.file_cache(), FILE_CONSUMER,
+                        f"\tSECURE_BOOT_DB_CERT={forwarding} \\\n",
+                    )
+                    self.assertEqual(
+                        "FINDING:P1:SECURE_BOOT_DB_CERT" in findings,
+                        forwarding == unsafe,
+                    )
+
+    def test_unmodeled_invocation_wrappers_and_overrides_are_reported(self):
+        for invocation in (
+            "env SECURE_UPGRADE_MODE=prod ./build_debian.sh",
+            "env -u SECURE_UPGRADE_MODE ./build_debian.sh",
+            "bash ./build_debian.sh",
+            "./build_debian.sh SECURE_UPGRADE_MODE=prod",
+        ):
+            with self.subTest(invocation=invocation):
+                self.assertIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(self.file_cache(), invocation=invocation),
+                )
+        self.assertNotIn(
+            "FINDING:P1:SECURE_BOOT_DB_CERT",
+            self.file_findings(
+                self.file_cache(), invocation="./build_debian.sh $(LOG)",
+            ),
+        )
+
+    def test_declarations_cannot_mutate_source_or_mode(self):
+        for declaration in (
+            "readonly SECURE_UPGRADE_MODE=prod",
+            "readonly -- SECURE_BOOT_DB_CERT=/tmp/other.auth",
+            "declare -rx OTHER=value SECURE_UPGRADE_MODE=prod",
+            "declare SECURE_BOOT_DB_CERT=/tmp/other.auth",
+            "typeset -x OTHER=value SECURE_BOOT_DB_CERT=/tmp/other.auth",
+            "local -r SECURE_UPGRADE_MODE=prod",
+            "export OTHER=value SECURE_UPGRADE_MODE=prod",
+        ):
+            with self.subTest(declaration=declaration):
+                consumer = (
+                    "copy_rootfs() {\n"
+                    + FILE_CONSUMER.replace("file ./build_debian.sh", declaration)
+                    + "}\ncopy_rootfs\n"
+                )
+                self.assertIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(self.file_cache(), consumer),
+                )
+        self.assertNotIn(
+            "FINDING:P1:SECURE_BOOT_DB_CERT",
+            self.file_findings(
+                self.file_cache(), "readonly OTHER=value\n" + FILE_CONSUMER,
+            ),
+        )
+
+    def test_preceding_continuations_do_not_hide_output_redirections(self):
+        for prefix in (
+            '> "$FILESYSTEM_ROOT/boot/cert-path" \\\n',
+            '1> "$FILESYSTEM_ROOT/boot/cert-path" \\\n',
+            '>> "$FILESYSTEM_ROOT/boot/cert-path" \\\n    \\\n',
+        ):
+            with self.subTest(prefix=prefix):
+                self.assertIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(
+                        self.file_cache(), FILE_CONSUMER + prefix
+                        + 'echo "$SECURE_BOOT_DB_CERT"\n',
+                    ),
+                )
+
     def test_recognition_is_not_tied_to_certificate_variable_names(self):
         cache = self.file_cache().replace("SECURE_BOOT_DB_CERT", "ROOTFS_DATA")
         consumer = FILE_CONSUMER.replace("SECURE_BOOT_DB_CERT", "ROOTFS_DATA")
         self.assertEqual(
-            self.run_audit(cache, consumer, '\tROOTFS_DATA="$(ROOTFS_DATA)" \\\n'),
+            self.run_audit(
+                cache, consumer,
+                FILE_SOURCE_ENV.replace("SECURE_BOOT_DB_CERT", "ROOTFS_DATA"),
+            ),
             {"FINDING:P1:UNKEYED"},
         )
 

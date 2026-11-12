@@ -164,6 +164,12 @@ The recipe must forward the same mode explicitly or inherit it through the
 matching `Makefile.work` environment binding. Unknown or overridden modes and
 continued source-path logging retain the finding, as do redirected or continued
 shell group closures that could capture earlier logging.
+Source forwarding must use the shell-escaped single-quote form used by staging;
+double-quoted Make expansion can reinterpret literal shell characters in paths.
+Each source-bearing prefix must directly invoke `./build_debian.sh`, optionally
+followed by `$(LOG)`; wrappers, overrides, and extra arguments retain the finding.
+Declarations mentioning the source or mode, and source uses following a continued
+line, also retain the finding rather than being treated as safe forwarding/logging.
 Unsupported Make or shell forms remain findings rather than being auto-cleared.
 
 Changes to the analyzer or waiver file should include the before/after findings
