@@ -13,7 +13,7 @@ import sys
 NAME = r"[A-Za-z_]\w*"
 
 
-def file_key_inputs(cache, consumer, keyed_flags, recipe):
+def file_key_inputs(cache, consumer, keyed_flags, recipe, environment=""):
     """Return file-source variables proven covered by the staged-file pattern."""
     cache = re.sub(r"\\\n[ \t]*", " ", cache)
     lines = cache.splitlines()
@@ -79,7 +79,9 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe):
             continue
         modes, mode, source = match.groups()
         modes = modes.split()
-        if (not modes or not _same_recipe_source(recipe, source) or
+        if (not modes or assignments.get(mode) or
+                not _same_recipe_source(recipe, source) or
+                not _same_recipe_mode(recipe, source, mode, environment) or
                 not _copy_only_consumer(consumer, source, mode, modes)):
             continue
         guard = (f"ifeq ($({enabled}),y)",)
@@ -157,6 +159,54 @@ def _same_recipe_source(recipe, source):
     return bool(values) and all(value in allowed for value in values)
 
 
+def _same_recipe_mode(recipe, source, mode, environment):
+    allowed = {
+        f"$({mode})", f'"$({mode})"',
+        """'$(subst ','"'"',$(%s))'""" % mode,
+    }
+
+    def forwarded(text):
+        bindings = re.findall(
+            r"^[ \t]*(?:export[ \t]+)?" + re.escape(mode)
+            + r"\s*([:+?]?=)[ \t]*(.*?)\s*$", text, re.M,
+        )
+        return bool(bindings) and all(
+            operator == "=" and value.removesuffix("\\").rstrip() in allowed
+            for operator, value in bindings
+        )
+
+    # Check every explicit binding, not just one elsewhere in the Makefile.
+    if re.search(
+        r"^[ \t]*(?:export[ \t]+)?" + re.escape(mode) + r"\s*[:+?]?=",
+        recipe, re.M,
+    ) and not forwarded(recipe):
+        return False
+    if re.search(
+        r"^[ \t]*unexport(?:[ \t]*$|[^\n]*\b" + re.escape(mode) + r"\b)",
+        recipe, re.M,
+    ):
+        return False
+
+    inherited = forwarded(environment)
+    lines = recipe.splitlines()
+    binding = re.compile(r"[ \t]*(" + NAME + r")=(.*?)\s*\\[ \t]*")
+    for position, line in enumerate(lines):
+        match = binding.fullmatch(line)
+        if not match or match[1] != source:
+            continue
+        start = end = position
+        while start and binding.fullmatch(lines[start - 1]):
+            start -= 1
+        while end + 1 < len(lines) and binding.fullmatch(lines[end + 1]):
+            end += 1
+        explicit = any(
+            binding.fullmatch(line)[1] == mode for line in lines[start:end + 1]
+        )
+        if not explicit and not inherited:
+            return False
+    return True
+
+
 def _copy_only_consumer(consumer, source, mode, modes):
     reference = re.compile(
         r"\$(?:" + re.escape(source) + r"\b|\{[#!]?" + re.escape(source) + r"\b)"
@@ -197,7 +247,8 @@ def _copy_only_consumer(consumer, source, mode, modes):
             continue
         if line in (nonempty, exists):
             continue
-        if line.startswith("echo ") and not re.search(r"[;|&<>`]", line):
+        if (line.startswith("echo ") and not line.endswith("\\") and
+                not re.search(r"[;|&<>`]", line)):
             continue
         copy = re.fullmatch(
             r'(?:sudo )?cp "\$' + re.escape(source) +
@@ -218,6 +269,10 @@ if __name__ == "__main__":
     cache = Path(sys.argv[1]).read_text(encoding="utf-8")
     consumer = Path(sys.argv[2]).read_text(encoding="utf-8")
     recipe = Path(sys.argv[4]).read_text(encoding="utf-8")
+    environment = (
+        Path(sys.argv[5]).read_text(encoding="utf-8")
+        if len(sys.argv) > 5 and Path(sys.argv[5]).exists() else ""
+    )
     for name in sorted(file_key_inputs(
-            cache, consumer, set(sys.argv[3].split()), recipe)):
+            cache, consumer, set(sys.argv[3].split()), recipe, environment)):
         print(name)

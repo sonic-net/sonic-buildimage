@@ -159,6 +159,9 @@ The enable definition must precede its flag snapshot and conditional file
 declarations. The staged path must precede its file-list addition, which must
 precede the RFS target snapshot. Parameter-expansion uses are checked too;
 inline shell conditional bodies are not recognized and retain the finding.
+The recipe must forward the same mode explicitly or inherit it through the
+matching `Makefile.work` environment binding. Unknown or overridden modes and
+continued source-path logging retain the finding.
 Unsupported Make or shell forms remain findings rather than being auto-cleared.
 
 Changes to the analyzer or waiver file should include the before/after findings

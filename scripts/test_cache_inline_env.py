@@ -49,15 +49,22 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
 fi
 """
 
+FILE_MODE_ENV = '\tSECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \\\n'
+FILE_BUILD_ENV = 'SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \\\n'
+
 
 class InlineEnvironmentAuditTest(unittest.TestCase):
-    def run_audit(self, cache, extra_consumer="", extra_env=""):
+    def run_audit(self, cache, extra_consumer="", extra_env="",
+                  environment=FILE_BUILD_ENV):
         source = (ROOT / "scripts/audit_dep_completeness.sh").read_text(encoding="utf-8")
         function = source.split("check_inline_recipe_env_vars() {", 1)[1]
         function = "check_inline_recipe_env_vars() {" + function.split("\n}\n", 1)[0] + "\n}\n"
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "Makefile.cache").write_text(cache, encoding="utf-8", newline="\n")
+            (root / "Makefile.work").write_text(
+                environment, encoding="utf-8", newline="\n",
+            )
             (root / "slave.mk").write_text(
                 '\tUSERNAME="$(USERNAME)" \\\n'
                 '\tPASSWORD="$(PASSWORD)" \\\n'
@@ -136,10 +143,12 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
             FILE_TRACKING + "\nRFS_INLINE_ENV_FLAGS :=", 1,
         )
 
-    def file_findings(self, cache, consumer=FILE_CONSUMER):
+    def file_findings(self, cache, consumer=FILE_CONSUMER,
+                      mode_env="", environment=FILE_BUILD_ENV):
         return self.run_audit(
             cache, consumer,
-            '\tSECURE_BOOT_DB_CERT=\'$(subst \',\'"\'"\',$(SECURE_BOOT_DB_CERT))\' \\\n',
+            '\tSECURE_BOOT_DB_CERT=\'$(subst \',\'"\'"\',$(SECURE_BOOT_DB_CERT))\' \\\n'
+            + mode_env, environment,
         )
 
     def test_file_bytes_and_enable_state_cover_the_source_path(self):
@@ -294,6 +303,59 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
                 consumer = (
                     mode + "\n" + inline + "fi\n"
                     'if [ -n "$SECURE_BOOT_DB_CERT" ]; then\n' + copy + "fi\n"
+                )
+                self.assertIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(self.file_cache(), consumer),
+                )
+
+    def test_unproven_or_overridden_recipe_modes_are_reported(self):
+        inherited = 'SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \\\n'
+        for mode_env, environment in (
+            ('\tSECURE_UPGRADE_MODE="prod" \\\n', inherited),
+            ('\tSECURE_UPGRADE_MODE="$(OTHER_MODE)" \\\n', inherited),
+            (FILE_MODE_ENV + '\tSECURE_UPGRADE_MODE="prod" \\\n', inherited),
+            (FILE_MODE_ENV + '\ttrue\n'
+             '\tSECURE_BOOT_DB_CERT="$(SECURE_BOOT_DB_CERT)" \\\n', ""),
+            ('\ttrue\n\texport SECURE_UPGRADE_MODE="prod"\n'
+             '\tSECURE_BOOT_DB_CERT="$(SECURE_BOOT_DB_CERT)" \\\n', inherited),
+            ("", ""),
+            ("", 'SECURE_UPGRADE_MODE="prod" \\\n'),
+        ):
+            with self.subTest(mode_env=mode_env, environment=environment):
+                self.assertIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(
+                        self.file_cache(), mode_env=mode_env,
+                        environment=environment,
+                    ),
+                )
+
+    def test_explicit_and_inherited_matching_recipe_modes_are_recognized(self):
+        for mode_env, environment in (
+            (FILE_MODE_ENV, ""),
+            ('\tSECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \\\n', ""),
+            ("", 'SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \\\n'),
+        ):
+            with self.subTest(mode_env=mode_env, environment=environment):
+                self.assertNotIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(
+                        self.file_cache(), mode_env=mode_env,
+                        environment=environment,
+                    ),
+                )
+
+    def test_continued_source_logging_is_not_auto_cleared(self):
+        for continuation in (
+            '    > "$FILESYSTEM_ROOT/boot/cert-path"\n',
+            '    | tee "$FILESYSTEM_ROOT/boot/cert-path"\n',
+            '    "continued log message"\n',
+        ):
+            with self.subTest(continuation=continuation):
+                consumer = (
+                    FILE_CONSUMER
+                    + 'echo "$SECURE_BOOT_DB_CERT" \\\n' + continuation
                 )
                 self.assertIn(
                     "FINDING:P1:SECURE_BOOT_DB_CERT",

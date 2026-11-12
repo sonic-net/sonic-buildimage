@@ -2332,7 +2332,8 @@ check_inline_recipe_env_vars() {
 
     local rfs_file_inputs=""
     if ! rfs_file_inputs=$(python3 "$SCRIPT_DIR/cache_key_rfs_files.py" \
-            "$MAKEFILE_CACHE" "$consumer" "$rfs_inline_flags" "$sm"); then
+            "$MAKEFILE_CACHE" "$consumer" "$rfs_inline_flags" "$sm" \
+            "$REPO_ROOT/Makefile.work"); then
         log_verbose "  RFS file-input analysis unavailable; retaining inline findings"
         rfs_file_inputs=""
     fi
