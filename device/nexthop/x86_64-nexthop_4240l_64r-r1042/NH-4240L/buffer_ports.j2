@@ -1,0 +1,6 @@
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# 64 front-panel ports on an 8-lane stride (1600G or 800G breakout) #}
+    {%- for port_idx in range(0, 512, 8) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
