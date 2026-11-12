@@ -204,9 +204,15 @@ fw_setenv boot_next "run sonic_image_1" || sonic_uboot_env_log "ERROR: Failed to
 # vendor hook below to insert a board-specific check (e.g. a reboot-storm guard
 # command). Keeping the payload here in one place -- and having the vendor override
 # only boot_guard -- avoids duplicating the boot logic in the hook. boot_guard MUST
-# stay defined: an unset var makes 'run boot_guard' fail and the board never boots.
-fw_setenv boot_guard "test 1 = 1" || sonic_uboot_env_log "ERROR: Failed to set boot_guard"
-fw_setenv bootcmd "run print_menu; if run boot_guard; then test -n \"\$boot_once\" && setenv do_boot_once \"\$boot_once\" && setenv boot_once \"\" && saveenv && run do_boot_once; run boot_next; fi" || sonic_uboot_env_log "ERROR: Failed to set bootcmd"
+# stay defined: an unset var makes 'run boot_guard' fail and the board never boots,
+# so if boot_guard cannot be written the payload is programmed unguarded instead.
+BOOT_PAYLOAD="test -n \"\$boot_once\" && setenv do_boot_once \"\$boot_once\" && setenv boot_once \"\" && saveenv && run do_boot_once; run boot_next"
+if fw_setenv boot_guard "test 1 = 1"; then
+    fw_setenv bootcmd "run print_menu; if run boot_guard; then ${BOOT_PAYLOAD}; fi" || sonic_uboot_env_log "ERROR: Failed to set bootcmd"
+else
+    sonic_uboot_env_log "ERROR: Failed to set boot_guard; programming bootcmd without the guard"
+    fw_setenv bootcmd "run print_menu; ${BOOT_PAYLOAD}" || sonic_uboot_env_log "ERROR: Failed to set bootcmd"
+fi
 
 fw_setenv loadaddr "0x432000000" || sonic_uboot_env_log "ERROR: Failed to set loadaddr"
 fw_setenv kernel_addr "0x403000000" || sonic_uboot_env_log "ERROR: Failed to set kernel_addr"

@@ -18,6 +18,13 @@ def pcie_lib_module():
     yield pcie_lib
 
 
+def _tmp_file(content):
+    f = tempfile.NamedTemporaryFile(mode="w+t", delete=False)
+    f.write(textwrap.dedent(content))
+    f.close()
+    return f.name
+
+
 class TestPcieLib:
     INPUT_PCIE_VARIABLES = textwrap.dedent(
         """
@@ -152,6 +159,275 @@ class TestDeviceTypeForVarName:
     )
     def test_does_not_match_unrelated_vars(self, pcie_lib_module, name):
         assert pcie_lib_module.device_type_for_var_name(name) is None
+
+
+class TestGetDeviceBuses:
+    def _buses(self, pcie_lib_module, content):
+        return pcie_lib_module._get_device_buses(
+            _tmp_file(content), pcie_lib_module.PcieDeviceType.ASIC
+        )
+
+    def test_returns_only_asic_var_outputs(self, pcie_lib_module):
+        buses = self._buses(
+            pcie_lib_module,
+            """
+            - name: "asic_0_bus"
+              lookup_command: "echo 'e5'"
+
+            - name: "asic_1_bus"
+              lookup_command: "echo 'c1'"
+
+            - name: "nvme_bus"
+              lookup_command: "echo '07'"
+
+            - name: "cpu_card_fpga_bdf"
+              lookup_command: "echo '0000:03:00.0'"
+            """,
+        )
+        assert sorted(buses) == ["c1", "e5"]
+
+    def test_missing_file_warns_and_returns_empty(self, pcie_lib_module):
+        with patch.object(pcie_lib_module, "_warn") as warn:
+            assert (
+                pcie_lib_module._get_device_buses(
+                    "/nonexistent/pcie-variables.yaml",
+                    pcie_lib_module.PcieDeviceType.ASIC,
+                )
+                == []
+            )
+        assert warn.call_count == 1
+
+    def test_failed_lookup_is_skipped_and_reported(self, pcie_lib_module):
+        # An unpopulated slot can fail; the ASICs that resolve still come back.
+        with patch.object(pcie_lib_module, "_warn") as warn:
+            assert self._buses(
+                pcie_lib_module,
+                """
+                - name: "asic_0_bus"
+                  lookup_command: "exit 1"
+
+                - name: "asic_1_bus"
+                  lookup_command: "echo 'c2'"
+                """,
+            ) == ["c2"]
+        assert warn.call_count == 1
+
+    def test_unparseable_bus_is_skipped(self, pcie_lib_module):
+        with patch.object(pcie_lib_module, "_warn") as warn:
+            assert self._buses(
+                pcie_lib_module,
+                """
+                - name: "asic_0_bus"
+                  lookup_command: "echo 'zz'"
+
+                - name: "asic_1_bus"
+                  lookup_command: "echo 'c3'"
+                """,
+            ) == ["c3"]
+        assert warn.call_count == 1
+
+    def test_bus_zero_is_rejected(self, pcie_lib_module):
+        with patch.object(pcie_lib_module, "_warn") as warn:
+            assert self._buses(
+                pcie_lib_module,
+                """
+                - name: "asic_0_bus"
+                  lookup_command: "echo '00'"
+
+                - name: "asic_1_bus"
+                  lookup_command: "echo 'c4'"
+                """,
+            ) == ["c4"]
+        assert warn.call_count == 1
+
+class TestGetPcieDeviceBdfs:
+    ASIC_VARIABLES = textwrap.dedent(
+        """
+        - name: "asic_0_bus"
+          lookup_command: "echo 'e5'"
+
+        - name: "asic_1_bus"
+          lookup_command: "echo 'c1'"
+
+        - name: "nvme_bus"
+          lookup_command: "echo '07'"
+        """
+    )
+
+    PCIE_YAML = textwrap.dedent(
+        """
+        - bus: '00'
+          dev: '01'
+          fn: '2'
+          id: '14db'
+          name: 'PCI bridge: upstream of the ASIC'
+        - bus: 'e5'
+          dev: '00'
+          fn: '0'
+          id: f914
+          name: 'Ethernet controller: BCM78914 Switch ASIC'
+        - bus: '07'
+          dev: '00'
+          fn: '0'
+          id: 110b
+          name: 'Non-Volatile memory controller: the NVMe'
+        - bus: 'c1'
+          dev: '00'
+          fn: '0'
+          id: f914
+          name: 'Ethernet controller: BCM78914 Switch ASIC, second die'
+        """
+    )
+
+    PCIE_YAML_TEMPLATE = textwrap.dedent(
+        """
+        - bus: '{{asic_0_bus}}'
+          dev: '00'
+          fn: '0'
+          id: f914
+          name: 'Ethernet controller: BCM78914 Switch ASIC'
+        - bus: '{{nvme_bus}}'
+          dev: '00'
+          fn: '0'
+          id: 110b
+          name: 'Non-Volatile memory controller: the NVMe'
+        - bus: '{{asic_1_bus}}'
+          dev: '00'
+          fn: '0'
+          id: f914
+          name: 'Ethernet controller: BCM78914 Switch ASIC, second die'
+        """
+    )
+    PLACEHOLDER = '- description: "Generated at runtime by pcie.yaml.j2"\n'
+
+    @pytest.fixture
+    def platform_dir(self, pcie_lib_module, tmp_path):
+        """Stands in for the device's platform directory."""
+        (tmp_path / "pcie-variables.yaml").write_text(self.ASIC_VARIABLES)
+        (tmp_path / "pcie.yaml.j2").write_text(self.PCIE_YAML_TEMPLATE)
+        (tmp_path / "pcie.yaml").write_text(self.PCIE_YAML)
+        with patch.object(
+            pcie_lib_module.device_info,
+            "get_path_to_platform_dir",
+            return_value=str(tmp_path),
+        ):
+            yield tmp_path
+
+    def test_returns_only_the_asic_rows(self, pcie_lib_module, platform_dir):
+        # The NVMe resolves a bus too, and the ASIC sits behind a bridge row.
+        assert pcie_lib_module.get_pcie_device_bdfs() == ["e5:00.0", "c1:00.0"]
+
+    def test_device_and_function_come_from_pcie_yaml(
+        self, pcie_lib_module, platform_dir
+    ):
+        # Not assumed to be 00.0: a BIOS update could move them.
+        (platform_dir / "pcie.yaml").write_text(
+            textwrap.dedent(
+                """
+                - bus: 'e5'
+                  dev: '03'
+                  fn: '2'
+                  id: f914
+                  name: 'Ethernet controller: ASIC somewhere else on its bus'
+                - bus: '07'
+                  dev: '00'
+                  fn: '0'
+                  id: 110b
+                  name: 'Non-Volatile memory controller: the NVMe'
+                """
+            )
+        )
+        assert pcie_lib_module.get_pcie_device_bdfs() == ["e5:03.2"]
+
+    def test_bdf_is_normalised_the_way_pcied_renders_it(
+        self, pcie_lib_module, platform_dir
+    ):
+        (platform_dir / "pcie.yaml").write_text(
+            textwrap.dedent(
+                """
+                - bus: 'e5'
+                  dev: '0'
+                  fn: '0'
+                  id: f914
+                  name: 'Ethernet controller: single-digit dev'
+                - bus: '07'
+                  dev: '00'
+                  fn: '0'
+                  id: 110b
+                  name: 'Non-Volatile memory controller: the NVMe'
+                """
+            )
+        )
+        assert pcie_lib_module.get_pcie_device_bdfs() == ["e5:00.0"]
+
+    def test_unresolvable_bus_returns_empty_without_warning(
+        self, pcie_lib_module, platform_dir
+    ):
+        # A platform with no ASIC variable is not a missing ASIC.
+        (platform_dir / "pcie-variables.yaml").write_text(
+            textwrap.dedent(
+                """
+                - name: "nvme_bus"
+                  lookup_command: "echo '07'"
+                """
+            )
+        )
+        with patch.object(pcie_lib_module, "_warn") as warn:
+            assert pcie_lib_module.get_pcie_device_bdfs() == []
+        warn.assert_not_called()
+
+    def test_malformed_row_is_skipped(self, pcie_lib_module, platform_dir):
+        (platform_dir / "pcie.yaml").write_text(
+            textwrap.dedent(
+                """
+                - bus: 'e5'
+                  dev: 'zz'
+                  fn: '0'
+                - bus: 'c1'
+                  dev: '00'
+                  fn: '0'
+                """
+            )
+        )
+        with patch.object(pcie_lib_module, "_warn"):
+            assert pcie_lib_module.get_pcie_device_bdfs() == ["c1:00.0"]
+
+class TestGeneratesPcieYamlWhenUngenerated:
+    @pytest.fixture
+    def platform_dir(self, pcie_lib_module, tmp_path):
+        (tmp_path / "pcie-variables.yaml").write_text(
+            TestGetPcieDeviceBdfs.ASIC_VARIABLES
+        )
+        (tmp_path / "pcie.yaml.j2").write_text(TestGetPcieDeviceBdfs.PCIE_YAML_TEMPLATE)
+        with patch.object(
+            pcie_lib_module.device_info,
+            "get_path_to_platform_dir",
+            return_value=str(tmp_path),
+        ):
+            yield tmp_path
+
+    def test_generates_from_the_placeholder_a_fresh_image_ships(
+        self, pcie_lib_module, platform_dir
+    ):
+        (platform_dir / "pcie.yaml").write_text(TestGetPcieDeviceBdfs.PLACEHOLDER)
+        assert pcie_lib_module.get_pcie_device_bdfs() == ["e5:00.0", "c1:00.0"]
+        assert "bus" in (platform_dir / "pcie.yaml").read_text()
+
+    def test_leaves_a_generated_file_alone(self, pcie_lib_module, platform_dir):
+        # A warm boot wants last boot's enumeration, not a fresh read.
+        generated = TestGetPcieDeviceBdfs.PCIE_YAML
+        (platform_dir / "pcie.yaml").write_text(generated)
+        assert pcie_lib_module.get_pcie_device_bdfs() == ["e5:00.0", "c1:00.0"]
+        assert (platform_dir / "pcie.yaml").read_text() == generated
+
+    def test_an_unrenderable_template_warns_and_returns_empty(
+        self, pcie_lib_module, platform_dir
+    ):
+        (platform_dir / "pcie.yaml").write_text(TestGetPcieDeviceBdfs.PLACEHOLDER)
+        (platform_dir / "pcie.yaml.j2").unlink()
+        with patch.object(pcie_lib_module, "_warn") as warn:
+            assert pcie_lib_module.get_pcie_device_bdfs() == []
+        assert warn.called
 
 
 def _completed(returncode=0, stdout="", stderr=""):
