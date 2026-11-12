@@ -82,7 +82,7 @@ binary-indep:
 		fi; \
 		if [ -f $${mod}/sonic_platform_setup.py ]; then \
 			cd $(MOD_SRC_DIR)/$${mod}; \
-			$(PYTHON3) sonic_platform_setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
+			$(PYTHON3) sonic_platform_setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --prefix=/usr --install-lib=/usr/lib/python3/dist-packages; \
 			echo "Insalled whl package for $$mod"; \
 			cd $(MOD_SRC_DIR); \
 		fi; \
