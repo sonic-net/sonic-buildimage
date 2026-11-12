@@ -1,0 +1,5 @@
+files/* /
+ln3804gf-8xgf/files/* /
+ln3804gf-8xgf/scripts/ln3804gf-8xgf-init.sh usr/local/bin
+ln3804gf-8xgf/service/ln3804gf-8xgf-init.service etc/systemd/system
+ln3804gf-8xgf/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3804gf-8xgf

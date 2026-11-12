@@ -1,0 +1,20 @@
+[Unit]
+Description=Platform 32x monitoring Service
+After=pddf-platform-init.service
+Before=pmon.target
+DefaultDependencies=no
+
+[Service]
+# The script does its work and exits. Without these, systemd marks the unit
+# dead as soon as it finishes and sysmonitor reports the whole system as not
+# ready.
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/pddf_32x_fan_control_sensor_refresh.py
+Restart=always
+RestartSec=30s
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+[Install]
+WantedBy=multi-user.target

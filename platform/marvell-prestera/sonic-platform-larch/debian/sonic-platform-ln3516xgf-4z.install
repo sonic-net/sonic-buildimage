@@ -1,0 +1,7 @@
+files/* /
+ln3516xgf-4z/files/etc/* /etc/
+ln3516xgf-4z/scripts/ln3516xgf-4z-init.sh  usr/local/bin
+ln3516xgf-4z/scripts/reset_button_handler.py usr/local/bin
+ln3516xgf-4z/utils/locator-led usr/local/bin
+ln3516xgf-4z/service/ln3516xgf-4z-init.service etc/systemd/system
+ln3516xgf-4z/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3516xgf-4z

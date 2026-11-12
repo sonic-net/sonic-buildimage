@@ -1,0 +1,11 @@
+#!/bin/sh
+# postinst script for sonic-platform-cn9131-ext-98cx
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/cn9131-ext-98cx-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable cn9131-ext-98cx-init.service
+systemctl start cn9131-ext-98cx-init.service
+exit 0

@@ -1,0 +1,12 @@
+[Unit]
+Description=PSU hot-swap monitor (re-binds the pmbus driver of a replaced PSU)
+After=ln4332z-v1-init.service
+Requires=ln4332z-v1-init.service
+
+[Service]
+ExecStart=/usr/local/bin/psu_monitor.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

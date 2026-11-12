@@ -1,0 +1,14 @@
+#!/bin/sh
+# postinst script for sonic-platform-ln3516xgf-4z
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln3516xgf-4z-init.sh
+chmod a+x /usr/local/bin/reset_button_handler.py
+chmod a+x /usr/local/bin/locator-led
+depmod -a
+systemctl restart kmod
+systemctl enable ln3516xgf-4z-init.service
+systemctl start ln3516xgf-4z-init.service
+systemctl enable --now reset_button.service
+exit 0

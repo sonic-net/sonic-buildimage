@@ -1,0 +1,12 @@
+{
+    "services_to_ignore": [
+        "cn9130-eps6800-r0-init.service"
+    ],
+    "devices_to_ignore": [
+        "asic",
+        "psu.temperature",
+        "fan",
+        "psu"
+    ],
+    "user_defined_checkers": []
+}

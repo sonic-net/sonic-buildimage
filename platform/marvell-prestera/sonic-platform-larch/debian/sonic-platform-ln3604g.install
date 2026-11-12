@@ -1,0 +1,5 @@
+files/* /
+ln3604g/files/* /
+ln3604g/scripts/ln3604g-init.sh usr/local/bin
+ln3604g/service/ln3604g-init.service etc/systemd/system
+ln3604g/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3604g

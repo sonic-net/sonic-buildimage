@@ -1,0 +1,7 @@
+files/* /
+ln3524xgf-6z-v1/files/* /
+ln3524xgf-6z-v1/scripts/ln3524xgf-6z-v1-init.sh  usr/local/bin
+ln3524xgf-6z-v1/scripts/reset_button_handler.py usr/local/bin
+ln3524xgf-6z-v1/service/ln3524xgf-6z-v1-init.service etc/systemd/system
+ln3524xgf-6z-v1/service/reset_button.service etc/systemd/system
+ln3524xgf-6z-v1/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3524xgf-6z-v1

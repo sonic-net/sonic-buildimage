@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "ln4332z-v1": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { }
+            }
+        }
+    }
+}

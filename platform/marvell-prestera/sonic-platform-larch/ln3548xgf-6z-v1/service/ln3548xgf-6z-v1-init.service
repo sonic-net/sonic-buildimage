@@ -1,0 +1,11 @@
+[Unit]
+Description=Platform ln3548xgf-6z-v1 Service
+After=sysinit.target
+Before=pmon.target
+
+[Service]
+ExecStart=/usr/local/bin/ln3548xgf-6z-v1-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

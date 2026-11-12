@@ -1,0 +1,12 @@
+{
+    "FLEX_COUNTER_TABLE": {
+        "PORT": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "RIF": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        }
+    }
+}

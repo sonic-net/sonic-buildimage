@@ -1,0 +1,14 @@
+#!/bin/sh
+# postinst script for sonic-platform-cn9131-ext-98cx
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln3612y2zt-init.sh
+chmod a+x /usr/local/bin/reset_button_handler.py
+depmod -a
+modprobe -a virgo_cpld
+systemctl restart kmod
+systemctl enable ln3612y2zt-init.service
+systemctl start ln3612y2zt-init.service
+systemctl enable --now reset_button.service
+exit 0

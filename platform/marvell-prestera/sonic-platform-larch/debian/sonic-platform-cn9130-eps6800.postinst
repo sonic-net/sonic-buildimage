@@ -1,0 +1,11 @@
+#!/bin/sh
+# postinst script for sonic-platform-cn9130-eps6800
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/cn9130-eps6800-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable cn9130-eps6800-init.service
+systemctl start cn9130-eps6800-init.service
+exit 0

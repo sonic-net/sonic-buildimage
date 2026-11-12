@@ -1,0 +1,5 @@
+sonic-platform-larch (1.0) unstable; urgency=low
+
+  * support for larch boards
+
+ -- Larch Networks <dev@larch-networks.com>  Tue, 16 Apr 2024 10:39:19 +0800

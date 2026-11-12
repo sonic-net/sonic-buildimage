@@ -1,0 +1,15 @@
+#!/bin/sh
+# postinst script for sonic-platform-ln4332z1-l
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln4332z1-l-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable ln4332z1-l-init.service
+systemctl start ln4332z1-l-init.service
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable fan-auto-control-32x-init.service
+systemctl start fan-auto-control-32x-init.service
+exit 0

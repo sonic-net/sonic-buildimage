@@ -1,0 +1,7 @@
+files/* /
+ln3612y2zt/files/etc/* /etc/
+ln3612y2zt/scripts/ln3612y2zt-init.sh  usr/local/bin
+ln3612y2zt/scripts/reset_button_handler.py  usr/local/bin
+ln3612y2zt/service/ln3612y2zt-init.service etc/systemd/system
+ln3612y2zt/service/reset_button.service etc/systemd/system
+ln3612y2zt/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3612y2zt

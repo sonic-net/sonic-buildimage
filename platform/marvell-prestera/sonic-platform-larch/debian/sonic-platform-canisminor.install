@@ -1,0 +1,5 @@
+files/* /
+canisminor/files/* /
+canisminor/scripts/canisminor-init.sh usr/local/bin
+canisminor/service/canisminor-init.service etc/systemd/system
+canisminor/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_canisminor

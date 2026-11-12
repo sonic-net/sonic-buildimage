@@ -1,0 +1,13 @@
+#!/bin/sh
+# postinst script for sonic-platform-ln3524xgf-6z-v1
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln3524xgf-6z-v1-init.sh
+chmod a+x /usr/local/bin/reset_button_handler.py
+depmod -a
+systemctl restart kmod
+systemctl enable ln3524xgf-6z-v1-init.service
+systemctl start ln3524xgf-6z-v1-init.service
+systemctl enable --now reset_button.service
+exit 0

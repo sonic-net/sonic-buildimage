@@ -1,0 +1,17 @@
+{
+    "services_to_ignore": [
+        "ln1524g-4xgf-v6-init.service"
+    ],
+    "devices_to_ignore": [
+        "asic",
+        "psu.temperature",
+        "fan",
+        "psu"
+    ],
+    "user_defined_checkers": [],
+    "led_color": {
+        "fault"  : "off",
+        "normal" : "green",
+        "booting": "blink_green"
+    }
+}

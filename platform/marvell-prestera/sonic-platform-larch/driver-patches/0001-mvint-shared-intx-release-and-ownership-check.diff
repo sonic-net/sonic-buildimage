@@ -1,0 +1,89 @@
+--- a/cpssEnabler/linuxNoKernelModule/drivers/intDriver.c
++++ b/cpssEnabler/linuxNoKernelModule/drivers/intDriver.c
+@@ -80,6 +80,7 @@
+ 	struct semaphore	close_sem; /* Sync disconnect with read */
+ 	struct tasklet_struct	tasklet;
+ 	enum irq_slot_state	state;
++	struct pci_dev		*intx_pdev; /* PCI device owning a legacy INTx line shared with others */
+ };
+ 
+ /* To hold list of devices we enabled MSI on */
+@@ -114,12 +115,38 @@
+ 	return -ENOENT;
+ }
+ 
++/*
++ * Legacy INTx lines are shared with other devices (i801_smbus, mmc, ...).
++ * Find the Marvell PCI device (bound to mvpci) that raises this line, so
++ * the ISR can tell whether the interrupt is ours. Returns it with a reference.
++ */
++static struct pci_dev *find_intx_pdev(unsigned int irq)
++{
++	struct pci_dev *pdev = NULL;
++
++	if (msi_used)
++		return NULL;
++	while ((pdev = pci_get_device(PCI_VENDOR_ID_MARVELL, PCI_ANY_ID, pdev))) {
++		if (pdev->irq == irq && !pci_dev_msi_enabled(pdev) &&
++		    pdev->driver && !strcmp(pdev->driver->name, "mvpci"))
++			return pdev;
++	}
++	return NULL;
++}
++
+ static irqreturn_t prestera_tl_ISR(int irq, void *tl)
+ {
+-	int slot = find_interrupt_slot(irq, true);
+-	struct interrupt_slot *sl = &(mvIntDrv_slots[slot]);
++	struct interrupt_slot *sl = container_of((struct tasklet_struct *)tl,
++						 struct interrupt_slot, tasklet);
++
++	if (sl->intx_pdev) {
++		u16 status;
+ 
+-	BUG_ON(!sl);
++		/* Shared line: not ours unless the device Interrupt Status bit is set */
++		pci_read_config_word(sl->intx_pdev, PCI_STATUS, &status);
++		if (!(status & PCI_STATUS_INTERRUPT))
++			return IRQ_NONE;
++	}
+ 
+ 	/* handle last interrupt after process termination
+ 	 * disregarding to (sl->state==IRQ_SLOT_STATE_ALLOCATED)
+@@ -175,6 +202,9 @@
+ 		if (mvIntDrv_slots[slot].state == IRQ_SLOT_STATE_UNALLOCATED) {
+ 			sl = &(mvIntDrv_slots[slot]);
+ 			sl->irq = irq;
++			sl->intx_pdev = find_intx_pdev(irq);
++			if (sl->intx_pdev)
++				pci_intx(sl->intx_pdev, 1); /* un-mask INTx at the device */
+ 			sema_init(&sl->sem, 0);
+ 			sema_init(&sl->close_sem, 0);
+ 			up(&sl->close_sem);
+@@ -224,11 +254,25 @@
+ 	   the IRQ. IRQ must be disabled at the end. */
+ 	synch_irq_state(sl, -1);
+ 	up(&sl->close_sem);
+-	if (msi_used) { /* MSI wil BUG() the kernel unless free_irq() is called */
++	if (msi_used || sl->intx_pdev) { /* MSI wil BUG() the kernel unless free_irq() is called */
++		if (sl->intx_pdev) {
++			/*
++			 * Shared INTx: mask the device at the source and release
++			 * the line, so the other devices on it keep their
++			 * interrupts while user space is gone.
++			 */
++			pci_intx(sl->intx_pdev, 0);
++			/* undo the disable that synch_irq_state(-1) left on the line */
++			synch_irq_state(sl, 0);
++		}
+ 		free_irq(sl->irq, (void*)&(sl->tasklet));
+ 		tasklet_kill(&(sl->tasklet));
+ 		sl->state = IRQ_SLOT_STATE_UNALLOCATED;
+ 		sl->irq = 0;
++		if (sl->intx_pdev) {
++			pci_dev_put(sl->intx_pdev);
++			sl->intx_pdev = NULL;
++		}
+ 	} else {
+ 		pr_info("Leaving irq %d ready for reallocation...\n", sl->irq);
+ 		tasklet_kill(&(sl->tasklet));

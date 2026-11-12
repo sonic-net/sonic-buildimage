@@ -1,0 +1,16 @@
+#!/bin/sh
+# postinst script for sonic-platform-ln4332z-v1
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln4332z-v1-init.sh
+chmod a+x /usr/local/bin/reset_button_handler.py
+chmod a+x /usr/local/bin/psu_monitor.py
+chmod a+x /usr/local/bin/locator-led
+depmod -a
+systemctl restart kmod
+systemctl enable ln4332z-v1-init.service
+systemctl start ln4332z-v1-init.service
+systemctl enable --now reset_button.service
+systemctl enable --now psu_monitor.service
+exit 0

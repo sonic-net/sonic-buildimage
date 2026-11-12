@@ -1,0 +1,12 @@
+{
+    "services_to_ignore": [
+        "cn9131-ext-98cx-init.service"
+    ],
+    "devices_to_ignore": [
+        "asic",
+        "psu.temperature",
+        "fan",
+        "psu"
+    ],
+    "user_defined_checkers": []
+}

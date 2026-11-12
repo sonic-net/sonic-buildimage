@@ -1,0 +1,166 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1",
+            "lanes": "0,1,2,3,4,5,6,7",
+            "breakout_modes": {
+                "1x400G": [
+                    "four00GigE0"
+                ]
+            }
+        },
+        "Ethernet1": {
+            "index": "2",
+            "lanes": "8,9,10,11,12,13,14,15",
+            "breakout_modes": {
+                "1x400G": [
+                    "four00GigE1"
+                ]
+            }
+        },
+        "Ethernet2": {
+            "index": "3",
+            "lanes": "16",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE2"
+                ]
+            }
+        },
+        "Ethernet3": {
+            "index": "4",
+            "lanes": "17",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE3"
+                ]
+            }
+        },
+        "Ethernet4": {
+            "index": "5",
+            "lanes": "18",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE4"
+                ]
+            }
+        },
+        "Ethernet5": {
+            "index": "6",
+            "lanes": "19",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE5"
+                ]
+            }
+        },
+        "Ethernet6": {
+            "index": "7",
+            "lanes": "20",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE6"
+                ]
+            }
+        },
+        "Ethernet7": {
+            "index": "8",
+            "lanes": "21",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE7"
+                ]
+            }
+        },
+        "Ethernet8": {
+            "index": "9",
+            "lanes": "22",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE8"
+                ]
+            }
+        },
+        "Ethernet9": {
+            "index": "10",
+            "lanes": "23",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE9"
+                ]
+            }
+        },
+        "Ethernet10": {
+            "index": "11",
+            "lanes": "24",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE10"
+                ]
+            }
+        },
+        "Ethernet11": {
+            "index": "12",
+            "lanes": "25",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE11"
+                ]
+            }
+        },
+        "Ethernet12": {
+            "index": "13",
+            "lanes": "26",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE12"
+                ]
+            }
+        },
+        "Ethernet13": {
+            "index": "14",
+            "lanes": "27",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE13"
+                ]
+            }
+        },
+        "Ethernet14": {
+            "index": "15",
+            "lanes": "28",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE14"
+                ]
+            }
+        },
+        "Ethernet15": {
+            "index": "16",
+            "lanes": "29",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE15"
+                ]
+            }
+        },
+        "Ethernet16": {
+            "index": "17",
+            "lanes": "30",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE16"
+                ]
+            }
+        },
+        "Ethernet17": {
+            "index": "18",
+            "lanes": "31",
+            "breakout_modes": {
+                "1x25G": [
+                    "twenty5GigE17"
+                ]
+            }
+        }
+    }
+}

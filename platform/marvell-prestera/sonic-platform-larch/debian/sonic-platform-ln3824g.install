@@ -1,0 +1,5 @@
+files/* /
+ln3824g/files/* /
+ln3824g/scripts/ln3824g-init.sh usr/local/bin
+ln3824g/service/ln3824g-init.service etc/systemd/system
+ln3824g/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3824g

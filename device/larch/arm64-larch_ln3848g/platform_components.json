@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "ln3848g": {
+            "component": {
+                "U-Boot": { },
+                "ONIE-VERSION": { }
+            }
+        }
+    }
+}

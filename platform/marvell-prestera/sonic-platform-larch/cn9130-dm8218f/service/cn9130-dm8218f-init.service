@@ -1,0 +1,16 @@
+[Unit]
+Description=Platform cn9130-dm8218f Service
+After=sysinit.target
+Before=pmon.target
+
+[Service]
+# The script does its work and exits. Without these, systemd marks the unit
+# dead as soon as it finishes and sysmonitor reports the whole system as not
+# ready.
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/cn9130-dm8218f-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

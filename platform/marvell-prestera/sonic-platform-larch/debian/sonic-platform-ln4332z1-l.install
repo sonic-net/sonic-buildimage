@@ -1,0 +1,9 @@
+files/* /
+ln4332z1-l/files/etc/* /etc/
+ln4332z1-l/scripts/ln4332z1-l-init.sh  usr/local/bin
+ln4332z1-l/utils/pddf_32x_fan_control_sensor_refresh.py usr/local/bin
+ln4332z1-l/service/ln4332z1-l-init.service etc/systemd/system
+ln4332z1-l/service/fan-auto-control-32x-init.service etc/systemd/system
+ln4332z1-l/systemd/pddf-platform-init.service etc/systemd/system
+ln4332z1-l/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln4332z1-l
+ln4332z1-l/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln4332z1-l/pddf/

@@ -1,0 +1,17 @@
+{
+    "services_to_ignore": [
+        "ln3604g-init.service"
+    ],
+    "devices_to_ignore": [
+        "asic",
+        "psu.temperature",
+        "fan",
+        "psu"
+    ],
+    "user_defined_checkers": [],
+    "led_color": {
+        "fault"  : "red",
+        "normal" : "green",
+        "booting": "blink_red"
+    }
+}
