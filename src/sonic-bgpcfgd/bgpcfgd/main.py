@@ -83,6 +83,9 @@ def do_work():
         'constants': read_constants(),
         'state_db_conn': swsscommon.DBConnector("STATE_DB", 0, False)
     }
+    # Registration order is drain order in Runner.run(). Register
+    # prerequisite tables before the managers that consume them
+    # (e.g. INTERFACE* before BGP_NEIGHBOR, VRF_TABLE before SRV6_*).
     managers = [
         # Config DB managers
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
