@@ -20,18 +20,7 @@ XCVR_REMOVED = "0"
 
 
 @pytest.fixture(scope="module")
-def mock_unimportant_modules():
-    """Mock modules that aren't important for integration testing."""
-    modules = {}
-    modules.update(mock_syslog_modules())
-    modules.update(fake_swsscommon_modules())
-
-    with patch.dict(sys.modules, modules):
-        yield
-
-
-@pytest.fixture(scope="module")
-def chassis_module(mock_unimportant_modules):
+def chassis_module():
     """Loads the module before all tests. This is to let conftest.py inject deps first."""
     from sonic_platform import chassis
 
@@ -39,7 +28,7 @@ def chassis_module(mock_unimportant_modules):
 
 
 @pytest.fixture(scope="module")
-def mock_sfps(mock_unimportant_modules):
+def mock_sfps():
     """
     Fixture providing autospec'ed mock SFP objects for testing.
     Creates a list of mock SFPs and attaches them to the chassis.
