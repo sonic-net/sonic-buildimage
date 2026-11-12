@@ -115,7 +115,7 @@ override_dh_auto_install:
 	done)
 	python3 setup.py install \
 		--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
-		--install-layout=deb
+		--prefix=/usr --install-lib=/usr/lib/python3/dist-packages
 
 override_dh_install:
 	set -e
