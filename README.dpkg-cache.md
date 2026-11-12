@@ -155,6 +155,10 @@ staged bytes are in `RFS_DEP_FILES` and their enable state is in
 `RFS_INLINE_ENV_FLAGS`. Recognition requires a matching mode/nonempty-source
 guard, a forced content-preserving staging copy, and no additional content uses
 of the source path. An enable flag alone does not track file contents.
+The enable definition must precede its flag snapshot and conditional file
+declarations. The staged path must precede its file-list addition, which must
+precede the RFS target snapshot. Parameter-expansion uses are checked too;
+inline shell conditional bodies are not recognized and retain the finding.
 Unsupported Make or shell forms remain findings rather than being auto-cleared.
 
 Changes to the analyzer or waiver file should include the before/after findings

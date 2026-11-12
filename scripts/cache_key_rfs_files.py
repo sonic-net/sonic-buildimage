@@ -19,7 +19,7 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe):
     lines = cache.splitlines()
     assignments = {}
     conditions = []
-    for line in lines:
+    for position, line in enumerate(lines):
         if line.startswith("\t") or line.lstrip().startswith("#"):
             continue
         line = line.split("#", 1)[0].strip()
@@ -36,15 +36,17 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe):
             if match:
                 name, operator, value = match.groups()
                 assignments.setdefault(name, []).append(
-                    (operator, value, tuple(conditions))
+                    (operator, value, tuple(conditions), position)
                 )
 
-    rfs_blocks = re.findall(
-        r"^\$\(foreach pkg, \$\(SONIC_RFS_TARGETS\), (.*)$", cache, re.M
-    )
+    prefix = "$(foreach pkg, $(SONIC_RFS_TARGETS), "
+    rfs_blocks = [
+        (position, line[len(prefix):])
+        for position, line in enumerate(lines) if line.startswith(prefix)
+    ]
     if len(rfs_blocks) != 1:
         return set()
-    wiring = rfs_blocks[0]
+    wiring_position, wiring = rfs_blocks[0]
     if ("$(eval $(pkg)_DEP_FILES := $(SONIC_COMMON_BASE_FILES_LIST) $(RFS_DEP_FILES))"
             not in wiring or
             "$(eval $(pkg)_CACHE_MODE := GIT_CONTENT_SHA)" not in wiring):
@@ -61,6 +63,7 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe):
     for enabled in keyed_flags:
         flags = assignments.get("RFS_INLINE_ENV_FLAGS", [])
         if (len(flags) != 1 or flags[0][0] != ":=" or flags[0][2] or
+                flags[0][3] >= wiring_position or
                 not re.search(
                     r"(?:^|\s)(?:" + re.escape(enabled) + r"=)?"
                     + re.escape(f"$({enabled})") + r"(?:\s|$)", flags[0][1]
@@ -69,9 +72,10 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe):
         definitions = assignments.get(enabled, [])
         if len(definitions) != 1:
             continue
-        operator, value, guards = definitions[0]
+        operator, value, guards, enabled_position = definitions[0]
         match = enabled_re.fullmatch(value)
-        if operator != ":=" or guards or not match:
+        if (operator != ":=" or guards or not match or
+                enabled_position >= flags[0][3]):
             continue
         modes, mode, source = match.groups()
         modes = modes.split()
@@ -82,25 +86,32 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe):
         for staged, definitions in assignments.items():
             if len(definitions) != 1:
                 continue
-            operator, path, guards = definitions[0]
+            operator, path, guards, staged_position = definitions[0]
             if (operator != ":=" or guards != guard or
+                    enabled_position >= staged_position or
                     not re.fullmatch(r"\$\(TARGET_PATH\)/[\w./-]+", path)):
                 continue
             deps = assignments.get("RFS_DEP_FILES", [])
             additions = [
-                i for i, (op, val, cond) in enumerate(deps)
+                i for i, (op, val, cond, _) in enumerate(deps)
                 if op == "+=" and val == f"$({staged})" and cond == guard
             ]
             if not additions or any(
-                op != "+=" for op, _, _ in deps[additions[-1] + 1:]
+                op != "+=" for op, _, _, _ in deps[additions[-1] + 1:]
             ):
                 continue
-            if _staging_rule(cache, staged, source, guard[0]):
+            # Both += on an immediate list and the RFS eval snapshot capture
+            # values in file order, as does the enabled-state conditional.
+            if (deps[0][0] != ":=" or deps[0][2] or
+                    any(not staged_position < deps[i][3] < wiring_position
+                        for i in additions)):
+                continue
+            if _staging_rule(cache, staged, source, guard[0], staged_position):
                 covered.add(source)
     return covered
 
 
-def _staging_rule(cache, staged, source, guard):
+def _staging_rule(cache, staged, source, guard, staged_position):
     quoted_source = """'$(subst ','"'"',$(%s))'""" % source
     if len(re.findall(r"^" + re.escape(f"$({staged})") + r"\s*:", cache, re.M)) != 1:
         return False
@@ -118,8 +129,11 @@ def _staging_rule(cache, staged, source, guard):
         r"endif"
     )
     for match in re.finditer(rule, cache, re.M):
+        preceding = cache[:match.start()].splitlines()
+        if len(preceding) <= staged_position:
+            continue
         depth = 0
-        for line in cache[:match.start()].splitlines():
+        for line in preceding:
             if line.startswith("\t"):
                 continue
             line = line.strip()
@@ -145,7 +159,7 @@ def _same_recipe_source(recipe, source):
 
 def _copy_only_consumer(consumer, source, mode, modes):
     reference = re.compile(
-        r"\$(?:" + re.escape(source) + r"\b|\{" + re.escape(source) + r"\})"
+        r"\$(?:" + re.escape(source) + r"\b|\{[#!]?" + re.escape(source) + r"\b)"
     )
     nonempty = f'if [ -n "${source}" ]; then'
     exists = f'if [ ! -f "${source}" ]; then'
@@ -162,6 +176,9 @@ def _copy_only_consumer(consumer, source, mode, modes):
         if not line or line.startswith("#"):
             continue
         if line.startswith("if "):
+            # Inline bodies/closures are outside the supported block syntax.
+            if re.search(r"\bthen\b(?!\s*$)|\bfi\b", line):
+                return False
             guards.append(line)
         elif line == "fi":
             if guards:
