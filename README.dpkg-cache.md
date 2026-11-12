@@ -150,6 +150,13 @@ suppress failures: check all uses covered by a waiver and explain why none creat
 an untracked cached-content input. If the audit fails to recognize existing
 tracking, prefer a focused analyzer correction with a regression test.
 
+Check 21 also recognizes optional file inputs copied into the rootfs when their
+staged bytes are in `RFS_DEP_FILES` and their enable state is in
+`RFS_INLINE_ENV_FLAGS`. Recognition requires a matching mode/nonempty-source
+guard, a forced content-preserving staging copy, and no additional content uses
+of the source path. An enable flag alone does not track file contents.
+Unsupported Make or shell forms remain findings rather than being auto-cleared.
+
 Changes to the analyzer or waiver file should include the before/after findings
 and evidence that genuine missing inputs are still reported. Separate broader
 audit corrections from unrelated package changes when practical.
