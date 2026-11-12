@@ -1,0 +1,53 @@
+Remove unused PHP protobuf package and build dependency
+
+SONiC consumes the C++, Python, Ruby, and compiler outputs, not the PHP
+package. Drop its packaging and build dependency from protobuf 3.21.12-3.
+
+--- a/debian/control
++++ b/debian/control
+@@ -23,9 +23,7 @@
+ # Ruby
+  , rake-compiler <!noruby>
+  , gem2deb <!noruby>
+-# PHP
+- , pkg-php-tools (>= 1.7~)
+ Build-Depends-Indep:
+ # Java
+    ant
+  , default-jdk
+@@ -253,30 +251,3 @@
+  .
+  This package provides an emacs major mode for editing files in protocol
+  buffers format. It features syntax highlighting and auto-indentation.
+-
+-Package: php-google-protobuf
+-Architecture: all
+-Multi-Arch: foreign
+-Section: php
+-Depends: ${misc:Depends}, ${phpcomposer:Debian-require}
+-Recommends: ${phpcomposer:Debian-recommend}
+-Suggests: ${phpcomposer:Debian-suggest}
+-Replaces: ${phpcomposer:Debian-replace}
+-Breaks: ${phpcomposer:Debian-conflict}, ${phpcomposer:Debian-replace}
+-Provides: ${phpcomposer:Debian-provide}
+-Description: PHP bindings for protocol buffers
+- Protocol buffers are a flexible, efficient, automated mechanism for
+- serializing structured data - similar to XML, but smaller, faster, and
+- simpler. You define how you want your data to be structured once, then you can
+- use special generated source code to easily write and read your structured
+- data to and from a variety of data streams and using a variety of languages.
+- You can even update your data structure without breaking deployed programs
+- that are compiled against the "old" format.
+- .
+- Google uses Protocol Buffers for almost all of its internal RPC protocols and
+- file formats.
+- .
+- This package contains the PHP bindings for the protocol buffers. You will
+- need the protoc tool (in the protobuf-compiler package) to compile your
+- definition to PHP code, and then the modules in this package will allow
+- you to use those classes in your programs.
+--- a/debian/php-google-protobuf.install
++++ /dev/null
+@@ -1,2 +0,0 @@
+-php/src/Google usr/share/php/
+-php/src/GPBMetadata usr/share/php/

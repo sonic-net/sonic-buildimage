@@ -2,6 +2,8 @@ SHELL = /bin/bash
 .ONESHELL:
 .SHELLFLAGS += -e
 
+PROTOBUF_PATCH_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/patch)
+
 MAIN_TARGET = libprotobuf32_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS = protobuf-compiler_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 					libprotobuf-dev_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
@@ -18,6 +20,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	dget -u protobuf_$(PROTOBUF_VERSION_FULL).dsc http://deb.debian.org/debian/pool/main/p/protobuf/protobuf_$(PROTOBUF_VERSION_FULL).dsc
 
 	pushd protobuf-$(PROTOBUF_VERSION)
+	patch -p1 < "$(PROTOBUF_PATCH_DIR)/0001-Remove-unused-PHP-package.patch"
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
