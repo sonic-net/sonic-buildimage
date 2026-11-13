@@ -218,3 +218,47 @@ def test_unnumbered_shutdown():
     """Interface neighbor renders shutdown when admin_status is down."""
     result = render_general_instance('PortChannel101', {'asn': '65200', 'name': 'spine1', 'admin_status': 'down'})
     assert 'neighbor PortChannel101 shutdown' in result
+
+
+def test_neighbor_encapsulation_type_is_rendered_per_address_family():
+    """Render the configured encapsulation command in the peer's AF context."""
+    result_v4 = render_general_instance(
+        '10.10.10.10',
+        {'asn': '555', 'name': 'remote_peer', 'encapsulation_type': 'srv6'},
+    )
+    assert 'address-family ipv4' in result_v4
+    assert 'neighbor 10.10.10.10 encapsulation-srv6' in result_v4
+
+    result_v6 = render_general_instance(
+        'fc00::1',
+        {'asn': '555', 'name': 'remote_peer', 'encapsulation_type': 'srv6-relax'},
+    )
+    assert 'address-family ipv6' in result_v6
+    assert 'neighbor fc00::1 encapsulation-srv6-relax' in result_v6
+
+
+def test_neighbor_without_encapsulation_type_renders_no_encapsulation_command():
+    result = render_general_instance('10.10.10.10', {'asn': '555', 'name': 'remote_peer'})
+    assert 'encapsulation-' not in result
+
+
+def test_unnumbered_neighbor_encapsulation_type_is_rendered_in_both_address_families():
+    result = render_general_instance(
+        'PortChannel101',
+        {'asn': '65200', 'name': 'spine1', 'encapsulation_type': 'srv6'},
+    )
+
+    assert result.count('neighbor PortChannel101 encapsulation-srv6') == 2
+    assert 'address-family ipv4' in result
+    assert 'address-family ipv6' in result
+
+
+def test_unnumbered_neighbor_encapsulation_type_respects_address_family():
+    result = render_general_instance(
+        'Ethernet0',
+        {'asn': '65200', 'name': 'spine2', 'address_family': 'v6', 'encapsulation_type': 'srv6-relax'},
+    )
+
+    assert 'address-family ipv6' in result
+    assert 'neighbor Ethernet0 encapsulation-srv6-relax' in result
+    assert 'address-family ipv4' not in result
