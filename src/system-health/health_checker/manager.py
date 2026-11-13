@@ -1,3 +1,6 @@
+from sonic_py_common import device_info
+
+from .bmc_checker import BmcChecker
 from .config import Config
 from .health_checker import HealthChecker
 from .service_checker import ServiceChecker
@@ -22,6 +25,9 @@ class HealthCheckerManager(object):
         """
         self._checkers.append(ServiceChecker())
         self._checkers.append(HardwareChecker())
+
+        if device_info.is_switch_host():
+            self._checkers.append(BmcChecker())
 
     def check(self, chassis):
         """
