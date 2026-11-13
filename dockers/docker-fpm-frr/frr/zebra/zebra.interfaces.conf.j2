@@ -29,6 +29,10 @@ link-detect
 {% for pc in PORTCHANNEL %}
 interface {{ pc }}
 link-detect
+{% set ethernet_segment = EVPN_ETHERNET_SEGMENT.get(pc, {}) if EVPN_ETHERNET_SEGMENT is defined else {} %}
+{% if ethernet_segment.get('bridge_port_protection', 'false') == 'true' %}
+evpn mh bridge-port-protection
+{% endif %}
 !
 {% endfor %}
 {% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'].lower() == 'dualtor') %}

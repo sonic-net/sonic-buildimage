@@ -89,6 +89,13 @@ module sonic-evpn {
                     default 32767;
                 }
 
+                leaf bridge_port_protection {
+                    description
+                        "Enable EVPN multihoming bridge-port protection on a PortChannel Ethernet Segment.";
+                    type boolean;
+                    default false;
+                }
+
                 /*
                  * Type 0 ESIs must be operator configured and must use the
                  * canonical Type 0 format with a leading 00 octet.
@@ -105,6 +112,12 @@ module sonic-evpn {
                 must "esi != '00:00:00:00:00:00:00:00:00:00'" {
                     error-message "Reserved all-zero ESI is not allowed";
                     error-app-tag reserved-esi-invalid;
+                }
+
+                must "bridge_port_protection = 'false' or " +
+                     "ifname = /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name" {
+                    error-message "Bridge-port protection can only be enabled on a PortChannel Ethernet Segment";
+                    error-app-tag bridge-port-protection-interface-invalid;
                 }
             }
         }

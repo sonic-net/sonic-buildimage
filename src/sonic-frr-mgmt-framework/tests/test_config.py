@@ -29,6 +29,52 @@ def test_contructor():
     daemon.config_db.pubsub.punsubscribe.assert_called_once()
     assert(daemon.config_db.sub_thread.is_alive() == False)
 
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_bridge_port_protection_runtime_updates(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    handler = daemon.evpn_ethernet_segment_handler
+    table = 'EVPN_ETHERNET_SEGMENT'
+    command = ['vtysh', '-c', 'configure terminal', '-c', 'interface PortChannel10']
+
+    assert (table, handler) in daemon.table_handler_list
+    daemon.subscribe_all()
+    daemon.config_db.subscribe.assert_any_call(table, handler)
+
+    handler(table, 'PortChannel10', {'bridge_port_protection': 'true', 'df_pref': '100'})
+    run_cmd.assert_called_once_with(
+        table, command + ['-c', 'evpn mh bridge-port-protection'], True, ['zebra'])
+
+    for data in (
+            {'bridge_port_protection': 'false', 'df_pref': '100'},
+            {'esi': 'AUTO', 'df_pref': '100'},
+            None):
+        run_cmd.reset_mock()
+        handler(table, 'PortChannel10', data)
+        run_cmd.assert_called_once_with(
+            table, command + ['-c', 'no evpn mh bridge-port-protection'], True, ['zebra'])
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_bridge_port_protection_rejects_invalid_input(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    handler = daemon.evpn_ethernet_segment_handler
+    table = 'EVPN_ETHERNET_SEGMENT'
+
+    for key, data in (
+            ("PortChannel10' -c 'exit", {'bridge_port_protection': 'true'}),
+            ('Ethernet0', {'bridge_port_protection': 'true'}),
+            ('PortChannel10', {'bridge_port_protection': 'TRUE'}),
+            ('PortChannel10', {'bridge_port_protection': True})):
+        handler(table, key, data)
+
+    run_cmd.assert_not_called()
+
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bgp_key_and_asn_validation(run_cmd):
