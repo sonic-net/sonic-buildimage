@@ -107,6 +107,7 @@ stages:
       - name: vs
         variables:
           asan_image: yes
+          secure_boot_enabled: yes
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'

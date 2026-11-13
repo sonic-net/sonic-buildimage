@@ -42,6 +42,7 @@ jobs:
       DOCKER_DATA_ROOT_FOR_MULTIARCH: /data/march/docker
       dbg_image: no
       asan_image: no
+      secure_boot_enabled: no
       swi_image: no
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
@@ -57,6 +58,7 @@ jobs:
           variables:
             dbg_image: yes
             asan_image: yes
+            secure_boot_enabled: yes
 
         - name: alpinevs
           variables:
@@ -144,6 +146,12 @@ jobs:
             BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SBOM=y"
           fi
           BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SOURCE_ARCHIVE=y"
+          if [ $(secure_boot_enabled) == yes ]; then
+            for i in PK KEK db; do
+              openssl req -new -x509 -newkey rsa:4096 -subj "/CN=SONiC ${i} certificate/dnQualifier=$(GROUP_NAME)/" -keyout ${i}.key -out ${i}.crt -days 3 -noenc -sha512
+            done
+            BUILD_OPTIONS="$BUILD_OPTIONS SECURE_UPGRADE_MODE=dev SECURE_UPGRADE_DEV_SIGNING_KEY=$(pwd)/db.key SECURE_UPGRADE_SIGNING_CERT=$(pwd)/db.crt"
+          fi
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
@@ -173,6 +181,9 @@ jobs:
             fi
             make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
             make $BUILD_OPTIONS target/docker-ptf.gz
+            if [ $(secure_boot_enabled) == yes ]; then
+              virt-fw-vars --input target/sonic-$(GROUP_NAME)-uefi_vars.fd --set-pk 8c7f3d10-9b67-4e17-8d8a-73e6f9725b1d db.crt --add-kek 8c7f3d10-9b67-4e17-8d8a-73e6f9725b1d KEK.crt --add-db d719b2cb-3d3a-4596-a3bc-dad00e67656f db.crt --secure-boot --output target/sonic-$(GROUP_NAME)-uefi_sb-vars.fd
+            fi
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz
               SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
