@@ -10,7 +10,7 @@ import time
 
 from dataclasses import dataclass
 from typing import NoReturn, Union
-from  nexthop.pddf_config_parser import load_pddf_device_config
+from  nexthop.pddf_loader import load_pddf_device_config
 
 
 def bdf_to_name(device_bdf, pddf_config=None):
