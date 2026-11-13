@@ -414,3 +414,193 @@ def test_cleanup_no_shutdown_protect_magic_closes(tmp_path, monkeypatch):
     writes, closed, _ = _cleanup_capture(daemon, monkeypatch)
     assert writes == [b"V"]
     assert closed == [999]
+
+
+def _stage_marker_capture(daemon, monkeypatch):
+    """Capture stage marker values written by cleanup()."""
+    markers = []
+    monkeypatch.setattr(daemon, "_write_stage_marker",
+                        lambda v: markers.append(v))
+    return markers
+
+
+def test_cleanup_system_stopping_writes_shutdown_marker(tmp_path, monkeypatch):
+    # During a system shutdown/reboot the daemon stamps the shutdown stage so a
+    # hang on the reboot path is attributed correctly on the next boot.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == [wdtd.STAGE_MARKER_DAEMON_SHUTDOWN]
+
+
+def test_cleanup_normal_stop_keeps_stage_marker(tmp_path, monkeypatch):
+    # A plain daemon stop/restart is not a shutdown: the resident marker (0x24
+    # armed) must be left alone so a WDT reset before the daemon comes back is
+    # not misattributed to the shutdown stage.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: False)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == []
+
+
+# ------------------------------------------------- boot-stage attribution
+MARKER_CMD = "/usr/local/bin/watchdog-stage-marker.sh"
+
+
+def _marker_cmd_capture(monkeypatch, fail=False, executable=True, stderr=b""):
+    """Capture the subprocess invocations made by _write_stage_marker."""
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        if fail:
+            raise wdtd.subprocess.CalledProcessError(1, argv)
+        return wdtd.subprocess.CompletedProcess(argv, 0, stdout=b"",
+                                                stderr=stderr)
+
+    monkeypatch.setattr(wdtd.subprocess, "run", fake_run)
+    monkeypatch.setattr(wdtd.os, "access", lambda path, mode: executable)
+    return calls
+
+
+def _policy_log_capture(monkeypatch, daemon):
+    logged = []
+    monkeypatch.setattr(daemon, "log", lambda msg, *a, **k: logged.append(msg))
+    return logged
+
+
+def test_write_stage_marker_runs_platform_command(monkeypatch):
+    # The daemon delegates the register write to the platform's command, so
+    # the address, the write protocol and the monotonic rule live in one place.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == [[MARKER_CMD, "0x24"]]
+
+
+def test_write_stage_marker_noop_without_command(monkeypatch):
+    # Platforms without stage_marker_cmd in platform.json never run anything.
+    daemon = wdtd.WatchdogManager()
+    assert daemon.stage_marker_cmd is None
+    calls = _marker_cmd_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == []
+
+
+def test_write_stage_marker_skips_missing_command(monkeypatch):
+    # The command ships in a lazily installed platform package, so it may not
+    # exist yet on the first boot: skip with a warning, never raise.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch, executable=False)
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == []
+    assert any("not executable" in m for m in logged)
+
+
+def test_write_stage_marker_failure_is_swallowed(monkeypatch):
+    # A failing command is logged; attribution never affects petting.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch, fail=True)
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_SHUTDOWN)
+    assert calls == [[MARKER_CMD, "0x25"]]
+    assert any("failed" in m for m in logged)
+
+
+def test_write_stage_marker_reports_stderr(monkeypatch):
+    # The marker script exits 0 even when the register write fails and only
+    # reports it on stderr, so that text must reach the log instead of the
+    # "wrote marker" success line.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(
+        monkeypatch, stderr=b"watchdog-stage-marker: failed to clear\n")
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == [[MARKER_CMD, "0x24"]]
+    assert any("failed to clear" in m for m in logged)
+    assert not any("wrote marker" in m for m in logged)
+
+
+def test_load_platform_config_stage_marker_cmd(monkeypatch):
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_marker_cmd": MARKER_CMD}})
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd == MARKER_CMD
+
+
+def test_load_platform_config_stage_marker_cmd_absent(monkeypatch):
+    # Absent key -> attribution disabled, even if a stale value was set.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": True}})
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+
+
+@pytest.mark.parametrize("bad", [
+    "watchdog-stage-marker.sh",            # relative
+    "/usr/local/bin/marker.sh 0x99",       # embedded argument
+    "",
+    42,
+    ["/usr/local/bin/marker.sh"],
+])
+def test_load_platform_config_stage_marker_cmd_rejects_invalid(monkeypatch, bad):
+    # The command runs as root: anything but a bare absolute path disables
+    # attribution and is logged, and the "Loaded watchdog policy" line is
+    # still emitted.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_marker_cmd": bad}})
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+    assert any("ignoring watchdog.stage_marker_cmd" in m for m in logged)
+    assert any(m.startswith("Loaded watchdog policy") and
+               "stage_marker_cmd=none" in m for m in logged)
+
+
+def test_load_platform_config_stage_marker_cmd_keeps_other_policy(monkeypatch):
+    # A bad command must not discard boot_arm / shutdown_protect parsed
+    # alongside it.
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": False, "shutdown_protect": False,
+                              "stage_marker_cmd": "relative"}})
+    _policy_log_capture(monkeypatch, daemon)
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+    assert daemon.boot_arm is False
+    assert daemon.shutdown_protect is False
+
+
+def test_b27_platform_json_names_the_marker_script():
+    # The b27 opts in by pointing the daemon at watchdog-stage-marker.sh; the
+    # install path must match where debian/rules puts common/scripts.
+    import json
+    pj = os.path.join(REPO_ROOT, "device", "nexthop", "arm64-nexthop_b27-r0",
+                      "platform.json")
+    with open(pj) as f:
+        cmd = json.load(f)["watchdog"]["stage_marker_cmd"]
+    assert cmd == MARKER_CMD
+    assert os.path.exists(os.path.join(
+        NEXTHOP_DIR, "common", "scripts", os.path.basename(cmd)))

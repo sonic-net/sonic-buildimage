@@ -26,6 +26,21 @@ def constructor(skip_bgp_asn=False):
 
     return mgr
 
+
+@patch('bgpcfgd.managers_static_rt.swsscommon.SonicV2Connector')
+def test_appl_db_delete_check_uses_config_db_unix_socket(mock_connector):
+    mgr = StaticRouteMgr.__new__(StaticRouteMgr)
+    mgr.db_name = "APPL_DB"
+    mgr.config_db = None
+    mgr.static_routes = {}
+    mock_connector.return_value.CONFIG_DB = "CONFIG_DB"
+    mock_connector.return_value.get.return_value = None
+
+    assert not mgr.skip_appl_del("default", "10.1.0.0/24")
+
+    mock_connector.assert_called_once_with(use_unix_socket_path=True)
+    mock_connector.return_value.connect.assert_called_once_with("CONFIG_DB")
+
 def set_del_test(mgr, op, args, expected_ret, expected_cmds):
     set_del_test.push_list_called = False
     def push_list(cmds):

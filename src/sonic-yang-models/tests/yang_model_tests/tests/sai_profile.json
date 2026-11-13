@@ -1,0 +1,24 @@
+{
+    "SAI_PROFILE_WITH_CORRECT_VALUES": {
+        "desc": "CONFIG SAI_PROFILE TABLE WITH ALL THE CORRECT VALUES"
+    },
+    "SAI_PROFILE_WITH_INVALID_NAME": {
+        "desc": "Referring invalid SAI_PROFILE key name (lowercase not allowed).",
+        "eStrKey": "Pattern",
+        "eStr": ["[A-Z][A-Z0-9_]*"]
+    },
+    "SAI_PROFILE_WITH_MISSING_VALUE": {
+        "desc": "Config SAI_PROFILE entry without mandatory value leaf.",
+        "eStrKey": "Mandatory"
+    },
+    "SAI_PROFILE_WITH_RESERVED_NAME": {
+        "desc": "SAI_INIT_CONFIG_FILE is a reserved, structural key and must be rejected.",
+        "eStr": [
+          "SAI_INIT_CONFIG_FILE is a reserved, structural SAI profile key and cannot be set via SAI_PROFILE."
+        ]
+    },
+    "SAI_PROFILE_WITH_NEWLINE_IN_VALUE": {
+        "desc": "A value containing a newline would break the one-entry/one-line KEY=VALUE contract and must be rejected.",
+        "eStrKey": "Pattern"
+    }
+}

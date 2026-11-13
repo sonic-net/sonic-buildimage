@@ -50,6 +50,8 @@ chassis_backend_role = 'ChassisBackendRouter'
 
 backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter']
 console_device_types = ['MgmtTsToR']
+# The console feature default for these comes from the platform init_cfg.json
+platform_console_device_types = ['NetworkBmc']
 dhcp_server_enabled_device_types = ['BmcMgmtToRRouter']
 mgmt_device_types = ['BmcMgmtToRRouter', 'MgmtToRRouter', 'MgmtTsToR']
 leafrouter_device_types = ['LeafRouter']
@@ -1967,7 +1969,7 @@ def update_forced_mgmt_route(mgmt_intf, mgmt_routes):
 #
 ###############################################################################
 def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hwsku_config_file=None, fabric_port_config_file=None ):
-    """ Parse minigraph xml file.
+    """ Parse minigraph XML without entity substitution or network access.
 
     Keyword arguments:
     filename -- minigraph file name
@@ -1978,7 +1980,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     fabric_port_config_file -- fabric port config file name
      """
 
-    root = ET.parse(filename).getroot()
+    parser = ET.XMLParser(resolve_entities=False, no_network=True)
+    root = ET.parse(filename, parser=parser).getroot()
 
     u_neighbors = None
     u_devices = None
@@ -2740,12 +2743,14 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if current_device and current_device['type'] == spine_chassis_frontend_role:
         parse_spine_chassis_fe(results, vni, lo_intfs, phyport_intfs, pc_intfs, pc_members, devices)
 
-    # Enable console management feature for console swtich
-    results['CONSOLE_SWITCH'] = {
-        'console_mgmt' : {
-            'enabled' : 'yes' if current_device and current_device['type'] in console_device_types else 'no'
+    # Enable console management feature for console switch. Leave it out for a
+    # BMC, so the platform default from init_cfg.json is not overridden.
+    if not (current_device and current_device['type'] in platform_console_device_types):
+        results['CONSOLE_SWITCH'] = {
+            'console_mgmt' : {
+                'enabled' : 'yes' if current_device and current_device['type'] in console_device_types else 'no'
+            }
         }
-    }
 
     # Enable DHCP Server feature for specific device type
     if current_device and current_device['type'] in dhcp_server_enabled_device_types:
@@ -2906,7 +2911,8 @@ def parse_hostname(filename):
     hostName = None
     if not os.path.isfile(filename):
         return None
-    root = ET.parse(filename).getroot()
+    parser = ET.XMLParser(resolve_entities=False, no_network=True)
+    root = ET.parse(filename, parser=parser).getroot()
     hostname_qn = QName(ns, "Hostname")
     for child in root:
         if child.tag == str(hostname_qn):
@@ -2918,7 +2924,8 @@ def parse_hostname(filename):
 def parse_asic_sub_role(filename, asic_name):
     if not os.path.isfile(filename):
         return None
-    root = ET.parse(filename).getroot()
+    parser = ET.XMLParser(resolve_entities=False, no_network=True)
+    root = ET.parse(filename, parser=parser).getroot()
     for child in root:
         if child.tag == str(QName(ns, "MetadataDeclaration")):
             sub_role, _, _, _, _, _= parse_asic_meta(child, asic_name)
@@ -2926,7 +2933,8 @@ def parse_asic_sub_role(filename, asic_name):
 
 def parse_asic_switch_type(filename, asic_name, hostname):
     if os.path.isfile(filename):
-        root = ET.parse(filename).getroot()
+        parser = ET.XMLParser(resolve_entities=False, no_network=True)
+        root = ET.parse(filename, parser=parser).getroot()
         switch_type, _ = get_chassis_type_and_hostname(root, hostname)
         if switch_type:
             return switch_type

@@ -47,6 +47,7 @@ BUILD_TIMESTAMP	volatile per-build timestamp; intentionally excluded from the ke
 DEFAULT_CONTAINER_REGISTRY	registry prefix stripped from an image tag; registry location, not image content
 DOCKER_USERNAME	strips a username suffix from an image name; image naming only, not content
 SONIC_VERSION_CACHE	controls the version-cache mechanism itself; not an input to any cached artifact
+SONIC_ROUTING_STACK	single-value compatibility knob pinned to frr; stack-selection conditionals are removed, so changing it cannot alter a cached artifact
 ENABLE_FIPS	consumed only by build_image.sh (SONIC_INSTALLERS stage), which is not in the cache framework and is always rebuilt
 BUILD_MULTIASIC_KVM	consumed only by build_image.sh (non-cached installer stage); no cached artifact depends on it
 onie_recovery_image	consumed only by build_image.sh; selects a recovery ISO for the always-rebuilt installer, not a cached target
@@ -65,3 +66,10 @@ KERNEL_SRC	filesystem path to the kernel build tree, default /lib/modules/$(KVER
 RFS_SQUASHFS_NAME	equals $* (the RFS target stem <installer>__<machine>__rfs.squashfs); it IS the cached artifact's own squashfs filename, so it cannot cause a stale cross-key reuse (Check 21)
 TARGET_MACHINE	equals $($*_MACHINE), a deterministic function of the RFS target stem $* which already encodes the machine in the artifact filename identity; not an independent content input (Check 21)
 TARGET_PATH	output directory path (target/) where build_debian.sh writes results; relocation only, does not alter rootfs content (Check 21)
+PYTHON_WHEELS_PATH	output directory for independently keyed wheel artifacts; changes their location, not wheel content
+installer_python_wheels	wheel list rendered by sonic_debian_extension.j2 and consumed only after the cached RFS first-stage exit in build_debian.sh; the final installer stage is always rebuilt
+scapy_wheel	patched wheel installed only after the cached RFS first-stage exit in build_debian.sh, including after rootfs restore; the final installer stage is always rebuilt
+DBGOPT	shell tracing option only (set -x); does not change rootfs content and is intentionally excluded from RFS_INLINE_ENV_FLAGS in Makefile.cache
+KBUILD_EXTRA_SYMBOLS	Kbuild modpost plumbing listing Module.symvers paths generated inside the same out-of-tree module build; exported only by platform/s3ip-sysfs/Makefile:13 (not built by any rules/*.mk target) and otherwise set locally in vendor module Makefiles that are hashed with their package sources; never a slave.mk/rules build option, so it carries no independent content signal
+IMAGE_DISTRO_DEBS_PATH	output directory path $(TARGET_PATH)/debs/$(IMAGE_DISTRO) (slave.mk:80) that debs are written to and read from; relocation only, the content signal is IMAGE_DISTRO/BLDENV and each deb's own key
+SONIC_IMAGE_VERSION	volatile per-build version stamp, same class as BUILD_TIMESTAMP and sonic_version; keying it would defeat caching. It does reach cached docker images, as the image_version build-arg (ENV IMAGE_VERSION) and Tag label in slave.mk, which a cache hit leaves at the stamp of the build that saved them, as before this waiver; build_debian.sh reads it only in "Version file part 2", after the cached RFS first stage has exited

@@ -3245,8 +3245,16 @@ device:
 # PG to Service Pool Mapping - SKIP
 # Ingress PG to PFC priority mapping
 # TM_PFC_PRI_TO_PRI_GRP_MAP is mapped to MMU_THDI_PFCPRI_PG_PROFILE in physical table. There are 8 profiles to configure the PFC to priority group mappings. For example, you could map multiple PG to a PFC. This is needed to generate PFC when a PG is hitting the limits. - SKIP
-# Per input port PG and flow control configurations - SKIP
-# TM_ING_PORT_PRI_GRP is mapped to MMU_THDI_ING_PORT_CONFIG in physical table - SKIP
+# Per input port PG and flow control configurations
+# TM_ING_PORT_PRI_GRP is mapped to MMU_THDI_ING_PORT_CONFIG in physical table
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[0,4], [17,21], [35,39], [52,57], [71,75], [89,93], [107,111], [125,129], [143,147], [161,165], [179,183], [197,201], [215,219], [233,237], [251,255], [268,273], [287,291], [305,309], [323,327], [340,345], [359,363], [377,381], [395,399], [413,417], [431,435], [449,453], [467,471], [485,489], [503,507], [521,525], [539,543], [556,561], 575]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                PFC: 1
+                LOSSLESS: 1
+
 # ING_PRI_MAP_ID is the ingress priority PG profile select, which maps to the Priority Group - SKIP
 # PRI_GRP_MAP_ID is the Priority Group profile select, which maps to service pool - SKIP
 ...

@@ -42,9 +42,12 @@ RUN apt-get install -y dbus
 {% endif %}
 {% if sonic_asic_platform == 'aspeed' %}
 # Install busybox for devmem access (needed for BMC hardware register control)
+# and the libgpiod tools (gpioset/gpioget) used to drive the switch CPU
+# power-enable line
 RUN apt-get install -y \
         busybox        \
-        freeipmi-tools
+        freeipmi-tools \
+        gpiod
 {% endif %}
 
 # On Arista devices, the sonic_platform wheel is not installed in the container.

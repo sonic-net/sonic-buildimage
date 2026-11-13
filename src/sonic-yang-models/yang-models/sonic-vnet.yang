@@ -27,6 +27,11 @@ module sonic-vnet {
     description
         "Virtual Network (VNET) configuration for overlay networking using VxLAN tunnels";
 
+    revision 2026-09-15 {
+        description
+            "Add install_on_kernel leaf to VNET_ROUTE_TUNNEL_LIST.";
+    }
+
     revision 2023-04-25 {
         description
             "First revision.";
@@ -193,6 +198,11 @@ module sonic-vnet {
                 leaf metric {
                     description "Value that can be set to categorize or determine the type of route. This value does not affect route behavior.";
                     type uint8;
+                }
+
+                leaf install_on_kernel {
+                    description "Flag to also program this route into the kernel routing table.";
+                    type boolean;
                 }
             }
             /* end of list VNET_ROUTE_TUNNEL_LIST */

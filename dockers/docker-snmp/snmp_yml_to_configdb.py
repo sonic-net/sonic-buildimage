@@ -15,9 +15,29 @@ SNMP_YML_PATH = '/etc/sonic/snmp.yml'
 
 FULL_SNMP_COMM_LIST = ['snmp_rocommunity', 'snmp_rocommunities', 'snmp_rwcommunity', 'snmp_rwcommunities']
 
+INSECURE_DEFAULT_COMMUNITIES = {'public', 'private'}
+
+
+def _warn_if_insecure_default(community):
+    """Log a warning if community is a well-known insecure default.
+
+    /etc/sonic/snmp.yml is deployed to the device out-of-band (e.g. by
+    HwProxy via scp), not auto-generated from a ZTP template. Configuring
+    'public'/'private' there is therefore the same kind of explicit,
+    deliberate choice as writing SNMP_COMMUNITY directly, so it is
+    honored -- consistent with how snmpd.conf.j2 renders an existing
+    ConfigDB entry -- but flagged here for operational visibility.
+    """
+    if community in INSECURE_DEFAULT_COMMUNITIES:
+        logger.log_warning("snmp.yml configures insecure default SNMP community '{}'".format(community))
+
 
 def load_snmp_yaml(path):
-    """Read and parse the ZTP-provided snmp.yml file.
+    """Read and parse the snmp.yml file.
+
+    This file is deployed to the device out-of-band (e.g. by HwProxy via
+    scp) rather than produced by ZTP in production; it is not assumed to
+    be ZTP-specific.
 
     Uses yaml.safe_load (rather than yaml.FullLoader) so that a malicious or
     corrupted file cannot cause construction of arbitrary Python objects via
@@ -50,18 +70,22 @@ def apply_snmp_communities(db, yaml_snmp_info, snmp_config_db_communities):
         if comm_type.startswith('snmp_rocommunities'):
             for community in yaml_snmp_info[comm_type]:
                 if community not in snmp_config_db_communities:
+                    _warn_if_insecure_default(community)
                     db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RO"})
         elif comm_type.startswith('snmp_rocommunity'):
             community = yaml_snmp_info['snmp_rocommunity']
             if community not in snmp_config_db_communities:
+                _warn_if_insecure_default(community)
                 db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RO"})
         elif comm_type.startswith('snmp_rwcommunities'):
             for community in yaml_snmp_info[comm_type]:
                 if community not in snmp_config_db_communities:
+                    _warn_if_insecure_default(community)
                     db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RW"})
         elif comm_type.startswith('snmp_rwcommunity'):
             community = yaml_snmp_info['snmp_rwcommunity']
             if community not in snmp_config_db_communities:
+                _warn_if_insecure_default(community)
                 db.set_entry('SNMP_COMMUNITY', community, {"TYPE": "RW"})
 
 
