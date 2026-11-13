@@ -5,10 +5,8 @@
 # The production script connects a real ConfigDBConnector (via swsscommon)
 # at import/main() time, and imports sonic_py_common.logger.Logger. Neither
 # dependency is installed in this test environment, so both are stubbed out
-# with fake modules -- following the same pattern used in
-# dockers/docker-telemetry-sidecar/cli-plugin-tests/test_systemd_stub.py --
-# before the module under test is imported. The module is loaded via
-# importlib so tests exercise the actual production yaml_snmp_info parsing
+# with fake modules before the module under test is imported. The module is
+# loaded via importlib so tests exercise the actual production yaml_snmp_info parsing
 # call site (load_snmp_yaml -> yaml.safe_load), not a reimplementation of it.
 
 import importlib.util
