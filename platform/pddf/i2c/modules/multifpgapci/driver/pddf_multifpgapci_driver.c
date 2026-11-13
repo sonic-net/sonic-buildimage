@@ -913,19 +913,26 @@ int pddf_multifpgapci_register(const struct pci_device_id *ids,
 {
 	int ret;
 
+	if (driver_registered) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_INFO "%s: driver already registered, skipping\n",
+			 __FUNCTION__);
+		return 0;
+	}
+
 	pddf_multifpgapci_driver.name = DRIVER_NAME;
 	pddf_multifpgapci_driver.id_table = ids;
 	pddf_multifpgapci_driver.probe = pddf_multifpgapci_probe;
 	pddf_multifpgapci_driver.remove = pddf_multifpgapci_remove;
 
-	if (!driver_registered) {
-		multifpgapci_kobj = kobject_get(kobj);
-	}
+	multifpgapci_kobj = kobject_get(kobj);
 
 	ret = pci_register_driver(&pddf_multifpgapci_driver);
 	if (ret != 0) {
 		pddf_dbg(MULTIFPGA, KERN_ERR "%s: Failed to register driver\n",
 			 __FUNCTION__);
+		kobject_put(multifpgapci_kobj);
+		multifpgapci_kobj = NULL;
 		return -EINVAL;
 	}
 

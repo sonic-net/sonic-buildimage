@@ -258,9 +258,11 @@ static void pddf_multifpgapci_gpio_detach(struct pci_dev *pci_dev,
 		kobject_put(gpio_drvdata->gpio_kobj);
 		gpio_drvdata->gpio_kobj = NULL;
 	}
+	
+	xa_erase(&gpio_drvdata_map, dev_index);
 
 	kfree(gpio_drvdata);
-	xa_erase(&gpio_drvdata_map, (unsigned long)pci_dev);
+	gpio_drvdata = NULL;
 }
 
 static void pddf_multifpgapci_gpio_map_bar(struct pci_dev *pci_dev,
