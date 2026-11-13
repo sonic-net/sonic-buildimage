@@ -84,7 +84,7 @@
     },
     "ROUTE_PREFIX_DUPLICATE_SEQ_NO": {
         "desc": "Duplicate Sequence Number",
-        "eStr": "sequence_number required to be unique for each prefix-list"
+        "eStrKey": "Unique"
     },
     "ROUTE_PREFIX_REPEAT_SEQ_NO_DIFFLIST": {
         "desc": "Duplicate Sequence Number, but in different lists is ok"

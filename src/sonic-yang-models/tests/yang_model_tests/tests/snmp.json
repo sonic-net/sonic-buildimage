@@ -204,7 +204,7 @@
     },
     "SNMP_AGENT_ADDRESS_CONFIG_DUPLICATE_IP_PORT": {
         "desc": "Load two SNMP agent address config same ip and port",
-	"eStr": ["Unique data leaf(s)"]
+        "eStrKey": "Unique"
     },
     "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV4_ADDRESS": {
         "desc": "Load SNMP agent address config with invalid IPv4 address",
