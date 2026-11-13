@@ -1,0 +1,35 @@
+From b134d3053be6dee874f6d444b325a91ad677ece8 Mon Sep 17 00:00:00 2001
+From: Grigory Solovyev <gs1571@gmail.com>
+Date: Sat, 29 Aug 2026 00:01:30 +0300
+Subject: [PATCH] isisd: Fix NEXT-CSID length for combined uA SIDs
+
+RFC 9800 defines the compressed SID length, LNFL, as the sum of
+the Locator-Node and Function lengths.
+
+IS-IS installs a combined uA SID using a B:G:L prefix, but passes
+only the Locator-Node length to the NEXT-CSID flavor. Include the
+Function length so the kernel shifts the complete G:L CSID.
+
+For an F3216 locator this changes nflen from 16 to 32 while keeping
+the existing route, behavior, nexthop, and interface.
+
+Related: #18823
+Signed-off-by: Grigory Solovyev <gs1571@gmail.com>
+---
+ isisd/isis_zebra.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/isisd/isis_zebra.c b/isisd/isis_zebra.c
+index 9389d6665a74..c08ff6e2c94b 100644
+--- a/isisd/isis_zebra.c
++++ b/isisd/isis_zebra.c
+@@ -1081,7 +1081,8 @@ void isis_zebra_srv6_adj_sid_install(struct srv6_adjacency *sra)
+ 		SET_SRV6_FLV_OP(ctx.flv.flv_ops,
+ 				ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
+ 		ctx.flv.lcblock_len = sra->locator->block_bits_length;
+-		ctx.flv.lcnode_func_len = sra->locator->node_bits_length;
++		ctx.flv.lcnode_func_len = sra->locator->node_bits_length +
++					  sra->locator->function_bits_length;
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_RESERVED:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:
