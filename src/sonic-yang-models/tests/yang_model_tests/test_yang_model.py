@@ -42,6 +42,7 @@ class Test_yang_models:
             'InvalidValue': ['Invalid', 'value', 'Data path'],
             'LeafRef': ['Invalid leafref', 'no target instance'],
             'When': ['When condition', 'not satisfied'],
+            'Unique': ['Unique data leaf(s)', 'not satisfied'],
             'Pattern': ['pattern', 'Unsatisfied pattern'],
             'Mandatory': ['Mandatory node', 'does not exist'],
             'Verify': ['verified'],
