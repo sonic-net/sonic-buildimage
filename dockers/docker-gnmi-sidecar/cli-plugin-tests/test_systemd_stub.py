@@ -1,6 +1,7 @@
 # tests/test_systemd_stub.py
 import sys
 import os
+import json
 import types
 import importlib
 
@@ -66,6 +67,37 @@ _setup_fakes()
 from sonic_py_common import sidecar_common as real_sidecar_common
 
 
+def _fake_apply_patch(config_db, input_bytes, text):
+    """Fake 'config apply-patch': apply RFC 6902 ops to the test config_db dict."""
+    try:
+        patch_ops = json.loads(input_bytes)
+        for op in patch_ops:
+            parts = op["path"].strip("/").split("/")
+            if op["op"] == "add":
+                if len(parts) == 1:
+                    for k, v in op["value"].items():
+                        config_db[f"{parts[0]}|{k}"] = dict(v)
+                elif len(parts) == 2:
+                    db_key = f"{parts[0]}|{parts[1]}"
+                    if db_key in config_db:
+                        config_db[db_key].update(op["value"])
+                    else:
+                        config_db[db_key] = dict(op["value"])
+                elif len(parts) == 3:
+                    db_key = f"{parts[0]}|{parts[1]}"
+                    config_db.setdefault(db_key, {})[parts[2]] = op["value"]
+            elif op["op"] == "replace":
+                if len(parts) == 2:
+                    config_db[f"{parts[0]}|{parts[1]}"] = dict(op["value"])
+                elif len(parts) == 3:
+                    db_key = f"{parts[0]}|{parts[1]}"
+                    if db_key in config_db:
+                        config_db[db_key][parts[2]] = op["value"]
+        return 0, "" if text else b"", "" if text else b""
+    except Exception as exc:
+        return 1, "" if text else b"", str(exc) if text else str(exc).encode()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def fake_logger_module():
     """
@@ -76,13 +108,49 @@ def fake_logger_module():
 
 
 @pytest.fixture
-def ss(tmp_path, monkeypatch):
+def config_db(monkeypatch):
+    """Fake CONFIG_DB ("TABLE|KEY" -> {field: value}) behind the sidecar_common db_* helpers."""
+    db = {}
+
+    def fake_db_hget(key, field):
+        return db.get(key, {}).get(field)
+
+    def fake_db_hgetall(key):
+        return dict(db.get(key, {}))
+
+    def fake_db_hdel(key, field):
+        entry = db.get(key)
+        if entry is None or field not in entry:
+            return True
+        del entry[field]
+        if not entry:
+            del db[key]
+        return True
+
+    def fake_db_del(key):
+        return db.pop(key, None) is not None
+
+    def fake_db_get_table_keys(table):
+        prefix = f"{table}|"
+        return [k.split("|", 1)[1] for k in db if k.startswith(prefix)]
+
+    monkeypatch.setattr(real_sidecar_common, "db_hget", fake_db_hget)
+    monkeypatch.setattr(real_sidecar_common, "db_hgetall", fake_db_hgetall)
+    monkeypatch.setattr(real_sidecar_common, "db_hdel", fake_db_hdel)
+    monkeypatch.setattr(real_sidecar_common, "db_del", fake_db_del)
+    monkeypatch.setattr(real_sidecar_common, "db_get_table_keys", fake_db_get_table_keys)
+    return db
+
+
+@pytest.fixture
+def ss(tmp_path, monkeypatch, config_db):
     """
     Import systemd_stub fresh for every test, and provide fakes:
 
       - run_nsenter: simulates host FS + systemctl/docker calls (patched on sidecar_common)
       - container_fs: dict for "container" files
       - host_fs: dict for "host" files
+      - config_db: see the config_db fixture; 'config apply-patch' writes to it
     """
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
@@ -170,6 +238,12 @@ def ss(tmp_path, monkeypatch):
             target = args[-1]
             host_fs.pop(target, None)
             return 0, "" if text else b"", "" if text else b""
+
+        # sudo -n config apply-patch /dev/stdin
+        if (args[:4] == ["sudo", "-n", "config", "apply-patch"]
+                and len(args) == 5 and args[4] == "/dev/stdin"
+                and input_bytes is not None):
+            return _fake_apply_patch(config_db, input_bytes, text)
 
         # sudo … (post actions)
         if args[:1] == ["sudo"]:
@@ -624,3 +698,364 @@ def test_container_checker_not_synced_when_disabled(monkeypatch, tmp_path):
     """With the gate off (default), ensure_sync() never touches /bin/container_checker."""
     host_fs = _run_ensure_sync_capture(monkeypatch, tmp_path, enabled=False)
     assert "/bin/container_checker" not in host_fs
+
+
+# ─────────────────────────── CONFIG_DB client-auth reconcile ───────────────────────────
+
+def test_reconcile_enables_user_auth_and_cname(ss, config_db):
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": ["gnmi_show_readonly"]}]
+    assert config_db == {}
+
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("GNMI|gnmi", {}).get("user_auth") == "cert"
+    assert config_db.get("GNMI_CLIENT_CERT|fake-infra-ca.test.example.com", {}).get("role") == ["gnmi_show_readonly"]
+    assert "TELEMETRY|gnmi" not in config_db
+
+
+def test_reconcile_unset_leaves_config_db_untouched(ss, config_db):
+    """Without a verify env var, existing user_auth and client certs are left alone."""
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = None
+    ss.GNMI_CLIENT_CERTS = [{"cname": "new.test.example.com", "role": ["admin"]}]
+    config_db["GNMI|gnmi"] = {"user_auth": "cert"}
+    config_db["GNMI_CLIENT_CERT|existing.test.example.com"] = {"role": ["admin"]}
+    before = json.loads(json.dumps(config_db))
+
+    ss.reconcile_config_db_once()
+
+    assert config_db == before
+    assert not any(args[:1] == ("sudo",) for _, args in commands)
+
+
+def test_reconcile_disabled_removes_cname(ss, config_db):
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = False
+    config_db["GNMI_CLIENT_CERT|fake-infra-ca.test.example.com"] = {"role": "gnmi_show_readonly"}
+
+    ss.reconcile_config_db_once()
+
+    assert "GNMI_CLIENT_CERT|fake-infra-ca.test.example.com" not in config_db
+
+
+def test_reconcile_disabled_removes_multiple_cnames(ss, config_db):
+    """When verify=false, all GNMI_CLIENT_CERT entries in the table are removed."""
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = False
+    config_db["GNMI_CLIENT_CERT|a.test.example.com"] = {"role": "admin"}
+    config_db["GNMI_CLIENT_CERT|b.test.example.com"] = {"role": "gnmi_show_readonly"}
+
+    ss.reconcile_config_db_once()
+
+    assert "GNMI_CLIENT_CERT|a.test.example.com" not in config_db
+    assert "GNMI_CLIENT_CERT|b.test.example.com" not in config_db
+
+
+def test_reconcile_disabled_removes_entries_not_in_env(ss, config_db):
+    """When verify=false, entries NOT in GNMI_CLIENT_CERTS env are also removed."""
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = False
+    ss.GNMI_CLIENT_CERTS = []
+    config_db["GNMI_CLIENT_CERT|unknown.example.com"] = {"role": "admin"}
+    config_db["GNMI_CLIENT_CERT|other.example.com"] = {"role": "gnmi_show_readonly"}
+
+    ss.reconcile_config_db_once()
+
+    assert "GNMI_CLIENT_CERT|unknown.example.com" not in config_db
+    assert "GNMI_CLIENT_CERT|other.example.com" not in config_db
+
+
+def test_reconcile_disabled_clears_user_auth_and_restarts_gnmi(ss, config_db):
+    """When verify=false and user_auth is set, the field is removed and gnmi restarted."""
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = False
+    config_db["GNMI|gnmi"] = {"user_auth": "cert", "port": "50052"}
+
+    ss.reconcile_config_db_once()
+
+    assert "user_auth" not in config_db.get("GNMI|gnmi", {})
+    assert config_db["GNMI|gnmi"]["port"] == "50052"
+    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "systemctl", "restart", "gnmi") in post_cmds
+
+
+def test_reconcile_disabled_removes_user_auth_any_value(ss, config_db):
+    """When verify=false, user_auth should be removed regardless of its value."""
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = False
+    config_db["GNMI|gnmi"] = {"user_auth": "password"}
+
+    ss.reconcile_config_db_once()
+
+    assert "user_auth" not in config_db.get("GNMI|gnmi", {})
+
+
+def test_reconcile_disabled_no_restart_when_user_auth_absent(ss, config_db):
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = False
+
+    ss.reconcile_config_db_once()
+
+    assert not any(args[:1] == ("sudo",) for _, args in commands)
+
+
+def test_reconcile_multiple_cnames(ss, config_db):
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [
+        {"cname": "fake-client.test.example.com", "role": ["admin"]},
+        {"cname": "fake-server.test.example.com", "role": ["gnmi_show_readonly", "admin"]},
+    ]
+
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("GNMI|gnmi", {}).get("user_auth") == "cert"
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin"]
+    assert config_db.get("GNMI_CLIENT_CERT|fake-server.test.example.com", {}).get("role") == ["gnmi_show_readonly", "admin"]
+
+
+def test_reconcile_rewrites_stale_json_string_role(ss, config_db):
+    """Reconcile must rewrite a stale JSON-string role into a proper list for YANG compliance."""
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-client.test.example.com", "role": ["admin"]}]
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": '["admin"]'}
+
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin"]
+
+
+def test_reconcile_rewrites_plain_string_role(ss, config_db):
+    """Reconcile must rewrite a plain-string role into a list for YANG leaf-list compliance."""
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-client.test.example.com", "role": ["gnmi_show_readonly"]}]
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": "gnmi_show_readonly"}
+
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["gnmi_show_readonly"]
+
+
+def test_reconcile_overwrites_when_role_differs(ss, config_db):
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-client.test.example.com", "role": ["admin", "gnmi_show_readonly"]}]
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": ["admin"]}
+
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin", "gnmi_show_readonly"]
+
+
+def test_reconcile_skips_when_role_matches(ss, config_db):
+    ss, container_fs, host_fs, commands = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-client.test.example.com", "role": ["admin"]}]
+    config_db["GNMI|gnmi"] = {"user_auth": "cert"}
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": ["admin"]}
+
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin"]
+    assert not any(args[:4] == ("sudo", "-n", "config", "apply-patch") for _, args in commands)
+
+
+def test_apply_config_patch_empty_is_noop(ss):
+    ss_mod, container_fs, host_fs, commands = ss
+    assert ss_mod._apply_config_patch([]) is True
+    assert commands == []
+
+
+def test_apply_config_patch_calls_nsenter(ss):
+    ss_mod, container_fs, host_fs, commands = ss
+    patch = [{"op": "add", "path": "/GNMI_CLIENT_CERT", "value": {"probe.example.com": {"role": ["admin"]}}}]
+
+    assert ss_mod._apply_config_patch(patch) is True
+
+    apply_cmds = [args for _, args in commands if args[:4] == ("sudo", "-n", "config", "apply-patch")]
+    assert len(apply_cmds) == 1
+
+
+def test_apply_config_patch_failure_returns_false(ss, monkeypatch):
+    ss_mod, container_fs, host_fs, commands = ss
+    monkeypatch.setattr(ss_mod, "run_nsenter", lambda *a, **kw: (1, b"", b"YANG validation failed"))
+
+    assert ss_mod._apply_config_patch([{"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"}]) is False
+
+
+def test_build_enabled_patch_table_absent(ss, config_db):
+    """When GNMI_CLIENT_CERT table is absent, patch uses a single 'add' at table level."""
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = [
+        {"cname": "a.test.example.com", "role": ["admin"]},
+        {"cname": "b.test.example.com", "role": ["readonly"]},
+    ]
+
+    patch = ss_mod._build_enabled_patch()
+
+    assert {"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"} in patch
+    assert len(patch) == 2
+    table_op = [p for p in patch if p["path"] == "/GNMI_CLIENT_CERT"]
+    assert len(table_op) == 1
+    assert table_op[0]["op"] == "add"
+    assert set(table_op[0]["value"]) == {"a.test.example.com", "b.test.example.com"}
+
+
+def test_build_enabled_patch_mixed_new_and_existing(ss, config_db):
+    """When table exists, new entries get 'add' and stale entries get 'replace'."""
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = [
+        {"cname": "existing.test.example.com", "role": ["admin", "readonly"]},
+        {"cname": "new.test.example.com", "role": ["admin"]},
+    ]
+    config_db["GNMI_CLIENT_CERT|existing.test.example.com"] = {"role": ["admin"]}
+
+    patch = ss_mod._build_enabled_patch()
+
+    cert_ops = [p for p in patch if p["path"].startswith("/GNMI_CLIENT_CERT/")]
+    assert len(cert_ops) == 2
+    replace_op = [p for p in cert_ops if p["op"] == "replace"]
+    assert [p["path"] for p in replace_op] == ["/GNMI_CLIENT_CERT/existing.test.example.com"]
+    add_op = [p for p in cert_ops if p["op"] == "add"]
+    assert [p["path"] for p in add_op] == ["/GNMI_CLIENT_CERT/new.test.example.com"]
+
+
+def test_build_enabled_patch_all_up_to_date(ss, config_db):
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = [{"cname": "ok.test.example.com", "role": ["admin"]}]
+    config_db["GNMI|gnmi"] = {"user_auth": "cert", "port": "50052"}
+    config_db["GNMI_CLIENT_CERT|ok.test.example.com"] = {"role": ["admin"]}
+
+    assert ss_mod._build_enabled_patch() == []
+
+
+def test_build_enabled_patch_ignores_telemetry_table(ss, config_db):
+    """user_auth in the TELEMETRY table does not satisfy the GNMI table."""
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = []
+    config_db["TELEMETRY|gnmi"] = {"user_auth": "cert"}
+
+    assert ss_mod._build_enabled_patch() == [{"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"}]
+
+
+def test_main_once_reconciles_before_sync(monkeypatch):
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    ss = importlib.import_module("systemd_stub")
+    calls = []
+    monkeypatch.setattr(ss, "reconcile_config_db_once", lambda: calls.append("reconcile"), raising=True)
+    monkeypatch.setattr(ss, "ensure_sync", lambda: calls.append("sync") or True, raising=True)
+    monkeypatch.setattr(sys, "argv", ["systemd_stub.py", "--once"])
+
+    assert ss.main() == 0
+    assert calls == ["reconcile", "sync"]
+
+
+# ─────────────────────────── Client-auth env parsing ───────────────────────────
+
+_CLIENT_AUTH_ENV_VARS = (
+    "GNMI_CLIENT_CERT_VERIFY_ENABLED", "TELEMETRY_CLIENT_CERT_VERIFY_ENABLED",
+    "GNMI_CLIENT_CERTS", "GNMI_CLIENT_CNAME", "TELEMETRY_CLIENT_CNAME", "GNMI_CLIENT_ROLE",
+)
+
+
+def _import_with_env(monkeypatch, env_vars):
+    for k in _CLIENT_AUTH_ENV_VARS:
+        monkeypatch.delenv(k, raising=False)
+    for k, v in env_vars.items():
+        monkeypatch.setenv(k, v)
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    return importlib.import_module("systemd_stub")
+
+
+@pytest.mark.parametrize("env,expected", [
+    ({}, None),
+    ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "true"}, True),
+    ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "false"}, False),
+    ({"TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "true"}, True),
+    ({"TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "false"}, False),
+    ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "false", "TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "true"}, False),
+    ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "true", "TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "false"}, True),
+])
+def test_verify_enabled_env(monkeypatch, env, expected):
+    assert _import_with_env(monkeypatch, env).GNMI_VERIFY_ENABLED is expected
+
+
+class TestParseClientCerts:
+    """Tests for _parse_client_certs() env-var parsing."""
+
+    @pytest.fixture(autouse=True)
+    def _env(self, monkeypatch):
+        self.monkeypatch = monkeypatch
+
+    def _certs(self, env_vars):
+        return _import_with_env(self.monkeypatch, env_vars).GNMI_CLIENT_CERTS
+
+    def test_valid_json_array(self):
+        certs = self._certs({"GNMI_CLIENT_CERTS": '[{"cname": "client.gbl", "role": "admin"}]'})
+        assert certs == [{"cname": "client.gbl", "role": ["admin"]}]
+
+    def test_valid_json_multiple_entries(self):
+        certs = self._certs({
+            "GNMI_CLIENT_CERTS": '[{"cname": "a.gbl", "role": "admin"}, {"cname": "b.gbl", "role": "readonly"}]'
+        })
+        assert certs == [{"cname": "a.gbl", "role": ["admin"]}, {"cname": "b.gbl", "role": ["readonly"]}]
+
+    def test_role_as_json_list(self):
+        certs = self._certs({"GNMI_CLIENT_CERTS": '[{"cname": "s.gbl", "role": ["gnmi_show_readonly", "admin"]}]'})
+        assert certs == [{"cname": "s.gbl", "role": ["gnmi_show_readonly", "admin"]}]
+
+    def test_non_array_json_falls_back_to_legacy(self):
+        certs = self._certs({
+            "GNMI_CLIENT_CERTS": '{"cname": "c.gbl", "role": "admin"}',
+            "GNMI_CLIENT_CNAME": "legacy.gbl",
+            "GNMI_CLIENT_ROLE": "readonly",
+        })
+        assert certs == [{"cname": "legacy.gbl", "role": ["readonly"]}]
+
+    def test_invalid_json_falls_back_to_legacy(self):
+        certs = self._certs({"GNMI_CLIENT_CERTS": "not-json!", "GNMI_CLIENT_CNAME": "fallback.gbl"})
+        assert certs == [{"cname": "fallback.gbl", "role": ["gnmi_show_readonly"]}]
+
+    def test_entry_not_dict_falls_back(self):
+        certs = self._certs({"GNMI_CLIENT_CERTS": '["not-a-dict"]', "GNMI_CLIENT_CNAME": "fb.gbl"})
+        assert certs == [{"cname": "fb.gbl", "role": ["gnmi_show_readonly"]}]
+
+    def test_entry_missing_role_falls_back(self):
+        certs = self._certs({"GNMI_CLIENT_CERTS": '[{"cname": "x.gbl"}]', "GNMI_CLIENT_CNAME": "fb.gbl"})
+        assert certs == [{"cname": "fb.gbl", "role": ["gnmi_show_readonly"]}]
+
+    def test_entry_empty_cname_falls_back(self):
+        certs = self._certs({"GNMI_CLIENT_CERTS": '[{"cname": "  ", "role": "admin"}]', "GNMI_CLIENT_CNAME": "fb.gbl"})
+        assert certs == [{"cname": "fb.gbl", "role": ["gnmi_show_readonly"]}]
+
+    def test_legacy_single_entry(self):
+        certs = self._certs({"GNMI_CLIENT_CNAME": "legacy.gbl", "GNMI_CLIENT_ROLE": "admin"})
+        assert certs == [{"cname": "legacy.gbl", "role": ["admin"]}]
+
+    def test_legacy_default_role(self):
+        assert self._certs({"GNMI_CLIENT_CNAME": "legacy.gbl"}) == [{"cname": "legacy.gbl", "role": ["gnmi_show_readonly"]}]
+
+    def test_telemetry_cname_fallback(self):
+        certs = self._certs({"TELEMETRY_CLIENT_CNAME": "tlm.gbl", "GNMI_CLIENT_ROLE": "admin"})
+        assert certs == [{"cname": "tlm.gbl", "role": ["admin"]}]
+
+    def test_gnmi_cname_preferred_over_telemetry_cname(self):
+        certs = self._certs({"GNMI_CLIENT_CNAME": "gnmi.gbl", "TELEMETRY_CLIENT_CNAME": "tlm.gbl"})
+        assert certs == [{"cname": "gnmi.gbl", "role": ["gnmi_show_readonly"]}]
+
+    def test_no_env_returns_empty(self):
+        assert self._certs({}) == []
+
+    def test_whitespace_stripped(self):
+        certs = self._certs({"GNMI_CLIENT_CERTS": '[{"cname": " client.gbl ", "role": " admin "}]'})
+        assert certs == [{"cname": "client.gbl", "role": ["admin"]}]
