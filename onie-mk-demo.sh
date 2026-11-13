@@ -147,7 +147,9 @@ sed -i -e "s|%%PAYLOAD_IMAGE_SIZE%%|${tar_size}|" ${output_file}
 if [ -n "$INSTALLER_PLATFORM_METADATA" ] && [ -f "$INSTALLER_PLATFORM_METADATA" ]; then
     awk -v metafile="$INSTALLER_PLATFORM_METADATA" '
 /^%%PLATFORM_METADATA%%$/ {
-  while ((getline line < metafile) > 0) print line
+  while ((getline line < metafile) > 0) {
+    if (line ~ /^[[:space:]]*#/) print line
+  }
   close(metafile)
   print ""
   next
