@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Disallow CLI for the root user, since we don't have auth certs for root
+if [[ "$(id -u)" == 0 ]]
+then
+    echo "FATAL: root cannot launch CLI" >&2
+    exit 1
+fi
+TIMEOUT=605
+if [[ "$1" =~ "prompt=" ]]
+then
+   SYSTEM_NAME=`echo $1 | cut -d"=" -f2`
+   shift
+   docker exec -e SYSTEM_NAME=$SYSTEM_NAME -e CLI_USER="$USER" -u $(id -u):$(id -g) -it mgmt-framework /usr/sbin/cli/clish_start -t "$TIMEOUT" "$@"
+else
+   docker exec -e CLI_USER="$USER" -e SYSTEM_NAME=$HOSTNAME -u $(id -u):$(id -g) -it mgmt-framework /usr/sbin/cli/clish_start -t "$TIMEOUT" "$@"
+fi
+ret=$?
+if [ $ret -ne 0 ]; then
+   [[ -e /tmp/fast-reboot-progress || -e /tmp/reboot-progress ]] && sleep infinity
+fi

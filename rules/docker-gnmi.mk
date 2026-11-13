@@ -25,14 +25,19 @@ $(DOCKER_GNMI_DBG)_AFTER += $(DOCKER_TELEMETRY_WATCHDOG)
 SONIC_DOCKER_IMAGES += $(DOCKER_GNMI)
 SONIC_TRIXIE_DOCKERS += $(DOCKER_GNMI)
 ifeq ($(INCLUDE_SYSTEM_GNMI), y)
-SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_GNMI)
+# (mega-gen: folded into mega) # SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_GNMI)
 endif
 
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_GNMI_DBG)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_GNMI_DBG)
 ifeq ($(INCLUDE_SYSTEM_GNMI), y)
-SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_GNMI_DBG)
+# (mega-gen: folded into mega) # SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_GNMI_DBG)
 endif
+
+# NOTE: unlike most optional features, DOCKER_GNMI's build (SONIC_DOCKER_IMAGES)
+# is intentionally NOT gated by INCLUDE_SYSTEM_GNMI, because docker-telemetry
+# and docker-telemetry-watchdog load it as a base image via *_LOAD_DOCKERS
+# regardless of INCLUDE_SYSTEM_GNMI. Only installation into the final image is gated.
 
 $(DOCKER_GNMI)_CONTAINER_NAME = gnmi
 $(DOCKER_GNMI)_RUN_OPT += -t

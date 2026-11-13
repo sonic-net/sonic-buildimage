@@ -1,8 +1,8 @@
 [Unit]
 Description=SNMP container
 Requires=config-setup.service
-Requisite=swss.service
-After=config-setup.service swss.service syncd.service interfaces-config.service
+Requisite=mega.service
+After=config-setup.service mega.service syncd.service interfaces-config.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200
