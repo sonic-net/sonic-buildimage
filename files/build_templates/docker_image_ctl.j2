@@ -149,7 +149,7 @@ function preStartAction()
         echo "Stopping watchdog-control.service before starting PDE"
         systemctl stop watchdog-control.service
     fi
-{%- elif docker_container_name == "snmp" %}
+{%- elif docker_container_name in ["snmp", "gnmi"] %}
     if decode-syseeprom -s > /dev/null 2>&1; then
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
     else

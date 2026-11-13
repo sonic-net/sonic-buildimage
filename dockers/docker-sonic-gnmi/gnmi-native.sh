@@ -132,6 +132,12 @@ else
     TELEMETRY_ARGS+=" -v=2"
 fi
 
+# Save-on-set is off unless GNMI|gnmi save_on_set is set.
+SAVE_ON_SET=$(extract_field "$GNMI" '.save_on_set // empty')
+if [ -n "$SAVE_ON_SET" ]; then
+    TELEMETRY_ARGS+=" --with-save-on-set=$SAVE_ON_SET"
+fi
+
 # Enable ZMQ for SmartSwitch
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
