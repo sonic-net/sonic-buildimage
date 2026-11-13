@@ -96,15 +96,21 @@ def marker(tmp_path, sensor_name):
 
 class FakeGpio:
     """Stands in for gpioget. Lines default to dry; a value of None makes the
-    read fail as an absent or claimed line would."""
+    read fail as an absent or claimed line would.
+
+    script[line] is an optional list of values returned by successive reads,
+    one per read, before falling back to values[line]. It models a line that
+    changes between two reads of the same poll."""
 
     def __init__(self):
         self.values = {line: "0" for line in LINES.values()}
+        self.script = {}
         self.reads = []
 
     def __call__(self, line):
         self.reads.append(line)
-        value = self.values[line]
+        queued = self.script.get(line)
+        value = queued.pop(0) if queued else self.values[line]
         if value is None:
             raise liquid_cooling.leak_detect.LeakLineError(
                 "cannot read {}".format(line))
@@ -248,6 +254,104 @@ class TestHardware:
         assert sensor.is_leak() == True
         assert sensor.is_test_leak() == True
         assert sensor.is_leak_sensor_ok() == False
+
+
+def thermalctld_poll(sensor):
+    """One sensor poll in the order thermalctld's LiquidCoolingUpdater makes it,
+    returning what it would publish."""
+    ok = sensor.is_leak_sensor_ok()
+    leak = sensor.is_leak()
+    return (ok, leak, sensor.get_leak_severity(), sensor.is_test_leak())
+
+
+DRY = (True, False, None, False)
+FAULT = (False, False, None, False)
+
+
+class TestCoherentSample:
+    """Health, leak state, severity and test provenance must describe the same
+    read of the line, under the order thermalctld calls the accessors in."""
+
+    @pytest.mark.parametrize("value,expected", [
+        ("0", DRY),
+        ("1", (True, True, LeakSeverity.CRITICAL, False)),
+        (None, FAULT),
+    ])
+    def test_stable_line(self, lc, gpio, value, expected):
+        gpio.values["leak_fault_1"] = value
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == expected
+        assert thermalctld_poll(sensor) == expected
+
+    def test_one_read_per_poll(self, lc, gpio):
+        sensor = lc.get_leak_sensor(1)
+        thermalctld_poll(sensor)
+        assert gpio.reads == ["leak_fault_1"]
+        thermalctld_poll(sensor)
+        assert gpio.reads == ["leak_fault_1", "leak_fault_1"]
+
+    def test_success_then_failure(self, lc, gpio):
+        # A line that fails between the health and the leak read must not be
+        # published as a healthy dry sensor: that would end a tracked leak
+        # episode. The poll reports the first read, consistently.
+        gpio.script["leak_fault_1"] = ["1", None]
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == (True, True, LeakSeverity.CRITICAL,
+                                            False)
+        # The failure is seen on the next poll, as a fault, not as dry.
+        assert thermalctld_poll(sensor) == (False, False, None, False)
+
+    def test_failure_then_asserted(self, lc, gpio):
+        gpio.script["leak_fault_1"] = [None, "1"]
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == FAULT
+        assert thermalctld_poll(sensor) == (True, True, LeakSeverity.CRITICAL,
+                                            False)
+
+    def test_success_then_failure_with_injection(self, lc, gpio, leak_test):
+        # Test provenance belongs to the same sample as health: an injection
+        # over a line that has just failed is still a test leak on a faulty
+        # sensor, never a healthy test leak.
+        leak_test.set_test_leak("driptray_leak", True,
+                                severity=LeakSeverity.CRITICAL)
+        gpio.script["leak_fault_1"] = [None, "0"]
+        sensor = lc.get_leak_sensor(1)
+        ok, leak, severity, test = thermalctld_poll(sensor)
+        assert (ok, leak, test) == (False, True, True)
+
+    def test_hardware_leak_under_injection_is_not_a_test_leak(self, lc, gpio,
+                                                              leak_test):
+        leak_test.set_test_leak("driptray_leak", True,
+                                severity=LeakSeverity.CRITICAL)
+        gpio.script["leak_fault_1"] = ["1", "0"]
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == (True, True, LeakSeverity.CRITICAL,
+                                            False)
+
+    def test_reverse_order_shares_a_sample(self, lc, gpio):
+        gpio.script["leak_fault_1"] = ["1", None]
+        sensor = lc.get_leak_sensor(1)
+        assert sensor.is_leak() == True
+        assert sensor.is_leak_sensor_ok() == True
+        assert gpio.reads == ["leak_fault_1"]
+
+    def test_repeated_accessor_reads_again(self, lc, gpio):
+        sensor = lc.get_leak_sensor(1)
+        sensor.is_leak()
+        sensor.is_leak()
+        sensor.is_leak_sensor_ok()
+        sensor.is_leak_sensor_ok()
+        assert len(gpio.reads) == 3
+
+    def test_stale_sample_is_not_reused(self, lc, gpio, monkeypatch):
+        clock = [100.0]
+        monkeypatch.setattr(liquid_cooling.time, "monotonic", lambda: clock[0])
+        gpio.script["leak_fault_1"] = ["0", "1"]
+        sensor = lc.get_leak_sensor(1)
+        assert sensor.is_leak_sensor_ok() == True
+        clock[0] += liquid_cooling.SAMPLE_REUSE_SEC + 0.1
+        assert sensor.is_leak() == True
+        assert len(gpio.reads) == 2
 
 
 class TestReadGpioLine:
@@ -423,8 +527,8 @@ class TestMarkerFiles:
         assert poller.get_leak_sensor(0).is_test_leak() == False
 
     def test_accessors_report_last_poll(self, lc, leak_test):
-        # Only is_leak() re-reads the marker; the other accessors report the
-        # state recorded by the last poll, so one poll gives a consistent view.
+        # get_leak_severity() and is_test_leak() never re-read the marker;
+        # they report the state recorded by the last sample.
         sensor = lc.get_leak_sensor(0)
         assert sensor.is_leak() == False
 

@@ -180,8 +180,9 @@ def yes_no(flag):
 
 
 def sensor_status(lc, leak_test, leak_test_dir):
-    """One dict per sensor, filled in the order thermalctld polls: is_leak()
-    first, so the accessors after it report the same poll."""
+    """One dict per sensor, filled in the order thermalctld polls:
+    is_leak_sensor_ok() then is_leak(), which share one sample, so the
+    accessors after them report that same sample."""
     suffix = load_liquid_cooling_module().TEST_LEAK_SUFFIX
     return [{
         "name": sensor.get_name(),

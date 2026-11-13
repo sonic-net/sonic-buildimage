@@ -18,7 +18,7 @@
 # reboot. The pmon container, where thermalctld polls the sensors, sees the
 # same directory through the /run/bmc bind mount added for the aspeed platform
 # in files/build_templates/docker_image_ctl.j2. Because the sensor re-reads the
-# line and the marker on every is_leak() poll, a separate process holding its
+# line and the marker on every poll, a separate process holding its
 # own LiquidCooling object observes the injection, and withdrawing it returns
 # the sensor to its hardware state rather than to a snapshot taken at
 # injection time.
@@ -27,6 +27,7 @@
 try:
     import os
     import subprocess
+    import time
 
     from sonic_platform_base.leakage_sensor_test_base import LeakageSensorTestBase
     from sonic_platform_base.liquid_cooling_base import (
@@ -61,6 +62,17 @@ INVALID_INJECTION_SEVERITY = LeakSeverity.CRITICAL
 GPIOGET = "gpioget"
 GPIO_CONSUMER = "leak-detect"
 GPIOGET_TIMEOUT_SEC = 5
+
+# How long a sample taken by one sensor accessor may be handed to the other.
+# thermalctld calls is_leak_sensor_ok() and is_leak() back to back, so this only
+# has to cover that gap; a caller arriving later gets a fresh read.
+SAMPLE_REUSE_SEC = 1.0
+
+# The two accessors that read hardware. A sample taken by one is handed to the
+# other once, so a back-to-back pair sees one sample in either order.
+_ACCESSOR_LEAK = "is_leak"
+_ACCESSOR_OK = "is_leak_sensor_ok"
+_OTHER_ACCESSOR = {_ACCESSOR_LEAK: _ACCESSOR_OK, _ACCESSOR_OK: _ACCESSOR_LEAK}
 
 logger = SysLogger("nexthop-liquid-cooling")
 
@@ -128,10 +140,15 @@ class NexthopLeakageSensor(LeakageSensorBase):
     show command calls the same accessor ad hoc, so a filter here would hand
     one of them half-formed state. Debounce belongs on the GPIO line itself.
 
-    Only is_leak() reads the line and the marker. get_leak_severity() and
-    is_test_leak() are inherited from LeakageSensorBase and report the state
-    recorded by the last is_leak() call, so one poll gives a consistent view of
-    the sensor.
+    Health, leak state, severity and test provenance always come from one
+    sample: a single read of the line and the marker, recorded together by
+    _sample(). Both is_leak_sensor_ok() and is_leak() take a sample, and a
+    sample taken by one is handed once to the other when it follows within
+    SAMPLE_REUSE_SEC. thermalctld calls is_leak_sensor_ok(), is_leak(),
+    get_leak_severity() in that order; without the hand-off a line that fails
+    between the first two reads would be published as a healthy dry sensor and
+    end a tracked leak episode. get_leak_severity() and is_test_leak() are
+    inherited and report the last sample.
     """
 
     def __init__(self, spec, profile=None, leak_test_dir=LEAK_TEST_DIR,
@@ -152,6 +169,9 @@ class NexthopLeakageSensor(LeakageSensorBase):
         self._leak_test_dir = leak_test_dir
         self._read_line = read_line or read_gpio_line
         self._read_error = None
+        # Accessor allowed to reuse the current sample, and when it was taken.
+        self._reusable_by = None
+        self._sampled_at = 0.0
 
     def _marker(self):
         return _marker_path(self._leak_test_dir, self.name)
@@ -195,13 +215,13 @@ class NexthopLeakageSensor(LeakageSensorBase):
                     self.name, severity, INVALID_INJECTION_SEVERITY.value))
             return INVALID_INJECTION_SEVERITY
 
-    def is_leak(self):
-        """Re-derive the reported state: the hardware state of the line,
-        overlaid with any injection present in the marker file."""
+    def _sample(self):
+        """Read the line and the marker once and record health, leak state,
+        severity and test provenance together."""
         hw = self._hw_leaking()
-        self.leak_sensor_ok = hw is not None
         injected = self._injected_severity()
 
+        self.leak_sensor_ok = hw is not None
         if hw:
             self.leaking = True
             self.test_leak = False
@@ -214,6 +234,23 @@ class NexthopLeakageSensor(LeakageSensorBase):
             self.leaking = False
             self.test_leak = False
             self.leak_severity = self._hw_severity
+
+    def _sample_for(self, accessor):
+        """Take a fresh sample, unless the other accessor just took one that
+        this accessor has not yet consumed."""
+        now = time.monotonic()
+        if (self._reusable_by == accessor
+                and now - self._sampled_at <= SAMPLE_REUSE_SEC):
+            self._reusable_by = None
+            return
+        self._sample()
+        self._sampled_at = time.monotonic()
+        self._reusable_by = _OTHER_ACCESSOR[accessor]
+
+    def is_leak(self):
+        """The hardware state of the line, overlaid with any injection present
+        in the marker file."""
+        self._sample_for(_ACCESSOR_LEAK)
         return self.leaking
 
     def is_leak_sensor_ok(self):
@@ -224,7 +261,7 @@ class NexthopLeakageSensor(LeakageSensorBase):
         is reported as OK. This detects an unreadable line, not a damaged
         sensor.
         """
-        self.leak_sensor_ok = self._hw_leaking() is not None
+        self._sample_for(_ACCESSOR_OK)
         return self.leak_sensor_ok
 
     def get_leak_profile(self):
