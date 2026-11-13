@@ -178,6 +178,24 @@ assert_not_contains "TLS listener does not use plaintext fallback" \
     "${args_output}" "--noTLS"
 
 output="$(run_launcher)"
+assert_not_contains "missing save_on_set is not passed" \
+    "${output}" "--with-save-on-set"
+
+for save_on_set in true false; do
+    config="$(jq -cn --arg save_on_set "${save_on_set}" '{
+        certs: {
+            server_crt: "/server.crt",
+            server_key: "/server.key",
+            ca_crt: "/ca.crt"
+        },
+        gnmi: {port: "50052", client_auth: "false", save_on_set: $save_on_set}
+    }')"
+    output="$(run_launcher_config "${config}" | tail -n 1)"
+    assert_contains_once "save_on_set ${save_on_set} is forwarded" \
+        "${output}" "--with-save-on-set=${save_on_set}"
+done
+
+output="$(run_launcher)"
 assert_not_contains "missing paths blacklist file is not passed" \
     "${output}" "--paths_blacklist"
 
