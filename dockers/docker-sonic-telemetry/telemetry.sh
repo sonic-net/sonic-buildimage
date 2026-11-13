@@ -25,6 +25,7 @@ EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
 INVALID_TLS_CONFIGURATION=3
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
+PATHS_BLACKLIST_FILE=/etc/telemetry/paths_blacklist.txt
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
@@ -48,6 +49,7 @@ export GRPC_GO_LOG_VERBOSITY_LEVEL=99
 export GRPC_GO_LOG_SEVERITY_LEVEL=info
 
 TELEMETRY_ARGS=" -logtostderr"
+NO_TLS_FALLBACK=false
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
@@ -79,6 +81,7 @@ elif [ -n "$X509" ]; then
     fi
 else
     TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
+    NO_TLS_FALLBACK=true
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -168,7 +171,16 @@ fi
 
 GNMI_VRF=$(extract_field "$GNMI" '.vrf')
 if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
-    TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
+    if [[ "$NO_TLS_FALLBACK" == "true" && "$GNMI_VRF" != "default" ]]; then
+        echo "Ignoring gNMI VRF '$GNMI_VRF': certificate-free fallback is restricted to localhost; configure TLS certificates for management-VRF access" >&2
+    else
+        TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
+    fi
+fi
+
+# Reject requests for paths listed in the blacklist, when one is installed
+if [ -f "$PATHS_BLACKLIST_FILE" ]; then
+    TELEMETRY_ARGS+=" --paths_blacklist $PATHS_BLACKLIST_FILE"
 fi
 
 echo "telemetry args: $TELEMETRY_ARGS"

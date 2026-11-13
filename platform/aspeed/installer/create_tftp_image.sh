@@ -198,31 +198,27 @@ repack_sonic_initrd_for_tftp_installer() {
     chmod 755 "$d/sbin/sonic-fw-env-config.sh"
     cp "$PLATFORM_ASPEED/aspeed-platform-services/scripts/sonic-program-uboot-env.sh" "$d/sbin/sonic-program-uboot-env.sh"
     chmod 755 "$d/sbin/sonic-program-uboot-env.sh"
-    # Optional vendor U-Boot env hook. The initramfs has no platform deb, so
-    # stage it here as well or the vendor's bootcmd customization would only
-    # be applied on the first host boot. Only one hook is supported.
-    for _uboot_env_vendor_hook in \
-        "$PLATFORM_ASPEED"/sonic-platform-modules-*/common/scripts/sonic-uboot-env-vendor-hook; do
-        [ -f "$_uboot_env_vendor_hook" ] || continue
-        cp "$_uboot_env_vendor_hook" "$d/sbin/sonic-uboot-env-vendor-hook"
-        chmod 755 "$d/sbin/sonic-uboot-env-vendor-hook"
-        break
-    done
-    unset _uboot_env_vendor_hook
     _aspeed_repo_root="$(cd "$PLATFORM_ASPEED/../.." && pwd)"
     if [ -d "$_aspeed_repo_root/device/aspeed" ]; then
         mkdir -p "$d/device/aspeed"
         cp -a "$_aspeed_repo_root/device/aspeed/." "$d/device/aspeed/"
     fi
     # sonic-machine-conf-init.sh also names nexthop/arista AST2700 platforms. Ship
-    # just their installer.conf -- those vendor trees are ~20 MB, this initrd is small.
+    # just their installer.conf and optional U-Boot env vendor hook (run by
+    # sonic-program-uboot-env.sh for the detected platform only) -- those vendor
+    # trees are ~20 MB, this initrd is small.
     for _ic in "$_aspeed_repo_root"/device/*/arm64-*/installer.conf; do
         [ -f "$_ic" ] || continue
         _rel="${_ic#"$_aspeed_repo_root"/}"
         mkdir -p "$d/$(dirname "$_rel")"
         cp "$_ic" "$d/$_rel"
+        _hook="$(dirname "$_ic")/sonic-uboot-env-vendor-hook"
+        # Keep the source mode: the ramdisk and the host apply the same executable check.
+        if [ -f "$_hook" ]; then
+            cp "$_hook" "$d/$(dirname "$_rel")/sonic-uboot-env-vendor-hook"
+        fi
     done
-    unset _aspeed_repo_root _ic _rel
+    unset _aspeed_repo_root _ic _rel _hook
     inject_fsroot_extras_into_initrd "$d"
     inject_fsroot_nss_into_initrd "$d"
     if [ ! -f "$d/lib/modules/ftgmac100.ko" ] && [ -d "$d/lib/modules" ]; then

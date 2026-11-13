@@ -9,10 +9,10 @@
                 "name": "Scd(addr=0000:02:00.0)"
             },
             {
-                "name": "Scd(addr=0000:05:00.0)"
+                "name": "SkylarkSysCpld(addr=11-0023)"
             },
             {
-                "name": "SkylarkSysCpld(addr=11-0023)"
+                "name": "Scd(addr=0000:05:00.0)"
             }
         ],
         "fans": [],
@@ -90,6 +90,34 @@
             },
             {
                 "name": "Inlet Ambient Air",
+                "controllable": false
+            },
+            {
+                "name": "0V8_Core",
+                "controllable": false
+            },
+            {
+                "name": "3V3_Port_RT",
+                "controllable": false
+            },
+            {
+                "name": "0V75_TH5_0",
+                "controllable": false
+            },
+            {
+                "name": "0V9_TH5_0",
+                "controllable": false
+            },
+            {
+                "name": "3V3_Port_LT",
+                "controllable": false
+            },
+            {
+                "name": "0V75_TH5_1",
+                "controllable": false
+            },
+            {
+                "name": "0V9_TH5_1",
                 "controllable": false
             }
         ],

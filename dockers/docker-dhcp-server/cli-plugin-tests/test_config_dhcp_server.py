@@ -133,9 +133,12 @@ class TestConfigDHCPServer(object):
         runner = CliRunner()
         db = clicommon.Db()
         db.db = mock_db
-        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["del"], ["Vlan100"], obj=db)
+        # Vlan300 rather than Vlan100: the fixture now gives Vlan100 match bindings, and
+        # deleting an interface that still has them is refused. Vlan300 has none, so this
+        # keeps exercising the plain delete path.
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["del"], ["Vlan300"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        assert mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100") == False
+        assert mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300") == False
 
     def test_config_dhcp_server_ipv4_del_does_not_exist(self, mock_db):
         runner = CliRunner()

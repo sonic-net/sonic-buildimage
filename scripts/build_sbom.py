@@ -23,7 +23,10 @@ Inputs (env vars from slave.mk):
     SBOM_INSTALLER_DOCKERS     space-separated list of docker .gz filenames
                                that actually ship in this installer.
     SBOM_INSTALLER_DEBS        space-separated list of .deb filenames
-                               installed into the host rootfs.
+                               the installer installs or carries. Each
+                               must have a recipe fragment.
+    SBOM_INSTALLER_DEBS_PATH   the directory holding those .debs; the
+                               fragment must be beside each one there.
     SBOM_INSTALLER_WHEELS      space-separated list of .whl filenames
                                installed into the host rootfs.
 
@@ -47,9 +50,10 @@ Algorithm:
 Failure mode: when ENABLE_SBOM=y the user has opted into SBOM emission
 and a quietly-incomplete SBOM is worse than a build failure. The
 aggregator validates that core inputs exist (host rootfs, declared
-installer dockers, scanner binary) and exits non-zero if any are
-missing. Set SBOM_STRICT=n to downgrade these to warnings for
-debugging or one-off partial emits. Soft optional features
+installer dockers, scanner binary, a recipe fragment for each declared
+installer .deb) and exits non-zero if any are missing. Set
+SBOM_STRICT=n to downgrade these to warnings for debugging or one-off
+partial emits. Soft optional features
 (SPDX conversion, provenance emit, license resolution) continue to
 warn-and-continue.
 """
@@ -97,7 +101,7 @@ class SbomInputMissing(Exception):
     The build_sbom recipe in slave.mk treats this as fatal — the user
     opted into SBOM generation via ENABLE_SBOM=y and we can't honor
     that opt-in if a core data source (host rootfs, installer docker,
-    scanner binary) is absent.
+    scanner binary, the recipe fragment of an installer .deb) is absent.
     """
 
 
@@ -308,9 +312,41 @@ class FragmentIndex:
                         if artifact_filename:
                             self.fragments[artifact_filename] = comp
                         self.all.append(comp)
+        # Artifacts first: the dedupe keeps the first record of a purl,
+        # and a top-of-submodule .deb shares its purl with the source
+        # component of every other artifact built from that submodule.
+        self.all.sort(key=lambda c: _property(c, "sonic:fragment_kind")
+                      != "recipe-emit")
 
     def for_filename(self, name: str) -> Optional[dict]:
         return self.fragments.get(name)
+
+
+def check_fragments(installer_debs: list, fragments: FragmentIndex,
+                    debs_path: str = "") -> None:
+    """Every .deb the installer ships must have a recipe fragment.
+
+    Without one the package reaches the SBOM only through the scanner,
+    without the `sonic` namespace. With debs_path, only the fragment beside
+    the .deb counts: another distro's directory can hold the same filename.
+    Raises SbomInputMissing in strict mode.
+    """
+    def has_fragment(deb: str) -> bool:
+        if debs_path:
+            return os.path.isfile(os.path.join(debs_path, f"{deb}.cdx.json"))
+        return fragments.for_filename(deb) is not None
+
+    missing = sorted({d for d in installer_debs
+                      if d.endswith(".deb") and not has_fragment(d)})
+    if not missing:
+        return
+    msg = (f"no recipe fragment for {len(missing)} installer .deb(s): "
+           + " ".join(missing)
+           + "; run `make target/debs/<distro>/<deb>-clean` for each and rebuild")
+    if strict_mode():
+        error(msg)
+        raise SbomInputMissing(msg)
+    warn(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -1550,28 +1586,18 @@ def build_dependency_graph(components: list, root_ref: str = "",
                     "value": joined,
                 })
 
-    # (3) per-binary language deps (recipe-emit-{rust,go,python}) ->
-    # their owning .deb. sbom_fragment.py attaches sonic:source_deb to
-    # every such component; we look up the .deb's bom-ref and reverse
-    # the attribution into a dependsOn edge.
+    # (3) language deps (recipe-emit-{rust,go,python}) and source
+    # repositories (recipe-emit-source) -> each artifact named in their
+    # sonic:source_deb. It is multi-valued after the dedupe (one crate
+    # shipped by two .debs, one repository several wheels are built from).
     for c in components:
         crate_ref = c.get("bom-ref")
         if not crate_ref:
             continue
-        source_deb = None
-        is_lang_dep = False
-        for prop in c.get("properties", []) or []:
-            n = prop.get("name")
-            v = prop.get("value", "")
-            if n == "sonic:source_deb":
-                source_deb = v
-            elif n == "sonic:fragment_kind" and v.startswith("recipe-emit-") and v != "recipe-emit":
-                is_lang_dep = True
-        if not (is_lang_dep and source_deb):
-            continue
-        deb_ref = filename_to_ref.get(source_deb)
-        if deb_ref and deb_ref != crate_ref:
-            edges.setdefault(deb_ref, set()).add(crate_ref)
+        for source_deb in _multi_values(c, "sonic:source_deb"):
+            deb_ref = filename_to_ref.get(source_deb)
+            if deb_ref and deb_ref != crate_ref:
+                edges.setdefault(deb_ref, set()).add(crate_ref)
 
     # (6) code compiled into a program belongs to the program, not to the
     # filesystem the program sits in.
@@ -1796,6 +1822,7 @@ def merge_components(*sources: list) -> list:
                 _promote_scope(winner, c)
                 _promote_lockfiles(winner, c)
                 _promote_found_in(winner, c)
+                _promote_source_debs(winner, c)
                 _promote_provenance(winner, c)
                 for k in _promote_version(winner, c):
                     seen.setdefault(k, winner_idx)
@@ -2010,6 +2037,12 @@ def _promote_found_in(winner: dict, loser: dict) -> None:
         _add_multi(winner, "sonic:found_in", owner)
     for scope in _multi_values(loser, "sonic:layer_scope"):
         _add_multi(winner, "sonic:layer_scope", scope)
+
+
+def _promote_source_debs(winner: dict, loser: dict) -> None:
+    """Keep every artifact a deduped-out record names in sonic:source_deb."""
+    for artifact in _multi_values(loser, "sonic:source_deb"):
+        _add_multi(winner, "sonic:source_deb", artifact)
 
 
 # ---------------------------------------------------------------------------
@@ -2475,6 +2508,11 @@ def main() -> int:
     info(f"Loaded {len(fragments.all)} recipe-emit fragments from {target_path}/")
 
     # ---- Recipe-emit components (authoritative for SONiC-built things) ----
+    try:
+        check_fragments(split_env_list("SBOM_INSTALLER_DEBS"), fragments,
+                        os.environ.get("SBOM_INSTALLER_DEBS_PATH", ""))
+    except SbomInputMissing:
+        return 1
     recipe_components = list(fragments.all)
 
     # ---- Observation components for host rootfs ----

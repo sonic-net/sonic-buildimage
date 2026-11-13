@@ -50,22 +50,6 @@ log "Found switch CPU console rules, configuring console..."
 ln -sf "$RULES_SRC" "$RULES_DEST"
 log "Created symlink: $RULES_DEST -> $RULES_SRC"
 
-# Enable console feature
-log "Enabling console feature..."
-if config console enable; then
-    log "Console feature enabled via config command"
-else
-    log "WARNING: config console enable failed, trying direct DB write..."
-fi
-
-# Verify and ensure it's actually enabled in CONFIG_DB
-if sonic-db-cli -s --authenticate CONFIG_DB HSET "CONSOLE_SWITCH|console_mgmt" enabled yes; then
-    log "Console feature enabled in CONFIG_DB"
-else
-    log "ERROR: Failed to enable console feature in CONFIG_DB"
-    exit 1
-fi
-
 # Reload udev to activate the rules
 log "Reloading udev rules..."
 udevadm control --reload-rules
@@ -75,14 +59,14 @@ log "Udev rules reloaded and triggered"
 # Configure CONSOLE_PORT|0 with platform settings (preserve user config such as logging)
 log "Configuring CONSOLE_PORT|0 in CONFIG_DB..."
 
-existing_logging=$(sonic-db-cli -s CONFIG_DB HGET "CONSOLE_PORT|0" logging_enabled 2>/dev/null || true)
-existing_log_file=$(sonic-db-cli -s CONFIG_DB HGET "CONSOLE_PORT|0" log_file 2>/dev/null || true)
+existing_logging=$(sonic-db-cli CONFIG_DB HGET "CONSOLE_PORT|0" logging_enabled 2>/dev/null || true)
+existing_log_file=$(sonic-db-cli CONFIG_DB HGET "CONSOLE_PORT|0" log_file 2>/dev/null || true)
 if [ -n "$existing_logging" ] || [ -n "$existing_log_file" ]; then
     log "Preserving existing user config: logging_enabled=${existing_logging:-unset}, log_file=${existing_log_file:-unset}"
 fi
 
 log "Updating CONSOLE_PORT|0 platform settings: baud=$CONSOLE_BAUD_RATE, flow=$CONSOLE_FLOW_CONTROL, device=$CONSOLE_REMOTE_DEVICE"
-if sonic-db-cli -s --authenticate CONFIG_DB HMSET "CONSOLE_PORT|0" \
+if sonic-db-cli CONFIG_DB HMSET "CONSOLE_PORT|0" \
     baud_rate "$CONSOLE_BAUD_RATE" \
     flow_control "$CONSOLE_FLOW_CONTROL" \
     remote_device "$CONSOLE_REMOTE_DEVICE"; then
