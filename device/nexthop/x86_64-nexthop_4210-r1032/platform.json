@@ -1,4 +1,8 @@
 {
+    "asic_sensors": {
+        "poll_interval": "5",
+        "poll_admin_status": "enable"
+    },
     "interfaces": {
         "Ethernet0": {
             "breakout_modes": {
@@ -4342,6 +4346,774 @@
                 "name": "DCDC0_MEZZ1",
                 "low-threshold": false,
                 "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC core.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon4",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon5",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon6",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon7",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon8",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC Min",
