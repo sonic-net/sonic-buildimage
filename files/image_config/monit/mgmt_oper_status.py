@@ -10,7 +10,7 @@ from swsscommon.swsscommon import SonicV2Connector
 
 
 def main():
-    db = SonicV2Connector(use_unix_socket_path=True)
+    db = SonicV2Connector(use_unix_socket_path=True, authenticate=True)
     db.connect('CONFIG_DB')
     db.connect('STATE_DB')
     mgmt_ports_keys = db.keys(db.CONFIG_DB, 'MGMT_PORT|*')

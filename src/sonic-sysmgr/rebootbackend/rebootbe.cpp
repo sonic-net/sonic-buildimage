@@ -21,7 +21,7 @@ namespace rebootbackend {
 namespace gpu = ::google::protobuf::util;
 
 RebootBE::RebootBE(DbusInterface &dbus_interface)
-    : m_db("STATE_DB", 0),
+    : m_db("STATE_DB", 0, false, "", true),
       m_RebootResponse(&m_db, REBOOT_RESPONSE_NOTIFICATION_CHANNEL),
       m_NotificationConsumer(&m_db, REBOOT_REQUEST_NOTIFICATION_CHANNEL),
       m_dbus(dbus_interface),

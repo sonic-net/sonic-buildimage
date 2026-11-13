@@ -26,7 +26,7 @@ class PortIndexMapper(object):
                                               REDIS_TIMEOUT_MS,
                                               False)
 
-        self.state_db = swsscommon.SonicV2Connector(host='127.0.0.1', decode_responses=True)
+        self.state_db = swsscommon.SonicV2Connector(use_unix_socket_path=True, authenticate=True, host='127.0.0.1', decode_responses=True)
         self.state_db.connect(self.state_db.STATE_DB, False)
         self.sel = swsscommon.Select()
         self.tbls = [swsscommon.SubscriberStateTable(self.appl_db, t)

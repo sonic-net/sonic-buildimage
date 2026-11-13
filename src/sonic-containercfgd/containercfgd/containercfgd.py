@@ -44,7 +44,7 @@ class ContainerConfigDaemon(daemon_base.DaemonBase):
     def run(self):
         """Register config handlers and listen to CONFIG DB changes
         """
-        config_db = ConfigDBConnector()
+        config_db = ConfigDBConnector(use_unix_socket_path=True)
         config_db.connect(wait_for_init=True, retry_on=True)
         self.log_notice(f'Connected to CONFIG DB')
         for table_name, handler in self.handlers.items():
