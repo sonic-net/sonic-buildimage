@@ -218,6 +218,23 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   exit-address-family
 {% endblock maximum_paths %}
 {% endif %}
+{# -------bgp pic backup-path - start ------------------------------------ #}
+{% if BGP_DEVICE_GLOBAL_AF is defined and BGP_DEVICE_GLOBAL_AF|length > 0 %}
+{% set af_afi_map = {'ipv4_unicast': 'ipv4', 'ipv6_unicast': 'ipv6'} %}
+{% for af_key, af_val in BGP_DEVICE_GLOBAL_AF.items() %}
+{% if af_key in af_afi_map and
+     'install_backup_path' in af_val and af_val['install_backup_path'] != 'disabled' %}
+  address-family {{ af_afi_map[af_key] }} unicast
+{% if af_val['install_backup_path'] == 'pic-ecmp' %}
+    install backup-path ecmp
+{% else %}
+    install backup-path
+{% endif %}
+  exit-address-family
+{% endif %}
+{% endfor %}
+{% endif %}
+{# -------bgp pic backup-path - end -------------------------------------- #}
 {% endif %}
 !
 ! end of template: bgpd/bgpd.main.conf.j2

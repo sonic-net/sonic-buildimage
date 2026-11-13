@@ -129,6 +129,15 @@
 {% if 'route_download_filter' in af_val %}
   table-map {{af_val['route_download_filter']}}
 {% endif %}
+{# -------bgp pic backup-path - start --------------------------- #}
+{% if af != 'l2vpn_evpn' and 'install_backup_path' in af_val %}
+{% if af_val['install_backup_path'] == 'pic-ecmp' %}
+  install backup-path ecmp
+{% elif af_val['install_backup_path'] == 'pic' %}
+  install backup-path
+{% endif %}
+{% endif %}
+{# -------bgp pic backup-path - end ----------------------------- #}
 {# -------bgp evpn - start --------------------------- #}
 {% if af == 'l2vpn_evpn' %}
 {% include "bgpd.conf.db.addr_family.evpn.j2" %}
