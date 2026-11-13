@@ -1,4 +1,4 @@
-from sonic_platform_base.sonic_storage.ssd import SsdUtil as SsdUtilGeneric
+from sonic_platform_base.sonic_ssd.ssd_generic import SsdUtil as SsdUtilGeneric
 
 class SsdUtil(SsdUtilGeneric):
     def parse_innodisk_info(self):
