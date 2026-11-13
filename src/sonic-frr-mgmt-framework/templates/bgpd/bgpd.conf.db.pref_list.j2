@@ -6,7 +6,10 @@
 {% for md in modes %}
 !
 {% for key, val in PREFIX_SET.items() %}
-{% if 'mode' in val %}
+{# mode declares a default of IPv4 in sonic-routing-policy-sets.yang, so an
+   absent (or empty) field is not an absent value -- requiring it here dropped
+   the whole prefix-set at boot. #}
+{% set set_mode = val['mode']|default('IPv4', true) %}
 {% for pf_key, pf_val in PREFIX.items() %}
 {# Support both PREFIX_LIST and PREFIX_NOSEQ_LIST #}
 {% if pf_key|count == 4 %}
@@ -19,7 +22,7 @@
 {% set pf_prefix = pf_key[1] %}
 {% set pf_len = pf_key[2] %}
 {% endif %}
-{% if pf_set == key and md == val['mode'] %}
+{% if pf_set == key and md == set_mode %}
 {% set seq='seq ' ~ pf_seq if pf_seq is defined else '' %}
 {% if pf_len == 'exact' %}
 {{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_prefix}}
@@ -35,7 +38,6 @@
 {% endif %}
 {% endif %}
 {% endfor %}
-{% endif %}
 {% endfor %}
 {% endfor %}
 {% endif %}
