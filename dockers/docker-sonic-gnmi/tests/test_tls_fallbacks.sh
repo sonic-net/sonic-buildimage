@@ -32,8 +32,8 @@ EOF
 
 chmod +x "${STUB_BIN}/sonic-cfggen" "${STUB_BIN}/sonic-db-cli" "${STUB_BIN}/telemetry"
 
-for image in docker-sonic-gnmi docker-sonic-telemetry; do
-    script="${DOCKERS_DIR}/${image}/$([[ "${image}" == docker-sonic-gnmi ]] && printf gnmi-native.sh || printf telemetry.sh)"
+for image in docker-sonic-gnmi; do
+    script="${DOCKERS_DIR}/${image}/gnmi-native.sh"
     test_script="${TEST_ROOT}/${image}.sh"
 
     [[ "$(grep -c '^TELEMETRY_VARS_FILE=' "${script}")" == 1 ]]
@@ -133,7 +133,7 @@ empty_x509="$(jq -c '.x509 = {
 }' <<< "${valid_x509}")"
 no_tls_config="$(jq -cn '{certs: "", x509: "", gnmi: ""}')"
 
-for image in docker-sonic-gnmi docker-sonic-telemetry; do
+for image in docker-sonic-gnmi; do
     run_launcher "${image}" "${valid_certs}"
     assert_started
     assert_has_arg --server_crt
@@ -208,4 +208,4 @@ for dpu_marker in type switch_type; do
     done
 done
 
-echo "native gNMI and legacy telemetry TLS fallback tests passed"
+echo "native gNMI TLS fallback tests passed"

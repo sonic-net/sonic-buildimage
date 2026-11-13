@@ -30,7 +30,7 @@ swsscommon.SonicV2Connector = MockConnector
 swsscommon.RestartWaiter = MagicMock()
 
 test_path = os.path.dirname(os.path.abspath(__file__))
-telemetry_path = os.path.join(test_path, 'telemetry')
+gnmi_path = os.path.join(test_path, 'gnmi')
 dhcp_relay_path = os.path.join(test_path, 'dhcp_relay')
 modules_path = os.path.dirname(test_path)
 scripts_path = os.path.join(modules_path, 'scripts')
@@ -451,12 +451,12 @@ def test_service_checker_group_expansion_retries_on_empty(mock_run, mock_docker_
 
 
 @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
-@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=telemetry_path))
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=gnmi_path))
 @patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
 @patch('docker.DockerClient')
 @patch('health_checker.utils.run_command')
 @patch('swsscommon.swsscommon.ConfigDBConnector')
-def test_service_checker_telemetry(mock_config_db, mock_run, mock_docker_client):
+def test_service_checker_gnmi(mock_config_db, mock_run, mock_docker_client):
     setup()
     mock_db_data = MagicMock()
     mock_get_table = MagicMock()
@@ -464,12 +464,6 @@ def test_service_checker_telemetry(mock_config_db, mock_run, mock_docker_client)
     mock_config_db.return_value = mock_db_data
     mock_get_table.return_value = {
         'gnmi': {
-            'state': 'enabled',
-            'has_global_scope': 'True',
-            'has_per_asic_scope': 'False',
-
-        },
-        'telemetry': {
             'state': 'enabled',
             'has_global_scope': 'True',
             'has_per_asic_scope': 'False',
@@ -485,8 +479,6 @@ def test_service_checker_telemetry(mock_config_db, mock_run, mock_docker_client)
     mock_docker_client_object.containers = mock_containers
     mock_docker_client_object.images = MagicMock()
     mock_docker_client_object.images.get = MagicMock()
-    except_err = docker.errors.ImageNotFound("Unit test")
-    mock_docker_client_object.images.get.side_effect = [except_err, None]
 
     mock_run.return_value = "gnmi-native                       RUNNING   pid 67, uptime 1:03:56"
 
