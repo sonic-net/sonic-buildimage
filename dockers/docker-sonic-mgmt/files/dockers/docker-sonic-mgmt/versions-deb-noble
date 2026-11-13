@@ -3,7 +3,6 @@ adwaita-icon-theme==46.0-1
 alsa-topology-conf==1.2.5.1-2
 alsa-ucm-conf==1.2.10-1ubuntu5.15
 appstream==1.0.2-1build6
-apt==2.8.4ubuntu0.1
 apt-transport-https==2.8.4ubuntu0.1
 apt-utils==2.8.4ubuntu0.1
 at-spi2-common==2.52.0-1build1
@@ -15,8 +14,8 @@ binutils-common==2.42-4ubuntu2.10
 binutils-x86-64-linux-gnu==2.42-4ubuntu2.10
 build-essential==12.10ubuntu1
 bzip2==1.0.8-5.1ubuntu0.1
-ca-certificates==20260816ubuntu0.24.04.1
-ca-certificates-java==20240118
+ca-certificates==20260816ubuntu0.24.04.2
+ca-certificates-java==20240118ubuntu0.24.04.2
 cmake==3.28.3-1build7
 cmake-data==3.28.3-1build7
 conserver-client==8.2.7-2build2
@@ -38,9 +37,9 @@ default-jre-headless==2:1.21-75+exp1
 dirmngr==2.4.4-2ubuntu17.6
 distro-info-data==2026.10.12-0ubuntu0.24.04.1
 dmsetup==2:1.02.185-3ubuntu3.2
-docker-buildx-plugin==0.38.1-1~ubuntu.24.04~noble
+docker-buildx-plugin==0.39.0-1~ubuntu.24.04~noble
 docker-ce-cli==5:29.9.3-1~ubuntu.24.04~noble
-docker-compose-plugin==5.7.0-1~ubuntu.24.04~noble
+docker-compose-plugin==5.7.1-1~ubuntu.24.04~noble
 dpkg-dev==1.22.6ubuntu6.6
 fakeroot==1.33-1
 fontconfig==2.15.0-1.1ubuntu2
@@ -95,7 +94,6 @@ libalgorithm-merge-perl==0.08-5
 libaom3==3.8.2-2ubuntu0.2
 libapparmor1==4.0.1really4.0.1-0ubuntu0.24.04.9
 libappstream5==1.0.2-1build6
-libapt-pkg6.0t64==2.8.4ubuntu0.1
 libarchive13t64==3.7.2-2ubuntu0.9
 libargon2-1==0~20190702+dfsg-4build1
 libasan8==14.2.0-4ubuntu2~24.04.1
@@ -115,9 +113,11 @@ libbinutils==2.42-4ubuntu2.10
 libbpf1==1:1.3.0-2build2
 libbrotli1==1.1.0-2ubuntu0.1
 libbsd0==0.12.1-1build1.1
-libc-dev-bin==2.39-0ubuntu8.9
-libc-devtools==2.39-0ubuntu8.9
-libc6-dev==2.39-0ubuntu8.9
+libc-bin==2.39-0ubuntu8.12
+libc-dev-bin==2.39-0ubuntu8.12
+libc-devtools==2.39-0ubuntu8.12
+libc6==2.39-0ubuntu8.12
+libc6-dev==2.39-0ubuntu8.12
 libcairo-gobject2==1.18.0-3build1
 libcairo2==1.18.0-3build1
 libcap2-bin==1:2.66-5ubuntu2.4
@@ -239,9 +239,8 @@ libpangoft2-1.0-0==1.52.1+ds-1build1
 libpcap0.8t64==1.10.4-4.1ubuntu3.1
 libpci3==1:3.10.0-2build1
 libpciaccess0==0.17-3ubuntu0.24.04.3
-libpcre2-8-0==10.42-4ubuntu2.2
 libpcsclite1==2.0.3-1build1
-libperl5.38t64==5.38.2-3.2ubuntu0.6
+libperl5.38t64==5.38.2-3.2ubuntu0.7
 libpixman-1-0==0.42.2-1build1
 libpng16-16t64==1.6.43-5ubuntu0.7
 libpolkit-agent-1-0==124-2ubuntu1.24.04.4
@@ -338,7 +337,7 @@ libxv1==2:1.0.11-1.1build1
 libxxf86dga1==2:1.1.5-1build1
 libxxf86vm1==1:1.1.4-1build4
 libyaml-0-2==0.2.5-1build1
-linux-libc-dev==6.8.0-147.147
+linux-libc-dev==6.8.0-149.149
 logrotate==3.21.0-2build1
 lsb-release==12.0-2
 lto-disabled-list==47
@@ -351,8 +350,8 @@ mesa-vulkan-drivers==25.2.8-0ubuntu0.24.04.4
 ncurses-term==6.4+20240113-1ubuntu2.2
 netbase==6.4
 networkd-dispatcher==2.2.4-1
-openjdk-21-jre==21.0.12.1+1-1~24.04.4
-openjdk-21-jre-headless==21.0.12.1+1-1~24.04.4
+openjdk-21-jre==21.0.13.0.3+1-1~24.04.1
+openjdk-21-jre-headless==21.0.13.0.3+1-1~24.04.1
 openssh-client==1:9.6p1-3ubuntu13.20
 openssh-server==1:9.6p1-3ubuntu13.20
 openssh-sftp-server==1:9.6p1-3ubuntu13.20
@@ -362,8 +361,9 @@ packagekit-tools==1.2.8-2ubuntu1.5
 parallel==20231122+ds-1
 patch==2.7.6-7build3
 pci.ids==0.0~2024.03.31-1ubuntu0.1
-perl==5.38.2-3.2ubuntu0.6
-perl-modules-5.38==5.38.2-3.2ubuntu0.6
+perl==5.38.2-3.2ubuntu0.7
+perl-base==5.38.2-3.2ubuntu0.7
+perl-modules-5.38==5.38.2-3.2ubuntu0.7
 pinentry-curses==1.2.1-3ubuntu5
 polkitd==124-2ubuntu1.24.04.4
 protobuf-compiler==3.21.12-8.2ubuntu0.4
@@ -379,7 +379,7 @@ python3-cryptography==41.0.7-4ubuntu0.4
 python3-dbus==1.3.2-5build3
 python3-dev==3.12.3-0ubuntu2.1
 python3-distro==1.9.0-1
-python3-distro-info==1.7build1
+python3-distro-info==1.7ubuntu0.1
 python3-gi==3.48.2-1
 python3-httplib2==0.20.4-3ubuntu0.1
 python3-jwt==2.7.0-1ubuntu0.4
