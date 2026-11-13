@@ -39,6 +39,14 @@ check program routeCheck with path "/usr/local/bin/route_check.py"
     every 5 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
 
+# chassis_db_consistency_checker.py: verify SYSTEM_LAG_ID_TABLE vs ASIC_DB LAG aggregate
+# IDs on VOQ chassis linecards (default; no args, like route_check.py). Non-VOQ and
+# supervisors exit 0. On mismatch, CRITICAL syslog and non-zero exit trigger alert.
+#
+check program chassisLagIdCheck with path "/usr/local/bin/chassis_db_consistency_checker.py"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
 # dualtor_neighbor_check.py: script to check if the neighbor entries in APPL_DB
 # has correct neighbor or tunnel route entries in ASIC_DB based on the mux
 # states.
