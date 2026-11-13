@@ -100,7 +100,7 @@ function wait_for_database_service()
 # $2 the string of a list of table prefixes
 function clean_up_tables()
 {
-    $SONIC_DB_CLI -s $1 EVAL "
+    $SONIC_DB_CLI --authenticate -s $1 EVAL "
     local tables = {$2}
     for i = 1, table.getn(tables) do
         local matches = redis.call('KEYS', tables[i])
