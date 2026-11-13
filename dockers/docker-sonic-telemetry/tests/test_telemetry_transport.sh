@@ -8,6 +8,7 @@ TEST_ROOT="$(mktemp -d)"
 TEST_SCRIPT="${TEST_ROOT}/telemetry.sh"
 STUB_BIN="${TEST_ROOT}/bin"
 TEMPLATE_FILE="${TEST_ROOT}/telemetry_vars.j2"
+BLACKLIST_FILE="${TEST_ROOT}/paths_blacklist.txt"
 trap 'rm -rf "${TEST_ROOT}"' EXIT
 
 mkdir -p "${STUB_BIN}"
@@ -16,6 +17,7 @@ touch "${TEMPLATE_FILE}"
 # shellcheck disable=SC2016
 sed \
     -e "s|^TELEMETRY_VARS_FILE=.*$|TELEMETRY_VARS_FILE=${TEMPLATE_FILE}|" \
+    -e "s|^PATHS_BLACKLIST_FILE=.*$|PATHS_BLACKLIST_FILE=${BLACKLIST_FILE}|" \
     -e 's|^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$|printf "telemetry args:%s\\n" "${TELEMETRY_ARGS}"|' \
     "${SCRIPT}" > "${TEST_SCRIPT}"
 chmod +x "${TEST_SCRIPT}"
@@ -116,5 +118,13 @@ assert_contains_once "TLS listener preserves management VRF" \
     "${args_output}" "--gnmi_vrf mgmt"
 assert_not_contains "TLS listener does not use plaintext fallback" \
     "${args_output}" "--noTLS"
+assert_not_contains "missing paths blacklist file is not passed" \
+    "${args_output}" "--paths_blacklist"
+
+touch "${BLACKLIST_FILE}"
+output="$(run_launcher "${config}")"
+args_output="$(tail -n 1 <<< "${output}")"
+assert_contains_once "installed paths blacklist file is passed" \
+    "${args_output}" "--paths_blacklist ${BLACKLIST_FILE}"
 
 echo "telemetry transport launcher tests passed"
