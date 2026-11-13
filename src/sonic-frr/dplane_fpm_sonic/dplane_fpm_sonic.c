@@ -219,6 +219,13 @@ struct fpm_nl_ctx {
 	struct event *t_ribwalk;
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
+	/* Reconnect refresh is pending or active until RMAC completes. */
+	atomic_bool refresh_chain_active;
+	/* Loopback-triggered SRv6 RIB-refresh state. */
+	struct event *t_srv6reset;
+	struct event *t_srv6walk;
+	/* A loopback change arrived during reconnect or an SRv6 walk. */
+	bool srv6_refresh_pending;
 
 	/* Statistic counters. */
 	struct {
@@ -278,6 +285,8 @@ enum fpm_nl_events {
 	FNE_RIB_FINISHED,
 	/* RMAC walk finished. */
 	FNE_RMAC_FINISHED,
+	/* SRv6 route walk finished. */
+	FNE_SRV6_FINISHED,
 };
 
 #define FPM_RECONNECT(fnc)                                                     \
@@ -297,10 +306,15 @@ static void fpm_lsp_send(struct event *t);
 static void fpm_lsp_reset(struct event *t);
 static void fpm_nhg_send(struct event *t);
 static void fpm_nhg_reset(struct event *t);
+static bool fpm_rib_walk(struct fpm_nl_ctx *fnc,
+			 void (*reschedule_fn)(struct event *t),
+			 struct event **reschedule_handle, bool srv6_only);
 static void fpm_rib_send(struct event *t);
 static void fpm_rib_reset(struct event *t);
 static void fpm_rmac_send(struct event *t);
 static void fpm_rmac_reset(struct event *t);
+static void fpm_srv6_route_send(struct event *t);
+static void fpm_srv6_route_reset(struct event *t);
 
 /*
  * CLI.
@@ -662,6 +676,13 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_ribwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
+
+	/* Keep SRv6 behind the next replay while its events are canceled. */
+	atomic_store_explicit(&fnc->refresh_chain_active, true,
+			      memory_order_release);
+
+	event_cancel_async(zrouter.master, &fnc->t_srv6walk, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_srv6reset, NULL);
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -1109,6 +1130,23 @@ static bool has_srv6_localsid_nexthop(struct zebra_dplane_ctx *ctx)
 	return false;
 }
 
+static bool fpm_srv6_route_has_segment(struct route_entry *re)
+{
+	struct nexthop *nexthop;
+
+	if (!re || !re->nhe)
+		return false;
+
+	for (ALL_NEXTHOPS_PTR(&re->nhe->nhg, nexthop))
+		if (!CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE) &&
+		    NEXTHOP_IS_ACTIVE(nexthop->flags) && nexthop->nh_srv6 &&
+		    nexthop->nh_srv6->seg6_segs &&
+		    !sid_zero(nexthop->nh_srv6->seg6_segs))
+			return true;
+
+	return false;
+}
+
 /**
  * Resets the SRv6 routes FPM flags so we send all SRv6 routes again.
  */
@@ -1119,9 +1157,17 @@ static void fpm_srv6_route_reset(struct event *t)
 	struct route_node *rn;
 	struct route_entry *re;
 	struct route_table *rt;
-	struct nexthop *nexthop;
 	rib_tables_iter_t rt_iter;
 
+	/* Queue one refresh behind the reconnect chain or the current walk. */
+	if (fnc->t_srv6walk ||
+	    atomic_load_explicit(&fnc->refresh_chain_active,
+				 memory_order_acquire)) {
+		fnc->srv6_refresh_pending = true;
+		return;
+	}
+
+	fnc->srv6_refresh_pending = false;
 	rt_iter.state = RIB_TABLES_ITER_S_INIT;
 	while ((rt = rib_tables_iter_next(&rt_iter))) {
 		for (rn = route_top(rt); rn; rn = srcdest_route_next(rn)) {
@@ -1131,19 +1177,17 @@ static void fpm_srv6_route_reset(struct event *t)
 				continue;
 
 			re = dest->selected_fib;
-			if (re == NULL)
+			if (!fpm_srv6_route_has_segment(re))
 				continue;
 
-			nexthop = re->nhe->nhg.nexthop;
-			if (nexthop && nexthop->nh_srv6 &&
-					!sid_zero((const struct seg6_seg_stack *)nexthop->nh_srv6->seg6_segs))
-				/* Unset FPM installation flag so it gets installed again. */
-				UNSET_FLAG(dest->flags, RIB_DEST_UPDATE_FPM);
+			/* Unset the flag so the route gets installed again. */
+			UNSET_FLAG(dest->flags, RIB_DEST_UPDATE_FPM);
 		}
 	}
 
-	/* Schedule next step: send RIB routes. */
-	event_add_event(zrouter.master, fpm_rib_send, fnc, 0, &fnc->t_ribwalk);
+	/* Schedule the standalone SRv6 RIB walker. */
+	event_add_event(zrouter.master, fpm_srv6_route_send, fnc, 0,
+			&fnc->t_srv6walk);
 }
 
 /*
@@ -2852,8 +2896,8 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	case DPLANE_OP_ADDR_INSTALL:
 	case DPLANE_OP_ADDR_UNINSTALL:
 		if (strmatch(dplane_ctx_get_ifname(ctx), "lo"))
-			event_add_timer(fnc->fthread->master, fpm_srv6_route_reset,
-				 fnc, 0, &fnc->t_ribreset);
+			event_add_timer(zrouter.master, fpm_srv6_route_reset,
+				fnc, 0, &fnc->t_srv6reset);
 		break;
 
 	case DPLANE_OP_BR_PORT_UPDATE:
@@ -3102,6 +3146,44 @@ static void fpm_nhg_send(struct event *t)
 static void fpm_rib_send(struct event *t)
 {
 	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+
+	if (!fpm_rib_walk(fnc, fpm_rib_send, &fnc->t_ribwalk, false))
+		return;
+
+	/* All RIB routes sent! */
+	WALK_FINISH(fnc, FNE_RIB_FINISHED);
+
+	/* Schedule next event: RMAC reset. */
+	event_add_event(zrouter.master, fpm_rmac_reset, fnc, 0,
+			 &fnc->t_rmacreset);
+}
+
+/* Standalone SRv6 RIB refresh after a loopback address change. */
+static void fpm_srv6_route_send(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+
+	if (!fpm_rib_walk(fnc, fpm_srv6_route_send, &fnc->t_srv6walk, true))
+		return;
+
+	WALK_FINISH(fnc, FNE_SRV6_FINISHED);
+
+	if (fnc->srv6_refresh_pending) {
+		fnc->srv6_refresh_pending = false;
+		event_add_timer(zrouter.master, fpm_srv6_route_reset, fnc, 0,
+				&fnc->t_srv6reset);
+	}
+}
+
+/*
+ * Walk the RIB and enqueue every destination whose FPM flag is clear.
+ * The caller supplies its retry callback and event handle. A standalone
+ * SRv6 walk skips unrelated routes whose FPM flags are also clear.
+ */
+static bool fpm_rib_walk(struct fpm_nl_ctx *fnc,
+			 void (*reschedule_fn)(struct event *t),
+			 struct event **reschedule_handle, bool srv6_only)
+{
 	rib_dest_t *dest;
 	struct route_node *rn;
 	struct route_table *rt;
@@ -3118,6 +3200,9 @@ static void fpm_rib_send(struct event *t)
 			/* Skip bad route entries. */
 			if (dest == NULL || dest->selected_fib == NULL)
 				continue;
+			if (srv6_only &&
+			    !fpm_srv6_route_has_segment(dest->selected_fib))
+				continue;
 
 			/* Check for already sent routes. */
 			if (CHECK_FLAG(dest->flags, RIB_DEST_UPDATE_FPM))
@@ -3131,9 +3216,9 @@ static void fpm_rib_send(struct event *t)
 				/* Free the temporary allocated context. */
 				dplane_ctx_fini(&ctx);
 
-				event_add_timer(zrouter.master, fpm_rib_send,
-						 fnc, 1, &fnc->t_ribwalk);
-				return;
+				event_add_timer(zrouter.master, reschedule_fn, fnc, 1,
+						reschedule_handle);
+				return false;
 			}
 
 			/* Mark as sent. */
@@ -3144,12 +3229,7 @@ static void fpm_rib_send(struct event *t)
 	/* Free the temporary allocated context. */
 	dplane_ctx_fini(&ctx);
 
-	/* All RIB routes sent! */
-	WALK_FINISH(fnc, FNE_RIB_FINISHED);
-
-	/* Schedule next event: RMAC reset. */
-	event_add_event(zrouter.master, fpm_rmac_reset, fnc, 0,
-			 &fnc->t_rmacreset);
+	return true;
 }
 
 /*
@@ -3215,9 +3295,17 @@ static void fpm_rmac_send(struct event *t)
 	hash_iterate(zrouter.l3vni_table, fpm_enqueue_l3vni_table, &fra);
 	dplane_ctx_fini(&fra.ctx);
 
-	/* RMAC walk completed. */
-	if (fra.complete)
+	/* RMAC completes the reconnect chain. Run any deferred SRv6 refresh. */
+	if (fra.complete) {
+		atomic_store_explicit(&fra.fnc->refresh_chain_active, false,
+				      memory_order_release);
 		WALK_FINISH(fra.fnc, FNE_RMAC_FINISHED);
+		if (fra.fnc->srv6_refresh_pending) {
+			fra.fnc->srv6_refresh_pending = false;
+			event_add_timer(zrouter.master, fpm_srv6_route_reset,
+					fra.fnc, 0, &fra.fnc->t_srv6reset);
+		}
+	}
 }
 
 /*
@@ -3272,6 +3360,9 @@ static void fpm_rib_reset(struct event *t)
 	struct route_node *rn;
 	struct route_table *rt;
 	rib_tables_iter_t rt_iter;
+
+	/* This full RIB replay covers earlier loopback changes. */
+	fnc->srv6_refresh_pending = false;
 
 	rt_iter.state = RIB_TABLES_ITER_S_INIT;
 	while ((rt = rib_tables_iter_next(&rt_iter))) {
@@ -3457,6 +3548,10 @@ static void fpm_process_event(struct event *t)
 		if (IS_ZEBRA_DEBUG_FPM)
 			zlog_debug("%s: LSP walk finished", __func__);
 		break;
+	case FNE_SRV6_FINISHED:
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: SRv6 route walk finished", __func__);
+		break;
 	}
 }
 
@@ -3468,6 +3563,7 @@ static int fpm_nl_start(struct zebra_dplane_provider *prov)
 	struct fpm_nl_ctx *fnc;
 
 	fnc = dplane_provider_get_data(prov);
+	atomic_init(&fnc->refresh_chain_active, true);
 	fnc->fthread = frr_pthread_new(NULL, prov_name, prov_name);
 	assert(frr_pthread_run(fnc->fthread, NULL) == 0);
 	fnc->ibuf = stream_new(DPLANE_FPM_NL_BUF_SIZE);
@@ -3507,6 +3603,8 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_ribwalk);
 	event_cancel(&fnc->t_rmacreset);
 	event_cancel(&fnc->t_rmacwalk);
+	event_cancel(&fnc->t_srv6reset);
+	event_cancel(&fnc->t_srv6walk);
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
