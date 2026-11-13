@@ -26,6 +26,7 @@ module sonic-static-anycast-gateway {
         container SAG {
             list SAG_LIST {
                 key "name";
+                max-elements 1;
 
                 leaf name {
                     description "SAG singleton entry name. Only GLOBAL is valid.";
