@@ -8,8 +8,7 @@ from unittest.mock import call, patch
 
 import pytest
 
-DEVICE = Path(__file__).resolve().parents[4] / "device/nexthop"
-PLUGIN = DEVICE / "common/plugins/syncd_request_pre_shutdown"
+PLUGIN = Path(__file__).resolve().parents[1] / "common/plugins/syncd_request_pre_shutdown"
 
 
 @pytest.fixture
