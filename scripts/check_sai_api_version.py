@@ -53,14 +53,21 @@ def query_image(image):
         raise VersionCheckError(f"Invalid image ID for {image}: {image_id!r}")
     name = "sai-api-check-" + uuid.uuid4().hex
     print(f"Checking {image} ({image_id})", flush=True)
+    probe_succeeded = False
     try:
         result = subprocess.run(
             ["docker", "run", "--name", name, "--network", "none", "-i",
              "--entrypoint", "python3", image_id, "-", "--syncd", "/usr/bin/syncd"],
             input=Path(__file__).read_text(encoding="utf-8"), text=True, capture_output=True, check=True, timeout=60,
         )
+        probe_succeeded = True
     finally:
-        subprocess.run(["docker", "rm", "--force", "--volumes", name], check=True, timeout=30)
+        try:
+            subprocess.run(["docker", "rm", "--force", "--volumes", name], check=True, timeout=30)
+        except (OSError, subprocess.SubprocessError) as error:
+            if probe_succeeded:
+                raise
+            print(f"SAI probe container cleanup failed for {name}: {error}", file=sys.stderr)
     versions = re.findall(r"^SAI_API_VERSION=(\d+)$", result.stdout, re.MULTILINE)
     if len(versions) != 1:
         raise VersionCheckError(f"Expected one SAI API version from {image}:\n{result.stdout}")
