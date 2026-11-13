@@ -47,3 +47,13 @@
 0123-bgpd-Fix-flags-used-by-use-underlays-nexthop-weight-command.patch
 0124-bgpd-Fix-route-map-use-count-for-SRv6-Service-routes.patch
 0125-bgpd-Flush-temporary-attr-after-SRv6-unicast-route-map.patch
+0126-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
+0127-bgpd-fold-EVPN-sync-info-from-every-ES-peer-path.patch
+0128-zebra-retire-a-sync-MAC-neighbours-when-the-MAC-goes.patch
+0129-zebra-do-not-let-a-kernel-echo-clear-a-neighbour-loc.patch
+0130-zebra-preserve-and-reconcile-inactive-MAC-neighbours.patch
+0131-zebra-revive-a-MAC-s-neighbours-when-the-MAC-becomes.patch
+0132-zebra-flush-a-local-inactive-MAC-once-nothing-pins-it.patch
+0133-zebra-make-the-EVPN-MH-local-inactive-decisions-unit.patch
+0134-zebra-remove-a-MAC-s-VXLAN-entry-when-it-moves-to-a.patch
+0135-zebra-keep-a-retired-neighbour-inactive-when-its-MAC.patch
