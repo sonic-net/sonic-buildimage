@@ -76,6 +76,7 @@ wheel_layer(
         "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
         "//src/sonic-containercfgd:sonic_containercfgd_wheel",
         "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
+        "@redis_dump_load//:wheel",
     ] + [whl_requirement(name) for name in [
         "bitarray",
         "grpcio",
@@ -88,7 +89,6 @@ wheel_layer(
         "protobuf",
         "pyang",
         "pyangbind",
-        "redis-dump-load",
         "regex",
         "six",
         "tabulate",

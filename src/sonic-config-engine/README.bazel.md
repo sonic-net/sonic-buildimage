@@ -147,8 +147,10 @@ resolving the requirements again.
 The source suites use `swsssdk` from the exact revision recorded by Make's
 submodule. Its Python 3 metadata requires `redis>=4.5.4`, so this lock selects
 4.5.4 even though the legacy Trixie builder initially installs 3.5.3.
-`redis-dump-load` also uses Make's exact source revision and existing pipeline
-patch; the PyPI 1.1 release omits two fixes present in that source revision.
+`redis-dump-load` uses the registry module `redis-dump-load@1.1.sonic.1`,
+which owns Make's exact source revision and patches. The pip source pin remains
+for the legacy SWSSSDK test dependency; production consumers use
+`@redis_dump_load//:redisdl` and `@redis_dump_load//:wheel`.
 
 After editing either input, regenerate the shared lock from the repository root
 with uv 0.12.18, for the native Linux AMD64/ARM64 Python 3.13 builds:

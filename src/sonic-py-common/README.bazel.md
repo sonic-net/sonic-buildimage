@@ -10,14 +10,17 @@ modules enabled by `setup.py` for Python 3.9+ on AMD64 and ARM64.
 `sonic_py_common-1.0-py3-none-any.whl`. It preserves the package and dependency
 metadata, license, generated gRPC modules, and the `sonic-db-load` and
 `sonic-db-dump` entry points. The DB helpers use SONiC's patched
-`redis-dump-load` source. The protobuf generation action declares its source
-inputs and pinned generator; it does not write generated files into the checkout.
+`redis-dump-load` source through `@redis_dump_load//:redisdl`. The protobuf
+generation action declares its source inputs and pinned generator; it does not write generated files into the checkout.
 
 Ordinary source additions in `sonic_py_common` are picked up by the source glob.
 Keep installed package declarations aligned with `setup.py`. Declare a new
 third-party import in `BUILD.bazel` and this directory's `requirements.in`.
 Config-engine includes that file and resolves both components into one shared
-`src/sonic-config-engine/requirements_lock.txt`; both use `@config_engine_pip`.
+`src/sonic-config-engine/requirements_lock.txt`; both use `@config_engine_pip`
+for pip dependencies. Production
+`redis-dump-load` uses the registry module; its pip source pin is retained only
+for the legacy SWSSSDK test dependency.
 For example, change the `natsort` pin here, then
 [regenerate the shared lock](../sonic-config-engine/README.bazel.md#python-dependencies).
 SONiC libraries depend on targets maintained by their owning repositories.

@@ -3,7 +3,8 @@ natsort==8.4.0
 PyYAML==6.0.3
 # The Make-pinned swsssdk source requires Redis Python >=4.5.4.
 redis==4.5.4
-# Match Make's source before applying its existing pipeline patch in MODULE.bazel.
+# Keep the Make-pinned source for the legacy SWSSSDK test dependency.
+# Production redis-dump-load comes from @redis_dump_load.
 redis-dump-load @ https://github.com/p/redis-dump-load/archive/758549795174dc6b3be70810e0e4d6308f80f1a3.tar.gz
 grpcio==1.71.0
 protobuf==5.29.6
