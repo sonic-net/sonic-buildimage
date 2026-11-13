@@ -19,6 +19,10 @@ module sonic-bgp-global {
         prefix ext;
     }
 
+    import sonic-srv6 {
+        prefix srv6;
+    }
+
     organization
         "SONiC";
 
@@ -27,6 +31,11 @@ module sonic-bgp-global {
 
     description
         "SONIC BGP Global YANG";
+
+    revision 2026-11-13 {
+        description
+            "Add SRv6 locator and SID advertisement controls to BGP global tables.";
+    }
 
     revision 2021-02-26 {
         description
@@ -60,6 +69,13 @@ module sonic-bgp-global {
                         range "1..4294967295";
                     }
                     description "Local autonomous system number for this BGP instance.";
+                }
+
+                leaf srv6_locator {
+                    type leafref {
+                        path "/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST/srv6:locator_name";
+                    }
+                    description "SRv6 locator configured for this BGP instance.";
                 }
 
                 leaf always_compare_med {
@@ -335,6 +351,28 @@ module sonic-bgp-global {
                 leaf afi_safi {
                     type string;
                     description "Address family name and subsequent address family name";
+                }
+
+                must "not(srv6_sid_advertise or srv6_sid_advertise_route_map) or " +
+                     "(vrf_name = 'default' and " +
+                     "(afi_safi = 'ipv4_unicast' or afi_safi = 'ipv6_unicast'))" {
+                    error-message "SRv6 SID advertisement is supported only for the default VRF IPv4/IPv6 unicast address families.";
+                }
+
+                must "not(srv6_sid_advertise_route_map) or boolean(srv6_sid_advertise)" {
+                    error-message "A SID advertisement route map requires srv6_sid_advertise to be configured.";
+                }
+
+                leaf srv6_sid_advertise {
+                    type boolean;
+                    description "Enable SRv6 Service SID advertisement for this address family.";
+                }
+
+                leaf srv6_sid_advertise_route_map {
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                    description "Optional route map used when advertising SRv6 Service SIDs.";
                 }
 
                 leaf max_ebgp_paths {

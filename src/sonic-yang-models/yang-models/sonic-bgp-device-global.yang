@@ -3,6 +3,14 @@ module sonic-bgp-device-global {
     prefix bgp_device_global;
     yang-version 1.1;
 
+    import sonic-srv6 {
+        prefix srv6;
+    }
+
+    import sonic-bgp-prefix-list {
+        prefix bgppl;
+    }
+
     organization
         "SONiC";
 
@@ -11,6 +19,10 @@ module sonic-bgp-device-global {
 
     description
         "SONIC Device-specific BGP global data";
+
+    revision 2026-11-14 {
+        description "Add BGP SRv6 GRT configuration.";
+    }
 
     revision 2026-04-28 {
         description "Add chassis_tsa_supported to select CHASSIS_APP_DB vs per-linecard TSA orchestration";
@@ -28,7 +40,7 @@ module sonic-bgp-device-global {
 
         container BGP_DEVICE_GLOBAL {
 
-            description "Device-level BGP global settings such as TSA, WCMP, and IDF isolation.";
+            description "Device-level BGP settings such as TSA, WCMP, IDF isolation, and SRv6.";
 
             container STATE {
 
@@ -93,6 +105,44 @@ module sonic-bgp-device-global {
                 }
             }
             /* end of CONFED container */
+
+            container SRV6 {
+                description "BGP SRv6 locator and GRT Service SID advertisement configuration.";
+
+                leaf bgp_srv6_locator {
+                    type leafref {
+                        path "/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST/srv6:locator_name";
+                    }
+                    description "SRv6 locator used to allocate BGP Service SIDs.";
+                }
+
+                leaf bgp_srv6_ipv4_sid_advertise {
+                    type boolean;
+                    default false;
+                    description "Enable Service SID advertisement for eligible IPv4 GRT routes.";
+                }
+
+                leaf bgp_srv6_ipv4_sid_prefix_list {
+                    type leafref {
+                        path "/bgppl:sonic-bgp-prefix-list/bgppl:PREFIX_LIST/bgppl:PREFIX_LIST_LIST/bgppl:prefix_type";
+                    }
+                    description "Optional IPv4 prefix list used to select GRT routes for SID advertisement.";
+                }
+
+                leaf bgp_srv6_ipv6_sid_advertise {
+                    type boolean;
+                    default false;
+                    description "Enable Service SID advertisement for eligible IPv6 GRT routes.";
+                }
+
+                leaf bgp_srv6_ipv6_sid_prefix_list {
+                    type leafref {
+                        path "/bgppl:sonic-bgp-prefix-list/bgppl:PREFIX_LIST/bgppl:PREFIX_LIST_LIST/bgppl:prefix_type";
+                    }
+                    description "Optional IPv6 prefix list used to select GRT routes for SID advertisement.";
+                }
+            }
+            /* end of SRV6 container */
         }
         /* end of BGP_DEVICE_GLOBAL container */
     }
