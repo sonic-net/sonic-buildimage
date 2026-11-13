@@ -36,8 +36,10 @@ SEVERITY_CRITICAL = "CRITICAL"
 LINE_DRIPTRAY = "leak_fault_1"
 LINE_COLDPLATE = "leak_fault_0"
 
-# Both lines are active high: asserted means leak. If a DTB ever declares them
-# inverted, gpioinfo shows the line as active-low and libgpiod applies it.
+# Both lines are active high: asserted means leak. Nothing inverts them
+# automatically: gpio-line-names only names the lines, and gpioget reports the
+# physical level unless it is asked for --active-low. If a board ever drives
+# these lines active low, flip LINE_ACTIVE_HIGH here.
 LINE_ACTIVE_HIGH = True
 
 # --- Sensor inventory -------------------------------------------------------
