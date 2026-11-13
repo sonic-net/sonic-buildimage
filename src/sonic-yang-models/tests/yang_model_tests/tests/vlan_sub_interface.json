@@ -71,7 +71,14 @@
         "desc": "Configure PortChannel VLAN sub interface with VNET reference."
     },
     "VLAN_SUB_INTERFACE_WITH_MISSING_VNET": {
-        "desc": "Configure VLAN sub interface with VNET reference but no VNET exsiting.",
+        "desc": "Configure VLAN sub interface with VNET reference but no VNET existing.",
         "eStrKey": "LeafRef"
+    },
+    "VLAN_SUB_INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Configure VLAN sub interface with ipv6_use_link_local_only enabled."
+    },
+    "VLAN_SUB_INTERFACE_INVALID_IPV6_LINK_LOCAL": {
+        "desc": "Configure VLAN sub interface with an invalid ipv6_use_link_local_only value.",
+        "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
     }
 }

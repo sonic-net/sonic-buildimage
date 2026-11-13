@@ -1,0 +1,11 @@
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/sai.mk $(PLATFORM_PATH)/sai.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+
+# The Marvell Teralynx SAI packages are version-pinned online debs: the release
+# version (SAI_RELEASE) and download URL live entirely in sai.mk, so keying the
+# .mk/.dep captures every version change. The four debs are independent
+# SONIC_ONLINE_DEBS entries, so each gets its own cache dependency definition.
+$(foreach deb,$(MRVL_TERALYNX_LIBSAI) $(MRVL_TERALYNX_HSAI) $(MRVL_TERALYNX_DRV) $(MRVL_TERALYNX_SHELL),\
+    $(eval $(deb)_CACHE_MODE  := GIT_CONTENT_SHA) \
+    $(eval $(deb)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)) \
+    $(eval $(deb)_DEP_FILES   := $(DEP_FILES)))

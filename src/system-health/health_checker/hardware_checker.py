@@ -171,12 +171,17 @@ class HardwareChecker(HealthChecker):
         :param config: Health checker configuration
         :return:
         """
-        if config.ignore_devices and 'psu' in config.ignore_devices and 'pdb' in config.ignore_devices:
+        ignore_psu = bool(config.ignore_devices) and 'psu' in config.ignore_devices
+        ignore_pdb = bool(config.ignore_devices) and 'pdb' in config.ignore_devices
+        if ignore_psu and ignore_pdb:
             return
 
         keys = self._db.keys(self._db.STATE_DB, HardwareChecker.PSU_TABLE_NAME + '*')
         if not keys:
-            self.set_object_not_ok('PSU', 'PSU', 'Failed to get PSU information')
+            # An empty PSU_INFO table is only a failure when PSU monitoring is expected.
+            # Platforms without PSUs (e.g. DPUs) ignore 'psu' to suppress this alarm.
+            if not ignore_psu:
+                self.set_object_not_ok('PSU', 'PSU', 'Failed to get PSU information')
             return
 
         for key in natsorted(keys):
@@ -187,6 +192,12 @@ class HardwareChecker(HealthChecker):
 
             name = key_list[1]
             if config.ignore_devices and name in config.ignore_devices:
+                continue
+
+            # PSU and PDB rows share PSU_INFO (PDB keys look like "PDB 1"); honor each
+            # category-level ignore independently so ignoring one does not check the other.
+            is_pdb = name.upper().startswith('PDB')
+            if (is_pdb and ignore_pdb) or (not is_pdb and ignore_psu):
                 continue
 
             data_dict = self._db.get_all(self._db.STATE_DB, key)
@@ -327,14 +338,21 @@ class HardwareChecker(HealthChecker):
                 continue
 
             data_dict = self._db.get_all(self._db.STATE_DB, key)
-            leak_status = data_dict.get('leak_status', None)
+            # thermalctld writes the state as 'leaking' and keeps 'leak_status' as a backward-compatibility alias
+            leak_status = data_dict.get('leaking', data_dict.get('leak_status'))
             if leak_status is None or leak_status == 'N/A':
                 self.set_object_not_ok('Liquid Cooling', name, 'Failed to get leakage sensor status for {}'.format(name))
                 continue
 
-            if leak_status.lower() == 'yes' and name not in self.leaking_sensors:
-                self.leaking_sensors.append(name)
-                new_leaking_sensors.append(name)
+            if leak_status.lower() not in ('yes', 'no'):
+                self.set_object_not_ok('Liquid Cooling', name, 'Unexpected leakage sensor status {} for {}'.format(leak_status, name))
+                continue
+
+            if leak_status.lower() == 'yes':
+                # Not OK on every check; the leak event is sent only when the leak starts
+                if name not in self.leaking_sensors:
+                    self.leaking_sensors.append(name)
+                    new_leaking_sensors.append(name)
                 self.set_object_not_ok('Liquid Cooling', name, 'Leakage sensor {} is leaking'.format(name))
                 continue
 

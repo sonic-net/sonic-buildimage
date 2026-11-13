@@ -1,0 +1,29 @@
+#!/bin/bash
+# This script is a hook invoked by SONiC for $1 (reboot/warm-reboot/fast-reboot).
+# Warm and fast reboot modes require the kernel to support CPU_IDLE.
+# If CPU_IDLE is not configured, fall back to the standard Debian reboot command.
+# The 'reboot -f' command does not stop services first,
+# which is acceptable for warm/fast reboots.
+
+KERNEL_CONFIG="/boot/config-*-a????"
+REBOOT_CMD="/usr/sbin/reboot -f"
+
+force_reboot() {
+    echo "--------------------------------------------------"
+    echo "$1 requires Kernel CONFIG_CPU_IDLE=y which is not set"
+    echo "$REBOOT_CMD   is forced"
+    exec $REBOOT_CMD
+}
+
+if [ "x$1x" = "xrebootx" ]; then
+    exit 0
+fi
+
+# if KERNEL_CONFIG file does not exist --> full reboot here
+ls $KERNEL_CONFIG >/dev/null 2>&1 || force_reboot "$1"
+
+# If CONFIG_CPU_IDLE is not exactly '=y' --> full reboot here
+grep -q '^CONFIG_CPU_IDLE=y$' $KERNEL_CONFIG || force_reboot "$1"
+
+# Do nothing here but return to caller to continue
+exit 0

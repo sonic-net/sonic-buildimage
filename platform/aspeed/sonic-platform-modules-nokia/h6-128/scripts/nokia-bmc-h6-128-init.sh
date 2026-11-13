@@ -22,9 +22,9 @@ file_exists() {
 assign_mac_eth0()
 {
     MAC_ADDR=$(sudo decode-syseeprom -m)
-    if [ -n $MAC_ADDR ]; then
+    if [ -n "$MAC_ADDR" ]; then
         sudo ifconfig eth0 down
-        sudo ifconfig eth0 hw ether $MAC_ADDR
+        sudo ifconfig eth0 hw ether "$MAC_ADDR"
         sudo ifconfig eth0 up
         echo "Nokia-BMC-H6-128: Updating BMC eth0 mac address ${MAC_ADDR}"
     else
@@ -34,6 +34,8 @@ assign_mac_eth0()
 
 # Disable sysrq-trigger
 echo 0 > /proc/sys/kernel/sysrq
+
+echo cb_pld 0x60 > /sys/bus/i2c/devices/i2c-14/new_device
 
 assign_mac_eth0
 

@@ -3,8 +3,10 @@ import os
 import shutil
 import subprocess
 import re
+import tempfile
 
 from unittest import TestCase
+from jinja2 import Environment, FileSystemLoader
 import tests.common_utils as utils
 from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 
@@ -68,6 +70,11 @@ class TestJ2Files(TestCase):
                 f.write(output)
 
         return output
+
+    def write_config_db_json(self, config):
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as config_file:
+            json.dump(config, config_file)
+            return config_file.name
 
     def run_diff(self, file1, file2):
         _, output = getstatusoutput_noshell(['diff', '-u', file1, file2])
@@ -171,6 +178,339 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'mvrf_interfaces_nomgmt'), self.output_file))
 
+    def test_interfaces_config_db_values(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        config_db_json = self.write_config_db_json({
+            'MGMT_INTERFACE': {
+                'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1',
+                    'forced_mgmt_routes': ['10.250.0.8/24', '10.250.0.9', '2001:db8::9'],
+                },
+                'eth0|2603:10e2:0:2902::8/64': {
+                    'gwaddr': '2603:10e2:0:2902::1',
+                    'forced_mgmt_routes': ['10.251.0.0/16', '2603:10e2:1::/64'],
+                },
+            },
+        })
+
+        try:
+            output = self.run_script(['-j', config_db_json, '-t', interfaces_template])
+        finally:
+            os.remove(config_db_json)
+
+        self.assertIn('auto eth0', output)
+        self.assertIn('up ip -4 route add default via 10.0.0.1 dev eth0 table default metric 201', output)
+        self.assertIn('up ip -4 rule add pref 32764 to 10.251.0.0/16 table default', output)
+        self.assertIn('up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table default metric 201', output)
+        self.assertIn('up ip -4 rule add pref 32764 to 10.250.0.8/24 table default', output)
+        self.assertIn('up ip -6 rule add pref 32764 to 2603:10e2:1::/64 table default', output)
+        for family, route in [('-4', '10.250.0.9'), ('-6', '2001:db8::9'),
+                              ('-4', '10.251.0.0/16'), ('-6', '2603:10e2:1::/64')]:
+            self.assertIn('up ip {} rule add pref 32764 to {} table default'.format(family, route), output)
+            self.assertIn('pre-down ip {} rule delete pref 32764 to {} table default'.format(family, route), output)
+
+    def test_interfaces_optional_config_db_values(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        cases = [
+            ({}, 'iface eth0 inet dhcp'),
+            ({'MGMT_INTERFACE': {}}, 'iface eth0 inet dhcp'),
+            ({'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.1'}}},
+             'iface eth0 inet static'),
+            ({'MGMT_INTERFACE': {'eth0|2001:db8::100/64': {
+                'gwaddr': '2001:db8::1', 'forced_mgmt_routes': []}}},
+             'iface eth0 inet6 static'),
+        ]
+        for config, expected in cases:
+            config_db_json = self.write_config_db_json(config)
+            try:
+                self.run_script(['-j', config_db_json, '-t', interfaces_template + ',' + self.output_file])
+                with open(self.output_file) as output_file:
+                    self.assertIn(expected, output_file.read())
+            finally:
+                os.remove(config_db_json)
+
+    def test_interfaces_config_db_clear_forced_routes(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        db_runner = """
+import json
+import os
+import runpy
+import sys
+import mock
+import copy
+from swsscommon.swsscommon import ConfigDBConnector
+
+config = json.loads(sys.argv[2])
+config['MGMT_INTERFACE'] = {
+    ConfigDBConnector.deserialize_key(key): ConfigDBConnector.raw_to_typed(
+        ConfigDBConnector.typed_to_raw(fields))
+    for key, fields in config['MGMT_INTERFACE'].items()
+}
+original = copy.deepcopy(config)
+script = sys.argv[1]
+sys.path.insert(0, os.path.dirname(script))
+sys.argv = [script] + sys.argv[3:]
+cfggen = runpy.run_path(script)
+connector = cfggen['ConfigDBPipeConnector']
+with mock.patch.object(connector, 'connect'), mock.patch.object(
+        connector, 'get_config', return_value=config):
+    cfggen['main']()
+assert config == original, 'Rendering mutated the ConfigDB input'
+"""
+        cases = [
+            ('10.0.0.100/24', '10.0.0.1', '10.0.0.2', '10.250.0.0/16', '-4'),
+            ('2001:db8::100/64', '2001:db8::1', '2001:db8::2', '2001:db8:1::/64', '-6'),
+        ]
+        for prefix, gateway, new_gateway, route, family in cases:
+            fields = {'gwaddr': gateway, 'forced_mgmt_routes': [route]}
+            config = {'MGMT_INTERFACE': {'eth0|' + prefix: fields}}
+            for routes, current_gateway in [([route], gateway), ([], gateway), ([], new_gateway)]:
+                fields['forced_mgmt_routes'] = routes
+                fields['gwaddr'] = current_gateway
+                subprocess.check_output([
+                    self.script_file[0], '-c', db_runner, self.script_file[-1],
+                    json.dumps(config), '-d', '-t', interfaces_template + ',' + self.output_file])
+                with open(self.output_file) as output_file:
+                    output = output_file.read()
+                self.assertIn('route add default via ' + current_gateway, output)
+                for action in ['up ip {} rule add', 'pre-down ip {} rule delete']:
+                    command = action.format(family) + ' pref 32764 to ' + route
+                    if routes:
+                        self.assertIn(command, output)
+                    else:
+                        self.assertNotIn(command, output)
+                self.assertNotIn('to  table', output)
+                if current_gateway != gateway:
+                    self.assertNotIn('via ' + gateway + ' ', output)
+
+    def test_interfaces_serialized_input_paths(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        entries = [
+            {'name': 'eth0', 'ip_prefix': '10.0.0.100/24', 'gwaddr': '10.0.0.1'},
+            {'name': 'eth0', 'ip_prefix': '2001:db8::100/64', 'gwaddr': '2001:db8::1',
+             'forced_mgmt_routes': ['10.20.0.0/16', '2001:db8:1::/64']},
+        ]
+        config = {'MGMT_INTERFACE': {
+            entry['name'] + '|' + entry['ip_prefix']: {
+                key: value for key, value in entry.items() if key not in ('name', 'ip_prefix')
+            } for entry in entries
+        }}
+        yang_config = {
+            'sonic-mgmt_port:sonic-mgmt_port': {
+                'sonic-mgmt_port:MGMT_PORT': {'MGMT_PORT_LIST': [{'name': 'eth0'}]}},
+            'sonic-mgmt_interface:sonic-mgmt_interface': {
+                'sonic-mgmt_interface:MGMT_INTERFACE': {'MGMT_INTERFACE_LIST': entries}},
+        }
+        config_file = self.write_config_db_json(config)
+        yang_file = self.write_config_db_json(yang_config)
+        try:
+            expected = self.run_script(['-j', config_file, '-t', interfaces_template])
+            arguments = [
+                ['--additional-data', json.dumps(config)],
+                ['-j', config_file, '--additional-data', json.dumps(config)],
+                ['-y', config_file],
+            ]
+            if utils.PY3x:
+                arguments += [['-Y', yang_file], ['-Y', yang_file, '-j', config_file]]
+            for argument in arguments:
+                self.run_script(argument + ['-t', interfaces_template + ',' + self.output_file])
+                with open(self.output_file) as output_file:
+                    self.assertEqual(output_file.read(), expected, argument)
+            if utils.PY3x:
+                conflicting_file = self.write_config_db_json({
+                    'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.2'}}})
+                try:
+                    output = self.run_script(['-j', conflicting_file, '-Y', yang_file,
+                                              '-t', interfaces_template])
+                    self.assertEqual(output, expected)
+                finally:
+                    os.remove(conflicting_file)
+        finally:
+            os.remove(config_file)
+            os.remove(yang_file)
+
+    def test_interfaces_additional_data_overrides_file(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        config_file = self.write_config_db_json({
+            'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.1'}}})
+        additional = {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.2'}}}
+        try:
+            output = self.run_script(['-j', config_file, '--additional-data', json.dumps(additional),
+                                      '-t', interfaces_template])
+            self.assertEqual(output.count('iface eth0 inet static'), 1)
+            self.assertIn('route add default via 10.0.0.2', output)
+            self.assertNotIn('via 10.0.0.1', output)
+        finally:
+            os.remove(config_file)
+
+    def test_interfaces_reject_config_db_injection(self):
+        invalid_configs = [
+            {
+                'MGMT_INTERFACE': {
+                    'eth0': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0\nup touch /tmp/injected|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0;touch /tmp/injected|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24\nup touch /tmp/injected': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1; touch /tmp/injected',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '$(touch /tmp/injected)',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': 'fe80::1%$(touch /tmp/injected)',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '2001:db8::1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': ['10.0.0.0/8\nup touch /tmp/injected'],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': ['`touch /tmp/injected`'],
+                    },
+                },
+            },
+        ]
+
+        expected_errors = [
+            'Invalid management interface key',
+            'Invalid management interface name',
+            'Invalid management interface name',
+            'Invalid IP prefix',
+            'Invalid IP address',
+            'Invalid IP address',
+            'Invalid IP address',
+            'IP address and prefix families do not match',
+            'Invalid IP address or prefix',
+            'Invalid IP address or prefix',
+        ]
+        self.assertEqual(len(invalid_configs), len(expected_errors))
+        for config, expected_error in zip(invalid_configs, expected_errors):
+            self.assert_interfaces_config_rejected(config, expected_error)
+
+    def test_interfaces_reject_malformed_config_db_values(self):
+        for table in [None, False, 0, '', [], ['eth0']]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': table}, 'Invalid management interface table')
+        for fields in [None, False, '', [], '10.0.0.1']:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': fields}},
+                'Invalid management interface entry')
+        for routes in [None, False, 0, '', {}, '10.20.0.0/16',
+                       {'10.20.0.0/16': 'not a route'}]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1', 'forced_mgmt_routes': routes}}},
+                'Invalid forced management routes list')
+        for prefix in ['10.0.0.100/255.255.255.0', '10.0.0.100/0.0.0.255',
+                       '10.0.0.100', '10.0.0.100/+24', '10.0.0.100/33',
+                       u'10.0.0.100/\u0662\u0664', '10.0.0.100/24\n',
+                       '2001:db8::100/129', '2001:db8::100%eth0/64']:
+            gateway = '2001:db8::1' if ':' in prefix else '10.0.0.1'
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|' + prefix: {'gwaddr': gateway}}},
+                'Invalid IP prefix')
+        for route in ['10.20.0.0/255.255.0.0', '10.20.0.0/0.0.255.255',
+                      '2001:db8::1%eth0', '10.20.0.0/33', None, {}]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1', 'forced_mgmt_routes': [route]}}},
+                'Invalid IP address or prefix')
+        for routes in [['', '10.20.0.0/16'], ['10.20.0.0/16', ''], ['', ''],
+                       [' '], ['\n'], ['', '$(invalid)']]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1', 'forced_mgmt_routes': routes}}},
+                'Invalid IP address or prefix')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {
+                'eth0|10.0.0.100': {'gwaddr': 'INVALID'},
+                'eth0|10.0.0.100/32': {'gwaddr': '10.0.0.1'}}},
+            'Invalid IP prefix')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {'eth0|10.0.0.100/24|extra': {'gwaddr': '10.0.0.1'}}},
+            'Invalid management interface key')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {}}},
+            'Invalid IP address')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {'eth0|2001:db8::100/64': {'gwaddr': '10.0.0.1'}}},
+            'IP address and prefix families do not match')
+
+    def assert_interfaces_config_rejected(self, config, expected_error):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        sentinel = 'existing interfaces configuration\n'
+        config_db_json = self.write_config_db_json(config)
+        try:
+            with open(self.output_file, 'w') as output_file:
+                output_file.write(sentinel)
+            for arguments in [['-j', config_db_json], ['--additional-data', json.dumps(config)]]:
+                process = subprocess.Popen(
+                    self.script_file + arguments + ['-t', interfaces_template + ',' + self.output_file],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                _, stderr = process.communicate()
+                self.assertNotEqual(process.returncode, 0, repr(config))
+                self.assertIn(('ValueError: ' + expected_error).encode('utf-8'), stderr, repr(config))
+                with open(self.output_file) as output_file:
+                    self.assertEqual(output_file.read(), sentinel)
+        finally:
+            os.remove(config_db_json)
+
 
     def test_ports_json(self):
         ports_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ports.json.j2')
@@ -234,6 +574,207 @@ class TestJ2Files(TestCase):
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                   'docker-dhcp-relay.supervisord.conf'), self.output_file))
 
+    def test_dhcp_relay_rejects_invalid_interface_names(self):
+        wait_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'wait_for_intf.sh.j2'
+        )
+        supervisor_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'docker-dhcp-relay.supervisord.conf.j2'
+        )
+        temp_dir = tempfile.mkdtemp(prefix='dhcp-relay-interface-validation-')
+        config_path = os.path.join(temp_dir, 'config.json')
+        invalid_names = (
+            '',
+            '-Vlan100',
+            'Vlan100;touch',
+            'Vlan100$(touch)',
+            'Vlan100`touch`',
+            'Vlan100 * ?',
+            "Vlan100'",
+            'Vlan100"',
+            'Vlan100\\name',
+            'Vlan100/name',
+            'Vlan100,other',
+            'Vlan100:other',
+            'Vlan100]other',
+            'Vlan100%(ENV_HOME)s',
+            'Vlan100\ncommand=/bin/sh -c true',
+            'Vlan100\n',
+            'Vlan100\r\nautostart=true',
+            'Vlan100\targument',
+            'Vl\u00e1n100',
+            'Vlan100\0suffix',
+        )
+
+        try:
+            for invalid_name in invalid_names:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        invalid_name: {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        '{}|192.0.2.1/24'.format(invalid_name): {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                for template in (wait_template, supervisor_template):
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        subprocess.check_output(
+                            self.script_file + ['-j', config_path, '-t', template],
+                            stderr=subprocess.STDOUT
+                        )
+                    output = error.exception.output.decode()
+                    self.assertIn('Invalid interface name', output)
+
+            for invalid_name in invalid_names:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        invalid_name: {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        invalid_name: {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                with self.assertRaises(subprocess.CalledProcessError) as error:
+                    subprocess.check_output(
+                        self.script_file + [
+                            '-j', config_path, '-t', supervisor_template
+                        ],
+                        stderr=subprocess.STDOUT
+                    )
+                output = error.exception.output.decode()
+                self.assertIn('Invalid interface name', output)
+
+            table_inputs = (
+                ('INTERFACE', 'Ethernet0\ncommand=/bin/sh -c true'),
+                ('PORTCHANNEL_INTERFACE', 'PortChannel1\r\nautostart=true'),
+                ('MGMT_INTERFACE', 'eth0\npriority=1'),
+            )
+            for table, invalid_name in table_inputs:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        'Vlan100': {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        'Vlan100|192.0.2.1/24': {},
+                    },
+                    table: {
+                        '{}|198.51.100.1/24'.format(invalid_name): {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                templates = [supervisor_template]
+                if table != 'MGMT_INTERFACE':
+                    templates.append(wait_template)
+                for template in templates:
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        subprocess.check_output(
+                            self.script_file + [
+                                '-j', config_path, '-t', template
+                            ],
+                            stderr=subprocess.STDOUT
+                        )
+                    output = error.exception.output.decode()
+                    self.assertIn('Invalid interface name', output)
+
+            invalid_ipv6_name = 'Vlan200\ncommand=/bin/sh -c true'
+            config = {
+                'VLAN_INTERFACE': {
+                    '{}|2001:db8::1/64'.format(invalid_ipv6_name): {},
+                },
+                'DHCP_RELAY': {
+                    invalid_ipv6_name: {
+                        'dhcpv6_servers': ['2001:db8::10'],
+                    },
+                },
+            }
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+            with self.assertRaises(subprocess.CalledProcessError) as error:
+                subprocess.check_output(
+                    self.script_file + [
+                        '-j', config_path, '-t', wait_template
+                    ],
+                    stderr=subprocess.STDOUT
+                )
+            self.assertIn(
+                'Invalid interface name', error.exception.output.decode()
+            )
+
+            valid_names = (
+                'Ethernet0',
+                'Ethernet-BP0',
+                'Ethernet-IB0',
+                'Ethernet-Rec0',
+                'Ethernet0.100',
+            )
+            config = {
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'deployment_id': '0',
+                    },
+                },
+                'VLAN': {
+                    'Vlan100': {
+                        'dhcp_servers': ['192.0.2.10'],
+                    },
+                },
+                'VLAN_INTERFACE': {
+                    'Vlan100': {},
+                    'Vlan100|192.0.2.1/24': {},
+                },
+                'INTERFACE': {
+                    '{}|198.51.100.{}/31'.format(name, index * 2): {}
+                    for index, name in enumerate(valid_names, 1)
+                },
+                'PORTCHANNEL_INTERFACE': {
+                    'PortChannel0001|203.0.113.1/31': {},
+                },
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.1/24': {},
+                },
+            }
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+            for template in (wait_template, supervisor_template):
+                rendered = self.run_script([
+                    '-j', config_path, '-t', template
+                ])
+                for name in valid_names:
+                    self.assertIn(name, rendered)
+        finally:
+            shutil.rmtree(temp_dir)
+
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-router-advertiser', 'radvd.conf.j2')
@@ -273,6 +814,199 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(expected_mgmt_ipv4_with_ports, self.output_file))
 
+    def test_lldp_hostname_injection_stripped(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        payloads = (
+            ('LF', 'switch-t0\nconfigure system description injected'),
+            ('CR', 'switch-t0\rconfigure system description injected'),
+            ('CRLF', 'switch-t0\r\nconfigure system description injected'),
+        )
+
+        for separator, payload in payloads:
+            additional_data = json.dumps({
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'hostname': payload,
+                    },
+                },
+            })
+            argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            hostname_lines = [
+                line for line in output.splitlines()
+                if line.startswith('configure system hostname ')
+            ]
+            self.assertEqual(
+                len(hostname_lines),
+                1,
+                '{} payload created multiple hostname lines'.format(separator)
+            )
+            self.assertEqual(
+                hostname_lines[0],
+                'configure system hostname switch-t0configure system description injected',
+                '{} payload was not collapsed onto the hostname line'.format(separator)
+            )
+            self.assertNotIn(
+                '\r',
+                output,
+                '{} payload left a carriage return in the rendered output'.format(separator)
+            )
+            self.assertFalse(
+                any(
+                    line.strip().startswith('configure system description injected')
+                    for line in output.splitlines()
+                ),
+                '{} payload created a standalone injected command'.format(separator)
+            )
+
+    def test_lldp_hostname_clean(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        additional_data = json.dumps({
+            'DEVICE_METADATA': {
+                'localhost': {
+                    'hostname': 'DUT_ASW-01.example',
+                },
+            },
+        })
+
+        argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('configure system hostname DUT_ASW-01.example\n', output)
+    def render_snmpd_conf(self, users):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_USER': users}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def render_snmpd_community_conf(self, communities):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_COMMUNITY': communities}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def test_snmpd_community_rendering(self):
+        communities = {
+            'readcommunity': {'TYPE': 'RO'},
+            'writecommunity': {'TYPE': 'RW'}
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity readcommunity\n', output)
+        self.assertIn('rocommunity6 readcommunity\n', output)
+        self.assertIn('rwcommunity writecommunity\n', output)
+        self.assertIn('rwcommunity6 writecommunity\n', output)
+
+    def test_snmpd_community_configuration_injection(self):
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        communities = {}
+        expected_values = []
+
+        for community_type in ('RO', 'RW'):
+            for separator_index, separator in enumerate(whitespace_separators):
+                marker = '{}_{}'.format(community_type, separator_index)
+                injected_tokens = 'rwcommunity evil_{}'.format(marker)
+                unsafe_community = 'safe_{}{}{}'.format(marker, separator, injected_tokens)
+                safe_community = 'safe_{}{}'.format(marker, injected_tokens.replace(' ', ''))
+                community = unsafe_community
+                communities[community] = {'TYPE': community_type}
+                expected_values.append((community_type, unsafe_community, safe_community, injected_tokens))
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for community_type, unsafe_community, safe_community, injected_tokens in expected_values:
+            directive = 'rocommunity' if community_type == 'RO' else 'rwcommunity'
+            self.assertNotIn(unsafe_community, output)
+            self.assertIn('{} {}\n'.format(directive, safe_community), output)
+            self.assertIn('{}6 {}\n'.format(directive, safe_community), output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
+
+    def test_snmpd_user_rendering(self):
+        users = {
+            'readuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RO',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            },
+            'writeuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RW',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            }
+        }
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertIn('rouser readuser Priv\n', output)
+        self.assertIn('CreateUser readuser SHA auth_pass AES encry_pass\n', output)
+        self.assertIn('rwuser writeuser Priv\n', output)
+        self.assertIn('CreateUser writeuser SHA auth_pass AES encry_pass\n', output)
+
+    def test_snmpd_user_configuration_injection(self):
+        rendered_fields = (
+            'name',
+            'SNMP_USER_TYPE',
+            'SNMP_USER_AUTH_TYPE',
+            'SNMP_USER_AUTH_PASSWORD',
+            'SNMP_USER_ENCRYPTION_TYPE',
+            'SNMP_USER_ENCRYPTION_PASSWORD'
+        )
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        users = {}
+        expected_values = []
+
+        for permission in ('RO', 'RW'):
+            for field_index, field in enumerate(rendered_fields):
+                for separator_index, separator in enumerate(whitespace_separators):
+                    marker = '{}_{}_{}'.format(permission, field_index, separator_index)
+                    injected_tokens = 'rocommunity {}'.format(marker)
+                    values = {
+                        'name': 'user{}'.format(marker),
+                        'SNMP_USER_TYPE': 'Priv',
+                        'SNMP_USER_PERMISSION': permission,
+                        'SNMP_USER_AUTH_TYPE': 'SHA',
+                        'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                        'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                        'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+                    }
+                    unsafe_value = values[field] + separator + injected_tokens
+                    safe_value = values[field] + injected_tokens.replace(' ', '')
+                    values[field] = unsafe_value
+                    user = values.pop('name')
+                    users[user] = values
+                    expected_values.append((unsafe_value, safe_value, injected_tokens))
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for unsafe_value, safe_value, injected_tokens in expected_values:
+            self.assertNotIn(unsafe_value, output)
+            self.assertIn(safe_value, output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
+
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-t', ipinip_file]
@@ -290,61 +1024,10 @@ class TestJ2Files(TestCase):
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_subnet_decap_enable.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
-    def test_ipinip_backend_tor_mellanox_no_storage(self):
-        # Mellanox BackEndToRRouter without storage_device - guard should fire (empty output).
+    def test_ipinip_disabled(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_tor_mellanox_with_storage(self):
-        # Mellanox BackEndToRRouter with storage_device - guard bypassed, normal ipinip config rendered.
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter", "storage_device": "true"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_tor_broadcom_no_storage(self):
-        # Broadcom BackEndToRRouter without storage_device - guard is Mellanox-only, normal config rendered.
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "broadcom", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage_broadcom.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-    
-    def test_ipinip_backend_leaf_broadcom_no_storage(self):
-        # Broadcom BackEndLeafRouter - 'LeafRouter' substring match makes is_broadcom_t1 true, so dscp_mode "pipe".
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "broadcom", "DEVICE_METADATA": {"localhost": {"type": "BackEndLeafRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_leaf_mellanox_no_storage(self):
-        # Mellanox BackEndLeafRouter without storage_device - guard should fire (empty output).
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndLeafRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_spine_mellanox_no_storage(self):
-        # Mellanox BackEndSpineRouter without storage_device - guard should fire (empty output).
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndSpineRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
+        extra_data = {"SYSTEM_DEFAULTS": {"ip_decap": {"status": "disabled"}}}
+        argument = ['-a', json.dumps(extra_data), '-t', ipinip_file]
         self.run_script(argument, output_file=self.output_file)
 
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
@@ -740,6 +1423,11 @@ class TestJ2Files(TestCase):
         # copy buffers_config.j2 to the SKU directory to have all templates in one directory
         buffers_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
         shutil.copy2(buffers_config_file, dir_path)
+        buffers_config_organization_file = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'build_templates',
+            'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file):
+            shutil.copy2(buffers_config_organization_file, dir_path)
 
         minigraph = os.path.join(self.test_dir, minigraph)
         argument = ['-m', minigraph, '-p', port_config_ini_file, '-t', buffers_file]
@@ -748,9 +1436,15 @@ class TestJ2Files(TestCase):
         # cleanup
         buffers_config_file_new = os.path.join(dir_path, 'buffers_config.j2')
         os.remove(buffers_config_file_new)
+        buffers_config_organization_file_new = os.path.join(
+            dir_path, 'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file_new):
+            os.remove(buffers_config_organization_file_new)
         self.remove_machine_conf(file_exist, dir_exist)
 
-        out_file_dir = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR)
+        out_file_dir = os.path.dirname(
+            utils.get_sample_output_file(self.test_dir, expected)
+        )
         expected_files = [expected, self.modify_cable_len(expected, out_file_dir)]
         match = False
         diff = ''
@@ -767,6 +1461,279 @@ class TestJ2Files(TestCase):
             self.copy_mmu_templates(dir_path, revert=True)
 
         assert match, diff
+
+    def test_buffers_mellanox_spc6_empty_data_port_profile_lists(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        test_data = [
+            ('x86_64-nvidia_sn6600_ld-r0', 'ACS-SN6600_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P128C2', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P64O128C2', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_simx-r0', 'ACS-SN6600', ['Ethernet512', 'Ethernet520', 'Ethernet528', 'Ethernet536']),
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6810_ld_simx-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+        ]
+
+        common_dir = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates')
+        for platform, sku, service_ports in test_data:
+            dir_path = os.path.join(
+                self.test_dir, '..', '..', '..', 'device', 'mellanox', platform, sku
+            )
+            environment = Environment(
+                loader=FileSystemLoader([dir_path, common_dir]),
+                trim_blocks=True
+            )
+            template = environment.get_template('buffers_defaults_t0.j2')
+            service_port_names = ','.join(service_ports)
+            scenarios = [
+                ('Ethernet0', service_port_names, ['Ethernet0'] + service_ports),
+                (service_port_names, '', service_ports),
+            ]
+
+            for context in ({}, {'dynamic_mode': True}):
+                module = template.make_module(context)
+                for active_ports, inactive_ports, expected_ports in scenarios:
+                    rendered = '{{{}}}'.format(
+                        module.generate_profile_lists_with_inactive_ports(
+                            active_ports, inactive_ports
+                        )
+                    )
+                    buffer_config = json.loads(rendered)
+
+                    self.assertEqual(
+                        set(buffer_config['BUFFER_PORT_INGRESS_PROFILE_LIST']),
+                        set(expected_ports)
+                    )
+                    self.assertEqual(
+                        set(buffer_config['BUFFER_PORT_EGRESS_PROFILE_LIST']),
+                        set(expected_ports)
+                    )
+
+    def test_buffers_mellanox_spc6_service_port_activity(self):
+
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        root = os.path.abspath(os.path.join(self.test_dir, '..', '..', '..'))
+        test_data = [
+            ('x86_64-nvidia_sn6600_ld-r0', 'ACS-SN6600_LD'),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P128C2'),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P64O128C2'),
+            ('x86_64-nvidia_sn6600_ld_simx-r0', 'ACS-SN6600_LD'),
+            ('x86_64-nvidia_sn6600_ld_simx-r0', 'Mellanox-SN6600_LD-P128C2'),
+            ('x86_64-nvidia_sn6600_ld_simx-r0', 'Mellanox-SN6600_LD-P64O128C2'),
+            ('x86_64-nvidia_sn6600_simx-r0', 'ACS-SN6600'),
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD'),
+            ('x86_64-nvidia_sn6810_ld_simx-r0', 'ACS-SN6810_LD'),
+        ]
+
+        def unique_objects(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise AssertionError('Duplicate JSON key: {}'.format(key))
+                result[key] = value
+            return result
+
+        for platform, sku in test_data:
+            sku_dir = os.path.join(root, 'device', 'mellanox', platform, sku)
+            environment = Environment(loader=FileSystemLoader([
+                sku_dir, os.path.join(root, 'files', 'build_templates')
+            ]))
+            service_ports = (['Ethernet512', 'Ethernet520', 'Ethernet528', 'Ethernet536']
+                             if sku == 'ACS-SN6600' else ['Ethernet512', 'Ethernet513'])
+            for role in ('ToRRouter', 'LeafRouter'):
+                for dynamic in (False, True):
+                    for active_ports in ([], service_ports[:1], ['Ethernet0'],
+                                         ['Ethernet0'] + service_ports[:1], ['Ethernet0'] + service_ports):
+                        active_service_ports = [port for port in service_ports if port in active_ports]
+                        with self.subTest(platform=platform, sku=sku, role=role,
+                                          dynamic=dynamic, active=active_ports):
+                            context = {
+                                'PORT': {port: {} for port in ['Ethernet0', 'Ethernet8'] + service_ports},
+                                'DEVICE_METADATA': {'localhost': {'type': role}},
+                                'DEVICE_NEIGHBOR': {
+                                    port: {'name': 'neighbor'}
+                                    for port in active_ports
+                                },
+                                'DEVICE_NEIGHBOR_METADATA': {'neighbor': {'type': 'LeafRouter'}},
+                            }
+                            template = environment.get_template(
+                                'buffers_dynamic.json.j2' if dynamic else 'buffers.json.j2'
+                            )
+                            config = json.loads(template.render(**context), object_pairs_hook=unique_objects)
+                            for table in ('BUFFER_PG', 'BUFFER_QUEUE',
+                                          'BUFFER_PORT_INGRESS_PROFILE_LIST', 'BUFFER_PORT_EGRESS_PROFILE_LIST'):
+                                self.assertEqual({key.split('|')[0] for key in config[table]}, set(context['PORT']))
+                            for port in service_ports:
+                                inactive = port not in active_service_ports and not dynamic
+                                expected_ingress = (
+                                    'ingress_lossless_zero_profile' if 'P128C2' in sku or 'P64O128C2' in sku
+                                    else 'ingress_lossy_zero_profile'
+                                ) if inactive else 'sp_ingress_port_profile'
+                                self.assertEqual(
+                                    config['BUFFER_PORT_INGRESS_PROFILE_LIST'][port]['profile_list'],
+                                    expected_ingress
+                                )
+                                self.assertEqual(config['BUFFER_PG'][port + '|0']['profile'],
+                                                 'ingress_lossy_pg_zero_profile' if inactive else 'sp_pg_lossy_profile')
+                                self.assertEqual([key for key in config['BUFFER_PG'] if key.startswith(port + '|')],
+                                                 [port + '|0'])
+                                self.assertEqual(
+                                    config['BUFFER_PORT_EGRESS_PROFILE_LIST'][port]['profile_list'],
+                                    'egress_lossy_zero_profile' if inactive else 'egress_lossy_profile'
+                                )
+                                for table, field in [('BUFFER_PG', 'profile'), ('BUFFER_QUEUE', 'profile'),
+                                                     ('BUFFER_PORT_INGRESS_PROFILE_LIST', 'profile_list'),
+                                                     ('BUFFER_PORT_EGRESS_PROFILE_LIST', 'profile_list')]:
+                                    entries = [value for key, value in config[table].items()
+                                               if key == port or key.startswith(port + '|')]
+                                    self.assertTrue(entries)
+                                    for entry in entries:
+                                        for name in entry[field].split(','):
+                                            self.assertIn(name, config['BUFFER_PROFILE'])
+                                            if table in ('BUFFER_PG', 'BUFFER_PORT_INGRESS_PROFILE_LIST'):
+                                                self.assertEqual(name.endswith('_zero_profile'), inactive)
+                                                if inactive:
+                                                    self.assertEqual(config['BUFFER_PROFILE'][name]['size'], '0')
+                                    if table == 'BUFFER_QUEUE' and (
+                                            port not in active_ports or 'Ethernet0' in active_ports):
+                                        data_port = 'Ethernet8' if port not in active_service_ports else 'Ethernet0'
+                                        data_entries = {key[len(data_port):]: value for key, value in config[table].items()
+                                                        if key == data_port or key.startswith(data_port + '|')}
+                                        service_entries = {key[len(port):]: value for key, value in config[table].items()
+                                                           if key == port or key.startswith(port + '|')}
+                                        if '|3-4' in service_entries:
+                                            # On SKUs with a lossless queue 3-4, service ports carry only
+                                            # lossy traffic, so that queue takes the lossy profile instead;
+                                            # every other queue still matches a data port. SKUs whose queues
+                                            # are all lossy have no |3-4 range key and need no special-casing.
+                                            lossy_34 = ('egress_lossy_zero_profile' if inactive
+                                                        else 'q_lossy_profile')
+                                            self.assertEqual(service_entries['|3-4']['profile'], lossy_34)
+                                            service_entries.pop('|3-4', None)
+                                            data_entries.pop('|3-4', None)
+                                        self.assertEqual(service_entries, data_entries)
+                            self.assertEqual(config['BUFFER_PG']['Ethernet0|0']['profile'],
+                                             'ingress_lossy_profile' if dynamic or 'Ethernet0' in active_ports
+                                             else 'ingress_lossy_pg_zero_profile')
+                            self.assertEqual(config['BUFFER_PG']['Ethernet8|0']['profile'],
+                                             'ingress_lossy_profile' if dynamic else 'ingress_lossy_pg_zero_profile')
+                            self.assertNotIn('|0', config['BUFFER_PG'])
+
+    def test_buffers_mellanox_spc6_service_port_cable_length(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        common_dir = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates')
+        test_data = [
+            ('x86_64-nvidia_sn6600_ld-r0', 'ACS-SN6600_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_simx-r0', 'ACS-SN6600', ['Ethernet512', 'Ethernet520', 'Ethernet528', 'Ethernet536']),
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6810_ld_simx-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+        ]
+
+        for platform, sku, service_ports in test_data:
+            sku_dir = os.path.join(self.test_dir, '..', '..', '..', 'device', 'mellanox', platform, sku)
+            environment = Environment(loader=FileSystemLoader([sku_dir, common_dir]))
+            template = environment.get_template('buffers.json.j2')
+            for role, neighbor_role, expected_length in [
+                ('ToRRouter', 'LeafRouter', '40m'),
+                ('LeafRouter', 'SpineRouter', '300m'),
+            ]:
+                ports = {'Ethernet0': {}, 'Ethernet8': {'role': 'Dpc'}}
+                ports.update({port: {} for port in service_ports})
+                context = {
+                    'PORT': ports,
+                    'DEVICE_METADATA': {'localhost': {'type': role}},
+                    'DEVICE_NEIGHBOR': {'Ethernet0': {'name': 'neighbor'}},
+                    'DEVICE_NEIGHBOR_METADATA': {'neighbor': {'type': neighbor_role}},
+                }
+                cable_lengths = json.loads(template.render(**context))['CABLE_LENGTH']['AZURE']
+                self.assertEqual(cable_lengths['Ethernet0'], expected_length)
+                self.assertEqual(cable_lengths['Ethernet8'], '0m')
+                for port in service_ports:
+                    self.assertEqual(cable_lengths[port], '0m')
+
+    def test_buffers_mellanox_spc6_service_ports_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        def render_buffer_config_template(platform, sku, minigraph, buffer_template):
+            file_exist, dir_exist = self.create_machine_conf(platform, 'mellanox')
+            dir_path = os.path.join(self.test_dir, '..', '..', '..', 'device', 'mellanox', platform, sku)
+            buffers_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
+            buffers_config_file_new = os.path.join(dir_path, 'buffers_config.j2')
+
+            try:
+                shutil.copy2(buffers_config_file, dir_path)
+                buffers_file = os.path.join(dir_path, buffer_template)
+                minigraph_file = os.path.join(self.test_dir, minigraph)
+                port_config_ini_file = os.path.join(dir_path, 'port_config.ini')
+                argument = ['-m', minigraph_file, '-p', port_config_ini_file, '-t', buffers_file]
+
+                return json.loads(self.run_script(argument))
+            finally:
+                if os.path.exists(buffers_config_file_new):
+                    os.remove(buffers_config_file_new)
+                self.remove_machine_conf(file_exist, dir_exist)
+
+        def assert_service_port_buffer_config(buffer_config, service_ports, dynamic=False):
+            for port in service_ports:
+                # The sample minigraph has no service-port neighbors.
+                self.assertEqual(
+                    buffer_config['BUFFER_PORT_INGRESS_PROFILE_LIST'][port]['profile_list'],
+                    'sp_ingress_port_profile' if dynamic else (
+                        'ingress_lossless_zero_profile' if sku == 'Mellanox-SN6600_LD-P128C2'
+                        else 'ingress_lossy_zero_profile'
+                    )
+                )
+                self.assertEqual(
+                    buffer_config['BUFFER_PG']['{}|0'.format(port)]['profile'],
+                    'sp_pg_lossy_profile' if dynamic else 'ingress_lossy_pg_zero_profile'
+                )
+                self.assertEqual(
+                    sorted(key for key in buffer_config['BUFFER_PG'] if key.startswith('{}|'.format(port))),
+                    ['{}|0'.format(port)]
+                )
+                # Egress paths (queue + egress profile list) are not filtered:
+                # service ports carry the same egress buffers as data ports.
+                self.assertTrue(any(key.startswith('{}|'.format(port)) for key in buffer_config['BUFFER_QUEUE']))
+                self.assertIn(port, buffer_config['BUFFER_PORT_EGRESS_PROFILE_LIST'])
+
+        test_data = [
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD', 't1-sample-graph-mlnx.xml', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P128C2', 't1-sample-graph-mlnx.xml', ['Ethernet512', 'Ethernet513']),
+        ]
+
+        for platform, sku, minigraph, service_ports in test_data:
+            buffer_config = render_buffer_config_template(
+                platform=platform,
+                sku=sku,
+                minigraph=minigraph,
+                buffer_template='buffers.json.j2'
+            )
+
+            assert_service_port_buffer_config(buffer_config, service_ports)
+            # Guard against a vacuous pass: assert a data port has queues before
+            # asserting no queue uses priority 7. Otherwise a template that
+            # excluded all data ports (empty BUFFER_QUEUE) would pass this test.
+            self.assertTrue(any(queue.startswith('Ethernet0|') for queue in buffer_config['BUFFER_QUEUE']))
+            self.assertFalse(any(queue.endswith('|7') for queue in buffer_config['BUFFER_QUEUE']))
+
+            # Also render the dynamic-buffer template: it sets dynamic_mode, a
+            # shipped path for these SKUs. The service-port PG invariant
+            # (a service port carries only a '|0' PG) must hold there too -
+            # without the data-port filter, the dynamic path would emit a
+            # spurious lossless '|3-4' PG on every service port.
+            dynamic_buffer_config = render_buffer_config_template(
+                platform=platform,
+                sku=sku,
+                minigraph=minigraph,
+                buffer_template='buffers_dynamic.json.j2'
+            )
+            assert_service_port_buffer_config(dynamic_buffer_config, service_ports, dynamic=True)
 
     def test_buffers_dell6100_render_template(self):
         self._test_buffers_render_template('dell', 'x86_64-dell_s6100_c2538-r0', 'Force10-S6100', 'sample-dell-6100-t0-minigraph.xml', 'buffers.json.j2', 'buffers-dell6100.json', copy_files=True)
@@ -893,8 +1860,8 @@ class TestJ2Files(TestCase):
         }
         for _, v in test_list.items():
             argument = ["-m", v["graph"], "-p", v["port_config"], "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -921,8 +1888,8 @@ class TestJ2Files(TestCase):
         for _, v in test_list.items():
             os.environ["NAMESPACE_ID"] = v["namespace_id"]
             argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -984,7 +1951,16 @@ class TestJ2Files(TestCase):
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
 
-        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_switch_bmc_conf(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_switch_bmc.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 1}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
@@ -993,7 +1969,7 @@ class TestJ2Files(TestCase):
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch.conf")
 
-        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
@@ -1002,7 +1978,7 @@ class TestJ2Files(TestCase):
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_dpu_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch_dpu.conf")
 
-        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
@@ -1014,6 +1990,366 @@ class TestJ2Files(TestCase):
         argument = ['-j', config_db_ntp_json, '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_conf_injection_stripped(self):
+        # ConfigDB validation (YANG) can be bypassed by a direct Redis write.
+        # A NTP_SERVER key/association_type/resolve_as value containing a
+        # newline or other whitespace must not be able to create a second
+        # chrony directive or inject extra arguments onto the rendered line.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        payloads = (
+            ('LF', '\nnoselect 6.6.6.6'),
+            ('CR', '\rnoselect 6.6.6.6'),
+            ('CRLF', '\r\nnoselect 6.6.6.6'),
+            ('space', ' noselect 6.6.6.6'),
+            ('tab', '\tnoselect 6.6.6.6'),
+        )
+
+        for marker, injected_suffix in payloads:
+            additional_data = json.dumps({
+                'NTP_SERVER': {
+                    'evil-server.example' + injected_suffix: {
+                        'association_type': 'server' + injected_suffix,
+                        'admin_state': 'enabled',
+                        'resolve_as': '10.20.30.40' + injected_suffix,
+                    }
+                }
+            })
+            argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            self.assertNotIn('\r', output, '{} payload left a carriage return in the rendered output'.format(marker))
+            self.assertFalse(
+                any(line.strip().startswith('noselect') for line in output.splitlines()),
+                '{} payload created a standalone injected directive'.format(marker)
+            )
+            self.assertIn(
+                'server 10.20.30.40noselect6.6.6.6\n',
+                output,
+                '{} payload was not collapsed onto a single server line'.format(marker)
+            )
+
+    def test_ntp_conf_injection_stripped_missing_resolve_as(self):
+        # Same as test_ntp_conf_injection_stripped, but exercises the
+        # server-key fallback path (config.resolve_as absent, so the
+        # NTP_SERVER key itself is used as resolve_as) instead of an
+        # explicit resolve_as value. Without this, a regression in the
+        # server-key sanitization path would go undetected.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                '10.20.30.40\nnoselect 6.6.6.6': {
+                    'association_type': 'server\nnoselect 6.6.6.6',
+                    'admin_state': 'enabled',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'missing-resolve_as fallback payload created a standalone injected directive'
+        )
+        self.assertIn(
+            'server 10.20.30.40noselect6.6.6.6\n',
+            output,
+            'missing-resolve_as fallback payload was not collapsed onto a single server line'
+        )
+
+    def test_ntp_conf_injection_stripped_pool(self):
+        # Same as test_ntp_conf_injection_stripped, but exercises the
+        # association_type == 'pool' override (line ~53), where resolve_as
+        # is reassigned from the NTP_SERVER key rather than config.resolve_as.
+        # A malicious explicit resolve_as would be ignored by this branch,
+        # so this must inject through the server key instead.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'pool.example\nnoselect 6.6.6.6': {
+                    'association_type': 'pool',
+                    'admin_state': 'enabled',
+                    'resolve_as': 'this-value-must-be-ignored',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'pool-branch payload created a standalone injected directive'
+        )
+        self.assertIn(
+            'pool pool.examplenoselect6.6.6.6\n',
+            output,
+            'pool-branch payload was not collapsed onto a single pool line'
+        )
+        self.assertNotIn('this-value-must-be-ignored', output)
+
+    def test_ntp_conf_association_type_restricted_to_schema_values(self):
+        # association_type is rendered as the directive name itself, so it
+        # must be restricted to the YANG enum's 'server'/'pool' values, not
+        # just stripped of whitespace. Otherwise a bypass write could set
+        # it to an arbitrary directive (e.g. association_type='allow' +
+        # resolve_as='0.0.0.0/0' would render "allow 0.0.0.0/0").
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                '0.0.0.0/0': {
+                    'association_type': 'allow',
+                    'admin_state': 'enabled',
+                    'resolve_as': '0.0.0.0/0',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertNotIn(
+            'allow 0.0.0.0/0\n',
+            output,
+            'unsupported association_type value was rendered as its own chrony directive'
+        )
+        self.assertIn(
+            'server 0.0.0.0/0\n',
+            output,
+            'unsupported association_type value was not rejected in favor of the safe server default'
+        )
+
+    def test_ntp_conf_key_version_injection_stripped(self):
+        # config.key (leafref to a uint16 NTP_KEY id) and config.version
+        # (uint8, range 3..4) are only constrained by YANG under validated
+        # writes; a direct Redis bypass write can still make either an
+        # arbitrary string, so both must be stripped at the render sink.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP': {'global': {'authentication': 'enabled'}},
+            'NTP_SERVER': {
+                'server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': '1.2.3.4',
+                    'key': '5\nnoselect 6.6.6.6',
+                    'version': '4\nnoselect 7.7.7.7',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'key/version payload created a standalone injected directive'
+        )
+        self.assertIn(
+            'server 1.2.3.4 key 5noselect6.6.6.6 version 4noselect7.7.7.7\n',
+            output,
+            'key/version payload was not collapsed onto the server line'
+        )
+
+    def test_ntp_conf_clean_rendering_unaffected(self):
+        # Regression: legitimate values (no injected whitespace) render
+        # exactly as before the stripping was introduced.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_keys_injection_stripped(self):
+        # The decoded NTP_KEY value can contain arbitrary bytes (base64
+        # encoding does not constrain its payload), so a key value that
+        # decodes to a string containing a newline must not be able to
+        # inject a second chrony.keys directive.
+        import base64
+
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        payloads = (
+            ('LF', 'goodkey\nnoselect 8.8.8.8'),
+            ('CR', 'goodkey\rnoselect 8.8.8.8'),
+            ('CRLF', 'goodkey\r\nnoselect 8.8.8.8'),
+        )
+
+        for marker, malicious_secret in payloads:
+            encoded_value = base64.b64encode(malicious_secret.encode()).decode()
+            additional_data = json.dumps({
+                'NTP_KEY': {
+                    '7': {
+                        'type': 'md5',
+                        'value': encoded_value,
+                    }
+                }
+            })
+            argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            self.assertNotIn('\r', output, '{} payload left a carriage return in the rendered output'.format(marker))
+            self.assertFalse(
+                any(line.strip().startswith('noselect') for line in output.splitlines()),
+                '{} payload created a standalone injected directive'.format(marker)
+            )
+            self.assertTrue(
+                any(line.startswith('7 MD5 goodkeynoselect8.8.8.8') for line in output.splitlines()),
+                '{} payload was not collapsed onto the key line'.format(marker)
+            )
+
+    def test_ntp_keys_keyid_type_injection_stripped(self):
+        # keyid (uint16 key-id) and NTP_KEY[keyid].type (enum key-type) are
+        # only constrained by YANG under validated writes; a direct Redis
+        # bypass write can still make either an arbitrary string, so both
+        # must be stripped at the render sink, not just the decoded value.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_KEY': {
+                '5\nnoselect 8.8.8.8': {
+                    'type': 'md5\nnoselect 9.9.9.9',
+                    'value': 'Z29vZGtleQ==',  # base64("goodkey")
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'keyid/type payload created a standalone injected directive'
+        )
+        self.assertIn(
+            '5noselect8.8.8.8 MD5NOSELECT9.9.9.9 goodkey',
+            output,
+            'keyid/type payload was not collapsed onto the key line'
+        )
+
+    def test_ntp_keys_trusted_arr_injection_stripped(self):
+        # trusted_arr collects resolve_as from NTP_SERVER entries marked
+        # trusted; this is a separate code path from the association line
+        # sanitization in chrony.conf.j2 and must be exercised on its own,
+        # otherwise a regression here would not be caught by the
+        # chrony.conf-focused injection tests above.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'trusted-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': '10.20.30.40\nnoselect 6.6.6.6',
+                    'trusted': 'yes',
+                }
+            },
+            'NTP_KEY': {
+                '7': {
+                    'type': 'md5',
+                    'value': 'Z29vZGtleQ==',  # base64("goodkey")
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'trusted_arr payload created a standalone injected directive'
+        )
+        self.assertIn(
+            '7 MD5 goodkey 10.20.30.40noselect6.6.6.6',
+            output,
+            'trusted_arr payload was not collapsed into the trusted list on the key line'
+        )
+
+    def test_ntp_keys_trusted_arr_comma_injection_stripped(self):
+        # strip_control_chars only removes whitespace/control characters,
+        # but trusted_str joins trusted_arr entries with ',' -- so a
+        # resolve_as value containing a comma must also be stripped here,
+        # otherwise it is rendered as two separate trusted hosts, extending
+        # trust to an attacker-controlled host.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'trusted-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': 'legit.example,attacker.example',
+                    'trusted': 'yes',
+                }
+            },
+            'NTP_KEY': {
+                '7': {
+                    'type': 'md5',
+                    'value': 'Z29vZGtleQ==',  # base64("goodkey")
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertNotIn(
+            'legit.example,attacker.example',
+            output,
+            'comma payload was rendered as two separate trusted hosts'
+        )
+        self.assertIn(
+            '7 MD5 goodkey legit.exampleattacker.example',
+            output,
+            'comma payload was not collapsed into a single trusted-list token'
+        )
+
+    def test_ntp_keys_clean_rendering_unaffected(self):
+        # Regression: legitimate key values render exactly as before the
+        # stripping was introduced.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.keys")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_strip_control_chars_non_ascii_injection_stripped(self):
+        # A non-ASCII resolve_as payload with an embedded newline must
+        # still be stripped: on Python 2, str(value) raises
+        # UnicodeEncodeError for such a value, which strip_control_chars()
+        # used to catch and return unfiltered.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'evil-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': u'ntp-\u00e9\nnoselect 6.6.6.6',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'non-ASCII payload created a standalone injected directive'
+        )
+        self.assertIn(u'ntp-\u00e9noselect6.6.6.6', output)
 
     def test_backend_acl_template_render(self):
         acl_template = os.path.join(
@@ -1041,6 +2377,43 @@ class TestJ2Files(TestCase):
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
+    def test_sai_profile_dynamic_template_render(self):
+        sai_profile_dynamic_template = os.path.join(
+            self.test_dir, '..', 'data', 'sai_profile_dynamic.j2'
+        )
+        test_list = {
+            'populated': {
+                'input': 'populated.json',
+                'output': 'sai_profile_dynamic_populated.txt'
+            },
+            'empty': {
+                'input': 'empty.json',
+                'output': 'sai_profile_dynamic_empty.txt'
+            },
+            # Exercises the direct-CONFIG_DB-write safety guards (which
+            # exist because such writes bypass YANG validation): a key
+            # that is exactly the reserved SAI_INIT_CONFIG_FILE, a key
+            # that embeds '=' to smuggle that reserved key past a
+            # first-'='-split parser, and a key containing CR/LF must
+            # all be dropped entirely; CR/LF in a value must be
+            # normalized (CR stripped, LF collapsed to a space) rather
+            # than allowed to produce extra profile lines.
+            'malicious': {
+                'input': 'malicious.json',
+                'output': 'sai_profile_dynamic_malicious.txt'
+            },
+        }
+        for _, v in test_list.items():
+            input_file = os.path.join(
+                self.test_dir, 'data', 'sai_profile', v['input']
+            )
+            argument = ["-j", input_file, "-t", sai_profile_dynamic_template]
+            sample_output_file = os.path.join(
+                self.test_dir, 'data', 'sai_profile', v['output']
+            )
+            self.run_script(argument, output_file=self.output_file)
+            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
     def test_dns_template_render(self):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'resolv-config', 'resolv.conf.j2')
         static_dns_conf = os.path.join(self.test_dir, "data", "dns", "static_dns.json")
@@ -1057,7 +2430,7 @@ class TestJ2Files(TestCase):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
-        additional_data = "{\"udp_server_ip\": \"1.1.1.1\", \"hostname\": \"kvm-host\"}"
+        additional_data = "{\"udp_server_ip\": \"1.1.1.1\"}"
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
         self.run_script(argument, output_file=self.output_file)
@@ -1072,7 +2445,7 @@ class TestJ2Files(TestCase):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
-        additional_data = "{\"udp_server_ip\": \"1.1.1.1\", \"hostname\": \"kvm-host\", " + \
+        additional_data = "{\"udp_server_ip\": \"1.1.1.1\", " + \
                           "\"docker0_ip\": \"2.2.2.2\"}"
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
@@ -1084,13 +2457,251 @@ class TestJ2Files(TestCase):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
-        additional_data = "{\"udp_server_ip\": \"2.2.2.2\", \"hostname\": \"kvm-host\", " + \
+        additional_data = "{\"udp_server_ip\": \"2.2.2.2\", " + \
                           "\"docker0_ip\": \"2.2.2.2\"}"
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_hostname_fallback(self):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        additional_data = '{"udp_server_ip": "1.1.1.1"}'
+
+        for hostname in ({}, {'hostname': ''}):
+            with tempfile.NamedTemporaryFile(mode='w') as config_db_json:
+                json.dump({'DEVICE_METADATA': {'localhost': hostname}}, config_db_json)
+                config_db_json.flush()
+                argument = ['-j', config_db_json.name, '-t', conf_template, '-a', additional_data]
+                output = self.run_script(argument)
+
+            sonic_template_lines = [
+                line for line in output.splitlines() if line.startswith('$template SONiC')
+            ]
+            self.assertEqual(len(sonic_template_lines), 3)
+            self.assertTrue(all(' sonic ' in line for line in sonic_template_lines))
+
+    def test_rsyslog_conf_hostname_injection_stripped(self):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        payload = 'switch-t0\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = '{"udp_server_ip": "1.1.1.1"}'
+
+        with tempfile.NamedTemporaryFile(mode='w') as config_db_json:
+            json.dump({'DEVICE_METADATA': {'localhost': {'hostname': payload}}}, config_db_json)
+            config_db_json.flush()
+            argument = ['-j', config_db_json.name, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+        sonic_template_lines = [
+            line for line in output.splitlines() if line.startswith('$template SONiC')
+        ]
+        self.assertEqual(len(sonic_template_lines), 3)
+        self.assertTrue(all('switch-t0action(type=omprog binary=/tmp/evil)' in line
+                            for line in sonic_template_lines))
+        self.assertFalse(any(line.strip().startswith('action(type=') and 'omprog' in line
+                             for line in output.splitlines()))
+
+    def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
+        """welf_firewall_name injection payload must be collapsed to a harmless single line.
+
+        Payload: 'fw1\\naction(type="omprog" binary="/tmp/evil")'
+        The newline strip is the critical defence — without it the action() lands on its own
+        line and rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence
+        in depth.  The test checks both independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'fw1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": payload}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The fw= field must not be split across multiple lines.
+        fw_lines = [l for l in output.splitlines() if 'fw=' in l and 'WelfRemote' not in l]
+        self.assertEqual(len(fw_lines), 1, 'fw= field was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_welf_firewall_name_clean(self):
+        """welf_firewall_name with a safe value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": "clean-fw-name"}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-fw-name', output,
+                      'Clean welf_firewall_name value not found in rendered rsyslog.conf')
+
+    def test_rsyslog_conf_os_version_injection_stripped(self):
+        """DEVICE_METADATA os_version injection payload must be collapsed to a harmless single line.
+
+        Payload: '1.0.0\\naction(type="omprog" binary="/tmp/evil")'
+        os_version is rendered unquoted inside the SONiCForwardFormatWithOsVersion $template
+        directive (rsyslog.conf.j2:65) with no prior sanitization; without the newline strip
+        the injected action() lands on its own line and rsyslog executes /tmp/evil as root.
+        This mirrors test_rsyslog_conf_hostname_injection_stripped but attacks os_version
+        instead of hostname, since both values share the same $template line but are
+        sanitized by two independent filter chains (rsyslog.conf.j2:52-53) — a regression
+        in the os_version chain alone would not be caught by the hostname-only test above.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = '1.0.0\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "os_version": payload,
+            "forward_with_osversion": "true",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The $template directives must not be split across multiple lines.
+        template_lines = [l for l in output.splitlines() if l.startswith('$template SONiC')]
+        self.assertEqual(len(template_lines), 3,
+                         '$template directive was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_hostname_and_os_version_special_chars_stripped(self):
+        """CR, backslash, and percent characters must be stripped from both hostname and
+        os_version, not just the newline/quote characters exercised by the injection tests
+        above. rsyslog.conf.j2:52-53 chain five separate .replace() calls per value
+        (\\n, \\r, ", \\, %); a regression that dropped one of the CR/backslash/percent
+        replacements would still pass the newline/quote-focused tests, so this asserts each
+        of those characters independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        hostname_payload = 'ho\rst\\na%me'
+        os_version_payload = '1.0\r.0\\%beta'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "DEVICE_METADATA": {"localhost": {"hostname": hostname_payload}},
+            "os_version": os_version_payload,
+            "forward_with_osversion": "true",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # Expected values after stripping \n, \r, ", \\, % — mirrors the filter chain in
+        # rsyslog.conf.j2:52-53.
+        def sanitize(value):
+            for ch in ('\n', '\r', '"', '\\', '%'):
+                value = value.replace(ch, '')
+            return value
+
+        expected_hostname = sanitize(hostname_payload)
+        expected_os_version = sanitize(os_version_payload)
+
+        self.assertIn(expected_hostname, output,
+                      'Sanitized hostname value not found in rendered rsyslog.conf')
+        self.assertIn(expected_os_version, output,
+                      'Sanitized os_version value not found in rendered rsyslog.conf')
+        self.assertNotIn(hostname_payload, output,
+                         'Unsanitized hostname payload (with CR/backslash/percent) leaked into rendered rsyslog.conf')
+        self.assertNotIn(os_version_payload, output,
+                         'Unsanitized os_version payload (with CR/backslash/percent) leaked into rendered rsyslog.conf')
+
+    def test_rsyslog_conf_hostname_clean(self):
+        """A safe hostname value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "DEVICE_METADATA": {"localhost": {"hostname": "clean-host"}},
+            "os_version": "1.0.0",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-host', output,
+                      'Clean hostname value not found in rendered rsyslog.conf')
+
+    def _render_rsyslog_conf(self, syslog_server, hostname='kvm-host'):
+        """Render rsyslog.conf.j2 with the given SYSLOG_SERVER mapping and return output."""
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": hostname,
+            "SYSLOG_SERVER": syslog_server,
+        })
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        return self.run_script(argument)
+
+    def test_rsyslog_conf_syslog_server_fields_injection_stripped(self):
+        """SYSLOG_SERVER vrf and server (Target) fields must not allow breaking out of
+        their double-quoted action() parameters. (F080)
+
+        Unlike the newline-based hostname/welf_firewall_name attacks above, this payload
+        does not need a newline: 'mgmtvrf" action.resumeRetryCount="999' would, without the
+        quote strip in rsyslog.conf.j2, close the Device="..." parameter and inject an
+        independent action.resumeRetryCount option into the same action() line. Likewise
+        for the server key rendered into Target="...".
+        """
+        vrf_payload = 'mgmtvrf" action.resumeRetryCount="999'
+        server_payload = '9.9.9.9" Protocol="tcp'
+        output = self._render_rsyslog_conf({
+            server_payload: {"vrf": vrf_payload, "severity": "*"},
+        })
+
+        # The injected option must never appear as its own quoted rsyslog parameter.
+        self.assertNotIn('action.resumeRetryCount="999"', output,
+                         'Injected action.resumeRetryCount option via vrf field: ' + repr(output))
+        self.assertNotIn('Protocol="tcp"', output,
+                         'Injected Protocol option via server/Target field: ' + repr(output))
+
+        # Every omfwd action() line must have exactly one Target= and at most one Device=.
+        for line in output.splitlines():
+            if not line.strip().startswith('action(type="omfwd"'):
+                continue
+            self.assertEqual(line.count('Target="'), 1, 'Injected Target= appeared: ' + repr(line))
+            self.assertLessEqual(line.count('Device="'), 1, 'Injected Device= appeared: ' + repr(line))
+
+    def test_rsyslog_conf_syslog_server_fields_clean(self):
+        """Safe SYSLOG_SERVER vrf/severity/server values must pass through unchanged."""
+        output = self._render_rsyslog_conf({
+            "9.9.9.9": {"vrf": "mgmtvrf", "severity": "*"},
+        })
+
+        self.assertIn('Target="9.9.9.9"', output, 'Clean server value not found in rendered rsyslog.conf')
+        self.assertIn('Device="mgmtvrf"', output, 'Clean vrf value not found in rendered rsyslog.conf')
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

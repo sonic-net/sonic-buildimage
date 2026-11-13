@@ -1,23 +1,3 @@
-/*
- * An wb_io_dev driver for read/write ioports device function
- *
- * Copyright (C) 2024 Micas Networks Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
@@ -32,7 +12,6 @@
 #include <linux/fs.h>
 #include <linux/export.h>
 #include <linux/uio.h>
-#include <linux/version.h>
 
 #include "wb_io_dev.h"
 
@@ -44,9 +23,6 @@
 #define IO_INDIRECT_ADDR_L(addr)           ((addr) & 0xff)
 #define IO_INDIRECT_OP_WRITE               (0x2)
 #define IO_INDIRECT_OP_READ                (0X3)
-
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
 
 static int g_io_dev_debug = 0;
 static int g_io_dev_error = 0;
@@ -167,7 +143,6 @@ static int io_dev_read_tmp(wb_io_dev_t *wb_io_dev, uint32_t offset, uint8_t *buf
     }
     if (wb_io_dev->indirect_addr) {
         width = wb_io_dev->rd_data_width;
-
         if (offset % width) {
             IO_DEV_DEBUG_VERBOSE("rd_data_width:%d, offset:0x%x, size %lu invalid.\n",
                 width, offset, count);
@@ -189,71 +164,46 @@ static int io_dev_read_tmp(wb_io_dev_t *wb_io_dev, uint32_t offset, uint8_t *buf
     return count;
 }
 
-static ssize_t io_dev_read(struct file *file, char __user *buf, size_t count, loff_t *offset, int flag)
+static ssize_t io_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
     wb_io_dev_t *wb_io_dev;
-    int ret, read_len;
+    size_t count;
+    ssize_t ret;
+    size_t copied;
+    loff_t pos;
     u8 buf_tmp[IO_RDWR_MAX_LEN];
 
-    wb_io_dev = file->private_data;
+    wb_io_dev = iocb->ki_filp->private_data;
     if (wb_io_dev == NULL) {
-        IO_DEV_DEBUG_ERROR("wb_io_dev is NULL, read failed.\n");
+        IO_DEV_DEBUG_ERROR("wb_io_dev is NULL, read_iter failed.\n");
         return -EINVAL;
     }
 
+    count = iov_iter_count(to);
     if (count == 0) {
-        IO_DEV_DEBUG_ERROR("Invalid params, read count is 0.\n");
-        return -EINVAL;
+        return 0;
     }
-
     if (count > sizeof(buf_tmp)) {
-        IO_DEV_DEBUG_VERBOSE("read count %lu exceed max %lu.\n", count, sizeof(buf_tmp));
         count = sizeof(buf_tmp);
     }
 
-    mem_clear(buf_tmp, sizeof(buf_tmp));
-    read_len = io_dev_read_tmp(wb_io_dev, *offset, buf_tmp, count);
-    if (read_len < 0) {
-        IO_DEV_DEBUG_ERROR("io_dev_read_tmp failed, ret:%d.\n", read_len);
-        return read_len;
+    pos = iocb->ki_pos;
+    ret = io_dev_read_tmp(wb_io_dev, pos, buf_tmp, count);
+    if (ret < 0) {
+        IO_DEV_DEBUG_ERROR("io_dev_read_tmp failed, ret:%d.\n", ret);
+        return ret;
     }
 
-    /* check flag is user spase or kernel spase */
-    if (flag == USER_SPACE) {
-        IO_DEV_DEBUG_VERBOSE("user space read, buf: %p, offset: %lld, read count %lu.\n",
-            buf, *offset, count);
-        if (copy_to_user(buf, buf_tmp, read_len)) {
-            IO_DEV_DEBUG_ERROR("copy_to_user failed.\n");
-            return -EFAULT;
-        }
-    } else {
-        IO_DEV_DEBUG_VERBOSE("kernel space read, buf: %p, offset: %lld, read count %lu.\n",
-            buf, *offset, count);
-        memcpy(buf, buf_tmp, read_len);
+    copied = copy_to_iter(buf_tmp, ret, to);
+    if (copied != ret) {
+        IO_DEV_DEBUG_ERROR("copy_to_iter failed, copied:%zu, expected:%zu.\n", copied, ret);
+        return -EFAULT;
     }
-    *offset += read_len;
-    ret = read_len;
-    return ret;
-}
 
-static ssize_t io_dev_read_user(struct file *file, char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    IO_DEV_DEBUG_VERBOSE("io_dev_read_user, file: %p, count: %lu, offset: %lld\n",
-        file, count, *offset);
-    ret = io_dev_read(file, buf, count, offset, USER_SPACE);
-    return ret;
-}
-
-static ssize_t io_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
-{
-    int ret;
-
-    IO_DEV_DEBUG_VERBOSE("io_dev_read_iter, file: %p, count: %lu, offset: %lld\n",
-        iocb->ki_filp, to->count, iocb->ki_pos);
-    ret = io_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPACE);
-    return ret;
+    iocb->ki_pos = pos + copied;
+    IO_DEV_DEBUG_VERBOSE("io_dev_read_iter, file: %p, count: %zu, offset: %lld\n",
+        iocb->ki_filp, count, iocb->ki_pos);
+    return copied;
 }
 
 void io_indirect_addressing_write(wb_io_dev_t *wb_io_dev, uint32_t address, u32 reg_val)
@@ -335,70 +285,45 @@ static int io_dev_write_tmp(wb_io_dev_t *wb_io_dev, uint32_t offset, uint8_t *bu
     return count;
 }
 
-static ssize_t io_dev_write(struct file *file, const char __user *buf, size_t count, loff_t *offset, int flag)
+static ssize_t io_dev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
     wb_io_dev_t *wb_io_dev;
-    int write_len;
+    size_t count;
+    ssize_t ret;
+    size_t copied;
+    loff_t pos;
     u8 buf_tmp[IO_RDWR_MAX_LEN];
 
-    wb_io_dev = file->private_data;
+    wb_io_dev = iocb->ki_filp->private_data;
     if (wb_io_dev == NULL) {
-        IO_DEV_DEBUG_ERROR("wb_io_dev is NULL, write failed.\n");
+        IO_DEV_DEBUG_ERROR("wb_io_dev is NULL, write_iter failed.\n");
         return -EINVAL;
     }
 
+    count = iov_iter_count(from);
     if (count == 0) {
-        IO_DEV_DEBUG_ERROR("Invalid params, write count is 0.\n");
-        return -EINVAL;
+        return 0;
     }
-
     if (count > sizeof(buf_tmp)) {
-        IO_DEV_DEBUG_VERBOSE("write count %lu exceed max %lu.\n", count, sizeof(buf_tmp));
         count = sizeof(buf_tmp);
     }
 
-    mem_clear(buf_tmp, sizeof(buf_tmp));
-    /* check flag is user spase or kernel spase */
-    if (flag == USER_SPACE) {
-        IO_DEV_DEBUG_VERBOSE("user space write, buf: %p, offset: %lld, write count %lu.\n",
-            buf, *offset, count);
-        if (copy_from_user(buf_tmp, buf, count)) {
-            IO_DEV_DEBUG_ERROR("copy_from_user failed.\n");
-            return -EFAULT;
-        }
-    } else {
-        IO_DEV_DEBUG_VERBOSE("kernel space write, buf: %p, offset: %lld, write count %lu.\n",
-            buf, *offset, count);
-        memcpy(buf_tmp, buf, count);
+    pos = iocb->ki_pos;
+    copied = copy_from_iter(buf_tmp, count, from);
+    if (copied != count) {
+        IO_DEV_DEBUG_ERROR("copy_from_iter failed, copied:%zu, expected:%zu.\n", copied, count);
+        return -EFAULT;
     }
 
-    write_len = io_dev_write_tmp(wb_io_dev, *offset, buf_tmp, count);
-    if (write_len < 0) {
-        IO_DEV_DEBUG_ERROR("io_dev_write_tmp failed, ret:%d.\n", write_len);
-        return write_len;
+    ret = io_dev_write_tmp(wb_io_dev, pos, buf_tmp, count);
+    if (ret < 0) {
+        IO_DEV_DEBUG_ERROR("io_dev_write_tmp failed, ret:%d.\n", ret);
+        return ret;
     }
 
-    *offset += write_len;
-    return write_len;
-}
-
-static ssize_t io_dev_write_user(struct file *file, const char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    IO_DEV_DEBUG_VERBOSE("io_dev_write_user, file: %p, count: %lu, offset: %lld\n",
-        file, count, *offset);
-    ret = io_dev_write(file, buf, count, offset, USER_SPACE);
-    return ret;
-}
-
-static ssize_t io_dev_write_iter(struct kiocb *iocb, struct iov_iter *from)
-{
-    int ret;
-
-    IO_DEV_DEBUG_VERBOSE("io_dev_write_iter, file: %p, count: %lu, offset: %lld\n",
-        iocb->ki_filp, from->count, iocb->ki_pos);
-    ret = io_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPACE);
+    iocb->ki_pos = pos + ret;
+    IO_DEV_DEBUG_VERBOSE("io_dev_write_iter, file: %p, count: %zu, offset: %lld\n",
+        iocb->ki_filp, count, iocb->ki_pos);
     return ret;
 }
 
@@ -455,8 +380,6 @@ static long io_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 static const struct file_operations io_dev_fops = {
     .owner      = THIS_MODULE,
     .llseek     = io_dev_llseek,
-    .read       = io_dev_read_user,
-    .write      = io_dev_write_user,
     .read_iter  = io_dev_read_iter,
     .write_iter = io_dev_write_iter,
     .unlocked_ioctl = io_dev_ioctl,
@@ -640,11 +563,7 @@ static int io_dev_probe(struct platform_device *pdev)
     return 0;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
-static int io_dev_remove(struct platform_device *pdev)
-#else
 static void io_dev_remove(struct platform_device *pdev)
-#endif
 {
     int i;
 
@@ -654,9 +573,8 @@ static void io_dev_remove(struct platform_device *pdev)
             io_dev_arry[i] = NULL;
         }
     }
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
-    return 0;
-#endif
+
+    return;
 }
 
 static struct of_device_id io_dev_match[] = {

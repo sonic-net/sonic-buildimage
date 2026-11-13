@@ -1,31 +1,99 @@
-From 9621a9cc5e1f2c983d7ba0b5aae3b901e4030993 Mon Sep 17 00:00:00 2001
+From 1fd073093dc0957532595547cac725dd0572f3ce Mon Sep 17 00:00:00 2001
 From: "Mrinmoy Ghosh (mrghosh)" <mrghosh@cisco.com>
 Date: Fri, 14 Mar 2025 23:09:49 -0400
-Subject: SVI Deletion handling, BGP sync message (#145) (#159)
+Subject: [PATCH] SVI Deletion handling, BGP sync message (#145) (#159)
 
 MIGSOFTWAR-21500: VLAN Interface Deletion handling, BGP sync message
+
+Delete unresolved-SVI sync neighbors at caller-owned lifecycle
+boundaries. Withdraw the neighbor from BGP, clear its sync-MAC
+reference, and then release it. A current update recreates the
+neighbor when the SVI is available again.
+
 (cherry picked from commit 86a196bcf3ae5f2d5f485cadc798a62bdda15bb4)
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+---
+ zebra/zebra_evpn_neigh.c | 43 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 43 insertions(+)
 
 diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
-index 7b8a703d9..7eef25bf0 100644
+index d32bf07994..d5a0159985 100644
 --- a/zebra/zebra_evpn_neigh.c
 +++ b/zebra/zebra_evpn_neigh.c
-@@ -462,6 +462,14 @@ static inline void zebra_evpn_neigh_start_hold_timer(struct zebra_neigh *n)
+@@ -565,15 +565,49 @@ int zebra_evpn_neigh_del(struct zebra_evpn *zevpn, struct zebra_neigh *n)
+ 	return 0;
+ }
  
- 	if (n->hold_timer)
- 		return;
-+	if (n->ifindex == IFINDEX_INTERNAL) {
-+		if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH)
-+			zlog_debug("sync-neigh vni %u ip %pIA mac %pEA 0x%x hold Ignore as"
-+			           " SVI/BVI is deleted", n->zevpn->vni, &n->ip, &n->emac,
-+			           n->flags);
-+		zebra_evpn_neigh_del(n->zevpn, n);
-+		return;
-+	}
++static bool zebra_evpn_neigh_del_if_svi_unresolved(struct zebra_neigh *n,
++						    struct zebra_mac **old_mac)
++{
++	struct zebra_evpn *zevpn = n->zevpn;
++
++	if (n->ifindex != IFINDEX_INTERNAL || !zevpn
++	    || !CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL)
++	    || !(n->flags & ZEBRA_NEIGH_ALL_PEER_FLAGS))
++		return false;
++
++	*old_mac = n->mac;
++
++	if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH)
++		zlog_debug(
++			"sync-neigh vni %u ip %pIA mac %pEA 0x%x delete as SVI/BVI is unresolved",
++			zevpn->vni, &n->ip, &n->emac, n->flags);
++
++	zebra_evpn_neigh_send_del_to_client(zevpn->vni, &n->ip, &n->emac,
++					    n->flags, n->state,
++					    false /* force */);
++	zebra_evpn_neigh_clear_sync_info(n);
++	zebra_evpn_neigh_del(zevpn, n);
++	return true;
++}
++
+ void zebra_evpn_sync_neigh_del(struct zebra_neigh *n)
+ {
+ 	bool old_n_static;
+ 	bool new_n_static;
++	struct zebra_evpn *zevpn = n->zevpn;
++	struct zebra_mac *old_mac = NULL;
  
  	if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH && n->zevpn)
- 		zlog_debug("sync-neigh vni %u ip %pIA mac %pEA 0x%x hold start",
+ 		zlog_debug("sync-neigh del vni %u ip %pIA mac %pEA f 0x%x",
+ 			   n->zevpn->vni, &n->ip, &n->emac, n->flags);
+ 
++	if (zebra_evpn_neigh_del_if_svi_unresolved(n, &old_mac)) {
++		if (old_mac && CHECK_FLAG(old_mac->flags, ZEBRA_MAC_AUTO)
++		    && !zebra_evpn_mac_in_use(old_mac))
++			zebra_evpn_mac_del(zevpn, old_mac);
++		return;
++	}
++
+ 	if (CHECK_FLAG(n->flags, ZEBRA_NEIGH_ES_PEER_ACTIVE)) {
+ 		struct zebra_ns *zns = NULL;
+ 		struct interface *ifp = NULL;
+@@ -642,12 +676,21 @@ struct zebra_neigh *zebra_evpn_proc_sync_neigh_update(
+ 	bool set_dp_inactive = false;
+ 	bool created;
+ 	ifindex_t ifindex = 0;
++	struct zebra_mac *old_mac = NULL;
+ 
+ 	/* locate l3-svi */
+ 	ifp = zevpn_map_to_svi(zevpn, true);
+ 	if (ifp)
+ 		ifindex = ifp->ifindex;
+ 
++	if (n && zebra_evpn_neigh_del_if_svi_unresolved(n, &old_mac))
++		n = NULL;
++
++	if (old_mac && old_mac != mac
++	    && CHECK_FLAG(old_mac->flags, ZEBRA_MAC_AUTO)
++	    && !zebra_evpn_mac_in_use(old_mac))
++		zebra_evpn_mac_del(zevpn, old_mac);
++
+ 	is_router = !!CHECK_FLAG(flags, ZEBRA_MACIP_TYPE_ROUTER_FLAG);
+ 	old_mac_static = zebra_evpn_mac_is_static(mac);
+ 
 -- 
-2.43.0
+2.34.1
 

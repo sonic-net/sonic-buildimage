@@ -2,10 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 DRIVERLISTS = [
-    {"name": "wb_i2c_i801", "delay": 1, "removable": 0},
+    {"name": "i2c_i801", "delay": 1, "removable": 0},
     {"name": "i2c_dev", "delay": 0, "removable": 0},
-    {"name": "wb_i2c_algo_bit", "delay": 0},
-    {"name": "wb_i2c_gpio", "delay": 0},
+    {"name": "i2c_algo_bit", "delay": 0, "removable": 0},
+    {"name": "i2c_gpio", "delay": 0},
     {"name": "i2c_mux", "delay": 0, "removable": 0},
     {"name": "wb_i2c_gpio_device gpio_sda=181 gpio_scl=180 gpio_chip_name=INTC3001:00 bus_num=1", "delay": 0},
     {"name": "platform_common dfd_my_type=0x40d9", "delay": 0},

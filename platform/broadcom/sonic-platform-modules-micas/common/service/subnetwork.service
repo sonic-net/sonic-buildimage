@@ -1,6 +1,7 @@
 [Unit]
 Description=Configuration eth0.4088 subnetwork
-After=network.target
+After=networking.service
+Requires=networking.service
 DefaultDependencies=no
 
 [Service]

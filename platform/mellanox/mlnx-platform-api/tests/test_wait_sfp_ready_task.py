@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,6 +39,20 @@ class TestWaitSfpReadyTask:
         assert not task.empty()
         task.cancel_wait(0)
         assert task.empty()
+
+    def test_cancel_wait_unknown_index(self):
+        task = wait_sfp_ready_task.WaitSfpReadyTask()
+        # cancel_wait must be safe for an index that was never scheduled
+        task.cancel_wait(42)
+        assert task.empty()
+        assert 42 not in task._ready_set
+
+    def test_cancel_wait_removes_from_ready_set(self):
+        task = wait_sfp_ready_task.WaitSfpReadyTask()
+        # Pre-populate ready set to verify discard-style cleanup
+        task._ready_set.add(7)
+        task.cancel_wait(7)
+        assert 7 not in task._ready_set
         
     def test_run(self):
         task = wait_sfp_ready_task.WaitSfpReadyTask()

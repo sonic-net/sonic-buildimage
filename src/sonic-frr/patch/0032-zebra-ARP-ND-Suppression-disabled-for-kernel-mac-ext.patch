@@ -1,23 +1,22 @@
-From bcca51bf037ac5ea6ed0ba426fa9041027b977ec Mon Sep 17 00:00:00 2001
-From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
-Date: Wed, 20 Aug 2025 00:58:23 +0000
-Subject: zebra: ARP/ND Suppression disabled for kernel-mac-ext-learn mode
+From 2e320484e26be7677fefa66860ff2c1a9fe8e598 Mon Sep 17 00:00:00 2001
+From: Patrice Brissette <patricebrissette@gmail.com>
+Date: Tue, 5 May 2026 17:06:55 -0400
+Subject: [PATCH] zebra: ARP/ND Suppression disabled for kernel mac ext learn
 
-For MAC External mode, presently ARP/ND Suppression is not supported,
- thereby disabled. Remote Neighbor programming is also not required,
- based on zebra_mac_ext_learn_mode.
+ARP/ND suppression is not supported in kernel MAC external learn mode.
 
-Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
-Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
-(cherry picked from commit 153730e70645360ae525822f7f2940251248a4e5)
+(cherry picked from commit db74c19c0515e7390e53ee71e8dcad5be68a1ed5)
+---
+ zebra/zebra_evpn_neigh.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
 
 diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
-index 9da391891..7b4bcee80 100644
+index 69870b88fe..b7bbd97c35 100644
 --- a/zebra/zebra_evpn_neigh.c
 +++ b/zebra/zebra_evpn_neigh.c
-@@ -159,7 +159,11 @@ int zebra_evpn_rem_neigh_install(struct zebra_evpn *zevpn,
+@@ -112,7 +112,11 @@ int zebra_evpn_rem_neigh_install(struct zebra_evpn *zevpn,
  		flags |= DPLANE_NTF_ROUTER;
  	ZEBRA_NEIGH_SET_ACTIVE(n);
  
@@ -30,7 +29,7 @@ index 9da391891..7b4bcee80 100644
  
  	return ret;
  }
-@@ -861,8 +865,12 @@ static int zebra_evpn_neigh_uninstall(struct zebra_evpn *zevpn,
+@@ -812,8 +816,12 @@ static int zebra_evpn_neigh_uninstall(struct zebra_evpn *zevpn,
  
  	ZEBRA_NEIGH_SET_INACTIVE(n);
  	n->loc_seq = 0;
@@ -46,5 +45,5 @@ index 9da391891..7b4bcee80 100644
  	return 0;
  }
 -- 
-2.43.0
+2.34.1
 

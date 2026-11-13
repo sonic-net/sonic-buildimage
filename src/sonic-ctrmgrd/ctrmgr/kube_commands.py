@@ -3,10 +3,13 @@
 
 import argparse
 import fcntl
+import ipaddress
 import inspect
 import json
 import os
+import re
 import shutil
+import socket
 import ssl
 import subprocess
 import sys
@@ -24,13 +27,196 @@ from swsscommon import swsscommon
 
 KUBE_ADMIN_CONF = "/etc/sonic/kube_admin.conf"
 KUBELET_YAML = "/var/lib/kubelet/config.yaml"
-SERVER_ADMIN_URL = "https://{}/admin.conf"
 LOCK_FILE = "/var/lock/kube_join.lock"
 FLANNEL_CONF_FILE = "/usr/share/sonic/templates/kube_cni.10-flannel.conflist"
 CNI_DIR = "/etc/cni/net.d"
-K8S_CA_URL = "https://{}:{}/api/v1/namespaces/default/configmaps/kube-root-ca.crt"
+K8S_CA_PATH = "/api/v1/namespaces/default/configmaps/kube-root-ca.crt"
+K8S_CA_TIMEOUT = 10
 AME_CRT = "/etc/sonic/credentials/restapiserver.crt"
 AME_KEY = "/etc/sonic/credentials/restapiserver.key"
+
+
+# DNS-1123 label grammar per RFC 1123 / Kubernetes:
+#   lower-case alphanumeric + hyphen, starts and ends alphanumeric, <= 63 chars.
+# Used for node names.
+_DNS1123_LABEL = re.compile(r"\A[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?\Z")
+
+# Kubernetes label-key syntax: optional DNS-1123-subdomain prefix + "/", then
+# a name segment of alphanumeric/[-._] up to 63 chars, starting and ending
+# alphanumeric. Empty deletion suffix ("key-") is handled by _valid_label_arg.
+_K8S_LABEL_NAME = re.compile(
+    r"\A(?:[A-Za-z0-9]([-A-Za-z0-9_.]{0,251}[A-Za-z0-9])?/)?"
+    r"[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?\Z")
+
+# Kubernetes label-value syntax: empty, or alphanumeric/[-._] up to 63 chars
+# starting and ending alphanumeric.
+_K8S_LABEL_VALUE = re.compile(
+    r"\A(|[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?)\Z")
+
+
+def _valid_node_name(name):
+    return isinstance(name, str) and bool(_DNS1123_LABEL.match(name))
+
+
+def _valid_label_arg(arg):
+    """A kubectl label positional is either 'key=value' (add/overwrite) or
+    'key-' (delete). Validate the key against K8s label-name grammar and
+    the value (if present) against label-value grammar."""
+    if not isinstance(arg, str):
+        return False
+    if arg.endswith("-") and "=" not in arg:
+        return bool(_K8S_LABEL_NAME.match(arg[:-1]))
+    if "=" in arg:
+        name, _, value = arg.partition("=")
+        return bool(_K8S_LABEL_NAME.match(name)) and bool(_K8S_LABEL_VALUE.match(value))
+    return False
+
+
+def _get_validated_device_name():
+    """Return the node name if it matches DNS-1123, else empty string.
+    Empty return short-circuits the calling kubectl/kubeadm operation
+    without emitting an unsafe argv."""
+    name = get_device_name()
+    if not _valid_node_name(name):
+        log_error("Refusing kubectl/kubeadm call: hostname {!r} is not a valid "
+                  "DNS-1123 label".format(name))
+        return ""
+    return name
+
+
+def _is_prohibited_address(address):
+    if address.version == 6 and address.ipv4_mapped:
+        return _is_prohibited_address(address.ipv4_mapped)
+    return (address.is_loopback or address.is_link_local or
+            address.is_multicast or address.is_unspecified or
+            address.is_reserved)
+
+
+def _validate_server_destination(server, port):
+    if not isinstance(server, str) or not server or server != server.strip():
+        raise IOError("Kubernetes server must be a non-empty host name or IP address")
+
+    bracketed = server.startswith("[") or server.endswith("]")
+    if bracketed:
+        if not (server.startswith("[") and server.endswith("]")):
+            raise IOError("Kubernetes server has invalid IPv6 brackets")
+        server = server[1:-1]
+    if "%" in server:
+        raise IOError("Kubernetes server IPv6 scope identifiers are not supported")
+
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        raise IOError("Kubernetes server port is invalid")
+    if port < 1 or port > 65535:
+        raise IOError("Kubernetes server port is out of range")
+
+    try:
+        addresses = [ipaddress.ip_address(server)]
+    except ValueError:
+        if bracketed:
+            raise IOError("Kubernetes server has an invalid bracketed IPv6 address")
+        try:
+            addrinfo = socket.getaddrinfo(
+                server, port, type=socket.SOCK_STREAM)
+        except (OSError, UnicodeError) as error:
+            raise IOError("Kubernetes server cannot be resolved: {}".format(error))
+        addresses = []
+        try:
+            for item in addrinfo:
+                if (item[0] == socket.AF_INET6 and len(item[4]) > 3 and
+                        item[4][3]):
+                    raise IOError(
+                        "Kubernetes server IPv6 scope identifiers are not supported")
+                address = ipaddress.ip_address(item[4][0])
+                if address not in addresses:
+                    addresses.append(address)
+        except ValueError as error:
+            raise IOError("Kubernetes server cannot be resolved: {}".format(error))
+
+    if bracketed and (not addresses or addresses[0].version != 6):
+        raise IOError("Kubernetes server brackets require an IPv6 address")
+    if not addresses:
+        raise IOError("Kubernetes server did not resolve to an IP address")
+    prohibited = [str(address) for address in addresses
+                  if _is_prohibited_address(address)]
+    if prohibited:
+        raise IOError("Kubernetes server resolves to a prohibited address: {}".
+                      format(", ".join(sorted(prohibited))))
+
+    return server, port, tuple(str(address) for address in addresses)
+
+
+def _format_url_host(host):
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return host
+    if address.version == 6:
+        return "[{}]".format(address)
+    return str(address)
+
+
+class _PinnedHTTPSAdapter(requests.adapters.HTTPAdapter):
+    """Connect to a validated IP while authenticating the configured host."""
+
+    def __init__(self, server_hostname):
+        self._server_hostname = (
+            server_hostname[:-1]
+            if len(server_hostname) > 1 and server_hostname.endswith(".")
+            else server_hostname)
+        super().__init__()
+
+    def init_poolmanager(self, connections, maxsize, block=False,
+                         **pool_kwargs):
+        pool_kwargs["assert_hostname"] = self._server_hostname
+        pool_kwargs["server_hostname"] = self._server_hostname
+        return super().init_poolmanager(
+            connections, maxsize, block=block, **pool_kwargs)
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        proxy_kwargs["assert_hostname"] = self._server_hostname
+        proxy_kwargs["server_hostname"] = self._server_hostname
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+
+def _request_k8s_ca(server, port, addresses, insecure):
+    session = requests.Session()
+    session.mount("https://", _PinnedHTTPSAdapter(server))
+    authority = "{}:{}".format(_format_url_host(server), port)
+    original_url = "https://{}:{}{}".format(
+        _format_url_host(server), port, K8S_CA_PATH)
+    proxies = requests.utils.get_environ_proxies(original_url)
+    if not proxies:
+        proxies = {"all": None, "http": None, "https": None}
+    kwargs = {
+        "allow_redirects": False,
+        "cert": (AME_CRT, AME_KEY),
+        "headers": {"Host": authority},
+        "proxies": proxies,
+    }
+    if insecure.lower() == "true":
+        kwargs["verify"] = False
+
+    last_error = None
+    try:
+        for address in addresses:
+            kwargs["timeout"] = K8S_CA_TIMEOUT
+            url = "https://{}:{}{}".format(
+                _format_url_host(address), port, K8S_CA_PATH)
+            try:
+                return session.get(url, **kwargs)
+            except requests.exceptions.ProxyError:
+                raise
+            except (requests.ConnectionError, requests.Timeout) as error:
+                last_error = error
+    finally:
+        session.close()
+
+    if last_error:
+        raise last_error
+    raise IOError("Kubernetes server did not resolve to an IP address")
+
 
 def log_debug(m):
     msg = "{}: {}".format(inspect.stack()[1][3], m)
@@ -57,41 +243,19 @@ def get_device_name():
     return str(device_info.get_hostname()).lower()
 
 
-def _run_command(cmd, timeout=5):
-    """ Run shell command and return exit code, along with stdout. """
-    ret = 0
-    try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-        (o, e) = proc.communicate(timeout)
-        output = to_str(o)
-        err = to_str(e)
-        ret = proc.returncode
-    except subprocess.TimeoutExpired as error:
-        proc.kill()
-        output = ""
-        err = str(error)
-        ret = -1
-
-    log_debug("cmd:{}\nret={}".format(cmd, ret))
-    if output:
-        log_debug("out:{}".format(output))
-    if err:
-        log_debug("err:{}".format(err))
-
-    return (ret, output.strip(), err.strip())
-
-
 def _run_command_list(cmd, timeout=5):
-    """ Run command as a list with shell=False to avoid shell metacharacter injection.
-    Use this for commands assembled from untrusted input (e.g. CONFIG_DB/STATE_DB values).
-    cmd must be a list.
+    """ Run command as an argv list with shell=False.
+
+    This is the only command runner in this module; a `shell=True` variant
+    used to exist alongside it, but every caller now assembles argv, so the
+    shell-string codepath was removed to eliminate the metacharacter-injection
+    landmine for future refactors.
     """
     ret = 0
     try:
         proc = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
-        (o, e) = proc.communicate(timeout)
+        (o, e) = proc.communicate(timeout=timeout)
         output = to_str(o)
         err = to_str(e)
         ret = proc.returncode
@@ -112,14 +276,19 @@ def _run_command_list(cmd, timeout=5):
 
 def kube_read_labels():
     """ Read current labels on node and return as dict. """
-    KUBECTL_GET_CMD = "kubectl --kubeconfig {} get nodes {} --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '"
-
     labels = {}
-    ret, out, _ = _run_command(KUBECTL_GET_CMD.format(
-        KUBE_ADMIN_CONF, get_device_name()))
+    node = _get_validated_device_name()
+    if not node:
+        return (-1, labels)
+    ret, out, _ = _run_command_list([
+        "kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+        "--show-labels", "--no-headers", "--", node,
+    ], timeout=60)
 
     if ret == 0:
-        lst = out.split(",")
+        lines = out.splitlines()
+        columns = lines[0].split(None, 5) if lines else []
+        lst = columns[5].split(",") if len(columns) == 6 else []
 
         for label in lst:
             tmp = label.split("=")
@@ -136,8 +305,11 @@ def kube_read_labels():
 def kube_write_labels(set_labels):
     """ Set given set_labels.
     """
-    KUBECTL_SET_BASE = ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-                        "label", "--overwrite", "nodes", get_device_name()]
+    node = _get_validated_device_name()
+    if not node:
+        return -1
+    KUBECTL_LABEL_BASE = ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+                          "label", "--overwrite", "nodes"]
 
     ret, node_labels = kube_read_labels()
     if ret != 0:
@@ -148,6 +320,9 @@ def kube_write_labels(set_labels):
     del_label_args = []
     add_label_args = []
     for (name, val) in set_labels.items():
+        if not _valid_label_arg("{}={}".format(name, val)):
+            log_error("Skipping label with invalid key or value: {!r}={!r}".format(name, val))
+            continue
         skip = False
         if name in node_labels:
             if val != node_labels[name]:
@@ -164,8 +339,10 @@ def kube_write_labels(set_labels):
     if add_label_args:
         # First remove if any
         if del_label_args:
-            (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + del_label_args)
-        (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + add_label_args)
+            (ret, _, _) = _run_command_list(
+                KUBECTL_LABEL_BASE + ["--", node] + del_label_args)
+        (ret, _, _) = _run_command_list(
+            KUBECTL_LABEL_BASE + ["--", node] + add_label_args)
 
         log_debug("{} kube labels {} ret={}".format(
             "Applied" if ret == 0 else "Failed to apply", add_label_args, ret))
@@ -186,6 +363,26 @@ def func_get_labels(args):
     return 0
 
 
+def is_ready_as_k8s_node():
+    """ Check if current node status is ready or not from k8s cluster """
+    node = _get_validated_device_name()
+    if not node:
+        return False
+    ret, out, _ = _run_command_list([
+        "kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+        "--no-headers", "--", node,
+    ], timeout=60)
+    if ret != 0:
+        log_debug("Failed to get node from Kube cluster")
+        return False
+    if out and len(out.strip().split()) >= 2:
+        if out.strip().split()[1].lower() == "ready":
+            log_debug("Node {} is ready.".format(get_device_name()))
+            return True
+    log_debug("Node {} is not ready. Out: {}".format(get_device_name(), out))
+    return False
+
+
 def is_connected(server=""):
     """ Check if we are currently connected """
 
@@ -199,7 +396,9 @@ def is_connected(server=""):
             if d:
                 o = urlparse(d)
                 if o.hostname:
-                    return not server or server == o.hostname
+                    if (not server or server == o.hostname):
+                        if is_ready_as_k8s_node():
+                            return True
     return False
 
 
@@ -249,10 +448,10 @@ users:
     client-certificate-data: {{ ame_crt }}
     client-key-data: {{ ame_key }}
     """
-    if insecure.lower() == "true":
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), verify=False)
-    else:
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY))
+    server, port, addresses = _validate_server_destination(server, port)
+    r = _request_k8s_ca(server, port, addresses, insecure)
+    if 300 <= r.status_code < 400:
+        raise IOError("Kubernetes CA download refused a redirect")
     if not r.ok:
         raise requests.RequestException("Something wrong with AME cert or something wrong about sonic role in k8s cluster")
     k8s_ca = r.json()["data"]["ca.crt"]
@@ -262,8 +461,11 @@ users:
     ame_key_raw = open(AME_KEY, "rb")
     ame_key_b64 = base64.b64encode(ame_key_raw.read()).decode("utf-8")
     client_kubeconfig_template_j2 = Template(client_kubeconfig_template)
+    # This template creates kubeconfig YAML rather than browser-rendered HTML.
+    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     client_kubeconfig = client_kubeconfig_template_j2.render(
-        k8s_ca=k8s_ca_b64, vip=server, port=port, ame_crt=ame_crt_b64, ame_key=ame_key_b64)
+        k8s_ca=k8s_ca_b64, vip=_format_url_host(server), port=port,
+        ame_crt=ame_crt_b64, ame_key=ame_key_b64)
     (h, fname) = tempfile.mkstemp(suffix="_kube_join")
     os.write(h, client_kubeconfig.encode("utf-8"))
     os.close(h)
@@ -323,38 +525,49 @@ c.  In Master check if all system pods are running good.
 def _do_reset(pending_join = False):
     # Drain & delete self from cluster. If not, the next join would fail
     #
+    node = _get_validated_device_name()
+    if not node:
+        return
     if os.path.exists(KUBE_ADMIN_CONF):
-        _run_command(
-                "kubectl --kubeconfig {} --request-timeout 20s drain {} --ignore-daemonsets".
-                format(KUBE_ADMIN_CONF, get_device_name()))
+        _run_command_list([
+            "kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+            "--request-timeout", "20s", "drain", "--ignore-daemonsets",
+            "--", node,
+        ], timeout=60)
 
-        _run_command("kubectl --kubeconfig {} --request-timeout 20s delete node {}".
-                format(KUBE_ADMIN_CONF, get_device_name()))
+        _run_command_list([
+            "kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+            "--request-timeout", "20s", "delete", "node", "--", node,
+        ], timeout=60)
 
-    _run_command("kubeadm reset -f", 10)
-    _run_command("rm -rf {}".format(CNI_DIR))
+    _run_command_list(["kubeadm", "reset", "-f"], timeout=60)
+    _run_command_list(["rm", "-rf", CNI_DIR], timeout=60)
     if not pending_join:
-        _run_command("rm -f {}".format(KUBE_ADMIN_CONF))
-    _run_command("systemctl stop kubelet")
+        _run_command_list(["rm", "-f", KUBE_ADMIN_CONF], timeout=60)
+    _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
 
 def _do_join(server, port, insecure):
-    KUBEADM_JOIN_CMD = "kubeadm join --discovery-file {} --node-name {}"
     err = ""
     out = ""
     ret = 0
+    node = _get_validated_device_name()
+    if not node:
+        return (-1, "", "Refusing kubeadm join: invalid device name")
     try:
         _gen_cli_kubeconf(server, port, insecure)
         _do_reset(True)
-        _run_command("modprobe br_netfilter")
+        _run_command_list(["modprobe", "br_netfilter"], timeout=60)
         # Copy flannel.conf
-        _run_command("mkdir -p {}".format(CNI_DIR))
-        _run_command("cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR))
-        (ret, _, _) = _run_command("systemctl start kubelet")
+        _run_command_list(["mkdir", "-p", CNI_DIR], timeout=60)
+        _run_command_list(["cp", FLANNEL_CONF_FILE, CNI_DIR], timeout=60)
+        (ret, _, _) = _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
 
         if ret == 0:
-            (ret, out, err) = _run_command(KUBEADM_JOIN_CMD.format(
-                KUBE_ADMIN_CONF, get_device_name()), timeout=60)
+            (ret, out, err) = _run_command_list([
+                "kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
+                "--node-name", node,
+            ], timeout=360)
             log_debug("ret = {}".format(ret))
 
     except IOError as e:
@@ -366,6 +579,8 @@ def _do_join(server, port, insecure):
 
     if (ret != 0):
         log_error(err)
+        _do_reset()
+        return (ret, out, err)
 
     return (ret, out, err)
 
@@ -386,7 +601,7 @@ def kube_join_master(server, port, insecure, force=False):
         return (-1, "", "")
 
     if ((not force) and is_connected(server)):
-        _run_command("systemctl start kubelet")
+        _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
         err = "Master {} is already connected. "
         err += "Reset or join with force".format(server)
     else:
@@ -415,7 +630,7 @@ def kube_reset_master(force):
     if ret == 0:
         _do_reset()
     else:
-        _run_command("systemctl stop kubelet")
+        _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
     return (ret, err)
 
@@ -507,65 +722,125 @@ def tag_latest(feat, docker_id, image_ver):
         log_error(err)
     return ret
 
+# Historical cleanup timeout (was the implicit default of the shell-based
+# _run_command helper). Passed explicitly to _run_command_list(), whose own
+# default timeout is much shorter, to preserve prior behavior.
+CLEAN_IMAGE_TIMEOUT = 60
+
+# Query docker images in a structured, script-friendly format so no
+# grep/awk shell pipeline (and therefore no shell interpretation of
+# feat/repository/tag/image-id values) is required.
+DOCKER_IMAGES_CMD = ["docker", "images", "--format", "{{.Repository}} {{.Tag}} {{.ID}}"]
+
+
 def _do_clean(feat, current_version, last_version):
     err = ""
     out = ""
     ret = 0
     IMAGE_ID = "image_id"
     REPO = "repo"
-    _, image_info, err = _run_command("docker images |grep {} |grep -v latest |awk '{{print $1,$2,$3}}'".format(feat))
-    if image_info:
-        remote_image_version_dict = {}
-        local_image_version_dict = {}
-        for info in image_info.split("\n"):
-            rep, version, image_id = info.split()
-            if len(rep.split("/")) == 1:
-                local_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
-            else:
-                remote_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
 
-        if current_version in remote_image_version_dict:
-            image_prefix = remote_image_version_dict[current_version][REPO]
-            del remote_image_version_dict[current_version]
-        else:
-            out = "Current version {} doesn't exist.".format(current_version)
-            ret = 0
-            return ret, out, err
-        # should be only one item in local_image_version_dict
-        for k, v in local_image_version_dict.items():
-            local_version, local_repo, local_image_id = k, v[REPO], v[IMAGE_ID]
-            # if there is a kube image with same version, need to remove the kube version
-            # and tag the local version to kube version for fallback preparation
-            # and remove the local version
-            if local_version in remote_image_version_dict:
-                tag_res, _, err = _run_command("docker rmi {}:{} && docker tag {} {}:{} && docker rmi {}:{}".format(
-                image_prefix, local_version, local_image_id, image_prefix, local_version, local_repo, local_version))
-            # if there is no kube image with same version, just remove the local version
-            else:
-                tag_res, _, err = _run_command("docker rmi {}:{}".format(local_repo, local_version))
-            if tag_res == 0:
-                msg = "Tag {} local version images successfully".format(feat)
-                log_debug(msg)
-            else:
-                ret = 1
-                err = "Failed to tag {} local version images. Err: {}".format(feat, err)
-            return ret, out, err
+    cmd_ret, image_info, cmd_err = _run_command_list(DOCKER_IMAGES_CMD, timeout=CLEAN_IMAGE_TIMEOUT)
+    if cmd_ret != 0:
+        ret = 1
+        err = "Failed to run docker images. Err: {}".format(cmd_err)
+        return ret, out, err
 
-        if last_version in remote_image_version_dict:
-            del remote_image_version_dict[last_version]
+    remote_image_version_dict = {}
+    local_image_version_dict = {}
+    for line in image_info.splitlines():
+        line = line.strip()
+        if not line:
+            continue
 
-        image_id_remove_list = [item[IMAGE_ID] for item in remote_image_version_dict.values()]
-        if image_id_remove_list:
-            clean_res, _, err = _run_command("docker rmi {} --force".format(" ".join(image_id_remove_list)))
-        else:
-            clean_res = 0
-        if clean_res == 0:
-            out = "Clean {} old version images successfully".format(feat)
-        else:
-            err = "Failed to clean {} old version images. Err: {}".format(feat, err)
+        fields = line.split()
+        if len(fields) != 3:
             ret = 1
+            err = "Unexpected docker images output: {}".format(line)
+            return ret, out, err
+
+        rep, version, image_id = fields
+
+        if version == "latest":
+            continue
+
+        # Match against the repository only (never the tag or image ID), to
+        # avoid a feat value coincidentally matching an unrelated image via
+        # its version/tag or hash. This preserves the historical
+        # substring-based feature-to-image association (e.g. feat "snmp"
+        # matches repository "docker-sonic-snmp").
+        if feat not in rep:
+            continue
+
+        if len(rep.split("/")) == 1:
+            local_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
+        else:
+            remote_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
+
+    if current_version in remote_image_version_dict:
+        image_prefix = remote_image_version_dict[current_version][REPO]
+        del remote_image_version_dict[current_version]
     else:
-        err = "Failed to docker images |grep {} |awk '{{print $3}}'. Error: {}".format(feat, err)
+        out = "Current version {} doesn't exist.".format(current_version)
+        ret = 0
+        return ret, out, err
+    # should be only one item in local_image_version_dict
+    for k, v in local_image_version_dict.items():
+        local_version, local_repo, local_image_id = k, v[REPO], v[IMAGE_ID]
+        # if there is a kube image with same version, need to remove the kube version
+        # and tag the local version to kube version for fallback preparation
+        # and remove the local version
+        if local_version in remote_image_version_dict:
+            remote_image = "{}:{}".format(image_prefix, local_version)
+            local_image = "{}:{}".format(local_repo, local_version)
+
+            # Sequential calls preserve the historical "cmd1 && cmd2 && cmd3"
+            # short-circuit semantics: stop immediately on the first failure
+            # instead of attempting later operations against a system left in
+            # an inconsistent state.
+            rm_remote_ret, _, rm_remote_err = _run_command_list(
+                ["docker", "rmi", remote_image], timeout=CLEAN_IMAGE_TIMEOUT)
+            if rm_remote_ret != 0:
+                ret = 1
+                err = "Failed to tag {} local version images. Err: failed to remove {}: {}".format(
+                    feat, remote_image, rm_remote_err)
+                return ret, out, err
+
+            tag_ret, _, tag_err = _run_command_list(
+                ["docker", "tag", local_image_id, remote_image], timeout=CLEAN_IMAGE_TIMEOUT)
+            if tag_ret != 0:
+                ret = 1
+                err = "Failed to tag {} local version images. Err: failed to tag {} as {}: {}".format(
+                    feat, local_image_id, remote_image, tag_err)
+                return ret, out, err
+
+            tag_res, _, err = _run_command_list(
+                ["docker", "rmi", local_image], timeout=CLEAN_IMAGE_TIMEOUT)
+        # if there is no kube image with same version, just remove the local version
+        else:
+            tag_res, _, err = _run_command_list(
+                ["docker", "rmi", "{}:{}".format(local_repo, local_version)], timeout=CLEAN_IMAGE_TIMEOUT)
+        if tag_res == 0:
+            msg = "Tag {} local version images successfully".format(feat)
+            log_debug(msg)
+        else:
+            ret = 1
+            err = "Failed to tag {} local version images. Err: {}".format(feat, err)
+        return ret, out, err
+
+    if last_version in remote_image_version_dict:
+        del remote_image_version_dict[last_version]
+
+    image_id_remove_list = [item[IMAGE_ID] for item in remote_image_version_dict.values()]
+    if image_id_remove_list:
+        clean_res, _, err = _run_command_list(
+            ["docker", "rmi"] + image_id_remove_list + ["--force"], timeout=CLEAN_IMAGE_TIMEOUT)
+    else:
+        clean_res = 0
+    if clean_res == 0:
+        out = "Clean {} old version images successfully".format(feat)
+    else:
+        err = "Failed to clean {} old version images. Err: {}".format(feat, err)
         ret = 1
 
     return ret, out, err

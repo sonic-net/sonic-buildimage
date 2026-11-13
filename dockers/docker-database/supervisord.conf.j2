@@ -46,7 +46,7 @@ dependent_startup=true
 {%- else %}
 {%- set ADDITIONAL_OPTS = '' %}
 {%- endif -%}
-command=/bin/bash -c "{ [[ -s /var/lib/{{ redis_inst }}/dump.rdb ]] || rm -f /var/lib/{{ redis_inst }}/dump.rdb; } && mkdir -p /var/lib/{{ redis_inst }} && {% if redis_items.get('bmc_link_ip') and redis_items.get('bmc_link_if') %}for ((i=0; i<300; i++)); do ip -o -4 addr show dev {{ redis_items['bmc_link_if'] }} up 2>/dev/null | grep -q 'inet {{ redis_items['bmc_link_ip'] }}/' && break; sleep 1; done; ip -o -4 addr show dev {{ redis_items['bmc_link_if'] }} up 2>/dev/null | grep -q 'inet {{ redis_items['bmc_link_ip'] }}/' || { echo 'Timed out waiting for {{ redis_items['bmc_link_if'] }} to be configured with {{ redis_items['bmc_link_ip'] }}' >&2; exit 1; } && {% endif %}exec /usr/bin/redis-server /etc/redis/redis.conf --bind {{ LOOPBACK_IP }} {{ redis_items['hostname'] }}{% if redis_items.get('bmc_link_ip') and redis_items.get('bmc_link_if') %} {{ redis_items['bmc_link_ip'] }}{% endif %} --port {{ redis_items['port'] }} --unixsocket {{ redis_items['unix_socket_path'] }} --pidfile /var/run/redis/{{ redis_inst }}.pid --dir /var/lib/{{ redis_inst }} {{ ADDITIONAL_OPTS }}"
+command=/bin/bash -c "{ [[ -s /var/lib/{{ redis_inst }}/dump.rdb ]] || rm -f /var/lib/{{ redis_inst }}/dump.rdb; } && mkdir -p /var/lib/{{ redis_inst }} && exec /usr/bin/redis-server /etc/redis/redis.conf --bind {{ LOOPBACK_IP }} {{ redis_items['hostname'] }} --port {{ redis_items['port'] }} --unixsocket {{ redis_items['unix_socket_path'] }} --pidfile /var/run/redis/{{ redis_inst }}.pid --dir /var/lib/{{ redis_inst }} {{ ADDITIONAL_OPTS }}"
 priority=2
 user=redis
 autostart=true
@@ -55,6 +55,20 @@ stdout_logfile=NONE
 stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
+
+{% if redis_items.get('bmc_link_ip') and redis_items.get('bmc_link_if') %}
+[program:{{ redis_inst }}_bmc_bind]
+command=/bin/bash -c "echo 'Waiting for {{ redis_items['bmc_link_if'] }} to get {{ redis_items['bmc_link_ip'] }}'; for ((i=0; i<300; i++)); do ip -o -4 addr show dev {{ redis_items['bmc_link_if'] }} 2>/dev/null | grep -q 'inet {{ redis_items['bmc_link_ip'] }}/' && break; sleep 1; done; if ip -o -4 addr show dev {{ redis_items['bmc_link_if'] }} 2>/dev/null | grep -q 'inet {{ redis_items['bmc_link_ip'] }}/'; then echo '{{ redis_items['bmc_link_if'] }} ready after '$i's'; bound_ips=$(redis-cli --raw -h 127.0.0.1 -p {{ redis_items['port'] }} config get bind | sed -n '2p'); redis-cli -h 127.0.0.1 -p {{ redis_items['port'] }} config set bind \"$bound_ips {{ redis_items['bmc_link_ip'] }}\"; redis-cli -h 127.0.0.1 -p {{ redis_items['port'] }} config rewrite; echo 'Bound {{ redis_items['bmc_link_ip'] }} to {{ redis_inst }} port {{ redis_items['port'] }}'; else echo 'Timed out waiting for {{ redis_items['bmc_link_if'] }} to get {{ redis_items['bmc_link_ip'] }} after 300s' >&2; exit 1; fi"
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for={{ redis_inst }}:running
+{% endif %}
 
 {% endif %}
 {%     endfor %}
