@@ -56,7 +56,7 @@ class ServiceChecker(HealthChecker):
 
     # Whitelist of containers which are managed by KubeSonic to bypass health checking entirely.
     # These containers will be excluded from both expected and running container sets.
-    CONTAINER_K8S_WHITELIST = {'telemetry', 'acms', 'restapi'}
+    CONTAINER_K8S_WHITELIST = {'acms', 'restapi'}
 
     # Containers that are only present in some images. When the docker image that
     # backs such a container is not part of the build, the container is not
@@ -126,19 +126,6 @@ class ServiceChecker(HealthChecker):
             # skip frr_bmp since it's not container just bmp option used by bgpd
             if container_name == "frr_bmp":
                 continue
-            # slim image does not have telemetry container and corresponding docker image
-            if container_name == "telemetry":
-                ret = check_docker_image("docker-sonic-telemetry")
-                if not ret:
-                    # If telemetry container image is not present, check gnmi container image
-                    # If gnmi container image is not present, ignore telemetry container check
-                    # if gnmi container image is present, check gnmi container instead of telemetry
-                    ret = check_docker_image("docker-sonic-gnmi")
-                    if not ret:
-                        logger.log_debug("Ignoring telemetry container check on image which has no corresponding docker image")
-                    else:
-                        container_list.append("gnmi")
-                    continue
             # Some platforms may not include an optional container; skip
             # expecting it when its docker image is absent from this build.
             if container_name in optional_containers:

@@ -20,7 +20,7 @@ exit "${DIALOUT_TEST_EXIT:-0}"
 EOF
 chmod +x "${DIALOUT_TEST_CLIENT}"
 
-for image in docker-sonic-gnmi docker-sonic-telemetry; do
+for image in docker-sonic-gnmi; do
     script="${DOCKERS_DIR}/${image}/dialout.sh"
     test_script="${TEST_ROOT}/${image}.sh"
 

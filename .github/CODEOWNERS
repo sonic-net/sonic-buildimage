@@ -127,10 +127,6 @@
 /src/sonic-wpa-supplicant/              @sonic-net/sonic-wpa-supplicant-maintainer
 /src/sonic-linkmgrd/                    @sonic-net/sonic-linkmgrd-maintainer
 
-# sonic-telemetry
-/dockers/docker-sonic-telemetry         @sonic-net/sonic-management
-/src/sonic-telemetry/                   @sonic-net/sonic-management
-
 # management framework
 /src/sonic-mgmt-common/                 @sonic-net/sonic-mgmt-common-maintainer
 /src/sonic-mgmt-framework/              @sonic-net/sonic-mgmt-framework-maintainer
