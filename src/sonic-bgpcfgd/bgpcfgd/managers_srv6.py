@@ -13,6 +13,12 @@ DEFAULT_VRF = "default"
 SRV6_MY_SIDS_TABLE_NAME = "SRV6_MY_SIDS"
 VRF_TABLE_NAME = "VRF_TABLE"
 APPL_DB = "APPL_DB"
+SRV6_LOCATOR_FORMATS = {
+    'usid-f3216': {
+        'prefix_length': 48,
+        'block_prefix_length': 32,
+    },
+}
 
 class SRv6Mgr(Manager):
     """ This class updates SRv6 configurations when SRV6_MY_SID_TABLE table is updated """
@@ -67,15 +73,36 @@ class SRv6Mgr(Manager):
     def locators_set_handler(self, key, data):
         locator_name = key
 
+        sid_format = data.get('format')
+        if 'format' in data and sid_format not in SRV6_LOCATOR_FORMATS:
+            log_err("Found a SRv6 locator config entry with unsupported format: {} | {}".format(key, data))
+            return False
+
         locator = Locator(locator_name, data)
-        cmd_list = ["segment-routing", "srv6"]
-        cmd_list += ['locators',
-                     'locator {}'.format(locator_name),
-                     'prefix {} block-len {} node-len {} func-bits {}'.format(
-                     locator.prefix,
-                     locator.block_len, locator.node_len, locator.func_len),
-                     "behavior usid"
-        ]
+        old_locator = self.directory.get_path(self.db_name, self.table_name, locator_name)
+        old_format = old_locator.format if old_locator else None
+
+        cmd_list = ["segment-routing", "srv6", "locators", 'locator {}'.format(locator_name)]
+        if old_format and old_format != locator.format:
+            # Remove the old schema before changing prefix length or layout.
+            cmd_list.append('no format')
+
+        if locator.format:
+            # A named format defines the SID layout and allocation behavior.
+            if old_locator and not old_format:
+                # Clear the legacy behavior usid setting when changing modes.
+                cmd_list.append('no behavior usid')
+            cmd_list.extend([
+                'prefix {}'.format(locator.prefix),
+                'format {}'.format(locator.format),
+            ])
+        else:
+            cmd_list.extend([
+                'prefix {} block-len {} node-len {} func-bits {}'.format(
+                    locator.prefix,
+                    locator.block_len, locator.node_len, locator.func_len),
+                "behavior usid",
+            ])
 
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
@@ -116,7 +143,13 @@ class SRv6Mgr(Manager):
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
         locator_prefix = IPv6Network(locator.prefix)
         sid_prefix = IPv6Network(ip_prefix)
-        locator_block = locator_prefix.supernet(new_prefix=locator.block_len)
+        locator_block_prefix_length = (
+            SRV6_LOCATOR_FORMATS[locator.format]['block_prefix_length']
+            if locator.format else locator.block_len
+        )
+        locator_block = locator_prefix.supernet(
+            new_prefix=locator_block_prefix_length
+        )
         if not locator_block.supernet_of(sid_prefix):
             log_err("Found a SRv6 SID config entry with action {} that does not match the locator block: {} | {}; locator {}".format(data['action'], key, data, locator))
             return False
@@ -200,11 +233,16 @@ class SRv6Mgr(Manager):
 class Locator:
     def __init__(self, name, data):
         self.name = name
-        self.block_len = int(data['block_len'] if 'block_len' in data else 32)
-        self.node_len = int(data['node_len'] if 'node_len' in data else 16)
-        self.func_len = int(data['func_len'] if 'func_len' in data else 16)
-        self.arg_len = int(data['arg_len'] if 'arg_len' in data else 0)
-        self.prefix = data['prefix'].lower() + "/{}".format(self.block_len + self.node_len)
+        self.format = data.get('format')
+        if self.format:
+            prefix_length = SRV6_LOCATOR_FORMATS[self.format]['prefix_length']
+            self.prefix = data['prefix'].lower() + "/{}".format(prefix_length)
+        else:
+            self.block_len = int(data['block_len'] if 'block_len' in data else 32)
+            self.node_len = int(data['node_len'] if 'node_len' in data else 16)
+            self.func_len = int(data['func_len'] if 'func_len' in data else 16)
+            self.arg_len = int(data['arg_len'] if 'arg_len' in data else 0)
+            self.prefix = data['prefix'].lower() + "/{}".format(self.block_len + self.node_len)
 
 class SID:
     def __init__(self, locator, ip_prefix, data):

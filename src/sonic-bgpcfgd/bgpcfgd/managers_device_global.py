@@ -2,7 +2,7 @@ import re
 import jinja2
 
 from .manager import Manager
-from .log import log_err, log_debug, log_notice
+from .log import log_err, log_debug, log_notice, log_warn
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
@@ -29,8 +29,17 @@ class DeviceGlobalCfgMgr(Manager):
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
         self.wcmp_template = common_objs['tf'].from_file("bgpd/wcmp/bgpd.wcmp.conf.j2")
         self.idf_isolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_isolate.conf.j2")
-        self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")        
+        self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")
+        self.bgp_srv6_add_template = common_objs['tf'].from_file("bgpd/srv6/bgpd.srv6.conf.j2")
+        self.bgp_srv6_del_template = common_objs['tf'].from_file("bgpd/srv6/bgpd.srv6.del.conf.j2")
+        # ChassisAppDbMgr creates a second DeviceGlobalCfgMgr with the same
+        # common objects, so share applied state to avoid duplicate commands.
+        self.bgp_srv6_state = common_objs.setdefault(
+            "bgp_srv6_state", {"locator": None, "config": {}})
         self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"),], self.handle_type_update)
+        self.directory.subscribe(
+            [("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn")],
+            self.handle_bgp_srv6_locator_update)
         super(DeviceGlobalCfgMgr, self).__init__(
             common_objs,
             [],
@@ -47,6 +56,10 @@ class DeviceGlobalCfgMgr(Manager):
         # By default IDF feature is unisolated
         if not self.directory.path_exist(self.db_name, self.table_name, "idf_isolation_state"):
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", self.IDF_DEFAULTS)
+        # Process the ASN if it was cached before this manager subscribed.
+        if self.bgp_srv6_state["config"]:
+            self.handle_bgp_srv6_locator_update()
+
         # Prime the BGP confederation (CONFED) config from CONFIG_DB up front so
         # the BGP peer templates can classify confed-external neighbors on the
         # very first render. bgpcfgd may process the BGP_NEIGHBOR table before the
@@ -82,6 +95,44 @@ class DeviceGlobalCfgMgr(Manager):
             self.switch_role = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["type"]
         log_debug("DeviceGlobalCfgMgr:: Switch role: %s" % self.switch_role)
 
+    def handle_bgp_srv6_locator_update(self):
+        """Apply the BGP SRv6 locator selected in BGP_DEVICE_GLOBAL|SRV6."""
+        metadata = self.directory.get_path("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost") or {}
+        locator = self.bgp_srv6_state["config"].get("bgp_srv6_locator") or None
+        old_locator = self.bgp_srv6_state["locator"]
+
+        if locator == old_locator:
+            return
+
+        bgp_asn = metadata.get("bgp_asn")
+        if not bgp_asn:
+            log_warn("DeviceGlobalCfgMgr:: BGP SRv6 locator update is waiting for DEVICE_METADATA|localhost/bgp_asn")
+            return
+
+        operations = []
+        if old_locator:
+            operations.append((self.bgp_srv6_del_template, old_locator))
+        if locator:
+            operations.append((self.bgp_srv6_add_template, locator))
+
+        commands = []
+        try:
+            for template, locator_name in operations:
+                command = template.render(
+                    bgp_asn=bgp_asn,
+                    locator_name=locator_name,
+                ).strip()
+                if command:
+                    commands.append(command)
+        except jinja2.TemplateError as e:
+            log_err("DeviceGlobalCfgMgr:: failed to render BGP SRv6 locator configuration: %s" % str(e))
+            return
+
+        if commands:
+            self.cfg_mgr.push("\n" + "\n".join(commands) + "\n")
+            log_notice("DeviceGlobalCfgMgr:: BGP SRv6 locator configuration updated to %s" % (locator or "<none>"))
+        self.bgp_srv6_state["locator"] = locator
+
     def set_handler(self, key, data):
         """ Handle device TSA/W-ECMP state change """
         log_debug("DeviceGlobalCfgMgr:: set handler")
@@ -89,6 +140,13 @@ class DeviceGlobalCfgMgr(Manager):
         if not data:
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
+
+        if key == "SRV6":
+            # The SRV6 row can also carry SID advertisement settings. Merge
+            # updates so an advertisement-only change preserves the locator.
+            self.bgp_srv6_state["config"].update(data)
+            self.handle_bgp_srv6_locator_update()
+            return True
 
         # the handler is for the whole BGP_DEVICE_GLOBAL table. It has 2 components, state and confged
         # we only handle the update BGP_DEVICE_GLOBAL|STATE here
@@ -112,6 +170,11 @@ class DeviceGlobalCfgMgr(Manager):
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
+
+        if key == "SRV6":
+            self.bgp_srv6_state["config"] = {}
+            self.handle_bgp_srv6_locator_update()
+            return True
 
         # only the STATE component drives the TSA/W-ECMP/IDF handlers
         if key != "STATE":
