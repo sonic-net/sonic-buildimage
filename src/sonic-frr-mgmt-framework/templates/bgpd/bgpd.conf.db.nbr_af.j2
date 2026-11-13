@@ -8,6 +8,9 @@
   no neighbor {{nbr_name}} activate
 {% endif %}
 {% endif %}
+{% if 'encapsulation_type' in n_af_val %}
+  neighbor {{nbr_name}} encapsulation-{{n_af_val['encapsulation_type']}}
+{% endif %}
 {% if 'tx_add_paths' in n_af_val %}
 {% if n_af_val['tx_add_paths'] == 'tx_all_paths' %}
   neighbor {{nbr_name}} addpath-tx-all-paths
