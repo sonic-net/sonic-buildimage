@@ -20,7 +20,7 @@ if is_multi_asic:
     SonicDBConfig.initializeGlobalConfig()
     ports_table = multi_asic.get_table('PORT')
 else:
-    config_db = ConfigDBConnector()
+    config_db = ConfigDBConnector(use_unix_socket_path=True)
     config_db.connect()
     ports_table = config_db.get_table('PORT')
 
