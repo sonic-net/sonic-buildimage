@@ -527,6 +527,57 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
                     ),
                 )
 
+    def test_nonordinary_source_and_mode_writes_are_reported(self):
+        for variable in ("SECURE_UPGRADE_MODE", "SECURE_BOOT_DB_CERT"):
+            for mutation in (
+                f': "${{{variable}:=prod}}"',
+                f': "${{{variable}=prod}}"',
+                f'{variable}+=prod',
+                f'read -r {variable} <<< prod',
+                f'read -r OTHER {variable} <<< "other prod"',
+                f'printf -v {variable} "%s" prod',
+                f'unset {variable}',
+                f'echo "${{{variable}:=prod}}"',
+            ):
+                with self.subTest(variable=variable, mutation=mutation):
+                    self.assertIn(
+                        "FINDING:P1:SECURE_BOOT_DB_CERT",
+                        self.file_findings(
+                            self.file_cache(),
+                            FILE_CONSUMER.replace("file ./build_debian.sh", mutation),
+                        ),
+                    )
+        self.assertNotIn(
+            "FINDING:P1:SECURE_BOOT_DB_CERT",
+            self.file_findings(
+                self.file_cache(),
+                ': "${OTHER:=prod}"\nread -r OTHER <<< prod\n' + FILE_CONSUMER,
+            ),
+        )
+
+    def test_command_substitutions_are_not_harmless_source_logging(self):
+        for logging in (
+            'echo "$(touch "$FILESYSTEM_ROOT/boot/${SECURE_BOOT_DB_CERT##*/}")"',
+            'echo "$(basename "$SECURE_BOOT_DB_CERT")"',
+            'echo "$SECURE_BOOT_DB_CERT $(true)"',
+            'echo "$(echo "$SECURE_UPGRADE_MODE")"',
+            'echo "$((SECURE_UPGRADE_MODE=1))"',
+        ):
+            with self.subTest(logging=logging):
+                self.assertIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(
+                        self.file_cache(), FILE_CONSUMER + logging + "\n",
+                    ),
+                )
+        self.assertNotIn(
+            "FINDING:P1:SECURE_BOOT_DB_CERT",
+            self.file_findings(
+                self.file_cache(), FILE_CONSUMER
+                + 'echo "source=${SECURE_BOOT_DB_CERT} mode=$SECURE_UPGRADE_MODE"\n',
+            ),
+        )
+
     def test_recognition_is_not_tied_to_certificate_variable_names(self):
         cache = self.file_cache().replace("SECURE_BOOT_DB_CERT", "ROOTFS_DATA")
         consumer = FILE_CONSUMER.replace("SECURE_BOOT_DB_CERT", "ROOTFS_DATA")

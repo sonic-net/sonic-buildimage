@@ -170,6 +170,11 @@ Each source-bearing prefix must directly invoke `./build_debian.sh`, optionally
 followed by `$(LOG)`; wrappers, overrides, and extra arguments retain the finding.
 Declarations mentioning the source or mode, and source uses following a continued
 line, also retain the finding rather than being treated as safe forwarding/logging.
+Consumer uses of either input must match the supported read-only guards, copy,
+or simple logging forms. Bare write destinations (`read`, `+=`, `printf -v`,
+`unset`) and parameter assignments therefore retain the finding too. Logging
+with command/arithmetic substitutions or complex parameter expansions is not
+exempted: expanding an `echo` argument can itself mutate state or rootfs content.
 Unsupported Make or shell forms remain findings rather than being auto-cleared.
 
 Changes to the analyzer or waiver file should include the before/after findings

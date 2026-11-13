@@ -212,8 +212,8 @@ def _same_recipe_mode(recipe, source, mode, environment):
 
 
 def _copy_only_consumer(consumer, source, mode, modes):
-    reference = re.compile(
-        r"\$(?:" + re.escape(source) + r"\b|\{[#!]?" + re.escape(source) + r"\b)"
+    input_name = re.compile(
+        r"\b(?:" + re.escape(source) + "|" + re.escape(mode) + r")\b"
     )
     nonempty = f'if [ -n "${source}" ]; then'
     exists = f'if [ ! -f "${source}" ]; then'
@@ -222,10 +222,6 @@ def _copy_only_consumer(consumer, source, mode, modes):
     mode_test = r"\$" + re.escape(mode) + r""" == ['"]([\w-]+)['"]"""
     mode_guard = re.compile(
         r"if \[\[ (" + mode_test + r"(?: \|\| " + mode_test + r")*) \]\]; then"
-    )
-    declared_input = re.compile(
-        r"(?:export|readonly|declare|typeset|local)\b.*\b(?:"
-        + re.escape(source) + "|" + re.escape(mode) + r")\b"
     )
     guards = []
     copies = 0
@@ -255,21 +251,19 @@ def _copy_only_consumer(consumer, source, mode, modes):
                 guards[-1] = "else"
         elif re.match(r"(?:fi|else|elif)\b", line):
             return False
-        if declared_input.match(line):
-            return False
-        if re.match(
-            r"(?:export )?(?:" + re.escape(source) + "|" +
-            re.escape(mode) + r")=", line
-        ):
-            return False
-        if not reference.search(line):
+        # Inspect bare destinations (read, +=, declarations), not just $reads.
+        # Only the supported read-only forms below can clear an input.
+        if not input_name.search(line):
             continue
         if follows_continuation:
             return False
         if line in (nonempty, exists):
             continue
+        if mode_guard.fullmatch(re.sub(r"^elif ", "if ", line)):
+            continue
+        logging = re.sub(r"\$\{(" + NAME + r")\}", r"$\1", line)
         if (line.startswith("echo ") and not line.endswith("\\") and
-                not re.search(r"[;|&<>`]", line)):
+                not re.search(r"[;|&<>`]|\$\(|\$\{", logging)):
             continue
         copy = re.fullmatch(
             r'(?:sudo )?cp "\$' + re.escape(source) +
