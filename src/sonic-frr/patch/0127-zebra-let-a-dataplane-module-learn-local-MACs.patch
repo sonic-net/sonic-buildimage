@@ -1,0 +1,453 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 29 Sep 2026 12:00:00 +0000
+Subject: [PATCH] zebra: let a dataplane module learn local MACs
+
+In SONiC's FPM MAC sync mode (FDB_SYNC mac_sync_mode fpm), zebra runs
+with --kernel-mac-ext-learn and loads dplane_fpm_sonic, the dataplane
+plugin that talks FPM to fpmsyncd. The ASIC learns local MACs, fpmsyncd
+reports them over the FPM channel, and dplane_fpm_sonic keeps them,
+hands them to zebra and writes their kernel bridge FDB entries. So in
+this mode the kernel is not a source of local MACs, and zebra must not
+learn them from it. zebra still creates a MAC for an ARP/ND entry (an
+auto MAC); when dplane_fpm_sonic reports the MAC, it becomes a local
+MAC, as it does on a kernel learn.
+
+The local MACs the kernel reports are zebra's own writes. Patch 0033
+drops them by NDA_PROTOCOL, which works while the kernel keeps a
+protocol for bridge FDB entries: SONiC's kernel patch
+0002-net-bridge-vxlan-Protocol-field-in-bridge-fdb.patch adds it, and
+sonic-net/sonic-linux-kernel#619 removes that patch, as nothing needs
+protocol-scoped FDB entries once MACs are synced over FPM. Without it,
+the bridge reports zebra's write with no protocol, and zebra takes it
+for a local learn: for a host the Ethernet Segment peer advertises but
+this switch has not seen, the MAC turns active, is advertised as learnt
+here, and stays after the peer withdraws it.
+
+This patch adds zebra_neigh_set_dplane_mac_learning(), which
+dplane_fpm_sonic calls when zebra runs in mac-ext-learn mode. While it
+is set:
+
+- zebra ignores the kernel's bridge FDB messages (RTM_NEWNEIGH and
+  RTM_DELNEIGH, AF_BRIDGE) for local ports, adds and deletes alike.
+  Those for the VXLAN device are left to the existing code, which in
+  mac-ext-learn mode acts only on the deletes of the BUM flooding
+  (all-zeros) and multicast group entries.
+
+- When a bridge port leaves its bridge or goes away, the kernel flushes
+  the port's FDB entries. As zebra ignores that flush, it would keep the
+  port's local MACs, still advertised, and nothing would tell
+  dplane_fpm_sonic to remove the static entries it installed in the ASIC
+  for the port's sync MACs: zebra's writes for the port fail once it is
+  out of the bridge, and the deletes of its Ethernet Segment cleanup go
+  out with ifindex 0, as if_delete_update() resets the ifindex first.
+  zebra now applies the flush itself, before it unlinks the port: it
+  deletes the port's local MACs as the flush would have, then calls the
+  new zebra_dplane_mac_port_flush hook, where dplane_fpm_sonic ends the
+  port's static entries.
+
+- zebra drops a local MAC for a VLAN with no L2VNI, and gets the local
+  MACs of a VLAN again from a read of the kernel bridge FDB when an
+  L2VNI is added or comes up, and when BGP enables advertise-all-vni.
+  The read's local entries are ignored as above, so after it zebra now
+  calls the new zebra_dplane_mac_read hook, and dplane_fpm_sonic hands
+  zebra the MACs it keeps.
+
+- dplane_fpm_sonic does not hand zebra a MAC on a port that is down, as
+  mac-ext-learn mode ignores the kernel's learns there (patch 0034).
+  SONiC flushes the port's dynamic MACs as it goes down, and the ASIC
+  learns them again once it is up, but it keeps the static ones, which
+  fpmsyncd reports only once: a static MAC configured while its port
+  was down never reached zebra. zebra now calls the new
+  zebra_dplane_mac_port_up hook when a bridge port comes up, and
+  dplane_fpm_sonic hands zebra the static MACs it held for the port.
+
+- When the peer-active hold timer of a MAC expires, mac-ext-learn mode
+  flushes the MAC, as no dynamic learn happens while it is static
+  (patch 0034). That stays for a local-inactive MAC. An active MAC is
+  one the ASIC learnt itself, for instance from a host whose traffic
+  reached this switch before the peer advertised it: the ASIC ages it,
+  and fpmsyncd reports when it does, so flushing it only withdraws the
+  route of a host still behind this switch, until dplane_fpm_sonic
+  gives the MAC back. Such a MAC now just loses peer-active, as without
+  mac-ext-learn.
+
+- dplane_fpm_sonic installs a sync MAC (a host the Ethernet Segment
+  peer advertises) in the ASIC as a static entry when zebra writes the
+  MAC as static, and removes it when zebra writes the MAC as a normal
+  entry or deletes it. mac-ext-learn mode writes a local MAC only while
+  it is local-inactive, so when an active MAC with such an entry stopped
+  being static, at hold timer expiry or when its last synced neighbour
+  was deleted, zebra wrote nothing, and the static entry stayed in the
+  ASIC, where it does not age. zebra now writes such a MAC once more as
+  a normal entry.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/interface.c b/zebra/interface.c
+index 6e8d2b9de3..7a7c002b21 100644
+--- a/zebra/interface.c
++++ b/zebra/interface.c
+@@ -37,6 +37,7 @@
+ #include "zebra/zebra_evpn_mh.h"
+ #include "zebra/zebra_trace.h"
+ #include "zebra/zebra_l2.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, ZINFO, "Zebra Interface Information");
+ 
+@@ -1042,6 +1043,8 @@ void if_up(struct interface *ifp, bool install_connected)
+ 	if (zif->flags & ZIF_FLAG_EVPN_MH_UPLINK)
+ 		zebra_evpn_mh_uplink_oper_update(zif);
+ 
++	zebra_neigh_dplane_port_up(ifp);
++
+ 	event_cancel(&zif->speed_update);
+ 	dplane_intf_speed_get(ifp);
+ 
+@@ -2034,6 +2037,9 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
+ 
+ 		frrtrace(3, frr_zebra, if_dplane_ifp_handling, name, ifindex, 0);
+ 
++		/* The kernel flushed the FDB entries of a bridge port as it went. */
++		zebra_neigh_dplane_port_flush(ifp);
++
+ 		if (IS_ZEBRA_IF_BOND(ifp))
+ 			zebra_l2if_update_bond(ifp, false);
+ 		if (IS_ZEBRA_IF_BOND_SLAVE(ifp))
+diff --git a/zebra/zebra_evpn.c b/zebra/zebra_evpn.c
+index 945ec8541f..2209e94d5b 100644
+--- a/zebra/zebra_evpn.c
++++ b/zebra/zebra_evpn.c
+@@ -41,6 +41,7 @@
+ #include "zebra/zebra_dplane.h"
+ #include "zebra/zebra_router.h"
+ #include "zebra/zebra_trace.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, ZEVPN, "VNI hash");
+ DEFINE_MTYPE_STATIC(ZEBRA, ZEVPN_VTEP, "VNI remote VTEP");
+@@ -953,6 +954,10 @@ void zebra_evpn_read_mac_neigh(struct zebra_evpn *zevpn, struct interface *ifp)
+ 			zif->brslave_info.bridge_ifindex);
+ 
+ 	dplane_fdb_read_for_bridge(zns, ifp, zif->brslave_info.br_if, vni->access_vlan);
++	/* The local MACs this read reports are ignored while a dataplane
++	 * module learns them, so ask the module instead.
++	 */
++	zebra_neigh_dplane_mac_read(zevpn);
+ 	/* We need to specifically read and retrieve the entry for BUM handling
+ 	 * via multicast, if any.
+ 	 */
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 5f9f84f34e..0d88150f17 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -26,6 +26,7 @@
+ #include "zebra/zebra_evpn_mh.h"
+ #include "zebra/zebra_evpn_mac.h"
+ #include "zebra/zebra_evpn_neigh.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, MAC, "EVPN MAC");
+ 
+@@ -1480,9 +1481,13 @@ int zebra_evpn_sync_mac_dp_install(struct zebra_mac *mac, bool set_inactive,
+ 		return 0;
+ 	}
+ 
+-	if (!zebra_mac_ext_learn_mode() || CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE)) {
++	if (!zebra_mac_ext_learn_mode() || CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE) ||
++	    (zebra_neigh_dplane_mac_learning() && !set_static)) {
+ 		/* For Extern Only mode:
+-		 *  Update the dataplane only when the MAC is inactive
++		 *  Update the dataplane only when the MAC is inactive, or when
++		 *  an active MAC stops being static and a dataplane module
++		 *  learns local MACs: the module keeps the static entry in
++		 *  the ASIC until this write ends it.
+ 		 */
+ 		if (IS_ZEBRA_DEBUG_EVPN_MH_MAC) {
+ 			char mac_buf[MAC_BUF_SIZE];
+@@ -1546,7 +1551,13 @@ static void zebra_evpn_mac_hold_exp_cb(struct event *t)
+ 			   zebra_evpn_zebra_mac_flag_dump(mac, mac_buf, sizeof(mac_buf)));
+ 	}
+ 
+-	if (zebra_mac_ext_learn_mode()) {
++	/* A dataplane module that learns local MACs also ages them, so only a
++	 * local-inactive MAC is flushed here; an active one stays until the
++	 * module reports it gone.
++	 */
++	if (zebra_mac_ext_learn_mode() &&
++	    (!zebra_neigh_dplane_mac_learning() ||
++	     CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE))) {
+ 		vlanid_t vid;
+ 		struct interface *ifp;
+ 		/* Upon expiry, MAC is deleted from DP. */
+@@ -2482,6 +2493,52 @@ int zebra_evpn_del_local_mac(struct zebra_evpn *zevpn, struct zebra_mac *mac,
+ 	return 0;
+ }
+ 
++struct zebra_evpn_port_flush {
++	struct interface *ifp;
++	struct list *macs;
++};
++
++static void zebra_evpn_port_flush_collect(struct hash_bucket *bucket, void *arg)
++{
++	struct zebra_evpn_port_flush *pf = arg;
++	struct zebra_mac *mac = bucket->data;
++	struct interface *ifp;
++	vlanid_t vid;
++
++	if (!CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL))
++		return;
++
++	/* The port of the MAC's FDB entry: its Ethernet Segment's, if any. */
++	zebra_evpn_mac_get_access_info(mac, &ifp, &vid);
++	if (ifp == pf->ifp)
++		listnode_add(pf->macs, mac);
++}
++
++/*
++ * Delete the local MACs of a bridge port in this EVPN, as
++ * zebra_vxlan_local_mac_del() does for each entry of a kernel flush of the
++ * port's FDB.
++ */
++void zebra_evpn_local_macs_port_flush(struct zebra_evpn *zevpn, struct interface *ifp)
++{
++	struct zebra_evpn_port_flush pf = { .ifp = ifp };
++	struct listnode *node, *nnode;
++	struct zebra_mac *mac;
++
++	if (!zevpn->mac_table)
++		return;
++
++	pf.macs = list_new();
++	hash_iterate(zevpn->mac_table, zebra_evpn_port_flush_collect, &pf);
++	for (ALL_LIST_ELEMENTS(pf.macs, node, nnode, mac)) {
++		if (IS_ZEBRA_DEBUG_VXLAN || IS_ZEBRA_DEBUG_EVPN_MH_MAC)
++			zlog_debug("Port flush: DEL local MAC %pEA VNI %u", &mac->macaddr,
++				   zevpn->vni);
++		zebra_evpn_del_local_mac(zevpn, mac, false);
++	}
++	list_delete(&pf.macs);
++}
++
+ void zebra_evpn_mac_gw_macip_add(struct interface *ifp, struct zebra_evpn *zevpn,
+ 				 const struct ipaddr *ip,
+ 				 struct zebra_mac **macp,
+diff --git a/zebra/zebra_evpn_mac.h b/zebra/zebra_evpn_mac.h
+index 85abdd59cc..3f6799c31e 100644
+--- a/zebra/zebra_evpn_mac.h
++++ b/zebra/zebra_evpn_mac.h
+@@ -276,6 +276,7 @@ int zebra_evpn_add_update_local_mac(struct zebra_vrf *zvrf,
+ 				    bool dp_static, struct zebra_mac *mac);
+ int zebra_evpn_del_local_mac(struct zebra_evpn *zevpn, struct zebra_mac *mac,
+ 			     bool clear_static);
++void zebra_evpn_local_macs_port_flush(struct zebra_evpn *zevpn, struct interface *ifp);
+ void zebra_evpn_mac_gw_macip_add(struct interface *ifp,
+ 				 struct zebra_evpn *zevpn,
+ 				 const struct ipaddr *ip,
+diff --git a/zebra/zebra_l2.c b/zebra/zebra_l2.c
+index 204cb34466..f7c2bbbf9f 100644
+--- a/zebra/zebra_l2.c
++++ b/zebra/zebra_l2.c
+@@ -30,6 +30,7 @@
+ #include "zebra/zebra_vxlan.h"
+ #include "zebra/zebra_vxlan_if.h"
+ #include "zebra/zebra_evpn_mh.h"
++#include "zebra/zebra_neigh.h"
+ 
+ /* definitions */
+ 
+@@ -467,6 +468,9 @@ void zebra_l2if_update_bridge_slave(struct interface *ifp,
+ 		if (zif->es_info.es)
+ 			zebra_evpn_es_local_br_port_update(zif);
+ 	} else if (old_bridge_ifindex != IFINDEX_INTERNAL) {
++		/* The kernel flushed the port's FDB entries as it left. */
++		zebra_neigh_dplane_port_flush(ifp);
++
+ 		/*
+ 		 * In the case of VxLAN, invoke the handler for EVPN.
+ 		 * Note that this should be done *prior*
+diff --git a/zebra/zebra_neigh.c b/zebra/zebra_neigh.c
+index b0350e2c0d..7f87949a2e 100644
+--- a/zebra/zebra_neigh.c
++++ b/zebra/zebra_neigh.c
+@@ -580,6 +580,57 @@ static void zebra_neigh_ipaddr_update(struct zebra_dplane_ctx *ctx)
+ 		zebra_vxlan_handle_kernel_neigh_del(ifp, link_if, &ip);
+ }
+ 
++static bool dplane_mac_learning;
++
++DEFINE_HOOK(zebra_dplane_mac_read, (struct zebra_evpn *zevpn), (zevpn));
++
++void zebra_neigh_set_dplane_mac_learning(bool enable)
++{
++	dplane_mac_learning = enable;
++}
++
++bool zebra_neigh_dplane_mac_learning(void)
++{
++	return dplane_mac_learning;
++}
++
++void zebra_neigh_dplane_mac_read(struct zebra_evpn *zevpn)
++{
++	if (dplane_mac_learning)
++		hook_call(zebra_dplane_mac_read, zevpn);
++}
++
++DEFINE_HOOK(zebra_dplane_mac_port_flush, (struct interface *ifp), (ifp));
++
++/* Called before the port is unlinked from its bridge, while its ifindex
++ * still names it.
++ */
++void zebra_neigh_dplane_port_flush(struct interface *ifp)
++{
++	struct zebra_if *zif = ifp->info;
++
++	if (!dplane_mac_learning || !zif || !zif->brslave_info.br_if || IS_ZEBRA_IF_VXLAN(ifp))
++		return;
++
++	if (IS_ZEBRA_DEBUG_KERNEL)
++		zlog_debug("Applying the kernel's FDB flush of %s(%u)", ifp->name, ifp->ifindex);
++
++	zebra_vxlan_local_macs_port_flush(ifp);
++	hook_call(zebra_dplane_mac_port_flush, ifp);
++}
++
++DEFINE_HOOK(zebra_dplane_mac_port_up, (struct interface *ifp), (ifp));
++
++void zebra_neigh_dplane_port_up(struct interface *ifp)
++{
++	struct zebra_if *zif = ifp->info;
++
++	if (!dplane_mac_learning || !zif || !zif->brslave_info.br_if || IS_ZEBRA_IF_VXLAN(ifp))
++		return;
++
++	hook_call(zebra_dplane_mac_port_up, ifp);
++}
++
+ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
+ {
+ 	ns_id_t ns_id;
+@@ -653,6 +704,14 @@ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
+ 	ndm_state = dplane_ctx_mac_get_ndm_state(ctx);
+ 	ndm_flags = dplane_ctx_mac_get_ndm_flags(ctx);
+ 
++	/* The dataplane module learns local MACs; this entry is zebra's own write. */
++	if (dplane_mac_learning && !IS_ZEBRA_IF_VXLAN(ifp)) {
++		if (IS_ZEBRA_DEBUG_KERNEL)
++			zlog_debug("        Ignoring %s MAC %pEA on %s, a dataplane module learns local MACs",
++				   dplane_op2str(op), &mac, ifp->name);
++		return;
++	}
++
+ 	/* If add or update, do accordingly if learnt on a "local" interface; if
+ 	 * the notification is over VxLAN, this has to be related to
+ 	 * multi-homing,
+diff --git a/zebra/zebra_neigh.h b/zebra/zebra_neigh.h
+index 30c9f4b644..fd735217a2 100644
+--- a/zebra/zebra_neigh.h
++++ b/zebra/zebra_neigh.h
+@@ -14,12 +14,15 @@
+ #include "lib/prefix.h"
+ #include "lib/ns.h"
+ #include "lib/if.h"
++#include "lib/hook.h"
+ 
+ struct zebra_pbr_rule;
+ struct zebra_dplane_ctx;
+ 
+ #define zneigh_info zrouter.neigh_info
+ 
++struct zebra_evpn;
++
+ struct zebra_neigh_ent {
+ 	ns_id_t ns_id;
+ 	ifindex_t ifindex;
+@@ -60,4 +63,25 @@ extern void zebra_neigh_deref(struct zebra_pbr_rule *rule);
+ extern void zebra_neigh_ref(ns_id_t ns_id, int ifindex, struct ipaddr *ip,
+ 			    struct zebra_pbr_rule *rule);
+ void zebra_neigh_dplane_update(struct zebra_dplane_ctx *ctx);
++/* A dataplane module, not the kernel, learns and ages local MACs. */
++extern void zebra_neigh_set_dplane_mac_learning(bool enable);
++extern bool zebra_neigh_dplane_mac_learning(void);
++/* Where zebra reads local MACs from the kernel, it asks that module for them
++ * instead. zevpn is the EVPN being read, or NULL for all of them.
++ */
++DECLARE_HOOK(zebra_dplane_mac_read, (struct zebra_evpn *zevpn), (zevpn));
++extern void zebra_neigh_dplane_mac_read(struct zebra_evpn *zevpn);
++/* When a bridge port leaves its bridge or goes away, the kernel flushes the
++ * port's FDB entries, which zebra ignores while that module learns local
++ * MACs. zebra applies the flush itself: it deletes the port's local MACs as
++ * the flush would have, then tells the module, which drops what it keeps for
++ * the port.
++ */
++DECLARE_HOOK(zebra_dplane_mac_port_flush, (struct interface *ifp), (ifp));
++extern void zebra_neigh_dplane_port_flush(struct interface *ifp);
++/* A bridge port came up: the module gives zebra the port's MACs it held back
++ * while the port was down.
++ */
++DECLARE_HOOK(zebra_dplane_mac_port_up, (struct interface *ifp), (ifp));
++extern void zebra_neigh_dplane_port_up(struct interface *ifp);
+ #endif /* _ZEBRA_NEIGH_H */
+diff --git a/zebra/zebra_vxlan.c b/zebra/zebra_vxlan.c
+index 42ed7e1ea8..8bc1fa0171 100644
+--- a/zebra/zebra_vxlan.c
++++ b/zebra/zebra_vxlan.c
+@@ -43,6 +43,7 @@
+ #include "zebra/zebra_dplane.h"
+ #include "zebra/zebra_router.h"
+ #include "zebra/zebra_trace.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, HOST_PREFIX, "host prefix");
+ DEFINE_MTYPE_STATIC(ZEBRA, ZL3VNI, "L3 VNI hash");
+@@ -4778,6 +4779,28 @@ int zebra_vxlan_dp_network_mac_del(struct interface *ifp,
+ 	return 0;
+ }
+ 
++static void zebra_vxlan_port_mac_flush_evpn(struct hash_bucket *bucket, void *arg)
++{
++	struct zebra_evpn *zevpn = bucket->data;
++
++	if (zevpn->vxlan_if)
++		zebra_evpn_local_macs_port_flush(zevpn, arg);
++}
++
++/* Delete the local MACs of a bridge port as the kernel's flush of its FDB
++ * entries would have, through zebra_vxlan_local_mac_del(): the port is leaving
++ * its bridge or going away.
++ */
++void zebra_vxlan_local_macs_port_flush(struct interface *ifp)
++{
++	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
++
++	if (!zvrf || !zvrf->evpn_table)
++		return;
++
++	hash_iterate(zvrf->evpn_table, zebra_vxlan_port_mac_flush_evpn, ifp);
++}
++
+ /*
+  * Handle local MAC delete (on a port or VLAN corresponding to this VNI).
+  */
+@@ -6066,6 +6089,7 @@ void zebra_vxlan_advertise_all_vni(ZAPI_HANDLER_ARGS)
+ 
+ 		/* Read the MAC FDB */
+ 		ns_walk_func(macfdb_read_ns, NULL, NULL);
++		zebra_neigh_dplane_mac_read(NULL);
+ 
+ 		/* Read neighbors */
+ 		ns_walk_func(neigh_read_ns, NULL, NULL);
+diff --git a/zebra/zebra_vxlan.h b/zebra/zebra_vxlan.h
+index d622deb634..869ffc5810 100644
+--- a/zebra/zebra_vxlan.h
++++ b/zebra/zebra_vxlan.h
+@@ -172,6 +172,7 @@ extern int zebra_vxlan_local_mac_add_update(struct interface *ifp,
+ 					    struct ethaddr *mac, vlanid_t vid,
+ 					    bool sticky, bool local_inactive,
+ 						bool dp_static);
++extern void zebra_vxlan_local_macs_port_flush(struct interface *ifp);
+ extern int zebra_vxlan_local_mac_del(struct interface *ifp,
+ 				     struct interface *br_if,
+ 				     struct ethaddr *mac, vlanid_t vid);

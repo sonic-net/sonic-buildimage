@@ -1,0 +1,45 @@
+From 747c06c3d1e121d53f2aea6fd2b27f974e6c6cf5 Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Mon, 9 Nov 2026 10:16:11 -0800
+Subject: [PATCH] zebra: clear a sync MAC's static flag when its L2VNI is
+ removed
+
+When zebra deletes the MACs of an L2VNI, it first writes each static
+local MAC as a normal entry (force_clear_static), so that the kernel
+entry stops being static. zebra_evpn_sync_mac_dp_install() defers any
+write for a MAC on an Ethernet Segment until the ES-EVI exists, and an
+L2VNI that goes down or is deleted drops its ES-EVIs
+(zebra_evpn_vl_vxl_deref()) before it deletes its MACs. So the write is
+skipped, the MAC is freed, and the kernel entry stays static: it does
+not age, and keeps sending the host's traffic to that port. In SONiC's
+FPM MAC sync mode, dplane_fpm_sonic also keeps the MAC's static entry
+in the ASIC, which it ends on this write.
+
+The deferral, from commit 09de6e4550, is for sync MACs that bgpd sends
+while an ES is being re-added: zebra_evpn_es_evi_mac_install() installs
+them once the ES-EVI is created. A MAC being deleted gets no such
+second attempt, so do not defer the write that clears its static flag.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ zebra/zebra_evpn_mac.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 0d88150f17..7a50e8cab2 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -1398,9 +1398,11 @@ int zebra_evpn_sync_mac_dp_install(struct zebra_mac *mac, bool set_inactive,
+ 	struct interface *br_ifp;
+ 
+ 	/* If the ES-EVI doesn't exist defer install. When the ES-EVI is
+-	 * created we will attempt to install the mac entry again
++	 * created we will attempt to install the mac entry again. A MAC
++	 * being deleted gets no such attempt, so clearing its static flag
++	 * is not deferred: the entry would stay static.
+ 	 */
+-	if (mac->es) {
++	if (mac->es && !force_clear_static) {
+ 		struct zebra_evpn_es_evi *es_evi;
+ 
+ 		es_evi = zebra_evpn_es_evi_find(mac->es, mac->zevpn);
