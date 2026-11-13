@@ -309,19 +309,21 @@ install_deb_package $debs_path/sonic-host-services-data_*.deb
 # Install ZTP (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-ztp_*.deb
 {% if sonic_asic_platform == "aspeed" %}
-{% if enable_bmc_ztp != "y" %}
-# BMC images (aspeed) built with ENABLE_BMC_ZTP=n ship ZTP installed but not
-# running: such a BMC must not self-provision unless an admin opts in with
-# 'systemctl enable --now ztp'. The unit is disabled, not masked, so it starts
-# cleanly once enabled. With the default ENABLE_BMC_ZTP=y the unit keeps the
-# enabled state set by the sonic-ztp package and ZTP runs on first boot.
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable ztp.service
-{% endif %}
-# Default ZTP configuration for BMC: no in-band discovery (a BMC is
-# provisioned over eth0 only). config-setup seeds /host/ztp/ztp_cfg.json
-# from this template on first boot, before the ZTP engine can create it
-# with built-in defaults (feat-inband true).
-sudo cp files/image_config/ztp/ztp_cfg.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/ztp_cfg.json
+# Default ZTP configuration for BMC (aspeed) images. config-setup seeds
+# /host/ztp/ztp_cfg.json from this template on first boot, before the ZTP
+# engine can create it with built-in defaults (admin-mode true, feat-inband
+# true).
+#  - admin-mode follows the ENABLE_BMC_ZTP build flag. With the default (n)
+#    ZTP is administratively disabled: first boot loads the factory default
+#    configuration and ztp.service exits. Admins opt in with 'ztp enable'
+#    followed by 'ztp run -y'.
+#  - feat-inband is false: a BMC is provisioned over eth0 only.
+sudo tee $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/ztp_cfg.json > /dev/null <<EOF
+{
+    "admin-mode": {{ "true" if enable_bmc_ztp == "y" else "false" }},
+    "feat-inband": false
+}
+EOF
 {% endif %}
 {% endif %}
 

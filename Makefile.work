@@ -6,7 +6,7 @@
 #  * PLATFORM: Specific platform we wish to build images for.
 #  * BUILD_NUMBER: Desired version-number to pass to the building-system.
 #  * ENABLE_ZTP: Enables zero touch provisioning.
-#  * ENABLE_BMC_ZTP: Enables the zero touch provisioning service in BMC (aspeed) images (default y).
+#  * ENABLE_BMC_ZTP: Ships zero touch provisioning administratively enabled in BMC (aspeed) images (default n).
 #  * SHUTDOWN_BGP_ON_START: Sets admin-down state for all bgp peerings after restart.
 #  * INCLUDE_KUBERNETES: Allows including Kubernetes
 #  * INCLUDE_KUBERNETES_MASTER: Allows including Kubernetes master
