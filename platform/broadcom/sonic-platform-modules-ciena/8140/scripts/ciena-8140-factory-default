@@ -1,0 +1,43 @@
+#!/bin/bash
+# Factory default config hook for x86_64-ciena-8140-r0
+# Merges platform-specific init_cfg.json into the generated config_db.json.
+# This adds FEATURE, AUTO_TECHSUPPORT, AUTO_TECHSUPPORT_FEATURE, and
+# BGP_DEVICE_GLOBAL sections that are not produced by the l3 preset.
+# It also disables the PORT_PHY_ATTR flex-counter (PHY RX-SNR) — unsupported on the BCM88850/DNX ASIC.
+
+PLATFORM_INIT_CFG="/usr/share/sonic/device/x86_64-ciena-8140-r0/init_cfg.json"
+
+if [ -z "${DEST_FILE}" ]; then
+    echo "ciena-8140-factory-default: DEST_FILE not set, skipping"
+    return 0
+fi
+
+# On the plain "factory" path, hooks run before config-setup writes DEST_FILE,
+# so it may not exist yet. Generate the preset ourselves to give the merge a
+# base; config-setup's own "if [ ! -e DEST_FILE ]" fallback then skips it.
+if [ ! -f "${DEST_FILE}" ]; then
+    echo "ciena-8140-factory-default: ${DEST_FILE} not present yet; generating preset first"
+    PLATFORM="$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)"
+    if [ -n "${PLATFORM}" ] && [ -f "/usr/share/sonic/device/${PLATFORM}/default_sku" ]; then
+        read -r HW_KEY DEFAULT_PRESET < "/usr/share/sonic/device/${PLATFORM}/default_sku"
+    fi
+    if [ -z "${HW_KEY}" ] || [ -z "${DEFAULT_PRESET}" ]; then
+        echo "ciena-8140-factory-default: could not resolve HW_KEY/preset from default_sku; skipping"
+        return 0
+    fi
+    if ! sonic-cfggen -H -k "${HW_KEY}" --preset "${DEFAULT_PRESET}" > "${DEST_FILE}"; then
+        echo "ciena-8140-factory-default: preset generation failed; skipping"
+        rm -f "${DEST_FILE}"
+        return 0
+    fi
+fi
+
+if [ ! -f "${PLATFORM_INIT_CFG}" ]; then
+    echo "ciena-8140-factory-default: ${PLATFORM_INIT_CFG} not found, skipping"
+    return 0
+fi
+
+echo "ciena-8140-factory-default: merging ${PLATFORM_INIT_CFG} into ${DEST_FILE}"
+jq --indent 4 -s '.[0] * .[1]' "${DEST_FILE}" "${PLATFORM_INIT_CFG}" > /tmp/ciena_merged.$$.json \
+    && mv /tmp/ciena_merged.$$.json "${DEST_FILE}" \
+    || echo "ciena-8140-factory-default: merge failed"
