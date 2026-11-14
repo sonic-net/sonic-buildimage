@@ -114,6 +114,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(UFISPACE_S9301_32DB_PLATFORM_MODULE) \
                                $(UFISPACE_S9321_64E_PLATFORM_MODULE) \
                                $(UFISPACE_S9321_64EO_PLATFORM_MODULE) \
+                               $(UFISPACE_S9620_32E_PLATFORM_MODULE) \
                                $(NEXTHOP_COMMON_PLATFORM_MODULE) \
                                $(NEXTHOP_KOMODO_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_PLATFORM_MODULE) \
