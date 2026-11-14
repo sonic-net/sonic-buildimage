@@ -132,67 +132,83 @@ class SfpUtil(SfpUtilBase):
         return eeprom_raw
 
     def get_highest_temperature_cpo_oe(self):
-        hightest_temperature = self.TEMP_INVALID
+        highest_temperature = self.TEMP_INVALID
         try:
             platform_chassis = sonic_platform.platform.Platform().get_chassis()
             if platform_chassis is None:
                 write_syslog(syslog.LOG_ERR, "platform_chassis is none")
                 return self.TEMP_ERROR
-            sfp_list = platform_chassis._sfp_list
-            last_oe_id = -1
-            for idx in range(1, len(sfp_list)):
-                sfp = sfp_list[idx]
-                # skip same oe
-                oe_id = sfp._oe_id
-                if oe_id == last_oe_id:
-                    continue
-                last_oe_id = oe_id
-                api = sfp.get_xcvr_api()
-                if api is None:
-                    write_syslog(syslog.LOG_ERR, "oe api is none:{}".format(idx))
-                    continue
-                temperature = api.get_module_temperature()
-                write_syslog(syslog.LOG_DEBUG, "OE:{} sfp:{},temp:{}".format(oe_id, idx, temperature))
-                if temperature < self.TEMP_VALID_LOW or temperature > self.TEMP_VALID_HIGH:
-                    write_syslog(syslog.LOG_ERR, "OE Invalid temp:{} idx:{}".format(temperature, idx))
-                    continue
-                if hightest_temperature < temperature:
-                    hightest_temperature = temperature
+            cpo_list = platform_chassis.get_all_cpos()
         except Exception as e:
-            write_syslog(syslog.LOG_ERR, "get oe temp error:{}".format(e))
+            write_syslog(syslog.LOG_ERR, "get cpo list for oe temperature failed:{}".format(e))
             return self.TEMP_ERROR
 
-        return hightest_temperature
+        seen_oes = set()
+        read_error = False
+        for cpo in cpo_list:
+            try:
+                oe = cpo.oe
+                oe_name = oe.get_name()
+                if oe_name in seen_oes:
+                    continue
+                seen_oes.add(oe_name)
+                api = oe.get_api()
+                if api is None:
+                    raise OSError("OE API is unavailable: {}".format(oe_name))
+                temperature = api.get_module_temperature()
+                if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
+                    raise ValueError("OE temperature is unavailable: {}".format(oe_name))
+                write_syslog(syslog.LOG_DEBUG, "OE:{},temp:{}".format(oe_name, temperature))
+                if not self.TEMP_VALID_LOW <= temperature <= self.TEMP_VALID_HIGH:
+                    write_syslog(syslog.LOG_ERR, "OE Invalid temp:{} oe:{}".format(temperature, oe_name))
+                    continue
+                highest_temperature = max(highest_temperature, temperature)
+            except Exception as e:
+                write_syslog(syslog.LOG_ERR, "get oe temp error:{}".format(e))
+                read_error = True
+
+        if highest_temperature == self.TEMP_INVALID and read_error:
+            return self.TEMP_ERROR
+        return highest_temperature
 
     def get_highest_temperature_cpo_rlm(self):
-        hightest_temperature = self.TEMP_INVALID
+        highest_temperature = self.TEMP_INVALID
         try:
             platform_chassis = sonic_platform.platform.Platform().get_chassis()
             if platform_chassis is None:
                 write_syslog(syslog.LOG_ERR, "platform_chassis is none")
                 return self.TEMP_ERROR
-            sfp_list = platform_chassis._sfp_list
-            last_rlm_id = -1
-            for idx in range(1, len(sfp_list)):
-                sfp = sfp_list[idx]
-                # skip same rlm
-                rlm_id = sfp._els_id
-                if rlm_id == last_rlm_id:
-                    continue
-                last_rlm_id = rlm_id
-                api = sfp.get_xcvr_api()
-                if api is None:
-                    write_syslog(syslog.LOG_ERR, "rlm api is none:{}".format(idx))
-                    continue
-                temperature = api.get_rlm_temperature()
-                write_syslog(syslog.LOG_DEBUG, "RLM:{} sfp:{},temp:{}".format(rlm_id, idx, temperature))
-                if temperature < self.TEMP_VALID_LOW or temperature > self.TEMP_VALID_HIGH:
-                    write_syslog(syslog.LOG_ERR, "RLM Invalid temp:{} idx:{}".format(temperature, idx))
-                    continue
-                if hightest_temperature < temperature:
-                    hightest_temperature = temperature
+            cpo_list = platform_chassis.get_all_cpos()
         except Exception as e:
-            write_syslog(syslog.LOG_ERR, "get rlm temp error:{}".format(e))
+            write_syslog(syslog.LOG_ERR, "get cpo list for els temperature failed:{}".format(e))
             return self.TEMP_ERROR
 
-        return hightest_temperature
+        seen_els = set()
+        read_error = False
+        for cpo in cpo_list:
+            try:
+                els = cpo.elsfp
+                els_name = els.get_name()
+                if els_name in seen_els:
+                    continue
+                seen_els.add(els_name)
+                if not els.get_presence():
+                    continue
+                api = els.get_api()
+                if api is None:
+                    raise OSError("ELS API is unavailable: {}".format(els_name))
+                temperature = api.get_module_temperature()
+                if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
+                    raise ValueError("ELS temperature is unavailable: {}".format(els_name))
+                write_syslog(syslog.LOG_DEBUG, "ELS:{},temp:{}".format(els_name, temperature))
+                if not self.TEMP_VALID_LOW <= temperature <= self.TEMP_VALID_HIGH:
+                    write_syslog(syslog.LOG_ERR, "ELS Invalid temp:{} els:{}".format(temperature, els_name))
+                    continue
+                highest_temperature = max(highest_temperature, temperature)
+            except Exception as e:
+                write_syslog(syslog.LOG_ERR, "get els temp error:{}".format(e))
+                read_error = True
+
+        if highest_temperature == self.TEMP_INVALID and read_error:
+            return self.TEMP_ERROR
+        return highest_temperature

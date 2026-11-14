@@ -3,7 +3,7 @@ import syslog
 import os
 import glob
 
-from cpoutil import get_all_oe_vendor_info
+from micas_cpoutil import get_all_oe_vendor_info
 
 OE_AVDD_VOLTAGE_STATIC_PARAMETERS = [
     # OE0_AVDD_RX_1.8_V
