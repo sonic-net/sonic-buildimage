@@ -1,0 +1,6 @@
+{
+    "ConnectionFileMixin": {
+        "connection_file" : "gt-ipython-shell.json"
+    }
+}
+
