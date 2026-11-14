@@ -1,6 +1,6 @@
 #!/bin/bash
 # Unit tests for k8s_pod_control.sh
-# Uses a mock docker command to test container discovery and restart logic.
+# Uses a mock docker command to test container discovery and stop logic.
 #
 # Usage: bash files/scripts/tests/test_k8s_pod_control.sh
 
@@ -32,7 +32,8 @@ assert_eq() {
 MOCK_DIR="$(mktemp -d)"
 trap 'rm -rf "${MOCK_DIR}"' EXIT
 
-# Mock docker: handles ps and restart subcommands
+# Mock docker: handles ps and stop; start/restart must never be called
+export MOCK_DIR
 cat > "${MOCK_DIR}/docker" <<'MOCK_DOCKER'
 #!/bin/bash
 subcmd="$1"; shift
@@ -86,12 +87,24 @@ case "$subcmd" in
         ;;  # no output
     esac
     ;;
-  restart)
-    cid="$1"
+  stop)
+    # accept 'docker stop -t <n> <cid>'
+    while (( $# > 0 )); do
+      case "$1" in
+        -t) shift 2 ;;
+        *) cid="$1"; shift ;;
+      esac
+    done
+    echo "stop ${cid}" >> "${MOCK_DIR}/docker_calls"
     case "$cid" in
       "abc123def456"|"aaa111"|"bbb222") ;;
       *) exit 1 ;;
     esac
+    ;;
+  start|restart)
+    # A kubelet-managed container must never be started from outside kubelet.
+    echo "$subcmd $*" >> "${MOCK_DIR}/docker_calls"
+    exit 99
     ;;
 esac
 MOCK_DOCKER
@@ -169,22 +182,50 @@ result="$(pods_on_node)"
 assert_eq "no match returns empty" "" "$result"
 
 echo ""
-echo "=== restart_containers ==="
+echo "=== stop_containers ==="
 
+: > "${MOCK_DIR}/docker_calls"
 set_filters_for "telemetry"
 SERVICE_NAME="telemetry"
-restart_containers; rc=$?
-assert_eq "restart single container succeeds" "0" "$rc"
+stop_containers; rc=$?
+assert_eq "stop single container succeeds" "0" "$rc"
+assert_eq "stop uses 'docker stop' on the container" "stop abc123def456" "$(cat "${MOCK_DIR}/docker_calls")"
 
+: > "${MOCK_DIR}/docker_calls"
 set_filters_for "multi"
 SERVICE_NAME="multi"
-restart_containers; rc=$?
-assert_eq "restart multiple containers succeeds" "0" "$rc"
+stop_containers; rc=$?
+assert_eq "stop multiple containers succeeds" "0" "$rc"
+assert_eq "stop hits every matching container (orphans included)" $'stop aaa111\nstop bbb222' "$(cat "${MOCK_DIR}/docker_calls")"
 
 set_filters_for "nonexistent"
 SERVICE_NAME="nonexistent"
-restart_containers; rc=$?
-assert_eq "restart with no containers is no-op" "0" "$rc"
+stop_containers; rc=$?
+assert_eq "stop with no containers is no-op" "0" "$rc"
+
+echo ""
+echo "=== cmd_start / cmd_stop / cmd_restart never start a container ==="
+
+: > "${MOCK_DIR}/docker_calls"
+set_filters_for "telemetry"
+SERVICE_NAME="telemetry"
+cmd_start; rc=$?
+assert_eq "cmd_start returns 0 when a container is running" "0" "$rc"
+assert_eq "cmd_start issues no docker start/stop/restart" "" "$(cat "${MOCK_DIR}/docker_calls")"
+
+: > "${MOCK_DIR}/docker_calls"
+set_filters_for "nonexistent"
+SERVICE_NAME="nonexistent"
+START_WAIT=1
+cmd_start; rc=$?
+assert_eq "cmd_start returns 0 with no container (kubelet owns the start)" "0" "$rc"
+assert_eq "cmd_start still issues no docker command" "" "$(cat "${MOCK_DIR}/docker_calls")"
+
+: > "${MOCK_DIR}/docker_calls"
+set_filters_for "telemetry"
+SERVICE_NAME="telemetry"
+cmd_stop; cmd_restart
+assert_eq "cmd_stop and cmd_restart only ever stop" $'stop abc123def456\nstop abc123def456' "$(cat "${MOCK_DIR}/docker_calls")"
 
 echo ""
 echo "=== cmd_status awk filter ==="
