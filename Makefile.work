@@ -763,6 +763,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SLAVE_DIR=$(SLAVE_DIR) \
                            ENABLE_AUTO_TECH_SUPPORT=$(ENABLE_AUTO_TECH_SUPPORT) \
                            BUILD_MULTIASIC_KVM=$(BUILD_MULTIASIC_KVM) \
+                           BUILD_UEFI_VS=$(BUILD_UEFI_VS) \
                            ENABLE_ASAN=$(ENABLE_ASAN) \
                            ENABLE_GCOV=$(ENABLE_GCOV) \
                            SONIC_INCLUDE_BOOTCHART=$(INCLUDE_BOOTCHART) \
