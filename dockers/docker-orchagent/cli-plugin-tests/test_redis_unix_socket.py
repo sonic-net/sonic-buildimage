@@ -187,9 +187,11 @@ LOCAL_CLI_CALLS = {
     DOCKER_DIR / "docker-init.j2": ["CONFIG_DB"] * 3,
     REPO_ROOT / "files/scripts/arp_update": [
         "APPL_DB",
+        "APPL_DB",
+        "APPL_DB",
+        "APPL_DB",
         "ASIC_DB",
         "CONFIG_DB",
-        "APPL_DB",
         "APPL_DB",
         "CONFIG_DB",
     ],
