@@ -1341,6 +1341,19 @@ def hdl_route_redist_set(daemon, cmd_str, op, st_idx, args, data):
         return None
     return cmd_list + upd_cmd_list
 
+def hdl_bgp_sid_advertise(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) == 0 or args[0] not in ('true', 'false'):
+        syslog.syslog(syslog.LOG_ERR, 'invalid BGP SID advertisement value')
+        return None
+
+    cmd = 'sid export auto behavior dt46'
+    if op == CachedDataWithOp.OP_DELETE or args[0] == 'false':
+        return ['no ' + cmd]
+
+    if len(args) > 1 and args[1]:
+        cmd += ' route-map {}'.format(args[1])
+    return [cmd]
+
 def hdl_attr_unchanged(daemon, cmd_str, op, st_idx, args, data):
     # blindly run no command first
     cmd_list = [cmd_str.format(CommandArgument(daemon, True, args[0]),
@@ -1826,6 +1839,8 @@ class BGPConfigDaemon:
     global_af_key_map = [(['ebgp_route_distance',
                            'ibgp_route_distance',
                            'local_route_distance'],                     '{no:no-prefix}distance bgp {} {} {}'),
+                         (['srv6_sid_advertise',
+                           '+srv6_sid_advertise_route_map'],               '{no:no-prefix}sid export auto behavior dt46 {:default-rmap}', hdl_bgp_sid_advertise),
                          ('rd_vpn_export',                              '{no:no-prefix}rd vpn export {}'),
                          ('rt_vpn_export',                              '{no:no-prefix}rt vpn export {}'),
                          ('rt_vpn_import',                              '{no:no-prefix}rt vpn import {}'),
@@ -1924,6 +1939,7 @@ class BGPConfigDaemon:
                         '+replace_private_as'],                             '{no:no-prefix}neighbor {} remove-private-AS {:rm-as-all} {:rm-as-repl}', hdl_rm_priv_as, ['true', 'false']),
                       ('cap_orf',                                           '{no:no-prefix}neighbor {} capability orf prefix-list {}', hdl_capa_orf_pfxlist),
                       ('route_server_client',                               '{no:no-prefix}neighbor {} route-server-client', ['true', 'false']),
+                      ('encapsulation_type',                                '{no:no-prefix}neighbor {} encapsulation-{}'),
     ]
 
     route_map_key_map = [('match_interface',                '{no:no-prefix}match interface {}'),
@@ -2835,6 +2851,139 @@ class BGPConfigDaemon:
 
         return cmd_suffix, None
 
+    def __apply_bgp_srv6_locator(self, vrf, local_asn, data):
+        locator = data.get('srv6_locator')
+        if locator is None or locator.op == CachedDataWithOp.OP_NONE:
+            return True
+
+        table_key = ExtConfigDBConnector.get_table_key('BGP_GLOBALS', vrf)
+        cached_data = self.table_data_cache.get(table_key, {})
+        old_locator = cached_data.get('srv6_locator')
+        cmd_prefix = ['vtysh', '-c', 'configure terminal',
+                      '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
+                      '-c', 'segment-routing srv6']
+
+        if locator.op == CachedDataWithOp.OP_DELETE:
+            cmd = cmd_prefix + ['-c', 'no locator {}'.format(locator.data)]
+        else:
+            if (locator.op == CachedDataWithOp.OP_UPDATE and old_locator is not None and
+                    old_locator != locator.data):
+                unset_cmd = cmd_prefix + ['-c', 'no locator {}'.format(old_locator)]
+                if not self.__run_command('BGP_GLOBALS', unset_cmd):
+                    syslog.syslog(syslog.LOG_ERR,
+                                  'failed to unset old BGP SRv6 locator {} for VRF {}'.format(
+                                      old_locator, vrf))
+                    return False
+                cached_data.pop('srv6_locator', None)
+
+            cmd = cmd_prefix + ['-c', 'encap-behavior H_Encaps_Red',
+                                '-c', 'locator {}'.format(locator.data)]
+
+        if not self.__run_command('BGP_GLOBALS', cmd):
+            syslog.syslog(syslog.LOG_ERR,
+                          'failed to apply BGP SRv6 locator {} for VRF {}'.format(
+                              locator.data, vrf))
+            return False
+
+        locator.status = CachedDataWithOp.STAT_SUCC
+        return True
+
+    def __unset_old_bgp_af_sid_advertise(self, table, key, vrf, cmd_prefix, data):
+        advertise = data.get('srv6_sid_advertise')
+        route_map = data.get('srv6_sid_advertise_route_map')
+        if (advertise is not None and
+                advertise.op != CachedDataWithOp.OP_DELETE and
+                advertise.data not in ('true', 'false')):
+            syslog.syslog(syslog.LOG_ERR,
+                          'invalid BGP SID advertisement value {!r} for VRF {} AF {}'.format(
+                              advertise.data, vrf, key))
+            return False
+
+        if advertise is None:
+            if route_map is not None and route_map.op != CachedDataWithOp.OP_DELETE:
+                syslog.syslog(syslog.LOG_ERR,
+                              'BGP SID advertisement route-map requires srv6_sid_advertise for VRF {} AF {}'.format(
+                                  vrf, key))
+                return False
+            return True
+
+        if advertise.op == CachedDataWithOp.OP_DELETE:
+            if route_map is not None:
+                route_map.op = CachedDataWithOp.OP_DELETE
+            return True
+
+        table_key = ExtConfigDBConnector.get_table_key(
+            table, '{}|{}'.format(vrf, key.lower()))
+        cached_data = self.table_data_cache.get(table_key, {})
+        old_advertise = cached_data.get('srv6_sid_advertise')
+        if old_advertise is None:
+            return True
+
+        old_route_map = cached_data.get('srv6_sid_advertise_route_map')
+        advertise_changed = (advertise.op in (CachedDataWithOp.OP_ADD,
+                                                       CachedDataWithOp.OP_UPDATE) and
+                                 advertise.data != old_advertise)
+        route_map_removed = (old_route_map and
+                             (route_map is None or
+                              route_map.op == CachedDataWithOp.OP_DELETE or
+                              not route_map.data))
+        if (not route_map_removed or advertise_changed or
+                old_advertise != 'true'):
+            return True
+
+        # FRR does not clear an existing route-map when the SID advertisement command is reapplied without one.
+        unset_cmd = ['vtysh']
+        for command in cmd_prefix:
+            unset_cmd += ['-c', command]
+        unset_cmd += ['-c', 'no sid export auto behavior dt46']
+        if not self.__run_command(table, unset_cmd):
+            syslog.syslog(syslog.LOG_ERR,
+                          'failed to unset old BGP SID advertisement for VRF {} AF {}'.format(
+                              vrf, key))
+            return False
+
+        cached_data.pop('srv6_sid_advertise', None)
+        cached_data.pop('srv6_sid_advertise_route_map', None)
+        if not cached_data:
+            self.table_data_cache.pop(table_key, None)
+
+        advertise.op = CachedDataWithOp.OP_ADD
+        if route_map is not None:
+            if route_map.op == CachedDataWithOp.OP_DELETE or not route_map.data:
+                data.pop('srv6_sid_advertise_route_map', None)
+            else:
+                route_map.op = CachedDataWithOp.OP_ADD
+        return True
+
+    def __unset_old_bgp_af_encapsulation_type(
+            self, table, key, vrf, neighbor, data, cmd_prefix, key_map):
+        encapsulation_type = data.get('encapsulation_type')
+        if (encapsulation_type is None or
+                encapsulation_type.op != CachedDataWithOp.OP_UPDATE):
+            return True
+
+        table_key = ExtConfigDBConnector.get_table_key(
+            table, '{}|{}'.format(vrf, key))
+        old_encapsulation_type = self.table_data_cache.get(
+            table_key, {}).get('encapsulation_type')
+        if old_encapsulation_type is None:
+            return True
+
+        # FRR requires removing the configured mode before setting the new one.
+        delete_data = {'encapsulation_type': CachedDataWithOp(
+            old_encapsulation_type, CachedDataWithOp.OP_DELETE)}
+        if not key_map.run_command(self, table, delete_data, cmd_prefix, neighbor):
+            syslog.syslog(syslog.LOG_ERR,
+                          'failed to unset old encapsulation type from table {} key {}'.format(
+                              table, key))
+            return False
+
+        cached_data = self.table_data_cache.get(table_key)
+        if cached_data is not None:
+            cached_data.pop("encapsulation_type", None)
+
+        return True
+
     def __update_bgp(self, data_list):
         while not self.bgp_message.empty():
             key, del_table, table, data = self.bgp_message.get()
@@ -2915,14 +3064,8 @@ class BGPConfigDaemon:
                         syslog.syslog(syslog.LOG_ERR, 'local ASN for VRF %s was not configured' % vrf)
                         continue
                     cmd_prefix = ['configure terminal', 'router bgp {} vrf {}'.format(local_asn, vrf)]
-                    if 'srv6_locator' in data:
-                        cmd = ['vtysh', '-c', 'configure terminal',
-                               '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
-                               '-c', 'segment-routing srv6',
-                               '-c', 'locator {}'.format(data['srv6_locator'].data)]
-                        if not self.__run_command(table, cmd):
-                            syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
-                            continue
+                    if not self.__apply_bgp_srv6_locator(vrf, local_asn, data):
+                        continue
                     if not key_map.run_command(self, table, data, cmd_prefix):
                         syslog.syslog(syslog.LOG_ERR, 'failed running BGP global config command')
                         continue
@@ -2934,13 +3077,30 @@ class BGPConfigDaemon:
                 if not del_table:
                     locator_name = prefix
                     prefix = data['prefix']
+                    locator_prefix = prefix.data
                     cmd = ['vtysh', '-c', 'configure terminal',
                            '-c', 'segment-routing', '-c', 'srv6', '-c', 'locators',
-                           '-c', 'locator {}'.format(locator_name),
-                           '-c', 'prefix {} block-len {} node-len {} func-bits {}'.format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)]
+                           '-c', 'locator {}'.format(locator_name)]
+                    locator_format = data.get('format')
+                    if (locator_format is not None and
+                            locator_format.op != CachedDataWithOp.OP_DELETE):
+                        if locator_format.data != 'usid-f3216':
+                            syslog.syslog(syslog.LOG_ERR, 'unsupported SRv6 locator format {!r}'.format(
+                                locator_format.data))
+                            continue
+                        cmd += ['-c', 'prefix {}/48'.format(locator_prefix),
+                                '-c', 'format {}'.format(locator_format.data)]
+                    else:
+                        block_len = int(data['block_len'].data) if 'block_len' in data else 32
+                        node_len = int(data['node_len'].data) if 'node_len' in data else 16
+                        func_len = int(data['func_len'].data) if 'func_len' in data else 16
+                        cmd += ['-c', 'prefix {} block-len {} node-len {} func-bits {}'.format(
+                            locator_prefix, block_len, node_len, func_len)]
                     if not self.__run_command(table, cmd):
                         syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATORS config command')
                         continue
+                    for dval in data.values():
+                        dval.status = CachedDataWithOp.STAT_SUCC
             elif table == 'SRV6_MY_SOURCE':
                 source = data['source-address']
                 cmd = ['vtysh', '-c', 'configure terminal',
@@ -2977,6 +3137,16 @@ class BGPConfigDaemon:
                 cmd_prefix = ['configure terminal',
                               'router bgp {} vrf {}'.format(local_asn, vrf),
                               'address-family {} {}'.format(af, ip_type)]
+                if 'srv6_sid_advertise' in data or 'srv6_sid_advertise_route_map' in data:
+                    if vrf != self.DEFAULT_VRF or key.lower() not in ('ipv4_unicast', 'ipv6_unicast'):
+                        syslog.syslog(syslog.LOG_ERR,
+                                      'BGP SID advertisement is only supported for the default VRF IPv4/IPv6 unicast AF')
+                        self.tmp_cache_key = ''
+                        continue
+                    if not self.__unset_old_bgp_af_sid_advertise(
+                            table, key, vrf, cmd_prefix, data):
+                        self.tmp_cache_key = ''
+                        continue
                 if not key_map.run_command(self, table, data, cmd_prefix):
                     syslog.syslog(syslog.LOG_ERR, 'failed running BGP global AF config command')
                     continue
@@ -3070,6 +3240,10 @@ class BGPConfigDaemon:
                 cmd_prefix = ['configure terminal',
                               'router bgp {} vrf {}'.format(local_asn, vrf),
                               'address-family {} {}'.format(af, ip_type)]
+                if not self.__unset_old_bgp_af_encapsulation_type(
+                        table, key, vrf, nbr, data, cmd_prefix, key_map):
+                    continue
+
                 if not key_map.run_command(self, table, data, cmd_prefix, nbr):
                     syslog.syslog(syslog.LOG_ERR, 'failed running BGP neighbor AF config command')
                     continue
