@@ -68,10 +68,11 @@ start() {
     trap handle_interrupted_start TERM
 
     # start service docker
-    /usr/bin/${SERVICE}.sh start $DEV
-    debug "Started ${SERVICE}$DEV service..."
-
+    local status=0
+    /usr/bin/${SERVICE}.sh start $DEV || status=$?
     trap - TERM
+    [ "$status" -eq 0 ] || return "$status"
+    debug "Started ${SERVICE}$DEV service..."
 }
 
 wait() {
@@ -109,9 +110,9 @@ SERVICE="${SCRIPT_NAME%.*}"
 NAMESPACE_PREFIX="asic"
 if [[ "$DEV" && "$DEV" != *"dpu"* ]]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
-    SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
+    SONIC_DB_CLI="sonic-db-cli -s -n $NET_NS"
 else
-    SONIC_DB_CLI="sonic-db-cli"
+    SONIC_DB_CLI="sonic-db-cli -s"
 fi
 
 case "$1" in

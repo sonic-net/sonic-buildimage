@@ -33,7 +33,7 @@ is_warm_reboot_in_progress() {
     fi
     
     local reboot_enabled
-    reboot_enabled=$(sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable 2>/dev/null)
+    reboot_enabled=$(sonic-db-cli -s STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable 2>/dev/null)
     if [[ "$reboot_enabled" == "true" ]]; then
         return 0
     fi

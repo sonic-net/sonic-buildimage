@@ -1,4 +1,6 @@
 import click
+from functools import wraps
+from utilities_common.db import Db
 import fcntl
 import importlib
 import json
@@ -11,6 +13,19 @@ import re
 dhcprelay = importlib.import_module('show.plugins.dhcp-relay')
 
 import utilities_common.cli as clicommon
+
+
+def _pass_writer_db(function):
+    @click.pass_context
+    @wraps(function)
+    def wrapper(ctx, *args, **kwargs):
+        db = ctx.find_object(Db)
+        if db is None:
+            db = Db(authenticate=True)
+            ctx.obj = db
+        return ctx.invoke(function, db, *args, **kwargs)
+    return wrapper
+
 
 # ============================================================
 # Constants
@@ -52,7 +67,7 @@ SUPPORTED_DHCPV6_TYPE = [
 
 def clear_dhcp_relay_ipv6_counter(interface):
     """Clear dhcp6relay STATE_DB counters."""
-    counter = dhcprelay.DHCPv6_Counter()
+    counter = dhcprelay.DHCPv6_Counter(authenticate=True)
     counter_intf = counter.get_interface()
     if interface:
         counter.clear_table(interface)
@@ -63,7 +78,7 @@ def clear_dhcp_relay_ipv6_counter(interface):
 
 def clear_dhcp_relay_ipv4_vlan_counter(direction, pkt_type, interface):
     """Clear dhcp4relay STATE_DB per-vlan counters."""
-    counter = dhcprelay.DHCPv4_Counter()
+    counter = dhcprelay.DHCPv4_Counter(authenticate=True)
     counter.clear_table(direction, pkt_type, interface)
 
 
@@ -353,7 +368,7 @@ def dhcp_relay_ipv6():
     '--type', type=click.Choice(SUPPORTED_DHCPV6_TYPE),
     required=False
 )
-@clicommon.pass_db
+@_pass_writer_db
 def clear_dhcp_relay_ipv6_counters(db, interface, dir, type):
     """ Clear dhcpmon ipv6 counters (COUNTERS_DB) """
     clear_dhcpmon_counters(
@@ -385,7 +400,7 @@ def dhcp_relay_ipv4():
     '--type', type=click.Choice(SUPPORTED_DHCP_TYPE),
     required=False
 )
-@clicommon.pass_db
+@_pass_writer_db
 def clear_dhcp_relay_ipv4_counters(db, interface, dir, type):
     """ Clear dhcpmon ipv4 counters (COUNTERS_DB) """
     clear_dhcpmon_counters(

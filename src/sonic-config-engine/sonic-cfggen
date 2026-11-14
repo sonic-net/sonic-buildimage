@@ -43,6 +43,7 @@ from portconfig import get_port_config, get_breakout_mode, get_system_port_confi
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common.bgp import validate_asn
 from sonic_py_common import device_info
+from sonic_py_common._redis_transport import use_local_redis_socket
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector, isInterfaceNameValid
 from asic_sensors_config import get_asic_sensors_config
 
@@ -606,11 +607,12 @@ def main():
         deep_update(data, FormatConverter.to_deserialized(json.loads(args.additional_data)))
 
     if args.from_db:
-        use_unix_sock = True if os.getuid() == 0 else False
+        if args.namespace is not None:
+            load_namespace_config()
+        use_unix_sock = bool(args.redis_unix_sock_file) or use_local_redis_socket("CONFIG_DB", args.namespace)
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, **db_kwargs)
         else:
-            load_namespace_config()
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, namespace=args.namespace, **db_kwargs)
 
         configdb.connect()
@@ -700,10 +702,10 @@ def main():
 
     if args.write_to_db:
         if args.namespace is None:
-            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, **db_kwargs)
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, authenticate=True, **db_kwargs)
         else:
             load_namespace_config()
-            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, authenticate=True, namespace=args.namespace, **db_kwargs)
 
         configdb.connect(False)
         configdb.mod_config(FormatConverter.output_to_db(data))

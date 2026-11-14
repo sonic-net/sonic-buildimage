@@ -22,12 +22,26 @@ try:
     import redis
     import struct
     from collections import OrderedDict
+    from sonic_py_common._redis_transport import use_local_redis_socket
+    from swsscommon.redis import connection_pool
     from sonic_platform_base.sonic_eeprom.eeprom_base import EepromDecoder
     from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
+    from swsscommon.swsscommon import SonicDBConfig
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-STATE_DB_INDEX = 6
+STATE_DB_NAME = 'STATE_DB'
+
+
+def _get_state_db_client():
+    if use_local_redis_socket(STATE_DB_NAME):
+        endpoint = {'unix_socket_path': SonicDBConfig.getDbSock(STATE_DB_NAME)}
+    else:
+        endpoint = {'host': SonicDBConfig.getDbHostname(STATE_DB_NAME),
+                    'port': SonicDBConfig.getDbPort(STATE_DB_NAME)}
+    return redis.Redis(connection_pool=connection_pool(
+        db=SonicDBConfig.getDbId(STATE_DB_NAME), **endpoint))
+
 
 # PSU eeprom fields in format required by EepromDecoder
 psu_eeprom_format = [
@@ -378,7 +392,7 @@ class EepromS6000(EepromDecoder):
         """
         Print out the contents of the EEPROM from database.
         """
-        client = redis.Redis(db=STATE_DB_INDEX)
+        client = _get_state_db_client()
         db_state = client.hget('EEPROM_INFO|State', 'Initialized')
         if db_state != '1':
             return -1
@@ -407,7 +421,7 @@ class EepromS6000(EepromDecoder):
         """
         Decode the contents of the EEPROM and update the contents to database
         """
-        client = redis.Redis(db=STATE_DB_INDEX)
+        client = _get_state_db_client()
         for blk_code in list(self._BLK_INFO.keys()):
             blk_name = self._BLK_INFO[blk_code]["name"]
             blk_start = self._BLK_INFO[blk_code]["offset"]

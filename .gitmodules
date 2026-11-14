@@ -1,15 +1,18 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = https://github.com/sonic-net/sonic-swss-common
+	url = https://github.com/ashutosh-agrawal/sonic-swss-common.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
-	url = https://github.com/sonic-net/sonic-sairedis
+	url = https://github.com/ashutosh-agrawal/sonic-sairedis.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "sonic-swss"]
 	path = src/sonic-swss
-	url = https://github.com/sonic-net/sonic-swss
+	url = https://github.com/ashutosh-agrawal/sonic-swss.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
 	url = https://github.com/krambn/p4c-bm
@@ -18,7 +21,8 @@
 	url = https://github.com/p4lang/p4-hlir
 [submodule "sonic-dbsyncd"]
 	path = src/sonic-dbsyncd
-	url = https://github.com/sonic-net/sonic-dbsyncd
+	url = https://github.com/ashutosh-agrawal/sonic-dbsyncd.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-py-swsssdk"]
 	path = src/sonic-py-swsssdk
 	url = https://github.com/sonic-net/sonic-py-swsssdk.git
@@ -30,16 +34,19 @@
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/sonic-utilities"]
 	path = src/sonic-utilities
-	url = https://github.com/sonic-net/sonic-utilities
+	url = https://github.com/ashutosh-agrawal/sonic-utilities.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "platform/broadcom/sonic-platform-modules-arista"]
 	path = platform/broadcom/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
 [submodule "src/sonic-platform-common"]
 	path = src/sonic-platform-common
-	url = https://github.com/sonic-net/sonic-platform-common
+	url = https://github.com/ashutosh-agrawal/sonic-platform-common.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-platform-daemons"]
 	path = src/sonic-platform-daemons
-	url = https://github.com/sonic-net/sonic-platform-daemons
+	url = https://github.com/ashutosh-agrawal/sonic-platform-daemons.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-platform-pde"]
 	path = src/sonic-platform-pde
 	url = https://github.com/sonic-net/sonic-platform-pdk-pde
@@ -66,20 +73,24 @@
 	url = https://github.com/secdev/scapy.git
 [submodule "src/sonic-mgmt-framework"]
 	path = src/sonic-mgmt-framework
-	url = https://github.com/sonic-net/sonic-mgmt-framework
+	url = https://github.com/ashutosh-agrawal/sonic-mgmt-framework.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-ztp"]
 	path = src/sonic-ztp
-	url = https://github.com/sonic-net/sonic-ztp
+	url = https://github.com/ashutosh-agrawal/sonic-ztp.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-restapi"]
 	path = src/sonic-restapi
-	url = https://github.com/sonic-net/sonic-restapi.git
-	branch = master
+	url = https://github.com/ashutosh-agrawal/sonic-restapi.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-mgmt-common"]
 	path = src/sonic-mgmt-common
-	url = https://github.com/sonic-net/sonic-mgmt-common.git
+	url = https://github.com/ashutosh-agrawal/sonic-mgmt-common.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/wpasupplicant/sonic-wpa-supplicant"]
 	path = src/wpasupplicant/sonic-wpa-supplicant
-	url = https://github.com/sonic-net/sonic-wpa-supplicant.git
+	url = https://github.com/ashutosh-agrawal/sonic-wpa-supplicant.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "platform/broadcom/saibcm-modules-dnx"]
 	path = platform/broadcom/saibcm-modules-dnx
 	url = https://github.com/sonic-net/saibcm-modules.git
@@ -89,37 +100,45 @@
 	url = https://github.com/nokia/sonic-platform.git
 [submodule "src/linkmgrd"]
 	path = src/linkmgrd
-	url = https://github.com/sonic-net/sonic-linkmgrd.git
+	url = https://github.com/ashutosh-agrawal/sonic-linkmgrd.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-p4rt/sonic-pins"]
 	path = src/sonic-p4rt/sonic-pins
-	url = https://github.com/sonic-net/sonic-pins.git
+	url = https://github.com/ashutosh-agrawal/sonic-pins.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/ptf-py3"]
 	path = src/ptf-py3
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/dhcprelay"]
 	path = src/dhcprelay
-	url = https://github.com/sonic-net/sonic-dhcp-relay.git
+	url = https://github.com/ashutosh-agrawal/sonic-dhcp-relay.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-host-services"]
 	path = src/sonic-host-services
-	url = https://github.com/sonic-net/sonic-host-services
+	url = https://github.com/ashutosh-agrawal/sonic-host-services.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
-	url = https://github.com/sonic-net/sonic-gnmi.git
+	url = https://github.com/ashutosh-agrawal/sonic-gnmi.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-bmp"]
 	path = src/sonic-bmp
-	url = https://github.com/sonic-net/sonic-bmp.git
+	url = https://github.com/ashutosh-agrawal/sonic-bmp.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet
 [submodule "src/dhcpmon"]
 	path = src/dhcpmon
-	url = https://github.com/sonic-net/sonic-dhcpmon.git
+	url = https://github.com/ashutosh-agrawal/sonic-dhcpmon.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-dash-api"]
 	path = src/sonic-dash-api
 	url = https://github.com/sonic-net/sonic-dash-api.git
 [submodule "src/sonic-dash-ha"]
 	path = src/sonic-dash-ha
-	url = https://github.com/sonic-net/sonic-dash-ha
+	url = https://github.com/ashutosh-agrawal/sonic-dash-ha.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-stp"]
 	path = src/sonic-stp
 	url = https://github.com/sonic-net/sonic-stp
@@ -128,7 +147,8 @@
 	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
 [submodule "platform/vpp"]
 	path = platform/vpp
-	url = https://github.com/sonic-net/sonic-platform-vpp.git
+	url = https://github.com/ashutosh-agrawal/sonic-platform-vpp.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "platform/marvell-prestera/mrvl-prestera"]
 	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
@@ -146,10 +166,12 @@
 	url = https://github.com/Supervisor/supervisor
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
-	url = https://github.com/sonic-net/sonic-alpine/
+	url = https://github.com/ashutosh-agrawal/sonic-alpine.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
-	url = https://github.com/sonic-net/sonic-redfish
+	url = https://github.com/ashutosh-agrawal/sonic-redfish.git
+	branch = redis-vs-auth-integration-20261114
 [submodule "platform/aspeed/sonic-platform-modules-arista"]
 	path = platform/aspeed/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic

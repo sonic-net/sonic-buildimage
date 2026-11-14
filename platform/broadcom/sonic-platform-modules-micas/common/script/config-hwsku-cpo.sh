@@ -100,7 +100,26 @@ config_hwsku_exec() {
     cp $target_json $backup_json
 
     #load default_sku  
-    CONFIG_DB_INDEX=4
+    local redis_settings
+    redis_settings=$(python3 - <<'PY'
+import json
+with open('/var/run/redis/sonic-db/database_config.json') as stream:
+    config = json.load(stream)
+database = config['DATABASES']['CONFIG_DB']
+instance = config['INSTANCES'][database['instance']]
+for value in (database['id'], instance.get('hostname', 'localhost'),
+              instance.get('port', 6379), instance['unix_socket_path']):
+    print(value)
+PY
+    ) || return 1
+    local -a redis_config native_cli
+    mapfile -t redis_config <<< "$redis_settings"
+    native_cli=(redis-cli -n "${redis_config[0]}")
+    if [ "${redis_config[2]}" = "0" ]; then
+        native_cli+=(-s "${redis_config[3]}")
+    else
+        native_cli+=(-h "${redis_config[1]}" -p "${redis_config[2]}")
+    fi
     cursor=0
     Ethernet="*Ethernet*"
     echo "Loading the new configuration"
@@ -108,13 +127,13 @@ config_hwsku_exec() {
     PRESET=(`head -n 1 /usr/share/sonic/device/$PLATFORM/default_sku`)
     sonic-cfggen -H -k ${PRESET[0]} --preset ${PRESET[1]} > /etc/sonic/config_db.json
     while true; do
-        result=$(redis-cli -n $CONFIG_DB_INDEX SCAN $cursor MATCH $Ethernet )
+        result=$("${native_cli[@]}" SCAN "$cursor" MATCH "$Ethernet")
         cursor=$(echo "$result" | head -n 1)
 
         keys=$(echo "$result" | tail -n +2)
 
         if [ ! -z "$keys" ]; then
-            redis-cli -n $CONFIG_DB_INDEX DEL $keys >/dev/null 2>&1
+            sonic-db-cli -s --authenticate CONFIG_DB DEL $keys >/dev/null 2>&1
         fi
 
         if [ "$cursor" == "0" ]; then
@@ -125,7 +144,7 @@ config_hwsku_exec() {
     echo "The configuration is being updated, please wait for 20s."
     sleep 20s
     sonic-cfggen -j /etc/sonic/config_db.json --write-to-db
-    redis-cli -n $CONFIG_DB_INDEX SET "CONFIG_DB_INITIALIZED" "1"
+    sonic-db-cli -s --authenticate CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 
     config save -y
     sync
