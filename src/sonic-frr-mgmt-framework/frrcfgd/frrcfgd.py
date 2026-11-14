@@ -122,7 +122,10 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
+            'ISIS_GLOBALS': ['isisd'],
+            'ISIS_GLOBALS_TIMERS': ['isisd'],
+            'ISIS_INTERFACE': ['isisd'],
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -138,6 +141,8 @@ class BgpdClientMgr(threading.Thread):
                         (r'show ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip igmp($|\s+\S+)', ['pimd']),
+                        (r'show isis($|\s+.*)', ['isisd']),
+                        (r'clear isis($|\s+.*)', ['isisd']),
                         (r'.*', ['bgpd'])]
     @staticmethod
     def __create_proxy_socket():
@@ -256,6 +261,16 @@ class BgpdClientMgr(threading.Thread):
         resp = ''
         ret_val = False
         for daemon in daemons:
+            if daemon == 'isisd':
+                # Optional protocol: its absence must not delay constructing
+                # the shared BGP client. Show/clear uses a fresh bounded VTY.
+                from .isis_native import NativeClient, NativeError
+                try:
+                    resp += NativeClient().query('isisd', command, budget=2)
+                    ret_val = True
+                except NativeError as error:
+                    syslog.syslog(syslog.LOG_ERR, str(error))
+                continue
             sock = self.client_socks.get(daemon, None)
             if sock is None:
                 syslog.syslog(syslog.LOG_ERR, 'daemon %s is not connected' % daemon)
@@ -299,6 +314,13 @@ class BgpdClientMgr(threading.Thread):
         if daemons is None or len(daemons) == 0:
             syslog.syslog(syslog.LOG_ERR, 'no common daemon list found for given commands')
             return False
+        if daemons == ['isisd']:
+            from .isis_native import NativeClient, NativeError, Operation
+            try:
+                return NativeClient().apply([Operation('isisd', tuple(cmd_list))], budget=10)
+            except NativeError as error:
+                syslog.syslog(syslog.LOG_ERR, str(error))
+                return False
         ret_val = True
         with self.lock:
             for cmd in cmd_list:
@@ -1510,6 +1532,7 @@ class ExtConfigDBConnector(ConfigDBConnector):
         super(ExtConfigDBConnector, self).__init__()
         self.nosort_attrs = ns_attrs if ns_attrs is not None else {}
         self.__listen_thread_running = False
+        self.subscription_ready = threading.Event()
     def raw_to_typed(self, raw_data, table = ''):
         if len(raw_data) == 0:
             raw_data = None
@@ -1538,17 +1561,22 @@ class ExtConfigDBConnector(ConfigDBConnector):
     def listen_thread(self, timeout):
         self.__listen_thread_running = True
         sub_key_space = "__keyspace@{}__:*".format(self.get_dbid(self.db_name))
+        # Native swsscommon consumes the Redis acknowledgement in psubscribe().
         self.pubsub.psubscribe(sub_key_space)
-        while self.__listen_thread_running:
-            msg = self.pubsub.get_message(timeout, True)
-            if msg:
-                self.sub_msg_handler(msg)
-
-        self.pubsub.punsubscribe(sub_key_space)
+        self.subscription_ready.set()
+        try:
+            while self.__listen_thread_running:
+                msg = self.pubsub.get_message(timeout, True)
+                if msg:
+                    self.sub_msg_handler(msg)
+        finally:
+            self.subscription_ready.clear()
+            self.pubsub.punsubscribe(sub_key_space)
 
     def listen(self):
         """Start listen Redis keyspace events and will trigger corresponding handlers when content of a table changes.
         """
+        self.subscription_ready.clear()
         self.pubsub = self.get_redis_client(self.db_name).pubsub()
         self.sub_thread = threading.Thread(target=self.listen_thread, args=(10,))
         self.sub_thread.start()
@@ -2104,7 +2132,6 @@ class BGPConfigDaemon:
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
 
-
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
                       'BGP_GLOBALS_AF':                 global_af_key_map,
                       'BGP_GLOBALS_LISTEN_PREFIX':      listen_prefix_key_map,
@@ -2362,6 +2389,13 @@ class BGPConfigDaemon:
             self.use_template_render_for_restore = db_entry['use_template_render_for_restore']
         else:
             self.use_template_render_for_restore = 'true'
+        # Recovery owns only the adopted single default instance. Existing
+        # named-VRF profiles keep their legacy event path.
+        self.isis_recovery_mode = (
+            (self.config_mode == 'unified' or db_entry.get('frr_mgmt_framework_config') == 'true') and
+            not os.environ.get('NAMESPACE_ID') and
+            set(self.config_db.get_table('ISIS_GLOBALS')) <= {'default'})
+        self.isis_recovery_worker = None
         # VRF ==> local_as
         self.bgp_asn = {}
         # VRF ==> confederation peer list
@@ -2493,6 +2527,25 @@ class BGPConfigDaemon:
                                         nh_attr('ifname'), nh_attr('tag'), nh_attr('distance'),
                                         nh_attr('nexthop-vrf'))
 
+        # Desired routed-interface VRFs and successfully applied IS-IS bindings.
+        self.isis_interface_vrfs = {}
+        self.isis_interface_bindings = {}
+        self.isis_pending_bindings = {}
+        for table in self.ISIS_ROUTED_INTERFACE_TABLES:
+            for name, entry in self.config_db.get_table(table).items():
+                if isinstance(name, str) and '|' not in name:
+                    self.isis_interface_vrfs[name] = entry.get('vrf_name', 'default')
+        if (not self.isis_recovery_mode
+                and not (self.config_mode == 'unified' and self.use_template_render_for_restore == 'false')):
+            # The startup template has restored these bindings before event processing.
+            for name, entry in self.config_db.get_table('ISIS_INTERFACE').items():
+                vrf = self.isis_interface_vrfs.get(name, 'default')
+                if (entry.get('enabled') == 'true' and
+                        (str(entry.get('ipv4_enabled', 'true')).lower() == 'true' or
+                         str(entry.get('ipv6_enabled', 'true')).lower() == 'true') and
+                        self.config_db.get_entry('ISIS_GLOBALS', vrf).get('enabled') == 'true'):
+                    self.isis_interface_bindings[name] = vrf
+
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
             ('DEVICE_METADATA', self.metadata_handler),
@@ -2538,22 +2591,93 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
+            ('ISIS_GLOBALS', self.bgp_table_handler_common),
+            ('ISIS_GLOBALS_TIMERS', self.bgp_table_handler_common),
+            ('ISIS_INTERFACE', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
+        if self.isis_recovery_mode:
+            # Desired rows are never seeded as successfully applied evidence.
+            from .isis_config import MANAGED_TABLES
+            for cache_key in list(self.table_data_cache):
+                if any(cache_key.startswith(ExtConfigDBConnector.get_table_key(table, '')) for table in MANAGED_TABLES):
+                    del self.table_data_cache[cache_key]
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
         if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
             for table, _ in self.table_handler_list:
+                if self.isis_recovery_mode and table in self.ISIS_RECOVERY_TABLES:
+                    continue
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
                     self.__replay_table_entry(table, key, data)
 
+    ISIS_ROUTED_INTERFACE_TABLES = ('INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE',
+                                    'LOOPBACK_INTERFACE', 'VLAN_SUB_INTERFACE')
+    ISIS_RECOVERY_TABLES = ('ISIS_GLOBALS', 'ISIS_GLOBALS_TIMERS', 'ISIS_INTERFACE',
+                            'SRV6_MY_LOCATORS', 'SRV6_MY_SOURCE', 'SRV6_MY_SIDS')
+
+    def isis_recovery_notify(self, *unused):
+        if self.isis_recovery_worker is not None:
+            self.isis_recovery_worker.notify()
+
+    def _start_isis_recovery(self):
+        """Start an independent reader/worker after event subscriptions exist."""
+        from .isis_desired import verified_defaults
+        from .isis_manager import ConfigRenderer, NativeReader, RecoveryWorker, SnapshotReader
+
+        def prepare():
+            # Preparation runs in the independent worker and is retried after
+            # transient failures, even with no subsequent ConfigDB event.
+            version_output = subprocess.run(['/usr/lib/frr/zebra', '--version'], capture_output=True,
+                                            text=True, timeout=2, check=True).stdout
+            match = re.search(r'\b(\d+)\.(\d+)\.(\d+)', version_output)
+            if match is None:
+                raise ValueError('Cannot identify installed FRR version')
+            version = tuple(map(int, match.groups()))
+            defaults = verified_defaults(version)
+            reader_db = SnapshotReader()
+
+            def snapshot():
+                if not self.config_db.subscription_ready.is_set():
+                    raise ValueError('ConfigDB keyspace subscription is not acknowledged')
+                return reader_db()
+            return snapshot, ConfigRenderer(defaults, version), NativeReader(defaults, version)
+        last = [None]
+
+        def report(result):
+            state = (getattr(result, 'status', 'invalid'), getattr(result, 'reason', str(result)))
+            if state != last[0]:
+                syslog.syslog(syslog.LOG_INFO if state[0] == 'applied' else syslog.LOG_ERR,
+                              'IS-IS recovery {}: {}'.format(*state))
+                last[0] = state
+        self.isis_recovery_worker = RecoveryWorker(prepare=prepare, report=report)
+        self.isis_recovery_worker.start()
+
+    def isis_routed_interface_handler(self, table, key, data):
+        """Reconcile only the interface row, not address-prefix rows."""
+        if getattr(self, 'isis_recovery_mode', False):
+            self.isis_recovery_notify()
+            return
+        if not isinstance(key, str) or '|' in key:
+            return
+        # Use the event payload: rereading ConfigDB can observe a later event.
+        self.isis_interface_vrfs[key] = None if data is None else data.get('vrf_name', 'default')
+        row = self.config_db.get_entry('ISIS_INTERFACE', key)
+        if row or key in self.isis_interface_bindings or key in self.isis_pending_bindings:
+            self.bgp_table_handler_common('ISIS_INTERFACE', key, row or None)
+
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
             self.config_db.subscribe(table, hdlr)
+        for table in self.ISIS_ROUTED_INTERFACE_TABLES:
+            self.config_db.subscribe(table, self.isis_routed_interface_handler)
+        if self.isis_recovery_mode:
+            for table in ('PORT', 'PORTCHANNEL', 'VLAN'):
+                self.config_db.subscribe(table, self.isis_recovery_notify)
 
     @staticmethod
     def __run_command(table, command, daemons = None):
@@ -2930,44 +3054,10 @@ class BGPConfigDaemon:
                         self.bgp_confed_peers[vrf] = copy.copy(self.upd_confed_peers)
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
-            elif table == 'SRV6_MY_LOCATORS':
-                if not del_table:
-                    locator_name = prefix
-                    prefix = data['prefix']
-                    cmd = ['vtysh', '-c', 'configure terminal',
-                           '-c', 'segment-routing', '-c', 'srv6', '-c', 'locators',
-                           '-c', 'locator {}'.format(locator_name),
-                           '-c', 'prefix {} block-len {} node-len {} func-bits {}'.format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)]
-                    if not self.__run_command(table, cmd):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATORS config command')
-                        continue
-            elif table == 'SRV6_MY_SOURCE':
-                source = data['source-address']
-                cmd = ['vtysh', '-c', 'configure terminal',
-                       '-c', 'segment-routing', '-c', 'srv6', '-c', 'encapsulation',
-                       '-c', 'source-address {}'.format(source.data)]
-                if not self.__run_command(table, cmd):
-                    syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 encap config command {}'.format(cmd))
+            elif table in ('SRV6_MY_LOCATORS', 'SRV6_MY_SOURCE', 'SRV6_MY_SIDS'):
+                if not self._apply_srv6(table, prefix, key, del_table, data):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running {} config command'.format(table))
                     continue
-            elif table == 'SRV6_MY_SIDS':
-                if key is None:
-                    syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_SIDS table')
-                    continue
-                if not del_table:
-                    cmd = ['vtysh', '-c', 'configure terminal',
-                           '-c', 'segment-routing', '-c', 'srv6',
-                           '-c', 'static-sids']
-                    uDTAction = ["uDT46", "uDT4", "uDT6"]
-                    if data['action'].data in uDTAction:
-                        cmd += ['-c', 'sid {} locator {} behavior {} vrf {}'.format(key, prefix, data['action'].data, data['decap_vrf'].data)]
-                    elif data['action'].data == 'uN':
-                        cmd += ['-c', 'sid {} locator {} behavior {} '.format(key, prefix, data['action'].data)]
-                    else:
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command, not support action %s'.format(data['action'].data))
-                        continue
-                    if not self.__run_command(table, cmd):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 SRV6_MY_SIDS config command')
-                        continue
 
             elif table == 'BGP_GLOBALS_AF':
                 af, ip_type = key.lower().split('_')
@@ -4053,6 +4143,128 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_ERR, 'failed running ip igmp interface config command')
                     continue
 
+            elif table in ('ISIS_GLOBALS', 'ISIS_GLOBALS_TIMERS', 'ISIS_INTERFACE'):
+                if not self._apply_isis(table, prefix, del_table, data):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running {} config command'.format(table))
+                    continue
+
+    def _apply_isis(self, table, key, deleted, data, reset_timers=False):
+        """Apply lifecycle and attributes together, including enable-only rows."""
+        current = {name: value.data for name, value in data.items()
+                   if value.op != CachedDataWithOp.OP_DELETE}
+        old = self.table_data_cache.get(ExtConfigDBConnector.get_table_key(table, key), {})
+        if reset_timers:
+            old = {}
+        commands = ['configure terminal']
+        router = 'router isis ' + key + ((' vrf ' + key) if key != 'default' else '')
+        if table == 'ISIS_GLOBALS':
+            if deleted or str(current.get('enabled', 'false')).lower() != 'true':
+                commands.append('no ' + router)
+            else:
+                commands.append(router)
+                commands.append(('' if str(current.get('ipv6_multi_topology', 'true')).lower() == 'true'
+                                 else 'no ') + 'topology ipv6-unicast')
+                if old.get('net_title') and old['net_title'] != current.get('net_title'):
+                    commands.append('no net ' + old['net_title'])
+                if current.get('net_title'):
+                    commands.append('net ' + current['net_title'])
+                level = current.get('level', 'level-1-2')
+                commands.append('is-type ' + ('level-2-only' if level == 'level-2' else level))
+                commands.append(('' if str(current.get('dynamic_hostname', 'true')).lower() == 'true'
+                                 else 'no ') + 'hostname dynamic')
+        elif table == 'ISIS_GLOBALS_TIMERS':
+            # A late timer deletion must not recreate a removed process.
+            if self.config_db.get_entry('ISIS_GLOBALS', key).get('enabled') == 'true':
+                commands.append(router)
+                refresh = int(current.get('lsp_refresh_interval', 900))
+                lifetime = int(current.get('lsp_lifetime', 1200))
+                refresh_cmd = ('lsp-refresh-interval ' + str(refresh) if 'lsp_refresh_interval' in current
+                               else 'no lsp-refresh-interval')
+                lifetime_cmd = ('max-lsp-lifetime ' + str(lifetime) if 'lsp_lifetime' in current
+                                else 'no max-lsp-lifetime')
+                # Preserve FRR's lifetime >= refresh + 300 invariant at each step.
+                if lifetime >= int(old.get('lsp_lifetime', 1200)):
+                    commands.extend([lifetime_cmd, refresh_cmd])
+                else:
+                    commands.extend([refresh_cmd, lifetime_cmd])
+                commands.append('lsp-mtu ' + current['lsp_mtu'] if 'lsp_mtu' in current else 'no lsp-mtu')
+        else:
+            vrf = self.isis_interface_vrfs.get(key, 'default')
+            bound_vrf = self.isis_interface_bindings.get(key)
+            pending_vrfs = self.isis_pending_bindings.get(key, set())
+            commands.append('interface ' + key)
+            ipv4 = str(current.get('ipv4_enabled', 'true')).lower() == 'true'
+            ipv6 = str(current.get('ipv6_enabled', 'true')).lower() == 'true'
+            enabled = (not deleted and vrf is not None and
+                       (ipv4 or ipv6) and
+                       str(current.get('enabled', 'false')).lower() == 'true' and
+                       self.config_db.get_entry('ISIS_GLOBALS', vrf).get('enabled') == 'true')
+            remove_vrfs = set(pending_vrfs)
+            if bound_vrf is not None and (not enabled or bound_vrf != vrf):
+                remove_vrfs.add(bound_vrf)
+            for previous_vrf in sorted(remove_vrfs):
+                commands.extend(['no ip router isis ' + previous_vrf,
+                                 'no ipv6 router isis ' + previous_vrf])
+            # A removed routed interface has no new instance to configure.
+            if vrf is None:
+                vrf = bound_vrf or 'default'
+            if enabled:
+                commands.append(('' if ipv4 else 'no ') + 'ip router isis ' + vrf)
+                commands.append(('' if ipv6 else 'no ') + 'ipv6 router isis ' + vrf)
+                commands.append(('' if str(current.get('passive', 'false')).lower() == 'true'
+                                 else 'no ') + 'isis passive')
+                commands.append('isis metric ' + current['metric'] if 'metric' in current else 'no isis metric')
+                commands.append(('' if current.get('circuit_type', 'lan') == 'p2p' else 'no ') +
+                                'isis network point-to-point')
+        if table == 'ISIS_INTERFACE' and not enabled and bound_vrf is None and not pending_vrfs:
+            commands = ['configure terminal']
+        command = ['vtysh']
+        for item in commands:
+            command.extend(['-c', item])
+        if len(commands) > 1 and not self.__run_command(table, command):
+            if table == 'ISIS_INTERFACE':
+                # vtysh can partially apply a batch. Remember every possible
+                # destination so a retry/delete also removes a partial new bind.
+                possible_vrfs = set(pending_vrfs)
+                if bound_vrf is not None:
+                    possible_vrfs.add(bound_vrf)
+                if enabled:
+                    possible_vrfs.add(vrf)
+                self.isis_pending_bindings[key] = possible_vrfs
+            return False
+        if table == 'ISIS_INTERFACE':
+            self.isis_pending_bindings.pop(key, None)
+            if enabled:
+                self.isis_interface_bindings[key] = vrf
+            else:
+                self.isis_interface_bindings.pop(key, None)
+        elif table == 'ISIS_GLOBALS':
+            # A recreated process starts with FRR defaults, even when the timer
+            # row was retained and therefore produces no new ConfigDB event.
+            if current.get('enabled') == 'true' and old.get('enabled') != 'true':
+                timers = self.config_db.get_entry('ISIS_GLOBALS_TIMERS', key)
+                if timers:
+                    timer_data = {field: CachedDataWithOp(value, CachedDataWithOp.OP_UPDATE)
+                                  for field, value in timers.items()}
+                    if not self._apply_isis('ISIS_GLOBALS_TIMERS', key, False, timer_data,
+                                            reset_timers=True):
+                        return False
+            # Target process creation may arrive after a VRF move; retry bindings
+            # then, and detach bindings when their process is disabled/deleted.
+            interfaces = self.config_db.get_table('ISIS_INTERFACE')
+            for name in set(interfaces) | set(self.isis_interface_bindings) | set(self.isis_pending_bindings):
+                if (self.isis_interface_vrfs.get(name, 'default') != key and
+                        self.isis_interface_bindings.get(name) != key and
+                        key not in self.isis_pending_bindings.get(name, set())):
+                    continue
+                row = interfaces.get(name, {})
+                interface_data = {field: CachedDataWithOp(value, CachedDataWithOp.OP_UPDATE)
+                                  for field, value in row.items()}
+                if not self._apply_isis('ISIS_INTERFACE', name, not row, interface_data):
+                    return False
+        for value in data.values():
+            value.status = CachedDataWithOp.STAT_SUCC
+        return True
 
     def __add_op_to_data(self, table_key, data, comb_attr_list):
         cached_data = self.table_data_cache.setdefault(table_key, {})
@@ -4088,6 +4300,118 @@ class BGPConfigDaemon:
                 for key in key_set:
                     data.pop(key, None)
 
+    def _srv6_static_sid_is_unambiguous(self, row_key):
+        """Protect native SID-prefix identity across ConfigDB locator keys."""
+        def identity(serialized_key):
+            if not isinstance(serialized_key, str) or '|' not in serialized_key:
+                raise ValueError('invalid static SID row key')
+            locator, sid_prefix = serialized_key.split('|', 1)
+            if not locator or '/' not in sid_prefix:
+                raise ValueError('invalid static SID row key')
+            return ipaddress.IPv6Network(sid_prefix, strict=False)
+
+        try:
+            target = identity(row_key)
+            desired = self.config_db.get_table('SRV6_MY_SIDS')
+            if not isinstance(desired, dict):
+                raise ValueError('invalid static SID desired snapshot')
+            # ConfigDB returns compound keys as tuples; applied-cache keys are
+            # already serialized. Match the existing get_table_data pattern.
+            rows = [(self.config_db.serialize_key(key), row) for key, row in desired.items()]
+            table_prefix = ExtConfigDBConnector.get_table_key('SRV6_MY_SIDS', '')
+            rows.extend((key[len(table_prefix):], row)
+                        for key, row in self.table_data_cache.items()
+                        if isinstance(key, str) and key.startswith(table_prefix))
+            for other_key, row in rows:
+                if not isinstance(row, dict):
+                    raise ValueError('invalid static SID row data')
+                other_identity = identity(other_key)
+                # An unrecognized action can still be owned by another
+                # consumer. Only an absent action is a policy-only row.
+                if other_key != row_key and 'action' in row and other_identity == target:
+                    syslog.syslog(syslog.LOG_ERR, 'conflicting static SID prefix {}: {} and {}'.format(
+                        target, row_key, other_key))
+                    return False
+        except Exception as error:
+            # A failed or malformed admission read is not evidence that no
+            # conflicting native SID exists.
+            syslog.syslog(syslog.LOG_ERR, 'cannot check static SID identity: {}'.format(error))
+            return False
+        return True
+
+    def _apply_srv6(self, table, prefix, key, deleted, data):
+        """Apply existing SRv6 rows without interpreting policy-only rows as SIDs."""
+        current = {name: value.data for name, value in data.items()
+                   if value.op != CachedDataWithOp.OP_DELETE}
+        row_key = prefix if key is None else prefix + '|' + key
+        old = self.table_data_cache.get(ExtConfigDBConnector.get_table_key(table, row_key), {})
+        commands = ['configure terminal', 'segment-routing', 'srv6']
+        try:
+            if table == 'SRV6_MY_LOCATORS':
+                commands.append('locators')
+                if deleted:
+                    commands.append('no locator ' + prefix)
+                else:
+                    block = int(current.get('block_len', 32))
+                    node = int(current.get('node_len', 16))
+                    function = int(current.get('func_len', 16))
+                    # The existing native locator command has neither VRF nor
+                    # argument-length configuration. Do not acknowledge a value
+                    # that cannot be represented by the command we send.
+                    if current.get('vrf', 'default') != 'default' or int(current.get('arg_len', 0)):
+                        raise ValueError('unsupported locator VRF or argument length')
+                    if not (16 <= block <= 64 and 0 <= node <= 64 and 0 <= function <= 64):
+                        raise ValueError('unsupported locator geometry')
+                    value = current['prefix']
+                    network = ipaddress.IPv6Network(
+                        value if '/' in value else value + '/' + str(block + node), strict=False)
+                    if network.prefixlen != block + node or network.prefixlen + function > 128:
+                        raise ValueError('locator prefix length does not match geometry')
+                    commands.extend(['locator ' + prefix,
+                                     'prefix {} block-len {} node-len {} func-bits {}'.format(
+                                         network, block, node, function)])
+            elif table == 'SRV6_MY_SOURCE':
+                commands.append('encapsulation')
+                if deleted or 'source-address' not in current:
+                    commands.append('no source-address')
+                else:
+                    commands.append('source-address ' + str(ipaddress.IPv6Address(current['source-address'])))
+            else:
+                if key is None:
+                    raise ValueError('missing static SID prefix')
+                action = current.get('action')
+                withdraw = deleted or action is None
+                owns_old_sid = old.get('action') in ('uN', 'uDT46', 'uDT4', 'uDT6')
+                if ((withdraw and owns_old_sid) or
+                        (not withdraw and action in ('uN', 'uDT46', 'uDT4', 'uDT6'))):
+                    if not self._srv6_static_sid_is_unambiguous(row_key):
+                        return False
+                if deleted or action is None:
+                    # Policy-only rows belong to the existing decapsulation
+                    # policy consumer. Only a known action-bearing row owns a
+                    # native static SID which this event can withdraw.
+                    if owns_old_sid:
+                        commands.extend(['static-sids', 'no sid ' + key])
+                elif action in ('uDT46', 'uDT4', 'uDT6'):
+                    commands.extend(['static-sids',
+                                     'sid {} locator {} behavior {} vrf {}'.format(
+                                         key, prefix, action, current.get('decap_vrf', 'default'))])
+                elif action == 'uN':
+                    commands.extend(['static-sids', 'sid {} locator {} behavior uN'.format(key, prefix)])
+                else:
+                    raise ValueError('unsupported static SID action')
+        except (KeyError, TypeError, ValueError) as error:
+            syslog.syslog(syslog.LOG_ERR, 'invalid {} configuration: {}'.format(table, error))
+            return False
+        if len(commands) > 3:
+            command = ['vtysh']
+            for item in commands:
+                command.extend(['-c', item])
+            if not self.__run_command(table, command):
+                return False
+        self.__apply_config_op_success(data)
+        return True
+
     def __update_cache_data(self, table_key, data):
         cached_data = self.table_data_cache.setdefault(table_key, {})
         for key, val in data.items():
@@ -4109,6 +4433,9 @@ class BGPConfigDaemon:
 
 
     def bgp_table_handler_common(self, table, key, data, comb_attr_list = []):
+        if getattr(self, 'isis_recovery_mode', False) and table in self.ISIS_RECOVERY_TABLES:
+            self.isis_recovery_notify()
+            return
         syslog.syslog(syslog.LOG_DEBUG, '----------------------------------')
         syslog.syslog(syslog.LOG_DEBUG, ' BGP table handling')
         syslog.syslog(syslog.LOG_DEBUG, '----------------------------------')
@@ -4158,7 +4485,16 @@ class BGPConfigDaemon:
     def start(self):
         self.subscribe_all()
         self.config_db.listen()
+        if self.isis_recovery_mode:
+            try:
+                self._start_isis_recovery()
+            except Exception as error:
+                # Keep BGP event processing alive; no fallback to an unowned
+                # legacy mutation path after recovery initialization fails.
+                syslog.syslog(syslog.LOG_ERR, 'IS-IS recovery unavailable: ' + str(error))
     def stop(self):
+        if self.isis_recovery_worker is not None:
+            self.isis_recovery_worker.stop()
         self.config_db.stop_listen()
         if self.config_db.sub_thread.is_alive():
             self.config_db.sub_thread.join()
@@ -4179,6 +4515,11 @@ def main():
     bgpd_client.start()
     daemon = BGPConfigDaemon()
     daemon.start()
+
+    def retry_isis(signum, frame):
+        if daemon.isis_recovery_worker is not None:
+            daemon.isis_recovery_worker.request_retry()
+    signal.signal(signal.SIGUSR1, retry_isis)
     while main_loop:
         signal.pause()
     syslog.syslog(syslog.LOG_DEBUG, 'leaving BGP configuration daemon')

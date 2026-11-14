@@ -298,5 +298,734 @@
                 ]
             }
         }
+    },
+    "SRV6_SOURCE_CANONICAL": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            },
+            "SRV6_MY_SOURCE": {
+                "SRV6_MY_SOURCE_LIST": [
+                    {
+                        "name": "tunnel-source",
+                        "source-address": "2001:db8::1"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_SOURCE_LEGACY_KEY": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            },
+            "SRV6_MY_SOURCE": {
+                "SRV6_MY_SOURCE_LIST": [
+                    {
+                        "name": "legacy-source",
+                        "source-address": "2001:db8::1"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_SOURCE_MULTIPLE": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            },
+            "SRV6_MY_SOURCE": {
+                "SRV6_MY_SOURCE_LIST": [
+                    {
+                        "name": "one",
+                        "source-address": "2001:db8::1"
+                    },
+                    {
+                        "name": "two",
+                        "source-address": "2001:db8::2"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_SOURCE_INVALID_ADDRESS": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            },
+            "SRV6_MY_SOURCE": {
+                "SRV6_MY_SOURCE_LIST": [
+                    {
+                        "name": "tunnel-source",
+                        "source-address": "192.0.2.1"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_SOURCE_MISSING_ADDRESS": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            },
+            "SRV6_MY_SOURCE": {
+                "SRV6_MY_SOURCE_LIST": [
+                    {
+                        "name": "tunnel-source"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_LOCATOR_PREFIX_CIDR": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::/48"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_LOCATOR_PREFIX_GEOMETRY_MISMATCH": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::/64"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_LOCATOR_UNFORMATTED_USID": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::",
+                        "behavior": "usid"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_LOCATOR_F3216": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_LOCATOR_F3216_REQUIRES_USID": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::",
+                        "format": "usid-f3216"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_LOCATOR_F3216_BAD_GEOMETRY": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::",
+                        "behavior": "usid",
+                        "format": "usid-f3216",
+                        "func_len": 20
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_LOCATOR_UNKNOWN_FORMAT": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::",
+                        "behavior": "usid",
+                        "format": "unsupported"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_ISIS_BINDING": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.0000.0000.0001.00",
+                        "srv6_locator": "MAIN",
+                        "srv6_interface": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_ISIS_MISSING_LOCATOR": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.0000.0000.0001.00",
+                        "srv6_locator": "MISSING",
+                        "srv6_interface": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_ISIS_MISSING_INTERFACE": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.0000.0000.0001.00",
+                        "srv6_locator": "MAIN",
+                        "srv6_interface": "Loopback999"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_ISIS_LOCATOR_INTERFACE_PAIR": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.0000.0000.0001.00",
+                        "srv6_interface": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_ISIS_INTERFACE_LOCATOR_PAIR": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.0000.0000.0001.00",
+                        "srv6_locator": "MAIN"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_ISIS_NONDEFAULT_BINDING": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "Vrf2",
+                        "enabled": true,
+                        "net_title": "49.0001.0000.0000.0001.00",
+                        "srv6_locator": "MAIN",
+                        "srv6_interface": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-vrf:sonic-vrf": {
+            "VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf2"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_DUPLICATE_ACTION_PREFIX": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    },
+                    {
+                        "locator_name": "OTHER",
+                        "prefix": "FCBB:BBBB:21::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    },
+                    {
+                        "locator": "OTHER",
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "action": "uN"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_SHARED_PREFIX_POLICY_ONLY": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    },
+                    {
+                        "locator_name": "OTHER",
+                        "prefix": "FCBB:BBBB:21::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "locator": "MAIN",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
+                        "locator": "MAIN",
+                        "action": "uDT46"
+                    },
+                    {
+                        "locator": "OTHER",
+                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "decap_dscp_mode": "pipe"
+                    }
+                ]
+            }
+        }
     }
 }

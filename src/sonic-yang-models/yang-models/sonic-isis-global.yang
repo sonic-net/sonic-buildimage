@@ -1,0 +1,164 @@
+module sonic-isis-global {
+    namespace "http://github.com/sonic-net/sonic-isis-global";
+    prefix isisg;
+    yang-version 1.1;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-srv6 { prefix srv6; }
+    import sonic-port { prefix port; }
+    import sonic-portchannel { prefix lag; }
+    import sonic-vlan { prefix vlan; }
+    import sonic-loopback-interface { prefix lo; }
+    import sonic-vlan-sub-interface { prefix sub; }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC IS-IS Global YANG Module";
+
+    revision 2026-06-16 {
+        description
+            "Initial revision for IS-IS global routing configuration.";
+    }
+
+    container sonic-isis-global {
+
+        container ISIS_GLOBALS {
+            list ISIS_GLOBALS_LIST {
+                key "vrf_name";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF instance name for IS-IS routing context.";
+                }
+
+                leaf enabled {
+                    type boolean;
+                    default false;
+                    description "Administrative status switch for the IS-IS daemon instance.";
+                }
+
+                leaf net_title {
+                    type string {
+                        pattern '[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00';
+                    }
+                    description "Network Entity Title (NET) for this intermediate system.";
+                }
+
+                leaf level {
+                    type enumeration {
+                        enum level-1 {
+                            description "Act solely as a Station Router within an area.";
+                        }
+                        enum level-2 {
+                            description "Act solely as an Area-to-Area Backbone Router.";
+                        }
+                        enum level-1-2 {
+                            description "Act simultaneously as both an intra-area and backbone router.";
+                        }
+                    }
+                    default level-1-2;
+                    description "Router topology tier level execution mode.";
+                }
+
+                leaf ipv6_multi_topology {
+                    type boolean;
+                    default true;
+                    description "Enable IPv6 multi-topology; false selects single-topology IPv6.";
+                }
+
+                leaf dynamic_hostname {
+                    type boolean;
+                    default true;
+                    description "Enable Dynamic Hostname exchange via TLV 137 in link-state packets.";
+                }
+
+                leaf srv6_locator {
+                    type leafref {
+                        path "/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST/srv6:locator_name";
+                    }
+                    description "SRv6 locator bound to this IS-IS process; absence means no SRv6 binding.";
+                }
+
+                leaf srv6_interface {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST/vlan:name";
+                        }
+                        type leafref {
+                            path "/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST/lo:name";
+                        }
+                        type leafref {
+                            path "/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST/sub:name";
+                        }
+                    }
+                    description "Existing interface used for the bound IS-IS SRv6 SIDs.";
+                }
+
+                must "(not(srv6_locator) and not(srv6_interface)) or (srv6_locator and srv6_interface and vrf_name = 'default')" {
+                    error-message "IS-IS SRv6 requires locator and interface in the default VRF";
+                }
+            }
+        }
+
+        container ISIS_GLOBALS_TIMERS {
+            list ISIS_GLOBALS_TIMERS_LIST {
+                key "vrf_name";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "../../../ISIS_GLOBALS/ISIS_GLOBALS_LIST/vrf_name";
+                    }
+                    description "Reference to base VRF instance.";
+                }
+
+                leaf lsp_mtu {
+                    type uint16 {
+                        range "128..4352";
+                    }
+                    default 1497;
+                    description "Maximum transmission size constraint for localized Link State PDU generation.";
+                }
+
+                leaf lsp_refresh_interval {
+                    type uint16 {
+                        range "1..65235";
+                    }
+                    units "seconds";
+                    default 900;
+                    description "Periodic refresh timing window to re-originate active self-generated LSPs.";
+                }
+
+                leaf lsp_lifetime {
+                    must ". >= ../lsp_refresh_interval + 300";
+                    type uint16 {
+                        range "350..65535";
+                    }
+                    units "seconds";
+                    default 1200;
+                    description "Maximum time-to-live expiration metric assigned to inbound tracking LSPs.";
+                }
+            }
+        }
+    }
+}

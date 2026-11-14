@@ -13,7 +13,11 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/unisolate.j2,/usr/sbin/bgp-unisolate \
 "
 
-FRR_VARS=$(sonic-cfggen $CFGGEN_PARAMS)
+FRR_SUPERVISOR_CONTEXT='{"frr_has_namespace":false}'
+if [[ -n "${NAMESPACE_ID:-}" ]]; then
+    FRR_SUPERVISOR_CONTEXT='{"frr_has_namespace":true}'
+fi
+FRR_VARS=$(sonic-cfggen $CFGGEN_PARAMS -a "$FRR_SUPERVISOR_CONTEXT")
 CONFIG_TYPE=$(echo $FRR_VARS | jq -r '.docker_routing_config_mode')
 
 update_default_gw()
@@ -51,6 +55,76 @@ write_default_zebra_config()
     }
 }
 
+render_integrated_frr_config()
+(
+    # Freeze one ConfigDB read before rendering any managed template. Both the
+    # full candidate and its independent fallback use exactly these JSON bytes.
+    # This subshell owns secret temporary files and cleans them before FRR starts.
+    umask 077
+    startup_dir=$(mktemp -d /tmp/frr-startup.XXXXXX) || return 1
+    trap 'rm -rf -- "$startup_dir"' EXIT
+    trap 'exit 1' HUP INT TERM
+    snapshot="$startup_dir/snapshot.json"
+    candidate="$startup_dir/candidate.conf"
+    outcome="$startup_dir/outcome.json"
+    fallback="$startup_dir/fallback.json"
+    if ! sonic-cfggen -d -y /etc/sonic/constants.yml --print-data > "$snapshot"; then
+        echo "Failed to capture the FRR startup snapshot" >&2
+        return 1
+    fi
+    rendered=false
+    if sonic-cfggen -j "$snapshot" -T /usr/local/sonic/frrcfgd \
+            -t /usr/share/sonic/templates/gen_frr.conf.j2,"$candidate"; then
+        rendered=true
+    else
+        # Never let the parser see a partially rendered candidate.
+        rm -f -- "$candidate"
+    fi
+
+    # The binary location is shared with the existing supervisord commands.
+    frr_version=$(PATH="/usr/lib/frr:$PATH" zebra --version 2>/dev/null |
+        awk 'NR == 1 {for (i = 1; i <= NF; i++) if ($i ~ /^[0-9]+\.[0-9]+(\.[0-9]+)?([_-].*)?$/) {sub(/[_-].*/, "", $i); print $i; exit}}')
+    if python3 -m frrcfgd.isis_startup --snapshot "$snapshot" \
+            --rendered-config "$candidate" --frr-version "$frr_version" \
+            --namespace "${NAMESPACE_ID:-}" > "$outcome" && [ "$rendered" = true ]; then
+        cp -- "$candidate" /etc/frr/frr.conf
+        return $?
+    fi
+
+    # A failed registration must never emit an unregistered managed slice.
+    # Named/mixed profiles and other namespaces keep their legacy IS-IS tables.
+    profile=$(jq -r '.profile // "canonical"' "$outcome" 2>/dev/null)
+    if ! python3 - "$snapshot" "$fallback" "$profile" "${NAMESPACE_ID:-}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as source:
+    config = json.load(source)
+tables = ('SRV6_MY_SOURCE', 'SRV6_MY_LOCATORS', 'SRV6_MY_SIDS')
+globals_ = config.get('ISIS_GLOBALS', {})
+legacy = (sys.argv[3] == 'legacy' or bool(sys.argv[4]) or
+          isinstance(globals_, dict) and any(key != 'default' for key in globals_))
+if not legacy:
+    tables += ('ISIS_GLOBALS', 'ISIS_GLOBALS_TIMERS', 'ISIS_INTERFACE')
+else:
+    for row in globals_.values():
+        row.pop('srv6_locator', None)
+        row.pop('srv6_interface', None)
+for name in tables:
+    config.pop(name, None)
+with open(sys.argv[2], 'w') as output:
+    json.dump(config, output, allow_nan=False)
+PY
+    then
+        echo "Failed to prepare the independent FRR startup fallback" >&2
+        return 1
+    fi
+    echo "IS-IS/SRv6 canonical startup unavailable; rendering the independent fallback" >&2
+    # Read the captured snapshot, never ConfigDB a second time for fallback.
+    sonic-cfggen -j "$fallback" -T /usr/local/sonic/frrcfgd \
+        -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf
+)
+
 if [[ ! -z "$NAMESPACE_ID" ]]; then
    update_default_gw 4
    update_default_gw 6
@@ -67,13 +141,7 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     "
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
-        CFGGEN_PARAMS=" \
-            -d \
-            -y /etc/sonic/constants.yml \
-            -T /usr/local/sonic/frrcfgd \
-            -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
-        "
-        sonic-cfggen $CFGGEN_PARAMS
+        render_integrated_frr_config || exit 1
         echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
         rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
               /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
@@ -94,13 +162,7 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
           /etc/frr/sharpd.conf
     write_default_zebra_config /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "unified" ]; then
-    CFGGEN_PARAMS=" \
-        -d \
-        -y /etc/sonic/constants.yml \
-        -T /usr/local/sonic/frrcfgd \
-        -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
-    "
-    sonic-cfggen $CFGGEN_PARAMS
+    render_integrated_frr_config || exit 1
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
           /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
