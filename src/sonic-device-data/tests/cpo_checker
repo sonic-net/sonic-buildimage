@@ -15,7 +15,9 @@ Checks performed:
                    types and enumeration values.
   Semantics        every referenced device is defined, banks are in range,
                    interface names are well-formed, lane sets are
-                   well-formed and do not overlap.
+                   well-formed and do not overlap, every laser of a device
+                   is mapped, laser indices are 0..N-1 or 1..N and every
+                   device in a file uses the same numbering.
   Cross-file       every cpo.json interface exists in platform.json, and the
                    lanes platform.json assigns to an interface are consistent
                    with the lanes of the devices cpo.json associates with it.
@@ -207,11 +209,14 @@ class CpoData:
         self.declared_interfaces: Set[str] = set()
 
 
-def check_device(device_id: str, device, report: Report) -> Optional[Set[int]]:
+def check_device(device_id: str, device, report: Report,
+                 laser_bases: Dict[str, int]) -> Optional[Set[int]]:
     """Validate one entry of the devices section.
 
     Returns the set of lanes the device drives if the entry is valid enough
-    to take part in the lane checks, otherwise None.
+    to take part in the lane checks, otherwise None. For an external laser
+    source, the index its lasers are numbered from (0 or 1) is recorded in
+    laser_bases so that the caller can check it is the same across the file.
     """
     where = "device '{}'".format(device_id)
 
@@ -295,10 +300,6 @@ def check_device(device_id: str, device, report: Report) -> Optional[Set[int]]:
                     report.error("{}: laser index {} listed more than once".format(where, laser_idx))
                     valid = False
                 seen_lasers.add(laser_idx)
-                if lasers is not None and laser_idx >= lasers:
-                    report.error("{}: laser index out of range, device has {} lasers (0..{})".format(
-                        laser_where, lasers, lasers - 1))
-                    valid = False
 
                 parsed = parse_lanes(laser_lanes, laser_where, report)
                 if parsed is None:
@@ -315,12 +316,44 @@ def check_device(device_id: str, device, report: Report) -> Optional[Set[int]]:
             if not mapping:
                 report.error("{}: '{}' is empty".format(where, LASER_MAPPING_KEY))
                 valid = False
-            elif lasers is not None and len(seen_lasers) < lasers:
-                unmapped = sorted(set(range(lasers)) - seen_lasers)
-                report.warning("{}: lasers {} have no entry in '{}'".format(
-                    where, fmt_lanes(unmapped), LASER_MAPPING_KEY))
+            elif seen_lasers:
+                # Every laser must have an entry, so the indices are exactly
+                # 0..N-1 or 1..N and the lowest one tells the numberings apart.
+                base = min(seen_lasers)
+                if base > 1:
+                    report.error("{}: laser indices must start at 0 or 1, lowest index in '{}' "
+                                 "is {}".format(where, LASER_MAPPING_KEY, base))
+                    valid = False
+                else:
+                    laser_bases[device_id] = base
+                    if lasers is not None:
+                        expected = set(range(base, base + lasers))
+                        out_of_range = seen_lasers - expected
+                        if out_of_range:
+                            report.error("{}: laser indices {} out of range, device has {} lasers "
+                                         "numbered from {} ({}..{})".format(
+                                             where, fmt_lanes(out_of_range), lasers, base,
+                                             base, base + lasers - 1))
+                            valid = False
+                        unmapped = expected - seen_lasers
+                        if unmapped:
+                            report.error("{}: lasers {} have no entry in '{}', device has {} lasers "
+                                         "numbered from {} ({}..{})".format(
+                                             where, fmt_lanes(unmapped), LASER_MAPPING_KEY, lasers,
+                                             base, base, base + lasers - 1))
+                            valid = False
 
     return lanes if valid else None
+
+
+def check_laser_bases(laser_bases: Dict[str, int], report: Report) -> None:
+    """Check that every external laser source numbers its lasers from the same index."""
+    zero_based = sorted(dev for dev, base in laser_bases.items() if base == 0)
+    one_based = sorted(dev for dev, base in laser_bases.items() if base == 1)
+    if zero_based and one_based:
+        report.error("laser indices are 0-based for devices {} but 1-based for devices {}, "
+                     "a file must use one numbering throughout".format(
+                         ", ".join(zero_based), ", ".join(one_based)))
 
 
 def check_interface(ifname: str, intf, report: Report) -> Optional[List]:
@@ -409,11 +442,14 @@ def check_cpo(cpo_json, report: Report) -> Optional[CpoData]:
     if not devices:
         report.error("'{}' section is empty".format(DEVICES_KEY))
 
+    laser_bases: Dict[str, int] = {}
     for device_id, device in devices.items():
-        lanes = check_device(device_id, device, report)
+        lanes = check_device(device_id, device, report, laser_bases)
         if lanes is not None:
             data.devices[device_id] = device
             data.device_lanes[device_id] = lanes
+
+    check_laser_bases(laser_bases, report)
 
     # Two devices of the same type must not drive the same ASIC lane.
     lane_owner: Dict[str, Dict[int, str]] = {}
