@@ -1,0 +1,45 @@
+{# Standard AZURE classification and bindings only; buffer qualification is separate. #}
+{%- set dscp_exceptions = {3: 3, 4: 4, 5: 2, 8: 0, 46: 5, 48: 6} -%}
+{
+    "DSCP_TO_TC_MAP": {
+        "AZURE": {
+{% for dscp in range(64) %}
+            "{{ dscp }}": "{{ dscp_exceptions.get(dscp, 1) }}"{{ ',' if not loop.last }}
+{% endfor %}
+        }
+    },
+    "TC_TO_PRIORITY_GROUP_MAP": {
+        "AZURE": {
+{% for tc in range(8) %}
+            "{{ tc }}": "{{ tc if tc in [3, 4, 7] else 0 }}"{{ ',' if not loop.last }}
+{% endfor %}
+        }
+    },
+    "TC_TO_QUEUE_MAP": {
+        "AZURE": {
+{% for tc in range(8) %}
+            "{{ tc }}": "{{ tc }}"{{ ',' if not loop.last }}
+{% endfor %}
+        }
+    },
+    "MAP_PFC_PRIORITY_TO_QUEUE": {
+        "AZURE": {
+{% for priority in range(8) %}
+            "{{ priority }}": "{{ priority }}"{{ ',' if not loop.last }}
+{% endfor %}
+        }
+    },
+    "PORT_QOS_MAP": {
+        "global": {
+            "dscp_to_tc_map": "AZURE"
+        }{% for port in DEVICE_NEIGHBOR | default(PORT | default({})) | sort %},
+        "{{ port }}": {
+            "dscp_to_tc_map": "AZURE",
+            "tc_to_queue_map": "AZURE",
+            "tc_to_pg_map": "AZURE",
+            "pfc_to_queue_map": "AZURE",
+            "pfc_enable": "3,4",
+            "pfcwd_sw_enable": "3,4"
+        }{% endfor %}
+    }
+}
