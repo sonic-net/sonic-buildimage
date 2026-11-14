@@ -3613,7 +3613,12 @@ static bool fpm_br_port_write(struct fpm_nl_ctx *fnc, const uint8_t *buf,
 	if (fnc->socket == -1 || fnc->connecting)
 		return false;
 
-	if (STREAM_WRITEABLE(fnc->obuf) < (nl_len + FPM_HEADER_SIZE)) {
+	/* fpm_process_queue() takes a context once DPLANE_FPM_NL_BUF_SIZE bytes
+	 * are free, and drops it if they are not when fpm_nl_enqueue() writes it,
+	 * as the lock is not held in between: leave it that room.
+	 */
+	if (STREAM_WRITEABLE(fnc->obuf) <
+	    DPLANE_FPM_NL_BUF_SIZE + nl_len + FPM_HEADER_SIZE) {
 		atomic_fetch_add_explicit(&fnc->counters.buffer_full, 1,
 					  memory_order_relaxed);
 		return false;
