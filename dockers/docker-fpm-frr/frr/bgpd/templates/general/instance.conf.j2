@@ -34,6 +34,9 @@
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client
 {%   endif %}
+{%   if bgp_session.get('encapsulation_type') %}
+    neighbor {{ neighbor_addr }} encapsulation-{{ bgp_session.get('encapsulation_type') }}
+{%   endif %}
     neighbor {{ neighbor_addr }} activate
   exit-address-family
 {% endif %}
@@ -41,6 +44,9 @@
   address-family ipv6
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+{%   if bgp_session.get('encapsulation_type') %}
+    neighbor {{ neighbor_addr }} encapsulation-{{ bgp_session.get('encapsulation_type') }}
 {%   endif %}
     neighbor {{ neighbor_addr }} activate
   exit-address-family
@@ -61,6 +67,9 @@
     neighbor {{ neighbor_addr }} next-hop-self
 {%   endif %}
 !
+{%   if bgp_session.get('encapsulation_type') %}
+    neighbor {{ neighbor_addr }} encapsulation-{{ bgp_session.get('encapsulation_type') }}
+{%   endif %}
     neighbor {{ neighbor_addr }} activate
   exit-address-family
 {% elif neighbor_addr | ipv6 %}
@@ -79,6 +88,9 @@
     neighbor {{ neighbor_addr }} next-hop-self
 {%   endif %}
 !
+{%   if bgp_session.get('encapsulation_type') %}
+    neighbor {{ neighbor_addr }} encapsulation-{{ bgp_session.get('encapsulation_type') }}
+{%   endif %}
     neighbor {{ neighbor_addr }} activate
   exit-address-family
 {% endif %}

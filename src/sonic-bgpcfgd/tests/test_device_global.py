@@ -449,3 +449,53 @@ def test_set_handler_unknown_key_does_not_run_tsa(mock_configure_tsa):
     # never fall through to configure_tsa() (regression guard for #28515).
     mock_configure_tsa.assert_not_called()
     assert m.cfg_mgr.get_config() == ""
+
+
+def test_bgp_srv6_locator_is_rendered_and_replaced_from_bgp_device_global():
+    m = constructor()
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", {
+        'bgp_asn': '65100', 'type': 'LeafRouter'})
+
+    m.set_handler("SRV6", {'bgp_srv6_locator': 'loc1'})
+    assert 'router bgp 65100\n segment-routing srv6\n  locator loc1\n  encap-behavior H_Encaps_Red\nexit' in m.cfg_mgr.changes
+
+    m.set_handler("SRV6", {'bgp_srv6_locator': 'loc2'})
+    assert 'no locator loc1\n  no encap-behavior H_Encaps_Red\nexit\nrouter bgp 65100\n segment-routing srv6\n  locator loc2\n  encap-behavior H_Encaps_Red' in m.cfg_mgr.changes
+
+
+def test_bgp_srv6_locator_is_removed_when_bgp_device_global_is_deleted():
+    m = constructor()
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", {
+        'bgp_asn': '65100', 'type': 'LeafRouter'})
+    m.set_handler("SRV6", {'bgp_srv6_locator': 'loc1'})
+
+    m.del_handler("SRV6")
+    assert 'no locator loc1\n  no encap-behavior H_Encaps_Red' in m.cfg_mgr.changes
+
+
+def test_bgp_srv6_locator_is_applied_when_asn_arrives_after_locator():
+    m = constructor()
+    metadata = {'type': 'LeafRouter'}
+
+    # The locator cannot be rendered before the BGP ASN is available.
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", metadata)
+    m.set_handler("SRV6", {'bgp_srv6_locator': 'loc1'})
+    assert m.cfg_mgr.changes == ""
+
+    # Updating the same metadata row with the ASN should apply the pending locator.
+    metadata['bgp_asn'] = '65100'
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", metadata)
+    assert 'router bgp 65100\n segment-routing srv6\n  locator loc1\n  encap-behavior H_Encaps_Red\nexit' in m.cfg_mgr.changes
+
+
+def test_bgp_srv6_locator_update_with_same_locator_is_idempotent():
+    m = constructor()
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", {
+        'bgp_asn': '65100', 'type': 'LeafRouter'})
+    srv6_config = {'bgp_srv6_locator': 'loc1'}
+    m.set_handler("SRV6", srv6_config)
+    initial_config = m.cfg_mgr.changes
+
+    m.set_handler("SRV6", srv6_config)
+    m.set_handler("SRV6", {'bgp_srv6_ipv4_sid_advertise': 'true'})
+    assert m.cfg_mgr.changes == initial_config
