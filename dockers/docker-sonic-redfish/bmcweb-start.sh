@@ -25,7 +25,7 @@ log() { logger -t bmcweb-start "$*"; echo "bmcweb-start: $*"; }
 
 # An unset, unreadable or invalid port must not stop the API from coming up;
 # the standard port is the safe answer.
-PORT="$(sonic-db-cli CONFIG_DB HGET "REDFISH|config" port 2>/dev/null)"
+PORT="$(sonic-db-cli -s CONFIG_DB HGET "REDFISH|config" port 2>/dev/null)"
 PORT="${PORT:-${DEFAULT_PORT}}"
 case "${PORT}" in
     ''|*[!0-9]*)

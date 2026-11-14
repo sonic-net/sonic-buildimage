@@ -19,7 +19,7 @@ events=PROCESS_STATE
 buffer_size=1024
 
 [eventlistener:supervisor-proc-exit-listener]
-command=/usr/bin/supervisor-proc-exit-listener-rs --container-name dhcp_relay
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name dhcp_relay --use-unix-socket-path
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
 autostart=true
 autorestart=unexpected
