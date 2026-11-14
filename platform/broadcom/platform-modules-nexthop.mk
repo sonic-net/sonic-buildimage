@@ -9,6 +9,10 @@ $(NEXTHOP_COMMON_PLATFORM_MODULE)_PLATFORM = nexthop-common
 SONIC_DPKG_DEBS += $(NEXTHOP_COMMON_PLATFORM_MODULE)
 SONIC_STRETCH_DEBS += $(NEXTHOP_COMMON_PLATFORM_MODULE)
 
+# Gearbox MDIO access library, installed into the gbsyncd container
+NEXTHOP_GBSYNCD_ACCESS = sonic-platform-nexthop-gbsyncd-access_1.0_amd64.deb
+$(eval $(call add_extra_package,$(NEXTHOP_COMMON_PLATFORM_MODULE),$(NEXTHOP_GBSYNCD_ACCESS)))
+
 # CPU Card
 NEXTHOP_KOMODO_PLATFORM_MODULE = sonic-platform-nexthop-komodo_1.0_amd64.deb
 $(NEXTHOP_KOMODO_PLATFORM_MODULE)_PLATFORM = nexthop-komodo
