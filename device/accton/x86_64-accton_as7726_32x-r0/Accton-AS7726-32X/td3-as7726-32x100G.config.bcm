@@ -492,3 +492,14 @@ phy_chain_tx_polarity_flip_physical{125.0}=0x0
 phy_chain_tx_polarity_flip_physical{126.0}=0x1
 phy_chain_tx_polarity_flip_physical{127.0}=0x0
 phy_chain_tx_polarity_flip_physical{128.0}=0x0
+
+# VXLAN settings from Edgecore's Accton-AS7726-32X configuration.
+l3_ecmp_levels=2
+use_all_splithorizon_groups=1
+riot_enable=1
+sai_tunnel_support=1
+riot_overlay_l3_intf_mem_size=4096
+riot_overlay_l3_egress_mem_size=32768
+riot_overlay_ecmp_resilient_hash_size=16384
+flow_init_mode=1
+host_as_route_disable=1
