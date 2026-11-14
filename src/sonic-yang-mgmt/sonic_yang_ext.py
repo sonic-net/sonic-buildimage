@@ -783,8 +783,9 @@ class SonicYangExtMixin(SonicYangPathMixin):
     Rev xlate a container inside a yang container
     """
     def _revXlateContainerInContainer(self, modelContainer, yang, config, table):
-        # Pass matching list from Yang Json if exist
-        if yang.get(modelContainer.name()):
+        name = modelContainer.name()
+        if yang.get(name) or (name in yang and yang[name] == {} and
+                              modelContainer.presence() is not None):
             config[modelContainer.name()] = dict()
             self.sysLog(msg="revXlateContainerInContainer {}".format(modelContainer.name()))
             self.elementPath.append(modelContainer.name())
