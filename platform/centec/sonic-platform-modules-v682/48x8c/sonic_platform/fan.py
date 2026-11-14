@@ -16,8 +16,8 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-FAN_PATH = "/sys/class/hwmon/hwmon{}/"
-FAN_MAX_PWM = 255
+FAN_PATH = "/sys/class/hwmon/hwmon2/"
+FAN_MAX_PWM = 100
 FAN_FAN_PWM = "pwm{}"
 FAN_FAN_INPUT = "fan{}_input"
 FAN_MAX_RPM = 15000
@@ -80,7 +80,7 @@ class Fan(FanBase):
         speed = 0
         fan_speed_sysfs_name = "fan{}_input".format(self.fan_index+1)
         fan_speed_sysfs_path = self.__search_file_by_name(
-            FAN_PATH.format(self.fan_tray_index + 1), fan_speed_sysfs_name)
+            FAN_PATH, fan_speed_sysfs_name)
         fan_speed_rpm = self.__read_txt_file(fan_speed_sysfs_path) or 0
         speed = math.ceil(float(fan_speed_rpm) * 100 / FAN_MAX_RPM)
 
@@ -110,7 +110,7 @@ class Fan(FanBase):
         speed = 0
         fan_speed_sysfs_name = "fan{}_input".format(self.fan_index+1)
         fan_speed_sysfs_path = self.__search_file_by_name(
-            FAN_PATH.format(self.fan_tray_index + 1), fan_speed_sysfs_name)
+            FAN_PATH, fan_speed_sysfs_name)
         fan_speed_rpm = self.__read_txt_file(fan_speed_sysfs_path) or 0
         speed = math.ceil(float(fan_speed_rpm) * 100 / FAN_MAX_RPM)
 
@@ -141,10 +141,10 @@ class Fan(FanBase):
              2.1) set pwm{}_enable to 3
 
         """
-        pwm = speed * 255 / 100
+        pwm = speed
         fan_target_sysfs_name = "pwm{}".format(self.fan_index+1)
         fan_target_sysfs_path = self.__search_file_by_name(
-            FAN_PATH.format(self.fan_tray_index + 1), fan_target_sysfs_name)
+            FAN_PATH, fan_target_sysfs_name)
         return self.__write_txt_file(fan_target_sysfs_path, int(pwm))
 
     def set_status_led(self, color):
