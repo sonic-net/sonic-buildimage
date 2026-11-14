@@ -1,0 +1,177 @@
+module sonic-grpc-authz {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-grpc-authz";
+    prefix grpc-authz;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "Shared authorization policy registry for gRPC servers in SONiC.";
+
+    revision 2026-08-18 {
+        description
+            "Initial revision.";
+    }
+
+    typedef identifier {
+        type string {
+            length 1..255;
+        }
+        description
+            "Non-empty identifier in the authorization policy registry.";
+    }
+
+    container sonic-grpc-authz {
+        container GRPC_AUTHZ_PRINCIPAL {
+            description
+                "Authenticated principals and their assigned roles.";
+
+            list GRPC_AUTHZ_PRINCIPAL_LIST {
+                key "name";
+
+                leaf name {
+                    type identifier;
+                    description
+                        "Principal derived from authenticated transport identity.";
+                }
+
+                leaf-list roles {
+                    type identifier;
+                    min-elements 1;
+                    description
+                        "Authorization roles assigned to this principal.";
+                }
+            }
+        }
+
+        container GRPC_AUTHZ_RULE {
+            description
+                "Method authorization rules shared by gRPC servers. Consumers
+                 evaluate matching deny rules before allow rules and deny when
+                 no allow rule matches.";
+
+            list GRPC_AUTHZ_RULE_LIST {
+                key "name";
+
+                leaf name {
+                    type identifier;
+                    description
+                        "Stable rule identifier.";
+                }
+
+                leaf-list roles {
+                    type leafref {
+                        path "/grpc-authz:sonic-grpc-authz/grpc-authz:GRPC_AUTHZ_PRINCIPAL/grpc-authz:GRPC_AUTHZ_PRINCIPAL_LIST/grpc-authz:roles";
+                    }
+                    min-elements 1;
+                    description
+                        "Roles to which this rule applies.";
+                }
+
+                leaf rpc {
+                    type string {
+                        pattern '/([A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*/[A-Za-z_][A-Za-z0-9_]*';
+                    }
+                    mandatory true;
+                    description
+                        "Exact full gRPC method name in /package.Service/Method form.";
+                }
+
+                leaf effect {
+                    type enumeration {
+                        enum allow;
+                        enum deny;
+                    }
+                    mandatory true;
+                    description
+                        "Authorization result when this rule matches.";
+                }
+            }
+        }
+
+        container GNMI_PATHZ_RULE {
+            description
+                "Path authorization rules for gNMI resources.";
+
+            list GNMI_PATHZ_RULE_LIST {
+                key "name";
+
+                leaf name {
+                    type identifier;
+                    description
+                        "Stable Pathz rule identifier.";
+                }
+
+                choice subject {
+                    mandatory true;
+                    description
+                        "Principal or role to which this Pathz rule applies.";
+
+                    leaf principal {
+                        type leafref {
+                            path "/grpc-authz:sonic-grpc-authz/grpc-authz:GRPC_AUTHZ_PRINCIPAL/grpc-authz:GRPC_AUTHZ_PRINCIPAL_LIST/grpc-authz:name";
+                        }
+                        description
+                            "Authenticated principal to which this rule applies.";
+                    }
+
+                    leaf role {
+                        type leafref {
+                            path "/grpc-authz:sonic-grpc-authz/grpc-authz:GRPC_AUTHZ_PRINCIPAL/grpc-authz:GRPC_AUTHZ_PRINCIPAL_LIST/grpc-authz:roles";
+                        }
+                        description
+                            "Role to which this rule applies.";
+                    }
+                }
+
+                leaf target {
+                    type identifier;
+                    description
+                        "Optional gNMI target selector.";
+                }
+
+                leaf origin {
+                    type identifier;
+                    description
+                        "Optional gNMI origin selector.";
+                }
+
+                leaf path {
+                    type string {
+                        length 1..4096;
+                        pattern '/|(/[A-Za-z_][A-Za-z0-9_.:-]*(\[[A-Za-z_][A-Za-z0-9_.:-]*=[^\[\]=]+\])*)+';
+                    }
+                    mandatory true;
+                    description
+                        "Canonical gNMI resource path, including path-element keys.";
+                }
+
+                leaf mode {
+                    type enumeration {
+                        enum READ;
+                        enum WRITE;
+                    }
+                    mandatory true;
+                    description
+                        "gNMI resource access mode.";
+                }
+
+                leaf action {
+                    type enumeration {
+                        enum PERMIT;
+                        enum DENY;
+                    }
+                    mandatory true;
+                    description
+                        "Pathz result when this rule matches.";
+                }
+            }
+        }
+    }
+}
