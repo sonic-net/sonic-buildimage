@@ -89,6 +89,20 @@ BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
+# BMC (aspeed) images include ZTP support by default; build with ENABLE_ZTP=n
+# to leave it out.
+# ENABLE_BMC_ZTP - ZTP admin mode shipped in BMC (aspeed) images. Default n:
+# ZTP is installed but administratively disabled, so a BMC with no saved
+# configuration boots to the factory default. Admins opt in at runtime with
+# 'ztp enable' followed by 'ztp run -y'. Set to y to ship ZTP enabled: on first
+# boot the BMC runs ZTP discovery over eth0 until it is provisioned or an
+# admin runs 'ztp disable', e.g.
+# make PLATFORM=aspeed PLATFORM_ARCH=arm64 ENABLE_BMC_ZTP=y ...
+ENABLE_BMC_ZTP ?= n
+ifeq ($(CONFIGURED_PLATFORM),aspeed)
+ENABLE_ZTP ?= y
+endif
+
 # INCLUDE_PDE - Enable platform development environment
 # INCLUDE_PDE = y
 # SHUTDOWN_BGP_ON_START - if set to y all bgp sessions will be in admin down state when

@@ -6,6 +6,7 @@
 #  * PLATFORM: Specific platform we wish to build images for.
 #  * BUILD_NUMBER: Desired version-number to pass to the building-system.
 #  * ENABLE_ZTP: Enables zero touch provisioning.
+#  * ENABLE_BMC_ZTP: Ships zero touch provisioning administratively enabled in BMC (aspeed) images (default n).
 #  * SHUTDOWN_BGP_ON_START: Sets admin-down state for all bgp peerings after restart.
 #  * INCLUDE_KUBERNETES: Allows including Kubernetes
 #  * INCLUDE_KUBERNETES_MASTER: Allows including Kubernetes master
@@ -703,6 +704,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SLAVE_TAG=$(SLAVE_TAG) \
                            SLAVE_BASE_TAG=$(SLAVE_BASE_TAG) \
                            ENABLE_ZTP=$(ENABLE_ZTP) \
+                           ENABLE_BMC_ZTP=$(ENABLE_BMC_ZTP) \
                            INCLUDE_PDE=$(INCLUDE_PDE) \
                            SHUTDOWN_BGP_ON_START=$(SHUTDOWN_BGP_ON_START) \
                            INCLUDE_KUBERNETES=$(INCLUDE_KUBERNETES) \

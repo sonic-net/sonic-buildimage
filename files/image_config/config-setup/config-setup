@@ -32,6 +32,8 @@ CONFIG_DB_PREFIX=config_db
 CONFIG_DB_SUFFIX=.json
 MINGRAPH_FILE=/etc/sonic/minigraph.xml
 TMP_ZTP_CONFIG_DB_JSON=/tmp/ztp_config_db.json
+ZTP_CFG_JSON=/host/ztp/ztp_cfg.json
+ZTP_CFG_TEMPLATE=/usr/share/sonic/templates/ztp_cfg.json
 FACTORY_DEFAULT_HOOKS=/etc/config-setup/factory-default-hooks.d
 CONFIG_PRE_MIGRATION_HOOKS=/etc/config-setup/config-migration-pre-hooks.d
 CONFIG_POST_MIGRATION_HOOKS=/etc/config-setup/config-migration-post-hooks.d
@@ -653,6 +655,31 @@ do_config_backup()
     run_hookdir ${CONFIG_PRE_MIGRATION_HOOKS} ${CONFIG_SETUP_PRE_MIGRATION_FLAG}
 }
 
+# Seed /host/ztp/ztp_cfg.json from the image-provided template, if any.
+#  - No existing file: copy the template.
+#  - Existing file (/host survives image upgrades): add only the keys it is
+#    missing. Keys already set, e.g. admin-mode changed by 'ztp enable' or
+#    'ztp disable', are kept.
+seed_ztp_cfg()
+{
+    [ -r ${ZTP_CFG_TEMPLATE} ] || return 0
+
+    if [ ! -e ${ZTP_CFG_JSON} ]; then
+        mkdir -p $(dirname ${ZTP_CFG_JSON})
+        cp ${ZTP_CFG_TEMPLATE} ${ZTP_CFG_JSON}
+        return 0
+    fi
+
+    # Template keys first, existing keys on top, so existing values win.
+    local tmp=${ZTP_CFG_JSON}.tmp
+    if jq -e -s '(.[0] + .[1]) as $m | if $m == .[1] then empty else $m end' \
+          ${ZTP_CFG_TEMPLATE} ${ZTP_CFG_JSON} > ${tmp} 2>/dev/null && [ -s ${tmp} ]; then
+        mv ${tmp} ${ZTP_CFG_JSON}
+    else
+        rm -f ${tmp}
+    fi
+}
+
 # Process switch bootup event
 #  - Check if it is warm boot and take no further action
 #  - Perform configuration migration if requested
@@ -661,6 +688,12 @@ do_config_backup()
 #    start ZTP
 boot_config()
 {
+    # Seed the ZTP configuration from an image-provided default (e.g. BMC
+    # images ship one that sets admin-mode and disables feat-inband). This
+    # must run before the first ztp CLI invocation, which would otherwise
+    # create /host/ztp/ztp_cfg.json with the ZTP engine's built-in defaults.
+    seed_ztp_cfg
+
     check_system_warm_boot
     if [ -e /etc/sonic/pending_config_migration ] || [ -e  ${CONFIG_SETUP_POST_MIGRATION_FLAG} ]; then
         do_config_migration

@@ -502,6 +502,7 @@ $(info "HTTP_PROXY"                      : "$(HTTP_PROXY)")
 $(info "HTTPS_PROXY"                     : "$(HTTPS_PROXY)")
 $(info "NO_PROXY"                        : "$(NO_PROXY)")
 $(info "ENABLE_ZTP"                      : "$(ENABLE_ZTP)")
+$(info "ENABLE_BMC_ZTP"                  : "$(ENABLE_BMC_ZTP)")
 $(info "INCLUDE_PDE"                     : "$(INCLUDE_PDE)")
 $(info "SONIC_DEBUGGING_ON"              : "$(SONIC_DEBUGGING_ON)")
 $(info "SONIC_PROFILING_ON"              : "$(SONIC_PROFILING_ON)")
@@ -1864,6 +1865,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 	export enable_organization_extensions="$(ENABLE_ORGANIZATION_EXTENSIONS)"
 	export enable_ztp="$(ENABLE_ZTP)"
+	export enable_bmc_ztp="$(ENABLE_BMC_ZTP)"
 	export include_teamd="$(INCLUDE_TEAMD)"
 	export include_router_advertiser="$(INCLUDE_ROUTER_ADVERTISER)"
 	export sonic_su_dev_signing_key="$(SECURE_UPGRADE_DEV_SIGNING_KEY)"
