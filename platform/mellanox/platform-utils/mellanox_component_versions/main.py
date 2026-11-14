@@ -57,6 +57,10 @@ def parse_fw_version_dpu(output: str) -> list[str]:
     return parse_fw_version(output, "BlueField")
 
 
+def get_oe_fw_version(_output: str) -> list[str]:
+    return get_vmod().get_running_versions() or ["N/A"]
+
+
 @dataclass
 class ComponentRule:
     deb_package: str | None = None
@@ -75,6 +79,12 @@ COMPONENT_RULES_SW = {
     "FW": ComponentRule(cmd="mlxfwmanager --query --query-format xml", regex=r"[0-9]{2}[\._]([0-9._-]*)", fn=parse_fw_version_sw),
     "KERNEL": ComponentRule(cmd="uname -r", regex=r"(.*)-[a-z0-9]+$"),
     "RSHIM": ComponentRule(deb_package="rshim"),
+}
+
+
+# Added to COMPONENT_RULES_SW on CPO platforms only.
+COMPONENT_RULES_CPO = {
+    "OE_FW": ComponentRule(fn=get_oe_fw_version),
 }
 
 
@@ -112,6 +122,13 @@ def get_device_data_manager():
 
 
 @functools.cache
+def get_vmod():
+    """Imported lazily: the BMC has no mellanox_fw_manager."""
+    from mellanox_fw_manager import vmod
+    return vmod
+
+
+@functools.cache
 def get_asic_type():
     from sonic_py_common import device_info
     return device_info.get_sonic_version_info().get('asic_type')
@@ -121,6 +138,8 @@ def get_asic_type():
 def get_component_rules():
     asic_type = get_asic_type()
     if asic_type == "mellanox":
+        if get_vmod().is_cpo_platform():
+            return {**COMPONENT_RULES_SW, **COMPONENT_RULES_CPO}
         return COMPONENT_RULES_SW
     if asic_type == BMC_ASIC_TYPE:
         return COMPONENT_RULES_BMC
@@ -136,7 +155,10 @@ def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
 
     versions = []
     cmd_args = shlex.split(cmd)
-    if asic_count > 1 and rule.is_from_syncd:
+    if not cmd_args:
+        # No command: the rule's fn reads the versions itself.
+        versions = [""]
+    elif asic_count > 1 and rule.is_from_syncd:
         for asic in range(asic_count):
             asic_cmd = ["docker", "exec", f"syncd{asic}"] + cmd_args
             version = subprocess.run(asic_cmd, shell=False, stdout=subprocess.PIPE, text=True).stdout
@@ -166,6 +188,13 @@ def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
 def parse_compiled_components_file():
     rules = get_component_rules()
     compiled_versions = {comp: "N/A" for comp in list(rules.keys()) + ["SIMX"]}
+
+    # The OE firmware ships inside the image's MFA, not in the versions file.
+    if "OE_FW" in compiled_versions:
+        try:
+            compiled_versions["OE_FW"] = get_vmod().get_image_version() or "N/A"
+        except Exception:
+            pass
 
     if not os.path.exists(COMPONENT_VERSIONS_FILE):
         return compiled_versions
