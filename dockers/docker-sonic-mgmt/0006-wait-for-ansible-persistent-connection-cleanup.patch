@@ -1,0 +1,54 @@
+Subject: [PATCH] ansible: finish persistent socket cleanup before the next play
+
+Strategy cleanup resets each persistent connection, but the daemon replies
+before removing its Unix socket. A following pytest-ansible one-task play
+can reuse that closing socket and fail in set_options with ECONNRESET.
+
+Wait for the old socket to disappear, bounded by the existing persistent
+connect timeout. Do not wait for a replacement socket created by another
+play, and always stop the results thread even when cleanup times out.
+Revalidate/remove this patch when upgrading to a corrected Ansible release.
+---
+diff --git a/ansible/plugins/strategy/__init__.py b/ansible/plugins/strategy/__init__.py
+--- a/ansible/plugins/strategy/__init__.py
++++ b/ansible/plugins/strategy/__init__.py
+@@ -280,11 +280,28 @@
+-    def cleanup(self):
+-        # close active persistent connections
+-        for sock in self._active_connections.values():
+-            try:
+-                conn = Connection(sock)
+-                conn.reset()
+-            except ConnectionError as e:
+-                # most likely socket is already closed
+-                display.debug("got an error while closing persistent connection: %s" % e)
+-        self._final_q.put(_sentinel)
+-        self._results_thread.join()
++    def cleanup(self):
++        # close active persistent connections
++        try:
++            for sock in self._active_connections.values():
++                try:
++                    previous = os.stat(sock)
++                    conn = Connection(sock)
++                    conn.reset()
++                    # reset acknowledges before the daemon removes its socket.
++                    deadline = time.monotonic() + C.PERSISTENT_CONNECT_TIMEOUT
++                    while True:
++                        try:
++                            current = os.stat(sock)
++                        except FileNotFoundError:
++                            break
++                        if (current.st_dev, current.st_ino) != (previous.st_dev, previous.st_ino):
++                            break
++                        if time.monotonic() >= deadline:
++                            raise AnsibleError(
++                                "Timed out waiting for persistent connection cleanup: %s" % sock
++                            )
++                        time.sleep(0.01)
++                except (ConnectionError, FileNotFoundError) as e:
++                    # most likely socket is already closed
++                    display.debug("got an error while closing persistent connection: %s" % e)
++        finally:
++            self._final_q.put(_sentinel)
++            self._results_thread.join()
