@@ -25,6 +25,7 @@ BASE_PLATFORM_PDDF_PATH = "../../../../../device/nexthop/{}/pddf"
 
 PLATFORMS_WITH_PD_PLUGIN_TEMPLATE = [
     "x86_64-nexthop_4210-r1032",
+    "x86_64-nexthop_4240l_64r-r1042",
 ]
 
 
