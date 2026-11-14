@@ -1,0 +1,20 @@
+[Unit]
+Description={{docker_container_name}} service
+Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service config-setup.service
+After=database{% if multi_instance == 'true' %}@%i{% endif %}.service config-setup.service
+After=interfaces-config.service
+After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+User=root
+Environment=sonic_asic_platform={{ sonic_asic_platform }}
+Environment=poesyncd_platform={{ docker_container_name }}
+ExecCondition=/usr/bin/{{docker_container_name}}-platform.sh
+ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start{% if multi_instance == 'true' %} %i{% endif %}
+ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait{% if multi_instance == 'true' %} %i{% endif %}
+ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop{% if multi_instance == 'true' %} %i{% endif %}
+
+[Install]
+WantedBy=sonic.target
