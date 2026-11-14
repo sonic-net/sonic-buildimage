@@ -149,12 +149,16 @@ function preStartAction()
         echo "Stopping watchdog-control.service before starting PDE"
         systemctl stop watchdog-control.service
     fi
-{%- elif docker_container_name == "snmp" %}
-    if decode-syseeprom -s > /dev/null 2>&1; then
-        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
-    else
+{%- elif docker_container_name in ["snmp", "gnmi"] %}
+    # gnmi.service runs as the admin user; decode-syseeprom needs root.
+    local serial
+    if serial=$(sudo -n decode-syseeprom -s 2>/dev/null) && [ -n "$serial" ]; then
+        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "$serial"
+    elif [ -z "$($SONIC_DB_CLI STATE_DB HGET 'DEVICE_METADATA|localhost' chassis_serial_number)" ]; then
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
+    else
+        echo "Cannot fetch system eeprom information. Keeping existing chassis serial number."
     fi
 {%- elif docker_container_name in bridged_containers %}
     # Wait for caclmgrd to allow {{ docker_container_name }} syslog before startup.

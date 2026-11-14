@@ -90,15 +90,13 @@ else
     NO_TLS_FALLBACK=true
 fi
 
-# If no configuration entry exists for TELEMETRY, create one default port
-if [ -z "$GNMI" ]; then
+# Use the default port if GNMI|gnmi or its port field is missing or empty
+PORT=$(extract_field "$GNMI" '.port // empty')
+if [ -z "$PORT" ]; then
     PORT=8080
-else
-    PORT=$(extract_field "$GNMI" '.port')
-    if ! [[ $PORT =~ ^[0-9]+$ ]]; then
-        echo "Incorrect port value ${PORT}, expecting positive integers" >&2
-        exit $INCORRECT_TELEMETRY_VALUE
-    fi
+elif ! [[ $PORT =~ ^[0-9]+$ ]]; then
+    echo "Incorrect port value ${PORT}, expecting positive integers" >&2
+    exit $INCORRECT_TELEMETRY_VALUE
 fi
 
 case "${GNMI_LISTENER_MODE-config}" in
@@ -130,6 +128,12 @@ if [[ $LOG_LEVEL =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" -v=$LOG_LEVEL"
 else
     TELEMETRY_ARGS+=" -v=2"
+fi
+
+# Save-on-set is off unless GNMI|gnmi save_on_set is set.
+SAVE_ON_SET=$(extract_field "$GNMI" '.save_on_set // empty')
+if [ -n "$SAVE_ON_SET" ]; then
+    TELEMETRY_ARGS+=" --with-save-on-set=$SAVE_ON_SET"
 fi
 
 # Enable ZMQ for SmartSwitch
