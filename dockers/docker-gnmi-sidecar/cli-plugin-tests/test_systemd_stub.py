@@ -67,35 +67,46 @@ _setup_fakes()
 from sonic_py_common import sidecar_common as real_sidecar_common
 
 
+def _to_nested(config_db):
+    nested = {}
+    for db_key, fields in config_db.items():
+        table, key = db_key.split("|", 1)
+        nested.setdefault(table, {})[key] = json.loads(json.dumps(fields))
+    return nested
+
+
+def _from_nested(nested):
+    return {f"{table}|{key}": fields
+            for table, entries in nested.items() for key, fields in entries.items()}
+
+
+def _strict_apply(doc, patch_ops):
+    """Apply RFC 6902 add/replace ops; a missing parent (add) or target (replace) raises."""
+    for op in patch_ops:
+        parts = [p.replace("~1", "/").replace("~0", "~") for p in op["path"].lstrip("/").split("/")]
+        parent = doc
+        for part in parts[:-1]:
+            if not isinstance(parent, dict) or part not in parent:
+                raise KeyError(f"member {part!r} not found for path {op['path']}")
+            parent = parent[part]
+        leaf = parts[-1]
+        if op["op"] == "replace" and leaf not in parent:
+            raise KeyError(f"replace target {op['path']} does not exist")
+        if op["op"] not in ("add", "replace"):
+            raise ValueError(f"unsupported op {op['op']}")
+        parent[leaf] = json.loads(json.dumps(op["value"]))
+    return doc
+
+
 def _fake_apply_patch(config_db, input_bytes, text):
-    """Fake 'config apply-patch': apply RFC 6902 ops to the test config_db dict."""
+    """Fake 'config apply-patch': strictly apply the patch to the test config_db dict."""
     try:
-        patch_ops = json.loads(input_bytes)
-        for op in patch_ops:
-            parts = op["path"].strip("/").split("/")
-            if op["op"] == "add":
-                if len(parts) == 1:
-                    for k, v in op["value"].items():
-                        config_db[f"{parts[0]}|{k}"] = dict(v)
-                elif len(parts) == 2:
-                    db_key = f"{parts[0]}|{parts[1]}"
-                    if db_key in config_db:
-                        config_db[db_key].update(op["value"])
-                    else:
-                        config_db[db_key] = dict(op["value"])
-                elif len(parts) == 3:
-                    db_key = f"{parts[0]}|{parts[1]}"
-                    config_db.setdefault(db_key, {})[parts[2]] = op["value"]
-            elif op["op"] == "replace":
-                if len(parts) == 2:
-                    config_db[f"{parts[0]}|{parts[1]}"] = dict(op["value"])
-                elif len(parts) == 3:
-                    db_key = f"{parts[0]}|{parts[1]}"
-                    if db_key in config_db:
-                        config_db[db_key][parts[2]] = op["value"]
-        return 0, "" if text else b"", "" if text else b""
+        nested = _strict_apply(_to_nested(config_db), json.loads(input_bytes))
     except Exception as exc:
         return 1, "" if text else b"", str(exc) if text else str(exc).encode()
+    config_db.clear()
+    config_db.update(_from_nested(nested))
+    return 0, "" if text else b"", "" if text else b""
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -898,7 +909,7 @@ def test_build_enabled_patch_table_absent(ss, config_db):
 
     patch = ss_mod._build_enabled_patch()
 
-    assert {"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"} in patch
+    assert {"op": "add", "path": "/GNMI", "value": {"gnmi": {"user_auth": "cert"}}} in patch
     assert len(patch) == 2
     table_op = [p for p in patch if p["path"] == "/GNMI_CLIENT_CERT"]
     assert len(table_op) == 1
@@ -943,7 +954,110 @@ def test_build_enabled_patch_ignores_telemetry_table(ss, config_db):
     ss_mod.GNMI_CLIENT_CERTS = []
     config_db["TELEMETRY|gnmi"] = {"user_auth": "cert"}
 
-    assert ss_mod._build_enabled_patch() == [{"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"}]
+    assert ss_mod._build_enabled_patch() == [{"op": "add", "path": "/GNMI", "value": {"gnmi": {"user_auth": "cert"}}}]
+
+
+_CERTS = [
+    {"cname": "a.test.example.com", "role": ["admin"]},
+    {"cname": "b.test.example.com", "role": ["gnmi_show_readonly"]},
+]
+
+# (seed CONFIG_DB, expected user_auth op) for each GNMI|gnmi shape
+_GNMI_SHAPES = {
+    "gnmi_table_absent": (
+        {},
+        {"op": "add", "path": "/GNMI", "value": {"gnmi": {"user_auth": "cert"}}},
+    ),
+    "gnmi_key_absent": (
+        {"GNMI|certs": {"server_crt": "/etc/sonic/telemetry/server.crt"}},
+        {"op": "add", "path": "/GNMI/gnmi", "value": {"user_auth": "cert"}},
+    ),
+    "user_auth_absent": (
+        {"GNMI|gnmi": {"port": "50052"}},
+        {"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"},
+    ),
+    "user_auth_other": (
+        {"GNMI|gnmi": {"port": "50052", "user_auth": "password"}},
+        {"op": "replace", "path": "/GNMI/gnmi/user_auth", "value": "cert"},
+    ),
+}
+
+# (seed CONFIG_DB, expected cert ops) for each GNMI_CLIENT_CERT shape
+_CERT_SHAPES = {
+    "cert_table_absent": (
+        {},
+        [{"op": "add", "path": "/GNMI_CLIENT_CERT",
+          "value": {"a.test.example.com": {"role": ["admin"]},
+                    "b.test.example.com": {"role": ["gnmi_show_readonly"]}}}],
+    ),
+    "cert_table_other_entry": (
+        {"GNMI_CLIENT_CERT|other.test.example.com": {"role": ["admin"]}},
+        [{"op": "add", "path": "/GNMI_CLIENT_CERT/a.test.example.com", "value": {"role": ["admin"]}},
+         {"op": "add", "path": "/GNMI_CLIENT_CERT/b.test.example.com", "value": {"role": ["gnmi_show_readonly"]}}],
+    ),
+    "cert_entry_stale": (
+        {"GNMI_CLIENT_CERT|a.test.example.com": {"role": ["readonly"]},
+         "GNMI_CLIENT_CERT|b.test.example.com": {"role": ["gnmi_show_readonly"]}},
+        [{"op": "replace", "path": "/GNMI_CLIENT_CERT/a.test.example.com", "value": {"role": ["admin"]}}],
+    ),
+}
+
+
+def _shape_case(gnmi_shape, cert_shape):
+    gnmi_seed, gnmi_op = _GNMI_SHAPES[gnmi_shape]
+    cert_seed, cert_ops = _CERT_SHAPES[cert_shape]
+    return {**gnmi_seed, **cert_seed}, [gnmi_op] + cert_ops
+
+
+@pytest.mark.parametrize("gnmi_shape", sorted(_GNMI_SHAPES))
+@pytest.mark.parametrize("cert_shape", sorted(_CERT_SHAPES))
+def test_build_enabled_patch_shapes(ss, config_db, gnmi_shape, cert_shape):
+    """The patch is minimal and valid for every combination of existing GNMI/GNMI_CLIENT_CERT state."""
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = _CERTS
+    seed, expected = _shape_case(gnmi_shape, cert_shape)
+    config_db.update(json.loads(json.dumps(seed)))
+
+    patch = ss_mod._build_enabled_patch()
+    assert patch == expected
+    assert not any(op["value"] == {} for op in patch)
+
+    ss_mod.reconcile_config_db_once()
+
+    assert config_db["GNMI|gnmi"]["user_auth"] == "cert"
+    for key, fields in seed.items():
+        if key.startswith("GNMI|"):
+            for field, value in fields.items():
+                if field != "user_auth":
+                    assert config_db[key][field] == value
+    for entry in _CERTS:
+        assert config_db[f"GNMI_CLIENT_CERT|{entry['cname']}"]["role"] == entry["role"]
+    # Converged: a second pass has nothing to do.
+    assert ss_mod._build_enabled_patch() == []
+
+
+@pytest.mark.parametrize("gnmi_shape", sorted(_GNMI_SHAPES))
+@pytest.mark.parametrize("cert_shape", sorted(_CERT_SHAPES))
+def test_build_enabled_patch_shapes_apply_with_jsonpatch(ss, config_db, gnmi_shape, cert_shape):
+    """Cross-check the patch with the jsonpatch library used by 'config apply-patch'."""
+    jsonpatch = pytest.importorskip("jsonpatch")
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_CLIENT_CERTS = _CERTS
+    seed, _ = _shape_case(gnmi_shape, cert_shape)
+    config_db.update(json.loads(json.dumps(seed)))
+
+    result = jsonpatch.JsonPatch(ss_mod._build_enabled_patch()).apply(_to_nested(config_db))
+
+    assert result["GNMI"]["gnmi"]["user_auth"] == "cert"
+    for entry in _CERTS:
+        assert result["GNMI_CLIENT_CERT"][entry["cname"]]["role"] == entry["role"]
+
+
+def test_strict_apply_rejects_leaf_under_missing_parent():
+    """Guard for the fake itself: the pre-fix patch shape must fail like the real apply-patch."""
+    with pytest.raises(KeyError):
+        _strict_apply({}, [{"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"}])
 
 
 def test_main_once_reconciles_before_sync(monkeypatch):
