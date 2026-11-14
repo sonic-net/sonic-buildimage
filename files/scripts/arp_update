@@ -83,7 +83,11 @@ flush_mac_mismatch_neighbor() {
     if appl_db_neigh_has_mac "$ifname" "$neighbor_ip" "$kernel_mac"; then
         return 1
     fi
+    # orchagent can pop the queued row between the two reads above.
     appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${ifname}:${neighbor_ip}" neigh)"
+    if [[ "$appl_db_mac" == "$kernel_mac" ]]; then
+        return 1
+    fi
     logger -p warning "MAC mismatch for ${neighbor_ip} on ${ifname} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
     ip neigh flush "$neighbor_ip"
     if [[ $neighbor_ip == *":"* ]]; then

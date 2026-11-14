@@ -11,7 +11,8 @@ DB_KEY_LOG="$(mktemp)"
 LOGGER_LOG="$(mktemp)"
 MARKER_FILE="/tmp/arp-update-test-marker"
 rm -f "$MARKER_FILE"
-trap 'rm -f "${SOURCE_SCRIPT}" "${MISMATCH_LOOP_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}" "${LOGGER_LOG}" "${MARKER_FILE}"' EXIT
+POP_MARK="$(mktemp -u)"
+trap 'rm -f "${SOURCE_SCRIPT}" "${MISMATCH_LOOP_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}" "${LOGGER_LOG}" "${MARKER_FILE}" "${POP_MARK}"' EXIT
 
 # Load only the helper functions; the remainder of arp_update is an infinite loop.
 sed '/^while \/bin\/true; do$/,$d' "$SCRIPT" > "$SOURCE_SCRIPT"
@@ -178,6 +179,21 @@ assert_eq "NEIGH_TABLE MAC differs from the kernel" "flushed" \
 APPL_DB_ROWS=()
 assert_eq "neighbor missing from APPL_DB" "flushed" \
     "$(mismatch_flushes Vlan1000 192.0.2.15 02:00:00:00:00:15)"
+
+# orchagent pops the queued row after NEIGH_TABLE is read but before
+# _NEIGH_TABLE is, so neither read sees the kernel MAC.
+sonic-db-cli() {
+    if [[ "$4" == _NEIGH_TABLE:* ]]; then
+        touch "$POP_MARK"
+    elif [[ -e "$POP_MARK" ]]; then
+        printf '%s' "02:00:00:00:00:16"
+    else
+        printf '%s' "02:00:00:00:00:01"
+    fi
+}
+rm -f "$POP_MARK"
+assert_eq "queued row popped between the two reads" "kept" \
+    "$(mismatch_flushes Vlan1000 192.0.2.16 02:00:00:00:00:16)"
 
 [[ ! -e "$MARKER_FILE" ]]
 
