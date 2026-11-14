@@ -1,0 +1,52 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/system-health",
+    "crates/healthd",
+    "crates/healthcheck",
+]
+
+[workspace.package]
+version = "1.0.0"
+authors = ["SONiC"]
+license = "Apache-2.0"
+repository = "https://github.com/sonic-net/sonic-buildimage"
+edition = "2021"
+# The oldest sonic-slave toolchain building this.
+rust-version = "1.86"
+
+[workspace.lints.rust]
+unused_extern_crates = 'warn'
+trivial_numeric_casts = 'warn'
+unstable_features = 'warn'
+unused_import_braces = 'warn'
+
+[workspace.dependencies]
+anyhow = "1"
+async-trait = "0.1"
+bollard = { version = "0.17.1", default-features = false }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures-util = "0.3"
+indexmap = { version = "2", features = ["serde"] }
+minijinja = "2"
+natord = "1"
+nix = { version = "0.29", features = ["signal"] }
+# The test of the real platform API bridge only; the same version platform-pyo3 links.
+pyo3 = { version = "0.29", features = ["auto-initialize"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tempfile = "3"
+tokio = { version = "1.37", features = ["fs", "io-util", "macros", "net", "process", "rt", "signal", "sync", "time"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+zbus_systemd = { version = ">=0.25900, <0.27000", features = ["systemd1"] }
+# The platform API of sonic-platform-common: the trait, and the PyO3 bridge to the vendor's sonic_platform.
+platform-api = { path = "../sonic-platform-common/crates/platform-api" }
+platform-provider = { path = "../sonic-platform-common/crates/platform-provider" }
+sonic-rs-common = { path = "../sonic-rs-common" }
+swss-common = { path = "../sonic-swss-common/crates/swss-common" }
+system-health = { path = "crates/system-health" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"

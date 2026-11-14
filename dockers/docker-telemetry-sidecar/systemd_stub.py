@@ -372,8 +372,10 @@ def ensure_sync() -> bool:
 
     items: List[SyncItem] = SYNC_ITEMS + [
         SyncItem(container_checker_src, "/bin/container_checker"),
-        SyncItem(service_checker_src, HOST_SERVICE_CHECKER),
     ]
+    # Only on hosts that still run the Python system-health daemon
+    if host_read_bytes(HOST_SERVICE_CHECKER) is not None:
+        items.append(SyncItem(service_checker_src, HOST_SERVICE_CHECKER))
     return sync_items(items, POST_COPY_ACTIONS)
 
 def parse_args() -> argparse.Namespace:
