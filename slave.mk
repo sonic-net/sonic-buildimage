@@ -712,7 +712,7 @@ endef
 # The load operation is protected with lock for parallel build.
 #
 # $(1) => Docker name
-# $(2) => Docker target name
+# $(2) => Optional output file for the loaded vendor's SAI API version
 define docker-image-load
     @echo "Attempting docker image lock for $(1) load" $(LOG)
     $(call MOD_LOCK,$(1),$(DOCKER_LOCKDIR),$(DOCKER_LOCKFILE_SUFFIX),$(DOCKER_LOCKFILE_TIMEOUT))
@@ -721,6 +721,7 @@ define docker-image-load
     docker load -i $(TARGET_PATH)/$(1).gz $(LOG)
     @echo "Tagging docker image $(1):$(call docker-get-tag,$(1)) as $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG)" $(LOG)
     docker tag $(1):$(call docker-get-tag,$(1)) $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(LOG)
+    $(if $(2),python3 scripts/check_sai_api_version.py --image "$(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG)" --output "$(2)" $(LOG))
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):latest" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
@@ -1701,6 +1702,29 @@ $(DOCKER_LOAD_TARGETS) :$(TARGET_PATH)/%.gz-load : .platform docker-start $$(TAR
 	$(HEADER)
 	$(call docker-image-load,$*)
 	$(FOOTER)
+
+BROADCOM_SAI_API_CHECK_IMAGES := docker-syncd-brcm.gz docker-syncd-brcm-legacy-th.gz docker-syncd-brcm-dnx.gz
+BROADCOM_SAI_API_CHECK_TARGETS := $(addsuffix -sai-api-check,$(addprefix $(TARGET_PATH)/,$(BROADCOM_SAI_API_CHECK_IMAGES)))
+
+.PHONY: $(TARGET_PATH)/broadcom-sai-api-version-check $(BROADCOM_SAI_API_CHECK_TARGETS)
+$(TARGET_PATH)/broadcom-sai-api-version-check:
+	results=$$(mktemp -d)
+	trap 'rm -f $(foreach image,$(BROADCOM_SAI_API_CHECK_IMAGES),"$$results/$(image).version"); rmdir "$$results"' EXIT
+	status=0
+	# Collect results for all three binaries, even if an earlier check fails.
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) --keep-going $(BROADCOM_SAI_API_CHECK_TARGETS) BROADCOM_SAI_API_RESULT_DIR="$$results" || status=$$?
+	python3 scripts/check_sai_api_version.py --compare $(foreach image,$(BROADCOM_SAI_API_CHECK_IMAGES),"$$results/$(image).version") || status=$$?
+	exit $$status
+
+# Load existing archives directly so this gate cannot silently rebuild a bad cached artifact.
+$(BROADCOM_SAI_API_CHECK_TARGETS): $(TARGET_PATH)/%.gz-sai-api-check: docker-start
+	$(HEADER)
+	test -s "$(TARGET_PATH)/$*.gz" || { echo "Missing required SAI artifact: $*.gz" >&2; exit 1; }
+	test -n "$(BROADCOM_SAI_API_RESULT_DIR)" || { echo "Missing SAI result directory" >&2; exit 1; }
+	$(call docker-image-load,$*,$(BROADCOM_SAI_API_RESULT_DIR)/$*.gz.version)
+	$(FOOTER)
+
+SONIC_TARGET_LIST += $(TARGET_PATH)/broadcom-sai-api-version-check
 
 ###############################################################################
 ## Installers
