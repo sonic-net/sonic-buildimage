@@ -74,6 +74,7 @@ module sonic-routing-policy-sets {
 
         leaf action {
             type routing-policy-action-type;
+            default "permit";
             description
                 "Permit/Deny action for the prefix list.";
         }
