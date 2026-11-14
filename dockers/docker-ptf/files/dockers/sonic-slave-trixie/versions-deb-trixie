@@ -1136,7 +1136,7 @@ libopencore-amrnb0==0.1.6-1+b2
 libopencore-amrwb0==0.1.6-1+b2
 libopencsd-dev==1.5.5-1
 libopencsd1==1.5.5-1
-libopenexr-3-1-30==3.1.13-2
+libopenexr-3-1-30==3.2.12-1~deb13u1
 libopengl-dev==1.7.0-1+b2
 libopengl0==1.7.0-1+b2
 libopenjp2-7==2.5.3-2.1~deb13u2
