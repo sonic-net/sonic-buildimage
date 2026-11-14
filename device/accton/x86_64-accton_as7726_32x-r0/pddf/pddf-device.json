@@ -1894,8 +1894,8 @@
 			"i2c" : {
 				"attr_list":
 				[
-					{"attr_name":"STATUS_LED_COLOR_BLUE", "descr" : "", "bits" : "7",  "value" : "0x0", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"},
-					{"attr_name":"STATUS_LED_COLOR_OFF",  "descr" : "", "bits" : "7",  "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"}
+					{"attr_name":"blue", "descr" : "", "bits" : "7",  "value" : "0x0", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"},
+					{"attr_name":"off",  "descr" : "", "bits" : "7",  "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"}
 				]
 			}
 	},
@@ -1907,9 +1907,9 @@
 			"i2c" : {
 				"attr_list":
 				[
-					{"attr_name":"STATUS_LED_COLOR_GREEN", "descr" : "", "bits" : "1:0", "value" : "0x2", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"},
-					{"attr_name":"STATUS_LED_COLOR_RED",   "descr" : "" ,"bits" : "1:0", "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"},
-					{"attr_name":"STATUS_LED_COLOR_OFF",   "descr" : "" ,"bits" : "1:0", "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"}
+					{"attr_name":"green", "descr" : "", "bits" : "1:0", "value" : "0x2", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"},
+					{"attr_name":"red",   "descr" : "" ,"bits" : "1:0", "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"},
+					{"attr_name":"off",   "descr" : "" ,"bits" : "1:0", "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x41"}
 				]
 			}
 

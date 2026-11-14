@@ -83,3 +83,13 @@ class Chassis(PddfChassis):
             sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                              index, len(self._sfp_list)))
         return sfp
+
+    # Keep the legacy spelling used by show/system_health.py.
+    def initizalize_system_led(self):
+        return True
+
+    def get_status_led(self):
+        return self.get_system_led("DIAG_LED")
+
+    def set_status_led(self, color):
+        return self.set_system_led("DIAG_LED", color)

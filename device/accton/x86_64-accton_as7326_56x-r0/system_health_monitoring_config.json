@@ -8,8 +8,8 @@
     "user_defined_checkers": [],
     "polling_interval": 60,
     "led_color": {
-        "fault": "STATUS_LED_COLOR_RED",
-        "normal": "STATUS_LED_COLOR_GREEN",
-        "booting": "STATUS_LED_COLOR_GREEN_BLINK"
+        "fault": "red",
+        "normal": "green",
+        "booting": "green_blink"
     }
 }
