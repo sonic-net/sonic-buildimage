@@ -2,5 +2,166 @@
     "PVST_GLOBAL_VALID": {
         "desc": "Configure valid global PVST settings",
         "eStr": []
+    },
+    "MSTP_GLOBAL_VALID": {
+        "desc": "Configure valid global MST settings (rootguard_timeout omitted/pruned in mst mode)."
+    },
+    "MSTP_REGION_VALID": {
+        "desc": "Configure valid STP_MST region globals (name/revision/timers) in mst mode."
+    },
+    "MSTP_INSTANCE_VALID": {
+        "desc": "Configure a valid STP_MST_INST instance with vlan list and bridge_priority."
+    },
+    "MSTP_PORT_VALID": {
+        "desc": "Configure a valid STP_MST_PORT (per-instance per-port path_cost/priority)."
+    },
+    "MSTP_STP_PORT_MST_ATTRS_VALID": {
+        "desc": "Configure STP_PORT MST attributes (edge_port, link_type, guards) in mst mode."
+    },
+    "MSTP_ROOTGUARD_TIMEOUT_IN_MST_VALID": {
+        "desc": "rootguard_timeout is valid in mst mode too (no longer restricted to pvst)."
+    },
+    "MSTP_REGION_IN_PVST": {
+        "desc": "STP_MST region config is allowed only in mst mode; in pvst it must fail.",
+        "eStr": [
+            "Configuration allowed in MST mode"
+        ]
+    },
+    "MSTP_EDGE_PORT_IN_PVST": {
+        "desc": "edge_port=true is allowed only in mst mode; in pvst it must fail.",
+        "eStr": [
+            "Mode must be MST, and EdgePort must be enabled for this configuration to be valid."
+        ]
+    },
+    "MSTP_LINK_TYPE_IN_PVST": {
+        "desc": "link_type is allowed only in mst mode; in pvst it must fail.",
+        "eStr": [
+            "Configuration allowed in MST mode only"
+        ]
+    },
+    "MSTP_PORTFAST_IN_MST": {
+        "desc": "portfast=true is allowed only in pvst mode; in mst it must fail.",
+        "eStr": [
+            "Mode must be PVST, and PortFast must be enabled for this configuration to be valid."
+        ]
+    },
+    "PVST_GLOBAL_PRIORITY_NOT_MULTIPLE": {
+        "desc": "STP global priority that is not a multiple of 4096 is rejected.",
+        "eStr": [
+            "must be a multiple of 4096"
+        ]
+    },
+    "PVST_VLAN_PRIORITY_NOT_MULTIPLE": {
+        "desc": "STP_VLAN priority that is not a multiple of 4096 is rejected.",
+        "eStr": [
+            "must be a multiple of 4096"
+        ]
+    },
+    "PVST_VLAN_PRIORITY_MAX_VALID": {
+        "desc": "STP_VLAN priority 61440, the largest multiple of 4096, is accepted."
+    },
+    "PVST_GLOBAL_PRIORITY_MULTIPLE_VALID": {
+        "desc": "STP global priority 4096, a multiple of 4096, is accepted."
+    },
+    "MSTP_INSTANCE_BRIDGE_PRIORITY_MAX_VALID": {
+        "desc": "STP_MST_INST bridge_priority 61440, the largest multiple of 4096, is accepted."
+    },
+    "MSTP_INSTANCE_BRIDGE_PRIORITY_NOT_MULTIPLE": {
+        "desc": "STP_MST_INST bridge_priority that is not a multiple of 4096 is rejected.",
+        "eStr": [
+            "must be a multiple of 4096"
+        ]
+    },
+    "MSTP_INSTANCE_BRIDGE_PRIORITY_RANGE": {
+        "desc": "STP_MST_INST bridge_priority above 61440 is out of range.",
+        "eStr": [
+            "Invalid Bridge Priority value"
+        ]
+    },
+    "MSTP_GLOBAL_FWD_DELAY_RANGE": {
+        "desc": "STP global forward_delay above 30 is out of range.",
+        "eStr": [
+            "Invalid Forwarding Delay Value"
+        ]
+    },
+    "MSTP_PORT_PRIORITY_RANGE": {
+        "desc": "STP_MST_PORT priority above 240 is out of range.",
+        "eStr": [
+            "Invalid Port Priority value"
+        ]
+    },
+    "PVST_PORT_PRIORITY_NOT_MULTIPLE": {
+        "desc": "STP_PORT priority that is not a multiple of 16 is rejected.",
+        "eStr": [
+            "must be a multiple of 16"
+        ]
+    },
+    "PVST_PORT_PRIORITY_MAX_VALID": {
+        "desc": "STP_PORT priority 240, the largest multiple of 16, is accepted."
+    },
+    "PVST_VLAN_PORT_PRIORITY_NOT_MULTIPLE": {
+        "desc": "STP_VLAN_PORT priority that is not a multiple of 16 is rejected.",
+        "eStr": [
+            "must be a multiple of 16"
+        ]
+    },
+    "MSTP_PORT_PRIORITY_NOT_MULTIPLE": {
+        "desc": "STP_MST_PORT priority that is not a multiple of 16 is rejected.",
+        "eStr": [
+            "must be a multiple of 16"
+        ]
+    },
+    "MSTP_PORT_PRIORITY_MULTIPLE_VALID": {
+        "desc": "STP_MST_PORT priority 16, a multiple of 16, is accepted."
+    },
+    "MSTP_PORT_INVALID_IFNAME": {
+        "desc": "STP_MST_PORT ifname must be an existing port or port channel.",
+        "eStrKey": "InvalidValue"
+    },
+    "MSTP_PORT_INVALID_INSTANCE": {
+        "desc": "STP_MST_PORT inst_id must reference an existing STP_MST_INST (leafref).",
+        "eStrKey": "InvalidValue"
+    },
+    "MSTP_STP_PORT_MISSING_ENABLED": {
+        "desc": "STP_PORT requires the mandatory 'enabled' leaf.",
+        "eStrKey": "Mandatory"
+    },
+    "MSTP_GLOBAL_MISSING_MODE": {
+        "desc": "STP global requires the mandatory 'mode' leaf.",
+        "eStrKey": "Mandatory"
+    },
+    "STP_PORT_IFNAME_NOT_A_PORT": {
+        "desc": "STP_PORT ifname must be an existing port or port channel.",
+        "eStrKey": "InvalidValue"
+    },
+    "STP_PORT_ON_PORTCHANNEL_VALID": {
+        "desc": "STP_PORT accepts a port channel."
+    },
+    "STP_VLAN_PORT_WITHOUT_STP_PORT": {
+        "desc": "STP_VLAN_PORT needs an STP_PORT row for the same interface.",
+        "eStr": [
+            "Configure spanning tree on the interface first"
+        ]
+    },
+    "STP_VLAN_PORT_VALID": {
+        "desc": "STP_VLAN_PORT is accepted when the interface has an STP_PORT row."
+    },
+    "STP_MST_PORT_WITHOUT_STP_PORT": {
+        "desc": "STP_MST_PORT needs an STP_PORT row for the same interface.",
+        "eStr": [
+            "Configure spanning tree on the interface first"
+        ]
+    },
+    "MSTP_REGION_WITH_STP_DISABLED": {
+        "desc": "STP_MST region config is kept while spanning tree is disabled (no STP GLOBAL row)."
+    },
+    "MSTP_DISABLED_KEEPS_INSTANCE_AND_PORT_ROWS": {
+        "desc": "What a disable leaves behind validates with no STP GLOBAL row: region, instance, per-instance port and a stripped STP_PORT."
+    },
+    "MSTP_LINK_TYPE_WITH_STP_DISABLED": {
+        "desc": "link_type is mode-only and is rejected while spanning tree is disabled (no STP GLOBAL row).",
+        "eStr": [
+            "Configuration allowed in MST mode only"
+        ]
     }
 }
