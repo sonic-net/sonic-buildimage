@@ -11,11 +11,11 @@ dbus-python==1.5.1
 docker==7.2.0
 docker-image-py==0.2.0
 enlighten==1.14.1
-filelock==4.2.9
+filelock==4.2.10
 idna==3.20
 invoke==3.0.3
 jinxed==2.1.0
-jsonpatch==1.44
+jsonpatch==1.47
 lazy-object-proxy==1.13.0
 m2crypto==0.51.0
 netifaces==0.11.0
