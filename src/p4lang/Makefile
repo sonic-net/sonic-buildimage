@@ -29,6 +29,7 @@ $(addprefix $(DEST)/, $(P4LANG_BMV2_TARGET)): $(DEST)/% :
 	pushd p4lang-bmv2-$(P4LANG_BMV2_VERSION)
 	patch -p1 -i ../p4lang-bmv2.patch/use-boost-1.83.patch
 	patch -p1 -i ../p4lang-bmv2.patch/remove-unnecessary-dependencies.patch
+	patch -p1 -i ../p4lang-bmv2.patch/fix-cli-tests-device-id-race.patch
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
