@@ -76,7 +76,12 @@ jobs:
           ENABLE_DOCKER_BASE_PULL=y make PLATFORM=$PLATFORM_NAME PLATFORM_ARCH=$(PLATFORM_ARCH) $(BUILD_OPTIONS) configure
         displayName: 'Make configure'
     postSteps:
+      - template: azure-pipelines-cleanup-signing.yml
       - script: |
+          set +x
+          registry_password=${REGISTRY_PASSWD:-}
+          export -n registry_password
+          unset REGISTRY_PASSWD
           BUILD_REASON=$(Build.Reason)
           PTF_MODIFIED_IN_PR="False"
           echo "Build.Reason = $BUILD_REASON"
@@ -120,15 +125,18 @@ jobs:
           else
             echo "Not publishing docker images since docker-ptf was not modified in this PR or build definition name is not Azure.sonic-buildimage.official.vs"
           fi
+          publish_status=0
           if [[ "$PUSH_DOCKER" == "True" ]]; then
             for f in $DOCKERS; do
               echo $f
               echo "Labels = $LABELS"
-              ./push_docker.sh "$f" "$REGISTRY_SERVER_PUBLIC" "$PORT" "$REGISTRY_USERNAME" "$LABELS"
+              REGISTRY_PASSWD="$registry_password" ./push_docker.sh "$f" "$REGISTRY_SERVER_PUBLIC" "$PORT" "$REGISTRY_USERNAME" "$LABELS" || publish_status=$?
             done
           fi
-          mkdir -p $(Build.ArtifactStagingDirectory)/target
-          mv target/* $(Build.ArtifactStagingDirectory)/target/
+          unset registry_password
+          mkdir -p $(Build.ArtifactStagingDirectory)/target || exit $?
+          mv target/* $(Build.ArtifactStagingDirectory)/target/ || exit $?
+          exit "$publish_status"
         env:
           REGISTRY_SERVER_PUBLIC: $(REGISTRY_SERVER_PUBLIC)
           REGISTRY_USERNAME: $(REGISTRY_USERNAME)
