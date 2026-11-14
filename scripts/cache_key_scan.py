@@ -25,6 +25,7 @@ CONSUMERS (where a variable is dereferenced during a cached build):
 DISPOSITIONS:
   in-key    Variable is literally part of a cache key: in SONIC_COMMON_FLAGS_LIST
             or some package's *_DEP_FLAGS. A change flips the key. PROVABLY SAFE.
+    derived   Slave-defined literal selector determined by a common-key variable.
   filename  Variable's value flows (transitively) into a cached target's file NAME
             (*.deb/*.whl/*.gz). The name is part of the key. PROVABLY SAFE. Only
             the filename token itself is inspected - not prerequisites or recipe
@@ -38,7 +39,7 @@ DISPOSITIONS:
             environment by an external tool (docker/cargo/dpkg). Static analysis
             cannot see inside those tools. REPORTED.
 
-Only in-key and filename are machine-provably cache-safe and auto-clear. Every
+Only in-key, derived and filename are machine-provably cache-safe and auto-clear. Every
 other exported variable is a finding (default-deny). A human clears a specific
 variable by recording it - WITH A REASON - in cache_key_export_waivers.tsv.
 
@@ -47,6 +48,9 @@ Usage:
                                and print a distribution summary.
   cache_key_scan.py --stdout   Emit "variable<TAB>disposition<TAB>evidence" rows to
                                stdout (consumed live by the audit gate). No file I/O.
+    cache_key_scan.py --check-forwarded-flag VAR RULE
+                                                             Check a conditional block on stdin against its
+                                                             affected packages' forwarded cache-key inputs.
 
 Enumeration is driven by `git ls-files`, so the scan sees committed source only and
 runs in a few seconds regardless of how dirty the working tree is.
@@ -105,6 +109,10 @@ ASSIGN_RE = re.compile(r"^\s*([A-Za-z_]\w*)\s*[:?+]?=\s*(.*)$", re.M)
 # export. `?=` (use-env-if-set) and `+=` (append to the inherited value) still
 # consume, so they are excluded from this pattern.
 OVERRIDE_RE = re.compile(r"^\s*(?:export\s+|override\s+)*([A-Za-z_]\w*)\s*:?=", re.M)
+MAKE_ASSIGN_RE = re.compile(
+    r"^(?:(?:export|override)\s+)*([A-Za-z_]\w*)\s*(" + _ASSIGN_OP + r")\s*(.*)$")
+MAKE_IF_RE = re.compile(r"^if(?:eq|neq|def|ndef)(?:\s|\()")
+ARG_ASSIGN_RE = re.compile(r"(?<!\S)([A-Za-z_]\w*)(" + _ASSIGN_OP + r")(" + _VALUE + r")(?=\s|$)")
 
 
 def read(path):
@@ -169,7 +177,7 @@ def logical_lines(text):
     continuation lines are missed and falsely reported as gaps."""
     buf = ""
     for line in text.splitlines():
-        if line.endswith("\\"):
+        if (len(line) - len(line.rstrip("\\"))) % 2:
             buf += line[:-1] + " "
         else:
             yield buf + line
@@ -296,6 +304,176 @@ def tracked_vars():
     return flags
 
 
+def make_lines(text):
+    for raw_line in logical_lines(text):
+        for index, character in enumerate(raw_line):
+            if character != "#":
+                continue
+            prefix = raw_line[:index]
+            if (len(prefix) - len(prefix.rstrip("\\"))) % 2 == 0:
+                raw_line = prefix
+                break
+        yield raw_line.strip()
+
+
+def make_statements(text, platform=None):
+    """Yield statements with conditional depth, excluding unevaluated defines."""
+    conditions = []
+    definitions = 0
+    for line in make_lines(text):
+        if re.match(r"^(?:override\s+)?define(?:\s|$)", line):
+            definitions += 1
+        elif re.match(r"^endef(?:\s|$)", line):
+            definitions = max(0, definitions - 1)
+        elif line and not definitions:
+            yield sum(condition is not True for condition in conditions), line
+            if MAKE_IF_RE.match(line):
+                guard = re.fullmatch(r"if(eq|neq)\s*\(\s*\$\(CONFIGURED_PLATFORM\)\s*,\s*([A-Za-z0-9_-]+)\s*\)", line)
+                active = None
+                if guard and platform is not None:
+                    active = (platform == guard[2]) == (guard[1] == "eq")
+                conditions.append(active)
+            elif line.startswith("else") and conditions:
+                previous = conditions[-1]
+                conditions[-1] = not previous if line == "else" and previous is not None else None
+            elif re.match(r"^endif(?:\s|$)", line):
+                if conditions:
+                    conditions.pop()
+
+
+def common_key_vars():
+    """Common-key inputs, without borrowing another package's coverage."""
+    tracked = set()
+    for depth, line in make_statements(read("Makefile.cache")):
+        assignment = MAKE_ASSIGN_RE.match(line)
+        if not assignment and re.search(r"\bSONIC_COMMON_FLAGS_LIST\s*" + _ASSIGN_OP, line):
+            return set()
+        if not assignment or assignment[1] != "SONIC_COMMON_FLAGS_LIST":
+            continue
+        if depth or assignment[2] not in ("=", ":=", "+="):
+            return set()
+        if "$" in VARREF_RE.sub("", assignment[3]):
+            return set()
+        inputs = set(VARREF_RE.findall(assignment[3]))
+        tracked = tracked | inputs if assignment[2] == "+=" else inputs
+    return tracked
+
+
+def build_assignments(files):
+    for path in files:
+        for depth, line in make_statements(read(path)):
+            for candidate in re.finditer(r"(?<![A-Za-z0-9_])([A-Za-z_]\w*)\s*" + _ASSIGN_OP, line):
+                assignment = MAKE_ASSIGN_RE.match(line[candidate.start():])
+                if assignment:
+                    yield path, depth if candidate.start() == 0 else max(1, depth), assignment
+
+
+def slave_arguments():
+    for depth, line in make_statements(read("Makefile.work")):
+        assignment = MAKE_ASSIGN_RE.match(line)
+        command = assignment[3] if assignment else line
+        if re.match(r"\$\(MAKE\)\s+-f\s+slave\.mk(?:\s|$)", command):
+            yield depth, [(name, value if operator == "=" else None)
+                          for name, operator, value in ARG_ASSIGN_RE.findall(command)]
+
+
+def derived_build_exports():
+    """Recognize only single, unconditional slave selectors with a keyed input."""
+    files = ["rules/config"] + [path for path in producer_files() if path.endswith(".mk")]
+    assignments = collections.defaultdict(list)
+    for path, depth, assignment in build_assignments(files):
+        assignments[assignment[1]].append((path, depth, assignment))
+    common = common_key_vars()
+    forwarded = {name for depth, arguments in slave_arguments() for name, value in arguments}
+    derived = {}
+    for name, definitions in assignments.items():
+        if len(definitions) != 1 or name in forwarded:
+            continue
+        path, depth, assignment = definitions[0]
+        if path != "slave.mk" or depth or assignment[2] not in ("=", ":="):
+            continue
+        references = VARREF_RE.findall(assignment[3])
+        literal = VARREF_RE.sub("", assignment[3])
+        if (len(references) == 1 and references[0] in common
+                and re.fullmatch(r"[A-Za-z0-9_./+-]*", literal)):
+            derived[name] = f"slave.mk:{name}<-{references[0]}"
+    return derived
+
+
+def forwarded_selector(flag, rule):
+    """Require both unchanged slave argument forwarding and its boolean controller."""
+    passed = collections.defaultdict(list)
+    for depth, arguments in slave_arguments():
+        for name, value in arguments:
+            passed[name].append((depth, value))
+    if flag in passed:
+        return None
+    candidates = {name for name, values in passed.items()
+                  if values in ([(0, f"$({flag})")], [(0, f"${{{flag}}}")])}
+    if len(candidates) != 1:
+        return None
+    forwarded = candidates.pop()
+    statements = list(make_statements(read("slave.mk")))
+    controller = re.compile(r"ifeq\s*\(\s*\$[({]" + re.escape(forwarded) + r"[})]\s*,\s*y\s*\)")
+    assignment = re.compile(re.escape(flag) + r"\s*=\s*y")
+    matches = [index for index, (depth, line) in enumerate(statements[:-2])
+               if depth == 0 and controller.fullmatch(line)
+               and statements[index + 1][0] == 1
+               and assignment.fullmatch(statements[index + 1][1])
+               and statements[index + 2] == (1, "endif")]
+    rule_dir = os.path.dirname(os.path.relpath(rule, REPO_ROOT) if os.path.isabs(rule) else rule)
+    files = ["slave.mk", "rules/config"] + [
+        path for path in producer_files()
+        if path != "slave.mk" and os.path.dirname(path) in ("rules", rule_dir)]
+    definitions = [item for item in build_assignments(files) if item[2][1] in (flag, forwarded)]
+    if len(matches) != 1 or len(definitions) != 1:
+        return None
+    return forwarded
+
+
+def package_tracks_forwarded(package, forwarded, rule):
+    rule = os.path.relpath(rule, REPO_ROOT) if os.path.isabs(rule) else rule
+    parts = rule.split("/")
+    platform = parts[1] if len(parts) > 2 and parts[0] == "platform" else None
+    key_write = r"\$[({]" + re.escape(package) + r"[})]_DEP_FLAGS\s*(" + _ASSIGN_OP + r")"
+    key = re.compile(r"^(?:(?:override|export)\s+)*" + key_write + r"\s*(.*)$")
+    common = common_key_vars()
+    definitions = []
+    guaranteed = False
+    for path in git_files(recurse=False):
+        if not path.endswith(".dep") or os.path.dirname(path) not in ("rules", os.path.dirname(rule)):
+            continue
+        for depth, line in make_statements(read(path), platform):
+            assignment = key.match(line)
+            if not assignment and re.search(key_write, line):
+                return False
+            if not assignment or assignment[1] == "+=":
+                continue
+            references = set(VARREF_RE.findall(assignment[2]))
+            definitions.append(assignment[1] in ("=", ":=")
+                and "$" not in VARREF_RE.sub("", assignment[2]) and (
+                forwarded in references
+                or ("SONIC_COMMON_FLAGS_LIST" in references and forwarded in common)))
+            guaranteed |= depth == 0
+    return guaranteed and all(definitions)
+
+
+def forwarded_flag_is_tracked(flag, rule, block):
+    forwarded = forwarded_selector(flag, rule)
+    if not forwarded:
+        return False
+    target = re.compile(r"^\$[({]([A-Za-z_]\w*)[})]_(?:DEPENDS|RDEPENDS|DBG_DEPENDS|DBG_PACKAGES|EXTRA_DEBS|DERIVED_DEBS|SRC_PATH|BUILD_ENV|MAKE_ENV|CFLAGS|MAKE_TARGET)\s*[:+?]?=")
+    packages = set()
+    for depth, line in make_statements(block):
+        if MAKE_IF_RE.match(line) or re.match(r"^(?:else|endif)(?:\s|$)", line):
+            continue
+        assignment = target.match(line)
+        if not assignment:
+            return False
+        packages.add(assignment[1])
+    return bool(packages) and all(package_tracks_forwarded(package, forwarded, rule) for package in packages)
+
+
 # ---- filename (token-scoped, transitive) -----------------------------------
 def filename_captured(producer_text_values):
     """Vars whose value is (part of) a cached target's file NAME - so a change flips
@@ -376,16 +554,19 @@ def classify():
 
     exp = exported_vars(alltext)
     tracked = tracked_vars()
+    derived = derived_build_exports()
     captured = filename_captured([strip_comments(read(f)) for f in producer_candidates()])
     make_refs = refs_in(alltext)
 
-    residual = [v for v in exp if v not in tracked and v not in captured]
+    residual = [v for v in exp if v not in tracked and v not in derived and v not in captured]
     examples = recipe_consumers(residual, recipe_files())
 
     rows = []
     for v in exp:
         if v in tracked:
             rows.append((v, "in-key", ""))
+        elif v in derived:
+            rows.append((v, "derived", derived[v]))
         elif v in captured:
             rows.append((v, "filename", "target-name"))
         elif v in examples:
@@ -398,6 +579,8 @@ def classify():
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--check-forwarded-flag":
+        return 0 if forwarded_flag_is_tracked(sys.argv[2], sys.argv[3], sys.stdin.read()) else 1
     rows = classify()
     if "--stdout" in sys.argv[1:]:
         for v, d, e in sorted(rows):
