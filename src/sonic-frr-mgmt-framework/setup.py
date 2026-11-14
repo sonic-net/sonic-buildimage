@@ -13,6 +13,7 @@ setuptools.setup(
     },
     install_requires = [
         'jinja2>=2.10',
+        'sonic-yang-models>=1.0',
         'netaddr==0.8.0',
         'pyyaml>=6.0.1',
     ],
@@ -45,6 +46,7 @@ setuptools.setup(
                                      'templates/staticd/staticd.conf.j2',
                                      'templates/staticd/staticd.db.conf.j2',
                                      'templates/staticd/staticd.db.default_route.conf.j2',
-                                     'templates/frr/frr.conf.j2'])
+                                     'templates/frr/frr.conf.j2',
+                                     'templates/isisd/isisd.conf.j2'])
     ]
 )

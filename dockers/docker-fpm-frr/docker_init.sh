@@ -56,6 +56,30 @@ if [[ ! -z "$NAMESPACE_ID" ]]; then
    update_default_gw 6
 fi
 
+# Freeze ConfigDB once, register IS-IS ownership, then render all protocols from
+# that same snapshot. A failed IS-IS preparation leaves independent BGP available.
+render_framework_config()
+{
+    local startup_dir snapshot prepared
+    startup_dir=$(mktemp -d /tmp/frr-startup.XXXXXX) || return 1
+    snapshot="$startup_dir/snapshot.json"
+    prepared="$startup_dir/prepared.json"
+    if ! sonic-cfggen -d -y /etc/sonic/constants.yml --print-data > "$snapshot"; then
+        rm -rf "$startup_dir"
+        return 1
+    fi
+    chmod 600 "$snapshot"
+    python3 -m frrcfgd.isis_startup --snapshot "$snapshot" --output "$prepared" || {
+        echo "Rendering routing startup without an unvalidated IS-IS fragment" >&2
+    }
+    if ! sonic-cfggen -j "$prepared" -T /usr/local/sonic/frrcfgd \
+        -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf; then
+        rm -rf "$startup_dir"
+        return 1
+    fi
+    rm -rf "$startup_dir"
+}
+
 if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     CFGGEN_PARAMS=" \
         -d \
@@ -67,13 +91,7 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     "
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
-        CFGGEN_PARAMS=" \
-            -d \
-            -y /etc/sonic/constants.yml \
-            -T /usr/local/sonic/frrcfgd \
-            -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
-        "
-        sonic-cfggen $CFGGEN_PARAMS
+        render_framework_config || exit 1
         echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
         rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
               /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
@@ -94,13 +112,7 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
           /etc/frr/sharpd.conf
     write_default_zebra_config /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "unified" ]; then
-    CFGGEN_PARAMS=" \
-        -d \
-        -y /etc/sonic/constants.yml \
-        -T /usr/local/sonic/frrcfgd \
-        -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
-    "
-    sonic-cfggen $CFGGEN_PARAMS
+    render_framework_config || exit 1
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
           /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \

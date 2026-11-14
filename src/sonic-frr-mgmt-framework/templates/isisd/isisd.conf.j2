@@ -1,0 +1,7 @@
+! IS-IS fragment prepared from the same validated startup snapshot as runtime.
+{% if ISIS_INSTANCE | default({}) and ISIS_CONFIG_LINES is not defined %}
+{{ ISIS_CONFIG_LINES.missing_startup_preparation }}
+{% endif %}
+{% for line in ISIS_CONFIG_LINES | default([]) %}
+{{ line }}
+{% endfor %}

@@ -77,7 +77,7 @@ def extract_cmd_daemons(cmd_str):
 class BgpdClientMgr(threading.Thread):
     VTYSH_MARK = 'vtysh '
     PROXY_SERVER_ADDR = '/etc/frr/bgpd_client_sock'
-    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd']
+    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd', 'isisd']
     TABLE_DAEMON = {
             'DEVICE_METADATA': ['bgpd'],
             'BGP_GLOBALS': ['bgpd'],
@@ -122,7 +122,7 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -138,6 +138,8 @@ class BgpdClientMgr(threading.Thread):
                         (r'show ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip igmp($|\s+\S+)', ['pimd']),
+                        (r'show isis($|\s+.*)', ['isisd']),
+                        (r'clear isis($|\s+.*)', ['isisd']),
                         (r'.*', ['bgpd'])]
     @staticmethod
     def __create_proxy_socket():
@@ -2104,7 +2106,6 @@ class BGPConfigDaemon:
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
 
-
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
                       'BGP_GLOBALS_AF':                 global_af_key_map,
                       'BGP_GLOBALS_LISTEN_PREFIX':      listen_prefix_key_map,
@@ -2493,6 +2494,10 @@ class BGPConfigDaemon:
                                         nh_attr('ifname'), nh_attr('tag'), nh_attr('distance'),
                                         nh_attr('nexthop-vrf'))
 
+        # IS-IS owns an independent bounded native worker; it never uses the
+        # BGP command-manager lock or infers applied state from desired rows.
+        self.isis_worker = None
+
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
             ('DEVICE_METADATA', self.metadata_handler),
@@ -2538,6 +2543,11 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
+            ('ISIS_INSTANCE', self.isis_table_handler),
+            ('ISIS_INSTANCE_LEVEL', self.isis_table_handler),
+            ('ISIS_INTERFACE', self.isis_table_handler),
+            ('ISIS_INTERFACE_LEVEL', self.isis_table_handler),
+            ('ISIS_REDISTRIBUTE', self.isis_table_handler),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -2546,14 +2556,31 @@ class BGPConfigDaemon:
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
         if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
             for table, _ in self.table_handler_list:
+                if table.startswith('ISIS_'):
+                    continue  # The worker reads and reconciles a complete graph.
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
                     self.__replay_table_entry(table, key, data)
 
+    ISIS_ROUTED_INTERFACE_TABLES = ('INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE',
+                                    'LOOPBACK_INTERFACE', 'VLAN_SUB_INTERFACE')
+
+    def isis_table_handler(self, table, key, data):
+        if self.isis_worker is not None:
+            self.isis_worker.notify()
+
+    def isis_routed_interface_handler(self, table, key, data):
+        # Address-only events do not change instance identity. Periodic snapshots
+        # also recover events missed while this daemon was stopped.
+        if isinstance(key, str) and '|' not in key:
+            self.isis_table_handler(table, key, data)
+
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
             self.config_db.subscribe(table, hdlr)
+        for table in self.ISIS_ROUTED_INTERFACE_TABLES:
+            self.config_db.subscribe(table, self.isis_routed_interface_handler)
 
     @staticmethod
     def __run_command(table, command, daemons = None):
@@ -4053,7 +4080,6 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_ERR, 'failed running ip igmp interface config command')
                     continue
 
-
     def __add_op_to_data(self, table_key, data, comb_attr_list):
         cached_data = self.table_data_cache.setdefault(table_key, {})
         for key in cached_data:
@@ -4158,7 +4184,17 @@ class BGPConfigDaemon:
     def start(self):
         self.subscribe_all()
         self.config_db.listen()
+        from .isis_manager import RecoveryWorker
+        def report(result):
+            status = getattr(result, 'status', 'error')
+            reason = getattr(result, 'reason', str(result))
+            priority = syslog.LOG_INFO if status == 'applied' else syslog.LOG_ERR
+            syslog.syslog(priority, '[isis] {}: {}'.format(status, reason))
+        self.isis_worker = RecoveryWorker(report=report)
+        self.isis_worker.start()
     def stop(self):
+        if self.isis_worker is not None:
+            self.isis_worker.stop()
         self.config_db.stop_listen()
         if self.config_db.sub_thread.is_alive():
             self.config_db.sub_thread.join()
@@ -4178,6 +4214,9 @@ def main():
     bgpd_client = BgpdClientMgr()
     bgpd_client.start()
     daemon = BGPConfigDaemon()
+    # An explicit retry opens a new bounded IS-IS recovery attempt only.
+    signal.signal(signal.SIGHUP, lambda signum, frame: daemon.isis_worker.request_retry()
+                  if daemon.isis_worker is not None else None)
     daemon.start()
     while main_loop:
         signal.pause()

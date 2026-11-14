@@ -3382,6 +3382,39 @@
                 "mac_holdtime": "1000",
                 "neigh_holdtime": "600"
             }
+        },
+        "ISIS_INSTANCE": {
+            "default|CORE": {
+                "enabled": "true",
+                "dynamic_hostname": "true",
+                "net_titles": [
+                    "49.0001.1921.6800.0001.00"
+                ],
+                "level_type": "level-1-2",
+                "lsp_mtu": "1492"
+            }
+        },
+        "ISIS_INSTANCE_LEVEL": {
+            "default|CORE|level-1": {
+                "lsp_refresh_interval": "900",
+                "lsp_maximum_lifetime": "1200"
+            }
+        },
+        "ISIS_INTERFACE": {
+            "Ethernet0": {
+                "enabled": "true",
+                "passive": "false",
+                "vrf": "default",
+                "instance": "CORE",
+                "ipv4_enabled": "true",
+                "ipv6_enabled": "true",
+                "network_type": "point-to-point"
+            }
+        },
+        "ISIS_INTERFACE_LEVEL": {
+            "Ethernet0|level-1": {
+                "metric": "10"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

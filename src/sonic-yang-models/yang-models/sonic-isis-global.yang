@@ -1,0 +1,242 @@
+module sonic-isis-global {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-isis-global";
+    prefix isisg;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+    import sonic-route-map {
+        prefix rmap;
+    }
+
+    organization
+        "SONiC";
+    description
+        "IS-IS instances, level attributes and redistribution policies.";
+
+    revision 2026-11-10 {
+        description
+            "Explicit instance identity and FRR-aligned attribute ownership.";
+    }
+
+    container sonic-isis-global {
+        container ISIS_INSTANCE {
+            list ISIS_INSTANCE_LIST {
+                must "enabled = 'false' or count(net_titles) > 0";
+                must
+                    "not(net_titles) or not(../ISIS_INSTANCE_LIST[vrf=current()/vrf]/net_titles[substring(translate(., 'ABCDEF.', 'abcdef'), string-length(translate(., 'ABCDEF.', 'abcdef')) - 13, 12) != substring(translate(current()/net_titles[1], 'ABCDEF.', 'abcdef'), string-length(translate(current()/net_titles[1], 'ABCDEF.', 'abcdef')) - 13, 12)])";
+                must
+                    '(spf_init_delay and spf_short_delay and spf_long_delay and spf_hold_down and spf_time_to_learn) or (not(spf_init_delay) and not(spf_short_delay) and not(spf_long_delay) and not(spf_hold_down) and not(spf_time_to_learn))';
+                must 'not(spf_hold_down) or spf_hold_down > spf_time_to_learn';
+                key "vrf instance";
+                leaf vrf {
+                    type union {
+                        type string {
+                            pattern 'default';
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                }
+                leaf instance {
+                    type string {
+                        length "1..64";
+                        pattern '[A-Za-z0-9_][A-Za-z0-9_.-]*';
+                    }
+                }
+                leaf enabled {
+                    type boolean;
+                    default "false";
+                }
+                leaf-list net_titles {
+                    type string {
+                        pattern '[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00';
+                    }
+                    must "count(../net_titles[translate(., 'ABCDEF', 'abcdef') = translate(current(), 'ABCDEF', 'abcdef')]) = 1";
+                    max-elements 3;
+                }
+                leaf level_type {
+                    type enumeration {
+                        enum level-1;
+                        enum level-2-only;
+                        enum level-1-2;
+                    }
+                    default "level-1-2";
+                }
+                leaf dynamic_hostname {
+                    type boolean;
+                    default "true";
+                }
+                leaf metric_style {
+                    type enumeration {
+                        enum wide;
+                    }
+                    default "wide";
+                }
+                leaf lsp_mtu {
+                    type uint32 {
+                        range "128..4352";
+                    }
+                    default "1497";
+                }
+                leaf overload {
+                    type boolean;
+                    default "false";
+                }
+                leaf overload_on_startup {
+                    type uint32 {
+                        range "0..86400";
+                    }
+                    default "0";
+                }
+                leaf ipv6_multi_topology {
+                    type boolean;
+                    default "false";
+                }
+                leaf spf_init_delay {
+                    type uint32 {
+                        range "0..60000";
+                    }
+                    units "milliseconds";
+                }
+                leaf spf_short_delay {
+                    type uint32 {
+                        range "0..60000";
+                    }
+                    units "milliseconds";
+                }
+                leaf spf_long_delay {
+                    type uint32 {
+                        range "0..60000";
+                    }
+                    units "milliseconds";
+                }
+                leaf spf_hold_down {
+                    type uint32 {
+                        range "0..60000";
+                    }
+                    units "milliseconds";
+                }
+                leaf spf_time_to_learn {
+                    type uint32 {
+                        range "0..60000";
+                    }
+                    units "milliseconds";
+                }
+            }
+        }
+        container ISIS_INSTANCE_LEVEL {
+            list ISIS_INSTANCE_LEVEL_LIST {
+                key "vrf instance level";
+                leaf vrf {
+                    type leafref {
+                        path "/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST/isisg:vrf";
+                    }
+                    mandatory true;
+                }
+                leaf instance {
+                    type leafref {
+                        path "/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST[isisg:vrf=current()/../vrf]"
+                              + "/isisg:instance";
+                    }
+                    mandatory true;
+                }
+                leaf level {
+                    type enumeration {
+                        enum level-1;
+                        enum level-2;
+                    }
+                }
+                leaf lsp_refresh_interval {
+                    type uint32 {
+                        range "1..65235";
+                    }
+                    units "seconds";
+                    default "900";
+                }
+                leaf lsp_maximum_lifetime {
+                    type uint32 {
+                        range "350..65535";
+                    }
+                    units "seconds";
+                    must '. >= ../lsp_refresh_interval + 300';
+                    default "1200";
+                }
+                leaf lsp_generation_interval {
+                    type uint32 {
+                        range "1..120";
+                    }
+                    units "seconds";
+                    must '. < ../lsp_refresh_interval';
+                    default "30";
+                }
+                leaf spf_minimum_interval {
+                    type uint32 {
+                        range "1..120";
+                    }
+                    units "seconds";
+                    default "1";
+                }
+            }
+        }
+        container ISIS_REDISTRIBUTE {
+            list ISIS_REDISTRIBUTE_LIST {
+                must
+                    "(af = 'ipv4' and protocol != 'ospf6' and protocol != 'ripng') or (af = 'ipv6' and protocol != 'ospf' and protocol != 'rip')";
+                must
+                    "/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST[isisg:vrf=current()/vrf][isisg:instance=current()/instance]/isisg:level_type = 'level-1-2' or (/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST[isisg:vrf=current()/vrf][isisg:instance=current()/instance]/isisg:level_type = 'level-1' and level = 'level-1') or (/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST[isisg:vrf=current()/vrf][isisg:instance=current()/instance]/isisg:level_type = 'level-2-only' and level = 'level-2')";
+                key "vrf instance af protocol level";
+                leaf vrf {
+                    type leafref {
+                        path "/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST/isisg:vrf";
+                    }
+                    mandatory true;
+                }
+                leaf instance {
+                    type leafref {
+                        path "/isisg:sonic-isis-global/isisg:ISIS_INSTANCE/isisg:ISIS_INSTANCE_LIST[isisg:vrf=current()/../vrf]"
+                              + "/isisg:instance";
+                    }
+                    mandatory true;
+                }
+                leaf af {
+                    type enumeration {
+                        enum ipv4;
+                        enum ipv6;
+                    }
+                }
+                leaf protocol {
+                    type enumeration {
+                        enum connected;
+                        enum static;
+                        enum kernel;
+                        enum bgp;
+                        enum ospf;
+                        enum ospf6;
+                        enum rip;
+                        enum ripng;
+                    }
+                }
+                leaf level {
+                    type enumeration {
+                        enum level-1;
+                        enum level-2;
+                    }
+                }
+                leaf metric {
+                    type uint32 {
+                        range "0..16777215";
+                    }
+                    default "0";
+                }
+                leaf route_map {
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                }
+            }
+        }
+    }
+}
