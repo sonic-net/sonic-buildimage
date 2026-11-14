@@ -34,24 +34,32 @@ files under `/run/bmc/leak_sim/<sensor>.test_leak` containing the severity.
 `/run` is tmpfs on the BMC host, so a simulation never writes to the eMMC and
 is cleared by a reboot. pmon sees the same directory through the `/run/bmc`
 bind mount added for the aspeed platform in
-`files/build_templates/docker_image_ctl.j2`. The sensor re-reads its marker on
-every `is_leak()` poll, so the state is visible to any process holding its own
+`files/build_templates/docker_image_ctl.j2`. The sensor re-reads its GPIO line and
+marker on every poll, so the state is visible to any process holding its own
 `LiquidCooling` object, and withdrawing an injection returns the sensor to its
-hardware state. `get_leak_severity()` and `is_test_leak()` report the state
-recorded by the last `is_leak()` call.
+hardware state. `is_leak_sensor_ok()` and `is_leak()` called back to back share
+one read, and `get_leak_severity()` and `is_test_leak()` report that same read,
+so a poll never mixes health from one read with leak state from another.
 
 ## Unit tests
 
-Run the platform test suite the same way `debian/rules` does:
+`debian/rules` runs both platform test directories at package build time:
+`tests/` (watchdog) and `common/tests/` (leak sensors, leak test API, liquid
+cooling detection, switch host module). To run the same set by hand:
 
 ```
 cd platform/aspeed/sonic-platform-modules-nexthop
-PYTHONDONTWRITEBYTECODE=1 python3 -m pytest
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest tests/ common/tests/
 ```
 
 The leak test coverage is in `common/tests/test_liquid_cooling.py`. It redirects
 the marker directory to a tmp path and stubs syslog, so no BMC hardware is
 required.
+
+`TestCoherentSample` checks that health, leak state, severity and test
+provenance come from one GPIO read when polled in thermalctld's order
+(`is_leak_sensor_ok()`, then `is_leak()`), including a line that fails or
+asserts between the two calls.
 
 `TestLeakTestApi` in that file mirrors the expectations of the base test suite
 in `src/sonic-platform-common/tests/leakage_sensor_test_base_test.py`
@@ -79,9 +87,9 @@ through `Chassis().get_liquid_cooling()`, the same wiring thermalctld uses.
 ```
 leak_injection_sim.py list
 leak_injection_sim.py status [--json]
-leak_injection_sim.py inject leakage1 [--severity MINOR|CRITICAL]   # default MINOR
+leak_injection_sim.py inject coldplate_leak [--severity MINOR|CRITICAL]   # default MINOR
 leak_injection_sim.py inject all --severity CRITICAL
-leak_injection_sim.py clear leakage1
+leak_injection_sim.py clear coldplate_leak
 leak_injection_sim.py clear all
 ```
 
@@ -101,11 +109,15 @@ test_leak_injection_sim.py --verify-db   # also wait for thermalctld to publish 
 ```
 
 With `--verify-db` it waits (default 60 s, `--db-timeout`) for
-`LIQUID_COOLING_INFO|<sensor>` to show `leaking=Yes` with the injected severity
-and `SYSTEM_LEAK_STATUS|system` to show `device_leak_status=CRITICAL`, then for
+`LIQUID_COOLING_INFO|<sensor>` to show `leaking=Yes`, `test_leak=Yes` and the
+injected severity, and `SYSTEM_LEAK_STATUS|system` to show
+`test_leak_status=CRITICAL` while `device_leak_status` stays `None`, then for
 both to clear after withdrawal. This needs `swsscommon` importable and
 thermalctld running with liquid cooling enabled; otherwise that check is
-skipped, not failed.
+skipped, not failed. It is also skipped, and nothing is injected, if
+thermalctld does not publish `test_leak`: such a thermalctld counts an injected
+CRITICAL leak toward `device_leak_status`, and bmcctld's default policy powers
+the switch off on that.
 
 Both scripts accept `--leak-test-dir DIR` to operate on another marker
 directory. That bypasses `Chassis()` and, on a development host without the
@@ -117,8 +129,19 @@ cd platform/aspeed/sonic-platform-modules-nexthop/common
 python3 scripts/test_leak_injection_sim.py --leak-test-dir /tmp/leak_sim
 ```
 
-Note that on a live BMC thermalctld logs an injected leak like a real one, and
-a CRITICAL injection is recorded in `/host/bmc/event.log`.
+## How thermalctld handles a test leak
+
+thermalctld publishes a test leak but never acts on it. The sensor's
+`LIQUID_COOLING_INFO` row shows `leaking=Yes` and `test_leak=Yes`, and
+`SYSTEM_LEAK_STATUS|system` reports it in `test_leak_status`. It is kept out of
+`device_leak_status`, the field bmcctld takes mitigation action on, and out of
+the MINOR-to-MAJOR escalation, the CRITICAL event log and leak-episode
+tracking. A hardware leak is never flagged as a test leak, so it is acted on
+even while an injection is present.
+
+This needs a thermalctld with test-leak support (sonic-platform-daemons).
+Older thermalctld ignores `is_test_leak()` and treats an injected leak like a
+real one, so do not inject a CRITICAL leak on a system running it.
 
 ## Manual test on the BMC
 
@@ -132,7 +155,7 @@ lc = Chassis().get_liquid_cooling()
 leak_test = lc.get_leak_sensor_test()
 
 # Inject (severity is keyword-only and defaults to MINOR)
-leak_test.set_test_leak("leakage1", True, severity=LeakSeverity.CRITICAL)
+leak_test.set_test_leak("coldplate_leak", True, severity=LeakSeverity.CRITICAL)
 
 # Observe
 for s in lc.get_leak_sensor_status():
@@ -144,7 +167,7 @@ leak_test.clear_test_leaks()
 
 Expected result:
 
-- `get_leak_sensor_status()` returns `leakage1` while the injection is active.
+- `get_leak_sensor_status()` returns `coldplate_leak` while the injection is active.
 - `get_leak_severity()` returns the injected severity (`None` once cleared).
 - `is_test_leak()` returns `True`, so no mitigation action is taken.
 - `is_leak_sensor_ok()` stays `True` — the injection does not fault the sensor.
@@ -154,6 +177,6 @@ The injection can also be inspected or cleared directly on the BMC host:
 
 ```
 ls /run/bmc/leak_sim/
-cat /run/bmc/leak_sim/leakage1.test_leak   # prints the injected severity
+cat /run/bmc/leak_sim/coldplate_leak.test_leak   # prints the injected severity
 rm -f /run/bmc/leak_sim/*.test_leak
 ```
