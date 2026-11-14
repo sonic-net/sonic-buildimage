@@ -1268,7 +1268,7 @@ libspreadsheet-writeexcel-perl==2.40-4
 libsqlite3-0==3.40.1-2+deb12u2
 libsqlite3-dev==3.40.1-2+deb12u2
 libsratom-0-0==0.6.14-1
-libsrt1.5-gnutls==1.5.1-1+deb12u1
+libsrt1.5-gnutls==1.5.1-1+deb12u2
 libssh-4==0.10.6-0+deb12u3
 libssh-gcrypt-4==0.10.6-0+deb12u3
 libssh2-1==1.10.0-3+deb12u1
@@ -1851,7 +1851,7 @@ rpm-common==4.18.0+dfsg-1+deb12u1
 rpm2cpio==4.18.0+dfsg-1+deb12u1
 rrdtool==1.7.2-4+b8
 rsync==3.5.0+ds1-0+deb12u1
-rsyslog==8.2302.0-1+deb12u1
+rsyslog==8.2302.0-1+deb12u2
 ruby==1:3.1
 ruby-all-dev==1:3.1
 ruby-asciidoctor==2.0.18-2
