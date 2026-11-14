@@ -113,6 +113,11 @@ int unparse_nss_config( RADIUS_NSS_CONF_B * conf, int * errnop, int * plockfd);
 
 int radius_lookup_cache( char * prog, const char * nam, int * pmpl);
 
+/* Return 1 when nam is safe for use in filesystem paths and as a useradd
+ * operand, or 0 otherwise.
+ */
+int radius_user_name_ok( const char * nam);
+
 int radius_fill_pw( RADIUS_NSS_CONF_B * conf, int mpl,
     const char * nam, struct passwd * pwd,
     char * buffer, size_t buflen, int * errnop);
@@ -129,4 +134,3 @@ int radius_update_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl);
 int radius_create_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl,
     int unconfirmed);
 int radius_clear_unconfirmed_users(RADIUS_NSS_CONF_B * conf);
-
