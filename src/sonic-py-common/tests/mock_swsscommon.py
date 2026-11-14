@@ -4,7 +4,7 @@ class SonicV2Connector:
     TEST_REV = "A1"
     TEST_SWITCH_HOST_SERIAL = "N/A"
 
-    def __init__(self):
+    def __init__(self, use_unix_socket_path=False, authenticate=False):
         self.STATE_DB = 'STATE_DB'
         self.data = {"serial": self.TEST_SERIAL,
                      "model": self.TEST_MODEL,
@@ -19,7 +19,7 @@ class SonicV2Connector:
 
 
 class ConfigDBConnector:
-    def __init__(self):
+    def __init__(self, use_unix_socket_path=False, authenticate=False):
         self.CONFIG_DB = 'CONFIG_DB'
         self.data = {"key_encrypt": "True"}
 

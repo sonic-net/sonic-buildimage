@@ -50,7 +50,7 @@ class MuxStateWriter(object):
         Initializes the connector during the first call
         """
         if self.appl_db_connector is None:
-            self.appl_db_connector = DBConnector(APPL_DB, REDIS_SOCK_PATH, True)
+            self.appl_db_connector = DBConnector("APPL_DB", 1, False, "", True)
         return self.appl_db_connector
     
     @property

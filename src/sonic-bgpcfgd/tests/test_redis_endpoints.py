@@ -10,7 +10,7 @@ def test_static_route_timer_uses_unix_socket(mock_connector):
 
     StaticRouteTimer()
 
-    mock_connector.assert_called_once_with(use_unix_socket_path=True)
+    mock_connector.assert_called_once_with(use_unix_socket_path=True, authenticate=True)
     mock_connector.return_value.connect.assert_called_once_with("APPL_DB")
 
 
