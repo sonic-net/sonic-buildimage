@@ -26,6 +26,7 @@
 try:
     import getopt
     import sys
+    import math
     import logging
     import logging.config
     import time  # this is only being used as part of the example
@@ -91,19 +92,33 @@ class accton_as5835_54x_monitor(object):
         thermal = ThermalUtil()
         fan = FanUtil()
 
-        temp2 = thermal.get_thermal_val(2)
-        if temp2 is None:
+        try:
+            temp2 = thermal.get_thermal_val(2)
+            temp3 = thermal.get_thermal_val(3)
+            valid = all(value is not None and not isinstance(value, bool)
+                        and math.isfinite(float(value)) for value in (temp2, temp3))
+        except (OSError, ValueError, TypeError):
+            valid = False
+        if not valid:
+            fan.set_fan_duty_cycle(DUTY_MAX)
+            self._input_unavailable = True
+            logging.error("Temperature unavailable; keeping fans at 100% and retrying")
             return False
 
-        temp3 = thermal.get_thermal_val(3)
-        if temp3 is None:
-            return False
+        temp2, temp3 = float(temp2), float(temp3)
 
         new_temp = (temp2 + temp3) / 2
+        if getattr(self, "_input_unavailable", False):
+            # Reevaluate the normal policy even when the recovered temperature
+            # equals the last good reading; otherwise full-speed fallback sticks.
+            self._ori_temp = new_temp - 1
+            self._input_unavailable = False
 
         for x in range(fan.get_idx_fan_start(), fan.get_num_fans()+1):
             fan_stat = fan.get_fan_status(x)
             if fan_stat is None:
+                fan.set_fan_duty_cycle(DUTY_MAX)
+                self._input_unavailable = True
                 return False
             if fan_stat is False:
                 self._new_perc = FAN_LEV1_SPEED_PERC

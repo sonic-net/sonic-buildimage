@@ -23,6 +23,7 @@
 
 try:
     import sys
+    import math
     import getopt
     import logging
     import subprocess
@@ -62,9 +63,19 @@ test_temp_list = [0, 0]
 temp_test_data = 0
 test_temp_revert = 0
 
-# Make a class we can use to capture stdout and sterr in the log
+def read_temperature_milli(index):
+    """Return a finite sensor reading, or None while unavailable."""
+    try:
+        value = platform_chassis.get_thermal(index).get_temperature()
+        if isinstance(value, bool) or value is None:
+            return None
+        value = float(value)
+        return value * 1000 if math.isfinite(value) else None
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
 
 
+# Make a class we can use to capture stdout and stderr in the log
 class device_monitor(object):
     # static temp var
     temp = 0
@@ -147,8 +158,12 @@ class device_monitor(object):
         ori_perc = platform_chassis.get_fan(0).get_speed()
         #logging.debug('test_temp=%d', test_temp)
         if test_temp == 0:
-            temp2 = platform_chassis.get_thermal(1).get_temperature()*1000
-            temp4 = platform_chassis.get_thermal(3).get_temperature()*1000
+            temp2 = read_temperature_milli(1)
+            temp4 = read_temperature_milli(3)
+            if temp2 is None or temp4 is None:
+                platform_chassis.get_fan(0).set_speed(100)
+                logging.error("Temperature unavailable; keeping fans at 100% and retrying")
+                return False
         else:
             temp2 = test_temp_list[0]
             temp4 = test_temp_list[1]

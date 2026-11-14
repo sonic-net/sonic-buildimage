@@ -25,6 +25,7 @@
 try:
     import subprocess
     import sys
+    import math
     import getopt
     import logging
     import logging.config
@@ -48,6 +49,19 @@ test_temp_revert = 0
 temp_test_data = 0
 
 
+
+def read_temperature_milli(index):
+    """Return a finite sensor reading, or None while unavailable."""
+    try:
+        value = platform_chassis.get_thermal(index).get_temperature()
+        if isinstance(value, bool) or value is None:
+            return None
+        value = float(value)
+        return value * 1000 if math.isfinite(value) else None
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+
+
 def get_thermal_avg_temp():
     global platform_chassis
     global test_temp_list
@@ -58,7 +72,10 @@ def get_thermal_avg_temp():
 
     if test_temp == 0:
         for x in range(THERMAL_NUM_ON_MAIN_BROAD):
-            sum_temp = sum_temp + platform_chassis.get_thermal(x).get_temperature()*1000
+            value = read_temperature_milli(x)
+            if value is None:
+                return None
+            sum_temp = sum_temp + value
 
     else:
         for x in range(THERMAL_NUM_ON_MAIN_BROAD):
@@ -141,6 +158,10 @@ class accton_as7816_monitor(object):
 
         # Decide fan duty by if avg of sensors falls into any of fan_policy{}
         get_temp = get_thermal_avg_temp()
+        if get_temp is None:
+            platform_chassis.get_fan(0).set_speed(DUTY_MAX)
+            logging.error("Temperature unavailable; keeping fans at 100% and retrying")
+            return False
 
         for x in range(0, len(fan_policy)):
             y = len(fan_policy) - x - 1  # checked from highest
