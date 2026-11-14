@@ -30,5 +30,5 @@ sonic-eventd-dbgsym==1.0.0-0
 sshpass==1.10-0.1
 strace==6.13+ds-1
 ucf==3.0052
-vim==2:9.1.1230-2
-vim-runtime==2:9.1.1230-2
+vim==2:9.1.1230-2+deb13u1
+vim-runtime==2:9.1.1230-2+deb13u1

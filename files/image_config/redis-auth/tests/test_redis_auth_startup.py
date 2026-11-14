@@ -301,7 +301,7 @@ class StartupTest(unittest.TestCase):
             self.assertNotIn('redis_socket_mode', rendered)
             if name == 'swss':
                 self.assertLess(rendered.index('SONIC_DB_CLI=\"sudo -n $SONIC_DB_CLI\"'),
-                                rendered.index("$SONIC_DB_CLI CONFIG_DB HDEL 'DEVICE_METADATA|localhost'"))
+                                rendered.index("CONFIG_DB HDEL 'DEVICE_METADATA|localhost'"))
                 self.assertLess(rendered.index('SONIC_CFGGEN=\"sudo -n $SONIC_CFGGEN\"'),
                                 rendered.index('$SONIC_CFGGEN -j \"$RUNTIME_VARS_JSON\" --write-to-db'))
 

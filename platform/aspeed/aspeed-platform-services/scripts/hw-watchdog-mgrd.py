@@ -86,16 +86,14 @@ MIN_TIMEOUT = 30
 MAX_TIMEOUT = 300
 KEEPALIVE_LOG_INTERVAL = 3600  # log heartbeat status hourly
 
-# Boot-stage attribution.  When platform.json's watchdog section defines
-# "stage_scratch_reg" (a scratch register that survives an SoC reset, e.g.
-# AST2700 WDT4C), the daemon records its current boot stage there so U-Boot can
-# attribute a WDT-caused reset to the daemon stage on the next boot.  These are
-# the SONiC daemon-stage marker values.
+# Boot-stage attribution.  When platform.json's watchdog section names a
+# "stage_marker_cmd" (a platform-provided executable that records a boot-stage
+# marker somewhere that survives an SoC reset), the daemon runs it with its
+# current stage so U-Boot can attribute a WDT-caused reset to the daemon stage
+# on the next boot.  The command owns the register address, its write protocol
+# and the never-move-backwards rule; the daemon only knows its stage values.
 STAGE_MARKER_DAEMON_ARMED = 0x24     # daemon armed, steady state
 STAGE_MARKER_DAEMON_SHUTDOWN = 0x25  # system shutdown/reboot in progress
-# WDT4C scratch is set-only (bits are write-1-to-set); the register is cleared
-# only by writing this magic value.  Write it before the marker to overwrite.
-STAGE_SCRATCH_MAGIC_CLEAR = 0xEA000000
 
 
 class WatchdogManager:
@@ -121,9 +119,10 @@ class WatchdogManager:
         # missing/unreadable config) explicitly opts out.
         self.boot_arm = True
         self.shutdown_protect = True
-        # Boot-stage attribution: physical scratch register address, or
-        # None to disable (the default; set from platform.json at startup).
-        self.stage_scratch_reg = None
+        # Boot-stage attribution: absolute path of the platform's stage-marker
+        # command, or None to disable (the default; set from platform.json at
+        # startup).
+        self.stage_marker_cmd = None
         # Set by the signal handler so the teardown runs in the main loop
         # (normal context) rather than the signal handler itself.  The wakeup
         # pipe lets a signal break the select() promptly.
@@ -152,45 +151,71 @@ class WatchdogManager:
             self.boot_arm = bool(wd.get("boot_arm", True))
             self.shutdown_protect = bool(wd.get("shutdown_protect", True))
             # Optional boot-stage attribution.  Absent -> disabled, so other
-            # platforms are unaffected.  Accepts a hex string ("0x14c3704c")
-            # or an integer.
-            reg = wd.get("stage_scratch_reg")
-            self.stage_scratch_reg = int(str(reg), 0) if reg is not None else None
+            # platforms are unaffected.
+            cmd = wd.get("stage_marker_cmd")
         except Exception as e:  # pragma: no cover - defensive
             self.log("failed to load platform watchdog policy: %s" % e,
                      syslog.LOG_ERR)
             return
+        self.stage_marker_cmd = self._parse_stage_marker_cmd(cmd)
         self.log("Loaded watchdog policy: boot_arm=%s shutdown_protect=%s "
-                 "stage_scratch_reg=%s"
+                 "stage_marker_cmd=%s"
                  % (self.boot_arm, self.shutdown_protect,
-                    ("0x%08x" % self.stage_scratch_reg)
-                    if self.stage_scratch_reg is not None else "none"))
+                    self.stage_marker_cmd or "none"))
+
+    def _parse_stage_marker_cmd(self, cmd):
+        """Validate platform.json's watchdog.stage_marker_cmd.
+
+        The value is executed as root, so accept only an absolute path with no
+        arguments.  Anything else disables attribution (returns None) and is
+        logged; it never raises, because a bad attribution config must not stop
+        the daemon from petting.  Existence is checked at write time, not here:
+        the command ships in a platform package that may be installed later in
+        the same boot the daemon starts on.
+        """
+        if cmd is None:
+            return None
+        if not isinstance(cmd, str) or not cmd.startswith("/") \
+                or any(c.isspace() for c in cmd):
+            self.log("ignoring watchdog.stage_marker_cmd %r: must be an "
+                     "absolute path" % (cmd,), syslog.LOG_ERR)
+            return None
+        return cmd
 
     def _write_stage_marker(self, value):
         """Record the current boot stage for WDT reset attribution.
 
-        Writes `value` to the scratch register named by platform.json's
-        watchdog.stage_scratch_reg (e.g. AST2700 WDT4C, which survives an SoC
-        reset); U-Boot reads it on the next boot to attribute a WDT-caused reset
-        to the stage that was running.  Best-effort: attribution must never
-        affect petting, so a missing config is a no-op and any write error is
-        logged and swallowed.
+        Runs platform.json's watchdog.stage_marker_cmd with `value` as its only
+        argument (e.g. "0x24").  The command writes it somewhere that survives
+        an SoC reset and U-Boot reads it on the next boot to attribute a
+        WDT-caused reset to the stage that was running.  The command enforces
+        the never-move-backwards rule, so a daemon restart cannot regress a
+        later marker.  Best-effort: attribution must never affect petting, so a
+        missing config or command is a no-op and any failure is logged and
+        swallowed.
         """
-        if self.stage_scratch_reg is None:
+        if self.stage_marker_cmd is None:
             return
-        addr = "0x%08x" % self.stage_scratch_reg
-        # WDT4C scratch is set-only: bits are write-1-to-set and the register is
-        # cleared only by writing the magic value.  Clear, then set, so the
-        # register reads exactly `value`.
-        for word in ("0x%08x" % STAGE_SCRATCH_MAGIC_CLEAR, "0x%02x" % value):
-            try:
-                subprocess.run(["busybox", "devmem", addr, "32", word],
-                               check=True, capture_output=True, timeout=5)
-            except (OSError, subprocess.SubprocessError) as e:
-                self.log("stage-marker write to %s (%s) failed: %s"
-                         % (addr, word, e), syslog.LOG_WARNING)
-                return
-        self.log("Stage attribution: wrote marker 0x%02x to %s" % (value, addr))
+        if not os.access(self.stage_marker_cmd, os.X_OK):
+            self.log("stage-marker command %s not executable; skipping marker "
+                     "0x%02x" % (self.stage_marker_cmd, value),
+                     syslog.LOG_WARNING)
+            return
+        try:
+            result = subprocess.run([self.stage_marker_cmd, "0x%02x" % value],
+                                    check=True, capture_output=True, timeout=5)
+        except (OSError, subprocess.SubprocessError) as e:
+            self.log("stage-marker command %s 0x%02x failed: %s"
+                     % (self.stage_marker_cmd, value, e), syslog.LOG_WARNING)
+            return
+        stderr = result.stderr.decode(errors="replace").strip()
+        if stderr:
+            self.log("stage-marker command %s 0x%02x reported: %s"
+                     % (self.stage_marker_cmd, value, stderr),
+                     syslog.LOG_WARNING)
+            return
+        self.log("Stage attribution: wrote marker 0x%02x via %s"
+                 % (value, self.stage_marker_cmd))
 
     # ----------------------------------------------------------- device access
     def _open_device(self):
@@ -397,9 +422,10 @@ class WatchdogManager:
         # Mark the shutdown stage ONLY when the system itself is going down, so
         # a hang on the shutdown/reboot path is attributed to it on the next
         # boot.  An ordinary daemon stop/restart (systemctl stop/restart for
-        # maintenance) leaves the previous marker (0x24 armed) in place: the
-        # write is not monotonic, and stamping 0x25 there would misattribute
-        # any WDT reset landing before the daemon comes back and re-arms.
+        # maintenance) leaves the previous marker (0x24 armed) in place:
+        # stamping 0x25 there would misattribute any WDT reset landing before
+        # the daemon comes back and re-arms, and the marker command never moves
+        # backwards, so the restarted daemon could not undo it.
         if system_stopping:
             self._write_stage_marker(STAGE_MARKER_DAEMON_SHUTDOWN)
         if self.fd is not None:

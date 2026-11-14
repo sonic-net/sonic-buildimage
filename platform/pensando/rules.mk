@@ -7,7 +7,7 @@ include $(PLATFORM_PATH)/dsc-drivers.mk
 include $(PLATFORM_PATH)/sonic-platform-modules-dpu.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
-             $(DOCKER_FPM)
+             $(DOCKER_FPM_FRR)
 
 # Inject pensando sai into syncd
 $(SYNCD)_DEPENDS += $(PENSANDO_SAI)
