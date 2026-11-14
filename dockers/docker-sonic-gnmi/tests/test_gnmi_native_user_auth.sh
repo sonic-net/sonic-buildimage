@@ -195,6 +195,28 @@ for save_on_set in true false; do
         "${output}" "--with-save-on-set=${save_on_set}"
 done
 
+for gnmi in '{user_auth: "password"}' '{save_on_set: "true"}' \
+    '{port: "", user_auth: "password"}' '{port: null, user_auth: "password"}'; do
+    config="$(jq -cn "{gnmi: ${gnmi}}")"
+    output="$(run_launcher_config "${config}" | tail -n 1)"
+    assert_contains_once "missing or empty port in ${gnmi} uses the default" \
+        "${output}" "--port 8080"
+done
+
+for port in abc -1 '8080 --insecure'; do
+    config="$(jq -cn --arg port "${port}" '{gnmi: {port: $port, user_auth: "password"}}')"
+    status=0
+    output="$(run_launcher_config "${config}")" || status=$?
+    if [[ "${status}" == 0 ]]; then
+        printf "FAIL: invalid port '%s' was accepted\n%s\n" "${port}" "${output}" >&2
+        exit 1
+    fi
+    assert_contains_once "invalid port '${port}' is rejected" \
+        "${output}" "Incorrect port value"
+    assert_not_contains "invalid port '${port}' does not start the server" \
+        "${output}" "telemetry args:"
+done
+
 output="$(run_launcher)"
 assert_not_contains "missing paths blacklist file is not passed" \
     "${output}" "--paths_blacklist"

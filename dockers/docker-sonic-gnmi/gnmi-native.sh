@@ -90,15 +90,13 @@ else
     NO_TLS_FALLBACK=true
 fi
 
-# If no configuration entry exists for TELEMETRY, create one default port
-if [ -z "$GNMI" ]; then
+# Use the default port if GNMI|gnmi or its port field is missing or empty
+PORT=$(extract_field "$GNMI" '.port // empty')
+if [ -z "$PORT" ]; then
     PORT=8080
-else
-    PORT=$(extract_field "$GNMI" '.port')
-    if ! [[ $PORT =~ ^[0-9]+$ ]]; then
-        echo "Incorrect port value ${PORT}, expecting positive integers" >&2
-        exit $INCORRECT_TELEMETRY_VALUE
-    fi
+elif ! [[ $PORT =~ ^[0-9]+$ ]]; then
+    echo "Incorrect port value ${PORT}, expecting positive integers" >&2
+    exit $INCORRECT_TELEMETRY_VALUE
 fi
 
 case "${GNMI_LISTENER_MODE-config}" in
