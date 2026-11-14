@@ -1,4 +1,136 @@
 {
+    "VNET_VALID_VXLAN_TUNNEL_LIST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "192.0.2.1"
+                    },
+                    {
+                        "name": "vtep2",
+                        "src_ip": "2001:db8::1"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel_list": "vtep1,vtep2",
+                        "vni": "10011"
+                    },
+                    {
+                        "name": "Vnet2",
+                        "vxlan_tunnel_list": "vtep2,vtep1",
+                        "vni": "10012"
+                    }
+                ]
+            }
+        }
+    },
+    "VNET_VALID_VXLAN_TUNNEL_LIST_SINGLE": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "192.0.2.1"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel_list": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        }
+    },
+    "VNET_VALID_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "192.0.2.1"
+                    },
+                    {
+                        "name": "vtep2",
+                        "src_ip": "2001:db8::1"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vxlan_tunnel_list": "vtep1,vtep2",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        }
+    },
+    "VNET_VALID_VXLAN_TUNNEL_EMPTY_LIST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "192.0.2.1"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vxlan_tunnel_list": "",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        }
+    },
+    "VNET_INVALID_MISSING_VXLAN_TUNNEL": {
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        }
+    },
+    "VNET_INVALID_EMPTY_VXLAN_TUNNEL_LIST": {
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel_list": "",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        }
+    },
     "VNET_VALID_TEST1": {
         "sonic-vxlan:sonic-vxlan": {
             "sonic-vxlan:VXLAN_TUNNEL": {
