@@ -28,6 +28,13 @@ Type_1_list_maps_model = [
     'TC_TO_DSCP_MAP_LIST',
 ]
 
+DATA_NODE_TYPES = (
+    ly.SNode.CONTAINER,
+    ly.SNode.LIST,
+    ly.SNode.LEAF,
+    ly.SNode.LEAFLIST,
+)
+
 # Workaround for those fields who is defined as leaf-list in YANG model but have string value in config DB.
 # Dictinary structure key = (<table_name>, <field_name>), value = seperator
 LEAF_LIST_WITH_STRING_VALUE_DICT = {
@@ -135,12 +142,29 @@ class SonicYangExtMixin(SonicYangPathMixin):
             if top.name() != m.name():
                 raise SonicYangException("topLevelContainer mismatch {}:{}".format(
                     top.name(), m.name()))
-            for table in top.children(types=(ly.SNode.CONTAINER,)):
-                self.confDbYangMap[table.name()] = {
-                    'module': m.name(),
-                    'topLevelContainer': top.name(),
-                    'container': table,
-                }
+
+            if top.config_false():
+                self.configFalseModules.add(m.name())
+                continue
+
+            dataNodes = list(top.children(types=DATA_NODE_TYPES))
+            if not dataNodes:
+                continue
+
+            hasConfigChild = False
+            for node in dataNodes:
+                if node.config_false():
+                    continue
+                hasConfigChild = True
+                if isinstance(node, ly.SContainer):
+                    self.confDbYangMap[node.name()] = {
+                        'module': m.name(),
+                        'topLevelContainer': top.name(),
+                        'container': node,
+                    }
+
+            if not hasConfigChild:
+                self.configFalseModules.add(m.name())
 
     """
     Get module, topLevelContainer(TLC) and container SNode for a config DB table

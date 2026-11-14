@@ -1,0 +1,23 @@
+module test-overlap-configfalse {
+    namespace "http://github.com/Azure/test-overlap-configfalse";
+    prefix toc;
+
+    revision 2026-10-12 {
+        description "Test YANG model with config-false top-level container";
+    }
+
+    container test-overlap-configfalse {
+        config false;
+        container TEST_OVERLAP_CONFIGFALSE {
+            list TEST_OVERLAP_CONFIGFALSE_LIST {
+                key "name";
+                leaf name {
+                    type string;
+                }
+                leaf value {
+                    type string;
+                }
+            }
+        }
+    }
+}
