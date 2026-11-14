@@ -1,0 +1,4 @@
+cooling_loop_interval: 5
+cooling_xcvr_target_offset: -5.
+cooling_rpm_slope: 1.1562
+cooling_rpm_offset: -15.6156
