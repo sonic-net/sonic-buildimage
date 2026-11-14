@@ -19,6 +19,7 @@ Requires=config-setup.service
 After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
+ConditionPathExists=!/run/sonic/shutdown-in-progress
 {% if sonic_asic_platform == 'mellanox' %}
 Requires=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
 After=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service

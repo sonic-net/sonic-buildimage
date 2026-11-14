@@ -10,6 +10,7 @@ Requires=config-setup.service
 After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
+ConditionPathExists=!/run/sonic/shutdown-in-progress
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 
