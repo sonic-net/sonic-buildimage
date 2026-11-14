@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -26,6 +26,8 @@ struct CommandResult {
     xpath: String,
     success: bool,
     error: Option<String>,
+    // The server answered gRPC NotFound: this gnmi build doesn't implement the xpath.
+    unsupported: bool,
     duration_ms: u128,
 }
 
@@ -90,16 +92,65 @@ const HTTP_ERROR: &str = "HTTP/1.1 500 Internal Server Error";
 // Both sources are merged; duplicates removed.
 // During probe: for each xpath (after port OK) run command:
 //   gnmi_get -xpath_target SHOW -xpath <XPATH> -target_addr 127.0.0.1:<port> -logtostderr \
-//     [ -ca <ca> -cert <cert> -key <key> -target_name <name> | -insecure true ]
-// Port, cert paths and client_auth come from CONFIG_DB (GNMI|gnmi, GNMI|certs).
-// client_auth: ONLY explicit value "true" (case-insensitive) enables TLS client certs; anything else -> insecure.
+//     [ -ca <ca> -cert <cert> -key <key> -target_name <name> | -insecure true | -notls ]
+// The TLS mode mirrors gnmi-native.sh (see server_tls_mode). Port, cert paths and client_auth
+// come from CONFIG_DB (GNMI|gnmi, GNMI|certs, DEVICE_METADATA|x509, DEVICE_METADATA|localhost).
 // Any failure (spawn error / non-zero exit / timeout) sets HTTP 500; body lists per-xpath results.
+// A SHOW xpath the server reports as gRPC NotFound is marked unsupported and does not fail the check.
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum TlsMode {
+    NoTls,
+    Tls { client_cert: bool },
+}
 
 struct GnmiSecurityConfig {
-    use_client_auth: bool,
+    tls: TlsMode,
     ca_crt: String,
     server_crt: String,
     server_key: String,
+}
+
+type Hash = HashMap<String, String>;
+
+fn field<'a>(hash: &'a Hash, name: &str) -> Option<&'a str> {
+    hash.get(name).map(String::as_str).filter(|v| !v.is_empty())
+}
+
+// The TLS config gnmi-native.sh hands the server: GNMI|certs if present, else DEVICE_METADATA|x509.
+fn server_tls_source<'a>(certs: &'a Hash, x509: &'a Hash) -> Option<&'a Hash> {
+    if !certs.is_empty() {
+        Some(certs)
+    } else if !x509.is_empty() {
+        Some(x509)
+    } else {
+        None
+    }
+}
+
+// Mirrors gnmi-native.sh:
+// - SmartSwitch DPU (DEVICE_METADATA|localhost type=SmartSwitchDPU or switch_type=dpu) without a
+//   TLS source carrying server_crt and server_key: ephemeral TLS (--insecure) with
+//   --allow_no_client_auth, so no client cert is needed.
+// - Otherwise GNMI|certs or DEVICE_METADATA|x509 present: TLS, and the server requires a client
+//   cert unless GNMI|gnmi.client_auth is exactly "false" (--allow_no_client_auth).
+// - Neither present: --noTLS.
+fn server_tls_mode(certs: &Hash, x509: &Hash, gnmi: &Hash, localhost: &Hash) -> TlsMode {
+    let is_dpu = field(localhost, "type") == Some("SmartSwitchDPU")
+        || field(localhost, "switch_type") == Some("dpu");
+    let source = server_tls_source(certs, x509);
+    if is_dpu {
+        let has_keypair = source
+            .map(|s| field(s, "server_crt").is_some() && field(s, "server_key").is_some())
+            .unwrap_or(false);
+        if !has_keypair {
+            return TlsMode::Tls { client_cert: false };
+        }
+    }
+    match source {
+        Some(_) => TlsMode::Tls { client_cert: field(gnmi, "client_auth") != Some("false") },
+        None => TlsMode::NoTls,
+    }
 }
 
 fn non_empty(v: Option<String>) -> Option<String> {
@@ -223,14 +274,47 @@ fn redis_hget(hash: &str, field: &str) -> Option<String> {
     }
 }
 
+fn redis_hgetall(hash: &str) -> Hash {
+    let client = match redis::Client::open("redis://127.0.0.1:6379/4") {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Redis client error {hash}: {e}");
+            return Hash::new();
+        }
+    };
+    let mut conn = match client.get_connection() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Redis connection error {hash}: {e}");
+            return Hash::new();
+        }
+    };
+    conn.hgetall::<_, Hash>(hash).unwrap_or_else(|e| {
+        eprintln!("Redis HGETALL error {hash}: {e}");
+        Hash::new()
+    })
+}
+
+fn is_grpc_not_found(stderr: &str) -> bool {
+    stderr.contains("code = NotFound") || stderr.contains("not found in clientTrie")
+}
+
 // Run `cmd` with an optional stdin payload, killing it after `timeout`.
 // stderr is drained on a separate thread so a chatty child cannot block on a full pipe.
-fn run_probe(name: &str, mut cmd: Command, stdin_data: Option<&[u8]>, timeout: Duration) -> CommandResult {
+// With `allow_unsupported`, a gRPC NotFound failure is flagged as unsupported.
+fn run_probe(
+    name: &str,
+    mut cmd: Command,
+    stdin_data: Option<&[u8]>,
+    timeout: Duration,
+    allow_unsupported: bool,
+) -> CommandResult {
     let start = Instant::now();
     let result = |success: bool, error: Option<String>| CommandResult {
         xpath: name.to_string(),
         success,
         error,
+        unsupported: false,
         duration_ms: start.elapsed().as_millis(),
     };
 
@@ -284,11 +368,11 @@ fn run_probe(name: &str, mut cmd: Command, stdin_data: Option<&[u8]>, timeout: D
     };
 
     // After a timeout kill, a grandchild may still hold stderr open; don't block on it.
-    let stderr = stderr_handle
+    let raw_stderr = stderr_handle
         .filter(|h| wait_result.is_ok() || h.is_finished())
         .and_then(|h| h.join().ok())
-        .map(|s| summarize_stderr(&s))
         .unwrap_or_default();
+    let stderr = summarize_stderr(&raw_stderr);
 
     match wait_result {
         Ok(status) if status.success() => result(true, None),
@@ -302,7 +386,9 @@ fn run_probe(name: &str, mut cmd: Command, stdin_data: Option<&[u8]>, timeout: D
                 msg.push_str(&format!("stderr: {stderr}; "));
             }
             msg.push_str(&format!("exit code: {exit_code}"));
-            result(false, Some(msg))
+            let mut res = result(false, Some(msg));
+            res.unsupported = allow_unsupported && is_grpc_not_found(&raw_stderr);
+            res
         }
         Err(e) => {
             eprintln!("Probe {name} wait/timeout failed: {e}");
@@ -327,13 +413,19 @@ fn gnmi_get_command(
         .arg("-xpath").arg(xpath)
         .arg("-target_addr").arg(format!("127.0.0.1:{port}"))
         .arg("-logtostderr");
-    if sec.use_client_auth {
-        cmd.arg("-ca").arg(&sec.ca_crt)
-            .arg("-cert").arg(&sec.server_crt)
-            .arg("-key").arg(&sec.server_key)
-            .arg("-target_name").arg(target_name);
-    } else {
-        cmd.arg("-insecure").arg("true");
+    match sec.tls {
+        TlsMode::Tls { client_cert: true } => {
+            cmd.arg("-ca").arg(&sec.ca_crt)
+                .arg("-cert").arg(&sec.server_crt)
+                .arg("-key").arg(&sec.server_key)
+                .arg("-target_name").arg(target_name);
+        }
+        TlsMode::Tls { client_cert: false } => {
+            cmd.arg("-insecure").arg("true");
+        }
+        TlsMode::NoTls => {
+            cmd.arg("-notls");
+        }
     }
     cmd
 }
@@ -345,31 +437,29 @@ fn run_gnmi_for_xpath(
     target_name: &str,
     timeout: Duration,
     xpath_target: &str,
+    allow_unsupported: bool,
 ) -> CommandResult {
     let cmd = gnmi_get_command(xpath, port, sec, target_name, xpath_target);
-    run_probe(xpath, cmd, None, timeout)
+    run_probe(xpath, cmd, None, timeout, allow_unsupported)
 }
 
 // Validates ConfigDB YANG integrity: `echo '[]' | sudo config apply-patch /dev/stdin`.
 fn run_yang_config_apply_patch_probe(timeout: Duration) -> CommandResult {
     let mut cmd = Command::new("sudo");
     cmd.arg("-n").arg("config").arg("apply-patch").arg("/dev/stdin");
-    run_probe(APPLY_PATCH_PROBE_NAME, cmd, Some(b"[]\n"), timeout)
+    run_probe(APPLY_PATCH_PROBE_NAME, cmd, Some(b"[]\n"), timeout, false)
 }
 
-fn client_auth_enabled(value: Option<&str>) -> bool {
-    matches!(value, Some(v) if v.trim().eq_ignore_ascii_case("true"))
-}
-
-fn get_security_config() -> GnmiSecurityConfig {
-    // CONFIG_DB hashes:
-    // GNMI|certs: ca_crt, server_crt, server_key
-    // GNMI|gnmi: client_auth
-    let cert = |field: &str, env_var: &str, default: &str| {
-        non_empty(redis_hget("GNMI|certs", field)).unwrap_or_else(|| env_or_default(env_var, default))
+// Client cert paths are the server's own TLS source (GNMI|certs, else DEVICE_METADATA|x509),
+// falling back to env vars.
+fn security_config(certs: &Hash, x509: &Hash, gnmi: &Hash, localhost: &Hash) -> GnmiSecurityConfig {
+    let empty = Hash::new();
+    let source = server_tls_source(certs, x509).unwrap_or(&empty);
+    let cert = |name: &str, env_var: &str, default: &str| {
+        non_empty(field(source, name).map(str::to_string)).unwrap_or_else(|| env_or_default(env_var, default))
     };
     GnmiSecurityConfig {
-        use_client_auth: client_auth_enabled(redis_hget("GNMI|gnmi", "client_auth").as_deref()),
+        tls: server_tls_mode(certs, x509, gnmi, localhost),
         ca_crt: cert("ca_crt", CA_CRT_ENV_VAR, DEFAULT_CA_CRT),
         server_crt: cert("server_crt", SERVER_CRT_ENV_VAR, DEFAULT_SERVER_CRT),
         server_key: cert("server_key", SERVER_KEY_ENV_VAR, DEFAULT_SERVER_KEY),
@@ -430,7 +520,8 @@ fn run_health_checks() -> (bool, HealthStatus) {
         return (true, status);
     }
 
-    let port = parse_gnmi_port(redis_hget("GNMI|gnmi", "port").as_deref());
+    let gnmi = redis_hgetall("GNMI|gnmi");
+    let port = parse_gnmi_port(field(&gnmi, "port"));
     let gnmi_status = check_gnmi_port(port);
     // Only run xpath probes if the port is reachable
     if !gnmi_status.starts_with("OK") {
@@ -442,22 +533,27 @@ fn run_health_checks() -> (bool, HealthStatus) {
         return (false, status);
     }
 
-    let sec_cfg = get_security_config();
+    let sec_cfg = security_config(
+        &redis_hgetall("GNMI|certs"),
+        &redis_hgetall("DEVICE_METADATA|x509"),
+        &gnmi,
+        &redis_hgetall("DEVICE_METADATA|localhost"),
+    );
     let timeout = read_timeout(env::var(CMD_TIMEOUT_ENV_VAR).ok().as_deref());
     let target_name = env_or_default(TARGET_NAME_ENV_VAR, DEFAULT_TARGET_NAME);
     let cert_probe_enabled = env_flag_var(CERT_PROBE_ENV_VAR, false);
 
     // Certificate probes: a BAD client cert must be rejected and a GOOD one accepted.
     // Only run when client_auth is enabled; an insecure server would accept both.
-    if cert_probe_enabled && sec_cfg.use_client_auth {
+    if cert_probe_enabled && sec_cfg.tls == (TlsMode::Tls { client_cert: true }) {
         let bad_sec = GnmiSecurityConfig {
-            use_client_auth: true,
+            tls: TlsMode::Tls { client_cert: true },
             ca_crt: env_or_default(BAD_CA_ENV_VAR, DEFAULT_BAD_CA),
             server_crt: env_or_default(BAD_CERT_ENV_VAR, DEFAULT_BAD_CERT),
             server_key: env_or_default(BAD_KEY_ENV_VAR, DEFAULT_BAD_KEY),
         };
         let bad_cname = env_or_default(BAD_CNAME_ENV_VAR, DEFAULT_BAD_CNAME);
-        let mut res_bad = run_gnmi_for_xpath(CERT_PROBE_XPATH, port, &bad_sec, &bad_cname, timeout, "SHOW");
+        let mut res_bad = run_gnmi_for_xpath(CERT_PROBE_XPATH, port, &bad_sec, &bad_cname, timeout, "SHOW", false);
         if res_bad.success {
             res_bad.success = false;
             let msg = "Expected FAILURE with BAD cert but command SUCCEEDED".to_string();
@@ -470,13 +566,13 @@ fn run_health_checks() -> (bool, HealthStatus) {
         cmd_results.push(res_bad);
 
         let good_sec = GnmiSecurityConfig {
-            use_client_auth: true,
+            tls: TlsMode::Tls { client_cert: true },
             ca_crt: env_or_default(GOOD_CA_ENV_VAR, DEFAULT_GOOD_CA),
             server_crt: env_or_default(GOOD_CERT_ENV_VAR, DEFAULT_GOOD_CERT),
             server_key: env_or_default(GOOD_KEY_ENV_VAR, DEFAULT_GOOD_KEY),
         };
         let good_cname = env_or_default(GOOD_CNAME_ENV_VAR, DEFAULT_GOOD_CNAME);
-        let res_good = run_gnmi_for_xpath(CERT_PROBE_XPATH, port, &good_sec, &good_cname, timeout, "SHOW");
+        let res_good = run_gnmi_for_xpath(CERT_PROBE_XPATH, port, &good_sec, &good_cname, timeout, "SHOW", false);
         ok &= res_good.success;
         cmd_results.push(res_good);
     }
@@ -488,7 +584,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
     }
 
     if env_flag_var(SERIALNUMBER_PROBE_ENV_VAR, false) {
-        let res_sn = run_gnmi_for_xpath(SERIAL_NUMBER_XPATH, port, &sec_cfg, &target_name, timeout, "STATE_DB");
+        let res_sn = run_gnmi_for_xpath(SERIAL_NUMBER_XPATH, port, &sec_cfg, &target_name, timeout, "STATE_DB", false);
         ok &= res_sn.success;
         cmd_results.push(res_sn);
     }
@@ -500,8 +596,8 @@ fn run_health_checks() -> (bool, HealthStatus) {
             ok = false;
         }
         for xp in xpaths {
-            let res = run_gnmi_for_xpath(&xp, port, &sec_cfg, &target_name, timeout, "SHOW");
-            ok &= res.success;
+            let res = run_gnmi_for_xpath(&xp, port, &sec_cfg, &target_name, timeout, "SHOW", true);
+            ok &= res.success || res.unsupported;
             cmd_results.push(res);
         }
     }
@@ -597,13 +693,81 @@ mod tests {
         assert_eq!(parse_gnmi_port(None), DEFAULT_GNMI_PORT);
     }
 
+    fn hash(pairs: &[(&str, &str)]) -> Hash {
+        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+    }
+
+    const NO_TLS: TlsMode = TlsMode::NoTls;
+    const CLIENT_CERT: TlsMode = TlsMode::Tls { client_cert: true };
+    const NO_CLIENT_CERT: TlsMode = TlsMode::Tls { client_cert: false };
+
     #[test]
-    fn client_auth_requires_explicit_true() {
-        assert!(client_auth_enabled(Some("true")));
-        assert!(client_auth_enabled(Some("TRUE")));
-        assert!(!client_auth_enabled(Some("false")));
-        assert!(!client_auth_enabled(Some("")));
-        assert!(!client_auth_enabled(None));
+    fn tls_mode_without_certs_is_notls() {
+        let none = Hash::new();
+        assert_eq!(server_tls_mode(&none, &none, &none, &none), NO_TLS);
+        let gnmi = hash(&[("client_auth", "true"), ("port", "50052")]);
+        assert_eq!(server_tls_mode(&none, &none, &gnmi, &none), NO_TLS);
+    }
+
+    #[test]
+    fn tls_mode_client_auth_matches_gnmi_native() {
+        let none = Hash::new();
+        let certs = hash(&[("server_crt", "/c"), ("server_key", "/k"), ("ca_crt", "/ca")]);
+        let unset = hash(&[("port", "50052")]);
+        assert_eq!(server_tls_mode(&certs, &none, &unset, &none), CLIENT_CERT);
+        assert_eq!(server_tls_mode(&certs, &none, &none, &none), CLIENT_CERT);
+        let t = hash(&[("client_auth", "true")]);
+        assert_eq!(server_tls_mode(&certs, &none, &t, &none), CLIENT_CERT);
+        let f = hash(&[("client_auth", "false")]);
+        assert_eq!(server_tls_mode(&certs, &none, &f, &none), NO_CLIENT_CERT);
+        // gnmi-native.sh compares the exact string "false".
+        let upper = hash(&[("client_auth", "FALSE")]);
+        assert_eq!(server_tls_mode(&certs, &none, &upper, &none), CLIENT_CERT);
+    }
+
+    #[test]
+    fn tls_mode_falls_back_to_x509() {
+        let none = Hash::new();
+        let x509 = hash(&[("server_crt", "/x"), ("server_key", "/xk")]);
+        assert_eq!(server_tls_mode(&none, &x509, &none, &none), CLIENT_CERT);
+    }
+
+    #[test]
+    fn tls_mode_dpu_ephemeral() {
+        let none = Hash::new();
+        let dpu = hash(&[("type", "SmartSwitchDPU")]);
+        let dpu_switch_type = hash(&[("switch_type", "dpu")]);
+        assert_eq!(server_tls_mode(&none, &none, &none, &dpu), NO_CLIENT_CERT);
+        assert_eq!(server_tls_mode(&none, &none, &none, &dpu_switch_type), NO_CLIENT_CERT);
+        let partial = hash(&[("server_crt", "/c")]);
+        assert_eq!(server_tls_mode(&partial, &none, &none, &dpu), NO_CLIENT_CERT);
+        let full = hash(&[("server_crt", "/c"), ("server_key", "/k")]);
+        assert_eq!(server_tls_mode(&full, &none, &none, &dpu), CLIENT_CERT);
+        let empty_key = hash(&[("server_crt", "/c"), ("server_key", "")]);
+        assert_eq!(server_tls_mode(&empty_key, &none, &none, &dpu), NO_CLIENT_CERT);
+    }
+
+    #[test]
+    fn security_config_uses_server_tls_source_paths() {
+        let none = Hash::new();
+        let x509 = hash(&[("server_crt", "/x.crt"), ("server_key", "/x.key"), ("ca_crt", "/xca.crt")]);
+        let sec = security_config(&none, &x509, &none, &none);
+        assert_eq!(sec.tls, CLIENT_CERT);
+        assert_eq!((sec.ca_crt.as_str(), sec.server_crt.as_str(), sec.server_key.as_str()),
+                   ("/xca.crt", "/x.crt", "/x.key"));
+
+        let certs = hash(&[("server_crt", "/g.crt"), ("server_key", "/g.key")]);
+        let sec = security_config(&certs, &x509, &none, &none);
+        assert_eq!(sec.server_crt, "/g.crt");
+        assert_eq!(sec.ca_crt, DEFAULT_CA_CRT);
+    }
+
+    #[test]
+    fn grpc_not_found_detection() {
+        assert!(is_grpc_not_found("F0101 Get failed: rpc error: code = NotFound desc = foo not found in clientTrie tree"));
+        assert!(is_grpc_not_found("show/foo not found in clientTrie tree"));
+        assert!(!is_grpc_not_found("rpc error: code = Unavailable desc = connection refused"));
+        assert!(!is_grpc_not_found("rpc error: code = Unauthenticated desc = bad cert"));
     }
 
     #[test]
@@ -644,7 +808,7 @@ mod tests {
     #[test]
     fn gnmi_get_args_insecure_without_client_auth() {
         let sec = GnmiSecurityConfig {
-            use_client_auth: false,
+            tls: NO_CLIENT_CERT,
             ca_crt: "ca".into(),
             server_crt: "crt".into(),
             server_key: "key".into(),
@@ -659,9 +823,25 @@ mod tests {
     }
 
     #[test]
+    fn gnmi_get_args_notls() {
+        let sec = GnmiSecurityConfig {
+            tls: NO_TLS,
+            ca_crt: "ca".into(),
+            server_crt: "crt".into(),
+            server_key: "key".into(),
+        };
+        let cmd = gnmi_get_command("uptime", 8080, &sec, "tgt", "SHOW");
+        assert_eq!(
+            args(&cmd),
+            vec!["-xpath_target", "SHOW", "-xpath", "uptime", "-target_addr", "127.0.0.1:8080",
+                 "-logtostderr", "-notls"]
+        );
+    }
+
+    #[test]
     fn gnmi_get_args_with_client_auth() {
         let sec = GnmiSecurityConfig {
-            use_client_auth: true,
+            tls: CLIENT_CERT,
             ca_crt: "ca".into(),
             server_crt: "crt".into(),
             server_key: "key".into(),
@@ -677,7 +857,7 @@ mod tests {
 
     #[test]
     fn run_probe_success() {
-        let res = run_probe("p", sh("exit 0"), None, Duration::from_secs(5));
+        let res = run_probe("p", sh("exit 0"), None, Duration::from_secs(5), true);
         assert!(res.success);
         assert_eq!(res.xpath, "p");
         assert!(res.error.is_none());
@@ -685,14 +865,40 @@ mod tests {
 
     #[test]
     fn run_probe_reports_exit_code_and_stderr() {
-        let res = run_probe("p", sh("echo boom >&2; exit 3"), None, Duration::from_secs(5));
+        let res = run_probe("p", sh("echo boom >&2; exit 3"), None, Duration::from_secs(5), true);
         assert!(!res.success);
+        assert!(!res.unsupported);
         assert_eq!(res.error.as_deref(), Some("stderr: boom; exit code: 3"));
+    }
+
+    const NOT_FOUND_SCRIPT: &str =
+        "echo 'Get failed: rpc error: code = NotFound desc = show/foo not found in clientTrie tree' >&2; exit 1";
+
+    #[test]
+    fn run_probe_flags_not_found_as_unsupported() {
+        let res = run_probe("p", sh(NOT_FOUND_SCRIPT), None, Duration::from_secs(5), true);
+        assert!(!res.success);
+        assert!(res.unsupported);
+        assert!(res.error.unwrap().contains("NotFound"));
+    }
+
+    #[test]
+    fn run_probe_not_found_is_failure_when_unsupported_not_allowed() {
+        let res = run_probe("p", sh(NOT_FOUND_SCRIPT), None, Duration::from_secs(5), false);
+        assert!(!res.success);
+        assert!(!res.unsupported);
+    }
+
+    #[test]
+    fn run_probe_not_found_detected_past_stderr_truncation() {
+        let script = format!("head -c 200000 /dev/zero | tr '\\0' x >&2; {NOT_FOUND_SCRIPT}");
+        let res = run_probe("p", sh(&script), None, Duration::from_secs(5), true);
+        assert!(res.unsupported);
     }
 
     #[test]
     fn run_probe_times_out() {
-        let res = run_probe("p", sh("sleep 5"), None, Duration::from_millis(200));
+        let res = run_probe("p", sh("sleep 5"), None, Duration::from_millis(200), true);
         assert!(!res.success);
         assert!(res.error.unwrap().contains("timed out"));
         assert!(res.duration_ms < 5000);
@@ -700,22 +906,23 @@ mod tests {
 
     #[test]
     fn run_probe_spawn_failure() {
-        let res = run_probe("p", Command::new("/nonexistent/gnmi_get"), None, Duration::from_secs(1));
+        let res = run_probe("p", Command::new("/nonexistent/gnmi_get"), None, Duration::from_secs(1), true);
         assert!(!res.success);
         assert!(res.error.is_some());
     }
 
     #[test]
     fn run_probe_feeds_stdin() {
-        let res = run_probe("p", sh(r#"read l; [ "$l" = "[]" ]"#), Some(b"[]\n"), Duration::from_secs(5));
+        let res = run_probe("p", sh(r#"read l; [ "$l" = "[]" ]"#), Some(b"[]\n"), Duration::from_secs(5), false);
         assert!(res.success, "{:?}", res.error);
     }
 
     #[test]
     fn run_probe_drains_large_stderr() {
         // More than a pipe buffer of stderr must not wedge the child until timeout.
-        let res = run_probe("p", sh("head -c 200000 /dev/zero | tr '\\0' x >&2; exit 1"), None, Duration::from_secs(5));
+        let res = run_probe("p", sh("head -c 200000 /dev/zero | tr '\\0' x >&2; exit 1"), None, Duration::from_secs(5), true);
         assert!(!res.success);
+        assert!(!res.unsupported);
         let err = res.error.unwrap();
         assert!(err.contains("[truncated"), "{}", &err[err.len().saturating_sub(80)..]);
         assert!(err.ends_with("exit code: 1"));
