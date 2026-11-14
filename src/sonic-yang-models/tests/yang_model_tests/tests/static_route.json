@@ -62,6 +62,74 @@
     },
     "STATIC_ROUTE_TEST_NEXTHOP_EMPTY_VRF": {
         "desc": "Configure with null value for VRF"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_BFD_LIST_INVALID": {
+        "desc": "Reject a per-nexthop list in bfd on the prefix-keyed list",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_ADVERTISE_LIST_INVALID": {
+        "desc": "Reject a per-nexthop list in advertise: it is a single route-level flag",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_ADVERTISE_LIST_INVALID": {
+        "desc": "Reject a per-nexthop list in advertise on the prefix-keyed list",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_MALFORMED": {
+        "desc": "Reject a misspelled interface name in ifname",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_MALFORMED_PORTCHANNEL": {
+        "desc": "Reject a misspelled port channel in ifname",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_VLAN_OUT_OF_RANGE": {
+        "desc": "Reject an out-of-range VLAN in ifname",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_ARITY_MISMATCH": {
+        "desc": "Reject an ifname list shorter than the nexthop list",
+        "eStr": [
+            "ifname must have one comma-separated entry per nexthop"
+        ]
+    },
+    "STATIC_ROUTE_TEST_NEXTHOP_VRF_ARITY_MISMATCH": {
+        "desc": "Reject a nexthop-vrf list shorter than the nexthop list",
+        "eStr": [
+            "nexthop-vrf must have one comma-separated entry per nexthop"
+        ]
+    },
+    "STATIC_ROUTE_TEST_BOTH_KEY_SHAPES_ONE_PREFIX": {
+        "desc": "Reject one prefix configured both with vrf default and without",
+        "eStr": [
+            "This prefix is configured twice: once with vrf default and once without"
+        ]
+    },
+    "STATIC_ROUTE_TEST_IFNAME_ALL_EMPTY": {
+        "desc": "Accept an ifname of only separators: every nexthop has no egress interface"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_TRAILING_EMPTY": {
+        "desc": "Accept an ifname whose last entry is empty"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_NULL": {
+        "desc": "Accept the null interface in ifname"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_REPEATED": {
+        "desc": "Accept the same interface for two nexthops"
+    },
+    "STATIC_ROUTE_TEST_BOTH_KEY_SHAPES_DIFFERENT_PREFIXES": {
+        "desc": "Accept both key shapes when they name different prefixes"
+    },
+    "STATIC_ROUTE_IFNAME_SHORT_SUBINTERFACE_VALID": {
+        "desc": "Egress interfaces named in the short sub-interface form, Eth<n>.<vid> and Po<n>.<vid>, which is the only spelling available once the long name would exceed the 15-character limit"
+    },
+    "STATIC_ROUTE_BFD_WITHOUT_IFNAME_INVALID": {
+        "desc": "Enable BFD on a route with no egress interface, which staticroutebfd cannot program",
+        "eStr": [
+            "bfd requires ifname"
+        ]
+    },
+    "STATIC_ROUTE_BFD_WITH_IFNAME_VALID": {
+        "desc": "Enable BFD on a route that names its egress interface, the shape this model intends to keep working"
     }
-
 }
