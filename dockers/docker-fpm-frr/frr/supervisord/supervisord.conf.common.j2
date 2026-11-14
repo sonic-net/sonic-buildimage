@@ -9,6 +9,9 @@
 {% set _pbase = frr_priority_base | default(4) %}
 {% set _dep = use_dependent_startup | default(false) %}
 {% set _wait = frr_wait_for | default("rsyslogd:running") %}
+{# MAC sync over FPM needs zebra in external-learn mode; an L3EvpnMH device always syncs over FPM. #}
+{% set _mac_sync_fpm = FDB_SYNC is defined and FDB_SYNC.global is defined and FDB_SYNC.global.mac_sync_mode is defined and FDB_SYNC.global.mac_sync_mode == "fpm" %}
+{% set _mac_ext_learn = _mac_sync_fpm or (DEVICE_METADATA is defined and DEVICE_METADATA.localhost.subtype is defined and DEVICE_METADATA.localhost.subtype == "L3EvpnMH") %}
 
 [program:mgmtd]
 command=/usr/lib/frr/mgmtd -P 0
@@ -24,7 +27,7 @@ dependent_startup_wait_for={{ _wait }}
 {% endif %}
 
 [program:zebra]
-command=/usr/lib/frr/zebra -P 0 -s 90000000 -M dplane_fpm_sonic{{ ' -M snmp' if _snmp else '' }} --asic-offload=notify_on_offload
+command=/usr/lib/frr/zebra -P 0 -s 90000000 -M dplane_fpm_sonic{{ ' -M snmp' if _snmp else '' }} --asic-offload=notify_on_offload{{ ' --kernel-mac-ext-learn' if _mac_ext_learn else '' }}
 priority={{ _pbase }}
 autostart=false
 autorestart=false
