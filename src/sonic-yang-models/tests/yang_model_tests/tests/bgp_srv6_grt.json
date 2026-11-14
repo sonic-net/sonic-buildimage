@@ -1,0 +1,84 @@
+{
+    "BGP_SRV6_GRT_VALID": {
+        "desc": "Configure BGP SRv6 GRT locator, SID advertisement policy, and neighbor encapsulation."
+    },
+    "BGP_SRV6_GRT_DEFAULT_IPV4_SID_ADVERTISE": {
+        "desc": "IPv4 SID advertisement defaults to disabled.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/SRV6/bgp_srv6_ipv4_sid_advertise",
+            "key": "sonic-bgp-device-global:bgp_srv6_ipv4_sid_advertise",
+            "value": false
+        }
+    },
+    "BGP_SRV6_GRT_DEFAULT_IPV6_SID_ADVERTISE": {
+        "desc": "IPv6 SID advertisement defaults to disabled.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/SRV6/bgp_srv6_ipv6_sid_advertise",
+            "key": "sonic-bgp-device-global:bgp_srv6_ipv6_sid_advertise",
+            "value": false
+        }
+    },
+    "BGP_SRV6_GRT_INVALID_LOCATOR": {
+        "desc": "BGP SRv6 GRT references a locator that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_SRV6_GRT_INVALID_IPV4_PREFIX_LIST": {
+        "desc": "BGP SRv6 GRT references an IPv4 prefix list that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_SRV6_GRT_INVALID_IPV6_PREFIX_LIST": {
+        "desc": "BGP SRv6 GRT references an IPv6 prefix list that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_SRV6_GRT_INVALID_LOCATOR_FORMAT": {
+        "desc": "SRv6 locator uses an unsupported format.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["format"]
+    },
+    "BGP_SRV6_GRT_INVALID_IPV4_SID_ADVERTISE": {
+        "desc": "IPv4 SID advertisement has an invalid boolean value.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["bgp_srv6_ipv4_sid_advertise"]
+    },
+    "BGP_SRV6_GRT_INVALID_ENCAPSULATION_TYPE": {
+        "desc": "BGP neighbor uses an unsupported encapsulation type.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["encapsulation_type"]
+    },
+    "BGP_SRV6_GRT_FRRCFGD_VALID": {
+        "desc": "Configure BGP SRv6 GRT using the generic BGP tables consumed by frrcfgd."
+    },
+    "BGP_SRV6_GRT_FRRCFGD_INVALID_LOCATOR": {
+        "desc": "BGP global configuration references a locator that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_SRV6_GRT_FRRCFGD_INVALID_ROUTE_MAP": {
+        "desc": "BGP SID advertisement references a route map that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_SRV6_GRT_FRRCFGD_INVALID_ADVERTISEMENT": {
+        "desc": "BGP SID advertisement has an invalid boolean value.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["srv6_sid_advertise"]
+    },
+    "BGP_SRV6_GRT_FRRCFGD_ORPHAN_ROUTE_MAP": {
+        "desc": "A SID advertisement route map requires an advertisement setting.",
+        "eStrKey": "Must"
+    },
+    "BGP_SRV6_GRT_FRRCFGD_UNSUPPORTED_AF": {
+        "desc": "SID advertisement is configured for an unsupported VRF/address family.",
+        "eStrKey": "Must"
+    },
+    "BGP_SRV6_GRT_FRRCFGD_INVALID_NEIGHBOR_AF_ENCAPSULATION": {
+        "desc": "BGP neighbor AF uses an unsupported encapsulation type.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["encapsulation_type"]
+    },
+    "BGP_SRV6_GRT_FRRCFGD_INVALID_PEER_GROUP_AF_ENCAPSULATION": {
+        "desc": "BGP peer-group AF uses an unsupported encapsulation type.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["encapsulation_type"]
+    }
+}

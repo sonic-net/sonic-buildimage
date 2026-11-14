@@ -45,6 +45,11 @@ module sonic-bgp-neighbor {
     description
         "SONIC BGP Neighbor";
 
+    revision 2026-11-13 {
+        description
+            "Add SRv6 encapsulation mode to BGP neighbor and AF configuration.";
+    }
+
     revision 2026-07-22 {
         description
             "Add VNet name support to BGP_NEIGHBOR_LIST and BGP_NEIGHBOR_AF_LIST vrf_name leaf.";
@@ -78,6 +83,14 @@ module sonic-bgp-neighbor {
                         }
                     }
                     description "BGP Neighbor address or interface name";
+                }
+
+                leaf encapsulation_type {
+                    type enumeration {
+                        enum srv6;
+                        enum srv6-relax;
+                    }
+                    description "SRv6 encapsulation mode for routes advertised to this neighbor.";
                 }
 
                 uses bgpcmn:sonic-bgp-cmn-neigh {
@@ -161,6 +174,14 @@ module sonic-bgp-neighbor {
                         path "../../../BGP_NEIGHBOR/BGP_NEIGHBOR_LIST[vrf_name=current()/../vrf_name]/neighbor";
                     }
                     description "BGP Neighbor, it will be neighbor address or interface name";
+                }
+
+                leaf encapsulation_type {
+                    type enumeration {
+                        enum srv6;
+                        enum srv6-relax;
+                    }
+                    description "SRv6 encapsulation mode for routes advertised to this neighbor in this address family.";
                 }
                 uses bgpcmn:sonic-bgp-cmn-af;
             }
