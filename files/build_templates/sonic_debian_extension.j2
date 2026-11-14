@@ -131,6 +131,8 @@ sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_reset.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_reset.sh
 sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_tpm_recovery.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_tpm_recovery.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/ssd_erase.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/ssd_erase.sh
 sudo cp $IMAGE_CONFIGS/sed_mgmt/sed-pw-tpm-recovery.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "sed-pw-tpm-recovery.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT systemctl enable sed-pw-tpm-recovery.service
