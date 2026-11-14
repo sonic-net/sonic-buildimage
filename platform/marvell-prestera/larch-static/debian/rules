@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	for dts in boot/dts/*.dts; do \
+		dtc -q -I dts -O dtb -o boot/$$(basename $$dts .dts).dtb $$dts || exit 1; \
+	done
+
+override_dh_auto_clean:
+	dh_clean boot/*.dtb

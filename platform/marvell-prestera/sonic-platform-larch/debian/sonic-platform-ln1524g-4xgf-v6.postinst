@@ -1,0 +1,11 @@
+#!/bin/sh
+# postinst script for sonic-platform-ln1524g-4xgf-v6
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln1524g-4xgf-v6-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable ln1524g-4xgf-v6-init.service
+systemctl start ln1524g-4xgf-v6-init.service
+exit 0

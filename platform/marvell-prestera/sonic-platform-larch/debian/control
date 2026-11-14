@@ -1,0 +1,102 @@
+Source: sonic-platform-larch
+Section: unknown
+Priority: optional
+Maintainer: larch
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.6
+Homepage: <insert the upstream URL, if relevant>
+
+Package: sonic-platform-ln3848g
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3848g board
+
+Package: sonic-platform-ln3824g
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3824g board
+
+Package: sonic-platform-canisminor
+Architecture: arm64
+Description:
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for canisminor board
+
+Package: sonic-platform-cn9131-ext-98cx
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for cn9131-ext-98cx board
+
+Package: sonic-platform-cn9130-dm8218f
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for cn9130-dm8218f board
+
+Package: sonic-platform-cn9130-eps6800
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for cn9130-eps6800 board
+
+Package: sonic-platform-ln3612y2zt
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3612y2zt board
+
+Package: sonic-platform-ln3604g
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3604g board
+
+Package: sonic-platform-ln3804gf-4xgf
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3804gf-4xgf board
+
+Package: sonic-platform-ln3804gf-8xgf
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3804gf-8xgf board
+
+Package: sonic-platform-ln3516xgf-4z
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3516xgf-4z board
+
+Package: sonic-platform-ln3548xgf-6z-v1
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3548xgf-6z-v1 board
+
+Package: sonic-platform-ln3524xgf-6z-v1
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3524xgf-6z-v1 board
+
+Package: sonic-platform-ln3548xgf-6z-v5
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln3548xgf-6z-v5 board
+
+Package: sonic-platform-ln1524g4mg-6xgf
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln1524g4mg-6xgf board
+
+Package: sonic-platform-ln1524g-4xgf-v6
+Architecture: arm64
+Description: 
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln1524g-4xgf-v6 board
+
+Package: sonic-platform-ln4332z1-l
+Architecture: arm64
+Description:
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for ln4332z1-l board
+
+Package: sonic-platform-ln4332z-v1
+Architecture: arm64
+Description:
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for the Lanaotek LN-4332Z1 board (ln4332z-v1)
+
+Package: sonic-platform-ln4348y-8z-v1
+Architecture: arm64
+Description:
+	Provides kernel modules and platform monitoring files (Sonic BSP package) for the Larch LN-4348Y-8Z board (ln4348y-8z-v1)

@@ -1,0 +1,13 @@
+[Unit]
+Description=Reset button handler
+After=ln3524xgf-6z-v1-init.service
+Requires=ln3524xgf-6z-v1-init.service
+
+[Service]
+ExecStart=/usr/local/bin/reset_button_handler.py
+ExecStopPost=/usr/local/bin/reset_button_handler.py --unmask
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

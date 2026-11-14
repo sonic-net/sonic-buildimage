@@ -1,0 +1,16 @@
+[Unit]
+Description=Platform canisminor Service
+After=sysinit.target
+Before=pmon.service
+
+[Service]
+# The script does its work and exits. Without these, systemd marks the unit
+# dead as soon as it finishes and sysmonitor reports the whole system as not
+# ready.
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/canisminor-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

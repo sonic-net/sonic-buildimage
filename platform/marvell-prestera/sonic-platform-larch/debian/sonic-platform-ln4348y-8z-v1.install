@@ -1,0 +1,5 @@
+files/* /
+ln4348y-8z-v1/files/* /
+ln4348y-8z-v1/scripts/ln4348y-8z-v1-init.sh  usr/local/bin
+ln4348y-8z-v1/service/ln4348y-8z-v1-init.service etc/systemd/system
+ln4348y-8z-v1/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln4348y-8z-v1

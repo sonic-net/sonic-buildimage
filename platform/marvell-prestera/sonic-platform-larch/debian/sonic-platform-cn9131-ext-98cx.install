@@ -1,0 +1,5 @@
+files/* /
+cn9131-ext-98cx/files/etc/* /etc/
+cn9131-ext-98cx/scripts/cn9131-ext-98cx-init.sh  usr/local/bin
+cn9131-ext-98cx/service/cn9131-ext-98cx-init.service etc/systemd/system
+cn9131-ext-98cx/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_cn9131-ext-98cx

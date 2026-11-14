@@ -120,6 +120,265 @@
                 algo = "sha1";
             };
         };
+
+        /* Larch Networks boards, see platform_arm64.conf */
+        kernel_larch_ac5x {
+            description = "Linux Kernel for AC5x";
+            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
+            type = "kernel";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <0x2 0x2000000>;
+            entry = <0x2 0x2000000>; 
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        kernel_larch_octeon {
+            description = "Linux Kernel for Octeon proccesors";
+            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
+            type = "kernel";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <0x5500000>;
+            entry = <0x5500000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk_larch {
+            description = "ramdisk for all devices";
+            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
+            type = "ramdisk";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3848g {
+            description = "Flattened Device Tree blob (Larch ln3848g)";
+            data = /incbin/("/boot/ac5x-ln3848g.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3824g {
+            description = "Flattened Device Tree blob (Larch ln3824g)";
+            data = /incbin/("/boot/ac5x-ln3848g.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3804gf-4xgf {
+            description = "Flattened Device Tree blob (Larch ln3804gf-4xgf)";
+            data = /incbin/("/boot/ac5x-ln3848g.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3804gf-8xgf {
+            description = "Flattened Device Tree blob (Larch ln3804gf-8xgf)";
+            data = /incbin/("/boot/ac5x-ln3848g.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_canisminor {
+            description = "Flattened Device Tree blob (Larch canisminor)";
+            data = /incbin/("/boot/canisminor.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_cn9131 {
+            description = "Flattened Device Tree blob (Larch cn9131)";
+            data = /incbin/("/boot/cn9131-ext-98cx.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_cn9130 {
+            description = "Flattened Device Tree blob (Larch cn9130)";
+            data = /incbin/("/boot/cn9130-eps6800-r0.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln4332z-v1 {
+            description = "Flattened Device Tree blob for ln4332z-v1";
+            data = /incbin/("/boot/ln4332z-v1.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln4348y-8z-v1 {
+            description = "Flattened Device Tree blob for ln4348y-8z-v1";
+            data = /incbin/("/boot/ln4348y-8z-v1.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln4332 {
+            description = "Flattened Device Tree blob (Larch ln4332)";
+            data = /incbin/("/boot/ln4332z1-l.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_leo {
+            description = "Flattened Device Tree blob (Larch leo)";
+            data = /incbin/("/boot/pegatron_dm8218_f-r0.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3516xgf-4z {
+            description = "Flattened Device Tree blob for ln3516xgf-4z";
+            data = /incbin/("/boot/ln3516xgf-4z.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3548xgf-6z-v1 {
+            description = "Flattened Device Tree blob for ln3548xgf-6z-v1";
+            data = /incbin/("/boot/ln3548xgf-6z-v1.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3548xgf-6z-v5 {
+            description = "Flattened Device Tree blob for ln3548xgf-6z-v5";
+            data = /incbin/("/boot/ln3548xgf-6z-v5.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3524xgf-6z-v1 {
+            description = "Flattened Device Tree blob for ln3524xgf-6z-v1";
+            data = /incbin/("/boot/ln3524xgf-6z-v1.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3612y2zt {
+            description = "Flattened Device Tree blob (Larch ln3612y2zt)";
+            data = /incbin/("/boot/ln3612y2zt.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x1000000>;
+            entry = <0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln3604g {
+            description = "Flattened Device Tree blob (Larch ln3604g)";
+            data = /incbin/("/boot/ln3604g.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln1524g4mg-6xgf {
+            description = "Flattened Device Tree blob (Larch ln1524g4mg-6xgf)";
+            data = /incbin/("/boot/ln1524g4mg-6xgf.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_larch_ln1524g-4xgf-v6 {
+            description = "Flattened Device Tree blob (Larch ln1524g-4xgf-v6)";
+            data = /incbin/("/boot/ln1524g-4xgf-v6.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
     };
 
     /* From Uboot env fit_conf_name=#conf_cn9131 */
@@ -148,6 +407,177 @@
             kernel = "kernel_cn9131";
             ramdisk = "ramdisk_cn9131";
             fdt = "fdt_cn9131";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3848g {
+            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_ln3848g";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3824g {
+            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_ln3824g";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3804gf-4xgf {
+            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_ln3804gf-4xgf";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3804gf-8xgf {
+            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_ln3804gf-8xgf";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3604g {
+            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_ln3604g";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_cn9131-ext-98cx {
+            description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_cn9131";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_cn9130-eps6800 {
+            description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_cn9130";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln4332z1-l {
+            description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln4332";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln4332z-v1 {
+            description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln4332z-v1";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln4348y-8z-v1 {
+            description = "Boot Linux kernel with FDT blob + ramdisk for LN-4348Y-8Z (CN9130)";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln4348y-8z-v1";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3612y2zt {
+            description = "Boot Linux kernel with FDT blob + ramdisk for LN-3612Y-2ZT (external CN9131)";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln3612y2zt";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_canisminor {
+            description = "Boot Linux kernel with FDT blob + ramdisk for Canisminor";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_canisminor";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_cn9130-dm8218f {
+            description = "Boot Linux kernel with FDT blob + ramdisk for Leo";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_leo";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3516xgf-4z {
+            description = "Boot Linux kernel with FDT blob + ramdisk";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln3516xgf-4z";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3548xgf-6z-v1 {
+            description = "Boot Linux kernel with FDT blob + ramdisk";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln3548xgf-6z-v1";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3548xgf-6z-v5 {
+            description = "Boot Linux kernel with FDT blob + ramdisk";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln3548xgf-6z-v5";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln3524xgf-6z-v1 {
+            description = "Boot Linux kernel with FDT blob + ramdisk";
+            kernel = "kernel_larch_octeon";
+            fdt = "fdt_larch_ln3524xgf-6z-v1";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln1524g4mg-6xgf {
+            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_ln1524g4mg-6xgf";
+            ramdisk = "ramdisk_larch";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_ln1524g-4xgf-v6 {
+            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+            kernel = "kernel_larch_ac5x";
+            fdt = "fdt_larch_ln1524g-4xgf-v6";
+            ramdisk = "ramdisk_larch";
             hash@1 {
                 algo = "sha1";
             };

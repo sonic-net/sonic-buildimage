@@ -1,0 +1,7 @@
+files/* /
+ln3848g/files/* /
+ln3848g/scripts/ln3848g-init.sh usr/local/bin
+ln3848g/service/ln3848g-init.service etc/systemd/system
+ln3848g/systemd/pddf-platform-init.service etc/systemd/system
+ln3848g/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3848g
+ln3848g/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3848g/pddf/

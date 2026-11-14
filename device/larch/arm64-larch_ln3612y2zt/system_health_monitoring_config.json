@@ -1,0 +1,17 @@
+{
+    "services_to_ignore": [
+        "ln3612y2zt-init.service"
+    ],
+    "devices_to_ignore": [
+        "asic",
+        "psu.temperature",
+        "fan",
+        "psu"
+    ],
+    "user_defined_checkers": [],
+    "led_color": {
+        "fault": "STATUS_LED_COLOR_AMBER",
+        "normal": "STATUS_LED_COLOR_GREEN",
+        "booting": "STATUS_LED_COLOR_RED_BLINK"
+    }
+}

@@ -1,0 +1,11 @@
+#!/bin/sh
+# postinst script for sonic-platform-ln4348y-8z-v1
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln4348y-8z-v1-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable ln4348y-8z-v1-init.service
+systemctl start ln4348y-8z-v1-init.service
+exit 0

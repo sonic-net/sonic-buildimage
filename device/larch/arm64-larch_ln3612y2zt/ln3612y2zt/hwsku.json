@@ -1,0 +1,74 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet1": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet2": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet3": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet4": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet5": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet6": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet7": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet8": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet9": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet10": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet11": {
+            "default_brkout_mode": "1x25G[10G,1G]",
+            "autoneg": "off",
+            "fec": "none"
+        },
+        "Ethernet12": {
+            "default_brkout_mode": "1x100G[40G]",
+            "autoneg": "off",
+            "fec": "rs"
+        },
+        "Ethernet13": {
+            "default_brkout_mode": "1x100G[40G]",
+            "autoneg": "off",
+            "fec": "rs"
+        }
+    }
+}

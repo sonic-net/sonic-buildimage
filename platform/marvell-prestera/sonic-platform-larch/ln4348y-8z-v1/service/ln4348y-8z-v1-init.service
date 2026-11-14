@@ -1,0 +1,13 @@
+[Unit]
+Description=Platform ln4348y-8z-v1 Service
+After=sysinit.target
+Before=pmon.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/ln4348y-8z-v1-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

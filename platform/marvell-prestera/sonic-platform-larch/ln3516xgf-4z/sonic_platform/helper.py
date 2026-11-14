@@ -1,0 +1,23 @@
+from sonic_py_common import device_info
+
+
+class APIHelper():
+    def __init__(self):
+        (self.platform, self.hwsku) = device_info.get_platform_and_hwsku()
+
+    def read_txt_file(self, file_path):
+        try:
+            with open(file_path, 'r', errors='replace') as fd:
+                data = fd.read()
+                return data.strip()
+        except IOError:
+            pass
+        return None
+
+    def write_txt_file(self, file_path, value):
+        try:
+            with open(file_path, 'w') as fd:
+                fd.write(str(value))
+        except IOError:
+            return False
+        return True

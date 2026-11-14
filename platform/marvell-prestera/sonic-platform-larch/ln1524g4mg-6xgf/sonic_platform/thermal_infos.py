@@ -1,0 +1,178 @@
+from sonic_platform_base.sonic_thermal_control.thermal_info_base import ThermalPolicyInfoBase
+from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
+
+
+@thermal_json_object('fan_info')
+class FanInfo(ThermalPolicyInfoBase):
+    """
+    Fan information needed by thermal policy
+    """
+
+    # Fan information name
+    INFO_NAME = 'fan_info'
+
+    def __init__(self):
+        self._absent_fans = set()
+        self._present_fans = set()
+        self._fault_fans = set()
+        self._status_changed = False
+
+    def collect(self, chassis):
+        """
+        Collect absence and presence fans.
+        :param chassis: The chassis object
+        :return:
+        """
+        self._status_changed = False
+        for fan in chassis.get_all_fans():
+            presence = fan.get_presence()
+            status = fan.get_status()
+            if presence and fan not in self._present_fans:
+                self._present_fans.add(fan)
+                self._status_changed = True
+                if fan in self._absent_fans:
+                    self._absent_fans.remove(fan)
+            elif not presence and fan not in self._absent_fans:
+                self._absent_fans.add(fan)
+                self._status_changed = True
+                if fan in self._present_fans:
+                    self._present_fans.remove(fan)
+
+            if not status and fan not in self._fault_fans:
+                self._fault_fans.add(fan)
+                self._status_changed = True
+
+            elif status and fan in self._fault_fans:
+                self._fault_fans.remove(fan)
+                self._status_changed = True
+
+    def get_absent_fans(self):
+        """
+        Retrieves absent fans
+        :return: A set of absent fans
+        """
+        return self._absent_fans
+
+    def get_present_fans(self):
+        """
+        Retrieves present fans
+        :return: A set of present fans
+        """
+        return self._present_fans
+
+    def get_fault_fans(self):
+        """
+        Retrieves fault fans
+        :return: A set of fault fans
+        """
+        return self._fault_fans
+
+    def is_status_changed(self):
+        """
+        Retrieves if the status of fan information changed
+        :return: True if status changed else False
+        """
+        return self._status_changed
+
+
+@thermal_json_object('thermal_info')
+class ThermalInfo(ThermalPolicyInfoBase):
+    """
+    Thermal information needed by thermal policy
+    """
+
+    # Fan information name
+    INFO_NAME = 'thermal_info'
+
+    def collect(self, chassis):
+        """
+        Collect thermal sensor temperature change status
+        :param chassis: The chassis object
+        :return:
+        """
+        self._over_high_threshold = False
+        self._over_high_critical_threshold = False
+        self._under_mid_low_threshold = False
+        self._over_mid_low_threshold = False
+        self._over_mid_high_threshold = False
+
+        # Calculate average temp within the device
+        temp = 0
+        num_of_thermals = chassis.get_num_thermals()
+        for index in range(num_of_thermals):
+            thermal = chassis.get_thermal(index)
+            temp = thermal.get_temperature()
+            high_threshold = thermal.get_high_threshold()
+            high_critical_threshold = thermal.get_high_critical_threshold()
+            mid_low_threshold = thermal.get_mid_low_threshold()
+            mid_high_threshold = thermal.get_mid_high_threshold()
+
+            if high_threshold and temp > high_threshold:
+                self._over_high_threshold = True
+
+            if high_critical_threshold and temp > high_critical_threshold:
+                self._over_high_critical_threshold = True
+
+            if mid_low_threshold and temp <= mid_low_threshold:
+                self._under_mid_low_threshold = True
+
+            if mid_low_threshold and mid_high_threshold and temp > mid_low_threshold and temp <= mid_high_threshold:
+                self._over_mid_low_threshold = True
+
+            if mid_high_threshold and high_threshold and temp > mid_high_threshold and temp <= high_threshold:
+                self._over_mid_high_threshold = True
+
+    def is_over_threshold(self):
+        """
+        Retrieves if the temperature is over any threshold
+        :return: True if the temperature is over any threshold else False
+        """
+        return self._over_high_threshold or self._over_high_critical_threshold
+
+    def is_over_high_critical_threshold(self):
+        """
+        Retrieves if the temperature is over high critical threshold
+        :return: True if the temperature is over high critical threshold else False
+        """
+        return self._over_high_critical_threshold
+
+    def is_over_high_threshold(self):
+        """
+        Retrieves if the temperature is over high threshold
+        :return: True if the temperature is over high threshold else False
+        """
+        return self._over_high_threshold
+
+    def is_under_mid_low_threshold(self):
+        return self._under_mid_low_threshold
+
+    def is_over_mid_low_threshold(self):
+        return self._over_mid_low_threshold
+
+    def is_over_mid_high_threshold(self):
+        return self._over_mid_high_threshold
+
+@thermal_json_object('chassis_info')
+class ChassisInfo(ThermalPolicyInfoBase):
+    """
+    Chassis information needed by thermal policy
+    """
+    INFO_NAME = 'chassis_info'
+
+    def __init__(self):
+        self._chassis = None
+
+    def collect(self, chassis):
+        """
+        Collect platform chassis.
+        :param chassis: The chassis object
+        :return:
+        """
+        self._chassis = chassis
+
+    def get_chassis(self):
+        """
+        Retrieves platform chassis object
+        :return: A platform chassis object.
+        """
+        return self._chassis

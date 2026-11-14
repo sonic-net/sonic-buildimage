@@ -1,0 +1,18 @@
+{
+    "services_to_ignore": [
+        "ln3548xgf-6z-v1-init.service",
+        "reset_button.service"
+    ],
+    "devices_to_ignore": [
+        "asic",
+        "psu.temperature",
+        "fan",
+        "psu"
+    ],
+    "user_defined_checkers": [],
+    "led_color": {
+        "fault": "STATUS_LED_COLOR_RED",
+        "normal": "STATUS_LED_COLOR_GREEN",
+        "booting": "STATUS_LED_COLOR_AMBER"
+    }
+}

@@ -1,0 +1,11 @@
+#!/bin/sh
+# postinst script for sonic-platform-ln3548xgf-6z-v5
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/ln3548xgf-6z-v5-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable ln3548xgf-6z-v5-init.service
+systemctl start ln3548xgf-6z-v5-init.service
+exit 0

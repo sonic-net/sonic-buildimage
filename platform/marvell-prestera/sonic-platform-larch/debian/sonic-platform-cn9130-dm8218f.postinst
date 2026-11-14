@@ -1,0 +1,11 @@
+#!/bin/sh
+# postinst script for sonic-platform-cn9130-dm8218f
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/cn9130-dm8218f-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable cn9130-dm8218f-init.service
+systemctl start cn9130-dm8218f-init.service
+exit 0

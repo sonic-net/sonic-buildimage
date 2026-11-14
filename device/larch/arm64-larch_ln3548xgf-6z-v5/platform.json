@@ -1,0 +1,490 @@
+{
+    "interfaces": {
+        "Ethernet48": {
+            "index": "1",
+            "lanes": "0,1,2,3",
+            "breakout_modes": {
+                "1x100G[40G]": [
+                    "one00GigE48"
+                ]
+            }
+        },
+        "Ethernet49": {
+            "index": "2",
+            "lanes": "4,5,6,7",
+            "breakout_modes": {
+                "1x100G[40G]": [
+                    "one00GigE49"
+                ]
+            }
+        },
+        "Ethernet50": {
+            "index": "3",
+            "lanes": "8,9,10,11",
+            "breakout_modes": {
+                "1x100G[40G]": [
+                    "one00GigE50"
+                ]
+            }
+        },
+        "Ethernet51": {
+            "index": "4",
+            "lanes": "12,13,14,15",
+            "breakout_modes": {
+                "1x100G[40G]": [
+                    "one00GigE51"
+                ]
+            }
+        },
+        "Ethernet52": {
+            "index": "5",
+            "lanes": "16,17,18,19",
+            "breakout_modes": {
+                "1x100G[40G]": [
+                    "one00GigE52"
+                ]
+            }
+        },
+        "Ethernet53": {
+            "index": "6",
+            "lanes": "20,21,22,23",
+            "breakout_modes": {
+                "1x100G[40G]": [
+                    "one00GigE53"
+                ]
+            }
+        },
+        "Ethernet0": {
+            "index": "7",
+            "lanes": "24",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE0"
+                ]
+            }
+        },
+        "Ethernet1": {
+            "index": "8",
+            "lanes": "25",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE1"
+                ]
+            }
+        },
+        "Ethernet2": {
+            "index": "9",
+            "lanes": "26",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE2"
+                ]
+            }
+        },
+        "Ethernet3": {
+            "index": "10",
+            "lanes": "27",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE3"
+                ]
+            }
+        },
+        "Ethernet4": {
+            "index": "11",
+            "lanes": "28",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE4"
+                ]
+            }
+        },
+        "Ethernet5": {
+            "index": "12",
+            "lanes": "29",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE5"
+                ]
+            }
+        },
+        "Ethernet6": {
+            "index": "13",
+            "lanes": "30",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE6"
+                ]
+            }
+        },
+        "Ethernet7": {
+            "index": "14",
+            "lanes": "31",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE7"
+                ]
+            }
+        },
+        "Ethernet8": {
+            "index": "15",
+            "lanes": "32",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE8"
+                ]
+            }
+        },
+        "Ethernet9": {
+            "index": "16",
+            "lanes": "33",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE9"
+                ]
+            }
+        },
+        "Ethernet10": {
+            "index": "17",
+            "lanes": "34",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE10"
+                ]
+            }
+        },
+        "Ethernet11": {
+            "index": "18",
+            "lanes": "35",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE11"
+                ]
+            }
+        },
+        "Ethernet12": {
+            "index": "19",
+            "lanes": "36",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE12"
+                ]
+            }
+        },
+        "Ethernet13": {
+            "index": "20",
+            "lanes": "37",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE13"
+                ]
+            }
+        },
+        "Ethernet14": {
+            "index": "21",
+            "lanes": "38",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE14"
+                ]
+            }
+        },
+        "Ethernet15": {
+            "index": "22",
+            "lanes": "39",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE15"
+                ]
+            }
+        },
+        "Ethernet16": {
+            "index": "23",
+            "lanes": "40",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE16"
+                ]
+            }
+        },
+        "Ethernet17": {
+            "index": "24",
+            "lanes": "41",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE17"
+                ]
+            }
+        },
+        "Ethernet18": {
+            "index": "25",
+            "lanes": "42",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE18"
+                ]
+            }
+        },
+        "Ethernet19": {
+            "index": "26",
+            "lanes": "43",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE19"
+                ]
+            }
+        },
+        "Ethernet20": {
+            "index": "27",
+            "lanes": "44",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE20"
+                ]
+            }
+        },
+        "Ethernet21": {
+            "index": "28",
+            "lanes": "45",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE21"
+                ]
+            }
+        },
+        "Ethernet22": {
+            "index": "29",
+            "lanes": "46",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE22"
+                ]
+            }
+        },
+        "Ethernet23": {
+            "index": "30",
+            "lanes": "47",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE23"
+                ]
+            }
+        },
+        "Ethernet24": {
+            "index": "31",
+            "lanes": "48",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE24"
+                ]
+            }
+        },
+        "Ethernet25": {
+            "index": "32",
+            "lanes": "49",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE25"
+                ]
+            }
+        },
+        "Ethernet26": {
+            "index": "33",
+            "lanes": "50",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE26"
+                ]
+            }
+        },
+        "Ethernet27": {
+            "index": "34",
+            "lanes": "51",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE27"
+                ]
+            }
+        },
+        "Ethernet28": {
+            "index": "35",
+            "lanes": "52",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE28"
+                ]
+            }
+        },
+        "Ethernet29": {
+            "index": "36",
+            "lanes": "53",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE29"
+                ]
+            }
+        },
+        "Ethernet30": {
+            "index": "37",
+            "lanes": "54",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE30"
+                ]
+            }
+        },
+        "Ethernet31": {
+            "index": "38",
+            "lanes": "55",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE31"
+                ]
+            }
+        },
+        "Ethernet32": {
+            "index": "39",
+            "lanes": "56",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE32"
+                ]
+            }
+        },
+        "Ethernet33": {
+            "index": "40",
+            "lanes": "57",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE33"
+                ]
+            }
+        },
+        "Ethernet34": {
+            "index": "41",
+            "lanes": "58",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE34"
+                ]
+            }
+        },
+        "Ethernet35": {
+            "index": "42",
+            "lanes": "59",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE35"
+                ]
+            }
+        },
+        "Ethernet36": {
+            "index": "43",
+            "lanes": "60",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE36"
+                ]
+            }
+        },
+        "Ethernet37": {
+            "index": "44",
+            "lanes": "73",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE37"
+                ]
+            }
+        },
+        "Ethernet38": {
+            "index": "45",
+            "lanes": "74",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE38"
+                ]
+            }
+        },
+        "Ethernet39": {
+            "index": "46",
+            "lanes": "64",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE39"
+                ]
+            }
+        },
+        "Ethernet40": {
+            "index": "47",
+            "lanes": "65",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE40"
+                ]
+            }
+        },
+        "Ethernet41": {
+            "index": "48",
+            "lanes": "66",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE41"
+                ]
+            }
+        },
+        "Ethernet42": {
+            "index": "49",
+            "lanes": "67",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE42"
+                ]
+            }
+        },
+        "Ethernet43": {
+            "index": "50",
+            "lanes": "68",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE43"
+                ]
+            }
+        },
+        "Ethernet44": {
+            "index": "51",
+            "lanes": "69",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE44"
+                ]
+            }
+        },
+        "Ethernet45": {
+            "index": "52",
+            "lanes": "70",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE45"
+                ]
+            }
+        },
+        "Ethernet46": {
+            "index": "53",
+            "lanes": "71",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE46"
+                ]
+            }
+        },
+        "Ethernet47": {
+            "index": "54",
+            "lanes": "72",
+            "breakout_modes": {
+                "1x10G": [
+                    "tenGigE47"
+                ]
+            }
+        }
+    }
+}

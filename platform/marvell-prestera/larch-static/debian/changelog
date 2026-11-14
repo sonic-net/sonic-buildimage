@@ -1,0 +1,5 @@
+larch-static (1.0) unstable; urgency=low
+
+  * Device trees for the Larch Networks boards
+
+ -- Larch Networks <dev@larch-networks.com>  Mon, 01 Jan 2024 00:00:00 +0000

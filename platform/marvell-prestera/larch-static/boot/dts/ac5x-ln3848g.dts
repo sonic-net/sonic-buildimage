@@ -1,0 +1,401 @@
+/dts-v1/;
+
+/ {
+	model = "Marvell RD-AC5X Board";
+	compatible = "marvell,rd-ac5x\0marvell,ac5x\0marvell,ac5";
+	interrupt-parent = <0x01>;
+	#address-cells = <0x02>;
+	#size-cells = <0x02>;
+
+	cpus {
+		#address-cells = <0x02>;
+		#size-cells = <0x00>;
+
+		cpu-map {
+
+			cluster0 {
+
+				core0 {
+					cpu = <0x02>;
+				};
+
+				core1 {
+					cpu = <0x03>;
+				};
+			};
+		};
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x00 0x00>;
+			enable-method = "psci";
+			next-level-cache = <0x04>;
+			phandle = <0x02>;
+		};
+
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x00 0x100>;
+			enable-method = "psci";
+			next-level-cache = <0x04>;
+			phandle = <0x03>;
+		};
+
+		l2-cache {
+			compatible = "cache";
+			cache-level = <0x02>;
+			cache-unified;
+			phandle = <0x04>;
+		};
+	};
+
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <0x01 0x09 0x04 0x01 0x08 0x04 0x01 0x0a 0x04 0x01 0x07 0x04>;
+		clock-frequency = <0x17d7840>;
+	};
+
+	pmu {
+		compatible = "arm,cortex-a55-pmu";
+		interrupts = <0x01 0x0c 0x04>;
+	};
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <0x02>;
+		#size-cells = <0x02>;
+		ranges;
+
+		internal-regs@7f000000 {
+			#address-cells = <0x01>;
+			#size-cells = <0x01>;
+			compatible = "simple-bus";
+			ranges = <0x00 0x00 0x7f000000 0x1000000>;
+			dma-coherent;
+
+			serial@12000 {
+				compatible = "snps,dw-apb-uart";
+				reg = <0x12000 0x100>;
+				reg-shift = <0x02>;
+				interrupts = <0x00 0x53 0x04>;
+				reg-io-width = <0x01>;
+				clocks = <0x05>;
+				status = "okay";
+			};
+
+			serial@12100 {
+				compatible = "snps,dw-apb-uart";
+				reg = <0x12100 0x100>;
+				reg-shift = <0x02>;
+				interrupts = <0x00 0x54 0x04>;
+				reg-io-width = <0x01>;
+				clocks = <0x05>;
+				status = "disabled";
+			};
+
+			serial@12200 {
+				compatible = "snps,dw-apb-uart";
+				reg = <0x12200 0x100>;
+				reg-shift = <0x02>;
+				interrupts = <0x00 0x55 0x04>;
+				reg-io-width = <0x01>;
+				clocks = <0x05>;
+				status = "disabled";
+			};
+
+			serial@12300 {
+				compatible = "snps,dw-apb-uart";
+				reg = <0x12300 0x100>;
+				reg-shift = <0x02>;
+				interrupts = <0x00 0x56 0x04>;
+				reg-io-width = <0x01>;
+				clocks = <0x05>;
+				status = "disabled";
+			};
+
+			mdio@22004 {
+				#address-cells = <0x01>;
+				#size-cells = <0x00>;
+				compatible = "marvell,orion-mdio";
+				reg = <0x22004 0x04>;
+				clocks = <0x05>;
+
+				ethernet-phy@0 {
+					reg = <0x00>;
+					phandle = <0x0d>;
+				};
+			};
+
+			i2c@11000 {
+				compatible = "marvell,mv78230-i2c";
+				reg = <0x11000 0x20>;
+				#address-cells = <0x01>;
+				#size-cells = <0x00>;
+				clocks = <0x05>;
+				clock-names = "core";
+				interrupts = <0x00 0x57 0x04>;
+				clock-frequency = <0x186a0>;
+				pinctrl-names = "default\0gpio";
+				pinctrl-0 = <0x06>;
+				pinctrl-1 = <0x07>;
+				scl-gpios = <0x08 0x1a 0x06>;
+				sda-gpios = <0x08 0x1b 0x06>;
+				status = "okay";
+			};
+
+			i2c@11100 {
+				compatible = "marvell,mv78230-i2c";
+				reg = <0x11100 0x20>;
+				#address-cells = <0x01>;
+				#size-cells = <0x00>;
+				clocks = <0x05>;
+				clock-names = "core";
+				interrupts = <0x00 0x58 0x04>;
+				clock-frequency = <0x186a0>;
+				pinctrl-names = "default\0gpio";
+				pinctrl-0 = <0x09>;
+				pinctrl-1 = <0x0a>;
+				scl-gpios = <0x08 0x14 0x06>;
+				sda-gpios = <0x08 0x15 0x06>;
+				status = "disabled";
+			};
+
+			gpio@18100 {
+				compatible = "marvell,orion-gpio";
+				reg = <0x18100 0x40>;
+				ngpios = <0x20>;
+				gpio-controller;
+				#gpio-cells = <0x02>;
+				gpio-ranges = <0x0b 0x00 0x00 0x20>;
+				marvell,pwm-offset = <0x1f0>;
+				interrupt-controller;
+				#interrupt-cells = <0x02>;
+				interrupts = <0x00 0x4b 0x04 0x00 0x4c 0x04 0x00 0x4d 0x04 0x00 0x4e 0x04>;
+				phandle = <0x08>;
+			};
+
+			gpio@18140 {
+				reg = <0x18140 0x40>;
+				compatible = "marvell,orion-gpio";
+				ngpios = <0x0e>;
+				gpio-controller;
+				#gpio-cells = <0x02>;
+				gpio-ranges = <0x0b 0x00 0x20 0x0e>;
+				marvell,pwm-offset = <0x1f0>;
+				interrupt-controller;
+				#interrupt-cells = <0x02>;
+				interrupts = <0x00 0x4f 0x04 0x00 0x50 0x04>;
+			};
+		};
+
+		bus@80500000 {
+			compatible = "simple-bus";
+			ranges;
+			#address-cells = <0x02>;
+			#size-cells = <0x02>;
+			reg = <0x00 0x80500000 0x00 0x100000>;
+			dma-ranges = <0x00 0x00 0x02 0x00 0x00 0x80000000>;
+
+			mmc@805c0000 {
+				compatible = "marvell,ac5-sdhci\0marvell,armada-ap806-sdhci";
+				reg = <0x00 0x805c0000 0x00 0x1000>;
+				interrupts = <0x00 0x5c 0x04>;
+				clocks = <0x0c 0x05>;
+				clock-names = "core\0axi";
+				bus-width = <0x08>;
+				non-removable;
+				status = "okay";
+			};
+		};
+
+		behind-32bit-controller@7f000000 {
+			compatible = "simple-bus";
+			#address-cells = <0x02>;
+			#size-cells = <0x02>;
+			ranges = <0x00 0x00 0x00 0x7f000000 0x00 0x1000000>;
+			dma-ranges = <0x00 0x00 0x02 0x00 0x01 0x00>;
+			dma-coherent;
+
+			ethernet@20000 {
+				compatible = "marvell,armada-ac5-neta";
+				reg = <0x00 0x20000 0x00 0x4000>;
+				interrupts = <0x00 0x2d 0x04>;
+				clocks = <0x05>;
+				phy-mode = "sgmii";
+				status = "okay";
+				phy = <0x0d>;
+			};
+
+			ethernet@24000 {
+				compatible = "marvell,armada-ac5-neta";
+				reg = <0x00 0x24000 0x00 0x4000>;
+				interrupts = <0x00 0x37 0x04>;
+				clocks = <0x05>;
+				phy-mode = "sgmii";
+				status = "disabled";
+			};
+
+			usb@80000 {
+				compatible = "marvell,ac5-ehci\0marvell,orion-ehci";
+				reg = <0x00 0x80000 0x00 0x500>;
+				interrupts = <0x00 0x43 0x04>;
+				status = "okay";
+			};
+
+			usb@a0000 {
+				compatible = "marvell,orion-ehci";
+				reg = <0x00 0xa0000 0x00 0x500>;
+				interrupts = <0x00 0x45 0x04>;
+				status = "disabled";
+			};
+		};
+
+		pinctrl@80020100 {
+			compatible = "marvell,ac5-pinctrl";
+			reg = <0x00 0x80020100 0x00 0x20>;
+			phandle = <0x0b>;
+
+			i2c0-pins {
+				marvell,pins = "mpp26\0mpp27";
+				marvell,function = "i2c0";
+				phandle = <0x06>;
+			};
+
+			i2c0-gpio-pins {
+				marvell,pins = "mpp26\0mpp27";
+				marvell,function = "gpio";
+				phandle = <0x07>;
+			};
+
+			i2c1-pins {
+				marvell,pins = "mpp20\0mpp21";
+				marvell,function = "i2c1";
+				phandle = <0x09>;
+			};
+
+			i2c1-gpio-pins {
+				marvell,pins = "mpp20\0mpp21";
+				marvell,function = "i2c1";
+				phandle = <0x0a>;
+			};
+		};
+
+		spi@805a0000 {
+			compatible = "marvell,armada-3700-spi";
+			reg = <0x00 0x805a0000 0x00 0x50>;
+			#address-cells = <0x01>;
+			#size-cells = <0x00>;
+			clocks = <0x0e>;
+			interrupts = <0x00 0x5a 0x04>;
+			num-cs = <0x01>;
+			status = "okay";
+
+			flash@0 {
+
+				partition@0 {
+					label = "uboot-env";
+					reg = <0x00 0x400000>;
+				};
+			};
+		};
+
+		spi@805a8000 {
+			compatible = "marvell,armada-3700-spi";
+			reg = <0x00 0x805a8000 0x00 0x50>;
+			#address-cells = <0x01>;
+			#size-cells = <0x00>;
+			clocks = <0x0e>;
+			interrupts = <0x00 0x5b 0x04>;
+			num-cs = <0x01>;
+			status = "disabled";
+		};
+
+		nand-controller@805b0000 {
+			compatible = "marvell,ac5-nand-controller";
+			reg = <0x00 0x805b0000 0x00 0x54>;
+			#address-cells = <0x01>;
+			#size-cells = <0x00>;
+			interrupts = <0x00 0x59 0x04>;
+			clocks = <0x0f>;
+			status = "disabled";
+		};
+
+		prestera {
+			compatible = "marvell,armada-ac5-switch";
+			interrupts = <0x00 0x23 0x04>;
+			status = "okay";
+		};
+
+		wdog {
+			compatible = "arm,smc-wdt";
+			status = "okay";
+		};
+
+		interrupt-controller@80600000 {
+			compatible = "arm,gic-v3";
+			#interrupt-cells = <0x03>;
+			interrupt-controller;
+			reg = <0x00 0x80600000 0x00 0x10000 0x00 0x80660000 0x00 0x40000>;
+			interrupts = <0x01 0x06 0x04>;
+			phandle = <0x01>;
+		};
+	};
+
+	clocks {
+
+		cnm-clock {
+			compatible = "fixed-clock";
+			#clock-cells = <0x00>;
+			clock-frequency = <0x135f1b40>;
+			phandle = <0x05>;
+		};
+
+		spi-clock {
+			compatible = "fixed-clock";
+			#clock-cells = <0x00>;
+			clock-frequency = <0xbebc200>;
+			phandle = <0x0e>;
+		};
+
+		nand-clock {
+			compatible = "fixed-clock";
+			#clock-cells = <0x00>;
+			clock-frequency = <0x17d78400>;
+			phandle = <0x0f>;
+		};
+
+		emmc-clock {
+			compatible = "fixed-clock";
+			#clock-cells = <0x00>;
+			clock-frequency = <0x17d78400>;
+			phandle = <0x0c>;
+		};
+	};
+
+	aliases {
+		serial0 = "/soc/internal-regs@7f000000/serial@12000";
+		spiflash0 = "/soc/spi@805a0000/flash@0";
+		gpio0 = "/soc/internal-regs@7f000000/gpio@18100";
+		gpio1 = "/soc/internal-regs@7f000000/gpio@18140";
+		ethernet0 = "/soc/behind-32bit-controller@7f000000/ethernet@20000";
+		ethernet1 = "/soc/behind-32bit-controller@7f000000/ethernet@24000";
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x02 0x00 0x01 0x00>;
+	};
+
+	sdma_drv {
+		compatible = "marvell,mvppnd";
+		interrupts = <0x00 0x23 0x04>;
+		status = "okay";
+	};
+};

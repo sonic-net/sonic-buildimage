@@ -1,0 +1,5 @@
+files/* /
+cn9130-eps6800/files/etc/* /etc/
+cn9130-eps6800/scripts/cn9130-eps6800-init.sh  usr/local/bin
+cn9130-eps6800/service/cn9130-eps6800-init.service etc/systemd/system
+cn9130-eps6800/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_cn9130-eps6800-r0

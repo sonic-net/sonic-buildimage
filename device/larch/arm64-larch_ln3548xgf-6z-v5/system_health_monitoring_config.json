@@ -1,0 +1,14 @@
+{
+    "services_to_ignore": [
+        "ucentral_client",
+        "ln3548xgf-6z-v5-init.service"
+    ],
+    "devices_to_ignore": [
+    ],
+    "user_defined_checkers": [],
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "blink_green"
+    }
+}

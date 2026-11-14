@@ -1,0 +1,139 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+include /usr/share/dpkg/pkg-info.mk
+#--------------------------------------------------------
+
+ifneq ($(CROSS_BUILD_ENVIRON), y)
+KVERSION   ?= $(shell uname -r)
+endif
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+INSTALL_MOD_DIR := kernel/extra/
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS_ARM64 := ln3848g ln3824g cn9131-ext-98cx cn9130-eps6800 ln3612y2zt ln3604g canisminor cn9130-dm8218f ln3804gf-4xgf ln3804gf-8xgf ln3516xgf-4z ln3548xgf-6z-v1 ln3524xgf-6z-v1 ln3548xgf-6z-v5 ln1524g4mg-6xgf ln1524g-4xgf-v6 ln4332z1-l ln4332z-v1 ln4348y-8z-v1
+ifeq ($(DEB_HOST_ARCH),arm64)
+MODULE_DIRS := $(MODULE_DIRS_ARM64)
+else
+MODULE_DIRS :=
+endif
+UTILS_DIR := utils
+SERVICE_DIR := service
+MRVL_MODULE_DIR:= mrvl-modules
+PRESTERA_MODULE_PREFIX := mrvl-prestera/drivers/generic/
+PRESTERA_MODULE_SRC := cpssEnabler/linuxNoKernelModule/drivers/
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_clean:
+	(for mod in $(MODULE_DIRS); do \
+		$(MAKE) clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --clean -d $${mod}; \
+		fi; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		rm -rf $(MRVL_MODULE_DIR)/; \
+		rm -rf *.egg-info/; \
+		rm -f *.whl; \
+		cd $(MOD_SRC_DIR)/; \
+	done)
+	dh_clean
+
+override_dh_auto_configure:
+	(for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --configure -d $${mod}; \
+		fi; \
+	done)
+
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		mkdir -p $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
+		cp -r $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_PREFIX)/* $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
+		patch -p1 -d $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR) < $(MOD_SRC_DIR)/driver-patches/0001-mvint-shared-intx-release-and-ownership-check.diff; \
+		cd $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC); \
+		make clean; \
+		if [ $$mod = "ln3848g" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3824g" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3604g" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3804gf-4xgf" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3804gf-8xgf" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln1524g4mg-6xgf" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln1524g-4xgf-v6" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln4332z1-l" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln4332z-v1" ] || [ $$mod = "ln4348y-8z-v1" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "canisminor" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
+		elif [ $$mod = "cn9131-ext-98cx" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "cn9130-eps6800" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "cn9130-dm8218f" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3612y2zt" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
+		elif [ $$mod = "ln3516xgf-4z" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3548xgf-6z-v1" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3548xgf-6z-v5" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		elif [ $$mod = "ln3524xgf-6z-v1" ]; then \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+		fi; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py build; \
+		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+		cd $(MOD_SRC_DIR); \
+	done)
+
+override_dh_auto_test:
+	# No tests to run
+
+override_dh_usrlocal:
+	# debian/sonic-platform-<>-<>/usr/local/bin/* are already done
+
+override_dh_auto_install:
+	dh_testdir
+	dh_installdirs
+	(set -e; for mod in $(MODULE_DIRS); do\
+		pkg=$$mod; \
+		dh_installdirs -psonic-platform-$${pkg} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -psonic-platform-$${pkg} /usr/local/bin; \
+		dh_installdirs -psonic-platform-$${pkg} /lib/systemd/system; \
+		if [ ! -d debian/sonic-platform-$${pkg} ]; then \
+			echo "Skipping $$pkg (package excluded)"; \
+			continue; \
+		fi; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/sonic-platform-$${pkg}/lib/systemd/system/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/sonic-platform-$${pkg}/usr/local/bin/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC)/mvcpss.ko debian/sonic-platform-$${pkg}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		if [ $$mod = "canisminor" ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC)/*.ko debian/sonic-platform-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/; \
+			dh_installdirs -psonic-platform-$${mod} /lib/firmware/ti/tps23881/; \
+			#cp -r $(MOD_SRC_DIR)/$${mod}/modules/firmware debian/sonic-platform-$${mod}/lib/; \
+		fi; \
+		if [ $$mod = "cn9130-eps6800" ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko debian/sonic-platform-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/; \
+		fi; \
+		if [ $$mod = "ln3612y2zt" ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko debian/sonic-platform-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/; \
+		fi; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py install --root=$(MOD_SRC_DIR)/debian/sonic-platform-$${mod} --install-layout=deb; \
+		cd $(MOD_SRC_DIR); \
+	done)

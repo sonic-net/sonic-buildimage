@@ -1,0 +1,10 @@
+[Unit]
+Description=Reset button handler
+After=sysinit.target
+
+[Service]
+ExecStart=/usr/local/bin/reset_button_handler.py
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

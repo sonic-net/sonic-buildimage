@@ -1,0 +1,5 @@
+files/* /
+ln3548xgf-6z-v5/files/* /
+ln3548xgf-6z-v5/scripts/ln3548xgf-6z-v5-init.sh  usr/local/bin
+ln3548xgf-6z-v5/service/ln3548xgf-6z-v5-init.service etc/systemd/system
+ln3548xgf-6z-v5/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-larch_ln3548xgf-6z-v5

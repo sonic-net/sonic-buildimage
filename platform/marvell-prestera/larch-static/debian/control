@@ -1,0 +1,12 @@
+Source: larch-static
+Section: kernel
+Priority: optional
+Maintainer: Larch Networks <dev@larch-networks.com>
+Build-Depends: debhelper (>=9), device-tree-compiler
+Standards-Version: 3.9.6
+
+Package: larch-static
+Architecture: arm64
+Description: Device tree blobs for the Larch Networks boards
+ The blobs are compiled from the sources in boot/dts and installed in /boot,
+ where platform_arm64.conf and sonic_fit.its pick them up.
