@@ -391,6 +391,17 @@ neighbor_shutdown_data = [
                   conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
 ]
 
+# EVPN MH global timer configuration (EVPN_MH_GLOBAL). This handler is key-map
+# driven, so it follows the same add/delete pattern as the BGP globals tests.
+evpn_mh_global_data = [
+    CmdMapTestInfo('EVPN_MH_GLOBAL', 'default', {'startup_delay': '30'},
+                  [conf_cmd, '{}evpn mh startup-delay 30']),
+    CmdMapTestInfo('EVPN_MH_GLOBAL', 'default', {'mac_holdtime': '1080'},
+                  [conf_cmd, '{}evpn mh mac-holdtime 1080']),
+    CmdMapTestInfo('EVPN_MH_GLOBAL', 'default', {'neigh_holdtime': '1080'},
+                  [conf_cmd, '{}evpn mh neigh-holdtime 1080']),
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd, skip_del=False):
@@ -476,6 +487,529 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+def test_evpn_mh_global():
+    data_set_del_test(evpn_mh_global_data)
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT']
+    assert(len(hdlr) == 1)
+    hdlr = hdlr[0]
+
+    # Each config clears the previous es-* settings, then re-applies the ConfigDB row.
+    def es_clear(ifname):
+        return ['vtysh', '-c', 'configure terminal', '-c', 'interface {}'.format(ifname),
+                '-c', 'no evpn mh es-sys-mac',
+                '-c', 'no evpn mh es-df-pref',
+                '-c', 'no evpn mh es-id']
+
+    def set_entries(es_entry, pc_entry=None):
+        def _get_entry(table, key):
+            if table == 'EVPN_ETHERNET_SEGMENT':
+                return es_entry
+            if table == 'PORTCHANNEL':
+                return pc_entry if pc_entry is not None else {}
+            return {}
+        daemon.config_db.get_entry = MagicMock(side_effect=_get_entry)
+
+    # Type-0: full ESI via es-id; default df_pref (32767) not programmed.
+    set_entries({'type': 'TYPE_0_OPERATOR_CONFIGURED',
+                 'esi': '00:01:02:03:04:05:06:07:08:AA',
+                 'df_pref': '32767'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet10',
+         {'type': 'TYPE_0_OPERATOR_CONFIGURED',
+          'esi': '00:01:02:03:04:05:06:07:08:AA',
+          'df_pref': '32767'})
+    expected = es_clear('Ethernet10') + ['-c', 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA']
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Type-3 with explicit es_id; es-sys-mac from PORTCHANNEL; non-default df_pref.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'},
+                pc_entry={'system_mac': '00:11:22:33:44:55'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0002',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'})
+    expected = (es_clear('PortChannel0002')
+                + ['-c', 'evpn mh es-id 10']
+                + ['-c', 'evpn mh es-sys-mac 00:11:22:33:44:55']
+                + ['-c', 'evpn mh es-df-pref 12345'])
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Type-3 with explicit es_id + explicit es_sys_mac in the row (no PORTCHANNEL needed).
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '7',
+                 'es_sys_mac': '00:aa:bb:cc:dd:ee'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet20',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '7',
+          'es_sys_mac': '00:aa:bb:cc:dd:ee'})
+    expected = (es_clear('Ethernet20')
+                + ['-c', 'evpn mh es-id 7']
+                + ['-c', 'evpn mh es-sys-mac 00:aa:bb:cc:dd:ee'])
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Type-3 without es_id: es-id derived from the PortChannel number; mac from PORTCHANNEL.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'},
+                pc_entry={'system_mac': '44:38:39:ff:ff:01'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0001',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'})
+    expected = (es_clear('PortChannel0001')
+                + ['-c', 'evpn mh es-id 1']
+                + ['-c', 'evpn mh es-sys-mac 44:38:39:ff:ff:01']
+                + ['-c', 'evpn mh es-df-pref 50000'])
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Type-3 with es_id but no PORTCHANNEL system_mac: FRR needs both, only clears + warning.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '5', 'df_pref': '50000'})
+    run_cmd.reset_mock()
+    with patch('frrcfgd.frrcfgd.syslog') as mock_syslog:
+        mock_syslog.LOG_WARNING = 4
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet40',
+             {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '5', 'df_pref': '50000'})
+        warned = any(call.args and call.args[0] == mock_syslog.LOG_WARNING
+                     and 'es-sys-mac' in call.args[1]
+                     for call in mock_syslog.syslog.call_args_list)
+        assert warned, 'expected a warning when es-sys-mac is missing for Type-3 ES'
+    expected = es_clear('Ethernet40')
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # df_pref-only update on a valid Type-3 ES: no teardown, only es-df-pref re-applied.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'},
+                pc_entry={'system_mac': '00:11:22:33:44:55'})
+    hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0009',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'})
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '20000'},
+                pc_entry={'system_mac': '00:11:22:33:44:55'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0009',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '20000'})
+    expected = ['vtysh', '-c', 'configure terminal', '-c', 'interface PortChannel0009',
+                '-c', 'evpn mh es-df-pref 20000']
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Delete: only clears are issued and ConfigDB is not queried.
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0009', None)
+    expected = es_clear('PortChannel0009')
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+
+def test_evpn_mh_template():
+    """Render frr.conf.evpn_mh.j2 and confirm it matches the frrcfgd handler:
+    Type-3 es-id is explicit es_id or derived from the interface number, es-sys-mac
+    comes from PORTCHANNEL.system_mac, and default df_pref is omitted."""
+    import os
+    from jinja2 import Environment, FileSystemLoader
+    tmpl_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            'templates', 'frr')
+    env = Environment(loader=FileSystemLoader(tmpl_dir), trim_blocks=True, lstrip_blocks=True)
+    tmpl = env.get_template('frr.conf.evpn_mh.j2')
+
+    ctx = {
+        'EVPN_MH_GLOBAL': {'default': {'startup_delay': '30',
+                                       'mac_holdtime': '1080',
+                                       'neigh_holdtime': '1080'},
+                           'bogus': {'startup_delay': '99'}},
+        'EVPN_ETHERNET_SEGMENT': {
+            'Ethernet10': {'type': 'TYPE_0_OPERATOR_CONFIGURED',
+                           'esi': '00:01:02:03:04:05:06:07:08:AA', 'df_pref': '32767'},
+            'PortChannel0002': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10',
+                                'df_pref': '12345'},
+            'PortChannel0001': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO',
+                                'df_pref': '50000'},  # es_id derived from PortChannel number
+            'Ethernet25': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '7',
+                           'es_sys_mac': '00:aa:bb:cc:dd:ee'},  # explicit es_sys_mac, no PORTCHANNEL
+            'Ethernet30': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO',
+                           'es_id': '30'},  # es_id but no system_mac -> skipped
+            'Ethernet0': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO'},  # derived es-id 0 + no mac -> skipped
+        },
+        'PORTCHANNEL': {'PortChannel0001': {'system_mac': '44:38:39:ff:ff:01'},
+                        'PortChannel0002': {'system_mac': '00:11:22:33:44:55'}},
+    }
+    out = tmpl.render(**ctx)
+    lines = [l.strip() for l in out.splitlines() if l.strip()]
+
+    # Global MH timers: only the 'default' row is rendered (singleton).
+    assert 'evpn mh startup-delay 30' in lines
+    assert 'evpn mh mac-holdtime 1080' in lines
+    assert 'evpn mh neigh-holdtime 1080' in lines
+    assert 'evpn mh startup-delay 99' not in out
+
+    # Type-0: full ESI via es-id; default df_pref (32767) is omitted.
+    assert 'interface Ethernet10' in out
+    assert 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA' in lines
+    assert 'evpn mh es-df-pref 32767' not in out
+
+    # Type-3 explicit es_id + es-sys-mac from PORTCHANNEL + non-default df_pref.
+    assert 'interface PortChannel0002' in out
+    assert 'evpn mh es-id 10' in lines
+    assert 'evpn mh es-sys-mac 00:11:22:33:44:55' in lines
+    assert 'evpn mh es-df-pref 12345' in lines
+
+    # Type-3 with derived es-id (from PortChannel number) + es-sys-mac from PORTCHANNEL.
+    assert 'interface PortChannel0001' in out
+    assert 'evpn mh es-id 1' in lines
+    assert 'evpn mh es-sys-mac 44:38:39:ff:ff:01' in lines
+    assert 'evpn mh es-df-pref 50000' in lines
+
+    # Type-3 with explicit es_sys_mac in the row (no PORTCHANNEL needed).
+    assert 'interface Ethernet25' in out
+    assert 'evpn mh es-id 7' in lines
+    assert 'evpn mh es-sys-mac 00:aa:bb:cc:dd:ee' in lines
+
+    # Type-3 with es_id but no PORTCHANNEL system_mac: FRR needs both, so nothing is emitted.
+    assert 'interface Ethernet30' not in out
+
+    # Type-3 with no es_id and a derived es-id of 0 (Ethernet0) + no mac: nothing emitted.
+    assert 'interface Ethernet0' not in out
+
+
+
+def _es_cmd(ifname, *lines):
+    cmd = ['vtysh', '-c', 'configure terminal', '-c', 'interface {}'.format(ifname)]
+    for line in lines:
+        cmd += ['-c', line]
+    return cmd
+
+_ES_CLEAR = ('no evpn mh es-sys-mac', 'no evpn mh es-df-pref', 'no evpn mh es-id')
+
+
+def _es_calls(run_cmd):
+    return [c.args[1] for c in run_cmd.call_args_list if c.args[0] == 'EVPN_ETHERNET_SEGMENT']
+
+
+def _es_db(config_db_cls, es_rows, pc_rows=None, metadata=None):
+    """Point the daemon's CONFIG_DB reads at in-memory EVPN_ETHERNET_SEGMENT/PORTCHANNEL rows."""
+    tables = {'EVPN_ETHERNET_SEGMENT': es_rows, 'PORTCHANNEL': pc_rows if pc_rows is not None else {}}
+    def get_entry(table, key):
+        if table == 'DEVICE_METADATA':
+            return dict(metadata or {})
+        return dict(tables.get(table, {}).get(key, {}))
+    def get_table(table):
+        return {k: dict(v) for k, v in tables.get(table, {}).items()}
+    return [patch.object(config_db_cls, 'get_entry', MagicMock(side_effect=get_entry), create=True),
+            patch.object(config_db_cls, 'get_table', MagicMock(side_effect=get_table), create=True),
+            patch.object(config_db_cls, 'get_table_data', MagicMock(return_value={})),
+            patch.object(config_db_cls, 'serialize_key', MagicMock(side_effect=lambda k: k), create=True)]
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_replay_no_teardown(run_cmd):
+    """A CONFIG_DB replay re-adds each valid ES without the clears that would flap a live ES."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    es_rows = {
+        'PortChannel0002': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'},
+        'Ethernet10': {'type': 'TYPE_0_OPERATOR_CONFIGURED', 'esi': '00:01:02:03:04:05:06:07:08:AA'},
+        'Ethernet40': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '5'},  # no system MAC
+    }
+    pc_rows = {'PortChannel0002': {'system_mac': '00:11:22:33:44:55'}}
+    patches = _es_db(ExtConfigDBConnector, es_rows, pc_rows,
+                     {'docker_routing_config_mode': 'unified', 'use_template_render_for_restore': 'false'})
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+    finally:
+        for p in patches:
+            p.stop()
+    assert daemon._replaying is False
+    assert sorted(_es_calls(run_cmd)) == sorted([
+        _es_cmd('PortChannel0002', 'evpn mh es-id 10', 'evpn mh es-sys-mac 00:11:22:33:44:55',
+                'evpn mh es-df-pref 12345'),
+        _es_cmd('Ethernet10', 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA', 'no evpn mh es-df-pref'),
+        # Nothing to re-add: the replay still clears whatever FRR holds for the interface.
+        _es_cmd('Ethernet40', *_ES_CLEAR),
+    ])
+
+    # A live identity change after the replay still tears the old ES down first.
+    run_cmd.reset_mock()
+    hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+    new_row = {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '11', 'df_pref': '12345'}
+    es_rows['PortChannel0002'] = new_row
+    patches = _es_db(ExtConfigDBConnector, es_rows, pc_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon.table_data_cache['EVPN_ETHERNET_SEGMENT&&PortChannel0002'] = {
+            'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10', 'df_pref': '12345'}
+        hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0002', dict(new_row))
+    finally:
+        for p in patches:
+            p.stop()
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT',
+                               _es_cmd('PortChannel0002', *_ES_CLEAR, 'evpn mh es-id 11',
+                                       'evpn mh es-sys-mac 00:11:22:33:44:55',
+                                       'evpn mh es-df-pref 12345'),
+                               True, None)
+
+
+class _FakeZebraEsi:
+    """Stands in for zebra's ESI checks: an es-id another interface holds is refused."""
+    def __init__(self):
+        self.owner = {}   # es-id -> interface
+    def __call__(self, table, cmd, *args):
+        if table != 'EVPN_ETHERNET_SEGMENT':
+            return True
+        ifname = cmd[4].split()[1]
+        ok = True
+        for line in cmd[6::2]:
+            if line == 'no evpn mh es-id':
+                self.owner = {e: i for e, i in self.owner.items() if i != ifname}
+            elif line.startswith('evpn mh es-id '):
+                es_id = line.split()[-1]
+                if self.owner.get(es_id, ifname) != ifname:
+                    ok = False
+                    continue
+                self.owner = {e: i for e, i in self.owner.items() if i != ifname}
+                self.owner[es_id] = ifname
+        return ok
+
+
+_ESI_A = '00:01:02:03:04:05:06:07:08:AA'
+_ESI_B = '00:01:02:03:04:05:06:07:08:BB'
+
+
+def _type0(esi, **extra):
+    return dict({'type': 'TYPE_0_OPERATOR_CONFIGURED', 'esi': esi}, **extra)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_refused_esi_retried(run_cmd):
+    """An ESI moving between interfaces: B's add is refused while A still holds the ESI,
+    and is retried once A's ES is removed."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    zebra = run_cmd.side_effect = _FakeZebraEsi()
+    es_rows = {'Ethernet1': _type0(_ESI_A)}
+    patches = _es_db(ExtConfigDBConnector, es_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', _type0(_ESI_A))
+        assert zebra.owner == {_ESI_A: 'Ethernet1'}
+
+        # B's SET is handled before A's DEL: refused, nothing cached, kept pending.
+        es_rows['Ethernet2'] = _type0(_ESI_A)
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+        assert zebra.owner == {_ESI_A: 'Ethernet1'}
+        assert daemon.evpn_es_pending == {'Ethernet2'}
+        assert 'EVPN_ETHERNET_SEGMENT&&Ethernet2' not in daemon.table_data_cache
+
+        # A's DEL frees the ESI, and B is re-applied in the same update.
+        run_cmd.reset_mock()
+        del es_rows['Ethernet1']
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', None)
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [
+        _es_cmd('Ethernet1', *_ES_CLEAR),
+        _es_cmd('Ethernet2', *_ES_CLEAR, 'evpn mh es-id {}'.format(_ESI_A)),
+    ]
+    assert zebra.owner == {_ESI_A: 'Ethernet2'}
+    assert daemon.evpn_es_pending == set()
+    assert daemon.table_data_cache['EVPN_ETHERNET_SEGMENT&&Ethernet2'] == _type0(_ESI_A)
+    assert 'EVPN_ETHERNET_SEGMENT&&Ethernet1' not in daemon.table_data_cache
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_refused_change_then_revert(run_cmd):
+    """A refused identity change clears the interface's ES, so reverting the row re-creates it."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    zebra = run_cmd.side_effect = _FakeZebraEsi()
+    es_rows = {'Ethernet1': _type0(_ESI_B), 'Ethernet2': _type0(_ESI_A)}
+    patches = _es_db(ExtConfigDBConnector, es_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', _type0(_ESI_B))
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+        es_rows['Ethernet2'] = _type0(_ESI_B)
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_B))
+        assert zebra.owner == {_ESI_B: 'Ethernet1'}
+        assert daemon.evpn_es_pending == {'Ethernet2'}
+
+        run_cmd.reset_mock()
+        es_rows['Ethernet2'] = _type0(_ESI_A)
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [_es_cmd('Ethernet2', *_ES_CLEAR, 'evpn mh es-id {}'.format(_ESI_A))]
+    assert zebra.owner == {_ESI_B: 'Ethernet1', _ESI_A: 'Ethernet2'}
+    assert daemon.evpn_es_pending == set()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_refused_esi_stays_pending(run_cmd):
+    """A new ES or a df_pref-only change frees no ESI and does not retry a pending row."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    zebra = run_cmd.side_effect = _FakeZebraEsi()
+    es_rows = {'Ethernet1': _type0(_ESI_A), 'Ethernet2': _type0(_ESI_A),
+               'Ethernet3': _type0(_ESI_B, df_pref='100')}
+    patches = _es_db(ExtConfigDBConnector, es_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet1', _type0(_ESI_A))
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet2', _type0(_ESI_A))
+        assert daemon.evpn_es_pending == {'Ethernet2'}
+        run_cmd.reset_mock()
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet3', _type0(_ESI_B, df_pref='100'))
+        es_rows['Ethernet3']['df_pref'] = '200'
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet3', _type0(_ESI_B, df_pref='200'))
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [
+        _es_cmd('Ethernet3', *_ES_CLEAR, 'evpn mh es-id {}'.format(_ESI_B), 'evpn mh es-df-pref 100'),
+        _es_cmd('Ethernet3', 'evpn mh es-df-pref 200'),
+    ]
+    assert daemon.evpn_es_pending == {'Ethernet2'}
+    assert zebra.owner == {_ESI_A: 'Ethernet1', _ESI_B: 'Ethernet3'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_portchannel_system_mac(run_cmd):
+    """A Type-3 ES without es_sys_mac follows its PORTCHANNEL.system_mac as it is set or changed."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    es_rows = {'PortChannel0001': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO'},
+               'PortChannel0002': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '2',
+                                   'es_sys_mac': '00:aa:bb:cc:dd:ee'}}
+    pc_rows = {'PortChannel0001': {'admin_status': 'up'},
+               'PortChannel0002': {'admin_status': 'up', 'system_mac': '00:11:22:33:44:55'}}
+    patches = _es_db(ExtConfigDBConnector, es_rows, pc_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        daemon.subscribe_all()
+        daemon.config_db.subscribe.assert_any_call('PORTCHANNEL', daemon.portchannel_handler)
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        es_key = 'EVPN_ETHERNET_SEGMENT&&PortChannel0001'
+        def pc_event(ifname, row):
+            run_cmd.reset_mock()
+            daemon.portchannel_handler('PORTCHANNEL', ifname, row)
+            return _es_calls(run_cmd)
+
+        # No system_mac yet: only the clears, nothing cached.
+        run_cmd.reset_mock()
+        hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0001', dict(es_rows['PortChannel0001']))
+        assert _es_calls(run_cmd) == [_es_cmd('PortChannel0001', *_ES_CLEAR)]
+        assert es_key not in daemon.table_data_cache
+        hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0002', dict(es_rows['PortChannel0002']))
+
+        # system_mac arrives later: the ES is created.
+        pc_rows['PortChannel0001']['system_mac'] = '44:38:39:ff:ff:01'
+        assert pc_event('PortChannel0001', dict(pc_rows['PortChannel0001'])) == [
+            _es_cmd('PortChannel0001', *_ES_CLEAR, 'evpn mh es-id 1', 'evpn mh es-sys-mac 44:38:39:ff:ff:01')]
+        assert daemon.table_data_cache[es_key] == es_rows['PortChannel0001']
+
+        # Another PORTCHANNEL field changes, or the MAC is rewritten in another case: nothing to do.
+        pc_rows['PortChannel0001']['admin_status'] = 'down'
+        assert pc_event('PortChannel0001', dict(pc_rows['PortChannel0001'])) == []
+        assert pc_event('PortChannel0001', {'admin_status': 'down', 'system_mac': '44:38:39:FF:FF:01'}) == []
+
+        # system_mac changes: the ES is re-created with the new ESI.
+        pc_rows['PortChannel0001']['system_mac'] = '44:38:39:ff:ff:02'
+        assert pc_event('PortChannel0001', dict(pc_rows['PortChannel0001'])) == [
+            _es_cmd('PortChannel0001', *_ES_CLEAR, 'evpn mh es-id 1', 'evpn mh es-sys-mac 44:38:39:ff:ff:02')]
+
+        # PortChannel removed: the ES loses its system MAC and is cleared.
+        del pc_rows['PortChannel0001']
+        assert pc_event('PortChannel0001', None) == [_es_cmd('PortChannel0001', *_ES_CLEAR)]
+
+        # An explicit es_sys_mac wins, so its PortChannel's system_mac is not followed.
+        assert pc_event('PortChannel0002', {'admin_status': 'up', 'system_mac': '00:11:22:33:44:66'}) == []
+
+        # Once the ES row is deleted, the PortChannel is no longer followed.
+        hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0001', None)
+        del es_rows['PortChannel0001']
+        assert pc_event('PortChannel0001', {'system_mac': '44:38:39:ff:ff:03'}) == []
+        assert daemon.evpn_es_pc_mac == {}
+    finally:
+        for p in patches:
+            p.stop()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_portchannel_mac_seen_by_df_pref_update(run_cmd):
+    """A df_pref-only update that reads a new system_mac does not apply it, so the
+    PORTCHANNEL event that follows still re-creates the ES."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    es_rows = {'PortChannel0001': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '100'}}
+    pc_rows = {'PortChannel0001': {'system_mac': '44:38:39:ff:ff:01'}}
+    patches = _es_db(ExtConfigDBConnector, es_rows, pc_rows)
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT'][0]
+        hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0001', dict(es_rows['PortChannel0001']))
+        es_rows['PortChannel0001']['df_pref'] = '200'
+        pc_rows['PortChannel0001']['system_mac'] = '44:38:39:ff:ff:02'
+        run_cmd.reset_mock()
+        hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel0001', dict(es_rows['PortChannel0001']))
+        assert _es_calls(run_cmd) == [_es_cmd('PortChannel0001', 'evpn mh es-df-pref 200')]
+        run_cmd.reset_mock()
+        daemon.portchannel_handler('PORTCHANNEL', 'PortChannel0001', dict(pc_rows['PortChannel0001']))
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [
+        _es_cmd('PortChannel0001', *_ES_CLEAR, 'evpn mh es-id 1', 'evpn mh es-sys-mac 44:38:39:ff:ff:02',
+                'evpn mh es-df-pref 200')]
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment_portchannel_system_mac_after_start(run_cmd):
+    """Without a replay (FRR config rendered from the template), a system_mac change after
+    the daemon starts still re-creates the ES."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    run_cmd.return_value = True
+    es_row = {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'}
+    es_rows = {'PortChannel0001': dict(es_row)}
+    pc_rows = {'PortChannel0001': {'system_mac': '44:38:39:FF:FF:01'}}
+    patches = _es_db(ExtConfigDBConnector, es_rows, pc_rows)
+    patches[2] = patch.object(ExtConfigDBConnector, 'get_table_data', MagicMock(
+        return_value={'EVPN_ETHERNET_SEGMENT&&PortChannel0001': dict(es_row)}))
+    for p in patches:
+        p.start()
+    try:
+        daemon = BGPConfigDaemon()
+        assert _es_calls(run_cmd) == []
+        assert daemon.evpn_es_pc_mac == {'PortChannel0001': '44:38:39:ff:ff:01'}
+        daemon.portchannel_handler('PORTCHANNEL', 'PortChannel0001', dict(pc_rows['PortChannel0001']))
+        assert _es_calls(run_cmd) == []
+        pc_rows['PortChannel0001']['system_mac'] = '44:38:39:ff:ff:02'
+        daemon.portchannel_handler('PORTCHANNEL', 'PortChannel0001', dict(pc_rows['PortChannel0001']))
+    finally:
+        for p in patches:
+            p.stop()
+    assert _es_calls(run_cmd) == [
+        _es_cmd('PortChannel0001', *_ES_CLEAR, 'evpn mh es-id 1', 'evpn mh es-sys-mac 44:38:39:ff:ff:02',
+                'evpn mh es-df-pref 50000')]
+    assert daemon.table_data_cache['EVPN_ETHERNET_SEGMENT&&PortChannel0001'] == es_row
 
 
 def test_bgp_confederation_template():
