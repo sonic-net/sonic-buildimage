@@ -17,6 +17,9 @@ const DEFAULT_GNMI_PORT: u16 = 8080;
 #[derive(Serialize)]
 struct HealthStatus {
     gnmi_status: String,
+    // Set when the watchdog cannot authenticate to the server, so gNMI probes were not run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    probes_skipped: Option<String>,
     xpath_commands: Vec<CommandResult>,
     xpath_load_errors: Vec<String>,
 }
@@ -93,7 +96,7 @@ const HTTP_ERROR: &str = "HTTP/1.1 500 Internal Server Error";
 // During probe: for each xpath (after port OK) run command:
 //   gnmi_get -xpath_target SHOW -xpath <XPATH> -target_addr 127.0.0.1:<port> -logtostderr \
 //     [ -ca <ca> -cert <cert> -key <key> -target_name <name> | -insecure true | -notls ]
-// The TLS mode mirrors gnmi-native.sh (see server_tls_mode). Port, cert paths and client_auth
+// The TLS mode mirrors gnmi-native.sh (see server_tls_mode). Port, cert paths and user_auth
 // come from CONFIG_DB (GNMI|gnmi, GNMI|certs, DEVICE_METADATA|x509, DEVICE_METADATA|localhost).
 // Any failure (spawn error / non-zero exit / timeout) sets HTTP 500; body lists per-xpath results.
 // A SHOW xpath the server reports as gRPC NotFound is marked unsupported and does not fail the check.
@@ -128,14 +131,24 @@ fn server_tls_source<'a>(certs: &'a Hash, x509: &'a Hash) -> Option<&'a Hash> {
     }
 }
 
+// gnmi-native.sh passes --client_auth $USER_AUTH, defaulting an unset or "null" user_auth to "cert".
+fn effective_user_auth(gnmi: &Hash) -> &str {
+    match field(gnmi, "user_auth") {
+        Some(v) if v != "null" => v,
+        _ => "cert",
+    }
+}
+
 // Mirrors gnmi-native.sh:
 // - SmartSwitch DPU (DEVICE_METADATA|localhost type=SmartSwitchDPU or switch_type=dpu) without a
-//   TLS source carrying server_crt and server_key: ephemeral TLS (--insecure) with
-//   --allow_no_client_auth, so no client cert is needed.
-// - Otherwise GNMI|certs or DEVICE_METADATA|x509 present: TLS, and the server requires a client
-//   cert unless GNMI|gnmi.client_auth is exactly "false" (--allow_no_client_auth).
-// - Neither present: --noTLS.
-fn server_tls_mode(certs: &Hash, x509: &Hash, gnmi: &Hash, localhost: &Hash) -> TlsMode {
+//   TLS source carrying server_crt and server_key: ephemeral TLS (--insecure), probed without a
+//   client cert.
+// - Otherwise GNMI|certs or DEVICE_METADATA|x509 present: TLS. client_auth only toggles
+//   --allow_no_client_auth at the TLS layer; gRPC authentication follows user_auth, so the
+//   watchdog presents a client cert when user_auth includes "cert". Any other user_auth
+//   (e.g. password, jwt) needs credentials the watchdog doesn't have: Err(reason).
+// - Neither present: --noTLS; the server answers -notls requests without a client cert.
+fn server_tls_mode(certs: &Hash, x509: &Hash, gnmi: &Hash, localhost: &Hash) -> Result<TlsMode, String> {
     let is_dpu = field(localhost, "type") == Some("SmartSwitchDPU")
         || field(localhost, "switch_type") == Some("dpu");
     let source = server_tls_source(certs, x509);
@@ -144,12 +157,17 @@ fn server_tls_mode(certs: &Hash, x509: &Hash, gnmi: &Hash, localhost: &Hash) -> 
             .map(|s| field(s, "server_crt").is_some() && field(s, "server_key").is_some())
             .unwrap_or(false);
         if !has_keypair {
-            return TlsMode::Tls { client_cert: false };
+            return Ok(TlsMode::Tls { client_cert: false });
         }
     }
-    match source {
-        Some(_) => TlsMode::Tls { client_cert: field(gnmi, "client_auth") != Some("false") },
-        None => TlsMode::NoTls,
+    if source.is_none() {
+        return Ok(TlsMode::NoTls);
+    }
+    let user_auth = effective_user_auth(gnmi);
+    if user_auth.split(',').any(|m| m.trim() == "cert") {
+        Ok(TlsMode::Tls { client_cert: true })
+    } else {
+        Err(format!("user_auth={user_auth} not supported by watchdog"))
     }
 }
 
@@ -452,18 +470,18 @@ fn run_yang_config_apply_patch_probe(timeout: Duration) -> CommandResult {
 
 // Client cert paths are the server's own TLS source (GNMI|certs, else DEVICE_METADATA|x509),
 // falling back to env vars.
-fn security_config(certs: &Hash, x509: &Hash, gnmi: &Hash, localhost: &Hash) -> GnmiSecurityConfig {
+fn security_config(certs: &Hash, x509: &Hash, gnmi: &Hash, localhost: &Hash) -> Result<GnmiSecurityConfig, String> {
     let empty = Hash::new();
     let source = server_tls_source(certs, x509).unwrap_or(&empty);
     let cert = |name: &str, env_var: &str, default: &str| {
         non_empty(field(source, name).map(str::to_string)).unwrap_or_else(|| env_or_default(env_var, default))
     };
-    GnmiSecurityConfig {
-        tls: server_tls_mode(certs, x509, gnmi, localhost),
+    Ok(GnmiSecurityConfig {
+        tls: server_tls_mode(certs, x509, gnmi, localhost)?,
         ca_crt: cert("ca_crt", CA_CRT_ENV_VAR, DEFAULT_CA_CRT),
         server_crt: cert("server_crt", SERVER_CRT_ENV_VAR, DEFAULT_SERVER_CRT),
         server_key: cert("server_key", SERVER_KEY_ENV_VAR, DEFAULT_SERVER_KEY),
-    }
+    })
 }
 
 fn read_timeout(value: Option<&str>) -> Duration {
@@ -514,6 +532,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
     if !feature_enabled(state.as_deref()) {
         let status = HealthStatus {
             gnmi_status: "SKIPPED: feature disabled".to_string(),
+            probes_skipped: None,
             xpath_commands: cmd_results,
             xpath_load_errors: load_errors,
         };
@@ -527,6 +546,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
     if !gnmi_status.starts_with("OK") {
         let status = HealthStatus {
             gnmi_status,
+            probes_skipped: None,
             xpath_commands: cmd_results,
             xpath_load_errors: load_errors,
         };
@@ -543,8 +563,30 @@ fn run_health_checks() -> (bool, HealthStatus) {
     let target_name = env_or_default(TARGET_NAME_ENV_VAR, DEFAULT_TARGET_NAME);
     let cert_probe_enabled = env_flag_var(CERT_PROBE_ENV_VAR, false);
 
+    if cert_probe_enabled {
+        let res_patch = run_yang_config_apply_patch_probe(Duration::from_secs(30));
+        ok &= res_patch.success;
+        cmd_results.push(res_patch);
+    }
+
+    // Without usable credentials every gNMI probe would be rejected by a healthy server, and a
+    // false 500 would get it restarted; report the gap instead of failing.
+    let sec_cfg = match sec_cfg {
+        Ok(cfg) => cfg,
+        Err(reason) => {
+            eprintln!("Skipping gNMI probes: {reason}");
+            let status = HealthStatus {
+                gnmi_status,
+                probes_skipped: Some(reason),
+                xpath_commands: cmd_results,
+                xpath_load_errors: load_errors,
+            };
+            return (ok, status);
+        }
+    };
+
     // Certificate probes: a BAD client cert must be rejected and a GOOD one accepted.
-    // Only run when client_auth is enabled; an insecure server would accept both.
+    // Only run when probing with a client cert; an insecure probe would not exercise cert auth.
     if cert_probe_enabled && sec_cfg.tls == (TlsMode::Tls { client_cert: true }) {
         let bad_sec = GnmiSecurityConfig {
             tls: TlsMode::Tls { client_cert: true },
@@ -577,12 +619,6 @@ fn run_health_checks() -> (bool, HealthStatus) {
         cmd_results.push(res_good);
     }
 
-    if cert_probe_enabled {
-        let res_patch = run_yang_config_apply_patch_probe(Duration::from_secs(30));
-        ok &= res_patch.success;
-        cmd_results.push(res_patch);
-    }
-
     if env_flag_var(SERIALNUMBER_PROBE_ENV_VAR, false) {
         let res_sn = run_gnmi_for_xpath(SERIAL_NUMBER_XPATH, port, &sec_cfg, &target_name, timeout, "STATE_DB", false);
         ok &= res_sn.success;
@@ -604,6 +640,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
 
     let status = HealthStatus {
         gnmi_status,
+        probes_skipped: None,
         xpath_commands: cmd_results,
         xpath_load_errors: load_errors,
     };
@@ -701,35 +738,56 @@ mod tests {
     const CLIENT_CERT: TlsMode = TlsMode::Tls { client_cert: true };
     const NO_CLIENT_CERT: TlsMode = TlsMode::Tls { client_cert: false };
 
+    fn gnmi_table(client_auth: Option<&str>, user_auth: Option<&str>) -> Hash {
+        let mut h = hash(&[("port", "50052")]);
+        if let Some(v) = client_auth {
+            h.insert("client_auth".into(), v.into());
+        }
+        if let Some(v) = user_auth {
+            h.insert("user_auth".into(), v.into());
+        }
+        h
+    }
+
+    const CLIENT_AUTHS: [Option<&str>; 3] = [None, Some("true"), Some("false")];
+
     #[test]
     fn tls_mode_without_certs_is_notls() {
         let none = Hash::new();
-        assert_eq!(server_tls_mode(&none, &none, &none, &none), NO_TLS);
-        let gnmi = hash(&[("client_auth", "true"), ("port", "50052")]);
-        assert_eq!(server_tls_mode(&none, &none, &gnmi, &none), NO_TLS);
+        for ca in CLIENT_AUTHS {
+            for ua in [None, Some("cert"), Some("password"), Some("password,cert")] {
+                let gnmi = gnmi_table(ca, ua);
+                assert_eq!(server_tls_mode(&none, &none, &gnmi, &none), Ok(NO_TLS), "{ca:?} {ua:?}");
+            }
+        }
     }
 
     #[test]
-    fn tls_mode_client_auth_matches_gnmi_native() {
+    fn tls_mode_follows_user_auth_not_client_auth() {
         let none = Hash::new();
         let certs = hash(&[("server_crt", "/c"), ("server_key", "/k"), ("ca_crt", "/ca")]);
-        let unset = hash(&[("port", "50052")]);
-        assert_eq!(server_tls_mode(&certs, &none, &unset, &none), CLIENT_CERT);
-        assert_eq!(server_tls_mode(&certs, &none, &none, &none), CLIENT_CERT);
-        let t = hash(&[("client_auth", "true")]);
-        assert_eq!(server_tls_mode(&certs, &none, &t, &none), CLIENT_CERT);
-        let f = hash(&[("client_auth", "false")]);
-        assert_eq!(server_tls_mode(&certs, &none, &f, &none), NO_CLIENT_CERT);
-        // gnmi-native.sh compares the exact string "false".
-        let upper = hash(&[("client_auth", "FALSE")]);
-        assert_eq!(server_tls_mode(&certs, &none, &upper, &none), CLIENT_CERT);
+        for ca in CLIENT_AUTHS {
+            for ua in [None, Some("cert"), Some("password,cert"), Some("null"), Some("")] {
+                let gnmi = gnmi_table(ca, ua);
+                assert_eq!(server_tls_mode(&certs, &none, &gnmi, &none), Ok(CLIENT_CERT), "{ca:?} {ua:?}");
+            }
+            let gnmi = gnmi_table(ca, Some("password"));
+            assert_eq!(
+                server_tls_mode(&certs, &none, &gnmi, &none),
+                Err("user_auth=password not supported by watchdog".to_string()),
+                "{ca:?}"
+            );
+        }
+        let jwt = gnmi_table(None, Some("jwt,password"));
+        assert!(server_tls_mode(&certs, &none, &jwt, &none).is_err());
+        assert_eq!(server_tls_mode(&certs, &none, &none, &none), Ok(CLIENT_CERT));
     }
 
     #[test]
     fn tls_mode_falls_back_to_x509() {
         let none = Hash::new();
         let x509 = hash(&[("server_crt", "/x"), ("server_key", "/xk")]);
-        assert_eq!(server_tls_mode(&none, &x509, &none, &none), CLIENT_CERT);
+        assert_eq!(server_tls_mode(&none, &x509, &none, &none), Ok(CLIENT_CERT));
     }
 
     #[test]
@@ -737,27 +795,28 @@ mod tests {
         let none = Hash::new();
         let dpu = hash(&[("type", "SmartSwitchDPU")]);
         let dpu_switch_type = hash(&[("switch_type", "dpu")]);
-        assert_eq!(server_tls_mode(&none, &none, &none, &dpu), NO_CLIENT_CERT);
-        assert_eq!(server_tls_mode(&none, &none, &none, &dpu_switch_type), NO_CLIENT_CERT);
+        assert_eq!(server_tls_mode(&none, &none, &none, &dpu), Ok(NO_CLIENT_CERT));
+        assert_eq!(server_tls_mode(&none, &none, &none, &dpu_switch_type), Ok(NO_CLIENT_CERT));
         let partial = hash(&[("server_crt", "/c")]);
-        assert_eq!(server_tls_mode(&partial, &none, &none, &dpu), NO_CLIENT_CERT);
+        assert_eq!(server_tls_mode(&partial, &none, &none, &dpu), Ok(NO_CLIENT_CERT));
         let full = hash(&[("server_crt", "/c"), ("server_key", "/k")]);
-        assert_eq!(server_tls_mode(&full, &none, &none, &dpu), CLIENT_CERT);
+        assert_eq!(server_tls_mode(&full, &none, &none, &dpu), Ok(CLIENT_CERT));
         let empty_key = hash(&[("server_crt", "/c"), ("server_key", "")]);
-        assert_eq!(server_tls_mode(&empty_key, &none, &none, &dpu), NO_CLIENT_CERT);
+        assert_eq!(server_tls_mode(&empty_key, &none, &none, &dpu), Ok(NO_CLIENT_CERT));
     }
 
     #[test]
     fn security_config_uses_server_tls_source_paths() {
         let none = Hash::new();
         let x509 = hash(&[("server_crt", "/x.crt"), ("server_key", "/x.key"), ("ca_crt", "/xca.crt")]);
-        let sec = security_config(&none, &x509, &none, &none);
+        let sec = security_config(&none, &x509, &none, &none).unwrap();
         assert_eq!(sec.tls, CLIENT_CERT);
         assert_eq!((sec.ca_crt.as_str(), sec.server_crt.as_str(), sec.server_key.as_str()),
                    ("/xca.crt", "/x.crt", "/x.key"));
 
         let certs = hash(&[("server_crt", "/g.crt"), ("server_key", "/g.key")]);
-        let sec = security_config(&certs, &x509, &none, &none);
+        let sec = security_config(&certs, &x509, &none, &none).unwrap();
+        assert_eq!(sec.tls, CLIENT_CERT);
         assert_eq!(sec.server_crt, "/g.crt");
         assert_eq!(sec.ca_crt, DEFAULT_CA_CRT);
     }
@@ -939,8 +998,9 @@ mod tests {
 
     #[test]
     fn http_response_status_and_body() {
-        let status = HealthStatus {
+        let mut status = HealthStatus {
             gnmi_status: "OK".to_string(),
+            probes_skipped: None,
             xpath_commands: vec![],
             xpath_load_errors: vec![],
         };
@@ -950,5 +1010,10 @@ mod tests {
             format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}", body.len())
         );
         assert!(http_response(false, &status).starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
+
+        status.probes_skipped = Some("user_auth=password not supported by watchdog".to_string());
+        assert!(http_response(true, &status).ends_with(
+            r#"{"gnmi_status":"OK","probes_skipped":"user_auth=password not supported by watchdog","xpath_commands":[],"xpath_load_errors":[]}"#
+        ));
     }
 }
