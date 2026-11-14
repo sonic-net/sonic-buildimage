@@ -309,8 +309,18 @@ def _build_enabled_patch() -> list:
     """
     patch: list = []
 
-    if db_hget("GNMI|gnmi", "user_auth") != "cert":
-        patch.append({"op": "add", "path": "/GNMI/gnmi/user_auth", "value": "cert"})
+    # JSON Patch "add" needs the parent to exist, so create GNMI or GNMI|gnmi
+    # whole when missing rather than adding the leaf under an absent parent.
+    gnmi_keys = db_get_table_keys("GNMI")
+    if not gnmi_keys:
+        patch.append({"op": "add", "path": "/GNMI", "value": {"gnmi": {"user_auth": "cert"}}})
+    elif "gnmi" not in gnmi_keys:
+        patch.append({"op": "add", "path": "/GNMI/gnmi", "value": {"user_auth": "cert"}})
+    else:
+        cur = db_hget("GNMI|gnmi", "user_auth")
+        if cur != "cert":
+            op = "add" if cur is None else "replace"
+            patch.append({"op": op, "path": "/GNMI/gnmi/user_auth", "value": "cert"})
 
     existing_cnames = set(db_get_table_keys("GNMI_CLIENT_CERT"))
     entries_needed: list = []
