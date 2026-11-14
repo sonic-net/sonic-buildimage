@@ -423,6 +423,39 @@ def data_set_del_test(test_data, run_cmd, skip_del=False):
 def test_bgp_globals():
     data_set_del_test(bgp_globals_data)
 
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_evpn_advertise_all_vni_l3vni_neigh(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    hdlr = lambda table: [h for t, h in daemon.table_handler_list if t == table][0]
+    hdlr('BGP_GLOBALS')('BGP_GLOBALS', 'default', {'local_asn': 100})
+    af_cmd = conf_bgp_af_cmd('default', 100, 'l2vpn')
+    aav = {'advertise-all-vni': 'true'}
+    neigh_on = dict(aav, **{'advertise-all-vni-l3vni-neigh': 'true'})
+    neigh_off = dict(aav, **{'advertise-all-vni-l3vni-neigh': 'false'})
+    # Each step is the full table entry and the one command expected for it.
+    steps = [
+        (aav, 'advertise-all-vni'),
+        (neigh_on, 'advertise-all-vni l3vni-neigh'),
+        (neigh_off, 'advertise-all-vni'),
+        (neigh_on, 'advertise-all-vni l3vni-neigh'),
+        (aav, 'advertise-all-vni'),
+        (neigh_on, 'advertise-all-vni l3vni-neigh'),
+        ({'advertise-all-vni': 'false', 'advertise-all-vni-l3vni-neigh': 'false'},
+         'no advertise-all-vni'),
+        (neigh_on, 'advertise-all-vni l3vni-neigh'),
+        # None deletes the whole entry.
+        (None, 'no advertise-all-vni'),
+    ]
+    for data, cmd in steps:
+        run_cmd.reset_mock()
+        hdlr('BGP_GLOBALS_AF')('BGP_GLOBALS_AF', 'default|l2vpn_evpn',
+                               None if data is None else dict(data))
+        run_cmd.assert_called_once_with('BGP_GLOBALS_AF',
+                                        CmdMapTestInfo.compose_vtysh_cmd(af_cmd + [cmd]),
+                                        True, None, False)
+
 def test_bgp_neighbor_af():
     # The neighbor AF test cases explicitly verify delete behavior, so skip the delete
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
