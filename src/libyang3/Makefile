@@ -21,7 +21,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	echo 'add_definitions(-D_FILE_OFFSET_BITS=64)' >> CMakeLists.txt
 
 	# Apply patch series
-	patch -p1 < ../patch/0001-pr2362-lyd_validate_noextdeps.patch
+	git init
+	git add -f *
+	git commit -qm "initial commit"
+	stg init
+	stg import -s ../patch/series
 
 	# Debian buster and below do not have new enough versions of xxhash and
 	# build fails.  xxhash is an optimization, not a real dependency.

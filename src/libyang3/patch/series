@@ -1,1 +1,2 @@
 0001-pr2362-lyd_validate_noextdeps.patch
+0002-parsers-forget-a-freed-keyless-list-from-the-unres-sets.patch
