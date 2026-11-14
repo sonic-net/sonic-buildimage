@@ -1207,7 +1207,7 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; fi $(LOG)
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
-		{ pip$($*_PYTHON_VERSION) install . &&
+		{ pip$($*_PYTHON_VERSION) install $(if $(filter bookworm trixie,$(BLDENV)),--no-build-isolation) . &&
 		NAME=$$(python$($*_PYTHON_VERSION) -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])" 2>/dev/null \
 		  || python$($*_PYTHON_VERSION) setup.py --name | tail -n 1) && \
 		pip$($*_PYTHON_VERSION) uninstall --yes "$$NAME"; } $(LOG)
@@ -1217,7 +1217,7 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		if case "$@" in *trixie*sonic_chassisd*) true;; *) false;; esac; then \
 		    echo "Skipping tests for sonic_chassisd on trixie ($@)"; \
 		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
-		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
+		    pip$($*_PYTHON_VERSION) install --no-build-isolation ".[testing]" && \
 		    NAME=$$(python$($*_PYTHON_VERSION) -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])" 2>/dev/null \
 		      || python$($*_PYTHON_VERSION) setup.py --name | tail -n 1) && \
 		    pip$($*_PYTHON_VERSION) uninstall --yes "$$NAME" && \
