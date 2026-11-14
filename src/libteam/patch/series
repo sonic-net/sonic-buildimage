@@ -19,3 +19,5 @@
 0019-fix-event-fd-init-and-free.patch
 0020-Extend-LACP-fallback-support-to-multiple-ports.patch
 0021-teamd-lacp-guard-missing-port-on-removal.patch
+0022-teamd-lacp-add-per-member-MACsec-gate-runner.macsec_.patch
+0023-teamd-state-match-a-per-port-item-path-on-the-full-p.patch
