@@ -50,13 +50,12 @@ class Eeprom(PddfEeprom):
                 code = "0x%02X" % ((tlv[0]))
 
                 if (tlv[0]) == self._TLV_CODE_VENDOR_EXT:
-                    name = "Vendor Extension" #lgtm [py/multiple-definition]
                     value = ""
                     if self._TLV_DISPLAY_VENDOR_EXT:
                        for c in tlv[2:2 + tlv[1]]:
                            value += "0x%02X " % c
                 else:
-                    name, value = self.decoder(None, tlv)
+                    _, value = self.decoder(None, tlv)
 
                 self.eeprom_tlv_dict[code] = value.strip()
                 if (eeprom[tlv_index]) == self._TLV_CODE_CRC_32:
