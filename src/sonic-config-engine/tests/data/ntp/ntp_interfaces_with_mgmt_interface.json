@@ -1,0 +1,68 @@
+{
+    "NTP": {
+        "global": {
+            "src_intf": "eth0",
+            "vrf": "default",
+            "authentication": "enabled",
+            "dhcp": "disabled",
+            "server_role": "disabled",
+            "admin_state": "enabled"
+        }
+    },
+    "NTP_SERVER": {
+        "my_ntp_server": {
+            "association_type": "server",
+            "iburst": "off",
+            "admin_state": "disabled",
+            "version": 3,
+            "resolve_as": "10.20.30.40"
+        },
+        "server2": {
+            "association_type": "server",
+            "iburst": "off",
+            "admin_state": "enabled",
+            "version": 3,
+            "resolve_as": "10.20.30.50",
+            "key": 42,
+            "trusted": "no"
+        },
+        "pool.ntp.org": {
+            "association_type": "pool",
+            "iburst": "on",
+            "admin_state": "enabled",
+            "version": 3,
+            "resolve_as": "pool.ntp.org"
+        }
+    },
+    "NTP_KEY": {
+        "1": {
+            "type": "md5",
+            "trusted": "no",
+            "value": "blabla"
+        },
+        "42": {
+            "type": "sha1",
+            "trusted": "yes",
+            "value": "the_answer"
+        }
+    },
+    "INTERFACE": {
+        "Ethernet0": {},
+        "Ethernet0|10.0.0.0/31": {},
+        "Ethernet0|192.168.0.122/24": {}
+	},
+	"MGMT_INTERFACE": {
+		"eth0|10.250.0.105/24": {
+			"gwaddr": "10.250.0.1"
+		},
+		"eth0|fec0::ffff:afa:5/64": {
+			"gwaddr": "fec0::1"
+		}
+	},
+	"MGMT_PORT": {
+		"eth0": {
+			"admin_status": "up",
+			"alias": "eth0"
+		}
+	}
+}
