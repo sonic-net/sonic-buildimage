@@ -70,7 +70,9 @@ def sonic_db_dump_load():
             pool_options.pop('keys', None)
             pool_options.pop('use_expireat', None)
             pool_options.setdefault('encoding', 'utf-8')
-            args['connection_pool'] = connection_pool(**pool_options)
+            args['connection_pool'] = connection_pool(
+                authenticate=action == LOAD and args['unix_socket_path'] is not None,
+                **pool_options)
 
         return args
 

@@ -220,14 +220,14 @@ set_config_db_initialized()
     local value="$1"
     local asic_num=0
 
-    sonic-db-cli -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
+    sonic-db-cli -s --authenticate CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
 
     if [[ ${NUM_ASIC:-1} -le 1 ]]; then
         return 0
     fi
 
     while [[ $asic_num -lt $NUM_ASIC ]]; do
-        sonic-db-cli -s -n "asic$asic_num" CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
+        sonic-db-cli -s --authenticate -n "asic$asic_num" CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
         ((asic_num = asic_num + 1))
     done
 }
@@ -309,7 +309,7 @@ do_config_initialization()
         echo "No config_db.json found but minigraph.xml is available, using minigraph..."
         reload_minigraph
         rm -f /etc/sonic/pending_config_initialization
-        sonic-db-cli -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        sonic-db-cli -s --authenticate CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
         return 0
     fi
 
@@ -327,7 +327,7 @@ do_config_initialization()
     fi
 
     rm -f /etc/sonic/pending_config_initialization
-    sonic-db-cli -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+    sonic-db-cli -s --authenticate CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 }
 
 # Restore config-setup post migration hooks from a backup copy

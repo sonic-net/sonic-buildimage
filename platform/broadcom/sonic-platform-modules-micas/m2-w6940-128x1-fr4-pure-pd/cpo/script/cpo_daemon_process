@@ -1330,13 +1330,13 @@ class database_monitor(threading.Thread):
             self.main_thread_stop_event.set()
 
     def task_worker(self):
-        appl_db = daemon_base.db_connect("APPL_DB", namespace="")
+        appl_db = daemon_base.db_connect("APPL_DB", namespace="", use_tcp=False)
         sel = swsscommon.Select()
         port_tbl = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
         pro_port_tbl = swsscommon.ProducerStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
         sel.addSelectable(port_tbl)
         if port_config_init:
-            config_db = daemon_base.db_connect("CONFIG_DB", namespace="")
+            config_db = daemon_base.db_connect("CONFIG_DB", namespace="", use_tcp=False)
             device_metadata_tbl = swsscommon.SubscriberStateTable(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
             sel.addSelectable(device_metadata_tbl)
         # Make sure this daemon started after all port configured

@@ -65,7 +65,7 @@ function _docker_swss_check {
     while true
     do
         # Check if syncd starts
-        result=`sonic-db-cli ASIC_DB HLEN HIDDEN`
+        result=`sonic-db-cli -s ASIC_DB HLEN HIDDEN`
         if [ "$result" == "3" ]; then
             return
         fi

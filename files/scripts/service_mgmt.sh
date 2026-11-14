@@ -68,10 +68,11 @@ start() {
     trap handle_interrupted_start TERM
 
     # start service docker
-    /usr/bin/${SERVICE}.sh start $DEV
-    debug "Started ${SERVICE}$DEV service..."
-
+    local status=0
+    /usr/bin/${SERVICE}.sh start $DEV || status=$?
     trap - TERM
+    [ "$status" -eq 0 ] || return "$status"
+    debug "Started ${SERVICE}$DEV service..."
 }
 
 wait() {

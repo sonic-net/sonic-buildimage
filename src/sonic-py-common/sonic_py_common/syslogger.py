@@ -51,7 +51,7 @@ class SysLogger:
         """        
         from swsscommon import swsscommon
         try:
-            config_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
+            config_db = swsscommon.SonicV2Connector(use_unix_socket_path=True, authenticate=True)
             config_db.connect(CONFIG_DB)
             log_level_in_db = config_db.get(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{self.log_identifier}', FIELD_LOG_LEVEL)
             if log_level_in_db:

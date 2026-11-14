@@ -25,7 +25,7 @@ def test_explicit_socket_preserves_namespace_and_database(metadata):
     with patch.object(sys, 'argv', ['sonic-db-dump', '-n', 'STATE_DB', '--netns', 'asic0', '-t', 'unix_socket']), \
             patch('redisdl.dump') as dump:
         sonic_db_dump_load()
-    pool.assert_called_once_with(unix_socket_path='/run/redis/example.sock', db=6, encoding='utf-8', host=None, port=None)
+    pool.assert_called_once_with(authenticate=False, unix_socket_path='/run/redis/example.sock', db=6, encoding='utf-8', host=None, port=None)
     assert config.getDbSock.call_args.args[0] == 'STATE_DB'
     assert config.getDbSock.call_args.args[1].netns == 'asic0'
     config.getDbPort.assert_not_called()
@@ -41,7 +41,7 @@ def test_default_keeps_explicit_tcp_contract(metadata, port, name):
     with patch.object(sys, 'argv', ['sonic-db-dump', '-n', name]), patch('redisdl.dump'):
         sonic_db_dump_load()
     config.getDbSock.assert_not_called()
-    pool.assert_called_once_with(host='127.0.0.2', port=port, db=6, unix_socket_path=None, encoding='utf-8')
+    pool.assert_called_once_with(authenticate=False, host='127.0.0.2', port=port, db=6, unix_socket_path=None, encoding='utf-8')
 
 
 def test_missing_explicit_socket_fails_before_creating_pool(metadata):

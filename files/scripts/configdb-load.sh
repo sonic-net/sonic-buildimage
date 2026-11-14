@@ -14,4 +14,4 @@ if [ -r /etc/sonic/config_db.json ]; then
     fi
 fi
 
-sonic-db-cli -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+sonic-db-cli -s --authenticate CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"

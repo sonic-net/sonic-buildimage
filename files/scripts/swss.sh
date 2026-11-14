@@ -100,7 +100,7 @@ function wait_for_database_service()
 # $2 the string of a list of table prefixes
 function clean_up_tables()
 {
-    $SONIC_DB_CLI -s $1 EVAL "
+    $SONIC_DB_CLI --authenticate -s $1 EVAL "
     local tables = {$2}
     for i = 1, table.getn(tables) do
         local matches = redis.call('KEYS', tables[i])
@@ -150,7 +150,7 @@ function retry_delete_entries() {
 function delete_system_neigh_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
     local nn = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
@@ -168,7 +168,7 @@ function delete_system_neigh_entries() {
 function delete_system_interface_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
     local nsi = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
@@ -186,7 +186,7 @@ function delete_system_interface_entries() {
 function delete_system_lag_member_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
     local nlm = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
@@ -204,7 +204,7 @@ function delete_system_lag_member_entries() {
 function delete_system_lag_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
     local nsl = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
@@ -428,15 +428,15 @@ start() {
     # Don't flush DB during warm boot
     if [[ x"$WARM_BOOT" != x"true" ]]; then
         debug "Flushing APP, ASIC, COUNTER, CONFIG, and partial STATE databases ..."
-        $SONIC_DB_CLI -s APPL_DB FLUSHDB
-        $SONIC_DB_CLI -s ASIC_DB FLUSHDB
-        $SONIC_DB_CLI -s COUNTERS_DB FLUSHDB
-        $SONIC_DB_CLI -s FLEX_COUNTER_DB FLUSHDB
-        $SONIC_DB_CLI -s GB_ASIC_DB FLUSHDB
-        $SONIC_DB_CLI -s GB_COUNTERS_DB FLUSHDB
-        $SONIC_DB_CLI -s RESTAPI_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s APPL_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s ASIC_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s COUNTERS_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s FLEX_COUNTER_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s GB_ASIC_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s GB_COUNTERS_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s RESTAPI_DB FLUSHDB
         clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*', 'HIGH_FREQUENCY_TELEMETRY_SESSION_TABLE*', 'PROCESS_HEALTH*', 'COPP_TRAP_TABLE*' "
-        $SONIC_DB_CLI -s APPL_STATE_DB FLUSHDB
+        $SONIC_DB_CLI --authenticate -s APPL_STATE_DB FLUSHDB
         # Flush DPU remote databases (DPU device only)
         # Only run if this is a DPU device (type=SmartSwitchDPU or switch_type=dpu)
         DEVICE_TYPE=`$SONIC_DB_CLI -s CONFIG_DB hget "DEVICE_METADATA|localhost" type`
@@ -445,10 +445,10 @@ start() {
             # Check if DPU_APPL_DB remote database is reachable
             if $SONIC_DB_CLI DPU_APPL_DB PING >/dev/null 2>&1; then
                 debug "Flushing DPU remote databases (DPU_APPL_DB, DPU_STATE_DB, DPU_APPL_STATE_DB, DPU_COUNTERS_DB) ..."
-                $SONIC_DB_CLI DPU_APPL_DB FLUSHDB
-                $SONIC_DB_CLI DPU_STATE_DB FLUSHDB
-                $SONIC_DB_CLI DPU_APPL_STATE_DB FLUSHDB
-                $SONIC_DB_CLI DPU_COUNTERS_DB FLUSHDB
+                $SONIC_DB_CLI --authenticate DPU_APPL_DB FLUSHDB
+                $SONIC_DB_CLI --authenticate DPU_STATE_DB FLUSHDB
+                $SONIC_DB_CLI --authenticate DPU_APPL_STATE_DB FLUSHDB
+                $SONIC_DB_CLI --authenticate DPU_COUNTERS_DB FLUSHDB
             fi
         fi
         clean_up_chassis_db_tables
@@ -562,7 +562,7 @@ stop() {
     if [[ x"$WARM_BOOT" != x"true" ]] && [[ x"$FAST_BOOT" != x"true" ]]; then
         /usr/bin/${SERVICE}.sh stop $DEV
         debug "Stopped ${SERVICE}$DEV service..."
-        $SONIC_DB_CLI -s APPL_DB DEL PORT_TABLE:PortInitDone
+        $SONIC_DB_CLI --authenticate -s APPL_DB DEL PORT_TABLE:PortInitDone
         debug "Cleared PortInitDone from APPL_DB for ${SERVICE}$DEV..."
         clean_up_tables STATE_DB "'FABRIC_PORT_TABLE*'"
         debug "Cleared FABRIC_PORT_TABLE from STATE_DB for ${SERVICE}$DEV..."
@@ -577,7 +577,7 @@ stop() {
     # be restarted.
     if [[ x"$FAST_BOOT" != x"true" ]]; then
         debug "Clearing FAST_RESTART_ENABLE_TABLE flag..."
-        $SONIC_DB_CLI -s STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false"
+        $SONIC_DB_CLI --authenticate -s STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false"
     fi
     # Unlock has to happen before reaching out to peer service
     unlock_service_state_change

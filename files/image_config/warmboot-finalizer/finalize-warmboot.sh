@@ -171,8 +171,8 @@ function finalize_warm_boot()
 function finalize_fast_reboot()
 {
     debug "Finalizing fast-reboot..."
-    sonic-db-cli -s -n "$NETNS" STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null
-    sonic-db-cli -s -n "$NETNS" CONFIG_DB DEL "WARM_RESTART|teamd" &>/dev/null
+    sonic-db-cli -s --authenticate -n "$NETNS" STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null
+    sonic-db-cli -s --authenticate -n "$NETNS" CONFIG_DB DEL "WARM_RESTART|teamd" &>/dev/null
 }
 
 # Finalize warm/fast boot in an ASIC namespace.

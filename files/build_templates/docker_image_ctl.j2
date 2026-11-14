@@ -164,10 +164,10 @@ function preStartAction()
     fi
 {%- elif docker_container_name == "snmp" %}
     if decode-syseeprom -s > /dev/null 2>&1; then
-        $SONIC_DB_CLI -s STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+        $SONIC_DB_CLI --authenticate -s STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
     else
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
-        $SONIC_DB_CLI -s STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
+        $SONIC_DB_CLI --authenticate -s STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
 {%- elif docker_container_name in bridged_containers %}
     # Wait for caclmgrd to allow {{ docker_container_name }} syslog before startup.
@@ -196,9 +196,9 @@ function preStartAction()
 
 function setPlatformLagIdBoundaries()
 {
-    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
-    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
-    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
     local start_id = tonumber(ARGV[1])
     local end_id = tonumber(ARGV[2])
     for id = start_id,end_id do
@@ -367,10 +367,10 @@ function postStartAction()
             if [[ "$BOOT_TYPE" == "fast" ]]; then
                 # Flush ASIC DB. On fast-boot there should be nothing in there.
                 # In the older versions there has been an issue where a queued FDB event might get into ASIC_DB causing syncd crash at boot.
-                $SONIC_DB_CLI -s ASIC_DB FLUSHDB
+                $SONIC_DB_CLI --authenticate -s ASIC_DB FLUSHDB
                 # this is the case when base OS version does not support fast-reboot with reconciliation logic (dump.rdb is absent)
                 # In this case, we need to set the flag to indicate fast-reboot is in progress. Set the key to expire in 3 minutes
-                $SONIC_DB_CLI -s STATE_DB SET "FAST_REBOOT|system" "1" "EX" "180"
+                $SONIC_DB_CLI --authenticate -s STATE_DB SET "FAST_REBOOT|system" "1" "EX" "180"
             fi
         fi
 
@@ -385,9 +385,9 @@ function postStartAction()
                 # For first boot/fast/cold reboot case, DB contains nothing at this point
                 # unset CONFIG_DB_INITIALIZED to indicate pending config load and migration
                 # This flag will be set to "1" after DB migration/initialization is completed as part of config-setup
-                $SONIC_DB_CLI -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+                $SONIC_DB_CLI --authenticate -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
             else
-                $SONIC_DB_CLI -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+                $SONIC_DB_CLI --authenticate -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
                 # this is not a first time boot to a new image. Database container starts w/ old pre-existing config
                 if [[ -x /usr/local/bin/db_migrator.py ]]; then
                     # Migrate the DB to the latest schema version if needed
@@ -396,7 +396,7 @@ function postStartAction()
                     fi
                 fi
                 # set CONFIG_DB_INITIALIZED to indicate end of config load and migration
-                $SONIC_DB_CLI -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+                $SONIC_DB_CLI --authenticate -s CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
             fi
         fi
 
@@ -406,7 +406,7 @@ function postStartAction()
            if [[ "$chassis_tsa_supported_cfg" == "true" ]]; then
               tsa_cfg="$($SONIC_DB_CLI -s CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
               if [[ -n "$tsa_cfg" ]]; then
-                 docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+                 docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
                  OP_CODE=$?
                  if [ $OP_CODE -ne 0 ]; then
                    echo "Err: Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled"
@@ -609,7 +609,7 @@ start() {
 
     if [ -d "$HWSKU_FOLDER" ]; then
         # This default should be undefined, set by runtime_vars.json
-        $SONIC_DB_CLI -s CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
+        $SONIC_DB_CLI --authenticate -s CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
     fi
 
     if [ -n "$RUNTIME_VARS_JSON" ]; then

@@ -1,0 +1,18 @@
+From: Ashutosh Agrawal <ashu@cisco.com>
+Subject: [PATCH] Build host services with the selected swss-common crate
+
+Use the Rust wrapper from the selected image source alongside its installed
+native SDK and runtime, as the DASH build already does.
+
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -23,7 +23,7 @@
+ [workspace.dependencies]
+ # System info and SONiC database
+ sysinfo = "0.35.0"
+-swss-common = { git = "https://github.com/sonic-net/sonic-swss-common", branch = "master" }
++swss-common = { path = "../sonic-swss-common/crates/swss-common" }
+
+ # Regex and pattern matching
+ regex = "1.10"

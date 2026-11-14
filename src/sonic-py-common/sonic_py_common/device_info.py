@@ -7,6 +7,7 @@ import re
 import subprocess
 from typing import List, Optional
 from sonic_py_common.general import getstatusoutput_noshell_pipe
+from sonic_py_common._redis_transport import use_local_redis_socket
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
 
 
@@ -68,7 +69,7 @@ def get_localhost_info(field, config_db=None):
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
         if not config_db:
-            config_db = ConfigDBConnector()
+            config_db = ConfigDBConnector(use_unix_socket_path=use_local_redis_socket('CONFIG_DB'))
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')
@@ -713,7 +714,7 @@ def get_platform_info(config_db=None):
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
         if not config_db:
-            config_db = ConfigDBConnector()
+            config_db = ConfigDBConnector(use_unix_socket_path=use_local_redis_socket('CONFIG_DB'))
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')["localhost"]
@@ -1232,7 +1233,7 @@ def get_system_routing_stack():
 
 # Check if System warm reboot or Container warm restart is enabled.
 def is_warm_restart_enabled(container_name):
-    state_db = SonicV2Connector(host='127.0.0.1')
+    state_db = SonicV2Connector(use_unix_socket_path=use_local_redis_socket('STATE_DB'), host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'
@@ -1322,7 +1323,7 @@ def get_bmc_build_config():
 
 # Check if System fast reboot is enabled.
 def is_fast_reboot_enabled():
-    state_db = SonicV2Connector(host='127.0.0.1')
+    state_db = SonicV2Connector(use_unix_socket_path=use_local_redis_socket('STATE_DB'), host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'

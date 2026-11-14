@@ -7,4 +7,5 @@ Standards-Version: 3.9.3
 
 Package: sonic-platform-pensando-dpu
 Architecture: arm64
+Depends: ${misc:Depends}, python3-swsscommon, python3-redis
 Description: kernel modules for platform devicesl

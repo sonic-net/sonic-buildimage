@@ -29,7 +29,7 @@ FAST_RESTART_ENABLE_KEY = ("FAST_RESTART_ENABLE_TABLE|system", "enable")
 def _state_db_hget(key, field):
     try:
         result = subprocess.run(
-            [SONIC_DB_CLI, "STATE_DB", "hget", key, field],
+            [SONIC_DB_CLI, "-s", "STATE_DB", "hget", key, field],
             capture_output=True,
             text=True,
             timeout=DB_CLI_TIMEOUT_S,
