@@ -18,24 +18,27 @@ class TestDaemonBase:
         mock_swsscommon_outer.swsscommon = mock_swsscommon_inner
         return mock_swsscommon_outer, mock_swsscommon_inner
 
+    @pytest.mark.parametrize("authenticate", [False, True])
     @pytest.mark.parametrize("use_tcp", [None, True, False])
     @pytest.mark.parametrize("db_name,namespace", [
         ("CONFIG_DB", daemon_base.EMPTY_NAMESPACE),
         ("APPL_DB", "asic0"),
         ("STATE_DB", "asic1"),
     ])
-    def test_db_connect(self, use_tcp, db_name, namespace):
+    def test_db_connect(self, use_tcp, db_name, namespace, authenticate):
         outer, inner = self._make_swss_mock()
         kwargs = {"namespace": namespace} if namespace else {}
         if use_tcp is not None:
             kwargs["use_tcp"] = use_tcp
+        kwargs["authenticate"] = authenticate
         with mock.patch.dict("sys.modules",
                              {"swsscommon": outer,
                               "swsscommon.swsscommon": inner}):
             connector = daemon_base.db_connect(db_name, **kwargs)
         inner.DBConnector.assert_called_once_with(
             db_name, daemon_base.REDIS_TIMEOUT_MSECS,
-            True if use_tcp is None else use_tcp, namespace)
+            True if use_tcp is None else use_tcp, namespace,
+            *([True] if authenticate else []))
         inner.SonicDBConfig.getDbPort.assert_not_called()
         assert connector is inner.DBConnector.return_value
 
