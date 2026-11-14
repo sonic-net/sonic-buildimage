@@ -352,6 +352,26 @@ class TestCfgGenCaseInsensitive(TestCase):
             else:
                 self.assertTrue("mux_cable" not in port)
 
+    def test_minigraph_gnmi(self):
+        argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "GNMI"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            {
+                'gnmi': {'client_auth': 'true', 'port': '50051', 'log_level': '2'},
+                'certs': {
+                    'server_crt': '/etc/sonic/telemetry/streamingtelemetryserver.cer',
+                    'server_key': '/etc/sonic/telemetry/streamingtelemetryserver.key',
+                    'ca_crt': '/etc/sonic/telemetry/dsmsroot.cer'
+                }
+            }
+        )
+
+    def test_minigraph_no_telemetry(self):
+        argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "TELEMETRY is defined or 'telemetry' in FEATURE|default({})"]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), 'False')
+
     def test_minigraph_storage_device(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'storage_device\']"]
         output = self.run_script(argument)
