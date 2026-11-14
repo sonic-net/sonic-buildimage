@@ -20,6 +20,13 @@ module sonic-mirror-session {
     description
         "SONiC Mirror session yang model";
 
+    revision 2026-09-06 {
+        description
+            "Add optional label leaf as a stable identifier for the mirror
+             session. When set, SAI can reuse the same hardware mirror session
+             across warm reboot.";
+    }
+
     revision 2026-04-14 {
         description
             "Add sample_rate and truncate_size leaves for sampled port mirroring
@@ -216,6 +223,27 @@ module sonic-mirror-session {
                         "Truncation size in bytes for mirrored packets.
                          When not configured, no truncation is applied. When set,
                          only the first N bytes of each mirrored packet are sent.";
+                }
+
+                leaf label {
+                    type string {
+                        length "1..31" {
+                            error-message "Mirror session label must be 1..31 characters";
+                            error-app-tag label-length-invalid;
+                        }
+                        pattern '[a-zA-Z0-9_-]+' {
+                            error-message "Mirror session label must match [a-zA-Z0-9_-]+";
+                            error-app-tag label-pattern-invalid;
+                        }
+                    }
+                    description
+                        "Optional stable identifier for the mirror session.
+                         Used by SAI to reuse the same hardware mirror session
+                         across warm reboot. When omitted, orchagent does not
+                         pass SAI_MIRROR_SESSION_ATTR_LABEL on create.
+                         The upper bound is 31 characters because the label is
+                         carried in the 32-byte sai_attribute_value_t chardata
+                         field, which must keep room for the string terminator.";
                 }
             }
         }
