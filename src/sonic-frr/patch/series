@@ -21,7 +21,6 @@
 0028-zebra-EVPN-VXLAN-Multihome-extern-mode-Enable-kernel.patch
 0030-doc-zebra-Doc-update-for-zebra-option-kernel-mac-ext.patch
 0031-zebra-EVPN-VXLAN-MH-extern-mode-Update-debug-print-f.patch
-0032-zebra-ARP-ND-Suppression-disabled-for-kernel-mac-ext.patch
 0033-zebra-netlink-message-handling-for-mac_extern_learn-.patch
 0034-zebra-mac-sync-update-del-expiry-in-extern_learn-mod.patch
 0035-tests-topotests-EVPN-VXLAN-MH-extern-learn-mode-test.patch
@@ -50,3 +49,4 @@
 0127-zebra-let-a-dataplane-module-learn-local-MACs.patch
 0128-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch
 0129-zebra-count-a-local-MAC-delete-with-no-kernel-entry-.patch
+0130-tests-check-remote-EVPN-neighbours-in-kernel-MAC-ext.patch
