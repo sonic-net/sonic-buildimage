@@ -10,7 +10,7 @@ module sonic-fdb-sync {
         "SONiC";
 
     description
-        "FDB synchronization transport selection for SONiC";
+        "FDB synchronization transport selection";
 
     revision 2026-08-06 {
         description

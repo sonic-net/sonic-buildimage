@@ -14,7 +14,7 @@ module sonic-dns {
     contact
         "SONiC";
 
-    description "Domain Name System (DNS) resolver configuration YANG module for SONiC OS.";
+    description "Domain Name System (DNS) resolver configuration";
 
     revision 2023-02-14 {
         description "Initial version";

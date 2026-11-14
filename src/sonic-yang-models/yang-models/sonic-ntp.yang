@@ -38,7 +38,7 @@ module sonic-ntp {
     }
 
     description
-        "Network Time Protocol (NTP) client configuration YANG module for SONiC OS.";
+        "Network Time Protocol (NTP) client configuration";
 
     revision 2021-04-07 {
         description

@@ -27,7 +27,7 @@ module sonic-mclag {
         "SONiC";
 
     description
-        "SONIC MCLAG";
+        "MCLAG configuration";
 
     revision 2019-10-01 {
         description

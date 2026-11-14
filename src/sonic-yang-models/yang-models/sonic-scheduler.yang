@@ -13,7 +13,7 @@ module sonic-scheduler {
         "SONiC";
 
     description
-        "SCHEDULER yang Module for SONiC OS";
+        "SCHEDULER configuration";
 
     revision 2021-04-01 {
         description

@@ -13,7 +13,7 @@ module sonic-flex_counter {
         prefix stypes;
     }
 
-    description "FLEX COUNTER YANG Module for SONiC OS";
+    description "FLEX COUNTER configuration";
 
     revision 2020-04-10 {
         description "First Revision";

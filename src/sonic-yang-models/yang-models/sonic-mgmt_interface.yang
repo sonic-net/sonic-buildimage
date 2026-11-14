@@ -62,7 +62,7 @@ module sonic-mgmt_interface {
                     }
                     ordered-by user;
                     description
-                        "This configuration allows addtional routes to be added to default VRF table
+                        "This configuration allows additional routes to be added to default VRF table
                          or mgmt VRF table, based on if Management VRF is configured.
                          Details can be found in interfaces.j2.";
                 }

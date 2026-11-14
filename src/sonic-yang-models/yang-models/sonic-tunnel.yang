@@ -14,7 +14,7 @@ module sonic-tunnel {
 		"SONiC";
 
 	description
-		"SONiC tunnel config";
+		"Tunnel configuration";
 
 	revision 2026-06-17 {
 		description
@@ -28,7 +28,7 @@ module sonic-tunnel {
 
 	container sonic-tunnel {
 		container TUNNEL {
-			description "General TUNNEL configuration for SONiC";
+			description "General TUNNEL configuration";
 			list TUNNEL_LIST {
 				key "tunnel_name";
 

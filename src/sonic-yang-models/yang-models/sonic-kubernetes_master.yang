@@ -14,7 +14,7 @@ module sonic-kubernetes_master {
         prefix stypes;
     }
 
-    description "KUBERNETES_MASTER YANG Module for SONiC OS";
+    description "KUBERNETES_MASTER configuration";
 
     revision 2022-10-09 {
         description "First Revision";

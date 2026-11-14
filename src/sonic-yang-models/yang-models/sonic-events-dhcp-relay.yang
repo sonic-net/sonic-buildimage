@@ -15,7 +15,7 @@ module sonic-events-dhcp-relay {
         "SONiC";
 
     description
-        "SONIC dhcp-relay events";
+        "DHCP-relay events";
 
     revision 2022-12-01 {
         description "dhcp-relay alert events.";

@@ -6,7 +6,7 @@ module sonic-serial-console {
     import sonic-types {
         prefix stypes;
     }
-    description "Serial console session policy YANG module for SONiC OS.";
+    description "Serial console session policy configuration";
     revision 2023-06-07 {
         description "First Revision";
     }

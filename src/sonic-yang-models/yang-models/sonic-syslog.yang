@@ -21,7 +21,7 @@ module sonic-syslog {
         prefix feature;
     }
 
-    description "Remote syslog server and logging configuration YANG module for SONiC OS.";
+    description "Remote syslog server and logging configuration";
 
     revision 2022-04-18 {
         description "Initial revision.";

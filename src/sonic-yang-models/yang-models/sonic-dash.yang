@@ -24,7 +24,7 @@ module sonic-dash {
         "SONiC";
 
     description
-        "Disaggregated API for SONiC Hosts (DASH) SmartNIC/DPU overlay configuration.";
+        "Disaggregated API for Hosts (DASH) SmartNIC/DPU overlay configuration.";
 
     revision 2022-12-07 {
         description

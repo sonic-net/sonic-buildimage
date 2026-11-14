@@ -18,7 +18,7 @@ module sonic-peer-switch {
         "SONiC";
 
     description
-        "SONiC DualToR peer switch data";
+        "DualToR peer switch data";
 
     revision 2022-08-23 {
         description
@@ -35,13 +35,13 @@ module sonic-peer-switch {
                 leaf peer_switch {
                     type stypes:hostname;
 
-                    description "SONiC DualToR peer host name.";
+                    description "DualToR peer host name.";
                 }
 
                 leaf address_ipv4 {
                     type inet:ipv4-address;
 
-                    description "SONiC DualToR peer's IPv4 address.";
+                    description "DualToR peer's IPv4 address.";
                 }
             }
         }

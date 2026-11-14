@@ -14,7 +14,7 @@ module sonic-subnet-decap {
         prefix stypes;
     }
 
-    description "Subnet-based IPinIP tunnel decapsulation rules for SONiC.";
+    description "Subnet-based IPinIP tunnel decapsulation rules.";
 
     revision 2024-12-19 {
         description "Initial version";

@@ -17,7 +17,7 @@ module sonic-tc-queue-map {
         "SONiC";
 
     description
-        "TC_TO_QUEUE_MAP yang Module for SONiC OS";
+        "TC_TO_QUEUE_MAP configuration";
 
     revision 2021-04-15 {
         description

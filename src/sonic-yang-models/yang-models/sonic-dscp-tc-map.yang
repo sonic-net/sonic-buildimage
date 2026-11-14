@@ -17,7 +17,7 @@ module sonic-dscp-tc-map {
         "SONiC";
 
     description
-        "DSCP_TO_TC_MAP yang Module for SONiC OS";
+        "DSCP_TO_TC_MAP configuration";
 
     revision 2021-04-15 {
         description
