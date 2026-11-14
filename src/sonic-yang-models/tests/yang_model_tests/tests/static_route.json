@@ -62,6 +62,9 @@
     },
     "STATIC_ROUTE_TEST_NEXTHOP_EMPTY_VRF": {
         "desc": "Configure with null value for VRF"
+    },
+    "STATIC_ROUTE_TEST_NO_VRF_PREFIX": {
+        "desc": "Configure static route with no vrf_name prefix in key (TEMPLATE_LIST format) with all fields"
     }
 
 }
