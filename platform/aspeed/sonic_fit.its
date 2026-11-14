@@ -8,6 +8,7 @@
  * - sonic-ast2700-nvidia-spc6-bmc: NVIDIA SPC6 Switch BMC
  * - nexthop-b27-r0: NextHop AST2700 platform
  * - arista_goldfinch-r0: Arista AST2700 BMC platform
+ * - micas-m2-w6950-128oc: Micas M2-W6950-128OC platform
  *
  * U-Boot selects the appropriate DTB configuration using the 'bootconf' variable
  * which is set based on hardware detection at boot time.
@@ -109,6 +110,17 @@
 				algo = "sha256";
 			};
 		};
+		fdt-micas-m2-w6950-128oc {
+			description = "Flattened Device Tree blob for Micas M2-W6950-128OC";
+			data = /incbin/("__DTB_PATH_ASPEED__/micas-m2-w6950-128oc.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
 		ramdisk-1 {
 			description = "Initramfs";
 			data = /incbin/("__INITRD_PATH__");
@@ -165,6 +177,15 @@
 			description = "SONiC for Arista 2700 BMC";
 			kernel = "kernel-1";
 			fdt = "fdt-arista_goldfinch-r0";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		conf-micas-m2-w6950-128oc {
+			description = "SONiC for Micas M2-W6950-128OC";
+			kernel = "kernel-1";
+			fdt = "fdt-micas-m2-w6950-128oc";
 			ramdisk = "ramdisk-1";
 			hash-1 {
 				algo = "sha256";

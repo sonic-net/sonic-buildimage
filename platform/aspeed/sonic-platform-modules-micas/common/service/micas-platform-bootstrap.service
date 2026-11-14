@@ -1,0 +1,16 @@
+[Unit]
+Description=Micas platform bootstrap
+Requires=sonic-platform-init.service
+After=sonic-platform-init.service systemd-modules-load.service
+Before=basic.target platform_base.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/micas-device-info-init.sh
+ExecStart=-/usr/local/bin/console_init.py
+ExecStartPost=/bin/sh -c 'if [ -f /tmp/notify_firstboot_to_platform ]; then systemctl --no-block start platform_base.service platform_driver_sh.service platform_driver.service; fi'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=basic.target
