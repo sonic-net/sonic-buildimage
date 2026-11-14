@@ -2044,7 +2044,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                 '{} payload created a standalone injected directive'.format(marker)
             )
             self.assertIn(
-                'server 10.20.30.40noselect6.6.6.6\n',
+                'server 10.20.30.40noselect6.6.6.6 iburst\n',
                 output,
                 '{} payload was not collapsed onto a single server line'.format(marker)
             )
@@ -2074,7 +2074,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             'missing-resolve_as fallback payload created a standalone injected directive'
         )
         self.assertIn(
-            'server 10.20.30.40noselect6.6.6.6\n',
+            'server 10.20.30.40noselect6.6.6.6 iburst\n',
             output,
             'missing-resolve_as fallback payload was not collapsed onto a single server line'
         )
@@ -2105,7 +2105,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             'pool-branch payload created a standalone injected directive'
         )
         self.assertIn(
-            'pool pool.examplenoselect6.6.6.6\n',
+            'pool pool.examplenoselect6.6.6.6 iburst\n',
             output,
             'pool-branch payload was not collapsed onto a single pool line'
         )
@@ -2138,7 +2138,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             'unsupported association_type value was rendered as its own chrony directive'
         )
         self.assertIn(
-            'server 0.0.0.0/0\n',
+            'server 0.0.0.0/0 iburst\n',
             output,
             'unsupported association_type value was not rejected in favor of the safe server default'
         )
@@ -2171,7 +2171,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             'key/version payload created a standalone injected directive'
         )
         self.assertIn(
-            'server 1.2.3.4 key 5noselect6.6.6.6 version 4noselect7.7.7.7\n',
+            'server 1.2.3.4 key 5noselect6.6.6.6 iburst version 4noselect7.7.7.7\n',
             output,
             'key/version payload was not collapsed onto the server line'
         )
