@@ -150,7 +150,7 @@ function retry_delete_entries() {
 function delete_system_neigh_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
     local nn = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
@@ -168,7 +168,7 @@ function delete_system_neigh_entries() {
 function delete_system_interface_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
     local nsi = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
@@ -186,7 +186,7 @@ function delete_system_interface_entries() {
 function delete_system_lag_member_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
     local nlm = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
@@ -204,7 +204,7 @@ function delete_system_lag_member_entries() {
 function delete_system_lag_entries() {
     local_host=$1
     local_asic=$2
-    $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
     local nsl = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]

@@ -183,9 +183,9 @@ function preStartAction()
 
 function setPlatformLagIdBoundaries()
 {
-    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
-    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
-    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB EVAL "
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
     local start_id = tonumber(ARGV[1])
     local end_id = tonumber(ARGV[2])
     for id = start_id,end_id do
@@ -393,7 +393,7 @@ function postStartAction()
            if [[ "$chassis_tsa_supported_cfg" == "true" ]]; then
               tsa_cfg="$($SONIC_DB_CLI -s CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
               if [[ -n "$tsa_cfg" ]]; then
-                 docker exec -i ${DOCKERNAME} $SONIC_DB_CLI --authenticate CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+                 docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
                  OP_CODE=$?
                  if [ $OP_CODE -ne 0 ]; then
                    echo "Err: Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled"
