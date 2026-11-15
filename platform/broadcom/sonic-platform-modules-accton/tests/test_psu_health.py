@@ -1,4 +1,4 @@
-"""Check AS7326 PMBus voltage limits and narrowly scoped fan health rules."""
+"""Check Accton PMBus voltage limits and narrowly scoped fan health rules."""
 
 import json
 import unittest
@@ -32,4 +32,57 @@ class PsuHealth(unittest.TestCase):
         mapping = plugin["PSU"]["psu_fan_dir"]["i2c"]["valmap"]
         self.assertEqual(
             mapping, {"F2B": "EXHAUST", "F2B*": "EXHAUST", "B2F": "INTAKE"}
+        )
+
+
+class As7726PsuHealth(unittest.TestCase):
+    def test_voltage_limits_use_the_as7726_pmbus_interfaces(self):
+        path = SOURCE / (DEVICE + "as7726_32x-r0/pddf/pddf-device.json")
+        data = json.loads(path.read_text())
+        for device, bus, address in (
+            ("PSU1-PMBUS", "0x32", "0x5b"),
+            ("PSU2-PMBUS", "0x31", "0x58"),
+        ):
+            interface = data[device]["i2c"]
+            self.assertEqual(interface["topo_info"]["parent_bus"], bus)
+            self.assertEqual(interface["topo_info"]["dev_addr"], address)
+            attrs = interface["attr_list"]
+            for name, offset in (("psu_v_out_min", "0xa4"), ("psu_v_out_max", "0xa5")):
+                matching = [a for a in attrs if a["attr_name"] == name]
+                self.assertEqual(len(matching), 1)
+                self.assertEqual(
+                    matching[0],
+                    {
+                        "attr_name": name,
+                        "attr_devaddr": address,
+                        "attr_devtype": "pmbus",
+                        "attr_offset": offset,
+                        "attr_mask": "0x0",
+                        "attr_cmpval": "0xff",
+                        "attr_len": "2",
+                    },
+                )
+            names = {a["attr_name"] for a in attrs}
+            self.assertLessEqual(
+                {
+                    "psu_present",
+                    "psu_power_good",
+                    "psu_v_out",
+                    "psu_fan1_speed_rpm",
+                    "psu_temp1_input",
+                },
+                names,
+            )
+
+    def test_only_psu_fan_target_comparisons_are_added_to_exclusions(self):
+        root = SOURCE / (DEVICE + "as7726_32x-r0")
+        config = json.loads((root / "system_health_monitoring_config.json").read_text())
+        self.assertEqual(
+            config["devices_to_ignore"], ["asic", "PSU1_FAN1.speed", "PSU2_FAN1.speed"]
+        )
+        self.assertEqual(config["services_to_ignore"], [])
+        plugin = json.loads((root / "pddf/pd-plugin.json").read_text())
+        self.assertEqual(
+            plugin["PSU"]["psu_fan_dir"]["i2c"]["valmap"],
+            {"F2B": "EXHAUST", "B2F": "INTAKE"},
         )
