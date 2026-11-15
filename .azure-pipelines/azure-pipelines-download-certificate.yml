@@ -17,17 +17,40 @@ steps:
     secretsFilter: ${{ parameters.certificateName }}
 
 - script: |
-    set -e
-    TMP_FILE=$(mktemp)
-    echo "$CERTIFICATE" | base64 -d > $TMP_FILE
-    sudo mkdir -p /etc/certificates
-    mkdir -p $(Build.StagingDirectory)/target
+    set -euo pipefail
+    umask 077
+
+    TMP_DIR=$(mktemp -d)
+    cleanup() {
+      rm -rf -- "$TMP_DIR"
+    }
+    trap cleanup EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+
+    PFX_FILE="$TMP_DIR/certificate.pfx"
+    PUBLIC_CERT_FILE="$TMP_DIR/public.pem"
+    PRIVATE_KEY_FILE="$TMP_DIR/private.pem"
+
+    printf '%s' "$CERTIFICATE" | base64 -d > "$PFX_FILE"
     # Save the public key
-    openssl pkcs12 -in $TMP_FILE -clcerts --nokeys -nodes -passin pass: | sed -z -e "s/.*\(-----BEGIN CERTIFICATE\)/\1/" > $(SIGNING_CERT)
+    openssl pkcs12 -in "$PFX_FILE" -clcerts --nokeys -nodes -passin pass: |
+      sed -z -e "s/.*\(-----BEGIN CERTIFICATE\)/\1/" > "$PUBLIC_CERT_FILE"
     # Save the private key
-    openssl pkcs12 -in $TMP_FILE -nocerts -nodes -passin pass: | sed -z -e "s/.*\(-----BEGIN PRIVATE KEY\)/\1/" | sudo tee $(SIGNING_KEY) 1>/dev/null
-    ls -lt $(SIGNING_CERT) $(SIGNING_KEY)
-    rm $TMP_FILE
+    openssl pkcs12 -in "$PFX_FILE" -nocerts -nodes -passin pass: |
+      sed -z -e "s/.*\(-----BEGIN PRIVATE KEY\)/\1/" > "$PRIVATE_KEY_FILE"
+
+    install -d -m 0755 "$(dirname "$SIGNING_CERT_PATH")"
+    install -m 0644 "$PUBLIC_CERT_FILE" "$SIGNING_CERT_PATH"
+    sudo install -d -m 0755 "$(dirname "$SIGNING_KEY_PATH")"
+    sudo rm -f -- "$SIGNING_KEY_PATH"
+    sudo install -m 0600 "$PRIVATE_KEY_FILE" "$SIGNING_KEY_PATH"
+
+    test "$(stat -c '%a' "$SIGNING_CERT_PATH")" = "644"
+    test "$(sudo stat -c '%a' "$SIGNING_KEY_PATH")" = "600"
   env:
     CERTIFICATE: $(${{ parameters.certificateName }})
+    SIGNING_CERT_PATH: $(SIGNING_CERT)
+    SIGNING_KEY_PATH: $(SIGNING_KEY)
   displayName: "Save certificate"
