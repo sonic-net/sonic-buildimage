@@ -44,7 +44,7 @@ def test_port_zero_requires_socket_without_tcp_fallback(config, access, path):
     config.getDbSock.return_value = path
 
     assert _redis_transport.use_local_redis_socket('CONFIG_DB') is True
-    config.getDbSock.assert_not_called()
+    config.getDbSock.assert_called_once()
     access.assert_not_called()
 
 
@@ -53,9 +53,10 @@ def test_port_zero_requires_socket_without_tcp_fallback(config, access, path):
 @mock.patch('sonic_py_common._redis_transport.swsscommon.SonicDBConfig')
 def test_remote_endpoint_keeps_tcp_even_with_local_socket(config, access, host):
     config.getDbHostname.return_value = host
+    config.getDbSock.return_value = '/var/run/redis-chassis/redis_chassis.sock'
     assert _redis_transport.use_local_redis_socket('CHASSIS_STATE_DB') is False
     config.getDbPort.assert_not_called()
-    config.getDbSock.assert_not_called()
+    config.getDbSock.assert_called_once()
     access.assert_not_called()
 
 
@@ -64,3 +65,28 @@ def test_other_loopback_address_is_local(config):
     config.getDbHostname.return_value = '127.0.0.2'
     config.getDbPort.return_value = 0
     assert _redis_transport.use_local_redis_socket('STATE_DB') is True
+
+
+@pytest.mark.parametrize('port,allowed', [(0, False), (6379, False), (6379, True)])
+@pytest.mark.parametrize('prefix', ['/run', '/var/run'])
+@mock.patch('sonic_py_common._redis_transport.os.access')
+@mock.patch('sonic_py_common._redis_transport.swsscommon.SonicDBConfig')
+def test_asic_bridge_address_uses_its_namespaced_socket(config, access, port, allowed, prefix):
+    config.getDbHostname.return_value = '172.18.0.5'
+    config.getDbSock.return_value = prefix + '/redis1/redis.sock'
+    config.getDbPort.return_value = port
+    access.return_value = allowed
+    assert _redis_transport.use_local_redis_socket('CONFIG_DB', 'asic1') is (port == 0 or allowed)
+
+
+@pytest.mark.parametrize('namespace,path', [
+    ('asic1', '/var/run/redis0/redis.sock'),
+    ('asic1', '/var/run/redis-chassis/redis_chassis.sock'),
+    ('asic1', ''), ('', '/var/run/redis1/redis.sock'),
+])
+@mock.patch('sonic_py_common._redis_transport.swsscommon.SonicDBConfig')
+def test_foreign_or_remote_socket_does_not_make_bridge_address_local(config, namespace, path):
+    config.getDbHostname.return_value = '172.18.0.5'
+    config.getDbSock.return_value = path
+    config.getDbPort.return_value = 0
+    assert _redis_transport.use_local_redis_socket('STATE_DB', namespace) is False

@@ -21,17 +21,21 @@ def test_config_connection_preserves_reader_or_explicit_writer(namespace, authen
 
 @pytest.mark.parametrize('all_local', [False, True])
 @pytest.mark.parametrize('supervisor', [False, True])
-def test_all_database_reader_keeps_remote_tcp_and_chassis_filter(all_local, supervisor):
+@pytest.mark.parametrize('authenticate', [False, True])
+def test_all_database_connections_keep_transport_and_chassis_filter(all_local, supervisor, authenticate):
     names = ['CONFIG_DB', 'STATE_DB', 'CHASSIS_APP_DB', 'CHASSIS_STATE_DB']
     with mock.patch.object(multi_asic.swsscommon.SonicDBConfig, 'getDbList', return_value=names), \
             mock.patch.object(multi_asic.swsscommon, 'SonicV2Connector') as factory, \
             mock.patch.object(multi_asic, 'use_local_redis_socket', return_value=all_local), \
             mock.patch.object(multi_asic, 'is_supervisor', return_value=supervisor):
-        result = multi_asic.connect_to_all_dbs_for_ns('asic0')
+        result = multi_asic.connect_to_all_dbs_for_ns('asic0', authenticate=authenticate)
     assert result is factory.return_value
     expected = names if supervisor else names[:2]
     assert result.connect.call_args_list == [mock.call(name) for name in expected]
-    factory.assert_called_once_with(namespace='asic0', use_unix_socket_path=all_local)
+    options = {'namespace': 'asic0', 'use_unix_socket_path': all_local}
+    if authenticate and all_local:
+        options['authenticate'] = True
+    factory.assert_called_once_with(**options)
 
 
 def test_all_database_reader_does_not_apply_config_socket_choice_to_remote_db():
