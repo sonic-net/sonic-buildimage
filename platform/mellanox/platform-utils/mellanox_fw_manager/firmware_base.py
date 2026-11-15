@@ -192,6 +192,10 @@ class FirmwareManagerBase(Process):
         """
         return self.current_version != self.available_version
 
+    def get_vmod_status(self) -> Optional[str]:
+        """OE firmware status for the status report; None where there is no OE."""
+        return None
+
     def _report_status(self, status: UpgradeStatusType, message: str = ""):
         """Report status to parent process."""
         if self.status_queue:
