@@ -16,6 +16,20 @@
     "VRF_TEST_WITH_VNI": {
         "desc": "Configure VRF with VNI in VRF table."
     },
+    "VRF_TEST_DEFAULT_WITH_VNI": {
+        "desc": "Configure the default VRF with VNI in VRF table."
+    },
+    "VRF_TEST_DEFAULT_WITH_MAX_VNI": {
+        "desc": "Configure the default VRF with the maximum valid VNI in VRF table."
+    },
+    "VRF_TEST_DEFAULT_WRONG_CASE": {
+        "desc": "Reject a case-variant of the reserved default VRF name.",
+        "eStr" : ["Invalid", "VRF name"]
+    },
+    "VRF_TEST_DEFAULT_WITH_SUFFIX": {
+        "desc": "Reject a name with the reserved default VRF name as a prefix.",
+        "eStr" : ["Invalid", "VRF name"]
+    },
     "VRF_TEST_WITH_VNI_OOR": {
         "desc": "Configure VRF with out of range VNI in VRF table.",
         "eStrKey": "Range"
