@@ -264,6 +264,7 @@ stages:
   - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+      MGMT_COMMIT_HASH: 81608c6b74276e8c5db0fc48db3d9630162790c4
       PTF_MODIFIED: $(PTF_MODIFIED)
       PTF_IMAGE_TAG: $(PTF_IMAGE_TAG)
 

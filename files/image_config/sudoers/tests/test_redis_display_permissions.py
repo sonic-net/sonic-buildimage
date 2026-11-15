@@ -28,6 +28,9 @@ def disposable_sudo_policy():
     consutil = Path("/usr/local/bin/consutil")
     consutil.write_text(show.read_text())
     consutil.chmod(0o755)
+    acl_loader = Path("/usr/local/bin/acl-loader")
+    acl_loader.write_text(show.read_text())
+    acl_loader.chmod(0o755)
 
 
 def ordinary_sudo(arguments, executable="show"):
@@ -132,5 +135,32 @@ def test_console_and_mux_queries_preserve_arguments(executable, arguments):
 ])
 def test_other_console_and_mux_operations_are_denied(executable, arguments):
     result = ordinary_sudo(arguments, executable)
+    assert result.returncode != 0
+    assert not result.stdout
+
+
+@pytest.mark.parametrize("arguments", [
+    ["show", "table"],
+    ["show", "table", "--", "DATAACL"],
+    ["show", "rule"],
+    ["show", "rule", "--", "DATAACL"],
+    ["show", "rule", "--", "DATAACL", "RULE_1"],
+])
+def test_acl_display_runs_as_root(arguments):
+    result = ordinary_sudo(arguments, "acl-loader")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {"uid": 0, "args": arguments, "pythonpath": None}
+
+
+@pytest.mark.parametrize("arguments", [
+    ["update", "full", "/tmp/acl.json"],
+    ["update", "incremental", "/tmp/acl.json"],
+    ["delete", "DATAACL"],
+    ["show", "table", "--", "DATAACL", "extra"],
+    ["show", "rule", "--", "DATAACL", "RULE_1", "extra"],
+    ["show", "table", "--", "DATAACL\nupdate full /tmp/acl.json"],
+])
+def test_acl_mutations_and_extra_arguments_are_denied(arguments):
+    result = ordinary_sudo(arguments, "acl-loader")
     assert result.returncode != 0
     assert not result.stdout
