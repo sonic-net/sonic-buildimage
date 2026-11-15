@@ -2831,6 +2831,10 @@ jobs:
           repository-cache: true
           disk-cache: gnmi-image-amd64
           cache-version: "8.5.1"
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
       - name: Validate Make handoff and version inputs
         run: |
           python3 -B tools/bazel/tests/gnmi_make_test.py
