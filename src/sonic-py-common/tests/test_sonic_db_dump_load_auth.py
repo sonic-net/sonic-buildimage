@@ -134,10 +134,56 @@ def test_native_credential_failure_never_retries_anonymous(protected_redis, miss
 
 
 def test_library_pretty_dump_keeps_connection_options():
-    mock_pool = object()
     with patch('redisdl.RedisWrapper') as client:
         client.return_value.keys.return_value = []
-        redisdl.dump(io.StringIO(), pretty=True, unix_socket_path='/var/run/redis/redis.sock',
-                     connection_pool=mock_pool)
-    assert client.call_args.kwargs['connection_pool'] is mock_pool
+        redisdl.dump(io.StringIO(), pretty=True, unix_socket_path='/var/run/redis/redis.sock')
     assert client.call_args.kwargs['unix_socket_path'] == '/var/run/redis/redis.sock'
+
+
+@pytest.fixture
+def legacy_redis(tmp_path):
+    path = str(tmp_path / 'redis.sock')
+    server = subprocess.Popen([
+        'redis-server', '--port', '0', '--unixsocket', path,
+        '--save', '', '--appendonly', 'no'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    client = redis.Redis(unix_socket_path=path)
+    try:
+        for _ in range(200):
+            try:
+                client.ping()
+                break
+            except redis.ConnectionError:
+                if server.poll() is not None:
+                    pytest.fail('fixture Redis exited')
+                time.sleep(0.01)
+        else:
+            pytest.fail('fixture Redis did not start')
+        yield path, client
+    finally:
+        client.close()
+        server.terminate()
+        server.wait(timeout=10)
+
+
+def test_library_keeps_requested_encoding(legacy_redis):
+    path, client = legacy_redis
+    client.set('binary', b'\x00\xff')
+    assert json.loads(redisdl.dumps(unix_socket_path=path, encoding='latin-1'))['binary']['value'] == '\x00\xff'
+
+
+def test_library_loads_sorted_set_with_current_client(legacy_redis):
+    path, client = legacy_redis
+    redisdl.loads('{"sorted":{"type":"zset","value":[["one",1.5]]}}', unix_socket_path=path)
+    assert client.zscore('sorted', 'one') == 1.5
+
+
+@pytest.mark.parametrize('pretty', [False, True])
+def test_library_round_trip_preserves_persistent_keys(legacy_redis, pretty):
+    path, client = legacy_redis
+    client.set('persistent', 'value')
+    output = io.StringIO()
+    redisdl.dump(output, unix_socket_path=path, pretty=pretty)
+    client.flushdb()
+    redisdl.loads(output.getvalue(), unix_socket_path=path)
+    assert client.get('persistent') == b'value'
+    assert client.ttl('persistent') == -1

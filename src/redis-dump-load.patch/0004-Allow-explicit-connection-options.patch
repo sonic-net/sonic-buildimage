@@ -1,8 +1,8 @@
-Subject: [PATCH] Forward explicit connection pools through dump and load
+Subject: [PATCH] Forward an explicit connection pool through load paths
 
 --- a/redisdl.py
 +++ b/redisdl.py
-@@ -105,24 +105,22 @@
+@@ -105,18 +105,15 @@
              return p.expireat(key, int(time))
  
  def client(host='localhost', port=6379, password=None, db=0,
@@ -29,45 +29,17 @@ Subject: [PATCH] Forward explicit connection pools through dump and load
      return r
  
  def dumps(host='localhost', port=6379, password=None, db=0, pretty=False,
--          unix_socket_path=None, encoding='utf-8', keys='*'):
-+          unix_socket_path=None, encoding='utf-8', keys='*', connection_pool=None):
-     r = client(host=host, port=port, password=password, db=db,
--               unix_socket_path=unix_socket_path, encoding=encoding)
-+               unix_socket_path=unix_socket_path, encoding=encoding,
-+               connection_pool=connection_pool)
-     kwargs = {}
-     if not pretty:
-         kwargs['separators'] = (',', ':')
-@@ -146,21 +144,23 @@
-         return self.stream.write(str.encode())
- 
- def dump(fp, host='localhost', port=6379, password=None, db=0, pretty=False,
--         unix_socket_path=None, encoding='utf-8', keys='*'):
--
-+         unix_socket_path=None, encoding='utf-8', keys='*', connection_pool=None):
-+
-     try:
-         fp.write('')
-     except TypeError:
-         fp = BytesWriteWrapper(fp)
--
-+
+@@ -156,7 +153,8 @@
      if pretty:
          # hack to avoid implementing pretty printing
          fp.write(dumps(host=host, port=port, password=password, db=db,
 -            pretty=pretty, encoding=encoding, keys=keys))
 +            pretty=pretty, encoding=encoding, keys=keys,
-+            unix_socket_path=unix_socket_path, connection_pool=connection_pool))
++            unix_socket_path=unix_socket_path))
          return
  
      r = client(host=host, port=port, password=password, db=db,
--               unix_socket_path=unix_socket_path, encoding=encoding)
-+               unix_socket_path=unix_socket_path, encoding=encoding,
-+               connection_pool=connection_pool)
-     kwargs = {}
-     if not pretty:
-         kwargs['separators'] = (',', ':')
-@@ -353,9 +353,10 @@
+@@ -353,9 +351,10 @@
          r.delete(key)
  
  def loads(s, host='localhost', port=6379, password=None, db=0, empty=False,
@@ -80,7 +52,7 @@ Subject: [PATCH] Forward explicit connection pools through dump and load
      if empty:
          _empty(r)
      table = json.loads(s)
-@@ -381,6 +382,7 @@
+@@ -381,6 +380,7 @@
  
  def load_lump(fp, host='localhost', port=6379, password=None, db=0,
      empty=False, unix_socket_path=None, encoding='utf-8', use_expireat=False,
@@ -88,7 +60,7 @@ Subject: [PATCH] Forward explicit connection pools through dump and load
  ):
      s = fp.read()
      if py3:
-@@ -388,7 +390,8 @@
+@@ -388,7 +388,8 @@
          # if bytes, decode to a string because loads requires input to be a string.
          if isinstance(s, bytes):
              s = s.decode(encoding)
@@ -98,7 +70,7 @@ Subject: [PATCH] Forward explicit connection pools through dump and load
  
  def get_ijson(local_streaming_backend):
      if local_streaming_backend:
-@@ -472,12 +475,13 @@
+@@ -472,12 +473,13 @@
  
  def load_streaming(fp, host='localhost', port=6379, password=None, db=0,
      empty=False, unix_socket_path=None, encoding='utf-8', use_expireat=False,
@@ -114,7 +86,7 @@ Subject: [PATCH] Forward explicit connection pools through dump and load
  
      counter = 0
      for key, item in loader():
-@@ -500,16 +504,17 @@
+@@ -500,16 +502,17 @@
  
  def load(fp, host='localhost', port=6379, password=None, db=0,
      empty=False, unix_socket_path=None, encoding='utf-8', use_expireat=False,

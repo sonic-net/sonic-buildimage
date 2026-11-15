@@ -5,10 +5,9 @@ def sonic_db_dump_load():
     import os.path
     import re
     import sys
-    from redisdl import dump, dumps, load
+    from redisdl import dump, load
     from swsscommon.swsscommon import SonicDBConfig, SonicDBKey
     from sonic_py_common import multi_asic
-    from swsscommon.redis import connection_pool
 
     DUMP = 1
     LOAD = 2
@@ -16,16 +15,11 @@ def sonic_db_dump_load():
 
     def initialize_database_config(options):
         is_multi_asic = multi_asic.is_multi_asic()
-        if options.dbname and not options.netns and is_multi_asic:
-            options.netns = multi_asic.get_current_namespace() or ''
         if options.netns or is_multi_asic:
             SonicDBConfig.initializeGlobalConfig()
 
     def database_connection_kwargs(dbname, key, conntype):
         args = {'db': SonicDBConfig.getDbId(dbname, key)}
-        if conntype is None:
-            conntype = 'tcp'
-
         if conntype == 'tcp':
             args['host'] = SonicDBConfig.getDbHostname(dbname, key)
             args['port'] = SonicDBConfig.getDbPort(dbname, key)
@@ -63,16 +57,12 @@ def sonic_db_dump_load():
         if hasattr(options, 'dbname'):
             key = SonicDBKey(options.netns)
             args.update(database_connection_kwargs(options.dbname, key, options.conntype))
-            pool_options = dict(args)
-            pool_options.pop('empty', None)
-            pool_options.pop('streaming_backend', None)
-            pool_options.pop('pretty', None)
-            pool_options.pop('keys', None)
-            pool_options.pop('use_expireat', None)
-            pool_options.setdefault('encoding', 'utf-8')
-            args['connection_pool'] = connection_pool(
-                authenticate=action == LOAD and args['unix_socket_path'] is not None,
-                **pool_options)
+            if action == LOAD and args['unix_socket_path'] is not None:
+                from swsscommon.redis import connection_pool
+                args['connection_pool'] = connection_pool(
+                    unix_socket_path=args['unix_socket_path'], db=args['db'],
+                    encoding=options.encoding or 'utf-8', password=options.password,
+                    authenticate=True)
 
         return args
 
@@ -84,10 +74,7 @@ def sonic_db_dump_load():
             output = sys.stdout
 
         kwargs = options_to_kwargs(options)
-        if options.pretty:
-            output.write(dumps(**kwargs))
-        else:
-            dump(output, **kwargs)
+        dump(output, **kwargs)
 
         if options.output:
             output.close()
@@ -138,7 +125,7 @@ def sonic_db_dump_load():
         parser.add_option('-n', '--dbname', help='use DATABASE (default: APPL_DB)', default=DEFAULT_DB)
         parser.add_option(
             '-t', '--conntype',
-            help='redis connection type (tcp or unix_socket); default: tcp')
+            help='redis connection type (tcp or unix_socket); default: tcp', default='tcp')
         parser.add_option('-k', '--keys', help='dump only keys matching specified glob-style pattern')
         parser.add_option('-o', '--output', help='write to OUTPUT instead of stdout')
         parser.add_option('-y', '--pretty', help='split output on multiple lines and indent it', action='store_true')
@@ -147,7 +134,7 @@ def sonic_db_dump_load():
         parser.add_option('-n', '--dbname', help='use DATABASE (default: APPL_DB)', default=DEFAULT_DB)
         parser.add_option(
             '-t', '--conntype',
-            help='redis connection type (tcp or unix_socket); default: tcp')
+            help='redis connection type (tcp or unix_socket); default: tcp', default='tcp')
         parser.add_option('-e', '--empty', help='delete all keys in destination db prior to loading', action='store_true')
         parser.add_option('-E', '--encoding', help='set encoding to use while encoding data to redis', default='utf-8')
         parser.add_option('-B', '--backend', help='use specified streaming backend')
@@ -157,7 +144,7 @@ def sonic_db_dump_load():
         parser.add_option('-n', '--dbname', help='use DATABASE (default: APPL_DB)', default=DEFAULT_DB)
         parser.add_option(
             '-t', '--conntype',
-            help='redis connection type (tcp or unix_socket); default: tcp')
+            help='redis connection type (tcp or unix_socket); default: tcp', default='tcp')
         parser.add_option('-k', '--keys', help='dump only keys matching specified glob-style pattern')
         parser.add_option('-o', '--output', help='write to OUTPUT instead of stdout (dump mode only)')
         parser.add_option('-y', '--pretty', help='split output on multiple lines and indent it (dump mode only)', action='store_true')
