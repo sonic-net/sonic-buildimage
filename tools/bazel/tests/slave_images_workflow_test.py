@@ -60,8 +60,17 @@ elif name == "az" and operation == "acr":
 elif name == "docker" and operation == "login":
     if sys.stdin.read() != os.environ.get("ACR_TOKEN", "fixture-acr-token"):
         raise SystemExit(1)
+elif name == "sudo" and args[:3] == ["-n", "test", "-d"]:
+    exists = (os.environ["CACHE_DIRECTORY_EXISTS"] == "1"
+              if "CACHE_DIRECTORY_EXISTS" in os.environ else os.path.isdir(args[3]))
+    raise SystemExit(0 if exists else 1)
+elif name == "sudo" and args[:2] == ["-n", "stat"]:
+    os.execvp("stat", args[1:])
+elif name == "stat":
+    print(os.environ.get("CACHE_AUTOMOUNT_FILESYSTEM",
+                         os.environ.get("CACHE_FILESYSTEM", "nfs")))
 '''
-        for name in ("make", "docker", "az", "curl", "sudo"):
+        for name in ("make", "docker", "az", "curl", "sudo", "stat"):
             executable = self.commands / name
             executable.write_text(shim)
             executable.chmod(0o755)
@@ -113,7 +122,11 @@ elif name == "docker" and operation == "login":
                          "SONIC_BUILD_RETRY_COUNT", "SONIC_BUILD_RETRY_INTERVAL"):
                 self.assertNotIn(name, job["env"])
         self.assertEqual(self.consumer["env"]["ENABLE_DOCKER_BASE_PULL"], "y")
-        self.assertEqual(self.consumer["env"]["SONIC_DPKG_CACHE_METHOD"], "rwcache")
+        self.assertEqual(
+            " ".join(self.consumer["env"]["SONIC_DPKG_CACHE_METHOD"].split()),
+            "${{ github.event_name == 'push' && github.ref == 'refs/heads/master' "
+            "&& 'rwcache' || 'rcache' }}")
+        self.assertEqual(self.consumer["env"]["SONIC_DPKG_CACHE_SOURCE"], "/nfs/dpkg_cache/vs")
         self.assertEqual(self.publisher["env"]["ACR_REGISTRY_NAME"], "sonicdev")
         self.assertEqual(self.publisher["env"]["REGISTRY_SERVER"], "sonicdev-microsoft.azurecr.io")
         self.assertEqual(self.publisher["env"]["AZURE_SUBSCRIPTION_ID"],
@@ -205,14 +218,146 @@ elif name == "docker" and operation == "login":
             with self.subTest(job=job["name"]):
                 steps = job["steps"]
                 cleanup = next(step for step in steps
-                               if step.get("name") == "Reclaim local Bazel caches")
+                               if step.get("name") in (
+                                   "Reclaim local Bazel caches", "Reclaim local build caches"))
                 preflight = next(step for step in steps
                                  if step.get("name") == "Check host-agent build prerequisites")
                 self.assertLess(steps.index(cleanup), steps.index(preflight))
                 self.assertEqual(cleanup["run"],
                                  "python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache"
-                                 ' --runner-workspace "${{ runner.workspace }}"')
+                                 ' --runner-workspace "${{ runner.workspace }}"' +
+                                 (" --remove-package-cache" if job is self.consumer else ""))
                 self.assertNotIn("continue-on-error", cleanup)
+
+    def test_nfs_validation_precedes_local_cleanup_and_build(self):
+        steps = self.consumer["steps"]
+        validation = next(step for step in steps
+                          if step["name"] == "Validate shared NFS package cache")
+        cleanup = next(step for step in steps if step["name"] == "Reclaim local build caches")
+        configure = next(step for step in steps if step["name"] == "Configure persistent caches")
+        self.assertEqual(validation["run"], "bash tools/ci/runner/nfs_package_cache.sh")
+        self.assertLess(steps.index(validation), steps.index(cleanup))
+        self.assertLess(steps.index(cleanup), steps.index(configure))
+        self.assertNotIn("continue-on-error", validation)
+        self.assertNotIn("SONIC_DPKG_CACHE_SOURCE", configure["env"])
+        self.assertIn('install -d -m 0700 "$SONIC_BAZEL_CACHE_SOURCE"', configure["run"])
+        self.assertNotIn('install -d -m 0700 "$SONIC_BAZEL_CACHE_SOURCE" "$SONIC_DPKG_CACHE_SOURCE"',
+                         configure["run"])
+        self.assertNotIn('test -w "$SONIC_DPKG_CACHE_SOURCE"', configure["run"])
+        self.assertIn("SONIC_DPKG_CACHE_SOURCE=%s", configure["run"])
+        self.assertFalse(any(step.get("name") == validation["name"]
+                             for step in self.publisher["steps"]))
+
+    def test_nfs_validation_accepts_only_existing_nfs_caches(self):
+        script = (ROOT / "tools/ci/runner/nfs_package_cache.sh").read_text()
+        cache = self.directory / "shared packages"
+        cache.mkdir()
+        for mode in ("rcache", "rwcache"):
+            for filesystem in ("nfs", "nfs4", "autofs", "ext4", "overlay", ""):
+                with self.subTest(mode=mode, filesystem=filesystem):
+                    result = self.run_shell(
+                        script, SONIC_DPKG_CACHE_SOURCE=str(cache),
+                        SONIC_DPKG_CACHE_METHOD=mode, CACHE_FILESYSTEM=filesystem)
+                    self.assertEqual(result.returncode == 0, filesystem in ("nfs", "nfs4"),
+                                     result.stdout + result.stderr)
+                    self.assertEqual(self.recorded(), [
+                        ["sudo", "-n", "test", "-d", str(cache)],
+                        ["sudo", "-n", "stat", "--file-system", "--format=%T",
+                         "--", str(cache)],
+                        ["stat", "--file-system", "--format=%T", "--", str(cache)]])
+        for mode, source in (("rcache", cache / "missing"), ("none", cache)):
+            result = self.run_shell(script, SONIC_DPKG_CACHE_SOURCE=str(source),
+                                    SONIC_DPKG_CACHE_METHOD=mode)
+            self.assertNotEqual(result.returncode, 0)
+        result = self.run_shell(
+            script, SONIC_DPKG_CACHE_SOURCE=str(cache), SONIC_DPKG_CACHE_METHOD="rcache",
+            FAIL_COMMAND="stat --file-system")
+        self.assertNotEqual(result.returncode, 0)
+        result = self.run_shell(
+            script, SONIC_DPKG_CACHE_SOURCE=str(cache), SONIC_DPKG_CACHE_METHOD="rcache",
+            FAIL_COMMAND="sudo -n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("privileged host access", result.stderr)
+        self.assertEqual(self.recorded(), [["sudo", "-n", "test", "-d", str(cache)]])
+
+    def test_nfs_validation_checks_the_filesystem_reached_through_autofs(self):
+        script = (ROOT / "tools/ci/runner/nfs_package_cache.sh").read_text()
+        cache = self.directory / "automounted packages"
+        cache.mkdir()
+        for mode in ("rcache", "rwcache"):
+            for filesystem in ("nfs", "nfs4", "autofs", "ext4", "overlay", ""):
+                with self.subTest(mode=mode, filesystem=filesystem):
+                    result = self.run_shell(
+                        script, SONIC_DPKG_CACHE_SOURCE=str(cache),
+                        SONIC_DPKG_CACHE_METHOD=mode, CACHE_FILESYSTEM="autofs",
+                        CACHE_AUTOMOUNT_FILESYSTEM=filesystem)
+                    self.assertEqual(result.returncode == 0, filesystem in ("nfs", "nfs4"),
+                                     result.stdout + result.stderr)
+                    self.assertEqual(self.recorded()[-1], [
+                        "stat", "--file-system", "--format=%T", "--", str(cache)])
+
+    def test_nfs_validation_leaves_read_write_permissions_to_the_slave(self):
+        script = (ROOT / "tools/ci/runner/nfs_package_cache.sh").read_text()
+        cache = self.directory / "read-only packages"
+        cache.mkdir(mode=0o555)
+        original = cache.stat()
+        for mode in ("rcache", "rwcache"):
+            result = self.run_shell(script, SONIC_DPKG_CACHE_SOURCE=str(cache),
+                                    SONIC_DPKG_CACHE_METHOD=mode)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("cache access handled by the slave", result.stdout)
+        current = cache.stat()
+        self.assertEqual(
+            (current.st_mode, current.st_uid, current.st_gid, current.st_mtime_ns),
+            (original.st_mode, original.st_uid, original.st_gid, original.st_mtime_ns))
+
+    @unittest.skipIf(os.geteuid() == 0, "root bypasses local directory mode restrictions")
+    def test_nfs_validation_does_not_require_host_user_parent_traversal(self):
+        script = (ROOT / "tools/ci/runner/nfs_package_cache.sh").read_text()
+        parent = self.directory / "restricted nfs"
+        parent.mkdir()
+        cache = parent / "packages"
+        cache.mkdir()
+        original = cache.stat()
+        parent.chmod(0o000)
+        try:
+            self.assertFalse(os.path.isdir(cache))
+            self.assertFalse(os.access(cache, os.R_OK | os.X_OK))
+            for mode in ("rcache", "rwcache"):
+                result = self.run_shell(
+                    script, SONIC_DPKG_CACHE_SOURCE=str(cache),
+                    SONIC_DPKG_CACHE_METHOD=mode, CACHE_DIRECTORY_EXISTS="1")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.recorded(), [
+                    ["sudo", "-n", "test", "-d", str(cache)],
+                    ["sudo", "-n", "stat", "--file-system", "--format=%T",
+                     "--", str(cache)],
+                    ["stat", "--file-system", "--format=%T", "--", str(cache)]])
+        finally:
+            parent.chmod(0o755)
+        current = cache.stat()
+        self.assertEqual(
+            (current.st_mode, current.st_uid, current.st_gid, current.st_mtime_ns),
+            (original.st_mode, original.st_uid, original.st_gid, original.st_mtime_ns))
+
+    def test_vs_build_forwards_four_make_jobs_to_slave(self):
+        self.assertEqual(self.consumer["env"]["SONIC_BUILD_JOBS"], "4")
+        self.assertNotIn("SONIC_BUILD_JOBS", self.publisher["env"])
+        source = (ROOT / "Makefile.work").read_text()
+        fragment = ("SHELL := /bin/bash\n" + assignment(source, "SONIC_BUILD_INSTRUCTION") +
+                    "\ncheck:\n\t@$(SONIC_BUILD_INSTRUCTION) target/sonic-vs.bin\n")
+        result = subprocess.run(
+            ["/usr/bin/make", "--no-print-directory", "-f", "-", "check",
+             "MAKE=" + str(self.commands / "make")],
+            input=fragment, cwd=self.directory,
+            env=dict(self.environment, SONIC_BUILD_JOBS=self.consumer["env"]["SONIC_BUILD_JOBS"]),
+            text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = self.recorded()
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][:3], ["make", "-f", "slave.mk"])
+        self.assertIn("SONIC_BUILD_JOBS=4", calls[0])
+        self.assertIn("target/sonic-vs.bin", calls[0])
 
     def test_private_docker_configuration_is_exported_before_docker_operations(self):
         expected = ("${{ runner.temp }}/docker-config-${{ github.run_id }}-"

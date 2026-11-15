@@ -92,7 +92,7 @@ class RunnerBazelCacheCleanupTest(unittest.TestCase):
             with self.subTest(root=root), self.assertRaises(ValueError):
                 subject.cleanup(root, self.workspace)
         (self.cache / "bazel").write_text("not a directory")
-        with self.assertRaisesRegex(ValueError, "unexpected Bazel cache"):
+        with self.assertRaisesRegex(ValueError, "unexpected local cache"):
             subject.cleanup(self.root, self.workspace)
 
     def test_container_or_mount_reference_prevents_all_deletion(self):
@@ -197,4 +197,62 @@ class RunnerBazelCacheCleanupTest(unittest.TestCase):
             env=dict(os.environ, RUNNER_TEMP=str(self.root)),
             text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("No container-home or VS Bazel caches", result.stdout)
+        self.assertIn("No selected local build caches", result.stdout)
+
+    def test_explicit_package_cleanup_removes_only_the_obsolete_local_directory(self):
+        self.populate()
+        packages = self.vs_cache.parent / "packages"
+        packages.mkdir()
+        (packages / "package.tgz").write_text("old local cache")
+        nfs = self.root / "shared-nfs"
+        nfs.mkdir()
+        (nfs / "package.tgz").write_text("retain shared cache")
+        expected = [*self.paths, packages]
+
+        def remove(command, check):
+            self.assertTrue(check)
+            path = Path(command[-1])
+            self.assertIn(path, expected)
+            shutil.rmtree(path)
+
+        with mock.patch.object(subject, "check_container_users") as containers, \
+                mock.patch.object(subject, "check_mounts") as mounts, \
+                mock.patch.object(subject.subprocess, "run", side_effect=remove) as run:
+            subject.cleanup(self.root, self.workspace, remove_package_cache=True)
+        self.assertEqual(containers.call_args_list, [mock.call(path) for path in expected])
+        self.assertEqual(mounts.call_args_list, [mock.call(path) for path in expected])
+        self.assertEqual(run.call_count, 5)
+        self.assertTrue(all(not path.exists() for path in expected))
+        self.assertEqual((nfs / "package.tgz").read_text(), "retain shared cache")
+
+    def test_package_reference_blocks_all_cleanup(self):
+        self.populate()
+        packages = self.vs_cache.parent / "packages"
+        packages.mkdir()
+
+        def check(path):
+            if path == packages:
+                raise ValueError("package cache is in use")
+
+        for guard in ("check_container_users", "check_mounts"):
+            with self.subTest(guard=guard), \
+                    mock.patch.object(subject, "check_container_users"), \
+                    mock.patch.object(subject, "check_mounts"), \
+                    mock.patch.object(subject, guard, side_effect=check), \
+                    mock.patch.object(subject.subprocess, "run") as run:
+                with self.assertRaisesRegex(ValueError, "package cache is in use"):
+                    subject.cleanup(self.root, self.workspace, remove_package_cache=True)
+                run.assert_not_called()
+                self.assertTrue(all(path.is_dir() for path in [*self.paths, packages]))
+
+    def test_package_symlink_is_never_followed_or_removed(self):
+        outside = self.root / "shared-nfs"
+        outside.mkdir()
+        (outside / "sentinel").write_text("retain")
+        packages = self.vs_cache.parent / "packages"
+        packages.symlink_to(outside, target_is_directory=True)
+        with mock.patch.object(subject.subprocess, "run") as run:
+            with self.assertRaisesRegex(ValueError, "Refusing unexpected local cache"):
+                subject.cleanup(self.root, self.workspace, remove_package_cache=True)
+            run.assert_not_called()
+        self.assertEqual((outside / "sentinel").read_text(), "retain")

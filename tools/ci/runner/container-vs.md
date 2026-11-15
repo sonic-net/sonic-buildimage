@@ -48,8 +48,10 @@ fetched or rebuilt. The VS job recreates its Bazel directory and prepares source
 distdirs after preflight. Cleanup refuses redirected paths,
 remaining mounts, or references from running or stopped Docker containers, and
 reports failures rather than continuing to preflight. Use an idle dedicated agent
-with no active Bazel processes using these directories. It does not remove `_temp`,
-other home/cache directories, `vs-cache/packages`, or checkouts.
+with no active build processes using these directories. The VS installer also
+removes the obsolete local `vs-cache/packages` directory, but only after its NFS
+package cache passes validation. Publisher cleanup leaves local packages alone.
+Neither cleanup removes `_temp`, other home/cache directories, NFS caches, or checkouts.
 
 For pre-merge testing, pushes to the same repository's `vs-runner` branch
 temporarily also publish real images to that registry. Manual dispatch remains
@@ -126,10 +128,34 @@ memory must be available; allow headroom beyond that threshold. The workspace
 and Docker store each need 100 GiB free, or 200 GiB if on the same filesystem.
 These are admission limits, not guaranteed maximum build sizes.
 
-Each run uses a distinct checkout and label-scoped builder cleanup. Persistent
-caches live in `vs-cache/bazel` and `vs-cache/packages` under the runner workspace,
-outside the run-specific checkout. Both host jobs clear the Bazel cache before
-preflight; the package cache is retained. Keep them writable by the runner user.
+Each run uses a distinct checkout and label-scoped builder cleanup. Local Bazel
+state lives in `vs-cache/bazel` under the runner workspace and is cleared before
+preflight. The VS installer uses `/nfs/dpkg_cache/vs` for Make's package/image
+cache, mounted into the slave as `/dpkg_cache`. Only push builds on `master` use
+`rwcache` (read and publish entries). All other builds, including PRs and manual
+runs, use `rcache` (read entries only).
+Matching dependency/configuration keys are required for hits. This does not
+replace Bazel's remote cache or resolve its connection failures.
+
+The VS job sets `SONIC_BUILD_JOBS=4` for concurrent Make recipes. Per-package
+compilation parallelism remains at its existing default, and Bazel retains its
+separate `--jobs=4` limit. Commands sharing one Bazel output base still serialize;
+increasing Make concurrency does not bypass that lock and may increase memory
+or I/O pressure.
+
+Before local cache cleanup, the job uses noninteractive `sudo` to check that the
+cache directory exists and is NFS-backed. The `stat --file-system` probe triggers
+on-demand mounts and checks the filesystem actually reached, rather than an
+`autofs` mount-table entry. An unresolved `autofs` filesystem or a local
+filesystem is still rejected. These privileged host checks match
+source-path resolution by the rootful Docker daemon: the non-root runner does
+not need to traverse `/nfs` itself. Read/write access and existing permission
+initialization remain inside the slave through the unchanged `Makefile.cache`.
+There is no local fallback, directory creation, or permission repair for the
+NFS cache in the workflow. Provision access for the Docker daemon to mount the
+source and for the slave build user's UID/GID to use `/dpkg_cache`, accounting
+for root squashing.
+
 After artifact upload attempts, the job removes its labeled containers and then
 its own `vs-<run-id>-<attempt>` checkout, including per-run nested-Docker state.
 Checkout deletion requires noninteractive `sudo rm` for root-owned build output.

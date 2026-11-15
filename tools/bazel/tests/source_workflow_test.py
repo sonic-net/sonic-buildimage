@@ -44,7 +44,7 @@ def shell(step):
 
 
 class ArchiveCachePolicyTest(unittest.TestCase):
-    def test_runner_cache_paths_are_step_scoped_and_exported_to_later_steps(self):
+    def test_local_bazel_cache_is_step_scoped_and_shared_package_cache_is_preserved(self):
         workflow = yaml.safe_load(WORKFLOW.read_text())
         for name, job in workflow["jobs"].items():
             with self.subTest(job=name):
@@ -53,13 +53,19 @@ class ArchiveCachePolicyTest(unittest.TestCase):
         job = workflow["jobs"]["vs_container"]
         configure = next(step for step in job["steps"]
                          if step.get("name") == "Configure persistent caches")
-        for name, suffix in (("SONIC_BAZEL_CACHE_SOURCE", "bazel"),
-                             ("SONIC_DPKG_CACHE_SOURCE", "packages")):
-            self.assertNotIn(name, job["env"])
-            self.assertEqual(configure["env"][name], "${{ runner.workspace }}/vs-cache/" + suffix)
+        self.assertNotIn("SONIC_BAZEL_CACHE_SOURCE", job["env"])
+        self.assertEqual(configure["env"], {
+            "SONIC_BAZEL_CACHE_SOURCE": "${{ runner.workspace }}/vs-cache/bazel"})
+        self.assertEqual(job["env"]["SONIC_DPKG_CACHE_SOURCE"], "/nfs/dpkg_cache/vs")
         with tempfile.TemporaryDirectory(prefix="vs cache paths ") as temporary:
             directory = Path(temporary)
             (directory / "artifacts/vs").mkdir(parents=True)
+            shared_cache = directory / "nfs/dpkg_cache/vs"
+            shared_cache.mkdir(parents=True)
+            sentinel = shared_cache / "existing-package.tgz"
+            sentinel.write_bytes(b"retained shared package")
+            shared_cache.chmod(0o555)
+            before = shared_cache.stat()
             commands = directory / "commands"
             commands.mkdir()
             python = commands / "python3"
@@ -67,6 +73,7 @@ class ArchiveCachePolicyTest(unittest.TestCase):
             python.chmod(0o755)
             expected = {name: value.replace("${{ runner.workspace }}", temporary)
                         for name, value in configure["env"].items()}
+            expected["SONIC_DPKG_CACHE_SOURCE"] = str(shared_cache)
             environment_file = directory / "github-env"
             result = subprocess.run(
                 ["bash", "-c", configure["run"]], cwd=directory,
@@ -76,8 +83,12 @@ class ArchiveCachePolicyTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             exported = dict(line.split("=", 1) for line in environment_file.read_text().splitlines())
             self.assertEqual(exported, expected)
-            for value in exported.values():
-                self.assertTrue(Path(value).is_dir())
+            self.assertTrue(Path(exported["SONIC_BAZEL_CACHE_SOURCE"]).is_dir())
+            after = shared_cache.stat()
+            self.assertEqual((before.st_mode, before.st_uid, before.st_gid, before.st_mtime_ns),
+                             (after.st_mode, after.st_uid, after.st_gid, after.st_mtime_ns))
+            self.assertEqual(sentinel.read_bytes(), b"retained shared package")
+            self.assertFalse((directory / "vs-cache/packages").exists())
             arguments = (directory / "source-arguments.txt").read_text().splitlines()
             self.assertEqual(arguments[-2:], ["--output", expected["SONIC_BAZEL_CACHE_SOURCE"] + "/distdir"])
         configure_index = job["steps"].index(configure)

@@ -2531,7 +2531,9 @@ jobs:
       SONIC_BAZEL_KERNEL_REMOTE_CACHE: grpc://172.16.0.4:9092
       SONIC_BAZEL_KERNEL_REMOTE_UPLOAD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'y' || 'n' }}
       SONIC_CONFIG_USE_DOCKER_CACHE: "y"
-      SONIC_DPKG_CACHE_METHOD: rwcache
+      SONIC_DPKG_CACHE_METHOD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'rwcache' || 'rcache' }}
+      SONIC_DPKG_CACHE_SOURCE: /nfs/dpkg_cache/vs
+      SONIC_BUILD_JOBS: "4"
       ENABLE_DOCKER_BASE_PULL: "y"
       REGISTRY_SERVER: sonicdev-microsoft.azurecr.io
       ACR_REGISTRY_NAME: sonicdev
@@ -2576,6 +2578,9 @@ jobs:
           install -d -m 0700 "$DOCKER_CONFIG"
           printf 'DOCKER_CONFIG=%s\n' "$DOCKER_CONFIG" >> "$GITHUB_ENV"
 
+      - name: Validate shared NFS package cache
+        run: bash tools/ci/runner/nfs_package_cache.sh
+
       - name: Reclaim unused images and build cache
         run: |
           set -euo pipefail
@@ -2584,8 +2589,8 @@ jobs:
           docker builder prune --all --force
           docker system df
 
-      - name: Reclaim local Bazel caches
-        run: python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache --runner-workspace "${{ runner.workspace }}"
+      - name: Reclaim local build caches
+        run: python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache --runner-workspace "${{ runner.workspace }}" --remove-package-cache
 
       - name: Check host-agent build prerequisites
         run: python3 -B tools/ci/runner/preflight.py --host-agent --workspace "$PWD" --build-target sonic-vs.bin
@@ -2612,12 +2617,10 @@ jobs:
       - name: Configure persistent caches
         env:
           SONIC_BAZEL_CACHE_SOURCE: ${{ runner.workspace }}/vs-cache/bazel
-          SONIC_DPKG_CACHE_SOURCE: ${{ runner.workspace }}/vs-cache/packages
         run: |
           set -euo pipefail
-          install -d -m 0700 "$SONIC_BAZEL_CACHE_SOURCE" "$SONIC_DPKG_CACHE_SOURCE"
+          install -d -m 0700 "$SONIC_BAZEL_CACHE_SOURCE"
           test -w "$SONIC_BAZEL_CACHE_SOURCE"
-          test -w "$SONIC_DPKG_CACHE_SOURCE"
           for cache in repository_cache disk_cache; do
             directory="$SONIC_BAZEL_CACHE_SOURCE/$cache"
             if test -d "$directory"; then
