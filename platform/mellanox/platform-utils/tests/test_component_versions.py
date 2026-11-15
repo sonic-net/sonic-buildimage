@@ -21,6 +21,8 @@ import os
 import sys
 from unittest import mock
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from mellanox_component_versions import main as main_module
@@ -155,6 +157,91 @@ class TestGetCurrentVersion:
         unique, version = get_current_version("MFT")
         assert unique == True
         assert version == "N/A"
+
+
+class TestSdkVersionReporting:
+    @pytest.mark.parametrize(
+        ("package_versions", "expected_result"),
+        [
+            pytest.param(["1.mlnx.4.10.1144"], (True, "4.10.1144"), id="numeric-release"),
+            pytest.param(["1.mlnx.dev.037"], (True, "dev.037"), id="alphabetic-build"),
+            pytest.param(
+                ["1.mlnx.dev.037", "1.mlnx.dev.037"],
+                (True, "dev.037"),
+                id="multi-asic-same-version",
+            ),
+            pytest.param(
+                ["1.mlnx.dev.037", "1.mlnx.dev.038"],
+                (False, ["dev.037", "dev.038"]),
+                id="multi-asic-different-versions",
+            ),
+        ],
+    )
+    def test_sdk_version_parses_package_versions_from_syncd(self, package_versions, expected_result):
+        device_data = mock.Mock()
+        device_data.get_asic_count.return_value = len(package_versions)
+
+        with mock.patch.object(main_module, "get_asic_type", return_value="mellanox"), \
+                mock.patch.object(main_module, "get_device_data_manager", return_value=device_data), \
+                mock.patch.object(main_module.subprocess, "run",
+                                  side_effect=[mock.Mock(stdout=version) for version in package_versions]) as mock_run:
+            result = main_module.process_rule(main_module.COMPONENT_RULES_SW["SDK"])
+
+        assert result == expected_result
+        containers = ["syncd"] if len(package_versions) == 1 else [
+            f"syncd{index}" for index in range(len(package_versions))
+        ]
+        assert mock_run.call_args_list == [
+            mock.call(
+                ["docker", "exec", container, "dpkg-query", "-W", "-f=${Version}", "sys-sdk-main"],
+                shell=False,
+                stdout=main_module.subprocess.PIPE,
+                text=True,
+            )
+            for container in containers
+        ]
+
+
+class TestFirmwareReporting:
+    @pytest.mark.parametrize(
+        ("device_xml", "expected_actual"),
+        [
+            pytest.param(
+                '<Device type="N/A" pciName="0000:01:00.0">'
+                '<Versions><FW current="--"/></Versions></Device>',
+                "N/A",
+                id="unavailable-device-type",
+            ),
+            pytest.param("", "N/A", id="empty-inventory"),
+            pytest.param(
+                '<Device type="Spectrum7" pciName="0000:01:00.0">'
+                '<Versions><FW current="37.2020.5678"/></Versions></Device>',
+                "2020.5678",
+                id="recognized-device",
+            ),
+        ],
+    )
+    def test_main_preserves_fw_compilation_row(self, device_xml, expected_actual, tmp_path, capsys):
+        compilation_file = tmp_path / "component-versions"
+        compilation_file.write_text("FW 2020.1234\n", encoding="utf-8")
+        device_data = mock.Mock()
+        device_data.get_asic_count.return_value = 1
+        device_data.is_simx_platform.return_value = True
+        device_data.get_simx_version.return_value = "N/A"
+
+        with mock.patch.object(main_module.os, "getuid", return_value=0), \
+                mock.patch.object(main_module, "get_asic_type", return_value="mellanox"), \
+                mock.patch.object(main_module, "get_device_data_manager", return_value=device_data), \
+                mock.patch.object(main_module, "get_component_rules",
+                                  return_value={"FW": main_module.COMPONENT_RULES_SW["FW"]}), \
+                mock.patch.object(main_module, "COMPONENT_VERSIONS_FILE", str(compilation_file)), \
+                mock.patch.object(main_module.subprocess, "run",
+                                  return_value=mock.Mock(stdout=f"<Devices>{device_xml}</Devices>")):
+            main_module.main()
+
+        rows = [line.split() for line in capsys.readouterr().out.splitlines()]
+        fw_rows = [row for row in rows if row and row[0] == "FW"]
+        assert fw_rows == [["FW", "2020.1234", expected_actual]]
 
 
 class TestBmcPlatform:
