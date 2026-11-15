@@ -94,13 +94,14 @@ def apply_debug_tools_layer(path, files, *, alternatives=(), elf_machine=62):
             "gid": 0,
             "linkname": replacement["before"],
         }
+        require(old_link["kind"] in ("symlink", "hardlink"), "debug alternative must replace a declared link")
         new_link = {"kind": "symlink", "mode": 0o777, "uid": 0, "gid": 0, "linkname": replacement["after"]}
         for name in replacement["paths"]:
             require(files.get(name) == old_link and entries.get(name) == new_link,
                     "unexpected debug alternative: " + name)
             approved[name] = entries[name]
         inherited = oci_inventory.resolve_path(replacement["before"].lstrip("/"), files)
-        added = oci_inventory.resolve_path(replacement["after"].lstrip("/"), entries)
+        added = oci_inventory.resolve_path(replacement["after"].lstrip("/"), {**files, **entries})
         require(files.get(inherited, {}).get("elf_machine") == elf_machine and
                 entries.get(added, {}).get("elf_machine") == elf_machine,
                 "debug alternatives require binaries for the expected architecture")

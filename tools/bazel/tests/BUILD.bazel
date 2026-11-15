@@ -1349,3 +1349,15 @@ _INSTALLED_BASE = "//dockers/docker-config-engine-trixie"
     )
     for family, (owner, image) in _INSTALLED_IMAGE_FAMILIES.items()
 ]
+
+py_test(
+    name = "gbsyncd_make_test",
+    srcs = ["gbsyncd_make_test.py"],
+    data = [
+        "//:platform/template/docker-gbsyncd-trixie.mk",
+        "//:platform/vs/docker-gbsyncd-vs.mk",
+        "//platform/vs/docker-gbsyncd-vs:Dockerfile.j2",
+        "//platform/vs/docker-syncd-vs:Dockerfile.j2",
+    ],
+    python_version = "3.11",
+)

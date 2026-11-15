@@ -1,4 +1,5 @@
 package(default_visibility = [
+    "//platform/vs/docker-gbsyncd-vs:__subpackages__",
     "//platform/vs/docker-syncd-vs:__subpackages__",
     "//tools/bazel/tests:__pkg__",
 ])

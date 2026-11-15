@@ -11,6 +11,7 @@ load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
 load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 load("//tools/bazel/oci:source_contract.bzl", "source_contract")
+load(":source_packages.bzl", "NATIVE_POLICY", "OWNER_METADATA", "SOURCE_MODULES", "SOURCE_PACKAGES")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -100,37 +101,7 @@ _PACKAGE_POLICY = dict(
         "debug_tag": "docker-syncd-vs-dbg:latest",
         "package_state": False,
     },
-    native = {
-        "debug_forwarding": {
-            "usr/bin/pi_CLI_dummy": {
-                "provider": "usr/lib/x86_64-linux-gnu/libpicli.so.0",
-                "symbol": "main",
-                "source": "main.c",
-            },
-        },
-        "required_packages": [
-            "syncd-vs",
-            "libsairedis",
-            "libsaimetadata",
-            "libsaivs",
-            "libswsscommon",
-            "openssh-client",
-            "p4lang-pi",
-            "p4lang-bmv2",
-            "p4lang-p4c",
-            "libsai",
-        ],
-        "required_sonames": {
-            "libsairedis": "libsairedis.so.0",
-            "libsaimetadata": "libsaimetadata.so.0",
-            "libsaivs": "libsaivs.so.0",
-            "libswsscommon": "libswsscommon.so.0",
-        },
-        "gap_packages": [],
-        "local_dependency_pattern": "lib(?:sai|swsscommon|MdioIpcClient|pi)",
-        "require_source": True,
-        "require_imported_symbols": False,
-    },
+    native = NATIVE_POLICY,
     retained_requirements = [],
 )
 
@@ -163,20 +134,6 @@ config_setting(
 
 # These public owner targets provide all project runtime payloads. Their
 # matching symbols follow the same dependency and cache graph.
-_SOURCE_PACKAGES = {
-    "p4lang-pi": "@p4lang_pi//:runtime",
-    "p4lang-bmv2": "@p4lang_bmv2//:runtime",
-    "p4lang-p4c": "@p4c//:p4c_pkg",
-    "libsai": "@sonic_dash//:runtime",
-    "libswsscommon": "@sonic_swss_common//dist:libswsscommon_pkg",
-    "libsairedis": "@sonic_sairedis//lib:libsairedis_pkg",
-    "libsaimetadata": "@sonic_sairedis//meta:libsaimetadata_pkg",
-    "libsaivs": "@sonic_sairedis//vslib:libsaivs_pkg",
-    "syncd-vs": "@sonic_sairedis//syncd:syncd_pkg",
-    "openssh-client": "@sonic_fips//openssh:openssh_client_pkg",
-    "libnl-3-dev": "@libnl3//:libnl-3-dev_files",
-    "libnl-route-3-dev": "@libnl3//:libnl-route-3-dev_files",
-}
 
 # Generate provenance and dependency records directly from owner metadata.
 source_contract(
@@ -184,27 +141,9 @@ source_contract(
     architecture = "amd64",
     distribution = "trixie",
     image = "docker-syncd-vs",
-    owner_metadata = [
-        "@sonic_swss_common//:runtime_packages.json",
-        "@sonic_sairedis//:runtime_packages.json",
-        "@sonic_fips//:runtime_packages.json",
-        "@libnl3//:runtime_packages.json",
-        "@p4lang_pi//:runtime_packages.json",
-        "@p4lang_bmv2//:runtime_packages.json",
-        "@p4c//:runtime_packages.json",
-        "@sonic_dash//:runtime_packages.json",
-    ],
-    source_modules = {
-        "sonic-swss-common": "@syncd_source_modules//:sonic-swss-common.MODULE.bazel",
-        "sonic-sairedis": "@syncd_source_modules//:sonic-sairedis.MODULE.bazel",
-        "sonic-fips": "@syncd_source_modules//:sonic-fips.MODULE.bazel",
-        "libnl3": "@syncd_source_modules//:libnl3.MODULE.bazel",
-        "p4lang-pi": "@syncd_source_modules//:p4lang-pi.MODULE.bazel",
-        "p4lang-bmv2": "@syncd_source_modules//:p4lang-bmv2.MODULE.bazel",
-        "p4c": "@syncd_source_modules//:p4c.MODULE.bazel",
-        "sonic-dash": "@syncd_source_modules//:sonic-dash.MODULE.bazel",
-    },
-    sources = _SOURCE_PACKAGES,
+    owner_metadata = OWNER_METADATA,
+    source_modules = SOURCE_MODULES,
+    sources = SOURCE_PACKAGES,
 )
 
 run_binary(
@@ -220,7 +159,7 @@ run_binary(
         "@syncd_source_modules//:sonic-fips.MODULE.bazel",
         "@syncd_source_modules//:sonic-sairedis.MODULE.bazel",
         "@syncd_source_modules//:sonic-swss-common.MODULE.bazel",
-    ] + _SOURCE_PACKAGES.values(),
+    ] + SOURCE_PACKAGES.values(),
     outs = [
         "source_packages.receipt.json",
         "source_runtime.tar",
@@ -238,8 +177,8 @@ run_binary(
                "--module=sonic-dash=$(execpath @syncd_source_modules//:sonic-dash.MODULE.bazel)",
                "--out-tar=$(execpath source_runtime.tar)",
                "--receipt=$(execpath source_packages.receipt.json)",
-           ] + ["--package=" + name + "=$(execpath " + target + ")" for name, target in _SOURCE_PACKAGES.items()] +
-           ["--package-target=" + name + "=" + target for name, target in _SOURCE_PACKAGES.items()],
+           ] + ["--package=" + name + "=$(execpath " + target + ")" for name, target in SOURCE_PACKAGES.items()] +
+           ["--package-target=" + name + "=" + target for name, target in SOURCE_PACKAGES.items()],
     mnemonic = "ValidateSyncdSourceRuntime",
     target_compatible_with = [
         "@platforms//cpu:x86_64",
@@ -295,7 +234,7 @@ sonic_layer(
 # The same graph supplies companion debug symbols.
 sonic_layer(
     name = "rdeps",
-    tars = _SOURCE_PACKAGES.values(),
+    tars = SOURCE_PACKAGES.values(),
 )
 
 debug_symbols_layer(
@@ -318,7 +257,7 @@ installed_packages(
     controls = [label + ":control" for label in APT_INPUTS["syncd_vs_debian"]["amd64"].values()],
     source_receipt = ":source_package_receipt",
     source_spec = "//platform/vs/docker-syncd-vs:source_contract",
-    sources = _SOURCE_PACKAGES,
+    sources = SOURCE_PACKAGES,
 )
 
 filegroup(

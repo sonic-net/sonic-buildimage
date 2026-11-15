@@ -309,7 +309,7 @@ def redis_fixture(config):
                     raise ValueError('Isolated Redis did not become ready: ' + log.read()[-4000:])
                 yield {'version': version['stdout'].strip(), 'sha256': config['sha256'],
                        'database_config_sha256': hashlib.sha256(database.read_bytes()).hexdigest(),
-                       'unix_socket': socket_path, 'tcp_disabled': port == 0,
+                       'unix_socket': socket_path, 'tcp_disabled': port == 0, 'process_id': process.pid,
                        'scope': 'Explicit test helper, not an installed image component.'}
             finally:
                 if process.poll() is None:

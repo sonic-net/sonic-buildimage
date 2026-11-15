@@ -31,3 +31,9 @@ exports_files([
     "target/docker-syncd-vs.gz",
     "target/docker-syncd-vs-dbg.gz",
 ])
+
+# Host-independent regression inputs for the gearbox Make selector.
+exports_files([
+    "platform/vs/docker-gbsyncd-vs.mk",
+    "platform/template/docker-gbsyncd-trixie.mk",
+])

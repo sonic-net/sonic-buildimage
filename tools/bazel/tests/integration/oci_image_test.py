@@ -849,6 +849,55 @@ class ValidateImageTest(unittest.TestCase):
                 self.assertEqual(files, before)
 
 
+    def vim_command_tools(self, *, new_target="/etc/alternatives/vim", replace_tiny=False):
+        path, files = self.vim_tools()
+        files["usr/bin/vim.tiny"] = files.pop("usr/bin/vim")
+        files["usr/bin/vim"] = {"kind": "hardlink", "mode": 0o755, "uid": 0, "gid": 0,
+                                "linkname": "usr/bin/vim.tiny"}
+        with tarfile.open(path, "a") as archive:
+            for name, target in (("etc/alternatives/vim", "/usr/bin/vim.basic"), ("usr/bin/vim", new_target)):
+                member = tarfile.TarInfo(name)
+                member.type, member.mode, member.linkname = tarfile.SYMTYPE, 0o777, target
+                archive.addfile(member)
+            if replace_tiny:
+                member = tarfile.TarInfo("usr/bin/vim.tiny")
+                member.mode, member.size = 0o755, 7
+                archive.addfile(member, io.BytesIO(b"changed"))
+        policy = [*DEBUG_ALTERNATIVES, {"paths": ["usr/bin/vim"], "before": "usr/bin/vim.tiny",
+                  "before_kind": "hardlink", "before_mode": 0o755, "after": "/etc/alternatives/vim"}]
+        return path, files, policy
+
+    def test_declared_vim_command_replaces_hardlink_without_changing_tiny(self):
+        path, files, policy = self.vim_command_tools()
+        original = dict(files["usr/bin/vim.tiny"])
+        with self.assertRaisesRegex(ValueError, "changes a base ELF link"):
+            subject.apply_debug_tools_layer(path, dict(files), alternatives=DEBUG_ALTERNATIVES)
+        subject.apply_debug_tools_layer(path, files, alternatives=policy)
+        self.assertEqual(files["usr/bin/vim.tiny"], original)
+        self.assertEqual(subject.oci_inventory.resolve_path("usr/bin/vim", files), "usr/bin/vim.basic")
+
+    def test_vim_command_rejects_wrong_original_metadata_and_new_target(self):
+        for key, value in (("mode", 0o777), ("uid", 1), ("kind", "symlink"), ("linkname", "usr/bin/other")):
+            path, files, policy = self.vim_command_tools()
+            files["usr/bin/vim"][key] = value
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "unexpected debug alternative"):
+                subject.apply_debug_tools_layer(path, files, alternatives=policy)
+        path, files, policy = self.vim_command_tools(new_target="/usr/bin/other")
+        with self.assertRaisesRegex(ValueError, "unexpected debug alternative"):
+            subject.apply_debug_tools_layer(path, files, alternatives=policy)
+
+    def test_declared_hardlink_requires_same_architecture_binaries(self):
+        path, files, policy = self.vim_command_tools()
+        files["usr/bin/vim.tiny"]["elf_machine"] = 183
+        with self.assertRaisesRegex(ValueError, "binaries for the expected architecture"):
+            subject.apply_debug_tools_layer(path, files, alternatives=policy)
+
+    def test_declared_vim_command_cannot_replace_inherited_binary(self):
+        path, files, policy = self.vim_command_tools(replace_tiny=True)
+        with self.assertRaisesRegex(ValueError, "change an inherited ELF"):
+            subject.apply_debug_tools_layer(path, files, alternatives=policy)
+
+
 class CachedValidateImageTest(ValidateImageTest):
     """Run the same success and rejection cases with scoped inventory reuse."""
 

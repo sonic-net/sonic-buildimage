@@ -145,6 +145,7 @@ apt-retries-count
 /artifacts/orchagent-download/
 
 # Evidence produced by the shared OCI jobs before source-image validation.
+/artifacts/gbsyncd/
 /artifacts/archive/
 /artifacts/swss-layer/
 /artifacts/config-engine/

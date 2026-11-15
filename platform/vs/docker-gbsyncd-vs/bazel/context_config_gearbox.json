@@ -1,0 +1,38 @@
+{
+    "CONTEXTS": [
+        {
+            "guid": 0,
+            "name": "syncd_main",
+            "dbAsic": "ASIC_DB_MAIN",
+            "dbCounters": "COUNTERS_DB_MAIN",
+            "dbFlex": "FLEX_DB_MAIN",
+            "dbState": "STATE_DB",
+            "zmq_enable": true,
+            "zmq_endpoint": "ipc:///tmp/main_zmq_ep",
+            "zmq_ntf_endpoint": "ipc:///tmp/main_zmq_ntf_ep",
+            "switches": [
+                {
+                    "index": 0,
+                    "hwinfo": ""
+                }
+            ]
+        },
+        {
+            "guid": 1,
+            "name": "gbsyncd",
+            "dbAsic": "ASIC_DB_GB",
+            "dbCounters": "COUNTERS_DB_GB",
+            "dbFlex": "FLEX_DB_GB",
+            "dbState": "STATE_DB",
+            "zmq_enable": false,
+            "zmq_endpoint": "ipc:///tmp/gb_zmq_ep",
+            "zmq_ntf_endpoint": "ipc:///tmp/gb_zmq_ntf_ep",
+            "switches": [
+                {
+                    "index": 0,
+                    "hwinfo": "gb"
+                }
+            ]
+        }
+    ]
+}

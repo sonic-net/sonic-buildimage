@@ -24,6 +24,8 @@ ARTIFACTS = (
     "target/docker-lldp-dbg.gz",
     "target/docker-mux.gz",
     "target/docker-mux-dbg.gz",
+    "target/docker-gbsyncd-vs.gz",
+    "target/docker-gbsyncd-vs-dbg.gz",
     "target/sonic-vs.bin",
     "target/sonic-vs.img.gz",
     "target/sonic-vs.raw",

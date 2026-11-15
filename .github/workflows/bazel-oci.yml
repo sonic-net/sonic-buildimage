@@ -1597,11 +1597,200 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  gearbox_archive:
+    name: Gearbox archive (AMD64)
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    runs-on: [self-hosted, linux, bazel-x64]
+    timeout-minutes: 360
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    env:
+      # Shared CI entry point with the canonical registry; the full Make VS job is separate.
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential busybox ca-certificates gdb git j2cli jq libarchive-tools libtool libxml2 pkg-config python3 python3-jinja2 python3-yaml tar unzip zstd
+          for tool in bsdtar gdb readelf objcopy; do
+            command -v "$tool"
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Configure remote cache uploads
+        env:
+          UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          printf '\nbuild --remote_upload_local_results=%s\n' \
+            "$UPLOAD_CACHE" >> .bazelrc.user
+
+      - name: Check native architecture and generated dependency state
+        run: |
+          test "$(uname -m)" = "x86_64"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Initialize Sysmgr's pinned gNOI source
+        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: gbsyncd-amd64
+          cache-version: "8.5.1"
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Check the gbsyncd Make handoff
+        run: python3 -B tools/bazel/tests/gbsyncd_make_test.py
+
+      - name: Test gearbox image validation
+        run: python3 -B -m unittest tools.bazel.tests.gbsyncd_image_test
+
+      - name: Build gearbox runtime and debug images from source packages
+        id: gearbox_build
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/gbsyncd_image.py build --bazel "$BAZEL" --artifacts artifacts/gbsyncd
+      - name: Validate gearbox installed contents and complete source symbols
+        run: python3 -B tools/bazel/ci/gbsyncd_image.py validate --artifacts artifacts/gbsyncd
+      - name: Verify gearbox no-op, configuration edit and restored archives
+        run: python3 -B tools/bazel/ci/gbsyncd_image.py incremental --bazel "$BAZEL" --artifacts artifacts/gbsyncd
+      - name: Review public gearbox evidence
+        id: gearbox_public
+        if: always() && steps.gearbox_build.outcome != 'skipped'
+        run: |
+          python3 - <<'PYCODE'
+          import json
+          from pathlib import Path
+          from tools.bazel.ci.public_artifacts import safe_json, dependency_json
+          root = Path('artifacts/gbsyncd')
+          public_json = (
+              'validation.json', 'source-contract.json', 'source-receipt.json', 'policy.json',
+              'runtime-apt.json', 'debug-apt.json', 'runtime-packages.json', 'debug-packages.json',
+              'base-packages.json', 'config-engine-packages.json', 'action-audit.json', 'incremental.json',
+          )
+          for name in public_json:
+              path = root / name
+              if path.exists():
+                  value = json.loads(path.read_text())
+                  if name == 'policy.json':
+                      # Only this declared image setting is public.
+                      assert value['image_validation'].pop('environment') == {'DEBIAN_FRONTEND': 'noninteractive'}
+                  safe_json(value)
+          for name, kind in (('MODULE.bazel.lock', 'lock'), ('module-graph.json', 'graph')):
+              path = root / name
+              if path.exists():
+                  dependency_json(json.loads(path.read_text()), kind)
+          receipt = root / 'build-receipt.json'
+          if receipt.exists():
+              source = json.loads(receipt.read_text())
+              public = {key: source[key] for key in ('status', 'revision', 'architecture', 'image_version', 'artifacts', 'tested_revision_parents') if key in source}
+              safe_json(public)
+              (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
+          PYCODE
+      - name: Retain gearbox archives and source evidence
+        if: always() && steps.gearbox_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gbsyncd-source-amd64-${{ github.sha }}
+          path: |
+            artifacts/gbsyncd/*.gz
+            artifacts/gbsyncd/*.tar
+            artifacts/gbsyncd/validation.json
+            artifacts/gbsyncd/source-contract.json
+            artifacts/gbsyncd/source-receipt.json
+            artifacts/gbsyncd/policy.json
+            artifacts/gbsyncd/runtime-apt.json
+            artifacts/gbsyncd/debug-apt.json
+            artifacts/gbsyncd/runtime-packages.json
+            artifacts/gbsyncd/debug-packages.json
+            artifacts/gbsyncd/base-packages.json
+            artifacts/gbsyncd/config-engine-packages.json
+            artifacts/gbsyncd/*.status
+            artifacts/gbsyncd/public-receipt.json
+            artifacts/gbsyncd/action-audit.json
+            artifacts/gbsyncd/incremental.json
+            artifacts/gbsyncd/MODULE.bazel.lock
+            artifacts/gbsyncd/module-graph.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+  gearbox_runtime:
+    name: Load and run gearbox images (AMD64)
+    needs: gearbox_archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: gbsyncd-source-amd64-${{ github.sha }}
+          path: artifacts/gbsyncd
+      - name: Exercise installed gearbox manager, context and private Redis
+        run: python3 -B tools/bazel/ci/gbsyncd_loaded.py --artifacts artifacts/gbsyncd
+      - name: Retain installed gearbox evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gbsyncd-runtime-amd64-${{ github.sha }}
+          path: |
+            artifacts/gbsyncd/*.runtime.json
+            artifacts/gbsyncd/loaded-validation.json
+          if-no-files-found: warn
+          retention-days: 14
+
   eventd_runtime:
     # Keep the required status on the job that actually loads and tests both archives.
     name: Container archive (AMD64)
     if: always() && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')
-    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime]
+    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime, gearbox_runtime]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

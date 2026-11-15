@@ -1,5 +1,5 @@
 # Keep unrelated platform trees outside recursive Bazel discovery.
-# VS Syncd exports its original Make files from platform/vs/docker-syncd-vs.
+# VS Syncd and gearbox export their original Make files beside their targets.
 platform/alpinevs
 platform/aspeed
 platform/barefoot
@@ -26,7 +26,6 @@ platform/s3ip-sysfs
 platform/template
 platform/vpp
 platform/vs/docker-dash-engine
-platform/vs/docker-gbsyncd-vs
 platform/vs/docker-sonic-vs
 platform/vs/sonic-platform-modules-vs
 platform/vs/sonic-version
