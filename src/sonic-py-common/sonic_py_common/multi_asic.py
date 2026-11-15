@@ -4,8 +4,6 @@ import subprocess
 
 from swsscommon import swsscommon
 
-from ._redis_transport import use_local_redis_socket
-
 from .device_info import get_asic_conf_file_path, get_expected_asic_list
 from .device_info import is_supervisor, is_chassis
 from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
@@ -35,7 +33,7 @@ CHASSIS_FABRIC_ASIC_INFO_TABLE='CHASSIS_FABRIC_ASIC_TABLE'
 # to prevent duplicate connections from being opened
 config_db_handle = {}
 
-def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
+def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
     """
     The function connects to the config DB for a given namespace and
     returns the handle
@@ -44,15 +42,10 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     In case of multi ASIC, the default namespace is the database
     instance running the on the host
 
-    authenticate requests writer login through the configured Unix socket.
-
     Returns:
       handle to the config_db for a namespace
     """
-    options = {"use_unix_socket_path": authenticate or use_local_redis_socket("CONFIG_DB", namespace)}
-    if authenticate:
-        options["authenticate"] = True
-    config_db = swsscommon.ConfigDBConnector(namespace=namespace, **options)
+    config_db = swsscommon.ConfigDBConnector(namespace=namespace)
     config_db.connect()
     return config_db
 
@@ -74,7 +67,8 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
     Returns:
         handle to all the dbs for a namespaces
     """
-    db_list = list(swsscommon.SonicDBConfig.getDbList(namespace or DEFAULT_NAMESPACE))
+    db = swsscommon.SonicV2Connector(namespace=namespace)
+    db_list = list(db.get_db_list())
     if not is_supervisor():
         try:
             db_list.remove('CHASSIS_APP_DB')
@@ -82,10 +76,6 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
         except Exception:
             pass
 
-    # One connector uses one transport, so use sockets only when every selected
-    # database admits this reader. Remote and restricted legacy endpoints keep TCP.
-    use_socket = bool(db_list) and all(use_local_redis_socket(name, namespace) for name in db_list)
-    db = swsscommon.SonicV2Connector(namespace=namespace, use_unix_socket_path=use_socket)
     for db_id in db_list:
         db.connect(db_id)
     return db
@@ -350,7 +340,7 @@ def mod_entry(table, key, value, namespace=None, modIfExists=False):
 
     for ns in ns_list:
         if not modIfExists or get_table_entry_for_asic(table, key, ns):
-            config_db = connect_config_db_for_ns(ns, authenticate=True)
+            config_db = connect_config_db_for_ns(ns)
             config_db.mod_entry(table, key, value)
 
 
