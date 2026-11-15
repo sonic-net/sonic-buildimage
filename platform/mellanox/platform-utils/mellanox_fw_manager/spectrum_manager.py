@@ -25,6 +25,7 @@ Handles firmware operations specific to Spectrum ASICs using mlxfwmanager.
 import re
 import subprocess
 from typing import Dict, Optional
+from . import vmod
 from .firmware_base import FirmwareManagerBase, FW_ALREADY_UPDATED_FAILURE
 
 
@@ -50,6 +51,89 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
         r'^\s*(user/.*\.(?:cpp|c|h):\d+|\[FLASH_ACCESS_DEBUG\]|-D-|controlFsm\s*:)',
         re.IGNORECASE,
     )
+
+    # OE firmware versions, read on CPO platforms only.
+    vmod_supported = False
+    vmod_versions_read = False
+    hw_vmod_versions = None
+    mfa_vmod_version = None
+    vmod_skip_reason = "ASIC firmware check failed"
+
+    def _initialize_asic(self) -> None:
+        super()._initialize_asic()
+        self.vmod_supported = vmod.is_cpo_platform()
+
+    def _read_vmod_versions(self) -> None:
+        # Read on first use rather than at init: when the ASIC firmware already
+        # differs a burn is needed anyway, and the MFA extract costs ~5 s.
+        if self.vmod_versions_read:
+            return
+        try:
+            self.hw_vmod_versions = vmod.get_hw_versions(self.pci_id)
+            self.mfa_vmod_version = vmod.get_mfa_version(self.fw_file, self.pci_id)
+        except Exception as e:
+            # Left unknown, so it is reported and does not request a burn.
+            self.logger.error(f"ASIC {self.asic_index}: failed to read the OE firmware version: {e}")
+        self.vmod_versions_read = True
+        self.logger.info(f"ASIC {self.asic_index} OE firmware: {self._vmod_versions_text()}")
+
+    def _vmod_versions_text(self) -> str:
+        hw = self.hw_vmod_versions
+        if not hw:
+            current = 'N/A'
+        elif hw.boot == hw.running:
+            current = hw.running
+        else:
+            current = f"{hw.running}, {hw.boot} after the next ASIC reset"
+        available = vmod.to_device_version(self.mfa_vmod_version or '') or 'N/A'
+        return f"current {current}, available {available}"
+
+    def is_upgrade_required(self) -> bool:
+        """
+        ASIC firmware differs, or (on CPO platforms) the OE firmware differs.
+
+        The OE firmware is a component of the same MFA, so either way the
+        one MFA burn upgrades both.
+        """
+        # Why the OE firmware was not read, for the status report.
+        if super().is_upgrade_required():
+            self.vmod_skip_reason = "ASIC firmware upgrade needed"
+            return True
+        return self.is_vmod_upgrade_required()
+
+    def is_vmod_upgrade_required(self) -> bool:
+        if not self.vmod_supported:
+            return False
+        self._read_vmod_versions()
+        if not self.hw_vmod_versions or not vmod.to_device_version(self.mfa_vmod_version or ''):
+            # Unknown is not a reason to burn: that would re-burn on every boot.
+            self.logger.error(f"ASIC {self.asic_index}: unable to read the OE firmware version "
+                              f"({self._vmod_versions_text()})")
+            return False
+        # The boot bank decides: a burned image waiting for the ASIC reset is
+        # up to date, an old image left in the other bank is not.
+        if vmod.versions_match(self.hw_vmod_versions.boot, self.mfa_vmod_version):
+            return False
+        self.logger.info(f"ASIC {self.asic_index} OE firmware differs ({self._vmod_versions_text()}); "
+                         f"firmware upgrade is required")
+        return True
+
+    def get_vmod_status(self) -> Optional[str]:
+        """The OE part of the status report; call after is_upgrade_required()."""
+        if not self.vmod_supported:
+            return None
+        if not self.vmod_versions_read:
+            # The ASIC decided first: the OE firmware was not read.
+            return f"not checked ({self.vmod_skip_reason})"
+        hw = self.hw_vmod_versions
+        available = vmod.to_device_version(self.mfa_vmod_version or '')
+        if not hw or not available:
+            return f"unknown, unable to read the version ({self._vmod_versions_text()})"
+        if vmod.versions_match(hw.boot, self.mfa_vmod_version):
+            if vmod.versions_match(hw.running, self.mfa_vmod_version):
+                return f"up to date ({available})"
+            return f"up to date ({available}, active after the next ASIC reset)"
+        return f"upgrade needed ({self._vmod_versions_text()})"
 
     @classmethod
     def get_asic_type_map(cls) -> Dict[str, str]:
