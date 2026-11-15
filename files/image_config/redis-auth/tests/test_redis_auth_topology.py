@@ -69,6 +69,41 @@ def test_broken_optional_platform_file_is_not_a_default(boot, file):
     assert not runtime.exists()
 
 
+@pytest.mark.parametrize('file,content', [
+    ('asic.conf', 'NUM_ASIC=1\n'),
+    ('platform_env.conf', 'supervisor=0\n'),
+    ('platform.json', '{}'),
+])
+def test_root_controlled_platform_symlinks_are_supported(boot, file, content):
+    intent, runtime = boot
+    target = startup.platform_directory().parent / 'shared' / file
+    write(target, content)
+    (startup.platform_directory() / file).symlink_to(target)
+    assert startup.prepare_selected(intent_path=intent, runtime=runtime) == ['redis', 'redis_bmp']
+
+
+def test_shipped_arista_platform_environment_link(boot):
+    intent, runtime = boot
+    root = Path(__file__).resolve().parents[4]
+    source = root / 'device/arista/x86_64-arista_7050sx3_48yc8c/platform_env.conf'
+    assert source.is_symlink()
+    target = startup.platform_directory().parent / 'x86_64-arista_7050sx3_48yc8/platform_env.conf'
+    write(target, source.read_text())
+    (startup.platform_directory() / source.name).symlink_to('../' + str(target.relative_to(target.parent.parent)))
+    assert startup.prepare_selected(intent_path=intent, runtime=runtime) == ['redis', 'redis_bmp']
+
+
+def test_writable_platform_symlink_target_is_rejected(boot):
+    intent, runtime = boot
+    target = startup.platform_directory().parent / 'shared-env'
+    write(target, 'supervisor=0\n')
+    target.chmod(0o666)
+    (startup.platform_directory() / 'platform_env.conf').symlink_to(target)
+    with pytest.raises(startup.CredentialStateError):
+        startup.prepare_selected(intent_path=intent, runtime=runtime)
+    assert not runtime.exists()
+
+
 @pytest.mark.parametrize('file', ['config_db.json', 'old_config/config_db.json'])
 def test_missing_or_malformed_metadata_is_rejected(boot, file):
     intent, runtime = boot

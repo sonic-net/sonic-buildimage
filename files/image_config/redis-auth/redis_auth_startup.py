@@ -82,7 +82,7 @@ def platform_directory():
 
 def platform_settings(path):
     parser = configparser.ConfigParser(interpolation=None)
-    parser.read_string('[platform]\n' + read_setting(path))
+    parser.read_string('[platform]\n' + read_setting(path.resolve(strict=True)))
     if parser.sections() != ['platform'] or parser.defaults():
         raise CredentialStateError('unsupported platform assignment format')
     return parser['platform']
@@ -113,7 +113,7 @@ def check_topology():
     metadata = json.loads(read_setting(source / 'config_db.json'))['DEVICE_METADATA']['localhost']
     environment, platform = directory / 'platform_env.conf', directory / 'platform.json'
     flags = platform_settings(environment) if os.path.lexists(environment) else {}
-    data = json.loads(read_setting(platform)) if os.path.lexists(platform) else {}
+    data = json.loads(read_setting(platform.resolve(strict=True))) if os.path.lexists(platform) else {}
     roles = {'ToRRouter', 'LeafRouter', 'BackEndToRRouter', 'BackEndLeafRouter',
              'ToRSwitch', 'MgmtToRRouter', 'MgmtLeafRouter', 'MgmtAccessRouter'}
     if (not isinstance(metadata, dict) or metadata.get('platform') != directory.name
