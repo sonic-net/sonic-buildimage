@@ -77,10 +77,11 @@ class Chassis(ChassisBase):
             self._psu_list.append(psu)
     
     def __initialize_thermals(self):
-        from sonic_platform.thermal import Thermal
+        from sonic_platform.thermal import Thermal, CpuThermal
         for index in range(0, NUM_THERMAL):
             thermal = Thermal(index)
             self._thermal_list.append(thermal)
+        self._thermal_list.extend(CpuThermal.discover(len(self._thermal_list)))
     
     def __initialize_eeprom(self):
         from sonic_platform.eeprom import Tlv
