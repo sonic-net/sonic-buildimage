@@ -131,18 +131,9 @@ class Fan(FanBase):
         return int(speed)
 
     def get_target_speed(self):
-        """
-        Retrieves the target (expected) speed of the fan
-        Returns:
-            An integer, the percentage of full fan speed, in the range 0 (off)
-                 to 100 (full speed)
-
-        Note:
-            speed_pc = pwm_target/255*100
-
-            0   : when PWM mode is use
-            pwm : when pwm mode is not use
-        """
+        """Return chassis PWM; PSU firmware exposes no independent target."""
+        if self.is_psu_fan:
+            raise NotImplementedError("PSU fan target speed is not available")
         return self.get_speed()
 
     def get_speed_tolerance(self):
