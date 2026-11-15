@@ -39,6 +39,7 @@ def protected_redis(monkeypatch):
         acl = root / 'users.acl'
         acl.write_text('user default on nopass ~* &* -@all +@read +@transaction +select +ping +info\n'
                        'user sonic-trusted-writer on >' + password + ' ~* &* +@all\n')
+        acl.chmod(0o600)
         log = (root / 'redis.log').open('w')
         server = subprocess.Popen(['redis-server', '--port', '0', '--unixsocket', socket,
                                    '--unixsocketperm', '666', '--save', '', '--appendonly', 'no',
