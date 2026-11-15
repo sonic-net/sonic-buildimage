@@ -1,4 +1,4 @@
-apt-utils==3.0.3
+apt-utils==3.0.4
 binutils==2.44-3
 binutils-common==2.44-3
 binutils-x86-64-linux-gnu==2.44-3
@@ -56,7 +56,7 @@ libtsan2==14.2.0-19
 libubsan1==14.2.0-19
 libyaml-0-2==0.2.5-2
 libyang3==3.12.2-1
-linux-libc-dev==6.12.113-1
+linux-libc-dev==6.12.115-2
 make==4.4.1-2
 patch==2.8-2
 python3-cffi==1.17.1-3

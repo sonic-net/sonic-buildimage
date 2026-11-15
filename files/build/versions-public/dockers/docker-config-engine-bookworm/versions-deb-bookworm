@@ -1,4 +1,4 @@
-apt-utils==2.6.1
+apt-utils==2.6.2
 binutils==2.40-2
 binutils-aarch64-linux-gnu==2.40-2
 binutils-common==2.40-2

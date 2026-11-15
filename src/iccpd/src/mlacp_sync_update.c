@@ -132,7 +132,7 @@ int mlacp_fsm_update_Agg_conf(struct CSM* csm, mLACPAggConfigTLV* portconf)
     }
 
     pif->po_id = ntohs(portconf->agg_id);
-    memcpy(pif->name, portconf->agg_name, portconf->agg_name_len);
+    snprintf(pif->name, sizeof(pif->name), "%s", portconf->agg_name);
     memcpy(pif->mac_addr, portconf->mac_addr, ETHER_ADDR_LEN);
 
     po_active = (pif->state == PORT_STATE_UP);
