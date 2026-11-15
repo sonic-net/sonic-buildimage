@@ -728,19 +728,25 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
     def checksum_type(self):
         return 'crc32'
 
+    def _connect_redis(self, authenticate=False):
+        from swsscommon import swsscommon
+        db = swsscommon.SonicDBConfig.getDbId("STATE_DB")
+        if authenticate:
+            from swsscommon.redis import connection_pool
+            return redis.Redis(connection_pool=connection_pool(
+                unix_socket_path=swsscommon.SonicDBConfig.getDbSock("STATE_DB"),
+                db=db, authenticate=True))
+        from sonic_py_common._redis_transport import use_local_redis_socket
+        if use_local_redis_socket("STATE_DB"):
+            return redis.Redis(db=db, unix_socket_path=swsscommon.SonicDBConfig.getDbSock("STATE_DB"))
+        return redis.Redis(db=db, host=swsscommon.SonicDBConfig.getDbHostname("STATE_DB"),
+                           port=swsscommon.SonicDBConfig.getDbPort("STATE_DB"))
+
     @property
     def redis_client(self):
-        """Handy property to get a redis client. Make sure only create the redis client once.
-
-        Returns:
-            A redis client instance
-        """
+        """Return the cached EEPROM reader connection."""
         if not self._redis_client:
-            from swsscommon import swsscommon
-            from swsscommon.redis import connection_pool
-            self._redis_client = redis.Redis(connection_pool=connection_pool(
-                unix_socket_path=swsscommon.SonicDBConfig.getDbSock("STATE_DB"),
-                db=swsscommon.SonicDBConfig.getDbId("STATE_DB")))
+            self._redis_client = self._connect_redis()
         return self._redis_client
 
     def _redis_hget(self, key, field):
@@ -845,7 +851,7 @@ class EepromDecodeVisitor(EepromDefaultVisitor):
 class EepromRedisVisitor(EepromDefaultVisitor):
     def __init__(self, eeprom_object):
         self.eeprom_object = eeprom_object
-        self.redis_client = eeprom_object.redis_client
+        self.redis_client = eeprom_object._connect_redis(authenticate=True)
         self.vendor_ext_tlv_num = 0
         self.fvs = {}
         self.error = None

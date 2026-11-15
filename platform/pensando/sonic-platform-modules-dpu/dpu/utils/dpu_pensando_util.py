@@ -96,7 +96,8 @@ def disable_unused_containers():
 
         r = redis.StrictRedis(connection_pool=connection_pool(
             unix_socket_path=swsscommon.SonicDBConfig.getDbSock("CONFIG_DB"),
-            db=swsscommon.SonicDBConfig.getDbId("CONFIG_DB"), decode_responses=True))
+            db=swsscommon.SonicDBConfig.getDbId("CONFIG_DB"),
+            decode_responses=True, authenticate=True))
 
         for feature in DISABLE_CONTAINER_LIST:
             key = f"FEATURE|{feature}"

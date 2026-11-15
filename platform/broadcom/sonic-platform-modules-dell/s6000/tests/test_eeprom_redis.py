@@ -33,28 +33,34 @@ def eeprom(monkeypatch):
     module.SonicDBConfig.getDbPort.return_value = 6381
     module.SonicDBConfig.getDbId.return_value = 16
     monkeypatch.setattr(module.redis, 'Redis', MagicMock())
+    module.test_pool = modules['swsscommon.redis'].connection_pool
     return module
 
 
 @pytest.mark.parametrize('use_unix', [True, False])
-def test_configured_endpoint_uses_native_pool(eeprom, use_unix):
+def test_reader_uses_configured_endpoint_without_native_pool(eeprom, use_unix):
     eeprom.use_local_redis_socket.return_value = use_unix
-    pool = MagicMock(name='native-pool')
-    eeprom.connection_pool.return_value = pool
+    assert eeprom._get_state_db_client() is eeprom.redis.Redis.return_value
     endpoint = ({'unix_socket_path': '/run/redis/custom-state.sock'} if use_unix
                 else {'host': '127.0.0.1', 'port': 6381})
+    eeprom.redis.Redis.assert_called_once_with(db=16, **endpoint)
+    eeprom.test_pool.assert_not_called()
 
-    assert eeprom._get_state_db_client() is eeprom.redis.Redis.return_value
 
-    eeprom.use_local_redis_socket.assert_called_once_with('STATE_DB')
-    eeprom.connection_pool.assert_called_once_with(db=16, **endpoint)
+def test_writer_authenticates_on_configured_socket(eeprom):
+    pool = MagicMock()
+    eeprom.test_pool.return_value = pool
+    assert eeprom._get_state_db_client(authenticate=True) is eeprom.redis.Redis.return_value
+    eeprom.test_pool.assert_called_once_with(
+        db=16, unix_socket_path='/run/redis/custom-state.sock', authenticate=True)
     eeprom.redis.Redis.assert_called_once_with(connection_pool=pool)
+    eeprom.use_local_redis_socket.assert_not_called()
 
 
-def test_authentication_setup_error_is_not_ignored(eeprom):
-    eeprom.connection_pool.side_effect = RuntimeError('missing selected credential')
+def test_writer_authentication_error_is_not_ignored(eeprom):
+    eeprom.test_pool.side_effect = RuntimeError('missing selected credential')
     with pytest.raises(RuntimeError, match='missing selected credential'):
-        eeprom._get_state_db_client()
+        eeprom._get_state_db_client(authenticate=True)
     eeprom.redis.Redis.assert_not_called()
 
 
@@ -82,3 +88,4 @@ def test_cache_writer_uses_selected_client(eeprom, capsys):
         (('EEPROM_INFO|State', 'Initialized', '1'),),
     ]
     eeprom.redis.Redis.assert_called_once()
+    assert eeprom.test_pool.call_args.kwargs['authenticate'] is True

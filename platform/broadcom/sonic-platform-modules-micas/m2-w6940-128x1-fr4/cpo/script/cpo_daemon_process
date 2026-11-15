@@ -1330,7 +1330,7 @@ class database_monitor(threading.Thread):
             self.main_thread_stop_event.set()
 
     def task_worker(self):
-        appl_db = daemon_base.db_connect("APPL_DB", namespace="", use_tcp=False)
+        appl_db = daemon_base.db_connect("APPL_DB", namespace="", use_tcp=False, authenticate=True)
         sel = swsscommon.Select()
         port_tbl = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
         pro_port_tbl = swsscommon.ProducerStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)

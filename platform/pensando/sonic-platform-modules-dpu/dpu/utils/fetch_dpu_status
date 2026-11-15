@@ -10,8 +10,6 @@
 from datetime import datetime, timezone, timedelta
 import docker
 import redis
-from swsscommon import swsscommon
-from swsscommon.redis import connection_pool
 from sonic_py_common import syslogger, device_info
 
 SYSLOG_IDENTIFIER = 'platform-healthd'
@@ -96,10 +94,12 @@ class DPUHealthUpdater():
                 self.db = None
                 log_err(f'Failed to connect to db due to {e}')
             if self.db == None:
+                from swsscommon import swsscommon
+                from swsscommon.redis import connection_pool
                 self.db = redis.Redis(connection_pool=connection_pool(
                     unix_socket_path=swsscommon.SonicDBConfig.getDbSock("STATE_DB"),
                     db=swsscommon.SonicDBConfig.getDbId("STATE_DB"),
-                    decode_responses=True))
+                    decode_responses=True, authenticate=True))
         except Exception as e:
             self.db = None
             log_err(f'Failed to connect to db due to {e}')
