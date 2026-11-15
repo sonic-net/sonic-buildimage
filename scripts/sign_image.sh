@@ -1,10 +1,31 @@
-#!/bin/bash -ex
+#!/bin/bash
 
+set +x
+set -e -o pipefail
+umask 077
 
 IMAGE=""
 SIGNING_KEY=""
 SIGNING_CERT=""
 CA_CERT=""
+TMP_CERT_PATH=""
+
+cleanup_image_signing()
+{
+    local status=$?
+    trap - EXIT
+    if [ -n "$TMP_CERT_PATH" ]; then
+        if ! rm -rf -- "$TMP_CERT_PATH"; then
+            echo "Failed to remove temporary image signing material" >&2
+            (( status != 0 )) || status=1
+        fi
+    fi
+    exit "$status"
+}
+trap cleanup_image_signing EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 usage()
 {
@@ -21,13 +42,13 @@ generate_signing_key()
     CA_KEY="${TMP_CERT_PATH}/ca.key"
 
     # Generate the CA key and certificate
-    openssl genrsa -out $CA_KEY 4096
-    openssl req -x509 -new -nodes -key $CA_KEY -sha256 -days 3650 -subj "/C=US/ST=Test/L=Test/O=Test/CN=Test" -out $CA_CERT
+    openssl genrsa -out "$CA_KEY" 4096
+    openssl req -x509 -new -nodes -key "$CA_KEY" -sha256 -days 3650 -subj "/C=US/ST=Test/L=Test/O=Test/CN=Test" -out "$CA_CERT"
 
     # Generate the signing key, certificate request and certificate
-    openssl genrsa -out $SIGNING_KEY 4096
-    openssl req -new -key $SIGNING_KEY -subj "/C=US/ST=Test/L=Test/O=Test/CN=Test" -out $SIGNING_CSR
-    openssl x509 -req -in $SIGNING_CSR -CA $CA_CERT -CAkey $CA_KEY -CAcreateserial -out $SIGNING_CERT -days 1825 -sha256
+    openssl genrsa -out "$SIGNING_KEY" 4096
+    openssl req -new -key "$SIGNING_KEY" -subj "/C=US/ST=Test/L=Test/O=Test/CN=Test" -out "$SIGNING_CSR"
+    openssl x509 -req -in "$SIGNING_CSR" -CA "$CA_CERT" -CAkey "$CA_KEY" -CAcreateserial -out "$SIGNING_CERT" -days 1825 -sha256
 }
 
 while getopts "i:k:c:a:t:" opt; do
@@ -50,20 +71,20 @@ while getopts "i:k:c:a:t:" opt; do
     esac
 done
 
-[ -z $CA_CERT ] && echo "Not to sign the image since the CA certificate not provided" 1>&2 && exit 1
+[ -z "$CA_CERT" ] && echo "Not to sign the image since the CA certificate not provided" 1>&2 && exit 1
 
 # Generate the self signed cert if not provided by input
-[ ! -f $CA_CERT ] && generate_signing_key
+[ ! -f "$CA_CERT" ] && generate_signing_key
 
 # Verify the required files existing
-[ ! -f $SIGNING_KEY ] && echo "$SIGNING_KEY not exist" && exit 1
-[ ! -f $SIGNING_CERT ] && echo "$SIGNING_CERT not exist" && exit 1
-[ ! -f $CA_CERT ] && echo "$CA_CERT not exist" && exit 1
+[ ! -f "$SIGNING_KEY" ] && echo "$SIGNING_KEY not exist" && exit 1
+[ ! -f "$SIGNING_CERT" ] && echo "$SIGNING_CERT not exist" && exit 1
+[ ! -f "$CA_CERT" ] && echo "$CA_CERT not exist" && exit 1
 
 # Prepare the image
-swi-signature prepare $IMAGE
+swi-signature prepare "$IMAGE"
 
 # Sign the image
-swi-signature sign $IMAGE $SIGNING_CERT $CA_CERT --key $SIGNING_KEY
+swi-signature sign "$IMAGE" "$SIGNING_CERT" "$CA_CERT" --key "$SIGNING_KEY"
 
 exit 0

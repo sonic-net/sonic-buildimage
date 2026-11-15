@@ -2,7 +2,12 @@
 ## This script is to automate the preparation for docker images for SONiC.
 ## If registry server and port provided, the images will be pushed there.
 
+set +x
 set -e
+
+registry_password=${REGISTRY_PASSWD:-}
+export -n registry_password
+unset REGISTRY_PASSWD
 
 . ./functions.sh
 
@@ -106,6 +111,6 @@ mkdir -p target
 command -v pigz > /dev/null && GZ_COMPRESS_PROGRAM=pigz || GZ_COMPRESS_PROGRAM=gzip
 docker save $docker_image_name | $GZ_COMPRESS_PROGRAM -c > target/$docker_image_name.gz
 
-if [ -n "$1" ]; then
-    ./push_docker.sh "target/$docker_image_name.gz" "$@" "$docker_image_tag"
+if [ -n "${1:-}" ]; then
+    REGISTRY_PASSWD="$registry_password" ./push_docker.sh "target/$docker_image_name.gz" "$@" "$docker_image_tag"
 fi
