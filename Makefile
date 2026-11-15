@@ -131,6 +131,23 @@ $(PLATFORM_PATH):
 	$(PLATFORM_CHECKOUT_CMD)
 
 configure : $(PLATFORM_PATH)
+ifeq ($(notdir $(PLATFORM_PATH)),cisco-8000)
+	# Cisco release patching runs while slave.mk is parsed, before package patches apply.
+	@series=src/sonic-linux-kernel/patches-sonic/series; \
+	anchor='#cisco-hwmon-pmbus_core-pec-support-check.patch # Upstreamed'; \
+	if [ ! -f "$$series" ]; then \
+		echo "Cisco kernel patch series not found: $$series" >&2; \
+		exit 1; \
+	fi; \
+	if ! grep -qxF "$$anchor" "$$series"; then \
+		matches=$$(grep -Fxc 'cisco-npu-disable-other-bars.patch' "$$series" || true); \
+		if [ "$$matches" -ne 1 ]; then \
+			echo "Unable to restore Cisco kernel patch-series anchor in $$series" >&2; \
+			exit 1; \
+		fi; \
+		sed -i '/^cisco-npu-disable-other-bars\.patch$$/a #cisco-hwmon-pmbus_core-pec-support-check.patch # Upstreamed' "$$series"; \
+	fi
+endif
 	$(call make_work, $@)
 
 clean showtag docker-cleanup clean-docker sonic-slave-build sonic-slave-bash :
