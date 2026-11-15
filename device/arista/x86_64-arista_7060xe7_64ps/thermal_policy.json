@@ -83,6 +83,12 @@
                                     "kd": 0,
                                     "zone": "system_zone"
                                 },
+                                "Secondary Inlet Sensor": {
+                                    "kp": 0,
+                                    "ki": 0,
+                                    "kd": 0,
+                                    "zone": "system_zone"
+                                },
                                 "TH6 on-die.*": {
                                     "kp": 0.19,
                                     "ki": 0,

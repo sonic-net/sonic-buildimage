@@ -222,6 +222,10 @@
                 "controllable": false
             },
             {
+                "name": "Secondary Inlet Sensor",
+                "controllable": false
+            },
+            {
                 "name": "Board Front Bottom",
                 "controllable": false
             },

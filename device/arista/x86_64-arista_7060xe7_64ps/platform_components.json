@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "DCS-7060XE7-64PS-F": {
+        "DCS-7060XE7-64PS": {
             "component": {
                 "Aboot()": {},
                 "Scd(addr=0000:03:00.0)": {},
