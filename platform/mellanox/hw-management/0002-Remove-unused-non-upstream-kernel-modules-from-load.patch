@@ -8,18 +8,12 @@ Subject: [PATCH 2/3] Remove unused non-upstream kernel modules from load
  1 file changed, 2 deletions(-)
 
 diff --git a/usr/etc/modules-load.d/05-hw-management-modules.conf b/usr/etc/modules-load.d/05-hw-management-modules.conf
-index ca9d1043..c0980bcd 100644
 --- a/usr/etc/modules-load.d/05-hw-management-modules.conf
 +++ b/usr/etc/modules-load.d/05-hw-management-modules.conf
-@@ -15,8 +15,6 @@ xdpe12284
- mp2975
- mp2888
- i2c-mux-pca954x
+@@ -17,3 +17,1 @@
 -emc2305
 -ti-ads1015
  powr1220
- gpio-pca953x
- pmbus
 -- 
 2.30.2
 
