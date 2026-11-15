@@ -35,6 +35,11 @@ DB_MIGRATOR=/usr/local/bin/db_migrator.py
 MINGRAPH_FILE=/etc/sonic/minigraph.xml
 GOLDEN_CONFIG_DB_JSON=/etc/sonic/golden_config_db.json
 GOLDEN_CONFIG_NATIVE_ENABLED_FILE=/etc/sonic/golden_config_native_enabled
+GOLDEN_NATIVE_TRANSITION_FILE=/etc/sonic/pending_golden_native_transition
+GOLDEN_NATIVE_SEALED_DIR=/host/golden-native
+GOLDEN_NATIVE_SEALED_CONFIG=${GOLDEN_NATIVE_SEALED_DIR}/golden_config_db.json
+GOLDEN_NATIVE_SEALED_SHA256=${GOLDEN_NATIVE_SEALED_CONFIG}.sha256
+GOLDEN_NATIVE_PREVIOUS_GOLD_ABSENT=${GOLDEN_CONFIG_DB_JSON}.pre_golden_native.absent
 TMP_ZTP_CONFIG_DB_JSON=/tmp/ztp_config_db.json
 FACTORY_DEFAULT_HOOKS=/etc/config-setup/factory-default-hooks.d
 CONFIG_PRE_MIGRATION_HOOKS=/etc/config-setup/config-migration-pre-hooks.d
@@ -46,6 +51,8 @@ CONFIG_SETUP_INITIALIZATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_initialization
 CONFIG_SETUP_CONF=/etc/config-setup/config-setup.conf
 PENDING_CONFIG_INITIALIZATION=/etc/sonic/pending_config_initialization
 PENDING_CONFIG_MIGRATION=/etc/sonic/pending_config_migration
+SONIC_DEVICE_PATH=/usr/share/sonic/device
+OLD_CONFIG_PATH=/etc/sonic/old_config
 
 TACACS_JSON_BACKUP=tacacs.json
 
@@ -73,6 +80,564 @@ usage_factory()
 
          keep-basic  - Preserves basic configurations only.
 EOF
+}
+
+recover_golden_native_transactions()
+{
+    "${CONFIG_CLI}" recover_golden_native_transactions --boot
+    local status=$?
+
+    if [ "${status}" -eq 3 ]; then
+        echo "Golden-native recovery completed with an evidence-cleanup warning." >&2
+        return 0
+    fi
+    return "${status}"
+}
+
+run_golden_native_commit()
+{
+    "$@"
+    local status=$?
+
+    if [ "${status}" -eq 3 ]; then
+        echo "Golden-native configuration committed, but transaction-evidence cleanup failed; stale evidence will be retried by recovery." >&2
+        return 0
+    fi
+    return "${status}"
+}
+
+sync_parent_directory()
+{
+    sync -d "$(dirname "$1")"
+}
+
+remove_file_durably()
+{
+    local path="$1"
+
+    rm -f -- "${path}" || return $?
+    sync_parent_directory "${path}"
+}
+
+replace_file_atomically()
+{
+    local source="$1"
+    local destination="$2"
+    local temporary="${destination}.golden-native-transition"
+
+    if [ ! -f "${source}" ] || [ -L "${source}" ]; then
+        echo "Golden-native transition source is not a regular file: ${source}" >&2
+        return 1
+    fi
+    if [ -e "${temporary}" ] || [ -L "${temporary}" ]; then
+        rm -f -- "${temporary}" || return $?
+    fi
+
+    cp -a -- "${source}" "${temporary}" || {
+        rm -f -- "${temporary}"
+        return 1
+    }
+    sync -f "${temporary}" || {
+        rm -f -- "${temporary}"
+        return 1
+    }
+    mv -f -- "${temporary}" "${destination}" || {
+        rm -f -- "${temporary}"
+        return 1
+    }
+    sync -f "${destination}" || return $?
+    sync_parent_directory "${destination}" || return $?
+    cmp -s -- "${source}" "${destination}"
+}
+
+write_golden_native_marker()
+{
+    local temporary="${GOLDEN_CONFIG_NATIVE_ENABLED_FILE}.golden-native-transition"
+
+    if [ -e "${temporary}" ] || [ -L "${temporary}" ]; then
+        rm -f -- "${temporary}" || return $?
+    fi
+    : > "${temporary}" || return $?
+    chmod 0600 "${temporary}" || {
+        rm -f -- "${temporary}"
+        return 1
+    }
+    sync -f "${temporary}" || {
+        rm -f -- "${temporary}"
+        return 1
+    }
+    mv -f -- "${temporary}" "${GOLDEN_CONFIG_NATIVE_ENABLED_FILE}" || {
+        rm -f -- "${temporary}"
+        return 1
+    }
+    sync -f "${GOLDEN_CONFIG_NATIVE_ENABLED_FILE}" || return $?
+    sync_parent_directory "${GOLDEN_CONFIG_NATIVE_ENABLED_FILE}"
+}
+
+read_golden_native_transition()
+{
+    local line_count
+    local transition
+
+    if [ ! -e "${GOLDEN_NATIVE_TRANSITION_FILE}" ]; then
+        return 1
+    fi
+    if [ -L "${GOLDEN_NATIVE_TRANSITION_FILE}" ] || \
+       [ ! -f "${GOLDEN_NATIVE_TRANSITION_FILE}" ]; then
+        echo "Golden-native transition intent is not a regular file: ${GOLDEN_NATIVE_TRANSITION_FILE}" >&2
+        return 2
+    fi
+
+    line_count=$(wc -l < "${GOLDEN_NATIVE_TRANSITION_FILE}") || return 2
+    if [ "${line_count}" -ne 1 ]; then
+        echo "Golden-native transition intent must contain exactly one line." >&2
+        return 2
+    fi
+    transition=$(cat "${GOLDEN_NATIVE_TRANSITION_FILE}") || return 2
+    case "${transition}" in
+        enable|restore)
+            printf '%s\n' "${transition}"
+            ;;
+        *)
+            echo "Unknown golden-native transition intent: ${transition}" >&2
+            return 2
+            ;;
+    esac
+}
+
+verify_golden_native_sealed_input()
+{
+    local recorded_hash
+    local actual_hash
+
+    for path in \
+        "${GOLDEN_CONFIG_DB_JSON}" \
+        "${GOLDEN_NATIVE_SEALED_CONFIG}" \
+        "${GOLDEN_NATIVE_SEALED_SHA256}"; do
+        if [ ! -f "${path}" ] || [ -L "${path}" ]; then
+            echo "Golden-native enable recovery requires regular file ${path}." >&2
+            return 1
+        fi
+    done
+
+    recorded_hash=$(cat "${GOLDEN_NATIVE_SEALED_SHA256}") || return $?
+    if [[ ! "${recorded_hash}" =~ ^[0-9a-fA-F]{64}$ ]]; then
+        echo "Golden-native sealed SHA-256 is invalid." >&2
+        return 1
+    fi
+    actual_hash=$(sha256sum -- "${GOLDEN_NATIVE_SEALED_CONFIG}") || return $?
+    actual_hash=${actual_hash%% *}
+    if [ "${actual_hash,,}" != "${recorded_hash,,}" ]; then
+        echo "Golden-native sealed configuration SHA-256 mismatch." >&2
+        return 1
+    fi
+    if ! cmp -s -- "${GOLDEN_CONFIG_DB_JSON}" "${GOLDEN_NATIVE_SEALED_CONFIG}"; then
+        echo "Active and sealed golden-native configurations differ." >&2
+        return 1
+    fi
+}
+
+validate_golden_native_restore_inputs()
+{
+    local asic_num=0
+    local backup
+    local absence
+    local expected_backup
+    local discovered_backup
+    local nullglob_was_set=false
+    local expected_found
+    local -a expected_backups=("${CONFIG_DB_JSON}.pre_golden_native")
+    local -a discovered_backups=()
+
+    while [[ $asic_num -lt ${NUM_ASIC:-1} && ${NUM_ASIC:-1} -gt 1 ]]; do
+        expected_backups+=(
+            "${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}.pre_golden_native"
+        )
+        ((asic_num = asic_num + 1))
+    done
+
+    shopt -q nullglob && nullglob_was_set=true
+    shopt -s nullglob
+    discovered_backups=(
+        "${CONFIG_DB_PATH}"${CONFIG_DB_PREFIX}*"${CONFIG_DB_SUFFIX}.pre_golden_native"
+    )
+    "${nullglob_was_set}" || shopt -u nullglob
+
+    if [ "${#discovered_backups[@]}" -ne "${#expected_backups[@]}" ]; then
+        echo "Golden-native recovery found an unexpected CONFIG_DB backup scope." >&2
+        return 1
+    fi
+
+    for discovered_backup in "${discovered_backups[@]}"; do
+        expected_found=false
+        for expected_backup in "${expected_backups[@]}"; do
+            if [ "${discovered_backup}" = "${expected_backup}" ]; then
+                expected_found=true
+                break
+            fi
+        done
+        if ! "${expected_found}"; then
+            echo "Golden-native recovery found unexpected CONFIG_DB backup ${discovered_backup}." >&2
+            return 1
+        fi
+    done
+
+    asic_num=0
+    for backup in "${expected_backups[@]}"; do
+        if [ ! -s "${backup}" ] || [ -L "${backup}" ]; then
+            echo "Golden-native recovery requires non-empty regular backup ${backup}." >&2
+            return 1
+        fi
+        validate_json_object_file \
+            "${backup}" \
+            "$(
+                if [ "${asic_num}" -eq 0 ]; then
+                    printf 'host CONFIG_DB'
+                else
+                    printf 'asic%s CONFIG_DB' "$((asic_num - 1))"
+                fi
+            )" || return $?
+        ((asic_num = asic_num + 1))
+    done
+
+    backup="${MINGRAPH_FILE}.pre_golden_native"
+    if [ ! -s "${backup}" ] || [ -L "${backup}" ]; then
+        echo "Golden-native recovery requires non-empty regular backup ${backup}." >&2
+        return 1
+    fi
+
+    backup="${GOLDEN_CONFIG_DB_JSON}.pre_golden_native"
+    absence="${GOLDEN_NATIVE_PREVIOUS_GOLD_ABSENT}"
+    if [ -e "${backup}" ] && [ -e "${absence}" ]; then
+        echo "Golden-native recovery found conflicting previous-gold state." >&2
+        return 1
+    fi
+    if [ -e "${backup}" ]; then
+        if [ ! -s "${backup}" ] || [ -L "${backup}" ]; then
+            echo "Golden-native recovery requires regular previous-gold backup ${backup}." >&2
+            return 1
+        fi
+        validate_json_object_file "${backup}" "previous golden config" || return $?
+        return 0
+    fi
+    if [ ! -f "${absence}" ] || [ -L "${absence}" ] || \
+       [ "$(cat "${absence}")" != "absent" ] || \
+       [ "$(wc -l < "${absence}")" -ne 1 ]; then
+        echo "Golden-native recovery requires a valid previous-gold absence marker." >&2
+        return 1
+    fi
+}
+
+validate_json_object_file()
+{
+    local path="$1"
+    local description="$2"
+
+    python3 - "${path}" "${description}" <<'PY'
+import json
+import sys
+
+path, description = sys.argv[1:]
+
+
+def object_without_duplicates(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate key {!r}".format(key))
+        result[key] = value
+    return result
+
+
+try:
+    with open(path, encoding="utf-8") as stream:
+        value = json.load(stream, object_pairs_hook=object_without_duplicates)
+except (OSError, UnicodeError, ValueError) as error:
+    print(
+        "Golden-native recovery found invalid {} '{}': {}".format(
+            description, path, error
+        ),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if not isinstance(value, dict):
+    print(
+        "Golden-native recovery requires {} '{}' to contain a JSON object.".format(
+            description, path
+        ),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+if not value:
+    print(
+        "Golden-native recovery requires {} '{}' to be non-empty.".format(
+            description, path
+        ),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+}
+
+reload_restored_legacy_config()
+{
+    local asic_num=0
+    local IFS=,
+    local -a config_files=("${CONFIG_DB_JSON}")
+
+    while [[ $asic_num -lt ${NUM_ASIC:-1} && ${NUM_ASIC:-1} -gt 1 ]]; do
+        config_files+=(
+            "${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}"
+        )
+        ((asic_num = asic_num + 1))
+    done
+
+    "${CONFIG_CLI}" reload -y -n -f "${config_files[*]}"
+}
+
+verify_live_config_db_scope()
+{
+    local source="$1"
+    local scope="$2"
+    local initialized
+    local live_dump
+    local -a db_cli=(sonic-db-cli)
+    local -a cfggen=(sonic-cfggen)
+
+    if [ "${scope}" != "localhost" ]; then
+        db_cli+=(-n "${scope}")
+        cfggen+=(-n "${scope}")
+    fi
+
+    initialized=$("${db_cli[@]}" CONFIG_DB GET CONFIG_DB_INITIALIZED) || {
+        echo "Golden-native recovery could not read live CONFIG_DB initialization state for ${scope}." >&2
+        return 1
+    }
+    if [ "${initialized}" != "1" ]; then
+        echo "Golden-native recovery found uninitialized live CONFIG_DB state for ${scope}." >&2
+        return 1
+    fi
+
+    live_dump=$(mktemp "${TMPDIR:-/tmp}/golden-native-live-config.XXXXXX") || return $?
+    chmod 0600 "${live_dump}" || {
+        rm -f -- "${live_dump}"
+        return 1
+    }
+    if ! "${cfggen[@]}" -d --print-data > "${live_dump}"; then
+        rm -f -- "${live_dump}"
+        echo "Golden-native recovery could not read live CONFIG_DB state for ${scope}." >&2
+        return 1
+    fi
+
+    python3 - "${source}" "${live_dump}" "${scope}" <<'PY'
+import json
+import sys
+
+source_path, live_path, scope = sys.argv[1:]
+
+
+def object_without_duplicates(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate key {!r}".format(key))
+        result[key] = value
+    return result
+
+
+def load_object(path, description):
+    with open(path, encoding="utf-8") as stream:
+        value = json.load(stream, object_pairs_hook=object_without_duplicates)
+    if not isinstance(value, dict):
+        raise ValueError("{} must contain a JSON object".format(description))
+    return value
+
+
+def first_mismatch(expected, actual, path=""):
+    for key, expected_value in expected.items():
+        child_path = "{}.{}".format(path, key) if path else key
+        if key not in actual:
+            return "{} is missing".format(child_path)
+        actual_value = actual[key]
+        if isinstance(expected_value, dict):
+            if not isinstance(actual_value, dict):
+                return "{} is not an object".format(child_path)
+            mismatch = first_mismatch(expected_value, actual_value, child_path)
+            if mismatch:
+                return mismatch
+        elif actual_value != expected_value:
+            return "{} does not match".format(child_path)
+    return None
+
+
+try:
+    expected = load_object(source_path, "restored CONFIG_DB")
+    actual = load_object(live_path, "live CONFIG_DB")
+    mismatch = first_mismatch(expected, actual)
+except (OSError, UnicodeError, ValueError) as error:
+    print(
+        "Golden-native recovery could not verify live CONFIG_DB for {}: {}".format(
+            scope, error
+        ),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if mismatch:
+    print(
+        "Golden-native recovery live CONFIG_DB mismatch for {}: {}".format(
+            scope, mismatch
+        ),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+    local status=$?
+    rm -f -- "${live_dump}"
+    return "${status}"
+}
+
+verify_restored_legacy_config()
+{
+    local asic_num=0
+
+    verify_live_config_db_scope "${CONFIG_DB_JSON}" localhost || return $?
+    while [[ $asic_num -lt ${NUM_ASIC:-1} && ${NUM_ASIC:-1} -gt 1 ]]; do
+        verify_live_config_db_scope \
+            "${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}" \
+            "asic${asic_num}" || return $?
+        ((asic_num = asic_num + 1))
+    done
+}
+
+golden_native_persisted_config_complete()
+{
+    if [[ ${NUM_ASIC:-1} -gt 1 ]]; then
+        multi_asic_config_db_complete
+    else
+        [ -s "${CONFIG_DB_JSON}" ]
+    fi
+}
+
+recover_golden_native_enable_transition()
+{
+    validate_golden_native_restore_inputs || return $?
+    verify_golden_native_sealed_input || return $?
+    validate_golden_config_native || return $?
+    reload_golden_config_native || return $?
+    golden_native_persisted_config_complete || {
+        echo "Golden-native enable recovery did not persist a complete CONFIG_DB generation." >&2
+        return 1
+    }
+    write_golden_native_marker || return $?
+    remove_file_durably "${MINGRAPH_FILE}" || return $?
+    [ -f "${GOLDEN_CONFIG_NATIVE_ENABLED_FILE}" ] || return 1
+    [ ! -e "${MINGRAPH_FILE}" ] || return 1
+    remove_file_durably "${GOLDEN_NATIVE_TRANSITION_FILE}" || return $?
+    echo "Completed interrupted golden-native enable transition."
+}
+
+cleanup_golden_native_restore_inputs()
+{
+    local asic_num=0
+    local backup
+
+    rm -f -- "${CONFIG_DB_JSON}.pre_golden_native" \
+        "${MINGRAPH_FILE}.pre_golden_native" \
+        "${GOLDEN_CONFIG_DB_JSON}.pre_golden_native" \
+        "${GOLDEN_NATIVE_PREVIOUS_GOLD_ABSENT}" || return $?
+    while [[ $asic_num -lt ${NUM_ASIC:-1} && ${NUM_ASIC:-1} -gt 1 ]]; do
+        backup="${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}.pre_golden_native"
+        rm -f -- "${backup}" || return $?
+        ((asic_num = asic_num + 1))
+    done
+    rm -rf -- "${GOLDEN_NATIVE_SEALED_DIR}" || return $?
+    sync_parent_directory "${CONFIG_DB_JSON}"
+}
+
+recover_golden_native_restore_transition()
+{
+    local asic_num=0
+    local source
+    local destination
+    local -a sources=("${CONFIG_DB_JSON}.pre_golden_native")
+    local -a destinations=("${CONFIG_DB_JSON}")
+
+    while [[ $asic_num -lt ${NUM_ASIC:-1} && ${NUM_ASIC:-1} -gt 1 ]]; do
+        sources+=(
+            "${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}.pre_golden_native"
+        )
+        destinations+=(
+            "${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}"
+        )
+        ((asic_num = asic_num + 1))
+    done
+
+    sources+=("${MINGRAPH_FILE}.pre_golden_native")
+    destinations+=("${MINGRAPH_FILE}")
+
+    validate_golden_native_restore_inputs || return $?
+
+    for index in "${!sources[@]}"; do
+        replace_file_atomically \
+            "${sources[$index]}" \
+            "${destinations[$index]}" || return $?
+    done
+
+    for index in "${!sources[@]}"; do
+        cmp -s -- "${sources[$index]}" "${destinations[$index]}" || return 1
+    done
+
+    remove_file_durably "${GOLDEN_CONFIG_NATIVE_ENABLED_FILE}" || return $?
+    if [ -e "${GOLDEN_CONFIG_DB_JSON}.pre_golden_native" ]; then
+        replace_file_atomically \
+            "${GOLDEN_CONFIG_DB_JSON}.pre_golden_native" \
+            "${GOLDEN_CONFIG_DB_JSON}" || return $?
+    else
+        remove_file_durably "${GOLDEN_CONFIG_DB_JSON}" || return $?
+    fi
+
+    [ ! -e "${GOLDEN_CONFIG_NATIVE_ENABLED_FILE}" ] || return 1
+    if [ -e "${GOLDEN_CONFIG_DB_JSON}.pre_golden_native" ]; then
+        cmp -s -- \
+            "${GOLDEN_CONFIG_DB_JSON}.pre_golden_native" \
+            "${GOLDEN_CONFIG_DB_JSON}" || return 1
+    elif [ -e "${GOLDEN_CONFIG_DB_JSON}" ]; then
+        return 1
+    fi
+
+    reload_restored_legacy_config || return $?
+    verify_restored_legacy_config || return $?
+
+    remove_file_durably "${GOLDEN_NATIVE_TRANSITION_FILE}" || return $?
+    cleanup_golden_native_restore_inputs || \
+        echo "Golden-native restore completed, but recovery-input cleanup failed." >&2
+    echo "Completed interrupted golden-native restore transition."
+}
+
+recover_golden_native_transition()
+{
+    local transition
+    local status
+
+    transition=$(read_golden_native_transition)
+    status=$?
+    if [ "${status}" -eq 1 ]; then
+        return 0
+    fi
+    if [ "${status}" -ne 0 ]; then
+        return "${status}"
+    fi
+
+    case "${transition}" in
+        enable)
+            recover_golden_native_enable_transition
+            ;;
+        restore)
+            recover_golden_native_restore_transition
+            ;;
+    esac
 }
 
 # run given script
@@ -167,14 +732,17 @@ migrate_golden_config_native()
         return 1
     fi
 
-    "${CONFIG_CLI}" load_golden_config -y --migrate-only ${GOLDEN_CONFIG_DB_JSON}
+    run_golden_native_commit \
+        "${CONFIG_CLI}" load_golden_config -y --migrate-only --persist \
+        "$@" ${GOLDEN_CONFIG_DB_JSON}
 }
 
 reload_golden_config_native()
 {
     echo "Reloading complete golden config without minigraph..."
-    "${CONFIG_CLI}" load_golden_config -y -n ${GOLDEN_CONFIG_DB_JSON} || return $?
-    "${CONFIG_CLI}" save -y
+    run_golden_native_commit \
+        "${CONFIG_CLI}" load_golden_config -y --persist -f \
+        ${GOLDEN_CONFIG_DB_JSON}
 }
 
 # Apply tacacs config
@@ -206,9 +774,9 @@ reload_configdb()
 copy_config_files_and_directories()
 {
     for file_dir in $@; do
-        if [ -f /etc/sonic/old_config/${file_dir} ] || [ -d /etc/sonic/old_config/${file_dir} ]; then
+        if [ -f ${OLD_CONFIG_PATH}/${file_dir} ] || [ -d ${OLD_CONFIG_PATH}/${file_dir} ]; then
             echo "Copying SONiC configuration ${file_dir} ..."
-            cp -ar /etc/sonic/old_config/${file_dir} /etc/sonic/ || return $?
+            cp -ar ${OLD_CONFIG_PATH}/${file_dir} /etc/sonic/ || return $?
         else
             echo "Missing SONiC configuration ${file_dir} ..."
         fi
@@ -350,8 +918,7 @@ do_config_initialization()
         echo "No config_db.json found and golden-native configuration is enabled, using complete gold..."
         reload_golden_config_native || return $?
         rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
-        set_config_db_initialized "1"
-        return $?
+        return 0
     fi
 
     # If minigraph.xml is available, prefer it over ZTP/factory default.
@@ -361,8 +928,8 @@ do_config_initialization()
     if [ -r ${MINGRAPH_FILE} ]; then
         echo "No config_db.json found but minigraph.xml is available, using minigraph..."
         reload_minigraph || return $?
-        rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
         set_config_db_initialized "1" || return $?
+        rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
         return 0
     fi
 
@@ -379,15 +946,16 @@ do_config_initialization()
         rm -f ${TMP_ZTP_CONFIG_DB_JSON} || return $?
     fi
 
+    set_config_db_initialized "1" || return $?
     rm -f ${PENDING_CONFIG_INITIALIZATION} || return $?
-    set_config_db_initialized "1"
+    return 0
 }
 
 # Not supported on chassis platforms (provisioned by minigraph or a migrated
 # config) or on fast/express boot
 multi_asic_config_initialization_supported()
 {
-    if [ -f /usr/share/sonic/device/$PLATFORM/chassisdb.conf ]; then
+    if [ -f ${SONIC_DEVICE_PATH}/$PLATFORM/chassisdb.conf ]; then
         echo "Chassis platform detected, skipping multi-npu config initialization."
         return 1
     fi
@@ -400,6 +968,38 @@ multi_asic_config_initialization_supported()
     esac
 
     return 0
+}
+
+golden_config_native_multi_asic_supported()
+{
+    if [[ ${NUM_ASIC:-1} -le 1 ]]; then
+        return 0
+    fi
+
+    if [ -f ${SONIC_DEVICE_PATH}/${PLATFORM}/chassisdb.conf ]; then
+        echo "Golden-native configuration supports only single-host multi-ASIC systems; chassis platforms remain unsupported."
+        return 1
+    fi
+
+    return 0
+}
+
+preflight_golden_config_native_migration()
+{
+    local marker_name=${GOLDEN_CONFIG_NATIVE_ENABLED_FILE##*/}
+    local gold_name=${GOLDEN_CONFIG_DB_JSON##*/}
+    local migration_gold
+
+    if [ -f "${OLD_CONFIG_PATH}/${marker_name}" ]; then
+        migration_gold="${OLD_CONFIG_PATH}/${gold_name}"
+    elif golden_config_native_enabled; then
+        migration_gold="${GOLDEN_CONFIG_DB_JSON}"
+    else
+        return 0
+    fi
+
+    golden_config_native_multi_asic_supported || return $?
+    "${CONFIG_CLI}" load_golden_config --check-only "${migration_gold}"
 }
 
 # config_db.json and every config_db<N>.json exist and are not empty
@@ -586,18 +1186,84 @@ check_namespace_warm_fast_boot()
 # do_config_migration, which runs after the database container starts.
 load_cold_booted_namespaces()
 {
+    local -a cold_namespaces=()
+    local -a cold_config_files=()
     local config_db_file
     local asic_num=0
+    local index
+    local namespace
+    local status
 
     while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 1) ]]; do
         config_db_file=${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX}
-        if ! check_namespace_warm_fast_boot "asic$asic_num" && [ -r $config_db_file ]; then
-            echo "asic$asic_num did not warm reboot, loading ${config_db_file} ..."
-            if [ -r ${INIT_CFG_JSON} ]; then
-                sonic-cfggen -n "asic$asic_num" -j ${INIT_CFG_JSON} -j $config_db_file --write-to-db
-            else
-                sonic-cfggen -n "asic$asic_num" -j $config_db_file --write-to-db
-            fi
+        if [[ ! -r "$config_db_file" ]]; then
+            echo "Required namespace config file is not readable: ${config_db_file}" >&2
+            return 1
+        fi
+        ((asic_num = asic_num + 1))
+    done
+
+    asic_num=0
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 1) ]]; do
+        config_db_file=${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX}
+        if ! check_namespace_warm_fast_boot "asic$asic_num"; then
+            cold_namespaces+=("asic$asic_num")
+            cold_config_files+=("$config_db_file")
+        fi
+        ((asic_num = asic_num + 1))
+    done
+
+    for index in "${!cold_namespaces[@]}"; do
+        namespace=${cold_namespaces[$index]}
+        config_db_file=${cold_config_files[$index]}
+        if [ -r "${INIT_CFG_JSON}" ]; then
+            sonic-cfggen -n "$namespace" -j "${INIT_CFG_JSON}" \
+                -j "$config_db_file" --print-data >/dev/null
+        else
+            sonic-cfggen -n "$namespace" -j "$config_db_file" \
+                --print-data >/dev/null
+        fi
+        status=$?
+        if [[ $status -ne 0 ]]; then
+            return $status
+        fi
+    done
+
+    for index in "${!cold_namespaces[@]}"; do
+        namespace=${cold_namespaces[$index]}
+        config_db_file=${cold_config_files[$index]}
+        echo "${namespace} did not warm reboot, loading ${config_db_file} ..."
+        if [ -r "${INIT_CFG_JSON}" ]; then
+            sonic-cfggen -n "$namespace" -j "${INIT_CFG_JSON}" \
+                -j "$config_db_file" --write-to-db
+        else
+            sonic-cfggen -n "$namespace" -j "$config_db_file" --write-to-db
+        fi
+        status=$?
+        if [[ $status -ne 0 ]]; then
+            return $status
+        fi
+    done
+}
+
+collect_cold_booted_namespace_configs()
+{
+    local asic_num=0
+    local config_db_file
+
+    COLD_NAMESPACE_CONFIG_ARGS=()
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 1) ]]; do
+        config_db_file=${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX}
+        if [[ ! -r "$config_db_file" ]]; then
+            echo "Required namespace config file is not readable: ${config_db_file}" >&2
+            return 1
+        fi
+        if ! check_namespace_warm_fast_boot "asic$asic_num"; then
+            COLD_NAMESPACE_CONFIG_ARGS+=(
+                --preload-namespace-config
+                "asic$asic_num"
+                "$config_db_file"
+            )
         fi
         ((asic_num = asic_num + 1))
     done
@@ -628,16 +1294,18 @@ do_db_migration()
     local skip_schema_migration=${1:-false}
     local -a db_migrator_args
 
-    if [[ "${skip_schema_migration}" != "true" && -x ${DB_MIGRATOR} ]]; then
-        db_migrator_args=(-o migrate)
-        if golden_config_native_enabled; then
-            db_migrator_args+=(--config-source golden --config-source-file "${GOLDEN_CONFIG_DB_JSON}")
-        fi
+    if [[ "${skip_schema_migration}" != "true" ]]; then
+        if [[ -x ${DB_MIGRATOR} ]]; then
+            db_migrator_args=(-o migrate)
+            if golden_config_native_enabled; then
+                db_migrator_args+=(--config-source golden --config-source-file "${GOLDEN_CONFIG_DB_JSON}")
+            fi
 
-        # Migrate the DB to the latest schema version if needed
-        "${DB_MIGRATOR}" "${db_migrator_args[@]}" || return $?
+            # Migrate the DB to the latest schema version if needed
+            "${DB_MIGRATOR}" "${db_migrator_args[@]}" || return $?
+        fi
+        set_config_db_initialized "1" || return $?
     fi
-    set_config_db_initialized "1" || return $?
 
     # Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
     if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
@@ -663,13 +1331,12 @@ do_config_migration()
     # Identify list of files to migrate
     copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json golden_config_native_enabled hft otel_config.yml"
 
+    # Validate the old-system golden-native source and trusted local platform
+    # before copying any persistent state into the new image.
+    preflight_golden_config_native_migration || return $?
+
     # Migrate all configuration files from old to new
     copy_config_files_and_directories $copy_list || return $?
-
-    if golden_config_native_enabled && [[ ${NUM_ASIC:-1} -gt 1 ]]; then
-        echo "Golden-native configuration is not yet supported for multi-ASIC migration."
-        return 1
-    fi
 
     # Migrate all config_db from old to new
     copy_config_files_and_directories $(get_config_db_file_list) || return $?
@@ -683,8 +1350,9 @@ do_config_migration()
     if [ x"${WARM_BOOT}" == x"true" ]; then
         echo "Warm reboot detected..."
         if golden_config_native_enabled; then
-            load_cold_booted_namespaces || return $?
-            migrate_golden_config_native || return $?
+            collect_cold_booted_namespace_configs || return $?
+            migrate_golden_config_native \
+                "${COLD_NAMESPACE_CONFIG_ARGS[@]}" || return $?
             do_db_migration true || return $?
         else
             load_cold_booted_namespaces || return $?
@@ -757,8 +1425,16 @@ boot_config()
     # e.g. on the first boot after an ONIE install with nothing to migrate.
     if [[ ($NUM_ASIC -gt 1) ]]; then
         if golden_config_native_enabled; then
-            echo "Golden-native configuration is not yet supported for multi-ASIC initialization."
-            return 1
+            golden_config_native_multi_asic_supported || return $?
+            if ! multi_asic_config_initialization_supported; then
+                return 0
+            fi
+            if [ -e ${PENDING_CONFIG_INITIALIZATION} ] || \
+               [ -e ${CONFIG_SETUP_INITIALIZATION_FLAG} ] || \
+               ! multi_asic_config_db_complete; then
+                do_config_initialization || return $?
+            fi
+            return 0
         fi
         if [ -e /etc/sonic/pending_config_initialization ] || \
            ! multi_asic_config_db_complete; then
@@ -795,6 +1471,11 @@ boot_config()
 
 main()
 {
+    CMD=${1:-}
+    if [ "${CMD}" = "boot" ]; then
+        recover_golden_native_transactions || return $?
+    fi
+
     # read SONiC immutable variables
     [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
@@ -813,7 +1494,6 @@ main()
         source $PLATFORM_ENV_CONF_FILE
     fi
 
-    CMD=$1
     if [ "$CMD" = "" ] || [ "$CMD" = "help" ] || \
        [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
         usage
@@ -822,6 +1502,7 @@ main()
 
     case "$CMD" in
         boot)
+            recover_golden_native_transition || return $?
             boot_config
             ;;
         factory)
