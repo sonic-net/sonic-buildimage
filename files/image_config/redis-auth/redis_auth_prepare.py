@@ -57,7 +57,7 @@ def _read(path, size):
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | _NOFOLLOW)
     except OSError:
-        raise CredentialStateError("runtime credential pair is incomplete or unsafe") from None
+        raise CredentialStateError("runtime credential is incomplete or unsafe") from None
     with os.fdopen(fd, "rb") as stream:
         info = os.fstat(stream.fileno())
         _check(info, 0o400)
@@ -78,7 +78,7 @@ def _write(path, content):
 
 
 def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT, create=True):
-    """Return the validated digest, creating the boot pair only when permitted."""
+    """Return the secret's digest, creating the boot secret only when permitted."""
     if os.geteuid() != 0:
         raise CredentialStateError("must run as root")
     runtime_root = os.fspath(runtime_root)
@@ -90,10 +90,7 @@ def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT, create=True):
         if os.path.lexists(target):
             _check(os.lstat(target), 0o755, directory=True)
             password = _read(os.path.join(target, "writer.secret"), 43)
-            digest = _read(os.path.join(target, "writer.sha256"), 65)
-            if hashlib.sha256(password).hexdigest().encode("ascii") + b"\n" != digest:
-                raise CredentialStateError("runtime credential pair does not match")
-            return digest.decode("ascii").strip()
+            return hashlib.sha256(password).hexdigest()
 
         if not create or any(os.path.lexists(os.path.join(runtime_root, name))
                for name in ("local.json", "server/users.acl", "server/instances.json")):
@@ -102,9 +99,7 @@ def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT, create=True):
         temporary = tempfile.mkdtemp(prefix=".local-system-", dir=runtime_root)
         try:
             password = secrets.token_urlsafe(32).encode("ascii")
-            digest = hashlib.sha256(password).hexdigest().encode("ascii") + b"\n"
             _write(os.path.join(temporary, "writer.secret"), password)
-            _write(os.path.join(temporary, "writer.sha256"), digest)
             os.chown(temporary, 0, 0, follow_symlinks=False)
             # Readers need directory search permission; credential files remain 0400.
             # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
@@ -114,6 +109,6 @@ def prepare_credential(*, runtime_root=DEFAULT_RUNTIME_ROOT, create=True):
         finally:
             if temporary is not None:
                 shutil.rmtree(temporary)
-        return digest.decode("ascii").strip()
+        return hashlib.sha256(password).hexdigest()
     finally:
         os.close(lock_fd)

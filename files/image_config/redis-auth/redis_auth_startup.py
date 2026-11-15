@@ -254,6 +254,12 @@ def prepare_selected(*, intent_path=INTENT, runtime=RUNTIME):
         if path.exists() and read_setting(path).encode() != content:
             raise CredentialStateError('activation changed during this boot; inventory or policy differs; reboot required')
     digest = prepare_credential(runtime_root=runtime)
+    acl = runtime / 'server/users.acl'
+    if os.path.lexists(acl):
+        if read_setting(acl).encode() != server_acl(digest):
+            raise CredentialStateError('boot credential or server policy changed; reboot required')
+    elif any(os.path.lexists(runtime / relative) for relative in files):
+        raise CredentialStateError('published server policy is missing; reboot required')
     server_directory(runtime, create=True)
     for relative, content in {'server/users.acl': server_acl(digest), **files}.items():
         atomic(runtime / relative, content)

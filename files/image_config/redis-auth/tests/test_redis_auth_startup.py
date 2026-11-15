@@ -89,7 +89,7 @@ class StartupTest(unittest.TestCase):
         self.assertEqual(self.prepare(), [])
         self.assertFalse(self.runtime.exists())
 
-    def test_explicit_primary_and_bmp_share_one_boot_pair(self):
+    def test_explicit_primary_and_bmp_share_one_boot_secret(self):
         self.select(mode='enforce')
         self.assertEqual(self.prepare(), ['redis', 'redis_bmp'])
         policy = json.loads((self.runtime / 'local.json').read_text())
@@ -116,7 +116,7 @@ class StartupTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE((self.runtime / 'server').stat().st_mode), 0o755)
         for name in ('local.json', 'server/users.acl'):
             self.assertEqual(stat.S_IMODE((self.runtime / name).stat().st_mode), 0o644)
-        for name in ('writer.secret', 'writer.sha256'):
+        for name in ('writer.secret',):
             self.assertEqual(stat.S_IMODE((self.runtime / 'local-system' / name).stat().st_mode), 0o400)
         self.assertEqual((self.runtime / 'local-system/writer.secret').stat().st_ino, inode)
 
@@ -167,6 +167,40 @@ class StartupTest(unittest.TestCase):
         (self.runtime / 'local-system/writer.secret').unlink()
         with self.assertRaises(startup.CredentialStateError):
             self.prepare()
+
+    def test_changed_secret_is_not_published_to_running_servers(self):
+        self.enforce()
+        secret = self.runtime / 'local-system/writer.secret'
+        acl = self.runtime / 'server/users.acl'
+        original = acl.read_bytes()
+        secret.chmod(0o600)
+        secret.write_bytes(b'B' * 43)
+        secret.chmod(0o400)
+        with mock.patch.object(startup, 'prepare_credential', wraps=startup.prepare_credential) as prepare:
+            for operation in (self.prepare, lambda: startup.runtime_required(
+                    intent_path=self.intent, runtime=self.runtime)):
+                with self.assertRaises(startup.CredentialStateError):
+                    operation()
+            self.assertEqual(prepare.call_count, 2)
+        self.assertEqual(acl.read_bytes(), original)
+        self.assertEqual(secret.read_bytes(), b'B' * 43)
+
+    def test_missing_published_acl_requires_reboot(self):
+        self.enforce()
+        acl = self.runtime / 'server/users.acl'
+        acl.unlink()
+        with self.assertRaises(startup.CredentialStateError):
+            self.prepare()
+        self.assertFalse(acl.exists())
+
+    def test_changed_published_acl_is_not_silently_replaced(self):
+        self.enforce()
+        acl = self.runtime / 'server/users.acl'
+        content = b'user default on nopass +@all\n'
+        acl.write_bytes(content)
+        with self.assertRaises(startup.CredentialStateError):
+            self.prepare()
+        self.assertEqual(acl.read_bytes(), content)
 
     def test_unsafe_server_directory_rejected(self):
         self.enforce(tcp_exceptions=['redis_bmp'])

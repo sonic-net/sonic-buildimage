@@ -37,7 +37,6 @@ class RedisAuthPrepareTest(unittest.TestCase):
         self.runtime = self.root / "run"
         self.target = self.runtime / helper.INSTANCE
         self.secret = self.target / "writer.secret"
-        self.digest = self.target / "writer.sha256"
 
     def prepare(self):
         return helper.prepare_credential(runtime_root=self.runtime)
@@ -51,29 +50,29 @@ class RedisAuthPrepareTest(unittest.TestCase):
         path.write_bytes(content)
         path.chmod(0o400)
 
-    def test_fresh_runtime_creates_one_complete_pair(self):
+    def test_fresh_runtime_creates_one_boot_secret(self):
         with mock.patch.object(helper.secrets, "token_urlsafe", wraps=helper.secrets.token_urlsafe) as generate:
-            self.assertEqual(self.prepare(), self.digest.read_text().strip())
+            self.assertEqual(self.prepare(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
         generate.assert_called_once_with(32)
         password = self.secret.read_bytes()
         self.assertEqual(len(password), 43)
         self.assertEqual(len(base64.b64decode(password + b"=", altchars=b"-_", validate=True)), 32)
-        self.assertEqual(self.digest.read_bytes(), hashlib.sha256(password).hexdigest().encode() + b"\n")
+        self.assertEqual(set(self.target.iterdir()), {self.secret})
         self.assertEqual(set(self.runtime.iterdir()), {self.target})
-        for path in (self.runtime, self.target, self.secret, self.digest):
+        for path in (self.runtime, self.target, self.secret):
             info = path.lstat()
             self.assertEqual(stat.S_IMODE(info.st_mode), 0o755 if path.is_dir() else 0o400)
             self.assertEqual((info.st_uid, info.st_gid), (0, 0))
             if path.is_file():
                 self.assertEqual(info.st_nlink, 1)
 
-    def test_same_boot_reuses_pair_and_file_inodes(self):
-        self.assertEqual(self.create(), self.digest.read_text().strip())
-        paths = (self.target, self.secret, self.digest)
+    def test_same_boot_reuses_secret_and_file_inodes(self):
+        self.assertEqual(self.create(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
+        paths = (self.target, self.secret)
         before = [(path.stat().st_ino, path.stat().st_mtime_ns) for path in paths]
         with mock.patch.object(helper.secrets, "token_urlsafe") as generate:
-            self.assertEqual(self.prepare(), self.digest.read_text().strip())
-            self.assertEqual(self.prepare(), self.digest.read_text().strip())
+            self.assertEqual(self.prepare(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
+            self.assertEqual(self.prepare(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
         generate.assert_not_called()
         self.assertEqual([(path.stat().st_ino, path.stat().st_mtime_ns) for path in paths], before)
         self.assertEqual(self.secret.read_text(), self.PASSWORD)
@@ -108,33 +107,32 @@ class RedisAuthPrepareTest(unittest.TestCase):
                     process.terminate()
                     process.join(timeout=5)
             queue.close()
-        self.assertEqual(results, [("ok", self.digest.read_text().strip())] * 2)
-        self.assertEqual(self.prepare(), self.digest.read_text().strip())
+        self.assertEqual(results, [("ok", hashlib.sha256(self.secret.read_bytes()).hexdigest())] * 2)
+        self.assertEqual(self.prepare(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
 
-    def test_pair_publishes_in_one_directory_rename(self):
+    def test_secret_publishes_in_one_directory_rename(self):
         rename = helper.os.rename
         def publish(source, target):
             source = Path(source)
             self.assertFalse(Path(target).exists())
-            self.assertEqual(set(path.name for path in source.iterdir()), {"writer.secret", "writer.sha256"})
+            self.assertEqual(set(path.name for path in source.iterdir()), {"writer.secret"})
             self.assertEqual((source / "writer.secret").read_text(), self.PASSWORD)
             return rename(source, target)
-        with mock.patch.object(helper.os, "rename", side_effect=publish) as publish_pair:
-            self.assertEqual(self.create(), self.digest.read_text().strip())
-        self.assertEqual(publish_pair.call_count, 1)
+        with mock.patch.object(helper.os, "rename", side_effect=publish) as publish_secret:
+            self.assertEqual(self.create(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
+        self.assertEqual(publish_secret.call_count, 1)
 
     def test_interruption_before_publication_leaves_no_final_state(self):
         write = helper._write
-        def stop_at_hash(path, content):
-            if Path(path).name == "writer.sha256":
-                raise OSError("injected interruption")
-            return write(path, content)
-        with mock.patch.object(helper, "_write", side_effect=stop_at_hash):
+        def stop_after_write(path, content):
+            write(path, content)
+            raise OSError("injected interruption")
+        with mock.patch.object(helper, "_write", side_effect=stop_after_write):
             with self.assertRaises(OSError):
                 self.create()
         self.assertFalse(self.target.exists())
         self.assertEqual(list(self.runtime.iterdir()), [])
-        self.assertEqual(self.create(), self.digest.read_text().strip())
+        self.assertEqual(self.create(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
 
     def test_failed_rename_leaves_no_final_state(self):
         with mock.patch.object(helper.os, "rename", side_effect=OSError("injected interruption")):
@@ -142,19 +140,19 @@ class RedisAuthPrepareTest(unittest.TestCase):
                 self.create()
         self.assertFalse(self.target.exists())
         self.assertEqual(list(self.runtime.iterdir()), [])
-        self.assertEqual(self.create(), self.digest.read_text().strip())
+        self.assertEqual(self.create(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
 
     def test_abandoned_private_stage_does_not_become_final_state(self):
         self.runtime.mkdir(mode=0o755)
         stage = self.runtime / ".local-system-abandoned"
         stage.mkdir(mode=0o700)
         (stage / "writer.secret").write_text("unused")
-        self.assertEqual(self.create(), self.digest.read_text().strip())
+        self.assertEqual(self.create(), hashlib.sha256(self.secret.read_bytes()).hexdigest())
         self.assertEqual(self.secret.read_text(), self.PASSWORD)
         self.assertTrue(stage.exists())
 
-    def test_missing_file_in_published_pair_never_generates_replacement(self):
-        for name in ("writer.secret", "writer.sha256"):
+    def test_missing_file_in_published_secret_never_generates_replacement(self):
+        for name in ("writer.secret",):
             with self.subTest(name=name):
                 runtime = self.root / name
                 helper.prepare_credential(runtime_root=runtime)
@@ -173,14 +171,6 @@ class RedisAuthPrepareTest(unittest.TestCase):
         generate.assert_not_called()
         self.assertEqual(list(self.target.iterdir()), [])
 
-    def test_changed_password_is_rejected_without_replacement(self):
-        self.create()
-        self.rewrite(self.secret, b"B" * 43)
-        with mock.patch.object(helper.secrets, "token_urlsafe") as generate:
-            with self.assertRaisesRegex(helper.CredentialStateError, "does not match"):
-                self.prepare()
-        generate.assert_not_called()
-        self.assertEqual(self.secret.read_bytes(), b"B" * 43)
 
     def test_invalid_credential_size_is_rejected(self):
         self.create()
@@ -188,12 +178,6 @@ class RedisAuthPrepareTest(unittest.TestCase):
         with self.assertRaisesRegex(helper.CredentialStateError, "size"):
             self.prepare()
 
-    def test_changed_hash_is_rejected_without_replacement(self):
-        self.create()
-        self.rewrite(self.digest, b"0" * 64 + b"\n")
-        with self.assertRaisesRegex(helper.CredentialStateError, "does not match"):
-            self.prepare()
-        self.assertEqual(self.digest.read_bytes(), b"0" * 64 + b"\n")
 
     def test_unsafe_file_mode_is_rejected(self):
         self.create()
@@ -215,8 +199,10 @@ class RedisAuthPrepareTest(unittest.TestCase):
 
     def test_symlinked_file_is_rejected(self):
         self.create()
-        self.digest.unlink()
-        self.digest.symlink_to(self.secret)
+        other = self.root / "other-secret"
+        other.write_bytes(b"A" * 43)
+        self.secret.unlink()
+        self.secret.symlink_to(other)
         with self.assertRaises(helper.CredentialStateError):
             self.prepare()
 
@@ -255,7 +241,7 @@ class RedisAuthPrepareTest(unittest.TestCase):
             with self.subTest(root=root), self.assertRaises(helper.CredentialStateError):
                 helper.prepare_credential(runtime_root=root)
 
-    def test_non_root_can_read_public_policy_but_not_password_or_hash(self):
+    def test_non_root_can_read_public_policy_but_not_password(self):
         self.create()
         policy = self.runtime / "local.json"
         policy.write_text("{}", encoding="ascii")
@@ -272,12 +258,12 @@ for path in sys.argv[2:]:
     raise AssertionError("credential is readable")
 """
         result = subprocess.run([sys.executable, "-c", check, str(policy),
-                                 str(self.secret), str(self.digest)],
+                                 str(self.secret)],
                                 user=65534, group=65534, extra_groups=(),
                                 capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_core_emits_no_password_or_hash(self):
+    def test_core_emits_no_password(self):
         stdout, stderr = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             self.create()
