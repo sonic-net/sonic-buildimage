@@ -471,6 +471,25 @@ SONiC registry endpoint; do not add another endpoint in a home or user rc.
 Generated resolution receipts list registry lookup URLs from the lock; a reused
 lock can also contain historical lookups.
 
+Source-image workers can test a source checkout against an explicitly selected
+SONiC registry commit. For the same selection locally, run the review entry
+point from the image workspace root. For example, to inspect the Database
+image archive target at the current published registry revision:
+
+```sh
+export SONIC_BAZEL_REGISTRY_REVISION=$(git ls-remote --exit-code \
+  https://github.com/securely1g/sonic-bazel-registry.git refs/heads/main | cut -f1)
+tools/bazel/ci/review_bazel.sh query //dockers/docker-database:docker-database.gz
+```
+
+The entry point requires a full lowercase commit ID. It replaces the SONiC
+registry URL for that invocation, keeps BCR as the second registry, and disables
+remote cache uploads for reviewed builds. It keeps cache and downloader settings
+from the home `.bazelrc` and the workspace `.bazelrc.user`. For settings in the
+same command scope, the workspace file takes precedence. The worker sets
+`BAZEL_REAL` to its resource-limited Bazel launcher. Ordinary CI still uses
+registry `main`.
+
 ## Kernel Debian packages in the Make VS flow
 
 The opt-in kernel runtime/debug/header DEB producer and installer handoff are documented
