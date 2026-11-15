@@ -61,7 +61,11 @@ $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 # The SX SDK opens the sx_core char device (/dev/sxdevs/sxcdev, major dynamically
 # allocated by the driver) and phcsync opens the PTP clock device (/dev/ptp*,
 # also dynamically allocated). A blanket rule mirrors the Broadcom SOC-init fix
-# and covers both; the node itself is bind-mounted (multi-ASIC) or via /dev/sxdevs
-# (single-ASIC).
+# and covers both. SX nodes are bind-mounted separately, while PTP nodes are
+# discovered from sysfs and created by phcsync at runtime.
 $(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='a *:* rwm'
 
+# phcsync sets the SX PHC from CLOCK_REALTIME. Opening the PTP device is
+# covered above, but Docker's default seccomp profile only permits clock_settime
+# with CAP_SYS_TIME.
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --cap-add=SYS_TIME
