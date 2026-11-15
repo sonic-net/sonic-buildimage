@@ -69,7 +69,7 @@ class ComponentRule:
 COMPONENT_RULES_SW = {
     "MFT": ComponentRule(deb_package="mft"),
     "HW_MANAGEMENT": ComponentRule(deb_package="hw-management", regex=r".*1\.mlnx\.([0-9.]*)"),
-    "SDK": ComponentRule(deb_package="sys-sdk-main", regex=r".*1\.mlnx\.([0-9.]*)", is_from_syncd=True),
+    "SDK": ComponentRule(deb_package="sys-sdk-main", regex=r".*1\.mlnx\.([A-Za-z0-9.]*)", is_from_syncd=True),
     "SAI": ComponentRule(deb_package="mlnx-sai", regex=r".*1\.mlnx\.([A-Za-z0-9.]*)", is_from_syncd=True),
     "SAI_API_HEADERS": ComponentRule(cmd="dpkg -s mlnx-sai", regex="X-Sai-Headers-Version: ([0-9.]+)", is_from_syncd=True),
     "FW": ComponentRule(cmd="mlxfwmanager --query --query-format xml", regex=r"[0-9]{2}[\._]([0-9._-]*)", fn=parse_fw_version_sw),
@@ -158,6 +158,8 @@ def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
     if rule.regex:
         versions[:] = [re.search(rule.regex, version).group(1) for version in versions]
 
+    if not versions:
+        return True, "N/A"
     if len(set(versions)) == 1:
         return True, versions[0]
     return False, versions
