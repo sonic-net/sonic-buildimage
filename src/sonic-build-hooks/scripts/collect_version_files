@@ -130,6 +130,30 @@ if [ "${ENABLE_SBOM:-n}" = "y" ]; then
     ' "$sbom_tsv_dpkg" "$sbom_tsv_apt" > "$sbom_tsv_final" 2>/dev/null || true
 
     rm -f "$sbom_tsv_dpkg" "$sbom_tsv_apt"
+
+    # Package<TAB>Origin of the first apt repository carrying its installed
+    # version (Debian, Docker, ...). A package from a local .deb is absent.
+    sbom_repo_origins="${TARGET_PATH}/.sbom-apt-origins"
+    apt-cache policy 2>/dev/null | awk '
+        /^ *[0-9-]+ / && !/\/var\/lib\/dpkg\/status/ { src = $0; sub(/^ *[0-9-]+ /, "", src); next }
+        src != "" && /^ +release / {
+            o = ""; n = split(substr($0, index($0, "release ") + 8), kv, ",")
+            for (i = 1; i <= n; i++) if (kv[i] ~ /^o=/) o = substr(kv[i], 3)
+            if (o != "") print src "\t" o
+            src = ""
+        }' > "$sbom_repo_origins" 2>/dev/null || true
+    dpkg-query -W -f '${db:Status-Status} ${Package}\n' \
+        | awk '$1 == "installed" { print $2 }' \
+        | xargs -r apt-cache policy 2>/dev/null | awk -F'\t' '
+        FNR == NR { origin[$1] = $2; next }
+        /^[^ ].*:$/ { pkg = substr($0, 1, length($0) - 1); inst = 0; done = 0; next }
+        /^ \*\*\* / { inst = 1; next }
+        inst && /^     [^ ]/ { inst = 0 }
+        inst && !done && /^ +[0-9-]+ / && !/\/var\/lib\/dpkg\/status/ {
+            src = $0; sub(/^ +[0-9-]+ /, "", src)
+            if (src in origin) { print pkg "\t" origin[src]; done = 1 }
+        }' "$sbom_repo_origins" - | sort -u > "${TARGET_PATH}/deb-origins" 2>/dev/null || true
+    rm -f "$sbom_repo_origins"
 fi
 
 ## Print the unique and sorted result
