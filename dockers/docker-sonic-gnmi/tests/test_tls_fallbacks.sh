@@ -63,8 +63,7 @@ run_launcher() {
     export F050_TEST_TELEMETRY="${STUB_BIN}/telemetry"
 
     RUN_STATUS=0
-    TELEMETRY_WATCHDOG_SERIALNUMBER_PROBE_ENABLED=false \
-        PATH="${STUB_BIN}:${PATH}" "${test_script}" \
+    PATH="${STUB_BIN}:${PATH}" "${test_script}" \
         > "${F050_STDOUT_FILE}" 2> "${F050_STDERR_FILE}" || RUN_STATUS=$?
 }
 
