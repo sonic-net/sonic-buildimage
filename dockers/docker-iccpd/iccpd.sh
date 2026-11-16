@@ -11,9 +11,11 @@ function start_app {
 function clean_up {
     pkill -9 mclagsyncd
     pkill -9 iccpd
-    exit
+    exit 0
 }
 
-trap clean_up SIGTERM SIGKILL
+trap clean_up SIGTERM SIGINT
 start_app
-read
+rc=$?
+pkill -9 mclagsyncd 2>/dev/null || true
+exit $rc

@@ -131,6 +131,12 @@ int mlacp_fsm_update_Agg_conf(struct CSM* csm, mLACPAggConfigTLV* portconf)
         new_create = 1;
     }
 
+    if (pif == NULL)
+    {
+        MLACP(csm).need_to_sync = 1;
+        return MCLAG_ERROR;
+    }
+
     pif->po_id = ntohs(portconf->agg_id);
     snprintf(pif->name, sizeof(pif->name), "%s", portconf->agg_name);
     memcpy(pif->mac_addr, portconf->mac_addr, ETHER_ADDR_LEN);
