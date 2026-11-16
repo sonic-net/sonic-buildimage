@@ -27,6 +27,8 @@ $(DOCKER_GNMI_WATCHDOG)_CONTAINER_NAME = gnmi_watchdog
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -t --pid=host
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+# gnmi serves an unauthenticated unix socket here; connect() works through a read-only mount.
+$(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 $(DOCKER_GNMI_WATCHDOG)_FILES += $(CONTAINER_RSYSLOG_RELP_UDP_CONF)
