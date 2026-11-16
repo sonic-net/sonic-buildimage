@@ -1,0 +1,120 @@
+From de1c5ffbc3835c912e939abe15fc94e57a01d2ec Mon Sep 17 00:00:00 2001
+From: Brad House <bhouse@nexthop.ai>
+Date: Thu, 12 Nov 2026 20:00:13 +0000
+Subject: [PATCH] parsers BUGFIX forget a freed keyless list from the unres
+ sets
+
+With LYD_VALIDATE_MULTI_ERROR the JSON and XML parsers continue after
+an invalid list key and free the list instance. Its nodes could still
+be in node_types (a union of leafrefs key stored LY_EINCOMPLETE),
+node_when, meta_types, ext_node or ext_val, and lyd_validate_unres
+then read the freed nodes (heap use-after-free).
+
+Signed-off-by: Brad House <bhouse@nexthop.ai>
+---
+ src/parser_common.c   | 39 +++++++++++++++++++++++++++++++++++++++
+ src/parser_internal.h | 12 ++++++++++++
+ src/parser_json.c     |  1 +
+ src/parser_xml.c      |  1 +
+ 4 files changed, 53 insertions(+)
+
+diff --git a/src/parser_common.c b/src/parser_common.c
+index 789f567a7..180d4b28b 100644
+--- a/src/parser_common.c
++++ b/src/parser_common.c
+@@ -359,6 +359,45 @@ cleanup:
+     return rc;
+ }
+ 
++void
++lyd_parser_unres_forget(struct lyd_ctx *lydctx, const struct lyd_node *subtree)
++{
++    const struct lyd_node *iter;
++    struct lyd_meta *meta;
++    uint32_t idx;
++
++    if (!subtree) {
++        return;
++    }
++
++    LYD_TREE_DFS_BEGIN(subtree, iter) {
++        if (ly_set_contains(&lydctx->node_when, iter, &idx)) {
++            ly_set_rm_index_ordered(&lydctx->node_when, idx, NULL);
++        }
++        if (ly_set_contains(&lydctx->node_types, iter, &idx)) {
++            ly_set_rm_index_ordered(&lydctx->node_types, idx, NULL);
++        }
++        for (idx = lydctx->ext_node.count; idx; --idx) {
++            if (((struct lyd_ctx_ext_node *)lydctx->ext_node.objs[idx - 1])->node == iter) {
++                ly_set_rm_index_ordered(&lydctx->ext_node, idx - 1, free);
++            }
++        }
++        for (idx = lydctx->ext_val.count; idx; --idx) {
++            if (((struct lyd_ctx_ext_val *)lydctx->ext_val.objs[idx - 1])->sibling == iter) {
++                ly_set_rm_index_ordered(&lydctx->ext_val, idx - 1, free);
++            }
++        }
++        if (iter->schema) {
++            LY_LIST_FOR(iter->meta, meta) {
++                if (ly_set_contains(&lydctx->meta_types, meta, &idx)) {
++                    ly_set_rm_index_ordered(&lydctx->meta_types, idx, NULL);
++                }
++            }
++        }
++        LYD_TREE_DFS_END(subtree, iter);
++    }
++}
++
+ LY_ERR
+ lyd_parser_check_keys(struct lyd_node *node)
+ {
+diff --git a/src/parser_internal.h b/src/parser_internal.h
+index 73156753f..26c16f4a8 100644
+--- a/src/parser_internal.h
++++ b/src/parser_internal.h
+@@ -434,6 +434,18 @@ LY_ERR lyd_parser_create_meta(struct lyd_ctx *lydctx, struct lyd_node *parent, s
+  */
+ LY_ERR lyd_parser_check_keys(struct lyd_node *node);
+ 
++/**
++ * @brief Forget a subtree that is about to be freed from all the parser unres sets.
++ *
++ * With ::LYD_VALIDATE_MULTI_ERROR the parser continues after an invalid node and may free it (a list
++ * instance without valid keys). Any of its nodes or metadata still in an unres set would be read by the
++ * following validation after being freed.
++ *
++ * @param[in] lydctx Data parser context.
++ * @param[in] subtree Subtree to forget.
++ */
++void lyd_parser_unres_forget(struct lyd_ctx *lydctx, const struct lyd_node *subtree);
++
+ /**
+  * @brief Set data flags for a newly parsed node.
+  *
+diff --git a/src/parser_json.c b/src/parser_json.c
+index b4d54874e..f34f546db 100644
+--- a/src/parser_json.c
++++ b/src/parser_json.c
+@@ -1460,6 +1460,7 @@ cleanup:
+     LOG_LOCBACK(0, 1);
+     if (!(*node)->hash) {
+         /* list without keys is unusable */
++        lyd_parser_unres_forget((struct lyd_ctx *)lydctx, *node);
+         lyd_free_tree(*node);
+         *node = NULL;
+     }
+diff --git a/src/parser_xml.c b/src/parser_xml.c
+index 03d5f5b7c..7893d8a6e 100644
+--- a/src/parser_xml.c
++++ b/src/parser_xml.c
+@@ -889,6 +889,7 @@ cleanup:
+     lydctx->parse_opts = prev_parse_opts;
+     if (rc && ((*node && !(*node)->hash) || !(lydctx->val_opts & LYD_VALIDATE_MULTI_ERROR) || (rc != LY_EVALID))) {
+         /* list without keys is unusable or an error */
++        lyd_parser_unres_forget((struct lyd_ctx *)lydctx, *node);
+         lyd_free_tree(*node);
+         *node = NULL;
+     }
+-- 
+2.43.0
+
