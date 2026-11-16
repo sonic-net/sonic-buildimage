@@ -1122,10 +1122,7 @@ def _import_with_env(monkeypatch, env_vars):
     ({}, None),
     ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "true"}, True),
     ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "false"}, False),
-    ({"TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "true"}, True),
-    ({"TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "false"}, False),
-    ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "false", "TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "true"}, False),
-    ({"GNMI_CLIENT_CERT_VERIFY_ENABLED": "true", "TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "false"}, True),
+    ({"TELEMETRY_CLIENT_CERT_VERIFY_ENABLED": "true"}, None),
 ])
 def test_verify_enabled_env(monkeypatch, env, expected):
     assert _import_with_env(monkeypatch, env).GNMI_VERIFY_ENABLED is expected
@@ -1186,13 +1183,8 @@ class TestParseClientCerts:
     def test_legacy_default_role(self):
         assert self._certs({"GNMI_CLIENT_CNAME": "legacy.gbl"}) == [{"cname": "legacy.gbl", "role": ["gnmi_show_readonly"]}]
 
-    def test_telemetry_cname_fallback(self):
-        certs = self._certs({"TELEMETRY_CLIENT_CNAME": "tlm.gbl", "GNMI_CLIENT_ROLE": "admin"})
-        assert certs == [{"cname": "tlm.gbl", "role": ["admin"]}]
-
-    def test_gnmi_cname_preferred_over_telemetry_cname(self):
-        certs = self._certs({"GNMI_CLIENT_CNAME": "gnmi.gbl", "TELEMETRY_CLIENT_CNAME": "tlm.gbl"})
-        assert certs == [{"cname": "gnmi.gbl", "role": ["gnmi_show_readonly"]}]
+    def test_telemetry_cname_ignored(self):
+        assert self._certs({"TELEMETRY_CLIENT_CNAME": "tlm.gbl"}) == []
 
     def test_no_env_returns_empty(self):
         assert self._certs({}) == []

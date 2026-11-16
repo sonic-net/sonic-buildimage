@@ -36,18 +36,15 @@ CONTAINER_CHECKER_SYNC_ENABLED = get_bool_env_var("CONTAINER_CHECKER_SYNC_ENABLE
 logger.log_notice(f"CONTAINER_CHECKER_SYNC_ENABLED={CONTAINER_CHECKER_SYNC_ENABLED}")
 
 
-# CONFIG_DB client-auth reconcile env.  The TELEMETRY_* names are the ones the
-# telemetry sidecar used and are accepted as fallbacks.
 def _parse_verify_enabled() -> Optional[bool]:
     """Return the client-cert verify setting, or None when no env var is set.
 
     None leaves GNMI|gnmi.user_auth and GNMI_CLIENT_CERT untouched, so a
     deployment that does not opt in never has its client certs removed.
     """
-    for name in ("GNMI_CLIENT_CERT_VERIFY_ENABLED", "TELEMETRY_CLIENT_CERT_VERIFY_ENABLED"):
-        if os.getenv(name) is not None:
-            return get_bool_env_var(name)
-    return None
+    if os.getenv("GNMI_CLIENT_CERT_VERIFY_ENABLED") is None:
+        return None
+    return get_bool_env_var("GNMI_CLIENT_CERT_VERIFY_ENABLED")
 
 
 GNMI_VERIFY_ENABLED: Optional[bool] = _parse_verify_enabled()
@@ -60,7 +57,7 @@ def _parse_client_certs() -> List[Dict[str, Union[str, List[str]]]]:
     Returns a list of {"cname": str, "role": List[str]}.
 
     Preferred: GNMI_CLIENT_CERTS  (JSON array of {"cname": ..., "role": ...})
-    Fallback:  GNMI_CLIENT_CNAME (or TELEMETRY_CLIENT_CNAME) / GNMI_CLIENT_ROLE  (single entry)
+    Fallback:  GNMI_CLIENT_CNAME / GNMI_CLIENT_ROLE  (single entry)
     """
     raw = os.getenv("GNMI_CLIENT_CERTS", "").strip()
     if raw:
@@ -88,8 +85,7 @@ def _parse_client_certs() -> List[Dict[str, Union[str, List[str]]]]:
         except (json.JSONDecodeError, ValueError) as exc:
             logger.log_error(f"Bad GNMI_CLIENT_CERTS env var: {exc}; falling back to legacy")
 
-    cname = (os.getenv("GNMI_CLIENT_CNAME", "").strip()
-             or os.getenv("TELEMETRY_CLIENT_CNAME", "").strip())
+    cname = os.getenv("GNMI_CLIENT_CNAME", "").strip()
     role = os.getenv("GNMI_CLIENT_ROLE", "gnmi_show_readonly").strip()
     if cname:
         return [{"cname": cname, "role": [role]}]
