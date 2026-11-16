@@ -22,6 +22,8 @@ def environment(auth):
     result.pop("BAZEL_REMOTE_AUTH", None)
     result.pop("MAKEFLAGS", None)
     result.pop("MFLAGS", None)
+    result.pop("SONIC_BAZEL_REMOTE_CACHE", None)
+    result.pop("SONIC_BAZEL_REMOTE_UPLOAD", None)
     result.pop("SONIC_BAZEL_KERNEL_REMOTE_CACHE", None)
     result.pop("SONIC_BAZEL_KERNEL_REMOTE_UPLOAD", None)
     if auth is not None:
@@ -30,10 +32,10 @@ def environment(auth):
 
 
 class RemoteCacheTest(unittest.TestCase):
-    def options(self, auth, *arguments):
+    def options(self, auth, *arguments, **cache_environment):
         return subprocess.run(
             [sys.executable, "-B", str(OPTIONS), "options", *arguments],
-            cwd=ROOT, env=environment(auth), text=True, capture_output=True,
+            cwd=ROOT, env=environment(auth) | cache_environment, text=True, capture_output=True,
         )
 
     def assert_no_credentials(self, text):
@@ -47,6 +49,16 @@ class RemoteCacheTest(unittest.TestCase):
                 result = self.options(auth, "--arguments=--jobs=3 --disk_cache=")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(), ["--jobs=3", "--disk_cache="])
+
+    def test_private_builds_share_the_selected_cache_and_upload_policy(self):
+        for policy, expected in (("", "false"), ("n", "false"), ("y", "true")):
+            with self.subTest(policy=policy):
+                result = self.options(None, SONIC_BAZEL_REMOTE_CACHE="grpc://cache.example:9092",
+                                      SONIC_BAZEL_REMOTE_UPLOAD=policy)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), [
+                    "--remote_cache=grpc://cache.example:9092",
+                    "--remote_upload_local_results=" + expected])
 
     def test_remote_access_does_not_require_a_local_cache(self):
         result = self.options(AUTH, "--cache-directory=", "--arguments=--disk_cache=")
@@ -143,6 +155,8 @@ class RemoteCacheTest(unittest.TestCase):
                     record = json.loads(result.stdout.splitlines()[-1])
                     self.assertEqual(record["args"], [
                         "-e", "BAZEL_REMOTE_AUTH",
+                        "-e", "SONIC_BAZEL_REMOTE_CACHE=",
+                        "-e", "SONIC_BAZEL_REMOTE_UPLOAD=",
                         "-e", "SONIC_BAZEL_KERNEL_REMOTE_CACHE=",
                         "-e", "SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=",
                         "builder-image"])

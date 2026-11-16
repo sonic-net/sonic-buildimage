@@ -409,6 +409,19 @@ BAZEL=bazel make -f slave.mk target/docker-example.gz \
   BUILD_WITH_BAZEL_WHEN_AVAILABLE=y
 ```
 
+Each independent Bazel recipe in the Make installer build uses a private local
+server and output directory. The build, its queries and its exports use the same
+server, including both archives of a grouped runtime/debug build. Exports resolve
+against the producing server's execution root. Parallel recipes can therefore
+build from the same checkout while sharing the configured repository, disk and
+remote caches. Temporary build state is removed after the recipe, including on
+failure. Size the action and memory limits for the number of concurrent builds.
+
+Set `SONIC_BAZEL_REMOTE_CACHE` for a common endpoint across image, P4RT and
+kernel builds. The default is read-only. Set `SONIC_BAZEL_REMOTE_UPLOAD=y` to
+publish locally built results. The kernel also accepts its existing cache
+overrides. CI permits remote writes on pushes to `master`.
+
 The normal Make platform and build-environment setup must already be selected.
 When invoking Make outside the builder, forward extra options through
 `SONIC_BUILDER_EXTRA_CMDLINE`.

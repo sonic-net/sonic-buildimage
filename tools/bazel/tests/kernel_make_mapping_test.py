@@ -60,7 +60,7 @@ class KernelMakeMappingTest(unittest.TestCase):
         work = (ROOT / "Makefile.work").read_text()
         git_mounts = between(work, "# Empty by default; only set when building from a git worktree", "# Consider removing the --ulimit")
         cache_mounts = between(work, "# Reuse downloads and action outputs across disposable builder containers.", "# User name and tag for")
-        kernel_cache = between(work, "# Forward the isolated kernel cache policy",
+        remote_cache_flags = between(work, "DOCKER_RUN += -e 'SONIC_BAZEL_REMOTE_CACHE=",
                                "# Reuse downloads and action outputs")
         capture = self.root / "docker-argv.json"
         recorder = self.root / "docker-recorder.py"
@@ -71,12 +71,14 @@ class KernelMakeMappingTest(unittest.TestCase):
             + f"PWD := {workspace}\nBUILD_WITH_BAZEL_WHEN_AVAILABLE := {'y' if enabled else 'n'}\n"
             + f"SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD := {'y' if native else 'n'}\n"
             + f"SONIC_BAZEL_CACHE_SOURCE := {cache or ''}\n"
+            + f"SONIC_BAZEL_REMOTE_CACHE := {remote_cache}\n"
+            + f"SONIC_BAZEL_REMOTE_UPLOAD := {upload}\n"
             + f"SONIC_BAZEL_KERNEL_REMOTE_CACHE := {remote_cache}\n"
             + f"SONIC_BAZEL_KERNEL_REMOTE_UPLOAD := {upload}\n"
             + git_mounts
             + "\nDOCKER_RUN := " + shlex.join([sys.executable, str(recorder), str(capture)])
             + ' -v "$(PWD):/sonic" $(GIT_WORKTREE_MOUNTS)\n'
-            + kernel_cache + cache_mounts
+            + remote_cache_flags + cache_mounts
             + "\nall:\n\t$(SONIC_WT_GITDIR_FIXUP)\n\t$(DOCKER_RUN) fixture-slave\n"
         )
         result = self.run_make(makefile, cwd=workspace)
@@ -120,6 +122,8 @@ class KernelMakeMappingTest(unittest.TestCase):
                 with self.subTest(cache=cache, upload=upload):
                     mounts, environment = self.docker_arguments(
                         cache=cache, remote_cache=endpoint, upload=upload)
+                    self.assertEqual(environment["SONIC_BAZEL_REMOTE_CACHE"], endpoint)
+                    self.assertEqual(environment["SONIC_BAZEL_REMOTE_UPLOAD"], upload)
                     self.assertEqual(environment["SONIC_BAZEL_KERNEL_REMOTE_CACHE"], endpoint)
                     self.assertEqual(environment["SONIC_BAZEL_KERNEL_REMOTE_UPLOAD"], upload)
                     self.assertEqual(Path("/bazel_cache") in mounts, cache is not None)

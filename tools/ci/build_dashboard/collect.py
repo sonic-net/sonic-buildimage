@@ -36,12 +36,14 @@ IMAGE_JOBS = {
     "Bazel VS installer (AMD64)": "bazel-vs",
     "Unprivileged sonic-vs.bin assembly (AMD64)": "bazel-vs",
 }
+HOST_VS_BUILD = "Build sonic-vs.bin through the host Make wrapper"
 IMAGE_STEPS = {
     "Build the VS installer (.bin)",
     "Build the VS image",
     "Build the VS image with Bazel SWSS archives",
     "Build the VS image and both OCI container variants",
     "Build sonic-vs.bin directly with slave.mk",
+    HOST_VS_BUILD,
     "Build the Bazel VS installer",
     "Build Bazel VS installer",
     "Build and verify sonic-vs.bin with Bazel",
@@ -107,6 +109,8 @@ def phase(name, job_name=None):
         and name in (
             "Publish the installer and matching container archives",
             "Preserve build receipts",
+            "Preserve VS image build profiles, timings and Make logs",
+            "Preserve VS Bazel profiles, timings and Make logs",
         )
     ):
         return "upload"
@@ -133,6 +137,23 @@ def job_kind(name):
     return "other"
 
 
+def image_step_timings(steps):
+    image_steps = [step for step in steps if step["name"] in IMAGE_STEPS]
+    elapsed = [step["duration_seconds"] for step in image_steps if step["duration_seconds"] is not None]
+    success = [step["duration_seconds"] for step in image_steps
+               if step["conclusion"] == "success" and step["duration_seconds"] is not None]
+    image_step_numbers = [step["number"] for step in image_steps]
+    if None in image_step_numbers or len(set(image_step_numbers)) != len(image_step_numbers):
+        image_step_numbers = None
+    # A partial result from one of several image-build steps is not a full build.
+    complete_image = bool(image_steps) and len(success) == len(image_steps)
+    return {
+        "image_build_seconds": sum(success) if complete_image else None,
+        "image_build_elapsed_seconds": sum(elapsed) if elapsed else None,
+        "image_build_step_numbers": image_step_numbers,
+    }
+
+
 def normalize_job(raw, repo, run_id):
     job_id = integer(raw.get("id"))
     if job_id is None:
@@ -154,23 +175,13 @@ def normalize_job(raw, repo, run_id):
         durations = [step["duration_seconds"] for step in steps
                      if step["phase"] == category and step["duration_seconds"] is not None]
         phases[category] = sum(durations) if durations else None
-    image_steps = [step for step in steps if kind in ("make-vs", "bazel-vs") and step["name"] in IMAGE_STEPS]
-    elapsed = [step["duration_seconds"] for step in image_steps if step["duration_seconds"] is not None]
-    success = [step["duration_seconds"] for step in image_steps
-               if step["conclusion"] == "success" and step["duration_seconds"] is not None]
-    image_step_numbers = [step["number"] for step in image_steps]
-    if None in image_step_numbers or len(set(image_step_numbers)) != len(image_step_numbers):
-        image_step_numbers = None
-    # A partial result from one of several image-build steps is not a full build.
-    complete_image = bool(image_steps) and len(success) == len(image_steps)
     return {
         "job_id": job_id, "name": name, "kind": kind,
         "architecture": "amd64" if "(AMD64)" in name else "arm64" if "(ARM64)" in name else None,
         "status": raw.get("status"), "conclusion": raw.get("conclusion"),
         "started_at": timestamp(raw.get("started_at")), "completed_at": timestamp(raw.get("completed_at")),
-        "duration_seconds": seconds(raw), "image_build_seconds": sum(success) if complete_image else None,
-        "image_build_elapsed_seconds": sum(elapsed) if elapsed else None,
-        "image_build_step_numbers": image_step_numbers,
+        "duration_seconds": seconds(raw),
+        **image_step_timings(steps if kind in ("make-vs", "bazel-vs") else []),
         "phases": phases, "steps": steps,
         "url": f"https://github.com/{repo}/actions/runs/{run_id}/job/{job_id}",
     }
@@ -442,7 +453,7 @@ def load_history(path, repo):
         "pr": {"number", "title", "state", "draft", "url", "head_sha", "base_sha", "base_branch", "base_target_sha", "base_target_observed_at", "head_branch", "updated_at", "merged_at"},
         "run": {"run_id", "attempt", "workflow_name", "workflow_path", "source_sha", "branch", "event", "status", "conclusion", "pr_numbers", "pr_association", "pr_association_note", "event_bases", "started_at", "started_at_source", "completed_at", "updated_at", "url", "jobs"},
         "event_base": {"number", "ref", "sha"},
-        "job": {"job_id", "name", "kind", "architecture", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "image_build_seconds", "image_build_elapsed_seconds", "image_build_step_numbers", "phases", "steps", "url"},
+        "job": {"job_id", "name", "kind", "architecture", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "image_build_seconds", "image_build_elapsed_seconds", "image_build_step_numbers", "image_recipe_timings", "phases", "steps", "url"},
         "step": {"number", "name", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "phase", "breakdown"},
     }
     def check_fields(value, kind):
@@ -480,6 +491,16 @@ def load_history(path, repo):
                 check_fields(step, "step")
                 if "breakdown" in step and not breakdown.valid(step["breakdown"]):
                     raise CollectionError("Dashboard history contains invalid build breakdown details")
+            if "image_recipe_timings" in job:
+                value = job["image_recipe_timings"]
+                steps = recipe_steps(job)
+                if (run.get("workflow_path") != ".github/workflows/bazel-oci.yml" or not steps
+                        or not breakdown.valid_recipes(value)
+                        or value["version"] != breakdown.RECIPE_STEP_VERSIONS[steps[1]["name"]]
+                        or value["status"] == "available" and
+                        (job.get("status") != "completed" or steps[1].get("status") != "completed"
+                         or steps[1].get("conclusion") == "skipped")):
+                    raise CollectionError("Dashboard history contains invalid VS image recipe timings")
         key = (integer(run.get("run_id")), integer(run.get("attempt")))
         if None in key or key in keys or run.get("workflow_path") not in {f".github/workflows/{w}" for w in WORKFLOWS}:
             raise CollectionError("Dashboard history has invalid or duplicate run attempts")
@@ -492,6 +513,21 @@ def step_identity(step):
         "number", "name", "status", "conclusion", "started_at", "completed_at"))
 
 
+def recipe_steps(job):
+    """Match the unique native installer build and its subsequent diagnostic step."""
+    if job.get("name") != "VS installer in SONiC slave (AMD64)" or job.get("kind") != "make-vs":
+        return None
+    builds = [s for s in job["steps"] if s.get("name") == HOST_VS_BUILD]
+    summaries = [s for s in job["steps"] if isinstance(s.get("name"), str)
+                 and s["name"] in breakdown.RECIPE_STEP_VERSIONS]
+    numbers = [s.get("number") for s in job["steps"]]
+    if (len(builds) == len(summaries) == 1 and integer(builds[0].get("number"))
+            and integer(summaries[0].get("number")) and builds[0]["number"] < summaries[0]["number"]
+            and numbers.count(builds[0]["number"]) == numbers.count(summaries[0]["number"]) == 1):
+        return builds[0], summaries[0]
+    return None
+
+
 def retain_breakdowns(jobs, old_jobs):
     """Reuse only exact job/step identities within the same run attempt."""
     old = {job["job_id"]: job for job in old_jobs}
@@ -502,6 +538,12 @@ def retain_breakdowns(jobs, old_jobs):
         for step in job["steps"]:
             if step_identity(step) in details:
                 step["breakdown"] = copy.deepcopy(details[step_identity(step)])
+        value = previous.get("image_recipe_timings")
+        if value is not None and breakdown.valid_recipes(value):
+            before, after = recipe_steps(previous), recipe_steps(job)
+            if (before and after and step_identity(previous) == step_identity(job)
+                    and list(map(step_identity, before)) == list(map(step_identity, after))):
+                job["image_recipe_timings"] = copy.deepcopy(value)
 
 
 def enrich_breakdowns(api, repo, runs, limit):
@@ -511,6 +553,9 @@ def enrich_breakdowns(api, repo, runs, limit):
         for job in run["jobs"]:
             if job["kind"] != "make-vs":
                 continue
+            # Older collectors cached this Make step before they recognized its name.
+            if not job.get("image_build_step_numbers") and any(step["name"] == HOST_VS_BUILD for step in job["steps"]):
+                job.update(image_step_timings(job["steps"]))
             pending = []
             for step in job["steps"]:
                 if step["name"] not in IMAGE_STEPS:
@@ -520,7 +565,18 @@ def enrich_breakdowns(api, repo, runs, limit):
                 elif breakdown.retry_needed(step.get("breakdown")):
                     step["breakdown"] = breakdown.unavailable("pending-collection")
                     pending.append(step)
-            if not pending or job["status"] != "completed" or fetched >= limit:
+            steps = recipe_steps(job) if run["workflow_path"] == ".github/workflows/bazel-oci.yml" else None
+            summary = steps[1] if steps else None
+            need_recipes = summary and breakdown.retry_needed(job.get("image_recipe_timings"))
+            if need_recipes:
+                version = breakdown.RECIPE_STEP_VERSIONS[summary["name"]]
+                if summary["conclusion"] == "skipped":
+                    job["image_recipe_timings"] = breakdown.recipe_unavailable("step-not-successful", version)
+                    need_recipes = False
+                else:
+                    job["image_recipe_timings"] = breakdown.recipe_unavailable("pending-collection", version)
+                    need_recipes = summary["status"] == "completed"
+            if (not pending and not need_recipes) or job["status"] != "completed" or fetched >= limit:
                 continue
             fetched += 1
             try:
@@ -528,9 +584,13 @@ def enrich_breakdowns(api, repo, runs, limit):
             except LogReadError as error:
                 for step in pending:
                     step["breakdown"] = breakdown.unavailable(error.reason)
+                if need_recipes:
+                    job["image_recipe_timings"] = breakdown.recipe_unavailable(error.reason, version)
                 continue
             for step in pending:
                 step["breakdown"] = breakdown.parse_log(log, step)
+            if need_recipes:
+                job["image_recipe_timings"] = breakdown.parse_recipe_log(log, summary)
 
 
 def completed_job_details(run):
@@ -628,7 +688,8 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
     with ThreadPoolExecutor(max_workers=workers) as pool:
         for run in pool.map(fetch, pending):
             previous = retained.get((run["run_id"], run["attempt"]), {})
-            retain_breakdowns(run["jobs"], previous.get("jobs", []))
+            if (run["source_sha"], run["workflow_path"]) == (previous.get("source_sha"), previous.get("workflow_path")):
+                retain_breakdowns(run["jobs"], previous.get("jobs", []))
             retained[(run["run_id"], run["attempt"])] = run
     enrich_breakdowns(api, repo, retained.values(), max(0, min(MAX_LOG_JOBS, log_jobs)))
     return {

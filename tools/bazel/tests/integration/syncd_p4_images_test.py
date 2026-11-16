@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-from tools.bazel.ci.artifact_validation import require, sha
+from tools.bazel.ci.artifact_validation import require, sha, verify_make_archives
 from tools.bazel.ci.validation_inputs import validation_input_cache
 from tools.bazel.oci import image_validation, native_packages
 from tools.bazel.oci.package_contract import read_contract, read_policy, receipt_records
@@ -52,9 +52,7 @@ def main():
     with validation_input_cache(inputs.values()):
         policy = read_policy(inputs["policy"])
         p4 = check_p4_inputs(inputs["source_contract_path"], inputs["source_receipt"])
-        for variant in ("runtime", "debug"):
-            require(sha(inputs["make_" + variant + "_archive"]) == sha(inputs[variant + "_archive"]),
-                    variant + " Make archive differs from the Bazel output")
+        verify_make_archives(inputs)
         images = image_validation.validate_images(
             source_root=Path.cwd(), policy=policy, runtime_handoff=None, debug_handoff=None,
             **{name: inputs[name] for name in IMAGE_INPUTS})

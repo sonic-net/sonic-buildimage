@@ -21,6 +21,16 @@ def sha(path):
     return sha256(path)
 
 
+def verify_make_archives(inputs):
+    for variant in ("runtime", "debug"):
+        archive = inputs[f"make_{variant}_archive"]
+        make_sha = sha(archive)
+        bazel_sha = sha(inputs[f"{variant}_archive"])
+        require(make_sha == bazel_sha,
+                f"{variant} Make archive differs from the Bazel output for {archive.name} "
+                f"(SHA-256 Make={make_sha}, Bazel={bazel_sha})")
+
+
 def path_name(value):
     path = PurePosixPath(value)
     require(not path.is_absolute() and ".." not in path.parts, "unsafe archive path: " + value)

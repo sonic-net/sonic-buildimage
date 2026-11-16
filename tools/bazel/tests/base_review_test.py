@@ -68,6 +68,10 @@ class BaseReviewTest(unittest.TestCase):
                 "--registry=https://bcr.bazel.build",
             ])
             self.assertIn("--remote_upload_local_results=false", result.splitlines())
+            private_base = "--output_base=" + str(directory / "owner")
+            command = subprocess.check_output([WRAPPER, private_base, "shutdown"], env=env, text=True)
+            self.assertEqual(command.splitlines(), [private_base, "--nosystem_rc", "--nohome_rc",
+                             "--noworkspace_rc", f"--bazelrc={Path.cwd()}/tools/bazel/common.bazelrc", "shutdown"])
             for extra in (["--registry=other"], ["--registry", "other"]):
                 result = subprocess.run([WRAPPER, "build", *extra], env=env, capture_output=True)
                 self.assertNotEqual(result.returncode, 0)

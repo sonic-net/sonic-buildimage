@@ -94,7 +94,11 @@ class SnmpImageBuildTest(unittest.TestCase):
         self.assertIn("snmp_image.py validate ", build_step["run"])
         self.assertIn("snmp_image.py incremental ", build_step["run"])
         upload = next(step for step in archive if step.get("name") == "Retain SNMP archives and build evidence")
-        self.assertEqual(upload["with"]["path"], "${{ runner.temp }}/snmp/public")
+        publish = next(step for step in archive if step.get("id") == "snmp_public")
+        self.assertIn('mktemp -d "$RUNNER_TEMP/snmp.XXXXXXXX"', build_step["run"])
+        self.assertEqual(publish["env"]["snmp_artifacts"], "${{ steps.snmp_build.outputs.directory }}")
+        self.assertIn("steps.snmp_build.outputs.directory != ''", publish["if"])
+        self.assertEqual(upload["with"]["path"], "${{ steps.snmp_build.outputs.directory }}/public")
         loaded = workflow["jobs"]["snmp_runtime"]
         self.assertEqual(loaded["needs"], "archive")
         download = next(step for step in loaded["steps"] if "actions/download-artifact" in step.get("uses", ""))

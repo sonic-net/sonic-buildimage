@@ -9,11 +9,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.tests.source_workflow_test import jobs, shell, steps
+from tools.ci.build_dashboard.breakdown import parse_recipe_log
 
 
 class VsBuildWorkflowTest(unittest.TestCase):
@@ -83,7 +85,8 @@ else:
         )
         for name in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "MAKELEVEL", "FAIL_ACTION",
                      "FORBID_VALIDATION", "CHANGE_REVISION_ACTION", "NOBOOKWORM", "NOTRIXIE",
-                     "SONIC_OVERRIDE_BUILD_VARS", "SONIC_BUILD_VARS", "FAIL_ONCE_GOAL"):
+                     "SONIC_OVERRIDE_BUILD_VARS", "SONIC_BUILD_VARS", "FAIL_ONCE_GOAL",
+                     "SONIC_VS_IMAGE_TIMINGS"):
             self.environment.pop(name, None)
 
     def run_script(self, name, *args, **environment):
@@ -129,6 +132,19 @@ else:
         self.assertEqual(result.returncode, 17, result.stdout + result.stderr)
         self.assertEqual([call["action"] for call in self.calls()], ["make"])
         self.assertEqual([path.name for path in (self.root / "artifacts/vs").iterdir()], ["build-revision.txt"])
+
+    def test_profile_opt_in_reaches_the_builder(self):
+        result = self.run_script("build_vs.sh", SONIC_VS_IMAGE_TIMINGS="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(self.profile_options()[-1] + " -e SONIC_VS_IMAGE_TIMINGS", self.calls()[0]["args"])
+
+    def test_native_handoff_is_forwarded_to_the_build_and_separate_validation_container(self):
+        option = self.profile_options()[-1] + " -e SONIC_VS_REUSE_BAZEL_PRODUCERS"
+        for script, goal in (("build_vs.sh", "target/sonic-vs.bin"), ("validate_vs.sh", "sonic-slave-run")):
+            result = self.run_script(script, SONIC_VS_REUSE_BAZEL_PRODUCERS="1")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            call = next(call for call in self.calls() if call["goal"] == goal)
+            self.assertIn(option, call["args"])
 
     def test_extra_arguments_and_old_calibration_are_rejected_before_make(self):
         for name in ("build_vs.sh", "validate_vs.sh"):
@@ -279,6 +295,59 @@ else:
         validation_log = (self.root / "artifacts/vs/validation.log").read_text()
         self.assertIn("controlled capture-pairs", validation_log)
         self.assertIn("controlled verify-pairs", validation_log)
+
+    def test_vs_installer_retains_all_bazel_recipe_diagnostics_before_validation(self):
+        job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["vs_container"]
+        build = next(step for step in job["steps"] if step.get("id") == "native_build")
+        self.assertEqual(build["env"]["SONIC_VS_IMAGE_TIMINGS"], "1")
+        self.assertNotIn("SONIC_VS_IMAGE_TIMINGS", job["env"])
+        self.assertEqual(job["env"]["SONIC_VS_REUSE_BAZEL_PRODUCERS"], "1")
+
+        upload = next(step for step in job["steps"] if step.get("id") == "vs_image_timings_upload")
+        self.assertEqual(upload["if"], "always()")
+        self.assertTrue(upload["continue-on-error"])
+        self.assertEqual(upload["with"]["name"], "sonic-vs-bazel-timings-amd64")
+        checkout = job["defaults"]["run"]["working-directory"] + "/"
+        self.assertEqual(upload["with"]["path"], checkout + "artifacts/vs/image-timings/")
+        summary = next(step for step in job["steps"] if "summarize_vs_image_timings.py" in step.get("run", ""))
+        validation = next(step for step in job["steps"] if "tools/bazel/ci/validate_vs.sh" in step.get("run", ""))
+        self.assertLess(job["steps"].index(build), job["steps"].index(summary))
+        self.assertLess(job["steps"].index(summary), job["steps"].index(upload))
+        self.assertLess(job["steps"].index(upload), job["steps"].index(validation))
+        self.assertIn("steps.vs_image_timings_upload.outcome == 'success'", job["steps"][-1]["if"])
+
+    def test_dashboard_reads_measurements_from_the_real_summary_step(self):
+        job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["vs_container"]
+        command = next(step["run"] for step in job["steps"] if step["name"] == "Summarize VS Bazel build timings")
+        name = "summarize_vs_image_timings.py"
+        (self.scripts / name).symlink_to(ROOT / "tools/bazel/ci" / name)
+        timings = self.root / "artifacts/vs/image-timings"
+        directory = timings / "docker-database.gz/run1"
+        directory.mkdir(parents=True)
+        phase = "export-docker-database.gz"
+        (directory / "recipe.json").write_text(json.dumps({
+            "bazel": ["build", "cquery-runtime", "cquery-debug"],
+            "profiles": ["build", "cquery-runtime", "cquery-debug"], "exports": [phase, "export-debug"]}))
+        (directory / (phase + ".timing.json")).write_text(json.dumps({
+            "phase": phase, "elapsed_seconds": 1.25, "exit_code": 0,
+        }))
+        summary = self.root / "step_summary"
+        result = subprocess.run(["bash", "-c", command], cwd=self.root, text=True, capture_output=True,
+                                env=dict(os.environ, GITHUB_STEP_SUMMARY=str(summary)), check=True)
+        self.assertEqual(summary.read_text(), (timings / "summary.md").read_text())
+        self.assertIn("1.25 (partial)", summary.read_text())
+        stamp = "2026-11-14T17:05:00Z"
+        lines = ["##[group]Run set -euo pipefail", *command.splitlines(), "##[endgroup]",
+                 *result.stdout.splitlines()]
+        log = "".join(f"{stamp} {line}\n" for line in lines).encode()
+        detail = parse_recipe_log(log, {"started_at": stamp, "completed_at": stamp,
+                                        "name": "Summarize VS Bazel build timings"})
+        receipt = json.loads((timings / "summary.json").read_text())
+        self.assertEqual(detail, dict(receipt, status="available"))
+        database, = detail["recipes"]
+        self.assertEqual(database["owner"], "docker-database.gz")
+        self.assertEqual((database["exports"], database["export_seconds"], database["compile_seconds"]),
+                         (1, 1.25, None))
 
     def test_workflow_publishes_onie_installer_and_its_selection_manifest(self):
         selected, _, _ = self.workflow_steps()

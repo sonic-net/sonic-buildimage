@@ -322,3 +322,15 @@ selection and both runtime/debug archive pairs, runs the P4/debug checks in the
 same slave, and publishes `sonic-vs-slave-amd64` with the installer, matching
 container archives, and SHA256 checksums. `sonic-vs-slave-evidence-amd64` retains
 the configuration and validation receipts.
+
+The VS job summary and build dashboard report Bazel timings for each profiled
+Make recipe in installer construction. Container recipes record their build,
+each output query and each archive export. Kernel package production records
+the pinned launcher's duration, three Bazel profiles and package staging. The
+P4RT package records its nested build, tests, server shutdown and package
+staging when its Make recipe runs. A Make cache hit that bypasses Bazel adds
+no command time. The
+`sonic-vs-bazel-timings-amd64` artifact retains the available profiles, logs
+and phase timings. Open a compressed Bazel JSON trace in Perfetto to inspect
+individual actions. Cache fetches include disk and remote reads.
+[Build dashboard](https://securely1g.github.io/sonic-buildimage/)

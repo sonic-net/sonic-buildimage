@@ -74,6 +74,8 @@ class ArchiveCachePolicyTest(unittest.TestCase):
             expected = {name: value.replace("${{ runner.workspace }}", temporary)
                         for name, value in configure["env"].items()}
             expected["SONIC_DPKG_CACHE_SOURCE"] = str(shared_cache)
+            rc = directory / ".bazelrc.user"
+            rc.write_text("common --color=no")
             environment_file = directory / "github-env"
             result = subprocess.run(
                 ["bash", "-c", configure["run"]], cwd=directory,
@@ -81,6 +83,13 @@ class ArchiveCachePolicyTest(unittest.TestCase):
                          PATH=str(commands) + os.pathsep + os.environ["PATH"]),
                 text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(rc.read_text().splitlines(), [
+                "common --color=no",
+                "startup --host_jvm_args=-XX:ActiveProcessorCount=2",
+                "startup --local_startup_timeout_secs=300",
+            ])
+            self.assertNotIn("--host_jvm_args", job["env"]["BAZEL_CONTAINER_ARGS"])
+            self.assertNotIn("--local_startup_timeout_secs", job["env"]["BAZEL_CONTAINER_ARGS"])
             exported = dict(line.split("=", 1) for line in environment_file.read_text().splitlines())
             self.assertEqual(exported, expected)
             self.assertTrue(Path(exported["SONIC_BAZEL_CACHE_SOURCE"]).is_dir())
@@ -100,9 +109,7 @@ class ArchiveCachePolicyTest(unittest.TestCase):
         workflow_jobs = jobs()
         flag = ("--remote_upload_local_results=${{ github.event_name == 'push'"
                 " && github.ref == 'refs/heads/master' }}")
-        for name in ("vs", "vs_container"):
-            with self.subTest(job=name):
-                self.assertIn(flag, workflow_jobs[name])
+        self.assertIn(flag, workflow_jobs["vs"])
         self.assertIn("if: ${{ false }}", workflow_jobs["vs"])
         self.assertIn("runs-on: [self-hosted, linux, bazel-x64, vs]",
                       workflow_jobs["vs_container"])
@@ -113,12 +120,12 @@ class ArchiveCachePolicyTest(unittest.TestCase):
         self.assertNotIn("container", job)
         self.assertNotIn("EXPECTED_MANAGER_REVISION", job["env"])
         self.assertEqual(job["env"]["BAZEL_REMOTE_AUTH"], "")
-        self.assertEqual(job["env"]["SONIC_BAZEL_KERNEL_REMOTE_CACHE"], "grpc://172.16.0.4:9092")
+        self.assertEqual(job["env"]["SONIC_BAZEL_REMOTE_CACHE"], "grpc://172.16.0.4:9092")
         self.assertEqual(
-            job["env"]["SONIC_BAZEL_KERNEL_REMOTE_UPLOAD"],
+            job["env"]["SONIC_BAZEL_REMOTE_UPLOAD"],
             "${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'y' || 'n' }}")
         for flag in (
-            "--remote_cache=grpc://172.16.0.4:9092",
+            "--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=3072",
             "--experimental_remote_downloader=grpc://172.16.0.4:9092",
             "--experimental_remote_downloader_local_fallback",
         ):

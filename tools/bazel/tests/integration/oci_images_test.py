@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-from tools.bazel.ci.artifact_validation import require, sha
+from tools.bazel.ci.artifact_validation import verify_make_archives
 from tools.bazel.oci import image_validation
 from tools.bazel.oci.package_contract import read_policy
 from tools.bazel.oci.source_base_validation import validate_source_base
@@ -30,9 +30,7 @@ def main():
         parser.add_argument("--" + name.replace("_", "-"), action="append", required=True, type=Path)
     inputs = vars(parser.parse_args())
     policy = read_policy(inputs["policy"])
-    for variant in ("runtime", "debug"):
-        require(sha(inputs["make_" + variant + "_archive"]) == sha(inputs[variant + "_archive"]),
-                variant + " Make archive differs from the Bazel output")
+    verify_make_archives(inputs)
     images = image_validation.validate_images(
         source_root=Path.cwd(), policy=policy, runtime_handoff=None, debug_handoff=None,
         debug_apt_lock_path=inputs["debug_apt_lock_path"],

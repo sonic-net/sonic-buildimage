@@ -15,10 +15,14 @@ mkdir -p artifacts/vs
 # Preserve the outer Makefile's caller overrides when entering Makefile.work
 # directly. An environment value still lets it append its version-cache settings.
 export SONIC_OVERRIDE_BUILD_VARS="${SONIC_OVERRIDE_BUILD_VARS:-} ${SONIC_BUILD_VARS:-}"
+builder_args="--label ${SONIC_CI_CONTAINER_LABEL:?} -e BAZEL=${BAZEL:?} -e BAZEL_CONTAINER_ARGS"
+if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} == 1 ]]; then
+    builder_args+=" -e SONIC_VS_REUSE_BAZEL_PRODUCERS"
+fi
 options=(
     BUILD_WITH_BAZEL_WHEN_AVAILABLE=y INCLUDE_VS_DASH_SAI=y INCLUDE_FIPS=y
     ENABLE_ASAN=n ENABLE_SYNCD_RPC=n
-    "SONIC_BUILDER_EXTRA_CMDLINE=--label ${SONIC_CI_CONTAINER_LABEL:?} -e BAZEL=${BAZEL:?} -e BAZEL_CONTAINER_ARGS"
+    "SONIC_BUILDER_EXTRA_CMDLINE=$builder_args"
 )
 receipt=artifacts/vs/orchagent-reuse.json
 pairs=artifacts/vs/runtime-debug-pairs.json

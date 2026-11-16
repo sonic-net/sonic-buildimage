@@ -71,52 +71,93 @@ debug_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT_DBG]}
 base_archive=${config[TARGET_PATH]}/${config[DOCKER_CONFIG_ENGINE_TRIXIE]}
 # Preserve the owner's dependency installation, freshness and cache rules.
 # Finish the legacy P4 workspace before testing the image workspace.
-# SWSS inherits this OCI base directly, so its Docker-load archive is not a
-# service-image prerequisite. Materialize it once for the shared Docker checks.
-"${make_command[@]}" --no-print-directory -j1 "$runtime_deb" "$debug_deb" "$base_archive"
+# A standalone verifier may need to materialize the base for the Docker checks.
+prerequisites=("$runtime_deb" "$debug_deb")
+# The native installer already published config-engine. Its phony Make recipe
+# would regenerate the retained image and its Make manifests in this container.
+if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} != 1 ]]; then prerequisites+=("$base_archive"); fi
+"${make_command[@]}" --no-print-directory -j1 "${prerequisites[@]}"
 for package in "$runtime_deb" "$debug_deb" "$base_archive"; do
     [[ -s $package ]] || { echo "Missing or empty P4RT prerequisite: $package" >&2; exit 1; }
 done
 
 # Match the archive recipes, including the caller's cache and distdir settings.
-# Keep one output base and server; only Syncd selects its DASH configuration.
+source tools/bazel/private_server.sh
 option_lines=$(python3 tools/bazel/build_helpers.py options \
     --cache-directory="${BAZEL_CONTAINER_CACHE_DIR-${BAZEL_SWSS_CACHE_DIR:-}}" \
     --arguments="${BAZEL_CONTAINER_ARGS-${BAZEL_SWSS_ARGS:-}}")
 bazel_options=()
 if test -n "$option_lines"; then mapfile -t bazel_options <<< "$option_lines"; fi
 bazel_options+=(--platforms=@sonic_build_infra//platforms:x86_64_trixie
-    --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
+    --host_platform=@sonic_build_infra//platforms:x86_64_trixie --symlink_prefix=/)
 
-collect_test_results() {
-    local test_name="$1" output="artifacts/vs/$2" file path
-    mkdir -p "$output"
+start_image_check() {
+    local owner=$1 operation=$2
+    if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} != 1 ]]; then
+        start_private_bazel "$operation"
+        return
+    fi
+    local base="$PWD/target/.vs-bazel/$owner"
+    if [[ ! -d "$base/execroot" ]]; then
+        printf 'Missing VS producer output base for %s: %s\n' "$owner" "$base" >&2
+        return 1
+    fi
+    open_private_bazel "$base"
+    # An outer Make retry may still need both producers if a later check fails.
+    # The workflow removes the entire run checkout after validation and upload.
+    private_bazel_keep_output=1
+}
+
+check_images() (
+    set -e
+    local owner=$1 test_name=$2 report_name=$3 status=0 file path
+    local -a reports
+    shift 3
+    start_image_check "$owner" "$test_name"
+    "${private_bazel[@]}" test "${bazel_options[@]}" "$@" "//tools/bazel/tests:$test_name" \
+        --nocache_test_results --nozip_undeclared_test_outputs \
+        2>&1 | tee "artifacts/vs/$report_name.log" || status=$?
+
+    # Each suite runs in its owning output base in one configuration.
+    # Bazel 8.5.1 info bazel-testlogs fails on apparent Bzlmod platform labels.
+    shopt -s nullglob
+    reports=("$bazel_output_base"/execroot/*/bazel-out/*/testlogs/tools/bazel/tests/"$test_name")
+    if (( ${#reports[@]} != 1 )); then
+        printf 'Expected one test report directory for %s, found %s\n' "$test_name" "${#reports[@]}" >&2
+        if (( status )); then exit "$status"; fi
+        exit 1
+    fi
+    mkdir -p "artifacts/vs/$report_name"
     for file in test.log test.xml test.outputs/validation.json; do
-        path="bazel-testlogs/tools/bazel/tests/$test_name/$file"
-        if test -f "$path"; then
-            cp "$path" "$output/$(basename "$file")"
+        path="${reports[0]}/$file"
+        if [[ -f $path ]]; then
+            cp --remove-destination -- "$path" "artifacts/vs/$report_name/${file##*/}"
         fi
     done
-}
-# Retain each result before another Bazel invocation changes bazel-testlogs.
-test_status=0
-"${BAZEL:-bazel}" test "${bazel_options[@]}" //tools/bazel/tests:swss_images_test \
-    --nocache_test_results --nozip_undeclared_test_outputs \
-    2>&1 | tee artifacts/vs/swss-images.log || test_status=$?
-collect_test_results swss_images_test swss-images
-"${BAZEL:-bazel}" test "${bazel_options[@]}" --config=syncd-dash //tools/bazel/tests:syncd_p4_images_test \
-    --nocache_test_results --nozip_undeclared_test_outputs \
-    2>&1 | tee artifacts/vs/syncd-p4-images.log || test_status=$?
-collect_test_results syncd_p4_images_test syncd-p4-images
-if test "$test_status" -ne 0; then exit "$test_status"; fi
+    exit "$status"
+)
 
-# cquery alone does not materialize cached policy outputs.
-"${BAZEL:-bazel}" build "${bazel_options[@]}" //tools/bazel/tests:swss_installed_images_policy
-policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" --output=files //tools/bazel/tests:swss_installed_images_policy)
-cp "$policy" artifacts/vs/swss-installed-images-policy.json
-"${BAZEL:-bazel}" build "${bazel_options[@]}" --config=syncd-dash //tools/bazel/tests:syncd_installed_images_policy
-policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" --config=syncd-dash --output=files //tools/bazel/tests:syncd_installed_images_policy)
-cp "$policy" artifacts/vs/syncd-installed-images-policy.json
+# Retain both suites' diagnostics, including when the first test fails.
+set +e
+check_images docker-orchagent.gz swss_images_test swss-images
+swss_status=$?
+check_images docker-syncd-vs.gz syncd_p4_images_test syncd-p4-images --config=syncd-dash
+syncd_status=$?
+set -e
+if (( syncd_status )); then exit "$syncd_status"; fi
+if (( swss_status )); then exit "$swss_status"; fi
+
+materialize_policy() (
+    local family=$1 owner=$2 label="//tools/bazel/tests:${1}_installed_images_policy" policy execution_root
+    shift 2
+    start_image_check "$owner" "${family}_installed_images_policy"
+    "${private_bazel[@]}" build "${bazel_options[@]}" "$@" "$label"
+    policy=$("${private_bazel[@]}" cquery "${bazel_options[@]}" "$@" --output=files "$label")
+    execution_root=$(private_bazel_execution_root)
+    cp --remove-destination -- "$execution_root/$policy" "artifacts/vs/$family-installed-images-policy.json"
+)
+materialize_policy swss docker-orchagent.gz
+materialize_policy syncd docker-syncd-vs.gz --config=syncd-dash
 
 python3 -B tools/bazel/ci/verify_p4rt_debug.py \
     --runtime-deb "$runtime_deb" --debug-deb "$debug_deb" \

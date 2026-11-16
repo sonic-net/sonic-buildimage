@@ -1,7 +1,7 @@
-"""Reduce public Make job logs to bounded, static-label timing measurements.
+"""Reduce public Make job logs to bounded timing measurements.
 
-Log contents are untrusted input. Nothing copied from a log becomes public text:
-only timestamps, known target identities, and fixed outcomes survive parsing.
+Publish timestamps, numeric metrics, fixed outcomes and validated build target
+identifiers. Command lines, paths and free-form log messages stay out of history.
 """
 from __future__ import annotations
 
@@ -112,6 +112,127 @@ TARGET = re.compile(r"\[ (building|finished|cached) \] \[ (\S{1,256}) \]\s*\Z")
 IMAGE_PHASE_MARKER = re.compile(r"\[ image phases \] \[ (\S{1,256}) \] (.*)\Z")
 IMAGE_PAIR_MARKER = re.compile(r"\[ bazel image pair \] \[ (\S{1,256}) \] \[ (\S{1,256}) \]\Z")
 IMAGE_PAIR_KINDS = {"target/docker-orchagent.gz": "orchagent-pair", "target/docker-syncd-vs.gz": "syncd-pair"}
+# Published v1 snapshots used exactly these four image owners.
+RECIPE_OWNERS = {"docker-teamd.gz", "docker-syncd-vs.gz", "docker-fpm-frr.gz", "docker-mux.gz"}
+RECIPE_METRICS = {
+    "bazel_phases": (3, ("bazel_seconds",)),
+    "profiles": (3, ("lock_seconds", "compile_seconds", "foreign_seconds", "fetch_seconds")),
+    "exports": (2, ("export_seconds",)),
+}
+RECIPE_EXPECTED = {"bazel_phases": "bazel_expected", "profiles": "profiles_expected", "exports": "exports_expected"}
+RECIPE_FIELDS = ({"owner", "failed"} | RECIPE_METRICS.keys() |
+                 {key for _, metrics in RECIPE_METRICS.values() for key in metrics})
+RECIPE_REASONS = {"pending-collection", "step-not-successful", "logs-expired", "logs-too-large",
+                  "logs-temporarily-unavailable", "not-recorded", "invalid-timing"}
+RECIPE_MARKER = "SONIC_VS_IMAGE_TIMINGS_V1"
+BAZEL_RECIPE_MARKER = "SONIC_VS_BAZEL_TIMINGS_V2"
+RECIPE_STEP_VERSIONS = {"Summarize VS image build timings": 1, "Summarize VS Bazel build timings": 2}
+RECIPE_LISTS = {1: "images", 2: "recipes"}
+RECIPE_OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]{0,191}\Z")
+MAX_RECIPES = 1024
+MAX_RECIPE_COMMANDS = 65535
+RECIPE_COMMAND = "python3 -B tools/bazel/ci/summarize_vs_image_timings.py "
+
+
+def recipe_unavailable(reason, version=1):
+    return {"version": version, "status": "unavailable", "reason": reason, RECIPE_LISTS[version]: []}
+
+
+def valid_recipes(value):
+    if not isinstance(value, dict) or type(value.get("version")) is not int or value["version"] not in RECIPE_LISTS:
+        return False
+    version = value["version"]
+    key = RECIPE_LISTS[version]
+    if value.get("status") == "unavailable":
+        return (set(value) == {"version", "status", "reason", key} and value[key] == []
+                and isinstance(value["reason"], str) and value["reason"] in RECIPE_REASONS)
+    if (set(value) != {"version", "status", key} or value["status"] != "available"
+            or not isinstance(value[key], list) or len(value[key]) > MAX_RECIPES):
+        return False
+    owners = set()
+    fields = RECIPE_FIELDS if version == 1 else RECIPE_FIELDS | set(RECIPE_EXPECTED.values())
+    for row in value[key]:
+        if (not isinstance(row, dict) or set(row) != fields or type(row["failed"]) is not bool
+                or not isinstance(row["owner"], str) or not RECIPE_OWNER.fullmatch(row["owner"])
+                or row["owner"] in owners):
+            return False
+        owners.add(row["owner"])
+        for count, (limit, metrics) in RECIPE_METRICS.items():
+            if version == 2:
+                limit = row[RECIPE_EXPECTED[count]]
+                if type(limit) is not int or not 0 <= limit <= MAX_RECIPE_COMMANDS:
+                    return False
+            if type(row[count]) is not int or not 0 <= row[count] <= limit:
+                return False
+            if row[count]:
+                if not all(finite_seconds(row[metric]) for metric in metrics):
+                    return False
+            elif any(row[metric] is not None for metric in metrics):
+                return False
+    return version == 2 or owners == RECIPE_OWNERS
+
+
+def recipe_markers(log, start, end):
+    """Yield only machine records in the identified Actions command's stdout."""
+    groups = 0
+    header = command = output = False
+    second = timedelta(seconds=1)
+    markers = {RECIPE_MARKER: 1, BAZEL_RECIPE_MARKER: 2}
+    for when, line in log_rows(log):
+        if not start <= when < end + second:
+            continue
+        if line.startswith("##[group]Run "):
+            # Adjacent steps can start within the same API timestamp second.
+            header = when < start + second
+            command = output = False
+        elif header:
+            if line == "##[endgroup]":
+                header = False
+                output = command
+                groups += int(command)
+            elif ANSI.sub("", line).lstrip().startswith(RECIPE_COMMAND):
+                command = True
+        elif output and line.startswith((RECIPE_MARKER, BAZEL_RECIPE_MARKER)):
+            prefix, _, payload = line.partition(" ")
+            if (prefix not in markers or not payload.startswith("{") or not payload.endswith("}")
+                    or len(line.encode()) > 4096):
+                raise ValueError("invalid recipe marker")
+            yield markers[prefix], json.loads(payload, object_pairs_hook=unique_json_object,
+                                               parse_constant=reject_json_constant)
+    if groups != 1:
+        raise ValueError("ambiguous recipe summary step")
+
+
+def parse_recipe_log(log, step):
+    """Require a complete receipt; the v2 count trailer also covers empty builds."""
+    expected = RECIPE_STEP_VERSIONS.get(step.get("name"))
+    version = expected or 1
+    if not isinstance(log, bytes) or len(log) > MAX_LOG_BYTES:
+        return recipe_unavailable("logs-too-large", version)
+    start, end = moment(step.get("started_at")), moment(step.get("completed_at"))
+    if not start or not end or end < start:
+        return recipe_unavailable("invalid-timing", version)
+    rows = []
+    result = None
+    try:
+        for marker_version, value in recipe_markers(log, start, end):
+            if (expected is not None and marker_version != expected) or result is not None:
+                return recipe_unavailable("invalid-timing", version)
+            expected = version = marker_version
+            if marker_version == 1 and set(value) == {"version", "images"}:
+                result = dict(value, status="available")
+            elif marker_version == 2 and set(value) == {"recipe"} and len(rows) < MAX_RECIPES:
+                rows.append(value["recipe"])
+            elif (marker_version == 2 and set(value) == {"count"} and type(value["count"]) is int
+                  and value["count"] == len(rows)):
+                result = {"version": 2, "status": "available", "recipes": rows}
+            else:
+                return recipe_unavailable("invalid-timing", version)
+    except (UnicodeError, ValueError, RecursionError):
+        return recipe_unavailable("invalid-timing", version)
+    if result is None and not rows:
+        return recipe_unavailable("not-recorded", version)
+    return result if valid_recipes(result) else recipe_unavailable("invalid-timing", version)
 
 
 def phase_unavailable(reason):
@@ -238,6 +359,15 @@ def moment(value):
         return None
 
 
+def log_rows(log):
+    for line in log.decode("utf-8-sig").splitlines():
+        match = STAMP.fullmatch(line)
+        if match:
+            when = moment(match[1])
+            if when is not None:
+                yield when, match[2]
+
+
 def parse_log(log, step):
     """Measure a successful step; reject partial, ambiguous or inconsistent logs.
 
@@ -253,16 +383,9 @@ are observed recipe/cache intervals and are deliberately not summed.
     if not start or not end or end < start:
         return unavailable("invalid-timing")
     try:
-        lines = log.decode("utf-8-sig").splitlines()
+        rows = [(when, ANSI.sub("", line)) for when, line in log_rows(log)]
     except UnicodeError:
         return unavailable("unsupported-log-format")
-    rows = []
-    for line in lines:
-        match = STAMP.fullmatch(line)
-        if match:
-            when = moment(match[1])
-            if when is not None:
-                rows.append((when, ANSI.sub("", match[2])))
     groups = [(i, when) for i, (when, text) in enumerate(rows) if text.startswith("##[group]Run ")]
     starts = [(i, when) for i, when in groups if start <= when < start + timedelta(seconds=1)]
     if len(starts) != 1:

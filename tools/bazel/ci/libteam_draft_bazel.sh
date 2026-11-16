@@ -52,7 +52,7 @@ while [[ ${1:-} == --* ]]; do
 done
 bazel_command=${1:-}
 case "$bazel_command" in
-  aquery|build|cquery|fetch|info|mod|query|test) shift ;;
+  aquery|build|cquery|fetch|info|mod|query|shutdown|test) shift ;;
   *) printf 'Unsupported CI Bazel command: %s\n' "$bazel_command" >&2; exit 2 ;;
 esac
 
@@ -80,8 +80,11 @@ if "$source_review"; then
   python3 "$(dirname "$0")/review_bazel_rc.py" "$rc"
 fi
 command=("$backend" "${startup_options[@]}" --nosystem_rc --nohome_rc --noworkspace_rc
-  --bazelrc="$rc" "$bazel_command" --registry="$registry"
-  --registry=https://bcr.bazel.build --lockfile_mode=update "${arguments[@]}")
+  --bazelrc="$rc" "$bazel_command")
+if [[ $bazel_command != shutdown ]]; then
+  command+=(--registry="$registry" --registry=https://bcr.bazel.build --lockfile_mode=update)
+fi
+command+=("${arguments[@]}")
 if "$source_review"; then
   "${command[@]}"
 else

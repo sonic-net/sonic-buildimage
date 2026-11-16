@@ -244,6 +244,8 @@ jobs:
             disk_cache: buildimage-gzip-arm64
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      # Reap the detached Bazel server so each Make archive can finish shutdown.
+      options: --init
     env:
       # Shared CI entry point with the canonical registry; the full Make VS job is separate.
       BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
@@ -676,20 +678,24 @@ jobs:
         id: snmp_build
         if: matrix.architecture == 'amd64'
         run: |
-          python3 -B tools/bazel/ci/snmp_image.py build --bazel "$BAZEL" --artifacts "$RUNNER_TEMP/snmp"
-          python3 -B tools/bazel/ci/snmp_image.py validate --artifacts "$RUNNER_TEMP/snmp"
-          python3 -B tools/bazel/ci/snmp_image.py incremental --bazel "$BAZEL" --artifacts "$RUNNER_TEMP/snmp"
+          snmp_artifacts=$(mktemp -d "$RUNNER_TEMP/snmp.XXXXXXXX")
+          printf 'directory=%s\n' "$snmp_artifacts" >> "$GITHUB_OUTPUT"
+          python3 -B tools/bazel/ci/snmp_image.py build --bazel "$BAZEL" --artifacts "$snmp_artifacts"
+          python3 -B tools/bazel/ci/snmp_image.py validate --artifacts "$snmp_artifacts"
+          python3 -B tools/bazel/ci/snmp_image.py incremental --bazel "$BAZEL" --artifacts "$snmp_artifacts"
           git diff --exit-code
       - name: Prepare public SNMP build evidence
         id: snmp_public
-        if: always() && (steps.snmp_build.outcome == 'success' || steps.snmp_build.outcome == 'failure')
-        run: python3 -B tools/bazel/ci/snmp_image.py publish --artifacts "$RUNNER_TEMP/snmp"
+        if: always() && steps.snmp_build.outputs.directory != '' && (steps.snmp_build.outcome == 'success' || steps.snmp_build.outcome == 'failure')
+        env:
+          snmp_artifacts: ${{ steps.snmp_build.outputs.directory }}
+        run: python3 -B tools/bazel/ci/snmp_image.py publish --artifacts "$snmp_artifacts"
       - name: Retain SNMP archives and build evidence
         if: always() && steps.snmp_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: snmp-images-amd64-${{ github.sha }}
-          path: ${{ runner.temp }}/snmp/public
+          path: ${{ steps.snmp_build.outputs.directory }}/public
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
@@ -2717,8 +2723,8 @@ jobs:
       BAZEL: bazel
       # Use the explicitly selected gRPC service, not the legacy HTTPS override.
       BAZEL_REMOTE_AUTH: ""
-      SONIC_BAZEL_KERNEL_REMOTE_CACHE: grpc://172.16.0.4:9092
-      SONIC_BAZEL_KERNEL_REMOTE_UPLOAD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'y' || 'n' }}
+      SONIC_BAZEL_REMOTE_CACHE: grpc://172.16.0.4:9092
+      SONIC_BAZEL_REMOTE_UPLOAD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'y' || 'n' }}
       SONIC_CONFIG_USE_DOCKER_CACHE: "y"
       SONIC_DPKG_CACHE_METHOD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'rwcache' || 'rcache' }}
       SONIC_DPKG_CACHE_SOURCE: /nfs/dpkg_cache/vs
@@ -2734,9 +2740,10 @@ jobs:
       SONIC_BUILD_SLAVE_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       SONIC_BUILD_VARS: P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources
       PREFER_DEBIAN_REPO: "y"
+      SONIC_VS_REUSE_BAZEL_PRODUCERS: "1"
+      # Four concurrent Make recipes share the runner's Bazel action budget.
       BAZEL_CONTAINER_ARGS: >-
-        --jobs=4 --local_resources=memory=12288
-        --remote_cache=grpc://172.16.0.4:9092
+        --jobs=2 --local_resources=cpu=2 --local_resources=memory=3072
         --experimental_remote_downloader=grpc://172.16.0.4:9092
         --experimental_remote_downloader_local_fallback
         --distdir=/bazel_cache/distdir/ape-1.0.1
@@ -2744,7 +2751,6 @@ jobs:
         --distdir=/bazel_cache/distdir/rules_coreutils-1.0.1
         --distdir=/bazel_cache/distdir/rules_gzip-1.0.0
         --distdir=/bazel_cache/distdir/toolchain_utils-1.0.2
-        --remote_upload_local_results=${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     steps:
       - name: Checkout repository and pinned submodules
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -2820,6 +2826,10 @@ jobs:
               fi
             fi
           done
+          # Four image builds can start JVMs on this eight-CPU runner at once.
+          # Match each JVM to its two-CPU action budget and allow a busy start.
+          printf '\n%s\n%s\n' 'startup --host_jvm_args=-XX:ActiveProcessorCount=2' \
+            'startup --local_startup_timeout_secs=300' >> .bazelrc.user
           python3 -B tools/bazel/gzip/source_archive.py \
             --archives-dir artifacts/vs/repository-inputs \
             --output "$SONIC_BAZEL_CACHE_SOURCE/distdir" > artifacts/vs/source-download-receipt.json
@@ -2850,12 +2860,37 @@ jobs:
 
       - name: Build sonic-vs.bin through the host Make wrapper
         id: native_build
+        env:
+          SONIC_VS_IMAGE_TIMINGS: "1"
         run: |
           set -euo pipefail
+          mkdir -p artifacts/vs/image-timings
           bash tools/bazel/ci/build_vs.sh 2>&1 | tee artifacts/vs/build.log
           test -s target/sonic-vs.bin
           test -s target/sonic-vs.bin.dockers
           test "$(git rev-parse HEAD)" = "$(cat artifacts/vs/build-revision.txt)"
+
+      - name: Summarize VS Bazel build timings
+        if: always() && steps.native_build.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          timings=artifacts/vs/image-timings
+          if [[ -d "$timings" ]]; then
+            python3 -B tools/bazel/ci/summarize_vs_image_timings.py "$timings" --github-actions
+            cat "$timings/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Preserve VS Bazel profiles, timings and Make logs
+        id: vs_image_timings_upload
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-vs-bazel-timings-amd64
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/image-timings/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Validate the installer and retained container pairs
         run: |
@@ -2977,6 +3012,7 @@ jobs:
       - name: Remove only this run's checkout
         if: >-
           always() && steps.vs_container_cleanup.outcome == 'success' &&
+          steps.vs_image_timings_upload.outcome == 'success' &&
           steps.vs_receipts_upload.outcome == 'success' &&
           steps.vs_validation_upload.outcome == 'success' &&
           (steps.vs_installer_upload.outcome == 'success' ||

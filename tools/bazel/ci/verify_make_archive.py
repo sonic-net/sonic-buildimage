@@ -88,9 +88,21 @@ def main():
     snapshots = []
     bases = []
     for phase in ("first", "repeat"):
-        with (directory / f"{phase}.log").open("w") as log:
-            subprocess.run(command, cwd=ROOT, env=environment, check=True,
-                           stdout=log, stderr=subprocess.STDOUT)
+        with (directory / f"{phase}.log").open("w+", errors="replace") as log:
+            result = subprocess.run(command, cwd=ROOT, env=environment,
+                                    stdout=log, stderr=subprocess.STDOUT)
+            if result.returncode:
+                # Make prints its expanded environment options into this private log.
+                # Surface the Bazel lifecycle failure without publishing those options.
+                log.seek(0)
+                for line in log:
+                    if line.startswith("FATAL: Attempted to kill stale server process"):
+                        print("Bazel shutdown timed out waiting for its server to exit.", file=sys.stderr)
+                        break
+                    if line.startswith("FATAL: couldn't connect to server"):
+                        print("Bazel could not connect to its new server.", file=sys.stderr)
+                        break
+                raise SystemExit(f"{phase} Make archive check exited {result.returncode}")
         snapshots.append({name: {
             "sha256": hashlib.sha256((directory / name).read_bytes()).hexdigest(),
             "size": (directory / name).stat().st_size,

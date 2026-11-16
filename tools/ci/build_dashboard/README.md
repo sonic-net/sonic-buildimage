@@ -59,8 +59,10 @@ The collector covers `bazel-swss-oci.yml`, `bazel-oci.yml`,
 `bazel-vs-unprivileged.yml`, and `bazel.yml`. The unprivileged workflow's final
 `sonic-vs.bin` assembly job uses the Bazel installer path; its explicit build
 step includes installer verification. Native preparation remains a separate
-job and does not supply an image result. Cancelled jobs retain their status and
-have no successful image timing.
+job and does not supply an image result. If all image-build steps pass and a
+later check fails or the job is cancelled, the PR row and job details still show
+the completed build time. The job keeps its recorded outcome. Only successful
+image jobs enter the performance chart.
 
 The dashboard can report observed durations from earlier builds, but their
 cache state, hardware/configuration match, and historical tested base are not
@@ -73,6 +75,28 @@ bounded set of public metadata fields is retained. Raw logs, command lines,
 environment variables, machine names, and build artifacts are not published.
 
 ## Expand an image build
+
+Select a run and the **VS installer in SONiC slave (AMD64)** job. Its Bazel
+breakdown lists the Make targets that invoked Bazel during installer
+construction, ordered by measured command and export time. Expand a target
+to inspect lock waits, compiler subprocesses, nested builds, cache fetches
+and exports. A Docker row can cover one archive or a runtime/debug pair.
+The Linux kernel row times the entire pinned launcher and reports its build,
+output query and module-graph profiles. When Make rebuilds the P4RT package,
+its row covers the nested Bazel build, tests, server shutdown and Debian package
+staging. If Make restores a package without invoking Bazel, it only appears in
+the Make breakdown.
+
+Partial measurements show how many expected records are present. A measured
+zero means Bazel recorded no matching span. Concurrent work can contribute to
+more than one category, and cache fetches include both disk and remote reads.
+
+Open the upload log linked from the timings to download
+`sonic-vs-bazel-timings-amd64` during its 14-day retention period. Open a
+Bazel profile in Perfetto to inspect individual actions within a recipe. The
+dashboard keeps the numeric breakdown in build history. Earlier instrumented
+runs keep their four-image reports, and pre-profiling runs keep their original
+Make timings.
 
 Open **Step timings**, then expand the Make VS image-build step marked
 **Measured breakdown**. Each section covers one sequential Make target, including its

@@ -33,6 +33,8 @@ platform/vs/tests
 src/sonic-linux-kernel
 src/sonic-p4rt/sonic-pins
 tools/bazel/kernel
+# Private SWSS/Syncd output bases passed between native VS build and validation.
+target/.vs-bazel
 
 # The image consumes Sysmgr through its standalone module.
 src/sonic-sysmgr

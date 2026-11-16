@@ -253,9 +253,13 @@ It requires native AMD64/Trixie VS with Bazel, FIPS and DASH enabled, without
 ASAN, Syncd RPC or cross/emulated execution, and checks that both runtime/debug
 container pairs select their Bazel producers.
 
-The shared verifier resolves the config-engine archive and the two existing
-P4RT package prerequisites through Make, then runs the SWSS and Syncd image
-checks and offline P4RT split-debug-symbol check in the same Trixie builder.
+The shared verifier resolves both P4RT packages through Make. Native CI uses
+the config-engine archive already produced for the installer. It reopens each
+service's private Bazel output base to check the exact SWSS and Syncd exports
+and generate their installed-image policies. Both builders mount the job
+checkout at `/sonic`, and checkout cleanup removes the two bases. Standalone
+validation can request the config-engine archive through Make. The offline
+P4RT split-debug-symbol check runs in the same Trixie builder.
 It does not request the Orchagent or Syncd Make archives again or add a package
 definition. The legacy wrapper's Bookworm builder cleanup
 is retained. The final pair check requires all four archives and their manifests

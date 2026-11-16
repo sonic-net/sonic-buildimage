@@ -8,6 +8,7 @@ on:
       - tools/bazel/tests/installed_images_test.py
       - tools/bazel/tests/image_workflow_test.py
       - tools/bazel/ci/verify_vs_oci.sh
+      - tools/bazel/private_server.sh
       - tools/bazel/tests/vs_oci_session_test.py
       - tools/bazel/oci/oci_inventory.py
       - tools/bazel/tests/integration/oci_inventory_test.py
@@ -26,6 +27,7 @@ on:
       - tools/bazel/tests/installed_images_test.py
       - tools/bazel/tests/image_workflow_test.py
       - tools/bazel/ci/verify_vs_oci.sh
+      - tools/bazel/private_server.sh
       - tools/bazel/tests/vs_oci_session_test.py
       - tools/bazel/oci/oci_inventory.py
       - tools/bazel/tests/integration/oci_inventory_test.py

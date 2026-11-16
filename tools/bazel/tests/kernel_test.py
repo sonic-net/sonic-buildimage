@@ -83,7 +83,7 @@ class KernelBundleTest(unittest.TestCase):
             'bazel_dep(name = "sonic-linux-kernel", version = "0.0.1-' + self.gitlink + '", repo_name = "sonic_linux_kernel")'))
         ci = self.root / "tools/bazel/ci"
         ci.mkdir(parents=True)
-        for name in ("resolution.py",):
+        for name in ("resolution.py", "time_vs_image.py"):
             shutil.copyfile(ROOT / "tools/bazel/ci" / name, ci / name)
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         subprocess.run(["git", "-C", str(self.root), "add", ".gitmodules", "Makefile.work", "rules", "tools"], check=True)
@@ -413,6 +413,7 @@ class KernelBundleTest(unittest.TestCase):
             kernel.main()
         self.assertEqual(json.loads(output.getvalue())["manifest"], self.manifest)
 
+    @patch.dict(os.environ, {"SONIC_VS_IMAGE_TIMINGS": "1"})
     def test_producer_uses_registered_source_and_retains_evidence(self):
         prebuilt = self.bundle
         with self.assertRaisesRegex(ValueError, "must not overlap"):
@@ -434,6 +435,8 @@ class KernelBundleTest(unittest.TestCase):
             self.assertIn(kernel.DEFAULT_REGISTRY, (self.root / "tools/bazel/kernel/.bazelrc").read_text())
             outputs = workdir / "outputs"
             outputs.mkdir(parents=True)
+            (workdir / "build.log").write_text("kernel source build\n")
+            (workdir / "profile.json.gz").write_bytes(b"build profile")
             for name in [kernel.MANIFEST, *self.packages]:
                 shutil.copyfile(prebuilt / name, outputs / name)
             (workdir / "output-paths.txt").write_text("".join(
@@ -462,6 +465,36 @@ class KernelBundleTest(unittest.TestCase):
         self.assertTrue((self.root / "state/kernel-receipt.json").is_file())
         self.assertEqual((self.root / "state").stat().st_mode & 0o077, 0)
         self.assertFalse((self.root / "tools/bazel/kernel/MODULE.bazel.lock").exists())
+        directory, = (self.root / "artifacts/vs/image-timings/linux-kernel").iterdir()
+        recipe = json.loads((directory / "recipe.json").read_text())
+        self.assertEqual(recipe, {"bazel": ["launcher"], "profiles": ["build", "cquery", "mod"],
+                                  "exports": ["stage-debs"]})
+        for phase in ("launcher", "stage-debs"):
+            self.assertEqual(json.loads((directory / f"{phase}.timing.json").read_text())["exit_code"], 0)
+        self.assertEqual((directory / "build.profile.json.gz").read_bytes(), b"build profile")
+        self.assertEqual((directory / "build.log").read_text(), "kernel source build\n")
+        rc = (self.root / "state/consumer/.bazelrc").read_text().splitlines()
+        self.assertIn("common --noslim_profile", rc)
+        for phase in ("cquery", "mod"):
+            self.assertIn(f"{phase} --profile={directory}/{phase}.profile.json.gz", rc)
+        self.assertTrue(kernel.ensure(self.root)["reused"])
+        self.assertEqual(list(directory.parent.iterdir()), [directory])
+
+    @patch.dict(os.environ, {"SONIC_VS_IMAGE_TIMINGS": "1"})
+    def test_failed_kernel_launcher_retains_its_profile_and_status(self):
+        def execute(command, workspace):
+            workdir = Path(command[command.index("--work-dir") + 1])
+            workdir.mkdir(parents=True)
+            (workdir / "profile.json.gz").write_bytes(b"partial profile")
+            raise subprocess.CalledProcessError(37, command)
+
+        with self.assertRaises(subprocess.CalledProcessError) as failure:
+            kernel.build(self.root, self.root / "state", None, False, execute=execute)
+        self.assertEqual(failure.exception.returncode, 37)
+        directory, = (self.root / "artifacts/vs/image-timings/linux-kernel").iterdir()
+        self.assertEqual(json.loads((directory / "launcher.timing.json").read_text())["exit_code"], 37)
+        self.assertEqual((directory / "build.profile.json.gz").read_bytes(), b"partial profile")
+        self.assertFalse((directory / "stage-debs.timing.json").exists())
 
     def test_managed_kernel_cache_reaches_only_the_isolated_consumer(self):
         cache_rc = self.root / "worker-cache.bazelrc"

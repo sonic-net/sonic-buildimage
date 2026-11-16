@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const {duration, measured, imageMeasurement, imageTrendGroups, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep, coverageRows, baseSummary, prStateLabel} = require("./app.js");
+const {duration, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, coverageRows, baseSummary, prStateLabel} = require("./app.js");
 const pr72Fixture = require("../testdata/pr72-carried-image-execution.json");
 
 test("closed draft PRs remain closed while open drafts and merged PRs keep their states", () => {
@@ -52,6 +52,14 @@ test("unmeasured and invalid durations never look like fast builds", () => {
   assert.equal(duration(0), "0s");
   assert.equal(duration(125), "2m 5s");
   assert.equal(duration(3660), "1h 1m");
+});
+
+test("a later validation failure preserves the completed build time in the PR details", () => {
+  const job = {kind: "make-vs", conclusion: "failure", image_build_seconds: 10259};
+  assert.equal(completedImageSeconds(job), 10259);
+  assert.equal(measured(job), false);
+  assert.equal(completedImageSeconds({...job, image_build_seconds: null}), null);
+  assert.equal(completedImageSeconds({...job, kind: "source"}), null);
 });
 
 test("only successful recognized image jobs enter the performance chart", () => {
@@ -516,6 +524,105 @@ function descendants(node, predicate) {
   return [node, ...(node.children || []).flatMap(child => descendants(child, predicate))].filter(predicate);
 }
 function stepWith(breakdown) { return {name: "Make VS image", status: "completed", conclusion: "success", duration_seconds: 101, ...(breakdown === undefined ? {} : {breakdown})}; }
+
+const hostStepName = "Build sonic-vs.bin through the host Make wrapper";
+
+function recipeJob() {
+  const images = ["docker-fpm-frr.gz", "docker-mux.gz", "docker-teamd.gz", "docker-syncd-vs.gz"]
+    .map(owner => ({owner, bazel_seconds: 12.5, lock_seconds: 2.25, compile_seconds: 4, foreign_seconds: 0,
+      fetch_seconds: 0.125, export_seconds: 1.5, bazel_phases: 3, profiles: 3, exports: 2, failed: false}));
+  return {kind: "make-vs", steps: [{name: hostStepName}], image_recipe_timings: {version: 1, status: "available", images}};
+}
+
+test("the host Make installer has a consistent and separate chart boundary", () => {
+  const old = timingPoint("Build the VS installer (.bin)"), first = timingPoint(hostStepName), next = timingPoint(hostStepName);
+  assert.deepEqual(imageTrendGroups([old, first, next]), [[old], [first, next]]);
+  assert.match(imageMeasurement(first.job).label, /through host Make/);
+});
+
+test("previous four-image receipts retain measured and partial coverage", () => withDocument(() => {
+  const job = recipeJob(), [frr, mux, teamd] = job.image_recipe_timings.images;
+  Object.assign(frr, {failed: true, bazel_phases: 1, profiles: 1, exports: 0, export_seconds: null});
+  Object.assign(mux, {profiles: 0, lock_seconds: null, compile_seconds: null, foreign_seconds: null, fetch_seconds: null});
+  Object.assign(teamd, {lock_seconds: 0.0001});
+  const view = renderRecipeTimings(job);
+  const rows = descendants(view, item => item.tagName === "details");
+  assert.equal(rows.length, 4);
+  assert.match(view.textContent, /four image recipes/);
+  assert.match(rows.at(-1).textContent, /docker-fpm-frr.gzCommand failed12.5sPartial/);
+  assert.match(rows.at(-1).textContent, /Bazel lock wait2.25s \(1\/3\)/);
+  assert.match(rows.at(-1).textContent, /Export— \(0\/2\)/);
+  assert.match(view.textContent, /Bazel lock wait<0.001s/);
+  assert.match(view.textContent, /can overlap/);
+  assert.match(view.textContent, /disk and remote reads/);
+}));
+
+test("all build recipes are ordered by recorded commands and exports with separate profile coverage", () => withDocument(() => {
+  const job = recipeJob();
+  const image = {...job.image_recipe_timings.images[0], owner: "docker-orchagent.gz",
+    bazel_expected: 3, profiles_expected: 3, exports_expected: 2};
+  const kernel = {...image, owner: "linux-headers-amd64", bazel_seconds: 120, bazel_expected: 1, bazel_phases: 1,
+    profiles_expected: 3, profiles: 2, exports_expected: 0, exports: 0, export_seconds: null};
+  const unknown = {...kernel, owner: "sonic-swss", bazel_seconds: null, bazel_phases: 0,
+    profiles: 0, fetch_seconds: null, compile_seconds: null, lock_seconds: null, foreign_seconds: null};
+  const packages = Array.from({length: 36}, (_, n) => ({...image, owner: `package-${n}.deb`, bazel_seconds: n}));
+  job.image_recipe_timings = {version: 2, status: "available", recipes: [unknown, image, ...packages, kernel]};
+  const view = renderRecipeTimings(job), rows = descendants(view, el => el.tagName === "details");
+  assert.equal(rows.length, 39);
+  assert.match(rows[0].textContent, /linux-headers-amd64120sBazel \/ launcher120sBazel lock wait2.25s \(2\/3\)/);
+  assert.match(rows[0].textContent, /ExportN\/A/);
+  assert.equal(rows[0].open, true);
+  assert.equal(rows[1].open, false);
+  assert.match(rows[1].textContent, /package-35.deb/);
+  assert.match(rows.at(-1).textContent, /sonic-swss—Bazel \/ launcher— \(0\/1\)/);
+  assert.equal(job.image_recipe_timings.recipes[0], unknown);
+  job.image_recipe_timings.recipes = [];
+  assert.match(renderRecipeTimings(job).textContent, /No Bazel activity was recorded/);
+  for (const change of [{owner: "bad/../path"}, {owner: "<script>"}, {owner: "a".repeat(193)},
+                        {bazel_expected: 65536}, {profiles_expected: 1}, {exports_expected: 1}, {compile_seconds: NaN}]) {
+    job.image_recipe_timings.recipes = [{...image, ...change}];
+    const invalid = renderRecipeTimings(job);
+    assert.match(invalid.textContent, /could not be verified/);
+    assert.doesNotMatch(invalid.textContent, /\.\.\/path|<script>/);
+  }
+}));
+
+test("unavailable or unverifiable profiles do not appear as measured recipes", () => withDocument(() => {
+  const job = recipeJob();
+  assert.equal(renderRecipeTimings({...job, kind: "container"}), null);
+  assert.equal(renderRecipeTimings({...job, steps: [{name: "Build the VS image"}]}), null);
+  assert.match(renderRecipeTimings({...job, image_recipe_timings: undefined}).textContent, /No Bazel timing breakdown/);
+  const unavailable = {version: 1, status: "unavailable", images: [], reason: "pending-collection"};
+  assert.match(renderRecipeTimings({...job, image_recipe_timings: unavailable}).textContent, /pending collection/);
+  for (const change of [{profiles: 0}, {bazel_seconds: "0"}, {compile_seconds: -1}, {exports: 3}, {failed: 0},
+                        {owner: "docker-mux.gz"}, {owner: "<img>"}]) {
+    const candidate = structuredClone(job);
+    Object.assign(candidate.image_recipe_timings.images[0], change);
+    const view = renderRecipeTimings(candidate);
+    assert.match(view.textContent, /could not be verified/);
+    assert.equal(descendants(view, el => el.tagName === "details").length, 0);
+    assert.doesNotMatch(view.textContent, /<img>/);
+  }
+}));
+
+test("the recipe evidence link opens this job's successful timing artifact upload", () => withDocument(() => {
+  const repository = "securely1g/sonic-buildimage", job = recipeJob();
+  job.url = `https://github.com/${repository}/actions/runs/123/job/456`;
+  const upload = {name: "Preserve VS image build profiles, timings and Make logs", conclusion: "success", number: 16};
+  job.steps.push(upload);
+  const links = () => descendants(renderRecipeTimings(job, repository), node => node.tagName === "a");
+  assert.equal(links()[0].href, job.url + "#step:16:1");
+  assert.match(links()[0].textContent, /Profiles and Make logs/);
+  job.steps[1] = {...upload, name: "Preserve VS Bazel profiles, timings and Make logs"};
+  assert.equal(links()[0].href, job.url + "#step:16:1");
+  for (const change of [{number: 0}, {number: "16"}, {name: "A different artifact"}, {conclusion: "failure"}]) {
+    job.steps[1] = {...upload, ...change};
+    assert.equal(links().length, 0);
+  }
+  job.steps[1] = upload;
+  job.url = "https://github.com/unrelated/repo/actions/runs/123/job/456";
+  assert.equal(links().length, 0);
+}));
 
 test("legacy snapshots keep their step duration without requiring a breakdown", () => withDocument(() => {
   const step = stepWith(undefined);

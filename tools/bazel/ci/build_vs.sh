@@ -7,10 +7,17 @@ if (( $# )); then
     exit 2
 fi
 
+builder_args="--label ${SONIC_CI_CONTAINER_LABEL:?} -e BAZEL=${BAZEL:?} -e BAZEL_CONTAINER_ARGS"
+if [[ ${SONIC_VS_IMAGE_TIMINGS:-} == 1 ]]; then
+    builder_args+=" -e SONIC_VS_IMAGE_TIMINGS"
+fi
+if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} == 1 ]]; then
+    builder_args+=" -e SONIC_VS_REUSE_BAZEL_PRODUCERS"
+fi
 options=(
     BUILD_WITH_BAZEL_WHEN_AVAILABLE=y INCLUDE_VS_DASH_SAI=y INCLUDE_FIPS=y
     ENABLE_ASAN=n ENABLE_SYNCD_RPC=n
-    "SONIC_BUILDER_EXTRA_CMDLINE=--label ${SONIC_CI_CONTAINER_LABEL:?} -e BAZEL=${BAZEL:?} -e BAZEL_CONTAINER_ARGS"
+    "SONIC_BUILDER_EXTRA_CMDLINE=$builder_args"
 )
 revision=$(git rev-parse HEAD)
 mkdir -p artifacts/vs

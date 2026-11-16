@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Execute VS installer dependency selection and the real grouped Bazel bridge."""
 
+import json
 import pathlib
 import sys
 import unittest
@@ -9,6 +10,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 from tools.bazel.tests.docker_test import ArchiveRecipeFixture
+from tools.bazel.ci.private_server_diagnostics import snapshot
+from tools.bazel.ci.summarize_vs_image_timings import read_owner
 
 
 class VSDockerPairTest(ArchiveRecipeFixture, unittest.TestCase):
@@ -95,6 +98,103 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
     def test_normal_vs_builds_both_pairs_and_installs_only_runtime(self):
         self.assertEqual(self.installer(), list(self.archives[::2]))
         self.assert_pairs()
+        self.assertFalse((self.root / "artifacts/vs/image-timings").exists())
+
+    def test_timed_pair_profiles_each_bazel_command_and_times_both_exports(self):
+        self.installer(SONIC_VS_IMAGE_TIMINGS="1")
+        self.assert_pairs()
+        timings = self.root / "artifacts/vs/image-timings"
+        self.assertEqual({path.name for path in timings.iterdir()}, set(self.archives[::2]))
+        expected_profiles = []
+        for owner, debug in (self.archives[:2], self.archives[2:]):
+            directory, = (timings / owner).iterdir()
+            profiles = ["build", "cquery-" + owner, "cquery-" + debug]
+            commands = [*profiles, "shutdown"]
+            exports = ["export-" + owner, "export-" + debug]
+            self.assertEqual(json.loads((directory / "recipe.json").read_text()),
+                             {"bazel": commands, "profiles": profiles, "exports": exports})
+            for phase in commands + exports:
+                record = json.loads((directory / (phase + ".timing.json")).read_text())
+                self.assertEqual((record["phase"], record["exit_code"]), (phase, 0))
+                self.assertGreater(record["elapsed_seconds"], 0)
+            self.assertIn("fixture query diagnostic", (directory / "make.log").read_text())
+            self.assertFalse((directory / "startup-diagnostics.json").exists())
+            expected_profiles.extend(f"--profile={directory}/{phase}.profile.json.gz" for phase in profiles)
+        profiles = []
+        for call in self.recorded_calls():
+            args = call["arguments"]
+            self.assertIn("--noslim_profile", args)
+            profiles.extend(arg for arg in args if arg.startswith("--profile="))
+        self.assertCountEqual(profiles, expected_profiles)
+
+    def test_timed_standalone_archive_preserves_every_invocation(self):
+        owner = self.archives[0]
+        for _ in range(2):
+            self.assert_success(self.run_make(owner, environment={"SONIC_VS_IMAGE_TIMINGS": "1"}))
+        instances = list((self.root / "artifacts/vs/image-timings" / owner).iterdir())
+        self.assertEqual(len(instances), 2)
+        for directory in instances:
+            recipe = json.loads((directory / "recipe.json").read_text())
+            self.assertEqual(recipe["bazel"], ["build", "cquery-" + owner, "shutdown"])
+            self.assertEqual(recipe["exports"], ["export-" + owner])
+            self.assertTrue((directory / "build.timing.json").is_file())
+
+    def test_failed_server_retains_sanitized_snapshot_before_cleanup(self):
+        owner = self.archives[0]
+        result = self.run_make(owner, environment={"SONIC_VS_IMAGE_TIMINGS": "1",
+                                                   "FAKE_BAZEL_MODE": "server_startup_failure"})
+        self.assertNotEqual(result.returncode, 0)
+        build, shutdown = self.recorded_calls(("build", "shutdown"))
+        self.assertEqual(build["output_base"], shutdown["output_base"])
+        self.assertFalse(pathlib.Path(build["output_base"]).exists())
+
+        owner_dir = self.root / "artifacts/vs/image-timings" / owner
+        recipe, = owner_dir.iterdir()
+        self.assertEqual(json.loads((recipe / "build.timing.json").read_text())["exit_code"], 37)
+        receipt = recipe / "startup-diagnostics.json"
+        data = json.loads(receipt.read_text())
+        self.assertEqual(data["jvm"], {"available": True, "bytes_scanned": 16384,
+                                       "error_phrases": ["OutOfMemoryError", "unable to create native thread"]})
+        self.assertNotIn("synthetic-private-value", receipt.read_text())
+        self.assertEqual(len(data["load_average_1_5_15_min"]), 3)
+        self.assertGreaterEqual(data["output_base_disk"]["available_bytes"], 0)
+        self.assertLess(receipt.stat().st_size, 8192)
+        # Older receipts have no snapshot. Both formats must give the same dashboard row.
+        summary = read_owner(owner_dir)
+        self.assertTrue(summary[0]["failed"])
+        receipt.unlink()
+        self.assertEqual(read_owner(owner_dir), summary)
+
+    def test_failure_snapshot_reads_the_process_and_enclosing_container_limits(self):
+        proc = self.root / "proc"
+        (proc / "self").mkdir(parents=True)
+        (proc / "self/cgroup").write_text("0::/leaf\n")
+        mount = self.root / "cgroup"
+        leaf = mount / "leaf"
+        leaf.mkdir(parents=True)
+        (leaf / "memory.events").write_text("oom_kill 2\n")
+        (leaf / "pids.current").write_text("91\n")
+        (mount / "pids.max").write_text("128\n")
+        (mount / "memory.max").write_text("4294967296\n")
+        info = snapshot(self.root, proc, mount)
+        self.assertFalse(info["jvm"]["available"])
+        self.assertEqual(info["cgroup_v2"], {
+            "process": {"memory.events": "oom_kill 2", "pids.current": "91"},
+            "mount_root": {"memory.max": "4294967296", "pids.max": "128"}})
+
+    def test_timing_preserves_failed_query_and_preceding_build(self):
+        result = self.run_make(goals=["target/" + self.archives[2]], environment={
+            "SONIC_BUILD_TARGET": "target/sonic-vs.bin",
+            "SONIC_VS_IMAGE_TIMINGS": "1", "FAKE_BAZEL_MODE": "query_failure"})
+        self.assertNotEqual(result.returncode, 0)
+        owner = self.archives[2]
+        records, = (self.root / "artifacts/vs/image-timings" / owner).iterdir()
+        self.assertIn("fixture query failure", (records / "make.log").read_text())
+        self.assertEqual(json.loads((records / "build.timing.json").read_text())["exit_code"], 0)
+        failed = json.loads((records / f"cquery-{owner}.timing.json").read_text())
+        self.assertNotEqual(failed["exit_code"], 0)
+        self.assertFalse(list(records.glob("export-*.timing.json")))
+        self.assertEqual((self.target / owner).read_bytes(), b"previous image")
 
     def test_debug_vs_builds_both_pairs_and_installs_only_debug(self):
         self.assertEqual(self.installer(INSTALL_DEBUG_TOOLS="y"), list(self.archives[1::2]))
@@ -117,10 +217,33 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
                     self.assert_pairs()
 
     def test_parallel_installer_and_explicit_variants_execute_once_per_pair(self):
+        # Another Bazel caller can own the workspace convenience symlink.
+        other_outputs = self.root / "other-server/bazel-out"
+        (other_outputs / "archive outputs").mkdir(parents=True)
+        (self.root / "bazel-out").symlink_to(other_outputs, target_is_directory=True)
+        for name in self.archives:
+            (other_outputs / "archive outputs" / name).write_bytes(b"other server's archive")
+
+        cache = "--remote_cache=grpc://fixture:9092"
         result = self.run_make(goals=["target/sonic-vs.img.gz"] +
-                               ["target/" + name for name in reversed(self.archives)], parallel=True)
+                               ["target/" + name for name in reversed(self.archives)],
+                               parallel=True, environment={"BAZEL_CONTAINER_ARGS": cache})
         self.assert_success(result)
         self.assert_pairs()
+        builds = self.recorded_calls(("build",))
+        self.assertEqual(len({call["output_base"] for call in builds}), 2)
+        for build in builds:
+            labels = build["arguments"][-2:]
+            queries = [call for call in self.recorded_calls(("cquery",))
+                       if call["arguments"][-1] in labels]
+            self.assertEqual(len(queries), 2)
+            for call in [build, *queries]:
+                self.assertEqual(call["output_base"], build["output_base"])
+                self.assertIn(cache, call["arguments"])
+                self.assertIn("--symlink_prefix=/", call["arguments"])
+        self.assertCountEqual([call["output_base"] for call in self.recorded_calls(("shutdown",))],
+                              [call["output_base"] for call in builds])
+        self.assertTrue(all(not pathlib.Path(call["output_base"]).exists() for call in builds))
 
     def test_missing_debug_outputs_are_recreated_without_changing_runtime(self):
         self.installer()

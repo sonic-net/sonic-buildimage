@@ -182,10 +182,12 @@ BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
 # writable by the build user; this does not enable Make's package cache.
 SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
 
-# The isolated kernel launcher does not inherit workspace Bazel options.
-# Select its remote cache explicitly; uploads require a separate opt-in.
-SONIC_BAZEL_KERNEL_REMOTE_CACHE ?=
-SONIC_BAZEL_KERNEL_REMOTE_UPLOAD ?= n
+# Independent Bazel builds can share completed actions. Opt in to remote writes
+# separately. The kernel launcher also supports its existing per-kernel override.
+SONIC_BAZEL_REMOTE_CACHE ?=
+SONIC_BAZEL_REMOTE_UPLOAD ?= n
+SONIC_BAZEL_KERNEL_REMOTE_CACHE ?= $(SONIC_BAZEL_REMOTE_CACHE)
+SONIC_BAZEL_KERNEL_REMOTE_UPLOAD ?= $(SONIC_BAZEL_REMOTE_UPLOAD)
 
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes

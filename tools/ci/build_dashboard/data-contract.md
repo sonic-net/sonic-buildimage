@@ -56,7 +56,8 @@ does not execute a build or execute any content from a log.
   not guaranteed to partition job wall time (runner overhead is separate).
   `image_build_seconds` is populated only for successful, explicitly recognized
   image-build steps; `image_build_elapsed_seconds` also records a failed image
-  build's elapsed time. A failed job is never a successful benchmark.
+  build's elapsed time. The PR table and job details keep a completed build's timing
+  when later validation fails. The performance chart requires a successful job.
   Exact recognized step names identify the measurement scope. In particular,
   `Build the VS installer (.bin)` excludes VM generation and boot checks;
   historical `Build the VS image` measurements include them. Consumers must
@@ -68,6 +69,29 @@ does not execute a build or execute any content from a log.
   without this field remains readable; the next collection recomputes it from
   retained steps. A display without verified step identities uses an explicitly
   labeled job execution time instead of inventing an image step timestamp.
+- A Make VS installer job with a profiling summary step may include
+  `image_recipe_timings`. Version 2 stores a `recipes` list. Each `owner`
+  is the Make output basename or package build group. New owners appear as
+  the build registers them. Repeated invocations for an owner contribute to
+  that owner's row.
+  - `bazel_seconds`, `bazel_phases` and `bazel_expected` report the measured
+    duration, recorded timing count and expected timing count for its commands.
+    The kernel measures its launcher once per invocation.
+  - `lock_seconds`, `compile_seconds`, `foreign_seconds` and `fetch_seconds`
+    cover spans in `profiles` of `profiles_expected` Bazel traces. A nested
+    build includes a whole foreign build or the kernel package action. Within
+    each category concurrent spans count once per trace. A cache fetch
+    includes input staging and output materialization from disk or remote storage.
+  - `export_seconds`, `exports` and `exports_expected` cover archive or package
+    exports. `failed` records whether a command returned a nonzero exit status.
+  Durations are null when their source count is zero. Counts below the
+  expectation show partial coverage. A valid empty list records zero observed
+  recipes. An unavailable result has a fixed `reason` and an empty list.
+  The collector reads one bounded record per recipe and verifies the final
+  count from the same job's summary step before persisting the result.
+  Version 1 history keeps `images` for FRR, mux, TeamD and Syncd VS, with
+  three command timings, three profiles and two exports expected per pair.
+  Jobs predating the profiling step omit this field.
 - Each step: `number`, `name`, `status`, `conclusion`, `started_at`,
   `completed_at`, `duration_seconds`, `phase`.
   An optional `breakdown` provides nested Make build timings without changing

@@ -16,7 +16,8 @@ class P4rtCacheTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
-        for name in ('Makefile.cache', 'rules/functions', 'rules/p4rt.mk', 'rules/p4rt.dep'):
+        for name in ('Makefile.cache', 'rules/functions', 'rules/p4rt.mk', 'rules/p4rt.dep',
+                     'tools/bazel/private_server.sh'):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
@@ -32,7 +33,7 @@ class P4rtCacheTest(unittest.TestCase):
         pins = source / 'sonic-pins'
         pins.mkdir()
         (pins / 'runtime.cc').write_text('// P4RT source\n')
-        for directory, files in ((self.root, ['src/sonic-p4rt/Makefile',
+        for directory, files in ((self.root, ['tools/bazel/private_server.sh', 'src/sonic-p4rt/Makefile',
                                             'src/sonic-p4rt/README.bazel.md',
                                             'src/sonic-p4rt/source_mirrors.cfg']),
                                  (pins, ['runtime.cc'])):
@@ -70,6 +71,7 @@ include Makefile.cache
         files = sidecar.read_text().split()
         self.assertIn('src/sonic-p4rt/README.bazel.md', files)
         self.assertIn('src/sonic-p4rt/Makefile', files)
+        self.assertIn('tools/bazel/private_server.sh', files)
         self.assertIn('src/sonic-p4rt/source_mirrors.cfg', files)
         self.assertNotIn('README.bazel.md', files)
         self.assertNotIn('Makefile', files)

@@ -30,7 +30,11 @@ def cache_options(cache_directory):
 def remote_cache_options():
     """Read the shared cache without exposing authentication in Bazel options."""
     if not os.environ.get("BAZEL_REMOTE_AUTH"):
-        return []
+        endpoint = os.environ.get("SONIC_BAZEL_REMOTE_CACHE")
+        if not endpoint:
+            return []
+        upload = "true" if os.environ.get("SONIC_BAZEL_REMOTE_UPLOAD") == "y" else "false"
+        return [f"--remote_cache={endpoint}", f"--remote_upload_local_results={upload}"]
     credentials.authorization()
     helper = Path(__file__).resolve().parent / "cache/credentials.py"
     return [
@@ -67,6 +71,7 @@ def main():
     export = commands.add_parser("export", help="Publish the single archive reported by cquery")
     export.add_argument("--query-output", required=True)
     export.add_argument("--output", type=Path, required=True)
+    export.add_argument("--execution-root", type=Path)
     args = parser.parse_args()
     if args.command == "options":
         arguments = cache_options(args.cache_directory) + shlex.split(args.arguments)
@@ -85,6 +90,10 @@ def main():
         if len(files) != 1:
             parser.error("expected exactly one Bazel archive output")
         source = Path(files[0])
+        if args.execution_root is not None:
+            if not args.execution_root.is_absolute() or source.is_absolute() or ".." in source.parts:
+                parser.error("expected a Bazel exec path relative to the producing execution root")
+            source = args.execution_root / source
         if not source.is_file() or not source.stat().st_size:
             parser.error("Bazel did not produce a nonempty archive")
         export_archive(source, args.output)

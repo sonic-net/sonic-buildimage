@@ -715,6 +715,53 @@ tbody tr:hover {
   margin: 10px 0 16px;
 }
 
+.recipe-timings>a {
+  display: inline-block;
+  font-size: .8rem;
+  margin: 0 0 16px;
+}
+
+.recipe-list h3 {
+  margin: 12px 0 5px;
+  font-size: .94rem;
+}
+.recipe-list>ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.recipe-list li {
+  border-top: 1px solid var(--line);
+}
+.recipe-list summary {
+  cursor: pointer;
+  font-size: .84rem;
+  font-weight: 600;
+}
+.recipe-metrics {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 5px 12px;
+  margin: 0 0 12px 20px;
+  font-size: .8rem;
+}
+.recipe-metrics dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.recipe-sample,.recipe-failed {
+  font-size: .74rem;
+  font-weight: normal;
+  color: var(--muted);
+}
+.recipe-failed,.timing-duration>.recipe-sample {
+  display: block;
+}
+.recipe-failed {
+  color: var(--red);
+}
+
 .steps {
   border-top: 1px solid var(--line);
   padding-top: 13px;

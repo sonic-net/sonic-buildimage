@@ -514,7 +514,9 @@ endif
 # of the optional local cache mount below. Only the Bazel client uses it.
 DOCKER_RUN += -e BAZEL_REMOTE_AUTH
 
-# Forward the isolated kernel cache policy for every slave entry point.
+# Pass cache settings into the slave independently of its shared disk-cache mount.
+DOCKER_RUN += -e 'SONIC_BAZEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_REMOTE_CACHE))' \
+	-e 'SONIC_BAZEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_REMOTE_UPLOAD))'
 DOCKER_RUN += -e 'SONIC_BAZEL_KERNEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_CACHE))' \
 	-e 'SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD))'
 
