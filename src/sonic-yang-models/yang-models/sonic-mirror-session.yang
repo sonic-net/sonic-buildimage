@@ -32,6 +32,13 @@ module sonic-mirror-session {
     description
         "SONiC Mirror session yang model";
 
+    revision 2026-10-16 {
+        description
+            "Move sample_rate and truncate_size from MIRROR_SESSION to
+             PORT_MIRROR_SAMPLE source bindings, and add system-wide sFlow
+             configuration exclusion.";
+    }
+
     revision 2026-04-14 {
         description
             "Add sample_rate and truncate_size leaves for sampled port mirroring
@@ -41,13 +48,6 @@ module sonic-mirror-session {
     revision 2021-06-15 {
         description
             "Initial revision.";
-    }
-
-    revision 2026-10-16 {
-        description
-            "Move sample_rate and truncate_size from MIRROR_SESSION to
-             PORT_MIRROR_SAMPLE source bindings, and add system-wide sFlow
-             configuration exclusion.";
     }
 
     typedef session_type {
@@ -95,6 +95,10 @@ module sonic-mirror-session {
                 }
 
                 leaf type {
+                    must "current() = 'ERSPAN' or count(/sms:sonic-mirror-session/sms:PORT_MIRROR_SAMPLE/sms:PORT_MIRROR_SAMPLE_LIST[sms:mirror_session=current()/../sms:name]) = 0" {
+                        error-message "The referenced mirror session must be ERSPAN.";
+                        error-app-tag "sample-mirror-session-type-invalid";
+                    }
                     type session_type;
                     default "ERSPAN";
                     description
@@ -182,6 +186,10 @@ module sonic-mirror-session {
                 }
 
                 leaf src_port {
+                    must "count(/sms:sonic-mirror-session/sms:PORT_MIRROR_SAMPLE/sms:PORT_MIRROR_SAMPLE_LIST[sms:mirror_session=current()/../sms:name]) = 0" {
+                        error-message "A sampled export session must not configure src_port.";
+                        error-app-tag "sample-mirror-source-conflict";
+                    }
                     type string {
                         length 1..2048;
                     }
