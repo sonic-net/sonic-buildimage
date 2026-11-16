@@ -53,7 +53,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "17,18,25,26",
+                "2": "19,20,27,28",
+                "3": "21,22,29,30",
+                "4": "23,24,31,32",
+                "5": "1,2,9,10",
+                "6": "3,4,11,12",
+                "7": "5,6,13,14",
+                "8": "7,8,15,16"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-24/24-0050",
             "base_page": 0,
             "els_presence": {
@@ -68,7 +77,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "49,50,57,58",
+                "2": "51,52,59,60",
+                "3": "53,54,61,62",
+                "4": "55,56,63,64",
+                "5": "33,34,41,42",
+                "6": "35,36,43,44",
+                "7": "37,38,45,46",
+                "8": "39,40,47,48"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-24/24-0050",
             "base_page": 4,
             "els_presence": {
@@ -83,7 +101,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "81,82,89,90",
+                "2": "83,84,91,92",
+                "3": "85,86,93,94",
+                "4": "87,88,95,96",
+                "5": "65,66,73,74",
+                "6": "67,68,75,76",
+                "7": "69,70,77,78",
+                "8": "71,72,79,80"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-25/25-0050",
             "base_page": 0,
             "els_presence": {
@@ -98,7 +125,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "113,114,121,122",
+                "2": "115,116,123,124",
+                "3": "117,118,125,126",
+                "4": "119,120,127,128",
+                "5": "97,98,105,106",
+                "6": "99,100,107,108",
+                "7": "101,102,109,110",
+                "8": "103,104,111,112"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-25/25-0050",
             "base_page": 4,
             "els_presence": {
@@ -113,7 +149,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "145,146,153,154",
+                "2": "147,148,155,156",
+                "3": "149,150,157,158",
+                "4": "151,152,159,160",
+                "5": "129,130,137,138",
+                "6": "131,132,139,140",
+                "7": "133,134,141,142",
+                "8": "135,136,143,144"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-26/26-0050",
             "base_page": 0,
             "els_presence": {
@@ -128,7 +173,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "177,178,185,186",
+                "2": "179,180,187,188",
+                "3": "181,182,189,190",
+                "4": "183,184,191,192",
+                "5": "161,162,169,170",
+                "6": "163,164,171,172",
+                "7": "165,166,173,174",
+                "8": "167,168,175,176"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-26/26-0050",
             "base_page": 4,
             "els_presence": {
@@ -143,7 +197,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "209,210,217,218",
+                "2": "211,212,219,220",
+                "3": "213,214,221,222",
+                "4": "215,216,223,224",
+                "5": "193,194,201,202",
+                "6": "195,196,203,204",
+                "7": "197,198,205,206",
+                "8": "199,200,207,208"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-27/27-0050",
             "base_page": 0,
             "els_presence": {
@@ -158,7 +221,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "241,242,249,250",
+                "2": "243,244,251,252",
+                "3": "245,246,253,254",
+                "4": "247,248,255,256",
+                "5": "225,226,233,234",
+                "6": "227,228,235,236",
+                "7": "229,230,237,238",
+                "8": "231,232,239,240"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-27/27-0050",
             "base_page": 4,
             "els_presence": {
@@ -173,7 +245,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "273,274,281,282",
+                "2": "275,276,283,284",
+                "3": "277,278,285,286",
+                "4": "279,280,287,288",
+                "5": "257,258,265,266",
+                "6": "259,260,267,268",
+                "7": "261,262,269,270",
+                "8": "263,264,271,272"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-28/28-0050",
             "base_page": 0,
             "els_presence": {
@@ -188,7 +269,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "305,306,313,314",
+                "2": "307,308,315,316",
+                "3": "309,310,317,318",
+                "4": "311,312,319,320",
+                "5": "289,290,297,298",
+                "6": "291,292,299,300",
+                "7": "293,294,301,302",
+                "8": "295,296,303,304"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-28/28-0050",
             "base_page": 4,
             "els_presence": {
@@ -203,7 +293,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "337,338,345,346",
+                "2": "339,340,347,348",
+                "3": "341,342,349,350",
+                "4": "343,344,351,352",
+                "5": "321,322,329,330",
+                "6": "323,324,331,332",
+                "7": "325,326,333,334",
+                "8": "327,328,335,336"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-29/29-0050",
             "base_page": 0,
             "els_presence": {
@@ -218,7 +317,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "369,370,377,378",
+                "2": "371,372,379,380",
+                "3": "373,374,381,382",
+                "4": "375,376,383,384",
+                "5": "353,354,361,362",
+                "6": "355,356,363,364",
+                "7": "357,358,365,366",
+                "8": "359,360,367,368"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-29/29-0050",
             "base_page": 4,
             "els_presence": {
@@ -233,7 +341,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "401,402,409,410",
+                "2": "403,404,411,412",
+                "3": "405,406,413,414",
+                "4": "407,408,415,416",
+                "5": "385,386,393,394",
+                "6": "387,388,395,396",
+                "7": "389,390,397,398",
+                "8": "391,392,399,400"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-30/30-0050",
             "base_page": 0,
             "els_presence": {
@@ -248,7 +365,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "433,434,441,442",
+                "2": "435,436,443,444",
+                "3": "437,438,445,446",
+                "4": "439,440,447,448",
+                "5": "417,418,425,426",
+                "6": "419,420,427,428",
+                "7": "421,422,429,430",
+                "8": "423,424,431,432"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-30/30-0050",
             "base_page": 4,
             "els_presence": {
@@ -263,7 +389,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "465,466,473,474",
+                "2": "467,468,475,476",
+                "3": "469,470,477,478",
+                "4": "471,472,479,480",
+                "5": "449,450,457,458",
+                "6": "451,452,459,460",
+                "7": "453,454,461,462",
+                "8": "455,456,463,464"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-31/31-0050",
             "base_page": 0,
             "els_presence": {
@@ -278,7 +413,16 @@
             "device_type": "external_laser_source",
             "lasers": 8,
             "max_banks": 1,
-            "laser_to_asic_lane_mapping": {},
+            "laser_to_asic_lane_mapping": {
+                "1": "497,498,505,506",
+                "2": "499,500,507,508",
+                "3": "501,502,509,510",
+                "4": "503,504,511,512",
+                "5": "481,482,489,490",
+                "6": "483,484,491,492",
+                "7": "485,486,493,494",
+                "8": "487,488,495,496"
+            },
             "i2c_path": "/sys/bus/i2c/devices/i2c-31/31-0050",
             "base_page": 4,
             "els_presence": {
