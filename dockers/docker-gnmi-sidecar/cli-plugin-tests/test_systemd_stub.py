@@ -1066,6 +1066,21 @@ def test_main_loop_continues_after_read_error(ss, config_db, monkeypatch):
     assert len(errors) >= 2
 
 
+def test_file_sync_runs_when_config_db_read_fails(ss, config_db, monkeypatch):
+    """A CONFIG_DB read error must not block the host file sync."""
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = _CERTS
+    monkeypatch.setattr(real_sidecar_common, "_get_config_db", lambda: _FailingConnector())
+    synced = []
+    monkeypatch.setattr(ss_mod, "ensure_sync", lambda: synced.append(1) or True, raising=True)
+    monkeypatch.setattr(sys, "argv", ["systemd_stub.py", "--once"])
+
+    assert ss_mod.main() == 1
+    assert synced == [1]
+    assert not [args for _, args in commands if args[:4] == ("sudo", "-n", "config", "apply-patch")]
+
+
 def test_strict_apply_rejects_leaf_under_missing_parent():
     """Guard for the fake itself: the pre-fix patch shape must fail like the real apply-patch."""
     with pytest.raises(KeyError):

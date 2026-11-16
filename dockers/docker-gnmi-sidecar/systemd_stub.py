@@ -432,6 +432,15 @@ def _cleanup_stale_service_unit() -> None:
     logger.log_notice("Restored gnmi.service and restarted")
 
 
+def _reconcile_config_db_logged() -> bool:
+    try:
+        reconcile_config_db_once()
+        return True
+    except Exception as e:
+        logger.log_error(f"CONFIG_DB reconcile failed: {e}. Will retry next cycle.")
+        return False
+
+
 def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
     cleanup_native_container("gnmi", IS_V1_ENABLED)
@@ -471,8 +480,8 @@ def main() -> int:
 
     try:
         # Reconcile CONFIG_DB before any file sync so auth is correct ASAP
-        reconcile_config_db_once()
-        ok = ensure_sync()
+        reconciled = _reconcile_config_db_logged()
+        ok = ensure_sync() and reconciled
         if not ok:
             logger.log_error("Initial sync failed.")
     except Exception as e:
@@ -486,7 +495,7 @@ def main() -> int:
         try:
             jitter = args.interval * random.uniform(-jitter_pct, jitter_pct)
             time.sleep(args.interval + jitter)
-            reconcile_config_db_once()
+            _reconcile_config_db_logged()
             ok = ensure_sync()
             if not ok:
                 logger.log_error("Sync failed. Will retry in next iteration.")
