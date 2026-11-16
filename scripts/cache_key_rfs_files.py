@@ -32,7 +32,10 @@ def file_key_inputs(cache, consumer, keyed_flags, recipe, environment=""):
             if conditions:
                 conditions[-1] = "else"
         else:
-            match = re.fullmatch(r"(" + NAME + r")\s*(:=|\+=|=|\?=)\s*(.*)", line)
+            match = re.fullmatch(
+                r"(?:(?:override|export)[ \t]+)*(" + NAME
+                + r")\s*(:=|\+=|=|\?=)\s*(.*)", line,
+            )
             if match:
                 name, operator, value = match.groups()
                 assignments.setdefault(name, []).append(

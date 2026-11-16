@@ -288,6 +288,40 @@ add_finding() { printf 'FINDING:%s:%s\\n' "$1" "$2"; }
             )),
         )
 
+    def test_prefixed_late_source_and_mode_assignments_are_reported(self):
+        enabled = "SECURE_BOOT_DB_CERT_ENABLED := " + FILE_PRESENCE + "\n"
+        for prefix in ("override", "export", "override export", "export override"):
+            for variable, value in (
+                ("SECURE_BOOT_DB_CERT", "source.auth"),
+                ("SECURE_UPGRADE_MODE", "dev"),
+            ):
+                for position in ("after enable", "after target snapshot"):
+                    with self.subTest(
+                        prefix=prefix, variable=variable, position=position,
+                    ):
+                        cache = self.file_cache()
+                        assignment = f"{prefix} {variable} := {value}\n"
+                        if position == "after enable":
+                            cache = cache.replace(enabled, enabled + assignment)
+                        else:
+                            cache += "\n" + assignment
+                        self.assertIn(
+                            "FINDING:P1:SECURE_BOOT_DB_CERT",
+                            self.file_findings(cache),
+                        )
+
+    def test_early_prefixed_source_assignments_are_recognized(self):
+        enabled = "SECURE_BOOT_DB_CERT_ENABLED := " + FILE_PRESENCE + "\n"
+        for prefix in ("override", "export", "override export", "export override"):
+            with self.subTest(prefix=prefix):
+                self.assertNotIn(
+                    "FINDING:P1:SECURE_BOOT_DB_CERT",
+                    self.file_findings(self.file_cache().replace(
+                        enabled,
+                        f"{prefix} SECURE_BOOT_DB_CERT := source.auth\n" + enabled,
+                    )),
+                )
+
     def test_extra_or_differently_gated_content_uses_are_reported(self):
         for consumer in [
             FILE_CONSUMER + 'printf "%s" "$SECURE_BOOT_DB_CERT" > rootfs/path\n',
