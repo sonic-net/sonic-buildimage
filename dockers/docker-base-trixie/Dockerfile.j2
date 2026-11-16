@@ -7,6 +7,11 @@ FROM $BASE AS base
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ["reserve-redis-identity.sh", "/tmp/reserve-redis-identity.sh"]
+ARG redis_user_uid
+ARG redis_user_gid
+RUN sh /tmp/reserve-redis-identity.sh "$redis_user_uid" "$redis_user_gid" && rm /tmp/reserve-redis-identity.sh
+
 # Configure data sources for apt/dpkg
 COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]

@@ -92,6 +92,11 @@ sudo mount proc /proc -t proc || true
 echo '[INFO] Build host debian base system...'
 TARGET_PATH=$TARGET_PATH scripts/build_debian_base_system.sh $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT $http_proxy
 
+## Reserve Redis before installing other service packages.
+sudo cp dockers/docker-base-trixie/reserve-redis-identity.sh "$FILESYSTEM_ROOT/tmp/"
+sudo LANG=C chroot "$FILESYSTEM_ROOT" sh /tmp/reserve-redis-identity.sh "$REDIS_USER_UID" "$REDIS_USER_GID"
+sudo rm "$FILESYSTEM_ROOT/tmp/reserve-redis-identity.sh"
+
 # Prepare buildinfo
 sudo SONIC_VERSION_CACHE=${SONIC_VERSION_CACHE} \
 	DBGOPT="${DBGOPT}" \
