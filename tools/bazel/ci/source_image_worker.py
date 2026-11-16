@@ -39,6 +39,8 @@ SNAPSHOT_FALLBACKS = {
     "pool/main/c/cdebconf/libdebconfclient0_0.280_amd64.deb": "219dec5cd95ea5be91161ab1d30dc3f19efb6e01",
     "pool/main/libs/libselinux/libselinux1_3.8.1-1_amd64.deb": "44b247687c034c8a4142204f0827f7286614b354",
 }
+CACHE_MOUNT = Path("/bazel_cache")
+WORK_MOUNT = Path("/actions")
 
 
 def mirror_configuration(original):
@@ -308,6 +310,39 @@ def memory_snapshot():
     return result
 
 
+def cache_layout(image):
+    """Share immutable downloads/action results; keep each Bazel server private."""
+    require(image in DRIVERS, "Unknown source image")
+
+    def checked(raw, mount):
+        require(isinstance(raw, str) and re.fullmatch(r"/[A-Za-z0-9_./-]+", raw),
+                "Invalid Bazel cache/state path")
+        path = Path(raw)
+        require(path.is_absolute() and not any(part in (".", "..") for part in raw.split("/"))
+                and path.is_relative_to(mount), "Bazel cache/state path is outside its mount")
+        require(path.resolve() == path, "Bazel cache/state path must not traverse symlinks")
+        require(not path.exists() or path.is_dir(), "Bazel cache/state path is not a directory")
+        return path
+
+    cache = checked(os.environ.get("SONIC_BAZEL_CACHE_ROOT", str(CACHE_MOUNT)), CACHE_MOUNT)
+    state = checked(os.environ.get("SONIC_BAZEL_STATE_ROOT", str(WORK_MOUNT / "bazel")), WORK_MOUNT)
+    paths = {"repository": cache / "repository", "disk": cache / "disk", "distdir": cache / "distdir",
+             "bazelisk": os.environ.get("BAZELISK_HOME", str(cache / "bazelisk")),
+             "output_base": state / image / "output-base"}
+    for name, path in paths.items():
+        paths[name] = checked(str(path), WORK_MOUNT if name == "output_base" else CACHE_MOUNT)
+    values = list(paths.values())
+    require(all(not a.is_relative_to(b) and not b.is_relative_to(a)
+                for index, a in enumerate(values) for b in values[index + 1:]),
+            "Bazel cache/state directories must not overlap")
+    # The verified distdir publisher uses atomic replacement, but its parent
+    # directories must not redirect a shared write outside the cache mount.
+    for name, (version, _) in SOURCES.items():
+        directory = checked(str(paths["distdir"] / (name + "-" + version)), CACHE_MOUNT)
+        require(not (directory / "src.tar.gz").is_symlink(), "Source archive must not be a symlink")
+    return paths
+
+
 def launcher_text(binary, base, profile):
     flags = ["--remote_cache=", "--remote_download_regex=(^|.*/)tools/build_tools/kernel_runtime_(amd64|arm64)(/.*)?$",
              "--jobs=" + str(profile["jobs"]), "--local_resources=cpu=" + str(profile["cpu"]),
@@ -354,7 +389,7 @@ def prepare(args):
     require(os.getuid() == 1000 and os.getgid() == 1000, "Expected worker UID/GID1000")
     require(platform.machine() == "x86_64" and
             platform.freedesktop_os_release().get("VERSION_CODENAME") == "trixie", "Expected native AMD64 Debian Trixie")
-    require(Path("/.dockerenv").is_file() and workspace.is_relative_to("/actions/_work"), "Expected a private SONiC slave workspace")
+    require(Path("/.dockerenv").is_file() and workspace.is_relative_to(WORK_MOUNT / "_work"), "Expected a private SONiC slave workspace")
     require(not any(os.environ.get(k) for k in ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH"))
             and not Path("/var/run/docker.sock").exists(), "Refuse an inherited Docker daemon")
     runner = os.environ.get("RUNNER_NAME", "")
@@ -383,25 +418,24 @@ def prepare(args):
     catalog = catalog_for(args.image, workspace)
     if args.image == "sysmgr":
         run(["git", "-C", str(workspace), "submodule", "update", "--init", "--", "src/sonic-sysmgr/gnoi"])
-    cache = Path("/bazel_cache/source-images") / runner
-    require(cache.resolve() == cache, "Cache path must not traverse symlinks")
-    for name in ("repository", "disk", "bazelisk", args.image + "/output-base"):
-        (cache / name).mkdir(parents=True, exist_ok=True)
+    caches = cache_layout(args.image)
+    for path in caches.values():
+        path.mkdir(parents=True, exist_ok=True)
     temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
-    require(temporary.is_relative_to("/actions/_work"), "Expected a worker-private temporary directory")
-    distdirs, download_receipt = prepare_source_downloads(temporary / "source-image-inputs", cache)
+    require(temporary.is_relative_to(WORK_MOUNT / "_work"), "Expected a worker-private temporary directory")
+    distdirs, download_receipt = prepare_source_downloads(temporary / "source-image-inputs", caches["distdir"].parent)
     (artifacts / "worker-source-downloads.json").write_text(json.dumps(download_receipt, indent=2) + "\n")
     launch = temporary / "source-image-bazel"
-    launch.write_text(launcher_text(shutil.which("bazel"), cache / args.image / "output-base", profile))
+    launch.write_text(launcher_text(shutil.which("bazel"), caches["output_base"], profile))
     launch.chmod(0o755)
     mirror = temporary / "source-image-mirrors.cfg"
     mirror.write_bytes(mirror_configuration(source_mirrors.download()))
     rc = workspace / ".bazelrc.user"
     require(not rc.exists(), "Expected a fresh source checkout without a local Bazel override")
     rc.write_text("\n".join([
-        "# Private persistent source-image worker caches; no Make package cache.",
-        "common --repository_cache=" + str(cache / "repository"),
-        "common --disk_cache=" + str(cache / "disk"),
+        "# Shared download/action caches and a worker-private Bazel output base; no Make package cache.",
+        "common --repository_cache=" + str(caches["repository"]),
+        "common --disk_cache=" + str(caches["disk"]),
         "common --downloader_config=" + str(mirror),
         *["common --distdir=" + str(directory) for directory in distdirs],
     ]) + "\n")
@@ -414,7 +448,7 @@ def prepare(args):
     client.mkdir(mode=0o700)
     daemon_config = temporary / "source-image-dockerd.json"
     daemon_config.write_text("{}\n")
-    env = {"BAZEL_REAL": str(launch), "BAZELISK_HOME": str(cache / "bazelisk"),
+    env = {"BAZEL_REAL": str(launch), "BAZELISK_HOME": str(caches["bazelisk"]),
            "SONIC_BAZEL_REGISTRY_REVISION": catalog, "CI_HEAD_SHA": args.revision, "CI_BASE_SHA": "",
            "DOCKER_HOST": "unix:///var/run/docker.sock", "DOCKER_CONFIG": str(client), "BAZELISK_GITHUB_TOKEN": ""}
     state = {"image": args.image, "revision": args.revision, "workspace": str(workspace), "environment": env,
@@ -444,7 +478,8 @@ def prepare(args):
         raise ValueError("Private Docker did not become ready")
     receipt = {"schema": 1, "status": "prepared", "worker": runner, "architecture": "amd64", "distribution": "trixie",
                "source_revision": args.revision, "dispatcher_revision": output(["git", "-C", str(ROOT), "rev-parse", "HEAD"]),
-               "review_catalog": catalog, "slave_image": marker_data["base_image"], "cache_mode": "persistent_worker_local",
+               "review_catalog": catalog, "slave_image": marker_data["base_image"],
+               "cache_mode": "shared_downloads_and_actions_private_output",
                "build_profile": profile, "memory": memory_snapshot(),
                "docker_network": "none", "image": args.image}
     safe_json(receipt)

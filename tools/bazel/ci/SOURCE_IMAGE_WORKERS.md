@@ -115,8 +115,24 @@ complete expected file inventory and original receipt before the fixed hashes.
 The legacy artifact's Redis test-helper files are recognized but never used.
 The selected run/job/artifact identities are retained with the worker evidence.
 
-Each worker retains its repository cache, disk cache and per-image Bazel output
-base under `/bazel_cache/source-images/<worker>/`. The job starts its own private
+Workers on the same manager share downloaded repositories and action results
+through `SONIC_BAZEL_CACHE_ROOT` (default `/bazel_cache`), using its `repository`,
+`disk`, `bazelisk` and `distdir` directories. An existing `BAZELISK_HOME` under
+the shared cache mount is respected. Runner names do not partition these
+caches. The five source archives are still verified for every handoff and
+published atomically; downloaded artifact inventories and receipts stay in
+the worker's private temporary directory.
+
+Each worker keeps its Bazel server and output tree under
+`SONIC_BAZEL_STATE_ROOT/<image>/output-base` (default
+`/actions/bazel/<image>/output-base`). The manager must mount a different
+`/actions` work volume into each worker; equal container-visible paths then
+refer to distinct output trees. Cache paths must remain under `/bazel_cache`,
+state paths under `/actions`, without symlinks, traversal or overlapping cache
+directories. These environment variables configure this dispatcher; Bazel
+itself receives explicit repository/disk-cache and output-base options.
+Existing per-worker caches are left untouched; this change neither moves nor
+deletes them. The job starts its own private
 Docker daemon and uses the existing nested-cgroup helper. It shuts down its
 idle Bazel server before the loaded-container phase, whose existing 4 GiB limit
 is preserved. Memory/peak/anonymous-page/file-cache/OOM measurements accompany

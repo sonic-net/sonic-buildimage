@@ -17,6 +17,7 @@ import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 import unittest
+from contextlib import ExitStack
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location("source_image_worker", ROOT / "tools/bazel/ci/source_image_worker.py")
@@ -284,6 +285,151 @@ class ImageWorkerTest(unittest.TestCase):
         self.assertIn('if args.image == "syncd":\n        prepare_tap_fixture(artifacts)', source)
         self.assertLess(source.index('prepare_tap_fixture(artifacts)'), source.index('prepare_source_downloads('))
         self.assertLess(source.index('prepare_tap_fixture(artifacts)'), source.index('launcher_text('))
+
+    def test_cache_identity_ignores_runner_and_keeps_private_image_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache, first, second = root / "cache", root / "worker1", root / "worker2"
+            with patch.object(worker, "CACHE_MOUNT", cache), patch.object(worker, "WORK_MOUNT", first), \
+                    patch.dict(os.environ, {"RUNNER_NAME": "worker-one"}, clear=True):
+                a = worker.cache_layout("sflow")
+                os.environ["RUNNER_NAME"] = "worker-two"
+                self.assertEqual(worker.cache_layout("sflow"), a)
+                self.assertNotEqual(worker.cache_layout("sysmgr")["output_base"], a["output_base"])
+            with patch.object(worker, "CACHE_MOUNT", cache), patch.object(worker, "WORK_MOUNT", second), \
+                    patch.dict(os.environ, {}, clear=True):
+                b = worker.cache_layout("sflow")
+            for name in ("repository", "disk", "distdir", "bazelisk"):
+                self.assertEqual(a[name], b[name])
+                self.assertEqual(a[name], cache / name)
+            self.assertEqual(a["output_base"], first / "bazel/sflow/output-base")
+            self.assertEqual(b["output_base"], second / "bazel/sflow/output-base")
+
+    def test_cache_roots_reject_traversal_wrong_mount_and_overlapping_bazelisk(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache, actions = root / "cache", root / "actions"
+            bad = [
+                {"SONIC_BAZEL_CACHE_ROOT": "relative"},
+                {"SONIC_BAZEL_CACHE_ROOT": str(actions)},
+                {"SONIC_BAZEL_STATE_ROOT": str(cache)},
+                {"SONIC_BAZEL_CACHE_ROOT": str(cache) + "/../cache"},
+                {"SONIC_BAZEL_STATE_ROOT": str(actions) + "/./bazel"},
+                {"SONIC_BAZEL_CACHE_ROOT": str(cache / "bad\ncommon")},
+                {"SONIC_BAZEL_CACHE_ROOT": str(cache / 'bad"quote')},
+                {"SONIC_BAZEL_CACHE_ROOT": str(cache / "bad\\escape")},
+                {"BAZELISK_HOME": ""},
+                {"BAZELISK_HOME": str(cache) + "/./bazelisk"},
+                {"BAZELISK_HOME": str(cache / "disk")},
+                {"BAZELISK_HOME": str(cache / "disk/child")},
+                {"BAZELISK_HOME": str(cache)},
+                {"BAZELISK_HOME": str(actions / "bazelisk")},
+            ]
+            with patch.object(worker, "CACHE_MOUNT", cache), patch.object(worker, "WORK_MOUNT", actions):
+                for env in bad:
+                    with self.subTest(env=env), patch.dict(os.environ, env, clear=True), self.assertRaises(ValueError):
+                        worker.cache_layout("sflow")
+                with patch.dict(os.environ, {"SONIC_BAZEL_CACHE_ROOT": str(cache / "selected"),
+                        "SONIC_BAZEL_STATE_ROOT": str(actions / "selected"),
+                        "BAZELISK_HOME": str(cache / "existing-bazelisk")}, clear=True):
+                    layout = worker.cache_layout("sflow")
+                    self.assertEqual(layout["disk"], cache / "selected/disk")
+                    self.assertEqual(layout["bazelisk"], cache / "existing-bazelisk")
+                    self.assertEqual(layout["output_base"], actions / "selected/sflow/output-base")
+
+    def test_cache_layout_rejects_existing_links_and_non_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache, actions = root / "cache", root / "actions"
+            cache.mkdir()
+            actions.mkdir()
+            (root / "outside").mkdir()
+            candidates = [cache / "disk", cache / "repository", cache / "bazelisk", cache / "distdir",
+                          cache / "distdir/ape-1.0.1", cache / "distdir/ape-1.0.1/src.tar.gz",
+                          actions / "bazel", actions / "bazel/sflow/output-base"]
+            with patch.object(worker, "CACHE_MOUNT", cache), patch.object(worker, "WORK_MOUNT", actions), \
+                    patch.dict(os.environ, {}, clear=True):
+                for path in candidates:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    with self.subTest(path=path):
+                        path.symlink_to(root / "outside")
+                        with self.assertRaises(ValueError):
+                            worker.cache_layout("sflow")
+                        path.unlink()
+                (cache / "disk").write_text("not a directory")
+                with self.assertRaises(ValueError):
+                    worker.cache_layout("sflow")
+
+    def test_prepare_wires_shared_caches_into_actual_rc_environment_and_launcher(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache, actions = root / "cache", root / "actions"
+            workspace, temporary = actions / "_work/source", actions / "_work/_temp"
+            artifacts = temporary / "evidence"
+            artifacts.mkdir(parents=True)
+            source = workspace / "tools/bazel/ci"
+            source.mkdir(parents=True)
+            for name in ("sflow_image.py", "sflow_loaded.py", "libteam_draft_bazel.sh", "review_bazel.sh"):
+                (source / name).write_text("reviewed fixture")
+            binary = root / "bazel"
+            binary.write_text("#!" + sys.executable + "\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n")
+            binary.chmod(0o755)
+            marker = SimpleNamespace(lstat=lambda: SimpleNamespace(st_mode=0o100444, st_uid=0),
+                read_text=lambda: json.dumps({"uid": 1000, "gid": 1000, "work_root": "/actions/_work",
+                                             "base_image": "sha256:" + "a" * 64}))
+            def paths(value):
+                if value == "/etc/sonic-slave-github-runner.json": return marker
+                if value in ("/.dockerenv", "/etc/ssl/certs/java/cacerts"):
+                    return SimpleNamespace(is_file=lambda: True)
+                if value == "/var/run/docker.sock": return SimpleNamespace(exists=lambda: False)
+                return Path(value)
+            env = {"RUNNER_NAME": "sonic-slave-lgh114-2", "RUNNER_TEMP": str(temporary),
+                   "SONIC_BAZEL_CACHE_ROOT": str(cache / "shared"),
+                   "SONIC_BAZEL_STATE_ROOT": str(actions / "private"),
+                   "BAZELISK_HOME": str(cache / "existing-bazelisk"),
+                   "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "1"}
+            downloads = [cache / "shared/distdir" / (name + "-" + version) for name, (version, _) in worker.SOURCES.items()]
+            mirror = b"verified mirror fixture\n"
+            with ExitStack() as stack:
+                for target, value in (("CACHE_MOUNT", cache), ("WORK_MOUNT", actions), ("Path", paths)):
+                    stack.enter_context(patch.object(worker, target, value))
+                stack.enter_context(patch.object(worker.source_mirrors, "SHA256", hashlib.sha256(mirror).hexdigest()))
+                stack.enter_context(patch.dict(os.environ, env, clear=True))
+                for obj, name, value in ((worker.os, "getuid", 1000), (worker.os, "getgid", 1000),
+                        (worker.os, "access", True), (worker.platform, "machine", "x86_64"),
+                        (worker.platform, "freedesktop_os_release", {"VERSION_CODENAME": "trixie"}),
+                        (worker, "measure", {"status": "passed", "build_profile": worker.select_build_profile(20 * 1024**3, 4)}),
+                        (worker, "catalog_for", "b" * 40),
+                        (worker, "memory_snapshot", {})):
+                    stack.enter_context(patch.object(obj, name, return_value=value))
+                for name in ("source_check", "prepare_validation_tools", "run"):
+                    stack.enter_context(patch.object(worker, name))
+                handoff = stack.enter_context(patch.object(worker, "prepare_source_downloads", return_value=(downloads, [])))
+                stack.enter_context(patch.object(worker.shutil, "which", return_value=str(binary)))
+                stack.enter_context(patch.object(worker, "output", side_effect=lambda argv: "ext4" if argv[0] == "findmnt" else "c" * 40))
+                stack.enter_context(patch.object(worker.source_mirrors, "download", return_value=mirror))
+                stack.enter_context(patch.object(worker.subprocess, "Popen"))
+                stack.enter_context(patch.object(worker.subprocess, "run", return_value=SimpleNamespace(
+                    returncode=0, stdout=str(temporary / "source-image-docker-123-1"))))
+                worker.prepare(SimpleNamespace(workspace=workspace, artifacts=artifacts, image="sflow", revision="d" * 40))
+                handoff.assert_called_once_with(temporary / "source-image-inputs", cache / "shared")
+            rc = (workspace / ".bazelrc.user").read_text().splitlines()
+            self.assertIn("common --repository_cache=" + str(cache / "shared/repository"), rc)
+            self.assertIn("common --disk_cache=" + str(cache / "shared/disk"), rc)
+            self.assertEqual([line for line in rc if line.startswith("common --distdir=")],
+                             ["common --distdir=" + str(path) for path in downloads])
+            state = json.loads((artifacts / "worker-private.json").read_text())
+            self.assertEqual(state["environment"]["BAZELISK_HOME"], str(cache / "existing-bazelisk"))
+            launch = state["environment"]["BAZEL_REAL"]
+            self.assertTrue(Path(launch).is_relative_to(temporary))
+            argv = json.loads(subprocess.check_output([sys.executable, launch, "build", "//fixture:target"], text=True))
+            self.assertEqual(argv[0], "--output_base=" + str(actions / "private/sflow/output-base"))
+            self.assertIn("--remote_cache=", argv)
+            self.assertFalse(any("sonic-slave-lgh114-2" in line for line in rc + argv))
+            self.assertEqual(sorted(path.name for path in (cache / "shared").iterdir()), ["disk", "distdir", "repository"])
+            self.assertTrue((artifacts / "worker-source-downloads.json").is_file())
+            self.assertEqual(json.loads((artifacts / "worker.json").read_text())["cache_mode"],
+                             "shared_downloads_and_actions_private_output")
 
     def test_validation_bootstrap_installs_only_missing_execution_tools(self):
         with tempfile.TemporaryDirectory() as directory:
