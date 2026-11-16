@@ -997,8 +997,12 @@ def parse_dpg(dpg, hname, ports=None):
                     ifname = []
                     nexthop = []
                     for nexthop_tuple in ipnh.find(str(QName(ns, "AttachTo"))).text.split(";"):
+                        if nexthop_tuple.split(",")[0] in skipped_pcs:
+                            continue
                         ifname.append(nexthop_tuple.split(",")[0])
                         nexthop.append(nexthop_tuple.split(",")[1])
+                    if not nexthop:
+                        continue
                     if ipnh.find(str(QName(ns, "Advertise"))):
                        advertise = ipnh.find(str(QName(ns, "Advertise"))).text
                     else:

@@ -61,6 +61,7 @@ speed**, not the lowest speed. Equal-speed ties use the mode name that comes
 last alphabetically. A cage without a supported one-port mode causes an error,
 even if multi-port modes exist. This requires a `platform.json` with breakout modes.
 Supply an explicit selection for cages without a supported one-port mode.
+Overlapping entries keep the first generated port in platform-file order.
 
 Minigraph, `-S` selections, and minimum generation write `PORT` only, never
 `BREAKOUT_CFG`. Only direct `-k` generation from an installed `hwsku.json`

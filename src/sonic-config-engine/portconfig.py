@@ -563,6 +563,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
     ports = {}
     port_alias_map = {}
     port_alias_asic_map = {}
+    used_lanes = set()
 
     port_dict = readJson(platform_json_file)
     if port_dict is None:
@@ -589,6 +590,11 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
 
         child_ports = get_child_ports(intf, brkout_mode, platform_json_file,
                                      select_minimum=not hwsku_json_file)
+        if not hwsku_json_file:
+            lanes = set(child_ports[intf]["lanes"].split(",")) - {""}
+            if used_lanes & lanes:
+                continue
+            used_lanes.update(lanes)
 
         # take optional fields from hwsku.json
         hwsku_entry = hwsku_dict[INTF_KEY]
