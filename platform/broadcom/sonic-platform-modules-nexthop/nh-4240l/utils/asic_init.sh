@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Ran during boot up and after syncd reset
-
 LOCKFD=200
 LOCKFILE="/var/run/nexthop-asic-init.lock"
 ASIC_BRIDGE="00:02.1"
@@ -57,7 +55,6 @@ fpga_read() {
 }
 
 function cleanup() {
-  # --end before the unlock, or a queued run's rows get deleted by ours.
   nh_asic_powercycle --end
   /usr/bin/flock -u ${LOCKFD}
   logger -t $LOG_TAG -p $LOG_PRIO "Released ${LOCKFILE}"
@@ -89,18 +86,11 @@ if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
   /etc/init.d/opennsl-modules stop
 fi
 
-# The ASIC is down from here until cleanup runs.
 LOG_TAG="$LOG_TAG" nh_asic_powercycle --begin --xcvr-cache
 
-# Set DP_PWR_ON = 1
-# DP_POWR_ON should already be 1 in normal circumstances, but it's possible
-# a power glitch brings it to 0. The system may kernel panic if we bring up
-# the ASIC when DP_PWR_ON = 0.
 fpga_write 0x90  0x1 "9:9"
 
-# Try power cycling, up to two times, or until Switch ASIC chip is found
 for attempt in {0..2}; do
-  # Powercycle the asic, then take it out of reset
   fpga_write 0x8 0x1 "3:3"
   sleep 2
   fpga_write 0x8 0x0 "3:3"
@@ -108,10 +98,8 @@ for attempt in {0..2}; do
 
   fpga_write 0x8 0x1 "10:10"
 
-  # We need to wait for the asic to come up
   sleep 3
 
-  # Log ASIC_PGOOD
   pg_bit=$(fpga_read 0x94 "15:15")
   logger -t "$LOG_TAG" -p "$LOG_PRIO" "ASIC_PGOOD = $pg_bit"
   if [ $(( pg_bit )) -eq 1 ]; then
@@ -120,7 +108,6 @@ for attempt in {0..2}; do
     logger -t "$LOG_TAG" -p "$LOG_ERR" "ASIC power good bit not set"
   fi
 
-  # Check if switch ASIC is up
   lspci -n | grep -q "$ASIC_BDF"
   if [ $? -eq 0 ]; then
     if [ "$attempt" -eq 0 ]; then
@@ -129,18 +116,9 @@ for attempt in {0..2}; do
         logger -t "$LOG_TAG" -p "$LOG_PRIO" "Switch ASIC is up after power cycle $attempt"
     fi
 
-    # This entire section may vary
     logger -t $LOG_TAG -p $LOG_PRIO "Current lspci error(s) output"
     output=$(lspci -vvv 2>/dev/null | grep -i -e '^0' -e 'CESta' | grep -B 1 -e 'CESta' | grep -B 1 -e '+ ' -e '+$')
     logger -t $LOG_TAG -p $LOG_PRIO "lspci Errors: ${output}"
-
-    logger -t $LOG_TAG -p $LOG_PRIO "Clearing lspci errors"
-    # setpci -s "$ASIC_BRIDGE" 0x160.l=$(setpci -s "$ASIC_BRIDGE" 0x160.l)
-
-    # Enable CommClk use
-    # setpci -s "$ASIC_BDF" 0xbc.w=0x40
-    # setpci -s "$ASIC_BRIDGE" 0x68.w=0x40
-    # setpci -s "$ASIC_BRIDGE" 0x68.w=0x60
 
     if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
       logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"

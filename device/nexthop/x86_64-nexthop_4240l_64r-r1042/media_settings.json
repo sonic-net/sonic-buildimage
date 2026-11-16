@@ -21,16 +21,6 @@
                     "lane5": "0x1",
                     "lane6": "0x1",
                     "lane7": "0x1"
-                },
-                "reach_mode": {
-                    "lane0": "ER",
-                    "lane1": "ER",
-                    "lane2": "ER",
-                    "lane3": "ER",
-                    "lane4": "ER",
-                    "lane5": "ER",
-                    "lane6": "ER",
-                    "lane7": "ER"
                 }
             }
         }
