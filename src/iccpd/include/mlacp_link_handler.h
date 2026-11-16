@@ -49,6 +49,7 @@ void update_peerlink_isolate_from_pif(struct CSM *csm, struct PeerInterface *pif
 void mlacp_mlag_link_add_handler(struct CSM *csm, struct LocalInterface *lif);
 void mlacp_mlag_link_del_handler(struct CSM *csm, struct LocalInterface *lif);
 void set_peerlink_mlag_port_learn(struct LocalInterface *lif, int enable);
+void mlacp_peer_link_learning_disable(struct CSM *csm);
 void peerlink_port_isolate_cleanup(struct CSM* csm);
 void update_peerlink_isolate_from_all_csm_lif(struct CSM* csm);
 
