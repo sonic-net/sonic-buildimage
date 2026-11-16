@@ -1,0 +1,7 @@
+hiredis (1.2.0-6+sonic1) unstable; urgency=medium
+
+  * Create Redis sockets with SOCK_CLOEXEC to prevent child exec inheritance.
+  * Test descriptor protection at socket creation and after reconnect.
+
+ -- Ashutosh Agrawal <ashu@cisco.com>  Sat, 17 Oct 2026 10:00:00 -0700
+
