@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # Generate supervisord config file
 mkdir -p /etc/supervisor/conf.d/
 

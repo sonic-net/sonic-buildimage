@@ -1,4 +1,5 @@
 import ipaddress
+import re
 
 from swsscommon import swsscommon
 
@@ -18,6 +19,10 @@ COMMON_FALSE_STRING = "false"
 ADDRESS_STATE_KEY = "state"
 ADDRESS_ACTIVE_STATE = "active"
 ADDRESS_INACTIVE_STATE = "inactive"
+_PREFIX_LIST_RE = re.compile(
+    r"^(no )?(ip|ipv6) prefix-list (\S+)(?: seq ([0-9]+))?"
+    r"(?: (permit|deny) (\S+)((?: (?:ge|le) [0-9]+)*))?$"
+)
 
 
 class AggregateAddressMgr(Manager):
@@ -56,9 +61,19 @@ class AggregateAddressMgr(Manager):
                     self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
             log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
+            inactive_addresses = []
             for address in addresses:
-                if self.address_del_handler(address[0], address[1]):
+                address_state = address[1]
+                if address_state.get(ADDRESS_STATE_KEY) == ADDRESS_INACTIVE_STATE:
+                    inactive_addresses.append(address)
+                    continue
+                if self.address_del_handler(address[0], address_state):
                     self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
+            if inactive_addresses:
+                snapshot_state = self._build_effective_state()
+                if snapshot_state is not None:
+                    for address in inactive_addresses:
+                        self._reconcile_inactive_address(snapshot_state, address[0], address[1])
         else:
             log_info("AggregateAddressMgr::BBR state changed to unknown with bbr_required addresses %s" % addresses)
 
@@ -184,6 +199,50 @@ class AggregateAddressMgr(Manager):
         self.cfg_mgr.push_list(cmd_list)
         return True
 
+    def _build_effective_state(self):
+        self.cfg_mgr.update()
+        running_lines = self.cfg_mgr.get_text()
+        if not any(line.strip() for line in running_lines):
+            log_err("AggregateAddressMgr::FRR snapshot is unavailable or empty, skip inactive reconciliation")
+            return None
+        bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
+        normalized_asn = _normalize_asn(bgp_asn)
+        state = {"aggregates": set(), "prefix_rules": set()}
+        if (
+            normalized_asn is None or
+            not _apply_config_lines(state, running_lines, normalized_asn) or
+            not _apply_config_lines(state, self.cfg_mgr.changes.splitlines(), normalized_asn)
+        ):
+            log_err("AggregateAddressMgr::FRR snapshot or pending changes are invalid, skip inactive reconciliation")
+            return None
+        return state
+
+    def _reconcile_inactive_address(self, state, key, data):
+        prefix = key2prefix(key)
+        net, reason = validate_prefix(prefix)
+        if net is None:
+            log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
+            return
+        bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
+        is_v4 = net.version == 4
+        af = "ipv4" if is_v4 else "ipv6"
+        family = "ip" if is_v4 else "ipv6"
+        cmd_list = []
+        normalized_prefix = str(net)
+        if (af, normalized_prefix) in state["aggregates"]:
+            cmd_list.extend(generate_aggregate_address_commands(asn=bgp_asn, prefix=prefix, is_v4=is_v4, is_remove=True))
+        prefix_lists = (
+            (data.get(AGGREGATE_ADDRESS_PREFIX_LIST_KEY, ""), None, False),
+            (data.get(CONTRIBUTING_ADDRESS_PREFIX_LIST_KEY, ""), 32 if is_v4 else 128, True),
+        )
+        for name, le, is_con in prefix_lists:
+            if name and _prefix_rule_exists(state, family, name, normalized_prefix, le):
+                cmd_list.extend(generate_prefix_list_commands(name, prefix, is_v4, is_con, True))
+        if cmd_list:
+            log_info("AggregateAddressMgr::inactive address %s reconciliation cmd_list: %s" % (prefix, cmd_list))
+            self.cfg_mgr.push_list(cmd_list)
+            _apply_config_lines(state, cmd_list, _normalize_asn(bgp_asn))
+
     def get_addresses_from_state_db(self, bbr_required_only=False):
         addresses = []
         for key in self.address_table.getKeys():
@@ -218,6 +277,137 @@ class AggregateAddressMgr(Manager):
     def del_address_state(self, key):
         self.address_table.delete(key)
         log_info("AggregateAddressMgr::State of aggregate address %s is removed" % key)
+
+
+def _apply_config_lines(state, lines, bgp_asn):
+    current_router = False
+    current_af = None
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("!"):
+            continue
+        tokens = line.split()
+        if tokens[:2] == ["router", "bgp"]:
+            if len(tokens) < 3:
+                return False
+            router_asn = _normalize_asn(tokens[2])
+            if router_asn is None:
+                return False
+            current_router = len(tokens) == 3 and router_asn == bgp_asn
+            current_af = None
+            continue
+        prefix_list = _apply_prefix_list_line(state, " ".join(tokens))
+        if prefix_list is not None:
+            if not prefix_list:
+                return False
+            continue
+        if tokens[0] in ("router", "end", "exit"):
+            current_router = False
+            current_af = None
+            continue
+        if tokens[0] == "address-family":
+            current_af = None
+            if current_router and tokens[1:] in (
+                ["ipv4"], ["ipv4", "unicast"], ["ipv6"], ["ipv6", "unicast"]
+            ):
+                current_af = tokens[1]
+            continue
+        if line == "exit-address-family":
+            current_af = None
+            continue
+        remove = tokens[0] == "no"
+        idx = 1 if remove else 0
+        if current_router and current_af and tokens[idx:idx + 1] == ["aggregate-address"]:
+            if len(tokens) < idx + 2:
+                return False
+            prefix = _normalize_prefix(tokens[idx + 1], current_af)
+            if prefix is None:
+                return False
+            if remove:
+                state["aggregates"].discard((current_af, prefix))
+            else:
+                state["aggregates"].add((current_af, prefix))
+    return True
+
+
+def _apply_prefix_list_line(state, line):
+    tokens = line.split()
+    if tokens[:1] == ["no"]:
+        tokens = tokens[1:]
+    if tokens[:2] in (["ip", "prefix-list"], ["ipv6", "prefix-list"]):
+        if tokens[2:] == ["sequence-number"] or tokens[3:4] == ["description"]:
+            return True
+    match = _PREFIX_LIST_RE.fullmatch(line)
+    if match is None:
+        if line.startswith(("ip prefix-list", "ipv6 prefix-list", "no ip prefix-list", "no ipv6 prefix-list")):
+            return False
+        return None
+    remove, family, name, seq, action, prefix, modifiers = match.groups()
+    if action is None and not remove:
+        return False
+    rules = state["prefix_rules"]
+    seq = int(seq) if seq is not None else None
+    # Unsequenced queued additions do not reveal which sequence FRR will assign.
+    if seq is not None and any(rule[:3] == (family, name, None) for rule in rules):
+        return False
+    if action is None:
+        state["prefix_rules"] = {
+            rule for rule in rules
+            if rule[:2] != (family, name) or (seq is not None and rule[2] != seq)
+        }
+        return True
+    prefix = "any" if prefix == "any" else _normalize_prefix(prefix, "ipv4" if family == "ip" else "ipv6")
+    if prefix is None:
+        return False
+    pairs = re.findall(r"(ge|le) ([0-9]+)", modifiers or "")
+    if len({name for name, _ in pairs}) != len(pairs):
+        return False
+    bounds = {name: int(value) for name, value in pairs}
+    rule = (family, name, seq, action, prefix, bounds.get("ge"), bounds.get("le"))
+    if remove:
+        if seq is not None:
+            rules = {current for current in rules if current[:3] != (family, name, seq)}
+        else:
+            matches = [
+                current for current in rules
+                if current[:2] == (family, name) and current[3:] == rule[3:]
+            ]
+            if matches:
+                rules.remove(min(matches, key=lambda current: current[2] or 4294967296))
+    elif seq is not None:
+        rules = {current for current in rules if current[:3] != (family, name, seq)}
+        rules.add(rule)
+    elif not any(current[:2] == (family, name) and current[3:] == rule[3:] for current in rules):
+        rules.add(rule)
+    state["prefix_rules"] = rules
+    return True
+
+
+def _prefix_rule_exists(state, family, name, prefix, le):
+    return any(
+        rule[:2] == (family, name) and rule[3:] == ("permit", prefix, None, le)
+        for rule in state["prefix_rules"]
+    )
+
+
+def _normalize_prefix(prefix, af):
+    if "/" not in prefix:
+        return None
+    try:
+        net = ipaddress.ip_network(prefix, strict=True)
+    except ValueError:
+        return None
+    return str(net) if net.version == (4 if af == "ipv4" else 6) else None
+
+
+def _normalize_asn(asn):
+    parts = str(asn).split(".")
+    if not all(part.isdigit() for part in parts) or len(parts) not in (1, 2):
+        return None
+    if len(parts) == 2 and any(int(part) > 65535 for part in parts):
+        return None
+    value = int(parts[0]) if len(parts) == 1 else int(parts[0]) * 65536 + int(parts[1])
+    return value if 0 < value <= 4294967295 else None
 
 
 def key2prefix(key):

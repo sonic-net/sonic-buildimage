@@ -3,11 +3,13 @@
 
 import argparse
 import fcntl
+import ipaddress
 import inspect
 import json
 import os
 import re
 import shutil
+import socket
 import ssl
 import subprocess
 import sys
@@ -25,11 +27,11 @@ from swsscommon import swsscommon
 
 KUBE_ADMIN_CONF = "/etc/sonic/kube_admin.conf"
 KUBELET_YAML = "/var/lib/kubelet/config.yaml"
-SERVER_ADMIN_URL = "https://{}/admin.conf"
 LOCK_FILE = "/var/lock/kube_join.lock"
 FLANNEL_CONF_FILE = "/usr/share/sonic/templates/kube_cni.10-flannel.conflist"
 CNI_DIR = "/etc/cni/net.d"
-K8S_CA_URL = "https://{}:{}/api/v1/namespaces/default/configmaps/kube-root-ca.crt"
+K8S_CA_PATH = "/api/v1/namespaces/default/configmaps/kube-root-ca.crt"
+K8S_CA_TIMEOUT = 10
 AME_CRT = "/etc/sonic/credentials/restapiserver.crt"
 AME_KEY = "/etc/sonic/credentials/restapiserver.key"
 
@@ -81,6 +83,141 @@ def _get_validated_device_name():
         return ""
     return name
 
+
+def _is_prohibited_address(address):
+    if address.version == 6 and address.ipv4_mapped:
+        return _is_prohibited_address(address.ipv4_mapped)
+    return (address.is_loopback or address.is_link_local or
+            address.is_multicast or address.is_unspecified or
+            address.is_reserved)
+
+
+def _validate_server_destination(server, port):
+    if not isinstance(server, str) or not server or server != server.strip():
+        raise IOError("Kubernetes server must be a non-empty host name or IP address")
+
+    bracketed = server.startswith("[") or server.endswith("]")
+    if bracketed:
+        if not (server.startswith("[") and server.endswith("]")):
+            raise IOError("Kubernetes server has invalid IPv6 brackets")
+        server = server[1:-1]
+    if "%" in server:
+        raise IOError("Kubernetes server IPv6 scope identifiers are not supported")
+
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        raise IOError("Kubernetes server port is invalid")
+    if port < 1 or port > 65535:
+        raise IOError("Kubernetes server port is out of range")
+
+    try:
+        addresses = [ipaddress.ip_address(server)]
+    except ValueError:
+        if bracketed:
+            raise IOError("Kubernetes server has an invalid bracketed IPv6 address")
+        try:
+            addrinfo = socket.getaddrinfo(
+                server, port, type=socket.SOCK_STREAM)
+        except (OSError, UnicodeError) as error:
+            raise IOError("Kubernetes server cannot be resolved: {}".format(error))
+        addresses = []
+        try:
+            for item in addrinfo:
+                if (item[0] == socket.AF_INET6 and len(item[4]) > 3 and
+                        item[4][3]):
+                    raise IOError(
+                        "Kubernetes server IPv6 scope identifiers are not supported")
+                address = ipaddress.ip_address(item[4][0])
+                if address not in addresses:
+                    addresses.append(address)
+        except ValueError as error:
+            raise IOError("Kubernetes server cannot be resolved: {}".format(error))
+
+    if bracketed and (not addresses or addresses[0].version != 6):
+        raise IOError("Kubernetes server brackets require an IPv6 address")
+    if not addresses:
+        raise IOError("Kubernetes server did not resolve to an IP address")
+    prohibited = [str(address) for address in addresses
+                  if _is_prohibited_address(address)]
+    if prohibited:
+        raise IOError("Kubernetes server resolves to a prohibited address: {}".
+                      format(", ".join(sorted(prohibited))))
+
+    return server, port, tuple(str(address) for address in addresses)
+
+
+def _format_url_host(host):
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return host
+    if address.version == 6:
+        return "[{}]".format(address)
+    return str(address)
+
+
+class _PinnedHTTPSAdapter(requests.adapters.HTTPAdapter):
+    """Connect to a validated IP while authenticating the configured host."""
+
+    def __init__(self, server_hostname):
+        self._server_hostname = (
+            server_hostname[:-1]
+            if len(server_hostname) > 1 and server_hostname.endswith(".")
+            else server_hostname)
+        super().__init__()
+
+    def init_poolmanager(self, connections, maxsize, block=False,
+                         **pool_kwargs):
+        pool_kwargs["assert_hostname"] = self._server_hostname
+        pool_kwargs["server_hostname"] = self._server_hostname
+        return super().init_poolmanager(
+            connections, maxsize, block=block, **pool_kwargs)
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        proxy_kwargs["assert_hostname"] = self._server_hostname
+        proxy_kwargs["server_hostname"] = self._server_hostname
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+
+def _request_k8s_ca(server, port, addresses, insecure):
+    session = requests.Session()
+    session.mount("https://", _PinnedHTTPSAdapter(server))
+    authority = "{}:{}".format(_format_url_host(server), port)
+    original_url = "https://{}:{}{}".format(
+        _format_url_host(server), port, K8S_CA_PATH)
+    proxies = requests.utils.get_environ_proxies(original_url)
+    if not proxies:
+        proxies = {"all": None, "http": None, "https": None}
+    kwargs = {
+        "allow_redirects": False,
+        "cert": (AME_CRT, AME_KEY),
+        "headers": {"Host": authority},
+        "proxies": proxies,
+    }
+    if insecure.lower() == "true":
+        kwargs["verify"] = False
+
+    last_error = None
+    try:
+        for address in addresses:
+            kwargs["timeout"] = K8S_CA_TIMEOUT
+            url = "https://{}:{}{}".format(
+                _format_url_host(address), port, K8S_CA_PATH)
+            try:
+                return session.get(url, **kwargs)
+            except requests.exceptions.ProxyError:
+                raise
+            except (requests.ConnectionError, requests.Timeout) as error:
+                last_error = error
+    finally:
+        session.close()
+
+    if last_error:
+        raise last_error
+    raise IOError("Kubernetes server did not resolve to an IP address")
+
+
 def log_debug(m):
     msg = "{}: {}".format(inspect.stack()[1][3], m)
     print(msg)
@@ -106,35 +243,13 @@ def get_device_name():
     return str(device_info.get_hostname()).lower()
 
 
-def _run_command(cmd, timeout=60):
-    """ Run shell command and return exit code, along with stdout. """
-    ret = 0
-    try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-        (o, e) = proc.communicate(timeout=timeout)
-        output = to_str(o)
-        err = to_str(e)
-        ret = proc.returncode
-    except subprocess.TimeoutExpired as error:
-        proc.kill()
-        output = ""
-        err = str(error)
-        ret = -1
-
-    log_debug("cmd:{}\nret={}".format(cmd, ret))
-    if output:
-        log_debug("out:{}".format(output))
-    if err:
-        log_debug("err:{}".format(err))
-
-    return (ret, output.strip(), err.strip())
-
-
 def _run_command_list(cmd, timeout=5):
-    """ Run command as a list with shell=False to avoid shell metacharacter injection.
-    Use this for commands assembled from untrusted input (e.g. CONFIG_DB/STATE_DB values).
-    cmd must be a list.
+    """ Run command as an argv list with shell=False.
+
+    This is the only command runner in this module; a `shell=True` variant
+    used to exist alongside it, but every caller now assembles argv, so the
+    shell-string codepath was removed to eliminate the metacharacter-injection
+    landmine for future refactors.
     """
     ret = 0
     try:
@@ -333,13 +448,10 @@ users:
     client-certificate-data: {{ ame_crt }}
     client-key-data: {{ ame_key }}
     """
-    if insecure.lower() == "true":
-        # verify=False is intentional: this branch is taken only when the operator explicitly
-        # opts in via the `insecure` flag for first-time bootstrap before the cluster CA is known.
-        r = requests.get(K8S_CA_URL.format(server, port),  # nosemgrep: python.requests.security.disabled-cert-validation.disabled-cert-validation
-                         cert=(AME_CRT, AME_KEY), verify=False, timeout=10)
-    else:
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), timeout=10)
+    server, port, addresses = _validate_server_destination(server, port)
+    r = _request_k8s_ca(server, port, addresses, insecure)
+    if 300 <= r.status_code < 400:
+        raise IOError("Kubernetes CA download refused a redirect")
     if not r.ok:
         raise requests.RequestException("Something wrong with AME cert or something wrong about sonic role in k8s cluster")
     k8s_ca = r.json()["data"]["ca.crt"]
@@ -349,8 +461,11 @@ users:
     ame_key_raw = open(AME_KEY, "rb")
     ame_key_b64 = base64.b64encode(ame_key_raw.read()).decode("utf-8")
     client_kubeconfig_template_j2 = Template(client_kubeconfig_template)
+    # This template creates kubeconfig YAML rather than browser-rendered HTML.
+    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     client_kubeconfig = client_kubeconfig_template_j2.render(
-        k8s_ca=k8s_ca_b64, vip=server, port=port, ame_crt=ame_crt_b64, ame_key=ame_key_b64)
+        k8s_ca=k8s_ca_b64, vip=_format_url_host(server), port=port,
+        ame_crt=ame_crt_b64, ame_key=ame_key_b64)
     (h, fname) = tempfile.mkstemp(suffix="_kube_join")
     os.write(h, client_kubeconfig.encode("utf-8"))
     os.close(h)
@@ -425,11 +540,11 @@ def _do_reset(pending_join = False):
             "--request-timeout", "20s", "delete", "node", "--", node,
         ], timeout=60)
 
-    _run_command("kubeadm reset -f")
-    _run_command("rm -rf {}".format(CNI_DIR))
+    _run_command_list(["kubeadm", "reset", "-f"], timeout=60)
+    _run_command_list(["rm", "-rf", CNI_DIR], timeout=60)
     if not pending_join:
-        _run_command("rm -f {}".format(KUBE_ADMIN_CONF))
-    _run_command("systemctl stop kubelet")
+        _run_command_list(["rm", "-f", KUBE_ADMIN_CONF], timeout=60)
+    _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
 
 def _do_join(server, port, insecure):
@@ -442,11 +557,11 @@ def _do_join(server, port, insecure):
     try:
         _gen_cli_kubeconf(server, port, insecure)
         _do_reset(True)
-        _run_command("modprobe br_netfilter")
+        _run_command_list(["modprobe", "br_netfilter"], timeout=60)
         # Copy flannel.conf
-        _run_command("mkdir -p {}".format(CNI_DIR))
-        _run_command("cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR))
-        (ret, _, _) = _run_command("systemctl start kubelet")
+        _run_command_list(["mkdir", "-p", CNI_DIR], timeout=60)
+        _run_command_list(["cp", FLANNEL_CONF_FILE, CNI_DIR], timeout=60)
+        (ret, _, _) = _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
 
         if ret == 0:
             (ret, out, err) = _run_command_list([
@@ -486,7 +601,7 @@ def kube_join_master(server, port, insecure, force=False):
         return (-1, "", "")
 
     if ((not force) and is_connected(server)):
-        _run_command("systemctl start kubelet")
+        _run_command_list(["systemctl", "start", "kubelet"], timeout=60)
         err = "Master {} is already connected. "
         err += "Reset or join with force".format(server)
     else:
@@ -515,7 +630,7 @@ def kube_reset_master(force):
     if ret == 0:
         _do_reset()
     else:
-        _run_command("systemctl stop kubelet")
+        _run_command_list(["systemctl", "stop", "kubelet"], timeout=60)
 
     return (ret, err)
 

@@ -117,6 +117,9 @@
     "DEVICE_METADATA_TYPE_MSEE_ROUTER_PATTERN": {
         "desc": "DEVICE_METADATA value as MseeRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_TOR_SWITCH_PATTERN": {
+        "desc": "DEVICE_METADATA value as ToRSwitch for Type field"
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_METADATA value as not-provisioned for Type field"
     },
@@ -177,6 +180,9 @@
     },
     "DEVICE_METADATA_VALID_SUBTYPE3": {
         "desc": "Verifying valid subtype value downstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "desc": "Verifying valid subtype value L3EvpnMH"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",

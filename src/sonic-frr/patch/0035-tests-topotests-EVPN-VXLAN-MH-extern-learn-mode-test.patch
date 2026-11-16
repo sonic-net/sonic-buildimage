@@ -1,7 +1,7 @@
-From be497c0d3175f849dae580296cd916e1cac6da17 Mon Sep 17 00:00:00 2001
+From 0074d3c2899aa876119938a24e3c32cbba37c8c2 Mon Sep 17 00:00:00 2001
 From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
 Date: Wed, 20 Aug 2025 06:11:35 +0000
-Subject: tests: topotests: EVPN VXLAN MH extern learn mode tests
+Subject: [PATCH] tests: topotests: EVPN VXLAN MH extern learn mode tests
 
 Topotests added under bgp_evpn_mh_l2l3vni_ext_learn to:
 - Validate correct ES discovery and advertisement for both local and
@@ -26,9 +26,28 @@ Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 (cherry picked from commit 391ca7e09fa99c106e99b5bb2519feb110c8e019)
+---
+ tests/topotests/bgp_evpn_mh/test_evpn_mh.py   |  56 +-
+ .../spine1/frr.conf                           |  34 +
+ .../spine2/frr.conf                           |  34 +
+ .../test_evpn_mh_l2l3vni_ext_learn.py         | 933 ++++++++++++++++++
+ .../torm11/frr.conf                           |  76 ++
+ .../torm12/frr.conf                           |  72 ++
+ .../torm21/frr.conf                           |  71 ++
+ .../torm22/frr.conf                           |  73 ++
+ tests/topotests/lib/bgp_evpn.py               | 366 +++++++
+ 9 files changed, 1666 insertions(+), 49 deletions(-)
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf
+ create mode 100644 tests/topotests/lib/bgp_evpn.py
 
 diff --git a/tests/topotests/bgp_evpn_mh/test_evpn_mh.py b/tests/topotests/bgp_evpn_mh/test_evpn_mh.py
-index 1ab55ef36..9a5e86c69 100644
+index 1084089e2d..24dfe28fd6 100644
 --- a/tests/topotests/bgp_evpn_mh/test_evpn_mh.py
 +++ b/tests/topotests/bgp_evpn_mh/test_evpn_mh.py
 @@ -37,6 +37,9 @@ from lib import topotest
@@ -75,10 +94,18 @@ index 1ab55ef36..9a5e86c69 100644
 -        node.run("/sbin/bridge vlan add vid 1000 untagged pvid dev %s" % bond_name)
 -
 -
+ def attach_bond_to_bridge(node, bond_name):
+     """
+     Re-attach an existing bond to the bridge with VLAN settings.
+@@ -251,7 +224,6 @@ def attach_bond_to_bridge(node, bond_name):
+     node.run("/sbin/bridge vlan add vid 1000 dev %s" % bond_name)
+     node.run("/sbin/bridge vlan add vid 1000 untagged pvid dev %s" % bond_name)
+ 
+-
  def config_mcast_tunnel_termination_device(node):
      """
      The kernel requires a device to terminate VxLAN multicast tunnels
-@@ -326,10 +299,10 @@ def config_tor(tor_name, tor, tor_ip, svi_pip):
+@@ -338,10 +310,10 @@ def config_tor(tor_name, tor, tor_ip, svi_pip):
      else:
          sys_mac = "44:38:39:ff:ff:02"
      bond_member = tor_name + "-eth2"
@@ -91,7 +118,7 @@ index 1ab55ef36..9a5e86c69 100644
  
      # create SVI
      config_svi(tor, svi_pip)
-@@ -349,25 +322,11 @@ def compute_host_ip_mac(host_name):
+@@ -361,25 +333,11 @@ def compute_host_ip_mac(host_name):
      return host_ip, host_mac
  
  
@@ -121,7 +148,7 @@ index 1ab55ef36..9a5e86c69 100644
  def setup_module(module):
 diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf
 new file mode 100644
-index 000000000..e23aff332
+index 0000000000..e23aff332c
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf
 @@ -0,0 +1,34 @@
@@ -162,7 +189,7 @@ index 000000000..e23aff332
 \ No newline at end of file
 diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf
 new file mode 100644
-index 000000000..b3916ef2c
+index 0000000000..b3916ef2c7
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf
 @@ -0,0 +1,34 @@
@@ -202,7 +229,7 @@ index 000000000..b3916ef2c
 +!
 diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py
 new file mode 100644
-index 000000000..c0249841f
+index 0000000000..c0249841f5
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py
 @@ -0,0 +1,933 @@
@@ -1141,7 +1168,7 @@ index 000000000..c0249841f
 +    sys.exit(pytest.main(args))
 diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf
 new file mode 100644
-index 000000000..4a1c92d70
+index 0000000000..4a1c92d70c
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf
 @@ -0,0 +1,76 @@
@@ -1223,7 +1250,7 @@ index 000000000..4a1c92d70
 +exit
 diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf
 new file mode 100644
-index 000000000..f8138a1ac
+index 0000000000..f8138a1acb
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf
 @@ -0,0 +1,72 @@
@@ -1301,7 +1328,7 @@ index 000000000..f8138a1ac
 +exit
 diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf
 new file mode 100644
-index 000000000..13374f67f
+index 0000000000..13374f67f3
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf
 @@ -0,0 +1,71 @@
@@ -1378,7 +1405,7 @@ index 000000000..13374f67f
 +exit
 diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf
 new file mode 100644
-index 000000000..dc330498c
+index 0000000000..dc330498c4
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf
 @@ -0,0 +1,73 @@
@@ -1457,7 +1484,7 @@ index 000000000..dc330498c
 +exit
 diff --git a/tests/topotests/lib/bgp_evpn.py b/tests/topotests/lib/bgp_evpn.py
 new file mode 100644
-index 000000000..c654b2426
+index 0000000000..c654b2426a
 --- /dev/null
 +++ b/tests/topotests/lib/bgp_evpn.py
 @@ -0,0 +1,366 @@
@@ -1828,5 +1855,5 @@ index 000000000..c654b2426
 +        return None
 +    return "Bridge FDB does not support protocol"
 -- 
-2.43.0
+2.34.1
 

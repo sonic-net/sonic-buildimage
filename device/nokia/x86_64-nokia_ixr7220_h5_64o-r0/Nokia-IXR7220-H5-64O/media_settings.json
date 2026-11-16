@@ -1560,14 +1560,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -1688,14 +1688,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -1816,14 +1816,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -1944,14 +1944,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -2072,14 +2072,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -2200,14 +2200,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -2328,14 +2328,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -2456,14 +2456,14 @@
                         "lane7": "0xFFFFFFF8"
                     },
                     "post2": {
-                        "lane0": "0xFFFFFFF8",
-                        "lane1": "0xFFFFFFF8",
-                        "lane2": "0xFFFFFFF8",
-                        "lane3": "0xFFFFFFF8",
-                        "lane4": "0xFFFFFFF8",
-                        "lane5": "0xFFFFFFF8",
-                        "lane6": "0xFFFFFFF8",
-                        "lane7": "0xFFFFFFF8"
+                        "lane0": "0x0",
+                        "lane1": "0x0",
+                        "lane2": "0x0",
+                        "lane3": "0x0",
+                        "lane4": "0x0",
+                        "lane5": "0x0",
+                        "lane6": "0x0",
+                        "lane7": "0x0"
                     },
                     "pre1": {
                         "lane0": "0xFFFFFFF8",
@@ -8189,6 +8189,50 @@
                         "lane6": "0x0",
                         "lane7": "0x0"
                     }
+                }
+            }
+        },
+        "65": {
+            "Default": {
+                "main": {
+                    "lane0": "0xA"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFE"
+                },
+                "post2": {
+                    "lane0": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0"
+                }
+            }
+        },
+        "66": {
+            "Default": {
+                "main": {
+                    "lane0": "0xA"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFE"
+                },
+                "post2": {
+                    "lane0": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0"
                 }
             }
         }

@@ -1,0 +1,82 @@
+Native MACsec DataPlane transform hooks
+
+Add per-(device,port) tx/rx transform hooks to ptf.dataplane.DataPlane so
+the native MACsec codec (ptf_macsec.py) can transparently encrypt injected
+frames and decrypt captured frames. Resolved at call time, so no test-file
+import ordering is required. NATIVE_MACSEC_CAPABLE lets the sonic-mgmt
+macsec.py monkeypatch detect the native layer and stand down.
+
+TX hook anchored at the top of send() (after the port guard) so it is stable
+across ptf versions that differ in the pcap-write region.
+
+diff --git a/src/ptf/dataplane.py b/src/ptf/dataplane.py
+index fd250fe..c985dff 100644
+--- a/src/ptf/dataplane.py
++++ b/src/ptf/dataplane.py
+@@ -96,6 +96,10 @@ class DataPlanePacketSourceIface:
+         raise NotImplementedError()
+ 
+ 
++# Set True at runtime when the native MACsec codec has registered port transforms.
++NATIVE_MACSEC_CAPABLE = False
++
++
+ class DataPlanePortIface:
+     def get_packet_source(self):
+         """
+@@ -568,6 +572,9 @@ class DataPlane(Thread):
+         # dict from device number, port number to list of (timestamp, packet)
+         self.packet_queues = {}
+ 
++        self._port_transforms = {}
++        self._install_native_macsec()
++
+         # counters of received packets (may include packets which were dropped due to queue overflow)
+         self.rx_counters = defaultdict(int)
+ 
+@@ -648,6 +655,9 @@ class DataPlane(Thread):
+                         if t is None:
+                             continue
+                         device_number, port_number, pkt, timestamp = t
++                        _t = self._port_transforms.get((device_number, port_number))
++                        if _t and _t["rx"]:
++                            pkt = _t["rx"](device_number, port_number, pkt)
+                         self.logger.debug(
+                             "Pkt len %d in on device %d, port %d",
+                             len(pkt),
+@@ -669,6 +679,25 @@ class DataPlane(Thread):
+ 
+         self.logger.info("Thread exit")
+ 
++    def register_port_transform(self, device_number, port_number, tx=None, rx=None):
++        self._port_transforms[(device_number, port_number)] = {"tx": tx, "rx": rx}
++
++    def _install_native_macsec(self):
++        try:
++            import ptf_macsec
++        except ImportError:
++            return
++        try:
++            if ptf_macsec.install(self):
++                global NATIVE_MACSEC_CAPABLE
++                NATIVE_MACSEC_CAPABLE = True
++                logging.getLogger("dataplane").info(
++                    "Native MACsec codec installed for %d port(s)",
++                    len(self._port_transforms))
++        except Exception as e:
++            logging.getLogger("dataplane").warning(
++                "Native MACsec codec install failed: %s", e)
++
+     def set_qlen(self, qlen):
+         self.qlen = qlen
+ 
+@@ -719,6 +748,9 @@ class DataPlane(Thread):
+                 "send: no port %d for device %d", port_number, device_number
+             )
+             return 0
++        _t = self._port_transforms.get((device_number, port_number))
++        if _t and _t["tx"]:
++            packet = _t["tx"](device_number, port_number, packet)
+         self.logger.debug(
+             "Sending %d bytes to device %d, port %d"
+             % (len(packet), device_number, port_number)

@@ -180,7 +180,7 @@ rotate_usb_to_eth0() {
 # Platform init script
 # Check if init is already done previously
 
-KVER=6.12.41+deb13-sonic-arm64
+KVER=6.12.94+deb13-sonic-arm64
 
 # Load required kernel-mode drivers
 load_kernel_drivers() {
@@ -384,6 +384,7 @@ if [ "$HWSKU" = "Nokia-7215-C1-mp" ]; then
     echo "[nokia-7215-init] HWSKU='$HWSKU'"
     SWAP_SRC=eth0
     ETH_LAST=2
+    sudo ifconfig eth2 hw ether $MAC_ADDR
 else
     echo "[nokia-7215-init] HWSKU='${HWSKU:-<unknown>}'"
     rotate_usb_to_eth0

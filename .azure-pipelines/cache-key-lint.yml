@@ -1,0 +1,42 @@
+# Tier 1 - Static dpkg cache-key completeness lint.
+#
+# Purpose: cheap, per-PR guardrail. Runs scripts/audit_dep_completeness.sh, a
+# static analysis (no build) over rules/*.mk and rules/*.dep. It fails when a
+# build-affecting input (feature flag, source file, derived package) is NOT
+# reflected in a target's dpkg cache key - the class of bug that lets a cache
+# hit serve a stale artifact.
+#
+# The audit script exits 1 only on a P0 finding, and P0 is emitted only in
+# diff mode: a P0 is a build-affecting input that a SPECIFIC PR leaves untracked
+# (see DIFF_MODE in scripts/audit_dep_completeness.sh). To gate on PR-introduced
+# gaps, the production stage must pass --base <target-branch> (e.g.
+# --base origin/$(System.PullRequest.TargetBranchName)). A whole-tree run
+# WITHOUT --base (as in this standalone staging definition) reports the existing
+# P1/P2/P3 backlog and exits 0 - it is a report, not a gate.
+#
+# NOTE: this is provided as a standalone pipeline definition for staging/testing.
+# The production gate is now implemented as the `CacheKeyLint` stage in
+# azure-pipelines.yml: it runs on every pull request and passes
+# --base origin/$(System.PullRequest.TargetBranchName), so the P0 exit-1 gate is
+# armed there. This standalone definition is retained only for manual/staging
+# runs of the whole-tree report.
+
+trigger: none
+pr: none
+
+pool:
+  vmImage: 'ubuntu-22.04'
+
+jobs:
+- job: cache_key_lint
+  displayName: 'dpkg cache-key completeness lint'
+  timeoutInMinutes: 10
+  steps:
+  - checkout: self
+  - script: |
+      set -e
+      chmod +x scripts/audit_dep_completeness.sh
+      # Whole-tree report (P1/P2/P3, exit 0). In the production PR stage, add
+      # --base origin/$(System.PullRequest.TargetBranchName) to arm the P0 gate.
+      ./scripts/audit_dep_completeness.sh --verbose
+    displayName: 'Run audit_dep_completeness.sh (whole-tree report; P0 gate needs --base)'

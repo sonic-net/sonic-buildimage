@@ -38,6 +38,7 @@ fi
 # which is consumed by pddfparse.expand_child_cards
 nh_gen pddf_device_json_base
 nh_gen pcie_yaml
+nh_gen pd_plugin_json
 
 if [[ -f /usr/share/sonic/platform/pddf/pddf-device.json.base ]]; then
   install -m 0644 /usr/share/sonic/platform/pddf/pddf-device.json.base \
