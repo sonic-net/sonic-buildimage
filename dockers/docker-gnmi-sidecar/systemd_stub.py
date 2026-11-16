@@ -13,7 +13,6 @@ import subprocess
 import time
 import argparse
 import traceback
-from typing import Dict, List, Optional, Union
 
 from sonic_py_common import sidecar_common
 from sonic_py_common.sidecar_common import (
@@ -36,65 +35,44 @@ CONTAINER_CHECKER_SYNC_ENABLED = get_bool_env_var("CONTAINER_CHECKER_SYNC_ENABLE
 logger.log_notice(f"CONTAINER_CHECKER_SYNC_ENABLED={CONTAINER_CHECKER_SYNC_ENABLED}")
 
 
-def _parse_verify_enabled() -> Optional[bool]:
-    """Return the client-cert verify setting, or None when no env var is set.
-
-    None leaves GNMI|gnmi.user_auth and GNMI_CLIENT_CERT untouched, so a
-    deployment that does not opt in never has its client certs removed.
+def _parse_client_certs() -> list[dict[str, str | list[str]]]:
     """
-    if os.getenv("GNMI_CLIENT_CERT_VERIFY_ENABLED") is None:
-        return None
-    return get_bool_env_var("GNMI_CLIENT_CERT_VERIFY_ENABLED")
+    Parse GNMI_CLIENT_CERTS, a JSON array of {"cname": ..., "role": ...}.
 
-
-GNMI_VERIFY_ENABLED: Optional[bool] = _parse_verify_enabled()
-
-
-def _parse_client_certs() -> List[Dict[str, Union[str, List[str]]]]:
-    """
-    Build the list of GNMI client cert entries from env vars.
-
-    Returns a list of {"cname": str, "role": List[str]}.
-
-    Preferred: GNMI_CLIENT_CERTS  (JSON array of {"cname": ..., "role": ...})
-    Fallback:  GNMI_CLIENT_CNAME / GNMI_CLIENT_ROLE  (single entry)
+    Returns a list of {"cname": str, "role": list[str]}, or [] when the env
+    var is unset, empty or invalid.
     """
     raw = os.getenv("GNMI_CLIENT_CERTS", "").strip()
-    if raw:
-        try:
-            entries = json.loads(raw)
-            if not isinstance(entries, list):
-                raise ValueError("GNMI_CLIENT_CERTS must be a JSON array")
-            normalized: List[Dict[str, Union[str, List[str]]]] = []
-            for e in entries:
-                if not isinstance(e, dict):
-                    raise ValueError(f"Each entry must be an object: {e!r}")
-                if "cname" not in e or "role" not in e:
-                    raise ValueError(f"Each entry needs 'cname' and 'role': {e}")
-                cname = str(e.get("cname", "")).strip()
-                role_raw = e.get("role", "")
-                if isinstance(role_raw, list):
-                    role = [str(r).strip() for r in role_raw if str(r).strip()]
-                else:
-                    s = str(role_raw).strip()
-                    role = [s] if s else []
-                if not cname or not role:
-                    raise ValueError(f"'cname' and 'role' must be non-empty: {e}")
-                normalized.append({"cname": cname, "role": role})
-            return normalized
-        except (json.JSONDecodeError, ValueError) as exc:
-            logger.log_error(f"Bad GNMI_CLIENT_CERTS env var: {exc}; falling back to legacy")
-
-    cname = os.getenv("GNMI_CLIENT_CNAME", "").strip()
-    role = os.getenv("GNMI_CLIENT_ROLE", "gnmi_show_readonly").strip()
-    if cname:
-        return [{"cname": cname, "role": [role]}]
-    return []
+    if not raw:
+        return []
+    try:
+        entries = json.loads(raw)
+        if not isinstance(entries, list):
+            raise ValueError("GNMI_CLIENT_CERTS must be a JSON array")
+        normalized: list[dict[str, str | list[str]]] = []
+        for e in entries:
+            if not isinstance(e, dict):
+                raise ValueError(f"Each entry must be an object: {e!r}")
+            if "cname" not in e or "role" not in e:
+                raise ValueError(f"Each entry needs 'cname' and 'role': {e}")
+            cname = str(e.get("cname", "")).strip()
+            role_raw = e.get("role", "")
+            if isinstance(role_raw, list):
+                role = [str(r).strip() for r in role_raw if str(r).strip()]
+            else:
+                s = str(role_raw).strip()
+                role = [s] if s else []
+            if not cname or not role:
+                raise ValueError(f"'cname' and 'role' must be non-empty: {e}")
+            normalized.append({"cname": cname, "role": role})
+        return normalized
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.log_error(f"Bad GNMI_CLIENT_CERTS env var: {exc}; not reconciling client certs")
+        return []
 
 
-GNMI_CLIENT_CERTS: List[Dict[str, Union[str, List[str]]]] = _parse_client_certs()
+GNMI_CLIENT_CERTS: list[dict[str, str | list[str]]] = _parse_client_certs()
 
-logger.log_notice(f"GNMI_VERIFY_ENABLED={GNMI_VERIFY_ENABLED}")
 logger.log_notice(f"GNMI_CLIENT_CERTS={GNMI_CLIENT_CERTS}")
 
 # Compile regex patterns once at module level to avoid repeated compilation
@@ -215,7 +193,7 @@ logger.log_notice(f"gnmi source set to {_GNMI_SRC}")
 # thin wrapper that exec's k8s_pod_control.sh.  If gnmi.sh is synced first its
 # post-copy action (systemctl restart gnmi) would fail with "No such file or
 # directory".
-SYNC_ITEMS: List[SyncItem] = [
+SYNC_ITEMS: list[SyncItem] = [
     SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-gnmi-sidecar/k8s_pod_control.sh"),
     SyncItem(_GNMI_SRC, "/usr/local/bin/gnmi.sh"),
 ]
@@ -261,7 +239,7 @@ def _apply_config_patch(patch: list) -> bool:
     return True
 
 
-def _get_table_keys(table: str) -> List[str]:
+def _get_table_keys(table: str) -> list[str]:
     """Return the keys of a CONFIG_DB table, raising if the read fails.
 
     sidecar_common.db_get_table_keys returns [] on error, which would make the
@@ -273,8 +251,8 @@ def _get_table_keys(table: str) -> List[str]:
     return list((db.get_table(table) or {}).keys())
 
 
-def _normalize_role(value) -> List[str]:
-    """Normalize a role value from CONFIG_DB into a canonical List[str].
+def _normalize_role(value) -> list[str]:
+    """Normalize a role value from CONFIG_DB into a canonical list[str].
 
     Handles:
       - list (correct format from ConfigDBConnector leaf-list) -> as-is
@@ -348,30 +326,18 @@ def _build_enabled_patch() -> list:
     return patch
 
 
-_verify_disabled_warned = False
-
-
 def reconcile_config_db_once() -> None:
     """
     Idempotent drift-correction for CONFIG_DB:
-      - When GNMI_CLIENT_CERT_VERIFY_ENABLED is unset or false: do nothing
-      - When true:
+      - When GNMI_CLIENT_CERTS is unset, empty or invalid: do nothing
+      - Otherwise:
           * Ensure GNMI|gnmi.user_auth=cert
           * Ensure every GNMI_CLIENT_CERT|<CNAME> entry exists with its role
 
     A CONFIG_DB read error raises, so the caller skips the cycle instead of
     patching from a partial view.
     """
-    global _verify_disabled_warned
-    if GNMI_VERIFY_ENABLED is None:
-        return
-    if not GNMI_VERIFY_ENABLED:
-        # gnmi treats a missing user_auth as cert auth, so removing user_auth
-        # and the client certs would lock every client out.
-        if not _verify_disabled_warned:
-            logger.log_warning("Client-cert verify is false; not acting on it because gnmi "
-                               "defaults to cert auth. GNMI user_auth and GNMI_CLIENT_CERT are left as is.")
-            _verify_disabled_warned = True
+    if not GNMI_CLIENT_CERTS:
         return
     patch = _build_enabled_patch()
     if patch:
@@ -440,7 +406,7 @@ def _reconcile_config_db_logged() -> bool:
 def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
     cleanup_native_container("gnmi", IS_V1_ENABLED)
-    items: List[SyncItem] = list(SYNC_ITEMS)
+    items: list[SyncItem] = list(SYNC_ITEMS)
     if CONTAINER_CHECKER_SYNC_ENABLED:
         branch_name = _resolve_branch(_get_branch_name())
         container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
