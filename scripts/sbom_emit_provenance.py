@@ -14,8 +14,8 @@ predicate (https://slsa.dev/provenance/v1) and answers the question:
 It is intentionally **unsigned**. Release engineering signs both the
 SBOM and the .intoto.json at publish time with whatever tool their
 policy requires (cosign, openssl, etc.). The build slave never sees
-production signing keys. See README.sbom.md "Attestation and signing"
-for the recommended workflow.
+production signing keys. See README.sbom.md "Signing"
+for an example.
 
 The output is reproducible: two byte-identical builds produce
 byte-identical .intoto.json documents, as long as SOURCE_DATE_EPOCH

@@ -52,6 +52,7 @@ built or written, and 0 otherwise (including a missing artifact). slave.mk
 appends `|| true` unless SBOM_STRICT=y.
 """
 
+import functools
 import hashlib
 import json
 import os
@@ -68,6 +69,7 @@ from typing import Any, Optional
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import sbom_cve_refs  # noqa: E402  (needs the path set above)
+import sbom_os_release  # noqa: E402  (needs the path set above)
 import sbom_purl  # noqa: E402  (needs the path set above)
 
 
@@ -94,6 +96,29 @@ _WHL_RE = re.compile(
 _GZ_RE = re.compile(r"^(?P<name>.+?)(?P<dbg>-dbg)?\.gz$")
 
 
+def _deb_control(path: str) -> Optional[dict]:
+    """Name, version (no epoch, like a filename's) and arch from a .deb's
+    control fields, for a filename that is not ``<name>_<version>_<arch>``
+    (``libsaibcm_dnx_15.2.1.0.0.0.11.3_amd64.deb`` is libsaibcm)."""
+    try:
+        out = subprocess.run(
+            ["dpkg-deb", "-f", path, "Package", "Version", "Architecture"],
+            capture_output=True, text=True, check=True, timeout=60,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    fields = {}
+    for line in out.splitlines():
+        key, sep, value = line.partition(":")
+        if sep:
+            fields[key.strip()] = value.strip()
+    if not fields.get("Package") or not fields.get("Version"):
+        return None
+    return {"name": fields["Package"],
+            "version": re.sub(r"^\d+:", "", fields["Version"]),
+            "arch": fields.get("Architecture", "")}
+
+
 def parse_artifact_name(path: str) -> dict:
     """Best-effort decompose an artifact filename."""
     fn = os.path.basename(path)
@@ -107,6 +132,9 @@ def parse_artifact_name(path: str) -> dict:
                 "arch": m.group("arch"),
                 "filename": fn,
             }
+        control = _deb_control(path)
+        if control:
+            return {"kind": "deb", **control, "filename": fn}
     if fn.endswith(".whl"):
         m = _WHL_RE.match(fn)
         if m:
@@ -504,28 +532,10 @@ def _vendor_supplier_from_url(url: Optional[str]) -> Optional[str]:
     return None
 
 
-# sonic-net submodules that rebuild a Debian source package rather than
-# hold code SONiC wrote. Their .debs keep the identity every other SONiC
-# rebuild of a Debian package has, `pkg:deb/sonic/<name>@<version>`,
-# instead of the repository's.
-#
-# The kernel is why. Named `pkg:github/sonic-net/sonic-linux-kernel@<sha>`,
-# the four .debs it builds — linux-image, linux-kbuild and both
-# linux-headers — shared one package URL, so the aggregator collapsed
-# them into a single component named after whichever fragment loaded
-# first. The linux-image the image installs, the package a scanner
-# matches kernel CVEs against, arrived from observation as its own
-# `pkg:deb` component and never merged with that one, because the
-# ecosystem is part of the dedupe key. So the pedigree listing every
-# patch the kernel carries, and each CVE a patch's `resolves` names, sat
-# on a component no advisory matches, while the kernel the patches fix
-# had none. As `pkg:deb` it merges with the observed package the way
-# openssl or bash do, picking up the `distro` and `upstream=linux`
-# qualifiers advisory matching needs.
-#
-# The submodule and its commit are not lost: they stay in
-# externalReferences and the `sonic:submodule_commit` property.
-_DEBIAN_REBUILD_SUBMODULES = ("sonic-linux-kernel",)
+# Every .deb is `pkg:deb/sonic/<name>@<version>`, including one built from a
+# sonic-net submodule. Named after the repository instead, one repository's
+# .debs collapsed into one component, and none merged with its installed
+# copy. The repository is the .deb's source component.
 
 
 def _submodule_repo(submodule: dict) -> str:
@@ -582,7 +592,39 @@ def source_component(submodule: dict, artifact_filename: str) -> Optional[dict]:
     }
 
 
-def build_purl(meta: dict, submodule: Optional[dict]) -> str:
+# Recipes that build their .deb in the build container, so the container's
+# release is the one the .deb was built for. ONLINE_DEB and COPY_DEB take a
+# .deb built elsewhere, for a release nothing here records.
+BUILT_DEB_RECIPES = ("MAKE_DEB", "DPKG_DEB", "DERIVED_DEB", "EXTRA_DEB",
+                     "PYTHON_STDEB")
+
+
+def built_here(recipe_type: str, artifact: str) -> bool:
+    """Whether this build made the .deb: a derived or extra deb of an
+    ONLINE_DEB or COPY_DEB was downloaded or copied with it."""
+    if recipe_type not in BUILT_DEB_RECIPES:
+        return False
+    main = os.environ.get("MAIN_DEB", "")
+    if recipe_type not in ("DERIVED_DEB", "EXTRA_DEB") or not main:
+        return True
+    try:
+        with open(os.path.join(os.path.dirname(artifact),
+                               main + ".cdx.json")) as f:
+            props = json.load(f)["components"][0].get("properties", [])
+    except (OSError, ValueError, KeyError, IndexError):
+        return True
+    return all(p.get("value") in BUILT_DEB_RECIPES for p in props
+               if p.get("name") == "sonic:recipe_type")
+
+
+@functools.lru_cache(maxsize=None)
+def build_distro() -> str:
+    """`<id>-<version>` of the build container, the release a .deb targets."""
+    got = sbom_os_release.read("/etc/os-release", "/usr/lib/os-release")
+    return f"{got[0]}-{got[1]}" if got and got[1] else ""
+
+
+def build_purl(meta: dict) -> str:
     """Construct a PURL appropriate to the artifact + source provenance.
 
     Assembled through sbom_purl so the version is escaped the way every
@@ -592,18 +634,7 @@ def build_purl(meta: dict, submodule: Optional[dict]) -> str:
     different way from syft, which escapes it.
     """
     if meta["kind"] == "deb":
-        # Heuristic: when source is a sonic-net submodule, use the github
-        # PURL as primary identity. Otherwise it's an apt-style deb.
-        # Only from the submodule's top directory: dhcp4relay and
-        # dhcp6relay come from two subdirectories of one repository and
-        # must stay two components.
-        if (submodule and submodule.get("root", True)
-                and is_sonic_net_url(submodule.get("url"))
-                and _submodule_repo(submodule)
-                not in _DEBIAN_REBUILD_SUBMODULES
-                and source_purl(submodule)):
-            return source_purl(submodule)
-        # Default: deb with sonic namespace (locally rebuilt).
+        # One identity per .deb (see the note above _submodule_repo).
         return sbom_purl.build(
             "deb", meta["name"], meta["version"], namespace="sonic",
             qualifiers={"arch": meta["arch"]},
@@ -661,6 +692,7 @@ def ancestor_from_debian_source(info: dict) -> dict:
         "version": info["version"],
         "purl": sbom_purl.build(
             "deb", info["name"], info["version"], namespace="debian",
+            qualifiers={"distro": build_distro()},
         ),
         "externalReferences": ext_refs,
     }
@@ -1077,7 +1109,7 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
     patches = [p for d in patch_dirs for p in enumerate_patches(d)]
     ps_hash = patchset_hash(patch_dirs) if patch_dirs else None
 
-    bom_ref = build_purl(meta, submodule)
+    bom_ref = build_purl(meta)
 
     component: dict[str, Any] = {
         "bom-ref": bom_ref,
@@ -1103,6 +1135,13 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
         component["properties"].append(
             {"name": "sonic:arch", "value": meta["arch"]}
         )
+        if built_here(recipe_type, artifact):
+            # SONiC built it; pedigree names who wrote the source.
+            component["supplier"] = {"name": "SONiC"}
+            # build_sbom.py's distro when no installed copy names one.
+            if build_distro():
+                component["properties"].append(
+                    {"name": "sonic:build_distro", "value": build_distro()})
 
     # Honor an explicit per-recipe license override
     # ($(ARTIFACT)_LICENSE in the recipe → ARTIFACT_LICENSE env var here).

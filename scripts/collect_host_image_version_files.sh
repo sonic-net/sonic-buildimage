@@ -18,10 +18,13 @@ IMAGENAME="host-image"
 mkdir -p $VERSIONS_PATH
 
 mkdir -p target/vcache/${IMAGENAME}
-sudo LANG=C chroot $FILESYSTEM_ROOT post_run_buildinfo ${IMAGENAME}
+sudo LANG=C ENABLE_SBOM=${ENABLE_SBOM} chroot $FILESYSTEM_ROOT post_run_buildinfo ${IMAGENAME}
 
 cp -r $FILESYSTEM_ROOT/usr/local/share/buildinfo/pre-versions $VERSIONS_PATH/
 cp -r $FILESYSTEM_ROOT/usr/local/share/buildinfo/post-versions $VERSIONS_PATH/
+# The SBOM inputs are copied out above; they need not ship in the image.
+(cd $FILESYSTEM_ROOT/usr/local/share/buildinfo/post-versions && \
+	sudo rm -f copyrights.tar.gz lockfiles.tar.gz sbom-pkgs-*.tsv deb-origins)
 
 sudo LANG=C chroot $FILESYSTEM_ROOT post_run_cleanup ${IMAGENAME}
 

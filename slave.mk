@@ -644,10 +644,12 @@ endef
 # ships and the DEP-5 resolver would otherwise emit NOASSERTION.
 sbom_emit_fragment = $(if $(filter y,$(ENABLE_SBOM)),ARTIFACT="$(1)" RECIPE_TYPE="$(2)" SRC_PATH="$(3)" URL="$(4)" DEPENDS="$(5)" RDEPENDS="$(6)" MAIN_DEB="$(7)" ARTIFACT_LICENSE="$($(notdir $(1))_LICENSE)" ENABLE_SBOM="$(ENABLE_SBOM)" CONFIGURED_PLATFORM="$(CONFIGURED_PLATFORM)" CONFIGURED_ARCH="$(CONFIGURED_ARCH)" SONIC_IMAGE_VERSION="$(SONIC_IMAGE_VERSION)" python3 ./scripts/sbom_fragment.py$(if $(filter y,$(SBOM_STRICT)), || { touch -c -d @0 "$(1)"; exit 1; }, || true),:)
 
-# $(call main_deb_newer_than_companions,main_deb)
-# Date main_deb's derived and extra debs one second before it, so make runs
-# each companion's own rule, which is what writes its SBOM fragment.
-main_deb_newer_than_companions = $(if $($(1)_DERIVED_DEBS)$($(1)_EXTRA_DEBS),touch -c -r $(DEBS_PATH)/$(1) -d '-1 second' $(addprefix $(DEBS_PATH)/,$($(1)_DERIVED_DEBS) $($(1)_EXTRA_DEBS)),:)
+# $(call sbom_emit_companions,main_deb)
+# Emit the fragments of the derived and extra debs main_deb's recipe produced.
+# Their own rules emit too, but in a parallel build make can skip those: it
+# saw the FIPS extras mid-download, newer than symcrypt-openssl.
+sbom_emit_companion = [ ! -e $(DEBS_PATH)/$(1) ] || { $(call sbom_emit_fragment,$(DEBS_PATH)/$(1),$(2),$($(1)_SRC_PATH),,$($(1)_DEPENDS),$($(1)_RDEPENDS),$($(1)_MAIN_DEB)) ; } ;
+sbom_emit_companions = $(if $(filter y,$(ENABLE_SBOM)),$(foreach deb,$($(1)_DERIVED_DEBS),$(call sbom_emit_companion,$(deb),DERIVED_DEB))$(foreach deb,$($(1)_EXTRA_DEBS),$(call sbom_emit_companion,$(deb),EXTRA_DEB)):,:)
 
 # Test containers that DON'T ship in any .bin installer payload but DO
 # get built (controlled by their respective INCLUDE_* flags) and need
@@ -747,6 +749,7 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS)) : $(DEBS_PATH)/% : .platform \
 
 	# Emit SBOM fragment for the copied deb.
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,COPY_DEB,,,$($*_DEPENDS),$($*_RDEPENDS),)
+	$(call sbom_emit_companions,$*)
 
 	$(FOOTER)
 
@@ -791,8 +794,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_ONLINE_DEBS)) : $(DEBS_PATH)/% : .platform \
 		$(call SAVE_CACHE,$*,$@)
 	fi
 	# Emit SBOM fragment for the downloaded vendor/online deb.
-	$(call main_deb_newer_than_companions,$*)
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,ONLINE_DEB,,$($*_URL),$($*_DEPENDS),$($*_RDEPENDS),)
+	$(call sbom_emit_companions,$*)
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_ONLINE_DEBS))
@@ -975,8 +978,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
 
 	# Emit SBOM fragment next to the .deb (no-op when ENABLE_SBOM != y).
-	$(call main_deb_newer_than_companions,$*)
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,MAKE_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
+	$(call sbom_emit_companions,$*)
 
 	$(FOOTER)
 
@@ -1031,8 +1034,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
 
 	# Emit SBOM fragment next to the .deb (no-op when ENABLE_SBOM != y).
-	$(call main_deb_newer_than_companions,$*)
 	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,DPKG_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
+	$(call sbom_emit_companions,$*)
 
 	$(FOOTER)
 

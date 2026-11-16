@@ -18,6 +18,14 @@ fi
 apt-get clean -y
 apt-get autoclean -y
 apt-get autoremove -y --purge
+
+# The versions were collected before the purges above; the SBOM lists what
+# ships. A package ships unless none of its files are left on disk.
+if [ "${ENABLE_SBOM:-n}" = "y" ]; then
+	dpkg-query -W -f '${db:Status-Status} ${Package}\n' \
+		| awk '$1 != "not-installed" && $1 != "config-files" { print $2 }' \
+		| sort -u > $POST_VERSION_PATH/installed-debs
+fi
 rm -f /var/cache/apt/archives/*.deb /var/cache/apt/*.bin
 
 if [[ ! ${IMAGENAME} =~ -slave- ]]; then

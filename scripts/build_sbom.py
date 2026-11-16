@@ -59,6 +59,7 @@ warn-and-continue.
 """
 
 import datetime
+import glob
 import hashlib
 import json
 import os
@@ -70,6 +71,7 @@ from typing import Any, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import sbom_os_release  # noqa: E402  (needs the path set above)
 import sbom_purl  # noqa: E402  (needs the path set above)
 
 
@@ -391,6 +393,38 @@ def find_post_versions(target_path: str, scope: str, kind: str,
     return sorted(matches)
 
 
+def read_deb_origins(target_path: str, scope: str) -> Optional[dict]:
+    """``{package: apt Origin}`` from a scope's `deb-origins`, or None."""
+    path = os.path.join(target_path, "versions", scope, "post-versions",
+                        "deb-origins")
+    try:
+        with open(path) as f:
+            rows = [line.rstrip("\n").split("\t", 1) for line in f]
+    except OSError:
+        return None
+    return {r[0]: r[1] for r in rows if len(r) == 2 and r[0] and r[1]}
+
+
+def read_deb_sources(target_path: str) -> dict:
+    """``{binary package: source package}`` from every scope's sbom-pkgs TSV.
+
+    The TSV's fourth column is dpkg's ${source:Package}.
+    """
+    out: dict = {}
+    for path in sorted(glob.glob(os.path.join(
+            target_path, "versions", "**", "sbom-pkgs-*.tsv"),
+            recursive=True)):
+        try:
+            with open(path) as f:
+                for line in f:
+                    cols = line.rstrip("\n").split("\t")
+                    if len(cols) >= 4 and cols[0] and cols[3]:
+                        out.setdefault(cols[0], cols[3])
+        except OSError:
+            continue
+    return out
+
+
 def find_copyright_tarballs(target_path: str) -> list:
     """Find every per-scope copyrights.tar.gz under target/versions/."""
     return _find_tarballs(target_path, "copyrights.tar.gz")
@@ -557,9 +591,50 @@ def resolve_licenses(target_path: str) -> dict:
     return data.get("resolved", {})
 
 
-def apply_licenses(components: list, license_map: dict) -> tuple:
+def _license_by_source(license_map: dict, sources: dict) -> dict:
+    """``{source package: license}`` from the binaries that have one.
+
+    Debian's copyright file belongs to the source package, so a binary
+    without one (kmod) has the license of a sibling that has it
+    (libkmod2). Only well-formed SPDX is copied: for prose-like
+    copyright files the resolver returns prose, e.g. gcc's
+    `LicenseRef-BSD 3-Clause License and/or ...`.
+    """
+    out: dict = {}
+    for pkg in sorted(sources):
+        spdx = license_map.get(pkg.lower())
+        if spdx and spdx != "NOASSERTION" and _is_spdx_expression(spdx):
+            out.setdefault(sources[pkg], spdx)
+    return out
+
+
+_SPDX_ID = re.compile(r"^[A-Za-z0-9.+-]+$")
+_SPDX_OPERATORS = ("AND", "OR", "WITH")
+
+
+def _is_spdx_expression(expr: str) -> bool:
+    """Whether ``expr`` is ids joined by AND / OR / WITH (parens ignored)."""
+    tokens = expr.replace("(", " ").replace(")", " ").split()
+    if len(tokens) % 2 == 0:
+        return False
+    for i, tok in enumerate(tokens):
+        if i % 2:
+            if tok not in _SPDX_OPERATORS:
+                return False
+        elif tok in _SPDX_OPERATORS or not _SPDX_ID.match(tok):
+            return False
+    return True
+
+
+def apply_licenses(components: list, license_map: dict,
+                   sources: Optional[dict] = None) -> tuple:
     """Attach licenses[] to components that lack one.
+
+    ``sources`` maps a Debian binary package to its source package; a deb
+    with no copyright of its own then takes its source's.
     Returns (with_license_count, noassertion_count)."""
+    sources = sources or {}
+    by_source = _license_by_source(license_map, sources)
     resolved = 0
     noassertion = 0
     for c in components:
@@ -570,10 +645,15 @@ def apply_licenses(components: list, license_map: dict) -> tuple:
         if not name:
             continue
         spdx = license_map.get(name)
+        if (not spdx or spdx == "NOASSERTION") and _purl_type(
+                c.get("purl")) == "deb":
+            # A .deb found as a file has no dpkg row, but its purl's
+            # `upstream=` names the source package too.
+            upstream = sbom_purl.qualifiers_of(c.get("purl")).get(
+                "upstream", "").split("@", 1)[0]
+            source = sources.get(name) or upstream
+            spdx = by_source.get(source) or spdx
         if not spdx:
-            # Debian binary packages often have a source-package name that
-            # carries the copyright. Don't have that here; just leave it
-            # NOASSERTION.
             noassertion += 1
             continue
         if spdx == "NOASSERTION":
@@ -591,9 +671,74 @@ def apply_licenses(components: list, license_map: dict) -> tuple:
     return resolved, noassertion
 
 
+def _strip_epoch(version: str) -> str:
+    return re.sub(r"^\d+:", "", version or "")
+
+
+def local_debs(target_path: str, arch: str, components: list,
+               host_status: Optional[str] = None) -> set:
+    """``(name, version)``, epoch stripped, of debs installed from a .deb.
+
+    That is every .deb a recipe produced, plus every package a scope with
+    a non-empty `deb-origins` still has installed but no repository
+    lists (sonic-build-hooks, otelcol-contrib). Used where apt listed
+    nothing. Only still-installed packages count: the host's versions
+    predate build_debian.sh's removals, its origins do not.
+    """
+    out = {
+        (c.get("name"), _strip_epoch(c.get("version", "")))
+        for c in components
+        if (c.get("purl") or "").startswith("pkg:deb/sonic/")
+    }
+    vbase = os.path.join(target_path, "versions")
+    scopes = ["host-image"]
+    dockers = os.path.join(vbase, "dockers")
+    if os.path.isdir(dockers):
+        scopes += [f"dockers/{d}" for d in sorted(os.listdir(dockers))]
+    for scope in scopes:
+        origins = read_deb_origins(target_path, scope)
+        if not origins:
+            continue
+        if scope == "host-image":
+            shipped = (shipped_from_dpkg_status(host_status)
+                       if host_status else None)
+        else:
+            shipped = shipped_from_list(target_path, scope)
+        if shipped is None:
+            continue
+        for vfile in find_post_versions(target_path, scope, "deb", arch):
+            for name, ver in parse_versions_file(vfile):
+                if name not in origins and name in shipped:
+                    out.add((name, _strip_epoch(ver)))
+    return out
+
+
+def deb_origin(origins: Optional[dict], name: str, version: str,
+               distro_ns: str, distro_supplier: str,
+               built: Optional[set] = None) -> tuple:
+    """``(namespace, supplier)`` for an installed deb, from its apt origin.
+
+    Another repository's package is named after its Origin
+    (`pkg:deb/docker/docker-ce`, supplier Docker). One apt does not list
+    is SONiC's, with the supplier left to the recipe, if apt listed any
+    repository at all; where it listed none (missing file, or deleted
+    apt lists as in docker-base-trixie) only if ``built`` names it.
+    """
+    origin = (origins or {}).get(name)
+    if not origin:
+        if origins or (name, _strip_epoch(version)) in (built or ()):
+            return "sonic", ""
+        return distro_ns, distro_supplier
+    if origin.lower().startswith(distro_ns.lower()):
+        # Debian, Debian Backports, Debian-Security ...
+        return distro_ns, distro_supplier
+    slug = re.sub(r"[^a-z0-9.+-]+", "-", origin.lower()).strip("-")
+    return (slug or distro_ns), origin
+
+
 def observation_components_for_scope(
     target_path: str, scope: str, arch: str, supplier: str,
-    distro: Optional[tuple] = None,
+    distro: Optional[tuple] = None, built: Optional[set] = None,
 ) -> list:
     """Emit observation-only components for everything in post-versions/.
 
@@ -613,6 +758,7 @@ def observation_components_for_scope(
         deb_ns = "debian"
         deb_distro = ""
         deb_supplier = supplier
+    origins = read_deb_origins(target_path, scope)
 
     for vfile in find_post_versions(target_path, scope, "deb", arch):
         for name, ver in parse_versions_file(vfile):
@@ -628,8 +774,10 @@ def observation_components_for_scope(
             # publish a guess in place of the one value that was read off a
             # real filesystem. sonic:arch still records what the build was
             # configured for.
+            ns, who = deb_origin(origins, name, ver, deb_ns, deb_supplier,
+                                 built)
             deb_purl = sbom_purl.build(
-                "deb", name, ver, namespace=deb_ns,
+                "deb", name, ver, namespace=ns,
                 qualifiers={"distro": deb_distro},
             )
             comp: dict[str, Any] = {
@@ -638,7 +786,7 @@ def observation_components_for_scope(
                 "name": name,
                 "version": ver,
                 "purl": deb_purl,
-                "supplier": {"name": deb_supplier},
+                **({"supplier": {"name": who}} if who else {}),
                 "properties": [
                     {"name": "sonic:fragment_kind", "value": "observation"},
                     {"name": "sonic:scope", "value": scope},
@@ -1834,7 +1982,47 @@ def merge_components(*sources: list) -> list:
             for k in keys:
                 seen[k] = len(out)
             out.append(c)
+    # A deb no installed copy gave a distro gets the one it was built for.
+    for c in out:
+        add_distro(c, _property(c, "sonic:build_distro"))
     return out
+
+
+def _rewrite_deb_purl(c: dict, rewrite) -> None:
+    """Apply ``rewrite`` to a deb component's purl, and to a bom-ref equal to it."""
+    purl = c.get("purl") or ""
+    if purl.startswith("pkg:deb/"):
+        c["purl"] = rewrite(purl)
+        if c.get("bom-ref") == purl:
+            c["bom-ref"] = c["purl"]
+
+
+def add_distro(c: dict, distro: str) -> None:
+    """Give a deb component ``distro=`` unless it already has one."""
+    if distro:
+        _rewrite_deb_purl(
+            c, lambda p: sbom_purl.with_qualifier(p, "distro", distro))
+
+
+# Where build_debian.sh puts .debs it downloads from the host's own apt
+# sources (`apt-get install -d`, then copied for the installer). Nothing
+# else in the rootfs is known to have come from there.
+HOST_APT_DEB_DIRS = ("/platform/grub/",)
+
+
+def is_host_apt_deb(c: dict) -> bool:
+    """Whether syft found this .deb as a file the host's apt downloaded."""
+    if _property(c, "syft:package:foundBy") != "deb-archive-cataloger":
+        return False
+    path = _property(c, "syft:location:0:path") or ""
+    return path.startswith(HOST_APT_DEB_DIRS)
+
+
+def add_namespace(c: dict, namespace: str) -> None:
+    """Give a deb component a namespace unless it already has one."""
+    if namespace:
+        _rewrite_deb_purl(
+            c, lambda p: sbom_purl.with_namespace(p, namespace))
 
 
 def _promote_cpe(winner: dict, loser: dict) -> None:
@@ -2050,24 +2238,6 @@ def _promote_source_debs(winner: dict, loser: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _parse_os_release(text: str) -> Optional[tuple]:
-    """Parse /etc/os-release content into ``(ID, VERSION_ID)``.
-
-    Returns None when no ``ID`` field is present.
-    """
-    kv: dict = {}
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        k, v = line.split("=", 1)
-        kv[k] = v.strip().strip('"').strip("'")
-    did = kv.get("ID")
-    if not did:
-        return None
-    return (did, kv.get("VERSION_ID", ""))
-
-
 def detect_container_distro(gz_path: str) -> Optional[tuple]:
     """Return the container's ``(distro_id, version_id)`` by reading
     ``/etc/os-release`` from the image archive, e.g. ``("ubuntu", "24.04")``.
@@ -2104,7 +2274,7 @@ def detect_container_distro(gz_path: str) -> Optional[tuple]:
             if nm.endswith("etc/os-release") or nm.endswith("usr/lib/os-release"):
                 ex = tf.extractfile(member)
                 if ex is not None:
-                    got = _parse_os_release(
+                    got = sbom_os_release.parse(
                         ex.read().decode("utf-8", "replace")
                     )
                     if got:
@@ -2122,7 +2292,7 @@ def detect_container_distro(gz_path: str) -> Optional[tuple]:
                 ):
                     ex = outer.extractfile(m)
                     if ex is not None:
-                        got = _parse_os_release(
+                        got = sbom_os_release.parse(
                             ex.read().decode("utf-8", "replace")
                         )
                         if got:
@@ -2170,6 +2340,60 @@ def detect_container_distro(gz_path: str) -> Optional[tuple]:
     except Exception as e:  # defensive: never fail the build on this
         warn(f"container distro detection failed for {gz_path}: {e}")
     return None
+
+
+# dpkg states in which none of a package's files are on disk. Every other
+# state (half-configured, unpacked, triggers-pending) leaves its files in
+# the image, so the package ships.
+_NOT_SHIPPED_STATES = ("not-installed", "config-files")
+
+
+def shipped_from_dpkg_status(path: str) -> Optional[set]:
+    """Names of the packages a dpkg status file has files on disk for.
+
+    Returns None when the file cannot be read.
+    """
+    try:
+        with open(path) as f:
+            text = f.read()
+    except OSError:
+        return None
+    names = set()
+    for para in text.split("\n\n"):
+        fields = {}
+        for line in para.splitlines():
+            # A continuation line (Description, Conffiles) starts with
+            # whitespace and can itself contain ": ".
+            if line[:1] not in (" ", "\t") and ": " in line:
+                key, value = line.split(": ", 1)
+                fields[key] = value.strip()
+        state = fields.get("Status", "").split()[-1:]
+        if fields.get("Package") and state and state[0] not in _NOT_SHIPPED_STATES:
+            names.add(fields["Package"])
+    return names
+
+
+def shipped_from_list(target_path: str, scope: str) -> Optional[set]:
+    """Names in the scope's `installed-debs`, or None when it is missing."""
+    try:
+        with open(os.path.join(target_path, "versions", scope,
+                               "post-versions", "installed-debs")) as f:
+            return {line.strip() for line in f if line.strip()}
+    except OSError:
+        return None
+
+
+def keep_installed(obs: list, shipped: Optional[set], scope: str) -> list:
+    """Drop deb observations for packages removed after collection.
+
+    Without a list of what is installed, keep all and warn.
+    """
+    if shipped is None:
+        warn(f"{scope}: no list of installed packages; keeping every "
+             f"collected deb, including any removed after collection")
+        return obs
+    return [c for c in obs
+            if not c["purl"].startswith("pkg:deb/") or c["name"] in shipped]
 
 
 def operating_system_component(distro_id: str, version_id: str) -> dict:
@@ -2274,9 +2498,10 @@ def _container_main(container_filename: str) -> int:
 
     # Observation: only this container's scope.
     scope = f"dockers/{cname}"
-    obs = observation_components_for_scope(
+    obs = keep_installed(observation_components_for_scope(
         target_path, scope, arch, "Debian", distro=distro,
-    )
+        built=local_debs(target_path, arch, fragments.all),
+    ), shipped_from_list(target_path, scope), scope)
     info(f"Container observation: {len(obs)} components")
 
     # Lockfile-derived: only this container's scope.
@@ -2321,7 +2546,7 @@ def _container_main(container_filename: str) -> int:
         license_map = resolve_licenses(target_path)
         if license_map:
             resolved, noassertion = apply_licenses(
-                all_components, license_map,
+                all_components, license_map, read_deb_sources(target_path),
             )
             total = len(all_components)
             pct = (100.0 * resolved / total) if total else 0.0
@@ -2516,9 +2741,20 @@ def main() -> int:
     recipe_components = list(fragments.all)
 
     # ---- Observation components for host rootfs ----
-    obs_host = observation_components_for_scope(
-        target_path, "host-image", arch, "Debian",
+    fsroot = os.path.join(
+        os.path.dirname(os.path.abspath(target_path)),
+        f"fsroot-{target_machine}",
     )
+    host_distro = sbom_os_release.read(
+        os.path.join(fsroot, "usr/lib/os-release"),
+        os.path.join(fsroot, "etc/os-release"))
+    host_status = os.path.join(fsroot, "var/lib/dpkg/status")
+    built_debs = local_debs(target_path, arch, recipe_components,
+                            host_status)
+    obs_host = keep_installed(observation_components_for_scope(
+        target_path, "host-image", arch, "Debian", distro=host_distro,
+        built=built_debs,
+    ), shipped_from_dpkg_status(host_status), "host-image")
     info(f"Host rootfs observation: {len(obs_host)} components")
 
     # ---- Per-container observation + container identity ----
@@ -2556,9 +2792,12 @@ def main() -> int:
 
         # In-container observation set.
         scope = f"dockers/{cname}"
-        obs_containers.extend(observation_components_for_scope(
+        obs_containers.extend(keep_installed(observation_components_for_scope(
             target_path, scope, arch, "Debian",
-        ))
+            distro=sbom_os_release.read(os.path.join(
+                target_path, "versions", scope, "os-release")),
+            built=built_debs,
+        ), shipped_from_list(target_path, scope), scope))
 
     info(f"Container observation: {len(obs_containers)} components "
          f"across {len(installer_dockers)} containers")
@@ -2582,20 +2821,24 @@ def main() -> int:
             # This is the source-of-truth scan for everything that ships
             # outside docker containers (kernel/grub/host utilities/the
             # docker daemon itself).
-            fsroot = os.path.join(
-                os.path.dirname(os.path.abspath(target_path)),
-                f"fsroot-{target_machine}",
-            )
             if os.path.isdir(fsroot):
                 if scan_tool == "syft":
                     target_spec = f"dir:{fsroot}"
                 else:
                     target_spec = fsroot
                 info(f"Scanning host rootfs: {fsroot}")
-                scanner_components.extend(
-                    run_scanner(scanner_bin, scan_tool, target_spec,
-                                scope="host-image")
-                )
+                host_scan = run_scanner(scanner_bin, scan_tool, target_spec,
+                                        scope="host-image")
+                # The grub .debs shipped for the installer carry no
+                # namespace or distro; they came from the host's own apt
+                # sources. Only those: a platform or vendor .deb elsewhere
+                # in the rootfs is not Debian's.
+                if host_distro and host_distro[1]:
+                    for c in host_scan:
+                        if is_host_apt_deb(c):
+                            add_namespace(c, host_distro[0])
+                            add_distro(c, "-".join(host_distro))
+                scanner_components.extend(host_scan)
             else:
                 info(f"host rootfs not found at {fsroot}; "
                      f"skipping host-rootfs scan")
@@ -2638,7 +2881,8 @@ def main() -> int:
     if os.environ.get("SBOM_INCLUDE_LICENSES", "y") == "y":
         license_map = resolve_licenses(target_path)
         if license_map:
-            resolved, noassertion = apply_licenses(all_components, license_map)
+            resolved, noassertion = apply_licenses(
+                all_components, license_map, read_deb_sources(target_path))
             total = len(all_components)
             pct = (100.0 * resolved / total) if total else 0.0
             info(f"License resolution: {resolved}/{total} "
