@@ -4,6 +4,7 @@ Requires=database.service
 After=database.service swss.service syncd.service
 BindsTo=sonic.target
 After=sonic.target
+After=config-setup.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 
