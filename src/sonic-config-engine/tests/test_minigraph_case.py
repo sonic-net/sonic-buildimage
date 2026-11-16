@@ -367,6 +367,12 @@ class TestCfgGenCaseInsensitive(TestCase):
             }
         )
 
+    def test_minigraph_dpu_no_gnmi(self):
+        dpu_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-dpu.xml')
+        result = minigraph.parse_xml(dpu_graph, port_config_file=self.port_config)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['switch_type'], 'dpu')
+        self.assertNotIn('GNMI', result)
+
     def test_minigraph_no_telemetry(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "TELEMETRY is defined or 'telemetry' in FEATURE|default({})"]
         output = self.run_script(argument)
