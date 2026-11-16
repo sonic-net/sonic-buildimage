@@ -205,6 +205,17 @@
                     "hw_cause": "CMD_PWR_CYC",
                     "hw_desc": "Software commanded power cycle",
                     "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0000",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0000",
+                    "gpio_value": "0x0000",
+                    "vh_uv_mask": "0x1",
+                    "vh_uv_value": "0x1",
+                    "hw_cause": "MAIN_12V_LOSS",
+                    "hw_desc": "Loss of 12V power from PSU",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
                 }
             ],
             "pin_to_name": {
