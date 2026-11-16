@@ -667,7 +667,6 @@ class Chassis(ChassisBase):
     def _init_port_mappings(self):
         """Construct platform objects from HLD associations and physical port data."""
         platform_interfaces = (device_info.get_platform_json_data() or {}).get("interfaces", {})
-        port_extensions = self._cpo_platform_data.get("interfaces", {})
         ports = {}
         for name, config in self._ports_config.items():
             platform_port = platform_interfaces.get(name, {})
@@ -693,13 +692,12 @@ class Chassis(ChassisBase):
                 associations[kind] = (device_id, bank)
             if associations and len(associations) != 2:
                 raise ValueError("CPO interface {} requires one OE and one ELS".format(name))
-            lasers = port_extensions.get(name, {}).get("laser_ids", [])
+            lasers = []
             if associations:
                 els_name = associations["external_laser_source"][0]
                 laser_map = self._cpo_devices[els_name].get("laser_to_asic_lane_mapping", {})
                 if laser_map:
                     port_lanes = {int(lane) for lane in str(platform_port["lanes"]).split(",")}
-                    lasers = []
                     for laser, mapped_lanes in laser_map.items():
                         if isinstance(mapped_lanes, str):
                             mapped_lanes = [int(lane) for lane in mapped_lanes.split(",")]
@@ -780,12 +778,10 @@ class Chassis(ChassisBase):
                 raise ValueError("CPO topology requires non-empty devices and interfaces")
             self._cpo_devices = {name.lower(): config for name, config in devices.items()}
             self._ports_config = interfaces
-            self._cpo_platform_data = cpo_data.get("platform_data", {})
             cpo_type = cpo_data.get("cpo_type")
             if cpo_type not in CPO_TYPES:
                 raise ValueError("Unsupported CPO type {!r}".format(cpo_type))
             self._cpo_hardware_info = CpoHardwareInfo(CPO_TYPES[cpo_type], None)
-            self._cpo_eeprom_mode = self._cpo_platform_data.get("cpo_eeprom_mode", "joint")
             self._init_port_mappings()
         except Exception as exc:
             # This hook can run before the board HAL and other devices exist.

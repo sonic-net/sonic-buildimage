@@ -161,11 +161,13 @@ class TestCpoInitialization(unittest.TestCase):
             self.assertEqual(cpo.get_name(), name)
             self.assertEqual(cpo.oe.bank, config["associated_devices"][0]["bank"])
             self.assertEqual(cpo.hardware_id.oe_id, OeId.BROADCOM_BAILLY)
-            self.assertEqual(cpo.oe.base_page, data["devices"][config["associated_devices"][1]["device_id"]]["base_page"])
+            els_config = data["devices"][config["associated_devices"][1]["device_id"]]
+            self.assertEqual(cpo.oe.base_page, els_config["base_page"])
+            self.assertNotIn("laser_ids", config)
 
     def test_els_addressing_and_presence_are_loaded_from_device(self):
         data = self.topology()
-        self.assertNotIn("devices", data["platform_data"])
+        self.assertNotIn("platform_data", data)
         chassis = self.make_chassis(data)
         self.assertTrue(chassis._cpo_initialized)
         for name, config in data["interfaces"].items():
@@ -199,9 +201,11 @@ class TestCpoInitialization(unittest.TestCase):
     def test_json_bailly_type_selects_both_endpoint_apis(self):
         data = self.topology()
         self.assertEqual(data["cpo_type"], "bailly")
-        self.assertNotIn("oe_type", data["platform_data"])
+        self.assertNotIn("platform_data", data)
+        self.assertNotIn("oe_type", data)
         self.assertTrue(all("oe_type" not in device for device in data["devices"].values()))
         chassis = self.make_chassis(data)
+        self.assertNotIn("cpo_eeprom_mode", data)
         cpo = chassis.get_cpo(1)
         self.assertTrue(all(port.hardware_id is cpo.hardware_id for port in chassis.get_all_cpos()))
         self.assertIs(cpo.oe.hardware_id, cpo.elsfp.hardware_id)
@@ -772,7 +776,6 @@ with open(sys.argv[1], 'rb') as fd:
 
     def test_initialization_without_laser_mapping(self):
         data = self.topology()
-        data['platform_data'].pop('interfaces', None)
         for device in data['devices'].values():
             device.pop('laser_to_asic_lane_mapping', None)
         chassis = self.make_chassis(data)
@@ -880,7 +883,7 @@ with open(sys.argv[1], 'rb') as fd:
         self.assertEqual(chassis.get_all_cpos(), [])
         self.assertFalse(chassis._cpo_initialized)
 
-    def test_precise_hld_lasers_override_coarse_platform_group(self):
+    def test_port_lasers_are_derived_from_hld_mapping(self):
         data = self.topology()
         data["interfaces"] = {"Ethernet0": data["interfaces"]["Ethernet0"]}
         data["devices"]["ELS0"]["laser_to_asic_lane_mapping"] = {"1": "1,2,3,4", "2": [5, 6, 7, 8]}
