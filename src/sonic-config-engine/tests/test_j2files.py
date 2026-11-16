@@ -2470,6 +2470,11 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_with_docker0.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+        # docker0 inputs come from /run, not the persisted config
+        with open(self.output_file) as file:
+            output = file.read()
+        self.assertNotIn('2.2.2.2', output)
+        self.assertIn('include(file="/run/sonic-rsyslog/docker0-inputs.conf" mode="optional")', output)
 
     def test_rsyslog_conf_same_ip(self):
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
