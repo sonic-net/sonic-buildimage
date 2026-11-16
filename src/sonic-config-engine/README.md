@@ -70,9 +70,12 @@ is unavailable on devices configured from other output.
 Minigraph preserves speeds, lanes, and supplied FEC/autonegotiation settings from
 minimum generation and explicit JSON selections. Installed profiles, INI files,
 and DB-backed ports retain their existing XML overrides.
-When a port configuration is available, local checks skip unavailable interface
-parents, channel/VLAN/ACL bindings, neighbors, and fine-grained ECMP members;
-VLAN definitions are retained.
+For minimum layouts and explicit JSON selections, local checks skip unavailable
+interface parents, channel/VLAN/ACL bindings, neighbors, and fine-grained ECMP
+members; VLAN definitions are retained. Installed profiles, INI files, and
+DB-backed ports retain their legacy topology handling.
+Filtering out one FG ECMP address family does not remove surviving members of
+the other.
 These checks do not infer replacement topology or replace full schema validation.
 Minigraph links a missing HWSKU directory to the
 shipped base SKU directory, named without the final hyphen-separated suffix,
