@@ -288,6 +288,18 @@ def validate_interface_name(value):
         raise ValueError("Invalid interface name: {!r}".format(value))
     return value
 
+
+def validate_interface_table_name(value):
+    """validate_interface_name for INTERFACE table keys, which may also be
+    front-panel aliases such as 'Ethernet24/1': the host namespace of a
+    multi-ASIC device without a host-level port_config keeps minigraph's alias
+    names. pfx_filter leaves those out of the rendered output, so accept them
+    when every '/'-separated part is itself a valid interface name."""
+    value = STR_TYPE(value)
+    if '/' in value and all(isInterfaceNameValid(part) for part in value.split('/')):
+        return value
+    return validate_interface_name(value)
+
 def get_primary_addr(value):
     if not value:
         return ""
@@ -453,6 +465,7 @@ def _get_jinja2_env(paths):
     env.filters['b64decode'] = b64decode
     env.filters['shellquote'] = shellquote
     env.filters['validate_interface_name'] = validate_interface_name
+    env.filters['validate_interface_table_name'] = validate_interface_table_name
     env.filters['validate_asn'] = validate_asn
 
     # Strip whitespace/control chars from ConfigDB-sourced values (see
