@@ -829,6 +829,15 @@ fn main() {
 mod tests {
     use super::*;
 
+    // Writing a stub script while another thread forks lets the child inherit the write fd until
+    // it execs, so exec'ing the stub can fail with ETXTBSY. Serialize every test that writes a stub
+    // or spawns a process.
+    static STUB_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn stub_lock() -> std::sync::MutexGuard<'static, ()> {
+        STUB_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     fn sh(script: &str) -> Command {
         let mut cmd = Command::new("sh");
         cmd.arg("-c").arg(script);
@@ -1061,6 +1070,7 @@ mod tests {
 
     #[test]
     fn run_probe_success() {
+        let _guard = stub_lock();
         let res = run_probe("p", sh("exit 0"), None, Duration::from_secs(5), true);
         assert!(res.success);
         assert_eq!(res.xpath, "p");
@@ -1069,6 +1079,7 @@ mod tests {
 
     #[test]
     fn run_probe_reports_exit_code_and_stderr() {
+        let _guard = stub_lock();
         let res = run_probe("p", sh("echo boom >&2; exit 3"), None, Duration::from_secs(5), true);
         assert!(!res.success);
         assert!(!res.unsupported);
@@ -1080,6 +1091,7 @@ mod tests {
 
     #[test]
     fn run_probe_flags_not_found_as_unsupported() {
+        let _guard = stub_lock();
         let res = run_probe("p", sh(NOT_FOUND_SCRIPT), None, Duration::from_secs(5), true);
         assert!(!res.success);
         assert!(res.unsupported);
@@ -1088,6 +1100,7 @@ mod tests {
 
     #[test]
     fn run_probe_not_found_is_failure_when_unsupported_not_allowed() {
+        let _guard = stub_lock();
         let res = run_probe("p", sh(NOT_FOUND_SCRIPT), None, Duration::from_secs(5), false);
         assert!(!res.success);
         assert!(!res.unsupported);
@@ -1095,6 +1108,7 @@ mod tests {
 
     #[test]
     fn run_probe_not_found_detected_past_stderr_truncation() {
+        let _guard = stub_lock();
         let script = format!("head -c 200000 /dev/zero | tr '\\0' x >&2; {NOT_FOUND_SCRIPT}");
         let res = run_probe("p", sh(&script), None, Duration::from_secs(5), true);
         assert!(res.unsupported);
@@ -1102,6 +1116,7 @@ mod tests {
 
     #[test]
     fn run_probe_times_out() {
+        let _guard = stub_lock();
         let res = run_probe("p", sh("sleep 5"), None, Duration::from_millis(200), true);
         assert!(!res.success);
         assert!(res.error.unwrap().contains("timed out"));
@@ -1110,6 +1125,7 @@ mod tests {
 
     #[test]
     fn run_probe_spawn_failure() {
+        let _guard = stub_lock();
         let res = run_probe("p", Command::new("/nonexistent/gnmi_get"), None, Duration::from_secs(1), true);
         assert!(!res.success);
         assert!(res.error.is_some());
@@ -1117,12 +1133,14 @@ mod tests {
 
     #[test]
     fn run_probe_feeds_stdin() {
+        let _guard = stub_lock();
         let res = run_probe("p", sh(r#"read l; [ "$l" = "[]" ]"#), Some(b"[]\n"), Duration::from_secs(5), false);
         assert!(res.success, "{:?}", res.error);
     }
 
     #[test]
     fn run_probe_drains_large_stderr() {
+        let _guard = stub_lock();
         // More than a pipe buffer of stderr must not wedge the child until timeout.
         let res = run_probe("p", sh("head -c 200000 /dev/zero | tr '\\0' x >&2; exit 1"), None, Duration::from_secs(5), true);
         assert!(!res.success);
@@ -1263,6 +1281,7 @@ mod tests {
 
     #[test]
     fn prober_uses_unix_socket_when_present() {
+        let _guard = stub_lock();
         let stub = Stub::new("unix", "exit 0");
         let mut prober = stub.prober(Some("/run/g.sock"), notls_tcp());
         assert!(prober.get("clock", "SHOW", true).unwrap().success);
@@ -1271,6 +1290,7 @@ mod tests {
 
     #[test]
     fn prober_uses_tcp_without_socket() {
+        let _guard = stub_lock();
         let stub = Stub::new("tcp", "exit 0");
         let mut prober = stub.prober(None, notls_tcp());
         assert!(prober.get("clock", "SHOW", true).unwrap().success);
@@ -1279,6 +1299,7 @@ mod tests {
 
     #[test]
     fn prober_falls_back_to_tcp_on_unauthenticated() {
+        let _guard = stub_lock();
         let stub = Stub::new("fallback", UNAUTH);
         let mut prober = stub.prober(Some("/run/g.sock"), notls_tcp());
         assert!(prober.get("clock", "SHOW", true).unwrap().success);
@@ -1293,6 +1314,7 @@ mod tests {
 
     #[test]
     fn prober_keeps_unix_result_on_other_errors() {
+        let _guard = stub_lock();
         let stub = Stub::new("notfound", "echo 'rpc error: code = NotFound desc = not found in clientTrie' >&2; exit 1");
         let mut prober = stub.prober(Some("/run/g.sock"), notls_tcp());
         let res = prober.get("clock", "SHOW", true).unwrap();
@@ -1302,6 +1324,7 @@ mod tests {
 
     #[test]
     fn prober_reports_skip_when_tcp_unusable() {
+        let _guard = stub_lock();
         let reason = "user_auth=password not supported by watchdog".to_string();
         let stub = Stub::new("skip", UNAUTH);
         let mut prober = stub.prober(Some("/run/g.sock"), Err(reason.clone()));
