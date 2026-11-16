@@ -55,14 +55,10 @@ def get_expected_running_containers():
     # it will be removed from exception list.
     run_all_instance_list = ['database', 'bgp']
 
-    container_list = []
     for container_name in feature_table.keys():
         # skip frr_bmp since it's not container just bmp option used by bgpd
         if container_name == "frr_bmp":
             continue
-        container_list.append(container_name)
-
-    for container_name in container_list:
         if feature_table[container_name]["state"] not in ["disabled", "always_disabled"]:
             if multi_asic.is_multi_asic():
                 if feature_table[container_name].get("has_global_scope", "True") == "True":
