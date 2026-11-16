@@ -1452,7 +1452,7 @@ UPGRADE_SUMMARY = {
                 "name":"IOB_FPGA",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1460,7 +1460,7 @@ UPGRADE_SUMMARY = {
                 "name":"DOM_FPGA",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1468,7 +1468,7 @@ UPGRADE_SUMMARY = {
                 "name":"SCM_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1476,7 +1476,7 @@ UPGRADE_SUMMARY = {
                 "name":"MCB_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1484,7 +1484,7 @@ UPGRADE_SUMMARY = {
                 "name":"SMB_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1492,7 +1492,7 @@ UPGRADE_SUMMARY = {
                 "name":"FCB_B_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1500,7 +1500,7 @@ UPGRADE_SUMMARY = {
                 "name":"FCB_T_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1508,7 +1508,7 @@ UPGRADE_SUMMARY = {
                 "name":"MAC_PCIe",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1533,7 +1533,7 @@ UPGRADE_SUMMARY = {
     "BMC": {
         "name": "BMC",
         "init_cmd": [
-            # firmware upgrade set sysled blue/amber alternate flashing
+            # firmware upgrade set sysled blue/amber or green/amber alternate flashing
             {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
         ],
         "finish_cmd": [],

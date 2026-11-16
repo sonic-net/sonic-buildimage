@@ -180,7 +180,7 @@ monitor = {
     },
 
     "ledcontrol_para": {
-        "interval": 5,
+        "interval": 3,
         "checkpsu": 1,  # 0: sys led don't follow psu led
         "checkfan": 1,  # 0: sys led don't follow fan led
         "checksmb": 1,  # 0: sys led don't follow smb led
@@ -189,6 +189,7 @@ monitor = {
         "fan_amber_num": 1,
         "sysled_check_temp": 0,
         "sysled_check_fw_up": 1,
+        "sysled_check_system_health": 1,
         "smbled_ctrl": 1,
         "board_sys_led": [
             {"led_name": "FRONT_SYS_LED"},
