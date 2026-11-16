@@ -2882,6 +2882,7 @@ jobs:
         id: native_build
         env:
           SONIC_VS_IMAGE_TIMINGS: "1"
+          TERM: dumb
         run: |
           set -euo pipefail
           mkdir -p artifacts/vs/image-timings

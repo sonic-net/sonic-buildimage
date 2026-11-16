@@ -139,6 +139,10 @@ recover those missing measurements; a subsequent image build supplies them.
 Current `.bin` builds expose the measured final recipe and root-filesystem
 tasks, but do not emit inner-phase receipts. Their inner phases remain
 **not recorded**. An old `.img.gz` receipt cannot populate `.bin` timings.
+The host Make step uses `TERM=dumb` to emit the existing build/finish markers
+instead of terminal redraws. The Make wrapper already marks its single outer
+installer request. Historical direct-slave terminal redraws do not provide task
+end times and cannot be reconstructed into a complete breakdown.
 Likewise, a Make `cached` marker does not establish a Bazel cache-hit rate.
 Repeated target invocations remain separate observations. Log timestamps have
 finer precision than Actions step timestamps, so their totals can differ slightly.
@@ -150,7 +154,11 @@ logs, command lines and machine details never enter the published snapshot.
 Completed measurements are cached with their exact run, attempt, job and step
 identity. Expired or unsupported logs are shown as unavailable. Temporary read
 failures can be retried without discarding the ordinary step timings. Older
-snapshots without breakdowns remain supported and gain details incrementally.
+unsupported or incomplete results are retried once with the current parser
+revision, within the same log-read budget; successful measurements are retained.
+Step boundaries match both the start and end timestamps, so a preceding short
+setup step in the same timestamp second does not make the build ambiguous.
+Older snapshots without breakdowns remain supported and gain details incrementally.
 Use `--log-jobs 0` to collect only metadata on a particular invocation, or a
 value from 1 to 20 to limit its log reads.
 

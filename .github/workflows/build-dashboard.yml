@@ -4,8 +4,10 @@ on:
   pull_request:
     paths:
       - '.github/workflows/build-dashboard.yml'
+      - '.github/workflows/bazel-oci.yml'
       - 'tools/ci/build_dashboard/**'
       - 'slave.mk'
+      - 'update_screen.sh'
       - 'build_debian.sh'
       - 'build_image.sh'
       - 'scripts/build_kvm_image.sh'
@@ -14,8 +16,10 @@ on:
     branches: [master]
     paths:
       - '.github/workflows/build-dashboard.yml'
+      - '.github/workflows/bazel-oci.yml'
       - 'tools/ci/build_dashboard/**'
       - 'slave.mk'
+      - 'update_screen.sh'
       - 'build_debian.sh'
       - 'build_image.sh'
       - 'scripts/build_kvm_image.sh'

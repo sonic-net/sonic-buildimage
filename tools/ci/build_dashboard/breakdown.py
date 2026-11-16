@@ -12,6 +12,7 @@ import math
 import re
 
 VERSION = 1
+PARSER_REVISION = 2
 SOURCE = "github-job-log"
 MAX_LOG_BYTES = 32 * 1024 * 1024
 MAX_SECTIONS = 32
@@ -341,12 +342,15 @@ def target_kind(target):
 def unavailable(reason):
     if reason not in REASONS:
         raise ValueError("Unknown breakdown reason")
-    return {"version": VERSION, "status": "unavailable", "reason": reason, "source": SOURCE,
+    return {"version": VERSION, "parser_revision": PARSER_REVISION,
+            "status": "unavailable", "reason": reason, "source": SOURCE,
             "duration_seconds": None, "sections": []}
 
 
 def retry_needed(value):
-    return value is None or value.get("reason") in RETRY_REASONS
+    return (value is None or value.get("reason") in RETRY_REASONS
+            or (value.get("reason") in {"unsupported-log-format", "incomplete-log"}
+                and value.get("parser_revision", 1) < PARSER_REVISION))
 
 
 def moment(value):
@@ -387,16 +391,20 @@ are observed recipe/cache intervals and are deliberately not summed.
     except UnicodeError:
         return unavailable("unsupported-log-format")
     groups = [(i, when) for i, (when, text) in enumerate(rows) if text.startswith("##[group]Run ")]
-    starts = [(i, when) for i, when in groups if start <= when < start + timedelta(seconds=1)]
-    if len(starts) != 1:
+    starts = [index for index, (_, when) in enumerate(groups)
+              if start <= when < start + timedelta(seconds=1)]
+    if not starts:
         return unavailable("unsupported-log-format")
-    first, log_start = starts[0]
-    following = [(i, when) for i, when in groups if i > first]
-    if not following:
+    # Adjacent short steps can start in the same API timestamp second. Only
+    # the group whose next boundary also matches this step's end is eligible.
+    intervals = [(groups[index], groups[index + 1]) for index in starts
+                 if index + 1 < len(groups)
+                 and end <= groups[index + 1][1] < end + timedelta(seconds=1)]
+    if not intervals:
         return unavailable("incomplete-log")
-    last, log_end = following[0]
-    if not end <= log_end < end + timedelta(seconds=1):
-        return unavailable("incomplete-log")
+    if len(intervals) != 1:
+        return unavailable("unsupported-log-format")
+    (first, log_start), (last, log_end) = intervals[0]
     previous = log_start
     sections, active, counts = [], {}, Counter()
     active_pairs = {}
@@ -494,7 +502,8 @@ are observed recipe/cache intervals and are deliberately not summed.
     current["duration_seconds"] = round((log_end - current.pop("start")).total_seconds(), 6)
     for section in sections:
         section["tasks"].sort(key=lambda task: (task["offset_seconds"], task["id"]))
-    result = {"version": VERSION, "status": "available", "reason": None, "source": SOURCE,
+    result = {"version": VERSION, "parser_revision": PARSER_REVISION,
+              "status": "available", "reason": None, "source": SOURCE,
               "duration_seconds": round((log_end - log_start).total_seconds(), 6), "sections": sections}
     return result if valid(result) else unavailable("invalid-timing")
 
@@ -513,8 +522,11 @@ def known_identity(value, labels):
 
 def valid(value):
     """Strict retained-data allowlist, including safe static labels and bounds."""
-    if (not isinstance(value, dict) or set(value) != {"version", "status", "reason", "source", "duration_seconds", "sections"}
+    if (not isinstance(value, dict)
+            or set(value) - {"parser_revision"} != {"version", "status", "reason", "source", "duration_seconds", "sections"}
             or type(value["version"]) is not int or value["version"] != VERSION or value["source"] != SOURCE
+            or type(value.get("parser_revision", 1)) is not int
+            or not 1 <= value.get("parser_revision", 1) <= PARSER_REVISION
             or not isinstance(value["sections"], list)):
         return False
     if value["status"] == "unavailable":

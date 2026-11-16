@@ -97,6 +97,10 @@ does not execute a build or execute any content from a log.
   An optional `breakdown` provides nested Make build timings without changing
   the existing step duration or successful-image measurement:
   - `version`: `1`; `source`: `github-job-log`.
+  - Optional `parser_revision`: the parser revision used for this result
+    (absent means `1`). Old unsupported/incomplete results are eligible for
+    one bounded retry with the current parser. Successful measurements and
+    expired logs are not invalidated by a parser update.
   - `status`: `available` or `unavailable`; `reason`: a fixed reason or `null`.
   - `duration_seconds`: observed log interval, or `null` when unavailable.
   - `sections`: sequential outer Make invocations. Each contains a known `id`,
