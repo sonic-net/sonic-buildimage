@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "packages": {
+    "wpasupplicant": {
+      "required_paths": [
+        "usr/sbin/wpa_supplicant",
+        "usr/sbin/wpa_cli",
+        "usr/bin/wpa_passphrase"
+      ]
+    }
+  }
+}

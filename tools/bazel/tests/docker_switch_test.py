@@ -135,9 +135,7 @@ $(addprefix $(TARGET_PATH)/,$(LEGACY_IMAGES)): $(TARGET_PATH)/%.gz:
         self.assertEqual(self.build(), current)
 
     def test_local_packages_remain_allowed_for_archives_using_make(self):
-        """Apply the Bazel local-package restriction only to selected archives, preserving the
-        normal Make package path.
-        """
+        """Preserve local packages when another image selects the Bazel producer."""
         self.makefile = "SONIC_PACKAGES_LOCAL = telemetry.gz telemetry-dbg.gz\n" + self.makefile
         self.build(telemetry="n", routing="y")
 

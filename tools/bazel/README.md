@@ -163,8 +163,8 @@ When returning to Make, the cache loader must replace the Bazel archive even if
 the destination already exists. The shared bridge requests a staged restore of
 that archive from a matching Make cache; a failed extraction preserves the prior
 archive and leaves the newer stamp in place for a retry.
-Archives selected for Bazel cannot appear in `SONIC_PACKAGES_LOCAL`: the shared
-archive macro supplies `:latest`, while that Make mode expects versioned tags.
+The shared archive macro exports `:latest`. For images in `SONIC_PACKAGES_LOCAL`,
+the installer loads the archive and adds the `SONIC_IMAGE_VERSION` tag.
 The base/config-engine images and service images register their own Bazel
 producers. SWSS supports native AMD64 Trixie VS without ASAN. Other SWSS configurations
 keep the Make build even with `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y`.

@@ -61,7 +61,7 @@ register_toolchains("@sonic_build_infra//tools/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.34-a4723268cd72a573ed316ab75347e698cc3f86ab",
+    version = "0.0.36-3070359b148ad6ad4eab749f5143ff2a38c980df",
     repo_name = "sonic_build_infra",
 )
 bazel_dep(
@@ -330,6 +330,14 @@ single_version_override(
 )
 
 bazel_dep(name = "sonic-fips", version = "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177", repo_name = "sonic_fips")
+bazel_dep(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.1", repo_name = "sonic_wpa_supplicant")
+
+# MACsec runtime/debug and private Redis checks share the production APT lock.
+use_repo(apt, "macsec_debian")
+apt_inputs(
+    name = "macsec_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
 
 # Fixed target C/C++ runtime and JSON headers for sonic-fib.
 apt.install(
@@ -361,6 +369,7 @@ source_modules(
         "@socat//:MODULE.bazel": "socat",
         "@iproute2//:MODULE.bazel": "iproute2",
         "@sonic_fips//:MODULE.bazel": "sonic-fips",
+        "@sonic_wpa_supplicant//:MODULE.bazel": "sonic-wpa-supplicant",
         "@sonic_sairedis//:MODULE.bazel": "sonic-sairedis",
         "@sonic_swss_common//:MODULE.bazel": "sonic-swss-common",
         "@hsflowd//:MODULE.bazel": "hsflowd",

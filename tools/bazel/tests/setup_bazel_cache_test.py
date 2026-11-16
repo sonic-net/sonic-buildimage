@@ -62,7 +62,10 @@ class SetupBazelCacheTest(unittest.TestCase):
                     enabled.add((path.name, name))
                     self.assertEqual(calls, ["python3 " + HELPER + " --private-remote-cache"])
                     if path.name == "bazel-oci.yml" and name in {"radv_native", "gearbox_archive"}:
-                        self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64"])
+                        labels = ["self-hosted", "linux", "bazel-x64"]
+                        if name == "gearbox_archive":
+                            labels.append("vs")
+                        self.assertEqual(job["runs-on"], labels)
                         continue
                     if path.name == "bazel-base-images.yml":
                         self.assertEqual(job["strategy"]["matrix"]["architecture"], ["amd64", "arm64"])

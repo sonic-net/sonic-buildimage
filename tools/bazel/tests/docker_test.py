@@ -346,19 +346,17 @@ selection:
                 self.assertEqual(self.recorded_calls(), [])
         self.makefile = original
 
-    def test_local_packages_reject_each_selected_runtime_and_debug_archive(self):
-        """Prevent the local-package path from accepting Bazel exports whose latest-only tags do
-        not meet its contract.
-        """
+    def test_local_packages_export_each_selected_runtime_and_debug_archive(self):
+        """The installer accepts latest archives and adds the SONiC version tag."""
         original = self.makefile
         for archive in self.archives:
             with self.subTest(archive=archive):
                 self.makefile = f"SONIC_PACKAGES_LOCAL = {archive}\n" + original
+                self.calls.unlink(missing_ok=True)
                 result = self.run_make(archive)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("cannot be in SONIC_PACKAGES_LOCAL: " + archive, result.stderr)
-                self.assertEqual(self.recorded_calls(), [])
-                self.assertEqual((self.target / archive).read_bytes(), b"previous image")
+                self.assert_success(result)
+                self.assertEqual([call["arguments"][0] for call in self.recorded_calls()], ["build", "cquery"])
+                self.assertEqual((self.target / archive).read_bytes(), ("new " + archive).encode())
         self.makefile = original
 
     def test_build_and_query_share_cache_and_quoted_options_without_shell_expansion(self):

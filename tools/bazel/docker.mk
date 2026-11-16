@@ -8,9 +8,8 @@ $(foreach IMAGE,$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES),\
     $(if $(strip $($(IMAGE)_BAZEL_TARGET)),,$(error $(IMAGE)_BAZEL_TARGET is required for a Bazel container))\
     $(if $(strip $($(IMAGE)_PATH)),,$(error $(IMAGE)_PATH is required for a Bazel container SBOM)))
 
-ifneq ($(filter $(SONIC_PACKAGES_LOCAL),$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES)),)
-$(error Bazel container archives use the latest tag and cannot be in SONIC_PACKAGES_LOCAL: $(filter $(SONIC_PACKAGES_LOCAL),$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES)))
-endif
+# Local packages also accept these latest-tagged archives: the installer's
+# sonic-package-manager path adds SONIC_IMAGE_VERSION after loading them.
 
 # Let Bazel check declared inputs on every request. Export preserves timestamps
 # when bytes are unchanged and publishes changed archives atomically.

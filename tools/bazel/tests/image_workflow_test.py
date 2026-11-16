@@ -74,7 +74,13 @@ class VerificationWorkflowTest(unittest.TestCase):
         archive = jobs["archive"]
         gate = jobs["eventd_runtime"]
         self.assertEqual(gate["name"], "Container archive (AMD64)")
-        self.assertIn("archive", gate["needs"])
+        self.assertEqual(gate["needs"], [
+            "archive", "database_acceptance", "frr_runtime", "teamd_runtime",
+            "radv_acceptance", "lldp_runtime", "mux_runtime", "gearbox_runtime", "macsec_runtime",
+        ])
+        self.assertEqual(jobs["macsec_runtime"]["needs"], "archive")
+        self.assertTrue(any("macsec_loaded.py" in step.get("run", "")
+                            for step in jobs["macsec_runtime"]["steps"]))
         self.assertEqual(gate["if"], "always() && (" + archive["if"] + ")")
         build = next(step for step in archive["steps"] if step.get("id") == "eventd_build")
         self.assertEqual(build["if"], "matrix.architecture == 'amd64'")
@@ -97,6 +103,13 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertTrue(any("eventd_loaded.py" in step.get("run", "") for step in gate["steps"]))
         guard = gate["steps"][0]
         self.assertEqual(guard["env"]["JOB_RESULTS"], "${{ toJSON(needs.*.result) }}")
+        self.assertNotIn("continue-on-error", guard)
+        self.assertNotIn("if", guard)
+        for malformed_or_empty in ("[]", "null", "not-json"):
+            with self.subTest(results=malformed_or_empty):
+                result = subprocess.run(["bash", "-ec", guard["run"]], capture_output=True,
+                                        env=dict(os.environ, JOB_RESULTS=malformed_or_empty))
+                self.assertNotEqual(result.returncode, 0)
         for position in range(len(gate["needs"])):
             for status in ("success", "failure", "skipped", "cancelled"):
                 with self.subTest(job=gate["needs"][position], status=status):

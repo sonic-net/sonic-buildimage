@@ -412,8 +412,7 @@ Common twice. The source-layer guard prevents a regression to older TARs that
 used paths beneath `var/run` or other inherited directory aliases.
 Complete-image validation remains necessary. Guest
 boot, forwarding, ARM64 images and cross builds remain unvalidated. ASAN uses
-the existing Make path. Listing SWSS in `SONIC_PACKAGES_LOCAL` is rejected when
-its Bazel path is selected.
+the existing Make path.
 
 To reproduce the source-layer check in native AMD64 Trixie, install the execution
 tools listed in `.github/workflows/bazel-oci.yml`, make the pinned Bazel
