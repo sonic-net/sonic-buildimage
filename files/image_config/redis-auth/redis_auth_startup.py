@@ -9,8 +9,10 @@ exception and matching client/restore support before their topology is admitted.
 
 import argparse
 import configparser
+import grp
 import json
 import os
+import pwd
 from pathlib import Path
 import stat
 import sys
@@ -197,9 +199,22 @@ def selection(path=INTENT, *, runtime=None):
     return selected, instances
 
 
+def redis_server_uid():
+    try:
+        account = pwd.getpwnam('redis')
+        group = grp.getgrnam('redis')
+    except KeyError as error:
+        raise CredentialStateError('missing reserved Redis service identity') from error
+    if account.pw_gid != group.gr_gid:
+        raise CredentialStateError('unexpected Redis service UID/GID')
+    return account.pw_uid
+
+
 def policy_files(selected, instances):
+    uid = redis_server_uid()
     policy = [{'username': USERNAME, 'unix_socket': instances[name]['unix_socket_path'],
-               'tcp_host': instances[name]['hostname'], 'tcp_port': 0} for name in selected]
+               'tcp_host': instances[name]['hostname'], 'tcp_port': 0,
+               'server_uid': uid} for name in selected]
     files = {name: (json.dumps(value, indent=2) + '\n').encode() for name, value in
              (('server/instances.json', instances), ('local.json', policy))}
     if len(files['local.json']) > 4096:

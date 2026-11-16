@@ -3,6 +3,7 @@
 
 import json
 import os
+import pwd
 from pathlib import Path
 import stat
 import sys
@@ -39,7 +40,8 @@ def configure(database, additional, policy, inventory, *, environ=os.environ,
         if record['protected']:
             expected[record['unix_socket_path']] = {
                 'username': 'sonic-trusted-writer', 'unix_socket': record['unix_socket_path'],
-                'tcp_host': '127.0.0.1', 'tcp_port': 0}
+                'tcp_host': '127.0.0.1', 'tcp_port': 0,
+                'server_uid': pwd.getpwnam('redis').pw_uid}
     if (len(expected) != protected or len(policy) != len(expected)
             or {entry['unix_socket']: entry for entry in policy} != expected):
         raise ValueError('selected Redis policy is incomplete, duplicated or differs from inventory')
@@ -59,6 +61,15 @@ def configure(database, additional, policy, inventory, *, environ=os.environ,
             extras.update({'port': 0, 'redis_auth_enforce': True, 'is_protected_mode': True})
             selected.add(name)
     return selected
+
+
+def check_socket_directory(directory):
+    info = directory.lstat()
+    if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0, pwd.getpwnam('redis').pw_uid)
+            or info.st_mode & 0o022):
+        raise ValueError('unsafe Redis socket directory ownership or permissions')
+    if 'system.posix_acl_default' in os.listxattr(directory):
+        raise ValueError('protected socket directory has a default ACL: ' + str(directory))
 
 
 def main():
@@ -82,10 +93,7 @@ def main():
         # exempt server to compensate for that unsupported configuration.
         directories = {Path(database['INSTANCES'][name]['unix_socket_path']).parent for name in selected}
         for directory in sorted(directories):
-            if 'system.posix_acl_default' in os.listxattr(directory):
-                print('redis-auth-configure: protected socket directory has a default ACL: '
-                      + str(directory), file=sys.stderr)
-                return 1
+            check_socket_directory(directory)
         # This path is the entrypoint's unpublished temporary database map.
         path.write_text(json.dumps(database, indent=2) + '\n')
         print(json.dumps(additional))
